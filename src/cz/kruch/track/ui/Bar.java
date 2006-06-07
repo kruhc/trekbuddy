@@ -14,6 +14,7 @@ abstract class Bar {
     protected Font font;
 
     protected String info;
+    protected boolean ok;
 
     protected Bar(int gx, int gy, int width, int height) {
         this.gx = gx;
@@ -28,13 +29,14 @@ abstract class Bar {
         int h = font.getHeight();
         int[] shadow = new int[width * h];
         for (int N = shadow.length, i = 0; i < N; i++) {
-            shadow[i] = 0xbf7f7f7f;
+            shadow[i] = 0xaf7f7f7f;
         }
         bar = Image.createRGBImage(shadow, width, h, true);
     }
 
-    public void setInfo(String info) {
+    public void setInfo(String info, boolean ok) {
         this.info = info;
+        this.ok = ok;
     }
 
     public abstract void render(Graphics graphics);

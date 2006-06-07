@@ -3,7 +3,7 @@
 
 package cz.kruch.track.maps;
 
-import cz.kruch.track.location.Position;
+import cz.kruch.track.ui.Position;
 
 import javax.microedition.lcdui.Image;
 
@@ -40,10 +40,10 @@ public class Slice {
         return calibration.getHeight();
     }
 
-    public void setAbsolutePosition(int x, int y) {
-        absx = x;
-        absy = y;
-        position = new Position(x, y);
+    public void absolutizePosition(Calibration parent) {
+        absx = parent.getPositions()[0].getX() - calibration.getPositions()[0].getX();
+        absy = parent.getPositions()[0].getY() - calibration.getPositions()[0].getY();
+        position = new Position(absx, absy);
     }
 
     public Position getAbsolutePosition() {

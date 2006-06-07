@@ -17,10 +17,13 @@ import java.util.Enumeration;
 
 import cz.kruch.j2se.io.BufferedInputStream;
 import cz.kruch.track.ui.Desktop;
+import cz.kruch.track.ui.Position;
+import cz.kruch.track.TrackingMIDlet;
+import cz.kruch.track.util.Logger;
+import api.location.QualifiedCoordinates;
 
 public class Map {
-    // component name for logging
-    private static final String COMPONENT_NAME = "Book";
+    private static final Logger log = new Logger("Map");
 
     private static final int TEXT_FILE_BUFFER_SIZE = 512; // for map calibration files content
     private static final int SMALL_BUFFER_SIZE = 512 * 2; // for map calibration files
@@ -31,6 +34,9 @@ public class Map {
     private Vector slices;
     private Calibration calibration;
 
+    // map range
+    protected QualifiedCoordinates[] range;
+
     // loading task
     private Thread task;
 
@@ -38,6 +44,7 @@ public class Map {
         this.path = path;
         this.slices = new Vector();
         open();
+        compute();
     }
 
     public Calibration getCalibration() {
@@ -45,12 +52,13 @@ public class Map {
     }
 
     public void close() {
-        System.out.println(COMPONENT_NAME + " [info] close map");
+        log.info("close map");
+
         if (fileConnection != null) {
             try {
                 fileConnection.close();
             } catch (IOException e) {
-                System.err.println(COMPONENT_NAME + " [error] map closing failed: " + e.toString());
+                log.error("map closing failed", e);
             }
         }
     }
@@ -66,6 +74,11 @@ public class Map {
         }
 
         return result;
+    }
+
+    public boolean isWithin(QualifiedCoordinates coordinates) {
+        return (coordinates.getLat() <= range[0].getLat() && coordinates.getLat() >= range[1].getLat())
+                && (coordinates.getLon() >= range[0].getLon() && coordinates.getLon() <= range[1].getLon());
     }
 
     /**
@@ -102,19 +115,30 @@ public class Map {
 
         // check map for consistency
         if (calibration == null) {
-            throw new IllegalStateException("Top-level calibration info missing");
+            throw new IllegalStateException("Map calibration info missing");
         }
         if (slices.size() == 0) {
             throw new IllegalStateException("Empty map - no slices");
         }
 
-        // absolutize slices position // TODO move to Calibration
+        // absolutize slices position
         for (Enumeration e = slices.elements(); e.hasMoreElements(); ) {
             Slice slice = (Slice) e.nextElement();
-            int x0 = calibration.getPositions()[0].getX() - slice.getCalibration().getPositions()[0].getX();
-            int y0 = calibration.getPositions()[0].getY() - slice.getCalibration().getPositions()[0].getY();
-            slice.setAbsolutePosition(x0, y0);
+            slice.absolutizePosition(calibration);
         }
+    }
+
+    /**
+     * Initial setup.
+     */
+    private void compute() {
+        range = new QualifiedCoordinates[2];
+        range[0] = calibration.transform(new Position(0, 0));
+        range[1] = calibration.transform(new Position(calibration.getWidth() - 1,
+                                                      calibration.getHeight() - 1));
+
+        // log
+        log.info("map range is "  + range[0] + "(" + range[0].getLat() + "," + range[0].getLon() + ") - " + range[1] + "(" + range[1].getLat() + "," + range[1].getLon() + ")");
     }
 
     /**
@@ -130,7 +154,8 @@ public class Map {
                 if (collection == null) {
                     collection = new Vector();
                 }
-                System.out.println("image missing for slice " + slice);
+
+                log.debug("image missing for slice " + slice);
                 collection.addElement(slice);
             }
         }
@@ -139,11 +164,11 @@ public class Map {
             return false;
         }
 
-        System.out.println("ABOUT TO LOAD NEW SLICES");
+        log.debug("about to load new slices");
 
         // wait for previous task to finish (it should be already finished!)
         if (task != null) {
-            System.out.println(COMPONENT_NAME + " [debug] waiting for previous task to finish");
+            log.debug("waiting for previous task to finish");
             try {
                 task.join();
             } catch (InterruptedException e) {
@@ -151,16 +176,21 @@ public class Map {
             }
         }
         // load images at background
-        System.out.println(COMPONENT_NAME + " [debug] starting loading task");
+        log.debug("starting loading task");
         final Vector toload = collection;
         task = new Thread(new Runnable() {
             public void run() {
                 // load images
                 Throwable t = loadSlices(toload);
+
+                // log
+                log.debug("all requested slices loaded");
+
                 // we are done
-                (new Desktop.Event(Desktop.Event.EVENT_BOOK_LOADED, null, t)).fire();
+                (new Desktop.Event(Desktop.Event.EVENT_SLICES_LOADED, null, t)).fire();
             }
         });
+        task.setPriority(Thread.MAX_PRIORITY);
         task.start();
 
         return true;
@@ -174,7 +204,7 @@ public class Map {
         try {
             for (Enumeration e = toLoad.elements(); e.hasMoreElements(); ) {
                 Slice slice = (Slice) e.nextElement();
-                System.out.println("load image for slice " + slice);
+                log.debug("load image for slice " + slice);
                 loadSlice(slice);
             }
 
@@ -202,8 +232,9 @@ public class Map {
      */
     private void loadSlice(Slice slice) throws IOException {
         // fire event
-        fireEvent("Loading slice " + slice.getCalibration().getPath() + "...",
-                  null);
+        if (!TrackingMIDlet.isEmulator()) {
+            (new Desktop.Event(Desktop.Event.EVENT_LOADING_STATUS_CHANGED, "Loading slice " + slice.getCalibration().getPath() + "...", null)).fire();
+        }
 
         IOException exception = null;
 
@@ -221,11 +252,11 @@ public class Map {
             }
 
             // log
-            System.out.println(COMPONENT_NAME + " [debug] image loaded for " + slice.getCalibration().getPath());
+            log.debug("image loaded for slice " + slice.getCalibration().getPath());
 
         } catch (IOException e) {
             // log
-            System.out.println(COMPONENT_NAME + " [error] image loading failed for " + slice.getCalibration().getPath() + ": " + e.toString());
+            log.error("image loading failed for slice " + slice.getCalibration().getPath(), e);
 
             exception = e;
         }
@@ -235,12 +266,14 @@ public class Map {
             try {
                 tar.close();
             } catch (IOException e) {
-                System.out.println(COMPONENT_NAME + " [error] failed to close input stream: " + e.toString());
+                log.error("failed to close input stream", e);
             }
         }
 
         // fire event
-        fireEvent(null, exception);
+        if (!TrackingMIDlet.isEmulator()) {
+            (new Desktop.Event(Desktop.Event.EVENT_LOADING_STATUS_CHANGED, null, exception)).fire();
+        }
 
         // upon no exception just return
         if (exception == null) {
@@ -272,15 +305,5 @@ public class Map {
         }
 
         return sb.toString();
-    }
-
-    private void fireEvent(String message, Throwable t) {
-/*
-        if (event != null) {
-            event.setResult(message);
-            event.fire();
-        }
-*/
-        (new Desktop.Event(Desktop.Event.EVENT_BOOK_STATUS_CHANGED, message, t)).fire();
     }
 }

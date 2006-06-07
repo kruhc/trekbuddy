@@ -17,6 +17,9 @@ import java.util.EmptyStackException;
 import java.io.IOException;
 
 public class FileBrowser implements CommandListener {
+    private Display display;
+    private Displayable previous;
+
     private List list;
     private Stack dirs;
     private Command cmdCancel;
@@ -24,7 +27,9 @@ public class FileBrowser implements CommandListener {
 
     private String selection;
 
-    public FileBrowser() {
+    public FileBrowser(Display display) {
+        this.display = display;
+        this.previous = display.getCurrent();
     }
 
     public String getSelection() {
@@ -80,6 +85,9 @@ public class FileBrowser implements CommandListener {
         if (quit) {
             // gc
             list = null;
+
+            // restore previous screen
+            display.setCurrent(previous);
 
             // we are done
             (new Desktop.Event(Desktop.Event.EVENT_FILE_BROWSER_FINISHED, selection, throwable)).fire();

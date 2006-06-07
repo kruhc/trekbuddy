@@ -15,11 +15,16 @@ import javax.microedition.lcdui.Command;
 import javax.microedition.lcdui.TextField;
 
 public class SettingsForm implements CommandListener {
+    private Display display;
+    private Displayable previous;
+
     private TextField fieldBook;
     private ChoiceGroup choiceProvider;
     private ChoiceGroup choiceDesktop;
 
-    public SettingsForm() {
+    public SettingsForm(Display display) {
+        this.display = display;
+        this.previous = display.getCurrent();
     }
 
     public void show() {
@@ -53,14 +58,15 @@ public class SettingsForm implements CommandListener {
         form.setCommandListener(this);
 
         // show
-        Desktop.Event.getDisplay().setCurrent(form);
+        display.setCurrent(form);
     }
 
     public void commandAction(Command command, Displayable displayable) {
         boolean changed = false;
 
         if (command.getCommandType() == Command.BACK) {
-            // nothing to do
+            // restore previous screen
+            display.setCurrent(previous);
         } else if (command.getCommandType() == Command.SCREEN) {
             // "Apply", "Save"
             Config config = Config.getSafeInstance();
@@ -72,12 +78,15 @@ public class SettingsForm implements CommandListener {
                     config.update();
 
                     // TODO use event
-                    Desktop.showInfo(Desktop.Event.getDisplay(), "Configuration saved");
+                    Desktop.showInfo(display, "Configuration saved", previous);
 
                 } catch (ConfigurationException e) {
                     // TODO use event
-                    Desktop.showError(Desktop.Event.getDisplay(), "Failed to save configuration", e);
+                    Desktop.showError(display, "Failed to save configuration", e);
                 }
+            } else {
+                // restore previous screen
+                display.setCurrent(previous);
             }
 
             // TODO detect any change and set 'changed' flagged accordingly

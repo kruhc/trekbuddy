@@ -3,6 +3,8 @@
 
 package cz.kruch.track.configuration;
 
+import cz.kruch.track.util.Logger;
+
 import javax.microedition.rms.RecordStore;
 import javax.microedition.rms.RecordStoreException;
 import java.io.DataInputStream;
@@ -12,6 +14,8 @@ import java.io.DataOutputStream;
 import java.io.ByteArrayOutputStream;
 
 public abstract class Config {
+    private static final Logger log = new Logger("Config");
+
     public static final String[] LOCATION_PROVIDERS = new String[] {
         "<none>",
         "Bluetooth (JSR-82)",
@@ -109,14 +113,14 @@ public abstract class Config {
                     // new store? existing store? corrupted store?
                     switch (rs.getNumRecords()) {
                         case 0:
-                            System.out.println("new cfg");
+                            log.info("new configuration");
                             break;
                         case 1: {
                                 DataInputStream din = new DataInputStream(new ByteArrayInputStream(rs.getRecord(1)));
                                 mapPath = din.readUTF();
                                 locationProvider = din.readUTF();
                                 fullscreen = din.readBoolean();
-                                System.out.println("configuration read");
+                                log.info("configuration read");
                             } break;
                         default: {
 
@@ -139,7 +143,7 @@ public abstract class Config {
                     throw new ConfigurationException(e);
                 }
 
-                System.out.println("configuration initialized");
+                log.info("configuration initialized");
 
                 initialized = true;
             }
@@ -173,7 +177,7 @@ public abstract class Config {
                 throw new ConfigurationException(e);
             }
 
-            System.out.println("configuration updated");
+            log.info("configuration updated");
         }
     }
 }

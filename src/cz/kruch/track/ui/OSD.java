@@ -17,9 +17,14 @@ class OSD extends Bar {
             info = NO_INFO;
 
         }
+
         // draw position
         graphics.drawImage(bar, gx, gy, Graphics.TOP | Graphics.LEFT);
-        graphics.setColor(255, 255, 255);
+        if (ok) {
+            graphics.setColor(255, 255, 255);
+        } else {
+            graphics.setColor(255, 0, 0);
+        }
         graphics.setFont(font);
         graphics.drawString(info, gx, gy, Graphics.TOP | Graphics.LEFT);
     }

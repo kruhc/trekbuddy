@@ -3,11 +3,7 @@
 
 package cz.kruch.track.ui;
 
-import cz.kruch.track.location.Position;
-
-import javax.microedition.lcdui.Font;
 import javax.microedition.lcdui.Graphics;
-import javax.microedition.lcdui.Image;
 
 class Status extends Bar{
     private int h;

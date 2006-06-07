@@ -28,6 +28,8 @@ public class InfoForm implements CommandListener {
         // form
         Form form = new Form("Info");
         form.append(new StringItem("In emulator", (new Boolean(TrackingMIDlet.isEmulator())).toString()));
+        form.append(new StringItem("JSR-82", (new Boolean(TrackingMIDlet.isJsr82())).toString()));
+        form.append(new StringItem("JSR-179", (new Boolean(TrackingMIDlet.isJsr179())).toString()));
         form.append(new StringItem("Total memory", Long.toString(Runtime.getRuntime().totalMemory())));
         form.append(new StringItem("Free memory", Long.toString(Runtime.getRuntime().freeMemory())));
         form.addCommand(new Command("Close", Command.CANCEL, 1));

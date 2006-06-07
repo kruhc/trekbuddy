@@ -19,7 +19,11 @@ public class TrackingMIDlet extends MIDlet {
     private static String APP_NAME = Desktop.APP_TITLE + " (C) 2006 Ales Pour";
 
     private Desktop desktop;
+
+    // system info
     private static boolean emulator;
+    private static boolean jsr179;
+    private static boolean jsr82;
 
     static {
         try {
@@ -30,7 +34,19 @@ public class TrackingMIDlet extends MIDlet {
 
     public TrackingMIDlet() {
         this.desktop = null;
-        this.emulator = "true".equals(getAppProperty("Is-Emulator"));
+
+        // detect environment
+        TrackingMIDlet.emulator = "true".equals(getAppProperty("Is-Emulator"));
+        try {
+            Class clazz = Class.forName("javax.microedition.location.LocationProvider");
+            TrackingMIDlet.jsr179 = true;
+        } catch (ClassNotFoundException e) {
+        }
+        try {
+            Class clazz = Class.forName("javax.bluetooth.DiscoveryAgent");
+            TrackingMIDlet.jsr82 = true;
+        } catch (ClassNotFoundException e) {
+        }
     }
 
     protected void startApp() throws MIDletStateChangeException {
@@ -109,7 +125,19 @@ public class TrackingMIDlet extends MIDlet {
         // TODO
     }
 
+    /*
+     * Environment info.
+     */
+
     public static boolean isEmulator() {
         return emulator;
+    }
+
+    public static boolean isJsr179() {
+        return jsr179;
+    }
+
+    public static boolean isJsr82() {
+        return jsr82;
     }
 }

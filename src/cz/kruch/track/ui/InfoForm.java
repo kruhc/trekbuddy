@@ -3,6 +3,8 @@
 
 package cz.kruch.track.ui;
 
+import cz.kruch.track.TrackingMIDlet;
+
 import javax.microedition.lcdui.Display;
 import javax.microedition.lcdui.Form;
 import javax.microedition.lcdui.StringItem;
@@ -25,6 +27,7 @@ public class InfoForm implements CommandListener {
 
         // form
         Form form = new Form("Info");
+        form.append(new StringItem("In emulator", (new Boolean(TrackingMIDlet.isEmulator())).toString()));
         form.append(new StringItem("Total memory", Long.toString(Runtime.getRuntime().totalMemory())));
         form.append(new StringItem("Free memory", Long.toString(Runtime.getRuntime().freeMemory())));
         form.addCommand(new Command("Close", Command.CANCEL, 1));

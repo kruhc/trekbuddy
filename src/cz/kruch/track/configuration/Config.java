@@ -4,6 +4,7 @@
 package cz.kruch.track.configuration;
 
 import cz.kruch.track.util.Logger;
+import cz.kruch.track.TrackingMIDlet;
 
 import javax.microedition.rms.RecordStore;
 import javax.microedition.rms.RecordStoreException;
@@ -12,19 +13,17 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.DataOutputStream;
 import java.io.ByteArrayOutputStream;
+import java.util.Vector;
 
 public abstract class Config {
     private static final Logger log = new Logger("Config");
 
-    public static final String[] LOCATION_PROVIDERS = new String[] {
-        "<none>",
-        "Bluetooth (JSR-82)",
-        "Internal (JSR-179)",
-        "Simulator"
-    };
+    public static final String LOCATION_PROVIDER_JSR82 = "Bluetooth (JSR-82)";
+    public static final String LOCATION_PROVIDER_JSR179 = "Internal (JSR-179)";
+    public static final String LOCATION_PROVIDER_SIMULATOR = "Simulator";
 
-    public static final String DEFAULT_MAP_PATH    = "file:///E:/trekbuddy/map.tar";
-    public static final String DEFAULT_PROVIDER     = LOCATION_PROVIDERS[0];
+    public static final String DEFAULT_MAP_PATH     = "file:///E:/trekbuddy/map.tar";
+    public static final String DEFAULT_PROVIDER     = LOCATION_PROVIDER_SIMULATOR;
     public static final boolean DEFAULT_FULLSCREEN  = false;
 
     private static Config instance = null;
@@ -57,6 +56,17 @@ public abstract class Config {
         } catch (ConfigurationException e) {
             return safeInstance;
         }
+    }
+
+    public String[] getLocationProviders() {
+        Vector list = new Vector();
+        list.addElement(LOCATION_PROVIDER_SIMULATOR);
+        if (TrackingMIDlet.isJsr82()) list.addElement(LOCATION_PROVIDER_JSR82);
+        if (TrackingMIDlet.isJsr179()) list.addElement(LOCATION_PROVIDER_JSR179);
+        String[] result = new String[list.size()];
+        list.copyInto(result);
+
+        return result;
     }
 
     public String getMapPath() {

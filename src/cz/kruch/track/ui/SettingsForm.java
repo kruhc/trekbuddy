@@ -36,8 +36,9 @@ public class SettingsForm implements CommandListener {
 
         // location provider radioboxes
         choiceProvider = new ChoiceGroup("Location Provider", ChoiceGroup.EXCLUSIVE);
-        for (int N = Config.LOCATION_PROVIDERS.length, i = 0; i < N; i++) {
-            String provider = Config.LOCATION_PROVIDERS[i];
+        String[] providers = Config.getSafeInstance().getLocationProviders();
+        for (int N = providers.length, i = 0; i < N; i++) {
+            String provider = providers[i];
             int idx = choiceProvider.append(provider, null);
             if (provider.equals(Config.getSafeInstance().getLocationProvider())) {
                 choiceProvider.setSelectedIndex(idx, true);

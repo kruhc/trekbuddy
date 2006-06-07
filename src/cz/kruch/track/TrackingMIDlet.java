@@ -19,6 +19,7 @@ public class TrackingMIDlet extends MIDlet {
     private static String APP_NAME = Desktop.APP_TITLE + " (C) 2006 Ales Pour";
 
     private Desktop desktop;
+    private static boolean emulator;
 
     static {
         try {
@@ -29,6 +30,7 @@ public class TrackingMIDlet extends MIDlet {
 
     public TrackingMIDlet() {
         this.desktop = null;
+        this.emulator = "true".equals(getAppProperty("Is-Emulator"));
     }
 
     protected void startApp() throws MIDletStateChangeException {
@@ -71,7 +73,7 @@ public class TrackingMIDlet extends MIDlet {
             desktop = new Desktop(display);
 
             // 4. read default map
-            console.show("reading default map...");
+            console.show("loading default map...");
             try {
                 desktop.initMap();
                 console.result(0, "ok");
@@ -105,5 +107,9 @@ public class TrackingMIDlet extends MIDlet {
 
     protected void destroyApp(boolean b) throws MIDletStateChangeException {
         // TODO
+    }
+
+    public static boolean isEmulator() {
+        return emulator;
     }
 }

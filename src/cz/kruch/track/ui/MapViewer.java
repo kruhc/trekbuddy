@@ -149,7 +149,8 @@ final class MapViewer {
             w = x + width - mapPosition.getX();
             x_dest = gx + mapPosition.getX() - x;
         }
-        if (w > width) w = width;
+        if (w > (width - x_dest)) w = width - x_dest;
+        if (w > slice.getWidth()) w = slice.getWidth();
 
         int y_src = -1;
         int h = -1;
@@ -163,10 +164,11 @@ final class MapViewer {
             h = y + height - mapPosition.getY();
             y_dest = gy + mapPosition.getY() - y;
         }
-        if (h > height) h = height;
+        if (h > (height - y_dest)) h = height - y_dest;
+        if (h > slice.getHeight()) h = slice.getHeight();
 
         if (w > 0 && h > 0) {
-//            System.out.println("draw region src " + x_src + "x" + y_src + " dim " + w + "x" + h + " at " + x_dest + "x" + y_dest);
+//            System.out.println("draw region " + x_src + "x" + y_src + " dim " + w + "x" + h + " of " + slice + " at " + x_dest + "x" + y_dest);
             graphics.drawRegion(slice.getImage(),
                                 x_src, y_src, w, h,
                                 Sprite.TRANS_NONE,

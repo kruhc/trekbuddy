@@ -115,10 +115,10 @@ public class Map {
 
         // check map for consistency
         if (calibration == null) {
-            throw new IllegalStateException("Map calibration info missing");
+            throw new InvalidMapException("Map calibration info missing");
         }
         if (slices.size() == 0) {
-            throw new IllegalStateException("Empty map - no slices");
+            throw new InvalidMapException("Empty map - no slices");
         }
 
         // absolutize slices position

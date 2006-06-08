@@ -10,11 +10,12 @@ import javax.microedition.lcdui.Image;
 public class Slice {
     private Calibration calibration;
     private Image image;
-    private Position position;
 
     // slice absolute position
-    protected int absx;
-    protected int absy;
+    private Position position;
+
+    // slice range (absolute)
+    private int minx, maxx, miny, maxy;
 
     public Slice(Calibration calibration) {
         this.calibration = calibration;
@@ -41,9 +42,11 @@ public class Slice {
     }
 
     public void absolutizePosition(Calibration parent) {
-        absx = parent.getPositions()[0].getX() - calibration.getPositions()[0].getX();
-        absy = parent.getPositions()[0].getY() - calibration.getPositions()[0].getY();
-        position = new Position(absx, absy);
+        position = calibration.computeAbsolutizePosition(parent);
+        minx = position.getX();
+        maxx = minx + getWidth();
+        miny = position.getY();
+        maxy = miny + getHeight();
     }
 
     public Position getAbsolutePosition() {
@@ -51,7 +54,7 @@ public class Slice {
     }
 
     public boolean isWithin(int x, int y) {
-        return (x >= absx && x <= (absx + getWidth()) && y >= absy && y <= (absy + getHeight()));
+        return (x >= minx && x <= maxx && y >= miny && y <= maxy);
     }
 
     public boolean equals(Object obj) {
@@ -64,7 +67,7 @@ public class Slice {
 
     // debug
     public String toString() {
-        return "Slice " + absx + "x" + absy + " " + getWidth() + "x" + getHeight() + " " + image;
+        return "Slice " + getCalibration().getPath() + " pos " + position + " " + getWidth() + "x" + getHeight() + " " + image;
     }
     // ~debug
 }

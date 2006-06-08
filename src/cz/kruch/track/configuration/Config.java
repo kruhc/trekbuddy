@@ -22,10 +22,6 @@ public abstract class Config {
     public static final String LOCATION_PROVIDER_JSR179 = "Internal (JSR-179)";
     public static final String LOCATION_PROVIDER_SIMULATOR = "Simulator";
 
-    public static final String DEFAULT_MAP_PATH     = "file:///E:/trekbuddy/map.tar";
-    public static final String DEFAULT_PROVIDER     = LOCATION_PROVIDER_SIMULATOR;
-    public static final boolean DEFAULT_FULLSCREEN  = false;
-
     private static Config instance = null;
     private static Config safeInstance = new DefaultConfig();
 
@@ -33,9 +29,11 @@ public abstract class Config {
      * Configuration params, initialized to default values.
      */
 
-    protected String mapPath = DEFAULT_MAP_PATH;
-    protected String locationProvider = DEFAULT_PROVIDER;
-    protected boolean fullscreen = DEFAULT_FULLSCREEN;
+    protected String mapPath = "file:///E:/maps/map.tar";
+    protected String locationProvider = LOCATION_PROVIDER_SIMULATOR;
+    protected boolean fullscreen = false;
+    protected String simulatorPath = "file:///E:/maps/simulator.log";
+    protected int simulatorDelay = 100;
 
     protected Config() {
     }
@@ -93,6 +91,22 @@ public abstract class Config {
         this.fullscreen = fullscreen;
     }
 
+    public String getSimulatorPath() {
+        return simulatorPath;
+    }
+
+    public void setSimulatorPath(String simulatorPath) {
+        this.simulatorPath = simulatorPath;
+    }
+
+    public int getSimulatorDelay() {
+        return simulatorDelay;
+    }
+
+    public void setSimulatorDelay(int simulatorDelay) {
+        this.simulatorDelay = simulatorDelay;
+    }
+
     private static class DefaultConfig extends Config {
         public DefaultConfig() {
         }
@@ -130,6 +144,8 @@ public abstract class Config {
                                 mapPath = din.readUTF();
                                 locationProvider = din.readUTF();
                                 fullscreen = din.readBoolean();
+                                simulatorPath = din.readUTF();
+                                simulatorDelay = din.readInt();
                                 log.info("configuration read");
                             } break;
                         default: {
@@ -173,6 +189,8 @@ public abstract class Config {
                 dout.writeUTF(mapPath);
                 dout.writeUTF(locationProvider);
                 dout.writeBoolean(fullscreen);
+                dout.writeUTF(simulatorPath);
+                dout.writeInt(simulatorDelay);
                 dout.flush();
                 byte[] bytes = data.toByteArray();
                 if (rs.getNumRecords() > 0) {

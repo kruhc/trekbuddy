@@ -18,9 +18,11 @@ public class SettingsForm implements CommandListener {
     private Display display;
     private Displayable previous;
 
-    private TextField fieldBook;
+    private TextField fieldMapPath;
     private ChoiceGroup choiceProvider;
     private ChoiceGroup choiceDesktop;
+    private TextField fieldSimulatorPath;
+    private TextField fieldSimulatorDelay;
 
     public SettingsForm(Display display) {
         this.display = display;
@@ -31,8 +33,8 @@ public class SettingsForm implements CommandListener {
         Form form = new Form("Settings");
 
         // map path field
-        fieldBook = new TextField("Default Map", Config.getSafeInstance().getMapPath(), 32, TextField.URL);
-        form.append(fieldBook);
+        fieldMapPath = new TextField("Default Map", Config.getSafeInstance().getMapPath(), 32, TextField.URL);
+        form.append(fieldMapPath);
 
         // location provider radioboxes
         choiceProvider = new ChoiceGroup("Location Provider", ChoiceGroup.EXCLUSIVE);
@@ -49,8 +51,13 @@ public class SettingsForm implements CommandListener {
         // desktop settings
         choiceDesktop = new ChoiceGroup("Desktop", ChoiceGroup.MULTIPLE);
         choiceDesktop.setSelectedIndex(choiceDesktop.append("fullscreen", null), Config.getSafeInstance().isFullscreen());
-
         form.append(choiceDesktop);
+
+        // simulator path field
+        fieldSimulatorPath = new TextField("Simulator File", Config.getSafeInstance().getSimulatorPath(), 32, TextField.URL);
+        fieldSimulatorDelay = new TextField("Simulator Delay", Integer.toString(Config.getSafeInstance().getSimulatorDelay()), 8, TextField.NUMERIC);
+        form.append(fieldSimulatorPath);
+        form.append(fieldSimulatorDelay);
 
         // add command and handling
         form.addCommand(new Command("Back", Command.BACK, 1));
@@ -71,15 +78,17 @@ public class SettingsForm implements CommandListener {
         } else if (command.getCommandType() == Command.SCREEN) {
             // "Apply", "Save"
             Config config = Config.getSafeInstance();
-            config.setMapPath(fieldBook.getString());
+            config.setMapPath(fieldMapPath.getString());
             config.setLocationProvider(choiceProvider.getString(choiceProvider.getSelectedIndex()));
             config.setFullscreen(choiceDesktop.isSelected(0));
+            config.setSimulatorPath(fieldSimulatorPath.getString());
+            config.setSimulatorDelay(Integer.parseInt(fieldSimulatorDelay.getString()));
             if ("Save".equals(command.getLabel())) {
                 try {
                     config.update();
 
                     // TODO use event
-                    Desktop.showInfo(display, "Configuration saved", previous);
+                    Desktop.showConfirmation(display, "Configuration saved", previous);
 
                 } catch (ConfigurationException e) {
                     // TODO use event

@@ -5,7 +5,6 @@ package cz.kruch.track.location;
 
 import api.location.LocationProvider;
 import api.location.LocationListener;
-import api.location.LocationException;
 
 import javax.microedition.io.file.FileConnection;
 import javax.microedition.io.Connector;
@@ -17,6 +16,8 @@ import cz.kruch.track.util.NmeaParser;
 
 public class SimulatorLocationProvider extends LocationProvider implements Runnable {
     private String path;
+    private int delay;
+
     private Thread thread;
     private boolean go;
     private FileConnection fc;
@@ -27,8 +28,9 @@ public class SimulatorLocationProvider extends LocationProvider implements Runna
     private int timeout;
     private int maxAge;
 
-    public SimulatorLocationProvider(String path) {
+    public SimulatorLocationProvider(String path, int delay) {
         this.path = path;
+        this.delay = delay < 25 ? 25 : delay;
     }
 
     public void setLocationListener(LocationListener locationListener, int interval, int timeout, int maxAge) {
@@ -94,7 +96,7 @@ public class SimulatorLocationProvider extends LocationProvider implements Runna
 
             // interval elapse
             try {
-                Thread.sleep(/*interval * 1000*/ 250);
+                Thread.sleep(delay);
             } catch (InterruptedException e) {
             }
         }

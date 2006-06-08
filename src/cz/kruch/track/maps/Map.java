@@ -51,8 +51,25 @@ public class Map {
         return calibration;
     }
 
+    public boolean isBuddy() {
+        return calibration instanceof Calibration.GMI;
+    }
+
+    public boolean isGpska() {
+        return calibration instanceof Calibration.XML;
+    }
+
+    public boolean isJ2n() {
+        return calibration instanceof Calibration.J2N;
+    }
+
     public void close() {
         log.info("close map");
+
+        for (Enumeration e = slices.elements(); e.hasMoreElements(); ) {
+            Slice slice = (Slice) e.nextElement();
+            slice.setImage(null);
+        }
 
         if (fileConnection != null) {
             try {
@@ -89,25 +106,20 @@ public class Map {
 
         // open the map
         fileConnection = (FileConnection) Connector.open(path, Connector.READ);
+        log.debug("map connection opened");
 
-        // look for calibration files in the map
-        TarInputStream tar = new TarInputStream(new BufferedInputStream(fileConnection.openInputStream(), SMALL_BUFFER_SIZE));
-        TarEntry entry = tar.getNextEntry();
-        while (entry != null) {
-            if (!entry.isDirectory()) {
-                if (entry.getName().endsWith(".gmi")) {
-                    Calibration calibration = Calibration.GMI.create(loadTextContent(tar, false));
-                    if (entry.getName().startsWith("slices/")) {
-                        Slice slice = new Slice(calibration);
-                        slices.addElement(slice);
-                    } else {
-                        this.calibration = calibration;
-                    }
-                }
-            }
-            entry = tar.getNextEntry();
+        // load map
+        Loader l = new Loader();
+/*
+        l.start();
+        try {
+            l.join();
+        } catch (InterruptedException e) {
         }
-        tar.close();
+*/
+        l.run();
+        l.checkException();
+        log.debug("map opened");
 
         /*
         * keep the connection open to avoid access confirmation
@@ -125,7 +137,10 @@ public class Map {
         for (Enumeration e = slices.elements(); e.hasMoreElements(); ) {
             Slice slice = (Slice) e.nextElement();
             slice.absolutizePosition(calibration);
+            System.out.println("slice finalized - " + slice);
         }
+
+        log.debug("map ready");
     }
 
     /**
@@ -212,6 +227,8 @@ public class Map {
 
         } catch (IOException e) {
             return e;
+        } catch (OutOfMemoryError e) {
+            return e;
         }
     }
 
@@ -231,12 +248,16 @@ public class Map {
      * Loads slice from map. Expects file connection opened.
      */
     private void loadSlice(Slice slice) throws IOException {
+        log.debug("Loading slice " + slice.getCalibration().getPath() + "...");
+
         // fire event
         if (!TrackingMIDlet.isEmulator()) {
             (new Desktop.Event(Desktop.Event.EVENT_LOADING_STATUS_CHANGED, "Loading slice " + slice.getCalibration().getPath() + "...", null)).fire();
         }
 
         IOException exception = null;
+        OutOfMemoryError error = null;
+        Throwable throwable = null;
 
         // find map entry and set it
         TarInputStream tar = null;
@@ -251,6 +272,11 @@ public class Map {
                 entry = tar.getNextEntry();
             }
 
+            // got image?
+            if (slice.getImage() == null) {
+                throw new InvalidMapException("No image " + slice.getCalibration().getPath());
+            }
+
             // log
             log.debug("image loaded for slice " + slice.getCalibration().getPath());
 
@@ -258,7 +284,13 @@ public class Map {
             // log
             log.error("image loading failed for slice " + slice.getCalibration().getPath(), e);
 
-            exception = e;
+            throwable = exception = e;
+
+        } catch (OutOfMemoryError e) {
+            // log
+            log.error("image loading failed for slice " + slice.getCalibration().getPath(), e);
+
+            throwable = error = e;
         }
 
         // close the stream
@@ -272,12 +304,16 @@ public class Map {
 
         // fire event
         if (!TrackingMIDlet.isEmulator()) {
-            (new Desktop.Event(Desktop.Event.EVENT_LOADING_STATUS_CHANGED, null, exception)).fire();
+            (new Desktop.Event(Desktop.Event.EVENT_LOADING_STATUS_CHANGED, null, throwable)).fire();
         }
 
         // upon no exception just return
         if (exception == null) {
-            return;
+            if (error == null) {
+                return;
+            } else {
+                throw error;
+            }
         }
 
         throw exception;
@@ -305,5 +341,50 @@ public class Map {
         }
 
         return sb.toString();
+    }
+
+    private class Loader extends Thread {
+        private IOException exception;
+
+        public void checkException() throws IOException {
+            if (exception != null) {
+                throw exception;
+            }
+        }
+
+        public void run() {
+            try {
+                TarInputStream tar = new TarInputStream(new BufferedInputStream(fileConnection.openInputStream(), SMALL_BUFFER_SIZE));
+                TarEntry entry = tar.getNextEntry();
+                while (entry != null) {
+                    if (!entry.isDirectory()) {
+                        String entryName = entry.getName();
+                        if (entryName.endsWith(".gmi")) {
+                            Calibration calibration = new Calibration.GMI(loadTextContent(tar, false), entryName);
+                            if (entryName.startsWith("slices/")) {
+                                Slice slice = new Slice(calibration);
+                                slices.addElement(slice);
+                            } else {
+                                Map.this.calibration = calibration;
+                            }
+                        } else if (entryName.endsWith(".xml")) {
+                            Calibration calibration = new Calibration.XML(loadTextContent(tar, false), entryName);
+                            if (entryName.startsWith("pictures/")) {
+                                Slice slice = new Slice(calibration);
+                                slices.addElement(slice);
+                            } else {
+                                Map.this.calibration = calibration;
+                            }
+                        } else if (entryName.endsWith(".j2n")) {
+                            Map.this.calibration = new Calibration.J2N(loadTextContent(tar, false), entryName);
+                        }
+                    }
+                    entry = tar.getNextEntry();
+                }
+                tar.close();
+            } catch (IOException e) {
+                exception = e;
+            }
+        }
     }
 }

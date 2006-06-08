@@ -129,7 +129,7 @@ public class Desktop extends GameCanvas implements Runnable, CommandListener, Lo
 
             // setup map viewer
             mapViewer.setMap(map);
-            mapViewer.ensureSlices();
+            mapLoading = mapViewer.ensureSlices();
         }
     }
 
@@ -186,7 +186,7 @@ public class Desktop extends GameCanvas implements Runnable, CommandListener, Lo
         } else if (command == cmdFocus) {
             if (!isMap()) {
                 showWarning(display, mapLoadingResult);
-            } else {
+            } else if (isProviderRunning()) {
                 browsing = false;
                 focus();
             }
@@ -210,15 +210,15 @@ public class Desktop extends GameCanvas implements Runnable, CommandListener, Lo
                 }
             } else {
                 // stop provider
-                if (stopProvider()) {
-                    // update menu
-                    removeCommand(cmdRun);
-                    cmdRun = new Command("Start", Command.SCREEN, 2);
-                    addCommand(cmdRun);
+                stopProvider();
 
-                    // tracking
-                    browsing = true;
-                }
+                // update menu
+                removeCommand(cmdRun);
+                cmdRun = new Command("Start", Command.SCREEN, 2);
+                addCommand(cmdRun);
+
+                // tracking
+                browsing = true;
             }
         }
     }
@@ -254,10 +254,10 @@ public class Desktop extends GameCanvas implements Runnable, CommandListener, Lo
 
         switch (newState) {
             case LocationProvider.AVAILABLE:
-                showInfo(display, "Simulator running", null);
+                showInfo(display, "Simulator started...", null);
                 break;
             case LocationProvider.TEMPORARILY_UNAVAILABLE:
-                showWarning(display, "Simulation ended");
+                showWarning(display, "Simulator finished");
                 break;
             case LocationProvider.OUT_OF_SERVICE:
                 showWarning(display, "Simulator crashed");
@@ -346,7 +346,10 @@ public class Desktop extends GameCanvas implements Runnable, CommandListener, Lo
                         }
                     } else {
                         if (mapViewer.scroll(action)) {
-                            renderScreen(true, true);
+                            mapLoading = mapViewer.ensureSlices();
+                            if (!mapLoading) {
+                                renderScreen(true, true);
+                            }
                         }
                     }
                 }
@@ -388,6 +391,19 @@ public class Desktop extends GameCanvas implements Runnable, CommandListener, Lo
         return mapViewer == null ? false : true;
     }
 
+    private boolean isProviderRunning() {
+        return provider == null ? false : true;
+    }
+
+    public static void showConfirmation(Display display, String message, Displayable nextDisplayable) {
+        Alert alert = new Alert(APP_TITLE, message + ".", null, AlertType.CONFIRMATION);
+        alert.setTimeout(INFO_DIALOG_TIMEOUT);
+        if (nextDisplayable == null)
+            display.setCurrent(alert);
+        else
+            display.setCurrent(alert, nextDisplayable);
+    }
+
     public static void showInfo(Display display, String message, Displayable nextDisplayable) {
         Alert alert = new Alert(APP_TITLE, message + ".", null, AlertType.INFO);
         alert.setTimeout(INFO_DIALOG_TIMEOUT);
@@ -407,6 +423,47 @@ public class Desktop extends GameCanvas implements Runnable, CommandListener, Lo
         Alert alert = new Alert(APP_TITLE, message + ". " + t.toString(), null, AlertType.ERROR);
         alert.setTimeout(Alert.FOREVER);
         display.setCurrent(alert);
+    }
+
+    public static void showError(Display display, String message, Throwable t, Displayable nextDisplayable) {
+        Alert alert = new Alert(APP_TITLE, message + ". " + t.toString(), null, AlertType.ERROR);
+        alert.setTimeout(Alert.FOREVER);
+        if (nextDisplayable == null)
+            display.setCurrent(alert);
+        else
+            display.setCurrent(alert, nextDisplayable);
+    }
+
+    private void updateBookLoadinResult(Throwable t) {
+        if (t == null) {
+            mapLoadingResult = null;
+        } else {
+            mapLoadingResult = MSG_NO_MAP + t.toString();
+        }
+    }
+
+    private boolean startProvider() {
+        provider = new SimulatorLocationProvider(Config.getSafeInstance().getSimulatorPath(),
+                                                 Config.getSafeInstance().getSimulatorDelay());
+        provider.setLocationListener(this, 1, -1, -1);
+        try {
+            provider.start();
+        } catch (IOException e) {
+            showError(display, "Failed to start provider", e);
+            return false;
+        }
+
+        return true;
+    }
+
+    private void stopProvider() {
+        try {
+            provider.stop();
+        } catch (IOException e) {
+            showError(display, "Failed to stop provider", e);
+        } finally {
+            provider = null;
+        }
     }
 
     /**
@@ -448,7 +505,69 @@ public class Desktop extends GameCanvas implements Runnable, CommandListener, Lo
                 } break;
 
                 case EVENT_FILE_BROWSER_FINISHED: {
-                    // TODO
+                    // had user selected anything?
+                    if (result != null) {
+
+                        /*
+                         * TODO not sure this is correct 'eventing'
+                         */
+
+                        // first try to load the map
+                        try {
+                            // TODO same code as in Desktop.initGUI()
+
+                            // gc
+                            if (desktop.map != null) {
+                                desktop.map.close();
+                                desktop.map = null;
+                            }
+                            desktop.mapViewer = null;
+                            System.gc();
+
+                            // clear map area with black
+                            Graphics g = desktop.getGraphics();
+                            g.setColor(0, 0, 0);
+                            g.fillRect(0, 0, desktop.getWidth(), desktop.getHeight());
+
+                            // load map
+                            desktop.map = new Map((String) result);
+
+                            // with failure upon startup, map viewer may be null
+                            if (desktop.mapViewer == null) {
+                                desktop.mapViewer = new MapViewer(0, 0, desktop.getWidth(), desktop.getHeight());
+                            }
+
+                            // setup map viewer
+                            desktop.mapViewer.setMap(desktop.map);
+                            desktop.mapLoading = desktop.mapViewer.ensureSlices();
+
+                        } catch (IOException e) {
+                            throwable = e;
+                            desktop.updateBookLoadinResult(e);
+                            showError(desktop.display, "Failed to load map", e, desktop);
+                        }
+
+                        // offer setting as default map
+                        if (throwable == null) {
+                            (new YesNoDialog(desktop.display, new YesNoDialog.AnswerListener(){
+                                public void response(int answer) {
+                                    log.debug("yes-no? " + answer);
+
+                                    // update cfg if requested
+                                    if (answer == YesNoDialog.AnswerListener.YES) {
+                                        try {
+                                            Config config = Config.getInstance();
+                                            config.setMapPath((String) result);
+                                            config.update();
+                                            showConfirmation(desktop.display, "Configuration updated", desktop);
+                                        } catch (ConfigurationException e) {
+                                            showError(desktop.display, "Failed to update configuration", e, desktop);
+                                        }
+                                    }
+                                }
+                            })).show("Use as default map", (String) result);
+                        }
+                    }
                 } break;
 
                 case EVENT_LOADING_STATUS_CHANGED: {
@@ -475,6 +594,8 @@ public class Desktop extends GameCanvas implements Runnable, CommandListener, Lo
 
                         // check keys
                         desktop.display.callSerially(desktop);
+                    } else {
+                        showError(desktop.display, (String) result, throwable);
                     }
                 } break;
             }
@@ -485,37 +606,5 @@ public class Desktop extends GameCanvas implements Runnable, CommandListener, Lo
             return "code " + code + ";result '" + result + "';throwable " + throwable;
         }
         // ~debug
-    }
-
-    private void updateBookLoadinResult(Throwable t) {
-        if (t == null) {
-            mapLoadingResult = null;
-        } else {
-            mapLoadingResult = MSG_NO_MAP + t.toString();
-        }
-    }
-
-    private boolean startProvider() {
-        provider = new SimulatorLocationProvider("file:///E:/track.nmea");
-        provider.setLocationListener(this, 1, -1, -1);
-        try {
-            ((SimulatorLocationProvider) provider).start();
-        } catch (IOException e) {
-            showError(display, "Failed to start provider", e);
-            return false;
-        }
-
-        return true;
-    }
-
-    private boolean stopProvider() {
-        try {
-            ((SimulatorLocationProvider) provider).stop();
-        } catch (IOException e) {
-            showError(display, "Failed to start provider", e);
-            return false;
-        }
-
-        return true;
     }
 }

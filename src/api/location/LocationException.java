@@ -10,4 +10,8 @@ public class LocationException extends Exception {
     public LocationException(String string) {
         super(string);
     }
+
+    public LocationException(Exception exception) {
+        super("api.location.LocationException: " + exception.toString());
+    }
 }

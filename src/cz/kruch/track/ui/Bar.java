@@ -8,6 +8,8 @@ import javax.microedition.lcdui.Font;
 import javax.microedition.lcdui.Graphics;
 
 abstract class Bar {
+    protected static final int BORDER = 2;
+    
     protected int gx, gy;
     protected int width, height;
     protected Image bar;

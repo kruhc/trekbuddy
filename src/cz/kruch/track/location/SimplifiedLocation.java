@@ -6,6 +6,8 @@ package cz.kruch.track.location;
 import api.location.Location;
 import api.location.QualifiedCoordinates;
 
+import java.util.Date;
+
 public class SimplifiedLocation extends Location {
     private QualifiedCoordinates qualifiedCoordinates;
     private long timestamp;
@@ -22,4 +24,11 @@ public class SimplifiedLocation extends Location {
     public long getTimestamp() {
         return timestamp;
     }
+
+    // debug
+
+    public String toString() {
+        return (new Date(timestamp)).toString() + ": " + qualifiedCoordinates.toString();
+    }
+    // ~debug
 }

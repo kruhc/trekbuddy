@@ -5,6 +5,7 @@ package cz.kruch.track.location;
 
 import api.location.LocationProvider;
 import api.location.LocationListener;
+import api.location.LocationException;
 
 import javax.microedition.io.file.FileConnection;
 import javax.microedition.io.Connector;
@@ -13,6 +14,7 @@ import java.io.IOException;
 
 import cz.kruch.j2se.io.BufferedInputStream;
 import cz.kruch.track.util.NmeaParser;
+import cz.kruch.track.configuration.Config;
 
 public class SimulatorLocationProvider extends LocationProvider implements Runnable {
     private String path;
@@ -23,34 +25,44 @@ public class SimulatorLocationProvider extends LocationProvider implements Runna
     private FileConnection fc;
     private InputStream in;
 
-    private LocationListener locationListener;
+    private volatile LocationListener listener;
     private int interval;
     private int timeout;
     private int maxAge;
 
     public SimulatorLocationProvider(String path, int delay) {
+        super(Config.LOCATION_PROVIDER_SIMULATOR);
         this.path = path;
         this.delay = delay < 25 ? 25 : delay;
     }
 
     public void setLocationListener(LocationListener locationListener, int interval, int timeout, int maxAge) {
-        this.locationListener = locationListener;
+        this.listener = locationListener;
         this.interval = interval;
         this.timeout = timeout;
         this.maxAge = maxAge;
     }
 
-    public void start() throws IOException {
-        fc = (FileConnection) Connector.open(path, Connector.READ);
-        in = new BufferedInputStream(fc.openInputStream());
-
-        go = true;
-        thread = new Thread(this);
-        thread.start();
-        System.out.println("simulator started");
+    public Object getImpl() {
+        return this;
     }
 
-    public void stop() throws IOException {
+    public void start() throws LocationException {
+        try {
+            fc = (FileConnection) Connector.open(path, Connector.READ);
+            in = new BufferedInputStream(fc.openInputStream());
+
+            go = true;
+            thread = new Thread(this);
+            thread.start();
+
+            System.out.println("simulator started");
+        } catch (IOException e) {
+            throw new LocationException(e);
+        }
+    }
+
+    public void stop() throws LocationException {
         go = false;
         try {
             thread.interrupt();
@@ -58,38 +70,48 @@ public class SimulatorLocationProvider extends LocationProvider implements Runna
         } catch (InterruptedException e) {
         }
 
-        in.close();
-        fc.close();
+        try {
+            in.close();
+            in = null;
+            fc.close();
+            fc = null;
+        } catch (IOException e) {
+            // ignore
+        }
+
         System.out.println("simulator stopped");
     }
 
     public void run() {
         System.out.println("simulator task starting");
 
-        final LocationListener l = locationListener;
-        l.providerStateChanged(this, LocationProvider.AVAILABLE);
+        boolean announced = false;
 
         for (; go ;) {
             // if any listener
-            if (l != null) {
-//                System.out.println("simulator sending location update");
+            if (listener != null) {
+
+                if (!announced) {
+                    announced = true;
+                    listener.providerStateChanged(this, LocationProvider.AVAILABLE);
+                }
+
                 try {
                     String nmea = nextGGA();
-//                    System.out.println("NMEA: " + nmea);
                     if (nmea == null) {
                         System.out.println("end of file");
-                        l.providerStateChanged(this, LocationProvider.TEMPORARILY_UNAVAILABLE);
+                        listener.providerStateChanged(this, LocationProvider.TEMPORARILY_UNAVAILABLE);
                         break;
                     }
                     try {
-                        l.locationUpdated(this, NmeaParser.parse(nmea));
+                        listener.locationUpdated(this, NmeaParser.parse(nmea));
                     } catch (Exception e) {
                         System.err.println("corrupted record: " + nmea + "\n" + e.toString());
                     }
                 } catch (Exception e) {
                     System.out.println("ERROR! " + e.toString());
                     e.printStackTrace();
-                    l.providerStateChanged(this, LocationProvider.OUT_OF_SERVICE);
+                    listener.providerStateChanged(this, LocationProvider.OUT_OF_SERVICE);
                     break;
                 }
             }

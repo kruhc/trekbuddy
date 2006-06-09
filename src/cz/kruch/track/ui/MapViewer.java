@@ -47,7 +47,7 @@ final class MapViewer {
 
     // TODO better name - x,y is desired position of crosshair!
     public boolean move(int x, int y) {
-//        System.out.println("move, current position " + this.x + "," + this.y);
+        log.debug("move, current position " + this.x + "," + this.y);
 
         boolean dirty = false;
         int direction = -1;

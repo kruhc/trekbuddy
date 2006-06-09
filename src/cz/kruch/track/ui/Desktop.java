@@ -7,6 +7,7 @@ import cz.kruch.track.maps.Map;
 import cz.kruch.track.configuration.Config;
 import cz.kruch.track.configuration.ConfigurationException;
 import cz.kruch.track.location.SimulatorLocationProvider;
+import cz.kruch.track.location.Jsr179LocationProvider;
 import cz.kruch.track.util.Logger;
 
 import javax.microedition.lcdui.Canvas;
@@ -19,11 +20,13 @@ import javax.microedition.lcdui.AlertType;
 import javax.microedition.lcdui.Graphics;
 import javax.microedition.lcdui.game.GameCanvas;
 import java.io.IOException;
+import java.util.Date;
 
 import api.location.LocationProvider;
 import api.location.LocationListener;
 import api.location.Location;
 import api.location.QualifiedCoordinates;
+import api.location.LocationException;
 
 /**
  * Application desktop.
@@ -40,14 +43,15 @@ public class Desktop extends GameCanvas implements Runnable, CommandListener, Lo
 
     // 1 sec timeout
     private static final int INFO_DIALOG_TIMEOUT = 1000;
+    private static final int WARN_DIALOG_TIMEOUT = 2500;
 
     // display
     private Display display;
 
     // desktop components
     private MapViewer mapViewer;
-    private Bar osd;
-    private Bar status;
+    private OSD osd;
+    private Status status;
 
     // data components
     private Map map;
@@ -224,7 +228,7 @@ public class Desktop extends GameCanvas implements Runnable, CommandListener, Lo
     }
 
     public void locationUpdated(LocationProvider provider, Location location) {
-//        System.out.println(COMPONENT_NAME + " [info] location update");
+        log.debug("location update: " + new Date(location.getTimestamp()) + ";" + location.getQualifiedCoordinates());
 
         // are we on map?
         if (!browsing && !mapLoading) {
@@ -254,15 +258,18 @@ public class Desktop extends GameCanvas implements Runnable, CommandListener, Lo
 
         switch (newState) {
             case LocationProvider.AVAILABLE:
-                showInfo(display, "Simulator started...", null);
+                showInfo(display, "Provider " + provider.getName() + " available", null);
                 break;
             case LocationProvider.TEMPORARILY_UNAVAILABLE:
-                showWarning(display, "Simulator finished");
+                showWarning(display, "Provider " + provider.getName() + " temporatily unavailable");
                 break;
             case LocationProvider.OUT_OF_SERVICE:
-                showWarning(display, "Simulator crashed");
+                showWarning(display, "Provider " + provider.getName() + " out of service");
                 break;
         }
+
+        osd.setProviderStatus(newState);
+        renderScreen(false, true);
     }
 
     public void run() {
@@ -415,7 +422,7 @@ public class Desktop extends GameCanvas implements Runnable, CommandListener, Lo
 
     public static void showWarning(Display display, String message) {
         Alert alert = new Alert(APP_TITLE, message + ".", null, AlertType.WARNING);
-        alert.setTimeout(Alert.FOREVER);
+        alert.setTimeout(WARN_DIALOG_TIMEOUT);
         display.setCurrent(alert);
     }
 
@@ -443,27 +450,47 @@ public class Desktop extends GameCanvas implements Runnable, CommandListener, Lo
     }
 
     private boolean startProvider() {
-        provider = new SimulatorLocationProvider(Config.getSafeInstance().getSimulatorPath(),
-                                                 Config.getSafeInstance().getSimulatorDelay());
-        provider.setLocationListener(this, 1, -1, -1);
+        // which provider?
+        String selectedProvider = Config.getSafeInstance().getLocationProvider();
+
+        // instantiat provider
+        if (Config.LOCATION_PROVIDER_SIMULATOR.equals(selectedProvider)) {
+            provider = new SimulatorLocationProvider(Config.getSafeInstance().getSimulatorPath(),
+                                                     Config.getSafeInstance().getSimulatorDelay());
+        } else if (Config.LOCATION_PROVIDER_JSR179.equals(selectedProvider)) {
+            provider = new Jsr179LocationProvider();
+        } else if (Config.LOCATION_PROVIDER_JSR82.equals(selectedProvider)) {
+            throw new IllegalArgumentException("Bluetooth Location Provider not supported yet");
+        }
+
+        // start provider
         try {
             provider.start();
-        } catch (IOException e) {
-            showError(display, "Failed to start provider", e);
+// ERROR: Current Displayable is Alert
+//            showInfo(display, "Provider " + provider + " started", null);
+        } catch (LocationException e) {
+            provider = null;
+            showError(display, "Failed to start provider " + provider, e);
             return false;
         }
+
+        // register as listener
+        provider.setLocationListener(this, -1, -1, -1);
 
         return true;
     }
 
-    private void stopProvider() {
+    private boolean stopProvider() {
         try {
+            provider.setLocationListener(null, -1, -1, -1);
             provider.stop();
-        } catch (IOException e) {
+        } catch (LocationException e) {
             showError(display, "Failed to stop provider", e);
         } finally {
             provider = null;
         }
+
+        return true;
     }
 
     /**

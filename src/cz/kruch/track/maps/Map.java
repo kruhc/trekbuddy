@@ -106,7 +106,7 @@ public class Map {
 
         // open the map
         fileConnection = (FileConnection) Connector.open(path, Connector.READ);
-        log.debug("map connection opened");
+        log.debug("map connection opened; " + path);
 
         // load map
         Loader l = new Loader();

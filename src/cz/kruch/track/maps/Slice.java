@@ -6,6 +6,7 @@ package cz.kruch.track.maps;
 import cz.kruch.track.ui.Position;
 
 import javax.microedition.lcdui.Image;
+import java.util.Enumeration;
 
 public class Slice {
     private Calibration calibration;
@@ -14,8 +15,10 @@ public class Slice {
     // slice absolute position
     private Position position;
 
+/*
     // slice range (absolute)
     private int minx, maxx, miny, maxy;
+*/
 
     public Slice(Calibration calibration) {
         this.calibration = calibration;
@@ -42,11 +45,7 @@ public class Slice {
     }
 
     public void absolutizePosition(Calibration parent) {
-        position = calibration.computeAbsolutizePosition(parent);
-        minx = position.getX();
-        maxx = minx + getWidth();
-        miny = position.getY();
-        maxy = miny + getHeight();
+        position = calibration.computeAbsolutePosition(parent);
     }
 
     public Position getAbsolutePosition() {
@@ -54,6 +53,11 @@ public class Slice {
     }
 
     public boolean isWithin(int x, int y) {
+        int minx = position.getX();
+        int maxx = minx + getWidth();
+        int miny = position.getY();
+        int maxy = miny + getHeight();
+
         return (x >= minx && x <= maxx && y >= miny && y <= maxy);
     }
 

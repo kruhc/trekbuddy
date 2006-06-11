@@ -543,13 +543,12 @@ public class Desktop extends GameCanvas implements Runnable, CommandListener, Lo
                         try {
                             // TODO same code as in Desktop.initGUI()
 
-                            // gc
+                            // close current map
                             if (desktop.map != null) {
                                 desktop.map.close();
                                 desktop.map = null;
                             }
                             desktop.mapViewer = null;
-                            System.gc();
 
                             // clear map area with black
                             Graphics g = desktop.getGraphics();

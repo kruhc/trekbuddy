@@ -34,7 +34,7 @@ public abstract class Calibration {
         this.path = parsePath(path) + ".png";
     }
 
-    public abstract Position computeAbsolutizePosition(Calibration parent);
+    public abstract Position computeAbsolutePosition(Calibration parent);
 
     public String getPath() {
         return path;
@@ -203,7 +203,7 @@ public abstract class Calibration {
 
     public static class GMI extends Calibration {
 
-        public Position computeAbsolutizePosition(Calibration parent) {
+        public Position computeAbsolutePosition(Calibration parent) {
             int absx = parent.positions[0].getX() - positions[0].getX();
             int absy = parent.positions[0].getY() - positions[0].getY();
             return new Position(absx, absy);
@@ -251,7 +251,7 @@ public abstract class Calibration {
         private static final String TAG_IMAGEWIDTH  = "imageWidth";
         private static final String TAG_IMAGEHEIGHT = "imageHeight";
 
-        public Position computeAbsolutizePosition(Calibration parent) {
+        public Position computeAbsolutePosition(Calibration parent) {
             if (parent.getClass().equals(getClass())) {
                 return new Position(0, 0);
             }
@@ -260,6 +260,7 @@ public abstract class Calibration {
             st.nextToken();
             int absx = Integer.parseInt(st.nextToken());
             int absy = Integer.parseInt(st.nextToken());
+
             return new Position(absx, absy);
         }
 
@@ -306,7 +307,7 @@ public abstract class Calibration {
                                 String text = parser.getText().trim();
 //                                System.out.println("content of " + currentTag + " " + text);
                                 if (TAG_NAME.equals(currentTag)) {
-                                    path = text + ".png";
+                                    this.path = text + ".png";
                                 }else if (TAG_LATITUDE.equals(currentTag)) {
                                     lat0 = Double.parseDouble(text);
                                 } else if (TAG_LONGITUDE.equals(currentTag)) {
@@ -344,8 +345,53 @@ public abstract class Calibration {
             super(content, path);
         }
 
-        public Position computeAbsolutizePosition(Calibration parent) {
+        public Position computeAbsolutePosition(Calibration parent) {
             return new Position(0, 0);
+        }
+    }
+
+    /**
+     * For simplified J2N format - no slice calibrations.
+     */
+    public static class Best extends Calibration {
+        private Position position;
+
+        public Best(String path) {
+            super(path);
+        }
+
+        public Position computeAbsolutePosition(Calibration parent) {
+            // share calibration with parent
+            positions = parent.positions;
+            coordinates = parent.coordinates;
+
+            // position is encoded in filename
+            StringTokenizer st = new StringTokenizer(path, "_.", false);
+            st.nextToken();
+            int absx = Integer.parseInt(st.nextToken());
+            int absy = Integer.parseInt(st.nextToken());
+            position = new Position(absx, absy);
+
+            return position;
+        }
+
+        public void fixDimension(Calibration parent, Slice[] siblings) {
+            int xNext = parent.getWidth();
+            int yNext = parent.getHeight();
+            for (int N = siblings.length, i = 0; i < N; i++) {
+                Slice s = siblings[i];
+                Position p = s.getAbsolutePosition();
+                int x = p.getX();
+                int y = p.getY();
+                if ((x > position.getX()) && (x < xNext)) {
+                    xNext = x;
+                }
+                if ((y > position.getY()) && (y < yNext)) {
+                    yNext = y;
+                }
+            }
+            width = xNext - position.getX();
+            height = yNext - position.getY();
         }
     }
 }

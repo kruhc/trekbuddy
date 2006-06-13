@@ -9,6 +9,7 @@ import cz.kruch.track.configuration.ConfigurationException;
 import cz.kruch.track.location.SimulatorLocationProvider;
 import cz.kruch.track.location.Jsr179LocationProvider;
 import cz.kruch.track.util.Logger;
+import cz.kruch.track.TrackingMIDlet;
 
 import javax.microedition.lcdui.Canvas;
 import javax.microedition.lcdui.Display;
@@ -256,16 +257,18 @@ public class Desktop extends GameCanvas implements Runnable, CommandListener, Lo
     public void providerStateChanged(LocationProvider provider, int newState) {
         log.info("location provider state changed; " + newState);
 
-        switch (newState) {
-            case LocationProvider.AVAILABLE:
-                showInfo(display, "Provider " + provider.getName() + " available", null);
-                break;
-            case LocationProvider.TEMPORARILY_UNAVAILABLE:
-                showWarning(display, "Provider " + provider.getName() + " temporatily unavailable");
-                break;
-            case LocationProvider.OUT_OF_SERVICE:
-                showWarning(display, "Provider " + provider.getName() + " out of service");
-                break;
+        if (!TrackingMIDlet.isEmulator()) {
+            switch (newState) {
+                case LocationProvider.AVAILABLE:
+                    showInfo(display, "Provider " + provider.getName() + " available", null);
+                    break;
+                case LocationProvider.TEMPORARILY_UNAVAILABLE:
+                    showWarning(display, "Provider " + provider.getName() + " temporatily unavailable");
+                    break;
+                case LocationProvider.OUT_OF_SERVICE:
+                    showWarning(display, "Provider " + provider.getName() + " out of service");
+                    break;
+            }
         }
 
         osd.setProviderStatus(newState);
@@ -482,7 +485,6 @@ public class Desktop extends GameCanvas implements Runnable, CommandListener, Lo
 
     private boolean stopProvider() {
         try {
-            provider.setLocationListener(null, -1, -1, -1);
             provider.stop();
         } catch (LocationException e) {
             showError(display, "Failed to stop provider", e);

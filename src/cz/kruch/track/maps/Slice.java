@@ -6,7 +6,6 @@ package cz.kruch.track.maps;
 import cz.kruch.track.ui.Position;
 
 import javax.microedition.lcdui.Image;
-import java.util.Enumeration;
 
 public class Slice {
     private Calibration calibration;

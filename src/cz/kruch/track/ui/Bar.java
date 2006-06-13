@@ -3,6 +3,8 @@
 
 package cz.kruch.track.ui;
 
+import cz.kruch.track.TrackingMIDlet;
+
 import javax.microedition.lcdui.Image;
 import javax.microedition.lcdui.Font;
 import javax.microedition.lcdui.Graphics;
@@ -29,9 +31,10 @@ abstract class Bar {
 
     private void init() {
         int h = font.getHeight();
+        int color = TrackingMIDlet.numAlphaLevels() > 2 ? 0xa07f7f7f : 0xff7f7f7f;
         int[] shadow = new int[width * h];
         for (int N = shadow.length, i = 0; i < N; i++) {
-            shadow[i] = 0xaf7f7f7f;
+            shadow[i] = color;
         }
         bar = Image.createRGBImage(shadow, width, h, true);
     }

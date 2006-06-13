@@ -376,8 +376,8 @@ public abstract class Calibration {
         }
 
         public void fixDimension(Calibration parent, Slice[] siblings) {
-            int xNext = parent.getWidth();
-            int yNext = parent.getHeight();
+            int xNext = parent.width;
+            int yNext = parent.height;
             for (int N = siblings.length, i = 0; i < N; i++) {
                 Slice s = siblings[i];
                 Position p = s.getAbsolutePosition();
@@ -392,6 +392,163 @@ public abstract class Calibration {
             }
             width = xNext - position.getX();
             height = yNext - position.getY();
+        }
+    }
+
+    public static class Ozi extends Calibration {
+        public Position computeAbsolutePosition(Calibration parent) {
+            int absx = parent.positions[0].getX() - positions[0].getX();
+            int absy = parent.positions[0].getY() - positions[0].getY();
+            return new Position(absx, absy);
+        }
+
+        public Ozi(String content, String path) throws InvalidMapException {
+            super(path);
+
+            int count = 0;
+            Vector xy = new Vector(), ll = new Vector();
+            StringTokenizer st = new StringTokenizer(content, "\n\r", false);
+            while (st.hasMoreTokens()) {
+                String line = st.nextToken();
+                if (line.startsWith("Point")) {
+                    boolean b = parsePoint(line, xy, ll);
+                    if (b) count++;
+                    log.debug("point parsed? " + b);
+                } else if (line.startsWith("MMPXY")) {
+                    if (count < 2) {
+                        boolean b = parseXy(line, xy);
+                        log.debug("mmpxy parsed? " + b);
+                    }
+                } else if (line.startsWith("MMPLL")) {
+                    if (count < 2) {
+                        boolean b = parseLl(line, ll);
+                        log.debug("mmpll parsed? " + b);
+                    }
+                } else if (line.startsWith("IWH")) {
+                    log.debug("parse IWH");
+                    parseIwh(line);
+                }
+            }
+
+            // check
+            if (width == -1  || height == -1) {
+                throw new InvalidMapException("Invalid dimension");
+            }
+
+            // paranoia
+            if (xy.size() != ll.size()) {
+                throw new IllegalStateException("Collection size mismatch");
+            }
+
+            positions = new Position[xy.size()];
+            coordinates = new QualifiedCoordinates[ll.size()];
+            xy.copyInto(positions);
+            ll.copyInto(coordinates);
+        }
+
+        private boolean parsePoint(String line, Vector xy, Vector ll) {
+            int index = 0;
+            String px = null, py = null;
+            String lath = null, latm = null, lats = null;
+            String lonh = null, lonm = null, lons = null;
+            StringTokenizer st = new StringTokenizer(line, " \t,", true);
+            while (st.hasMoreTokens()) {
+                String token = st.nextToken().trim();
+                if (",".equals(token)) {
+                    index++;
+                } else if (" ".equals(token) || "\t".equals(token)) {
+                    // nothing
+                } else if (index == 2) {
+                    px = token;
+                } else if (index == 3) {
+                    py = token;
+                } else if (index == 6) {
+                    lath = token;
+                } else if (index == 7) {
+                    latm = token;
+                } else if (index == 8) {
+                    lats = token;
+                } else if (index == 9) {
+                    lonh = token;
+                } else if (index == 10) {
+                    lonm = token;
+                } else if (index == 11) {
+                    lons = token;
+                } else if (index > 11) {
+                    break;
+                }
+            }
+
+            try {
+                int x = Integer.parseInt(px);
+                int y = Integer.parseInt(py);
+                double lat = Integer.parseInt(lath) + (Double.parseDouble(latm) * 100 / 60);
+                lats.length(); // TODO
+                double lon = Integer.parseInt(lonh) + (Double.parseDouble(lonm) * 100 / 60);
+                lons.length(); // TODO
+
+                xy.addElement(new Position(x, y));
+                ll.addElement(new QualifiedCoordinates(lat, lon));
+
+            } catch (NumberFormatException e) {
+                return false;
+            } catch (NullPointerException e) {
+                return false;
+            }
+
+            return true;
+        }
+
+        private boolean parseXy(String line, Vector xy) {
+            try {
+                StringTokenizer st = new StringTokenizer(line, " \t,", false);
+                st.nextToken();
+                String index = st.nextToken();
+                int x = Integer.parseInt(st.nextToken());
+                int y = Integer.parseInt(st.nextToken());
+
+                xy.addElement(new Position(x, y));
+
+            } catch (NumberFormatException e) {
+                e.printStackTrace();
+                return false;
+            }
+
+            return true;
+        }
+
+        private boolean parseLl(String line, Vector ll) {
+            try {
+                StringTokenizer st = new StringTokenizer(line, " \t,", false);
+                st.nextToken();
+                String index = st.nextToken();
+                double lat = Double.parseDouble(st.nextToken());
+                double lon = Double.parseDouble(st.nextToken());
+
+                ll.addElement(new QualifiedCoordinates(lat, lon));
+
+            } catch (NumberFormatException e) {
+                e.printStackTrace();
+                return false;
+            }
+
+            return true;
+        }
+
+        private void parseIwh(String line) {
+            int index = 0;
+            StringTokenizer st = new StringTokenizer(line, " \t,", true);
+            while (st.hasMoreTokens()) {
+                String token = st.nextToken();
+                System.out.println("token " + index + " = '" + token +"'");
+                if (",".equals(token)) {
+                    index++;
+                } else if (index == 2) {
+                    width = Integer.parseInt(token);
+                } else if (index == 3) {
+                    height = Integer.parseInt(token);
+                }
+            }
         }
     }
 }

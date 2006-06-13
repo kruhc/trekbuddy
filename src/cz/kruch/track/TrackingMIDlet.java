@@ -14,6 +14,8 @@ import cz.kruch.track.configuration.ConfigurationException;
 
 import java.io.UnsupportedEncodingException;
 
+import com.ice.tar.TarInputStream;
+
 public class TrackingMIDlet extends MIDlet {
 
     private static String APP_NAME = Desktop.APP_TITLE + " (C) 2006 Ales Pour";
@@ -21,9 +23,11 @@ public class TrackingMIDlet extends MIDlet {
     private Desktop desktop;
 
     // system info
+    private static String flags;
     private static boolean emulator;
     private static boolean jsr179;
     private static boolean jsr82;
+    private static int numAlphaLevels = 2;
 
     static {
         try {
@@ -36,6 +40,7 @@ public class TrackingMIDlet extends MIDlet {
         this.desktop = null;
 
         // detect environment
+        TrackingMIDlet.flags = getAppProperty("App-Flags");
         TrackingMIDlet.emulator = "true".equals(getAppProperty("Is-Emulator"));
         try {
             Class clazz = Class.forName("javax.microedition.location.LocationProvider");
@@ -47,10 +52,19 @@ public class TrackingMIDlet extends MIDlet {
             TrackingMIDlet.jsr82 = true;
         } catch (ClassNotFoundException e) {
         }
+
+        // setup environment
+        if (hasFlag("fs_read_skip")) {
+            System.out.println("* read-skip feature on");
+            TarInputStream.useReadSkip = true;
+        }
     }
 
     protected void startApp() throws MIDletStateChangeException {
         Display display = Display.getDisplay(this);
+
+        // setup environment
+        TrackingMIDlet.numAlphaLevels = display.numAlphaLevels();
 
         // create desktop if it does not exist
         if (desktop == null) {
@@ -77,12 +91,12 @@ public class TrackingMIDlet extends MIDlet {
 
 /*
             // SE, WTK fix
-            Config.getSafeInstance().setBookPath("file:///E/slices.tar");
-
+            Config.getSafeInstance().setMapPath("file:///E/cr-gpska.tar");
 */
+
 /*
             // BENQ fix
-            Config.getSafeInstance().setBookPath("file:///0:/Misc/slices-big.tar");
+            Config.getSafeInstance().setSimulatorPath("file:///0:/Misc/track.nmea");
 */
 
             // 3. create desktop
@@ -139,5 +153,13 @@ public class TrackingMIDlet extends MIDlet {
 
     public static boolean isJsr82() {
         return jsr82;
+    }
+
+    public static boolean hasFlag(String flag) {
+        return flags == null ? false : flags.indexOf(flag) > -1;
+    }
+
+    public static int numAlphaLevels() {
+        return numAlphaLevels;
     }
 }

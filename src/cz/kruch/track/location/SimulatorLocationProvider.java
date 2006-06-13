@@ -64,10 +64,11 @@ public class SimulatorLocationProvider extends LocationProvider implements Runna
 
     public void stop() throws LocationException {
         go = false;
+        thread.interrupt();
         try {
-            thread.interrupt();
             thread.join();
         } catch (InterruptedException e) {
+            System.err.println("join interrupted: " + e.toString());
         }
 
         try {
@@ -87,40 +88,47 @@ public class SimulatorLocationProvider extends LocationProvider implements Runna
 
         boolean announced = false;
 
-        for (; go ;) {
-            // if any listener
-            if (listener != null) {
+        try {
+            for (; go ;) {
+                // if any listener
+                if (listener != null) {
 
-                if (!announced) {
-                    announced = true;
-                    listener.providerStateChanged(this, LocationProvider.AVAILABLE);
-                }
+                    if (!announced) {
+                        announced = true;
+                        listener.providerStateChanged(this, LocationProvider.AVAILABLE);
+                    }
 
-                try {
                     String nmea = nextGGA();
                     if (nmea == null) {
                         System.out.println("end of file");
                         listener.providerStateChanged(this, LocationProvider.TEMPORARILY_UNAVAILABLE);
                         break;
                     }
+
                     try {
                         listener.locationUpdated(this, NmeaParser.parse(nmea));
                     } catch (Exception e) {
                         System.err.println("corrupted record: " + nmea + "\n" + e.toString());
                     }
-                } catch (Exception e) {
-                    System.out.println("ERROR! " + e.toString());
-                    e.printStackTrace();
-                    listener.providerStateChanged(this, LocationProvider.OUT_OF_SERVICE);
-                    break;
+                }
+
+                // interval elapse
+                try {
+                    Thread.sleep(delay);
+                } catch (InterruptedException e) {
                 }
             }
 
-            // interval elapse
-            try {
-                Thread.sleep(delay);
-            } catch (InterruptedException e) {
+        } catch (Exception e) {
+            if (e instanceof InterruptedException) {
+                // probably stop request
+            } else {
+                System.out.println("ERROR: " + e.toString());
             }
+        }
+
+        if (listener != null) {
+            listener.providerStateChanged(this, LocationProvider.OUT_OF_SERVICE);
         }
 
         System.out.println("simulator task ended");

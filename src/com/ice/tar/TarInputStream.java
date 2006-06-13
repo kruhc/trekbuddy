@@ -51,6 +51,8 @@ public class TarInputStream extends /* FilterInputStream */ InputStream {
     private byte[] headerBuffer;
     private TarEntry currEntry;
 
+    public static boolean useReadSkip;
+
     public TarInputStream(InputStream is) {
         this(is, DEFAULT_BLKSIZE, DEFAULT_RCDSIZE);
     }
@@ -99,7 +101,13 @@ public class TarInputStream extends /* FilterInputStream */ InputStream {
     public long skip(long numToSkip) throws IOException {
         long num = numToSkip;
         for (; num > 0;) {
-            long numRead = this.in.skip(num);
+            long numRead = -1;
+
+            if (useReadSkip) {
+                numRead = this.in.read(new byte[(int) num]);
+            } else {
+                numRead = this.in.skip(num);
+            }
 
             if (numRead == -1) {
                 break;

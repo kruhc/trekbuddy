@@ -18,7 +18,7 @@ import com.ice.tar.TarInputStream;
 
 public class TrackingMIDlet extends MIDlet {
 
-    private static String APP_NAME = Desktop.APP_TITLE + " (C) 2006 Ales Pour";
+    private static String APP_NAME = Desktop.APP_TITLE + " (C) 2006 KrUcH";
 
     private Desktop desktop;
 
@@ -31,7 +31,7 @@ public class TrackingMIDlet extends MIDlet {
 
     static {
         try {
-            APP_NAME = Desktop.APP_TITLE + " " + new String(new byte[]{ (byte) 0xc2, (byte) 0xa9 }, "UTF-8") + " " + "2006 Ales Pour";
+            APP_NAME = Desktop.APP_TITLE + " " + new String(new byte[]{ (byte) 0xc2, (byte) 0xa9 }, "UTF-8") + " " + "2006 KrUcH";
         } catch (UnsupportedEncodingException e) {
         }
     }

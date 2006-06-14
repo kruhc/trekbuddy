@@ -365,12 +365,16 @@ public abstract class Calibration {
             positions = parent.positions;
             coordinates = parent.coordinates;
 
-            // position is encoded in filename
-            StringTokenizer st = new StringTokenizer(path, "_.", false);
-            st.nextToken();
-            int absx = Integer.parseInt(st.nextToken());
-            int absy = Integer.parseInt(st.nextToken());
-            position = new Position(absx, absy);
+            if (parent instanceof Best || parent instanceof GMI || parent instanceof J2N) {
+                // position is encoded in filename (tb, j2n)
+                StringTokenizer st = new StringTokenizer(path, "_.", false);
+                st.nextToken();
+                int absx = Integer.parseInt(st.nextToken());
+                int absy = Integer.parseInt(st.nextToken());
+                position = new Position(absx, absy);
+            } else { // gpska
+                position = new Position(0, 0);
+            }
 
             return position;
         }

@@ -410,7 +410,7 @@ public class Map {
                             } else {
                                 log.warn("calibration file " + entryName + " ignored");
                             }
-                        } else if (entryName.startsWith("set/") && entryName.endsWith(".png")) {
+                        } else if ((entryName.startsWith("set/") || (entryName.startsWith("pictures/"))) && entryName.endsWith(".png")) {
                             Calibration calibration = new Calibration.Best(entryName);
                             collection.addElement(new Slice(calibration));
                             Map.this.type = TYPE_BEST;
@@ -463,7 +463,7 @@ public class Map {
         private String dir;
 
         public void init() throws IOException {
-            dir = path.substring(0, path.lastIndexOf('/')) + "/set";
+            dir = path.substring(0, path.lastIndexOf('/'));
             log.debug("slices are in " + dir);
         }
 
@@ -499,6 +499,7 @@ public class Map {
                 fc = null;
 
                 // next, look for slices
+                dir = dir + (Map.this.type == TYPE_J2N ? "/pictures" : "/set"); // compatibility with j2n
                 fc = (FileConnection) Connector.open(dir, Connector.READ);
                 if (fc.isDirectory()) {
                     for (Enumeration e = fc.list("*", false); e.hasMoreElements(); ) {

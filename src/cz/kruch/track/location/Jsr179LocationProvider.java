@@ -5,8 +5,9 @@ package cz.kruch.track.location;
 
 import cz.kruch.track.configuration.Config;
 
-public class Jsr179LocationProvider extends api.location.LocationProvider implements Runnable {
+public class Jsr179LocationProvider extends api.location.LocationProvider {
     private javax.microedition.location.LocationProvider impl;
+    private LocationListenerAdapter adapter;
 
     public Jsr179LocationProvider() {
         super(Config.LOCATION_PROVIDER_JSR179);
@@ -19,23 +20,24 @@ public class Jsr179LocationProvider extends api.location.LocationProvider implem
     public void start() throws api.location.LocationException {
         try {
             impl = javax.microedition.location.LocationProvider.getInstance(null);
+            impl.setLocationListener(adapter, -1, -1, -1);
         } catch (javax.microedition.location.LocationException e) {
             throw new api.location.LocationException(e);
         }
+
+        // notify listener on current status
+        adapter.listener.providerStateChanged(Jsr179LocationProvider.this, impl.getState());
     }
 
     public void stop() throws api.location.LocationException {
     }
 
     public void setLocationListener(api.location.LocationListener listener, int interval, int timeout, int maxAge) {
-        impl.setLocationListener(new LocationListenerAdapter(listener),
-                                 interval, timeout, maxAge);
-        if (listener != null) {
-            listener.providerStateChanged(Jsr179LocationProvider.this, impl.getState());
+        if (listener == null) {
+            impl.setLocationListener(null, interval, timeout, maxAge);   
+        } else {
+            adapter = new LocationListenerAdapter(listener);
         }
-    }
-
-    public void run() {
     }
 
     private class LocationListenerAdapter implements javax.microedition.location.LocationListener {

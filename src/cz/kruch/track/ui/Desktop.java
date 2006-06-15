@@ -8,6 +8,7 @@ import cz.kruch.track.configuration.Config;
 import cz.kruch.track.configuration.ConfigurationException;
 import cz.kruch.track.location.SimulatorLocationProvider;
 import cz.kruch.track.location.Jsr179LocationProvider;
+import cz.kruch.track.location.Jsr82LocationProvider;
 import cz.kruch.track.util.Logger;
 import cz.kruch.track.TrackingMIDlet;
 
@@ -77,8 +78,8 @@ public class Desktop extends GameCanvas implements Runnable, CommandListener, Lo
     private boolean browsing = true;
 
     // map loading state and result of last operation
-    private boolean mapLoading = false;
-    private String mapLoadingResult;
+    private volatile boolean mapLoading = false;
+    private volatile String mapLoadingResult;
 
     // location provider
     private LocationProvider provider;
@@ -203,27 +204,9 @@ public class Desktop extends GameCanvas implements Runnable, CommandListener, Lo
             (new FileBrowser(display)).browse();
         } else if (command == cmdRun) {
             if ("Start".equals(cmdRun.getLabel())) {
-                // start provider
-                if (startProvider()) {
-                    // update menu
-                    removeCommand(cmdRun);
-                    cmdRun = new Command("Stop", Command.SCREEN, 2);
-                    addCommand(cmdRun);
-
-                    // tracking
-                    browsing = false;
-                }
+                startTracking();
             } else {
-                // stop provider
-                stopProvider();
-
-                // update menu
-                removeCommand(cmdRun);
-                cmdRun = new Command("Start", Command.SCREEN, 2);
-                addCommand(cmdRun);
-
-                // tracking
-                browsing = true;
+                stopTracking();
             }
         }
     }
@@ -266,13 +249,24 @@ public class Desktop extends GameCanvas implements Runnable, CommandListener, Lo
                     showWarning(display, "Provider " + provider.getName() + " temporatily unavailable");
                     break;
                 case LocationProvider.OUT_OF_SERVICE:
-                    showWarning(display, "Provider " + provider.getName() + " out of service");
+                    if (provider.getException() == null) {
+                        showWarning(display, "Provider " + provider.getName() + " out of service");
+                    } else {
+                        showWarning(display, "Provider " + provider.getName() + " out of service", provider.getException());
+                    }
                     break;
             }
         }
 
-        osd.setProviderStatus(newState);
-        renderScreen(false, true);
+        // how severe is the change
+        if (newState == LocationProvider.OUT_OF_SERVICE) {
+            // stop tracking completely
+            stopTracking();
+        } else {
+            // update desktop
+            osd.setProviderStatus(newState);
+            renderScreen(false, true);
+        }
     }
 
     public void run() {
@@ -316,7 +310,7 @@ public class Desktop extends GameCanvas implements Runnable, CommandListener, Lo
 
             // repeat if not map loading
             if (!mapLoading) {
-                display.callSerially(Desktop.this);
+                display.callSerially(this);
             }
 
         } else {
@@ -429,6 +423,12 @@ public class Desktop extends GameCanvas implements Runnable, CommandListener, Lo
         display.setCurrent(alert);
     }
 
+    public static void showWarning(Display display, String message, Throwable t) {
+        Alert alert = new Alert(APP_TITLE, message + ". " + t.toString(), null, AlertType.WARNING);
+        alert.setTimeout(WARN_DIALOG_TIMEOUT);
+        display.setCurrent(alert);
+    }
+
     public static void showError(Display display, String message, Throwable t) {
         Alert alert = new Alert(APP_TITLE, message + ". " + t.toString(), null, AlertType.ERROR);
         alert.setTimeout(Alert.FOREVER);
@@ -452,7 +452,7 @@ public class Desktop extends GameCanvas implements Runnable, CommandListener, Lo
         }
     }
 
-    private boolean startProvider() {
+    private boolean startTracking() {
         // which provider?
         String selectedProvider = Config.getSafeInstance().getLocationProvider();
 
@@ -463,34 +463,57 @@ public class Desktop extends GameCanvas implements Runnable, CommandListener, Lo
         } else if (Config.LOCATION_PROVIDER_JSR179.equals(selectedProvider)) {
             provider = new Jsr179LocationProvider();
         } else if (Config.LOCATION_PROVIDER_JSR82.equals(selectedProvider)) {
-            throw new IllegalArgumentException("Bluetooth Location Provider not supported yet");
-        }
-
-        // start provider
-        try {
-            provider.start();
-// ERROR: Current Displayable is Alert
-//            showInfo(display, "Provider " + provider + " started", null);
-        } catch (LocationException e) {
-            provider = null;
-            showError(display, "Failed to start provider " + provider, e);
-            return false;
+            provider = new Jsr82LocationProvider(display);
         }
 
         // register as listener
         provider.setLocationListener(this, -1, -1, -1);
 
+        // start provider
+        try {
+            provider.start();
+        } catch (LocationException e) {
+            showError(display, "Failed to start provider " + provider.getName(), e);
+
+            // gc hint
+            provider = null;
+
+            return false;
+        }
+
+        // update menu
+        removeCommand(cmdRun);
+        cmdRun = new Command("Stop", Command.SCREEN, 2);
+        addCommand(cmdRun);
+
+        // tracking
+        browsing = false;
+
         return true;
     }
 
-    private boolean stopProvider() {
+    private boolean stopTracking() {
         try {
+            provider.setLocationListener(null, -1, -1, -1);
             provider.stop();
         } catch (LocationException e) {
             showError(display, "Failed to stop provider", e);
         } finally {
             provider = null;
         }
+
+        // update desktop
+        osd.setProviderStatus(LocationProvider.OUT_OF_SERVICE);
+        renderScreen(false, true);
+
+
+        // update menu
+        removeCommand(cmdRun);
+        cmdRun = new Command("Start", Command.SCREEN, 2);
+        addCommand(cmdRun);
+
+        // tracking
+        browsing = true;
 
         return true;
     }

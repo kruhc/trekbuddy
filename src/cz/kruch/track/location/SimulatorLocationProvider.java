@@ -14,9 +14,12 @@ import java.io.IOException;
 
 import cz.kruch.j2se.io.BufferedInputStream;
 import cz.kruch.track.util.NmeaParser;
+import cz.kruch.track.util.Logger;
 import cz.kruch.track.configuration.Config;
 
-public class SimulatorLocationProvider extends LocationProvider implements Runnable {
+public class SimulatorLocationProvider extends StreamReadingLocationProvider implements Runnable {
+    private static final Logger log = new Logger("Simulator");
+
     private String path;
     private int delay;
 
@@ -44,7 +47,7 @@ public class SimulatorLocationProvider extends LocationProvider implements Runna
     }
 
     public Object getImpl() {
-        return this;
+        return null;
     }
 
     public void start() throws LocationException {
@@ -56,7 +59,8 @@ public class SimulatorLocationProvider extends LocationProvider implements Runna
             thread = new Thread(this);
             thread.start();
 
-            System.out.println("simulator started");
+            log.debug("simulator started");
+
         } catch (IOException e) {
             throw new LocationException(e);
         }
@@ -64,11 +68,11 @@ public class SimulatorLocationProvider extends LocationProvider implements Runna
 
     public void stop() throws LocationException {
         go = false;
-        thread.interrupt();
         try {
+            thread.interrupt();
             thread.join();
         } catch (InterruptedException e) {
-            System.err.println("join interrupted: " + e.toString());
+            log.warn("join interrupted: " + e.toString());
         }
 
         try {
@@ -80,36 +84,36 @@ public class SimulatorLocationProvider extends LocationProvider implements Runna
             // ignore
         }
 
-        System.out.println("simulator stopped");
+        log.info("simulator stopped");
     }
 
     public void run() {
-        System.out.println("simulator task starting");
+        log.info("simulator task starting");
 
-        boolean announced = false;
+        // send current status
+        if (listener != null) {
+            listener.providerStateChanged(this, LocationProvider.AVAILABLE);
+        }
 
         try {
             for (; go ;) {
-                // if any listener
-                if (listener != null) {
 
-                    if (!announced) {
-                        announced = true;
-                        listener.providerStateChanged(this, LocationProvider.AVAILABLE);
-                    }
+                // read GGA
+                String nmea = nextGGA(in);
+                if (nmea == null) {
+                    log.warn("end of file");
 
-                    String nmea = nextGGA();
-                    if (nmea == null) {
-                        System.out.println("end of file");
-                        listener.providerStateChanged(this, LocationProvider.TEMPORARILY_UNAVAILABLE);
-                        break;
-                    }
+                    // send current status
+                    listener.providerStateChanged(this, LocationProvider.OUT_OF_SERVICE);
 
-                    try {
-                        listener.locationUpdated(this, NmeaParser.parse(nmea));
-                    } catch (Exception e) {
-                        System.err.println("corrupted record: " + nmea + "\n" + e.toString());
-                    }
+                    break;
+                }
+
+                // send new location
+                try {
+                    listener.locationUpdated(this, NmeaParser.parse(nmea));
+                } catch (Exception e) {
+                    System.err.println("corrupted record: " + nmea + "\n" + e.toString());
                 }
 
                 // interval elapse
@@ -123,7 +127,7 @@ public class SimulatorLocationProvider extends LocationProvider implements Runna
             if (e instanceof InterruptedException) {
                 // probably stop request
             } else {
-                System.out.println("ERROR: " + e.toString());
+                log.error("simulator failed: " + e.toString());
             }
         }
 
@@ -131,37 +135,6 @@ public class SimulatorLocationProvider extends LocationProvider implements Runna
             listener.providerStateChanged(this, LocationProvider.OUT_OF_SERVICE);
         }
 
-        System.out.println("simulator task ended");
-    }
-
-    private String nextGGA() throws IOException {
-        String line = readLine();
-        while (line != null) {
-            if (line.startsWith("$GPGGA")) {
-                break;
-            }
-            line = readLine();
-        }
-
-        return line;
-    }
-
-    private String readLine() throws IOException {
-        StringBuffer sb = new StringBuffer();
-        boolean nl = false;
-        int c = in.read();
-        while (c > -1) {
-            char ch = (char) c;
-            sb.append(ch);
-            nl = ch == '\n';
-            if (nl) break;
-            c = in.read();
-        }
-
-        if (nl) {
-            return sb.toString();
-        }
-
-        return null;
+        log.info("simulator task ended");
     }
 }

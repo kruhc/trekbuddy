@@ -15,6 +15,8 @@ import javax.microedition.lcdui.Command;
 import javax.microedition.lcdui.TextField;
 
 public class SettingsForm implements CommandListener {
+    private static final int MAX_URL_LENGTH = 128;
+
     private Display display;
     private Displayable previous;
 
@@ -33,7 +35,7 @@ public class SettingsForm implements CommandListener {
         Form form = new Form("Settings");
 
         // map path field
-        fieldMapPath = new TextField("Default Map", Config.getSafeInstance().getMapPath(), 32, TextField.URL);
+        fieldMapPath = new TextField("Default Map", Config.getSafeInstance().getMapPath(), MAX_URL_LENGTH, TextField.URL);
         form.append(fieldMapPath);
 
         // location provider radioboxes

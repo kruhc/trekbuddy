@@ -18,8 +18,8 @@ import java.util.Vector;
 public abstract class Config {
     private static final Logger log = new Logger("Config");
 
-    public static final String LOCATION_PROVIDER_JSR82 = "Bluetooth (JSR-82)";
-    public static final String LOCATION_PROVIDER_JSR179 = "Internal (JSR-179)";
+    public static final String LOCATION_PROVIDER_JSR82 = "Bluetooth";
+    public static final String LOCATION_PROVIDER_JSR179 = "Internal";
     public static final String LOCATION_PROVIDER_SIMULATOR = "Simulator";
 
     private static Config instance = null;

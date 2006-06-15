@@ -95,7 +95,7 @@ public class FileBrowser implements CommandListener {
                 }
             }
 
-            // gc
+            // gc hint
             fc = null;
             list = null;
 

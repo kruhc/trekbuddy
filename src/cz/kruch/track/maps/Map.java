@@ -201,8 +201,8 @@ public class Map {
             try {
                 task.join();
             } catch (InterruptedException e) {
-                e.printStackTrace();
             }
+            task = null;
         }
         // load images at background
         log.debug("starting loading task");

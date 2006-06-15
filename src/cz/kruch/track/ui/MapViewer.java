@@ -115,7 +115,7 @@ final class MapViewer {
                 }
                 break;
             default:
-                throw new IllegalArgumentException("Unknown direction");
+                throw new IllegalArgumentException("Weird direction");
         }
 
         return dirty;

@@ -3,6 +3,8 @@
 
 package cz.kruch.track.util;
 
+import cz.kruch.track.TrackingMIDlet;
+
 public class Logger {
     private static final String LEVEL_DEBUG  = "DEBUG";
     private static final String LEVEL_INFO   = "INFO";
@@ -42,12 +44,16 @@ public class Logger {
     }
 
     private void log(String severity, String message) /*throws IOException*/ {
-        System.out.println("[" + appname + "] " + severity + " - " + message);
-        System.out.flush();
+        if (TrackingMIDlet.isEmulator()) {
+            System.out.println("[" + severity + "] " + appname + " - " + message);
+            System.out.flush();
+        }
     }
 
     private void log(String stacktrace) /*throws IOException*/ {
-        System.out.println(stacktrace);
-        System.out.flush();
+        if (TrackingMIDlet.isEmulator()) {
+            System.out.println(stacktrace);
+            System.out.flush();
+        }
     }
 }

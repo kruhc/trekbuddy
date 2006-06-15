@@ -27,4 +27,6 @@ public abstract class LocationProvider {
                                              int maxAge);
 
     public abstract Object getImpl();
+
+    public LocationException getException() { return null; }
 }

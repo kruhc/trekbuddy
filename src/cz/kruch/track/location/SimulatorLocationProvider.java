@@ -59,7 +59,7 @@ public class SimulatorLocationProvider extends StreamReadingLocationProvider imp
             thread = new Thread(this);
             thread.start();
 
-            log.debug("simulator started");
+            if (log.isEnabled()) log.debug("simulator started");
 
         } catch (IOException e) {
             throw new LocationException(e);
@@ -72,7 +72,7 @@ public class SimulatorLocationProvider extends StreamReadingLocationProvider imp
             thread.interrupt();
             thread.join();
         } catch (InterruptedException e) {
-            log.warn("join interrupted: " + e.toString());
+            if (log.isEnabled()) log.warn("join interrupted: " + e.toString());
         }
 
         try {
@@ -84,11 +84,11 @@ public class SimulatorLocationProvider extends StreamReadingLocationProvider imp
             // ignore
         }
 
-        log.info("simulator stopped");
+        if (log.isEnabled()) log.info("simulator stopped");
     }
 
     public void run() {
-        log.info("simulator task starting");
+        if (log.isEnabled()) log.info("simulator task starting");
 
         // send current status
         if (listener != null) {
@@ -101,7 +101,7 @@ public class SimulatorLocationProvider extends StreamReadingLocationProvider imp
                 // read GGA
                 String nmea = nextGGA(in);
                 if (nmea == null) {
-                    log.warn("end of file");
+                    if (log.isEnabled()) log.warn("end of file");
 
                     // send current status
                     listener.providerStateChanged(this, LocationProvider.OUT_OF_SERVICE);
@@ -127,7 +127,7 @@ public class SimulatorLocationProvider extends StreamReadingLocationProvider imp
             if (e instanceof InterruptedException) {
                 // probably stop request
             } else {
-                log.error("simulator failed: " + e.toString());
+                if (log.isEnabled()) log.error("simulator failed: " + e.toString());
             }
         }
 
@@ -135,6 +135,6 @@ public class SimulatorLocationProvider extends StreamReadingLocationProvider imp
             listener.providerStateChanged(this, LocationProvider.OUT_OF_SERVICE);
         }
 
-        log.info("simulator task ended");
+        if (log.isEnabled()) log.info("simulator task ended");
     }
 }

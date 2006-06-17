@@ -56,40 +56,49 @@ public abstract class Calibration {
     public QualifiedCoordinates transform(Position position) {
         int[] index = findNearestCalibrationPoints(position);
 
-        if (position.equals(positions[0])) {
-            return coordinates[0];
-        }
-        if (position.equals(positions[1])) {
-            return coordinates[1];
-        }
-
         double lon = 0D;
         double lat = 0D;
 
+        int x = position.getX();
+        int y = position.getY();
+
+        // check x and y match with any of the calibration points
         for (int N = positions.length, i = 0; i < N; i++) {
             Position p0 = positions[i];
-            if (position.getX() == p0.getX()) {
-                log.debug("direct use lon of cal point " + i);
+            if (x == p0.getX() && lon == 0D) {
+                if (log.isEnabled()) log.debug("direct use lon of cal point " + i);
                 lon = coordinates[i].getLon();
             }
-            if (position.getY() == p0.getY()) {
-                log.debug("direct use lat of cal point " + i);
+            if (y == p0.getY() && lat == 0D) {
+                if (log.isEnabled()) log.debug("direct use lat of cal point " + i);
                 lat = coordinates[i].getLat();
             }
         }
 
-        Position ref0 = positions[index[0]];
+        /*
+         * because it is unlikely to hit x or y calpoint,
+         * it is better for performance to have local refs to
+         * neighbours positions and coordinates to avoid
+         * array index check etc
+         */
 
+        Position ref0 = positions[index[0]];
+        Position ref1 = positions[index[1]];
+        QualifiedCoordinates refC1 = coordinates[index[1]];
+        QualifiedCoordinates refC0 = coordinates[index[0]];
+
+        // no match for x with any calpoint
         if (lon == 0D) {
-            int dx = position.getX() - ref0.getX();
-            double xScale = Math.abs(coordinates[index[1]].getLon() - coordinates[index[0]].getLon()) / Math.abs(positions[index[1]].getX() - positions[index[0]].getX());
-            lon = coordinates[index[0]].getLon() + dx * xScale;
+            int dx = x - ref0.getX();
+            double xScale = Math.abs(refC1.getLon() - refC0.getLon()) / Math.abs(ref1.getX() - ref0.getX());
+            lon = refC0.getLon() + dx * xScale;  // closer neighbour is ref point
         }
 
+        // no match for y with any calpoint
         if (lat == 0D) {
-            int dy = position.getY() - ref0.getY();
-            double yScale = Math.abs(coordinates[index[1]].getLat() - coordinates[index[0]].getLat()) / Math.abs(positions[index[1]].getY() - positions[index[0]].getY());
-            lat = coordinates[index[0]].getLat() - dy * yScale;
+            int dy = y - ref0.getY();
+            double yScale = Math.abs(refC1.getLat() - refC0.getLat()) / Math.abs(ref1.getY() - ref0.getY());
+            lat = refC0.getLat() - dy * yScale;  // closer neighbour is ref point
         }
 
         return new QualifiedCoordinates(lat, lon);
@@ -98,14 +107,15 @@ public abstract class Calibration {
     public Position transform(QualifiedCoordinates coordinates) {
         int[] index = findNearestCalibrationPoints(coordinates);
 
-        QualifiedCoordinates ref0 = this.coordinates[index[0]];
-        QualifiedCoordinates ref1 = this.coordinates[index[1]];
+        Position ref0 = positions[index[0]]; // closer neighbour is ref point
+        QualifiedCoordinates refC0 = this.coordinates[index[0]];
+        QualifiedCoordinates refC1 = this.coordinates[index[1]];
 
-        double dlon = coordinates.getLon() - ref0.getLon();
-        double dlat = coordinates.getLat() - ref0.getLat();
+        double dlon = coordinates.getLon() - refC0.getLon();
+        double dlat = coordinates.getLat() - refC0.getLat();
 
-        double xScale = Math.abs(ref1.getLon() - ref0.getLon()) / Math.abs(positions[index[1]].getX() - positions[index[0]].getX());
-        double yScale = Math.abs(ref1.getLat() - ref0.getLat()) / Math.abs(positions[index[1]].getY() - positions[index[0]].getY());
+        double xScale = Math.abs(refC1.getLon() - refC0.getLon()) / Math.abs(positions[index[1]].getX() - ref0.getX());
+        double yScale = Math.abs(refC1.getLat() - refC0.getLat()) / Math.abs(positions[index[1]].getY() - ref0.getY());
 
         Double dx = new Double(dlon / xScale);
         Double dy = new Double(dlat / yScale);
@@ -118,8 +128,8 @@ public abstract class Calibration {
             intDy++;
         }
 
-        int x = positions[index[0]].getX() + intDx;
-        int y = positions[index[0]].getY() - intDy;
+        int x = ref0.getX() + intDx;
+        int y = ref0.getY() - intDy;
 
         return new Position(x, y);
     }
@@ -297,7 +307,7 @@ public abstract class Calibration {
                                     pos.addElement(new Position(x0, y0));
                                     coords.addElement(new QualifiedCoordinates(lat0, lon0));
                                 } else {
-                                    log.debug("ignore cal point " + new Position(x0, y0));
+                                    if (log.isEnabled()) log.debug("ignore cal point " + new Position(x0, y0));
                                 }
                             }
                             currentTag = null;
@@ -308,7 +318,7 @@ public abstract class Calibration {
 //                                System.out.println("content of " + currentTag + " " + text);
                                 if (TAG_NAME.equals(currentTag)) {
                                     this.path = text + ".png";
-                                }else if (TAG_LATITUDE.equals(currentTag)) {
+                                } else if (TAG_LATITUDE.equals(currentTag)) {
                                     lat0 = Double.parseDouble(text);
                                 } else if (TAG_LONGITUDE.equals(currentTag)) {
                                     lon0 = Double.parseDouble(text);
@@ -351,7 +361,7 @@ public abstract class Calibration {
     }
 
     /**
-     * For simplified J2N format - no slice calibrations.
+     * For simplified J2N format (aka Best) - no slice calibrations.
      */
     public static class Best extends Calibration {
         private Position position;
@@ -365,7 +375,7 @@ public abstract class Calibration {
             positions = parent.positions;
             coordinates = parent.coordinates;
 
-            if (parent instanceof Best || parent instanceof GMI || parent instanceof J2N) {
+            if (parent instanceof Best || parent instanceof GMI || parent instanceof J2N || parent instanceof Ozi) {
                 // position is encoded in filename (tb, j2n)
                 StringTokenizer st = new StringTokenizer(path, "_.", false);
                 st.nextToken();
@@ -417,19 +427,19 @@ public abstract class Calibration {
                 if (line.startsWith("Point")) {
                     boolean b = parsePoint(line, xy, ll);
                     if (b) count++;
-                    log.debug("point parsed? " + b);
+                    if (log.isEnabled()) log.debug("point parsed? " + b);
                 } else if (line.startsWith("MMPXY")) {
                     if (count < 2) {
                         boolean b = parseXy(line, xy);
-                        log.debug("mmpxy parsed? " + b);
+                        if (log.isEnabled()) log.debug("mmpxy parsed? " + b);
                     }
                 } else if (line.startsWith("MMPLL")) {
                     if (count < 2) {
                         boolean b = parseLl(line, ll);
-                        log.debug("mmpll parsed? " + b);
+                        if (log.isEnabled()) log.debug("mmpll parsed? " + b);
                     }
                 } else if (line.startsWith("IWH")) {
-                    log.debug("parse IWH");
+                    if (log.isEnabled()) log.debug("parse IWH");
                     parseIwh(line);
                 }
             }
@@ -453,16 +463,16 @@ public abstract class Calibration {
         private boolean parsePoint(String line, Vector xy, Vector ll) {
             int index = 0;
             String px = null, py = null;
-            String lath = null, latm = null, lats = null;
-            String lonh = null, lonm = null, lons = null;
-            StringTokenizer st = new StringTokenizer(line, " \t,", true);
+            String lath = null, latm = null, lats = "N";
+            String lonh = null, lonm = null, lons = "E";
+            StringTokenizer st = new StringTokenizer(line, ",", true);
             while (st.hasMoreTokens()) {
                 String token = st.nextToken().trim();
                 if (",".equals(token)) {
                     index++;
-                } else if (" ".equals(token) || "\t".equals(token)) {
+                }/* else if (" ".equals(token) || "\t".equals(token)) {
                     // nothing
-                } else if (index == 2) {
+                }*/ else if (index == 2) {
                     px = token;
                 } else if (index == 3) {
                     py = token;
@@ -486,13 +496,15 @@ public abstract class Calibration {
             try {
                 int x = Integer.parseInt(px);
                 int y = Integer.parseInt(py);
-                double lat = Integer.parseInt(lath) + (Double.parseDouble(latm) * 100 / 60);
-                lats.length(); // TODO
-                double lon = Integer.parseInt(lonh) + (Double.parseDouble(lonm) * 100 / 60);
-                lons.length(); // TODO
+                double lat = Integer.parseInt(lath) + (Double.parseDouble(latm) / 60D);
+                if (lats.startsWith("S")) lat *= -1.0D;
+                double lon = Integer.parseInt(lonh) + (Double.parseDouble(lonm) / 60D);
+                if (lons.startsWith("W")) lon *= -1.0D;
 
-                xy.addElement(new Position(x, y));
-                ll.addElement(new QualifiedCoordinates(lat, lon));
+                Position p = new Position(x, y);
+                xy.addElement(p);
+                QualifiedCoordinates qc = new QualifiedCoordinates(lat, lon);
+                ll.addElement(qc);
 
             } catch (NumberFormatException e) {
                 return false;
@@ -505,13 +517,14 @@ public abstract class Calibration {
 
         private boolean parseXy(String line, Vector xy) {
             try {
-                StringTokenizer st = new StringTokenizer(line, " \t,", false);
+                StringTokenizer st = new StringTokenizer(line, ",", false);
                 st.nextToken();
                 String index = st.nextToken();
-                int x = Integer.parseInt(st.nextToken());
-                int y = Integer.parseInt(st.nextToken());
+                int x = Integer.parseInt(st.nextToken().trim());
+                int y = Integer.parseInt(st.nextToken().trim());
 
-                xy.addElement(new Position(x, y));
+                Position p = new Position(x, y);
+                xy.addElement(p);
 
             } catch (NumberFormatException e) {
                 e.printStackTrace();
@@ -523,13 +536,14 @@ public abstract class Calibration {
 
         private boolean parseLl(String line, Vector ll) {
             try {
-                StringTokenizer st = new StringTokenizer(line, " \t,", false);
+                StringTokenizer st = new StringTokenizer(line, ",", false);
                 st.nextToken();
                 String index = st.nextToken();
-                double lat = Double.parseDouble(st.nextToken());
-                double lon = Double.parseDouble(st.nextToken());
+                double lat = Double.parseDouble(st.nextToken().trim());
+                double lon = Double.parseDouble(st.nextToken().trim());
 
-                ll.addElement(new QualifiedCoordinates(lat, lon));
+                QualifiedCoordinates qc = new QualifiedCoordinates(lat, lon);
+                ll.addElement(qc);
 
             } catch (NumberFormatException e) {
                 e.printStackTrace();
@@ -541,10 +555,9 @@ public abstract class Calibration {
 
         private void parseIwh(String line) {
             int index = 0;
-            StringTokenizer st = new StringTokenizer(line, " \t,", true);
+            StringTokenizer st = new StringTokenizer(line, ",", true);
             while (st.hasMoreTokens()) {
-                String token = st.nextToken();
-                System.out.println("token " + index + " = '" + token +"'");
+                String token = st.nextToken().trim();
                 if (",".equals(token)) {
                     index++;
                 } else if (index == 2) {

@@ -10,7 +10,6 @@ import cz.kruch.track.location.SimulatorLocationProvider;
 import cz.kruch.track.location.Jsr179LocationProvider;
 import cz.kruch.track.location.Jsr82LocationProvider;
 import cz.kruch.track.util.Logger;
-import cz.kruch.track.TrackingMIDlet;
 
 import javax.microedition.lcdui.Canvas;
 import javax.microedition.lcdui.Display;
@@ -20,6 +19,7 @@ import javax.microedition.lcdui.Displayable;
 import javax.microedition.lcdui.Alert;
 import javax.microedition.lcdui.AlertType;
 import javax.microedition.lcdui.Graphics;
+import javax.microedition.lcdui.Font;
 import javax.microedition.lcdui.game.GameCanvas;
 import java.io.IOException;
 import java.util.Date;
@@ -43,9 +43,9 @@ public class Desktop extends GameCanvas implements Runnable, CommandListener, Lo
     // 'no map loaded' message header
     private static final String MSG_NO_MAP = "No map loaded. ";
 
-    // 1 sec timeout
-    private static final int INFO_DIALOG_TIMEOUT = 1000;
-    private static final int WARN_DIALOG_TIMEOUT = 2500;
+    // dialog timeouts
+    private static final int INFO_DIALOG_TIMEOUT = 750;
+    private static final int WARN_DIALOG_TIMEOUT = 1500;
 
     // display
     private Display display;
@@ -59,17 +59,13 @@ public class Desktop extends GameCanvas implements Runnable, CommandListener, Lo
     private Map map;
 
     // LSM/MSK commands
-    private Command cmdInfo;
+    private Command cmdFocus; // hope for MSK
+    private Command cmdLoadMap;
     private Command cmdSettings;
-    private Command cmdLoadBook;
-//    private Command cmdLoadWaypoints;
+    private Command cmdInfo;
     private Command cmdRun;
-    private Command cmdFocus;
     // RSK commands
     private Command cmdOSD;
-
-    // OSD on/off
-    private boolean osdVisible = true;
 
     // for faster movement
     private int scrolls = 0;
@@ -77,15 +73,18 @@ public class Desktop extends GameCanvas implements Runnable, CommandListener, Lo
     // browsing or tracking
     private boolean browsing = true;
 
-    // map loading state and result of last operation
-    private volatile boolean mapLoading = false;
-    private volatile String mapLoadingResult;
+    // loading states and last-op message
+    private volatile boolean initializingMap = false;
+    private volatile boolean loadingSlices = false;
+    private volatile String loadingResult = "No default map. Use Options->Load Map to load a map";
 
     // location provider
     private LocationProvider provider;
 
-    // last known X-Y position
+    // last known X-Y and L-L position
     private Position position = new Position(0, 0);
+    private QualifiedCoordinates coordinates = new QualifiedCoordinates(0D, 0D);
+    private long timestamp = 0;
 
     public Desktop(Display display) {
         super(false);
@@ -99,27 +98,25 @@ public class Desktop extends GameCanvas implements Runnable, CommandListener, Lo
         this.setTitle(APP_TITLE);
 
         // create and add commands to the screen
-        this.cmdFocus = new Command("Focus", Command.SCREEN, 1);
         this.cmdOSD = new Command("OSD", Command.BACK, 1);
-        this.cmdInfo = new Command("Info", Command.SCREEN, 2);
-        this.cmdSettings = new Command("Settings", Command.SCREEN, 2);
-        this.cmdLoadBook = new Command("Load Map", Command.SCREEN, 2);
-//        this.cmdLoadWaypoints = new Command("Load Waypoints", Command.SCREEN, 2);
+        this.cmdFocus = new Command("Focus", Command.SCREEN, 1); // hope for MSK
         this.cmdRun = new Command("Start", Command.SCREEN, 2);
-        this.addCommand(cmdFocus);
+        this.cmdLoadMap = new Command("Load Map", Command.SCREEN, 3);
+        this.cmdSettings = new Command("Settings", Command.SCREEN, 4);
+        this.cmdInfo = new Command("Info", Command.SCREEN, 5);
         this.addCommand(cmdOSD);
-        this.addCommand(cmdInfo);
-        this.addCommand(cmdSettings);
-        this.addCommand(cmdLoadBook);
-//        this.addCommand(cmdLoadWaypoints);
+        this.addCommand(cmdFocus);
         this.addCommand(cmdRun);
+        this.addCommand(cmdLoadMap);
+        this.addCommand(cmdSettings);
+        this.addCommand(cmdInfo);
 
         // handle comamnds
         this.setCommandListener(this);
     }
 
     public void initGui() throws ConfigurationException, IOException {
-        // clear map area with black
+        // clear main area with black
         Graphics g = getGraphics();
         g.setColor(0, 0, 0);
         g.fillRect(0, 0, getWidth(), getHeight());
@@ -135,21 +132,34 @@ public class Desktop extends GameCanvas implements Runnable, CommandListener, Lo
 
             // setup map viewer
             mapViewer.setMap(map);
-            mapLoading = mapViewer.ensureSlices();
+
+            // ensure slices are being loaded for current view
+            loadingSlices = mapViewer.ensureSlices();
         }
     }
 
+    /*
+     * hack - call blocking method to show result in boot console
+     */
     public void initMap() throws ConfigurationException, IOException {
         try {
             map = new Map(Config.getInstance().getMapPath());
-        } catch (IOException e) {
-            updateBookLoadinResult(e);
-            throw e;
+            Throwable t = map.loadMap();
+            if (t instanceof Error) {
+                throw (Error)t;
+            } else if (t instanceof RuntimeException) {
+                throw (RuntimeException)t;
+            } else if (t instanceof Exception) {
+                throw new RuntimeException(t.toString());
+            }
         } catch (ConfigurationException e) {
-            updateBookLoadinResult(e);
+            updateLoadingResult(e);
             throw e;
         } catch (RuntimeException e) {
-            updateBookLoadinResult(e);
+            updateLoadingResult(e);
+            throw e;
+        } catch (OutOfMemoryError e) {
+            updateLoadingResult(e);
             throw e;
         }
     }
@@ -159,7 +169,7 @@ public class Desktop extends GameCanvas implements Runnable, CommandListener, Lo
      */
     public void destroy() {
         // log
-        log.info("destroy");
+        if (log.isEnabled()) log.info("destroy");
 
         // close map
         map.close();
@@ -167,7 +177,7 @@ public class Desktop extends GameCanvas implements Runnable, CommandListener, Lo
 
     protected void keyPressed(int i) {
         // log
-        log.debug("key pressed");
+        if (log.isEnabled()) log.debug("key pressed");
 
         // handle event
         handleKey(i, false);
@@ -175,7 +185,7 @@ public class Desktop extends GameCanvas implements Runnable, CommandListener, Lo
 
     protected void keyRepeated(int i) {
         // log
-        log.debug("key repeated");
+        if (log.isEnabled()) log.debug("key repeated");
 
         // handle event
         handleKey(i, true);
@@ -184,14 +194,14 @@ public class Desktop extends GameCanvas implements Runnable, CommandListener, Lo
     public void commandAction(Command command, Displayable displayable) {
         if (command == cmdOSD) {
             if (!isMap()) {
-                showWarning(display, mapLoadingResult);
+                showWarning(display, loadingResult, null);
             } else {
-                osdVisible = !osdVisible;
+                osd.setVisible(!osd.isVisible());
                 renderScreen(true, true);
             }
         } else if (command == cmdFocus) {
             if (!isMap()) {
-                showWarning(display, mapLoadingResult);
+                showWarning(display, loadingResult, null);
             } else if (isProviderRunning()) {
                 browsing = false;
                 focus();
@@ -200,8 +210,8 @@ public class Desktop extends GameCanvas implements Runnable, CommandListener, Lo
             (new InfoForm(display)).show();
         } else if (command == cmdSettings) {
             (new SettingsForm(display)).show();
-        } else if (command == cmdLoadBook) {
-            (new FileBrowser(display)).browse();
+        } else if (command == cmdLoadMap) {
+            (new FileBrowser(display)).show();
         } else if (command == cmdRun) {
             if ("Start".equals(cmdRun.getLabel())) {
                 startTracking();
@@ -212,11 +222,16 @@ public class Desktop extends GameCanvas implements Runnable, CommandListener, Lo
     }
 
     public void locationUpdated(LocationProvider provider, Location location) {
-        log.debug("location update: " + new Date(location.getTimestamp()) + ";" + location.getQualifiedCoordinates());
+        if (log.isEnabled()) log.debug("location update: " + new Date(location.getTimestamp()) + ";" + location.getQualifiedCoordinates());
+
+        // update timestamp
+        timestamp = System.currentTimeMillis();
+
+        // update last know L-L
+        coordinates = location.getQualifiedCoordinates();
 
         // are we on map?
-        if (!browsing && !mapLoading) {
-            QualifiedCoordinates coordinates = location.getQualifiedCoordinates();
+        if (!browsing && !loadingSlices) {
             if (map.isWithin(coordinates)) {
                 // update OSD
                 osd.setInfo(coordinates.toString(), true);
@@ -226,7 +241,7 @@ public class Desktop extends GameCanvas implements Runnable, CommandListener, Lo
                 focus(); // includes screen update
             } else {
                 // log
-                log.warn("position off current map");
+                if (log.isEnabled()) log.warn("position off current map");
 
                 // update OSD
                 osd.setInfo(coordinates.toString(), false);
@@ -238,24 +253,18 @@ public class Desktop extends GameCanvas implements Runnable, CommandListener, Lo
     }
 
     public void providerStateChanged(LocationProvider provider, int newState) {
-        log.info("location provider state changed; " + newState);
+        if (log.isEnabled()) log.info("location provider state changed; " + newState);
 
-        if (!TrackingMIDlet.isEmulator()) {
-            switch (newState) {
-                case LocationProvider.AVAILABLE:
-                    showInfo(display, "Provider " + provider.getName() + " available", null);
-                    break;
-                case LocationProvider.TEMPORARILY_UNAVAILABLE:
-                    showWarning(display, "Provider " + provider.getName() + " temporatily unavailable");
-                    break;
-                case LocationProvider.OUT_OF_SERVICE:
-                    if (provider.getException() == null) {
-                        showWarning(display, "Provider " + provider.getName() + " out of service");
-                    } else {
-                        showWarning(display, "Provider " + provider.getName() + " out of service", provider.getException());
-                    }
-                    break;
-            }
+        switch (newState) {
+            case LocationProvider.AVAILABLE:
+                showInfo(display, "Provider " + provider.getName() + " available", null);
+                break;
+            case LocationProvider.TEMPORARILY_UNAVAILABLE:
+                showWarning(display, "Provider " + provider.getName() + " temporatily unavailable", null);
+                break;
+            case LocationProvider.OUT_OF_SERVICE:
+                showWarning(display, "Provider " + provider.getName() + " out of service", provider.getException());
+                break;
         }
 
         // how severe is the change
@@ -286,7 +295,7 @@ public class Desktop extends GameCanvas implements Runnable, CommandListener, Lo
         if (action > -1) {
 
             // scroll if possible
-            if (!mapLoading && mapViewer.scroll(action)) {
+            if (!loadingSlices && mapViewer.scroll(action)) {
                 scrolls++;
                 if (scrolls >= 15) {
                     int steps = 2;
@@ -302,14 +311,14 @@ public class Desktop extends GameCanvas implements Runnable, CommandListener, Lo
                 }
 
                 // move made, ensure map viewer has slices
-                mapLoading = mapViewer.ensureSlices();
-                if (!mapLoading) {
+                loadingSlices = mapViewer.ensureSlices();
+                if (!loadingSlices) {
                     renderScreen(true, true);
                 }
             }
 
             // repeat if not map loading
-            if (!mapLoading) {
+            if (!loadingSlices) {
                 display.callSerially(this);
             }
 
@@ -324,9 +333,9 @@ public class Desktop extends GameCanvas implements Runnable, CommandListener, Lo
         if (mapViewer.move(position.getX(), position.getY())) {
 
             // move made, ensure map viewer has slices
-            mapLoading = mapViewer.ensureSlices();
+            loadingSlices = mapViewer.ensureSlices();
 
-            if (!mapLoading) {
+            if (!loadingSlices) {
                 renderScreen(true, true);
             }
         }
@@ -339,9 +348,8 @@ public class Desktop extends GameCanvas implements Runnable, CommandListener, Lo
             case Canvas.UP:
             case Canvas.LEFT:
             case Canvas.RIGHT: {
-//                System.out.println("handled action " + action + ", repeated? " + repeated);
                 if (mapViewer == null) {
-                    showWarning(display, mapLoadingResult);
+                    showWarning(display, loadingResult, null);
                 } else {
                     browsing = true;
                     if (repeated) {
@@ -350,8 +358,8 @@ public class Desktop extends GameCanvas implements Runnable, CommandListener, Lo
                         }
                     } else {
                         if (mapViewer.scroll(action)) {
-                            mapLoading = mapViewer.ensureSlices();
-                            if (!mapLoading) {
+                            loadingSlices = mapViewer.ensureSlices();
+                            if (!loadingSlices) {
                                 renderScreen(true, true);
                             }
                         }
@@ -359,7 +367,7 @@ public class Desktop extends GameCanvas implements Runnable, CommandListener, Lo
                 }
             } break;
             default:
-                log.debug("unhandled key " + getKeyName(i));
+                if (log.isEnabled()) log.debug("unhandled key " + getKeyName(i));
         }
     }
 
@@ -370,19 +378,29 @@ public class Desktop extends GameCanvas implements Runnable, CommandListener, Lo
     private void renderScreen(boolean deep, boolean flush) {
         if (isMap()) {
             Graphics g = getGraphics();
-            if (deep) {
-                mapViewer.render(g);
-            }
-            if (osd != null) {
-                if (osdVisible) {
-                    if (browsing) {
-                        osd.setInfo(map.getCalibration().transform(mapViewer.getPosition()).toString(), true);  // TODO listener
-                    }
-                    osd.render(g);
+            if (initializingMap) {
+                if (loadingResult != null) {
+                    g.setFont(Font.getFont(Font.FACE_MONOSPACE, Font.STYLE_PLAIN, Font.SIZE_SMALL));
+                    g.setColor(255, 255, 255);
+                    g.drawString(loadingResult, 0, 0, Graphics.TOP | Graphics.LEFT);
                 }
-            }
-            if (status != null) {
-                status.render(g);
+            } else {
+                if (deep) {
+                    mapViewer.render(g);
+                }
+                if (osd != null) {
+                    if (osd.isVisible()) {
+                        if (browsing) {
+                            osd.setInfo(map.getCalibration().transform(mapViewer.getPosition()).toString(), true);  // TODO listener
+                        } else {
+                            osd.setInfo(coordinates.toString(), true);
+                        }
+                        osd.render(g);
+                    }
+                }
+                if (status != null) {
+                    status.render(g);
+                }
             }
         }
 
@@ -417,14 +435,8 @@ public class Desktop extends GameCanvas implements Runnable, CommandListener, Lo
             display.setCurrent(alert, nextDisplayable);
     }
 
-    public static void showWarning(Display display, String message) {
-        Alert alert = new Alert(APP_TITLE, message + ".", null, AlertType.WARNING);
-        alert.setTimeout(WARN_DIALOG_TIMEOUT);
-        display.setCurrent(alert);
-    }
-
     public static void showWarning(Display display, String message, Throwable t) {
-        Alert alert = new Alert(APP_TITLE, message + ". " + t.toString(), null, AlertType.WARNING);
+        Alert alert = new Alert(APP_TITLE, message + (t == null ? "." : ". " + t.toString()), null, AlertType.WARNING);
         alert.setTimeout(WARN_DIALOG_TIMEOUT);
         display.setCurrent(alert);
     }
@@ -444,11 +456,11 @@ public class Desktop extends GameCanvas implements Runnable, CommandListener, Lo
             display.setCurrent(alert, nextDisplayable);
     }
 
-    private void updateBookLoadinResult(Throwable t) {
+    private void updateLoadingResult(Throwable t) {
         if (t == null) {
-            mapLoadingResult = null;
+            loadingResult = null;
         } else {
-            mapLoadingResult = MSG_NO_MAP + t.toString();
+            loadingResult = MSG_NO_MAP + t.toString();
         }
     }
 
@@ -493,6 +505,8 @@ public class Desktop extends GameCanvas implements Runnable, CommandListener, Lo
     }
 
     private boolean stopTracking() {
+
+        // stop provider
         try {
             provider.setLocationListener(null, -1, -1, -1);
             provider.stop();
@@ -506,7 +520,6 @@ public class Desktop extends GameCanvas implements Runnable, CommandListener, Lo
         osd.setProviderStatus(LocationProvider.OUT_OF_SERVICE);
         renderScreen(false, true);
 
-
         // update menu
         removeCommand(cmdRun);
         cmdRun = new Command("Start", Command.SCREEN, 2);
@@ -518,6 +531,31 @@ public class Desktop extends GameCanvas implements Runnable, CommandListener, Lo
         return true;
     }
 
+    private void bgTaskOpenMap(String url) {
+        if (map != null) {
+            map.close();
+            map = null;
+        }
+
+        // release current viewer
+        mapViewer = null;
+
+        // message for the screen
+        loadingResult = "Opening map " + url;
+
+        // emulate console...
+        Graphics g = getGraphics();
+        g.setColor(0, 0, 0);
+        g.fillRect(0, 0, getWidth(), getHeight());
+        g.setFont(Font.getFont(Font.FACE_MONOSPACE, Font.STYLE_PLAIN, Font.SIZE_SMALL));
+        g.setColor(255, 255, 255);
+        g.drawString(loadingResult, 0, 0, Graphics.TOP | Graphics.LEFT);
+
+        // open map (in background)
+        map = new Map(url);
+        initializingMap = map.prepare();
+    }
+
     /**
      * For external events.
      */
@@ -526,6 +564,7 @@ public class Desktop extends GameCanvas implements Runnable, CommandListener, Lo
         public static final int EVENT_FILE_BROWSER_FINISHED         = 1;
         public static final int EVENT_LOADING_STATUS_CHANGED        = 2;
         public static final int EVENT_SLICES_LOADED                 = 3;
+        public static final int EVENT_MAP_OPENED                    = 4;
 
         private static Desktop desktop; // only if the class is static!
 
@@ -540,7 +579,7 @@ public class Desktop extends GameCanvas implements Runnable, CommandListener, Lo
         }
 
         public void fire() {
-            log.debug("firing event " + this.toString());
+            if (log.isEnabled()) log.debug("firing event " + this.toString());
             desktop.display.callSerially(Desktop.Event.this);
         }
 
@@ -549,9 +588,10 @@ public class Desktop extends GameCanvas implements Runnable, CommandListener, Lo
         }
 
         public void run() {
-            log.debug("event " + this.toString());
+            if (log.isEnabled()) log.debug("event " + this.toString());
 
             switch (code) {
+
                 case EVENT_CONFIGURATION_CHANGED: {
                     // TODO
                 } break;
@@ -560,64 +600,11 @@ public class Desktop extends GameCanvas implements Runnable, CommandListener, Lo
                     // had user selected anything?
                     if (result != null) {
 
-                        /*
-                         * TODO not sure this is correct 'eventing'
-                         */
+                        // hide OSD
+                        desktop.osd.setVisible(false);
 
-                        // first try to load the map
-                        try {
-                            // TODO same code as in Desktop.initGUI()
-
-                            // close current map
-                            if (desktop.map != null) {
-                                desktop.map.close();
-                                desktop.map = null;
-                            }
-                            desktop.mapViewer = null;
-
-                            // clear map area with black
-                            Graphics g = desktop.getGraphics();
-                            g.setColor(0, 0, 0);
-                            g.fillRect(0, 0, desktop.getWidth(), desktop.getHeight());
-
-                            // load map
-                            desktop.map = new Map((String) result);
-
-                            // with failure upon startup, map viewer may be null
-                            if (desktop.mapViewer == null) {
-                                desktop.mapViewer = new MapViewer(0, 0, desktop.getWidth(), desktop.getHeight());
-                            }
-
-                            // setup map viewer
-                            desktop.mapViewer.setMap(desktop.map);
-                            desktop.mapLoading = desktop.mapViewer.ensureSlices();
-
-                        } catch (IOException e) {
-                            throwable = e;
-                            desktop.updateBookLoadinResult(e);
-                            showError(desktop.display, "Failed to load map", e, desktop);
-                        }
-
-                        // offer setting as default map
-                        if (throwable == null) {
-                            (new YesNoDialog(desktop.display, new YesNoDialog.AnswerListener(){
-                                public void response(int answer) {
-                                    log.debug("yes-no? " + answer);
-
-                                    // update cfg if requested
-                                    if (answer == YesNoDialog.AnswerListener.YES) {
-                                        try {
-                                            Config config = Config.getInstance();
-                                            config.setMapPath((String) result);
-                                            config.update();
-                                            showConfirmation(desktop.display, "Configuration updated", desktop);
-                                        } catch (ConfigurationException e) {
-                                            showError(desktop.display, "Failed to update configuration", e, desktop);
-                                        }
-                                    }
-                                }
-                            })).show("Use as default map", (String) result);
-                        }
+                        // background task
+                        desktop.bgTaskOpenMap((String) result);
                     }
                 } break;
 
@@ -627,25 +614,100 @@ public class Desktop extends GameCanvas implements Runnable, CommandListener, Lo
 
                     // render if shown
                     if (desktop.isShown()) {
-                        // do not deep render when until loading is not finished
+
+                        // do not deep render until loading is not finished
                         desktop.renderScreen(false, true);
                         desktop.serviceRepaints();
                     }
                 } break;
 
                 case EVENT_SLICES_LOADED: {
-                    // clear flag and save result
-                    desktop.mapLoading = false;
-                    desktop.updateBookLoadinResult(throwable);
+                    // temp var
+                    boolean yesno = desktop.initializingMap;
 
-                    // if loaded ok
+                    // clear flags and save result
+                    desktop.loadingSlices = false;
+                    desktop.initializingMap = false;
+                    desktop.updateLoadingResult(throwable);
+
+                    // if loaded was ok
                     if (throwable == null) {
+
+                        // offer setting as default map
+                        if (yesno) {
+
+                            // default map
+                            (new YesNoDialog(desktop.display, new YesNoDialog.AnswerListener(){
+                                public void response(int answer) {
+                                    if (log.isEnabled()) log.debug("yes-no? " + answer);
+
+                                    // update cfg if requested
+                                    if (answer == YesNoDialog.AnswerListener.YES) {
+                                        try {
+                                            Config config = Config.getInstance();
+                                            config.setMapPath(desktop.map.getPath());
+                                            config.update();
+                                            showConfirmation(desktop.display, "Configuration updated", desktop);
+                                        } catch (ConfigurationException e) {
+                                            showError(desktop.display, "Failed to update configuration", e, desktop);
+                                        }
+                                    }
+                                }
+                            })).show("Use as default map", desktop.map.getPath());
+                        }
+
                         // update screen
                         desktop.renderScreen(true, true);
+                        desktop.serviceRepaints();
 
-                        // check keys
-                        desktop.display.callSerially(desktop);
+                        // check keys, for loading-in-move
+                        if (desktop.scrolls > 0) {
+                            desktop.display.callSerially(desktop);
+                        }
                     } else {
+                        showError(desktop.display, (String) result, throwable);
+                    }
+                } break;
+
+                case EVENT_MAP_OPENED: {
+                    // update loading result
+/*
+                    desktop.updateLoadingResult(throwable);
+*/ // do not clear it yet, for the user to see what's happing
+
+                    // show OSD (only on map reload)
+                    desktop.osd.setVisible(true);
+
+                    // if opening ok
+                    if (throwable == null) {
+                        try {
+
+                            /*
+                             * same as in initGui...
+                             */
+
+                            // create map viewer
+                            desktop.mapViewer = new MapViewer(0, 0, desktop.getWidth(), desktop.getHeight());
+
+                            // setup map viewer
+                            desktop.mapViewer.setMap(desktop.map);
+
+                            // ensure initial slice(s) are being loaded
+                            desktop.loadingSlices = desktop.mapViewer.ensureSlices();
+
+                        } catch (IOException e) {
+                            desktop.updateLoadingResult(e);
+                            showError(desktop.display, "Failed to load map", e, desktop);
+                        }
+                    } else {
+                        // update message
+                        desktop.updateLoadingResult(throwable);
+
+                        // clear desktop
+                        Graphics g = desktop.getGraphics();
+                        g.setColor(0, 0, 0);
+                        g.fillRect(0, 0, desktop.getWidth(), desktop.getHeight());
+
                         showError(desktop.display, (String) result, throwable);
                     }
                 } break;

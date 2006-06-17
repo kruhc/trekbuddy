@@ -20,6 +20,8 @@ abstract class Bar {
     protected String info;
     protected boolean ok;
 
+    private boolean visible = true;
+
     protected Bar(int gx, int gy, int width, int height) {
         this.gx = gx;
         this.gy = gy;
@@ -39,9 +41,21 @@ abstract class Bar {
         bar = Image.createRGBImage(shadow, width, h, true);
     }
 
+    public int getHeight() {
+        return font.getHeight(); 
+    }
+
     public void setInfo(String info, boolean ok) {
         this.info = info;
         this.ok = ok;
+    }
+
+    public boolean isVisible() {
+        return visible;
+    }
+
+    public void setVisible(boolean visible) {
+        this.visible = visible;
     }
 
     public abstract void render(Graphics graphics);

@@ -47,7 +47,7 @@ final class MapViewer {
 
     // TODO better name - x,y is desired position of crosshair!
     public boolean move(int x, int y) {
-        log.debug("move, current position " + this.x + "," + this.y);
+        if (log.isEnabled()) log.debug("move, current position " + this.x + "," + this.y);
 
         boolean dirty = false;
         int direction = -1;
@@ -123,6 +123,7 @@ final class MapViewer {
 
     public void render(Graphics graphics) {
         // clear window
+        graphics.setColor(0, 0, 0);
         graphics.fillRect(gx, gy, width, height);
 
         // project slices to window
@@ -135,40 +136,49 @@ final class MapViewer {
     }
 
     private void drawSlice(Graphics graphics, Slice slice) {
-        Position mapPosition = slice.getAbsolutePosition();
+        int m_x0 = slice.getAbsolutePosition().getX();
+        int m_y0 = slice.getAbsolutePosition().getY();
+        int slice_w = slice.getWidth();
+        int slice_h = slice.getHeight();
 
         int x_src = -1;
         int w = -1;
         int x_dest = -1;
-        if (x > mapPosition.getX()) {
-            x_src = x - mapPosition.getX();
-            w = slice.getWidth() - x_src;
+        if (x > m_x0) {
+            x_src = x - m_x0;
+            w = slice_w - x_src;
             x_dest = gx;
         } else {
             x_src = 0;
-            w = x + width - mapPosition.getX();
-            x_dest = gx + mapPosition.getX() - x;
+            w = x + width - m_x0;
+            x_dest = gx + m_x0 - x;
         }
         if (w > (width - x_dest)) w = width - x_dest;
-        if (w > slice.getWidth()) w = slice.getWidth();
+        if (w > slice_w) w = slice_w;
 
         int y_src = -1;
         int h = -1;
         int y_dest = -1;
-        if (y > mapPosition.getY()) {
-            y_src = y - mapPosition.getY();
-            h = slice.getHeight() - y_src;
+        if (y > m_y0) {
+            y_src = y - m_y0;
+            h = slice_h - y_src;
             y_dest = gy;
         } else {
             y_src = 0;
-            h = y + height - mapPosition.getY();
-            y_dest = gy + mapPosition.getY() - y;
+            h = y + height - m_y0;
+            y_dest = gy + m_y0 - y;
         }
         if (h > (height - y_dest)) h = height - y_dest;
-        if (h > slice.getHeight()) h = slice.getHeight();
+        if (h > slice_h) h = slice_h;
+
+/*
+        // assertions
+        if (x_src > slice.getWidth()) throw new IllegalStateException("x_src > slice.getWidth()");
+        if (y_src > slice.getHeight()) throw new IllegalStateException("y_src > slice.getHeight()");
+*/
 
         if (w > 0 && h > 0) {
-//            System.out.println("draw region " + x_src + "x" + y_src + " dim " + w + "x" + h + " of " + slice + " at " + x_dest + "x" + y_dest);
+//            log.debug("draw region " + x_src + "x" + y_src + " dim " + w + "x" + h + " of " + slice + " at " + x_dest + "x" + y_dest);
             graphics.drawRegion(slice.getImage(),
                                 x_src, y_src, w, h,
                                 Sprite.TRANS_NONE,
@@ -179,7 +189,7 @@ final class MapViewer {
 
     public boolean ensureSlices() {
         if (map == null) {
-            log.error("no map");
+            if (log.isEnabled()) log.error("no map");
             throw new IllegalStateException("No map");
         }
 
@@ -188,26 +198,28 @@ final class MapViewer {
         ensureSlice(x + width - 1, y, collection);
         ensureSlice(x, y + height - 1, collection);
         ensureSlice(x + width - 1, y + height - 1, collection);
-        collection.trimToSize();
 
         // find slices we will no longer use
-        Vector garbage = new Vector();
+        Vector garbage = null;
         for (Enumeration e = slices.elements(); e.hasMoreElements(); ) {
             Slice slice = (Slice) e.nextElement();
             if (!collection.contains(slice)) {
                 // debug
-                log.debug("release map image in " + slice);
+                if (log.isEnabled()) log.debug("release map image in " + slice);
 
                 // to be freed
+                if (garbage == null) {
+                    garbage = new Vector();
+                }
                 garbage.addElement(slice);
             }
         }
 
         // release old slices
-        map.releaseSlices(garbage);
-
-        // help gc
-        if (garbage.size() > 0) System.gc(); // enforce gc
+        if (garbage != null) {
+            map.releaseSlices(garbage);
+            System.gc(); // enforce gc
+        }
 
         // set new slices
         slices = collection;

@@ -24,7 +24,10 @@ public class TrackingMIDlet extends MIDlet {
 
     // system info
     private static String flags;
+/*
     private static boolean emulator;
+*/
+    private static boolean logEnabled;
     private static boolean jsr179;
     private static boolean jsr82;
     private static int numAlphaLevels = 2;
@@ -41,7 +44,10 @@ public class TrackingMIDlet extends MIDlet {
 
         // detect environment
         TrackingMIDlet.flags = getAppProperty("App-Flags");
+/*
         TrackingMIDlet.emulator = "true".equals(getAppProperty("Is-Emulator"));
+*/
+        TrackingMIDlet.logEnabled = "true".equals(getAppProperty("Log-Enable"));
         try {
             Class clazz = Class.forName("javax.microedition.location.LocationProvider");
             TrackingMIDlet.jsr179 = true;
@@ -104,12 +110,16 @@ public class TrackingMIDlet extends MIDlet {
 
             // 4. read default map
             console.show("loading default map...");
-            try {
-                desktop.initMap();
-                console.result(0, "ok");
-            } catch (Exception e) {
-                e.printStackTrace();
-                console.result(-1, "failed");
+            if ("".equals(Config.getSafeInstance().getMapPath())) {
+                console.result(1, "skipped");
+            } else {
+                try {
+                    desktop.initMap();
+                    console.result(0, "ok");
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    console.result(-1, "failed");
+                }
             }
 
             // 5. preparing desktop
@@ -143,8 +153,14 @@ public class TrackingMIDlet extends MIDlet {
      * Environment info.
      */
 
+/*
     public static boolean isEmulator() {
         return emulator;
+    }
+*/
+
+    public static boolean isLogEnabled() {
+        return logEnabled;
     }
 
     public static boolean isJsr179() {
@@ -153,6 +169,10 @@ public class TrackingMIDlet extends MIDlet {
 
     public static boolean isJsr82() {
         return jsr82;
+    }
+
+    public static String getFlags() {
+        return flags;
     }
 
     public static boolean hasFlag(String flag) {

@@ -29,8 +29,10 @@ public abstract class Config {
      * Configuration params, initialized to default values.
      */
 
-    protected String mapPath = "file:///E:/maps/map.tar";
+    protected String mapPath = ""; // no default map
     protected String locationProvider = LOCATION_PROVIDER_SIMULATOR;
+    protected String tracklogsDir = "file:///E:/tracklogs";
+    protected boolean tracklogsOn = false;
     protected boolean fullscreen = false;
     protected String simulatorPath = "file:///E:/maps/simulator.log";
     protected int simulatorDelay = 100;
@@ -83,6 +85,22 @@ public abstract class Config {
         this.locationProvider = locationProvider;
     }
 
+    public boolean isTracklogsOn() {
+        return tracklogsOn;
+    }
+
+    public void setTracklogsOn(boolean tracklogsOn) {
+        this.tracklogsOn = tracklogsOn;
+    }
+
+    public String getTracklogsDir() {
+        return tracklogsDir;
+    }
+
+    public void setTracklogsDir(String tracklogsDir) {
+        this.tracklogsDir = tracklogsDir;
+    }
+
     public boolean isFullscreen() {
         return fullscreen;
     }
@@ -120,7 +138,7 @@ public abstract class Config {
     }
 
     private static class RMSConfig extends Config {
-        private static final String NAME = "config10";
+        private static final String NAME = "config_07x";
 
         private boolean initialized = false;
 
@@ -137,16 +155,19 @@ public abstract class Config {
                     // new store? existing store? corrupted store?
                     switch (rs.getNumRecords()) {
                         case 0:
-                            log.info("new configuration");
+                            if (log.isEnabled()) log.info("new configuration");
                             break;
                         case 1: {
                                 DataInputStream din = new DataInputStream(new ByteArrayInputStream(rs.getRecord(1)));
                                 mapPath = din.readUTF();
                                 locationProvider = din.readUTF();
-                                fullscreen = din.readBoolean();
+                                tracklogsOn = din.readBoolean();
+                                tracklogsDir = din.readUTF();
                                 simulatorPath = din.readUTF();
                                 simulatorDelay = din.readInt();
-                                log.info("configuration read");
+                                fullscreen = din.readBoolean();
+                                din.close();
+                                if (log.isEnabled()) log.info("configuration read");
                             } break;
                         default: {
 
@@ -169,7 +190,7 @@ public abstract class Config {
                     throw new ConfigurationException(e);
                 }
 
-                log.info("configuration initialized");
+                if (log.isEnabled()) log.info("configuration initialized");
 
                 initialized = true;
             }
@@ -188,10 +209,12 @@ public abstract class Config {
                 DataOutputStream dout = new DataOutputStream(data);
                 dout.writeUTF(mapPath);
                 dout.writeUTF(locationProvider);
-                dout.writeBoolean(fullscreen);
+                dout.writeBoolean(tracklogsOn);
+                dout.writeUTF(tracklogsDir);
                 dout.writeUTF(simulatorPath);
                 dout.writeInt(simulatorDelay);
-                dout.flush();
+                dout.writeBoolean(fullscreen);
+                dout.close();
                 byte[] bytes = data.toByteArray();
                 if (rs.getNumRecords() > 0) {
                     rs.setRecord(1, bytes, 0, bytes.length);
@@ -205,7 +228,7 @@ public abstract class Config {
                 throw new ConfigurationException(e);
             }
 
-            log.info("configuration updated");
+            if (log.isEnabled()) log.info("configuration updated");
         }
     }
 }

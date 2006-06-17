@@ -12,11 +12,12 @@ import javax.microedition.lcdui.Command;
 import javax.microedition.lcdui.CommandListener;
 import javax.microedition.lcdui.Displayable;
 
-public class InfoForm implements CommandListener {
+public class InfoForm extends Form implements CommandListener {
     private Display display;
     private Displayable previous;
 
     public InfoForm(Display display) {
+        super("Info");
         this.display = display;
         this.previous = display.getCurrent();
     }
@@ -25,18 +26,13 @@ public class InfoForm implements CommandListener {
         // gc
         System.gc();
 
-        // form
-        Form form = new Form("Info");
-        form.append(new StringItem("In emulator", (new Boolean(TrackingMIDlet.isEmulator())).toString()));
-        form.append(new StringItem("JSR-82", (new Boolean(TrackingMIDlet.isJsr82())).toString()));
-        form.append(new StringItem("JSR-179", (new Boolean(TrackingMIDlet.isJsr179())).toString()));
-        form.append(new StringItem("Total memory", Long.toString(Runtime.getRuntime().totalMemory())));
-        form.append(new StringItem("Free memory", Long.toString(Runtime.getRuntime().freeMemory())));
-        form.addCommand(new Command("Close", Command.CANCEL, 1));
-        form.setCommandListener(this);
+        append(new StringItem("Memory", Long.toString(Runtime.getRuntime().totalMemory()) + "/" + Long.toString(Runtime.getRuntime().freeMemory())));
+        append(new StringItem("AppFlags", TrackingMIDlet.getFlags()));
+        addCommand(new Command("Close", Command.CANCEL, 1));
+        setCommandListener(this);
 
         // show
-        display.setCurrent(form);
+        display.setCurrent(this);
     }
 
     public void commandAction(Command command, Displayable displayable) {

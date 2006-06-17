@@ -7,8 +7,11 @@ import api.location.LocationProvider;
 
 import java.io.InputStream;
 import java.io.IOException;
+import java.io.OutputStream;
 
 public abstract class StreamReadingLocationProvider extends LocationProvider {
+    protected volatile OutputStream observer;
+
     protected StreamReadingLocationProvider(String name) {
         super(name);
     }
@@ -30,9 +33,17 @@ public abstract class StreamReadingLocationProvider extends LocationProvider {
         boolean nl = false;
         int c = in.read();
         while (c > -1) {
+            if (observer != null) {
+                try {
+                    observer.write(c);
+                    observer.flush();
+                } catch (IOException e) {
+                    // ignore observer's problems :-)
+                }
+            }
             char ch = (char) c;
             sb.append(ch);
-            nl = ch == '\n';
+            nl = (ch == '\n' || ch == '\r');
             if (nl) break;
             c = in.read();
         }

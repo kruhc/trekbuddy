@@ -46,11 +46,13 @@ public class Map {
     // loading task
     private Thread task;
 
-    public Map(String path) throws IOException {
+    public Map(String path) {
         this.path = path;
         this.slices = new Slice[0];
-        open();
-        compute();
+    }
+
+    public String getPath() {
+        return path;
     }
 
     public Calibration getCalibration() {
@@ -58,21 +60,21 @@ public class Map {
     }
 
     public void close() {
-        log.info("close map");
+        if (log.isEnabled()) log.info("close map");
 
         // null images
         for (int N = slices.length, i = 0; i < N; i++) {
-            log.debug("null image for slice " + slices[i]);
+            if (log.isEnabled()) log.debug("null image for slice " + slices[i]);
             slices[i].setImage(null);
         }
 
         // destroy loader
         try {
             loader.destroy();
-            log.debug("loader destroyed");
+            if (log.isEnabled()) log.debug("loader destroyed");
             loader = null;
         } catch (IOException e) {
-            log.warn("failed to destroy loader");
+            if (log.isEnabled()) log.warn("failed to destroy loader");
         }
 
         // gc
@@ -99,75 +101,38 @@ public class Map {
 
     /**
      * Opens and scans map.
-     * @throws IOException
      */
-    private void open() throws IOException {
+    public boolean prepare() {
+        if (log.isEnabled()) log.debug("about to open and prepare map");
 
-        // load map
-        loader = path.endsWith(".tar") ? (Loader) new TarLoader() : (Loader) new DirLoader();
-        loader.init();
-/*
-        l.start();
-        try {
-            l.join();
-        } catch (InterruptedException e) {
-        }
-*/
-        loader.run();
-        loader.checkException();
-        log.debug("map opened");
-
-        /*
-        * keep the connection open to avoid access confirmation
-        */
-
-        // check map for consistency
-        if (calibration == null) {
-            throw new InvalidMapException("Map calibration info missing");
-        }
-        if (slices.length == 0) {
-            throw new InvalidMapException("Empty map - no slices");
+        // wait for previous task to finish (it should be already finished!)
+        if (task != null) {
+            if (log.isEnabled()) log.debug("waiting for previous task to finish");
+            try {
+                task.join();
+            } catch (InterruptedException e) {
+            }
+            task = null;
         }
 
-        // absolutize slices position
-        for (int N = slices.length, i = 0; i < N; i++) {
-            slices[i].absolutizePosition(calibration);
-        }
+        // load images at background
+        if (log.isEnabled()) log.debug("starting init task");
+        task = new Thread(new Runnable() {
+            public void run() {
+                // open and init map
+                Throwable t = loadMap();
 
-        // type-specific ops
-        switch (type) {
-            case TYPE_BEST: {
-                log.debug("fix slices dimension");
-                // fix slices dimension
-                for (int N = slices.length, i = 0; i < N; i++) {
-                    Slice slice = slices[i];
-                    ((Calibration.Best) slice.getCalibration()).fixDimension(calibration, slices);
-                }
-            } break;
-            default:
-                log.debug("no map specific ops for map of type " + type);
-        }
+                // log
+                if (log.isEnabled()) log.debug("map opened and initialized");
 
-        // debug
-        for (int N = slices.length, i = 0; i < N; i++) {
-            log.debug("ready slice " + slices[i]);
-        }
-        // ~debug
+                // we are done
+                (new Desktop.Event(Desktop.Event.EVENT_MAP_OPENED, null, t)).fire();
+            }
+        });
+        task.setPriority(Thread.MAX_PRIORITY);
+        task.start();
 
-        log.debug("map ready");
-    }
-
-    /**
-     * Initial setup.
-     */
-    private void compute() {
-        range = new QualifiedCoordinates[2];
-        range[0] = calibration.transform(new Position(0, 0));
-        range[1] = calibration.transform(new Position(calibration.getWidth() - 1,
-                                                      calibration.getHeight() - 1));
-
-        // log
-        log.info("map range is "  + range[0] + "(" + range[0].getLat() + "," + range[0].getLon() + ") - " + range[1] + "(" + range[1].getLat() + "," + range[1].getLon() + ")");
+        return true;
     }
 
     /**
@@ -177,43 +142,48 @@ public class Map {
     public boolean prepareSlices(Vector slices) {
         Vector collection = null;
 
+        // create list of slices whose images are to be loaded
         for (Enumeration e = slices.elements(); e.hasMoreElements(); ) {
             Slice slice = (Slice) e.nextElement();
             if (slice.getImage() == null) {
+                if (log.isEnabled()) log.debug("image missing for slice " + slice);
                 if (collection == null) {
                     collection = new Vector();
                 }
-
-                log.debug("image missing for slice " + slice);
                 collection.addElement(slice);
             }
         }
 
+        // no images to be loaded
         if (collection == null) {
             return false;
         }
 
-        log.debug("about to load new slices");
+        // debug
+        if (log.isEnabled()) log.debug("about to load new slices");
+
+        // trick
+        final Vector toload = collection;
 
         // wait for previous task to finish (it should be already finished!)
         if (task != null) {
-            log.debug("waiting for previous task to finish");
+            if (log.isEnabled()) log.debug("waiting for previous task to finish");
             try {
                 task.join();
             } catch (InterruptedException e) {
             }
             task = null;
         }
+
         // load images at background
-        log.debug("starting loading task");
-        final Vector toload = collection;
+        if (log.isEnabled()) log.debug("starting loading task");
         task = new Thread(new Runnable() {
             public void run() {
                 // load images
                 Throwable t = loadSlices(toload);
 
                 // log
-                log.debug("all requested slices loaded");
+                if (log.isEnabled()) log.debug("all requested slices loaded");
 
                 // we are done
                 (new Desktop.Event(Desktop.Event.EVENT_SLICES_LOADED, null, t)).fire();
@@ -225,6 +195,74 @@ public class Map {
         return true;
     }
 
+    /* public only for init loading */
+    public Throwable loadMap() {
+        try {
+            // load map
+            loader = path.endsWith(".tar") ? (Loader) new TarLoader() : (Loader) new DirLoader();
+            loader.init();
+            loader.run();
+            loader.checkException();
+            if (log.isEnabled()) log.debug("map opened");
+
+            /*
+            * keep the connection open to avoid access confirmation
+            */
+
+            // check map for consistency
+            if (calibration == null) {
+                throw new InvalidMapException("Map calibration info missing");
+            }
+            if (slices.length == 0) {
+                throw new InvalidMapException("Empty map - no slices");
+            }
+
+            // absolutize slices position
+            for (int N = slices.length, i = 0; i < N; i++) {
+                slices[i].absolutizePosition(calibration);
+            }
+
+            // type-specific ops
+            switch (type) {
+                case TYPE_BEST: {
+                    if (log.isEnabled()) log.debug("fix slices dimension");
+                    // fix slices dimension
+                    for (int N = slices.length, i = 0; i < N; i++) {
+                        Slice slice = slices[i];
+                        ((Calibration.Best) slice.getCalibration()).fixDimension(calibration, slices);
+                    }
+                } break;
+                default:
+                    if (log.isEnabled()) log.debug("no map specific ops for map of type " + type);
+            }
+
+            // debug
+            if (log.isEnabled()) {
+                for (int N = slices.length, i = 0; i < N; i++) {
+                    log.debug("ready slice " + slices[i]);
+                }
+            }
+
+            // compute map range
+            range = new QualifiedCoordinates[2];
+            range[0] = calibration.transform(new Position(0, 0));
+            range[1] = calibration.transform(new Position(calibration.getWidth() - 1,
+                                                          calibration.getHeight() - 1));
+
+            // log
+            if (log.isEnabled()) log.info("map range is "  + range[0] + "(" + range[0].getLat() + "," + range[0].getLon() + ") - " + range[1] + "(" + range[1].getLat() + "," + range[1].getLon() + ")");
+
+            return null;
+
+        } catch (InvalidMapException e) {
+            return e;
+        } catch (IOException e) {
+            return e;
+        } catch (OutOfMemoryError e) {
+            return e;
+        }
+    }
+
     /**
      * Loads images for given slices.
      * @param toLoad
@@ -233,7 +271,7 @@ public class Map {
         try {
             for (Enumeration e = toLoad.elements(); e.hasMoreElements(); ) {
                 Slice slice = (Slice) e.nextElement();
-                log.debug("load image for slice " + slice);
+                if (log.isEnabled()) log.debug("load image for slice " + slice);
                 loadSlice(slice);
             }
 
@@ -247,14 +285,14 @@ public class Map {
     }
 
     /**
-     * Releases slices..
+     * Releases slices images.
      * @param slices
      */
     public void releaseSlices(Vector slices) {
-        //  clears their image references
+        //  clear slices image references
         for (Enumeration e = slices.elements(); e.hasMoreElements(); ) {
             Slice slice = (Slice) e.nextElement();
-            log.debug("release image for slice " + slice);
+            if (log.isEnabled()) log.debug("release image for slice " + slice);
             slice.setImage(null);
         }
 
@@ -266,12 +304,12 @@ public class Map {
      * Loads slice from map. Expects file connection opened.
      */
     private void loadSlice(Slice slice) throws IOException {
-        log.debug("Loading slice " + slice.getCalibration().getPath() + "...");
+        if (log.isEnabled()) log.debug("Loading slice " + slice.getCalibration().getPath() + "...");
 
         // fire event
-        if (!TrackingMIDlet.isEmulator()) {
+//        if (!TrackingMIDlet.isEmulator()) {
             (new Desktop.Event(Desktop.Event.EVENT_LOADING_STATUS_CHANGED, "Loading slice " + slice.getCalibration().getPath() + "...", null)).fire();
-        }
+//        }
 
         IOException exception = null;
         OutOfMemoryError error = null;
@@ -288,25 +326,25 @@ public class Map {
             }
 
             // log
-            log.debug("image loaded for slice " + slice.getCalibration().getPath());
+            if (log.isEnabled()) log.debug("image loaded for slice " + slice.getCalibration().getPath());
 
         } catch (IOException e) {
             // log
-            log.error("image loading failed for slice " + slice.getCalibration().getPath(), e);
+            if (log.isEnabled()) log.error("image loading failed for slice " + slice.getCalibration().getPath(), e);
 
             throwable = exception = e;
 
         } catch (OutOfMemoryError e) {
             // log
-            log.error("image loading failed for slice " + slice.getCalibration().getPath(), e);
+            if (log.isEnabled()) log.error("image loading failed for slice " + slice.getCalibration().getPath(), e);
 
             throwable = error = e;
         }
 
         // fire event
-        if (!TrackingMIDlet.isEmulator()) {
+//        if (!TrackingMIDlet.isEmulator()) {
             (new Desktop.Event(Desktop.Event.EVENT_LOADING_STATUS_CHANGED, null, throwable)).fire();
-        }
+//        }
 
         // upon no exception just return
         if (exception == null) {
@@ -354,7 +392,7 @@ public class Map {
 
         public void init() throws IOException {
             fileConnection = (FileConnection) Connector.open(path, Connector.READ);
-            log.debug("map connection opened; " + path);
+            if (log.isEnabled()) log.debug("map connection opened; " + path);
         }
 
         public void destroy() {
@@ -363,7 +401,7 @@ public class Map {
                 try {
                     fileConnection.close();
                 } catch (IOException e) {
-                    log.error("map closing failed", e);
+                    if (log.isEnabled()) log.error("map closing failed", e);
                 }
             }
         }
@@ -384,7 +422,7 @@ public class Map {
                                 Map.this.calibration = calibration;
                                 Map.this.type = TYPE_BEST;
                             } else {
-                                log.warn("calibration file " + entryName + " ignored");
+                                if (log.isEnabled()) log.warn("calibration file " + entryName + " ignored");
                             }
                         } else if (entryName.endsWith(".map")) {
                             Calibration calibration = new Calibration.Ozi(loadTextContent(tar), entryName);
@@ -392,7 +430,7 @@ public class Map {
                                 Map.this.calibration = calibration;
                                 Map.this.type = TYPE_BEST;
                             } else {
-                                log.warn("calibration file " + entryName + " ignored");
+                                if (log.isEnabled()) log.warn("calibration file " + entryName + " ignored");
                             }
                         } else if (entryName.endsWith(".xml")) {
                             Calibration calibration = new Calibration.XML(loadTextContent(tar), entryName);
@@ -408,7 +446,7 @@ public class Map {
                                 Map.this.calibration = calibration;
                                 Map.this.type = TYPE_J2N;
                             } else {
-                                log.warn("calibration file " + entryName + " ignored");
+                                if (log.isEnabled()) log.warn("calibration file " + entryName + " ignored");
                             }
                         } else if ((entryName.startsWith("set/") || (entryName.startsWith("pictures/"))) && entryName.endsWith(".png")) {
                             Calibration calibration = new Calibration.Best(entryName);
@@ -451,7 +489,7 @@ public class Map {
                     try {
                         tar.close();
                     } catch (IOException e) {
-                        log.error("failed to close input stream", e);
+                        if (log.isEnabled()) log.error("failed to close input stream", e);
                     }
                 }
             }
@@ -464,7 +502,7 @@ public class Map {
 
         public void init() throws IOException {
             dir = path.substring(0, path.lastIndexOf('/'));
-            log.debug("slices are in " + dir);
+            if (log.isEnabled()) log.debug("slices are in " + dir);
         }
 
         public void destroy() throws IOException {
@@ -532,7 +570,7 @@ public class Map {
 
         public void loadSlice(Slice slice) throws IOException {
             String spath = dir + "/" + slice.getCalibration().getPath();
-            log.debug("load slice image from " + spath);
+            if (log.isEnabled()) log.debug("load slice image from " + spath);
 
             FileConnection fc = null;
             InputStream in = null;

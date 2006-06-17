@@ -35,7 +35,7 @@ public class Console extends Canvas {
     }
 
     public void delay() {
-        long delay = errors > 0 ? 2500 : 500;
+        long delay = errors > 0 ? 2000 : 500;
         try {
             Thread.sleep(delay);
         } catch (InterruptedException e) {
@@ -45,6 +45,7 @@ public class Console extends Canvas {
     public void show(String text) {
         y++;
         Graphics g = image.getGraphics();
+        g.setFont(font);
         g.setColor(255, 255, 255);
         g.drawString(text, BORDER, y * h, Graphics.TOP | Graphics.LEFT);
         repaint();
@@ -55,10 +56,14 @@ public class Console extends Canvas {
         Graphics g = image.getGraphics();
         if (code == 0) {
             g.setColor(0, 255, 0);
-        } else {
+        } else if (code == -1) {
             g.setColor(255, 0, 0);
             errors++;
+        } else {
+            g.setColor(255, 185, 0);
+            errors++;
         }
+        g.setFont(font);
         g.drawString(text, x, y * h, Graphics.TOP | Graphics.LEFT);
         repaint();
     }

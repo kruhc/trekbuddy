@@ -11,10 +11,16 @@ public class Logger {
     private static final String LEVEL_WARN   = "WARN";
     private static final String LEVEL_ERROR  = "ERROR";
 
-    private String appname = null;
+    private String cname;
+    private boolean enabled;
 
     public Logger(String appname) {
-        this.appname = appname;
+        this.cname = appname;
+        this.enabled = TrackingMIDlet.isLogEnabled();
+    }
+
+    public boolean isEnabled() {
+        return enabled;
     }
 
     public void debug(String message) {
@@ -44,14 +50,14 @@ public class Logger {
     }
 
     private void log(String severity, String message) /*throws IOException*/ {
-        if (TrackingMIDlet.isEmulator()) {
-            System.out.println("[" + severity + "] " + appname + " - " + message);
+        if (enabled) {
+            System.out.println("[" + severity + "] " + cname + " - " + message);
             System.out.flush();
         }
     }
 
     private void log(String stacktrace) /*throws IOException*/ {
-        if (TrackingMIDlet.isEmulator()) {
+        if (enabled) {
             System.out.println(stacktrace);
             System.out.flush();
         }

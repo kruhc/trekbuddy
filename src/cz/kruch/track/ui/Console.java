@@ -16,11 +16,12 @@ public class Console extends Canvas {
     private Image image;
     private Font font;
     private int errors;
+    private int skips;
 
     public Console() {
         this.setFullScreenMode(true);
         this.y = -1;
-        this.errors = 0;
+        this.errors = this.skips = 0;
         this.width = getWidth();
         this.image = Image.createImage(width, getHeight());
         this.font = Font.getFont(Font.FACE_MONOSPACE, Font.STYLE_PLAIN, Font.SIZE_SMALL);
@@ -35,7 +36,7 @@ public class Console extends Canvas {
     }
 
     public void delay() {
-        long delay = errors > 0 ? 2000 : 500;
+        long delay = errors > 0 ? 2000 : (skips > 0 ? 750: 500);
         try {
             Thread.sleep(delay);
         } catch (InterruptedException e) {
@@ -61,7 +62,7 @@ public class Console extends Canvas {
             errors++;
         } else {
             g.setColor(255, 185, 0);
-            errors++;
+            skips++;
         }
         g.setFont(font);
         g.drawString(text, x, y * h, Graphics.TOP | Graphics.LEFT);

@@ -69,12 +69,14 @@ public class Map {
         }
 
         // destroy loader
-        try {
-            loader.destroy();
-            if (log.isEnabled()) log.debug("loader destroyed");
-            loader = null;
-        } catch (IOException e) {
-            if (log.isEnabled()) log.warn("failed to destroy loader");
+        if (loader != null) {
+            try {
+                loader.destroy();
+                if (log.isEnabled()) log.debug("loader destroyed");
+                loader = null;
+            } catch (IOException e) {
+                if (log.isEnabled()) log.warn("failed to destroy loader");
+            }
         }
 
         // gc
@@ -594,5 +596,30 @@ public class Map {
                 }
             }
         }
+    }
+
+    private static final String defaultMapCalibration =
+        "Point01,xy,0,0,in,deg,90,0,N,180,0,W,grid,,,,N\n" +
+        "Point02,xy,639,0,in,deg,90,0,N,180,0,E,grid,,,,N\n" +
+        "Point03,xy,0,319,in,deg,90,0,S,180,0,W, grid,,,,N\n" +
+        "Point04,xy,639,319,in,deg,90,0,S,180,0,E, grid,,,,N\n" +
+        "Point05,xy,320,160,in,deg,0,0,N,0,0,E, grid,,,,N\n" +
+        "IWH,Map Image Width/Height,640,320";
+
+    public static Map defaultMap() throws IOException {
+        Map map = new Map("");
+        map.calibration = new Calibration.Ozi(defaultMapCalibration, "resource:///resources/world_0_0.png");
+        map.range = new QualifiedCoordinates[2];
+        map.range[0] = map.calibration.transform(new Position(0, 0));
+        map.range[1] = map.calibration.transform(new Position(map.calibration.getWidth() - 1,
+                                                              map.calibration.getHeight() - 1));
+        Slice slice = new Slice(map.calibration);
+        slice.absolutizePosition(map.calibration);
+        slice.setImage(Image.createImage("/resources/world_0_0.png"));
+        map.slices = new Slice[] { slice };
+
+        if (log.isEnabled()) log.debug("default map slice ready " + slice);
+
+        return map;
     }
 }

@@ -22,6 +22,7 @@ final class MapViewer {
     private int width, height;
     private int x, y;
     private int chx, chy;
+    private int chx0, chy0;
 
     private Image crosshair;
     private Map map;
@@ -33,8 +34,8 @@ final class MapViewer {
         this.width = width;
         this.height = height;
         this.crosshair = Image.createImage("/resources/crosshair.png");
-        this.chx = (width - crosshair.getWidth()) / 2;
-        this.chy = (height - crosshair.getHeight()) / 2;
+        this.chx0 = this.chx = (width - crosshair.getWidth()) / 2;
+        this.chy0 = this.chy = (height - crosshair.getHeight()) / 2;
     }
 
     public void setMap(Map map) {
@@ -42,7 +43,12 @@ final class MapViewer {
     }
 
     public Position getPosition() {
-        return new Position(x + width / 2, y + height / 2);
+        // center-oriented position
+//        return new Position(x + width / 2, y + height / 2);
+
+        // crosshair-oriented position
+        return new Position(x + chx + crosshair.getWidth() / 2,
+                            y + chy + crosshair.getHeight() / 2);
     }
 
     // TODO better name - x,y is desired position of crosshair!
@@ -87,31 +93,51 @@ final class MapViewer {
 
         switch (direction) {
             case Canvas.DOWN:
-                if (y + height < map.getCalibration().getHeight()) {
+                if (chy < chy0) {
+                    chy++;
+                    dirty = true;
+                } else if (y + height < map.getCalibration().getHeight()) {
                     y++;
                     dirty = true;
-//                    System.out.println("scroll DOWN");
+                } else if (chy < height - 1 - crosshair.getHeight() / 2) {
+                    chy++;
+                    dirty = true;
                 }
                 break;
             case Canvas.UP:
-                if (y > 0) {
+                if (chy > chy0) {
+                    chy--;
+                    dirty = true;
+                } else if (y > 0) {
                     y--;
                     dirty = true;
-//                    System.out.println("scroll UP");
+                } else if (chy > 0 - crosshair.getHeight() / 2) {
+                    chy--;
+                    dirty = true;
                 }
                 break;
             case Canvas.LEFT:
-                if (x > 0) {
+                if (chx > chx0) {
+                    chx--;
+                    dirty = true;
+                } else if (x > 0) {
                     x--;
                     dirty = true;
-//                    System.out.println("scroll LEFT");
+                } else if (chx > 0 - crosshair.getWidth() / 2) {
+                    chx--;
+                    dirty = true;
                 }
                 break;
             case Canvas.RIGHT:
-                if (x + width < map.getCalibration().getWidth()) {
+                if (chx < chx0) {
+                    chx++;
+                    dirty = true;
+                } else if (x + width < map.getCalibration().getWidth()) {
                     x++;
                     dirty = true;
-//                    System.out.println("scroll RIGHT");
+                } else if (chx < width - 1 - crosshair.getWidth() / 2) {
+                    chx++;
+                    dirty = true;
                 }
                 break;
             default:

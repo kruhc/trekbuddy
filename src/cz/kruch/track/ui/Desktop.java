@@ -135,6 +135,19 @@ public class Desktop extends GameCanvas implements Runnable, CommandListener, Lo
 
             // ensure slices are being loaded for current view
             loadingSlices = mapViewer.ensureSlices();
+
+            // if slices are ready, show map
+            if (!loadingSlices) {
+                renderScreen(true, true);
+            }
+        }
+    }
+
+    public void initDefaultMap() {
+        try {
+            map = Map.defaultMap();
+        } catch (IOException e) {
+            // should never happen
         }
     }
 
@@ -261,9 +274,17 @@ public class Desktop extends GameCanvas implements Runnable, CommandListener, Lo
                 break;
             case LocationProvider.TEMPORARILY_UNAVAILABLE:
                 showWarning(display, "Provider " + provider.getName() + " temporatily unavailable", null);
+                try {
+                    javax.microedition.media.Manager.playTone(69 /* A */, 250, 100);
+                } catch (Throwable t) {
+                }
                 break;
             case LocationProvider.OUT_OF_SERVICE:
                 showWarning(display, "Provider " + provider.getName() + " out of service", provider.getException());
+                try {
+                    javax.microedition.media.Manager.playTone(69 /* A */, 1000, 100);
+                } catch (Throwable t) {
+                }
                 break;
         }
 
@@ -392,9 +413,9 @@ public class Desktop extends GameCanvas implements Runnable, CommandListener, Lo
                     if (osd.isVisible()) {
                         if (browsing) {
                             osd.setInfo(map.getCalibration().transform(mapViewer.getPosition()).toString(), true);  // TODO listener
-                        } else {
+                        }/* else { // updated in locationUpdated()...
                             osd.setInfo(coordinates.toString(), true);
-                        }
+                        }*/
                         osd.render(g);
                     }
                 }

@@ -111,6 +111,7 @@ public class TrackingMIDlet extends MIDlet {
             // 4. read default map
             console.show("loading default map...");
             if ("".equals(Config.getSafeInstance().getMapPath())) {
+                desktop.initDefaultMap();
                 console.result(1, "skipped");
             } else {
                 try {

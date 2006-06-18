@@ -41,9 +41,15 @@ public class QualifiedCoordinates {
 
     public String toString() {
         StringBuffer sb = new StringBuffer(24);
-        append(lat, sb).append(" N");
+        if (lat > 0D)
+            append(lat, sb).append(" N");
+        else
+            append(-1D * lat, sb).append(" S");
         sb.append("   ");
-        append(lon, sb).append(" E");
+        if (lon > 0D)
+            append(lon, sb).append(" E");
+        else
+            append(-1D * lon, sb).append(" W");
         if (alt > -1F) {
             sb.append(' ').append(alt);
         }

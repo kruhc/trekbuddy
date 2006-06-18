@@ -142,6 +142,24 @@ public abstract class Calibration {
         int x = position.getX();
         int y = position.getY();
         for (int N = positions.length, i = 0; i < N; i++) {
+
+            // check that positions[i] have different both x and y with already found cal point
+            if (i0 > -1) {
+                if ((positions[i0].getX() == positions[i].getX())
+                    || (positions[i0].getY() == positions[i].getY())) {
+//                    if (log.isEnabled()) log.debug("incest sibling");
+                    continue;
+                }
+            }
+            if (i1 > -1) {
+                if ((positions[i1].getX() == positions[i].getX())
+                    || (positions[i1].getY() == positions[i].getY())) {
+//                    if (log.isEnabled()) log.debug("incest sibling");
+                    continue;
+                }
+            }
+            // ~
+
             int dx = x - positions[i].getX();
             int dx2 = dx * dx;
             int dy = y - positions[i].getY();
@@ -161,6 +179,9 @@ public abstract class Calibration {
         }
 
 //        System.out.println("nearest calibration points indexes are " + i0 + "," + i1);
+        if (i0 == -1 || i1 == -1) {
+            throw new IllegalStateException("Defective calibration");
+        }
 
         return i0 < i1 ? new int[]{ i0, i1 } : new int[]{ i1, i0 };
     }

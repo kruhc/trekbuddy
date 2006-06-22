@@ -178,7 +178,6 @@ public abstract class Calibration {
             }
         }
 
-//        System.out.println("nearest calibration points indexes are " + i0 + "," + i1);
         if (i0 == -1 || i1 == -1) {
             throw new IllegalStateException("Defective calibration");
         }
@@ -211,8 +210,6 @@ public abstract class Calibration {
                 i1 = i;
             }
         }
-
-//        System.out.println("nearest calibration points indexes are " + i0 + "," + i1);
 
         return i0 < i1 ? new int[]{ i0, i1 } : new int[]{ i1, i0 };
     }
@@ -315,14 +312,12 @@ public abstract class Calibration {
                     switch (parser.next()) {
                         case XmlPullParser.START_TAG: {
                             currentTag = parser.getName();
-//                            System.out.println("start of " + currentTag);
                             if (TAG_POSITION.equals(currentTag)) {
                                 x0 = Integer.parseInt(parser.getAttributeValue(null, "x"));
                                 y0 = Integer.parseInt(parser.getAttributeValue(null, "y"));
                             }
                         } break;
                         case XmlPullParser.END_TAG: {
-//                            System.out.println("end of " + parser.getName());
                             if (TAG_POSITION.equals(parser.getName())) {
                                 if ((x0 == 0 && y0 == 0) || (x0 != 0 && y0 != 0)) {
                                     pos.addElement(new Position(x0, y0));
@@ -336,7 +331,6 @@ public abstract class Calibration {
                         case XmlPullParser.TEXT: {
                             if (currentTag != null) {
                                 String text = parser.getText().trim();
-//                                System.out.println("content of " + currentTag + " " + text);
                                 if (TAG_NAME.equals(currentTag)) {
                                     this.path = text + ".png";
                                 } else if (TAG_LATITUDE.equals(currentTag)) {
@@ -491,9 +485,7 @@ public abstract class Calibration {
                 String token = st.nextToken().trim();
                 if (",".equals(token)) {
                     index++;
-                }/* else if (" ".equals(token) || "\t".equals(token)) {
-                    // nothing
-                }*/ else if (index == 2) {
+                } else if (index == 2) {
                     px = token;
                 } else if (index == 3) {
                     py = token;
@@ -512,6 +504,11 @@ public abstract class Calibration {
                 } else if (index > 11) {
                     break;
                 }
+            }
+
+            // empty cal point
+            if (px.length() == 0 || py.length() == 0) {
+                return false;
             }
 
             try {
@@ -548,7 +545,6 @@ public abstract class Calibration {
                 xy.addElement(p);
 
             } catch (NumberFormatException e) {
-                e.printStackTrace();
                 return false;
             }
 
@@ -567,7 +563,6 @@ public abstract class Calibration {
                 ll.addElement(qc);
 
             } catch (NumberFormatException e) {
-                e.printStackTrace();
                 return false;
             }
 

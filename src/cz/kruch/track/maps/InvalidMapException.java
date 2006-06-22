@@ -14,6 +14,6 @@ public class InvalidMapException extends IOException {
     }
 
     public InvalidMapException(Exception exception) {
-        super("cz.kruch.track.maps.InvalidMapException: " + exception.toString());
+        super(exception.toString());
     }
 }

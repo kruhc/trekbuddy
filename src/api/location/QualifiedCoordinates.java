@@ -39,6 +39,10 @@ public class QualifiedCoordinates {
         return lon;
     }
 
+    public float getAlt() {
+        return alt;
+    }
+
     public String toString() {
         StringBuffer sb = new StringBuffer(24);
         if (lat > 0D)

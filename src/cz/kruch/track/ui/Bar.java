@@ -20,7 +20,7 @@ abstract class Bar {
     protected String info;
     protected boolean ok;
 
-    private boolean visible = true;
+    protected boolean visible = true;
 
     protected Bar(int gx, int gy, int width, int height) {
         this.gx = gx;

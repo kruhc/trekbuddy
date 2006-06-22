@@ -12,6 +12,6 @@ public class LocationException extends Exception {
     }
 
     public LocationException(Exception exception) {
-        super("api.location.LocationException: " + exception.toString());
+        super(exception.toString());
     }
 }

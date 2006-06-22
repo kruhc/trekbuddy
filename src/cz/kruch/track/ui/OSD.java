@@ -17,6 +17,7 @@ class OSD extends Bar {
     private Image providerOutOfService;
     private int providerStatus = LocationProvider.OUT_OF_SERVICE;
     private int semaforX, semaforY;
+    private String gpxRecording = null;
 
     public OSD(int gx, int gy, int width, int height) throws IOException {
         super(gx, gy, width, height);
@@ -28,6 +29,10 @@ class OSD extends Bar {
     }
 
     public void render(Graphics graphics) {
+        if (!visible) {
+            return;
+        }
+        
         if (info == null) {
             info = NO_INFO;
         }
@@ -42,6 +47,12 @@ class OSD extends Bar {
         graphics.setFont(font);
         graphics.drawString(info, gx, gy, Graphics.TOP | Graphics.LEFT);
 
+        // gpx recording
+        if (gpxRecording != null) {
+            graphics.setColor(255, 0, 0);
+            graphics.drawChar('R', semaforX - font.charWidth('R'), 0, Graphics.TOP | Graphics.LEFT);
+        }
+        
         // draw provider status
         switch (providerStatus) {
             case LocationProvider.AVAILABLE:
@@ -58,5 +69,9 @@ class OSD extends Bar {
 
     public void setProviderStatus(int providerStatus) {
         this.providerStatus = providerStatus;
+    }
+
+    public void setGpxRecording(String gpxRecording) {
+        this.gpxRecording = gpxRecording;
     }
 }

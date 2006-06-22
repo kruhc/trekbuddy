@@ -5,6 +5,7 @@ package cz.kruch.track.ui;
 
 import cz.kruch.track.configuration.Config;
 import cz.kruch.track.configuration.ConfigurationException;
+import cz.kruch.track.event.Callback;
 
 import javax.microedition.lcdui.Display;
 import javax.microedition.lcdui.Displayable;
@@ -20,19 +21,21 @@ public class SettingsForm extends Form implements CommandListener {
     private static final int MAX_URL_LENGTH = 128;
 
     private Display display;
+    private Callback callback;
     private Displayable previous;
 
     private TextField fieldMapPath;
     private ChoiceGroup choiceProvider;
     private ChoiceGroup choiceTracklogs;
+    private ChoiceGroup choiceTracklogsFormat;
     private TextField fieldTracklogsDir;
-    private TextField fieldSimulatorPath;
     private TextField fieldSimulatorDelay;
     private ChoiceGroup choiceDesktop;
 
-    public SettingsForm(Display display) {
+    public SettingsForm(Display display, Callback callback) {
         super("Settings");
         this.display = display;
+        this.callback = callback;
         this.previous = display.getCurrent();
     }
 
@@ -56,15 +59,18 @@ public class SettingsForm extends Form implements CommandListener {
         // tracklogs
         choiceTracklogs = new ChoiceGroup("Tracklogs", ChoiceGroup.MULTIPLE);
         choiceTracklogs.setSelectedIndex(choiceTracklogs.append("enabled", null), Config.getSafeInstance().isTracklogsOn());
+        choiceTracklogsFormat = new ChoiceGroup("Tracklog Fomat", ChoiceGroup.EXCLUSIVE);
+        for (int N = Config.TRACKLOGS_FORMAT.length, i = 0; i < N; i++) {
+            String format = Config.TRACKLOGS_FORMAT[i];
+            int idx = choiceTracklogsFormat.append(format, null);
+            if (format.equals(Config.getSafeInstance().getTracklogsFormat())) {
+                choiceTracklogsFormat.setSelectedIndex(idx, true);
+            }
+        }
         fieldTracklogsDir = new TextField("Tracklogs Dir", Config.getSafeInstance().getTracklogsDir(), MAX_URL_LENGTH, TextField.URL);
-//        append(choiceTracklogs);
-//        append(fieldTracklogsDir);
 
         // simulator
-        fieldSimulatorPath = new TextField("Simulator File", Config.getSafeInstance().getSimulatorPath(), MAX_URL_LENGTH, TextField.URL);
         fieldSimulatorDelay = new TextField("Simulator Delay", Integer.toString(Config.getSafeInstance().getSimulatorDelay()), 8, TextField.NUMERIC);
-//        append(fieldSimulatorPath);
-//        append(fieldSimulatorDelay);
 
         // desktop settings
         choiceDesktop = new ChoiceGroup("Desktop", ChoiceGroup.MULTIPLE);
@@ -101,8 +107,8 @@ public class SettingsForm extends Form implements CommandListener {
             config.setMapPath(fieldMapPath.getString());
             config.setLocationProvider(choiceProvider.getString(choiceProvider.getSelectedIndex()));
             config.setTracklogsOn(choiceTracklogs.isSelected(0));
+            config.setTracklogsFormat(choiceTracklogsFormat.getString(choiceTracklogsFormat.getSelectedIndex()));
             config.setTracklogsDir(fieldTracklogsDir.getString());
-            config.setSimulatorPath(fieldSimulatorPath.getString());
             config.setSimulatorDelay(Integer.parseInt(fieldSimulatorDelay.getString()));
             config.setFullscreen(choiceDesktop.isSelected(0));
             if ("Save".equals(command.getLabel())) {
@@ -114,7 +120,7 @@ public class SettingsForm extends Form implements CommandListener {
 
                 } catch (ConfigurationException e) {
                     // TODO use event
-                    Desktop.showError(display, "Failed to save configuration", e);
+                    Desktop.showError(display, "Failed to save configuration", e, null);
                 }
             } else {
                 // restore previous screen
@@ -125,7 +131,7 @@ public class SettingsForm extends Form implements CommandListener {
         }
 
         // notify that we are done
-        (new Desktop.Event(Desktop.Event.EVENT_CONFIGURATION_CHANGED, changed ? Boolean.TRUE : Boolean.FALSE, null)).fire();
+        callback.invoke(changed ? Boolean.TRUE : Boolean.FALSE, null);
     }
 
     private void showProviderOptions() {
@@ -149,12 +155,14 @@ public class SettingsForm extends Form implements CommandListener {
         String provider = choiceProvider.getString(choiceProvider.getSelectedIndex());
         if (Config.LOCATION_PROVIDER_SIMULATOR.equals(provider)) {
             insert(insertAt, fieldSimulatorDelay);
-            insert(insertAt, fieldSimulatorPath);
         } else if (Config.LOCATION_PROVIDER_JSR82.equals(provider)) {
             insert(insertAt, fieldTracklogsDir);
+            insert(insertAt, choiceTracklogsFormat);
             insert(insertAt, choiceTracklogs);
         } else if (Config.LOCATION_PROVIDER_JSR179.equals(provider)) {
-            // nothing to show
+            insert(insertAt, fieldTracklogsDir);
+            insert(insertAt, choiceTracklogsFormat);
+            insert(insertAt, choiceTracklogs);
         }
     }
 }

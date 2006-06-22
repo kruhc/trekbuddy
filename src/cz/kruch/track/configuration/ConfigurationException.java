@@ -9,6 +9,6 @@ public class ConfigurationException extends Exception {
     }
 
     public ConfigurationException(Exception exception) {
-        super("cz.kruch.track.configuration.ConfigurationException: " + exception.toString());
+        super(exception.toString());
     }
 }

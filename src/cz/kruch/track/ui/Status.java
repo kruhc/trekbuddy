@@ -5,7 +5,7 @@ package cz.kruch.track.ui;
 
 import javax.microedition.lcdui.Graphics;
 
-class Status extends Bar{
+class Status extends Bar {
     private int h;
 
     public Status(int gx, int gy, int width, int height) {
@@ -14,10 +14,11 @@ class Status extends Bar{
     }
 
     public void render(Graphics graphics) {
-        if (info == null) {
-            // log
-//            System.out.println(COMPONENT_NAME + " [debug] no message to render");
+        if (!visible) {
+            return;
+        }
 
+        if (info == null) {
             return;
         }
 

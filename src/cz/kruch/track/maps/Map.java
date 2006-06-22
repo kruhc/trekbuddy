@@ -16,14 +16,23 @@ import java.util.Vector;
 import java.util.Enumeration;
 
 import cz.kruch.j2se.io.BufferedInputStream;
-import cz.kruch.track.ui.Desktop;
 import cz.kruch.track.ui.Position;
-import cz.kruch.track.TrackingMIDlet;
 import cz.kruch.track.util.Logger;
 import api.location.QualifiedCoordinates;
 
 public class Map {
+
+    public interface StateListener {
+        public void mapOpened(Object result, Throwable throwable);
+        public void slicesLoaded(Object result, Throwable throwable);
+        public void loadingChanged(Object result, Throwable throwable);
+    }
+
     private static final Logger log = new Logger("Map");
+
+    private static final int EVENT_MAP_OPENED       = 0;
+    private static final int EVENT_SLICES_LOADED    = 1;
+    private static final int EVENT_LOADING_CHANGED  = 2;
 
     private static final int TEXT_FILE_BUFFER_SIZE = 512; // for map calibration files content
     private static final int SMALL_BUFFER_SIZE = 512 * 2; // for map calibration files
@@ -35,19 +44,22 @@ public class Map {
     private static final int TYPE_BEST       = 3;
 
     private String path;
+    private StateListener listener;
+
     private Slice[] slices;
     private Calibration calibration;
     private int type = -1;
     private Loader loader;
 
+    private boolean ready = true;
+    private Object lock = new Object();
+
     // map range
     protected QualifiedCoordinates[] range;
 
-    // loading task
-    private Thread task;
-
-    public Map(String path) {
+    public Map(String path, StateListener listener) {
         this.path = path;
+        this.listener = listener;
         this.slices = new Slice[0];
     }
 
@@ -59,6 +71,10 @@ public class Map {
         return calibration;
     }
 
+    /**
+     * Closes map - releases map images, destroy loader.
+     * Does gc at the end.
+     */
     public void close() {
         if (log.isEnabled()) log.info("close map");
 
@@ -104,35 +120,43 @@ public class Map {
     /**
      * Opens and scans map.
      */
-    public boolean prepare() {
-        if (log.isEnabled()) log.debug("about to open and prepare map");
+    public boolean prepareMap() {
+        if (log.isEnabled()) log.debug("begin open map");
 
-        // wait for previous task to finish (it should be already finished!)
-        if (task != null) {
-            if (log.isEnabled()) log.debug("waiting for previous task to finish");
-            try {
-                task.join();
-            } catch (InterruptedException e) {
+        // wait for previous task to finish
+        synchronized (lock) {
+            while (!ready) {
+                if (log.isEnabled()) log.debug("wait for lock");
+                try {
+                    lock.wait();
+                } catch (InterruptedException e) {
+                }
             }
-            task = null;
         }
 
-        // load images at background
-        if (log.isEnabled()) log.debug("starting init task");
-        task = new Thread(new Runnable() {
+        // open map in background
+        (new Thread(new Runnable() {
             public void run() {
+                if (log.isEnabled()) log.debug("map loading task started");
+
                 // open and init map
                 Throwable t = loadMap();
 
+                // sync
+                synchronized (lock) {
+                    ready = true;
+                    lock.notify();
+                }
+
                 // log
-                if (log.isEnabled()) log.debug("map opened and initialized");
+                if (log.isEnabled()) log.debug("map opened; " + t);
 
                 // we are done
-                (new Desktop.Event(Desktop.Event.EVENT_MAP_OPENED, null, t)).fire();
+                notifyListener(EVENT_MAP_OPENED, null, t);
             }
-        });
-        task.setPriority(Thread.MAX_PRIORITY);
-        task.start();
+        })).start();
+
+        if (log.isEnabled()) log.debug("~begin open map");
 
         return true;
     }
@@ -149,6 +173,7 @@ public class Map {
             Slice slice = (Slice) e.nextElement();
             if (slice.getImage() == null) {
                 if (log.isEnabled()) log.debug("image missing for slice " + slice);
+
                 if (collection == null) {
                     collection = new Vector();
                 }
@@ -167,32 +192,38 @@ public class Map {
         // trick
         final Vector toload = collection;
 
-        // wait for previous task to finish (it should be already finished!)
-        if (task != null) {
-            if (log.isEnabled()) log.debug("waiting for previous task to finish");
-            try {
-                task.join();
-            } catch (InterruptedException e) {
+        // wait for previous task to finish
+        synchronized (lock) {
+            while (!ready) {
+                if (log.isEnabled()) log.debug("wait for lock");
+                try {
+                    lock.wait();
+                } catch (InterruptedException e) {
+                }
             }
-            task = null;
         }
 
         // load images at background
-        if (log.isEnabled()) log.debug("starting loading task");
-        task = new Thread(new Runnable() {
+        (new Thread(new Runnable() {
             public void run() {
+                if (log.isEnabled()) log.debug("slice loading task started");
+
                 // load images
                 Throwable t = loadSlices(toload);
+
+                // sync
+                synchronized (lock) {
+                    ready = true;
+                    lock.notify();
+                }
 
                 // log
                 if (log.isEnabled()) log.debug("all requested slices loaded");
 
                 // we are done
-                (new Desktop.Event(Desktop.Event.EVENT_SLICES_LOADED, null, t)).fire();
+                notifyListener(EVENT_SLICES_LOADED, null, t);
             }
-        });
-        task.setPriority(Thread.MAX_PRIORITY);
-        task.start();
+        })).start();
 
         return true;
     }
@@ -205,6 +236,7 @@ public class Map {
             loader.init();
             loader.run();
             loader.checkException();
+
             if (log.isEnabled()) log.debug("map opened");
 
             /*
@@ -272,9 +304,7 @@ public class Map {
     private Throwable loadSlices(Vector toLoad) {
         try {
             for (Enumeration e = toLoad.elements(); e.hasMoreElements(); ) {
-                Slice slice = (Slice) e.nextElement();
-                if (log.isEnabled()) log.debug("load image for slice " + slice);
-                loadSlice(slice);
+                loadSlice((Slice) e.nextElement());
             }
 
             return null;
@@ -287,15 +317,16 @@ public class Map {
     }
 
     /**
-     * Releases slices images.
+     * Releases slices images. Does gc.
      * @param slices
      */
     public void releaseSlices(Vector slices) {
-        //  clear slices image references
+        // clear slices image references
         for (Enumeration e = slices.elements(); e.hasMoreElements(); ) {
             Slice slice = (Slice) e.nextElement();
-            if (log.isEnabled()) log.debug("release image for slice " + slice);
             slice.setImage(null);
+
+            if (log.isEnabled()) log.debug("released image for slice " + slice);
         }
 
         // gc
@@ -308,10 +339,8 @@ public class Map {
     private void loadSlice(Slice slice) throws IOException {
         if (log.isEnabled()) log.debug("Loading slice " + slice.getCalibration().getPath() + "...");
 
-        // fire event
-//        if (!TrackingMIDlet.isEmulator()) {
-            (new Desktop.Event(Desktop.Event.EVENT_LOADING_STATUS_CHANGED, "Loading slice " + slice.getCalibration().getPath() + "...", null)).fire();
-//        }
+        // notify
+        notifyListener(EVENT_LOADING_CHANGED, "Loading slice " + slice.getCalibration().getPath() + "...", null);
 
         IOException exception = null;
         OutOfMemoryError error = null;
@@ -343,10 +372,8 @@ public class Map {
             throwable = error = e;
         }
 
-        // fire event
-//        if (!TrackingMIDlet.isEmulator()) {
-            (new Desktop.Event(Desktop.Event.EVENT_LOADING_STATUS_CHANGED, null, throwable)).fire();
-//        }
+        // notify
+        notifyListener(EVENT_LOADING_CHANGED, null, throwable);
 
         // upon no exception just return
         if (exception == null) {
@@ -358,6 +385,24 @@ public class Map {
         }
 
         throw exception;
+    }
+
+    private void notifyListener(final int code, final Object result, final Throwable t) {
+        (new Thread() {
+            public void run() {
+                switch (code) {
+                    case EVENT_MAP_OPENED:
+                        listener.mapOpened(result, t);
+                        break;
+                    case EVENT_SLICES_LOADED:
+                        listener.slicesLoaded(result, t);
+                        break;
+                    case EVENT_LOADING_CHANGED:
+                        listener.loadingChanged(result, t);
+                        break;
+                }
+            }
+        }).start();
     }
 
     private abstract class Loader extends Thread {
@@ -503,7 +548,11 @@ public class Map {
         private String dir;
 
         public void init() throws IOException {
-            dir = path.substring(0, path.lastIndexOf('/'));
+            int i = path.lastIndexOf('/');
+            if (i == -1) {
+                throw new InvalidMapException("Invalid map URL");
+            }
+            dir = path.substring(0, i);
             if (log.isEnabled()) log.debug("slices are in " + dir);
         }
 
@@ -606,8 +655,8 @@ public class Map {
         "Point05,xy,320,160,in,deg,0,0,N,0,0,E, grid,,,,N\n" +
         "IWH,Map Image Width/Height,640,320";
 
-    public static Map defaultMap() throws IOException {
-        Map map = new Map("");
+    public static Map defaultMap(StateListener listener) throws IOException {
+        Map map = new Map("", listener);
         map.calibration = new Calibration.Ozi(defaultMapCalibration, "resource:///resources/world_0_0.png");
         map.range = new QualifiedCoordinates[2];
         map.range[0] = map.calibration.transform(new Position(0, 0));

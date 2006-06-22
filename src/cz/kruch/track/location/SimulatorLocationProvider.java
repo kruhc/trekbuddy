@@ -7,40 +7,44 @@ import api.location.LocationProvider;
 import api.location.LocationListener;
 import api.location.LocationException;
 
-import javax.microedition.io.file.FileConnection;
 import javax.microedition.io.Connector;
+import javax.microedition.lcdui.Display;
 import java.io.InputStream;
 import java.io.IOException;
 
-import cz.kruch.j2se.io.BufferedInputStream;
 import cz.kruch.track.util.NmeaParser;
 import cz.kruch.track.util.Logger;
 import cz.kruch.track.configuration.Config;
+import cz.kruch.track.ui.FileBrowser;
+import cz.kruch.track.event.Callback;
+import cz.kruch.j2se.io.BufferedInputStream;
 
 public class SimulatorLocationProvider extends StreamReadingLocationProvider implements Runnable {
     private static final Logger log = new Logger("Simulator");
 
-    private String path;
-    private int delay;
+    private Display display;
 
     private Thread thread;
     private boolean go;
-    private FileConnection fc;
-    private InputStream in;
 
-    private volatile LocationListener listener;
+    private String url;
+    private int delay;
+
     private int interval;
     private int timeout;
     private int maxAge;
 
-    public SimulatorLocationProvider(String path, int delay) {
+    public SimulatorLocationProvider(Display display) {
         super(Config.LOCATION_PROVIDER_SIMULATOR);
-        this.path = path;
-        this.delay = delay < 25 ? 25 : delay;
+        this.display = display;
+        this.delay = Config.getSafeInstance().getSimulatorDelay();
+        if (this.delay < 25) {
+            this.delay = 25;
+        }
     }
 
     public void setLocationListener(LocationListener locationListener, int interval, int timeout, int maxAge) {
-        this.listener = locationListener;
+        setListener(locationListener);
         this.interval = interval;
         this.timeout = timeout;
         this.maxAge = maxAge;
@@ -51,51 +55,37 @@ public class SimulatorLocationProvider extends StreamReadingLocationProvider imp
     }
 
     public void start() throws LocationException {
-        try {
-            fc = (FileConnection) Connector.open(path, Connector.READ);
-            in = new BufferedInputStream(fc.openInputStream());
-
-            go = true;
-            thread = new Thread(this);
-            thread.start();
-
-            if (log.isEnabled()) log.debug("simulator started");
-
-        } catch (IOException e) {
-            throw new LocationException(e);
-        }
+        go = true;
+        thread = new Thread(SimulatorLocationProvider.this);
+        thread.start();
     }
 
     public void stop() throws LocationException {
+        if (log.isEnabled()) log.debug("stop request");
         go = false;
         try {
             thread.interrupt();
             thread.join();
         } catch (InterruptedException e) {
-            if (log.isEnabled()) log.warn("join interrupted: " + e.toString());
         }
-
-        try {
-            in.close();
-            in = null;
-            fc.close();
-            fc = null;
-        } catch (IOException e) {
-            // ignore
-        }
-
-        if (log.isEnabled()) log.info("simulator stopped");
     }
 
     public void run() {
         if (log.isEnabled()) log.info("simulator task starting");
 
-        // send current status
-        if (listener != null) {
-            listener.providerStateChanged(this, LocationProvider.AVAILABLE);
-        }
+        InputStream in = null;
 
         try {
+            // select tracklog
+            Selector selector = new Selector();
+            selector.go();
+
+            // notify
+            notifyListener(LocationProvider.AVAILABLE);
+
+            // open file and stream
+            in = new BufferedInputStream(Connector.openInputStream(url));
+
             for (; go ;) {
 
                 // read GGA
@@ -104,16 +94,16 @@ public class SimulatorLocationProvider extends StreamReadingLocationProvider imp
                     if (log.isEnabled()) log.warn("end of file");
 
                     // send current status
-                    listener.providerStateChanged(this, LocationProvider.OUT_OF_SERVICE);
+                    notifyListener(LocationProvider.OUT_OF_SERVICE);
 
                     break;
                 }
 
                 // send new location
                 try {
-                    listener.locationUpdated(this, NmeaParser.parse(nmea));
+                    notifyListener(NmeaParser.parse(nmea));
                 } catch (Exception e) {
-                    System.err.println("corrupted record: " + nmea + "\n" + e.toString());
+                    if (log.isEnabled()) log.warn("corrupted record: " + nmea + "\n" + e.toString());
                 }
 
                 // interval elapse
@@ -125,16 +115,41 @@ public class SimulatorLocationProvider extends StreamReadingLocationProvider imp
 
         } catch (Exception e) {
             if (e instanceof InterruptedException) {
-                // probably stop request
+                // stop request
             } else {
-                if (log.isEnabled()) log.error("simulator failed: " + e.toString());
+                // record exception
+                setException(e instanceof LocationException ? (LocationException) e : new LocationException(e));
             }
-        }
+        } finally {
+            if (in != null) {
+                try {
+                    in.close();
+                } catch (IOException e) {
+                }
+            }
 
-        if (listener != null) {
-            listener.providerStateChanged(this, LocationProvider.OUT_OF_SERVICE);
+            notifyListener(LocationProvider.OUT_OF_SERVICE);
         }
 
         if (log.isEnabled()) log.info("simulator task ended");
+    }
+
+    private class Selector implements Callback {
+        private boolean finished = false;
+
+        public void go() {
+            (new FileBrowser("SelectTracklog", display, this)).show();
+
+            while (!finished) {
+                Thread.yield();
+            }
+        }
+
+        public void invoke(Object result, Throwable throwable) {
+            if (log.isEnabled()) log.debug("file browser notification - result:'" + result + "';throwable:" + throwable);
+
+            url = (String) result;
+            finished = true;
+        }
     }
 }

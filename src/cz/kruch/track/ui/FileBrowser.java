@@ -4,6 +4,7 @@
 package cz.kruch.track.ui;
 
 import cz.kruch.track.util.Logger;
+import cz.kruch.track.event.Callback;
 
 import javax.microedition.io.file.FileSystemRegistry;
 import javax.microedition.io.file.FileConnection;
@@ -18,7 +19,9 @@ import java.io.IOException;
 
 public class FileBrowser extends List implements CommandListener {
     private static final Logger log = new Logger("FileBrowser");
+
     private Display display;
+    private Callback callback;
     private Displayable previous;
 
     private Command cmdCancel;
@@ -29,11 +32,10 @@ public class FileBrowser extends List implements CommandListener {
     private volatile String selection;
     private volatile int depth = 0;
 
-    private Thread scanner;
-
-    public FileBrowser(Display display) {
-        super("FileBrowser", List.IMPLICIT);
+    public FileBrowser(String title, Display display, Callback callback) {
+        super(title, List.IMPLICIT);
         this.display = display;
+        this.callback = callback;
         this.previous = display.getCurrent();
         this.cmdCancel = new Command("Cancel", Command.CANCEL, 1);
         this.cmdBack = new Command("Back", Command.BACK, 1);
@@ -50,16 +52,7 @@ public class FileBrowser extends List implements CommandListener {
     }
 
     public void browse(Runnable r) {
-        if (scanner != null) {
-            if (log.isEnabled()) log.debug("join scanner");
-            try {
-                scanner.interrupt();
-                scanner.join();
-            } catch (InterruptedException e) {
-            }
-        }
-        scanner = new Thread(r);
-        scanner.start();
+        (new Thread(r)).start();
     }
 
     private void show(Enumeration entries) {
@@ -95,16 +88,6 @@ public class FileBrowser extends List implements CommandListener {
     }
 
     private void quit(Throwable throwable) {
-        // join scanner
-        if (scanner != null) {
-            if (log.isEnabled()) log.debug("join left scanner");
-            try {
-                scanner.interrupt();
-                scanner.join();
-            } catch (InterruptedException e) {
-            }
-        }
-
         // close connection
         if (fc != null) {
             if (log.isEnabled()) log.debug("join left fc");
@@ -121,7 +104,7 @@ public class FileBrowser extends List implements CommandListener {
         display.setCurrent(previous);
 
         // we are done
-        (new Desktop.Event(Desktop.Event.EVENT_FILE_BROWSER_FINISHED, selection, throwable)).fire();
+        callback.invoke(selection, throwable);
     }
 
     private Runnable ShowDirectory = new Runnable() {
@@ -142,6 +125,8 @@ public class FileBrowser extends List implements CommandListener {
             } catch (IOException e) {
                 quit(e);
             }
+
+            if (log.isEnabled()) log.debug("scanner thread exits");
         }
     };
 
@@ -157,6 +142,8 @@ public class FileBrowser extends List implements CommandListener {
             fc = null;
 
             show(FileSystemRegistry.listRoots());
+
+            if (log.isEnabled()) log.debug("scanner thread exits");
         }
     };
 }

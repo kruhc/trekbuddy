@@ -22,6 +22,11 @@ public abstract class Config {
     public static final String LOCATION_PROVIDER_JSR179 = "Internal";
     public static final String LOCATION_PROVIDER_SIMULATOR = "Simulator";
 
+    public static final String[] TRACKLOGS_FORMAT = new String[] {
+        "NMEA 0183",
+        "GPX 1.1"
+    };
+
     private static Config instance = null;
     private static Config safeInstance = new DefaultConfig();
 
@@ -31,10 +36,10 @@ public abstract class Config {
 
     protected String mapPath = ""; // no default map
     protected String locationProvider = LOCATION_PROVIDER_SIMULATOR;
-    protected String tracklogsDir = "file:///E:/tracklogs";
     protected boolean tracklogsOn = false;
+    protected String tracklogsFormat = TRACKLOGS_FORMAT[1];
+    protected String tracklogsDir = "file:///E:/tracklogs";
     protected boolean fullscreen = false;
-    protected String simulatorPath = "file:///E:/maps/simulator.log";
     protected int simulatorDelay = 100;
 
     protected Config() {
@@ -93,6 +98,14 @@ public abstract class Config {
         this.tracklogsOn = tracklogsOn;
     }
 
+    public String getTracklogsFormat() {
+        return tracklogsFormat;
+    }
+
+    public void setTracklogsFormat(String tracklogsFormat) {
+        this.tracklogsFormat = tracklogsFormat;
+    }
+
     public String getTracklogsDir() {
         return tracklogsDir;
     }
@@ -107,14 +120,6 @@ public abstract class Config {
 
     public void setFullscreen(boolean fullscreen) {
         this.fullscreen = fullscreen;
-    }
-
-    public String getSimulatorPath() {
-        return simulatorPath;
-    }
-
-    public void setSimulatorPath(String simulatorPath) {
-        this.simulatorPath = simulatorPath;
     }
 
     public int getSimulatorDelay() {
@@ -162,8 +167,8 @@ public abstract class Config {
                                 mapPath = din.readUTF();
                                 locationProvider = din.readUTF();
                                 tracklogsOn = din.readBoolean();
+                                tracklogsFormat = din.readUTF();
                                 tracklogsDir = din.readUTF();
-                                simulatorPath = din.readUTF();
                                 simulatorDelay = din.readInt();
                                 fullscreen = din.readBoolean();
                                 din.close();
@@ -210,8 +215,8 @@ public abstract class Config {
                 dout.writeUTF(mapPath);
                 dout.writeUTF(locationProvider);
                 dout.writeBoolean(tracklogsOn);
+                dout.writeUTF(tracklogsFormat);
                 dout.writeUTF(tracklogsDir);
-                dout.writeUTF(simulatorPath);
                 dout.writeInt(simulatorDelay);
                 dout.writeBoolean(fullscreen);
                 dout.close();

@@ -5,6 +5,9 @@ package cz.kruch.track.location;
 
 import cz.kruch.track.configuration.Config;
 
+import api.location.Location;
+import api.location.LocationException;
+
 public class Jsr179LocationProvider extends api.location.LocationProvider {
     private javax.microedition.location.LocationProvider impl;
     private LocationListenerAdapter adapter;
@@ -26,7 +29,7 @@ public class Jsr179LocationProvider extends api.location.LocationProvider {
         }
 
         // notify listener on current status
-        adapter.listener.providerStateChanged(Jsr179LocationProvider.this, impl.getState());
+        notifyListener(impl.getState());
     }
 
     public void stop() throws api.location.LocationException {
@@ -34,35 +37,35 @@ public class Jsr179LocationProvider extends api.location.LocationProvider {
 
     public void setLocationListener(api.location.LocationListener listener, int interval, int timeout, int maxAge) {
         if (listener == null) {
-            impl.setLocationListener(null, interval, timeout, maxAge);   
+            impl.setLocationListener(null, interval, timeout, maxAge);
         } else {
             adapter = new LocationListenerAdapter(listener);
         }
     }
 
+    public LocationException getException() {
+        return null;
+    }
+
     private class LocationListenerAdapter implements javax.microedition.location.LocationListener {
-        private api.location.LocationListener listener;
 
         public LocationListenerAdapter(api.location.LocationListener listener) {
-            this.listener = listener;
+            setListener(listener);
         }
 
         public void locationUpdated(javax.microedition.location.LocationProvider locationProvider, javax.microedition.location.Location xlocation) {
-            if (listener != null) {
-                javax.microedition.location.QualifiedCoordinates xc = xlocation.getQualifiedCoordinates();
-                api.location.QualifiedCoordinates c = new api.location.QualifiedCoordinates(xc.getLatitude(),
-                                                                                            xc.getLongitude(),
-                                                                                            xc.getAltitude());
-                long t = xlocation.getTimestamp();
-                SimplifiedLocation l = new SimplifiedLocation(c, t);
-                listener.locationUpdated(Jsr179LocationProvider.this, l);
-            }
+            javax.microedition.location.QualifiedCoordinates xc = xlocation.getQualifiedCoordinates();
+            api.location.QualifiedCoordinates c = new api.location.QualifiedCoordinates(xc.getLatitude(),
+                                                                                        xc.getLongitude(),
+                                                                                        xc.getAltitude());
+            long t = xlocation.getTimestamp();
+            int f = xlocation.isValid() ? 1 : 0;
+
+            notifyListener(new Location(c, t, f));
         }
 
         public void providerStateChanged(javax.microedition.location.LocationProvider locationProvider, int i) {
-            if (listener != null) {
-                listener.providerStateChanged(Jsr179LocationProvider.this, i);
-            }
+            notifyListener(i);
         }
     }
 }

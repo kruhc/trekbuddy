@@ -28,14 +28,32 @@ final class MapViewer {
     private Map map;
     private Vector slices = new Vector();
 
+    private boolean visible = true;
+
     public MapViewer(int gx, int gy, int width, int height) throws IOException {
         this.gx = gx;
         this.gy = gy;
         this.width = width;
         this.height = height;
+        this.x = this.y = 0;
         this.crosshair = Image.createImage("/resources/crosshair.png");
         this.chx0 = this.chx = (width - crosshair.getWidth()) / 2;
         this.chy0 = this.chy = (height - crosshair.getHeight()) / 2;
+    }
+
+    public void reset() {
+        chx = chx0;
+        chy = chy0;
+        x = y = 0;
+        visible = true;
+    }
+
+    public void hide() {
+        visible = false;
+    }
+
+    public void show() {
+        visible = true;
     }
 
     public void setMap(Map map) {
@@ -43,9 +61,6 @@ final class MapViewer {
     }
 
     public Position getPosition() {
-        // center-oriented position
-//        return new Position(x + width / 2, y + height / 2);
-
         // crosshair-oriented position
         return new Position(x + chx + crosshair.getWidth() / 2,
                             y + chy + crosshair.getHeight() / 2);
@@ -148,6 +163,10 @@ final class MapViewer {
     }
 
     public void render(Graphics graphics) {
+        if (!visible) {
+            return;
+        }
+
         // clear window
         graphics.setColor(0, 0, 0);
         graphics.fillRect(gx, gy, width, height);
@@ -244,7 +263,6 @@ final class MapViewer {
         // release old slices
         if (garbage != null) {
             map.releaseSlices(garbage);
-            System.gc(); // enforce gc
         }
 
         // set new slices
@@ -260,7 +278,6 @@ final class MapViewer {
     private void ensureSlice(int x, int y, Vector newSlices) {
         Slice slice = map.getSlice(x, y);
         if (slice != null && !newSlices.contains(slice)) {
-//            System.out.println("add map " + map);
             newSlices.addElement(slice);
         }
     }

@@ -9,6 +9,7 @@ public abstract class LocationProvider {
     public static final int OUT_OF_SERVICE = 3;
 
     private String name;
+    private LocationListener listener;
 
     protected LocationProvider(String name) {
         this.name = name;
@@ -18,15 +19,38 @@ public abstract class LocationProvider {
         return name;
     }
 
+    protected synchronized LocationListener getListener() {
+        return listener;
+    }
+
+    protected synchronized void setListener(LocationListener listener) {
+        this.listener = listener;
+    }
+
     public abstract void start() throws LocationException;
     public abstract void stop() throws LocationException;
-
-    public abstract void setLocationListener(LocationListener listener,
-                                             int interval,
-                                             int timeout,
-                                             int maxAge);
-
     public abstract Object getImpl();
+    public abstract LocationException getException();
+    public abstract void setLocationListener(LocationListener listener,
+                                             int interval, int timeout, int maxAge);
 
-    public LocationException getException() { return null; }
+    protected synchronized void notifyListener(int newState) {
+        if (listener != null) {
+            try {
+                listener.providerStateChanged(this, newState);
+            } catch (Throwable t) {
+                t.printStackTrace();
+            }
+        }
+    }
+
+    protected synchronized void notifyListener(Location location) {
+        if (listener != null) {
+            try {
+               listener.locationUpdated(this, location);
+            } catch (Throwable t) {
+                t.printStackTrace();
+            }
+        }
+    }
 }

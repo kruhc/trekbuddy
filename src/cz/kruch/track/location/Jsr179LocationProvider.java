@@ -20,7 +20,7 @@ public class Jsr179LocationProvider extends api.location.LocationProvider {
         return impl;
     }
 
-    public void start() throws api.location.LocationException {
+    public int start() throws api.location.LocationException {
         try {
             impl = javax.microedition.location.LocationProvider.getInstance(null);
             impl.setLocationListener(adapter, -1, -1, -1);
@@ -28,11 +28,11 @@ public class Jsr179LocationProvider extends api.location.LocationProvider {
             throw new api.location.LocationException(e);
         }
 
-        // notify listener on current status
-        notifyListener(impl.getState());
+        return impl.getState();
     }
 
     public void stop() throws api.location.LocationException {
+        // anything to do?
     }
 
     public void setLocationListener(api.location.LocationListener listener, int interval, int timeout, int maxAge) {

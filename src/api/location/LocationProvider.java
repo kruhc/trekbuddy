@@ -27,7 +27,7 @@ public abstract class LocationProvider {
         this.listener = listener;
     }
 
-    public abstract void start() throws LocationException;
+    public abstract int start() throws LocationException;
     public abstract void stop() throws LocationException;
     public abstract Object getImpl();
     public abstract LocationException getException();

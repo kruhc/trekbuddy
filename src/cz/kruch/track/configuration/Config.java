@@ -18,13 +18,18 @@ import java.util.Vector;
 public abstract class Config {
     private static final Logger log = new Logger("Config");
 
-    public static final String LOCATION_PROVIDER_JSR82 = "Bluetooth";
-    public static final String LOCATION_PROVIDER_JSR179 = "Internal";
-    public static final String LOCATION_PROVIDER_SIMULATOR = "Simulator";
+    private static final String NAME = "config_076";
+
+    public static final String LOCATION_PROVIDER_JSR82      = "Bluetooth";
+    public static final String LOCATION_PROVIDER_JSR179     = "Internal";
+    public static final String LOCATION_PROVIDER_SIMULATOR  = "Simulator";
+
+    public static final String TRACKLOG_FORMAT_NMEA         = "NMEA 0183";
+    public static final String TRACKLOG_FORMAT_GPX          = "GPX 1.1";
 
     public static final String[] TRACKLOGS_FORMAT = new String[] {
-        "NMEA 0183",
-        "GPX 1.1"
+        TRACKLOG_FORMAT_NMEA,
+        TRACKLOG_FORMAT_GPX
     };
 
     private static Config instance = null;
@@ -37,7 +42,7 @@ public abstract class Config {
     protected String mapPath = ""; // no default map
     protected String locationProvider = LOCATION_PROVIDER_SIMULATOR;
     protected boolean tracklogsOn = false;
-    protected String tracklogsFormat = TRACKLOGS_FORMAT[1];
+    protected String tracklogsFormat = TRACKLOG_FORMAT_GPX;
     protected String tracklogsDir = "file:///E:/tracklogs";
     protected boolean fullscreen = false;
     protected int simulatorDelay = 100;
@@ -143,8 +148,6 @@ public abstract class Config {
     }
 
     private static class RMSConfig extends Config {
-        private static final String NAME = "config_07x";
-
         private boolean initialized = false;
 
         public RMSConfig() throws ConfigurationException {

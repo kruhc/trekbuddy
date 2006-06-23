@@ -87,7 +87,9 @@ public class SettingsForm extends Form implements CommandListener {
         setCommandListener(this);
         setItemStateListener(new ItemStateListener() {
             public void itemStateChanged(Item item) {
-                showProviderOptions();
+                if (item == choiceProvider) {
+                    showProviderOptions();
+                }
             }
         });
 

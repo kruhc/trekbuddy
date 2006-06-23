@@ -161,7 +161,6 @@ public class SettingsForm extends Form implements CommandListener {
             insert(insertAt, choiceTracklogs);
         } else if (Config.LOCATION_PROVIDER_JSR179.equals(provider)) {
             insert(insertAt, fieldTracklogsDir);
-            insert(insertAt, choiceTracklogsFormat);
             insert(insertAt, choiceTracklogs);
         }
     }

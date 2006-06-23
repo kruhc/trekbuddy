@@ -6,6 +6,7 @@ package cz.kruch.track.location;
 import api.location.LocationProvider;
 import api.location.LocationListener;
 import api.location.LocationException;
+import api.location.Location;
 
 import javax.microedition.io.Connector;
 import javax.microedition.lcdui.Display;
@@ -23,10 +24,8 @@ public class SimulatorLocationProvider extends StreamReadingLocationProvider imp
     private static final Logger log = new Logger("Simulator");
 
     private Display display;
-
     private Thread thread;
     private boolean go;
-
     private String url;
     private int delay;
 
@@ -54,19 +53,34 @@ public class SimulatorLocationProvider extends StreamReadingLocationProvider imp
         return null;
     }
 
-    public void start() throws LocationException {
-        go = true;
-        thread = new Thread(SimulatorLocationProvider.this);
-        thread.start();
+    public int start() throws LocationException {
+        (new FileBrowser("PlaybackSelection", display, new Callback() {
+            public void invoke(Object result, Throwable throwable) {
+                if (log.isEnabled()) log.debug("playback selection: " + result);
+                if (result != null) {
+                    go = true;
+                    url = (String) result;
+                    thread = new Thread(SimulatorLocationProvider.this);
+                    thread.start();
+                } else {
+                    notifyListener(LocationProvider.OUT_OF_SERVICE);
+                }
+            }
+        })).show();
+
+        return LocationProvider.TEMPORARILY_UNAVAILABLE;
     }
 
     public void stop() throws LocationException {
         if (log.isEnabled()) log.debug("stop request");
-        go = false;
-        try {
-            thread.interrupt();
-            thread.join();
-        } catch (InterruptedException e) {
+        if (go) {
+            go = false;
+            try {
+                thread.interrupt();
+                thread.join();
+            } catch (InterruptedException e) {
+            }
+            thread = null;
         }
     }
 
@@ -76,27 +90,18 @@ public class SimulatorLocationProvider extends StreamReadingLocationProvider imp
         InputStream in = null;
 
         try {
-            // select tracklog
-            Selector selector = new Selector();
-            selector.go();
+            // open file and stream
+            in = new BufferedInputStream(Connector.openInputStream(url));
 
             // notify
             notifyListener(LocationProvider.AVAILABLE);
-
-            // open file and stream
-            in = new BufferedInputStream(Connector.openInputStream(url));
 
             for (; go ;) {
 
                 // read GGA
                 String nmea = nextGGA(in);
                 if (nmea == null) {
-                    if (log.isEnabled()) log.warn("end of file");
-
-                    // send current status
-                    notifyListener(LocationProvider.OUT_OF_SERVICE);
-
-                    break;
+                    break; // end-of-file
                 }
 
                 // send new location
@@ -128,28 +133,10 @@ public class SimulatorLocationProvider extends StreamReadingLocationProvider imp
                 }
             }
 
+            // notify
             notifyListener(LocationProvider.OUT_OF_SERVICE);
         }
 
         if (log.isEnabled()) log.info("simulator task ended");
-    }
-
-    private class Selector implements Callback {
-        private boolean finished = false;
-
-        public void go() {
-            (new FileBrowser("SelectTracklog", display, this)).show();
-
-            while (!finished) {
-                Thread.yield();
-            }
-        }
-
-        public void invoke(Object result, Throwable throwable) {
-            if (log.isEnabled()) log.debug("file browser notification - result:'" + result + "';throwable:" + throwable);
-
-            url = (String) result;
-            finished = true;
-        }
     }
 }

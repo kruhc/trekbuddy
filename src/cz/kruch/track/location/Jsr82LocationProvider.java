@@ -43,7 +43,7 @@ public class Jsr82LocationProvider extends StreamReadingLocationProvider impleme
 
     private Thread thread;
 
-    private String url = null;
+    private String btspp = null;
     private boolean go = false;
 
     private Timer watcher;
@@ -62,43 +62,18 @@ public class Jsr82LocationProvider extends StreamReadingLocationProvider impleme
     }
 
     public void run() {
-
-        boolean inside = false;
-
         try {
-            // show device/service discoverer
-            Discoverer discoverer = new Discoverer();
-            display.setCurrent(discoverer);
+            // start watcher
+            startWatcher();
 
-            // start discovery
-            int go = discoverer.go();
-            while (go == ACTION_REFRESH) {
-                go = discoverer.go();
+            // start tracklog - if set and NMEA format selected
+            if (Config.getSafeInstance().isTracklogsOn() && Config.TRACKLOG_FORMAT_NMEA.equals(Config.getSafeInstance().getTracklogsFormat())) {
+                tracklog = new Observer();
+                setObserver(tracklog.getWriter());
             }
 
-            // restore screen
-            display.setCurrent(previous);
-
-            inside = true;
-
-            // start if ready
-            if (go == ACTION_GO) {
-
-                // update status
-                notifyListener(LocationProvider.TEMPORARILY_UNAVAILABLE); // matches initial value of 'state'
-
-                // start watcher
-                startWatcher();
-
-                // start tracklog - if set and NMEA format selected
-                if (Config.getSafeInstance().isTracklogsOn() && Config.TRACKLOGS_FORMAT[0].equals(Config.getSafeInstance().getTracklogsFormat())) {
-                    tracklog = new Observer();
-                    setObserver(tracklog.getWriter());
-                }
-
-                // GPS
-                gps();
-            }
+            // GPS
+            gps();
 
         } catch (Exception e) {
             if (e instanceof InterruptedException) {
@@ -107,13 +82,8 @@ public class Jsr82LocationProvider extends StreamReadingLocationProvider impleme
                 // record exception
                 setException(e instanceof LocationException ? (LocationException) e : new LocationException(e));
             }
-
-            // for errors during discovery and service search, restore screen
-            if (!inside) {
-                display.setCurrent(previous);
-            }
-
         } finally {
+
             // stop tracklog
             if (tracklog != null) {
                 try {
@@ -136,7 +106,7 @@ public class Jsr82LocationProvider extends StreamReadingLocationProvider impleme
         }
     }
 
-    public void start() throws LocationException {
+    public int start() throws LocationException {
         // BT turned on?
         try {
             javax.bluetooth.LocalDevice.getLocalDevice();
@@ -144,19 +114,22 @@ public class Jsr82LocationProvider extends StreamReadingLocationProvider impleme
             throw new LocationException("Bluetooth radio disabled?");
         }
 
-        go = true;
-        thread = new Thread(this);
-        thread.start();
+        // show BT device browser
+        display.setCurrent(new Discoverer());
+
+        return LocationProvider.TEMPORARILY_UNAVAILABLE;
     }
 
     public void stop() throws LocationException {
-        go = false;
-        try {
-            thread.interrupt();
-            thread.join();
-        } catch (InterruptedException e) {
+        if (go) {
+            go = false;
+            try {
+                thread.interrupt();
+                thread.join();
+            } catch (InterruptedException e) {
+            }
+            thread = null;
         }
-        thread = null;
     }
 
     public void setLocationListener(LocationListener listener, int interval, int timeout, int maxAge) {
@@ -187,7 +160,7 @@ public class Jsr82LocationProvider extends StreamReadingLocationProvider impleme
 
     private void gps() throws IOException {
         // open connection
-        StreamConnection connection = (StreamConnection) Connector.open(url, Connector.READ);
+        StreamConnection connection = (StreamConnection) Connector.open(btspp, Connector.READ);
         InputStream in = null;
 
         try {
@@ -287,16 +260,19 @@ public class Jsr82LocationProvider extends StreamReadingLocationProvider impleme
         }
     }
 
-    private class Discoverer extends List implements javax.bluetooth.DiscoveryListener, CommandListener {
+    private class Discoverer extends List implements javax.bluetooth.DiscoveryListener, CommandListener, Runnable {
         // intentionally not static
         private javax.bluetooth.UUID[] uuidSet = { new javax.bluetooth.UUID(0x1101) };
 
         private javax.bluetooth.DiscoveryAgent agent;
         private javax.bluetooth.RemoteDevice device;
         private Vector devices = new Vector();
+        private String url;
+        private LocationException exception;
+        private int retCode;
+        private int transactionID;
 
-        private volatile LocationException exception;
-        private volatile int retCode;
+        private boolean inquiryCompleted;
 
         private Command cmdBack = new Command("Cancel", Command.BACK, 1);
         private Command cmdRefresh = new Command("Refresh", Command.SCREEN, List.SELECT_COMMAND.getPriority() + 1);
@@ -304,15 +280,49 @@ public class Jsr82LocationProvider extends StreamReadingLocationProvider impleme
         public Discoverer() {
             super("DeviceSelection", List.IMPLICIT);
             setCommandListener(this);
+            (new Thread(this)).start();
+        }
+
+        public void run() {
+            int action = ACTION_REFRESH;
+
+            while (action == ACTION_REFRESH) {
+                try {
+                    action = go();
+                } catch (javax.bluetooth.BluetoothStateException e) {
+                    Desktop.showError(display, "Device discovery failed", e, null);
+                } catch (LocationException e) { // no devices found
+                    Desktop.showWarning(display, e.getMessage(), null, null);
+                }
+            }
+
+            // clear 'status' exception
+            setException(null);
+
+            // restore screen
+            display.setCurrent(previous);
+
+            // good to go
+            if (action == ACTION_GO) {
+                go = true;
+                btspp = url;
+                thread = new Thread(Jsr82LocationProvider.this);
+                thread.start();
+            } else {
+                notifyListener(LocationProvider.OUT_OF_SERVICE);
+            }
         }
 
         public int go() throws LocationException, javax.bluetooth.BluetoothStateException {
             // reset
             deleteAll();
             devices.removeAllElements();
+            exception = null;
             url = null;
             device = null;
             retCode = -1;
+            transactionID = 0;
+            inquiryCompleted = false;
 
             // setup commands
             setupCommands(false);
@@ -328,28 +338,34 @@ public class Jsr82LocationProvider extends StreamReadingLocationProvider impleme
             while (device == null && retCode == -1) {
 
                 // wait for device selection
-                device = getDevice();
+                getDevice();
 
-                // device is selected (-1), otherwise CANCEL or REFRESH
-                if (retCode == -1) {
+                // device selected?
+                if (device != null) {
 
                     // update UI
-                    next();
+                    setTitle("ServiceSearch");
+                    setTicker(new Ticker("Searching service..."));
                     setupCommands(false);
 
-                    // search fore service
-                    int transactionID = 0;
+                    // search for service
                     try {
+                        // start search
                         transactionID = agent.searchServices(null, uuidSet, device, this);
-                        url = getURL();
+
+                        // wait for btspp URL
+                        getURL();
+
+                        // if we have url, quit the loop
                         if (url != null) {
-                            retCode = ACTION_GO;
+                            return ACTION_GO;
                         }
                     } catch (javax.bluetooth.BluetoothStateException e) {
                         Desktop.showError(display, "Service search failed", e, null);
                     } catch (LocationException e) { // no service found at selected device, select another device
                         Desktop.showWarning(display, e.getMessage(), null, null);
                     } finally {
+
                         // cancel search (if started)
                         if (transactionID > 0) {
                             agent.cancelServiceSearch(transactionID);
@@ -358,7 +374,9 @@ public class Jsr82LocationProvider extends StreamReadingLocationProvider impleme
                         // return to device selection
                         exception = null;
                         device = null;
-                        previous();
+                        retCode = -1;
+                        transactionID = 0;
+                        setTitle("DeviceSelection");
                         setupCommands(true);
                     }
                 }
@@ -383,34 +401,35 @@ public class Jsr82LocationProvider extends StreamReadingLocationProvider impleme
             }
         }
 
-        private void next() {
-            setTitle("ServiceSearch");
-            setTicker(new Ticker("Searching service..."));
-        }
-
-        private void previous() {
-            setTitle("DeviceSelection");
-        }
-
-        private String getURL() throws LocationException {
-            while (url == null && exception == null && retCode == -1) {
-                Thread.yield();
+        private javax.bluetooth.RemoteDevice getDevice() throws LocationException {
+            synchronized (this) {
+                while (device == null && exception == null && retCode == -1) {
+                    try {
+                        wait();
+                    } catch (InterruptedException e) {
+                    }
+                }
             }
 
             if (exception == null) {
-                return url;
+                return device;
             }
 
             throw exception;
         }
 
-        private javax.bluetooth.RemoteDevice getDevice() throws LocationException {
-            while (device == null && exception == null && retCode == -1) {
-                Thread.yield();
+        private String getURL() throws LocationException {
+            synchronized (this) {
+                while (url == null && exception == null && retCode == -1) {
+                    try {
+                        wait();
+                    } catch (InterruptedException e) {
+                    }
+                }
             }
 
             if (exception == null) {
-                return device;
+                return url;
             }
 
             throw exception;
@@ -422,52 +441,64 @@ public class Jsr82LocationProvider extends StreamReadingLocationProvider impleme
         }
 
         public void servicesDiscovered(int i, javax.bluetooth.ServiceRecord[] serviceRecords) {
-            try {
-                url = serviceRecords[0].getConnectionURL(javax.bluetooth.ServiceRecord.NOAUTHENTICATE_NOENCRYPT, false);
-            } catch (ArrayIndexOutOfBoundsException e) {
-            } catch (NullPointerException e) {
+                try {
+                    synchronized (this) {
+                        url = serviceRecords[0].getConnectionURL(javax.bluetooth.ServiceRecord.NOAUTHENTICATE_NOENCRYPT, false);
+                        notify();
+                    }
+                } catch (ArrayIndexOutOfBoundsException e) {
+                } catch (NullPointerException e) {
             }
         }
 
         public void serviceSearchCompleted(int transID, int respCode) {
             setTicker(null);
 
-            if (url == null) {
-                String respMsg;
+            synchronized (this) {
+                if (url == null) {
+                    String respMsg;
 
-                switch (respCode) {
-                    case SERVICE_SEARCH_COMPLETED:
-                        respMsg = "COMPLETED";
-                        break;
-                    case SERVICE_SEARCH_DEVICE_NOT_REACHABLE:
-                        respMsg = "DEVICE NOT REACHABLE";
-                        break;
-                    case SERVICE_SEARCH_ERROR:
-                        respMsg = "ERROR";
-                        break;
-                    case SERVICE_SEARCH_NO_RECORDS:
-                        respMsg = "NO RECORDS";
-                        break;
-                    case SERVICE_SEARCH_TERMINATED:
-                        respMsg = "TERMINATED";
-                        break;
-                    default:
-                        respMsg = "UNKNOWN";
+                    switch (respCode) {
+                        case SERVICE_SEARCH_COMPLETED:
+                            respMsg = "COMPLETED";
+                            break;
+                        case SERVICE_SEARCH_DEVICE_NOT_REACHABLE:
+                            respMsg = "DEVICE NOT REACHABLE";
+                            break;
+                        case SERVICE_SEARCH_ERROR:
+                            respMsg = "ERROR";
+                            break;
+                        case SERVICE_SEARCH_NO_RECORDS:
+                            respMsg = "NO RECORDS";
+                            break;
+                        case SERVICE_SEARCH_TERMINATED:
+                            respMsg = "TERMINATED";
+                            break;
+                        default:
+                            respMsg = "UNKNOWN";
+                    }
+
+                    exception = new LocationException("Service not found (" + respMsg + ")");
                 }
 
-                exception = new LocationException("Service not found (" + respMsg + ")");
+                notify();
             }
         }
 
         public void inquiryCompleted(int discType) {
-            setTicker(null);
+            inquiryCompleted = true;
+
+            setTicker(null); // stop "Looking for devices"
             deleteAll(); // delete temporary items (bt adresses)
 
-            // all commands available
+            // make all commands available
             setupCommands(true);
 
             if (devices.size() == 0) {
-                exception = new LocationException("No devices discovered");
+                synchronized (this) {
+                    exception = new LocationException("No devices discovered");
+                    notify();
+                }
             } else {
                 setTicker(new Ticker("Resolving names"));
                 for (int N = devices.size(), i = 0; i < N; i++) {
@@ -486,18 +517,46 @@ public class Jsr82LocationProvider extends StreamReadingLocationProvider impleme
 
         public void commandAction(Command command, Displayable displayable) {
             if (command == List.SELECT_COMMAND) {
+                /*
+                 * device selection
+                 */
                 displayable.setTicker(null);
                 if (device == null) {
                     agent.cancelInquiry(this);
-                    device = (javax.bluetooth.RemoteDevice) devices.elementAt(getSelectedIndex());
+                    synchronized (this) {
+                        device = (javax.bluetooth.RemoteDevice) devices.elementAt(getSelectedIndex());
+                        notify();
+                    }
                 }
             } else if (command.getCommandType() == Command.BACK) {
                 if (device == null) {
+                    /*
+                     * cancel device discovery and quit device selection at all
+                     */
                     agent.cancelInquiry(this);
-                    retCode = ACTION_CANCEL;
+                    if (inquiryCompleted  || (devices.size() == 0)) {
+                        synchronized (this) {
+                            retCode = ACTION_CANCEL;
+                            notify();
+                        }
+                    }
+                } else if (transactionID > 0) {
+                    /*
+                     * cancel service, offer device selection
+                     */
+                    agent.cancelServiceSearch(transactionID);
+                    setTitle("DeviceSelection");
+                    setupCommands(true);
                 }
             } else if ("Refresh".equals(command.getLabel())) {
-                retCode = ACTION_REFRESH;
+                /*
+                 * refresh device selection
+                 */
+                agent.cancelInquiry(this);
+                synchronized (this) {
+                    retCode = ACTION_REFRESH;
+                    notify();
+                }
             }
         }
     }

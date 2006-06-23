@@ -570,8 +570,10 @@ public class Desktop extends GameCanvas implements Runnable, CommandListener, Lo
         provider.setLocationListener(this, -1, -1, -1);
 
         // start provider
+        int state;
         try {
-            provider.start();
+            state = provider.start();
+            if (log.isEnabled()) log.debug("provider started; state " + state);
         } catch (LocationException e) {
             showError(display, "Failed to start provider " + provider.getName(), e, null);
 
@@ -584,12 +586,18 @@ public class Desktop extends GameCanvas implements Runnable, CommandListener, Lo
         // start gpx
         startGpx();
 
+        // update OSD
+        osd.setProviderStatus(state);
+
+        // update screen
+        renderScreen(true, true);
+
         // update menu
         removeCommand(cmdRun);
         cmdRun = new Command("Stop", Command.SCREEN, 2);
         addCommand(cmdRun);
 
-        // tracking
+        // not browsing
         browsing = false;
 
         return true;
@@ -614,11 +622,12 @@ public class Desktop extends GameCanvas implements Runnable, CommandListener, Lo
             showError(display, "Failed to stop provider", e, null);
         } finally {
             provider = null;
-            if (log.isEnabled()) log.debug("stopped");
         }
 
-        // update desktop
+        // update OSD
         osd.setProviderStatus(LocationProvider.OUT_OF_SERVICE);
+
+        // update screen
         renderScreen(true, true);
 
         // update menu
@@ -626,7 +635,7 @@ public class Desktop extends GameCanvas implements Runnable, CommandListener, Lo
         cmdRun = new Command("Start", Command.SCREEN, 2);
         addCommand(cmdRun);
 
-        // tracking
+        // not tracking
         browsing = true;
 
         return true;
@@ -634,7 +643,7 @@ public class Desktop extends GameCanvas implements Runnable, CommandListener, Lo
 
     private void startGpx() {
         if (Config.getSafeInstance().isTracklogsOn()) {
-            if ((provider instanceof Jsr179LocationProvider) || (Config.TRACKLOGS_FORMAT[1].equals(Config.getSafeInstance().getTracklogsFormat()))) {
+            if ((provider instanceof Jsr179LocationProvider) || ((provider instanceof Jsr82LocationProvider) && (Config.TRACKLOG_FORMAT_GPX.equals(Config.getSafeInstance().getTracklogsFormat())))) {
                 gpxTracklog = new GpxTracklog(new DesktopEvent(DesktopEvent.EVENT_TRACKLOG));
                 gpxTracklog.start();
                 osd.setGpxRecording("R");
@@ -644,9 +653,9 @@ public class Desktop extends GameCanvas implements Runnable, CommandListener, Lo
 
     private void stopGpx() {
         if (gpxTracklog != null) {
-            osd.setGpxRecording(null);
             gpxTracklog.destroy();
             gpxTracklog = null;
+            osd.setGpxRecording(null);
         }
     }
 

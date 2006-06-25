@@ -6,9 +6,9 @@ package cz.kruch.track.ui;
 import cz.kruch.track.util.Logger;
 import cz.kruch.track.event.Callback;
 
+import javax.microedition.io.Connector;
 import javax.microedition.io.file.FileSystemRegistry;
 import javax.microedition.io.file.FileConnection;
-import javax.microedition.io.Connector;
 import javax.microedition.lcdui.Display;
 import javax.microedition.lcdui.List;
 import javax.microedition.lcdui.Command;
@@ -122,8 +122,8 @@ public class FileBrowser extends List implements CommandListener {
                     selection = fc.getURL();
                     quit(null);
                 }
-            } catch (IOException e) {
-                quit(e);
+            } catch (Throwable t) {
+                quit(t);
             }
 
             if (log.isEnabled()) log.debug("scanner thread exits");
@@ -132,18 +132,22 @@ public class FileBrowser extends List implements CommandListener {
 
     private Runnable ShowRoots = new Runnable() {
         public void run() {
-            if (fc != null) {
-                if (log.isEnabled()) log.debug("close existing fc");
-                try {
-                    fc.close();
-                } catch (IOException e) {
+            try {
+                if (fc != null) {
+                    if (log.isEnabled()) log.debug("close existing fc");
+                    try {
+                        fc.close();
+                    } catch (IOException e) {
+                    }
                 }
+                fc = null;
+
+                show(FileSystemRegistry.listRoots());
+
+                if (log.isEnabled()) log.debug("scanner thread exits");
+            } catch (Throwable t) {
+                quit(t);
             }
-            fc = null;
-
-            show(FileSystemRegistry.listRoots());
-
-            if (log.isEnabled()) log.debug("scanner thread exits");
         }
     };
 }

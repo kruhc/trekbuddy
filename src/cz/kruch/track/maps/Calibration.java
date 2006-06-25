@@ -102,7 +102,6 @@ public abstract class Calibration {
             int dy = y - ref0.getY();
             double yScale = Math.abs(refC1.getLat() - refC0.getLat()) / Math.abs(ref1.getY() - ref0.getY());
             lat = refC0.getLat() - dy * yScale;
-            System.out.println("yScale = " + yScale + "dy =" + dy);
         }
 
         return new QualifiedCoordinates(lat, lon);
@@ -572,8 +571,6 @@ public abstract class Calibration {
                 Position p = new Position(x, y);
                 xy.addElement(p);
 
-                System.out.println("cal point xy: " + x + "-" + y);
-
             } catch (NumberFormatException e) {
                 return false;
             }
@@ -591,8 +588,6 @@ public abstract class Calibration {
 
                 QualifiedCoordinates qc = new QualifiedCoordinates(lat, lon);
                 ll.addElement(qc);
-
-                System.out.println("cal point ll: " + lon + "-" + lat + ";" + qc);
 
             } catch (NumberFormatException e) {
                 return false;

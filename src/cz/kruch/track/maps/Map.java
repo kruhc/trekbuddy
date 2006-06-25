@@ -6,8 +6,8 @@ package cz.kruch.track.maps;
 import com.ice.tar.TarInputStream;
 import com.ice.tar.TarEntry;
 
-import javax.microedition.io.file.FileConnection;
 import javax.microedition.io.Connector;
+import javax.microedition.io.file.FileConnection;
 import javax.microedition.lcdui.Image;
 import java.io.IOException;
 import java.io.InputStream;
@@ -132,6 +132,7 @@ public class Map {
                 } catch (InterruptedException e) {
                 }
             }
+            ready = false;
         }
 
         // open map in background
@@ -201,6 +202,7 @@ public class Map {
                 } catch (InterruptedException e) {
                 }
             }
+            ready = false;
         }
 
         // load images at background

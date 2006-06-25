@@ -19,6 +19,9 @@ public abstract class Calibration {
     // log
     private static final Logger log = new Logger("Calibration");
 
+    // incest limit
+    private static final int INCEST_LIMIT = 24; // 10% z 240, 9+% z 256
+
     // map/slice path
     protected String path;
 
@@ -91,14 +94,15 @@ public abstract class Calibration {
         if (lon == 0D) {
             int dx = x - ref0.getX();
             double xScale = Math.abs(refC1.getLon() - refC0.getLon()) / Math.abs(ref1.getX() - ref0.getX());
-            lon = refC0.getLon() + dx * xScale;  // closer neighbour is ref point
+            lon = refC0.getLon() + dx * xScale;
         }
 
         // no match for y with any calpoint
         if (lat == 0D) {
             int dy = y - ref0.getY();
             double yScale = Math.abs(refC1.getLat() - refC0.getLat()) / Math.abs(ref1.getY() - ref0.getY());
-            lat = refC0.getLat() - dy * yScale;  // closer neighbour is ref point
+            lat = refC0.getLat() - dy * yScale;
+            System.out.println("yScale = " + yScale + "dy =" + dy);
         }
 
         return new QualifiedCoordinates(lat, lon);
@@ -107,15 +111,16 @@ public abstract class Calibration {
     public Position transform(QualifiedCoordinates coordinates) {
         int[] index = findNearestCalibrationPoints(coordinates);
 
-        Position ref0 = positions[index[0]]; // closer neighbour is ref point
+        Position ref0 = positions[index[0]];
+        Position ref1 = positions[index[1]];
         QualifiedCoordinates refC0 = this.coordinates[index[0]];
         QualifiedCoordinates refC1 = this.coordinates[index[1]];
 
         double dlon = coordinates.getLon() - refC0.getLon();
         double dlat = coordinates.getLat() - refC0.getLat();
 
-        double xScale = Math.abs(refC1.getLon() - refC0.getLon()) / Math.abs(positions[index[1]].getX() - ref0.getX());
-        double yScale = Math.abs(refC1.getLat() - refC0.getLat()) / Math.abs(positions[index[1]].getY() - ref0.getY());
+        double xScale = Math.abs(refC1.getLon() - refC0.getLon()) / Math.abs(ref1.getX() - ref0.getX());
+        double yScale = Math.abs(refC1.getLat() - refC0.getLat()) / Math.abs(ref1.getY() - ref0.getY());
 
         Double dx = new Double(dlon / xScale);
         Double dy = new Double(dlat / yScale);
@@ -143,22 +148,9 @@ public abstract class Calibration {
         int y = position.getY();
         for (int N = positions.length, i = 0; i < N; i++) {
 
-            // check that positions[i] have different both x and y with already found cal point
-            if (i0 > -1) {
-                if ((positions[i0].getX() == positions[i].getX())
-                    || (positions[i0].getY() == positions[i].getY())) {
-//                    if (log.isEnabled()) log.debug("incest sibling");
-                    continue;
-                }
+            if (incest(i, i0, i1)) {
+                continue;
             }
-            if (i1 > -1) {
-                if ((positions[i1].getX() == positions[i].getX())
-                    || (positions[i1].getY() == positions[i].getY())) {
-//                    if (log.isEnabled()) log.debug("incest sibling");
-                    continue;
-                }
-            }
-            // ~
 
             int dx = x - positions[i].getX();
             int dx2 = dx * dx;
@@ -166,7 +158,7 @@ public abstract class Calibration {
             int dy2 = dy * dy;
             int r = dx2 + dy2; // sqrt not necessary, we just compare
             if (r < r0) {
-                if (i1 == -1) { // r0 - >r1
+                if (i0 > -1) {
                     r1 = r0;
                     i1 = i0;
                 }
@@ -182,7 +174,7 @@ public abstract class Calibration {
             throw new IllegalStateException("Defective calibration");
         }
 
-        return i0 < i1 ? new int[]{ i0, i1 } : new int[]{ i1, i0 };
+        return r0 < r1 ? new int[]{ i0, i1 } : new int[]{ i1, i0 };
     }
 
     private int[] findNearestCalibrationPoints(QualifiedCoordinates coordinates) {
@@ -193,13 +185,18 @@ public abstract class Calibration {
         double lon = coordinates.getLon();
         double lat = coordinates.getLat();
         for (int N = this.coordinates.length, i = 0; i < N; i++) {
+
+            if (incest(i, i0, i1)) {
+                continue;
+            }
+
             double dlon = lon - this.coordinates[i].getLon();
             double dlon2 = dlon * dlon;
             double dlat = lat - this.coordinates[i].getLat();
             double dlat2 = dlat * dlat;
             double r = dlat2 + dlon2; // sqrt not necessary, we just compare
             if (r < r0) {
-                if (i1 == -1) { // r0 - >r1
+                if (i0 > -1) {
                     r1 = r0;
                     i1 = i0;
                 }
@@ -211,10 +208,38 @@ public abstract class Calibration {
             }
         }
 
-        return i0 < i1 ? new int[]{ i0, i1 } : new int[]{ i1, i0 };
+        if (i0 == -1 || i1 == -1) {
+            throw new IllegalStateException("Defective calibration");
+        }
+
+        return r0 < r1 ? new int[]{ i0, i1 } : new int[]{ i1, i0 };
     }
 
-    private String parsePath(String line) {
+    private boolean incest(int i, int i0, int i1) {
+
+        int x = positions[i].getX();
+        int y = positions[i].getY();
+
+        // check that positions[i] have different both x and y with already found cal point
+        if (i0 > -1) {
+            int cdx = positions[i0].getX() - x;
+            int cdy = positions[i0].getY() - y;
+            if ((cdx > -INCEST_LIMIT && cdx < INCEST_LIMIT) || (cdy > -INCEST_LIMIT && cdy < INCEST_LIMIT)) {
+                return true;
+            }
+        }
+        if (i1 > -1) {
+            int cdx = positions[i1].getX() - x;
+            int cdy = positions[i1].getY() - y;
+            if ((cdx > -INCEST_LIMIT && cdx < INCEST_LIMIT) || (cdy > -INCEST_LIMIT && cdy < INCEST_LIMIT)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static String parsePath(String line) {
         int idxUnix = line.lastIndexOf('/');
         int idxWindows = line.lastIndexOf('\\');
         int idx = idxUnix > -1 ? idxUnix : (idxWindows > -1 ? idxWindows : -1);
@@ -507,7 +532,10 @@ public abstract class Calibration {
             }
 
             // empty cal point
-            if (px.length() == 0 || py.length() == 0) {
+            if (px == null || py == null || lath == null || lonh == null) {
+                return false;
+            }
+            if (px.length() == 0 || py.length() == 0 || lath.length() == 0 || lonh.length() == 0) {
                 return false;
             }
 
@@ -544,6 +572,8 @@ public abstract class Calibration {
                 Position p = new Position(x, y);
                 xy.addElement(p);
 
+                System.out.println("cal point xy: " + x + "-" + y);
+
             } catch (NumberFormatException e) {
                 return false;
             }
@@ -556,11 +586,13 @@ public abstract class Calibration {
                 StringTokenizer st = new StringTokenizer(line, ",", false);
                 st.nextToken();
                 String index = st.nextToken();
-                double lat = Double.parseDouble(st.nextToken().trim());
                 double lon = Double.parseDouble(st.nextToken().trim());
+                double lat = Double.parseDouble(st.nextToken().trim());
 
                 QualifiedCoordinates qc = new QualifiedCoordinates(lat, lon);
                 ll.addElement(qc);
+
+                System.out.println("cal point ll: " + lon + "-" + lat + ";" + qc);
 
             } catch (NumberFormatException e) {
                 return false;

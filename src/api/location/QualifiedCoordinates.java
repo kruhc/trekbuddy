@@ -67,7 +67,7 @@ public class QualifiedCoordinates {
         l *= 60D;
         int m = (int) Math.floor(l);
         l -= m;
-        l *= 100D;
+        l *= 60D;
         int s = (int) Math.floor(l);
 
         sb.append(h).append(SIGN);

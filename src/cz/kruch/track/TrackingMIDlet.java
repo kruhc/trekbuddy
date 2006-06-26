@@ -24,9 +24,6 @@ public class TrackingMIDlet extends MIDlet {
 
     // system info
     private static String flags;
-/*
-    private static boolean emulator;
-*/
     private static boolean logEnabled;
     private static boolean jsr179;
     private static boolean jsr82;
@@ -44,9 +41,6 @@ public class TrackingMIDlet extends MIDlet {
 
         // detect environment
         TrackingMIDlet.flags = getAppProperty("App-Flags");
-/*
-        TrackingMIDlet.emulator = "true".equals(getAppProperty("Is-Emulator"));
-*/
         TrackingMIDlet.logEnabled = "true".equals(getAppProperty("Log-Enable"));
         try {
             Class clazz = Class.forName("javax.microedition.location.LocationProvider");
@@ -71,6 +65,7 @@ public class TrackingMIDlet extends MIDlet {
 
         // setup environment
         TrackingMIDlet.numAlphaLevels = display.numAlphaLevels();
+        System.out.println("* numAlphaLevels: " + TrackingMIDlet.numAlphaLevels);
 
         // create desktop if it does not exist
         if (desktop == null) {
@@ -82,13 +77,15 @@ public class TrackingMIDlet extends MIDlet {
             console.show("");
             console.show("initializing...");
 
+/*
             // 1a. show vital info
             console.show("total memory: " + Runtime.getRuntime().totalMemory());
             console.show("free memory:  " + Runtime.getRuntime().freeMemory());
+*/
 
             // 2. load configuration
             try {
-                console.show("loading configuration...");
+                console.show("loading config...");
                 Config.getInstance();
                 console.result(0, "ok");
             } catch (ConfigurationException e) {
@@ -106,10 +103,10 @@ public class TrackingMIDlet extends MIDlet {
 */
 
             // 3. create desktop
-            desktop = new Desktop(display);
+            desktop = new Desktop(this);
 
             // 4. read default map
-            console.show("loading default map...");
+            console.show("loading map...");
             if ("".equals(Config.getSafeInstance().getMapPath())) {
                 desktop.initDefaultMap();
                 console.result(1, "skipped");
@@ -124,7 +121,7 @@ public class TrackingMIDlet extends MIDlet {
             }
 
             // 5. preparing desktop
-            console.show("preparing desktop...");
+            console.show("preparing gui...");
             try {
                 desktop.initGui();
                 console.result(0, "ok");
@@ -143,22 +140,17 @@ public class TrackingMIDlet extends MIDlet {
     }
 
     protected void pauseApp() {
-        // TODO
+        // anything to do?
     }
 
     protected void destroyApp(boolean b) throws MIDletStateChangeException {
-        // TODO
+        // same as answering Yes in Do you want to quit?
+        desktop.response(0);
     }
 
     /*
      * Environment info.
      */
-
-/*
-    public static boolean isEmulator() {
-        return emulator;
-    }
-*/
 
     public static boolean isLogEnabled() {
         return logEnabled;

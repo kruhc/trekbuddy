@@ -81,7 +81,7 @@ public class SettingsForm extends Form implements CommandListener {
         showProviderOptions();
 
         // add command and handling
-        addCommand(new Command("Close", Command.BACK, 1));
+        addCommand(new Command("Cancel", Command.BACK, 1));
         addCommand(new Command("Apply", Command.SCREEN, 1));
         addCommand(new Command("Save", Command.SCREEN, 2));
         setCommandListener(this);

@@ -24,8 +24,11 @@ import javax.microedition.lcdui.AlertType;
 import javax.microedition.lcdui.Graphics;
 import javax.microedition.lcdui.Font;
 import javax.microedition.lcdui.game.GameCanvas;
+import javax.microedition.midlet.MIDlet;
 import java.io.IOException;
 import java.util.Date;
+import java.util.Timer;
+import java.util.TimerTask;
 
 import api.location.LocationProvider;
 import api.location.LocationListener;
@@ -36,7 +39,7 @@ import api.location.LocationException;
 /**
  * Application desktop.
  */
-public class Desktop extends GameCanvas implements Runnable, CommandListener, LocationListener, Map.StateListener {
+public class Desktop extends GameCanvas implements Runnable, CommandListener, LocationListener, Map.StateListener, YesNoDialog.AnswerListener {
     // log
     private static final Logger log = new Logger("Desktop");
 
@@ -53,7 +56,8 @@ public class Desktop extends GameCanvas implements Runnable, CommandListener, Lo
     // musical note
     private static final int NOTE = 77;
 
-    // display
+    // application and display
+    private MIDlet midlet;
     private Display display;
 
     // desktop components
@@ -66,10 +70,11 @@ public class Desktop extends GameCanvas implements Runnable, CommandListener, Lo
 
     // LSM/MSK commands
     private Command cmdFocus; // hope for MSK
+    private Command cmdRun;
     private Command cmdLoadMap;
     private Command cmdSettings;
     private Command cmdInfo;
-    private Command cmdRun;
+    private Command cmdExit;
     // RSK commands
     private Command cmdOSD;
 
@@ -98,9 +103,17 @@ public class Desktop extends GameCanvas implements Runnable, CommandListener, Lo
     // event lock
     private Object lock = new Object();
 
-    public Desktop(Display display) {
+    // repeated event simulation
+    private Timer repeatedKeyChecker;
+    private int inAction = -1;
+
+    public Desktop(MIDlet midlet) {
         super(false);
-        this.display = display;
+        this.midlet = midlet;
+        this.display = Display.getDisplay(midlet);
+
+        // debug for defective impl
+        if (log.isEnabled()) log.debug("hasRepeatEvents? " + hasRepeatEvents());
 
         // adjust appearance
         this.setFullScreenMode(Config.getSafeInstance().isFullscreen());
@@ -113,12 +126,14 @@ public class Desktop extends GameCanvas implements Runnable, CommandListener, Lo
         this.cmdLoadMap = new Command("Load Map", Command.SCREEN, 3);
         this.cmdSettings = new Command("Settings", Command.SCREEN, 4);
         this.cmdInfo = new Command("Info", Command.SCREEN, 5);
+        this.cmdExit = new Command("Exit", Command.SCREEN, 6);
         this.addCommand(cmdOSD);
         this.addCommand(cmdFocus);
         this.addCommand(cmdRun);
         this.addCommand(cmdLoadMap);
         this.addCommand(cmdSettings);
         this.addCommand(cmdInfo);
+        this.addCommand(cmdExit);
 
         // handle comamnds
         this.setCommandListener(this);
@@ -210,7 +225,7 @@ public class Desktop extends GameCanvas implements Runnable, CommandListener, Lo
 
     protected void keyPressed(int i) {
         // log
-        if (log.isEnabled()) log.debug("key pressed");
+        if (log.isEnabled()) log.info("keyPressed");
 
         // handle event
         handleKey(i, false);
@@ -218,10 +233,24 @@ public class Desktop extends GameCanvas implements Runnable, CommandListener, Lo
 
     protected void keyRepeated(int i) {
         // log
-        if (log.isEnabled()) log.debug("key repeated");
+        if (log.isEnabled()) log.info("keyRepeated");
 
         // handle event
         handleKey(i, true);
+    }
+
+    protected void keyReleased(int i) {
+        // log
+        if (log.isEnabled()) log.info("keyReleased");
+
+        // for dumb devices
+        inAction = -1;
+
+        // prohibit key check upon key release
+        if (repeatedKeyChecker != null) {
+            repeatedKeyChecker.cancel();
+            if (log.isEnabled()) log.debug("repeated key check cancelled");
+        }
     }
 
     public void commandAction(Command command, Displayable displayable) {
@@ -254,6 +283,21 @@ public class Desktop extends GameCanvas implements Runnable, CommandListener, Lo
             } else {
                 stopTracking();
             }
+        } else if (command == cmdExit) {
+            (new YesNoDialog(display, this)).show("Do you want to quit?", "Yes / No");
+        }
+    }
+
+    public void response(int answer) {
+        if (answer == YesNoDialog.YES) {
+            // stop tracking (GPS connection, tracklog fs handles)
+            stopTracking();
+
+            // close map (fs handles)
+            if (map != null) map.close();
+
+            // anything else? bail out
+            midlet.notifyDestroyed();
         }
     }
 
@@ -354,7 +398,13 @@ public class Desktop extends GameCanvas implements Runnable, CommandListener, Lo
             action = Canvas.DOWN;
         }
 
+        if ((action == -1) && (inAction != -1)) {
+            if (log.isEnabled()) log.debug("use inAction value " + inAction);
+            action = inAction;
+        }
+
         if (action > -1) {
+            if (log.isEnabled()) log.debug("repeated action " + action);
 
             // scroll if possible
             if (!_getLoadingSlices() && mapViewer.scroll(action)) {
@@ -388,6 +438,8 @@ public class Desktop extends GameCanvas implements Runnable, CommandListener, Lo
             }
 
         } else {
+            if (log.isEnabled()) log.debug("stop scrolling");
+
             // scrolling stop
             scrolls = 0;
         }
@@ -420,15 +472,19 @@ public class Desktop extends GameCanvas implements Runnable, CommandListener, Lo
                 if (mapViewer == null) {
                     showWarning(display, _getLoadingResult(), null, null);
                 } else {
-                    // kurzor movement break autofocus
+
+                    // cursor movement breaks autofocus
                     browsing = true;
 
-                    // when repetead and not yet fast-moving, go
+                    // when repeated and not yet fast-moving, go
                     if (repeated) {
                         if (scrolls == 0) {
                             display.callSerially(this);
                         }
                     } else { // single step
+
+                        // for dumb devices
+                        inAction = action;
 
                         // scrolled?
                         if (mapViewer.scroll(action)) {
@@ -441,6 +497,28 @@ public class Desktop extends GameCanvas implements Runnable, CommandListener, Lo
                             if (!_getLoadingSlices()) {
                                 renderScreen(true, true);
                             }
+                        }
+
+                        // for dumb phones
+                        if (!hasRepeatEvents()) {
+                            if (log.isEnabled()) log.debug("does not have repeat events");
+
+                            /*
+                             * "A key's bit will be 1 if the key is currently down or has
+                             * been pressed at least once since the last time this method
+                             * was called."
+                             *
+                             * Therefore the dummy getKeyStates() call before invoking run().
+                             */
+
+                            // delayed check to emulate keyRepeated
+                            repeatedKeyChecker = new Timer();
+                            repeatedKeyChecker.schedule(new TimerTask() {
+                                public void run() {
+                                    getKeyStates();
+                                    display.callSerially(Desktop.this);
+                                }
+                            }, 1000);
                         }
                     }
                 }
@@ -644,7 +722,8 @@ public class Desktop extends GameCanvas implements Runnable, CommandListener, Lo
     private void startGpx() {
         if (Config.getSafeInstance().isTracklogsOn()) {
             if ((provider instanceof Jsr179LocationProvider) || ((provider instanceof Jsr82LocationProvider) && (Config.TRACKLOG_FORMAT_GPX.equals(Config.getSafeInstance().getTracklogsFormat())))) {
-                gpxTracklog = new GpxTracklog(new DesktopEvent(DesktopEvent.EVENT_TRACKLOG));
+                gpxTracklog = new GpxTracklog(new DesktopEvent(DesktopEvent.EVENT_TRACKLOG),
+                                              APP_TITLE + " " + midlet.getAppProperty("MIDlet-Version"));
                 gpxTracklog.start();
                 osd.setGpxRecording("R");
             }

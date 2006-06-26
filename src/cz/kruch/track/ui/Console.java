@@ -53,6 +53,11 @@ public class Console extends Canvas {
     }
 
     public void result(int code, String text) {
+
+        // hack
+        text = "*";
+        // ~hack
+
         int x = width - BORDER - font.stringWidth(text);
         Graphics g = image.getGraphics();
         if (code == 0) {

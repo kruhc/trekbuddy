@@ -33,7 +33,7 @@ abstract class Bar {
 
     private void init() {
         int h = font.getHeight();
-        int color = TrackingMIDlet.numAlphaLevels() > 2 ? 0xa07f7f7f : 0xff7f7f7f;
+        int color = TrackingMIDlet.numAlphaLevels() > 2 ? 0x807f7f7f : 0xff7f7f7f;
         int[] shadow = new int[width * h];
         for (int N = shadow.length, i = 0; i < N; i++) {
             shadow[i] = color;

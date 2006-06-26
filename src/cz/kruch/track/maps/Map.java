@@ -625,23 +625,15 @@ public class Map {
             String spath = dir + "/" + slice.getCalibration().getPath();
             if (log.isEnabled()) log.debug("load slice image from " + spath);
 
-            FileConnection fc = null;
             InputStream in = null;
 
             try {
-                fc = (FileConnection) Connector.open(spath, Connector.READ);
-                in = fc.openInputStream();
+                in = Connector.openInputStream(spath);
                 slice.setImage(Image.createImage(in));
             } finally {
                 if (in != null) {
                     try {
                         in.close();
-                    } catch (IOException e) {
-                    }
-                }
-                if (fc != null) {
-                    try {
-                        fc.close();
                     } catch (IOException e) {
                     }
                 }

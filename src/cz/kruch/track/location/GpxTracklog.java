@@ -27,14 +27,17 @@ public class GpxTracklog extends Thread {
     private static final double MIN_DL = 0.00015D; // cca 10 m
 
     private Callback callback;
+    private String creator;
+
     private Location queue;
     private boolean go = true;
 
     private QualifiedCoordinates refCoordinates = new QualifiedCoordinates(0D, 0D);
     private long refTimestamp = 0;
 
-    public GpxTracklog(Callback callback) {
+    public GpxTracklog(Callback callback, String creator) {
         this.callback = callback;
+        this.creator = creator;
     }
 
     public void destroy() {
@@ -52,7 +55,7 @@ public class GpxTracklog extends Thread {
         try {
             fc = (FileConnection) Connector.open(path, Connector.WRITE);
             fc.create();
-            writer = new OutputStreamWriter(Connector.openOutputStream(path));
+            writer = new OutputStreamWriter(fc.openOutputStream());
         } catch (Throwable t) {
             if (fc != null) {
                 try {
@@ -74,6 +77,9 @@ public class GpxTracklog extends Thread {
             serializer.setPrefix(null, GPX_1_1_NAMESPACE);
             serializer.startTag(DEFAULT_NAMESPACE, "gpx");
             serializer.attribute(DEFAULT_NAMESPACE, "version", "1.1");
+            serializer.attribute(DEFAULT_NAMESPACE, "creator", creator);
+            serializer.startTag(DEFAULT_NAMESPACE, "trk");
+            serializer.startTag(DEFAULT_NAMESPACE, "trkseg");
 
             for (; go ;) {
                 Location l = null;
@@ -91,7 +97,7 @@ public class GpxTracklog extends Thread {
                 if (!go) break;
 
                 QualifiedCoordinates qc = l.getQualifiedCoordinates();
-                serializer.startTag(DEFAULT_NAMESPACE, "wpt");
+                serializer.startTag(DEFAULT_NAMESPACE, "trkpt");
                 serializer.attribute(DEFAULT_NAMESPACE, "lat", Double.toString(qc.getLat()));
                 serializer.attribute(DEFAULT_NAMESPACE, "lon", Double.toString(qc.getLon()));
                 serializer.startTag(DEFAULT_NAMESPACE, "time");
@@ -112,13 +118,15 @@ public class GpxTracklog extends Thread {
                     serializer.text(Integer.toString(l.getSat()));
                     serializer.endTag(DEFAULT_NAMESPACE, "sat");
                 }
-                serializer.endTag(DEFAULT_NAMESPACE, "wpt");
+                serializer.endTag(DEFAULT_NAMESPACE, "trkpt");
             }
         } catch (Throwable t) {
             callback.invoke(null, t);
         } finally {
             if (serializer != null) {
                 try {
+                    serializer.endTag(DEFAULT_NAMESPACE, "trkseg");
+                    serializer.endTag(DEFAULT_NAMESPACE, "trk");
                     serializer.endTag(null, "gpx");
                     serializer.endDocument();
                     serializer.flush();
@@ -128,6 +136,12 @@ public class GpxTracklog extends Thread {
             if (writer != null) {
                 try {
                     writer.close();
+                } catch (IOException e) {
+                }
+            }
+            if (fc != null) {
+                try {
+                    fc.close();
                 } catch (IOException e) {
                 }
             }

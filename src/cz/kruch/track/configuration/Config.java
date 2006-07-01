@@ -18,8 +18,6 @@ import java.util.Vector;
 public abstract class Config {
     private static final Logger log = new Logger("Config");
 
-    private static final String NAME = "config_076";
-
     public static final String LOCATION_PROVIDER_JSR82      = "Bluetooth";
     public static final String LOCATION_PROVIDER_JSR179     = "Internal";
     public static final String LOCATION_PROVIDER_SIMULATOR  = "Simulator";
@@ -39,13 +37,22 @@ public abstract class Config {
      * Configuration params, initialized to default values.
      */
 
+    // group
     protected String mapPath = ""; // no default map
+
+    // group
     protected String locationProvider = LOCATION_PROVIDER_SIMULATOR;
+
+    // group
     protected boolean tracklogsOn = false;
     protected String tracklogsFormat = TRACKLOG_FORMAT_GPX;
     protected String tracklogsDir = "file:///E:/tracklogs";
-    protected boolean fullscreen = false;
+
+    // group
     protected int simulatorDelay = 100;
+
+    // group
+    protected boolean fullscreen = false;
 
     protected Config() {
     }
@@ -119,20 +126,20 @@ public abstract class Config {
         this.tracklogsDir = tracklogsDir;
     }
 
-    public boolean isFullscreen() {
-        return fullscreen;
-    }
-
-    public void setFullscreen(boolean fullscreen) {
-        this.fullscreen = fullscreen;
-    }
-
     public int getSimulatorDelay() {
         return simulatorDelay;
     }
 
     public void setSimulatorDelay(int simulatorDelay) {
         this.simulatorDelay = simulatorDelay;
+    }
+
+    public boolean isFullscreen() {
+        return fullscreen;
+    }
+
+    public void setFullscreen(boolean fullscreen) {
+        this.fullscreen = fullscreen;
     }
 
     private static class DefaultConfig extends Config {
@@ -148,6 +155,8 @@ public abstract class Config {
     }
 
     private static class RMSConfig extends Config {
+        private static final String NAME = "config_076";
+
         private boolean initialized = false;
 
         public RMSConfig() throws ConfigurationException {

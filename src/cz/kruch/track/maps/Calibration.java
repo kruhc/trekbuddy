@@ -4,23 +4,21 @@
 package cz.kruch.track.maps;
 
 import cz.kruch.j2se.util.StringTokenizer;
-import cz.kruch.track.ui.Position;
 import cz.kruch.track.util.Logger;
+import cz.kruch.track.ui.Position;
+import cz.kruch.track.AssertionFailedException;
 import api.location.QualifiedCoordinates;
 
 import java.util.Vector;
-import java.io.InputStreamReader;
 import java.io.ByteArrayInputStream;
+import java.io.InputStreamReader;
 
-import org.kxml2.io.KXmlParser;
 import org.xmlpull.v1.XmlPullParser;
+import org.kxml2.io.KXmlParser;
 
 public abstract class Calibration {
     // log
     private static final Logger log = new Logger("Calibration");
-
-    // incest limit
-    private static final int INCEST_LIMIT = 24; // 10% z 240, 9+% z 256
 
     // map/slice path
     protected String path;
@@ -37,8 +35,6 @@ public abstract class Calibration {
         this.path = parsePath(path) + ".png";
     }
 
-    public abstract Position computeAbsolutePosition(Calibration parent);
-
     public String getPath() {
         return path;
     }
@@ -51,191 +47,295 @@ public abstract class Calibration {
         return height;
     }
 
-    // TODO make this unneeded
-    public Position[] getPositions() {
-        return positions;
+    public abstract Position computeAbsolutePosition(Calibration parent);
+
+    private int gridTHx;
+    private int gridTHy;
+    private double gridTHlon;
+//    private double gridTHlat;
+    private double gridTHscale;
+
+    private int gridBHx;
+    private int gridBHy;
+    private double gridBHlon;
+//    private double gridBHlat;
+    private double gridBHscale;
+
+    private int gridLVy;
+    private int gridLVx;
+    private double gridLVlat;
+//    private double gridLVlon;
+    private double gridLVscale;
+
+    private int gridRVy;
+    private int gridRVx;
+    private double gridRVlat;
+//    private double gridRVlon;
+    private double gridRVscale;
+
+    public void computeGrid() {
+        int[] index = horizontalAxisByY(new Position(0, 0));
+        gridTHx = positions[0].getX();
+        gridTHy = (positions[index[0]].getY() + positions[index[1]].getY()) / 2;
+        gridTHlon = coordinates[index[0]].getLon();
+//        gridTHlat = (coordinates[index[0]].getLat() + coordinates[index[1]].getLat()) / 2;
+        gridTHscale = Math.abs((coordinates[index[1]].getLon() - coordinates[index[0]].getLon()) / (positions[index[1]].getX() - positions[index[0]].getX()));
+
+        index = horizontalAxisByY(new Position(0, getHeight()));
+        gridBHx = positions[index[0]].getX();
+        gridBHy = (positions[index[0]].getY() + positions[index[1]].getY()) / 2;
+        gridBHlon = coordinates[index[0]].getLon();
+//        gridBHlat = (coordinates[index[0]].getLon() + coordinates[index[1]].getLon()) / 2;
+        gridBHscale = Math.abs((coordinates[index[1]].getLon() - coordinates[index[0]].getLon()) / (positions[index[1]].getX() - positions[index[0]].getX()));
+
+        index = verticalAxisByX(new Position(0, 0));
+        gridLVy = positions[index[0]].getY();
+        gridLVx = (positions[index[0]].getX() + positions[index[1]].getX()) / 2;
+        gridLVlat = coordinates[index[0]].getLat();
+//        gridLVlon = (coordinates[index[0]].getLon() + coordinates[index[1]].getLon()) / 2;
+        gridLVscale = Math.abs((coordinates[index[1]].getLat() - coordinates[index[0]].getLat()) / (positions[index[1]].getY() - positions[index[0]].getY()));
+
+        index = verticalAxisByX(new Position(getWidth(), 0));
+        gridRVy = positions[index[0]].getY();
+        gridRVx = (positions[index[0]].getX() + positions[index[1]].getX()) / 2;
+        gridRVlat = coordinates[index[0]].getLat();
+//        gridRVlon = (coordinates[index[0]].getLon() + coordinates[index[1]].getLon()) / 2;
+        gridRVscale = Math.abs((coordinates[index[1]].getLat() - coordinates[index[0]].getLat()) / (positions[index[1]].getY() - positions[index[0]].getY()));
     }
 
     public QualifiedCoordinates transform(Position position) {
-        int[] index = findNearestCalibrationPoints(position);
-
-        double lon = 0D;
-        double lat = 0D;
+        if (log.isEnabled()) log.debug("transform " + position);
 
         int x = position.getX();
         int y = position.getY();
 
-        // check x and y match with any of the calibration points
-        for (int N = positions.length, i = 0; i < N; i++) {
-            Position p0 = positions[i];
-            if (x == p0.getX() && lon == 0D) {
-                if (log.isEnabled()) log.debug("direct use lon of cal point " + i);
-                lon = coordinates[i].getLon();
-            }
-            if (y == p0.getY() && lat == 0D) {
-                if (log.isEnabled()) log.debug("direct use lat of cal point " + i);
-                lat = coordinates[i].getLat();
-            }
+        double latLshare;
+        double latRshare;
+        if (x <= gridLVx) {
+            latLshare = 1D;
+            latRshare = 0D;
+        } else if (x >= gridRVx) {
+            latLshare = 0D;
+            latRshare = 1D;
+        } else {
+            latLshare = 1 - Math.abs((double) (x - gridLVx) / (gridRVx - gridLVx));
+            latRshare = 1 - Math.abs((double) (x - gridRVx) / (gridRVx - gridLVx));
         }
+        double latL = (gridLVlat - (y - gridLVy) * gridLVscale);
+        double latR = (gridRVlat - (y - gridRVy) * gridRVscale);
+        double lat = latL * latLshare + latR * latRshare;
 
-        /*
-         * because it is unlikely to hit x or y calpoint,
-         * it is better for performance to have local refs to
-         * neighbours positions and coordinates to avoid
-         * array index check etc
-         */
-
-        Position ref0 = positions[index[0]];
-        Position ref1 = positions[index[1]];
-        QualifiedCoordinates refC1 = coordinates[index[1]];
-        QualifiedCoordinates refC0 = coordinates[index[0]];
-
-        // no match for x with any calpoint
-        if (lon == 0D) {
-            int dx = x - ref0.getX();
-            double xScale = Math.abs(refC1.getLon() - refC0.getLon()) / Math.abs(ref1.getX() - ref0.getX());
-            lon = refC0.getLon() + dx * xScale;
+        double lonTshare;
+        double lonBshare;
+        if (y <= gridTHy) {
+            lonTshare = 1D;
+            lonBshare = 0D;
+        } else if (y >= gridBHy) {
+            lonTshare = 0D;
+            lonBshare = 1D;
+        } else {
+            lonTshare = 1 - Math.abs((double) (y - gridTHy) / (gridTHy - gridBHy));
+            lonBshare = 1 - Math.abs((double) (y - gridBHy) / (gridTHy - gridBHy));
         }
+        double lonT = (gridTHlon + (x - gridTHx) * gridTHscale);
+        double lonB = (gridBHlon + (x - gridBHx) * gridBHscale);
+        double lon = lonT * lonTshare + lonB * lonBshare;
 
-        // no match for y with any calpoint
-        if (lat == 0D) {
-            int dy = y - ref0.getY();
-            double yScale = Math.abs(refC1.getLat() - refC0.getLat()) / Math.abs(ref1.getY() - ref0.getY());
-            lat = refC0.getLat() - dy * yScale;
+        if (!(position instanceof ProximitePosition)) {
+            if (log.isEnabled()) log.debug("check reverse xf");
+            Position check = transform(new QualifiedCoordinates(lat, lon));
+            if (Math.abs(position.getX() - check.getX()) > 1) {
+                throw new AssertionFailedException("Reverse longitude transformation failed - diff is " + (position.getX() - check.getX()));
+            }
+            if (Math.abs(position.getY() - check.getY()) > 1) {
+                throw new AssertionFailedException("Reverse latitude transformation failed - diff is " + (position.getY() - check.getY()));
+            }
+            if (log.isEnabled()) log.debug("reversed position: " + check);
         }
 
         return new QualifiedCoordinates(lat, lon);
     }
 
-    public Position transform(QualifiedCoordinates coordinates) {
-        int[] index = findNearestCalibrationPoints(coordinates);
+    public Position transform(QualifiedCoordinates coords) {
+        ProximitePosition proximite = proximitePosition(coords);
+        QualifiedCoordinates qc = transform(proximite);
 
-        Position ref0 = positions[index[0]];
-        Position ref1 = positions[index[1]];
-        QualifiedCoordinates refC0 = this.coordinates[index[0]];
-        QualifiedCoordinates refC1 = this.coordinates[index[1]];
+        while ((qc.getLon() > coords.getLon()) && !minorDiff(qc, coords, 0)) {
+            if (log.isEnabled()) log.debug("move proximite right");
+            proximite = new ProximitePosition(proximite.getX() - 1, proximite.getY());
+            qc = transform(proximite);
+        }
+        while ((qc.getLon() < coords.getLon()) && !minorDiff(qc, coords, 0)) {
+            if (log.isEnabled()) log.debug("move proximite left");
+            proximite = new ProximitePosition(proximite.getX() + 1, proximite.getY());
+            qc = transform(proximite);
+        }
+        while ((qc.getLat() > coords.getLat()) && !minorDiff(qc, coords, 1)) {
+            if (log.isEnabled()) log.debug("move proximite down");
+            proximite = new ProximitePosition(proximite.getX(), proximite.getY() + 1);
+            qc = transform(proximite);
+        }
+        while ((qc.getLat() < coords.getLat()) && !minorDiff(qc, coords, 1)) {
+            if (log.isEnabled()) log.debug("move proximite up");
+            proximite = new ProximitePosition(proximite.getX(), proximite.getY() - 1);
+            qc = transform(proximite);
+        }
 
-        double dlon = coordinates.getLon() - refC0.getLon();
-        double dlat = coordinates.getLat() - refC0.getLat();
+        return proximite;
+    }
 
-        double xScale = Math.abs(refC1.getLon() - refC0.getLon()) / Math.abs(ref1.getX() - ref0.getX());
-        double yScale = Math.abs(refC1.getLat() - refC0.getLat()) / Math.abs(ref1.getY() - ref0.getY());
+    private final boolean minorDiff(QualifiedCoordinates qc1, QualifiedCoordinates qc2, int axis) {
+        if (axis == 0) {
+            return Math.abs(qc1.getLon() - qc2.getLon()) < (Math.abs(gridTHscale) / 2);
+        } else {
+            return Math.abs(qc1.getLat() - qc2.getLat()) < (Math.abs(gridLVscale) / 2);
+        }
+    }
+
+    private ProximitePosition proximitePosition(QualifiedCoordinates coordinates) {
+
+        int[] xindex = horizontalAxisByLat(coordinates);
+        int[] yindex = verticalAxisByLon(coordinates);
+
+        Position refX0 = positions[xindex[0]];
+        Position refY0 = positions[yindex[0]];
+        Position refX1 = positions[xindex[1]];
+        Position refY1 = positions[yindex[1]];
+
+        QualifiedCoordinates refXC0 = this.coordinates[xindex[0]];
+        QualifiedCoordinates refYC0 = this.coordinates[yindex[0]];
+        QualifiedCoordinates refXC1 = this.coordinates[xindex[1]];
+        QualifiedCoordinates refYC1 = this.coordinates[yindex[1]];
+
+        double dlon = coordinates.getLon() - refXC0.getLon();
+        double dlat = coordinates.getLat() - refYC0.getLat();
+
+        double xScale = Math.abs((refXC1.getLon() - refXC0.getLon()) / (refX1.getX() - refX0.getX()));
+        double yScale = Math.abs((refYC1.getLat() - refYC0.getLat()) / (refY1.getY() - refY0.getY()));
 
         Double dx = new Double(dlon / xScale);
         Double dy = new Double(dlat / yScale);
+
         int intDx = dx.intValue();
         int intDy = dy.intValue();
+
+/* this is only proximite anyway
         if ((dx.doubleValue() - intDx) > 0.50D) {
             intDx++;
         }
         if ((dy.doubleValue() - intDy) > 0.50D) {
             intDy++;
         }
+*/
 
-        int x = ref0.getX() + intDx;
-        int y = ref0.getY() - intDy;
+        int x = refX0.getX() + intDx;
+        int y = refY0.getY() - intDy;
 
-        return new Position(x, y);
+        return new ProximitePosition(x, y);
     }
 
-    private int[] findNearestCalibrationPoints(Position position) {
-        double r0 = Double.MAX_VALUE;
-        double r1 = Double.MAX_VALUE;
-        int i0 = -1;
-        int i1 = -1;
+    private int[] verticalAxisByX(Position position) {
         int x = position.getX();
-        int y = position.getY();
+        int i0 = -1, i1 = -1;
+        int d0 = Integer.MAX_VALUE, d1 = Integer.MAX_VALUE;
         for (int N = positions.length, i = 0; i < N; i++) {
-
-            if (incest(i, i0, i1)) {
-                continue;
-            }
-
-            int dx = x - positions[i].getX();
-            int dx2 = dx * dx;
-            int dy = y - positions[i].getY();
-            int dy2 = dy * dy;
-            int r = dx2 + dy2; // sqrt not necessary, we just compare
-            if (r < r0) {
+            int dx = Math.abs(x - positions[i].getX());
+            if (dx < d0) {
                 if (i0 > -1) {
-                    r1 = r0;
+                    d1 = d0;
                     i1 = i0;
                 }
-                r0 = r;
+                d0 = dx;
                 i0 = i;
-            } else if (r < r1) {
-                r1 = r;
+            } else if (dx < d1) {
+                d1 = dx;
                 i1 = i;
             }
         }
 
-        if (i0 == -1 || i1 == -1) {
-            throw new IllegalStateException("Defective calibration");
+        if (Math.abs(position.getY() - positions[i0].getY()) < Math.abs(position.getY() - positions[i1].getY())) {
+            return new int[]{ i0, i1 };
+        } else {
+            return new int[]{ i1, i0 };
         }
-
-        return r0 < r1 ? new int[]{ i0, i1 } : new int[]{ i1, i0 };
     }
 
-    private int[] findNearestCalibrationPoints(QualifiedCoordinates coordinates) {
-        double r0 = Double.MAX_VALUE;
-        double r1 = Double.MAX_VALUE;
-        int i0 = -1;
-        int i1 = -1;
-        double lon = coordinates.getLon();
-        double lat = coordinates.getLat();
-        for (int N = this.coordinates.length, i = 0; i < N; i++) {
-
-            if (incest(i, i0, i1)) {
-                continue;
-            }
-
-            double dlon = lon - this.coordinates[i].getLon();
-            double dlon2 = dlon * dlon;
-            double dlat = lat - this.coordinates[i].getLat();
-            double dlat2 = dlat * dlat;
-            double r = dlat2 + dlon2; // sqrt not necessary, we just compare
-            if (r < r0) {
+    private int[] horizontalAxisByY(Position position) {
+        int y = position.getY();
+        int i0 = -1, i1 = -1;
+        int d0 = Integer.MAX_VALUE, d1 = Integer.MAX_VALUE;
+        for (int N = positions.length, i = 0; i < N; i++) {
+            int dy = Math.abs(y - positions[i].getY());
+            if (dy < d0) {
                 if (i0 > -1) {
-                    r1 = r0;
+                    d1 = d0;
                     i1 = i0;
                 }
-                r0 = r;
+                d0 = dy;
                 i0 = i;
-            } else if (r < r1) {
-                r1 = r;
+            } else if (dy < d1) {
+                d1 = dy;
                 i1 = i;
             }
         }
 
-        if (i0 == -1 || i1 == -1) {
-            throw new IllegalStateException("Defective calibration");
+        if (Math.abs(position.getX() - positions[i0].getX()) < Math.abs(position.getX() - positions[i1].getX())) {
+            return new int[]{ i0, i1 };
+        } else {
+            return new int[]{ i1, i0 };
         }
-
-        return r0 < r1 ? new int[]{ i0, i1 } : new int[]{ i1, i0 };
     }
 
-    private boolean incest(int i, int i0, int i1) {
-
-        int x = positions[i].getX();
-        int y = positions[i].getY();
-
-        // check that positions[i] have different both x and y with already found cal point
-        if (i0 > -1) {
-            int cdx = positions[i0].getX() - x;
-            int cdy = positions[i0].getY() - y;
-            if ((cdx > -INCEST_LIMIT && cdx < INCEST_LIMIT) || (cdy > -INCEST_LIMIT && cdy < INCEST_LIMIT)) {
-                return true;
+    private int[] verticalAxisByLon(QualifiedCoordinates coords) {
+        double lon = coords.getLon();
+        int i0 = -1, i1 = -1;
+        double d0 = Double.MAX_VALUE, d1 = Double.MAX_VALUE;
+        for (int N = coordinates.length, i = 0; i < N; i++) {
+            double dlon = Math.abs(lon - coordinates[i].getLon());
+            if (dlon < d0) {
+                if (i0 > -1) {
+                    d1 = d0;
+                    i1 = i0;
+                }
+                d0 = dlon;
+                i0 = i;
+            } else if (dlon < d1) {
+                d1 = dlon;
+                i1 = i;
             }
         }
-        if (i1 > -1) {
-            int cdx = positions[i1].getX() - x;
-            int cdy = positions[i1].getY() - y;
-            if ((cdx > -INCEST_LIMIT && cdx < INCEST_LIMIT) || (cdy > -INCEST_LIMIT && cdy < INCEST_LIMIT)) {
-                return true;
+
+        if (Math.abs(coords.getLat() - coordinates[i0].getLat()) < Math.abs(coords.getLat() - coordinates[i1].getLat())) {
+            return new int[]{ i0, i1 };
+        } else {
+            return new int[]{ i1, i0 };
+        }
+    }
+
+    private int[] horizontalAxisByLat(QualifiedCoordinates coords) {
+        double lat = coords.getLat();
+        int i0 = -1, i1 = -1;
+        double d0 = Double.MAX_VALUE, d1 = Double.MAX_VALUE;
+        for (int N = coordinates.length, i = 0; i < N; i++) {
+            double dlat = Math.abs(lat - coordinates[i].getLat());
+            if (dlat < d0) {
+                if (i0 > -1) {
+                    d1 = d0;
+                    i1 = i0;
+                }
+                d0 = dlat;
+                i0 = i;
+            } else if (dlat < d1) {
+                d1 = dlat;
+                i1 = i;
             }
         }
 
-        return false;
+        if (Math.abs(coords.getLon() - coordinates[i0].getLon()) < Math.abs(coords.getLon() - coordinates[i1].getLon())) {
+            return new int[]{ i0, i1 };
+        } else {
+            return new int[]{ i1, i0 };
+        }
     }
 
     private static String parsePath(String line) {
@@ -459,12 +559,12 @@ public abstract class Calibration {
             super(path);
 
             int count = 0;
-            Vector xy = new Vector(), ll = new Vector();
+            Vector xy = new Vector(), ll = new Vector(), utm = new Vector();
             StringTokenizer st = new StringTokenizer(content, "\n\r", false);
             while (st.hasMoreTokens()) {
                 String line = st.nextToken();
                 if (line.startsWith("Point")) {
-                    boolean b = parsePoint(line, xy, ll);
+                    boolean b = parsePoint(line, xy, ll, utm);
                     if (b) count++;
                     if (log.isEnabled()) log.debug("point parsed? " + b);
                 } else if (line.startsWith("MMPXY")) {
@@ -472,7 +572,12 @@ public abstract class Calibration {
                         boolean b = parseXy(line, xy);
                         if (log.isEnabled()) log.debug("mmpxy parsed? " + b);
                     }
-                } else if (line.startsWith("MMPLL")) {
+                } /*else if (line.startsWith("Projection Setup")) {
+                    if (utm.size() > 0) {
+                        parseProjectionSetup(line, ll, utm);
+                        if (log.isEnabled()) log.debug("projection setup parsed");
+                    }
+                }*/ else if (line.startsWith("MMPLL")) {
                     if (count < 2) {
                         boolean b = parseLl(line, ll);
                         if (log.isEnabled()) log.debug("mmpll parsed? " + b);
@@ -499,11 +604,12 @@ public abstract class Calibration {
             ll.copyInto(coordinates);
         }
 
-        private boolean parsePoint(String line, Vector xy, Vector ll) {
+        private boolean parsePoint(String line, Vector xy, Vector ll, Vector utm) {
             int index = 0;
             String px = null, py = null;
             String lath = null, latm = null, lats = "N";
             String lonh = null, lonm = null, lons = "E";
+            String easting = null, northing = null, zone = "N";
             StringTokenizer st = new StringTokenizer(line, ",", true);
             while (st.hasMoreTokens()) {
                 String token = st.nextToken().trim();
@@ -525,31 +631,49 @@ public abstract class Calibration {
                     lonm = token;
                 } else if (index == 11) {
                     lons = token;
-                } else if (index > 11) {
+                } else if (index == 14) {
+                    easting = token;
+                } else if (index == 15) {
+                    northing = token;
+                } else if (index == 16) {
+                    zone = token;
+                } else if (index > 16) {
                     break;
                 }
             }
 
             // empty cal point
-            if (px == null || py == null || lath == null || lonh == null) {
+            if (px == null || px.length() == 0 || py == null || py.length() == 0) {
                 return false;
             }
-            if (px.length() == 0 || py.length() == 0 || lath.length() == 0 || lonh.length() == 0) {
+/*
+            if (lath == null || lath.length() == 0 || lonh == null || lonh.length() == 0) {
                 return false;
             }
+*/
 
             try {
                 int x = Integer.parseInt(px);
                 int y = Integer.parseInt(py);
-                double lat = Integer.parseInt(lath) + (Double.parseDouble(latm) / 60D);
-                if (lats.startsWith("S")) lat *= -1.0D;
-                double lon = Integer.parseInt(lonh) + (Double.parseDouble(lonm) / 60D);
-                if (lons.startsWith("W")) lon *= -1.0D;
 
-                Position p = new Position(x, y);
-                xy.addElement(p);
-                QualifiedCoordinates qc = new QualifiedCoordinates(lat, lon);
-                ll.addElement(qc);
+                if (lath != null && lath.length() > 0 && lonh != null && lonh.length() > 0) {
+                    double lat = Integer.parseInt(lath) + (Double.parseDouble(latm) / 60D);
+                    if (lats.startsWith("S")) lat *= -1.0D;
+                    double lon = Integer.parseInt(lonh) + (Double.parseDouble(lonm) / 60D);
+                    if (lons.startsWith("W")) lon *= -1.0D;
+
+                    Position p = new Position(x, y);
+                    xy.addElement(p);
+                    QualifiedCoordinates qc = new QualifiedCoordinates(lat, lon);
+                    ll.addElement(qc);
+                } else if (easting != null && easting.length() > 0 && northing != null & northing.length() > 0) {
+                    Integer east = Integer.valueOf(easting);
+                    Integer north = Integer.valueOf(northing);
+
+                    Position p = new Position(x, y);
+                    xy.addElement(p);
+                    utm.addElement(new Object[]{ east, north, zone });
+                }
 
             } catch (NumberFormatException e) {
                 return false;
@@ -559,6 +683,59 @@ public abstract class Calibration {
 
             return true;
         }
+
+/*
+        private void parseProjectionSetup(String line, Vector ll, Vector utm) {
+            int index = 0;
+            String lato = null, lono = null;
+            String k = null;
+            String feast = null, fnorth = null;
+            StringTokenizer st = new StringTokenizer(line, ",", true);
+            while (st.hasMoreTokens()) {
+                String token = st.nextToken().trim();
+                if (",".equals(token)) {
+                    index++;
+                } else if (index == 1) {
+                    lato = token;
+                } else if (index == 2) {
+                    lono = token;
+                } else if (index == 3) {
+                    k = token;
+                } else if (index == 4) {
+                    feast = token;
+                } else if (index == 5) {
+                    fnorth = token;
+                } else if (index > 5) {
+                    break;
+                }
+            }
+
+            try {
+                double latOrigin = Double.parseDouble(lato);
+                double lonOrigin = Double.parseDouble(lono);
+                double k0 = Double.parseDouble(k);
+                double falseEasting = Double.parseDouble(feast);
+                double falseNorthing = Double.parseDouble(fnorth);
+
+                for (Enumeration e = utm.elements(); e.hasMoreElements(); ) {
+                    Object[] item = (Object[]) e.nextElement();
+                    Integer easting = (Integer) item[0];
+                    Integer northing = (Integer) item[1];
+                    String zone = (String) item[2];
+
+                    double[] result = Mercator.UTMtoLL(lonOrigin, k0, zone.charAt(0),
+                                                       easting.doubleValue() - (falseEasting - 500000),
+                                                       northing.doubleValue());
+                    ll.addElement(new QualifiedCoordinates(result[1], result[0]));
+                }
+
+            } catch (NumberFormatException e) {
+                throw new RuntimeException("Invalid UTM Projection Setup");
+            } catch (NullPointerException e) {
+                throw new RuntimeException("Invalid UTM Projection Setup");
+            }
+        }
+*/
 
         private boolean parseXy(String line, Vector xy) {
             try {
@@ -609,6 +786,12 @@ public abstract class Calibration {
                     height = Integer.parseInt(token);
                 }
             }
+        }
+    }
+
+    private class ProximitePosition extends Position {
+        public ProximitePosition(int x, int y) {
+            super(x, y);
         }
     }
 }

@@ -85,7 +85,7 @@ public class SimulatorLocationProvider extends StreamReadingLocationProvider imp
     }
 
     public void run() {
-        if (log.isEnabled()) log.info("simulator task starting");
+        if (log.isEnabled()) log.info("simulator task starting; url " + url);
 
         InputStream in = null;
 
@@ -101,6 +101,7 @@ public class SimulatorLocationProvider extends StreamReadingLocationProvider imp
                 // read GGA
                 String nmea = nextGGA(in);
                 if (nmea == null) {
+                    if (log.isEnabled()) log.debug("end-of-file");
                     break; // end-of-file
                 }
 

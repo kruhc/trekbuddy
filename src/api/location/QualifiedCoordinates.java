@@ -70,11 +70,23 @@ public class QualifiedCoordinates {
         l *= 60D;
         int s = (int) Math.floor(l);
 
+        if ((l - s) > 0.5D) {
+            s++;
+            if (s == 60) {
+                s = 0;
+                m++;
+                if (m == 60) {
+                    m = 0;
+                    h++;
+                }
+            }
+        }
+
         sb.append(h).append(SIGN);
         if (m < 10) sb.append('0');
-        sb.append(m).append('"');
+        sb.append(m).append('\'');
         if (s < 10) sb.append('0');
-        sb.append(s).append('\'');
+        sb.append(s).append('"');
 
         return sb;
     }

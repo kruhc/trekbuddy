@@ -62,8 +62,11 @@ final class MapViewer {
 
     public Position getPosition() {
         // crosshair-oriented position
-        return new Position(x + chx + crosshair.getWidth() / 2,
-                            y + chy + crosshair.getHeight() / 2);
+        Position p = new Position(x + chx + crosshair.getWidth() / 2,
+                                  y + chy + crosshair.getHeight() / 2);
+        if (log.isEnabled()) log.debug(p.toString());
+
+        return p;
     }
 
     // TODO better name - x,y is desired position of crosshair!
@@ -111,7 +114,7 @@ final class MapViewer {
                 if (chy < chy0) {
                     chy++;
                     dirty = true;
-                } else if (y + height < map.getCalibration().getHeight()) {
+                } else if (y + height < map.getHeight()) {
                     y++;
                     dirty = true;
                 } else if (chy < height - 1 - crosshair.getHeight() / 2) {
@@ -147,7 +150,7 @@ final class MapViewer {
                 if (chx < chx0) {
                     chx++;
                     dirty = true;
-                } else if (x + width < map.getCalibration().getWidth()) {
+                } else if (x + width < map.getWidth()) {
                     x++;
                     dirty = true;
                 } else if (chx < width - 1 - crosshair.getWidth() / 2) {

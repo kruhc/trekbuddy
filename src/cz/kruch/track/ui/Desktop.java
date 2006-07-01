@@ -151,7 +151,7 @@ public class Desktop extends GameCanvas implements Runnable, CommandListener, Lo
 
         // init map viewer if map is loaded
         if (map != null) {
-            
+
             // create
             mapViewer = new MapViewer(0, 0, getWidth(), getHeight());
 
@@ -159,7 +159,7 @@ public class Desktop extends GameCanvas implements Runnable, CommandListener, Lo
             mapViewer.setMap(map);
 
             // update OSD
-            osd.setInfo(map.getCalibration().transform(mapViewer.getPosition()).toString(), true);  // TODO listener
+            osd.setInfo(map.transform(mapViewer.getPosition()).toString(), true);  // TODO listener
 
             // ensure slices are being loaded for current view
             _setLoadingSlices(mapViewer.ensureSlices());
@@ -322,7 +322,7 @@ public class Desktop extends GameCanvas implements Runnable, CommandListener, Lo
 
         // update
         if (onMap) {
-            position = map.getCalibration().transform(coordinates);
+            position = map.transform(coordinates);
         }
         osd.setInfo(coordinates.toString(), onMap);
 
@@ -423,7 +423,7 @@ public class Desktop extends GameCanvas implements Runnable, CommandListener, Lo
                 }
 
                 // update OSD
-                osd.setInfo(map.getCalibration().transform(mapViewer.getPosition()).toString(), true);  // TODO listener
+                osd.setInfo(map.transform(mapViewer.getPosition()).toString(), true);  // TODO listener
 
                 // move made, ensure map viewer has slices
                 _setLoadingSlices(mapViewer.ensureSlices());
@@ -490,7 +490,7 @@ public class Desktop extends GameCanvas implements Runnable, CommandListener, Lo
                         if (mapViewer.scroll(action)) {
 
                             // update OSD
-                            osd.setInfo(map.getCalibration().transform(mapViewer.getPosition()).toString(), true);  // TODO listener
+                            osd.setInfo(map.transform(mapViewer.getPosition()).toString(), true);  // TODO listener
 
                             // ensure viewer has proper slices
                             _setLoadingSlices(mapViewer.ensureSlices());
@@ -953,7 +953,7 @@ public class Desktop extends GameCanvas implements Runnable, CommandListener, Lo
                             mapViewer.setMap(map);
 
                             // update OSD
-                            osd.setInfo(map.getCalibration().transform(mapViewer.getPosition()).toString(), true);  // TODO listener
+                            osd.setInfo(map.transform(mapViewer.getPosition()).toString(), true);  // TODO listener
 
                             // ensure initial slice(s) are being loaded
                             _setLoadingSlices(mapViewer.ensureSlices());

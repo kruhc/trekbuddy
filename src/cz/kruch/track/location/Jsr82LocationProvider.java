@@ -262,7 +262,10 @@ public class Jsr82LocationProvider extends StreamReadingLocationProvider impleme
 
     private class Discoverer extends List implements javax.bluetooth.DiscoveryListener, CommandListener, Runnable {
         // intentionally not static
-        private javax.bluetooth.UUID[] uuidSet = { new javax.bluetooth.UUID(0x1101) };
+        private javax.bluetooth.UUID[] uuidSet = {
+            new javax.bluetooth.UUID(0x1101),
+            new javax.bluetooth.UUID(0x0003)
+        };
 
         private javax.bluetooth.DiscoveryAgent agent;
         private javax.bluetooth.RemoteDevice device;

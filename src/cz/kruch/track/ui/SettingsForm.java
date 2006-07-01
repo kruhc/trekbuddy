@@ -30,7 +30,7 @@ public class SettingsForm extends Form implements CommandListener {
     private ChoiceGroup choiceTracklogsFormat;
     private TextField fieldTracklogsDir;
     private TextField fieldSimulatorDelay;
-    private ChoiceGroup choiceDesktop;
+    private ChoiceGroup choiceMisc;
 
     public SettingsForm(Display display, Callback callback) {
         super("Settings");
@@ -72,10 +72,10 @@ public class SettingsForm extends Form implements CommandListener {
         // simulator
         fieldSimulatorDelay = new TextField("Simulator Delay", Integer.toString(Config.getSafeInstance().getSimulatorDelay()), 8, TextField.NUMERIC);
 
-        // desktop settings
-        choiceDesktop = new ChoiceGroup("Desktop", ChoiceGroup.MULTIPLE);
-        choiceDesktop.setSelectedIndex(choiceDesktop.append("fullscreen", null), Config.getSafeInstance().isFullscreen());
-        append(choiceDesktop);
+        // misc settings
+        choiceMisc = new ChoiceGroup("Miscellaneous", ChoiceGroup.MULTIPLE);
+        choiceMisc.setSelectedIndex(choiceMisc.append("fullscreen", null), Config.getSafeInstance().isFullscreen());
+        append(choiceMisc);
 
         // show provider specific options
         showProviderOptions();
@@ -112,7 +112,11 @@ public class SettingsForm extends Form implements CommandListener {
             config.setTracklogsFormat(choiceTracklogsFormat.getString(choiceTracklogsFormat.getSelectedIndex()));
             config.setTracklogsDir(fieldTracklogsDir.getString());
             config.setSimulatorDelay(Integer.parseInt(fieldSimulatorDelay.getString()));
-            config.setFullscreen(choiceDesktop.isSelected(0));
+            // misc
+            boolean[] misc = new boolean[choiceMisc.size()];
+            choiceMisc.getSelectedFlags(misc);
+            config.setFullscreen(misc[0]);
+
             if ("Save".equals(command.getLabel())) {
                 try {
                     config.update();
@@ -139,7 +143,7 @@ public class SettingsForm extends Form implements CommandListener {
     private void showProviderOptions() {
         for (int i = 0; i < size(); i++) {
             Item item = get(i);
-            if (!(fieldMapPath == item || choiceProvider == item || choiceDesktop == item)) {
+            if (!(fieldMapPath == item || choiceProvider == item || choiceMisc == item)) {
                 delete(i);
                 i = 0;
             }
@@ -148,7 +152,7 @@ public class SettingsForm extends Form implements CommandListener {
         int insertAt = 0;
         for (int N = size(), i = 0; i < N; i++) {
             Item item = get(i);
-            if (choiceDesktop == item) {
+            if (choiceMisc == item) {
                 insertAt = i;
                 break;
             }

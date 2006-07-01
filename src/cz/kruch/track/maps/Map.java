@@ -16,8 +16,10 @@ import java.util.Vector;
 import java.util.Enumeration;
 
 import cz.kruch.j2se.io.BufferedInputStream;
+
 import cz.kruch.track.ui.Position;
 import cz.kruch.track.util.Logger;
+
 import api.location.QualifiedCoordinates;
 
 public class Map {
@@ -54,8 +56,11 @@ public class Map {
     private boolean ready = true;
     private Object lock = new Object();
 
-    // map range
-    protected QualifiedCoordinates[] range;
+    // map range and scale
+    private QualifiedCoordinates[] range;
+/*
+    private double xscale, yscale;
+*/
 
     public Map(String path, StateListener listener) {
         this.path = path;
@@ -67,8 +72,20 @@ public class Map {
         return path;
     }
 
-    public Calibration getCalibration() {
-        return calibration;
+    public int getWidth() {
+        return calibration.getWidth();
+    }
+
+    public int getHeight() {
+        return calibration.getHeight();
+    }
+
+    public QualifiedCoordinates transform(Position p) {
+        return calibration.transform(p);
+    }
+
+    public Position transform(QualifiedCoordinates qc) {
+        return calibration.transform(qc);
     }
 
     /**
@@ -113,8 +130,8 @@ public class Map {
     }
 
     public boolean isWithin(QualifiedCoordinates coordinates) {
-        return (coordinates.getLat() <= range[0].getLat() && coordinates.getLat() >= range[1].getLat())
-                && (coordinates.getLon() >= range[0].getLon() && coordinates.getLon() <= range[1].getLon());
+        return (coordinates.getLat() <= range[0].getLat() && coordinates.getLat() >= range[3].getLat())
+                && (coordinates.getLon() >= range[0].getLon() && coordinates.getLon() <= range[3].getLon());
     }
 
     /**
@@ -279,11 +296,8 @@ public class Map {
                 }
             }
 
-            // compute map range
-            range = new QualifiedCoordinates[2];
-            range[0] = calibration.transform(new Position(0, 0));
-            range[1] = calibration.transform(new Position(calibration.getWidth() - 1,
-                                                          calibration.getHeight() - 1));
+            // compute map range and scale
+            precalculate();
 
             // log
             if (log.isEnabled()) log.info("map range is "  + range[0] + "(" + range[0].getLat() + "," + range[0].getLon() + ") - " + range[1] + "(" + range[1].getLat() + "," + range[1].getLon() + ")");
@@ -297,6 +311,18 @@ public class Map {
         } catch (OutOfMemoryError e) {
             return e;
         }
+    }
+
+    /**
+     * Precomputes map range.
+     */
+    private void precalculate() {
+        calibration.computeGrid();
+        range = new QualifiedCoordinates[4];
+        range[0] = calibration.transform(new Position(0, 0));
+        range[1] = calibration.transform(new Position(0, getWidth()));
+        range[2] = calibration.transform(new Position(getHeight(), 0));
+        range[3] = calibration.transform(new Position(getWidth(), getHeight()));
     }
 
     /**
@@ -652,10 +678,13 @@ public class Map {
     public static Map defaultMap(StateListener listener) throws IOException {
         Map map = new Map("", listener);
         map.calibration = new Calibration.Ozi(defaultMapCalibration, "resource:///resources/world_0_0.png");
+/*
         map.range = new QualifiedCoordinates[2];
         map.range[0] = map.calibration.transform(new Position(0, 0));
         map.range[1] = map.calibration.transform(new Position(map.calibration.getWidth() - 1,
                                                               map.calibration.getHeight() - 1));
+*/
+        map.precalculate();
         Slice slice = new Slice(map.calibration);
         slice.absolutizePosition(map.calibration);
         slice.setImage(Image.createImage("/resources/world_0_0.png"));

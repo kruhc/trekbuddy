@@ -52,55 +52,53 @@ public abstract class Calibration {
     private int gridTHx;
     private int gridTHy;
     private double gridTHlon;
-//    private double gridTHlat;
     private double gridTHscale;
 
     private int gridBHx;
     private int gridBHy;
     private double gridBHlon;
-//    private double gridBHlat;
     private double gridBHscale;
 
     private int gridLVy;
     private int gridLVx;
     private double gridLVlat;
-//    private double gridLVlon;
     private double gridLVscale;
 
     private int gridRVy;
     private int gridRVx;
     private double gridRVlat;
-//    private double gridRVlon;
     private double gridRVscale;
+
+    double halfHStep;
+    double halfVStep;
 
     public void computeGrid() {
         int[] index = horizontalAxisByY(new Position(0, 0));
-        gridTHx = positions[0].getX();
-        gridTHy = (positions[index[0]].getY() + positions[index[1]].getY()) / 2;
+        gridTHx = positions[index[0]].getX();
         gridTHlon = coordinates[index[0]].getLon();
-//        gridTHlat = (coordinates[index[0]].getLat() + coordinates[index[1]].getLat()) / 2;
+        gridTHy = (positions[index[0]].getY() + positions[index[1]].getY()) / 2;
         gridTHscale = Math.abs((coordinates[index[1]].getLon() - coordinates[index[0]].getLon()) / (positions[index[1]].getX() - positions[index[0]].getX()));
 
         index = horizontalAxisByY(new Position(0, getHeight()));
         gridBHx = positions[index[0]].getX();
-        gridBHy = (positions[index[0]].getY() + positions[index[1]].getY()) / 2;
         gridBHlon = coordinates[index[0]].getLon();
-//        gridBHlat = (coordinates[index[0]].getLon() + coordinates[index[1]].getLon()) / 2;
+        gridBHy = (positions[index[0]].getY() + positions[index[1]].getY()) / 2;
         gridBHscale = Math.abs((coordinates[index[1]].getLon() - coordinates[index[0]].getLon()) / (positions[index[1]].getX() - positions[index[0]].getX()));
 
         index = verticalAxisByX(new Position(0, 0));
         gridLVy = positions[index[0]].getY();
-        gridLVx = (positions[index[0]].getX() + positions[index[1]].getX()) / 2;
         gridLVlat = coordinates[index[0]].getLat();
-//        gridLVlon = (coordinates[index[0]].getLon() + coordinates[index[1]].getLon()) / 2;
+        gridLVx = (positions[index[0]].getX() + positions[index[1]].getX()) / 2;
         gridLVscale = Math.abs((coordinates[index[1]].getLat() - coordinates[index[0]].getLat()) / (positions[index[1]].getY() - positions[index[0]].getY()));
 
         index = verticalAxisByX(new Position(getWidth(), 0));
         gridRVy = positions[index[0]].getY();
-        gridRVx = (positions[index[0]].getX() + positions[index[1]].getX()) / 2;
         gridRVlat = coordinates[index[0]].getLat();
-//        gridRVlon = (coordinates[index[0]].getLon() + coordinates[index[1]].getLon()) / 2;
+        gridRVx = (positions[index[0]].getX() + positions[index[1]].getX()) / 2;
         gridRVscale = Math.abs((coordinates[index[1]].getLat() - coordinates[index[0]].getLat()) / (positions[index[1]].getY() - positions[index[0]].getY()));
+        
+        halfHStep = Math.min(gridTHscale / 2, gridBHscale / 2);
+        halfVStep = Math.min(gridLVscale / 2, gridRVscale / 2);
     }
 
     public QualifiedCoordinates transform(Position position) {
@@ -186,9 +184,9 @@ public abstract class Calibration {
 
     private final boolean minorDiff(QualifiedCoordinates qc1, QualifiedCoordinates qc2, int axis) {
         if (axis == 0) {
-            return Math.abs(qc1.getLon() - qc2.getLon()) < (Math.abs(gridTHscale) / 2);
+            return Math.abs(qc1.getLon() - qc2.getLon()) < halfHStep;
         } else {
-            return Math.abs(qc1.getLat() - qc2.getLat()) < (Math.abs(gridLVscale) / 2);
+            return Math.abs(qc1.getLat() - qc2.getLat()) < halfVStep;
         }
     }
 
@@ -646,11 +644,9 @@ public abstract class Calibration {
             if (px == null || px.length() == 0 || py == null || py.length() == 0) {
                 return false;
             }
-/*
             if (lath == null || lath.length() == 0 || lonh == null || lonh.length() == 0) {
                 return false;
             }
-*/
 
             try {
                 int x = Integer.parseInt(px);

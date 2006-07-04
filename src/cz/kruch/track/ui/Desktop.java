@@ -13,6 +13,7 @@ import cz.kruch.track.location.Jsr82LocationProvider;
 import cz.kruch.track.location.GpxTracklog;
 import cz.kruch.track.util.Logger;
 import cz.kruch.track.event.Callback;
+import cz.kruch.track.AssertionFailedException;
 
 import javax.microedition.lcdui.Canvas;
 import javax.microedition.lcdui.Display;
@@ -96,9 +97,9 @@ public class Desktop extends GameCanvas implements Runnable, CommandListener, Lo
     // GPX tracklog
     private GpxTracklog gpxTracklog;
 
-    // last known valid X-Y and L-L position
+    // last known valid X-Y and location
     private Position position = null;
-    private QualifiedCoordinates coordinates = null;
+    private Location location = null;
 
     // event lock
     private Object lock = new Object();
@@ -266,8 +267,11 @@ public class Desktop extends GameCanvas implements Runnable, CommandListener, Lo
                 showWarning(display, _getLoadingResult(), null, null);
             } else {
                 browsing = false;
-                if (coordinates != null) {
-                    osd.setInfo(coordinates.toString(), map.isWithin(coordinates));
+                if (location != null) {
+                    osd.setInfo(location.toInfo(), map.isWithin(location.getQualifiedCoordinates()));
+                    if (Config.getSafeInstance().isOsdExtended()) {
+                        osd.setExtendedInfo(location.toExtendedInfo());
+                    }
                 }
                 focus();
             }
@@ -281,7 +285,7 @@ public class Desktop extends GameCanvas implements Runnable, CommandListener, Lo
             if ("Start".equals(cmdRun.getLabel())) {
                 startTracking();
             } else {
-                stopTracking();
+                stopTracking(false);
             }
         } else if (command == cmdExit) {
             (new YesNoDialog(display, this)).show("Do you want to quit?", "Yes / No");
@@ -290,11 +294,15 @@ public class Desktop extends GameCanvas implements Runnable, CommandListener, Lo
 
     public void response(int answer) {
         if (answer == YesNoDialog.YES) {
-            // stop tracking (GPS connection, tracklog fs handles)
-            stopTracking();
+            if (log.isEnabled()) log.debug("exit command");
 
+            // stop tracking (GPS connection, tracklog fs handles)
+            stopTracking(true);
+
+/* read-only anyway, so let's hope it's ok to skip this
             // close map (fs handles)
             if (map != null) map.close();
+*/
 
             // anything else? bail out
             midlet.notifyDestroyed();
@@ -314,17 +322,20 @@ public class Desktop extends GameCanvas implements Runnable, CommandListener, Lo
             return;
         }
 
-        // update last know valid L-L
-        coordinates = location.getQualifiedCoordinates();
+        // update last know valid location
+        this.location = location;
 
         // are we on current map?
-        boolean onMap = map.isWithin(coordinates);
+        boolean onMap = map.isWithin(location.getQualifiedCoordinates());
 
         // update
         if (onMap) {
-            position = map.transform(coordinates);
+            position = map.transform(location.getQualifiedCoordinates());
         }
-        osd.setInfo(coordinates.toString(), onMap);
+        osd.setInfo(location.toInfo(), onMap);
+        if (Config.getSafeInstance().isOsdExtended()) {
+            osd.setExtendedInfo(location.toExtendedInfo());
+        }
 
         // when not browsing and having all slices
         if (!browsing && !_getLoadingSlices()) {
@@ -349,6 +360,8 @@ public class Desktop extends GameCanvas implements Runnable, CommandListener, Lo
         if (log.isEnabled()) log.info("location provider state changed; " + newState);
 
         switch (newState) {
+            case LocationProvider._STARTING:
+                break;
             case LocationProvider.AVAILABLE:
                 try {
                     javax.microedition.media.Manager.playTone(NOTE, 250, 100);
@@ -373,14 +386,26 @@ public class Desktop extends GameCanvas implements Runnable, CommandListener, Lo
         providerResult = provider.getException();
 
         // how severe is the change
-        if (newState == LocationProvider.OUT_OF_SERVICE) {
-            // stop tracking completely (also updates OSD and render)
-            stopTracking();
-        } else {
-            // update OSD
-            osd.setProviderStatus(newState);
-            // update desktop
-            renderScreen(true, true);
+        switch (newState) {
+            case LocationProvider._STARTING: {
+                // start gpx
+                startGpx();
+                // update desktop
+                renderScreen(true, true);
+            } break;
+
+            case LocationProvider.AVAILABLE:
+            case LocationProvider.TEMPORARILY_UNAVAILABLE: {
+                // update OSD
+                osd.setProviderStatus(newState);
+                // update desktop
+                renderScreen(true, true);
+            } break;
+
+            case LocationProvider.OUT_OF_SERVICE: {
+                // stop tracking completely (also updates OSD and render)
+                stopTracking(false);
+            } break;
         }
     }
 
@@ -424,6 +449,7 @@ public class Desktop extends GameCanvas implements Runnable, CommandListener, Lo
 
                 // update OSD
                 osd.setInfo(map.transform(mapViewer.getPosition()).toString(), true);  // TODO listener
+                osd.setExtendedInfo(null);
 
                 // move made, ensure map viewer has slices
                 _setLoadingSlices(mapViewer.ensureSlices());
@@ -447,9 +473,12 @@ public class Desktop extends GameCanvas implements Runnable, CommandListener, Lo
 
     private void focus() {
         // do we have a real position?
-        if (position == null) {
+        if (position == null || location == null) {
             return;
         }
+
+        // set course
+        mapViewer.setCourse(new Float(location.getCourse()));
 
         // move to given position
         if (mapViewer.move(position.getX(), position.getY())) {
@@ -476,6 +505,9 @@ public class Desktop extends GameCanvas implements Runnable, CommandListener, Lo
                     // cursor movement breaks autofocus
                     browsing = true;
 
+                    // and also course showing
+                    mapViewer.setCourse(null);
+
                     // when repeated and not yet fast-moving, go
                     if (repeated) {
                         if (scrolls == 0) {
@@ -491,6 +523,7 @@ public class Desktop extends GameCanvas implements Runnable, CommandListener, Lo
 
                             // update OSD
                             osd.setInfo(map.transform(mapViewer.getPosition()).toString(), true);  // TODO listener
+                            osd.setExtendedInfo(null);
 
                             // ensure viewer has proper slices
                             _setLoadingSlices(mapViewer.ensureSlices());
@@ -524,7 +557,13 @@ public class Desktop extends GameCanvas implements Runnable, CommandListener, Lo
                 }
             } break;
             default:
-                if (log.isEnabled()) log.debug("unhandled key " + getKeyName(i));
+                switch (i) {
+                    case KEY_STAR: {
+                        showWarning(display, "No overview map", null, null);
+                    } break;
+                    default:
+                        if (log.isEnabled()) log.debug("unhandled key " + getKeyName(i));
+                }
         }
     }
 
@@ -661,9 +700,6 @@ public class Desktop extends GameCanvas implements Runnable, CommandListener, Lo
             return false;
         }
 
-        // start gpx
-        startGpx();
-
         // update OSD
         osd.setProviderStatus(state);
 
@@ -681,16 +717,16 @@ public class Desktop extends GameCanvas implements Runnable, CommandListener, Lo
         return true;
     }
 
-    private boolean stopTracking() {
+    private boolean stopTracking(boolean exit) {
         if (log.isEnabled()) log.debug("stop tracking " + provider);
-
-        // // assertion - should never happen
-        if (provider == null) {
-            return false;
-        }
 
         // stop gpx
         stopGpx();
+
+        // assertion - should never happen
+        if (provider == null) {
+            return false;
+        }
 
         // stop provider
         try {
@@ -701,6 +737,9 @@ public class Desktop extends GameCanvas implements Runnable, CommandListener, Lo
         } finally {
             provider = null;
         }
+
+        // when exiting, the bellow is not necessary
+        if (exit) return true;
 
         // update OSD
         osd.setProviderStatus(LocationProvider.OUT_OF_SERVICE);
@@ -720,19 +759,26 @@ public class Desktop extends GameCanvas implements Runnable, CommandListener, Lo
     }
 
     private void startGpx() {
-        if (Config.getSafeInstance().isTracklogsOn()) {
-            if ((provider instanceof Jsr179LocationProvider) || ((provider instanceof Jsr82LocationProvider) && (Config.TRACKLOG_FORMAT_GPX.equals(Config.getSafeInstance().getTracklogsFormat())))) {
-                gpxTracklog = new GpxTracklog(new DesktopEvent(DesktopEvent.EVENT_TRACKLOG),
-                                              APP_TITLE + " " + midlet.getAppProperty("MIDlet-Version"));
-                gpxTracklog.start();
-                osd.setGpxRecording("R");
-            }
+        // assert
+        if (gpxTracklog != null) {
+            throw new AssertionFailedException("GPX already started");
+        }
+
+        if (Config.getSafeInstance().isTracklogsOn() && Config.TRACKLOG_FORMAT_GPX.equals(Config.getSafeInstance().getTracklogsFormat())) {
+            gpxTracklog = new GpxTracklog(new DesktopEvent(DesktopEvent.EVENT_TRACKLOG),
+                                          APP_TITLE + " " + midlet.getAppProperty("MIDlet-Version"));
+            gpxTracklog.start();
+            osd.setGpxRecording("R");
         }
     }
 
     private void stopGpx() {
         if (gpxTracklog != null) {
             gpxTracklog.destroy();
+            try {
+                gpxTracklog.join();
+            } catch (InterruptedException e) {
+            }
             gpxTracklog = null;
             osd.setGpxRecording(null);
         }
@@ -954,6 +1000,7 @@ public class Desktop extends GameCanvas implements Runnable, CommandListener, Lo
 
                             // update OSD
                             osd.setInfo(map.transform(mapViewer.getPosition()).toString(), true);  // TODO listener
+                            osd.setExtendedInfo(null);
 
                             // ensure initial slice(s) are being loaded
                             _setLoadingSlices(mapViewer.ensureSlices());

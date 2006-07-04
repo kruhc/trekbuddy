@@ -6,6 +6,7 @@ package cz.kruch.track.ui;
 import cz.kruch.track.maps.Slice;
 import cz.kruch.track.maps.Map;
 import cz.kruch.track.util.Logger;
+import cz.kruch.track.AssertionFailedException;
 
 import javax.microedition.lcdui.Graphics;
 import javax.microedition.lcdui.Canvas;
@@ -25,10 +26,13 @@ final class MapViewer {
     private int chx0, chy0;
 
     private Image crosshair;
+    private Image[] courses;
     private Map map;
     private Vector slices = new Vector();
 
     private boolean visible = true;
+
+    private Float course;
 
     public MapViewer(int gx, int gy, int width, int height) throws IOException {
         this.gx = gx;
@@ -37,6 +41,14 @@ final class MapViewer {
         this.height = height;
         this.x = this.y = 0;
         this.crosshair = Image.createImage("/resources/crosshair.png");
+        this.courses = new Image[] {
+            Image.createImage("/resources/course_0_0.png"),
+            Image.createImage("/resources/course_0_15.png"),
+            Image.createImage("/resources/course_0_30.png"),
+            Image.createImage("/resources/course_0_45.png"),
+            Image.createImage("/resources/course_0_60.png"),
+            Image.createImage("/resources/course_0_75.png")
+        };
         this.chx0 = this.chx = (width - crosshair.getWidth()) / 2;
         this.chy0 = this.chy = (height - crosshair.getHeight()) / 2;
     }
@@ -165,6 +177,10 @@ final class MapViewer {
         return dirty;
     }
 
+    public void setCourse(Float course) {
+        this.course = course;
+    }
+
     public void render(Graphics graphics) {
         if (!visible) {
             return;
@@ -181,6 +197,63 @@ final class MapViewer {
 
         // paint crosshair
         graphics.drawImage(crosshair, chx, chy, Graphics.TOP | Graphics.LEFT);
+
+        // paint course
+        if (course != null) {
+            drawCourse(graphics);
+        }
+    }
+
+    private void drawCourse(Graphics graphics) {
+        int ti;
+        switch (course.intValue() / 90) {
+            case 0:
+                ti = Sprite.TRANS_NONE;
+                break;
+            case 1:
+                ti = Sprite.TRANS_ROT90;
+                break;
+            case 2:
+                ti = Sprite.TRANS_ROT180;
+                break;
+            case 3:
+                ti = Sprite.TRANS_ROT270;
+                break;
+            default:
+                // should never happen
+                throw new AssertionFailedException("Course over 360");
+        }
+
+        int cwo = course.intValue() % 90;
+        int ci;
+        if (cwo >= 0 && cwo < 8) {
+            ci = 0;
+        } else if (cwo >= 8 && cwo < 23) {
+            ci = 1;
+        } else if (cwo >= 23 && cwo < 38) {
+            ci = 2;
+        } else if (cwo >= 38 && cwo < 53) {
+            ci = 3;
+        } else if (cwo >= 53 && cwo < 68) {
+            ci = 4;
+        } else if (cwo >= 68 && cwo < 83) {
+            ci = 5;
+        } else {
+            ci = 0;
+            if (ti == Sprite.TRANS_NONE) {
+                ti = Sprite.TRANS_ROT90;
+            } else if (ti == Sprite.TRANS_ROT90) {
+                ti = Sprite.TRANS_ROT180;
+            } else if (ti == Sprite.TRANS_ROT180) {
+                ti = Sprite.TRANS_ROT270;
+            } else if (ti == Sprite.TRANS_ROT270) {
+                ti = Sprite.TRANS_NONE;
+            }
+        }
+
+        // TODO precompute offset
+        graphics.drawRegion(courses[ci], 0, 0, courses[ci].getWidth(), courses[ci].getHeight(),
+                            ti, chx - (courses[0].getHeight() - crosshair.getHeight()) / 2, chy - (courses[0].getWidth() - crosshair.getWidth()) / 2, Graphics.TOP | Graphics.LEFT);
     }
 
     private void drawSlice(Graphics graphics, Slice slice) {

@@ -28,6 +28,9 @@ public class Jsr179LocationProvider extends api.location.LocationProvider {
             throw new api.location.LocationException(e);
         }
 
+        // start gpx
+        getListener().providerStateChanged(this, api.location.LocationProvider._STARTING);
+
         return impl.getState();
     }
 
@@ -61,7 +64,11 @@ public class Jsr179LocationProvider extends api.location.LocationProvider {
             long t = xlocation.getTimestamp();
             int f = xlocation.isValid() ? 1 : 0;
 
-            notifyListener(new Location(c, t, f));
+            Location location = new Location(c, t, f);
+            location.setCourse(xlocation.getCourse());
+            location.setSpeed(xlocation.getSpeed());
+
+            notifyListener(location);
         }
 
         public void providerStateChanged(javax.microedition.location.LocationProvider locationProvider, int i) {

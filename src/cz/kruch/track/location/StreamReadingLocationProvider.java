@@ -11,6 +11,9 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 
 public abstract class StreamReadingLocationProvider extends LocationProvider {
+    protected static final String HEADER_GGA = "$GPGGA";
+    protected static final String HEADER_RMC = "$GPRMC";
+
     private OutputStreamWriter observer;
     private LocationException exception;
 
@@ -30,10 +33,13 @@ public abstract class StreamReadingLocationProvider extends LocationProvider {
         this.observer = observer;
     }
 
-    protected String nextGGA(InputStream in) throws IOException {
+    protected String nextSentence(InputStream in, String header) throws IOException {
         String line = readLine(in);
         while (line != null) {
-            if (line.startsWith("$GPGGA")) {
+            if (header == null) {
+                break;
+            }
+            if (line.startsWith(header)) {
                 break;
             }
             line = readLine(in);

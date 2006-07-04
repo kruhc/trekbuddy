@@ -20,8 +20,10 @@ import cz.kruch.track.configuration.Config;
 import cz.kruch.track.event.Callback;
 
 public class GpxTracklog extends Thread {
-    private static final String GPX_1_1_NAMESPACE = "http://www.topografix.com/GPX/1/1";
-    private static final String DEFAULT_NAMESPACE = null;
+    private static final String GPX_1_1_NAMESPACE   = "http://www.topografix.com/GPX/1/1";
+    private static final String DEFAULT_NAMESPACE   = null;
+    private static final String EXTENSION_NAMESPACE = "http://kruch.wz.cz/GPX/1/1/ext";
+    private static final String EXTENSION_PREFIX    = "k";
 
     private static final int MIN_DT = 60000; // 1 min
     private static final double MIN_DL = 0.00015D; // cca 10 m
@@ -75,6 +77,7 @@ public class GpxTracklog extends Thread {
             serializer.setOutput(writer);
             serializer.startDocument("UTF-8", null);
             serializer.setPrefix(null, GPX_1_1_NAMESPACE);
+            serializer.setPrefix(EXTENSION_PREFIX, EXTENSION_NAMESPACE);
             serializer.startTag(DEFAULT_NAMESPACE, "gpx");
             serializer.attribute(DEFAULT_NAMESPACE, "version", "1.1");
             serializer.attribute(DEFAULT_NAMESPACE, "creator", creator);
@@ -118,7 +121,18 @@ public class GpxTracklog extends Thread {
                     serializer.text(Integer.toString(l.getSat()));
                     serializer.endTag(DEFAULT_NAMESPACE, "sat");
                 }
+                if (l.getCourse() > -1F) {
+                    serializer.startTag(DEFAULT_NAMESPACE, "course");
+                    serializer.text(Float.toString(l.getCourse()));
+                    serializer.endTag(DEFAULT_NAMESPACE, "course");
+                }
+                if (l.getSpeed() > -1F) {
+                    serializer.startTag(DEFAULT_NAMESPACE, "speed");
+                    serializer.text(Float.toString(l.getSpeed() * 1.852F * 3.6F));
+                    serializer.endTag(DEFAULT_NAMESPACE, "speed");
+                }
                 serializer.endTag(DEFAULT_NAMESPACE, "trkpt");
+                serializer.flush();
             }
         } catch (Throwable t) {
             callback.invoke(null, t);

@@ -53,6 +53,7 @@ public abstract class Config {
 
     // group
     protected boolean fullscreen = false;
+    protected boolean osdExtended = false;
 
     protected Config() {
     }
@@ -142,6 +143,14 @@ public abstract class Config {
         this.fullscreen = fullscreen;
     }
 
+    public boolean isOsdExtended() {
+        return osdExtended;
+    }
+
+    public void setOsdExtended(boolean osdExtended) {
+        this.osdExtended = osdExtended;
+    }
+
     private static class DefaultConfig extends Config {
         public DefaultConfig() {
         }
@@ -155,7 +164,7 @@ public abstract class Config {
     }
 
     private static class RMSConfig extends Config {
-        private static final String NAME = "config_076";
+        private static final String NAME = "config_0711";
 
         private boolean initialized = false;
 
@@ -183,6 +192,7 @@ public abstract class Config {
                                 tracklogsDir = din.readUTF();
                                 simulatorDelay = din.readInt();
                                 fullscreen = din.readBoolean();
+                                osdExtended = din.readBoolean();
                                 din.close();
                                 if (log.isEnabled()) log.info("configuration read");
                             } break;
@@ -231,6 +241,7 @@ public abstract class Config {
                 dout.writeUTF(tracklogsDir);
                 dout.writeInt(simulatorDelay);
                 dout.writeBoolean(fullscreen);
+                dout.writeBoolean(osdExtended);
                 dout.close();
                 byte[] bytes = data.toByteArray();
                 if (rs.getNumRecords() > 0) {

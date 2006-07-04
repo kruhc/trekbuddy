@@ -9,7 +9,7 @@ public class QualifiedCoordinates {
     public static int DD_MM_SS  = 1;
     public static int DD_MM     = 2;
 
-    private static String SIGN = "^";
+    public static String SIGN = "^";
 
     private double lat, lon;
     private float alt;
@@ -54,9 +54,11 @@ public class QualifiedCoordinates {
             append(lon, sb).append(" E");
         else
             append(-1D * lon, sb).append(" W");
+/*
         if (alt > -1F) {
             sb.append(' ').append(alt);
         }
+*/
 
         return sb.toString();
     }

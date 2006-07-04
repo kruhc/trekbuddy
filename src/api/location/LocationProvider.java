@@ -4,6 +4,7 @@
 package api.location;
 
 public abstract class LocationProvider {
+    public static final int _STARTING = 0; // non-JSR_179
     public static final int AVAILABLE = 1;
     public static final int TEMPORARILY_UNAVAILABLE = 2;
     public static final int OUT_OF_SERVICE = 3;

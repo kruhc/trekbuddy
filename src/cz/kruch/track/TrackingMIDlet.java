@@ -145,7 +145,7 @@ public class TrackingMIDlet extends MIDlet {
 
     protected void destroyApp(boolean b) throws MIDletStateChangeException {
         // same as answering Yes in Do you want to quit?
-        desktop.response(0);
+        desktop.response(cz.kruch.track.ui.YesNoDialog.YES);
     }
 
     /*

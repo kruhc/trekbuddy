@@ -139,6 +139,7 @@ public abstract class Calibration {
         double lonB = (gridBHlon + (x - gridBHx) * gridBHscale);
         double lon = lonT * lonTshare + lonB * lonBshare;
 
+/*
         if (!(position instanceof ProximitePosition)) {
             if (log.isEnabled()) log.debug("check reverse xf");
             Position check = transform(new QualifiedCoordinates(lat, lon));
@@ -150,6 +151,7 @@ public abstract class Calibration {
             }
             if (log.isEnabled()) log.debug("reversed position: " + check);
         }
+*/
 
         return new QualifiedCoordinates(lat, lon);
     }

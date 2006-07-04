@@ -7,6 +7,7 @@ import api.location.LocationProvider;
 import api.location.LocationListener;
 import api.location.LocationException;
 import api.location.Location;
+import api.location.QualifiedCoordinates;
 
 import javax.microedition.io.Connector;
 import javax.microedition.lcdui.Display;
@@ -99,18 +100,47 @@ public class SimulatorLocationProvider extends StreamReadingLocationProvider imp
             for (; go ;) {
 
                 // read GGA
-                String nmea = nextGGA(in);
-                if (nmea == null) {
+                String ggaSentence = nextSentence(in, HEADER_GGA);
+                if (ggaSentence == null) {
                     if (log.isEnabled()) log.debug("end-of-file");
                     break; // end-of-file
                 }
 
-                // send new location
-                try {
-                    notifyListener(NmeaParser.parse(nmea));
-                } catch (Exception e) {
-                    if (log.isEnabled()) log.warn("corrupted record: " + nmea + "\n" + e.toString());
+                // read RMC
+                String rmcSentence = nextSentence(in, HEADER_RMC);
+                if (rmcSentence == null) {
+                    if (log.isEnabled()) log.debug("end-of-file");
+                    break; // end-of-file
                 }
+
+                // parse GGA
+                NmeaParser.Record rec = null;
+                try {
+                    rec = NmeaParser.parseGGA(ggaSentence);
+                } catch (Exception e) {
+                    if (log.isEnabled()) log.warn("corrupted record: " + ggaSentence + "\n" + e.toString());
+                    continue;
+                }
+
+                // prepare instance of location
+                QualifiedCoordinates coordinates = new QualifiedCoordinates(rec.lat, rec.lon, rec.altitude);
+                Location location = new Location(coordinates, rec.timestamp, rec.fix, rec.sat);
+
+                // update location with angle and speed, if possible
+                try {
+                    NmeaParser.Record rmc = NmeaParser.parseRMC(rmcSentence);
+                    if (log.isEnabled()) log.debug("RMC data: " + rmc.speed + ";" + rmc.angle);
+                    if (log.isEnabled()) log.debug("GGA timestamp: " + rec.timestamp + "; RMC timestamp: " + rmc.timestamp);
+                    if (rmc.timestamp == rec.timestamp) {
+                        location.setCourse(rmc.angle);
+                        location.setSpeed(rmc.speed);
+                    }
+                } catch (LocationException e) {
+                    if (log.isEnabled()) log.debug("corrupted RMC: " + e.toString());
+                }
+
+                // send the location
+                notifyListener(location);
 
                 // interval elapse
                 try {

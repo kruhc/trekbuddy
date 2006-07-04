@@ -7,6 +7,7 @@ import api.location.LocationProvider;
 import api.location.LocationException;
 import api.location.LocationListener;
 import api.location.Location;
+import api.location.QualifiedCoordinates;
 import cz.kruch.track.configuration.Config;
 import cz.kruch.track.ui.Desktop;
 import cz.kruch.track.util.NmeaParser;
@@ -63,6 +64,9 @@ public class Jsr82LocationProvider extends StreamReadingLocationProvider impleme
 
     public void run() {
         try {
+            // start gpx
+            getListener().providerStateChanged(this, LocationProvider._STARTING);
+
             // start watcher
             startWatcher();
 
@@ -171,22 +175,41 @@ public class Jsr82LocationProvider extends StreamReadingLocationProvider impleme
             for (; go ;) {
 
                 // read GGA
-                String nmea = nextGGA(in);
-                if (nmea == null) {
+                String ggaSentence = nextSentence(in, HEADER_GGA);
+                if (ggaSentence == null) {
                     break;
                 }
 
                 // parse GGA
-                Location location = null;
+                NmeaParser.Record rec = null;
                 try {
-                    location = NmeaParser.parse(nmea);
+                    rec = NmeaParser.parseGGA(ggaSentence);
                 } catch (Exception e) {
-                    if (log.isEnabled()) log.error("corrupted record: " + nmea + "\n" + e.toString());
+                    if (log.isEnabled()) log.error("corrupted record: " + ggaSentence + "\n" + e.toString());
                     continue;
                 }
 
+                // prepare location info
+                QualifiedCoordinates coordinates = new QualifiedCoordinates(rec.lat, rec.lon, rec.altitude);
+                Location location = new Location(coordinates, rec.timestamp, rec.fix, rec.sat);
+
                 // is position valid?
-                if (location.getFix() > 0) {
+                if (rec.fix > 0) {
+
+                    // read and parse RMC
+                    try {
+                        String rmcSentence = nextSentence(in, HEADER_RMC);
+                        if (rmcSentence == null) {
+                            break;
+                        }
+                        NmeaParser.Record rmc = NmeaParser.parseRMC(rmcSentence);
+                        if (rmc.timestamp == rec.timestamp) {
+                            location.setCourse(rmc.angle);
+                            location.setSpeed(rmc.speed);
+                        }
+                    } catch (Exception e) {
+                        // ignore
+                    }
 
                     // fix state - we may be in TEMPORARILY_UNAVAILABLE state
                     boolean notify = false;

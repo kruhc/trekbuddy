@@ -10,6 +10,8 @@ public class Location {
     private long timestamp;
     private int fix;
     private int sat;
+    private float speed = -1F;
+    private float course = -1F;
 
     public Location(QualifiedCoordinates coordinates, long timestamp, int fix) {
         this(coordinates, timestamp, fix, -1);
@@ -36,6 +38,48 @@ public class Location {
 
     public int getSat() {
         return sat;
+    }
+
+    public float getSpeed() {
+        return speed;
+    }
+
+    public void setSpeed(float speed) {
+        this.speed = speed;
+    }
+
+    public float getCourse() {
+        return course;
+    }
+
+    public void setCourse(float course) {
+        this.course = course;
+    }
+
+    public String toInfo() {
+        return coordinates.toString();
+    }
+
+    public String toExtendedInfo() {
+        StringBuffer sb = new StringBuffer(0);
+        if (coordinates.getAlt() > -1F) {
+            sb.append(coordinates.getAlt()).append(" m ");
+        }
+        if (speed > -1F) {
+            sb.append((int) (new Float(speed * 1.852F)).intValue()).append(" km/h ");
+        }
+        if (course > -1F) {
+            sb.append((new Float(course)).intValue()).append(QualifiedCoordinates.SIGN).append(' ');
+        }
+        if (sat > -1) {
+            sb.append(sat).append('*');
+        }
+
+        if (sb.length() > 0) {
+            return sb.toString();
+        }
+
+        return null;
     }
 
     // debug

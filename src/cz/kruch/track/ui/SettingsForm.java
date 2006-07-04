@@ -75,6 +75,7 @@ public class SettingsForm extends Form implements CommandListener {
         // misc settings
         choiceMisc = new ChoiceGroup("Miscellaneous", ChoiceGroup.MULTIPLE);
         choiceMisc.setSelectedIndex(choiceMisc.append("fullscreen", null), Config.getSafeInstance().isFullscreen());
+        choiceMisc.setSelectedIndex(choiceMisc.append("extended OSD", null), Config.getSafeInstance().isOsdExtended());
         append(choiceMisc);
 
         // show provider specific options
@@ -116,6 +117,7 @@ public class SettingsForm extends Form implements CommandListener {
             boolean[] misc = new boolean[choiceMisc.size()];
             choiceMisc.getSelectedFlags(misc);
             config.setFullscreen(misc[0]);
+            config.setOsdExtended(misc[1]);
 
             if ("Save".equals(command.getLabel())) {
                 try {

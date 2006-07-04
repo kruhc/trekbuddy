@@ -368,7 +368,7 @@ public class Map {
         if (log.isEnabled()) log.debug("Loading slice " + slice.getCalibration().getPath() + "...");
 
         // notify
-        notifyListener(EVENT_LOADING_CHANGED, "Loading slice " + slice.getCalibration().getPath() + "...", null);
+        notifyListener(EVENT_LOADING_CHANGED, "Loading " + slice.getCalibration().getPath() + "...", null);
 
         IOException exception = null;
         OutOfMemoryError error = null;

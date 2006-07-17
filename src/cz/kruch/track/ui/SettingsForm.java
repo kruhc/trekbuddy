@@ -17,7 +17,7 @@ import javax.microedition.lcdui.TextField;
 import javax.microedition.lcdui.ItemStateListener;
 import javax.microedition.lcdui.Item;
 
-public class SettingsForm extends Form implements CommandListener {
+public class SettingsForm extends Form implements CommandListener, ItemStateListener {
     private static final int MAX_URL_LENGTH = 128;
 
     private Display display;
@@ -26,7 +26,7 @@ public class SettingsForm extends Form implements CommandListener {
 
     private TextField fieldMapPath;
     private ChoiceGroup choiceProvider;
-    private ChoiceGroup choiceTracklogs;
+    private ChoiceGroup choiceTracklog;
     private ChoiceGroup choiceTracklogsFormat;
     private TextField fieldTracklogsDir;
     private TextField fieldSimulatorDelay;
@@ -57,8 +57,8 @@ public class SettingsForm extends Form implements CommandListener {
         append(choiceProvider);
 
         // tracklogs
-        choiceTracklogs = new ChoiceGroup("Tracklogs", ChoiceGroup.MULTIPLE);
-        choiceTracklogs.setSelectedIndex(choiceTracklogs.append("enabled", null), Config.getSafeInstance().isTracklogsOn());
+        choiceTracklog = new ChoiceGroup("Tracklog", ChoiceGroup.MULTIPLE);
+        choiceTracklog.setSelectedIndex(choiceTracklog.append("enabled", null), Config.getSafeInstance().isTracklogsOn());
         choiceTracklogsFormat = new ChoiceGroup("Tracklog Fomat", ChoiceGroup.EXCLUSIVE);
         for (int N = Config.TRACKLOGS_FORMAT.length, i = 0; i < N; i++) {
             String format = Config.TRACKLOGS_FORMAT[i];
@@ -73,29 +73,31 @@ public class SettingsForm extends Form implements CommandListener {
         fieldSimulatorDelay = new TextField("Simulator Delay", Integer.toString(Config.getSafeInstance().getSimulatorDelay()), 8, TextField.NUMERIC);
 
         // misc settings
-        choiceMisc = new ChoiceGroup("Miscellaneous", ChoiceGroup.MULTIPLE);
+        choiceMisc = new ChoiceGroup("Desktop", ChoiceGroup.MULTIPLE);
         choiceMisc.setSelectedIndex(choiceMisc.append("fullscreen", null), Config.getSafeInstance().isFullscreen());
         choiceMisc.setSelectedIndex(choiceMisc.append("extended OSD", null), Config.getSafeInstance().isOsdExtended());
         append(choiceMisc);
 
-        // show provider specific options
-        showProviderOptions();
+        // show current provider and tracklog specific options
+        showProviderOptions(false);
 
         // add command and handling
         addCommand(new Command("Cancel", Command.BACK, 1));
         addCommand(new Command("Apply", Command.SCREEN, 1));
         addCommand(new Command("Save", Command.SCREEN, 2));
         setCommandListener(this);
-        setItemStateListener(new ItemStateListener() {
-            public void itemStateChanged(Item item) {
-                if (item == choiceProvider) {
-                    showProviderOptions();
-                }
-            }
-        });
+        setItemStateListener(this);
 
         // show
         display.setCurrent(this);
+    }
+
+    public void itemStateChanged(Item item) {
+        if (choiceProvider == item) {
+            showProviderOptions(false);
+        } else if (choiceTracklog == item) {
+            showProviderOptions(true);
+        }
     }
 
     public void commandAction(Command command, Displayable displayable) {
@@ -109,7 +111,7 @@ public class SettingsForm extends Form implements CommandListener {
             Config config = Config.getSafeInstance();
             config.setMapPath(fieldMapPath.getString());
             config.setLocationProvider(choiceProvider.getString(choiceProvider.getSelectedIndex()));
-            config.setTracklogsOn(choiceTracklogs.isSelected(0));
+            config.setTracklogsOn(choiceTracklog.isSelected(0));
             config.setTracklogsFormat(choiceTracklogsFormat.getString(choiceTracklogsFormat.getSelectedIndex()));
             config.setTracklogsDir(fieldTracklogsDir.getString());
             config.setSimulatorDelay(Integer.parseInt(fieldSimulatorDelay.getString()));
@@ -142,13 +144,16 @@ public class SettingsForm extends Form implements CommandListener {
         callback.invoke(changed ? Boolean.TRUE : Boolean.FALSE, null);
     }
 
-    private void showProviderOptions() {
+    private void showProviderOptions(boolean soft) {
         for (int i = 0; i < size(); i++) {
             Item item = get(i);
-            if (!(fieldMapPath == item || choiceProvider == item || choiceMisc == item)) {
-                delete(i);
-                i = 0;
-            }
+            if (fieldMapPath == item || choiceProvider == item || choiceMisc == item)
+                continue;
+            if (soft && choiceTracklog == item)
+                continue;
+
+            delete(i);
+            i = 0;
         }
 
         int insertAt = 0;
@@ -163,13 +168,24 @@ public class SettingsForm extends Form implements CommandListener {
         String provider = choiceProvider.getString(choiceProvider.getSelectedIndex());
         if (Config.LOCATION_PROVIDER_SIMULATOR.equals(provider)) {
             insert(insertAt, fieldSimulatorDelay);
+            if (choiceTracklog.isSelected(0)) {
+                insert(insertAt, fieldTracklogsDir);
+            }
+            if (!soft)
+                insert(insertAt, choiceTracklog);
         } else if (Config.LOCATION_PROVIDER_JSR82.equals(provider)) {
-            insert(insertAt, fieldTracklogsDir);
-            insert(insertAt, choiceTracklogsFormat);
-            insert(insertAt, choiceTracklogs);
+            if (choiceTracklog.isSelected(0)) {
+                insert(insertAt, fieldTracklogsDir);
+                insert(insertAt, choiceTracklogsFormat);
+            }
+            if (!soft)
+                insert(insertAt, choiceTracklog);
         } else if (Config.LOCATION_PROVIDER_JSR179.equals(provider)) {
-            insert(insertAt, fieldTracklogsDir);
-            insert(insertAt, choiceTracklogs);
+            if (choiceTracklog.isSelected(0)) {
+                insert(insertAt, fieldTracklogsDir);
+            }
+            if (!soft)
+                insert(insertAt, choiceTracklog);
         }
     }
 }

@@ -203,8 +203,9 @@ class BufferedInputStream extends /* FilterInputStream */ InputStream {
      * @see        java.io.FilterInputStream#in
      */
     public synchronized int read() throws IOException {
-        ensureOpen();
-	if (pos >= count) {
+        /* ensureOpen(); */
+    if (pos >= count) {
+        ensureOpen(); /* optimization */
 	    fill();
 	    if (pos >= count)
 		return -1;

@@ -5,23 +5,25 @@ package api.location;
 
 import java.util.Date;
 
-public class Location {
+public final class Location {
     private QualifiedCoordinates coordinates;
     private long timestamp;
     private int fix;
     private int sat;
+    private float hdop = -1F;
     private float speed = -1F;
     private float course = -1F;
 
     public Location(QualifiedCoordinates coordinates, long timestamp, int fix) {
-        this(coordinates, timestamp, fix, -1);
+        this(coordinates, timestamp, fix, -1, -1F);
     }
 
-    public Location(QualifiedCoordinates coordinates, long timestamp, int fix, int sat) {
+    public Location(QualifiedCoordinates coordinates, long timestamp, int fix, int sat, float hdop) {
         this.coordinates = coordinates;
         this.timestamp = timestamp;
         this.fix = fix;
         this.sat = sat;
+        this.hdop = hdop;
     }
 
     public QualifiedCoordinates getQualifiedCoordinates() {
@@ -38,6 +40,10 @@ public class Location {
 
     public int getSat() {
         return sat;
+    }
+
+    public float getHdop() {
+        return hdop;
     }
 
     public float getSpeed() {
@@ -61,7 +67,7 @@ public class Location {
     }
 
     public String toExtendedInfo() {
-        StringBuffer sb = new StringBuffer(0);
+        StringBuffer sb = new StringBuffer(24);
         if (coordinates.getAlt() > -1F) {
             sb.append(coordinates.getAlt()).append(" m ");
         }

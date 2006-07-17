@@ -34,13 +34,15 @@ import java.util.TimerTask;
 import api.location.LocationProvider;
 import api.location.LocationListener;
 import api.location.Location;
-import api.location.QualifiedCoordinates;
 import api.location.LocationException;
 
 /**
  * Application desktop.
  */
-public class Desktop extends GameCanvas implements Runnable, CommandListener, LocationListener, Map.StateListener, YesNoDialog.AnswerListener {
+public final class Desktop extends GameCanvas
+        implements Runnable, CommandListener, LocationListener,
+                   Map.StateListener, YesNoDialog.AnswerListener {
+
     // log
     private static final Logger log = new Logger("Desktop");
 
@@ -55,7 +57,7 @@ public class Desktop extends GameCanvas implements Runnable, CommandListener, Lo
     private static final int WARN_DIALOG_TIMEOUT = 1500;
 
     // musical note
-    private static final int NOTE = 77;
+    private static final int NOTE = 91;
 
     // application and display
     private MIDlet midlet;
@@ -276,7 +278,7 @@ public class Desktop extends GameCanvas implements Runnable, CommandListener, Lo
                 focus();
             }
         } else if (command == cmdInfo) {
-            (new InfoForm(display)).show(providerResult);
+            (new InfoForm(display)).show(provider == null ? providerResult : provider.getException());
         } else if (command == cmdSettings) {
             (new SettingsForm(display, new DesktopEvent(DesktopEvent.EVENT_CONFIGURATION_CHANGED))).show();
         } else if (command == cmdLoadMap) {
@@ -304,7 +306,7 @@ public class Desktop extends GameCanvas implements Runnable, CommandListener, Lo
             if (map != null) map.close();
 */
 
-            // anything else? bail out
+            // anything else? no, bail out
             midlet.notifyDestroyed();
         }
     }
@@ -314,7 +316,11 @@ public class Desktop extends GameCanvas implements Runnable, CommandListener, Lo
 
         // update tracklog
         if (gpxTracklog != null) {
-            gpxTracklog.update(location);
+            try {
+                gpxTracklog.update(location);
+            } catch (Exception e) {
+                showWarning(display, "GPX tracklog update failed", e, null);
+            }
         }
 
         // if not valid position just quit
@@ -359,29 +365,6 @@ public class Desktop extends GameCanvas implements Runnable, CommandListener, Lo
     public void providerStateChanged(LocationProvider provider, int newState) {
         if (log.isEnabled()) log.info("location provider state changed; " + newState);
 
-        switch (newState) {
-            case LocationProvider._STARTING:
-                break;
-            case LocationProvider.AVAILABLE:
-                try {
-                    javax.microedition.media.Manager.playTone(NOTE, 250, 100);
-                } catch (Throwable t) {
-                }
-                break;
-            case LocationProvider.TEMPORARILY_UNAVAILABLE:
-                try {
-                    javax.microedition.media.Manager.playTone(NOTE, 250, 100);
-                } catch (Throwable t) {
-                }
-                break;
-            case LocationProvider.OUT_OF_SERVICE:
-                try {
-                    javax.microedition.media.Manager.playTone(NOTE, 1000, 100);
-                } catch (Throwable t) {
-                }
-                break;
-        }
-
         // provider last-op message
         providerResult = provider.getException();
 
@@ -396,6 +379,11 @@ public class Desktop extends GameCanvas implements Runnable, CommandListener, Lo
 
             case LocationProvider.AVAILABLE:
             case LocationProvider.TEMPORARILY_UNAVAILABLE: {
+                // beep
+                try {
+                    javax.microedition.media.Manager.playTone(NOTE, 250, 100);
+                } catch (Throwable t) {
+                }
                 // update OSD
                 osd.setProviderStatus(newState);
                 // update desktop
@@ -403,6 +391,10 @@ public class Desktop extends GameCanvas implements Runnable, CommandListener, Lo
             } break;
 
             case LocationProvider.OUT_OF_SERVICE: {
+                try {
+                    javax.microedition.media.Manager.playTone(NOTE, 750, 100);
+                } catch (Throwable t) {
+                }
                 // stop tracking completely (also updates OSD and render)
                 stopTracking(false);
             } break;
@@ -485,6 +477,8 @@ public class Desktop extends GameCanvas implements Runnable, CommandListener, Lo
 
             // move made, ensure map viewer has slices
             _setLoadingSlices(mapViewer.ensureSlices());
+
+            // if not loading, render
             if (!_getLoadingSlices()) {
                 renderScreen(true, true);
             }
@@ -1038,12 +1032,23 @@ public class Desktop extends GameCanvas implements Runnable, CommandListener, Lo
                 } break;
 
                 case EVENT_TRACKLOG: {
-                    if (throwable != null) {
-                        showWarning(display, result == null? "GPX tracklog event" : (String) result, throwable, null);
-                    }
+                    if (throwable == null) {
+/*
+                        if (result instanceof Integer) {
+                            if (((Integer) result).intValue() == 0) {
+                                osd.setGpxRecording(null);
+                            } else {
+                                osd.setGpxRecording("R");
+                            }
+                        }
+*/
+                    } else {
+                        // display warning
+                        showWarning(display, result == null ? "GPX tracklog event" : (String) result, throwable, null);
 
-                    // event from GPX tracklog always means something wrong
-                    stopGpx();
+                        // stop gpx
+                        stopGpx();
+                    }
                 } break;
             }
         }

@@ -5,7 +5,7 @@ package api.location;
 
 import java.io.UnsupportedEncodingException;
 
-public class QualifiedCoordinates {
+public final class QualifiedCoordinates {
     public static int DD_MM_SS  = 1;
     public static int DD_MM     = 2;
 
@@ -49,12 +49,12 @@ public class QualifiedCoordinates {
             append(lat, sb).append(" N");
         else
             append(-1D * lat, sb).append(" S");
-        sb.append("   ");
+        sb.append("  ");
         if (lon > 0D)
             append(lon, sb).append(" E");
         else
             append(-1D * lon, sb).append(" W");
-/*
+/* in location extended info
         if (alt > -1F) {
             sb.append(' ').append(alt);
         }

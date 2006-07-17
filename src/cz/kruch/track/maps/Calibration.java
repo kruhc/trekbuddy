@@ -3,11 +3,11 @@
 
 package cz.kruch.track.maps;
 
+import api.location.QualifiedCoordinates;
+
 import cz.kruch.j2se.util.StringTokenizer;
 import cz.kruch.track.util.Logger;
 import cz.kruch.track.ui.Position;
-import cz.kruch.track.AssertionFailedException;
-import api.location.QualifiedCoordinates;
 
 import java.util.Vector;
 import java.io.ByteArrayInputStream;
@@ -72,6 +72,9 @@ public abstract class Calibration {
     double halfHStep;
     double halfVStep;
 
+    /**
+     * Computes map calibration grid - only for map, not slices.
+     */
     public void computeGrid() {
         int[] index = horizontalAxisByY(new Position(0, 0));
         gridTHx = positions[index[0]].getX();
@@ -139,7 +142,7 @@ public abstract class Calibration {
         double lonB = (gridBHlon + (x - gridBHx) * gridBHscale);
         double lon = lonT * lonTshare + lonB * lonBshare;
 
-/*
+/* reverse check assertion
         if (!(position instanceof ProximitePosition)) {
             if (log.isEnabled()) log.debug("check reverse xf");
             Position check = transform(new QualifiedCoordinates(lat, lon));
@@ -156,28 +159,23 @@ public abstract class Calibration {
         return new QualifiedCoordinates(lat, lon);
     }
 
-    public Position transform(QualifiedCoordinates coords) {
-        ProximitePosition proximite = proximitePosition(coords);
+    public Position transform(QualifiedCoordinates coords, ProximitePosition proximite) {
         QualifiedCoordinates qc = transform(proximite);
 
         while ((qc.getLon() > coords.getLon()) && !minorDiff(qc, coords, 0)) {
-            if (log.isEnabled()) log.debug("move proximite right");
-            proximite = new ProximitePosition(proximite.getX() - 1, proximite.getY());
+            proximite.decrementX();
             qc = transform(proximite);
         }
         while ((qc.getLon() < coords.getLon()) && !minorDiff(qc, coords, 0)) {
-            if (log.isEnabled()) log.debug("move proximite left");
-            proximite = new ProximitePosition(proximite.getX() + 1, proximite.getY());
+            proximite.incrementX();
             qc = transform(proximite);
         }
         while ((qc.getLat() > coords.getLat()) && !minorDiff(qc, coords, 1)) {
-            if (log.isEnabled()) log.debug("move proximite down");
-            proximite = new ProximitePosition(proximite.getX(), proximite.getY() + 1);
+            proximite.incrementY();
             qc = transform(proximite);
         }
         while ((qc.getLat() < coords.getLat()) && !minorDiff(qc, coords, 1)) {
-            if (log.isEnabled()) log.debug("move proximite up");
-            proximite = new ProximitePosition(proximite.getX(), proximite.getY() - 1);
+            proximite.decrementY();
             qc = transform(proximite);
         }
 
@@ -190,48 +188,6 @@ public abstract class Calibration {
         } else {
             return Math.abs(qc1.getLat() - qc2.getLat()) < halfVStep;
         }
-    }
-
-    private ProximitePosition proximitePosition(QualifiedCoordinates coordinates) {
-
-        int[] xindex = horizontalAxisByLat(coordinates);
-        int[] yindex = verticalAxisByLon(coordinates);
-
-        Position refX0 = positions[xindex[0]];
-        Position refY0 = positions[yindex[0]];
-        Position refX1 = positions[xindex[1]];
-        Position refY1 = positions[yindex[1]];
-
-        QualifiedCoordinates refXC0 = this.coordinates[xindex[0]];
-        QualifiedCoordinates refYC0 = this.coordinates[yindex[0]];
-        QualifiedCoordinates refXC1 = this.coordinates[xindex[1]];
-        QualifiedCoordinates refYC1 = this.coordinates[yindex[1]];
-
-        double dlon = coordinates.getLon() - refXC0.getLon();
-        double dlat = coordinates.getLat() - refYC0.getLat();
-
-        double xScale = Math.abs((refXC1.getLon() - refXC0.getLon()) / (refX1.getX() - refX0.getX()));
-        double yScale = Math.abs((refYC1.getLat() - refYC0.getLat()) / (refY1.getY() - refY0.getY()));
-
-        Double dx = new Double(dlon / xScale);
-        Double dy = new Double(dlat / yScale);
-
-        int intDx = dx.intValue();
-        int intDy = dy.intValue();
-
-/* this is only proximite anyway
-        if ((dx.doubleValue() - intDx) > 0.50D) {
-            intDx++;
-        }
-        if ((dy.doubleValue() - intDy) > 0.50D) {
-            intDy++;
-        }
-*/
-
-        int x = refX0.getX() + intDx;
-        int y = refY0.getY() - intDy;
-
-        return new ProximitePosition(x, y);
     }
 
     private int[] verticalAxisByX(Position position) {
@@ -559,12 +515,12 @@ public abstract class Calibration {
             super(path);
 
             int count = 0;
-            Vector xy = new Vector(), ll = new Vector(), utm = new Vector();
+            Vector xy = new Vector(), ll = new Vector()/*, utm = new Vector()*/;
             StringTokenizer st = new StringTokenizer(content, "\n\r", false);
             while (st.hasMoreTokens()) {
                 String line = st.nextToken();
                 if (line.startsWith("Point")) {
-                    boolean b = parsePoint(line, xy, ll, utm);
+                    boolean b = parsePoint(line, xy, ll/*, utm*/);
                     if (b) count++;
                     if (log.isEnabled()) log.debug("point parsed? " + b);
                 } else if (line.startsWith("MMPXY")) {
@@ -604,7 +560,7 @@ public abstract class Calibration {
             ll.copyInto(coordinates);
         }
 
-        private boolean parsePoint(String line, Vector xy, Vector ll, Vector utm) {
+        private boolean parsePoint(String line, Vector xy, Vector ll/*, Vector utm*/) {
             int index = 0;
             String px = null, py = null;
             String lath = null, latm = null, lats = "N";
@@ -664,14 +620,14 @@ public abstract class Calibration {
                     xy.addElement(p);
                     QualifiedCoordinates qc = new QualifiedCoordinates(lat, lon);
                     ll.addElement(qc);
-                } else if (easting != null && easting.length() > 0 && northing != null & northing.length() > 0) {
+                }/* else if (easting != null && easting.length() > 0 && northing != null & northing.length() > 0) {
                     Integer east = Integer.valueOf(easting);
                     Integer north = Integer.valueOf(northing);
 
                     Position p = new Position(x, y);
                     xy.addElement(p);
                     utm.addElement(new Object[]{ east, north, zone });
-                }
+                }*/
 
             } catch (NumberFormatException e) {
                 return false;
@@ -787,9 +743,25 @@ public abstract class Calibration {
         }
     }
 
-    private class ProximitePosition extends Position {
+    public static final class ProximitePosition extends Position {
         public ProximitePosition(int x, int y) {
             super(x, y);
+        }
+
+        public void decrementX() {
+            x -= 1;
+        }
+
+        public void incrementX() {
+            x += 1;
+        }
+
+        public void decrementY() {
+            y -= 1;
+        }
+
+        public void incrementY() {
+            y += 1;
         }
     }
 }

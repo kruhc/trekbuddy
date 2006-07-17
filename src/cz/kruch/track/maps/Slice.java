@@ -7,17 +7,15 @@ import cz.kruch.track.ui.Position;
 
 import javax.microedition.lcdui.Image;
 
-public class Slice {
+public final class Slice {
     private Calibration calibration;
     private Image image;
 
     // slice absolute position
     private Position position;
 
-/*
-    // slice range (absolute)
+    // slice range (absolute) - for better performance of isWithinh
     private int minx, maxx, miny, maxy;
-*/
 
     public Slice(Calibration calibration) {
         this.calibration = calibration;
@@ -47,25 +45,19 @@ public class Slice {
         position = calibration.computeAbsolutePosition(parent);
     }
 
+    public void precalculate() {
+        minx = position.getX();
+        maxx = minx + getWidth();
+        miny = position.getY();
+        maxy = miny + getHeight();
+    }
+
     public Position getAbsolutePosition() {
         return position;
     }
 
     public boolean isWithin(int x, int y) {
-        int minx = position.getX();
-        int maxx = minx + getWidth();
-        int miny = position.getY();
-        int maxy = miny + getHeight();
-
         return (x >= minx && x <= maxx && y >= miny && y <= maxy);
-    }
-
-    public boolean equals(Object obj) {
-        if (obj instanceof Slice) {
-            return getAbsolutePosition().equals(((Slice) obj).getAbsolutePosition());
-        }
-
-        return false;
     }
 
     // debug

@@ -22,7 +22,7 @@ import cz.kruch.track.util.Logger;
 
 import api.location.QualifiedCoordinates;
 
-public class Map {
+public final class Map {
 
     public interface StateListener {
         public void mapOpened(Object result, Throwable throwable);
@@ -58,9 +58,7 @@ public class Map {
 
     // map range and scale
     private QualifiedCoordinates[] range;
-/*
-    private double xscale, yscale;
-*/
+    private double xScale, yScale;
 
     public Map(String path, StateListener listener) {
         this.path = path;
@@ -85,7 +83,25 @@ public class Map {
     }
 
     public Position transform(QualifiedCoordinates qc) {
-        return calibration.transform(qc);
+        return calibration.transform(qc, proximitePosition(qc));
+    }
+
+    private Calibration.ProximitePosition proximitePosition(QualifiedCoordinates coordinates) {
+        QualifiedCoordinates leftTopQc = range[0];
+
+        double dlon = coordinates.getLon() - leftTopQc.getLon();
+        double dlat = coordinates.getLat() - leftTopQc.getLat();
+
+        Double dx = new Double(dlon / xScale);
+        Double dy = new Double(dlat / yScale);
+
+        int intDx = dx.intValue();
+        int intDy = dy.intValue();
+
+        int x = 0 + intDx;
+        int y = 0 - intDy;
+
+        return new Calibration.ProximitePosition(x, y);
     }
 
     /**
@@ -116,22 +132,29 @@ public class Map {
         System.gc();
     }
 
+    /**
+     * Gets slice into which given point falls.
+     * @param x
+     * @param y
+     * @return slice
+     */
     public Slice getSlice(int x, int y) {
-        Slice result = null;
         for (int N = slices.length, i = 0; i < N; i++) {
             Slice slice = slices[i];
             if (slice.isWithin(x, y)) {
-                result = slice;
-                break;
+                return slice;
             }
         }
 
-        return result;
+        return null;
     }
 
+    // TODO optimize access to range
     public boolean isWithin(QualifiedCoordinates coordinates) {
-        return (coordinates.getLat() <= range[0].getLat() && coordinates.getLat() >= range[3].getLat())
-                && (coordinates.getLon() >= range[0].getLon() && coordinates.getLon() <= range[3].getLon());
+        double lat = coordinates.getLat();
+        double lon = coordinates.getLon();
+        return (lat <= range[0].getLat() && lat >= range[3].getLat())
+                && (lon >= range[0].getLon() && lon <= range[3].getLon());
     }
 
     /**
@@ -275,25 +298,20 @@ public class Map {
                 slices[i].absolutizePosition(calibration);
             }
 
-            // type-specific ops
-            switch (type) {
-                case TYPE_BEST: {
-                    if (log.isEnabled()) log.debug("fix slices dimension");
-                    // fix slices dimension
-                    for (int N = slices.length, i = 0; i < N; i++) {
-                        Slice slice = slices[i];
-                        ((Calibration.Best) slice.getCalibration()).fixDimension(calibration, slices);
-                    }
-                } break;
-                default:
-                    if (log.isEnabled()) log.debug("no map specific ops for map of type " + type);
-            }
+            // finalize slices creation
+            for (int N = slices.length, i = 0; i < N; i++) {
+                Slice slice = slices[i];
 
-            // debug
-            if (log.isEnabled()) {
-                for (int N = slices.length, i = 0; i < N; i++) {
-                    log.debug("ready slice " + slices[i]);
+                // fix slice dimension for filename-encoded positions
+                if (type == TYPE_BEST) {
+                    ((Calibration.Best) slice.getCalibration()).fixDimension(calibration, slices);
                 }
+
+                // precalculate slice range (pixel coordinates)
+                slice.precalculate();
+
+                // debug
+                if (log.isEnabled()) log.debug("ready slice " + slices[i]);
             }
 
             // compute map range and scale
@@ -323,6 +341,8 @@ public class Map {
         range[1] = calibration.transform(new Position(0, getWidth()));
         range[2] = calibration.transform(new Position(getHeight(), 0));
         range[3] = calibration.transform(new Position(getWidth(), getHeight()));
+        xScale = Math.abs((range[3].getLon() - range[0].getLon()) / getWidth());
+        yScale = Math.abs((range[3].getLat() - range[0].getLat()) / getHeight());
     }
 
     /**
@@ -678,17 +698,12 @@ public class Map {
     public static Map defaultMap(StateListener listener) throws IOException {
         Map map = new Map("", listener);
         map.calibration = new Calibration.Ozi(defaultMapCalibration, "resource:///resources/world_0_0.png");
-/*
-        map.range = new QualifiedCoordinates[2];
-        map.range[0] = map.calibration.transform(new Position(0, 0));
-        map.range[1] = map.calibration.transform(new Position(map.calibration.getWidth() - 1,
-                                                              map.calibration.getHeight() - 1));
-*/
-        map.precalculate();
         Slice slice = new Slice(map.calibration);
         slice.absolutizePosition(map.calibration);
+        slice.precalculate();
         slice.setImage(Image.createImage("/resources/world_0_0.png"));
         map.slices = new Slice[] { slice };
+        map.precalculate();
 
         if (log.isEnabled()) log.debug("default map slice ready " + slice);
 

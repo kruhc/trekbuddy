@@ -11,6 +11,7 @@ public abstract class LocationProvider {
 
     private String name;
     private LocationListener listener;
+    private LocationException exception;
 
     protected LocationProvider(String name) {
         this.name = name;
@@ -28,10 +29,17 @@ public abstract class LocationProvider {
         this.listener = listener;
     }
 
+    public synchronized LocationException getException() {
+        return exception;
+    }
+
+    protected synchronized void setException(LocationException exception) {
+        this.exception = exception;
+    }
+
     public abstract int start() throws LocationException;
     public abstract void stop() throws LocationException;
     public abstract Object getImpl();
-    public abstract LocationException getException();
     public abstract void setLocationListener(LocationListener listener,
                                              int interval, int timeout, int maxAge);
 
@@ -40,7 +48,11 @@ public abstract class LocationProvider {
             try {
                 listener.providerStateChanged(this, newState);
             } catch (Throwable t) {
-                t.printStackTrace();
+                if (t instanceof LocationException) {
+                    setException((LocationException) t);
+                } else {
+                    setException(new LocationException(t.toString()));
+                }
             }
         }
     }
@@ -50,7 +62,11 @@ public abstract class LocationProvider {
             try {
                listener.locationUpdated(this, location);
             } catch (Throwable t) {
-                t.printStackTrace();
+                if (t instanceof LocationException) {
+                    setException((LocationException) t);
+                } else {
+                    setException(new LocationException(t.toString()));
+                }
             }
         }
     }

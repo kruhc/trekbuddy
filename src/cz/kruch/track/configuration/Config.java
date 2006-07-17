@@ -41,7 +41,7 @@ public abstract class Config {
     protected String mapPath = ""; // no default map
 
     // group
-    protected String locationProvider = LOCATION_PROVIDER_SIMULATOR;
+    protected String locationProvider = LOCATION_PROVIDER_JSR82;
 
     // group
     protected boolean tracklogsOn = false;
@@ -53,7 +53,7 @@ public abstract class Config {
 
     // group
     protected boolean fullscreen = false;
-    protected boolean osdExtended = false;
+    protected boolean osdExtended = true;
 
     protected Config() {
     }

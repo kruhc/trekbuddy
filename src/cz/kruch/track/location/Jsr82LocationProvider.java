@@ -11,8 +11,8 @@ import api.location.QualifiedCoordinates;
 import cz.kruch.track.configuration.Config;
 import cz.kruch.track.ui.Desktop;
 import cz.kruch.track.util.NmeaParser;
-import cz.kruch.track.util.Logger;
 import cz.kruch.j2se.io.BufferedInputStream;
+import cz.kruch.j2se.io.BufferedOutputStream;
 
 import javax.microedition.lcdui.Display;
 import javax.microedition.lcdui.Displayable;
@@ -25,18 +25,12 @@ import javax.microedition.io.Connector;
 import javax.microedition.io.file.FileConnection;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStreamWriter;
+import java.io.OutputStream;
 import java.util.Vector;
 import java.util.Timer;
 import java.util.TimerTask;
 
 public class Jsr82LocationProvider extends StreamReadingLocationProvider implements Runnable {
-    private static final Logger log = new Logger("Bluetooth");
-
-    private static final int ACTION_GO      = 0;
-    private static final int ACTION_REFRESH = 1;
-    private static final int ACTION_CANCEL  = 2;
-
     private static final int WATCHER_PERIOD = 60 * 1000;
 
     private Display display;
@@ -52,7 +46,8 @@ public class Jsr82LocationProvider extends StreamReadingLocationProvider impleme
     private long timestamp;
     private int state;
 
-    private Observer tracklog;
+    private FileConnection nmeaFc;
+    private OutputStream nmeaObserver;
 
     public Jsr82LocationProvider(Display display) {
         super(Config.LOCATION_PROVIDER_JSR82);
@@ -70,11 +65,8 @@ public class Jsr82LocationProvider extends StreamReadingLocationProvider impleme
             // start watcher
             startWatcher();
 
-            // start tracklog - if set and NMEA format selected
-            if (Config.getSafeInstance().isTracklogsOn() && Config.TRACKLOG_FORMAT_NMEA.equals(Config.getSafeInstance().getTracklogsFormat())) {
-                tracklog = new Observer();
-                setObserver(tracklog.getWriter());
-            }
+            // start NMEA log
+            startNmeaLog();
 
             // GPS
             gps();
@@ -88,22 +80,11 @@ public class Jsr82LocationProvider extends StreamReadingLocationProvider impleme
             }
         } finally {
 
-            // stop tracklog
-            if (tracklog != null) {
-                try {
-                    tracklog.close();
-                } catch (IOException e1) {
-                    // never happens
-                }
-                tracklog = null;
-                setObserver(null);
-            }
+            // stop NMEA log
+            stopNmeaLog();
 
             // stop watcher
-            if (watcher != null) {
-                watcher.cancel();
-                watcher = null;
-            }
+            stopWatcher();
 
             // update status
             notifyListener(LocationProvider.OUT_OF_SERVICE);
@@ -118,8 +99,8 @@ public class Jsr82LocationProvider extends StreamReadingLocationProvider impleme
             throw new LocationException("Bluetooth radio disabled?");
         }
 
-        // show BT device browser
-        display.setCurrent(new Discoverer());
+        // start BT discovery
+        (new Discoverer()).start();
 
         return LocationProvider.TEMPORARILY_UNAVAILABLE;
     }
@@ -156,10 +137,55 @@ public class Jsr82LocationProvider extends StreamReadingLocationProvider impleme
                     }
                 }
                 if (notify) {
-                    notifyListener(LocationProvider.TEMPORARILY_UNAVAILABLE);
+                    notifyListener(state);
                 }
             }
         }, WATCHER_PERIOD, WATCHER_PERIOD); // delay = period = 1 min
+    }
+
+    private void stopWatcher() {
+        if (watcher != null) {
+            watcher.cancel();
+            watcher = null;
+        }
+    }
+
+    private void startNmeaLog() {
+        if (Config.getSafeInstance().isTracklogsOn() && Config.TRACKLOG_FORMAT_NMEA.equals(Config.getSafeInstance().getTracklogsFormat())) {
+            String path = Config.getSafeInstance().getTracklogsDir() + "/nmea-" + Long.toString(System.currentTimeMillis()) + ".log";
+            try {
+                nmeaFc = (FileConnection) Connector.open(path, Connector.WRITE);
+                nmeaFc.create();
+                nmeaObserver = new BufferedOutputStream(nmeaFc.openOutputStream(), 512);
+
+                // set stream 'observer'
+                setObserver(nmeaObserver);
+
+            } catch (Throwable t) {
+                Desktop.showError(display, "Failed to start NMEA log", t, null);
+            }
+        }
+    }
+
+    public void stopNmeaLog() {
+
+        // clear stream 'observer'
+        setObserver(null);
+
+        if (nmeaObserver != null) {
+            try {
+                nmeaObserver.close();
+            } catch (IOException e) {
+            }
+            nmeaObserver = null;
+        }
+        if (nmeaFc != null) {
+            try {
+                nmeaFc.close();
+            } catch (IOException e) {
+            }
+            nmeaFc = null;
+        }
     }
 
     private void gps() throws IOException {
@@ -181,38 +207,41 @@ public class Jsr82LocationProvider extends StreamReadingLocationProvider impleme
                 }
 
                 // parse GGA
-                NmeaParser.Record rec = null;
+                NmeaParser.Record gga;
                 try {
-                    rec = NmeaParser.parseGGA(ggaSentence);
-                } catch (Exception e) {
-                    if (log.isEnabled()) log.error("corrupted record: " + ggaSentence + "\n" + e.toString());
+                    gga = NmeaParser.parseGGA(ggaSentence.toCharArray());
+                } catch (Throwable t) {
+                    // ignore
                     continue;
                 }
 
-                // prepare location info
-                QualifiedCoordinates coordinates = new QualifiedCoordinates(rec.lat, rec.lon, rec.altitude);
-                Location location = new Location(coordinates, rec.timestamp, rec.fix, rec.sat);
+                // create location instance
+                Location location = new Location(new QualifiedCoordinates(gga.lat, gga.lon, gga.altitude),
+                                                 gga.timestamp, gga.fix, gga.sat, gga.hdop);
+
+                boolean notify = false;
 
                 // is position valid?
-                if (rec.fix > 0) {
+                if (gga.fix > 0) {
 
-                    // read and parse RMC
+                    // read RMC
+                    String rmcSentence = nextSentence(in, HEADER_RMC);
+                    if (rmcSentence == null) {
+                        break;
+                    }
+
+                    // parse RMC
                     try {
-                        String rmcSentence = nextSentence(in, HEADER_RMC);
-                        if (rmcSentence == null) {
-                            break;
-                        }
-                        NmeaParser.Record rmc = NmeaParser.parseRMC(rmcSentence);
-                        if (rmc.timestamp == rec.timestamp) {
+                        NmeaParser.Record rmc = NmeaParser.parseRMC(rmcSentence.toCharArray());
+                        if (rmc.timestamp == gga.timestamp) {
                             location.setCourse(rmc.angle);
                             location.setSpeed(rmc.speed);
                         }
-                    } catch (Exception e) {
+                    } catch (Throwable t) {
                         // ignore
                     }
 
                     // fix state - we may be in TEMPORARILY_UNAVAILABLE state
-                    boolean notify = false;
                     synchronized (sync) {
                         if (state != LocationProvider.AVAILABLE) {
                             state = LocationProvider.AVAILABLE;
@@ -220,9 +249,18 @@ public class Jsr82LocationProvider extends StreamReadingLocationProvider impleme
                         }
                         timestamp = System.currentTimeMillis();
                     }
-                    if (notify) {
-                        notifyListener(LocationProvider.AVAILABLE);
+                } else {
+                    synchronized (sync) {
+                        if (state != LocationProvider.TEMPORARILY_UNAVAILABLE) {
+                            state = LocationProvider.TEMPORARILY_UNAVAILABLE;
+                            notify = true;
+                        }
                     }
+                }
+
+                // notify about state, if necessary
+                if (notify) {
+                    notifyListener(state);
                 }
 
                 // send new location
@@ -246,44 +284,7 @@ public class Jsr82LocationProvider extends StreamReadingLocationProvider impleme
         }
     }
 
-    private class Observer {
-        private FileConnection fc;
-        private OutputStreamWriter writer;
-
-        public Observer() {
-            String path = Config.getSafeInstance().getTracklogsDir() + "/nmea-" + Long.toString(System.currentTimeMillis()) + ".log";
-            try {
-                fc = (FileConnection) Connector.open(path, Connector.WRITE);
-                fc.create();
-                writer = new OutputStreamWriter(fc.openOutputStream());
-            } catch (IOException e) {
-                Desktop.showError(display, "Failed to start tracklog", e, null);
-            }
-        }
-
-        public OutputStreamWriter getWriter() {
-            return writer;
-        }
-
-        public void close() throws IOException {
-            if (writer != null) {
-                try {
-                    writer.close();
-                } catch (IOException e) {
-                }
-                writer = null;
-            }
-            if (fc != null) {
-                try {
-                    fc.close();
-                } catch (IOException e) {
-                }
-                fc = null;
-            }
-        }
-    }
-
-    private class Discoverer extends List implements javax.bluetooth.DiscoveryListener, CommandListener, Runnable {
+    private class Discoverer extends List implements javax.bluetooth.DiscoveryListener, CommandListener {
         // intentionally not static
         private javax.bluetooth.UUID[] uuidSet = {
             new javax.bluetooth.UUID(0x1101),
@@ -294,42 +295,35 @@ public class Jsr82LocationProvider extends StreamReadingLocationProvider impleme
         private javax.bluetooth.RemoteDevice device;
         private Vector devices = new Vector();
         private String url;
-        private LocationException exception;
-        private int retCode;
         private int transactionID;
-
         private boolean inquiryCompleted;
+
+        private boolean cancel = false;
 
         private Command cmdBack = new Command("Cancel", Command.BACK, 1);
         private Command cmdRefresh = new Command("Refresh", Command.SCREEN, List.SELECT_COMMAND.getPriority() + 1);
 
         public Discoverer() {
             super("DeviceSelection", List.IMPLICIT);
-            setCommandListener(this);
-            (new Thread(this)).start();
+            this.setCommandListener(this);
         }
 
-        public void run() {
-            int action = ACTION_REFRESH;
-
-            while (action == ACTION_REFRESH) {
-                try {
-                    action = go();
-                } catch (javax.bluetooth.BluetoothStateException e) {
-                    Desktop.showError(display, "Device discovery failed", e, null);
-                } catch (LocationException e) { // no devices found
-                    Desktop.showWarning(display, e.getMessage(), null, null);
-                }
+        public void start() throws LocationException {
+            display.setCurrent(this);
+            try {
+                goDevices();
+            } catch (LocationException e) {
+                display.setCurrent(previous);
+                throw e;
             }
+        }
 
-            // clear 'status' exception
-            setException(null);
-
-            // restore screen
+        private void letsGo(boolean ok) {
+            // restore screen anyway
             display.setCurrent(previous);
 
-            // good to go
-            if (action == ACTION_GO) {
+            // good to go or not
+            if (ok) {
                 go = true;
                 btspp = url;
                 thread = new Thread(Jsr82LocationProvider.this);
@@ -339,76 +333,51 @@ public class Jsr82LocationProvider extends StreamReadingLocationProvider impleme
             }
         }
 
-        public int go() throws LocationException, javax.bluetooth.BluetoothStateException {
-            // reset
+        private void goDevices() throws LocationException {
+            // reset UI and state
             deleteAll();
             devices.removeAllElements();
-            exception = null;
             url = null;
             device = null;
-            retCode = -1;
-            transactionID = 0;
             inquiryCompleted = false;
-
-            // setup commands
-            setupCommands(false);
+            cancel = false;
 
             // update UI
             setTicker(new Ticker("Looking for devices..."));
+            setupCommands(false);
 
             // start inquiry
-            agent = javax.bluetooth.LocalDevice.getLocalDevice().getDiscoveryAgent();
-            agent.startInquiry(javax.bluetooth.DiscoveryAgent.GIAC, this);
-
-            // wait until device and service is selected
-            while (device == null && retCode == -1) {
-
-                // wait for device selection
-                getDevice();
-
-                // device selected?
-                if (device != null) {
-
-                    // update UI
-                    setTitle("ServiceSearch");
-                    setTicker(new Ticker("Searching service..."));
-                    setupCommands(false);
-
-                    // search for service
-                    try {
-                        // start search
-                        transactionID = agent.searchServices(null, uuidSet, device, this);
-
-                        // wait for btspp URL
-                        getURL();
-
-                        // if we have url, quit the loop
-                        if (url != null) {
-                            return ACTION_GO;
-                        }
-                    } catch (javax.bluetooth.BluetoothStateException e) {
-                        Desktop.showError(display, "Service search failed", e, null);
-                    } catch (LocationException e) { // no service found at selected device, select another device
-                        Desktop.showWarning(display, e.getMessage(), null, null);
-                    } finally {
-
-                        // cancel search (if started)
-                        if (transactionID > 0) {
-                            agent.cancelServiceSearch(transactionID);
-                        }
-
-                        // return to device selection
-                        exception = null;
-                        device = null;
-                        retCode = -1;
-                        transactionID = 0;
-                        setTitle("DeviceSelection");
-                        setupCommands(true);
-                    }
-                }
+            try {
+                agent = javax.bluetooth.LocalDevice.getLocalDevice().getDiscoveryAgent();
+                agent.startInquiry(javax.bluetooth.DiscoveryAgent.GIAC, this);
+            } catch (javax.bluetooth.BluetoothStateException e) {
+                throw new LocationException(e);
             }
+        }
 
-            return retCode;
+        private void showDevices() {
+            // partial reset
+            device = null;
+
+            // update UI
+            setTicker(null);
+            setTitle("DeviceSelection");
+            setupCommands(true);
+        }
+
+        private void goServices() {
+            // update UI
+            setTitle("ServiceSearch");
+            setTicker(new Ticker("Searching service..."));
+            setupCommands(false);
+
+            // start search
+            try {
+                transactionID = agent.searchServices(null, uuidSet, device, this);
+            } catch (javax.bluetooth.BluetoothStateException e) {
+                Desktop.showError(display, "Service search failed", e, null);
+                showDevices();
+            }
         }
 
         private void setupCommands(boolean ready) {
@@ -418,47 +387,15 @@ public class Jsr82LocationProvider extends StreamReadingLocationProvider impleme
                 removeCommand(List.SELECT_COMMAND);
                 addCommand(cmdBack);
                 addCommand(cmdRefresh);
-                addCommand(List.SELECT_COMMAND);
+                if (devices.size() > 0) {
+                    addCommand(List.SELECT_COMMAND);
+                }
             } else {
                 removeCommand(cmdBack);
                 removeCommand(cmdRefresh);
                 removeCommand(List.SELECT_COMMAND);
                 addCommand(cmdBack);
             }
-        }
-
-        private javax.bluetooth.RemoteDevice getDevice() throws LocationException {
-            synchronized (this) {
-                while (device == null && exception == null && retCode == -1) {
-                    try {
-                        wait();
-                    } catch (InterruptedException e) {
-                    }
-                }
-            }
-
-            if (exception == null) {
-                return device;
-            }
-
-            throw exception;
-        }
-
-        private String getURL() throws LocationException {
-            synchronized (this) {
-                while (url == null && exception == null && retCode == -1) {
-                    try {
-                        wait();
-                    } catch (InterruptedException e) {
-                    }
-                }
-            }
-
-            if (exception == null) {
-                return url;
-            }
-
-            throw exception;
         }
 
         public void deviceDiscovered(javax.bluetooth.RemoteDevice remoteDevice, javax.bluetooth.DeviceClass deviceClass) {
@@ -468,62 +405,69 @@ public class Jsr82LocationProvider extends StreamReadingLocationProvider impleme
 
         public void servicesDiscovered(int i, javax.bluetooth.ServiceRecord[] serviceRecords) {
                 try {
-                    synchronized (this) {
-                        url = serviceRecords[0].getConnectionURL(javax.bluetooth.ServiceRecord.NOAUTHENTICATE_NOENCRYPT, false);
-                        notify();
-                    }
+                    url = serviceRecords[0].getConnectionURL(javax.bluetooth.ServiceRecord.NOAUTHENTICATE_NOENCRYPT, false);
+                    agent.cancelServiceSearch(transactionID);
+/* called from serviceSearchCompleted
+                    letsGo(true);
+*/
                 } catch (ArrayIndexOutOfBoundsException e) {
                 } catch (NullPointerException e) {
             }
         }
 
         public void serviceSearchCompleted(int transID, int respCode) {
-            setTicker(null);
+            transactionID = 0;
 
-            synchronized (this) {
-                if (url == null) {
-                    String respMsg;
+            if (url == null) {
+                String respMsg;
 
-                    switch (respCode) {
-                        case SERVICE_SEARCH_COMPLETED:
-                            respMsg = "COMPLETED";
-                            break;
-                        case SERVICE_SEARCH_DEVICE_NOT_REACHABLE:
-                            respMsg = "DEVICE NOT REACHABLE";
-                            break;
-                        case SERVICE_SEARCH_ERROR:
-                            respMsg = "ERROR";
-                            break;
-                        case SERVICE_SEARCH_NO_RECORDS:
-                            respMsg = "NO RECORDS";
-                            break;
-                        case SERVICE_SEARCH_TERMINATED:
-                            respMsg = "TERMINATED";
-                            break;
-                        default:
-                            respMsg = "UNKNOWN";
-                    }
-
-                    exception = new LocationException("Service not found (" + respMsg + ")");
+                switch (respCode) {
+                    case SERVICE_SEARCH_COMPLETED:
+                        respMsg = "COMPLETED";
+                        break;
+                    case SERVICE_SEARCH_DEVICE_NOT_REACHABLE:
+                        respMsg = "DEVICE NOT REACHABLE";
+                        break;
+                    case SERVICE_SEARCH_ERROR:
+                        respMsg = "ERROR";
+                        break;
+                    case SERVICE_SEARCH_NO_RECORDS:
+                        respMsg = "NO RECORDS";
+                        break;
+                    case SERVICE_SEARCH_TERMINATED:
+                        respMsg = "TERMINATED";
+                        break;
+                    default:
+                        respMsg = "UNKNOWN";
                 }
 
-                notify();
+                if (respCode != SERVICE_SEARCH_TERMINATED) {
+                    Desktop.showWarning(display, "Service not found (" + respMsg + ")",
+                                        null, null);
+                    // update UI
+                    setTicker(null);
+
+                    // offer device selection
+                    showDevices();
+                }
+            } else {
+                letsGo(true);
             }
         }
 
         public void inquiryCompleted(int discType) {
             inquiryCompleted = true;
 
-            setTicker(null); // stop "Looking for devices"
-            deleteAll(); // delete temporary items (bt adresses)
-
-            // make all commands available
+            // update UI
+            setTicker(null);
+            deleteAll();
             setupCommands(true);
 
             if (devices.size() == 0) {
-                synchronized (this) {
-                    exception = new LocationException("No devices discovered");
-                    notify();
+                if (cancel) {
+                    letsGo(false);
+                } else {
+                    Desktop.showError(display, "No devices discovered", null, null);
                 }
             } else {
                 setTicker(new Ticker("Resolving names"));
@@ -542,46 +486,30 @@ public class Jsr82LocationProvider extends StreamReadingLocationProvider impleme
         }
 
         public void commandAction(Command command, Displayable displayable) {
-            if (command == List.SELECT_COMMAND) {
-                /*
-                 * device selection
-                 */
-                displayable.setTicker(null);
-                if (device == null) {
-                    agent.cancelInquiry(this);
-                    synchronized (this) {
-                        device = (javax.bluetooth.RemoteDevice) devices.elementAt(getSelectedIndex());
-                        notify();
-                    }
-                }
+            if (command == List.SELECT_COMMAND) { /* device selection */
+                device = (javax.bluetooth.RemoteDevice) devices.elementAt(getSelectedIndex());
+                goServices();
             } else if (command.getCommandType() == Command.BACK) {
-                if (device == null) {
-                    /*
-                     * cancel device discovery and quit device selection at all
-                     */
-                    agent.cancelInquiry(this);
-                    if (inquiryCompleted  || (devices.size() == 0)) {
-                        synchronized (this) {
-                            retCode = ACTION_CANCEL;
-                            notify();
-                        }
-                    }
-                } else if (transactionID > 0) {
-                    /*
-                     * cancel service, offer device selection
-                     */
+                cancel = true;
+                if (transactionID > 0) {
                     agent.cancelServiceSearch(transactionID);
-                    setTitle("DeviceSelection");
-                    setupCommands(true);
                 }
-            } else if ("Refresh".equals(command.getLabel())) {
-                /*
-                 * refresh device selection
-                 */
-                agent.cancelInquiry(this);
-                synchronized (this) {
-                    retCode = ACTION_REFRESH;
-                    notify();
+                if (inquiryCompleted == false) {
+                    agent.cancelInquiry(this);
+                }
+                if (device == null) { /* quit BT explorer */
+                    if (inquiryCompleted) {
+                        letsGo(false);
+                    }
+                } else { /* offer device selection */
+                    showDevices();
+                }
+            } else if ("Refresh".equals(command.getLabel())) { /* refresh device list */
+                try {
+                    goDevices();
+                } catch (LocationException e) {
+                    Desktop.showError(display, "Unable to restart discovery",
+                                      e, null);
                 }
             }
         }

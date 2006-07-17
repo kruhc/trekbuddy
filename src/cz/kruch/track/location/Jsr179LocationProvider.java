@@ -5,9 +5,6 @@ package cz.kruch.track.location;
 
 import cz.kruch.track.configuration.Config;
 
-import api.location.Location;
-import api.location.LocationException;
-
 public class Jsr179LocationProvider extends api.location.LocationProvider {
     private javax.microedition.location.LocationProvider impl;
     private LocationListenerAdapter adapter;
@@ -46,10 +43,6 @@ public class Jsr179LocationProvider extends api.location.LocationProvider {
         }
     }
 
-    public LocationException getException() {
-        return null;
-    }
-
     private class LocationListenerAdapter implements javax.microedition.location.LocationListener {
 
         public LocationListenerAdapter(api.location.LocationListener listener) {
@@ -64,7 +57,7 @@ public class Jsr179LocationProvider extends api.location.LocationProvider {
             long t = xlocation.getTimestamp();
             int f = xlocation.isValid() ? 1 : 0;
 
-            Location location = new Location(c, t, f);
+            api.location.Location location = new api.location.Location(c, t, f);
             location.setCourse(xlocation.getCourse());
             location.setSpeed(xlocation.getSpeed());
 

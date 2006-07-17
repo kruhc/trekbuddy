@@ -5,7 +5,7 @@ package cz.kruch.track.ui;
 
 import javax.microedition.lcdui.Graphics;
 
-class Status extends Bar {
+final class Status extends Bar {
     private int h;
 
     public Status(int gx, int gy, int width, int height) {

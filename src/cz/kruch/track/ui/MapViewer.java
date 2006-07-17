@@ -24,6 +24,8 @@ final class MapViewer {
     private int x, y;
     private int chx, chy;
     private int chx0, chy0;
+    private int cWidth, cHeight;
+    private int mWidth, mHeight;
 
     private Image crosshair;
     private Image[] courses;
@@ -49,8 +51,10 @@ final class MapViewer {
             Image.createImage("/resources/course_0_60.png"),
             Image.createImage("/resources/course_0_75.png")
         };
-        this.chx0 = this.chx = (width - crosshair.getWidth()) / 2;
-        this.chy0 = this.chy = (height - crosshair.getHeight()) / 2;
+        this.cWidth = crosshair.getWidth();
+        this.cHeight = crosshair.getHeight();
+        this.chx0 = this.chx = (width - cWidth) / 2;
+        this.chy0 = this.chy = (height - cHeight) / 2;
     }
 
     public void reset() {
@@ -70,12 +74,13 @@ final class MapViewer {
 
     public void setMap(Map map) {
         this.map = map;
+        this.mWidth = map.getWidth();
+        this.mHeight = map.getHeight();
     }
 
     public Position getPosition() {
         // crosshair-oriented position
-        Position p = new Position(x + chx + crosshair.getWidth() / 2,
-                                  y + chy + crosshair.getHeight() / 2);
+        Position p = new Position(x + chx + cWidth / 2, y + chy + cHeight / 2);
         if (log.isEnabled()) log.debug(p.toString());
 
         return p;
@@ -95,7 +100,8 @@ final class MapViewer {
             direction = Canvas.LEFT;
         }
 
-        for (int i = 0; i < Math.abs(dx); i++) {
+        int absDx = Math.abs(dx);
+        for (int i = 0; i < absDx; i++) {
             dirty |= scroll(direction);
         }
 
@@ -106,12 +112,13 @@ final class MapViewer {
             direction = Canvas.UP;
         }
 
-        for (int i = 0; i < Math.abs(dy); i++) {
+        int absDy = Math.abs(dy);
+        for (int i = 0; i < absDy; i++) {
             dirty |= scroll(direction);
         }
 
-        chx = x - this.x - crosshair.getWidth() / 2;
-        chy = y - this.y - crosshair.getHeight() / 2;
+        chx = x - this.x - cWidth / 2;
+        chy = y - this.y - cHeight / 2;
 
 //        if (dirty) System.out.println("move made, current position " + this.x + "," + this.y + "; dirty = " + dirty + "; crosshair requested at " + x + "-" + y + " -> screen position at " + chx + "-" + chy);
 
@@ -126,10 +133,10 @@ final class MapViewer {
                 if (chy < chy0) {
                     chy++;
                     dirty = true;
-                } else if (y + height < map.getHeight()) {
+                } else if (y + height < mHeight) {
                     y++;
                     dirty = true;
-                } else if (chy < height - 1 - crosshair.getHeight() / 2) {
+                } else if (chy < height - 1 - cHeight / 2) {
                     chy++;
                     dirty = true;
                 }
@@ -141,7 +148,7 @@ final class MapViewer {
                 } else if (y > 0) {
                     y--;
                     dirty = true;
-                } else if (chy > 0 - crosshair.getHeight() / 2) {
+                } else if (chy > 0 - cHeight / 2) {
                     chy--;
                     dirty = true;
                 }
@@ -153,7 +160,7 @@ final class MapViewer {
                 } else if (x > 0) {
                     x--;
                     dirty = true;
-                } else if (chx > 0 - crosshair.getWidth() / 2) {
+                } else if (chx > 0 - cWidth / 2) {
                     chx--;
                     dirty = true;
                 }
@@ -162,10 +169,10 @@ final class MapViewer {
                 if (chx < chx0) {
                     chx++;
                     dirty = true;
-                } else if (x + width < map.getWidth()) {
+                } else if (x + width < mWidth) {
                     x++;
                     dirty = true;
-                } else if (chx < width - 1 - crosshair.getWidth() / 2) {
+                } else if (chx < width - 1 - cWidth / 2) {
                     chx++;
                     dirty = true;
                 }
@@ -253,7 +260,7 @@ final class MapViewer {
 
         // TODO precompute offset
         graphics.drawRegion(courses[ci], 0, 0, courses[ci].getWidth(), courses[ci].getHeight(),
-                            ti, chx - (courses[0].getHeight() - crosshair.getHeight()) / 2, chy - (courses[0].getWidth() - crosshair.getWidth()) / 2, Graphics.TOP | Graphics.LEFT);
+                            ti, chx - (courses[0].getHeight() - cHeight) / 2, chy - (courses[0].getWidth() - cWidth) / 2, Graphics.TOP | Graphics.LEFT);
     }
 
     private void drawSlice(Graphics graphics, Slice slice) {
@@ -308,13 +315,14 @@ final class MapViewer {
         }
     }
 
+    // TODO optimize
     public boolean ensureSlices() {
         if (map == null) {
             if (log.isEnabled()) log.error("no map");
             throw new IllegalStateException("No map");
         }
 
-        Vector collection = new Vector();
+        Vector collection = new Vector(4);
         ensureSlice(x, y, collection);
         ensureSlice(x + width - 1, y, collection);
         ensureSlice(x, y + height - 1, collection);

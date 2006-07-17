@@ -9,7 +9,7 @@ import javax.microedition.lcdui.Graphics;
 import javax.microedition.lcdui.Image;
 import java.io.IOException;
 
-class OSD extends Bar {
+final class OSD extends Bar {
     private static final String NO_INFO = "Lon: ? Lat: ?";
 
     private Image providerAvailable;
@@ -21,6 +21,9 @@ class OSD extends Bar {
     private String gpxRecording = null;
     private String extendedInfo;
 
+    private int bh;
+    private int rw;
+
     public OSD(int gx, int gy, int width, int height) throws IOException {
         super(gx, gy, width, height);
         this.providerAvailable = Image.createImage("/resources/s_green.png");
@@ -28,6 +31,8 @@ class OSD extends Bar {
         this.providerOutOfService = Image.createImage("/resources/s_red.png");
         this.semaforX = this.width - this.providerAvailable.getWidth() - BORDER;
         this.semaforY = Math.abs((this.font.getHeight() - this.providerAvailable.getHeight())) / 2;
+        this.bh = bar.getHeight();
+        this.rw = font.charWidth('R');
     }
 
     public void render(Graphics graphics) {
@@ -52,7 +57,7 @@ class OSD extends Bar {
         // gpx recording
         if (gpxRecording != null) {
             graphics.setColor(255, 0, 0);
-            graphics.drawChar('R', semaforX - font.charWidth('R'), 0, Graphics.TOP | Graphics.LEFT);
+            graphics.drawChar('R', semaforX - rw, 0, Graphics.TOP | Graphics.LEFT);
         }
 
         // draw provider status
@@ -75,8 +80,8 @@ class OSD extends Bar {
             } else {
                 graphics.setColor(255, 0, 0);
             }
-            graphics.drawImage(bar, gx, gy + bar.getHeight(), Graphics.TOP | Graphics.LEFT);
-            graphics.drawString(extendedInfo, gx, gy + bar.getHeight(), Graphics.TOP | Graphics.LEFT);
+            graphics.drawImage(bar, gx, gy + bh, Graphics.TOP | Graphics.LEFT);
+            graphics.drawString(extendedInfo, gx, gy + bh, Graphics.TOP | Graphics.LEFT);
         }
     }
 

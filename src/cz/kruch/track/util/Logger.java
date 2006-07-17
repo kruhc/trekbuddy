@@ -5,7 +5,7 @@ package cz.kruch.track.util;
 
 import cz.kruch.track.TrackingMIDlet;
 
-public class Logger {
+public final class Logger {
     private static final String LEVEL_DEBUG  = "DEBUG";
     private static final String LEVEL_INFO   = "INFO";
     private static final String LEVEL_WARN   = "WARN";

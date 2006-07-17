@@ -88,8 +88,10 @@ public class SimulatorLocationProvider extends StreamReadingLocationProvider imp
     public void run() {
         if (log.isEnabled()) log.info("simulator task starting; url " + url);
 
-        InputStream in = null;
+        // start gpx
+        getListener().providerStateChanged(this, LocationProvider._STARTING);
 
+        InputStream in = null;
         try {
             // open file and stream
             in = new BufferedInputStream(Connector.openInputStream(url));
@@ -116,7 +118,7 @@ public class SimulatorLocationProvider extends StreamReadingLocationProvider imp
                 // parse GGA
                 NmeaParser.Record rec = null;
                 try {
-                    rec = NmeaParser.parseGGA(ggaSentence);
+                    rec = NmeaParser.parseGGA(ggaSentence.toCharArray());
                 } catch (Exception e) {
                     if (log.isEnabled()) log.warn("corrupted record: " + ggaSentence + "\n" + e.toString());
                     continue;
@@ -124,16 +126,16 @@ public class SimulatorLocationProvider extends StreamReadingLocationProvider imp
 
                 // prepare instance of location
                 QualifiedCoordinates coordinates = new QualifiedCoordinates(rec.lat, rec.lon, rec.altitude);
-                Location location = new Location(coordinates, rec.timestamp, rec.fix, rec.sat);
+                Location location = new Location(coordinates, rec.timestamp, rec.fix, rec.sat, rec.hdop);
 
                 // update location with angle and speed, if possible
                 try {
-                    NmeaParser.Record rmc = NmeaParser.parseRMC(rmcSentence);
-                    if (log.isEnabled()) log.debug("RMC data: " + rmc.speed + ";" + rmc.angle);
-                    if (log.isEnabled()) log.debug("GGA timestamp: " + rec.timestamp + "; RMC timestamp: " + rmc.timestamp);
+                    NmeaParser.Record rmc = NmeaParser.parseRMC(rmcSentence.toCharArray());
                     if (rmc.timestamp == rec.timestamp) {
                         location.setCourse(rmc.angle);
                         location.setSpeed(rmc.speed);
+                    } else {
+                        if (log.isEnabled()) log.warn("GGA-RMC timestamp mismatch: " + rmc.timestamp + "!=" + rec.timestamp);
                     }
                 } catch (LocationException e) {
                     if (log.isEnabled()) log.debug("corrupted RMC: " + e.toString());

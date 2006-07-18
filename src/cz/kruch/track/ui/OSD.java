@@ -18,7 +18,7 @@ final class OSD extends Bar {
 
     private int providerStatus = LocationProvider.OUT_OF_SERVICE;
     private int semaforX, semaforY;
-    private String gpxRecording = null;
+    private String recording = null;
     private String extendedInfo;
 
     private int bh;
@@ -55,7 +55,7 @@ final class OSD extends Bar {
         graphics.drawString(info, gx, gy, Graphics.TOP | Graphics.LEFT);
 
         // gpx recording
-        if (gpxRecording != null) {
+        if (recording != null) {
             graphics.setColor(255, 0, 0);
             graphics.drawChar('R', semaforX - rw, 0, Graphics.TOP | Graphics.LEFT);
         }
@@ -89,8 +89,8 @@ final class OSD extends Bar {
         this.providerStatus = providerStatus;
     }
 
-    public void setGpxRecording(String gpxRecording) {
-        this.gpxRecording = gpxRecording;
+    public void setRecording(String recording) {
+        this.recording = recording;
     }
 
     public void setExtendedInfo(String extendedInfo) {

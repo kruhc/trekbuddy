@@ -11,6 +11,7 @@ import api.location.QualifiedCoordinates;
 import cz.kruch.track.configuration.Config;
 import cz.kruch.track.ui.Desktop;
 import cz.kruch.track.util.NmeaParser;
+import cz.kruch.track.event.Callback;
 import cz.kruch.j2se.io.BufferedInputStream;
 import cz.kruch.j2se.io.BufferedOutputStream;
 
@@ -35,6 +36,7 @@ public class Jsr82LocationProvider extends StreamReadingLocationProvider impleme
 
     private Display display;
     private Displayable previous;
+    private Callback recordingCallback;
 
     private Thread thread;
 
@@ -49,10 +51,11 @@ public class Jsr82LocationProvider extends StreamReadingLocationProvider impleme
     private FileConnection nmeaFc;
     private OutputStream nmeaObserver;
 
-    public Jsr82LocationProvider(Display display) {
+    public Jsr82LocationProvider(Display display, Callback recordingCallback) {
         super(Config.LOCATION_PROVIDER_JSR82);
         this.display = display;
         this.previous = display.getCurrent();
+        this.recordingCallback = recordingCallback;
         this.timestamp = 0;
         this.state = LocationProvider.TEMPORARILY_UNAVAILABLE;
     }
@@ -161,6 +164,9 @@ public class Jsr82LocationProvider extends StreamReadingLocationProvider impleme
                 // set stream 'observer'
                 setObserver(nmeaObserver);
 
+                // signal recording has started
+                recordingCallback.invoke(new Integer(1), null);
+
             } catch (Throwable t) {
                 Desktop.showError(display, "Failed to start NMEA log", t, null);
             }
@@ -168,6 +174,9 @@ public class Jsr82LocationProvider extends StreamReadingLocationProvider impleme
     }
 
     public void stopNmeaLog() {
+
+        // signal recording is stopping
+        recordingCallback.invoke(new Integer(0), null);
 
         // clear stream 'observer'
         setObserver(null);

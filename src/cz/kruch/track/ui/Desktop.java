@@ -674,7 +674,7 @@ public final class Desktop extends GameCanvas
         } else if (Config.LOCATION_PROVIDER_JSR179.equals(selectedProvider)) {
             provider = new Jsr179LocationProvider();
         } else if (Config.LOCATION_PROVIDER_JSR82.equals(selectedProvider)) {
-            provider = new Jsr82LocationProvider(display);
+            provider = new Jsr82LocationProvider(display, new DesktopEvent(DesktopEvent.EVENT_TRACKLOG));
         }
 
         // register as listener
@@ -762,7 +762,6 @@ public final class Desktop extends GameCanvas
             gpxTracklog = new GpxTracklog(new DesktopEvent(DesktopEvent.EVENT_TRACKLOG),
                                           APP_TITLE + " " + midlet.getAppProperty("MIDlet-Version"));
             gpxTracklog.start();
-            osd.setGpxRecording("R");
         }
     }
 
@@ -774,7 +773,6 @@ public final class Desktop extends GameCanvas
             } catch (InterruptedException e) {
             }
             gpxTracklog = null;
-            osd.setGpxRecording(null);
         }
     }
 
@@ -1033,22 +1031,27 @@ public final class Desktop extends GameCanvas
 
                 case EVENT_TRACKLOG: {
                     if (throwable == null) {
-/*
                         if (result instanceof Integer) {
                             if (((Integer) result).intValue() == 0) {
-                                osd.setGpxRecording(null);
+                                osd.setRecording(null);
                             } else {
-                                osd.setGpxRecording("R");
+                                osd.setRecording("R");
                             }
                         }
-*/
                     } else {
                         // display warning
                         showWarning(display, result == null ? "GPX tracklog event" : (String) result, throwable, null);
 
                         // stop gpx
                         stopGpx();
+
+                        // no more recording
+                        osd.setRecording(null);
                     }
+
+                    // update screen
+                    renderScreen(true, true);
+                    
                 } break;
             }
         }

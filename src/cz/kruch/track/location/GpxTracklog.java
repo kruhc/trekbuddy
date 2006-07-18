@@ -29,7 +29,7 @@ public final class GpxTracklog extends Thread {
     private static final double MIN_DL_WALK = 0.00027D;     // cca 25 m
     private static final double MIN_DL_BIKE = 0.00110D;     // cca 100 m
     private static final double MIN_DL_CAR  = 0.00270D;     // cca 250 m
-    private static final float  MIN_SPEED_SLOW = 3F;        // 3 * 1.852 km/h
+    private static final float  MIN_SPEED_SLOW = 2F;        // 2 * 1.852 km/h
     private static final float  MIN_SPEED_FAST = 15F;       // 15 * 1.852 km/h
     private static final float  MIN_COURSE_DIVERSION = 15F; // 15 degrees
 
@@ -74,11 +74,13 @@ public final class GpxTracklog extends Thread {
                 } catch (IOException e) {
                 }
             }
-
             callback.invoke("Failed to create GPX file", t);
 
-            return; // END
+            return; // no logging
         }
+
+        // signal recording start
+        callback.invoke(new Integer(1), null);
 
         try {
             serializer = new KXmlSerializer();
@@ -192,6 +194,9 @@ public final class GpxTracklog extends Thread {
                 } catch (IOException e) {
                 }
             }
+
+            // signal recording stop
+            callback.invoke(new Integer(0), null);
         }
     }
 

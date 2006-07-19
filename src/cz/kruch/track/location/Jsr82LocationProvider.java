@@ -168,7 +168,7 @@ public class Jsr82LocationProvider extends StreamReadingLocationProvider impleme
                 recordingCallback.invoke(new Integer(1), null);
 
             } catch (Throwable t) {
-                Desktop.showError(display, "Failed to start NMEA log", t, null);
+                Desktop.showError(display, "Failed to start NMEA log.", t, null);
             }
         }
     }
@@ -451,7 +451,7 @@ public class Jsr82LocationProvider extends StreamReadingLocationProvider impleme
                 }
 
                 if (respCode != SERVICE_SEARCH_TERMINATED) {
-                    Desktop.showWarning(display, "Service not found (" + respMsg + ")",
+                    Desktop.showWarning(display, "Service not found (" + respMsg + ").",
                                         null, null);
                     // update UI
                     setTicker(null);

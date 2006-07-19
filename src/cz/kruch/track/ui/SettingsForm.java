@@ -126,11 +126,11 @@ public class SettingsForm extends Form implements CommandListener, ItemStateList
                     config.update();
 
                     // TODO use event
-                    Desktop.showConfirmation(display, "Configuration saved", previous);
+                    Desktop.showConfirmation(display, "Configuration saved.", previous);
 
                 } catch (ConfigurationException e) {
                     // TODO use event
-                    Desktop.showError(display, "Failed to save configuration", e, null);
+                    Desktop.showError(display, "Failed to save configuration.", e, null);
                 }
             } else {
                 // restore previous screen

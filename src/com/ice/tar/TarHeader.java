@@ -22,7 +22,7 @@ package com.ice.tar;
  * @author Timothy Gerard Endres, <time@gjt.org>
  */
 
-public class TarHeader {
+public final class TarHeader {
     /**
      * The length of the name field in a header buffer.
      */

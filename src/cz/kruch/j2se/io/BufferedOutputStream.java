@@ -20,7 +20,7 @@ import java.io.IOException;
  * @version 1.31, 01/23/03
  * @since   JDK1.0
  */
-public
+public final
 class BufferedOutputStream extends /* FilterOutputStream */ OutputStream {
 
     private OutputStream out;

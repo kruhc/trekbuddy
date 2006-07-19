@@ -34,7 +34,7 @@ import java.io.IOException;
  */
 
 
-public class TarInputStream extends /* FilterInputStream */ InputStream {
+public final class TarInputStream extends /* FilterInputStream */ InputStream {
     private static final int DEFAULT_RCDSIZE = 512;
     private static final int DEFAULT_BLKSIZE = DEFAULT_RCDSIZE * 20;
 

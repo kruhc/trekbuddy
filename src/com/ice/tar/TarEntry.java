@@ -119,7 +119,7 @@ import java.util.Date;
  * @see TarHeader
  */
 
-public class TarEntry {
+public final class TarEntry {
     /**
      * This is the entry's header information.
      */

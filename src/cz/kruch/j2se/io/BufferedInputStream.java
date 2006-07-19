@@ -32,7 +32,7 @@ import java.io.InputStream;
  * @version 1.43, 01/23/03
  * @since   JDK1.0
  */
-public
+public final
 class BufferedInputStream extends /* FilterInputStream */ InputStream {
 
     private static int defaultBufferSize = 2048;

@@ -14,6 +14,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.Vector;
 import java.util.Enumeration;
+import java.util.Hashtable;
 
 import cz.kruch.j2se.io.BufferedInputStream;
 
@@ -45,25 +46,30 @@ public final class Map {
     private static final int TYPE_J2N        = 2;
     private static final int TYPE_BEST       = 3;
 
+    // map interaction with outside world
     private String path;
     private StateListener listener;
 
-    private Slice[] slices;
-    private Calibration calibration;
-    private int type = -1;
+    // map state
     private Loader loader;
+    private int type = -1;
+    private Hashtable sets;
+    private Hashtable calibrations;
 
+    // layer state
+    private LayerState layer;
+    private LayerState defaultLayer;
+
+    // I/O state
     private boolean ready = true;
     private Object lock = new Object();
-
-    // map range and scale
-    private QualifiedCoordinates[] range;
-    private double xScale, yScale;
 
     public Map(String path, StateListener listener) {
         this.path = path;
         this.listener = listener;
-        this.slices = new Slice[0];
+        this.sets = new Hashtable();
+        this.calibrations = new Hashtable();
+        this.layer = new LayerState();
     }
 
     public String getPath() {
@@ -71,37 +77,53 @@ public final class Map {
     }
 
     public int getWidth() {
-        return calibration.getWidth();
+        return layer.calibration.getWidth();
     }
 
     public int getHeight() {
-        return calibration.getHeight();
+        return layer.calibration.getHeight();
     }
 
     public QualifiedCoordinates transform(Position p) {
-        return calibration.transform(p);
+        return layer.calibration.transform(p);
     }
 
     public Position transform(QualifiedCoordinates qc) {
-        return calibration.transform(qc, proximitePosition(qc));
+        return layer.calibration.transform(qc, proximitePosition(qc));
     }
 
-    private Calibration.ProximitePosition proximitePosition(QualifiedCoordinates coordinates) {
-        QualifiedCoordinates leftTopQc = range[0];
+    public Enumeration getLayers() {
+        return calibrations.keys();
+    }
 
-        double dlon = coordinates.getLon() - leftTopQc.getLon();
-        double dlat = coordinates.getLat() - leftTopQc.getLat();
+    public boolean changeLayer(String name) {
+        if (log.isEnabled()) log.debug("change layer from " + layer.name + " to " + name);
 
-        Double dx = new Double(dlon / xScale);
-        Double dy = new Double(dlat / yScale);
+        // detect no-change
+        if (name.equals(layer.name)) {
+            return false;
+        }
 
-        int intDx = dx.intValue();
-        int intDy = dy.intValue();
+        // detect change to default layer
+        if ("set/".equals(name)) {
+            layer = defaultLayer;
+        } else {
+            // new layer
+            LayerState newLayer = new LayerState();
+            newLayer.name = name;
+//            newLayer.calibration = defaultLayer.calibration.resize(0.50F);
+            newLayer.calibration = (Calibration) calibrations.get(name);
+            loader.doFinal(newLayer);
+            newLayer.doFinal();
 
-        int x = 0 + intDx;
-        int y = 0 - intDy;
+            // dispose current layer
+            layer.dispose();
 
-        return new Calibration.ProximitePosition(x, y);
+            // set new layer
+            layer = newLayer;
+        }
+
+        return true;
     }
 
     /**
@@ -111,11 +133,8 @@ public final class Map {
     public void close() {
         if (log.isEnabled()) log.info("close map");
 
-        // null images
-        for (int N = slices.length, i = 0; i < N; i++) {
-            if (log.isEnabled()) log.debug("null image for slice " + slices[i]);
-            slices[i].setImage(null);
-        }
+        // release layer resources
+        layer.dispose();
 
         // destroy loader
         if (loader != null) {
@@ -139,6 +158,7 @@ public final class Map {
      * @return slice
      */
     public Slice getSlice(int x, int y) {
+        Slice[] slices = layer.slices;
         for (int N = slices.length, i = 0; i < N; i++) {
             Slice slice = slices[i];
             if (slice.isWithin(x, y)) {
@@ -153,6 +173,7 @@ public final class Map {
     public boolean isWithin(QualifiedCoordinates coordinates) {
         double lat = coordinates.getLat();
         double lon = coordinates.getLon();
+        QualifiedCoordinates[] range = layer.range;
         return (lat <= range[0].getLat() && lat >= range[3].getLat())
                 && (lon >= range[0].getLon() && lon <= range[3].getLon());
     }
@@ -278,71 +299,71 @@ public final class Map {
             loader.init();
             loader.run();
             loader.checkException();
-
             if (log.isEnabled()) log.debug("map opened");
 
-            /*
-            * keep the connection open to avoid access confirmation
-            */
-
             // check map for consistency
-            if (calibration == null) {
+            if (layer.calibration == null) {
                 throw new InvalidMapException("Map calibration info missing");
             }
-            if (slices.length == 0) {
+            if (layer.slices.length == 0) {
                 throw new InvalidMapException("Empty map - no slices");
             }
 
-            // absolutize slices position
-            for (int N = slices.length, i = 0; i < N; i++) {
-                slices[i].absolutizePosition(calibration);
-            }
-
-            // finalize slices creation
-            for (int N = slices.length, i = 0; i < N; i++) {
-                Slice slice = slices[i];
-
-                // fix slice dimension for filename-encoded positions
-                if (type == TYPE_BEST) {
-                    ((Calibration.Best) slice.getCalibration()).fixDimension(calibration, slices);
-                }
-
-                // precalculate slice range (pixel coordinates)
-                slice.precalculate();
-
-                // debug
-                if (log.isEnabled()) log.debug("ready slice " + slices[i]);
-            }
-
-            // compute map range and scale
-            precalculate();
+            // prepare layer
+            layer.doFinal();
 
             // log
-            if (log.isEnabled()) log.info("map range is "  + range[0] + "(" + range[0].getLat() + "," + range[0].getLon() + ") - " + range[1] + "(" + range[1].getLat() + "," + range[1].getLon() + ")");
+            if (log.isEnabled()) log.info("map range is "  + layer.range[0] + "(" + layer.range[0].getLat() + "," + layer.range[0].getLon() + ") - " + layer.range[1] + "(" + layer.range[3].getLat() + "," + layer.range[3].getLon() + ")");
 
-            return null;
-
-        } catch (InvalidMapException e) {
-            return e;
-        } catch (IOException e) {
-            return e;
-        } catch (OutOfMemoryError e) {
-            return e;
+        } catch (Throwable t) {
+            return t;
         }
+
+        return null;
+    }
+
+
+    /**
+     * Creates default map from embedded resources.
+     */
+    public static Map defaultMap(StateListener listener) throws IOException {
+        Map map = new Map("", listener);
+        InputStream in = Map.class.getResourceAsStream("/resources/world.map");
+        map.type = TYPE_BEST;
+        map.layer.calibration = new Calibration.Ozi(loadTextContent(in), "/resources/world.map");
+        in.close();
+        Slice slice = new Slice(new Calibration.Best("/resources/world_0_0.png"));
+        slice.setImage(Image.createImage("/resources/world_0_0.png"));
+        slice.absolutizePosition(map.layer.calibration);
+        map.layer.slices = new Slice[] { slice };
+        ((Calibration.Best) slice.getCalibration()).fixDimension(map.layer.calibration, map.layer.slices);
+        slice.precalculate();
+        map.layer.doFinal();
+
+        if (log.isEnabled()) log.debug("default map slice ready " + slice);
+
+        return map;
     }
 
     /**
-     * Precomputes map range.
+     * Calculates proximite position for given coordinates.
      */
-    private void precalculate() {
-        calibration.computeGrid();
-        range = new QualifiedCoordinates[4];
-        range[0] = calibration.transform(new Position(0, 0));
-        range[1] = calibration.transform(new Position(0, getWidth()));
-        range[2] = calibration.transform(new Position(getHeight(), 0));
-        range[3] = calibration.transform(new Position(getWidth(), getHeight()));
-        xScale = Math.abs((range[3].getLon() - range[0].getLon()) / getWidth());
-        yScale = Math.abs((range[3].getLat() - range[0].getLat()) / getHeight());
+    private Calibration.ProximitePosition proximitePosition(QualifiedCoordinates coordinates) {
+        QualifiedCoordinates leftTopQc = layer.range[0];
+
+        double dlon = coordinates.getLon() - leftTopQc.getLon();
+        double dlat = coordinates.getLat() - leftTopQc.getLat();
+
+        Double dx = new Double(dlon / layer.xScale);
+        Double dy = new Double(dlat / layer.yScale);
+
+        int intDx = dx.intValue();
+        int intDy = dy.intValue();
+
+        int x = 0 + intDx;
+        int y = 0 - intDy;
+
+        return new Calibration.ProximitePosition(x, y);
     }
 
     /**
@@ -365,15 +386,13 @@ public final class Map {
     }
 
     /**
-     * Releases slices images. Does gc.
+     * Releases given slices images. Does gc.
      * @param slices
      */
     public void releaseSlices(Vector slices) {
-        // clear slices image references
         for (Enumeration e = slices.elements(); e.hasMoreElements(); ) {
             Slice slice = (Slice) e.nextElement();
             slice.setImage(null);
-
             if (log.isEnabled()) log.debug("released image for slice " + slice);
         }
 
@@ -435,6 +454,7 @@ public final class Map {
         throw exception;
     }
 
+    // TODO is thread necessary?
     private void notifyListener(final int code, final Object result, final Throwable t) {
         (new Thread() {
             public void run() {
@@ -453,32 +473,130 @@ public final class Map {
         }).start();
     }
 
+    private static String loadTextContent(InputStream stream) throws IOException {
+        InputStreamReader reader = new InputStreamReader(stream);
+        char[] buffer = new char[TEXT_FILE_BUFFER_SIZE];
+        StringBuffer sb = new StringBuffer();
+        int c = reader.read(buffer);
+        while (c > -1) {
+            sb.append(buffer, 0, c);
+            c = reader.read(buffer);
+        }
+
+        return sb.toString();
+    }
+
+    /*
+     * Layer state.
+     */
+
+    private static class LayerState {
+        public String name;
+        public Slice[] slices;
+        public Calibration calibration;
+        public QualifiedCoordinates[] range;
+        public double xScale, yScale;
+
+        public LayerState() {
+            this.slices = new Slice[0];
+        }
+
+        /**
+         * Disposes layer resources - slices images.
+         */
+        public void dispose() {
+            for (int N = slices.length, i = 0; i < N; i++) {
+                if (log.isEnabled()) log.debug("null image for slice " + slices[i]);
+                slices[i].setImage(null);
+            }
+        }
+
+        /**
+         * Finalizes layer initialization.
+         */
+        public void doFinal() {
+            // absolutize slices position
+            absolutizePositions();
+
+            // finalize slices creation
+            prepareSlices();
+
+            // compure grid and range
+            calibration.computeGrid();
+            range = new QualifiedCoordinates[4];
+            range[0] = calibration.transform(new Position(0, 0));
+            range[1] = calibration.transform(new Position(0, calibration.getWidth()));
+            range[2] = calibration.transform(new Position(calibration.getHeight(), 0));
+            range[3] = calibration.transform(new Position(calibration.getWidth(), calibration.getHeight()));
+            xScale = Math.abs((range[3].getLon() - range[0].getLon()) / calibration.getWidth());
+            yScale = Math.abs((range[3].getLat() - range[0].getLat()) / calibration.getHeight());
+        }
+
+        private void absolutizePositions() {
+            for (int N = slices.length, i = 0; i < N; i++) {
+                slices[i].absolutizePosition(calibration);
+            }
+        }
+
+        private void prepareSlices() {
+            for (int N = slices.length, i = 0; i < N; i++) {
+                Slice slice = slices[i];
+
+                // fix slice dimension for filename-encoded positions
+                if (slice.getCalibration() instanceof Calibration.Best) {
+                    ((Calibration.Best) slice.getCalibration()).fixDimension(calibration, slices);
+                }
+
+                // precalculate slice range (pixel coordinates)
+                slice.precalculate();
+
+                // debug
+                if (log.isEnabled()) log.debug("ready slice " + slices[i]);
+            }
+        }
+    }
+
+    /*
+     * Map loaders.
+     */
+
     private abstract class Loader extends Thread {
-        protected IOException exception;
+        protected Exception exception;
 
         public abstract void init() throws IOException;
-
         public abstract void destroy() throws IOException;
-
         public abstract void loadSlice(Slice slice) throws IOException;
 
-        public void checkException() throws IOException {
+        public void checkException() throws Exception {
             if (exception != null) {
                 throw exception;
             }
         }
 
-        protected String loadTextContent(InputStream stream) throws IOException {
-            InputStreamReader reader = new InputStreamReader(stream);
-            char[] buffer = new char[TEXT_FILE_BUFFER_SIZE];
-            StringBuffer sb = new StringBuffer();
-            int c = reader.read(buffer);
-            while (c > -1) {
-                sb.append(buffer, 0, c);
-                c = reader.read(buffer);
+        protected Vector getCollection(String collectionName) {
+            Vector collection = (Vector) sets.get(collectionName);
+            if (collection == null) {
+                collection = new Vector();
+                sets.put(collectionName, collection);
             }
 
-            return sb.toString();
+            return collection;
+        }
+
+        protected void doFinal(LayerState layer) {
+            if (layer.name == null) { // default layer upon start
+                defaultLayer = layer;
+                switch (Map.this.type) {
+                    case TYPE_BEST:
+                        layer.name = "set/";
+                        break;
+                    default:
+                        layer.name = "pictures/";
+                }
+            }
+            Vector collection = getCollection(layer.name);
+            layer.slices = new Slice[collection.size()];
+            collection.copyInto(layer.slices);
         }
     }
 
@@ -496,62 +614,72 @@ public final class Map {
                 try {
                     fileConnection.close();
                 } catch (IOException e) {
-                    if (log.isEnabled()) log.error("map closing failed", e);
+                    // ignore
                 }
             }
         }
 
         public void run() {
-            Vector collection = new Vector(0);
             TarInputStream tar = null;
-
             try {
                 tar = new TarInputStream(new BufferedInputStream(fileConnection.openInputStream(), SMALL_BUFFER_SIZE));
                 TarEntry entry = tar.getNextEntry();
                 while (entry != null) {
                     if (!entry.isDirectory()) {
                         String entryName = entry.getName();
-                        if (entryName.endsWith(".gmi")) {
-                            Calibration calibration = new Calibration.GMI(loadTextContent(tar), entryName);
-                            if (entryName.indexOf("/") == -1) { // map calibration
-                                Map.this.calibration = calibration;
-                                Map.this.type = TYPE_BEST;
+                        if (entryName.endsWith(".png")) { // slice
+                            int indexOf = entryName.indexOf("/");
+                            if (indexOf > -1) {
+                                String collectionName = entryName.substring(0, indexOf + 1);
+                                Calibration calibration = new Calibration.Best(entryName);
+                                getCollection(collectionName).addElement(new Slice(calibration));
                             } else {
-                                if (log.isEnabled()) log.warn("calibration file " + entryName + " ignored");
+                                if (log.isEnabled()) log.warn("image file " + entryName + " ignored");
                             }
-                        } else if (entryName.endsWith(".map")) {
-                            Calibration calibration = new Calibration.Ozi(loadTextContent(tar), entryName);
-                            if (entryName.indexOf("/") == -1) { // map calibration
-                                Map.this.calibration = calibration;
-                                Map.this.type = TYPE_BEST;
-                            } else {
-                                if (log.isEnabled()) log.warn("calibration file " + entryName + " ignored");
+                        } else {
+                            int indexOf = entryName.indexOf("/");
+                            String collectionName = null;
+                            if (indexOf > -1) {
+                                collectionName = entryName.substring(0, indexOf + 1);
                             }
-                        } else if (entryName.endsWith(".xml")) {
-                            Calibration calibration = new Calibration.XML(loadTextContent(tar), entryName);
-                            if (entryName.startsWith("pictures/")) {
-                                collection.addElement(new Slice(calibration));
-                            } else {
-                                Map.this.calibration = calibration;
-                                Map.this.type = TYPE_GPSKA;
+                            if (entryName.endsWith(".gmi")) {
+                                Calibration calibration = new Calibration.GMI(loadTextContent(tar), entryName);
+                                if (indexOf == -1) { // default layer calibration
+                                    Map.this.layer.calibration = calibration;
+                                    Map.this.type = TYPE_BEST;
+                                } else {
+                                    calibrations.put(collectionName, calibration);
+                                }
+                            } else if (entryName.endsWith(".map")) {
+                                Calibration calibration = new Calibration.Ozi(loadTextContent(tar), entryName);
+                                if (indexOf == -1) { // default layer calibration
+                                    Map.this.layer.calibration = calibration;
+                                    Map.this.type = TYPE_BEST;
+                                } else {
+                                    calibrations.put(collectionName, calibration);
+                                }
+                            } else if (entryName.endsWith(".xml")) {
+                                Calibration calibration = new Calibration.XML(loadTextContent(tar), entryName);
+                                if (indexOf == -1) { // default layer calibration
+                                    Map.this.layer.calibration = calibration;
+                                    Map.this.type = TYPE_GPSKA;
+                                } else {
+                                    calibrations.put(collectionName, calibration);
+                                }
+                            } else if (entryName.endsWith(".j2n")) {
+                                Calibration calibration = new Calibration.J2N(loadTextContent(tar), entryName);
+                                if (indexOf == -1) { // default layer calibration
+                                    Map.this.layer.calibration = calibration;
+                                    Map.this.type = TYPE_J2N;
+                                } else {
+                                    calibrations.put(collectionName, calibration);
+                                }
                             }
-                        } else if (entryName.endsWith(".j2n")) {
-                            Calibration calibration = new Calibration.J2N(loadTextContent(tar), entryName);
-                            if (entryName.indexOf("/") == -1) { // map calibration
-                                Map.this.calibration = calibration;
-                                Map.this.type = TYPE_J2N;
-                            } else {
-                                if (log.isEnabled()) log.warn("calibration file " + entryName + " ignored");
-                            }
-                        } else if ((entryName.startsWith("set/") || (entryName.startsWith("pictures/"))) && entryName.endsWith(".png")) {
-                            Calibration calibration = new Calibration.Best(entryName);
-                            collection.addElement(new Slice(calibration));
-                            Map.this.type = TYPE_BEST;
                         }
                     }
                     entry = tar.getNextEntry();
                 }
-            } catch (IOException e) {
+            } catch (Exception e) {
                 exception = e;
             } finally {
                 if (tar != null) {
@@ -562,13 +690,11 @@ public final class Map {
                 }
             }
 
-            slices = new Slice[collection.size()];
-            collection.copyInto(slices);
+            doFinal(layer);
         }
 
         public void loadSlice(Slice slice) throws IOException {
             TarInputStream tar = null;
-
             try {
                 tar = new TarInputStream(new BufferedInputStream(fileConnection.openInputStream(), LARGE_BUFFER_SIZE));
                 TarEntry entry = tar.getNextEntry();
@@ -600,7 +726,7 @@ public final class Map {
             if (i == -1) {
                 throw new InvalidMapException("Invalid map URL");
             }
-            dir = path.substring(0, i);
+            dir = path.substring(0, i + 1);
             if (log.isEnabled()) log.debug("slices are in " + dir);
         }
 
@@ -608,45 +734,87 @@ public final class Map {
         }
 
         public void run() {
-            Vector collection = new Vector(0);
             FileConnection fc = null;
             InputStream in = null;
 
             try {
                 // path points to calibration file
-                fc = (FileConnection) Connector.open(path, Connector.READ);
-                String url = fc.getURL();
-                in = fc.openInputStream();
-                if (url.endsWith(".gmi")) {
-                    Map.this.calibration = new Calibration.GMI(loadTextContent(in), url);
+                in = new BufferedInputStream(Connector.openInputStream(path), SMALL_BUFFER_SIZE);
+                String content = loadTextContent(in);
+                if (path.endsWith(".gmi")) {
+                    Map.this.layer.calibration = new Calibration.GMI(content, path);
                     Map.this.type = TYPE_BEST;
-                } else if (url.endsWith(".map")) {
-                    Map.this.calibration = new Calibration.Ozi(loadTextContent(in), url);
+                } else if (path.endsWith(".map")) {
+                    Map.this.layer.calibration = new Calibration.Ozi(content, path);
                     Map.this.type = TYPE_BEST;
-                } else if (url.endsWith(".xml")) {
-                    Map.this.calibration = new Calibration.XML(loadTextContent(in), url);
+                } else if (path.endsWith(".xml")) {
+                    Map.this.layer.calibration = new Calibration.XML(content, path);
                     Map.this.type = TYPE_GPSKA;
-                } else if (url.endsWith(".j2n")) {
-                    Map.this.calibration = new Calibration.J2N(loadTextContent(in), url);
+                } else if (path.endsWith(".j2n")) {
+                    Map.this.layer.calibration = new Calibration.J2N(content, path);
                     Map.this.type = TYPE_J2N;
                 }
                 in.close();
                 in = null;
-                fc.close();
-                fc = null;
 
-                // next, look for slices
-                dir = dir + (Map.this.type == TYPE_J2N ? "/pictures" : "/set"); // compatibility with j2n
+                // get all possible sets dirs
                 fc = (FileConnection) Connector.open(dir, Connector.READ);
-                if (fc.isDirectory()) {
-                    for (Enumeration e = fc.list("*", false); e.hasMoreElements(); ) {
-                        Calibration calibration = new Calibration.Best((String) e.nextElement());
-                        collection.addElement(new Slice(calibration));
-                        Map.this.type = TYPE_BEST;
+                Enumeration children = fc.list("*", false);
+
+                // next, look for slices in sets
+                while (children.hasMoreElements()) {
+                    String child = (String) children.nextElement();
+                    if (child.endsWith("/")) {
+                        // debug
+                        if (log.isEnabled()) log.debug("new set: " + child);
+
+                        // get collection
+                        Vector collection = getCollection(child);
+
+                        // set file connection
+                        fc.setFileConnection(child);
+
+                        // iterate over set
+                        for (Enumeration e = fc.list("*", false); e.hasMoreElements(); ) {
+                            String entry = ((String) e.nextElement());
+                            if (entry.endsWith(".png")) {
+                                Calibration calibration = new Calibration.Best(child + entry);
+                                collection.addElement(new Slice(calibration));
+                            } else {
+                                InputStream cin = null;
+                                Calibration calibration = null;
+                                try {
+                                    cin = new BufferedInputStream(Connector.openInputStream(fc.getURL() + entry), SMALL_BUFFER_SIZE);
+                                    content = loadTextContent(cin);
+                                    if (entry.endsWith(".gmi")) {
+                                        calibration = new Calibration.GMI(content,child + entry);
+                                    } else if (entry.endsWith(".map")) {
+                                        calibration = new Calibration.Ozi(content,child + entry);
+                                    } else if (entry.endsWith(".j2n")) {
+                                        calibration = new Calibration.J2N(content,child + entry);
+                                    } else if (entry.endsWith(".xml")) {
+                                        calibration = new Calibration.XML(content,child + entry);
+                                    }
+                                } finally {
+                                    if (cin != null) {
+                                        try {
+                                            cin.close();
+                                        } catch (IOException ex) {
+                                            // ignore
+                                        }
+                                    }
+                                }
+                                if (calibration != null) {
+                                    calibrations.put(child, calibration);
+                                }
+                            }
+                        }
+
+                        // go back to map root dir
+                        fc.setFileConnection("..");
                     }
                 }
-
-            } catch (IOException e) {
+            } catch (Exception e) {
                 exception = e;
             } finally {
                 if (in != null) {
@@ -663,18 +831,16 @@ public final class Map {
                 }
             }
 
-            slices = new Slice[collection.size()];
-            collection.copyInto(slices);
+            doFinal(layer);
         }
 
         public void loadSlice(Slice slice) throws IOException {
-            String spath = dir + "/" + slice.getCalibration().getPath();
-            if (log.isEnabled()) log.debug("load slice image from " + spath);
+            String slicePath = dir + slice.getCalibration().getPath();
+            if (log.isEnabled()) log.debug("load slice image from " + slicePath);
 
             InputStream in = null;
-
             try {
-                in = Connector.openInputStream(spath);
+                in = new BufferedInputStream(Connector.openInputStream(slicePath), LARGE_BUFFER_SIZE);
                 slice.setImage(Image.createImage(in));
             } finally {
                 if (in != null) {
@@ -685,28 +851,5 @@ public final class Map {
                 }
             }
         }
-    }
-
-    private static final String defaultMapCalibration =
-        "Point01,xy,0,0,in,deg,90,0,N,180,0,W,grid,,,,N\n" +
-        "Point02,xy,639,0,in,deg,90,0,N,180,0,E,grid,,,,N\n" +
-        "Point03,xy,0,319,in,deg,90,0,S,180,0,W, grid,,,,N\n" +
-        "Point04,xy,639,319,in,deg,90,0,S,180,0,E, grid,,,,N\n" +
-        "Point05,xy,320,160,in,deg,0,0,N,0,0,E, grid,,,,N\n" +
-        "IWH,Map Image Width/Height,640,320";
-
-    public static Map defaultMap(StateListener listener) throws IOException {
-        Map map = new Map("", listener);
-        map.calibration = new Calibration.Ozi(defaultMapCalibration, "resource:///resources/world_0_0.png");
-        Slice slice = new Slice(map.calibration);
-        slice.absolutizePosition(map.calibration);
-        slice.precalculate();
-        slice.setImage(Image.createImage("/resources/world_0_0.png"));
-        map.slices = new Slice[] { slice };
-        map.precalculate();
-
-        if (log.isEnabled()) log.debug("default map slice ready " + slice);
-
-        return map;
     }
 }

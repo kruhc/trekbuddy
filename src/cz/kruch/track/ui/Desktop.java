@@ -30,11 +30,13 @@ import java.io.IOException;
 import java.util.Date;
 import java.util.Timer;
 import java.util.TimerTask;
+import java.util.Enumeration;
 
 import api.location.LocationProvider;
 import api.location.LocationListener;
 import api.location.Location;
 import api.location.LocationException;
+import api.location.QualifiedCoordinates;
 
 /**
  * Application desktop.
@@ -319,7 +321,7 @@ public final class Desktop extends GameCanvas
             try {
                 gpxTracklog.update(location);
             } catch (Exception e) {
-                showWarning(display, "GPX tracklog update failed", e, null);
+                showWarning(display, "GPX tracklog update failed.", e, null);
             }
         }
 
@@ -465,12 +467,14 @@ public final class Desktop extends GameCanvas
 
     private void focus() {
         // do we have a real position?
-        if (position == null || location == null) {
+        if (position == null) {
             return;
         }
 
         // set course
-        mapViewer.setCourse(new Float(location.getCourse()));
+        if (location != null) {
+            mapViewer.setCourse(new Float(location.getCourse()));
+        }
 
         // move to given position
         if (mapViewer.move(position.getX(), position.getY())) {
@@ -553,7 +557,14 @@ public final class Desktop extends GameCanvas
             default:
                 switch (i) {
                     case KEY_STAR: {
-                        showWarning(display, "No overview map", null, null);
+                        Enumeration e = map.getLayers();
+                        if (e.hasMoreElements()) {
+                            (new LayerSelection(display, new DesktopEvent(DesktopEvent.EVENT_LAYER_SELECTION_FINISHED))).show(e);
+                        } else {
+                            showInfo(display, "No layers.", null);
+                        }
+                    } break;
+                    case KEY_POUND: {
                     } break;
                     default:
                         if (log.isEnabled()) log.debug("unhandled key " + getKeyName(i));
@@ -599,35 +610,40 @@ public final class Desktop extends GameCanvas
     }
 
     public static void showConfirmation(Display display, String message, Displayable nextDisplayable) {
-        Alert alert = new Alert(APP_TITLE, message + ".", null, AlertType.CONFIRMATION);
-        alert.setTimeout(INFO_DIALOG_TIMEOUT);
-        if (nextDisplayable == null)
-            display.setCurrent(alert);
-        else
-            display.setCurrent(alert, nextDisplayable);
+        showAlert(display, AlertType.CONFIRMATION, message, INFO_DIALOG_TIMEOUT, nextDisplayable);
     }
 
     public static void showInfo(Display display, String message, Displayable nextDisplayable) {
-        Alert alert = new Alert(APP_TITLE, message + ".", null, AlertType.INFO);
-        alert.setTimeout(INFO_DIALOG_TIMEOUT);
-        if (nextDisplayable == null)
-            display.setCurrent(alert);
-        else
-            display.setCurrent(alert, nextDisplayable);
+        showAlert(display, AlertType.INFO, message, INFO_DIALOG_TIMEOUT, nextDisplayable);
     }
 
     public static void showWarning(Display display, String message, Throwable t, Displayable nextDisplayable) {
-        Alert alert = new Alert(APP_TITLE, message + (t == null ? "." : ". " + t.toString()), null, AlertType.WARNING);
-        alert.setTimeout(WARN_DIALOG_TIMEOUT);
-        if (nextDisplayable == null)
-            display.setCurrent(alert);
-        else
-            display.setCurrent(alert, nextDisplayable);
+        if (message == null) {
+            message = "";
+        }
+        if (t != null) {
+            if (message.length() > 0) message += " ";
+            message += t.toString();
+        }
+        showAlert(display, AlertType.WARNING, message, WARN_DIALOG_TIMEOUT, nextDisplayable);
     }
 
     public static void showError(Display display, String message, Throwable t, Displayable nextDisplayable) {
-        Alert alert = new Alert(APP_TITLE, message + (t == null ? "." : (". " + t.toString())), null, AlertType.ERROR);
-        alert.setTimeout(Alert.FOREVER);
+        if (message == null) {
+            message = "";
+        }
+        if (t != null) {
+            if (message.length() > 0) message += " ";
+            message += t.toString();
+        }
+        showAlert(display, AlertType.ERROR, message, Alert.FOREVER, nextDisplayable);
+    }
+
+    private static void showAlert(Display display, AlertType type,
+                                  String message, int timeout,
+                                  Displayable nextDisplayable) {
+        Alert alert = new Alert(APP_TITLE, message, null, type);
+        alert.setTimeout(timeout);
         if (nextDisplayable == null)
             display.setCurrent(alert);
         else
@@ -686,7 +702,7 @@ public final class Desktop extends GameCanvas
             state = provider.start();
             if (log.isEnabled()) log.debug("provider started; state " + state);
         } catch (LocationException e) {
-            showError(display, "Failed to start provider " + provider.getName(), e, null);
+            showError(display, "Failed to start provider " + provider.getName() + ".", e, null);
 
             // gc hint
             provider = null;
@@ -727,7 +743,7 @@ public final class Desktop extends GameCanvas
             provider.setLocationListener(null, -1, -1, -1);
             provider.stop();
         } catch (LocationException e) {
-            showError(display, "Failed to stop provider", e, null);
+            showError(display, "Failed to stop provider.", e, null);
         } finally {
             provider = null;
         }
@@ -851,6 +867,7 @@ public final class Desktop extends GameCanvas
         public static final int EVENT_SLICES_LOADED                 = 3;
         public static final int EVENT_MAP_OPENED                    = 4;
         public static final int EVENT_TRACKLOG                      = 5;
+        public static final int EVENT_LAYER_SELECTION_FINISHED      = 6;
 
         private int code;
         private Object result;
@@ -878,9 +895,9 @@ public final class Desktop extends GameCanvas
                     Config config = Config.getInstance();
                     config.setMapPath(map.getPath());
                     config.update();
-                    showConfirmation(display, "Configuration updated", Desktop.this);
+                    showConfirmation(display, "Configuration updated.", Desktop.this);
                 } catch (ConfigurationException e) {
-                    showError(display, "Failed to update configuration", e, Desktop.this);
+                    showError(display, "Failed to update configuration.", e, Desktop.this);
                 }
             }
         }
@@ -999,7 +1016,7 @@ public final class Desktop extends GameCanvas
 
                         } catch (IOException e) {
                             _updateLoadingResult(e);
-                            showError(display, "Failed to load map", e, null);
+                            showError(display, "Failed to load map.", e, null);
                         }
 
                     } else {
@@ -1040,7 +1057,7 @@ public final class Desktop extends GameCanvas
                         }
                     } else {
                         // display warning
-                        showWarning(display, result == null ? "GPX tracklog event" : (String) result, throwable, null);
+                        showWarning(display, result == null ? "GPX tracklog warning." : (String) result, throwable, null);
 
                         // stop gpx
                         stopGpx();
@@ -1051,7 +1068,20 @@ public final class Desktop extends GameCanvas
 
                     // update screen
                     renderScreen(true, true);
-                    
+
+                } break;
+
+                case EVENT_LAYER_SELECTION_FINISHED: {
+                    // had user selected anything?
+                    if (result != null) {
+                        QualifiedCoordinates qc0 = map.transform(mapViewer.getPosition());
+                        if (map.changeLayer((String) result)) {
+                            Position p0 = map.transform(qc0);
+                            mapViewer.setMap(map);
+                            position = p0;
+                            focus();
+                        }
+                    }
                 } break;
             }
         }

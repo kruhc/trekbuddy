@@ -8,6 +8,7 @@ import api.location.QualifiedCoordinates;
 import cz.kruch.j2se.util.StringTokenizer;
 import cz.kruch.track.util.Logger;
 import cz.kruch.track.ui.Position;
+import cz.kruch.track.AssertionFailedException;
 
 import java.util.Vector;
 import java.io.ByteArrayInputStream;
@@ -20,19 +21,19 @@ public abstract class Calibration {
     // log
     private static final Logger log = new Logger("Calibration");
 
-    // map/slice path
+    // map/slice path // TODO bad design - path to slice should be in Slice
     protected String path;
 
     // map/slice dimensions
     protected int width = -1;
     protected int height = -1;
 
-    // calibration point info
+    // calibration points
     protected Position[] positions;
     protected QualifiedCoordinates[] coordinates;
 
     protected Calibration(String path) {
-        this.path = parsePath(path) + ".png";
+        this.path = path;
     }
 
     public String getPath() {
@@ -47,7 +48,15 @@ public abstract class Calibration {
         return height;
     }
 
-    public abstract Position computeAbsolutePosition(Calibration parent);
+    public Position computeAbsolutePosition(Calibration parent) {
+        throw new AssertionFailedException("Illegal calibration type");
+    }
+
+/*
+    public Calibration resize(float factor) {
+        return new Layer(this, factor);
+    }
+*/
 
     private int gridTHx;
     private int gridTHy;
@@ -242,80 +251,15 @@ public abstract class Calibration {
         }
     }
 
-    private int[] verticalAxisByLon(QualifiedCoordinates coords) {
-        double lon = coords.getLon();
-        int i0 = -1, i1 = -1;
-        double d0 = Double.MAX_VALUE, d1 = Double.MAX_VALUE;
-        for (int N = coordinates.length, i = 0; i < N; i++) {
-            double dlon = Math.abs(lon - coordinates[i].getLon());
-            if (dlon < d0) {
-                if (i0 > -1) {
-                    d1 = d0;
-                    i1 = i0;
-                }
-                d0 = dlon;
-                i0 = i;
-            } else if (dlon < d1) {
-                d1 = dlon;
-                i1 = i;
-            }
-        }
+    public static final class GMI extends Calibration {
 
-        if (Math.abs(coords.getLat() - coordinates[i0].getLat()) < Math.abs(coords.getLat() - coordinates[i1].getLat())) {
-            return new int[]{ i0, i1 };
-        } else {
-            return new int[]{ i1, i0 };
-        }
-    }
-
-    private int[] horizontalAxisByLat(QualifiedCoordinates coords) {
-        double lat = coords.getLat();
-        int i0 = -1, i1 = -1;
-        double d0 = Double.MAX_VALUE, d1 = Double.MAX_VALUE;
-        for (int N = coordinates.length, i = 0; i < N; i++) {
-            double dlat = Math.abs(lat - coordinates[i].getLat());
-            if (dlat < d0) {
-                if (i0 > -1) {
-                    d1 = d0;
-                    i1 = i0;
-                }
-                d0 = dlat;
-                i0 = i;
-            } else if (dlat < d1) {
-                d1 = dlat;
-                i1 = i;
-            }
-        }
-
-        if (Math.abs(coords.getLon() - coordinates[i0].getLon()) < Math.abs(coords.getLon() - coordinates[i1].getLon())) {
-            return new int[]{ i0, i1 };
-        } else {
-            return new int[]{ i1, i0 };
-        }
-    }
-
-    private static String parsePath(String line) {
-        int idxUnix = line.lastIndexOf('/');
-        int idxWindows = line.lastIndexOf('\\');
-        int idx = idxUnix > -1 ? idxUnix : (idxWindows > -1 ? idxWindows : -1);
-        if (idx > -1) {
-            line = line.substring(idx + 1);
-        }
-        idx = line.lastIndexOf('.');
-        if (idx > -1) {
-            line = line.substring(0, idx);
-        }
-
-        return line;
-    }
-
-    public static class GMI extends Calibration {
-
+/*
         public Position computeAbsolutePosition(Calibration parent) {
             int absx = parent.positions[0].getX() - positions[0].getX();
             int absy = parent.positions[0].getY() - positions[0].getY();
             return new Position(absx, absy);
         }
+*/
 
         public GMI(String content, String path) throws InvalidMapException {
             super(path);
@@ -359,6 +303,7 @@ public abstract class Calibration {
         private static final String TAG_IMAGEWIDTH  = "imageWidth";
         private static final String TAG_IMAGEHEIGHT = "imageHeight";
 
+/*
         public Position computeAbsolutePosition(Calibration parent) {
             if (parent.getClass().equals(getClass())) {
                 return new Position(0, 0);
@@ -371,6 +316,7 @@ public abstract class Calibration {
 
             return new Position(absx, absy);
         }
+*/
 
         public XML(String content, String path) throws InvalidMapException {
             super(path);
@@ -445,20 +391,22 @@ public abstract class Calibration {
         }
     }
 
-    public static class J2N extends XML {
+    public static final class J2N extends XML {
         public J2N(String content, String path) throws InvalidMapException {
             super(content, path);
         }
 
+/*
         public Position computeAbsolutePosition(Calibration parent) {
             return new Position(0, 0);
         }
+*/
     }
 
     /**
      * For simplified J2N format (aka Best) - no slice calibrations.
      */
-    public static class Best extends Calibration {
+    public static final class Best extends Calibration {
         private Position position;
 
         public Best(String path) {
@@ -470,14 +418,14 @@ public abstract class Calibration {
             positions = parent.positions;
             coordinates = parent.coordinates;
 
-            if (parent instanceof Best || parent instanceof GMI || parent instanceof J2N || parent instanceof Ozi) {
+            if (parent instanceof Best || parent instanceof GMI || parent instanceof J2N || parent instanceof Ozi /*|| parent instanceof Layer*/) {
                 // position is encoded in filename (tb, j2n)
                 StringTokenizer st = new StringTokenizer(path, "_.", false);
                 st.nextToken();
                 int absx = Integer.parseInt(st.nextToken());
                 int absy = Integer.parseInt(st.nextToken());
                 position = new Position(absx, absy);
-            } else { // gpska
+            } else { // single slice of gpska map
                 position = new Position(0, 0);
             }
 
@@ -487,29 +435,33 @@ public abstract class Calibration {
         public void fixDimension(Calibration parent, Slice[] siblings) {
             int xNext = parent.width;
             int yNext = parent.height;
+            int thisX = position.getX();
+            int thisY = position.getY();
             for (int N = siblings.length, i = 0; i < N; i++) {
                 Slice s = siblings[i];
                 Position p = s.getAbsolutePosition();
                 int x = p.getX();
                 int y = p.getY();
-                if ((x > position.getX()) && (x < xNext)) {
+                if ((x > thisX) && (x < xNext)) {
                     xNext = x;
                 }
-                if ((y > position.getY()) && (y < yNext)) {
+                if ((y > thisY) && (y < yNext)) {
                     yNext = y;
                 }
             }
-            width = xNext - position.getX();
-            height = yNext - position.getY();
+            width = xNext - thisX;
+            height = yNext - thisY;
         }
     }
 
-    public static class Ozi extends Calibration {
+    public static final class Ozi extends Calibration {
+/*
         public Position computeAbsolutePosition(Calibration parent) {
             int absx = parent.positions[0].getX() - positions[0].getX();
             int absy = parent.positions[0].getY() - positions[0].getY();
             return new Position(absx, absy);
         }
+*/
 
         public Ozi(String content, String path) throws InvalidMapException {
             super(path);
@@ -742,6 +694,22 @@ public abstract class Calibration {
             }
         }
     }
+
+/*
+    private static final class Layer extends Calibration {
+        public Layer(Calibration parent, float factor) {
+            super(null);
+            this.width = (int) (parent.getWidth() * factor);
+            this.height = (int) (parent.getHeight() * factor);
+            this.positions = new Position[parent.positions.length];
+            for (int N = parent.positions.length, i = 0; i < N; i++) {
+                this.positions[i] = new Position((int) (parent.positions[i].getX() * factor),
+                                                 (int) (parent.positions[i].getY() * factor));
+            }
+            this.coordinates = parent.coordinates;
+        }
+    }
+*/
 
     public static final class ProximitePosition extends Position {
         public ProximitePosition(int x, int y) {

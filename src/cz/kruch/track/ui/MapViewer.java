@@ -78,9 +78,12 @@ final class MapViewer {
         this.mHeight = map.getHeight();
     }
 
+    /**
+     * Returns crosshair position.
+     */
     public Position getPosition() {
-        // crosshair-oriented position
         Position p = new Position(x + chx + cWidth / 2, y + chy + cHeight / 2);
+
         if (log.isEnabled()) log.debug(p.toString());
 
         return p;
@@ -120,7 +123,7 @@ final class MapViewer {
         chx = x - this.x - cWidth / 2;
         chy = y - this.y - cHeight / 2;
 
-//        if (dirty) System.out.println("move made, current position " + this.x + "," + this.y + "; dirty = " + dirty + "; crosshair requested at " + x + "-" + y + " -> screen position at " + chx + "-" + chy);
+        if (log.isEnabled()) log.debug("move made, dirty? " + dirty + ";current position " + this.x + "," + this.y + "; dirty = " + dirty + "; crosshair requested at " + x + "-" + y + " -> screen position at " + chx + "-" + chy);
 
         return dirty;
     }
@@ -318,7 +321,6 @@ final class MapViewer {
     // TODO optimize
     public boolean ensureSlices() {
         if (map == null) {
-            if (log.isEnabled()) log.error("no map");
             throw new IllegalStateException("No map");
         }
 

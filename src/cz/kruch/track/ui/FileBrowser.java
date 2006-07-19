@@ -62,10 +62,11 @@ public class FileBrowser extends List implements CommandListener {
         for (Enumeration e = entries; e.hasMoreElements(); ) {
             append((String) e.nextElement(), null);
         }
-        if (size() == 0 && log.isEnabled()) {
-            append("<empty>", null);
+        if (size() == 0) {
+            append("<no files>", null);
+        } else {
+            addCommand(List.SELECT_COMMAND);
         }
-        addCommand(List.SELECT_COMMAND);
         addCommand(depth == 0 ? cmdCancel :cmdBack);
     }
 

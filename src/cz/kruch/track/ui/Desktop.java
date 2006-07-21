@@ -76,6 +76,7 @@ public final class Desktop extends GameCanvas
     // data components
     private Map map;
     private Atlas atlas;
+    private Object cLock = new Object();
 
     // LSM/MSK commands
     private Command cmdFocus; // hope for MSK
@@ -299,7 +300,7 @@ public final class Desktop extends GameCanvas
         } else if (command == cmdFocus) {
             if (!isMap()) {
                 showWarning(display, _getLoadingResult(), null, null);
-            } else {
+            } else if (isTracking()) {
                 browsing = false;
                 if (location != null) {
                     osd.setInfo(location.toInfo(), map.isWithin(location.getQualifiedCoordinates()));
@@ -365,20 +366,25 @@ public final class Desktop extends GameCanvas
         // update last know valid location
         this.location = location;
 
-        // are we on current map?
-        boolean onMap = map.isWithin(location.getQualifiedCoordinates());
+        boolean onMap = false;
+        synchronized (cLock) {
+            // are we on current map?
+            onMap = map.isWithin(location.getQualifiedCoordinates());
 
-        // update
-        if (onMap) {
-            position = map.transform(location.getQualifiedCoordinates());
-        }
+            // update
+            if (onMap) {
+                position = map.transform(location.getQualifiedCoordinates());
+            }
+        } // ~synchronized
+
+        // update OSD
         osd.setInfo(location.toInfo(), onMap);
         if (Config.getSafeInstance().isOsdExtended()) {
             osd.setExtendedInfo(location.toExtendedInfo());
         }
 
         // when not browsing and having all slices
-        if (!browsing && !_getLoadingSlices()) {
+        if (!browsing && !_getLoadingSlices() && !_getInitializingMap()) {
 
             // are we on map?
             if (onMap) {
@@ -498,6 +504,11 @@ public final class Desktop extends GameCanvas
     }
 
     private void focus() {
+        // caught in the middle of something?
+        if (_getInitializingMap() || _getLoadingSlices()) {
+            return;
+        }
+
         // do we have a real position?
         if (position == null) {
             return;
@@ -535,8 +546,9 @@ public final class Desktop extends GameCanvas
                     // cursor movement breaks autofocus
                     browsing = true;
 
-                    // and also course showing
+                    // and also course showing and extended OSD
                     mapViewer.setCourse(null);
+                    osd.setExtendedInfo(null);
 
                     // when repeated and not yet fast-moving, go
                     if (repeated) {
@@ -638,17 +650,19 @@ public final class Desktop extends GameCanvas
                     status.render(g);
                 }
             }
-        } else {
-            if (log.isEnabled()) log.debug("no map viewer");
         }
 
-        if (flush) {
+        if (flush && isShown()) {
             flushGraphics();
         }
     }
 
     private boolean isMap() {
         return mapViewer == null ? false : true;
+    }
+
+    private boolean isTracking() {
+        return provider == null ? false : true;
     }
 
     public static void showConfirmation(Display display, String message, Displayable nextDisplayable) {
@@ -890,14 +904,23 @@ public final class Desktop extends GameCanvas
 
     public void mapOpened(Object result, Throwable throwable) {
         (new DesktopEvent(DesktopEvent.EVENT_MAP_OPENED)).invoke(result, throwable);
+/*
+        display.callSerially(new DesktopEvent(DesktopEvent.EVENT_MAP_OPENED, result, throwable, null));
+*/
     }
 
     public void slicesLoaded(Object result, Throwable throwable) {
         (new DesktopEvent(DesktopEvent.EVENT_SLICES_LOADED)).invoke(result, throwable);
+/*
+        display.callSerially(new DesktopEvent(DesktopEvent.EVENT_SLICES_LOADED, result, throwable, null));
+*/
     }
 
     public void loadingChanged(Object result, Throwable throwable) {
         (new DesktopEvent(DesktopEvent.EVENT_LOADING_STATUS_CHANGED)).invoke(result, throwable);
+/*
+        display.callSerially(new DesktopEvent(DesktopEvent.EVENT_LOADING_STATUS_CHANGED, result, throwable, null));
+*/
     }
 
     /*
@@ -906,6 +929,9 @@ public final class Desktop extends GameCanvas
 
     public void atlasOpened(Object result, Throwable throwable) {
         (new DesktopEvent(DesktopEvent.EVENT_ATLAS_OPENED)).invoke(result, throwable);
+/*
+        display.callSerially(new DesktopEvent(DesktopEvent.EVENT_ATLAS_OPENED, result, throwable, null));
+*/
     }
 
     /*
@@ -960,6 +986,15 @@ public final class Desktop extends GameCanvas
         private DesktopEvent(int code) {
             this.code = code;
         }
+
+/*
+        private DesktopEvent(int code, Object result, Throwable throwable, Object closure) {
+            this.code = code;
+            this.result = result;
+            this.throwable = throwable;
+            this.closure = closure;
+        }
+*/
 
         public DesktopEvent(int code, Object closure) {
             this.code = code;
@@ -1041,12 +1076,6 @@ public final class Desktop extends GameCanvas
                     // if loading was ok
                     if (throwable == null) {
 
-                        // enqueue layer switch?
-                        if (_qc != null) {
-                            display.callSerially(new DesktopEvent(EVENT_FOCUS, _qc));
-                            _qc = null;
-                        }
-
                         // was this layer change?
                         if (_layer != null) {
                             if (atlas != null) {
@@ -1085,25 +1114,37 @@ public final class Desktop extends GameCanvas
                              * same as in initGui...
                              */
 
-                            // release old atlas
-                            if (atlas != null) {
-                                atlas.close();
-                            }
+                            synchronized (cLock) {
+                                // release old atlas
+                                if (atlas != null) {
+                                    atlas.close();
+                                }
 
-                            // use new atlas
-                            if (_atlas != null) {
-                                atlas = _atlas;
-                                _atlas = null;
-                            }
+                                // use new atlas
+                                if (_atlas != null) {
+                                    atlas = _atlas;
+                                    _atlas = null;
+                                }
 
-                            // release old map
-                            if (map != null) {
-                                map.close();
-                            }
+                                // release old map
+                                if (map != null) {
+                                    map.close();
+                                }
 
-                            // use new map
-                            map = _map;
-                            _map = null;
+                                // use new map
+                                map = _map;
+                                _map = null;
+
+                                // create new map viewer
+                                if (mapViewer != null) {
+                                    mapViewer.reset();
+                                } else {
+                                    mapViewer = new MapViewer(0, 0, getWidth(), getHeight());
+                                }
+
+                                // setup map viewer
+                                mapViewer.setMap(map);
+                            } // ~synchronized
 
                             // use as default?
                             if (yesno) {
@@ -1114,15 +1155,15 @@ public final class Desktop extends GameCanvas
                                 }
                             }
 
-                            // create new map viewer
-                            if (mapViewer != null) {
-                                mapViewer.reset();
-                            } else {
-                                mapViewer = new MapViewer(0, 0, getWidth(), getHeight());
+                            // move viewer to known position, if any
+                            if (_qc != null) {
+                                if (log.isEnabled()) log.debug("move to known position " + _qc.toString());
+                                QualifiedCoordinates qc0 = _qc;
+                                _qc = null;
+                                position = map.transform(qc0);
+                                if (log.isEnabled()) log.debug("new x-y position: " + position.toString());
+                                mapViewer.move(position.getX(), position.getY());
                             }
-
-                            // setup map viewer
-                            mapViewer.setMap(map);
 
                             // update OSD
                             osd.setInfo(map.transform(mapViewer.getPosition()).toString(), true);  // TODO listener
@@ -1210,10 +1251,10 @@ public final class Desktop extends GameCanvas
                             // layer change?
                             if (!result.toString().equals(atlas.getLayer())) {
 
-                                // current coordinates
+                                // get current lat/lon
                                 QualifiedCoordinates qc0 = map.transform(mapViewer.getPosition());
 
-                                // get map URL from atlas
+                                // get map URL from atlas for given coords
                                 String url = atlas.getMapURL(result.toString(), qc0);
                                 if (url == null) {
                                     showWarning(display, "No map for current position in layer '" + result + "'.", null, Desktop.this);
@@ -1233,11 +1274,15 @@ public final class Desktop extends GameCanvas
                     // had user selected anything?
                     if (result != null) {
                         String name = result.toString();
+
                         // load task
                         if (closure == null) {
+
                             // background task
                             startOpenMap(_atlas.getMapURL(name), name);
+
                         } else { // change map
+
                             // background task
                             startOpenMap(atlas.getMapURL(name), name);
                         }
@@ -1288,14 +1333,6 @@ public final class Desktop extends GameCanvas
                         // show a user error
                         showError(display, (String) result, throwable, null);
                     }
-                } break;
-
-                case EVENT_FOCUS: {
-                    if (log.isEnabled()) log.debug("transform " + _qc + " to new layer");
-                    Position p0 = map.transform((QualifiedCoordinates) closure);
-                    position = p0;
-                    if (log.isEnabled()) log.debug("position in new layer is " + position);
-                    focus();
                 } break;
             }
         }

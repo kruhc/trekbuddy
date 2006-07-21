@@ -17,7 +17,7 @@ import javax.microedition.lcdui.Displayable;
 import java.util.Enumeration;
 import java.io.IOException;
 
-public class FileBrowser extends List implements CommandListener {
+public class FileBrowser extends List implements CommandListener, Runnable {
     private static final Logger log = new Logger("FileBrowser");
 
     private Display display;
@@ -44,15 +44,53 @@ public class FileBrowser extends List implements CommandListener {
     }
 
     public void show() {
-        browse(ShowRoots);
+        browse();
     }
 
     public String getSelection() {
         return selection;
     }
 
-    public void browse(Runnable r) {
-        (new Thread(r)).start();
+    public void browse() {
+        (new Thread(this)).start();
+    }
+
+    public void run() {
+        if (depth == 0) {
+            try {
+                if (fc != null) {
+                    if (log.isEnabled()) log.debug("close existing fc");
+                    try {
+                        fc.close();
+                    } catch (IOException e) {
+                    }
+                }
+                fc = null;
+
+                show(FileSystemRegistry.listRoots());
+
+                if (log.isEnabled()) log.debug("scanner thread exits");
+            } catch (Throwable t) {
+                quit(t);
+            }
+        } else {
+            try {
+                if (fc == null) {
+                    fc = (FileConnection) Connector.open("file:///" + path, Connector.READ);
+                } else {
+                    fc.setFileConnection(path);
+                }
+
+                if (fc.isDirectory()) {
+                    show(fc.list("*", false));
+                } else {
+                    selection = fc.getURL();
+                    quit(null);
+                }
+            } catch (Throwable t) {
+                quit(t);
+            }
+        }
     }
 
     private void show(Enumeration entries) {
@@ -74,14 +112,14 @@ public class FileBrowser extends List implements CommandListener {
         if (command == List.SELECT_COMMAND) {
             depth++;
             path = getString(getSelectedIndex());
-            browse(ShowDirectory);
+            browse();
         } else if (command.getCommandType() == Command.BACK) {
             depth--;
             if (depth > 0) {
                 path = "..";
-                browse(ShowDirectory);
+                browse();
             } else {
-                browse(ShowRoots);
+                browse();
             }
         } else {
             quit(null);
@@ -107,48 +145,4 @@ public class FileBrowser extends List implements CommandListener {
         // we are done
         callback.invoke(selection, throwable);
     }
-
-    private Runnable ShowDirectory = new Runnable() {
-        public void run() {
-            try {
-                if (fc == null) {
-                    fc = (FileConnection) Connector.open("file:///" + path, Connector.READ);
-                } else {
-                    fc.setFileConnection(path);
-                }
-
-                if (fc.isDirectory()) {
-                    show(fc.list("*", false));
-                } else {
-                    selection = fc.getURL();
-                    quit(null);
-                }
-            } catch (Throwable t) {
-                quit(t);
-            }
-
-            if (log.isEnabled()) log.debug("scanner thread exits");
-        }
-    };
-
-    private Runnable ShowRoots = new Runnable() {
-        public void run() {
-            try {
-                if (fc != null) {
-                    if (log.isEnabled()) log.debug("close existing fc");
-                    try {
-                        fc.close();
-                    } catch (IOException e) {
-                    }
-                }
-                fc = null;
-
-                show(FileSystemRegistry.listRoots());
-
-                if (log.isEnabled()) log.debug("scanner thread exits");
-            } catch (Throwable t) {
-                quit(t);
-            }
-        }
-    };
 }

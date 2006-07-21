@@ -14,7 +14,6 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.Vector;
 import java.util.Enumeration;
-import java.util.Hashtable;
 
 import cz.kruch.j2se.io.BufferedInputStream;
 
@@ -37,93 +36,73 @@ public final class Map {
     private static final int EVENT_SLICES_LOADED    = 1;
     private static final int EVENT_LOADING_CHANGED  = 2;
 
-    private static final int TEXT_FILE_BUFFER_SIZE = 512; // for map calibration files content
-    private static final int SMALL_BUFFER_SIZE = 512 * 2; // for map calibration files
-    private static final int LARGE_BUFFER_SIZE = 512 * 8; // for map image files
+    static final int TEXT_FILE_BUFFER_SIZE = 512; // for map calibration files content
+    static final int SMALL_BUFFER_SIZE = 512 * 2; // for map calibration files
+    static final int LARGE_BUFFER_SIZE = 512 * 8; // for map image files
 
     private static final int TYPE_GMI        = 0;
     private static final int TYPE_GPSKA      = 1;
     private static final int TYPE_J2N        = 2;
     private static final int TYPE_BEST       = 3;
 
-    // map interaction with outside world
+    // interaction with outside world
     private String path;
+    private String name;
     private StateListener listener;
 
     // map state
     private Loader loader;
     private int type = -1;
-    private Hashtable sets;
-    private Hashtable calibrations;
-
-    // layer state
-    private LayerState layer;
-    private LayerState defaultLayer;
+    private Slice[] slices;
+    private Calibration calibration;
 
     // I/O state
     private boolean ready = true;
     private Object lock = new Object();
 
     public Map(String path, StateListener listener) {
+        this(path, null, listener);
+    }
+
+    public Map(String path, String name, StateListener listener) {
         this.path = path;
+        this.name = name;
         this.listener = listener;
-        this.sets = new Hashtable();
-        this.calibrations = new Hashtable();
-        this.layer = new LayerState();
+        this.slices = new Slice[0];
     }
 
     public String getPath() {
         return path;
     }
 
+    public String getName() {
+        return name;
+    }
+
     public int getWidth() {
-        return layer.calibration.getWidth();
+        return calibration.getWidth();
     }
 
     public int getHeight() {
-        return layer.calibration.getHeight();
+        return calibration.getHeight();
     }
 
     public QualifiedCoordinates transform(Position p) {
-        return layer.calibration.transform(p);
+        return calibration.transform(p);
     }
 
     public Position transform(QualifiedCoordinates qc) {
-        return layer.calibration.transform(qc, proximitePosition(qc));
+        return calibration.transform(qc);
     }
 
-    public Enumeration getLayers() {
-        return calibrations.keys();
-    }
-
-    public boolean changeLayer(String name) {
-        if (log.isEnabled()) log.debug("change layer from " + layer.name + " to " + name);
-
-        // detect no-change
-        if (name.equals(layer.name)) {
-            return false;
+    /**
+     * Disposes map resources - slices images.
+     */
+    public void dispose() {
+        for (int N = slices.length, i = 0; i < N; i++) {
+            if (log.isEnabled()) log.debug("null image for slice " + slices[i]);
+            slices[i].setImage(null);
         }
-
-        // detect change to default layer
-        if ("set/".equals(name)) {
-            layer = defaultLayer;
-        } else {
-            // new layer
-            LayerState newLayer = new LayerState();
-            newLayer.name = name;
-//            newLayer.calibration = defaultLayer.calibration.resize(0.50F);
-            newLayer.calibration = (Calibration) calibrations.get(name);
-            loader.doFinal(newLayer);
-            newLayer.doFinal();
-
-            // dispose current layer
-            layer.dispose();
-
-            // set new layer
-            layer = newLayer;
-        }
-
-        return true;
     }
 
     /**
@@ -133,17 +112,18 @@ public final class Map {
     public void close() {
         if (log.isEnabled()) log.info("close map");
 
-        // release layer resources
-        layer.dispose();
+        // release map resources
+        dispose();
 
         // destroy loader
         if (loader != null) {
             try {
                 loader.destroy();
                 if (log.isEnabled()) log.debug("loader destroyed");
-                loader = null;
             } catch (IOException e) {
                 if (log.isEnabled()) log.warn("failed to destroy loader");
+            } finally {
+                loader = null;
             }
         }
 
@@ -158,7 +138,6 @@ public final class Map {
      * @return slice
      */
     public Slice getSlice(int x, int y) {
-        Slice[] slices = layer.slices;
         for (int N = slices.length, i = 0; i < N; i++) {
             Slice slice = slices[i];
             if (slice.isWithin(x, y)) {
@@ -169,13 +148,8 @@ public final class Map {
         return null;
     }
 
-    // TODO optimize access to range
     public boolean isWithin(QualifiedCoordinates coordinates) {
-        double lat = coordinates.getLat();
-        double lon = coordinates.getLon();
-        QualifiedCoordinates[] range = layer.range;
-        return (lat <= range[0].getLat() && lat >= range[3].getLat())
-                && (lon >= range[0].getLon() && lon <= range[3].getLon());
+        return calibration.isWithin(coordinates);
     }
 
     /**
@@ -302,18 +276,15 @@ public final class Map {
             if (log.isEnabled()) log.debug("map opened");
 
             // check map for consistency
-            if (layer.calibration == null) {
+            if (calibration == null) {
                 throw new InvalidMapException("Map calibration info missing");
             }
-            if (layer.slices.length == 0) {
+            if (slices.length == 0) {
                 throw new InvalidMapException("Empty map - no slices");
             }
 
-            // prepare layer
-            layer.doFinal();
-
-            // log
-            if (log.isEnabled()) log.info("map range is "  + layer.range[0] + "(" + layer.range[0].getLat() + "," + layer.range[0].getLon() + ") - " + layer.range[1] + "(" + layer.range[3].getLat() + "," + layer.range[3].getLon() + ")");
+            // finalize map preparation
+            doFinal();
 
         } catch (Throwable t) {
             return t;
@@ -322,48 +293,28 @@ public final class Map {
         return null;
     }
 
-
     /**
      * Creates default map from embedded resources.
      */
     public static Map defaultMap(StateListener listener) throws IOException {
         Map map = new Map("", listener);
-        InputStream in = Map.class.getResourceAsStream("/resources/world.map");
         map.type = TYPE_BEST;
-        map.layer.calibration = new Calibration.Ozi(loadTextContent(in), "/resources/world.map");
+        InputStream in = Map.class.getResourceAsStream("/resources/world.map");
+        map.calibration = new Calibration.Ozi(loadTextContent(in), "/resources/world.map");
         in.close();
         Slice slice = new Slice(new Calibration.Best("/resources/world_0_0.png"));
-        slice.setImage(Image.createImage("/resources/world_0_0.png"));
-        slice.absolutizePosition(map.layer.calibration);
-        map.layer.slices = new Slice[] { slice };
-        ((Calibration.Best) slice.getCalibration()).fixDimension(map.layer.calibration, map.layer.slices);
+        in = Map.class.getResourceAsStream("/resources/world_0_0.png");
+        slice.setImage(Image.createImage(in));
+        in.close();
+        map.slices = new Slice[]{ slice };
+        slice.doFinal(map.calibration);
+        slice.doFinal(map.calibration, map.slices);
         slice.precalculate();
-        map.layer.doFinal();
+        map.doFinal();
 
         if (log.isEnabled()) log.debug("default map slice ready " + slice);
 
         return map;
-    }
-
-    /**
-     * Calculates proximite position for given coordinates.
-     */
-    private Calibration.ProximitePosition proximitePosition(QualifiedCoordinates coordinates) {
-        QualifiedCoordinates leftTopQc = layer.range[0];
-
-        double dlon = coordinates.getLon() - leftTopQc.getLon();
-        double dlat = coordinates.getLat() - leftTopQc.getLat();
-
-        Double dx = new Double(dlon / layer.xScale);
-        Double dy = new Double(dlat / layer.yScale);
-
-        int intDx = dx.intValue();
-        int intDy = dy.intValue();
-
-        int x = 0 + intDx;
-        int y = 0 - intDy;
-
-        return new Calibration.ProximitePosition(x, y);
     }
 
     /**
@@ -404,10 +355,10 @@ public final class Map {
      * Loads slice from map. Expects file connection opened.
      */
     private void loadSlice(Slice slice) throws IOException {
-        if (log.isEnabled()) log.debug("Loading slice " + slice.getCalibration().getPath() + "...");
+        if (log.isEnabled()) log.debug("Loading slice " + slice.getURL() + "...");
 
         // notify
-        notifyListener(EVENT_LOADING_CHANGED, "Loading " + slice.getCalibration().getPath() + "...", null);
+        notifyListener(EVENT_LOADING_CHANGED, "Loading " + slice.getURL() + "...", null);
 
         IOException exception = null;
         OutOfMemoryError error = null;
@@ -420,21 +371,21 @@ public final class Map {
 
             // got image?
             if (slice.getImage() == null) {
-                throw new InvalidMapException("No image " + slice.getCalibration().getPath());
+                throw new InvalidMapException("No image " + slice.getURL());
             }
 
             // log
-            if (log.isEnabled()) log.debug("image loaded for slice " + slice.getCalibration().getPath());
+            if (log.isEnabled()) log.debug("image loaded for slice " + slice.getURL());
 
         } catch (IOException e) {
             // log
-            if (log.isEnabled()) log.error("image loading failed for slice " + slice.getCalibration().getPath(), e);
+            if (log.isEnabled()) log.error("image loading failed for slice " + slice.getURL(), e);
 
             throwable = exception = e;
 
         } catch (OutOfMemoryError e) {
             // log
-            if (log.isEnabled()) log.error("image loading failed for slice " + slice.getCalibration().getPath(), e);
+            if (log.isEnabled()) log.error("image loading failed for slice " + slice.getURL(), e);
 
             throwable = error = e;
         }
@@ -473,7 +424,7 @@ public final class Map {
         }).start();
     }
 
-    private static String loadTextContent(InputStream stream) throws IOException {
+    static String loadTextContent(InputStream stream) throws IOException {
         InputStreamReader reader = new InputStreamReader(stream);
         char[] buffer = new char[TEXT_FILE_BUFFER_SIZE];
         StringBuffer sb = new StringBuffer();
@@ -486,73 +437,27 @@ public final class Map {
         return sb.toString();
     }
 
-    /*
-     * Layer state.
+    /**
+     * Finalizes map initialization.
      */
-
-    private static class LayerState {
-        public String name;
-        public Slice[] slices;
-        public Calibration calibration;
-        public QualifiedCoordinates[] range;
-        public double xScale, yScale;
-
-        public LayerState() {
-            this.slices = new Slice[0];
+    public void doFinal() {
+        // absolutize slices position
+        for (int N = slices.length, i = 0; i < N; i++) {
+            slices[i].doFinal(calibration);
         }
 
-        /**
-         * Disposes layer resources - slices images.
-         */
-        public void dispose() {
-            for (int N = slices.length, i = 0; i < N; i++) {
-                if (log.isEnabled()) log.debug("null image for slice " + slices[i]);
-                slices[i].setImage(null);
-            }
-        }
+        // finalize slices creation
+        for (int N = slices.length, i = 0; i < N; i++) {
+            Slice slice = slices[i];
 
-        /**
-         * Finalizes layer initialization.
-         */
-        public void doFinal() {
-            // absolutize slices position
-            absolutizePositions();
+            // fix slice dimension for filename-encoded positions
+            slice.doFinal(calibration, slices);
 
-            // finalize slices creation
-            prepareSlices();
+            // precalculate slice range in pixel coordinates
+            slice.precalculate();
 
-            // compure grid and range
-            calibration.computeGrid();
-            range = new QualifiedCoordinates[4];
-            range[0] = calibration.transform(new Position(0, 0));
-            range[1] = calibration.transform(new Position(0, calibration.getWidth()));
-            range[2] = calibration.transform(new Position(calibration.getHeight(), 0));
-            range[3] = calibration.transform(new Position(calibration.getWidth(), calibration.getHeight()));
-            xScale = Math.abs((range[3].getLon() - range[0].getLon()) / calibration.getWidth());
-            yScale = Math.abs((range[3].getLat() - range[0].getLat()) / calibration.getHeight());
-        }
-
-        private void absolutizePositions() {
-            for (int N = slices.length, i = 0; i < N; i++) {
-                slices[i].absolutizePosition(calibration);
-            }
-        }
-
-        private void prepareSlices() {
-            for (int N = slices.length, i = 0; i < N; i++) {
-                Slice slice = slices[i];
-
-                // fix slice dimension for filename-encoded positions
-                if (slice.getCalibration() instanceof Calibration.Best) {
-                    ((Calibration.Best) slice.getCalibration()).fixDimension(calibration, slices);
-                }
-
-                // precalculate slice range (pixel coordinates)
-                slice.precalculate();
-
-                // debug
-                if (log.isEnabled()) log.debug("ready slice " + slices[i]);
-            }
+            // debug
+            if (log.isEnabled()) log.debug("ready slice " + slices[i]);
         }
     }
 
@@ -561,6 +466,7 @@ public final class Map {
      */
 
     private abstract class Loader extends Thread {
+        private Vector collection;
         protected Exception exception;
 
         public abstract void init() throws IOException;
@@ -573,30 +479,19 @@ public final class Map {
             }
         }
 
-        protected Vector getCollection(String collectionName) {
-            Vector collection = (Vector) sets.get(collectionName);
+        protected Vector getCollection() {
             if (collection == null) {
                 collection = new Vector();
-                sets.put(collectionName, collection);
             }
 
             return collection;
         }
 
-        protected void doFinal(LayerState layer) {
-            if (layer.name == null) { // default layer upon start
-                defaultLayer = layer;
-                switch (Map.this.type) {
-                    case TYPE_BEST:
-                        layer.name = "set/";
-                        break;
-                    default:
-                        layer.name = "pictures/";
-                }
+        protected void doFinal() {
+            if (collection != null) {
+                slices = new Slice[collection.size()];
+                collection.copyInto(slices);
             }
-            Vector collection = getCollection(layer.name);
-            layer.slices = new Slice[collection.size()];
-            collection.copyInto(layer.slices);
         }
     }
 
@@ -627,52 +522,22 @@ public final class Map {
                 while (entry != null) {
                     if (!entry.isDirectory()) {
                         String entryName = entry.getName();
-                        if (entryName.endsWith(".png")) { // slice
-                            int indexOf = entryName.indexOf("/");
-                            if (indexOf > -1) {
-                                String collectionName = entryName.substring(0, indexOf + 1);
-                                Calibration calibration = new Calibration.Best(entryName);
-                                getCollection(collectionName).addElement(new Slice(calibration));
-                            } else {
-                                if (log.isEnabled()) log.warn("image file " + entryName + " ignored");
-                            }
+                        if (entryName.endsWith(".png") && (entryName.startsWith("set/") || entryName.startsWith("pictures/"))) { // slice
+                            getCollection().addElement(new Slice(new Calibration.Best(entryName)));
                         } else {
-                            int indexOf = entryName.indexOf("/");
-                            String collectionName = null;
-                            if (indexOf > -1) {
-                                collectionName = entryName.substring(0, indexOf + 1);
-                            }
-                            if (entryName.endsWith(".gmi")) {
-                                Calibration calibration = new Calibration.GMI(loadTextContent(tar), entryName);
-                                if (indexOf == -1) { // default layer calibration
-                                    Map.this.layer.calibration = calibration;
+                            if (entryName.indexOf("/") == -1) {
+                                if (entryName.endsWith(".gmi")) {
+                                    Map.this.calibration = new Calibration.GMI(loadTextContent(tar), entryName);
                                     Map.this.type = TYPE_BEST;
-                                } else {
-                                    calibrations.put(collectionName, calibration);
-                                }
-                            } else if (entryName.endsWith(".map")) {
-                                Calibration calibration = new Calibration.Ozi(loadTextContent(tar), entryName);
-                                if (indexOf == -1) { // default layer calibration
-                                    Map.this.layer.calibration = calibration;
+                                } else if (entryName.endsWith(".map")) {
+                                    Map.this.calibration = new Calibration.Ozi(loadTextContent(tar), entryName);
                                     Map.this.type = TYPE_BEST;
-                                } else {
-                                    calibrations.put(collectionName, calibration);
-                                }
-                            } else if (entryName.endsWith(".xml")) {
-                                Calibration calibration = new Calibration.XML(loadTextContent(tar), entryName);
-                                if (indexOf == -1) { // default layer calibration
-                                    Map.this.layer.calibration = calibration;
+                                } else if (entryName.endsWith(".xml")) {
+                                    Map.this.calibration = new Calibration.XML(loadTextContent(tar), entryName);
                                     Map.this.type = TYPE_GPSKA;
-                                } else {
-                                    calibrations.put(collectionName, calibration);
-                                }
-                            } else if (entryName.endsWith(".j2n")) {
-                                Calibration calibration = new Calibration.J2N(loadTextContent(tar), entryName);
-                                if (indexOf == -1) { // default layer calibration
-                                    Map.this.layer.calibration = calibration;
+                                } else if (entryName.endsWith(".j2n")) {
+                                    Map.this.calibration = new Calibration.J2N(loadTextContent(tar), entryName);
                                     Map.this.type = TYPE_J2N;
-                                } else {
-                                    calibrations.put(collectionName, calibration);
                                 }
                             }
                         }
@@ -690,7 +555,7 @@ public final class Map {
                 }
             }
 
-            doFinal(layer);
+            this.doFinal();
         }
 
         public void loadSlice(Slice slice) throws IOException {
@@ -699,7 +564,7 @@ public final class Map {
                 tar = new TarInputStream(new BufferedInputStream(fileConnection.openInputStream(), LARGE_BUFFER_SIZE));
                 TarEntry entry = tar.getNextEntry();
                 while (entry != null) {
-                    if (entry.getName().endsWith(slice.getCalibration().getPath())) {
+                    if (entry.getName().endsWith(slice.getURL())) {
                         slice.setImage(Image.createImage(tar));
                         break;
                     }
@@ -738,21 +603,24 @@ public final class Map {
             InputStream in = null;
 
             try {
+                String setDir = "set/";
+
                 // path points to calibration file
                 in = new BufferedInputStream(Connector.openInputStream(path), SMALL_BUFFER_SIZE);
                 String content = loadTextContent(in);
                 if (path.endsWith(".gmi")) {
-                    Map.this.layer.calibration = new Calibration.GMI(content, path);
+                    Map.this.calibration = new Calibration.GMI(content, path);
                     Map.this.type = TYPE_BEST;
                 } else if (path.endsWith(".map")) {
-                    Map.this.layer.calibration = new Calibration.Ozi(content, path);
+                    Map.this.calibration = new Calibration.Ozi(content, path);
                     Map.this.type = TYPE_BEST;
                 } else if (path.endsWith(".xml")) {
-                    Map.this.layer.calibration = new Calibration.XML(content, path);
+                    Map.this.calibration = new Calibration.XML(content, path);
                     Map.this.type = TYPE_GPSKA;
                 } else if (path.endsWith(".j2n")) {
-                    Map.this.layer.calibration = new Calibration.J2N(content, path);
+                    Map.this.calibration = new Calibration.J2N(content, path);
                     Map.this.type = TYPE_J2N;
+                    setDir = "pictures/";
                 }
                 in.close();
                 in = null;
@@ -761,57 +629,26 @@ public final class Map {
                 fc = (FileConnection) Connector.open(dir, Connector.READ);
                 Enumeration children = fc.list("*", false);
 
-                // next, look for slices in sets
+                // next, look for slices in the set
                 while (children.hasMoreElements()) {
-                    String child = (String) children.nextElement();
-                    if (child.endsWith("/")) {
+                    String child = children.nextElement().toString();
+                    if (child.startsWith(setDir)) {
                         // debug
                         if (log.isEnabled()) log.debug("new set: " + child);
-
-                        // get collection
-                        Vector collection = getCollection(child);
 
                         // set file connection
                         fc.setFileConnection(child);
 
                         // iterate over set
-                        for (Enumeration e = fc.list("*", false); e.hasMoreElements(); ) {
-                            String entry = ((String) e.nextElement());
-                            if (entry.endsWith(".png")) {
-                                Calibration calibration = new Calibration.Best(child + entry);
-                                collection.addElement(new Slice(calibration));
-                            } else {
-                                InputStream cin = null;
-                                Calibration calibration = null;
-                                try {
-                                    cin = new BufferedInputStream(Connector.openInputStream(fc.getURL() + entry), SMALL_BUFFER_SIZE);
-                                    content = loadTextContent(cin);
-                                    if (entry.endsWith(".gmi")) {
-                                        calibration = new Calibration.GMI(content,child + entry);
-                                    } else if (entry.endsWith(".map")) {
-                                        calibration = new Calibration.Ozi(content,child + entry);
-                                    } else if (entry.endsWith(".j2n")) {
-                                        calibration = new Calibration.J2N(content,child + entry);
-                                    } else if (entry.endsWith(".xml")) {
-                                        calibration = new Calibration.XML(content,child + entry);
-                                    }
-                                } finally {
-                                    if (cin != null) {
-                                        try {
-                                            cin.close();
-                                        } catch (IOException ex) {
-                                            // ignore
-                                        }
-                                    }
-                                }
-                                if (calibration != null) {
-                                    calibrations.put(child, calibration);
-                                }
-                            }
+                        for (Enumeration e = fc.list("*.png", false); e.hasMoreElements(); ) {
+                            String entry = e.nextElement().toString();
+                            getCollection().addElement(new Slice(new Calibration.Best(child + entry)));
                         }
 
                         // go back to map root dir
                         fc.setFileConnection("..");
+
+                        break; // only one set per map
                     }
                 }
             } catch (Exception e) {
@@ -831,11 +668,11 @@ public final class Map {
                 }
             }
 
-            doFinal(layer);
+            this.doFinal();
         }
 
         public void loadSlice(Slice slice) throws IOException {
-            String slicePath = dir + slice.getCalibration().getPath();
+            String slicePath = dir + slice.getURL();
             if (log.isEnabled()) log.debug("load slice image from " + slicePath);
 
             InputStream in = null;

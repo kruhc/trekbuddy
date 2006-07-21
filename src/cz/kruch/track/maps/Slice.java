@@ -8,21 +8,17 @@ import cz.kruch.track.ui.Position;
 import javax.microedition.lcdui.Image;
 
 public final class Slice {
-    private Calibration calibration;
+    private Calibration.Best calibration;
     private Image image;
 
     // slice absolute position
     private Position position;
 
-    // slice range (absolute) - for better performance of isWithinh
+    // slice range (absolute) - for better performance of isWithin
     private int minx, maxx, miny, maxy;
 
-    public Slice(Calibration calibration) {
+    public Slice(Calibration.Best calibration) {
         this.calibration = calibration;
-    }
-
-    public Calibration getCalibration() {
-        return calibration;
     }
 
     public Image getImage() {
@@ -41,8 +37,16 @@ public final class Slice {
         return calibration.getHeight();
     }
 
-    public void absolutizePosition(Calibration parent) {
+    public String getURL() {
+        return calibration.getPath();
+    }
+
+    public void doFinal(Calibration parent) {
         position = calibration.computeAbsolutePosition(parent);
+    }
+
+    public void doFinal(Calibration parent, Slice[] slices) {
+        calibration.fixDimension(parent, slices);
     }
 
     public void precalculate() {
@@ -62,7 +66,7 @@ public final class Slice {
 
     // debug
     public String toString() {
-        return "Slice " + getCalibration().getPath() + " pos " + position + " " + getWidth() + "x" + getHeight() + " " + image;
+        return "Slice " + getURL() + " pos " + position + " " + getWidth() + "x" + getHeight() + " " + image;
     }
     // ~debug
 }

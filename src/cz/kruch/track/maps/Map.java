@@ -37,8 +37,8 @@ public final class Map {
     private static final int EVENT_LOADING_CHANGED  = 2;
 
     static final int TEXT_FILE_BUFFER_SIZE = 512; // for map calibration files content
-    static final int SMALL_BUFFER_SIZE = 512 * 2; // for map calibration files
-    static final int LARGE_BUFFER_SIZE = 512 * 8; // for map image files
+    static final int SMALL_BUFFER_SIZE = 512 * 2; // for map calibration files 1kB
+    static final int LARGE_BUFFER_SIZE = 512 * 16; // for map image files 8 kB
 
     private static final int TYPE_GMI        = 0;
     private static final int TYPE_GPSKA      = 1;

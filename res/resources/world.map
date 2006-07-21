@@ -1,0 +1,6 @@
+Point01,xy,0,0,in,deg,90,0,N,180,0,W,grid,,,,N
+Point02,xy,639,0,in,deg,90,0,N,180,0,E,grid,,,,N
+Point03,xy,0,319,in,deg,90,0,S,180,0,W,grid,,,,N
+Point04,xy,639,319,in,deg,90,0,S,180,0,E,grid,,,,N
+Point05,xy,320,160,in,deg,0,0,N,0,0,E,grid,,,,N
+IWH,Map Image Width/Height,640,320

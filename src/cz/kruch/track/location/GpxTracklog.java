@@ -7,10 +7,10 @@ import api.location.QualifiedCoordinates;
 import api.location.Location;
 
 import java.io.IOException;
-import java.io.OutputStreamWriter;
 import java.io.OutputStream;
 import java.util.Date;
 import java.util.Calendar;
+import java.util.TimeZone;
 
 import org.kxml2.io.KXmlSerializer;
 
@@ -26,16 +26,18 @@ public final class GpxTracklog extends Thread {
     private static final String DEFAULT_NAMESPACE   = null;
 
     private static final int    MIN_DT = 5 * 60000;         // 5 min
-    private static final double MIN_DL_WALK = 0.00027D;     // cca 25 m
-    private static final double MIN_DL_BIKE = 0.00110D;     // cca 100 m
-    private static final double MIN_DL_CAR  = 0.00270D;     // cca 250 m
-    private static final float  MIN_SPEED_SLOW = 2F;        // 2 * 1.852 km/h
-    private static final float  MIN_SPEED_FAST = 15F;       // 15 * 1.852 km/h
-    private static final float  MIN_COURSE_DIVERSION = 15F; // 15 degrees
+    private static final double MIN_DL_WALK = 0.00054D;     // cca 50 m
+    private static final double MIN_DL_BIKE = 0.00270D;     // cca 250 m
+    private static final double MIN_DL_CAR  = 0.00540D;     // cca 500 m
+    private static final float  MIN_SPEED_WALK = 2F;        // 2 * 1.852 km/h
+    private static final float  MIN_SPEED_BIKE = 10F;       // 10 * 1.852 km/h
+    private static final float  MIN_SPEED_CAR  = 20F;       // 20 * 1.852 km/h
+    private static final float  MIN_COURSE_DIVERSION      = 15F; // 15 degrees
+    private static final float  MIN_COURSE_DIVERSION_FAST = 10F; // 10 degrees
 
-    private static final double ONE_KNOT_DISTANCE_IN_DEGREES = MIN_DL_WALK * 1852D / 25D;
+    private static final double ONE_KNOT_DISTANCE_IN_DEGREES = 0.016637157;
 
-    private static final Calendar CALENDAR = Calendar.getInstance();
+    private static final Calendar CALENDAR = Calendar.getInstance(TimeZone.getTimeZone("GMT"));
 
     private Callback callback;
     private String creator;
@@ -223,7 +225,7 @@ public final class GpxTracklog extends Thread {
                     double xspeed = (r / ONE_KNOT_DISTANCE_IN_DEGREES) / ((double) (timestamp - lastTimestamp) / 3600000);
 
                     double speedDiff = Math.abs(xspeed - speed) / speed;
-                    if (speedDiff > 0.666D) {
+                    if (speedDiff > 0.50D) {
                         dance = true;
                     }
                 }
@@ -251,16 +253,20 @@ public final class GpxTracklog extends Thread {
                     float speed = location.getSpeed();
 
                     // depending on speed, find out whether log or not
-                    if (speed < MIN_SPEED_SLOW) { /* no move or hiking speed */
+                    if (speed < MIN_SPEED_WALK) { /* no move or hiking speed */
                         boolean bPosDiff = r > MIN_DL_WALK;
                         bLog = bPosDiff;
-                    } else if (speed < MIN_SPEED_FAST) { /* bike speed */
+                    } else if (speed < MIN_SPEED_BIKE) { /* bike speed */
                         boolean bPosDiff = r > MIN_DL_BIKE;
                         boolean bCourseDiff = location.getCourse() > -1F && refLocation.getCourse() > -1F ? Math.abs(location.getCourse() - refLocation.getCourse()) > MIN_COURSE_DIVERSION : false;
                         bLog = bPosDiff || bCourseDiff;
-                    } else { /* car speed */
+                    } else if (speed < MIN_SPEED_CAR) {
                         boolean bPosDiff = r > MIN_DL_CAR;
                         boolean bCourseDiff = location.getCourse() > -1F && refLocation.getCourse() > -1F ? Math.abs(location.getCourse() - refLocation.getCourse()) > MIN_COURSE_DIVERSION : false;
+                        bLog = bPosDiff || bCourseDiff;
+                    } else {
+                        boolean bPosDiff = r > 2 * MIN_DL_CAR;
+                        boolean bCourseDiff = location.getCourse() > -1F && refLocation.getCourse() > -1F ? Math.abs(location.getCourse() - refLocation.getCourse()) > MIN_COURSE_DIVERSION_FAST : false;
                         bLog = bPosDiff || bCourseDiff;
                     }
                 } else {

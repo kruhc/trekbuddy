@@ -18,10 +18,15 @@ import cz.kruch.track.util.NmeaParser;
 import cz.kruch.track.util.Logger;
 import cz.kruch.track.configuration.Config;
 import cz.kruch.track.ui.FileBrowser;
+import cz.kruch.track.ui.Desktop;
 import cz.kruch.track.event.Callback;
+import cz.kruch.track.AssertionFailedException;
 import cz.kruch.j2se.io.BufferedInputStream;
 
-public class SimulatorLocationProvider extends StreamReadingLocationProvider implements Runnable {
+public class SimulatorLocationProvider
+        extends StreamReadingLocationProvider
+        implements Runnable, Callback {
+
     private static final Logger log = new Logger("Simulator");
 
     private Display display;
@@ -55,19 +60,7 @@ public class SimulatorLocationProvider extends StreamReadingLocationProvider imp
     }
 
     public int start() throws LocationException {
-        (new FileBrowser("PlaybackSelection", display, new Callback() {
-            public void invoke(Object result, Throwable throwable) {
-                if (log.isEnabled()) log.debug("playback selection: " + result);
-                if (result != null) {
-                    go = true;
-                    url = (String) result;
-                    thread = new Thread(SimulatorLocationProvider.this);
-                    thread.start();
-                } else {
-                    notifyListener(LocationProvider.OUT_OF_SERVICE);
-                }
-            }
-        })).show();
+        (new FileBrowser("PlaybackSelection", display, this)).show();
 
         return LocationProvider.TEMPORARILY_UNAVAILABLE;
     }
@@ -82,6 +75,19 @@ public class SimulatorLocationProvider extends StreamReadingLocationProvider imp
             } catch (InterruptedException e) {
             }
             thread = null;
+        }
+    }
+
+    public void invoke(Object result, Throwable throwable) {
+        if (log.isEnabled()) log.debug("playback selection: " + result);
+
+        if (result != null) {
+            go = true;
+            url = (String) result;
+            thread = new Thread(this);
+            thread.start();
+        } else {
+            notifyListener(LocationProvider.OUT_OF_SERVICE);
         }
     }
 
@@ -101,44 +107,31 @@ public class SimulatorLocationProvider extends StreamReadingLocationProvider imp
 
             for (; go ;) {
 
-                // read GGA
-                String ggaSentence = nextSentence(in, HEADER_GGA);
-                if (ggaSentence == null) {
-                    if (log.isEnabled()) log.debug("end-of-file");
-                    break; // end-of-file
-                }
+                Location location = null;
 
-                // read RMC
-                String rmcSentence = nextSentence(in, HEADER_RMC);
-                if (rmcSentence == null) {
-                    if (log.isEnabled()) log.debug("end-of-file");
-                    break; // end-of-file
-                }
-
-                // parse GGA
-                NmeaParser.Record rec = null;
+                // get next location
                 try {
-                    rec = NmeaParser.parseGGA(ggaSentence.toCharArray());
+                    location = nextLocation(in);
+                } catch (AssertionFailedException e) {
+                    Desktop.showError(display, e.getMessage(), null, null);
                 } catch (Exception e) {
-                    if (log.isEnabled()) log.warn("corrupted record: " + ggaSentence + "\n" + e.toString());
+                    if (log.isEnabled()) log.warn("Failed to get location.", e);
+
+                    // record exception
+                    if (e instanceof InterruptedException) {
+                        // probably stop request
+                    } else {
+                        // record exception
+                        setException(e instanceof LocationException ? (LocationException) e : new LocationException(e));
+                    }
+
+                    // ignore
                     continue;
                 }
 
-                // prepare instance of location
-                QualifiedCoordinates coordinates = new QualifiedCoordinates(rec.lat, rec.lon, rec.altitude);
-                Location location = new Location(coordinates, rec.timestamp, rec.fix, rec.sat, rec.hdop);
-
-                // update location with angle and speed, if possible
-                try {
-                    NmeaParser.Record rmc = NmeaParser.parseRMC(rmcSentence.toCharArray());
-                    if (rmc.timestamp == rec.timestamp) {
-                        location.setCourse(rmc.angle);
-                        location.setSpeed(rmc.speed);
-                    } else {
-                        if (log.isEnabled()) log.warn("GGA-RMC timestamp mismatch: " + rmc.timestamp + "!=" + rec.timestamp);
-                    }
-                } catch (LocationException e) {
-                    if (log.isEnabled()) log.debug("corrupted RMC: " + e.toString());
+                // end of data?
+                if (location == null) {
+                    break;
                 }
 
                 // send the location

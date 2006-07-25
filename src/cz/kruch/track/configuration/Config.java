@@ -26,8 +26,8 @@ public abstract class Config {
     public static final String TRACKLOG_FORMAT_GPX          = "GPX 1.1";
 
     public static final String[] TRACKLOGS_FORMAT = new String[] {
-        TRACKLOG_FORMAT_NMEA,
-        TRACKLOG_FORMAT_GPX
+        TRACKLOG_FORMAT_GPX,
+        TRACKLOG_FORMAT_NMEA
     };
 
     private static Config instance = null;
@@ -54,6 +54,10 @@ public abstract class Config {
     // group
     protected boolean fullscreen = false;
     protected boolean osdExtended = true;
+    protected boolean noSounds = false;
+
+    // group
+    protected int timeZone = 0;
 
     protected Config() {
     }
@@ -78,9 +82,9 @@ public abstract class Config {
 
     public String[] getLocationProviders() {
         Vector list = new Vector();
-        list.addElement(LOCATION_PROVIDER_SIMULATOR);
         if (TrackingMIDlet.isJsr82()) list.addElement(LOCATION_PROVIDER_JSR82);
         if (TrackingMIDlet.isJsr179()) list.addElement(LOCATION_PROVIDER_JSR179);
+        list.addElement(LOCATION_PROVIDER_SIMULATOR);
         String[] result = new String[list.size()];
         list.copyInto(result);
 
@@ -151,6 +155,22 @@ public abstract class Config {
         this.osdExtended = osdExtended;
     }
 
+    public boolean isNoSounds() {
+        return noSounds;
+    }
+
+    public void setNoSounds(boolean noSounds) {
+        this.noSounds = noSounds;
+    }
+
+    public int getTimeZone() {
+        return timeZone;
+    }
+
+    public void setTimeZone(int timeZone) {
+        this.timeZone = timeZone;
+    }
+
     private static class DefaultConfig extends Config {
         public DefaultConfig() {
         }
@@ -164,7 +184,7 @@ public abstract class Config {
     }
 
     private static class RMSConfig extends Config {
-        private static final String NAME = "config_0711";
+        private static final String NAME = "config_0803";
 
         private boolean initialized = false;
 
@@ -193,6 +213,8 @@ public abstract class Config {
                                 simulatorDelay = din.readInt();
                                 fullscreen = din.readBoolean();
                                 osdExtended = din.readBoolean();
+                                noSounds = din.readBoolean();
+                                timeZone = din.readInt();
                                 din.close();
                                 if (log.isEnabled()) log.info("configuration read");
                             } break;
@@ -242,6 +264,8 @@ public abstract class Config {
                 dout.writeInt(simulatorDelay);
                 dout.writeBoolean(fullscreen);
                 dout.writeBoolean(osdExtended);
+                dout.writeBoolean(noSounds);
+                dout.writeInt(timeZone);
                 dout.close();
                 byte[] bytes = data.toByteArray();
                 if (rs.getNumRecords() > 0) {

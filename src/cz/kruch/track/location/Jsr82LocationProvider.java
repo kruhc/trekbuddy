@@ -11,7 +11,9 @@ import api.location.QualifiedCoordinates;
 import cz.kruch.track.configuration.Config;
 import cz.kruch.track.ui.Desktop;
 import cz.kruch.track.util.NmeaParser;
+import cz.kruch.track.util.Logger;
 import cz.kruch.track.event.Callback;
+import cz.kruch.track.AssertionFailedException;
 import cz.kruch.j2se.io.BufferedInputStream;
 import cz.kruch.j2se.io.BufferedOutputStream;
 
@@ -32,6 +34,8 @@ import java.util.Timer;
 import java.util.TimerTask;
 
 public class Jsr82LocationProvider extends StreamReadingLocationProvider implements Runnable {
+    private static final Logger log = new Logger("Jsr82LocationProvider");
+
     private static final int WATCHER_PERIOD = 60 * 1000;
 
     private Display display;
@@ -209,52 +213,42 @@ public class Jsr82LocationProvider extends StreamReadingLocationProvider impleme
             // read NMEA until error or stop request
             for (; go ;) {
 
-                // read GGA
-                String ggaSentence = nextSentence(in, HEADER_GGA);
-                if (ggaSentence == null) {
-                    break;
-                }
+                Location location = null;
 
-                // parse GGA
-                NmeaParser.Record gga;
+                // get next location
                 try {
-                    gga = NmeaParser.parseGGA(ggaSentence.toCharArray());
-                } catch (Throwable t) {
+                    location = nextLocation(in);
+                } catch (AssertionFailedException e) {
+                    Desktop.showError(display, e.getMessage(), null, null);
+                } catch (Exception e) {
+                    if (log.isEnabled()) log.warn("Failed to get location.", e);
+
+                    // record exception
+                    if (e instanceof InterruptedException) {
+                        // probably stop request
+                    } else {
+                        // record exception
+                        setException(e instanceof LocationException ? (LocationException) e : new LocationException(e));
+                    }
+
                     // ignore
                     continue;
                 }
 
-                // create location instance
-                Location location = new Location(new QualifiedCoordinates(gga.lat, gga.lon, gga.altitude),
-                                                 gga.timestamp, gga.fix, gga.sat, gga.hdop);
+                // end of data?
+                if (location == null) {
+                    break;
+                }
 
-                boolean notify = false;
+                boolean stateChange = false;
 
                 // is position valid?
-                if (gga.fix > 0) {
-
-                    // read RMC
-                    String rmcSentence = nextSentence(in, HEADER_RMC);
-                    if (rmcSentence == null) {
-                        break;
-                    }
-
-                    // parse RMC
-                    try {
-                        NmeaParser.Record rmc = NmeaParser.parseRMC(rmcSentence.toCharArray());
-                        if (rmc.timestamp == gga.timestamp) {
-                            location.setCourse(rmc.angle);
-                            location.setSpeed(rmc.speed);
-                        }
-                    } catch (Throwable t) {
-                        // ignore
-                    }
-
+                if (location.getFix() > 0) {
                     // fix state - we may be in TEMPORARILY_UNAVAILABLE state
                     synchronized (sync) {
                         if (state != LocationProvider.AVAILABLE) {
                             state = LocationProvider.AVAILABLE;
-                            notify = true;
+                            stateChange = true;
                         }
                         timestamp = System.currentTimeMillis();
                     }
@@ -262,13 +256,13 @@ public class Jsr82LocationProvider extends StreamReadingLocationProvider impleme
                     synchronized (sync) {
                         if (state != LocationProvider.TEMPORARILY_UNAVAILABLE) {
                             state = LocationProvider.TEMPORARILY_UNAVAILABLE;
-                            notify = true;
+                            stateChange = true;
                         }
                     }
                 }
 
-                // notify about state, if necessary
-                if (notify) {
+                // stateChange about state, if necessary
+                if (stateChange) {
                     notifyListener(state);
                 }
 

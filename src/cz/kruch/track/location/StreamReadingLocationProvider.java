@@ -4,10 +4,17 @@
 package cz.kruch.track.location;
 
 import api.location.LocationProvider;
+import api.location.Location;
+import api.location.QualifiedCoordinates;
+import api.location.LocationException;
 
 import java.io.InputStream;
 import java.io.IOException;
 import java.io.OutputStream;
+
+import cz.kruch.track.util.NmeaParser;
+import cz.kruch.track.ui.Desktop;
+import cz.kruch.track.AssertionFailedException;
 
 public abstract class StreamReadingLocationProvider extends LocationProvider {
     protected static final char[] HEADER_GGA = "$GPGGA".toCharArray();
@@ -21,6 +28,37 @@ public abstract class StreamReadingLocationProvider extends LocationProvider {
 
     protected void setObserver(OutputStream observer) {
         this.observer = observer;
+    }
+
+    protected Location nextLocation(InputStream in) throws IOException, LocationException {
+        // read GGA
+        String ggaSentence = nextSentence(in, HEADER_GGA);
+        if (ggaSentence == null) {
+            return null;
+        }
+
+        // read RMC
+        String rmcSentence = nextSentence(in, HEADER_RMC);
+        if (rmcSentence == null) {
+            return null;
+        }
+
+        Location location = null;
+
+        // parse GGA and RMC
+        NmeaParser.Record gga = NmeaParser.parseGGA(ggaSentence.toCharArray());
+        NmeaParser.Record rmc = NmeaParser.parseRMC(rmcSentence.toCharArray());
+        if (rmc.timestamp == gga.timestamp) {
+            long datetime = rmc.date + rmc.timestamp;
+            location = new Location(new QualifiedCoordinates(gga.lat, gga.lon, gga.altitude),
+                                    datetime, gga.fix, gga.sat, gga.hdop);
+            location.setCourse(rmc.angle);
+            location.setSpeed(rmc.speed);
+        } else {
+            throw new AssertionFailedException("Invalid NMEA flow");
+        }
+
+        return location;
     }
 
     /** @deprecated change return value */

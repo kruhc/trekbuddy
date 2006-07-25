@@ -40,6 +40,11 @@ public final class Logger {
         log(LEVEL_WARN, message);
     }
 
+    public void warn(String message, Throwable t) {
+        log(LEVEL_WARN, message);
+        log(t.toString());
+    }
+
     public void error(String message) {
         log(LEVEL_ERROR, message);
     }

@@ -31,6 +31,7 @@ public class SettingsForm extends Form implements CommandListener, ItemStateList
     private TextField fieldTracklogsDir;
     private TextField fieldSimulatorDelay;
     private ChoiceGroup choiceMisc;
+    private ChoiceGroup choiceTimezone;
 
     public SettingsForm(Display display, Callback callback) {
         super("Settings");
@@ -76,7 +77,22 @@ public class SettingsForm extends Form implements CommandListener, ItemStateList
         choiceMisc = new ChoiceGroup("Desktop", ChoiceGroup.MULTIPLE);
         choiceMisc.setSelectedIndex(choiceMisc.append("fullscreen", null), Config.getSafeInstance().isFullscreen());
         choiceMisc.setSelectedIndex(choiceMisc.append("extended OSD", null), Config.getSafeInstance().isOsdExtended());
+        choiceMisc.setSelectedIndex(choiceMisc.append("no sounds", null), Config.getSafeInstance().isNoSounds());
         append(choiceMisc);
+
+        // timezone
+        choiceTimezone = new ChoiceGroup("Timezone", ChoiceGroup.POPUP);
+        for (int i = -12; i <= 12; i++) {
+            boolean selected = Config.getSafeInstance().getTimeZone() == i;
+            if (i == 0) {
+                choiceTimezone.setSelectedIndex(choiceTimezone.append("GMT", null), selected);
+            } else if (i > 0) {
+                choiceTimezone.setSelectedIndex(choiceTimezone.append("GMT+" + Integer.toString(i), null), selected);
+            } else {
+                choiceTimezone.setSelectedIndex(choiceTimezone.append("GMT" + Integer.toString(i), null), selected);
+            }
+        }
+        append(choiceTimezone);
 
         // show current provider and tracklog specific options
         showProviderOptions(false);
@@ -104,22 +120,36 @@ public class SettingsForm extends Form implements CommandListener, ItemStateList
         boolean changed = false;
 
         if (command.getCommandType() == Command.BACK) {
-            // restore previous screen
             display.setCurrent(previous);
-        } else if (command.getCommandType() == Command.SCREEN) {
-            // "Apply", "Save"
+        } else if (command.getCommandType() == Command.SCREEN) { // "Apply", "Save"
             Config config = Config.getSafeInstance();
+            // map path
             config.setMapPath(fieldMapPath.getString());
+            // provider
             config.setLocationProvider(choiceProvider.getString(choiceProvider.getSelectedIndex()));
+            // tracklog
             config.setTracklogsOn(choiceTracklog.isSelected(0));
             config.setTracklogsFormat(choiceTracklogsFormat.getString(choiceTracklogsFormat.getSelectedIndex()));
             config.setTracklogsDir(fieldTracklogsDir.getString());
+            // provider-specific
             config.setSimulatorDelay(Integer.parseInt(fieldSimulatorDelay.getString()));
             // misc
             boolean[] misc = new boolean[choiceMisc.size()];
             choiceMisc.getSelectedFlags(misc);
             config.setFullscreen(misc[0]);
             config.setOsdExtended(misc[1]);
+            config.setNoSounds(misc[2]);
+            // timezone
+            String tz = choiceTimezone.getString(choiceTimezone.getSelectedIndex());
+            if ("GMT".equals(tz)) {
+                config.setTimeZone(0);
+            } else {
+                if (tz.charAt(3) == '-') {
+                    config.setTimeZone(Integer.parseInt(tz.substring(3)));
+                } else {
+                    config.setTimeZone(Integer.parseInt(tz.substring(4)));
+                }
+            }
 
             if ("Save".equals(command.getLabel())) {
                 try {
@@ -147,7 +177,7 @@ public class SettingsForm extends Form implements CommandListener, ItemStateList
     private void showProviderOptions(boolean soft) {
         for (int i = 0; i < size(); i++) {
             Item item = get(i);
-            if (fieldMapPath == item || choiceProvider == item || choiceMisc == item)
+            if (fieldMapPath == item || choiceProvider == item || choiceMisc == item || choiceTimezone == item)
                 continue;
             if (soft && choiceTracklog == item)
                 continue;

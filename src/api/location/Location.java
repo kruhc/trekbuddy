@@ -4,8 +4,12 @@
 package api.location;
 
 import java.util.Date;
+import java.util.Calendar;
+import java.util.TimeZone;
 
 public final class Location {
+    private static final Calendar CALENDAR = Calendar.getInstance(TimeZone.getTimeZone("GMT"));
+
     private QualifiedCoordinates coordinates;
     private long timestamp;
     private int fix;
@@ -66,13 +70,22 @@ public final class Location {
         return coordinates.toString();
     }
 
-    public String toExtendedInfo() {
+    public String toExtendedInfo(int timezone) {
         StringBuffer sb = new StringBuffer(24);
+        if (timestamp > 0) {
+            CALENDAR.setTime(new Date(timestamp + timezone * 3600000));
+            int hour = CALENDAR.get(Calendar.HOUR_OF_DAY);
+            if (hour < 10) sb.append('0');
+            sb.append(hour).append(':');
+            int min = CALENDAR.get(Calendar.MINUTE);
+            if (min < 10) sb.append('0');
+            sb.append(min).append(' ');
+        }
         if (coordinates.getAlt() > -1F) {
             sb.append(coordinates.getAlt()).append(" m ");
         }
         if (speed > -1F) {
-            sb.append((int) (new Float(speed * 1.852F)).intValue()).append(" km/h ");
+            sb.append((new Float(speed * 1.852F)).intValue()).append(" km/h ");
         }
         if (course > -1F) {
             sb.append((new Float(course)).intValue()).append(QualifiedCoordinates.SIGN).append(' ');

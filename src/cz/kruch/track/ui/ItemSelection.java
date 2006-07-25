@@ -44,6 +44,8 @@ public class ItemSelection extends List implements CommandListener {
         display.setCurrent(previous);
         if (command == List.SELECT_COMMAND) {
             callback.invoke(getString(getSelectedIndex()), null);
+        } else {
+            callback.invoke(null, null);
         }
     }
 }

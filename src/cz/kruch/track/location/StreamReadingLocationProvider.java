@@ -30,15 +30,15 @@ public abstract class StreamReadingLocationProvider extends LocationProvider {
         this.observer = observer;
     }
 
-    protected Location nextLocation(InputStream in) throws IOException, LocationException {
+    protected final Location nextLocation(InputStream in) throws IOException, LocationException {
         // read GGA
-        String ggaSentence = nextSentence(in, HEADER_GGA);
+        char[] ggaSentence = nextSentence(in, HEADER_GGA);
         if (ggaSentence == null) {
             return null;
         }
 
         // read RMC
-        String rmcSentence = nextSentence(in, HEADER_RMC);
+        char[] rmcSentence = nextSentence(in, HEADER_RMC);
         if (rmcSentence == null) {
             return null;
         }
@@ -46,8 +46,8 @@ public abstract class StreamReadingLocationProvider extends LocationProvider {
         Location location = null;
 
         // parse GGA and RMC
-        NmeaParser.Record gga = NmeaParser.parseGGA(ggaSentence.toCharArray());
-        NmeaParser.Record rmc = NmeaParser.parseRMC(rmcSentence.toCharArray());
+        NmeaParser.Record gga = NmeaParser.parseGGA(ggaSentence);
+        NmeaParser.Record rmc = NmeaParser.parseRMC(rmcSentence);
         if (rmc.timestamp == gga.timestamp) {
             long datetime = rmc.date + rmc.timestamp;
             location = new Location(new QualifiedCoordinates(gga.lat, gga.lon, gga.altitude),
@@ -61,8 +61,7 @@ public abstract class StreamReadingLocationProvider extends LocationProvider {
         return location;
     }
 
-    /** @deprecated change return value */
-    protected String nextSentence(InputStream in, char[] header) throws IOException {
+    protected final char[] nextSentence(InputStream in, char[] header) throws IOException {
         char[] sb = new char[0x80];
         int pos = 0;
 
@@ -85,18 +84,20 @@ public abstract class StreamReadingLocationProvider extends LocationProvider {
 
                 if (nl) break;
 
-                sb[pos++] = ch;
-
-                if (pos >= 0x80) {
-                    throw new IOException("Hmm, is this really NMEA stream?");
+                // header check
+                if (pos < hlen) {
+                    if (ch != header[pos]) {
+                        match = false;
+                    }
                 }
 
-                if (pos == hlen) { // check header
-                    for (int i = 0; i < hlen; i++) {
-                        if (sb[i] != header[i])  {
-                            match = false;
-                            break;
-                        }
+                if (match) { // only if header still matches
+                    // add char to array
+                    sb[pos++] = ch;
+
+                    // weird content check
+                    if (pos >= 0x80) {
+                        throw new IOException("Hmm, is this really NMEA stream?");
                     }
                 }
             }
@@ -105,7 +106,9 @@ public abstract class StreamReadingLocationProvider extends LocationProvider {
         }
 
         if (nl) {
-            return new String(sb, 0, pos);
+            char[] result = new char[pos];
+            System.arraycopy(sb, 0, result, 0, pos);
+            return result;
         }
 
         return null;

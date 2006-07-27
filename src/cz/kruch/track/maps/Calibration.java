@@ -136,6 +136,10 @@ public abstract class Calibration {
                 && (lon >= range[0].getLon() && lon <= range[3].getLon());
     }
 
+    public QualifiedCoordinates[] getRange() {
+        return range;
+    }
+
     public QualifiedCoordinates transform(Position position) {
         if (log.isEnabled()) log.debug("transform " + position);
 

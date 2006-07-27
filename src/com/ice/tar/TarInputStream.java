@@ -57,11 +57,7 @@ public final class TarInputStream extends /* FilterInputStream */ InputStream {
         this(is, DEFAULT_BLKSIZE, DEFAULT_RCDSIZE);
     }
 
-    public TarInputStream(InputStream is, int blockSize) {
-        this(is, blockSize, DEFAULT_RCDSIZE);
-    }
-
-    public TarInputStream(InputStream is, int blockSize, int recordSize) {
+    private TarInputStream(InputStream is, int blockSize, int recordSize) {
         /* super(is); */
         this.in = is;
         /* ~super(is); */

@@ -54,8 +54,10 @@ public final class GpxTracklog extends Thread {
     }
 
     public void destroy() {
-        go = false;
-        interrupt();
+        synchronized (this) {
+            go = false;
+            notify();
+        }
     }
 
     public void run() {
@@ -97,7 +99,7 @@ public final class GpxTracklog extends Thread {
             serializer.startTag(DEFAULT_NAMESPACE, "trk");
             serializer.startTag(DEFAULT_NAMESPACE, "trkseg");
 
-            for (; go ;) {
+            for (;;) {
                 Location l = null;
                 synchronized (this) {
                     while (go && queue == null) {

@@ -96,4 +96,8 @@ final class OSD extends Bar {
     public void setExtendedInfo(String extendedInfo) {
         this.extendedInfo = extendedInfo;
     }
+
+    public int[] getClip() {
+        return new int[]{ gx, gy, width, 2 * bh };
+    }
 }

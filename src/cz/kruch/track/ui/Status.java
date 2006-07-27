@@ -10,7 +10,7 @@ final class Status extends Bar {
 
     public Status(int gx, int gy, int width, int height) {
         super(gx, gy, width, height);
-        this.h = font.getHeight();
+        this.h = bar.getHeight();
     }
 
     public void render(Graphics graphics) {
@@ -27,5 +27,9 @@ final class Status extends Bar {
         graphics.setColor(255, 255, 255);
         graphics.setFont(font);
         graphics.drawString(info, gx, height - h, Graphics.TOP | Graphics.LEFT);
+    }
+
+    public int[] getClip() {
+        return new int[]{ gx, height - h, width, h };
     }
 }

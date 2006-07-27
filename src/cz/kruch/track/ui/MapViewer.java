@@ -191,6 +191,21 @@ final class MapViewer {
         this.course = course;
     }
 
+    public Character boundsHit() {
+        Character result = null;
+        if (chx + cWidth / 2 == 0) {
+            result = new Character('W');
+        } else if (chx + cWidth / 2 == width - 1) {
+            result = new Character('E');
+        } else if (chy + cHeight / 2 == 0) {
+            result = new Character('N');
+        } else if (chy + cHeight / 2 == height - 1) {
+            result = new Character('S');
+        }
+
+        return result;
+    }
+
     public void render(Graphics graphics) {
         if (!visible) {
             return;
@@ -309,7 +324,10 @@ final class MapViewer {
 */
 
         if (w > 0 && h > 0) {
-//            log.debug("draw region " + x_src + "x" + y_src + " dim " + w + "x" + h + " of " + slice + " at " + x_dest + "x" + y_dest);
+            // assertion
+            if (slice.getImage() == null) {
+                throw new AssertionFailedException("Slice image is null");
+            }
             graphics.drawRegion(slice.getImage(),
                                 x_src, y_src, w, h,
                                 Sprite.TRANS_NONE,
@@ -331,24 +349,18 @@ final class MapViewer {
         ensureSlice(x + width - 1, y + height - 1, collection);
 
         // find slices we will no longer use
-        Vector garbage = null;
+        Vector old = new Vector(0);
         for (Enumeration e = slices.elements(); e.hasMoreElements(); ) {
             Slice slice = (Slice) e.nextElement();
             if (!collection.contains(slice)) {
-                // debug
                 if (log.isEnabled()) log.debug("release map image in " + slice);
-
-                // to be freed
-                if (garbage == null) {
-                    garbage = new Vector();
-                }
-                garbage.addElement(slice);
+                old.addElement(slice);
             }
         }
 
         // release old slices
-        if (garbage != null) {
-            map.releaseSlices(garbage);
+        if (old.size() > 0) {
+            map.disposeImages(old);
         }
 
         // set new slices

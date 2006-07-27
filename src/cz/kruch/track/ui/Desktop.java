@@ -569,6 +569,9 @@ public final class Desktop extends GameCanvas
                         }
                     } else { // single step
 
+                        // for dumb devices
+                        inAction = action;
+
                         // scrolled?
                         if (mapViewer.scroll(action)) {
 
@@ -628,9 +631,6 @@ public final class Desktop extends GameCanvas
                              *
                              * Therefore the dummy getKeyStates() call before invoking run().
                              */
-
-                            // for dumb devices
-                            inAction = action;
 
                             // delayed check to emulate keyRepeated
                             repeatedKeyChecker = new Timer();

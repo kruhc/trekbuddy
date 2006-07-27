@@ -41,10 +41,6 @@ abstract class Bar {
         bar = Image.createRGBImage(shadow, width, h, true);
     }
 
-    public int getHeight() {
-        return font.getHeight(); 
-    }
-
     public void setInfo(String info, boolean ok) {
         this.info = info;
         this.ok = ok;
@@ -57,6 +53,8 @@ abstract class Bar {
     public void setVisible(boolean visible) {
         this.visible = visible;
     }
+
+    public abstract int[] getClip();
 
     public abstract void render(Graphics graphics);
 }

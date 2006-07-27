@@ -19,6 +19,7 @@ import cz.kruch.j2se.io.BufferedInputStream;
 
 import cz.kruch.track.ui.Position;
 import cz.kruch.track.util.Logger;
+import cz.kruch.track.maps.io.LoaderIO;
 
 import api.location.QualifiedCoordinates;
 
@@ -55,10 +56,7 @@ public final class Map {
     private int type = -1;
     private Slice[] slices;
     private Calibration calibration;
-
-    // I/O state
-    private boolean ready = true;
-    private Object lock = new Object();
+    private boolean closing = false;
 
     public Map(String path, StateListener listener) {
         this(path, null, listener);
@@ -92,7 +90,19 @@ public final class Map {
     }
 
     public Position transform(QualifiedCoordinates qc) {
-        return calibration.transform(qc);
+        if (isWithin(qc)) {
+            return calibration.transform(qc);
+        }
+
+        return null;
+    }
+
+    public QualifiedCoordinates[] getRange() {
+        return calibration.getRange();
+    }
+
+    public boolean isWithin(QualifiedCoordinates coordinates) {
+        return calibration.isWithin(coordinates);
     }
 
     /**
@@ -100,7 +110,6 @@ public final class Map {
      */
     public void dispose() {
         for (int N = slices.length, i = 0; i < N; i++) {
-            if (log.isEnabled()) log.debug("null image for slice " + slices[i]);
             slices[i].setImage(null);
         }
     }
@@ -115,16 +124,13 @@ public final class Map {
         // release map resources
         dispose();
 
+        // we are closing
+        closing = true;
+
         // destroy loader
         if (loader != null) {
-            try {
-                loader.destroy();
-                if (log.isEnabled()) log.debug("loader destroyed");
-            } catch (IOException e) {
-                if (log.isEnabled()) log.warn("failed to destroy loader");
-            } finally {
-                loader = null;
-            }
+            loader.destroy();
+            loader = null;
         }
 
         // gc
@@ -148,51 +154,27 @@ public final class Map {
         return null;
     }
 
-    public boolean isWithin(QualifiedCoordinates coordinates) {
-        return calibration.isWithin(coordinates);
-    }
-
     /**
      * Opens and scans map.
      */
     public boolean prepareMap() {
-        if (log.isEnabled()) log.debug("begin open map");
-
-        // wait for previous task to finish
-        synchronized (lock) {
-            while (!ready) {
-                if (log.isEnabled()) log.debug("wait for lock");
-                try {
-                    lock.wait();
-                } catch (InterruptedException e) {
-                }
-            }
-            ready = false;
-        }
+        if (log.isEnabled()) log.debug("prepare map");
 
         // open map in background
-        (new Thread(new Runnable() {
+        LoaderIO.getInstance().enqueue(new Runnable() {
             public void run() {
-                if (log.isEnabled()) log.debug("map loading task started");
+                if (log.isEnabled()) log.debug("map loading task starting");
 
                 // open and init map
-                Throwable t = loadMap();
-
-                // sync
-                synchronized (lock) {
-                    ready = true;
-                    lock.notify();
-                }
+                Throwable throwable = loadMap();
 
                 // log
-                if (log.isEnabled()) log.debug("map opened; " + t);
+                if (log.isEnabled()) log.debug("map opened; " + throwable);
 
                 // we are done
-                notifyListener(EVENT_MAP_OPENED, null, t);
+                notifyListener(EVENT_MAP_OPENED, null, throwable);
             }
-        })).start();
-
-        if (log.isEnabled()) log.debug("~begin open map");
+        });
 
         return true;
     }
@@ -202,70 +184,47 @@ public final class Map {
      * @param slices
      */
     public boolean prepareSlices(Vector slices) {
-        Vector collection = null;
+        if (log.isEnabled()) log.debug("prepare slices");
+
+        final Vector collection = new Vector(0);
 
         // create list of slices whose images are to be loaded
         for (Enumeration e = slices.elements(); e.hasMoreElements(); ) {
             Slice slice = (Slice) e.nextElement();
             if (slice.getImage() == null) {
                 if (log.isEnabled()) log.debug("image missing for slice " + slice);
-
-                if (collection == null) {
-                    collection = new Vector();
-                }
                 collection.addElement(slice);
             }
         }
 
         // no images to be loaded
-        if (collection == null) {
+        if (collection.size() == 0) {
             return false;
         }
 
         // debug
         if (log.isEnabled()) log.debug("about to load new slices");
 
-        // trick
-        final Vector toload = collection;
-
-        // wait for previous task to finish
-        synchronized (lock) {
-            while (!ready) {
-                if (log.isEnabled()) log.debug("wait for lock");
-                try {
-                    lock.wait();
-                } catch (InterruptedException e) {
-                }
-            }
-            ready = false;
-        }
-
         // load images at background
-        (new Thread(new Runnable() {
+        LoaderIO.getInstance().enqueue(new Runnable() {
             public void run() {
                 if (log.isEnabled()) log.debug("slice loading task started");
 
                 // load images
-                Throwable t = loadSlices(toload);
-
-                // sync
-                synchronized (lock) {
-                    ready = true;
-                    lock.notify();
-                }
+                Throwable throwable = loadImages(collection);
 
                 // log
                 if (log.isEnabled()) log.debug("all requested slices loaded");
 
                 // we are done
-                notifyListener(EVENT_SLICES_LOADED, null, t);
+                notifyListener(EVENT_SLICES_LOADED, null, throwable);
             }
-        })).start();
+        });
 
         return true;
     }
 
-    /* public only for init loading */
+    /* (non-javadoc) public only for loading upon startup */
     public Throwable loadMap() {
         try {
             // load map
@@ -318,17 +277,31 @@ public final class Map {
     }
 
     /**
-     * Loads images for given slices.
-     * @param toLoad
+     * Notififies listener.
      */
-    private Throwable loadSlices(Vector toLoad) {
+    private void notifyListener(int code, Object result, Throwable throwable) {
+        switch (code) {
+            case EVENT_MAP_OPENED:
+                listener.mapOpened(result, throwable);
+                break;
+            case EVENT_SLICES_LOADED:
+                listener.slicesLoaded(result, throwable);
+                break;
+            case EVENT_LOADING_CHANGED:
+                listener.loadingChanged(result, throwable);
+                break;
+        }
+    }
+
+    /**
+     * Loads images for given slices.
+     */
+    private Throwable loadImages(Vector collection) {
         try {
-            for (Enumeration e = toLoad.elements(); e.hasMoreElements(); ) {
-                loadSlice((Slice) e.nextElement());
+            for (Enumeration e = collection.elements(); e.hasMoreElements(); ) {
+                loadImage((Slice) e.nextElement());
             }
-
             return null;
-
         } catch (IOException e) {
             return e;
         } catch (OutOfMemoryError e) {
@@ -340,11 +313,10 @@ public final class Map {
      * Releases given slices images. Does gc.
      * @param slices
      */
-    public void releaseSlices(Vector slices) {
+    public void disposeImages(Vector slices) {
         for (Enumeration e = slices.elements(); e.hasMoreElements(); ) {
             Slice slice = (Slice) e.nextElement();
             slice.setImage(null);
-            if (log.isEnabled()) log.debug("released image for slice " + slice);
         }
 
         // gc
@@ -354,7 +326,7 @@ public final class Map {
     /**
      * Loads slice from map. Expects file connection opened.
      */
-    private void loadSlice(Slice slice) throws IOException {
+    private void loadImage(Slice slice) throws IOException {
         if (log.isEnabled()) log.debug("Loading slice " + slice.getURL() + "...");
 
         // notify
@@ -405,25 +377,6 @@ public final class Map {
         throw exception;
     }
 
-    // TODO is thread necessary?
-    private void notifyListener(final int code, final Object result, final Throwable t) {
-        (new Thread() {
-            public void run() {
-                switch (code) {
-                    case EVENT_MAP_OPENED:
-                        listener.mapOpened(result, t);
-                        break;
-                    case EVENT_SLICES_LOADED:
-                        listener.slicesLoaded(result, t);
-                        break;
-                    case EVENT_LOADING_CHANGED:
-                        listener.loadingChanged(result, t);
-                        break;
-                }
-            }
-        }).start();
-    }
-
     static String loadTextContent(InputStream stream) throws IOException {
         InputStreamReader reader = new InputStreamReader(stream);
         char[] buffer = new char[TEXT_FILE_BUFFER_SIZE];
@@ -470,7 +423,7 @@ public final class Map {
         protected Exception exception;
 
         public abstract void init() throws IOException;
-        public abstract void destroy() throws IOException;
+        public abstract void destroy();
         public abstract void loadSlice(Slice slice) throws IOException;
 
         public void checkException() throws Exception {
@@ -595,7 +548,7 @@ public final class Map {
             if (log.isEnabled()) log.debug("slices are in " + dir);
         }
 
-        public void destroy() throws IOException {
+        public void destroy() {
         }
 
         public void run() {

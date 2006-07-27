@@ -5,6 +5,7 @@ package cz.kruch.track.maps;
 
 import cz.kruch.track.util.Logger;
 import cz.kruch.track.AssertionFailedException;
+import cz.kruch.track.maps.io.LoaderIO;
 import cz.kruch.j2se.io.BufferedInputStream;
 import cz.kruch.j2se.util.StringTokenizer;
 
@@ -26,7 +27,7 @@ public final class Atlas {
         public void loadingChanged(Object result, Throwable throwable);
     }
 
-    private static final Logger log = new Logger("Map");
+    private static final Logger log = new Logger("Atlas");
 
     private static final int EVENT_ATLAS_OPENED     = 0;
     private static final int EVENT_LOADING_CHANGED  = 1;
@@ -39,10 +40,6 @@ public final class Atlas {
     private Loader loader;
     private Hashtable layers;
     private String current;
-
-    // I/O state
-    private boolean ready = true;
-    private Object lock = new Object();
 
     public Atlas(String url, StateListener listener) {
         this.url = url;
@@ -76,7 +73,23 @@ public final class Atlas {
 
     public String getMapURL(String layerName, QualifiedCoordinates qc) {
         Hashtable layer = (Hashtable) layers.get(layerName);
-        if (layerName == null) {
+        if (layer == null) {
+            throw new AssertionFailedException("Nonexistent layer");
+        }
+
+        for (Enumeration e = layer.elements(); e.hasMoreElements(); ) {
+            Calibration calibration = (Calibration) e.nextElement();
+            if (calibration.isWithin(qc)) {
+                return calibration.getPath();
+            }
+        }
+
+        return null;
+    }
+
+    public String getMapURL(QualifiedCoordinates qc) {
+        Hashtable layer = (Hashtable) layers.get(current);
+        if (layer == null) {
             throw new AssertionFailedException("Nonexistent layer");
         }
 
@@ -98,33 +111,15 @@ public final class Atlas {
      * Opens and scans atlas.
      */
     public boolean prepareAtlas() {
-        if (log.isEnabled()) log.debug("begin open atlas");
+        if (log.isEnabled()) log.debug("prepare atlas");
 
-        // wait for previous task to finish
-        synchronized (lock) {
-            while (!ready) {
-                if (log.isEnabled()) log.debug("wait for lock");
-                try {
-                    lock.wait();
-                } catch (InterruptedException e) {
-                }
-            }
-            ready = false;
-        }
-
-        // open map in background
-        (new Thread(new Runnable() {
+        // open atlas in background
+        LoaderIO.getInstance().enqueue(new Runnable() {
             public void run() {
-                if (log.isEnabled()) log.debug("map loading task started");
+                if (log.isEnabled()) log.debug("atlas loading task starting");
 
                 // open and init atlas
                 Throwable t = loadAtlas();
-
-                // sync
-                synchronized (lock) {
-                    ready = true;
-                    lock.notify();
-                }
 
                 // log
                 if (log.isEnabled()) log.debug("atlas opened; " + t);
@@ -132,14 +127,12 @@ public final class Atlas {
                 // we are done
                 notifyListener(EVENT_ATLAS_OPENED, null, t);
             }
-        })).start();
-
-        if (log.isEnabled()) log.debug("~begin open atlas");
+        });
 
         return true;
     }
 
-    /* public only for init loading */
+    /* (non-javadoc) public only for init loading */
     public Throwable loadAtlas() {
         try {
             // load map
@@ -178,24 +171,19 @@ public final class Atlas {
         System.gc();
     }
 
-    // TODO is thread necessary?
     private void notifyListener(final int code, final Object result, final Throwable t) {
-        (new Thread() {
-            public void run() {
-                switch (code) {
-                    case EVENT_ATLAS_OPENED:
-                        listener.atlasOpened(result, t);
-                        break;
-                    case EVENT_LOADING_CHANGED:
-                        listener.loadingChanged(result, t);
-                        break;
-                }
-            }
-        }).start();
+        switch (code) {
+            case EVENT_ATLAS_OPENED:
+                listener.atlasOpened(result, t);
+                break;
+            case EVENT_LOADING_CHANGED:
+                listener.loadingChanged(result, t);
+                break;
+        }
     }
 
     /*
-    * Map loaders.
+    * Atlas loaders.
     */
 
     private abstract class Loader extends Thread {

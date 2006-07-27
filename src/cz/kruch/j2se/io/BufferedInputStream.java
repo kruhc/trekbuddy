@@ -301,13 +301,15 @@ class BufferedInputStream extends /* FilterInputStream */ InputStream {
      * @exception  IOException  if an I/O error occurs.
      */
     public synchronized long skip(long n) throws IOException {
-        ensureOpen();
+        /* ensureOpen(); */
 	if (n <= 0) {
 	    return 0;
 	}
 	long avail = count - pos;
      
         if (avail <= 0) {
+            ensureOpen(); /* optimization */
+
             // If no mark position set then don't keep in buffer
             if (markpos <0) 
                 return in.skip(n);

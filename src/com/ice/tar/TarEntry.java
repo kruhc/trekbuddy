@@ -15,8 +15,6 @@
 
 package com.ice.tar;
 
-import java.util.Date;
-
 /**
  * This class represents an entry in a Tar archive. It consists
  * of the entry's header, as well as the entry's File. Entries
@@ -142,21 +140,6 @@ public final class TarEntry {
 
 
     /**
-     * The default constructor is protected for use only by subclasses.
-     */
-    protected TarEntry() {
-    }
-
-    /**
-     * Construct an entry with only a name. This allows the programmer
-     * to construct the entry's header "by hand". File is set to null.
-     */
-    public TarEntry(String name) {
-        this.initialize();
-        this.nameTarHeader(this.header, name);
-    }
-
-    /**
      * Construct an entry from an archive's header bytes. File is set
      * to null.
      *
@@ -179,60 +162,6 @@ public final class TarEntry {
     }
 
     /**
-     * Returns true if this entry's header is in "ustar" format.
-     *
-     * @return True if the entry's header is in "ustar" format.
-     */
-    public boolean isUSTarFormat() {
-        return this.ustarFormat;
-    }
-
-    /**
-     * Sets this entry's header format to "ustar".
-     */
-    public void setUSTarFormat() {
-        this.ustarFormat = true;
-        this.gnuFormat = false;
-        this.unixFormat = false;
-    }
-
-    /**
-     * Returns true if this entry's header is in the GNU 'ustar' format.
-     *
-     * @return True if the entry's header is in the GNU 'ustar' format.
-     */
-    public boolean isGNUTarFormat() {
-        return this.gnuFormat;
-    }
-
-    /**
-     * Sets this entry's header format to GNU "ustar".
-     */
-    public void setGNUTarFormat() {
-        this.gnuFormat = true;
-        this.ustarFormat = false;
-        this.unixFormat = false;
-    }
-
-    /**
-     * Returns true if this entry's header is in the old "unix-tar" format.
-     *
-     * @return True if the entry's header is in the old "unix-tar" format.
-     */
-    public boolean isUnixTarFormat() {
-        return this.unixFormat;
-    }
-
-    /**
-     * Sets this entry's header format to "unix-style".
-     */
-    public void setUnixTarFormat() {
-        this.unixFormat = true;
-        this.ustarFormat = false;
-        this.gnuFormat = false;
-    }
-
-    /**
      * Determine if the two entries are equal. Equality is determined
      * by the header names being equal.
      *
@@ -240,27 +169,6 @@ public final class TarEntry {
      */
     public boolean equals(TarEntry it) {
         return this.header.name.equals(it.header.name);
-    }
-
-    /**
-     * Determine if the given entry is a descendant of this entry.
-     * Descendancy is determined by the name of the descendant
-     * starting with this entry's name.
-     *
-     * @param desc Entry to be checked as a descendent of this.
-     * @return True if entry is a descendant of this.
-     */
-    public boolean isDescendent(TarEntry desc) {
-        return desc.header.name.startsWith(this.header.name);
-    }
-
-    /**
-     * Get this entry's header.
-     *
-     * @return This entry's TarHeader.
-     */
-    public TarHeader getHeader() {
-        return this.header;
     }
 
     /**
@@ -273,150 +181,12 @@ public final class TarEntry {
     }
 
     /**
-     * Set this entry's name.
-     *
-     * @param name This entry's new name.
-     */
-    public void setName(String name) {
-        this.header.name = name;
-    }
-
-    /**
-     * Get this entry's user id.
-     *
-     * @return This entry's user id.
-     */
-    public int getUserId() {
-        return this.header.userId;
-    }
-
-    /**
-     * Set this entry's user id.
-     *
-     * @param userId This entry's new user id.
-     */
-    public void setUserId(int userId) {
-        this.header.userId = userId;
-    }
-
-    /**
-     * Get this entry's group id.
-     *
-     * @return This entry's group id.
-     */
-    public int getGroupId() {
-        return this.header.groupId;
-    }
-
-    /**
-     * Set this entry's group id.
-     *
-     * @param groupId This entry's new group id.
-     */
-    public void setGroupId(int groupId) {
-        this.header.groupId = groupId;
-    }
-
-    /**
-     * Get this entry's user name.
-     *
-     * @return This entry's user name.
-     */
-    public String getUserName() {
-        return this.header.userName;
-    }
-
-    /**
-     * Set this entry's user name.
-     *
-     * @param userName This entry's new user name.
-     */
-    public void setUserName(String userName) {
-        this.header.userName = userName;
-    }
-
-    /**
-     * Get this entry's group name.
-     *
-     * @return This entry's group name.
-     */
-    public String getGroupName() {
-        return this.header.groupName;
-    }
-
-    /**
-     * Set this entry's group name.
-     *
-     * @param groupName This entry's new group name.
-     */
-    public void setGroupName(String groupName) {
-        this.header.groupName = groupName;
-    }
-
-    /**
-     * Convenience method to set this entry's group and user ids.
-     *
-     * @param userId  This entry's new user id.
-     * @param groupId This entry's new group id.
-     */
-    public void setIds(int userId, int groupId) {
-        this.setUserId(userId);
-        this.setGroupId(groupId);
-    }
-
-    /**
-     * Convenience method to set this entry's group and user names.
-     *
-     * @param userName  This entry's new user name.
-     * @param groupName This entry's new group name.
-     */
-    public void setNames(String userName, String groupName) {
-        this.setUserName(userName);
-        this.setGroupName(groupName);
-    }
-
-    /**
-     * Set this entry's modification time. The parameter passed
-     * to this method is in "Java time".
-     *
-     * @param time This entry's new modification time.
-     */
-    public void setModTime(long time) {
-        this.header.modTime = time / 1000;
-    }
-
-    /**
-     * Set this entry's modification time.
-     *
-     * @param time This entry's new modification time.
-     */
-    public void setModTime(Date time) {
-        this.header.modTime = time.getTime() / 1000;
-    }
-
-    /**
-     * Get this entry's modification time.
-     */
-    public Date getModTime() {
-        return new Date(this.header.modTime * 1000);
-    }
-
-    /**
      * Get this entry's file size.
      *
      * @return This entry's file size.
      */
     public long getSize() {
         return this.header.size;
-    }
-
-    /**
-     * Set this entry's file size.
-     *
-     * @param size This entry's new file size.
-     */
-    public void setSize(long size) {
-        this.header.size = size;
     }
 
     /**
@@ -434,22 +204,6 @@ public final class TarEntry {
         }
 
         return false;
-    }
-
-    /**
-     * Compute the checksum of a tar entry header.
-     *
-     * @param buf The tar entry's header buffer.
-     * @return The computed checksum.
-     */
-    public long computeCheckSum(byte[] buf) {
-        long sum = 0;
-
-        for (int i = 0; i < buf.length; ++i) {
-            sum += 255 & buf[i];
-        }
-
-        return sum;
     }
 
     /**
@@ -527,15 +281,15 @@ public final class TarEntry {
 
         offset = TarHeader.NAMELEN;
 
-        hdr.mode = (int) TarHeader.parseOctal(headerBuf, offset, TarHeader.MODELEN);
+//        hdr.mode = (int) TarHeader.parseOctal(headerBuf, offset, TarHeader.MODELEN);
 
         offset += TarHeader.MODELEN;
 
-        hdr.userId = (int) TarHeader.parseOctal(headerBuf, offset, TarHeader.UIDLEN);
+//        hdr.userId = (int) TarHeader.parseOctal(headerBuf, offset, TarHeader.UIDLEN);
 
         offset += TarHeader.UIDLEN;
 
-        hdr.groupId = (int) TarHeader.parseOctal(headerBuf, offset, TarHeader.GIDLEN);
+//        hdr.groupId = (int) TarHeader.parseOctal(headerBuf, offset, TarHeader.GIDLEN);
 
         offset += TarHeader.GIDLEN;
 
@@ -543,17 +297,17 @@ public final class TarEntry {
 
         offset += TarHeader.SIZELEN;
 
-        hdr.modTime = TarHeader.parseOctal(headerBuf, offset, TarHeader.MODTIMELEN);
+//        hdr.modTime = TarHeader.parseOctal(headerBuf, offset, TarHeader.MODTIMELEN);
 
         offset += TarHeader.MODTIMELEN;
 
-        hdr.checkSum = (int) TarHeader.parseOctal(headerBuf, offset, TarHeader.CHKSUMLEN);
+//        hdr.checkSum = (int) TarHeader.parseOctal(headerBuf, offset, TarHeader.CHKSUMLEN);
 
         offset += TarHeader.CHKSUMLEN;
 
         hdr.linkFlag = headerBuf[offset++];
 
-        hdr.linkName = TarHeader.parseName(headerBuf, offset, TarHeader.NAMELEN);
+//        hdr.linkName = TarHeader.parseName(headerBuf, offset, TarHeader.NAMELEN);
 
         offset += TarHeader.NAMELEN;
 
@@ -562,62 +316,26 @@ public final class TarEntry {
 
             offset += TarHeader.MAGICLEN;
 
-            hdr.userName = TarHeader.parseName(headerBuf, offset, TarHeader.UNAMELEN);
+//            hdr.userName = TarHeader.parseName(headerBuf, offset, TarHeader.UNAMELEN);
 
             offset += TarHeader.UNAMELEN;
 
-            hdr.groupName = TarHeader.parseName(headerBuf, offset, TarHeader.GNAMELEN);
+//            hdr.groupName = TarHeader.parseName(headerBuf, offset, TarHeader.GNAMELEN);
 
             offset += TarHeader.GNAMELEN;
 
-            hdr.devMajor = (int) TarHeader.parseOctal(headerBuf, offset, TarHeader.DEVLEN);
+//            hdr.devMajor = (int) TarHeader.parseOctal(headerBuf, offset, TarHeader.DEVLEN);
 
             offset += TarHeader.DEVLEN;
 
-            hdr.devMinor = (int) TarHeader.parseOctal(headerBuf, offset, TarHeader.DEVLEN);
+//            hdr.devMinor = (int) TarHeader.parseOctal(headerBuf, offset, TarHeader.DEVLEN);
         } else {
-            hdr.devMajor = 0;
-            hdr.devMinor = 0;
             hdr.magic = "";
-            hdr.userName = "";
-            hdr.groupName = "";
+//            hdr.userName = "";
+//            hdr.groupName = "";
+//            hdr.devMajor = 0;
+//            hdr.devMinor = 0;
         }
-    }
-
-    /**
-     * Fill in a TarHeader given only the entry's name.
-     *
-     * @param hdr  The TarHeader to fill in.
-     * @param name The tar entry name.
-     */
-    public void nameTarHeader(TarHeader hdr, String name) {
-        boolean isDir = name.endsWith("/");
-
-        this.gnuFormat = false;
-        this.ustarFormat = true;
-        this.unixFormat = false;
-
-        hdr.checkSum = 0;
-        hdr.devMajor = 0;
-        hdr.devMinor = 0;
-
-        hdr.name = name;
-        hdr.mode = isDir ? 040755 : 0100644;
-        hdr.userId = 0;
-        hdr.groupId = 0;
-        hdr.size = 0;
-        hdr.checkSum = 0;
-
-        hdr.modTime = (new java.util.Date()).getTime() / 1000;
-
-        hdr.linkFlag = isDir ? TarHeader.LF_DIR : TarHeader.LF_NORMAL;
-
-        hdr.linkName = "";
-        hdr.userName = "";
-        hdr.groupName = "";
-
-        hdr.devMajor = 0;
-        hdr.devMinor = 0;
     }
 }
 

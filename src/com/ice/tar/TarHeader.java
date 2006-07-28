@@ -133,78 +133,24 @@ public final class TarHeader {
      */
     public String name;
     /**
-     * The entry's permission mode.
-     */
-    public int mode;
-    /**
-     * The entry's user id.
-     */
-    public int userId;
-    /**
-     * The entry's group id.
-     */
-    public int groupId;
-    /**
      * The entry's size.
      */
     public long size;
-    /**
-     * The entry's modification time.
-     */
-    public long modTime;
-    /**
-     * The entry's checksum.
-     */
-    public int checkSum;
     /**
      * The entry's link flag.
      */
     public byte linkFlag;
     /**
-     * The entry's link name.
-     */
-    public String linkName;
-    /**
      * The entry's magic tag.
      */
     public String magic;
-    /**
-     * The entry's user name.
-     */
-    public String userName;
-    /**
-     * The entry's group name.
-     */
-    public String groupName;
-    /**
-     * The entry's major device number.
-     */
-    public int devMajor;
-    /**
-     * The entry's minor device number.
-     */
-    public int devMinor;
 
-
+    /**
+     * Default constructor.
+     */
     public TarHeader() {
-        this.magic = new String(TarHeader.TMAGIC);
-
+        this.magic = TarHeader.TMAGIC;
         this.name = null;
-        this.linkName = null;
-
-        this.userId = 0;
-        this.groupId = 0;
-        this.userName = "unknown";
-        this.groupName = "";
-    }
-
-    /**
-     * Get the name of this entry.
-     *
-     * @return Teh entry's name.
-     */
-    public String getName() {
-        return this.name;
     }
 
     /**
@@ -218,27 +164,28 @@ public final class TarHeader {
      */
     public static long parseOctal(byte[] header, int offset, int length)
             throws InvalidHeaderException {
+
         long result = 0;
         boolean stillPadding = true;
-
         int end = offset + length;
+
         for (int i = offset; i < end; ++i) {
-            if (header[i] == 0)
+            byte b = header[i];
+
+            if (b == 0)
                 break;
 
-            if (header[i] == (byte) ' ' || header[i] == '0') {
+            if (b == (byte) ' ' || b == '0') {
                 if (stillPadding)
                     continue;
 
-                if (header[i] == (byte) ' ')
+                if (b == (byte) ' ')
                     break;
             }
 
             stillPadding = false;
 
-            result =
-                    (result << 3)
-                            + (header[i] - '0');
+            result = (result << 3) + (b - '0');
         }
 
         return result;
@@ -252,8 +199,6 @@ public final class TarHeader {
      * Contributed by Dmitri Tikhonov <dxt2431@yahoo.com>
      *
      * @param header The header buffer from which to parse.
-     * @param offset The offset into the buffer from which to parse.
-     * @param length The number of header bytes to parse.
      * @return The header's entry name.
      */
     public static String parseFileName(byte[] header) {
@@ -292,152 +237,13 @@ public final class TarHeader {
 
         int end = offset + length;
         for (int i = offset; i < end; ++i) {
-            if (header[i] == 0)
+            byte b = header[i];
+            if (b == 0)
                 break;
-            result.append((char) header[i]);
+            result.append((char) b);
         }
 
         return result.toString();
     }
-
-    /**
-     * This method, like getNameBytes(), is intended to place a name
-     * into a TarHeader's buffer. However, this method is sophisticated
-     * enough to recognize long names (name.length() > NAMELEN). In these
-     * cases, the method will break the name into a prefix and suffix and
-     * place the name in the header in 'ustar' format. It is up to the
-     * TarEntry to manage the "entry header format". This method assumes
-     * the name is valid for the type of archive being generated.
-     *
-     * @param outbuf  The buffer containing the entry header to modify.
-     * @param newName The new name to place into the header buffer.
-     * @return The current offset in the tar header (always TarHeader.NAMELEN).
-     * @throws InvalidHeaderException If the name will not fit in the header.
-     */
-    public static int getFileNameBytes(String newName, byte[] outbuf)
-            throws InvalidHeaderException {
-        if (newName.length() > 100) {
-            // Locate a pathname "break" prior to the maximum name length...
-            int index = newName.indexOf("/", newName.length() - 100);
-            if (index == -1)
-                throw new InvalidHeaderException
-                        ("file name is greater than 100 characters, " + newName);
-
-            // Get the "suffix subpath" of the name.
-            String name = newName.substring(index + 1);
-
-            // Get the "prefix subpath", or "prefix", of the name.
-            String prefix = newName.substring(0, index);
-            if (prefix.length() > TarHeader.PREFIXLEN)
-                throw new InvalidHeaderException
-                        ("file prefix is greater than 155 characters");
-
-            TarHeader.getNameBytes
-                    (new StringBuffer(name), outbuf,
-                     TarHeader.NAMEOFFSET, TarHeader.NAMELEN);
-
-            TarHeader.getNameBytes
-                    (new StringBuffer(prefix), outbuf,
-                     TarHeader.PREFIXOFFSET, TarHeader.PREFIXLEN);
-        } else {
-            TarHeader.getNameBytes
-                    (new StringBuffer(newName), outbuf,
-                     TarHeader.NAMEOFFSET, TarHeader.NAMELEN);
-        }
-
-        // The offset, regardless of the format, is now the end of the
-        // original name field.
-        //
-        return TarHeader.NAMELEN;
-    }
-
-    /**
-     * Move the bytes from the name StringBuffer into the header's buffer.
-     *
-     * @param header The header buffer into which to copy the name.
-     * @param offset The offset into the buffer at which to store.
-     * @param length The number of header bytes to store.
-     * @return The new offset (offset + length).
-     */
-    public static int getNameBytes(StringBuffer name, byte[] buf, int offset, int length) {
-        int i;
-
-        for (i = 0; i < length && i < name.length(); ++i) {
-            buf[offset + i] = (byte) name.charAt(i);
-        }
-
-        for (; i < length; ++i) {
-            buf[offset + i] = 0;
-        }
-
-        return offset + length;
-    }
-
-    /**
-     * Parse an octal integer from a header buffer.
-     *
-     * @param header The header buffer from which to parse.
-     * @param offset The offset into the buffer from which to parse.
-     * @param length The number of header bytes to parse.
-     * @return The integer value of the octal bytes.
-     */
-    public static int getOctalBytes(long value, byte[] buf, int offset, int length) {
-        byte[] result = new byte[ length ];
-
-        int idx = length - 1;
-
-        buf[offset + idx] = 0;
-        --idx;
-        buf[offset + idx] = (byte) ' ';
-        --idx;
-
-        if (value == 0) {
-            buf[offset + idx] = (byte) '0';
-            --idx;
-        } else {
-            for (long val = value; idx >= 0 && val > 0; --idx) {
-                buf[offset + idx] = (byte)
-                        ((byte) '0' + (byte) (val & 7));
-                val = val >> 3;
-            }
-        }
-
-        for (; idx >= 0; --idx) {
-            buf[offset + idx] = (byte) ' ';
-        }
-
-        return offset + length;
-    }
-
-    /**
-     * Parse an octal long integer from a header buffer.
-     *
-     * @param header The header buffer from which to parse.
-     * @param offset The offset into the buffer from which to parse.
-     * @param length The number of header bytes to parse.
-     * @return The long value of the octal bytes.
-     */
-    public static int getLongOctalBytes(long value, byte[] buf, int offset, int length) {
-        byte[] temp = new byte[ length + 1 ];
-        TarHeader.getOctalBytes(value, temp, 0, length + 1);
-        System.arraycopy(temp, 0, buf, offset, length);
-        return offset + length;
-    }
-
-    /**
-     * Parse the checksum octal integer from a header buffer.
-     *
-     * @param header The header buffer from which to parse.
-     * @param offset The offset into the buffer from which to parse.
-     * @param length The number of header bytes to parse.
-     * @return The integer value of the entry's checksum.
-     */
-    public static int getCheckSumOctalBytes(long value, byte[] buf, int offset, int length) {
-        TarHeader.getOctalBytes(value, buf, offset, length);
-        buf[offset + length - 1] = (byte) ' ';
-        buf[offset + length - 2] = 0;
-        return offset + length;
-    }
-
 }
  

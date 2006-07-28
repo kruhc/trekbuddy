@@ -35,8 +35,6 @@ import java.io.InputStream;
 public final
 class BufferedInputStream extends /* FilterInputStream */ InputStream {
 
-    private static int defaultBufferSize = 2048;
-
     private InputStream in;
 
     /**
@@ -123,18 +121,6 @@ class BufferedInputStream extends /* FilterInputStream */ InputStream {
     private void ensureOpen() throws IOException {
 	if (in == null)
 	    throw new IOException("Stream closed");
-    }
-
-    /**
-     * Creates a <code>BufferedInputStream</code>
-     * and saves its  argument, the input stream
-     * <code>in</code>, for later use. An internal
-     * buffer array is created and  stored in <code>buf</code>.
-     *
-     * @param   in   the underlying input stream.
-     */
-    public BufferedInputStream(InputStream in) {
-	this(in, defaultBufferSize);
     }
 
     /**
@@ -344,7 +330,7 @@ class BufferedInputStream extends /* FilterInputStream */ InputStream {
      */
     public synchronized int available() throws IOException {
         ensureOpen();
-	return (count - pos) + in.available();
+      return (count - pos) + in.available();
     }
 
     /** 

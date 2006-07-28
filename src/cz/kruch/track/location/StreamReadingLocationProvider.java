@@ -19,6 +19,7 @@ import cz.kruch.track.AssertionFailedException;
 public abstract class StreamReadingLocationProvider extends LocationProvider {
     protected static final char[] HEADER_GGA = "$GPGGA".toCharArray();
     protected static final char[] HEADER_RMC = "$GPRMC".toCharArray();
+    protected static final int BUFFER_SIZE = 512;
 
     private OutputStream observer;
 

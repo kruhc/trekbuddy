@@ -100,7 +100,7 @@ public class SimulatorLocationProvider
         InputStream in = null;
         try {
             // open file and stream
-            in = new BufferedInputStream(Connector.openInputStream(url));
+            in = new BufferedInputStream(Connector.openInputStream(url), BUFFER_SIZE);
 
             // notify
             notifyListener(LocationProvider.AVAILABLE);

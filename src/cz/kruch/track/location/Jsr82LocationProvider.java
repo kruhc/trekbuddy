@@ -163,7 +163,7 @@ public class Jsr82LocationProvider extends StreamReadingLocationProvider impleme
             try {
                 nmeaFc = (FileConnection) Connector.open(path, Connector.WRITE);
                 nmeaFc.create();
-                nmeaObserver = new BufferedOutputStream(nmeaFc.openOutputStream(), 512);
+                nmeaObserver = new BufferedOutputStream(nmeaFc.openOutputStream());
 
                 // set stream 'observer'
                 setObserver(nmeaObserver);
@@ -208,7 +208,7 @@ public class Jsr82LocationProvider extends StreamReadingLocationProvider impleme
 
         try {
             // open stream for reading
-            in = new BufferedInputStream(connection.openInputStream(), 512);
+            in = new BufferedInputStream(connection.openInputStream(), BUFFER_SIZE);
 
             // read NMEA until error or stop request
             for (; go ;) {

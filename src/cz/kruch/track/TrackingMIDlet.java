@@ -14,8 +14,6 @@ import cz.kruch.track.configuration.ConfigurationException;
 
 import java.io.UnsupportedEncodingException;
 
-import com.ice.tar.TarInputStream;
-
 public class TrackingMIDlet extends MIDlet {
 
     private static String APP_NAME = Desktop.APP_TITLE + " (C) 2006 KrUcH";
@@ -56,7 +54,7 @@ public class TrackingMIDlet extends MIDlet {
         // setup environment
         if (hasFlag("fs_read_skip")) {
             System.out.println("* read-skip feature on");
-            TarInputStream.useReadSkip = true;
+            com.ice.tar.TarInputStream.useReadSkip = true;
         }
     }
 

@@ -673,50 +673,42 @@ public final class Desktop extends GameCanvas
     }
 
     private void render(boolean deep) {
-/*
-        if (isMap()) {
-*/
-            Graphics g = getGraphics();
-            if (_getInitializingMap()) {
-                if (_getLoadingResult() != null) {
-                    g.setFont(Font.getFont(Font.FACE_MONOSPACE, Font.STYLE_PLAIN, Font.SIZE_SMALL));
-                    g.setColor(255, 255, 255);
-                    g.drawString(_getLoadingResult(), 0, 0, Graphics.TOP | Graphics.LEFT);
-                }
-                if (status != null) { // initializing map is not clear till EVENT_SLICES_LOADED
-                    status.render(g);
-                }
-                flushGraphics();
-            } else {
-                if (mapViewer != null) {
-                    if (!_getLoadingSlices()) {
-                        mapViewer.render(g);
-                    }
-                }
-                if (osd != null) {
-                    osd.render(g);
-                }
-                if (status != null) {
-                    status.render(g);
-                }
-                if (deep) {
-                    flushGraphics();
-                } else {
-                    if (osd != null) {
-                        int[] clip = osd.getClip();
-                        flushGraphics(clip[0], clip[1], clip[2], clip[3]);
-                    }
-                    if (status != null) {
-                        int[] clip = status.getClip();
-                        flushGraphics(clip[0], clip[1], clip[2], clip[3]);
-                    }
+        Graphics g = getGraphics();
+        if (_getInitializingMap()) {
+            if (_getLoadingResult() != null) {
+                g.setFont(Font.getFont(Font.FACE_MONOSPACE, Font.STYLE_PLAIN, Font.SIZE_SMALL));
+                g.setColor(255, 255, 255);
+                g.drawString(_getLoadingResult(), 0, 0, Graphics.TOP | Graphics.LEFT);
+            }
+            if (status != null) { // initializing map is not clear till EVENT_SLICES_LOADED
+                status.render(g);
+            }
+            flushGraphics();
+        } else {
+            if (mapViewer != null) {
+                if (!_getLoadingSlices()) {
+                    mapViewer.render(g);
                 }
             }
-/*
-        } else {
-            throw new AssertionFailedException("render() should not be called");
+            if (osd != null) {
+                osd.render(g);
+            }
+            if (status != null) {
+                status.render(g);
+            }
+            if (deep) {
+                flushGraphics();
+            } else {
+                if (osd != null) {
+                    int[] clip = osd.getClip();
+                    flushGraphics(clip[0], clip[1], clip[2], clip[3]);
+                }
+                if (status != null) {
+                    int[] clip = status.getClip();
+                    flushGraphics(clip[0], clip[1], clip[2], clip[3]);
+                }
+            }
         }
-*/
     }
 
     private boolean isMap() {

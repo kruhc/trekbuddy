@@ -163,7 +163,7 @@ public class Jsr82LocationProvider extends StreamReadingLocationProvider impleme
             try {
                 nmeaFc = (FileConnection) Connector.open(path, Connector.WRITE);
                 nmeaFc.create();
-                nmeaObserver = new BufferedOutputStream(nmeaFc.openOutputStream());
+                nmeaObserver = new BufferedOutputStream(nmeaFc.openOutputStream(), 512);
 
                 // set stream 'observer'
                 setObserver(nmeaObserver);

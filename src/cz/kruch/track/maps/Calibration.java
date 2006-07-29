@@ -310,7 +310,10 @@ public abstract class Calibration {
             Vector pos = new Vector();
             Vector coords = new Vector();
             while (st.hasMoreTokens()) {
-                parsePoint(st.nextToken(), pos, coords);
+                String line = st.nextToken();
+                if (line.startsWith("Additional Calibration Data"))
+                    break;
+                parsePoint(line, pos, coords);
             }
             if ((pos.size() < 2) || (coords.size() < 2)) {
                 throw new InvalidMapException("Too few calibration points");

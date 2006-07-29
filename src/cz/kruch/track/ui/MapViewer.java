@@ -27,7 +27,7 @@ final class MapViewer {
     private int cWidth, cHeight;
     private int mWidth, mHeight;
 
-    private Image crosshair;
+    private Image crosshair, compas;
     private Image[] courses;
     private Map map;
     private Vector slices = new Vector();
@@ -43,6 +43,7 @@ final class MapViewer {
         this.height = height;
         this.x = this.y = 0;
         this.crosshair = Image.createImage("/resources/crosshair.png");
+        this.compas = Image.createImage("/resources/compas.png");
         this.courses = new Image[] {
             Image.createImage("/resources/course_0_0.png"),
             Image.createImage("/resources/course_0_15.png"),
@@ -222,6 +223,10 @@ final class MapViewer {
 
         // paint crosshair
         graphics.drawImage(crosshair, chx, chy, Graphics.TOP | Graphics.LEFT);
+        graphics.drawImage(compas,
+                           chx - (compas.getWidth() - cWidth) / 2,
+                           chy - (compas.getHeight() - cHeight) / 2,
+                           Graphics.TOP | Graphics.LEFT);
 
         // paint course
         if (course != null) {

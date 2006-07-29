@@ -53,8 +53,12 @@ public class TrackingMIDlet extends MIDlet {
 
         // setup environment
         if (hasFlag("fs_read_skip")) {
-            System.out.println("* read-skip feature on");
+            System.out.println("* fs read-skip feature on");
             com.ice.tar.TarInputStream.useReadSkip = true;
+        }
+        if (hasFlag("fs_no_available")) {
+            System.out.println("* fs no-available feature on");
+            cz.kruch.j2se.io.BufferedInputStream.useAvailable = false;
         }
     }
 
@@ -63,7 +67,7 @@ public class TrackingMIDlet extends MIDlet {
 
         // setup environment
         TrackingMIDlet.numAlphaLevels = display.numAlphaLevels();
-        System.out.println("* numAlphaLevels: " + TrackingMIDlet.numAlphaLevels);
+        System.out.println("* UI numAlphaLevels: " + TrackingMIDlet.numAlphaLevels);
 
         // create desktop if it does not exist
         if (desktop == null) {
@@ -75,12 +79,6 @@ public class TrackingMIDlet extends MIDlet {
             console.show("");
             console.show("initializing...");
 
-/*
-            // 1a. show vital info
-            console.show("total memory: " + Runtime.getRuntime().totalMemory());
-            console.show("free memory:  " + Runtime.getRuntime().freeMemory());
-*/
-
             // 2. load configuration
             try {
                 console.show("loading config...");
@@ -89,16 +87,6 @@ public class TrackingMIDlet extends MIDlet {
             } catch (ConfigurationException e) {
                 console.result(-1, "failed");
             }
-
-/*
-            // SE, WTK fix
-            Config.getSafeInstance().setMapPath("file:///E/cr-gpska.tar");
-*/
-
-/*
-            // BENQ fix
-            Config.getSafeInstance().setSimulatorPath("file:///0:/Misc/track.nmea");
-*/
 
             // 3. create desktop
             desktop = new Desktop(this);

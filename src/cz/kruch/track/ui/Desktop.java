@@ -98,7 +98,7 @@ public final class Desktop extends GameCanvas
     // loading states and last-op message
     private boolean initializingMap = false;
     private boolean loadingSlices = false;
-    private String loadingResult = "No default map. Use Options->Load Map to load a map";
+    private String loadingResult = "No default map. Use Options->Load Map/Atlas to load a map/atlas";
 
     // location provider and its last-op throwable
     private LocationProvider provider;
@@ -367,6 +367,7 @@ public final class Desktop extends GameCanvas
 
         // continue only if in tracking mode and not loading map or slices
         if (browsing || _getLoadingSlices() || _getInitializingMap()) {
+            if (log.isEnabled()) log.debug("not ready to update position");
             return;
         }
 
@@ -979,10 +980,10 @@ public final class Desktop extends GameCanvas
      */
 
     public void atlasOpened(Object result, Throwable throwable) {
-        (new DesktopEvent(DesktopEvent.EVENT_ATLAS_OPENED)).invoke(result, throwable);
 /*
-        display.callSerially(new DesktopEvent(DesktopEvent.EVENT_ATLAS_OPENED, result, throwable, null));
+        (new DesktopEvent(DesktopEvent.EVENT_ATLAS_OPENED)).invoke(result, throwable);
 */
+        display.callSerially(new DesktopEvent(DesktopEvent.EVENT_ATLAS_OPENED, result, throwable, null));
     }
 
     /*
@@ -1041,6 +1042,7 @@ public final class Desktop extends GameCanvas
             this.result = result;
             this.throwable = throwable;
             this.closure = closure;
+            if (log.isEnabled()) log.debug("private event constructed; " + this.toString());
         }
 
         public DesktopEvent(int code, Object closure) {
@@ -1384,10 +1386,10 @@ public final class Desktop extends GameCanvas
                         // update screen
                         render(true);
 
+/*
                         // repaint if shown
-                        if (isShown()) {
-                            serviceRepaints();
-                        }
+                        repaint();
+*/
 
                         // check keys, for loading-in-move
                         if ((scrolls > 0) && isShown()) {
@@ -1407,10 +1409,11 @@ public final class Desktop extends GameCanvas
                     // do not deep render until loading is not finished
                     render(false);
 
+/*
                     // repaint if shown
-                    if (isShown()) {
-                        serviceRepaints();
-                    }
+                    int[] clip = status.getClip();
+                    repaint(clip[0], clip[1], clip[2], clip[3]);
+*/
                 } break;
             }
         }
@@ -1431,10 +1434,10 @@ public final class Desktop extends GameCanvas
             // update screen
             render(true);
 
+/*
             // repaint if shown
-            if (isShown()) {
-                serviceRepaints();
-            }
+            repaint();
+*/
         }
 
         // debug

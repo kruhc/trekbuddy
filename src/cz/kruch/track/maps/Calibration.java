@@ -450,14 +450,21 @@ public abstract class Calibration {
             return height;
         }
 
-        public Position computeAbsolutePosition(Calibration parent) {
+        public Position computeAbsolutePosition(Calibration parent) throws InvalidMapException {
             if (parent instanceof GMI || parent instanceof J2N || parent instanceof Ozi) {
                 // position is encoded in filename (trekbuddy, j2n)
+/*
                 StringTokenizer st = new StringTokenizer(path, "_.", false);
                 st.nextToken();
                 int absx = Integer.parseInt(st.nextToken());
                 int absy = Integer.parseInt(st.nextToken());
                 position = new Position(absx, absy);
+*/
+                int[] xy = getXy(path);
+                if (xy == null) {
+                    throw new InvalidMapException("Illegal slice filename: " + path);
+                }
+                position = new Position(xy[0], xy[1]);
             } else { // single slice of gpska map
                 position = new Position(0, 0);
             }
@@ -484,6 +491,32 @@ public abstract class Calibration {
             }
             width = xNext - thisX;
             height = yNext - thisY;
+        }
+
+        private static int[] getXy(String n) {
+            int p0, p1;
+            p0 = p1 = -1;
+            int i = 0;
+            for (int N = n.length(); i < N; i++) {
+                if (i + 4 == N) {
+                    break;
+                }
+                if ('_' == n.charAt(i)) {
+                    p0 = p1;
+                    p1 = i;
+                }
+            }
+            if (p0 == -1 || p1 == -1) {
+                return null;
+            }
+            String sx = n.substring(p0 + 1, p1);
+            String sy = n.substring(p1 + 1, i);
+
+            try {
+                return new int[]{ Integer.parseInt(sx), Integer.parseInt(sy) };
+            } catch (NumberFormatException e) {
+                return null;
+            }
         }
     }
 
@@ -560,8 +593,14 @@ public abstract class Calibration {
                     index++;
                 } else if (index == 2) {
                     px = token;
+                    if (token == null || token.length() == 0) {
+                        index = Integer.MAX_VALUE;
+                    }
                 } else if (index == 3) {
                     py = token;
+                    if (token == null || token.length() == 0) {
+                        index = Integer.MAX_VALUE;
+                    }
                 } else if (index == 6) {
                     lath = token;
                 } else if (index == 7) {
@@ -580,7 +619,8 @@ public abstract class Calibration {
                     northing = token;
                 } else if (index == 16) {
                     zone = token;
-                } else if (index > 16) {
+                }
+                if (index > 16) {
                     break;
                 }
             }
@@ -729,22 +769,6 @@ public abstract class Calibration {
             }
         }
     }
-
-/*
-    private static final class Layer extends Calibration {
-        public Layer(Calibration parent, float factor) {
-            super(null);
-            this.width = (int) (parent.getWidth() * factor);
-            this.height = (int) (parent.getHeight() * factor);
-            this.positions = new Position[parent.positions.length];
-            for (int N = parent.positions.length, i = 0; i < N; i++) {
-                this.positions[i] = new Position((int) (parent.positions[i].getX() * factor),
-                                                 (int) (parent.positions[i].getY() * factor));
-            }
-            this.coordinates = parent.coordinates;
-        }
-    }
-*/
 
     public static final class ProximitePosition extends Position {
         public ProximitePosition(int x, int y) {

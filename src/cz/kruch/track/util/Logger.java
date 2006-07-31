@@ -14,8 +14,8 @@ public final class Logger {
     private String cname;
     private boolean enabled;
 
-    public Logger(String appname) {
-        this.cname = appname;
+    public Logger(String componentName) {
+        this.cname = componentName;
         this.enabled = TrackingMIDlet.isLogEnabled();
     }
 

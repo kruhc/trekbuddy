@@ -17,14 +17,15 @@ import java.util.Enumeration;
 import java.io.IOException;
 
 final class MapViewer {
-    private static final Logger log = new Logger("Map");
+    private static final Logger log = new Logger("MapViewer");
 
     private int gx, gy;
     private int width, height;
     private int x, y;
     private int chx, chy;
     private int chx0, chy0;
-    private int cWidth, cHeight;
+    private int crosshairWidth, crosshairHeight;
+    private int compasWidth, compasHeight;
     private int mWidth, mHeight;
 
     private Image crosshair, compas;
@@ -33,7 +34,6 @@ final class MapViewer {
     private Vector slices = new Vector();
 
     private boolean visible = true;
-
     private Float course;
 
     public MapViewer(int gx, int gy, int width, int height) throws IOException {
@@ -52,10 +52,12 @@ final class MapViewer {
             Image.createImage("/resources/course_0_60.png"),
             Image.createImage("/resources/course_0_75.png")
         };
-        this.cWidth = crosshair.getWidth();
-        this.cHeight = crosshair.getHeight();
-        this.chx0 = this.chx = (width - cWidth) / 2;
-        this.chy0 = this.chy = (height - cHeight) / 2;
+        this.crosshairWidth = crosshair.getWidth();
+        this.crosshairHeight = crosshair.getHeight();
+        this.compasWidth = compas.getWidth();
+        this.compasHeight = compas.getHeight();
+        this.chx0 = this.chx = (width - crosshairWidth) / 2;
+        this.chy0 = this.chy = (height - crosshairHeight) / 2;
     }
 
     public void reset() {
@@ -77,13 +79,14 @@ final class MapViewer {
         this.map = map;
         this.mWidth = map.getWidth();
         this.mHeight = map.getHeight();
+        this.slices = new Vector(0);
     }
 
     /**
      * Returns crosshair position.
      */
     public Position getPosition() {
-        Position p = new Position(x + chx + cWidth / 2, y + chy + cHeight / 2);
+        Position p = new Position(x + chx + crosshairWidth / 2, y + chy + crosshairHeight / 2);
 
         if (log.isEnabled()) log.debug(p.toString());
 
@@ -121,8 +124,8 @@ final class MapViewer {
             dirty |= scroll(direction);
         }
 
-        chx = x - this.x - cWidth / 2;
-        chy = y - this.y - cHeight / 2;
+        chx = x - this.x - crosshairWidth / 2;
+        chy = y - this.y - crosshairHeight / 2;
 
         if (log.isEnabled()) log.debug("move made, dirty? " + dirty + ";current position " + this.x + "," + this.y + "; dirty = " + dirty + "; crosshair requested at " + x + "-" + y + " -> screen position at " + chx + "-" + chy);
 
@@ -140,7 +143,7 @@ final class MapViewer {
                 } else if (y + height < mHeight) {
                     y++;
                     dirty = true;
-                } else if (chy < height - 1 - cHeight / 2) {
+                } else if (chy < height - 1 - crosshairHeight / 2) {
                     chy++;
                     dirty = true;
                 }
@@ -152,7 +155,7 @@ final class MapViewer {
                 } else if (y > 0) {
                     y--;
                     dirty = true;
-                } else if (chy > 0 - cHeight / 2) {
+                } else if (chy > 0 - crosshairHeight / 2) {
                     chy--;
                     dirty = true;
                 }
@@ -164,7 +167,7 @@ final class MapViewer {
                 } else if (x > 0) {
                     x--;
                     dirty = true;
-                } else if (chx > 0 - cWidth / 2) {
+                } else if (chx > 0 - crosshairWidth / 2) {
                     chx--;
                     dirty = true;
                 }
@@ -176,7 +179,7 @@ final class MapViewer {
                 } else if (x + width < mWidth) {
                     x++;
                     dirty = true;
-                } else if (chx < width - 1 - cWidth / 2) {
+                } else if (chx < width - 1 - crosshairWidth / 2) {
                     chx++;
                     dirty = true;
                 }
@@ -194,13 +197,13 @@ final class MapViewer {
 
     public Character boundsHit() {
         Character result = null;
-        if (chx + cWidth / 2 == 0) {
+        if (chx + crosshairWidth / 2 == 0) {
             result = new Character('W');
-        } else if (chx + cWidth / 2 == width - 1) {
+        } else if (chx + crosshairWidth / 2 == width - 1) {
             result = new Character('E');
-        } else if (chy + cHeight / 2 == 0) {
+        } else if (chy + crosshairHeight / 2 == 0) {
             result = new Character('N');
-        } else if (chy + cHeight / 2 == height - 1) {
+        } else if (chy + crosshairHeight / 2 == height - 1) {
             result = new Character('S');
         }
 
@@ -224,8 +227,8 @@ final class MapViewer {
         // paint crosshair
         graphics.drawImage(crosshair, chx, chy, Graphics.TOP | Graphics.LEFT);
         graphics.drawImage(compas,
-                           chx - (compas.getWidth() - cWidth) / 2,
-                           chy - (compas.getHeight() - cHeight) / 2,
+                           chx - (compasWidth - crosshairWidth) / 2,
+                           chy - (compasHeight - crosshairHeight) / 2,
                            Graphics.TOP | Graphics.LEFT);
 
         // paint course
@@ -283,7 +286,7 @@ final class MapViewer {
 
         // TODO precompute offset
         graphics.drawRegion(courses[ci], 0, 0, courses[ci].getWidth(), courses[ci].getHeight(),
-                            ti, chx - (courses[0].getHeight() - cHeight) / 2, chy - (courses[0].getWidth() - cWidth) / 2, Graphics.TOP | Graphics.LEFT);
+                            ti, chx - (courses[0].getHeight() - crosshairHeight) / 2, chy - (courses[0].getWidth() - crosshairWidth) / 2, Graphics.TOP | Graphics.LEFT);
     }
 
     private void drawSlice(Graphics graphics, Slice slice) {
@@ -341,31 +344,47 @@ final class MapViewer {
         }
     }
 
-    // TODO optimize
+    // TODO optimize; eg. look in current slices
     public boolean ensureSlices() {
+        if (log.isEnabled()) log.debug("ensure slices from map @" + Integer.toHexString(map.hashCode()));
+
         if (map == null) {
-            throw new IllegalStateException("No map");
+            throw new AssertionFailedException("No map");
         }
 
+        // find needed slices "line by line"
         Vector collection = new Vector(4);
-        ensureSlice(x, y, collection);
-        ensureSlice(x + width - 1, y, collection);
-        ensureSlice(x, y + height - 1, collection);
-        ensureSlice(x + width - 1, y + height - 1, collection);
+        int _x = x;
+        int _y = y;
+        while (_y <= (y + height)) {
+            int _l = y + height; // bottom for current "line"
+            while (_x <= (x + width)) {
+                Slice s = ensureSlice(_x, _y, collection);
+                if (s == null) {
+                    _x = _y = Integer.MAX_VALUE;
+                    break;
+                } else {
+                    Position p = s.getAbsolutePosition();
+                    int _x0 = p.getX();
+                    int _y0 = p.getY();
+                    _x = _x0 + s.getWidth() + 1;
+                    _l = _y0 + s.getHeight() + 1;
+                }
+            }
+            _y = _l; // next "line" of slices
+            _x = x;  // start on "line"
+        }
 
-        // find slices we will no longer use
-        Vector old = new Vector(0);
+        // release slices images we will no longer use
         for (Enumeration e = slices.elements(); e.hasMoreElements(); ) {
             Slice slice = (Slice) e.nextElement();
-            if (!collection.contains(slice)) {
-                if (log.isEnabled()) log.debug("release map image in " + slice);
-                old.addElement(slice);
+            if (collection.contains(slice)) {
+                if (log.isEnabled()) log.debug("reuse slice in current set; " + slice);
+                continue;
             }
-        }
 
-        // release old slices
-        if (old.size() > 0) {
-            map.disposeImages(old);
+            if (log.isEnabled()) log.debug("release map image in " + slice);
+            slice.setImage(null);
         }
 
         // set new slices
@@ -378,10 +397,31 @@ final class MapViewer {
         return loading;
     }
 
-    private void ensureSlice(int x, int y, Vector newSlices) {
-        Slice slice = map.getSlice(x, y);
-        if (slice != null && !newSlices.contains(slice)) {
+    private Slice ensureSlice(int x, int y, Vector newSlices) {
+        Slice slice = null;
+
+        // look for suitable slice in current set
+        for (Enumeration e = slices.elements(); e.hasMoreElements(); ) {
+            Slice s = (Slice) e.nextElement();
+            if (s.isWithin(x, y)) {
+                slice = s;
+                break;
+            }
+        }
+
+        // next try map slices
+        if (slice == null) {
+            slice = map.getSlice(x, y);
+        }
+
+        // found it?
+        if (slice != null) {
+            if (newSlices.contains(slice)) {
+                throw new AssertionFailedException("Slice already added");
+            }
             newSlices.addElement(slice);
         }
+
+        return slice;
     }
 }

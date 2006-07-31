@@ -41,7 +41,7 @@ public final class Slice {
         return calibration.getPath();
     }
 
-    public void doFinal(Calibration parent) {
+    public void doFinal(Calibration parent) throws InvalidMapException {
         position = calibration.computeAbsolutePosition(parent);
     }
 

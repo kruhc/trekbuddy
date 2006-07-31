@@ -56,7 +56,6 @@ public final class Map {
     private int type = -1;
     private Slice[] slices;
     private Calibration calibration;
-    private boolean closing = false;
 
     public Map(String path, StateListener listener) {
         this(path, null, listener);
@@ -106,26 +105,16 @@ public final class Map {
     }
 
     /**
-     * Disposes map resources - slices images.
-     */
-    public void dispose() {
-        for (int N = slices.length, i = 0; i < N; i++) {
-            slices[i].setImage(null);
-        }
-    }
-
-    /**
      * Closes map - releases map images, destroy loader.
      * Does gc at the end.
      */
     public void close() {
-        if (log.isEnabled()) log.info("close map");
+        if (log.isEnabled()) log.info("close map @" + Integer.toHexString(hashCode()));
 
-        // release map resources
-        dispose();
-
-        // we are closing
-        closing = true;
+        // release slices images
+        for (int N = slices.length, i = 0; i < N; i++) {
+            slices[i].setImage(null);
+        }
 
         // destroy loader
         if (loader != null) {
@@ -157,19 +146,19 @@ public final class Map {
     /**
      * Opens and scans map.
      */
-    public boolean prepareMap() {
-        if (log.isEnabled()) log.debug("prepare map");
+    public boolean open() {
+        if (log.isEnabled()) log.debug("open map @" + Integer.toHexString(hashCode()));
 
         // open map in background
         LoaderIO.getInstance().enqueue(new Runnable() {
             public void run() {
-                if (log.isEnabled()) log.debug("map loading task starting");
+                if (log.isEnabled()) log.debug("map loading task starting @" + Integer.toHexString(Map.this.hashCode()));
 
                 // open and init map
                 Throwable throwable = loadMap();
 
                 // log
-                if (log.isEnabled()) log.debug("map opened; " + throwable);
+                if (log.isEnabled()) log.debug("map opened @" + Integer.toHexString(Map.this.hashCode()) + "; " + throwable);
 
                 // we are done
                 notifyListener(EVENT_MAP_OPENED, null, throwable);
@@ -184,7 +173,7 @@ public final class Map {
      * @param slices
      */
     public boolean prepareSlices(Vector slices) {
-        if (log.isEnabled()) log.debug("prepare slices");
+        if (log.isEnabled()) log.debug("prepare slices @" + Integer.toHexString(hashCode()));
 
         final Vector collection = new Vector(0);
 
@@ -208,13 +197,13 @@ public final class Map {
         // load images at background
         LoaderIO.getInstance().enqueue(new Runnable() {
             public void run() {
-                if (log.isEnabled()) log.debug("slice loading task started");
+                if (log.isEnabled()) log.debug("slice loading task started @" + Integer.toHexString(Map.this.hashCode()));
 
                 // load images
                 Throwable throwable = loadImages(collection);
 
                 // log
-                if (log.isEnabled()) log.debug("all requested slices loaded");
+                if (log.isEnabled()) log.debug("all requested slices loaded @" + Integer.toHexString(Map.this.hashCode()));
 
                 // we are done
                 notifyListener(EVENT_SLICES_LOADED, null, throwable);
@@ -259,7 +248,16 @@ public final class Map {
         Map map = new Map("", listener);
         map.type = TYPE_BEST;
         InputStream in = Map.class.getResourceAsStream("/resources/world.map");
-        map.calibration = new Calibration.Ozi(loadTextContent(in), "/resources/world.map");
+        if (in == null) {
+            in = Map.class.getResourceAsStream("/resources/world.gmi");
+            if (in == null) {
+                throw new InvalidMapException("No default map calibration");
+            } else {
+                map.calibration = new Calibration.GMI(loadTextContent(in), "/resources/world.map");
+            }
+        } else {
+            map.calibration = new Calibration.Ozi(loadTextContent(in), "/resources/world.map");
+        }
         in.close();
         Slice slice = new Slice(new Calibration.Best("/resources/world_0_0.png"));
         in = Map.class.getResourceAsStream("/resources/world_0_0.png");
@@ -307,20 +305,6 @@ public final class Map {
         } catch (OutOfMemoryError e) {
             return e;
         }
-    }
-
-    /**
-     * Releases given slices images. Does gc.
-     * @param slices
-     */
-    public void disposeImages(Vector slices) {
-        for (Enumeration e = slices.elements(); e.hasMoreElements(); ) {
-            Slice slice = (Slice) e.nextElement();
-            slice.setImage(null);
-        }
-
-        // gc
-        System.gc();
     }
 
     /**
@@ -393,7 +377,7 @@ public final class Map {
     /**
      * Finalizes map initialization.
      */
-    public void doFinal() {
+    public void doFinal() throws InvalidMapException {
         // absolutize slices position
         for (int N = slices.length, i = 0; i < N; i++) {
             slices[i].doFinal(calibration);

@@ -187,7 +187,7 @@ public final class Desktop extends GameCanvas
         try {
             map = Map.defaultMap(this);
         } catch (IOException e) {
-            // should never happen
+            _updateLoadingResult(e);
         }
     }
 
@@ -920,7 +920,7 @@ public final class Desktop extends GameCanvas
 
         // open map (in background)
         _map = new Map(url, name, this);
-        _setInitializingMap(_map.prepareMap());
+        _setInitializingMap(_map.open());
     }
 
     private void startOpenAtlas(String url) {

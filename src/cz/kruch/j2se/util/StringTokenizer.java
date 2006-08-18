@@ -109,7 +109,7 @@ public final class StringTokenizer implements Enumeration {
         }
 
         char m = 0;
-        for (int i = 0; i < delimiters.length(); i++) {
+        for (int N = delimiters.length(), i = 0; i < N; i++) {
             char c = delimiters.charAt(i);
             if (m < c)
                 m = c;

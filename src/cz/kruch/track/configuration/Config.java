@@ -55,6 +55,7 @@ public abstract class Config {
     protected boolean fullscreen = false;
     protected boolean osdExtended = true;
     protected boolean noSounds = false;
+    protected int crosshairType = 0; // hidden
 
     // group
     protected int timeZone = 0;
@@ -64,7 +65,7 @@ public abstract class Config {
 
     public abstract void update() throws ConfigurationException;
 
-    public static Config getInstance() throws ConfigurationException {
+    public synchronized static Config getInstance() throws ConfigurationException {
         if (instance == null) {
             instance = new RMSConfig();
         }
@@ -72,7 +73,7 @@ public abstract class Config {
         return instance;
     }
 
-    public static Config getSafeInstance() {
+    public synchronized static Config getSafeInstance() {
         try {
             return getInstance();
         } catch (ConfigurationException e) {
@@ -171,7 +172,15 @@ public abstract class Config {
         this.timeZone = timeZone;
     }
 
-    private static class DefaultConfig extends Config {
+    public int getCrosshairType() {
+        return crosshairType;
+    }
+
+    public void setCrosshairType(int crosshairType) {
+        this.crosshairType = crosshairType;
+    }
+
+    private static final class DefaultConfig extends Config {
         public DefaultConfig() {
         }
 
@@ -183,8 +192,8 @@ public abstract class Config {
         }
     }
 
-    private static class RMSConfig extends Config {
-        private static final String NAME = "config_0803";
+    private static final class RMSConfig extends Config {
+        private static final String NAME = "config_086";
 
         private boolean initialized = false;
 
@@ -215,6 +224,7 @@ public abstract class Config {
                                 osdExtended = din.readBoolean();
                                 noSounds = din.readBoolean();
                                 timeZone = din.readInt();
+                                crosshairType = din.readInt();
                                 din.close();
                                 if (log.isEnabled()) log.info("configuration read");
                             } break;
@@ -266,6 +276,7 @@ public abstract class Config {
                 dout.writeBoolean(osdExtended);
                 dout.writeBoolean(noSounds);
                 dout.writeInt(timeZone);
+                dout.writeInt(crosshairType);
                 dout.close();
                 byte[] bytes = data.toByteArray();
                 if (rs.getNumRecords() > 0) {

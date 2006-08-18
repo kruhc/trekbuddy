@@ -25,16 +25,17 @@ final class MapViewer {
     private int chx, chy;
     private int chx0, chy0;
     private int crosshairWidth, crosshairHeight;
-    private int compasWidth, compasHeight;
+    private int arrowWidth, arrowHeight;
     private int mWidth, mHeight;
 
-    private Image crosshair, compas;
+    private Image[] crosshairs;
     private Image[] courses;
     private Map map;
     private Vector slices = new Vector();
 
     private boolean visible = true;
     private Float course;
+    private int ci = 0;
 
     public MapViewer(int gx, int gy, int width, int height) throws IOException {
         this.gx = gx;
@@ -42,25 +43,35 @@ final class MapViewer {
         this.width = width;
         this.height = height;
         this.x = this.y = 0;
-        this.crosshair = Image.createImage("/resources/crosshair.png");
-        this.compas = Image.createImage("/resources/compas.png");
-        this.courses = new Image[] {
-            Image.createImage("/resources/course_0_0.png"),
-            Image.createImage("/resources/course_0_15.png"),
-            Image.createImage("/resources/course_0_30.png"),
-            Image.createImage("/resources/course_0_45.png"),
-            Image.createImage("/resources/course_0_60.png"),
-            Image.createImage("/resources/course_0_75.png")
+        this.crosshairs = new Image[] {
+            Image.createImage("/resources/crosshair_tp_full.png"),
+            Image.createImage("/resources/crosshair_tp_white.png"),
+            Image.createImage("/resources/crosshair_tp_grey.png")
         };
-        this.crosshairWidth = crosshair.getWidth();
-        this.crosshairHeight = crosshair.getHeight();
-        this.compasWidth = compas.getWidth();
-        this.compasHeight = compas.getHeight();
+        this.courses = new Image[] {
+            Image.createImage("/resources/course_0.png"),
+            Image.createImage("/resources/course_10.png"),
+            Image.createImage("/resources/course_20.png"),
+            Image.createImage("/resources/course_30.png"),
+            Image.createImage("/resources/course_40.png"),
+            Image.createImage("/resources/course_50.png"),
+            Image.createImage("/resources/course_60.png"),
+            Image.createImage("/resources/course_70.png"),
+            Image.createImage("/resources/course_80.png")
+        };
+        this.crosshairWidth = crosshairs[0].getWidth();
+        this.crosshairHeight = crosshairs[0].getHeight();
+        this.arrowWidth = courses[0].getWidth();
+        this.arrowHeight = courses[0].getHeight();
         this.chx0 = this.chx = (width - crosshairWidth) / 2;
         this.chy0 = this.chy = (height - crosshairHeight) / 2;
     }
 
-    public void reset() {
+    public void reset(int gx, int gy, int width, int height) {
+        this.gx = gx;
+        this.gy = gy;
+        this.width = width;
+        this.height = height;
         chx = chx0;
         chy = chy0;
         x = y = 0;
@@ -73,6 +84,10 @@ final class MapViewer {
 
     public void show() {
         visible = true;
+    }
+
+    public boolean isVisible() {
+        return visible;
     }
 
     public void setMap(Map map) {
@@ -140,10 +155,10 @@ final class MapViewer {
                 if (chy < chy0) {
                     chy++;
                     dirty = true;
-                } else if (y + height < mHeight) {
+                } else if (y + height < mHeight - 1) {
                     y++;
                     dirty = true;
-                } else if (chy < height - 1 - crosshairHeight / 2) {
+                } else if (chy < height - 1 - crosshairHeight / 2 - 1) {
                     chy++;
                     dirty = true;
                 }
@@ -176,10 +191,10 @@ final class MapViewer {
                 if (chx < chx0) {
                     chx++;
                     dirty = true;
-                } else if (x + width < mWidth) {
+                } else if (x + width < mWidth - 1) {
                     x++;
                     dirty = true;
-                } else if (chx < width - 1 - crosshairWidth / 2) {
+                } else if (chx < width - 1 - crosshairWidth / 2 - 1) {
                     chx++;
                     dirty = true;
                 }
@@ -199,11 +214,11 @@ final class MapViewer {
         Character result = null;
         if (chx + crosshairWidth / 2 == 0) {
             result = new Character('W');
-        } else if (chx + crosshairWidth / 2 == width - 1) {
+        } else if (chx + crosshairWidth / 2 >= width - 2) {
             result = new Character('E');
         } else if (chy + crosshairHeight / 2 == 0) {
             result = new Character('N');
-        } else if (chy + crosshairHeight / 2 == height - 1) {
+        } else if (chy + crosshairHeight / 2 >= height - 2) {
             result = new Character('S');
         }
 
@@ -215,21 +230,40 @@ final class MapViewer {
             return;
         }
 
-        // clear window
-        graphics.setColor(0, 0, 0);
-        graphics.fillRect(gx, gy, width, height);
+        render(graphics, null);
+    }
+
+    public void render(Graphics graphics, int[] clip) {
+        if (!visible) {
+            return;
+        }
+
+        if (clip != null) {
+            graphics.setClip(clip[0], clip[1], clip[2], clip[3]);
+        }
 
         // project slices to window
         for (Enumeration e = slices.elements(); e.hasMoreElements(); ) {
-            drawSlice(graphics, (Slice) e.nextElement());
+            Slice slice = (Slice) e.nextElement();
+            if (slice.getImage() == null) {
+                if (log.isEnabled()) log.debug("image for slice " + slice + " being loaded?");
+                continue;
+            }
+            drawSlice(graphics, clip, slice);
+        }
+
+        if (clip != null) {
+            graphics.setClip(0, 0, width, height);
+        }
+    }
+
+    public void render2(Graphics graphics) {
+        if (!visible) {
+            return;
         }
 
         // paint crosshair
-        graphics.drawImage(crosshair, chx, chy, Graphics.TOP | Graphics.LEFT);
-        graphics.drawImage(compas,
-                           chx - (compasWidth - crosshairWidth) / 2,
-                           chy - (compasHeight - crosshairHeight) / 2,
-                           Graphics.TOP | Graphics.LEFT);
+        graphics.drawImage(crosshairs[ci], chx, chy, Graphics.TOP | Graphics.LEFT);
 
         // paint course
         if (course != null) {
@@ -237,6 +271,7 @@ final class MapViewer {
         }
     }
 
+    // TODO move calculation to setter
     private void drawCourse(Graphics graphics) {
         int ti;
         switch (course.intValue() / 90) {
@@ -259,18 +294,24 @@ final class MapViewer {
 
         int cwo = course.intValue() % 90;
         int ci;
-        if (cwo >= 0 && cwo < 8) {
+        if (cwo >= 0 && cwo < 6) {
             ci = 0;
-        } else if (cwo >= 8 && cwo < 23) {
+        } else if (cwo >= 6 && cwo < 16) {
             ci = 1;
-        } else if (cwo >= 23 && cwo < 38) {
+        } else if (cwo >= 16 && cwo < 26) {
             ci = 2;
-        } else if (cwo >= 38 && cwo < 53) {
+        } else if (cwo >= 26 && cwo < 36) {
             ci = 3;
-        } else if (cwo >= 53 && cwo < 68) {
+        } else if (cwo >= 36 && cwo < 46) {
             ci = 4;
-        } else if (cwo >= 68 && cwo < 83) {
+        } else if (cwo >= 46 && cwo < 56) {
             ci = 5;
+        } else if (cwo >= 56 && cwo < 66) {
+            ci = 6;
+        } else if (cwo >= 66 && cwo < 76) {
+            ci = 7;
+        } else if (cwo >= 76 && cwo < 86) {
+            ci = 8;
         } else {
             ci = 0;
             if (ti == Sprite.TRANS_NONE) {
@@ -284,14 +325,16 @@ final class MapViewer {
             }
         }
 
-        // TODO precompute offset
-        graphics.drawRegion(courses[ci], 0, 0, courses[ci].getWidth(), courses[ci].getHeight(),
-                            ti, chx - (courses[0].getHeight() - crosshairHeight) / 2, chy - (courses[0].getWidth() - crosshairWidth) / 2, Graphics.TOP | Graphics.LEFT);
+        graphics.drawRegion(courses[ci], 0, 0, arrowWidth, arrowHeight,
+                            ti,
+                            chx - (arrowWidth - crosshairWidth) / 2,
+                            chy - (arrowHeight - crosshairHeight) / 2,
+                            Graphics.TOP | Graphics.LEFT);
     }
 
-    private void drawSlice(Graphics graphics, Slice slice) {
-        int m_x0 = slice.getAbsolutePosition().getX();
-        int m_y0 = slice.getAbsolutePosition().getY();
+    private void drawSlice(Graphics graphics, int[] clip, Slice slice) {
+        int m_x0 = slice.getX();
+        int m_y0 = slice.getY();
         int slice_w = slice.getWidth();
         int slice_h = slice.getHeight();
 
@@ -325,17 +368,8 @@ final class MapViewer {
         if (h > (height - y_dest)) h = height - y_dest;
         if (h > slice_h) h = slice_h;
 
-/*
-        // assertions
-        if (x_src > slice.getWidth()) throw new IllegalStateException("x_src > slice.getWidth()");
-        if (y_src > slice.getHeight()) throw new IllegalStateException("y_src > slice.getHeight()");
-*/
-
+//        if (log.isEnabled()) log.debug("draw " + w + "x" + h + " from " + slice.getURL() + ";" + x_src + "-" + y_src + " at " + x_dest + "-" + y_dest + " ");
         if (w > 0 && h > 0) {
-            // assertion
-            if (slice.getImage() == null) {
-                throw new AssertionFailedException("Slice image is null");
-            }
             graphics.drawRegion(slice.getImage(),
                                 x_src, y_src, w, h,
                                 Sprite.TRANS_NONE,
@@ -344,7 +378,19 @@ final class MapViewer {
         }
     }
 
-    // TODO optimize; eg. look in current slices
+    public void nextCrosshair() {
+        ci++;
+        if (ci == crosshairs.length)
+            ci = 0;
+    }
+
+    public int[] getClip() {
+        if (!visible)
+            return null;
+
+        return new int[] { chx, chy, crosshairWidth, crosshairHeight };
+    }
+
     public boolean ensureSlices() {
         if (log.isEnabled()) log.debug("ensure slices from map @" + Integer.toHexString(map.hashCode()));
 
@@ -356,19 +402,17 @@ final class MapViewer {
         Vector collection = new Vector(4);
         int _x = x;
         int _y = y;
-        while (_y <= (y + height)) {
-            int _l = y + height; // bottom for current "line"
-            while (_x <= (x + width)) {
+        int xmax = x + width > mWidth ? mWidth : x + width;
+        int ymax = y + height > mHeight ? mHeight : y + height;
+        while (_y < ymax) {
+            int _l = ymax; // bottom for current "line"
+            while (_x < xmax) {
                 Slice s = ensureSlice(_x, _y, collection);
                 if (s == null) {
-                    _x = _y = Integer.MAX_VALUE;
-                    break;
+                    throw new AssertionFailedException("Out of map - no slice for " + _x + "-" + _y);
                 } else {
-                    Position p = s.getAbsolutePosition();
-                    int _x0 = p.getX();
-                    int _y0 = p.getY();
-                    _x = _x0 + s.getWidth() + 1;
-                    _l = _y0 + s.getHeight() + 1;
+                    _x = s.getX() + s.getWidth();
+                    _l = s.getY() + s.getHeight();
                 }
             }
             _y = _l; // next "line" of slices
@@ -417,7 +461,7 @@ final class MapViewer {
         // found it?
         if (slice != null) {
             if (newSlices.contains(slice)) {
-                throw new AssertionFailedException("Slice already added");
+                throw new AssertionFailedException("Slice " + slice + " already added for " + x + "-" + y);
             }
             newSlices.addElement(slice);
         }

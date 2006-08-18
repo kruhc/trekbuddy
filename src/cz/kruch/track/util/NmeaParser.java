@@ -196,13 +196,13 @@ public final class NmeaParser {
         return parseInt(token.array, token.begin, token.length);
     }
 
-    private static int parseInt(char[] value, int offset, int length) {
+    public static int parseInt(char[] value, int offset, int length) {
         if (length == 0) {
             throw new NumberFormatException("No input");
         }
 
         int end = offset + length;
-        int result = 0; // TODO is this correct initial value
+        int result = 0; // TODO is this correct initial value???
 
         while (offset < end) {
             char ch = value[offset++];
@@ -245,12 +245,8 @@ public final class NmeaParser {
 /* too slow
                 int idigit = Character.digit(ch, 10);
 */
-                int idigit = -1;
                 if (ch >= '0' && ch <= '9') {
-                    idigit = ch - '0';
-                }
-                if (idigit > -1) {
-                    float fdigit = idigit;
+                    float fdigit = ch - '0';
                     if (decSeen > 0) {
                         result += (fdigit / decSeen);
                         decSeen *= 10;
@@ -284,12 +280,8 @@ public final class NmeaParser {
 /* too slow
                 int idigit = Character.digit(ch, 10);
 */
-                int idigit = -1;
                 if (ch >= '0' && ch <= '9') {
-                    idigit = ch - '0';
-                }
-                if (idigit > -1) {
-                    double fdigit = idigit;
+                    double fdigit = ch - '0';
                     if (decSeen > 0) {
                         result += (fdigit / decSeen);
                         decSeen *= 10;

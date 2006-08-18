@@ -7,10 +7,8 @@ import api.location.LocationProvider;
 import api.location.LocationException;
 import api.location.LocationListener;
 import api.location.Location;
-import api.location.QualifiedCoordinates;
 import cz.kruch.track.configuration.Config;
 import cz.kruch.track.ui.Desktop;
-import cz.kruch.track.util.NmeaParser;
 import cz.kruch.track.util.Logger;
 import cz.kruch.track.event.Callback;
 import cz.kruch.track.AssertionFailedException;
@@ -38,17 +36,15 @@ public class Jsr82LocationProvider extends StreamReadingLocationProvider impleme
 
     private static final int WATCHER_PERIOD = 60 * 1000;
 
-    private Display display;
-    private Displayable previous;
     private Callback recordingCallback;
 
     private Thread thread;
 
     private String btspp = null;
-    private boolean go = false;
+    private volatile boolean go = false;
 
     private Timer watcher;
-    private Object sync = new Object();
+    private final Object sync = new Object();
     private long timestamp;
     private int state;
 
@@ -57,8 +53,6 @@ public class Jsr82LocationProvider extends StreamReadingLocationProvider impleme
 
     public Jsr82LocationProvider(Display display, Callback recordingCallback) {
         super(Config.LOCATION_PROVIDER_JSR82);
-        this.display = display;
-        this.previous = display.getCurrent();
         this.recordingCallback = recordingCallback;
         this.timestamp = 0;
         this.state = LocationProvider.TEMPORARILY_UNAVAILABLE;
@@ -67,7 +61,7 @@ public class Jsr82LocationProvider extends StreamReadingLocationProvider impleme
     public void run() {
         try {
             // start gpx
-            getListener().providerStateChanged(this, LocationProvider._STARTING);
+            notifyListener(LocationProvider._STARTING);
 
             // start watcher
             startWatcher();
@@ -159,7 +153,7 @@ public class Jsr82LocationProvider extends StreamReadingLocationProvider impleme
 
     private void startNmeaLog() {
         if (Config.getSafeInstance().isTracklogsOn() && Config.TRACKLOG_FORMAT_NMEA.equals(Config.getSafeInstance().getTracklogsFormat())) {
-            String path = Config.getSafeInstance().getTracklogsDir() + "/nmea-" + Long.toString(System.currentTimeMillis()) + ".log";
+            String path = Config.getSafeInstance().getTracklogsDir() + "/nmea-" + GpxTracklog.dateToFileDate(System.currentTimeMillis()) + ".log";
             try {
                 nmeaFc = (FileConnection) Connector.open(path, Connector.WRITE);
                 nmeaFc.create();
@@ -172,7 +166,7 @@ public class Jsr82LocationProvider extends StreamReadingLocationProvider impleme
                 recordingCallback.invoke(new Integer(1), null);
 
             } catch (Throwable t) {
-                Desktop.showError(display, "Failed to start NMEA log.", t, null);
+                Desktop.showError("Failed to start NMEA log.", t);
             }
         }
     }
@@ -219,7 +213,7 @@ public class Jsr82LocationProvider extends StreamReadingLocationProvider impleme
                 try {
                     location = nextLocation(in);
                 } catch (AssertionFailedException e) {
-                    Desktop.showError(display, e.getMessage(), null, null);
+                    Desktop.showError(e.getMessage(), null);
                 } catch (Exception e) {
                     if (log.isEnabled()) log.warn("Failed to get location.", e);
 
@@ -287,7 +281,7 @@ public class Jsr82LocationProvider extends StreamReadingLocationProvider impleme
         }
     }
 
-    private class Discoverer extends List implements javax.bluetooth.DiscoveryListener, CommandListener {
+    private final class Discoverer extends List implements javax.bluetooth.DiscoveryListener, CommandListener {
         // intentionally not static
         private javax.bluetooth.UUID[] uuidSet = {
             new javax.bluetooth.UUID(0x1101),
@@ -312,18 +306,18 @@ public class Jsr82LocationProvider extends StreamReadingLocationProvider impleme
         }
 
         public void start() throws LocationException {
-            display.setCurrent(this);
+            Desktop.display.setCurrent(this);
             try {
                 goDevices();
             } catch (LocationException e) {
-                display.setCurrent(previous);
+                Desktop.display.setCurrent(Desktop.screen);
                 throw e;
             }
         }
 
         private void letsGo(boolean ok) {
             // restore screen anyway
-            display.setCurrent(previous);
+            Desktop.display.setCurrent(Desktop.screen);
 
             // good to go or not
             if (ok) {
@@ -378,7 +372,7 @@ public class Jsr82LocationProvider extends StreamReadingLocationProvider impleme
             try {
                 transactionID = agent.searchServices(null, uuidSet, device, this);
             } catch (javax.bluetooth.BluetoothStateException e) {
-                Desktop.showError(display, "Service search failed", e, null);
+                Desktop.showError("Service search failed", e);
                 showDevices();
             }
         }
@@ -445,7 +439,7 @@ public class Jsr82LocationProvider extends StreamReadingLocationProvider impleme
                 }
 
                 if (respCode != SERVICE_SEARCH_TERMINATED) {
-                    Desktop.showWarning(display, "Service not found (" + respMsg + ").",
+                    Desktop.showWarning("Service not found (" + respMsg + ").",
                                         null, null);
                     // update UI
                     setTicker(null);
@@ -470,7 +464,7 @@ public class Jsr82LocationProvider extends StreamReadingLocationProvider impleme
                 if (cancel) {
                     letsGo(false);
                 } else {
-                    Desktop.showError(display, "No devices discovered", null, null);
+                    Desktop.showError("No devices discovered", null);
                 }
             } else {
                 setTicker(new Ticker("Resolving names"));
@@ -497,7 +491,7 @@ public class Jsr82LocationProvider extends StreamReadingLocationProvider impleme
                 if (transactionID > 0) {
                     agent.cancelServiceSearch(transactionID);
                 }
-                if (inquiryCompleted == false) {
+                if (!inquiryCompleted) {
                     agent.cancelInquiry(this);
                 }
                 if (device == null) { /* quit BT explorer */
@@ -511,8 +505,7 @@ public class Jsr82LocationProvider extends StreamReadingLocationProvider impleme
                 try {
                     goDevices();
                 } catch (LocationException e) {
-                    Desktop.showError(display, "Unable to restart discovery",
-                                      e, null);
+                    Desktop.showError("Unable to restart discovery", e);
                 }
             }
         }

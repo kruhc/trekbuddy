@@ -10,6 +10,7 @@ import api.location.Location;
 import api.location.QualifiedCoordinates;
 
 import javax.microedition.io.Connector;
+import javax.microedition.io.file.FileConnection;
 import javax.microedition.lcdui.Display;
 import java.io.InputStream;
 import java.io.IOException;
@@ -94,12 +95,12 @@ public class SimulatorLocationProvider
     public void run() {
         if (log.isEnabled()) log.info("simulator task starting; url " + url);
 
-        // start gpx
-        getListener().providerStateChanged(this, LocationProvider._STARTING);
+        // for start gpx
+        notifyListener(LocationProvider._STARTING);
 
         InputStream in = null;
         try {
-            // open file and stream
+            // open input
             in = new BufferedInputStream(Connector.openInputStream(url), BUFFER_SIZE);
 
             // notify
@@ -113,7 +114,7 @@ public class SimulatorLocationProvider
                 try {
                     location = nextLocation(in);
                 } catch (AssertionFailedException e) {
-                    Desktop.showError(display, e.getMessage(), null, null);
+                    Desktop.showError(e.getMessage(), null);
                 } catch (Exception e) {
                     if (log.isEnabled()) log.warn("Failed to get location.", e);
 

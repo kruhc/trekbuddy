@@ -26,7 +26,7 @@ public class Jsr179LocationProvider extends api.location.LocationProvider {
         }
 
         // start gpx
-        getListener().providerStateChanged(this, api.location.LocationProvider._STARTING);
+        notifyListener(api.location.LocationProvider._STARTING);
 
         return impl.getState();
     }
@@ -43,7 +43,7 @@ public class Jsr179LocationProvider extends api.location.LocationProvider {
         }
     }
 
-    private class LocationListenerAdapter implements javax.microedition.location.LocationListener {
+    private final class LocationListenerAdapter implements javax.microedition.location.LocationListener {
 
         public LocationListenerAdapter(api.location.LocationListener listener) {
             setListener(listener);

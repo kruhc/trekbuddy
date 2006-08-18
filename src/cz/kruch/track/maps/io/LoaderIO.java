@@ -11,7 +11,7 @@ public final class LoaderIO extends Thread {
     private static LoaderIO instance;
 
     private Runnable task = null;
-    private boolean go = true;
+    private volatile boolean go = true;
     private boolean ready = true;
 
     private LoaderIO() {
@@ -20,7 +20,6 @@ public final class LoaderIO extends Thread {
     public static LoaderIO getInstance() {
         if (instance == null) {
             instance = new LoaderIO();
-            instance.setPriority(Thread.MAX_PRIORITY);
             instance.start();
         }
 
@@ -29,8 +28,8 @@ public final class LoaderIO extends Thread {
 
     public static void destroy() {
         if (instance != null) {
+            instance.go = false;
             synchronized (instance) {
-                instance.go = false;
                 instance.notify();
             }
             try {
@@ -43,7 +42,7 @@ public final class LoaderIO extends Thread {
     public void enqueue(Runnable r) {
         if (log.isEnabled()) log.debug("enqueueing task " + r);
 
-        // wait for previous task to finish
+        // enqueu task (wait for previous task to finish)
         synchronized (this) {
             while (!ready) {
                 try {
@@ -52,17 +51,9 @@ public final class LoaderIO extends Thread {
                 }
             }
             ready = false;
-        }
-
-        if (log.isEnabled()) log.debug("I/O thread ready");
-
-        // enqueu task
-        synchronized (this) {
-            this.task = r;
+            task = r;
             notify();
         }
-
-        if (log.isEnabled()) log.debug("enqueued");
     }
 
     public void run() {

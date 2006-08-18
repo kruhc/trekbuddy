@@ -7,7 +7,7 @@ import java.util.Date;
 import java.util.Calendar;
 import java.util.TimeZone;
 
-public final class Location {
+public class Location {
     private static final Calendar CALENDAR = Calendar.getInstance(TimeZone.getTimeZone("GMT"));
 
     private QualifiedCoordinates coordinates;
@@ -87,9 +87,11 @@ public final class Location {
         if (speed > -1F) {
             sb.append((new Float(speed * 1.852F)).intValue()).append(" km/h ");
         }
+/* course arrow is good enough
         if (course > -1F) {
             sb.append((new Float(course)).intValue()).append(QualifiedCoordinates.SIGN).append(' ');
         }
+*/
         if (sat > -1) {
             sb.append(sat).append('*');
         }

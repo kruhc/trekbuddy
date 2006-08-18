@@ -14,6 +14,17 @@ public final class Logger {
     private String cname;
     private boolean enabled;
 
+//    private static java.io.OutputStreamWriter out;
+
+//    static {
+//        try {
+//            javax.microedition.io.file.FileConnection fc = (javax.microedition.io.file.FileConnection) javax.microedition.io.Connector.open("file:///E:/trekbuddy.log", javax.microedition.io.Connector.WRITE);
+//            fc.create();
+//            out = new java.io.OutputStreamWriter(fc.openOutputStream());
+//        } catch (IOException e) {
+//        }
+//    }
+
     public Logger(String componentName) {
         this.cname = componentName;
         this.enabled = TrackingMIDlet.isLogEnabled();
@@ -29,7 +40,7 @@ public final class Logger {
 
     public void debug(String message, Throwable t) {
         log(LEVEL_DEBUG, message);
-        log(t.toString());
+        log(t);
     }
 
     public void info(String message) {
@@ -42,7 +53,7 @@ public final class Logger {
 
     public void warn(String message, Throwable t) {
         log(LEVEL_WARN, message);
-        log(t.toString());
+        log(t);
     }
 
     public void error(String message) {
@@ -51,20 +62,38 @@ public final class Logger {
 
     public void error(String message, Throwable t) {
         log(LEVEL_ERROR, message);
-        log(t.toString());
+        log(t);
     }
 
     private void log(String severity, String message) /*throws IOException*/ {
         if (enabled) {
-            System.out.println("[" + severity + "] " + cname + " - " + message);
-            System.out.flush();
+//            if (out == null) {
+                System.out.println("[" + severity + "] " + cname + " - " + message);
+                System.out.flush();
+//            } else {
+//                try {
+//                    out.write("[" + severity + "] " + cname + " - " + message + "\n");
+//                    out.flush();
+//                } catch (IOException e) {
+//                }
+//            }
         }
     }
 
-    private void log(String stacktrace) /*throws IOException*/ {
+    private void log(Throwable t) /*throws IOException*/ {
         if (enabled) {
-            System.out.println(stacktrace);
-            System.out.flush();
+//            if (out == null) {
+//                System.out.println(stacktrace);
+//                System.out.flush();
+                t.printStackTrace();
+                System.err.flush();
+//            } else {
+//                try {
+//                    out.write("stacktrace" + "\n");
+//                    out.flush();
+//                } catch (IOException e) {
+//                }
+//            }
         }
     }
 }

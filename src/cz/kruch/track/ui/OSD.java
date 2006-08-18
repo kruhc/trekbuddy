@@ -16,10 +16,10 @@ final class OSD extends Bar {
     private Image providerUnavailable;
     private Image providerOutOfService;
 
-    private int providerStatus = LocationProvider.OUT_OF_SERVICE;
     private int semaforX, semaforY;
-    private String recording = null;
-    private String extendedInfo;
+    private volatile int providerStatus = LocationProvider.OUT_OF_SERVICE;
+    private volatile String recording = null;
+    private volatile String extendedInfo;
 
     private int bh;
     private int rw;
@@ -30,9 +30,9 @@ final class OSD extends Bar {
         this.providerUnavailable = Image.createImage("/resources/s_orange.png");
         this.providerOutOfService = Image.createImage("/resources/s_red.png");
         this.semaforX = this.width - this.providerAvailable.getWidth() - BORDER;
-        this.semaforY = Math.abs((this.font.getHeight() - this.providerAvailable.getHeight())) / 2;
+        this.semaforY = Math.abs((Desktop.font.getHeight() - this.providerAvailable.getHeight())) / 2;
         this.bh = bar.getHeight();
-        this.rw = font.charWidth('R');
+        this.rw = Desktop.font.charWidth('R');
     }
 
     public void render(Graphics graphics) {
@@ -44,20 +44,34 @@ final class OSD extends Bar {
             info = NO_INFO;
         }
 
-        // draw position
+        // draw info + extended info bg
         graphics.drawImage(bar, gx, gy, Graphics.TOP | Graphics.LEFT);
-        if (ok) {
-            graphics.setColor(255, 255, 255);
-        } else {
+        if (extendedInfo != null) {
+            graphics.drawImage(bar, gx, gy + bh, Graphics.TOP | Graphics.LEFT);
+        }
+
+        // not ok? change color...
+        if (!ok) {
             graphics.setColor(255, 0, 0);
         }
-        graphics.setFont(font);
+
+        // draw info + extended info text
         graphics.drawString(info, gx, gy, Graphics.TOP | Graphics.LEFT);
+        if (extendedInfo != null) {
+            graphics.drawString(extendedInfo, gx, gy + bh, Graphics.TOP | Graphics.LEFT);
+        }
 
         // gpx recording
         if (recording != null) {
-            graphics.setColor(255, 0, 0);
+            if (ok) { // text was 'ok', so change the color now
+                graphics.setColor(255, 0, 0);
+            }
             graphics.drawChar('R', semaforX - rw, 0, Graphics.TOP | Graphics.LEFT);
+        }
+
+        // restore default color
+        if (!ok || recording != null) {
+            graphics.setColor(255, 255, 255);
         }
 
         // draw provider status
@@ -71,17 +85,6 @@ final class OSD extends Bar {
             case LocationProvider.OUT_OF_SERVICE:
                 graphics.drawImage(providerOutOfService,  semaforX, semaforY, Graphics.TOP | Graphics.LEFT);
                 break;
-        }
-
-        // draw extende info
-        if (extendedInfo != null) {
-            if (ok) {
-                graphics.setColor(255, 255, 255);
-            } else {
-                graphics.setColor(255, 0, 0);
-            }
-            graphics.drawImage(bar, gx, gy + bh, Graphics.TOP | Graphics.LEFT);
-            graphics.drawString(extendedInfo, gx, gy + bh, Graphics.TOP | Graphics.LEFT);
         }
     }
 
@@ -98,6 +101,9 @@ final class OSD extends Bar {
     }
 
     public int[] getClip() {
-        return new int[]{ gx, gy, width, 2 * bh };
+        if (!visible)
+            return null;
+
+        return new int[]{ gx, gy, width, extendedInfo == null ? bh : 2 * bh };
     }
 }

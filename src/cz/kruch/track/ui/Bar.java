@@ -15,10 +15,9 @@ abstract class Bar {
     protected int gx, gy;
     protected int width, height;
     protected Image bar;
-    protected Font font;
 
-    protected String info;
-    protected boolean ok;
+    protected volatile String info;
+    protected volatile boolean ok;
 
     protected boolean visible = true;
 
@@ -27,15 +26,14 @@ abstract class Bar {
         this.gy = gy;
         this.width = width;
         this.height = height;
-        this.font = Font.getFont(Font.FACE_MONOSPACE, Font.STYLE_PLAIN, Font.SIZE_SMALL);
         init();
     }
 
     private void init() {
-        int h = font.getHeight();
+        int h = Desktop.font.getHeight();
         int color = TrackingMIDlet.numAlphaLevels() > 2 ? 0x807f7f7f : 0xff7f7f7f;
         int[] shadow = new int[width * h];
-        for (int N = shadow.length, i = 0; i < N; i++) {
+        for (int i = shadow.length; --i >= 0; ) {
             shadow[i] = color;
         }
         bar = Image.createRGBImage(shadow, width, h, true);

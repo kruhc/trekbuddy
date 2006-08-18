@@ -17,14 +17,12 @@ import javax.microedition.io.Connector;
 import java.util.Enumeration;
 import java.io.IOException;
 
-public class ItemSelection extends List implements CommandListener {
-    private Display display;
+final class ItemSelection extends List implements CommandListener {
     private Callback callback;
     private Displayable previous;
 
     public ItemSelection(Display display, Displayable nextDisplayable, String title, Callback callback) {
         super(title, List.IMPLICIT);
-        this.display = display;
         this.callback = callback;
         this.previous = nextDisplayable;
         addCommand(new Command("Cancel", Command.CANCEL, 1));
@@ -41,7 +39,7 @@ public class ItemSelection extends List implements CommandListener {
     }
 
     public void commandAction(Command command, Displayable displayable) {
-        display.setCurrent(previous);
+        Desktop.display.setCurrent(previous);
         if (command == List.SELECT_COMMAND) {
             callback.invoke(getString(getSelectedIndex()), null);
         } else {

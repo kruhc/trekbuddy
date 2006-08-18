@@ -14,22 +14,19 @@ final class Status extends Bar {
     }
 
     public void render(Graphics graphics) {
-        if (!visible) {
+        if (!visible || info == null) {
             return;
         }
 
-        if (info == null) {
-            return;
-        }
-
-        // draw position
+        // draw status info
         graphics.drawImage(bar, gx, height - h, Graphics.TOP | Graphics.LEFT);
-        graphics.setColor(255, 255, 255);
-        graphics.setFont(font);
         graphics.drawString(info, gx, height - h, Graphics.TOP | Graphics.LEFT);
     }
 
     public int[] getClip() {
+        if (!visible)
+            return null;
+
         return new int[]{ gx, height - h, width, h };
     }
 }

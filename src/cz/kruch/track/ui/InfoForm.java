@@ -11,18 +11,13 @@ import javax.microedition.lcdui.StringItem;
 import javax.microedition.lcdui.Command;
 import javax.microedition.lcdui.CommandListener;
 import javax.microedition.lcdui.Displayable;
-import javax.microedition.lcdui.Spacer;
 
 import api.location.LocationException;
 
-public class InfoForm extends Form implements CommandListener {
-    private Display display;
-    private Displayable previous;
+public final class InfoForm extends Form implements CommandListener {
 
     public InfoForm(Display display) {
         super("Info");
-        this.display = display;
-        this.previous = display.getCurrent();
     }
 
     public void show(LocationException le) {
@@ -31,15 +26,15 @@ public class InfoForm extends Form implements CommandListener {
 
         append(new StringItem("Memory", Long.toString(Runtime.getRuntime().totalMemory()) + "/" + Long.toString(Runtime.getRuntime().freeMemory())));
         append(new StringItem("AppFlags", TrackingMIDlet.getFlags()));
-        append(new StringItem("ProviderResult", le == null ? "" : le.toString()));
+        append(new StringItem("ProviderStatus", le == null ? "" : le.toString()));
         addCommand(new Command("Close", Command.CANCEL, 1));
         setCommandListener(this);
 
         // show
-        display.setCurrent(this);
+        Desktop.display.setCurrent(this);
     }
 
     public void commandAction(Command command, Displayable displayable) {
-        display.setCurrent(previous);
+        Desktop.display.setCurrent(Desktop.screen);
     }
 }

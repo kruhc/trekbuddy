@@ -17,12 +17,11 @@ import javax.microedition.lcdui.Displayable;
 import java.util.Enumeration;
 import java.io.IOException;
 
-public class FileBrowser extends List implements CommandListener, Runnable {
+public final class FileBrowser extends List implements CommandListener, Runnable {
     private static final Logger log = new Logger("FileBrowser");
 
     private Display display;
     private Callback callback;
-    private Displayable previous;
 
     private Command cmdCancel;
     private Command cmdBack;
@@ -36,7 +35,6 @@ public class FileBrowser extends List implements CommandListener, Runnable {
         super(title, List.IMPLICIT);
         this.display = display;
         this.callback = callback;
-        this.previous = display.getCurrent();
         this.cmdCancel = new Command("Cancel", Command.CANCEL, 1);
         this.cmdBack = new Command("Back", Command.BACK, 1);
         setCommandListener(this);
@@ -82,7 +80,7 @@ public class FileBrowser extends List implements CommandListener, Runnable {
                 }
 
                 if (fc.isDirectory()) {
-                    show(fc.list("*", false));
+                    show(fc.list());
                 } else {
                     selection = fc.getURL();
                     quit(null);
@@ -139,8 +137,8 @@ public class FileBrowser extends List implements CommandListener, Runnable {
         // gc hint
         fc = null;
 
-        // restore previous screen
-        display.setCurrent(previous);
+        // restore desktop
+        display.setCurrent(Desktop.screen);
 
         // we are done
         callback.invoke(selection, throwable);

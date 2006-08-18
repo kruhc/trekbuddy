@@ -10,7 +10,7 @@ import javax.microedition.lcdui.StringItem;
 import javax.microedition.lcdui.Command;
 import javax.microedition.lcdui.CommandListener;
 
-public class YesNoDialog implements CommandListener {
+public final class YesNoDialog implements CommandListener {
 
     public interface AnswerListener {
         public void response(int answer);
@@ -19,13 +19,11 @@ public class YesNoDialog implements CommandListener {
     public static final int YES = 0;
     public static final int NO  = 1;
 
-    private Display display;
-    private Displayable previous;
+    private Displayable next;
     private AnswerListener callback;
 
-    public YesNoDialog(Display display, AnswerListener callback) {
-        this.display = display;
-        this.previous = display.getCurrent();
+    public YesNoDialog(Display display, Displayable next, AnswerListener callback) {
+        this.next = next;
         this.callback = callback;
     }
 
@@ -35,15 +33,12 @@ public class YesNoDialog implements CommandListener {
         form.addCommand(new Command("Yes", Command.OK, 1));
         form.addCommand(new Command("No", Command.CANCEL, 1));
         form.setCommandListener(this);
-        display.setCurrent(form);
+        Desktop.display.setCurrent(form);
     }
 
     public void commandAction(final Command command, Displayable displayable) {
-        // stop handling key presses immediately
-        displayable.setCommandListener(null);
-
         // 'close' the dialog window
-        display.setCurrent(previous);
+        Desktop.display.setCurrent(next);
 
         // 'return' response code
         callback.response("Yes".equals(command.getLabel()) ? YES : NO);

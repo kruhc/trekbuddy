@@ -109,7 +109,7 @@ public class TrackingMIDlet extends MIDlet {
             // 5. preparing desktop
             console.show("preparing gui...");
             try {
-                desktop.initGui();
+                desktop.resetGui();
                 console.result(0, "ok");
             } catch (Exception e) {
                 e.printStackTrace();

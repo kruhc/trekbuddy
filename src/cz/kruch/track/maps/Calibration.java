@@ -6,13 +6,14 @@ package cz.kruch.track.maps;
 import api.location.QualifiedCoordinates;
 
 import cz.kruch.j2se.util.StringTokenizer;
+import cz.kruch.j2se.io.BufferedReader;
 import cz.kruch.track.util.Logger;
 import cz.kruch.track.ui.Position;
-import cz.kruch.track.AssertionFailedException;
 
 import java.util.Vector;
-import java.io.ByteArrayInputStream;
 import java.io.InputStreamReader;
+import java.io.IOException;
+import java.io.InputStream;
 
 import org.xmlpull.v1.XmlPullParser;
 import org.kxml2.io.KXmlParser;
@@ -298,22 +299,23 @@ public abstract class Calibration {
     }
 
     public static final class GMI extends Calibration {
-        public GMI(String content, String path) throws InvalidMapException {
+        public GMI(InputStream in, String path) throws IOException {
             super(path);
 
-            StringTokenizer st = new StringTokenizer(content, "\r\n", false);
-            st.nextToken();                             // "Map Calibration maps file v2.0"
-            st.nextToken();                             // path to image file
-            width = Integer.parseInt(st.nextToken());   // image width
-            height = Integer.parseInt(st.nextToken());  // image height
+            BufferedReader reader = new BufferedReader(new InputStreamReader(in), Map.SMALL_BUFFER_SIZE);
+            reader.readLine(false); // ignore - intro line
+            reader.readLine(false); // ignore - path to image file
+            width = Integer.parseInt(reader.readLine(false));   // image width
+            height = Integer.parseInt(reader.readLine(false));  // image height
 
             Vector pos = new Vector();
             Vector coords = new Vector();
-            while (st.hasMoreTokens()) {
-                String line = st.nextToken();
+            String line = reader.readLine(false);
+            while (line != null) {
                 if (line.startsWith("Additional Calibration Data"))
                     break;
                 parsePoint(line, pos, coords);
+                line = reader.readLine(false);
             }
             if ((pos.size() < 2) || (coords.size() < 2)) {
                 throw new InvalidMapException("Too few calibration points");
@@ -345,7 +347,7 @@ public abstract class Calibration {
         private static final String TAG_IMAGEWIDTH  = "imageWidth";
         private static final String TAG_IMAGEHEIGHT = "imageHeight";
 
-        public XML(String content, String path) throws InvalidMapException {
+        public XML(InputStream in, String path) throws InvalidMapException {
             super(path);
 
             Vector pos = new Vector();
@@ -353,7 +355,7 @@ public abstract class Calibration {
 
             try {
                 KXmlParser parser = new KXmlParser();
-                parser.setInput(new InputStreamReader(new ByteArrayInputStream(content.getBytes())));
+                parser.setInput(new InputStreamReader(in));
 
                 boolean keepParsing = true;
                 String currentTag = null;
@@ -421,8 +423,8 @@ public abstract class Calibration {
     }
 
     public static final class J2N extends XML {
-        public J2N(String content, String path) throws InvalidMapException {
-            super(content, path);
+        public J2N(InputStream in, String path) throws InvalidMapException {
+            super(in, path);
         }
     }
 
@@ -431,8 +433,8 @@ public abstract class Calibration {
      */
     public static final class Best /*extends Calibration*/ {
         private String path;
-        private Position position;
-        int width = -1, height = -1;
+        protected int width = -1, height = -1;
+        protected int x = -1, y = -1;
 
         public Best(String path) {
             this.path = path;
@@ -442,6 +444,15 @@ public abstract class Calibration {
             return path;
         }
 
+/*
+        public int getX() {
+            return x;
+        }
+
+        public int getY() {
+            return y;
+        }
+
         public int getWidth() {
             return width;
         }
@@ -449,74 +460,61 @@ public abstract class Calibration {
         public int getHeight() {
             return height;
         }
-
-        public Position computeAbsolutePosition(Calibration parent) throws InvalidMapException {
-            if (parent instanceof GMI || parent instanceof J2N || parent instanceof Ozi) {
-                // position is encoded in filename (trekbuddy, j2n)
-/*
-                StringTokenizer st = new StringTokenizer(path, "_.", false);
-                st.nextToken();
-                int absx = Integer.parseInt(st.nextToken());
-                int absy = Integer.parseInt(st.nextToken());
-                position = new Position(absx, absy);
 */
-                int[] xy = getXy(path);
-                if (xy == null) {
-                    throw new InvalidMapException("Illegal slice filename: " + path);
-                }
-                position = new Position(xy[0], xy[1]);
+
+        protected void computeAbsolutePosition(boolean friendly) throws InvalidMapException {
+            if (friendly) { // slice of trekbuddy or j2n map
+                parseXy();
             } else { // single slice of gpska map
-                position = new Position(0, 0);
+                x = y = 0;
             }
-
-            return position;
         }
 
-        public void fixDimension(Calibration parent, Slice[] siblings) {
-            int xNext = parent.width;
-            int yNext = parent.height;
-            int thisX = position.getX();
-            int thisY = position.getY();
-            for (int N = siblings.length, i = 0; i < N; i++) {
-                Slice s = siblings[i];
-                Position p = s.getAbsolutePosition();
-                int x = p.getX();
-                int y = p.getY();
-                if ((x > thisX) && (x < xNext)) {
-                    xNext = x;
-                }
-                if ((y > thisY) && (y < yNext)) {
-                    yNext = y;
-                }
-            }
-            width = xNext - thisX;
-            height = yNext - thisY;
+        protected void fixDimension(int xNext, int yNext, int xs, int ys) {
+            if (x + xs < xNext)
+                xNext = x + xs;
+            if (y + ys < yNext)
+                yNext = y + ys;
+            width = xNext - x;
+            height = yNext - y;
         }
 
-        private static int[] getXy(String n) {
-            int p0, p1;
-            p0 = p1 = -1;
+        private void parseXy() throws InvalidMapException {
+            char[] n = path.toCharArray();
+            int p0 = -1, p1 = -1;
             int i = 0;
-            for (int N = n.length(); i < N; i++) {
-                if (i + 4 == N) {
-                    break;
-                }
-                if ('_' == n.charAt(i)) {
+            for (int N = n.length - 4; i < N; i++) {
+                if ('_' == n[i]) {
                     p0 = p1;
                     p1 = i;
                 }
             }
             if (p0 == -1 || p1 == -1) {
-                return null;
+                throw new InvalidMapException("Invalid slice filename");
             }
-            String sx = n.substring(p0 + 1, p1);
-            String sy = n.substring(p1 + 1, i);
 
-            try {
-                return new int[]{ Integer.parseInt(sx), Integer.parseInt(sy) };
-            } catch (NumberFormatException e) {
-                return null;
+            x = parseInt(n, p0 + 1, p1);
+            y = parseInt(n, p1 + 1, i);
+        }
+
+        private static int parseInt(char[] value, int offset, int end) {
+            if (offset == end || value == null) {
+                throw new NumberFormatException("No input");
             }
+
+            int result = 0;
+
+            while (offset < end) {
+                char ch = value[offset++];
+                if (ch >= '0' && ch <= '9') {
+                    result *= 10;
+                    result += ch - '0';
+                } else {
+                    throw new NumberFormatException("Not a digit: " + ch);
+                }
+            }
+
+            return result;
         }
     }
 
@@ -529,14 +527,14 @@ public abstract class Calibration {
         }
 */
 
-        public Ozi(String content, String path) throws InvalidMapException {
+        public Ozi(InputStream in, String path) throws IOException {
             super(path);
 
             int count = 0;
             Vector xy = new Vector(), ll = new Vector()/*, utm = new Vector()*/;
-            StringTokenizer st = new StringTokenizer(content, "\n\r", false);
-            while (st.hasMoreTokens()) {
-                String line = st.nextToken();
+            BufferedReader reader = new BufferedReader(new InputStreamReader(in), Map.SMALL_BUFFER_SIZE);
+            String line = reader.readLine(false);
+            while (line != null) {
                 if (line.startsWith("Point")) {
                     boolean b = parsePoint(line, xy, ll/*, utm*/);
                     if (b) count++;
@@ -560,6 +558,7 @@ public abstract class Calibration {
                     if (log.isEnabled()) log.debug("parse IWH");
                     parseIwh(line);
                 }
+                line = reader.readLine(false);
             }
 
             // check

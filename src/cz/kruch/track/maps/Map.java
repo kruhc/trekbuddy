@@ -16,6 +16,7 @@ import java.util.Vector;
 import java.util.Enumeration;
 
 import cz.kruch.j2se.io.BufferedInputStream;
+import cz.kruch.j2se.io.BufferedReader;
 
 import cz.kruch.track.ui.Position;
 import cz.kruch.track.util.Logger;
@@ -57,15 +58,15 @@ public final class Map {
     private Slice[] slices;
     private Calibration calibration;
 
-    public Map(String path, StateListener listener) {
-        this(path, null, listener);
-    }
-
     public Map(String path, String name, StateListener listener) {
         this.path = path;
         this.name = name;
         this.listener = listener;
         this.slices = new Slice[0];
+    }
+
+    public void setCalibration(Calibration calibration) {
+        this.calibration = calibration;
     }
 
     public String getPath() {
@@ -105,21 +106,16 @@ public final class Map {
     }
 
     /**
-     * Closes map - releases map images, destroy loader.
+     * Disposes map - releases map images.
      * Does gc at the end.
      */
-    public void close() {
-        if (log.isEnabled()) log.info("close map @" + Integer.toHexString(hashCode()));
+    public void dispose() {
+        if (log.isEnabled()) log.info("dispose map @" + Integer.toHexString(hashCode()));
 
         // release slices images
-        for (int N = slices.length, i = 0; i < N; i++) {
+//        for (int N = slices.length, i = 0; i < N; i++) {
+        for (int i = slices.length; --i >= 0; ) {
             slices[i].setImage(null);
-        }
-
-        // destroy loader
-        if (loader != null) {
-            loader.destroy();
-            loader = null;
         }
 
         // gc
@@ -133,7 +129,8 @@ public final class Map {
      * @return slice
      */
     public Slice getSlice(int x, int y) {
-        for (int N = slices.length, i = 0; i < N; i++) {
+//        for (int N = slices.length, i = 0; i < N; i++) {
+        for (int i = slices.length; --i >= 0; ) {
             Slice slice = slices[i];
             if (slice.isWithin(x, y)) {
                 return slice;
@@ -145,6 +142,7 @@ public final class Map {
 
     /**
      * Opens and scans map.
+     * @return always <code>true</code>
      */
     public boolean open() {
         if (log.isEnabled()) log.debug("open map @" + Integer.toHexString(hashCode()));
@@ -188,6 +186,7 @@ public final class Map {
 
         // no images to be loaded
         if (collection.size() == 0) {
+            if (log.isEnabled()) log.debug("got all slices with images");
             return false;
         }
 
@@ -217,7 +216,7 @@ public final class Map {
     public Throwable loadMap() {
         try {
             // load map
-            loader = path.endsWith(".tar") ? (Loader) new TarLoader() : (Loader) new DirLoader();
+            loader = path.endsWith(".tar") || path.endsWith(".TAR") ? (Loader) new TarLoader() : (Loader) new DirLoader();
             loader.init();
             loader.run();
             loader.checkException();
@@ -245,7 +244,7 @@ public final class Map {
      * Creates default map from embedded resources.
      */
     public static Map defaultMap(StateListener listener) throws IOException {
-        Map map = new Map("", listener);
+        Map map = new Map("resource:///resources/world.map", "default", listener);
         map.type = TYPE_BEST;
         InputStream in = Map.class.getResourceAsStream("/resources/world.map");
         if (in == null) {
@@ -253,10 +252,10 @@ public final class Map {
             if (in == null) {
                 throw new InvalidMapException("No default map calibration");
             } else {
-                map.calibration = new Calibration.GMI(loadTextContent(in), "/resources/world.map");
+                map.calibration = new Calibration.GMI(in, "/resources/world.map");
             }
         } else {
-            map.calibration = new Calibration.Ozi(loadTextContent(in), "/resources/world.map");
+            map.calibration = new Calibration.Ozi(in, "/resources/world.map");
         }
         in.close();
         Slice slice = new Slice(new Calibration.Best("/resources/world_0_0.png"));
@@ -264,12 +263,7 @@ public final class Map {
         slice.setImage(Image.createImage(in));
         in.close();
         map.slices = new Slice[]{ slice };
-        slice.doFinal(map.calibration);
-        slice.doFinal(map.calibration, map.slices);
-        slice.precalculate();
         map.doFinal();
-
-        if (log.isEnabled()) log.debug("default map slice ready " + slice);
 
         return map;
     }
@@ -297,101 +291,99 @@ public final class Map {
     private Throwable loadImages(Vector collection) {
         try {
             for (Enumeration e = collection.elements(); e.hasMoreElements(); ) {
-                loadImage((Slice) e.nextElement());
+                Slice slice = (Slice) e.nextElement();
+                Throwable throwable = null;
+
+                try {
+                    // notify
+                    notifyListener(EVENT_LOADING_CHANGED, "Loading " + slice.getURL() + "...", null);
+
+                    // use loader
+                    loader.loadSlice(slice);
+
+                    // got image?
+                    if (slice.getImage() == null) {
+                        throw new InvalidMapException("No image " + slice.getURL());
+                    }
+
+                    // log
+                    if (log.isEnabled()) log.debug("image loaded for slice " + slice.getURL());
+
+                } catch (Throwable t) {
+                    throwable = t;
+                    throw t;
+                } finally {
+                    // notify
+                    notifyListener(EVENT_LOADING_CHANGED, null, throwable);
+                }
             }
-            return null;
-        } catch (IOException e) {
-            return e;
-        } catch (OutOfMemoryError e) {
-            return e;
+        } catch (Throwable t) {
+            return t;
         }
+
+        return null;
     }
 
     /**
-     * Loads slice from map. Expects file connection opened.
+     * File input helper class.
      */
-    private void loadImage(Slice slice) throws IOException {
-        if (log.isEnabled()) log.debug("Loading slice " + slice.getURL() + "...");
+    static final class FileInput {
+        private String url;
+        private FileConnection fc;
+        private InputStream in;
 
-        // notify
-        notifyListener(EVENT_LOADING_CHANGED, "Loading " + slice.getURL() + "...", null);
-
-        IOException exception = null;
-        OutOfMemoryError error = null;
-        Throwable throwable = null;
-
-        // load slice via loader
-        try {
-            // use loader
-            loader.loadSlice(slice);
-
-            // got image?
-            if (slice.getImage() == null) {
-                throw new InvalidMapException("No image " + slice.getURL());
-            }
-
-            // log
-            if (log.isEnabled()) log.debug("image loaded for slice " + slice.getURL());
-
-        } catch (IOException e) {
-            // log
-            if (log.isEnabled()) log.error("image loading failed for slice " + slice.getURL(), e);
-
-            throwable = exception = e;
-
-        } catch (OutOfMemoryError e) {
-            // log
-            if (log.isEnabled()) log.error("image loading failed for slice " + slice.getURL(), e);
-
-            throwable = error = e;
+        FileInput(String url) {
+            this.url = url;
         }
 
-        // notify
-        notifyListener(EVENT_LOADING_CHANGED, null, throwable);
+        InputStream getInputStream() throws IOException {
+            fc = (FileConnection) Connector.open(url, Connector.READ);
+            in = new BufferedInputStream(fc.openInputStream(), TEXT_FILE_BUFFER_SIZE);
 
-        // upon no exception just return
-        if (exception == null) {
-            if (error == null) {
-                return;
-            } else {
-                throw error;
+            return in;
+        }
+
+        void close() throws IOException {
+            if (in != null) {
+                in.close();
+            }
+            if (fc != null) {
+                fc.close();
             }
         }
-
-        throw exception;
-    }
-
-    static String loadTextContent(InputStream stream) throws IOException {
-        InputStreamReader reader = new InputStreamReader(stream);
-        char[] buffer = new char[TEXT_FILE_BUFFER_SIZE];
-        StringBuffer sb = new StringBuffer();
-        int c = reader.read(buffer);
-        while (c > -1) {
-            sb.append(buffer, 0, c);
-            c = reader.read(buffer);
-        }
-
-        return sb.toString();
     }
 
     /**
      * Finalizes map initialization.
      */
     public void doFinal() throws InvalidMapException {
+        int xi = getWidth(), yi = getHeight();
+        boolean friendly = calibration instanceof Calibration.Ozi || calibration instanceof Calibration.GMI || calibration instanceof Calibration.J2N;
+        int mapWidth = calibration.width;
+        int mapHeight = calibration.height;
+
         // absolutize slices position
-        for (int N = slices.length, i = 0; i < N; i++) {
-            slices[i].doFinal(calibration);
+//        for (int N = slices.length, i = 0; i < N; i++) {
+        for (int i = slices.length; --i >= 0; ) {
+            Slice slice = slices[i];
+            slice.doFinal(friendly);
+
+            // look for dimensions increments
+            int x = slice.x;
+            if (x > 0 && x < xi)
+                xi = x;
+            int y = slice.y;
+            if (y > 0 && y < yi)
+                yi = y;
         }
 
         // finalize slices creation
-        for (int N = slices.length, i = 0; i < N; i++) {
+//        for (int N = slices.length, i = 0; i < N; i++) {
+        for (int i = slices.length; --i >= 0; ) {
             Slice slice = slices[i];
 
-            // fix slice dimension for filename-encoded positions
-            slice.doFinal(calibration, slices);
-
-            // precalculate slice range in pixel coordinates
-            slice.precalculate();
+            // figure slice dimension and precalculate range
+            slice.doFinal(mapWidth, mapHeight, xi, yi);
 
             // debug
             if (log.isEnabled()) log.debug("ready slice " + slices[i]);
@@ -416,64 +408,65 @@ public final class Map {
             }
         }
 
-        protected Vector getCollection() {
-            if (collection == null) {
-                collection = new Vector();
-            }
-
-            return collection;
-        }
-
         protected void doFinal() {
             if (collection != null) {
                 slices = new Slice[collection.size()];
                 collection.copyInto(slices);
             }
         }
+
+        protected void addSlice(Slice s) {
+            if (collection == null) {
+                collection = new Vector();
+            }
+
+            collection.addElement(s);
+        }
     }
 
-    private class TarLoader extends Loader {
+    private final class TarLoader extends Loader {
         private FileConnection fileConnection;
 
         public void init() throws IOException {
             fileConnection = (FileConnection) Connector.open(path, Connector.READ);
-            if (log.isEnabled()) log.debug("map connection opened; " + path);
         }
 
         public void destroy() {
-            // close file connection
             if (fileConnection != null) {
                 try {
                     fileConnection.close();
                 } catch (IOException e) {
-                    // ignore
                 }
             }
         }
 
         public void run() {
             TarInputStream tar = null;
+            TarEntry entry;
+
             try {
                 tar = new TarInputStream(new BufferedInputStream(fileConnection.openInputStream(), SMALL_BUFFER_SIZE));
-                TarEntry entry = tar.getNextEntry();
+                entry = tar.getNextEntry();
                 while (entry != null) {
-                    if (!entry.isDirectory()) {
-                        String entryName = entry.getName();
-                        if (entryName.endsWith(".png") && (entryName.startsWith("set/") || entryName.startsWith("pictures/"))) { // slice
-                            getCollection().addElement(new Slice(new Calibration.Best(entryName)));
+                    String entryName = entry.getName();
+                    int indexOf = entryName.lastIndexOf('.');
+                    if (indexOf > -1) {
+                        String ext = entryName.substring(indexOf + 1);
+                        if ("png".equals(ext) && (entryName.startsWith("set/", 0) || entryName.startsWith("pictures/", 0))) { // slice
+                            addSlice(new Slice(new Calibration.Best(entryName), entry));
                         } else {
-                            if (entryName.indexOf("/") == -1) {
-                                if (entryName.endsWith(".gmi")) {
-                                    Map.this.calibration = new Calibration.GMI(loadTextContent(tar), entryName);
+                            if (Map.this.calibration == null && entryName.indexOf('/') == -1) {
+                                if ("gmi".equals(ext)) {
+                                    Map.this.calibration = new Calibration.GMI(tar, entryName);
                                     Map.this.type = TYPE_BEST;
-                                } else if (entryName.endsWith(".map")) {
-                                    Map.this.calibration = new Calibration.Ozi(loadTextContent(tar), entryName);
+                                } else if ("map".equals(ext)) {
+                                    Map.this.calibration = new Calibration.Ozi(tar, entryName);
                                     Map.this.type = TYPE_BEST;
-                                } else if (entryName.endsWith(".xml")) {
-                                    Map.this.calibration = new Calibration.XML(loadTextContent(tar), entryName);
+                                } else if ("xml".equals(ext)) {
+                                    Map.this.calibration = new Calibration.XML(tar, entryName);
                                     Map.this.type = TYPE_GPSKA;
-                                } else if (entryName.endsWith(".j2n")) {
-                                    Map.this.calibration = new Calibration.J2N(loadTextContent(tar), entryName);
+                                } else if ("j2n".equals(ext)) {
+                                    Map.this.calibration = new Calibration.J2N(tar, entryName);
                                     Map.this.type = TYPE_J2N;
                                 }
                             }
@@ -496,31 +489,25 @@ public final class Map {
         }
 
         public void loadSlice(Slice slice) throws IOException {
+            TarEntry entry = (TarEntry) slice.getClosure();
             TarInputStream tar = null;
             try {
                 tar = new TarInputStream(new BufferedInputStream(fileConnection.openInputStream(), LARGE_BUFFER_SIZE));
-                TarEntry entry = tar.getNextEntry();
-                while (entry != null) {
-                    if (entry.getName().endsWith(slice.getURL())) {
-                        slice.setImage(Image.createImage(tar));
-                        break;
-                    }
-                    entry = tar.getNextEntry();
-                }
+                tar.setNextEntry(entry);
+                tar.getNextEntry();
+                slice.setImage(Image.createImage(tar));
             } finally {
                 if (tar != null) {
                     try {
                         tar.close();
-                    } catch (IOException e) {
-                        if (log.isEnabled()) log.error("failed to close input stream", e);
+                    } catch (IOException exc) {
                     }
                 }
             }
-
         }
     }
 
-    private class DirLoader extends Loader {
+    private final class DirLoader extends Loader {
         private String dir;
 
         public void init() throws IOException {
@@ -529,6 +516,7 @@ public final class Map {
                 throw new InvalidMapException("Invalid map URL");
             }
             dir = path.substring(0, i + 1);
+
             if (log.isEnabled()) log.debug("slices are in " + dir);
         }
 
@@ -537,63 +525,67 @@ public final class Map {
 
         public void run() {
             FileConnection fc = null;
-            InputStream in = null;
+            BufferedReader reader = null;
 
             try {
                 String setDir = "set/";
 
-                // path points to calibration file
-                in = new BufferedInputStream(Connector.openInputStream(path), SMALL_BUFFER_SIZE);
-                String content = loadTextContent(in);
-                if (path.endsWith(".gmi")) {
-                    Map.this.calibration = new Calibration.GMI(content, path);
-                    Map.this.type = TYPE_BEST;
-                } else if (path.endsWith(".map")) {
-                    Map.this.calibration = new Calibration.Ozi(content, path);
-                    Map.this.type = TYPE_BEST;
-                } else if (path.endsWith(".xml")) {
-                    Map.this.calibration = new Calibration.XML(content, path);
-                    Map.this.type = TYPE_GPSKA;
-                } else if (path.endsWith(".j2n")) {
-                    Map.this.calibration = new Calibration.J2N(content, path);
-                    Map.this.type = TYPE_J2N;
-                    setDir = "pictures/";
+                if (Map.this.calibration == null) {
+                    // helper loader
+                    FileInput fileInput = new FileInput(path);
+
+                    // path points to calibration file
+                    if (path.endsWith(".gmi")) {
+                        Map.this.calibration = new Calibration.GMI(fileInput.getInputStream(), path);
+                        Map.this.type = TYPE_BEST;
+                    } else if (path.endsWith(".map")) {
+                        Map.this.calibration = new Calibration.Ozi(fileInput.getInputStream(), path);
+                        Map.this.type = TYPE_BEST;
+                    } else if (path.endsWith(".xml")) {
+                        Map.this.calibration = new Calibration.XML(fileInput.getInputStream(), path);
+                        Map.this.type = TYPE_GPSKA;
+                    } else if (path.endsWith(".j2n")) {
+                        Map.this.calibration = new Calibration.J2N(fileInput.getInputStream(), path);
+                        Map.this.type = TYPE_J2N;
+                        setDir = "pictures/";
+                    }
+
+                    // close hellper loader
+                    fileInput.close();
+
+                } else {
+                    if (Map.this.type == TYPE_J2N) {
+                        setDir = "pictures/";
+                    }
                 }
-                in.close();
-                in = null;
 
-                // get all possible sets dirs
-                fc = (FileConnection) Connector.open(dir, Connector.READ);
-                Enumeration children = fc.list("*", false);
+                // do we have a list?
+                fc = (FileConnection) Connector.open(path.substring(0, path.lastIndexOf('.')) + ".set", Connector.READ);
+                if (fc.exists()) {
+                    // each line is a slice filename
+                    reader = new BufferedReader(new InputStreamReader(fc.openInputStream()), LARGE_BUFFER_SIZE);
+                    String entry = reader.readLine(false);
+                    while (entry != null) {
+                        addSlice(new Slice(new Calibration.Best(setDir + entry.trim())));
+                        entry = reader.readLine(false);
+                    }
+                } else {
+                    // close connection for reuse
+                    fc.close();
 
-                // next, look for slices in the set
-                while (children.hasMoreElements()) {
-                    String child = children.nextElement().toString();
-                    if (child.startsWith(setDir)) {
-                        // debug
-                        if (log.isEnabled()) log.debug("new set: " + child);
-
-                        // set file connection
-                        fc.setFileConnection(child);
-
-                        // iterate over set
-                        for (Enumeration e = fc.list("*.png", false); e.hasMoreElements(); ) {
-                            String entry = e.nextElement().toString();
-                            getCollection().addElement(new Slice(new Calibration.Best(child + entry)));
-                        }
-
-                        // go back to map root dir
-                        fc.setFileConnection("..");
-
-                        break; // only one set per map
+                    // iterate over set
+                    fc = (FileConnection) Connector.open(dir + setDir, Connector.READ);
+                    for (Enumeration e = fc.list("*.png", false); e.hasMoreElements(); ) {
+                        String entry = e.nextElement().toString();
+                        addSlice(new Slice(new Calibration.Best(setDir + entry)));
                     }
                 }
             } catch (Exception e) {
                 exception = e;
             } finally {
-                if (in != null) {
+                if (reader != null) {
                     try {
-                        in.close();
+                        fc.close();
                     } catch (IOException e) {
                     }
                 }
@@ -610,16 +602,25 @@ public final class Map {
 
         public void loadSlice(Slice slice) throws IOException {
             String slicePath = dir + slice.getURL();
+            FileConnection fc = null;
+            InputStream in = null;
+
             if (log.isEnabled()) log.debug("load slice image from " + slicePath);
 
-            InputStream in = null;
             try {
-                in = new BufferedInputStream(Connector.openInputStream(slicePath), LARGE_BUFFER_SIZE);
+                fc = (FileConnection) Connector.open(slicePath, Connector.READ);
+                in = new BufferedInputStream(fc.openInputStream(), LARGE_BUFFER_SIZE);
                 slice.setImage(Image.createImage(in));
             } finally {
                 if (in != null) {
                     try {
                         in.close();
+                    } catch (IOException e) {
+                    }
+                }
+                if (fc != null) {
+                    try {
+                        fc.close();
                     } catch (IOException e) {
                     }
                 }

@@ -8,7 +8,7 @@ import javax.microedition.lcdui.Graphics;
 import javax.microedition.lcdui.Image;
 import javax.microedition.lcdui.Font;
 
-public class Console extends Canvas {
+public final class Console extends Canvas {
     // spacing from horizontal edges
     private static final int BORDER = 2;
 
@@ -36,7 +36,7 @@ public class Console extends Canvas {
     }
 
     public void delay() {
-        long delay = errors > 0 ? 2000 : (skips > 0 ? 750: 500);
+        long delay = errors > 0 ? 2000 : (skips > 0 ? 750: 250);
         try {
             Thread.sleep(delay);
         } catch (InterruptedException e) {

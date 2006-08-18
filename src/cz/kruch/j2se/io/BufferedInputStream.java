@@ -122,14 +122,6 @@ public final class BufferedInputStream extends /* FilterInputStream */ InputStre
     private int marklimit;
 
     /**
-     * Check to make sure that this stream has not been closed
-     */
-    private void ensureOpen() throws IOException {
-        if (in == null)
-            throw new IOException("Stream closed");
-    }
-
-    /**
      * Creates a <code>BufferedInputStream</code>
      * with the specified buffer size,
      * and saves its  argument, the input stream
@@ -204,9 +196,7 @@ public final class BufferedInputStream extends /* FilterInputStream */ InputStre
      * @see java.io.FilterInputStream#in
      */
     public int read() throws IOException {
-        /* ensureOpen(); */
         if (pos >= count) {
-            ensureOpen(); /* optimization */
             fill();
             if (pos >= count)
                 return -1;
@@ -299,7 +289,6 @@ public final class BufferedInputStream extends /* FilterInputStream */ InputStre
      */
     public int read(byte b[], int off, int len)
             throws IOException {
-        ensureOpen();
         if ((off | len | (off + len) | (b.length - (off + len))) < 0) {
             throw new IndexOutOfBoundsException();
         } else if (len == 0) {
@@ -325,15 +314,12 @@ public final class BufferedInputStream extends /* FilterInputStream */ InputStre
      * @throws IOException if an I/O error occurs.
      */
     public long skip(long n) throws IOException {
-        /* ensureOpen(); */
         if (n <= 0) {
             return 0;
         }
         long avail = count - pos;
 
         if (avail <= 0) {
-            ensureOpen(); /* optimization */
-
             // If no mark position set then don't keep in buffer
             if (markpos < 0)
                 return in.skip(n);
@@ -367,7 +353,6 @@ public final class BufferedInputStream extends /* FilterInputStream */ InputStre
      * @see java.io.FilterInputStream#in
      */
     public int available() throws IOException {
-        ensureOpen();
         if (available > -1) {
             int n = available;
             available = -1;
@@ -404,7 +389,6 @@ public final class BufferedInputStream extends /* FilterInputStream */ InputStre
      * @see java.io.BufferedInputStream#mark(int)
      */
     public void reset() throws IOException {
-        ensureOpen();
         if (markpos < 0)
             throw new IOException("Resetting to invalid mark");
         pos = markpos;

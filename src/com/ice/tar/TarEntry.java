@@ -121,23 +121,12 @@ public final class TarEntry {
     /**
      * This is the entry's header information.
      */
-    protected TarHeader header;
+    private TarHeader header;
 
     /**
-     * Set to true if this is a "old-unix" format entry.
+     * Entry's absolute position in archive.
      */
-    protected boolean unixFormat;
-
-    /**
-     * Set to true if this is a 'ustar' format entry.
-     */
-    protected boolean ustarFormat;
-
-    /**
-     * Set to true if this is a GNU 'ustar' format entry.
-     */
-    protected boolean gnuFormat;
-
+    private long position;
 
     /**
      * Construct an entry from an archive's header bytes. File is set
@@ -146,19 +135,18 @@ public final class TarEntry {
      * @param headerBuf The header bytes from a tar archive entry.
      */
     public TarEntry(byte[] headerBuf) throws InvalidHeaderException {
-        this.initialize();
-        this.parseTarHeader(this.header, headerBuf);
+        this(headerBuf, -1);
     }
 
     /**
-     * Initialization code common to all constructors.
+     * Construct an entry from an archive's header bytes. File is set
+     * to null.
+     *
+     * @param headerBuf The header bytes from a tar archive entry.
      */
-    private void initialize() {
-        this.header = new TarHeader();
-
-        this.gnuFormat = false;
-        this.ustarFormat = true; // REVIEW What we prefer to use...
-        this.unixFormat = false;
+    public TarEntry(byte[] headerBuf, long position) throws InvalidHeaderException {
+        this.position = position;
+        this.header = new TarHeader(headerBuf);
     }
 
     /**
@@ -190,6 +178,15 @@ public final class TarEntry {
     }
 
     /**
+     * Gets this entry's position in archive.
+     *
+     * @return position in archive (header start).
+     */
+    public long getPosition() {
+        return position;
+    }
+
+    /**
      * Return whether or not this entry represents a directory.
      *
      * @return True if this entry is a directory.
@@ -204,138 +201,6 @@ public final class TarEntry {
         }
 
         return false;
-    }
-
-    /**
-     * Parse an entry's TarHeader information from a header buffer.
-     * Old unix-style code contributed by David Mehringer <dmehring@astro.uiuc.edu>.
-     *
-     * @param hdr header to fill in from the buffer information
-     * @param headerBuf The tar entry header buffer to get information from
-     */
-    public void parseTarHeader(TarHeader hdr, byte[] headerBuf)
-            throws InvalidHeaderException {
-        int offset = 0;
-
-        //
-        // NOTE Recognize archive header format.
-        //
-        if (headerBuf[257] == 0
-                && headerBuf[258] == 0
-                && headerBuf[259] == 0
-                && headerBuf[260] == 0
-                && headerBuf[261] == 0) {
-            this.unixFormat = true;
-            this.ustarFormat = false;
-            this.gnuFormat = false;
-        } else if (headerBuf[257] == 'u'
-                && headerBuf[258] == 's'
-                && headerBuf[259] == 't'
-                && headerBuf[260] == 'a'
-                && headerBuf[261] == 'r'
-                && headerBuf[262] == 0) {
-            this.ustarFormat = true;
-            this.gnuFormat = false;
-            this.unixFormat = false;
-        } else if (headerBuf[257] == 'u'
-                && headerBuf[258] == 's'
-                && headerBuf[259] == 't'
-                && headerBuf[260] == 'a'
-                && headerBuf[261] == 'r'
-                && headerBuf[262] != 0
-                && headerBuf[263] != 0) {
-            // REVIEW
-            this.gnuFormat = true;
-            this.unixFormat = false;
-            this.ustarFormat = false;
-        } else {
-            StringBuffer buf = new StringBuffer(128);
-
-            buf.append("header magic is not 'ustar' or unix-style zeros, it is '");
-            buf.append(headerBuf[257]);
-            buf.append(headerBuf[258]);
-            buf.append(headerBuf[259]);
-            buf.append(headerBuf[260]);
-            buf.append(headerBuf[261]);
-            buf.append(headerBuf[262]);
-            buf.append(headerBuf[263]);
-            buf.append("', or (dec) ");
-            buf.append((int) headerBuf[257]);
-            buf.append(", ");
-            buf.append((int) headerBuf[258]);
-            buf.append(", ");
-            buf.append((int) headerBuf[259]);
-            buf.append(", ");
-            buf.append((int) headerBuf[260]);
-            buf.append(", ");
-            buf.append((int) headerBuf[261]);
-            buf.append(", ");
-            buf.append((int) headerBuf[262]);
-            buf.append(", ");
-            buf.append((int) headerBuf[263]);
-
-            throw new InvalidHeaderException(buf.toString());
-        }
-
-        hdr.name = TarHeader.parseFileName(headerBuf);
-
-        offset = TarHeader.NAMELEN;
-
-//        hdr.mode = (int) TarHeader.parseOctal(headerBuf, offset, TarHeader.MODELEN);
-
-        offset += TarHeader.MODELEN;
-
-//        hdr.userId = (int) TarHeader.parseOctal(headerBuf, offset, TarHeader.UIDLEN);
-
-        offset += TarHeader.UIDLEN;
-
-//        hdr.groupId = (int) TarHeader.parseOctal(headerBuf, offset, TarHeader.GIDLEN);
-
-        offset += TarHeader.GIDLEN;
-
-        hdr.size = TarHeader.parseOctal(headerBuf, offset, TarHeader.SIZELEN);
-
-        offset += TarHeader.SIZELEN;
-
-//        hdr.modTime = TarHeader.parseOctal(headerBuf, offset, TarHeader.MODTIMELEN);
-
-        offset += TarHeader.MODTIMELEN;
-
-//        hdr.checkSum = (int) TarHeader.parseOctal(headerBuf, offset, TarHeader.CHKSUMLEN);
-
-        offset += TarHeader.CHKSUMLEN;
-
-        hdr.linkFlag = headerBuf[offset++];
-
-//        hdr.linkName = TarHeader.parseName(headerBuf, offset, TarHeader.NAMELEN);
-
-        offset += TarHeader.NAMELEN;
-
-        if (this.ustarFormat) {
-            hdr.magic = TarHeader.parseName(headerBuf, offset, TarHeader.MAGICLEN);
-
-            offset += TarHeader.MAGICLEN;
-
-//            hdr.userName = TarHeader.parseName(headerBuf, offset, TarHeader.UNAMELEN);
-
-            offset += TarHeader.UNAMELEN;
-
-//            hdr.groupName = TarHeader.parseName(headerBuf, offset, TarHeader.GNAMELEN);
-
-            offset += TarHeader.GNAMELEN;
-
-//            hdr.devMajor = (int) TarHeader.parseOctal(headerBuf, offset, TarHeader.DEVLEN);
-
-            offset += TarHeader.DEVLEN;
-
-//            hdr.devMinor = (int) TarHeader.parseOctal(headerBuf, offset, TarHeader.DEVLEN);
-        } else {
-            hdr.magic = "";
-//            hdr.userName = "";
-//            hdr.groupName = "";
-//            hdr.devMajor = 0;
-//            hdr.devMinor = 0;
-        }
     }
 }
 

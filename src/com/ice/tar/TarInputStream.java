@@ -38,9 +38,9 @@ public final class TarInputStream extends /* FilterInputStream */ InputStream {
     private static final int DEFAULT_RCDSIZE = 512;
     private static final int DEFAULT_BLKSIZE = DEFAULT_RCDSIZE * 20;
 
-    /* FilterInputStream */
+    public static boolean useReadSkip;
+
     private InputStream in;
-    /* ~FilterInputStream */
 
     private int blockSize;
     private int recordSize;
@@ -51,21 +51,20 @@ public final class TarInputStream extends /* FilterInputStream */ InputStream {
     private byte[] headerBuffer;
     private TarEntry currEntry;
 
-    public static boolean useReadSkip;
+    private long streamOffset;
 
     public TarInputStream(InputStream is) {
         this(is, DEFAULT_BLKSIZE, DEFAULT_RCDSIZE);
     }
 
     private TarInputStream(InputStream is, int blockSize, int recordSize) {
-        /* super(is); */
-        this.in = is;
-        /* ~super(is); */
+        this.in = is; /* super(is); */
         this.blockSize = blockSize;
         this.recordSize = recordSize;
         this.oneBuffer = new byte[1];
         this.headerBuffer = new byte[blockSize];
         this.hasHitEOF = false;
+        this.streamOffset = 0;
     }
 
     /**
@@ -96,11 +95,13 @@ public final class TarInputStream extends /* FilterInputStream */ InputStream {
      */
     public long skip(long numToSkip) throws IOException {
         long num = numToSkip;
+        byte[] rsbuffer = useReadSkip ? new byte[4096] : null;
+
         for (; num > 0;) {
             long numRead = -1;
 
             if (useReadSkip) {
-                numRead = this.in.read(new byte[(int) num]);
+                numRead = this.in.read(rsbuffer, 0, num > 4096 ? 4096 : (int) num);
             } else {
                 numRead = this.in.skip(num);
             }
@@ -115,6 +116,8 @@ public final class TarInputStream extends /* FilterInputStream */ InputStream {
         if (num > 0) {
             throw new IOException(num + " bytes left to be skipped");
         }
+
+        this.streamOffset += numToSkip - num;
 
         return (numToSkip - num);
     }
@@ -154,6 +157,14 @@ public final class TarInputStream extends /* FilterInputStream */ InputStream {
         return this.entryOffset;
     }
 
+    public void setNextEntry(TarEntry entry) throws IOException {
+        if (streamOffset > 0) {
+            throw new IllegalStateException("Stream is dirty");
+        }
+
+        this.skip(entry.getPosition());
+    }
+
     /**
      * Get the next entry in this tar archive. This will skip
      * over any remaining data in the current entry, if there
@@ -186,6 +197,8 @@ public final class TarInputStream extends /* FilterInputStream */ InputStream {
             this.skip(numToSkip);
         }
 
+        long entryPosition = streamOffset;
+
         byte[] headerBuf = this.readHeader();
 
         if (headerBuf == null) {
@@ -198,7 +211,7 @@ public final class TarInputStream extends /* FilterInputStream */ InputStream {
             this.currEntry = null;
         } else {
             try {
-                this.currEntry = new TarEntry(headerBuf);
+                this.currEntry = new TarEntry(headerBuf, entryPosition);
                 this.entryOffset = 0;
                 this.entrySize = this.currEntry.getSize();
             }
@@ -263,6 +276,7 @@ public final class TarInputStream extends /* FilterInputStream */ InputStream {
         int c = this.in.read(buffer, offset, numToRead);
         if (c > -1) {
             this.entryOffset += c;
+            this.streamOffset += c;
         }
 
         return c;
@@ -296,6 +310,8 @@ public final class TarInputStream extends /* FilterInputStream */ InputStream {
 
             offset += numBytes;
             bytesNeeded -= numBytes;
+
+            this.streamOffset += numBytes;
         }
 
         if (offset != this.recordSize) {

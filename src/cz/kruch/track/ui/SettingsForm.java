@@ -17,12 +17,10 @@ import javax.microedition.lcdui.TextField;
 import javax.microedition.lcdui.ItemStateListener;
 import javax.microedition.lcdui.Item;
 
-public class SettingsForm extends Form implements CommandListener, ItemStateListener {
-    private static final int MAX_URL_LENGTH = 128;
+final class SettingsForm extends Form implements CommandListener, ItemStateListener {
+    private static final int MAX_URL_LENGTH = 256;
 
-    private Display display;
     private Callback callback;
-    private Displayable previous;
 
     private TextField fieldMapPath;
     private ChoiceGroup choiceProvider;
@@ -35,9 +33,7 @@ public class SettingsForm extends Form implements CommandListener, ItemStateList
 
     public SettingsForm(Display display, Callback callback) {
         super("Settings");
-        this.display = display;
         this.callback = callback;
-        this.previous = display.getCurrent();
     }
 
     public void show() {
@@ -56,6 +52,20 @@ public class SettingsForm extends Form implements CommandListener, ItemStateList
             }
         }
         append(choiceProvider);
+
+        // timezone
+        choiceTimezone = new ChoiceGroup("Timezone", ChoiceGroup.POPUP);
+        for (int i = -12; i <= 12; i++) {
+            boolean selected = Config.getSafeInstance().getTimeZone() == i;
+            if (i == 0) {
+                choiceTimezone.setSelectedIndex(choiceTimezone.append("GMT", null), selected);
+            } else if (i > 0) {
+                choiceTimezone.setSelectedIndex(choiceTimezone.append("GMT+" + Integer.toString(i), null), selected);
+            } else {
+                choiceTimezone.setSelectedIndex(choiceTimezone.append("GMT" + Integer.toString(i), null), selected);
+            }
+        }
+        append(choiceTimezone);
 
         // tracklogs
         choiceTracklog = new ChoiceGroup("Tracklog", ChoiceGroup.MULTIPLE);
@@ -80,20 +90,6 @@ public class SettingsForm extends Form implements CommandListener, ItemStateList
         choiceMisc.setSelectedIndex(choiceMisc.append("no sounds", null), Config.getSafeInstance().isNoSounds());
         append(choiceMisc);
 
-        // timezone
-        choiceTimezone = new ChoiceGroup("Timezone", ChoiceGroup.POPUP);
-        for (int i = -12; i <= 12; i++) {
-            boolean selected = Config.getSafeInstance().getTimeZone() == i;
-            if (i == 0) {
-                choiceTimezone.setSelectedIndex(choiceTimezone.append("GMT", null), selected);
-            } else if (i > 0) {
-                choiceTimezone.setSelectedIndex(choiceTimezone.append("GMT+" + Integer.toString(i), null), selected);
-            } else {
-                choiceTimezone.setSelectedIndex(choiceTimezone.append("GMT" + Integer.toString(i), null), selected);
-            }
-        }
-        append(choiceTimezone);
-
         // show current provider and tracklog specific options
         showProviderOptions(false);
 
@@ -105,7 +101,7 @@ public class SettingsForm extends Form implements CommandListener, ItemStateList
         setItemStateListener(this);
 
         // show
-        display.setCurrent(this);
+        Desktop.display.setCurrent(this);
     }
 
     public void itemStateChanged(Item item) {
@@ -119,9 +115,10 @@ public class SettingsForm extends Form implements CommandListener, ItemStateList
     public void commandAction(Command command, Displayable displayable) {
         boolean changed = false;
 
-        if (command.getCommandType() == Command.BACK) {
-            display.setCurrent(previous);
-        } else if (command.getCommandType() == Command.SCREEN) { // "Apply", "Save"
+        // restore desktop
+        Desktop.display.setCurrent(Desktop.screen);
+
+        if (command.getCommandType() == Command.SCREEN) { // "Apply", "Save"
             Config config = Config.getSafeInstance();
             // map path
             config.setMapPath(fieldMapPath.getString());
@@ -151,20 +148,19 @@ public class SettingsForm extends Form implements CommandListener, ItemStateList
                 }
             }
 
+            // save
             if ("Save".equals(command.getLabel())) {
                 try {
+                    // update config
                     config.update();
 
-                    // TODO use event
-                    Desktop.showConfirmation(display, "Configuration saved.", previous);
+                    // show confirmation
+                    Desktop.showConfirmation("Configuration saved.", Desktop.screen);
 
                 } catch (ConfigurationException e) {
-                    // TODO use event
-                    Desktop.showError(display, "Failed to save configuration.", e, null);
+                    // show error
+                    Desktop.showError("Failed to save configuration.", e, Desktop.screen);
                 }
-            } else {
-                // restore previous screen
-                display.setCurrent(previous);
             }
 
             // TODO detect any change and set 'changed' flagged accordingly

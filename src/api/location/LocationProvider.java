@@ -21,10 +21,6 @@ public abstract class LocationProvider {
         return name;
     }
 
-    protected synchronized LocationListener getListener() {
-        return listener;
-    }
-
     protected synchronized void setListener(LocationListener listener) {
         this.listener = listener;
     }

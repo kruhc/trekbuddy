@@ -7,15 +7,18 @@ import api.location.LocationProvider;
 import api.location.LocationException;
 import api.location.LocationListener;
 import api.location.Location;
+import api.file.File;
+
 import cz.kruch.track.configuration.Config;
 import cz.kruch.track.ui.Desktop;
+//#ifdef __LOG__
 import cz.kruch.track.util.Logger;
+//#endif
 import cz.kruch.track.event.Callback;
 import cz.kruch.track.AssertionFailedException;
 import cz.kruch.j2se.io.BufferedInputStream;
 import cz.kruch.j2se.io.BufferedOutputStream;
 
-import javax.microedition.lcdui.Display;
 import javax.microedition.lcdui.Displayable;
 import javax.microedition.lcdui.List;
 import javax.microedition.lcdui.CommandListener;
@@ -23,7 +26,6 @@ import javax.microedition.lcdui.Command;
 import javax.microedition.lcdui.Ticker;
 import javax.microedition.io.StreamConnection;
 import javax.microedition.io.Connector;
-import javax.microedition.io.file.FileConnection;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -32,7 +34,9 @@ import java.util.Timer;
 import java.util.TimerTask;
 
 public class Jsr82LocationProvider extends StreamReadingLocationProvider implements Runnable {
+//#ifdef __LOG__
     private static final Logger log = new Logger("Jsr82LocationProvider");
+//#endif
 
     private static final int WATCHER_PERIOD = 60 * 1000;
 
@@ -48,10 +52,10 @@ public class Jsr82LocationProvider extends StreamReadingLocationProvider impleme
     private long timestamp;
     private int state;
 
-    private FileConnection nmeaFc;
+    private File nmeaFc;
     private OutputStream nmeaObserver;
 
-    public Jsr82LocationProvider(Display display, Callback recordingCallback) {
+    public Jsr82LocationProvider(Callback recordingCallback) {
         super(Config.LOCATION_PROVIDER_JSR82);
         this.recordingCallback = recordingCallback;
         this.timestamp = 0;
@@ -153,9 +157,9 @@ public class Jsr82LocationProvider extends StreamReadingLocationProvider impleme
 
     private void startNmeaLog() {
         if (Config.getSafeInstance().isTracklogsOn() && Config.TRACKLOG_FORMAT_NMEA.equals(Config.getSafeInstance().getTracklogsFormat())) {
-            String path = Config.getSafeInstance().getTracklogsDir() + "/nmea-" + GpxTracklog.dateToFileDate(System.currentTimeMillis()) + ".log";
+            String path = Config.getSafeInstance().getTracklogsDir() + "/trekbuddy-" + GpxTracklog.dateToFileDate(System.currentTimeMillis()) + ".nmea";
             try {
-                nmeaFc = (FileConnection) Connector.open(path, Connector.WRITE);
+                nmeaFc = new File(Connector.open(path, Connector.WRITE));
                 nmeaFc.create();
                 nmeaObserver = new BufferedOutputStream(nmeaFc.openOutputStream(), 512);
 
@@ -215,7 +219,9 @@ public class Jsr82LocationProvider extends StreamReadingLocationProvider impleme
                 } catch (AssertionFailedException e) {
                     Desktop.showError(e.getMessage(), null);
                 } catch (Exception e) {
+//#ifdef __LOG__
                     if (log.isEnabled()) log.warn("Failed to get location.", e);
+//#endif
 
                     // record exception
                     if (e instanceof InterruptedException) {

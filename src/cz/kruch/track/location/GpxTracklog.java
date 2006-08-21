@@ -5,6 +5,7 @@ package cz.kruch.track.location;
 
 import api.location.QualifiedCoordinates;
 import api.location.Location;
+import api.file.File;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -15,7 +16,6 @@ import java.util.TimeZone;
 import org.kxml2.io.KXmlSerializer;
 
 import javax.microedition.io.Connector;
-import javax.microedition.io.file.FileConnection;
 
 import cz.kruch.track.configuration.Config;
 import cz.kruch.track.event.Callback;
@@ -65,14 +65,14 @@ public final class GpxTracklog extends Thread {
     }
 
     public void run() {
-        FileConnection fc = null;
+        File fc = null;
         OutputStream output = null;
         KXmlSerializer serializer = null;
 
-        String path = Config.getSafeInstance().getTracklogsDir() + "/gpx-" + dateToFileDate(System.currentTimeMillis()) + ".xml";
+        String path = Config.getSafeInstance().getTracklogsDir() + "/trekbuddy-" + dateToFileDate(System.currentTimeMillis()) + ".gpx";
 
         try {
-            fc = (FileConnection) Connector.open(path, Connector.WRITE);
+            fc = new File(Connector.open(path, Connector.WRITE));
             fc.create();
             output = new BufferedOutputStream(fc.openOutputStream(), 512);
         } catch (Throwable t) {
@@ -86,7 +86,7 @@ public final class GpxTracklog extends Thread {
             // signal failure
             callback.invoke("Failed to create GPX file", t);
 
-            return; // no logging
+            return; // no tracklog
         }
 
         // signal recording start

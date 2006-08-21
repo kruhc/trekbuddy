@@ -3,13 +3,12 @@
 
 package cz.kruch.track.ui;
 
+//#ifdef __LOG__
 import cz.kruch.track.util.Logger;
+//#endif
 import cz.kruch.track.event.Callback;
 
 import javax.microedition.io.Connector;
-import javax.microedition.io.file.FileSystemRegistry;
-import javax.microedition.io.file.FileConnection;
-import javax.microedition.lcdui.Display;
 import javax.microedition.lcdui.List;
 import javax.microedition.lcdui.Command;
 import javax.microedition.lcdui.CommandListener;
@@ -17,28 +16,30 @@ import javax.microedition.lcdui.Displayable;
 import java.util.Enumeration;
 import java.io.IOException;
 
-public final class FileBrowser extends List implements CommandListener, Runnable {
-    private static final Logger log = new Logger("FileBrowser");
+import api.file.File;
 
-    private Display display;
+public final class FileBrowser extends List implements CommandListener, Runnable {
+//#ifdef __LOG__
+    private static final Logger log = new Logger("FileBrowser");
+//#endif
+
     private Callback callback;
 
     private Command cmdCancel;
     private Command cmdBack;
 
-    private volatile FileConnection fc;
+    private volatile File fc;
     private volatile String path;
     private volatile String selection;
     private volatile int depth = 0;
 
-    public FileBrowser(String title, Display display, Callback callback) {
+    public FileBrowser(String title, Callback callback) {
         super(title, List.IMPLICIT);
-        this.display = display;
         this.callback = callback;
         this.cmdCancel = new Command("Cancel", Command.CANCEL, 1);
         this.cmdBack = new Command("Back", Command.BACK, 1);
         setCommandListener(this);
-        display.setCurrent(this);
+        Desktop.display.setCurrent(this);
     }
 
     public void show() {
@@ -57,7 +58,9 @@ public final class FileBrowser extends List implements CommandListener, Runnable
         if (depth == 0) {
             try {
                 if (fc != null) {
+//#ifdef __LOG__
                     if (log.isEnabled()) log.debug("close existing fc");
+//#endif
                     try {
                         fc.close();
                     } catch (IOException e) {
@@ -65,16 +68,18 @@ public final class FileBrowser extends List implements CommandListener, Runnable
                 }
                 fc = null;
 
-                show(FileSystemRegistry.listRoots());
+                show(File.listRoots());
 
+//#ifdef __LOG__
                 if (log.isEnabled()) log.debug("scanner thread exits");
+//#endif
             } catch (Throwable t) {
                 quit(t);
             }
         } else {
             try {
                 if (fc == null) {
-                    fc = (FileConnection) Connector.open("file:///" + path, Connector.READ);
+                    fc = new File(Connector.open("file:///" + path, Connector.READ));
                 } else {
                     fc.setFileConnection(path);
                 }
@@ -127,7 +132,9 @@ public final class FileBrowser extends List implements CommandListener, Runnable
     private void quit(Throwable throwable) {
         // close connection
         if (fc != null) {
+//#ifdef __LOG__
             if (log.isEnabled()) log.debug("join left fc");
+//#endif
             try {
                 fc.close();
             } catch (IOException e) {
@@ -138,7 +145,7 @@ public final class FileBrowser extends List implements CommandListener, Runnable
         fc = null;
 
         // restore desktop
-        display.setCurrent(Desktop.screen);
+        Desktop.display.setCurrent(Desktop.screen);
 
         // we are done
         callback.invoke(selection, throwable);

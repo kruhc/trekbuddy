@@ -3,7 +3,6 @@
 
 package cz.kruch.track.ui;
 
-import javax.microedition.lcdui.Display;
 import javax.microedition.lcdui.Displayable;
 import javax.microedition.lcdui.Form;
 import javax.microedition.lcdui.StringItem;
@@ -22,7 +21,7 @@ public final class YesNoDialog implements CommandListener {
     private Displayable next;
     private AnswerListener callback;
 
-    public YesNoDialog(Display display, Displayable next, AnswerListener callback) {
+    public YesNoDialog(Displayable next, AnswerListener callback) {
         this.next = next;
         this.callback = callback;
     }

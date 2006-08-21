@@ -9,7 +9,6 @@ import cz.kruch.track.location.GpxTracklog;
 
 import javax.microedition.lcdui.Form;
 import javax.microedition.lcdui.CommandListener;
-import javax.microedition.lcdui.Display;
 import javax.microedition.lcdui.Displayable;
 import javax.microedition.lcdui.TextField;
 import javax.microedition.lcdui.Command;
@@ -18,20 +17,17 @@ import javax.microedition.lcdui.StringItem;
 import api.location.Location;
 
 public final class WaypointForm extends Form implements CommandListener {
-    private Display display;
     private Callback callback;
-    private Displayable previous;
+    private Displayable next;
     private Location location;
 
     private TextField fieldName;
     private TextField fieldComment;
 
-    public WaypointForm(Display display, Displayable previous,
-                        Callback callback, Location location) {
+    public WaypointForm(Displayable next, Callback callback, Location location) {
         super("AddWaypoint (!EXPERIMENTAL!)");
-        this.display = display;
         this.callback = callback;
-        this.previous = previous;
+        this.next = next;
         this.location = location;
     }
 
@@ -50,14 +46,14 @@ public final class WaypointForm extends Form implements CommandListener {
         setCommandListener(this);
 
         // show
-        display.setCurrent(this);
+        Desktop.display.setCurrent(this);
     }
 
     public void commandAction(Command command, Displayable displayable) {
         Waypoint wpt = null;
 
         // restore screen
-        display.setCurrent(previous);
+        Desktop.display.setCurrent(next);
 
         if (command.getCommandType() == Command.SCREEN) {
             wpt = new Waypoint(location, fieldName.getString(), fieldComment.getString());

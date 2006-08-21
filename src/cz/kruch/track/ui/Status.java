@@ -6,11 +6,9 @@ package cz.kruch.track.ui;
 import javax.microedition.lcdui.Graphics;
 
 final class Status extends Bar {
-    private int h;
 
     public Status(int gx, int gy, int width, int height) {
         super(gx, gy, width, height);
-        this.h = bar.getHeight();
     }
 
     public void render(Graphics graphics) {
@@ -19,14 +17,14 @@ final class Status extends Bar {
         }
 
         // draw status info
-        graphics.drawImage(bar, gx, height - h, Graphics.TOP | Graphics.LEFT);
-        graphics.drawString(info, gx, height - h, Graphics.TOP | Graphics.LEFT);
+        graphics.drawImage(bar, gx, height - bh, Graphics.TOP | Graphics.LEFT);
+        graphics.drawString(info, gx, height - bh, Graphics.TOP | Graphics.LEFT);
     }
 
     public int[] getClip() {
-        if (!visible)
+        if (!visible && !update)
             return null;
 
-        return new int[]{ gx, height - h, width, h };
+        return new int[]{ gx, height - bh, width, bh };
     }
 }

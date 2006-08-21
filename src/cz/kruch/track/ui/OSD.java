@@ -21,7 +21,6 @@ final class OSD extends Bar {
     private volatile String recording = null;
     private volatile String extendedInfo;
 
-    private int bh;
     private int rw;
 
     public OSD(int gx, int gy, int width, int height) throws IOException {
@@ -30,8 +29,7 @@ final class OSD extends Bar {
         this.providerUnavailable = Image.createImage("/resources/s_orange.png");
         this.providerOutOfService = Image.createImage("/resources/s_red.png");
         this.semaforX = this.width - this.providerAvailable.getWidth() - BORDER;
-        this.semaforY = Math.abs((Desktop.font.getHeight() - this.providerAvailable.getHeight())) / 2;
-        this.bh = bar.getHeight();
+        this.semaforY = Math.abs((this.bh - this.providerAvailable.getHeight())) / 2;
         this.rw = Desktop.font.charWidth('R');
     }
 
@@ -101,7 +99,7 @@ final class OSD extends Bar {
     }
 
     public int[] getClip() {
-        if (!visible)
+        if (!visible && !update)
             return null;
 
         return new int[]{ gx, gy, width, extendedInfo == null ? bh : 2 * bh };

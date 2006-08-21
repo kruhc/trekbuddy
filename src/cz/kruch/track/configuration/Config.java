@@ -3,7 +3,9 @@
 
 package cz.kruch.track.configuration;
 
+//#ifdef __LOG__
 import cz.kruch.track.util.Logger;
+//#endif
 import cz.kruch.track.TrackingMIDlet;
 
 import javax.microedition.rms.RecordStore;
@@ -16,7 +18,9 @@ import java.io.ByteArrayOutputStream;
 import java.util.Vector;
 
 public abstract class Config {
+//#ifdef __LOG__
     private static final Logger log = new Logger("Config");
+//#endif
 
     public static final String LOCATION_PROVIDER_JSR82      = "Bluetooth";
     public static final String LOCATION_PROVIDER_JSR179     = "Internal";
@@ -83,8 +87,12 @@ public abstract class Config {
 
     public String[] getLocationProviders() {
         Vector list = new Vector();
-        if (TrackingMIDlet.isJsr82()) list.addElement(LOCATION_PROVIDER_JSR82);
-        if (TrackingMIDlet.isJsr179()) list.addElement(LOCATION_PROVIDER_JSR179);
+        if (TrackingMIDlet.isJsr82()) {
+            list.addElement(LOCATION_PROVIDER_JSR82);
+        }
+        if (TrackingMIDlet.isJsr179()) {
+            list.addElement(LOCATION_PROVIDER_JSR179);
+        }
         list.addElement(LOCATION_PROVIDER_SIMULATOR);
         String[] result = new String[list.size()];
         list.copyInto(result);
@@ -210,7 +218,9 @@ public abstract class Config {
                     // new store? existing store? corrupted store?
                     switch (rs.getNumRecords()) {
                         case 0:
+//#ifdef __LOG__
                             if (log.isEnabled()) log.info("new configuration");
+//#endif
                             break;
                         case 1: {
                                 DataInputStream din = new DataInputStream(new ByteArrayInputStream(rs.getRecord(1)));
@@ -226,7 +236,9 @@ public abstract class Config {
                                 timeZone = din.readInt();
                                 crosshairType = din.readInt();
                                 din.close();
+//#ifdef __LOG__
                                 if (log.isEnabled()) log.info("configuration read");
+//#endif
                             } break;
                         default: {
 
@@ -249,7 +261,9 @@ public abstract class Config {
                     throw new ConfigurationException(e);
                 }
 
+//#ifdef __LOG__
                 if (log.isEnabled()) log.info("configuration initialized");
+//#endif
 
                 initialized = true;
             }
@@ -291,7 +305,9 @@ public abstract class Config {
                 throw new ConfigurationException(e);
             }
 
+//#ifdef __LOG__
             if (log.isEnabled()) log.info("configuration updated");
+//#endif            
         }
     }
 }

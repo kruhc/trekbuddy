@@ -7,7 +7,6 @@ import com.ice.tar.TarInputStream;
 import com.ice.tar.TarEntry;
 
 import javax.microedition.io.Connector;
-import javax.microedition.io.file.FileConnection;
 import javax.microedition.lcdui.Image;
 import java.io.IOException;
 import java.io.InputStream;
@@ -19,10 +18,13 @@ import cz.kruch.j2se.io.BufferedInputStream;
 import cz.kruch.j2se.io.BufferedReader;
 
 import cz.kruch.track.ui.Position;
+//#ifdef __LOG__
 import cz.kruch.track.util.Logger;
+//#endif
 import cz.kruch.track.maps.io.LoaderIO;
 
 import api.location.QualifiedCoordinates;
+import api.file.File;
 
 public final class Map {
 
@@ -32,7 +34,9 @@ public final class Map {
         public void loadingChanged(Object result, Throwable throwable);
     }
 
+//#ifdef __LOG__
     private static final Logger log = new Logger("Map");
+//#endif
 
     private static final int EVENT_MAP_OPENED       = 0;
     private static final int EVENT_SLICES_LOADED    = 1;
@@ -110,10 +114,11 @@ public final class Map {
      * Does gc at the end.
      */
     public void dispose() {
+//#ifdef __LOG__
         if (log.isEnabled()) log.info("dispose map @" + Integer.toHexString(hashCode()));
+//#endif
 
         // release slices images
-//        for (int N = slices.length, i = 0; i < N; i++) {
         for (int i = slices.length; --i >= 0; ) {
             slices[i].setImage(null);
         }
@@ -145,18 +150,23 @@ public final class Map {
      * @return always <code>true</code>
      */
     public boolean open() {
+//#ifdef __LOG__
         if (log.isEnabled()) log.debug("open map @" + Integer.toHexString(hashCode()));
+//#endif
 
         // open map in background
         LoaderIO.getInstance().enqueue(new Runnable() {
             public void run() {
+//#ifdef __LOG__
                 if (log.isEnabled()) log.debug("map loading task starting @" + Integer.toHexString(Map.this.hashCode()));
+//#endif
 
                 // open and init map
                 Throwable throwable = loadMap();
 
-                // log
+//#ifdef __LOG__
                 if (log.isEnabled()) log.debug("map opened @" + Integer.toHexString(Map.this.hashCode()) + "; " + throwable);
+//#endif
 
                 // we are done
                 notifyListener(EVENT_MAP_OPENED, null, throwable);
@@ -171,7 +181,9 @@ public final class Map {
      * @param slices
      */
     public boolean prepareSlices(Vector slices) {
+//#ifdef __LOG__
         if (log.isEnabled()) log.debug("prepare slices @" + Integer.toHexString(hashCode()));
+//#endif
 
         final Vector collection = new Vector(0);
 
@@ -179,30 +191,38 @@ public final class Map {
         for (Enumeration e = slices.elements(); e.hasMoreElements(); ) {
             Slice slice = (Slice) e.nextElement();
             if (slice.getImage() == null) {
+//#ifdef __LOG__
                 if (log.isEnabled()) log.debug("image missing for slice " + slice);
+//#endif
                 collection.addElement(slice);
             }
         }
 
         // no images to be loaded
         if (collection.size() == 0) {
+//#ifdef __LOG__
             if (log.isEnabled()) log.debug("got all slices with images");
+//#endif
             return false;
         }
 
-        // debug
+//#ifdef __LOG__
         if (log.isEnabled()) log.debug("about to load new slices");
+//#endif
 
         // load images at background
         LoaderIO.getInstance().enqueue(new Runnable() {
             public void run() {
+//#ifdef __LOG__
                 if (log.isEnabled()) log.debug("slice loading task started @" + Integer.toHexString(Map.this.hashCode()));
+//#endif
 
                 // load images
                 Throwable throwable = loadImages(collection);
 
-                // log
+//#ifdef __LOG__
                 if (log.isEnabled()) log.debug("all requested slices loaded @" + Integer.toHexString(Map.this.hashCode()));
+//#endif
 
                 // we are done
                 notifyListener(EVENT_SLICES_LOADED, null, throwable);
@@ -220,7 +240,10 @@ public final class Map {
             loader.init();
             loader.run();
             loader.checkException();
+
+//#ifdef __LOG__
             if (log.isEnabled()) log.debug("map opened");
+//#endif
 
             // check map for consistency
             if (calibration == null) {
@@ -306,9 +329,9 @@ public final class Map {
                         throw new InvalidMapException("No image " + slice.getURL());
                     }
 
-                    // log
+//#ifdef __LOG__
                     if (log.isEnabled()) log.debug("image loaded for slice " + slice.getURL());
-
+//#endif
                 } catch (Throwable t) {
                     throwable = t;
                     throw t;
@@ -329,7 +352,7 @@ public final class Map {
      */
     static final class FileInput {
         private String url;
-        private FileConnection fc;
+        private File fc;
         private InputStream in;
 
         FileInput(String url) {
@@ -337,7 +360,7 @@ public final class Map {
         }
 
         InputStream getInputStream() throws IOException {
-            fc = (FileConnection) Connector.open(url, Connector.READ);
+            fc = new File(Connector.open(url, Connector.READ));
             in = new BufferedInputStream(fc.openInputStream(), TEXT_FILE_BUFFER_SIZE);
 
             return in;
@@ -385,8 +408,9 @@ public final class Map {
             // figure slice dimension and precalculate range
             slice.doFinal(mapWidth, mapHeight, xi, yi);
 
-            // debug
+//#ifdef __LOG__
             if (log.isEnabled()) log.debug("ready slice " + slices[i]);
+//#endif
         }
     }
 
@@ -425,16 +449,16 @@ public final class Map {
     }
 
     private final class TarLoader extends Loader {
-        private FileConnection fileConnection;
+        private File file;
 
         public void init() throws IOException {
-            fileConnection = (FileConnection) Connector.open(path, Connector.READ);
+            file = new File(Connector.open(path, Connector.READ));
         }
 
         public void destroy() {
-            if (fileConnection != null) {
+            if (file != null) {
                 try {
-                    fileConnection.close();
+                    file.close();
                 } catch (IOException e) {
                 }
             }
@@ -445,7 +469,7 @@ public final class Map {
             TarEntry entry;
 
             try {
-                tar = new TarInputStream(new BufferedInputStream(fileConnection.openInputStream(), SMALL_BUFFER_SIZE));
+                tar = new TarInputStream(new BufferedInputStream(file.openInputStream(), SMALL_BUFFER_SIZE));
                 entry = tar.getNextEntry();
                 while (entry != null) {
                     String entryName = entry.getName();
@@ -492,7 +516,7 @@ public final class Map {
             TarEntry entry = (TarEntry) slice.getClosure();
             TarInputStream tar = null;
             try {
-                tar = new TarInputStream(new BufferedInputStream(fileConnection.openInputStream(), LARGE_BUFFER_SIZE));
+                tar = new TarInputStream(new BufferedInputStream(file.openInputStream(), LARGE_BUFFER_SIZE));
                 tar.setNextEntry(entry);
                 tar.getNextEntry();
                 slice.setImage(Image.createImage(tar));
@@ -517,14 +541,16 @@ public final class Map {
             }
             dir = path.substring(0, i + 1);
 
+//#ifdef __LOG__
             if (log.isEnabled()) log.debug("slices are in " + dir);
+//#endif
         }
 
         public void destroy() {
         }
 
         public void run() {
-            FileConnection fc = null;
+            File fc = null;
             BufferedReader reader = null;
 
             try {
@@ -560,7 +586,7 @@ public final class Map {
                 }
 
                 // do we have a list?
-                fc = (FileConnection) Connector.open(path.substring(0, path.lastIndexOf('.')) + ".set", Connector.READ);
+                fc = new File(Connector.open(path.substring(0, path.lastIndexOf('.')) + ".set", Connector.READ));
                 if (fc.exists()) {
                     // each line is a slice filename
                     reader = new BufferedReader(new InputStreamReader(fc.openInputStream()), LARGE_BUFFER_SIZE);
@@ -574,7 +600,7 @@ public final class Map {
                     fc.close();
 
                     // iterate over set
-                    fc = (FileConnection) Connector.open(dir + setDir, Connector.READ);
+                    fc = new File(Connector.open(dir + setDir, Connector.READ));
                     for (Enumeration e = fc.list("*.png", false); e.hasMoreElements(); ) {
                         String entry = e.nextElement().toString();
                         addSlice(new Slice(new Calibration.Best(setDir + entry)));
@@ -602,13 +628,15 @@ public final class Map {
 
         public void loadSlice(Slice slice) throws IOException {
             String slicePath = dir + slice.getURL();
-            FileConnection fc = null;
+            File fc = null;
             InputStream in = null;
 
+//#ifdef __LOG__
             if (log.isEnabled()) log.debug("load slice image from " + slicePath);
+//#endif
 
             try {
-                fc = (FileConnection) Connector.open(slicePath, Connector.READ);
+                fc = new File(Connector.open(slicePath, Connector.READ));
                 in = new BufferedInputStream(fc.openInputStream(), LARGE_BUFFER_SIZE);
                 slice.setImage(Image.createImage(in));
             } finally {

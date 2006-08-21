@@ -3,22 +3,23 @@
 
 package cz.kruch.track.maps;
 
+//#ifdef __LOG__
 import cz.kruch.track.util.Logger;
+//#endif
 import cz.kruch.track.AssertionFailedException;
 import cz.kruch.track.maps.io.LoaderIO;
 import cz.kruch.j2se.io.BufferedInputStream;
-import cz.kruch.j2se.io.BufferedReader;
 import cz.kruch.j2se.util.StringTokenizer;
 
-import javax.microedition.io.file.FileConnection;
 import javax.microedition.io.Connector;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.util.Enumeration;
 import java.util.Hashtable;
 
 import api.location.QualifiedCoordinates;
+import api.file.File;
+
 import com.ice.tar.TarEntry;
 import com.ice.tar.TarInputStream;
 
@@ -29,7 +30,9 @@ public final class Atlas {
         public void loadingChanged(Object result, Throwable throwable);
     }
 
+//#ifdef __LOG__
     private static final Logger log = new Logger("Atlas");
+//#endif
 
     private static final int EVENT_ATLAS_OPENED     = 0;
     private static final int EVENT_LOADING_CHANGED  = 1;
@@ -140,18 +143,23 @@ public final class Atlas {
      * Opens and scans atlas.
      */
     public boolean prepareAtlas() {
+//#ifdef __LOG__
         if (log.isEnabled()) log.debug("prepare atlas");
+//#endif
 
         // open atlas in background
         LoaderIO.getInstance().enqueue(new Runnable() {
             public void run() {
+//#ifdef __LOG__
                 if (log.isEnabled()) log.debug("atlas loading task starting");
+//#endif
 
                 // open and init atlas
                 Throwable t = loadAtlas();
 
-                // log
+//#ifdef __LOG__
                 if (log.isEnabled()) log.debug("atlas opened; " + t);
+//#endif
 
                 // we are done
                 notifyListener(EVENT_ATLAS_OPENED, null, t);
@@ -169,7 +177,9 @@ public final class Atlas {
             loader.init();
             loader.run();
             loader.checkException();
+//#ifdef __LOG__
             if (log.isEnabled()) log.debug("atlas opened");
+//#endif
         } catch (Throwable t) {
             return t;
         }
@@ -182,15 +192,21 @@ public final class Atlas {
      * Does gc at the end.
      */
     public void close() {
+//#ifdef __LOG__
         if (log.isEnabled()) log.info("close atlas");
+//#endif
 
         // destroy loader
         if (loader != null) {
             try {
                 loader.destroy();
+//#ifdef __LOG__
                 if (log.isEnabled()) log.debug("loader destroyed");
+//#endif
             } catch (IOException e) {
+//#ifdef __LOG__
                 if (log.isEnabled()) log.warn("failed to destroy loader");
+//#endif
             } finally {
                 loader = null;
             }
@@ -231,7 +247,9 @@ public final class Atlas {
             }
             dir = url.substring(0, i + 1);
 
+//#ifdef __LOG__
             if (log.isEnabled()) log.debug("layers are in " + dir);
+//#endif
         }
 
         public void destroy() throws IOException {
@@ -257,11 +275,11 @@ public final class Atlas {
     private final class TarLoader extends Loader {
 
         public void run() {
-            FileConnection fc = null;
+            File fc = null;
             TarInputStream tar = null;
 
             try {
-                fc = (FileConnection) Connector.open(url, Connector.READ);
+                fc = new File(Connector.open(url, Connector.READ));
                 tar = new TarInputStream(new BufferedInputStream(fc.openInputStream(), Map.SMALL_BUFFER_SIZE));
 
                 // iterate over archive
@@ -302,7 +320,9 @@ public final class Atlas {
                                 calibration = new Calibration.XML(tar, url);
                             }
                             if (calibration != null) {
+//#ifdef __LOG__
                                 if (log.isEnabled()) log.debug("calibration loaded; " + calibration);
+//#endif
                                 getLayerCollection(lName).put(mName, calibration);
                             }
                         }
@@ -331,19 +351,20 @@ public final class Atlas {
     private final class DirLoader extends Loader {
 
         public void run() {
-            FileConnection fc = null;
+            File fc = null;
             InputStream in = null;
 
             try {
                 // open atlas dir
-                fc = (FileConnection) Connector.open(dir, Connector.READ);
+                fc = new File(Connector.open(dir, Connector.READ));
 
                 // iterate over layers
                 for (Enumeration le = fc.list(); le.hasMoreElements(); ) {
                     String lEntry = le.nextElement().toString();
                     if (lEntry.endsWith("/")) {
-                        // debug
+//#ifdef __LOG__
                         if (log.isEnabled()) log.debug("new layer: " + lEntry);
+//#endif
 
                         // get collection
                         Hashtable collection = getLayerCollection(lEntry);
@@ -355,8 +376,9 @@ public final class Atlas {
                         for (Enumeration me = fc.list(); me.hasMoreElements(); ) {
                             String mEntry = me.nextElement().toString();
                             if (mEntry.endsWith("/")) {
-                                // debug
+//#ifdef __LOG__
                                 if (log.isEnabled()) log.debug("new map? " + mEntry);
+//#endif
 
                                 // set file connection
                                 fc.setFileConnection(mEntry);
@@ -374,7 +396,9 @@ public final class Atlas {
                                     String ext = iEntry.substring(indexOf + 1);
 
                                     if (Calibration.KNOWN_EXTENSIONS.contains(ext)) {
+//#ifdef __LOG__
                                         if (log.isEnabled()) log.debug("found map calibration: " + iEntry);
+//#endif
 
                                         Calibration calibration = null;
                                         String url = fc.getURL() + iEntry;
@@ -394,7 +418,9 @@ public final class Atlas {
                                         fileInput.close();
                                         // we do not need but one calibration
                                         if (calibration != null) {
+//#ifdef __LOG__
                                             if (log.isEnabled()) log.debug("calibration loaded; " + calibration);
+//#endif
                                             collection.put(mEntry, calibration);
 
                                             /*

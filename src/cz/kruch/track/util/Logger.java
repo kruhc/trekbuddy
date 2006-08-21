@@ -14,17 +14,6 @@ public final class Logger {
     private String cname;
     private boolean enabled;
 
-//    private static java.io.OutputStreamWriter out;
-
-//    static {
-//        try {
-//            javax.microedition.io.file.FileConnection fc = (javax.microedition.io.file.FileConnection) javax.microedition.io.Connector.open("file:///E:/trekbuddy.log", javax.microedition.io.Connector.WRITE);
-//            fc.create();
-//            out = new java.io.OutputStreamWriter(fc.openOutputStream());
-//        } catch (IOException e) {
-//        }
-//    }
-
     public Logger(String componentName) {
         this.cname = componentName;
         this.enabled = TrackingMIDlet.isLogEnabled();
@@ -67,33 +56,15 @@ public final class Logger {
 
     private void log(String severity, String message) /*throws IOException*/ {
         if (enabled) {
-//            if (out == null) {
-                System.out.println("[" + severity + "] " + cname + " - " + message);
-                System.out.flush();
-//            } else {
-//                try {
-//                    out.write("[" + severity + "] " + cname + " - " + message + "\n");
-//                    out.flush();
-//                } catch (IOException e) {
-//                }
-//            }
+            System.out.println("[" + severity + "] " + cname + " - " + message);
+            System.out.flush();
         }
     }
 
     private void log(Throwable t) /*throws IOException*/ {
         if (enabled) {
-//            if (out == null) {
-//                System.out.println(stacktrace);
-//                System.out.flush();
-                t.printStackTrace();
-                System.err.flush();
-//            } else {
-//                try {
-//                    out.write("stacktrace" + "\n");
-//                    out.flush();
-//                } catch (IOException e) {
-//                }
-//            }
+            t.printStackTrace();
+            System.err.flush();
         }
     }
 }

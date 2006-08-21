@@ -31,7 +31,7 @@ final class SettingsForm extends Form implements CommandListener, ItemStateListe
     private ChoiceGroup choiceMisc;
     private ChoiceGroup choiceTimezone;
 
-    public SettingsForm(Display display, Callback callback) {
+    public SettingsForm(Callback callback) {
         super("Settings");
         this.callback = callback;
     }

@@ -5,7 +5,6 @@ package cz.kruch.track.ui;
 
 import cz.kruch.track.TrackingMIDlet;
 
-import javax.microedition.lcdui.Display;
 import javax.microedition.lcdui.Form;
 import javax.microedition.lcdui.StringItem;
 import javax.microedition.lcdui.Command;
@@ -16,7 +15,7 @@ import api.location.LocationException;
 
 public final class InfoForm extends Form implements CommandListener {
 
-    public InfoForm(Display display) {
+    public InfoForm() {
         super("Info");
     }
 

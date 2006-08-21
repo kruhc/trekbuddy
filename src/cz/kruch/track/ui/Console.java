@@ -36,10 +36,12 @@ public final class Console extends Canvas {
     }
 
     public void delay() {
-        long delay = errors > 0 ? 2000 : (skips > 0 ? 750: 250);
-        try {
-            Thread.sleep(delay);
-        } catch (InterruptedException e) {
+        long delay = errors > 0 ? 2000 : (skips > 0 ? 750: 0);
+        if (delay > 0) {
+            try {
+                Thread.sleep(delay);
+            } catch (InterruptedException e) {
+            }
         }
     }
 

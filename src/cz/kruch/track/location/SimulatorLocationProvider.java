@@ -7,16 +7,14 @@ import api.location.LocationProvider;
 import api.location.LocationListener;
 import api.location.LocationException;
 import api.location.Location;
-import api.location.QualifiedCoordinates;
 
 import javax.microedition.io.Connector;
-import javax.microedition.io.file.FileConnection;
-import javax.microedition.lcdui.Display;
 import java.io.InputStream;
 import java.io.IOException;
 
-import cz.kruch.track.util.NmeaParser;
+//#ifdef __LOG__
 import cz.kruch.track.util.Logger;
+//#endif
 import cz.kruch.track.configuration.Config;
 import cz.kruch.track.ui.FileBrowser;
 import cz.kruch.track.ui.Desktop;
@@ -27,10 +25,10 @@ import cz.kruch.j2se.io.BufferedInputStream;
 public class SimulatorLocationProvider
         extends StreamReadingLocationProvider
         implements Runnable, Callback {
-
+//#ifdef __LOG__
     private static final Logger log = new Logger("Simulator");
+//#endif
 
-    private Display display;
     private Thread thread;
     private boolean go;
     private String url;
@@ -40,9 +38,8 @@ public class SimulatorLocationProvider
     private int timeout;
     private int maxAge;
 
-    public SimulatorLocationProvider(Display display) {
+    public SimulatorLocationProvider() {
         super(Config.LOCATION_PROVIDER_SIMULATOR);
-        this.display = display;
         this.delay = Config.getSafeInstance().getSimulatorDelay();
         if (this.delay < 25) {
             this.delay = 25;
@@ -61,13 +58,16 @@ public class SimulatorLocationProvider
     }
 
     public int start() throws LocationException {
-        (new FileBrowser("PlaybackSelection", display, this)).show();
+        (new FileBrowser("PlaybackSelection", this)).show();
 
         return LocationProvider.TEMPORARILY_UNAVAILABLE;
     }
 
     public void stop() throws LocationException {
+//#ifdef __LOG__
         if (log.isEnabled()) log.debug("stop request");
+//#endif
+
         if (go) {
             go = false;
             try {
@@ -80,7 +80,9 @@ public class SimulatorLocationProvider
     }
 
     public void invoke(Object result, Throwable throwable) {
+//#ifdef __LOG__
         if (log.isEnabled()) log.debug("playback selection: " + result);
+//#endif
 
         if (result != null) {
             go = true;
@@ -93,7 +95,9 @@ public class SimulatorLocationProvider
     }
 
     public void run() {
+//#ifdef __LOG__
         if (log.isEnabled()) log.info("simulator task starting; url " + url);
+//#endif
 
         // for start gpx
         notifyListener(LocationProvider._STARTING);
@@ -116,7 +120,9 @@ public class SimulatorLocationProvider
                 } catch (AssertionFailedException e) {
                     Desktop.showError(e.getMessage(), null);
                 } catch (Exception e) {
+//#ifdef __LOG__
                     if (log.isEnabled()) log.warn("Failed to get location.", e);
+//#endif
 
                     // record exception
                     if (e instanceof InterruptedException) {
@@ -164,6 +170,8 @@ public class SimulatorLocationProvider
             notifyListener(LocationProvider.OUT_OF_SERVICE);
         }
 
+//#ifdef __LOG__
         if (log.isEnabled()) log.info("simulator task ended");
+//#endif
     }
 }

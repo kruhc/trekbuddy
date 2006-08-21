@@ -3,31 +3,25 @@
 
 package cz.kruch.track.ui;
 
-import cz.kruch.track.util.Logger;
 import cz.kruch.track.event.Callback;
 
 import javax.microedition.lcdui.List;
 import javax.microedition.lcdui.CommandListener;
-import javax.microedition.lcdui.Display;
 import javax.microedition.lcdui.Displayable;
 import javax.microedition.lcdui.Command;
-import javax.microedition.io.file.FileConnection;
-import javax.microedition.io.file.FileSystemRegistry;
-import javax.microedition.io.Connector;
 import java.util.Enumeration;
-import java.io.IOException;
 
 final class ItemSelection extends List implements CommandListener {
     private Callback callback;
-    private Displayable previous;
+    private Displayable next;
 
-    public ItemSelection(Display display, Displayable nextDisplayable, String title, Callback callback) {
+    public ItemSelection(Displayable next, String title, Callback callback) {
         super(title, List.IMPLICIT);
         this.callback = callback;
-        this.previous = nextDisplayable;
+        this.next = next;
         addCommand(new Command("Cancel", Command.CANCEL, 1));
         setCommandListener(this);
-        display.setCurrent(this);
+        Desktop.display.setCurrent(this);
     }
 
     public void show(Enumeration items) {
@@ -39,7 +33,7 @@ final class ItemSelection extends List implements CommandListener {
     }
 
     public void commandAction(Command command, Displayable displayable) {
-        Desktop.display.setCurrent(previous);
+        Desktop.display.setCurrent(next);
         if (command == List.SELECT_COMMAND) {
             callback.invoke(getString(getSelectedIndex()), null);
         } else {

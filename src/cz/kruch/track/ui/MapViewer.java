@@ -5,7 +5,9 @@ package cz.kruch.track.ui;
 
 import cz.kruch.track.maps.Slice;
 import cz.kruch.track.maps.Map;
+//#ifdef __LOG__
 import cz.kruch.track.util.Logger;
+//#endif
 import cz.kruch.track.AssertionFailedException;
 
 import javax.microedition.lcdui.Graphics;
@@ -17,7 +19,9 @@ import java.util.Enumeration;
 import java.io.IOException;
 
 final class MapViewer {
+//#ifdef __LOG__
     private static final Logger log = new Logger("MapViewer");
+//#endif
 
     private int gx, gy;
     private int width, height;
@@ -103,14 +107,18 @@ final class MapViewer {
     public Position getPosition() {
         Position p = new Position(x + chx + crosshairWidth / 2, y + chy + crosshairHeight / 2);
 
+//#ifdef __LOG__
         if (log.isEnabled()) log.debug(p.toString());
+//#endif
 
         return p;
     }
 
     // TODO better name - x,y is desired position of crosshair!
     public boolean move(int x, int y) {
+//#ifdef __LOG__
         if (log.isEnabled()) log.debug("move, current position " + this.x + "," + this.y);
+//#endif
 
         boolean dirty = false;
         int direction = -1;
@@ -142,7 +150,9 @@ final class MapViewer {
         chx = x - this.x - crosshairWidth / 2;
         chy = y - this.y - crosshairHeight / 2;
 
+//#ifdef __LOG__
         if (log.isEnabled()) log.debug("move made, dirty? " + dirty + ";current position " + this.x + "," + this.y + "; dirty = " + dirty + "; crosshair requested at " + x + "-" + y + " -> screen position at " + chx + "-" + chy);
+//#endif
 
         return dirty;
     }
@@ -246,7 +256,9 @@ final class MapViewer {
         for (Enumeration e = slices.elements(); e.hasMoreElements(); ) {
             Slice slice = (Slice) e.nextElement();
             if (slice.getImage() == null) {
+//#ifdef __LOG__
                 if (log.isEnabled()) log.debug("image for slice " + slice + " being loaded?");
+//#endif
                 continue;
             }
             drawSlice(graphics, clip, slice);
@@ -392,7 +404,9 @@ final class MapViewer {
     }
 
     public boolean ensureSlices() {
+//#ifdef __LOG__
         if (log.isEnabled()) log.debug("ensure slices from map @" + Integer.toHexString(map.hashCode()));
+//#endif
 
         if (map == null) {
             throw new AssertionFailedException("No map");
@@ -423,11 +437,15 @@ final class MapViewer {
         for (Enumeration e = slices.elements(); e.hasMoreElements(); ) {
             Slice slice = (Slice) e.nextElement();
             if (collection.contains(slice)) {
+//#ifdef __LOG__
                 if (log.isEnabled()) log.debug("reuse slice in current set; " + slice);
+//#endif
                 continue;
             }
 
+//#ifdef __LOG__
             if (log.isEnabled()) log.debug("release map image in " + slice);
+//#endif
             slice.setImage(null);
         }
 

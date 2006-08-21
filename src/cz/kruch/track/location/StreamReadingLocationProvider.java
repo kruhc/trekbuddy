@@ -13,7 +13,6 @@ import java.io.IOException;
 import java.io.OutputStream;
 
 import cz.kruch.track.util.NmeaParser;
-import cz.kruch.track.ui.Desktop;
 import cz.kruch.track.AssertionFailedException;
 
 public abstract class StreamReadingLocationProvider extends LocationProvider {

@@ -3,10 +3,7 @@
 
 package cz.kruch.track.maps;
 
-import cz.kruch.track.ui.Position;
-
 import javax.microedition.lcdui.Image;
-import java.util.Vector;
 
 public final class Slice {
     private Calibration.Best calibration;

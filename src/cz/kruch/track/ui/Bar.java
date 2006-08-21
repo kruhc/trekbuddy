@@ -6,7 +6,6 @@ package cz.kruch.track.ui;
 import cz.kruch.track.TrackingMIDlet;
 
 import javax.microedition.lcdui.Image;
-import javax.microedition.lcdui.Font;
 import javax.microedition.lcdui.Graphics;
 
 abstract class Bar {
@@ -15,11 +14,13 @@ abstract class Bar {
     protected int gx, gy;
     protected int width, height;
     protected Image bar;
+    protected int bh;
 
     protected volatile String info;
     protected volatile boolean ok;
 
     protected boolean visible = true;
+    protected boolean update = false;
 
     protected Bar(int gx, int gy, int width, int height) {
         this.gx = gx;
@@ -30,13 +31,13 @@ abstract class Bar {
     }
 
     private void init() {
-        int h = Desktop.font.getHeight();
+        bh = Desktop.font.getHeight();
         int color = TrackingMIDlet.numAlphaLevels() > 2 ? 0x807f7f7f : 0xff7f7f7f;
-        int[] shadow = new int[width * h];
+        int[] shadow = new int[width * bh];
         for (int i = shadow.length; --i >= 0; ) {
             shadow[i] = color;
         }
-        bar = Image.createRGBImage(shadow, width, h, true);
+        bar = Image.createRGBImage(shadow, width, bh, true);
     }
 
     public void setInfo(String info, boolean ok) {
@@ -50,6 +51,7 @@ abstract class Bar {
 
     public void setVisible(boolean visible) {
         this.visible = visible;
+        this.update = true;
     }
 
     public abstract int[] getClip();

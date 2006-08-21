@@ -7,7 +7,9 @@ import api.location.QualifiedCoordinates;
 
 import cz.kruch.j2se.util.StringTokenizer;
 import cz.kruch.j2se.io.BufferedReader;
+//#ifdef __LOG__
 import cz.kruch.track.util.Logger;
+//#endif
 import cz.kruch.track.ui.Position;
 
 import java.util.Vector;
@@ -19,8 +21,9 @@ import org.xmlpull.v1.XmlPullParser;
 import org.kxml2.io.KXmlParser;
 
 public abstract class Calibration {
-    // log
+//#ifdef __LOG__
     private static final Logger log = new Logger("Calibration");
+//#endif
 
     public static final Vector KNOWN_EXTENSIONS = new Vector();
 
@@ -142,7 +145,9 @@ public abstract class Calibration {
     }
 
     public QualifiedCoordinates transform(Position position) {
+//#ifdef __LOG__
         if (log.isEnabled()) log.debug("transform " + position);
+//#endif
 
         int x = position.getX();
         int y = position.getY();
@@ -378,7 +383,9 @@ public abstract class Calibration {
                                     pos.addElement(new Position(x0, y0));
                                     coords.addElement(new QualifiedCoordinates(lat0, lon0));
                                 } else {
+//#ifdef __LOG__
                                     if (log.isEnabled()) log.debug("ignore cal point " + new Position(x0, y0));
+//#endif
                                 }
                             }
                             currentTag = null;
@@ -538,11 +545,15 @@ public abstract class Calibration {
                 if (line.startsWith("Point")) {
                     boolean b = parsePoint(line, xy, ll/*, utm*/);
                     if (b) count++;
+//#ifdef __LOG__
                     if (log.isEnabled()) log.debug("point parsed? " + b);
+//#endif
                 } else if (line.startsWith("MMPXY")) {
                     if (count < 2) {
                         boolean b = parseXy(line, xy);
+//#ifdef __LOG__
                         if (log.isEnabled()) log.debug("mmpxy parsed? " + b);
+//#endif
                     }
                 } /*else if (line.startsWith("Projection Setup")) {
                     if (utm.size() > 0) {
@@ -552,10 +563,14 @@ public abstract class Calibration {
                 }*/ else if (line.startsWith("MMPLL")) {
                     if (count < 2) {
                         boolean b = parseLl(line, ll);
+//#ifdef __LOG__
                         if (log.isEnabled()) log.debug("mmpll parsed? " + b);
+//#endif
                     }
                 } else if (line.startsWith("IWH")) {
+//#ifdef __LOG__
                     if (log.isEnabled()) log.debug("parse IWH");
+//#endif
                     parseIwh(line);
                 }
                 line = reader.readLine(false);

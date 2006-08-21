@@ -3,10 +3,14 @@
 
 package cz.kruch.track.maps.io;
 
+//#ifdef __LOG__
 import cz.kruch.track.util.Logger;
+//#endif
 
 public final class LoaderIO extends Thread {
+//#ifdef __LOG__
     private static final Logger log = new Logger("LoaderIO");
+//#endif
 
     private static LoaderIO instance;
 
@@ -40,7 +44,9 @@ public final class LoaderIO extends Thread {
     }
 
     public void enqueue(Runnable r) {
+//#ifdef __LOG__
         if (log.isEnabled()) log.debug("enqueueing task " + r);
+//#endif
 
         // enqueu task (wait for previous task to finish)
         synchronized (this) {
@@ -57,7 +63,9 @@ public final class LoaderIO extends Thread {
     }
 
     public void run() {
+//#ifdef __LOG__
         if (log.isEnabled()) log.debug("I/O thread starting...");
+//#endif
 
         for (;;) {
             // pop task
@@ -76,12 +84,16 @@ public final class LoaderIO extends Thread {
             // good to go?
             if (!go) break;
 
+//#ifdef __LOG__
             if (log.isEnabled()) log.debug("popped task: " + r);
+//#endif
 
             // run task
             r.run();
 
+//#ifdef __LOG__
             if (log.isEnabled()) log.debug("task finished");
+//#endif
 
             // signal ready for next task
             synchronized (this) {

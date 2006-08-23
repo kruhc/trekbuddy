@@ -118,7 +118,7 @@ public class SimulatorLocationProvider
                 try {
                     location = nextLocation(in);
                 } catch (AssertionFailedException e) {
-                    Desktop.showError(e.getMessage(), null);
+                    Desktop.showError(e.getMessage(), null, null);
                 } catch (Exception e) {
 //#ifdef __LOG__
                     if (log.isEnabled()) log.warn("Failed to get location.", e);

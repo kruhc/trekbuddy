@@ -18,7 +18,6 @@ import java.util.Enumeration;
 import java.util.Hashtable;
 
 import api.location.QualifiedCoordinates;
-import api.file.File;
 
 import com.ice.tar.TarEntry;
 import com.ice.tar.TarInputStream;
@@ -275,11 +274,11 @@ public final class Atlas {
     private final class TarLoader extends Loader {
 
         public void run() {
-            File fc = null;
+            api.file.File fc = null;
             TarInputStream tar = null;
 
             try {
-                fc = new File(Connector.open(url, Connector.READ));
+                fc = new api.file.File(Connector.open(url, Connector.READ));
                 tar = new TarInputStream(new BufferedInputStream(fc.openInputStream(), Map.SMALL_BUFFER_SIZE));
 
                 // iterate over archive
@@ -351,12 +350,12 @@ public final class Atlas {
     private final class DirLoader extends Loader {
 
         public void run() {
-            File fc = null;
+            api.file.File fc = null;
             InputStream in = null;
 
             try {
                 // open atlas dir
-                fc = new File(Connector.open(dir, Connector.READ));
+                fc = new api.file.File(Connector.open(dir, Connector.READ));
 
                 // iterate over layers
                 for (Enumeration le = fc.list(); le.hasMoreElements(); ) {

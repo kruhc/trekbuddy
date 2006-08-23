@@ -5,7 +5,6 @@ package cz.kruch.track.location;
 
 import api.location.QualifiedCoordinates;
 import api.location.Location;
-import api.file.File;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -65,14 +64,14 @@ public final class GpxTracklog extends Thread {
     }
 
     public void run() {
-        File fc = null;
+        api.file.File fc = null;
         OutputStream output = null;
         KXmlSerializer serializer = null;
 
         String path = Config.getSafeInstance().getTracklogsDir() + "/trekbuddy-" + dateToFileDate(System.currentTimeMillis()) + ".gpx";
 
         try {
-            fc = new File(Connector.open(path, Connector.WRITE));
+            fc = new api.file.File(Connector.open(path, Connector.WRITE));
             fc.create();
             output = new BufferedOutputStream(fc.openOutputStream(), 512);
         } catch (Throwable t) {

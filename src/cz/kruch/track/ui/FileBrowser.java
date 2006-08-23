@@ -16,8 +16,6 @@ import javax.microedition.lcdui.Displayable;
 import java.util.Enumeration;
 import java.io.IOException;
 
-import api.file.File;
-
 public final class FileBrowser extends List implements CommandListener, Runnable {
 //#ifdef __LOG__
     private static final Logger log = new Logger("FileBrowser");
@@ -28,7 +26,7 @@ public final class FileBrowser extends List implements CommandListener, Runnable
     private Command cmdCancel;
     private Command cmdBack;
 
-    private volatile File fc;
+    private volatile api.file.File fc;
     private volatile String path;
     private volatile String selection;
     private volatile int depth = 0;
@@ -68,7 +66,7 @@ public final class FileBrowser extends List implements CommandListener, Runnable
                 }
                 fc = null;
 
-                show(File.listRoots());
+                show(api.file.File.listRoots());
 
 //#ifdef __LOG__
                 if (log.isEnabled()) log.debug("scanner thread exits");
@@ -79,7 +77,7 @@ public final class FileBrowser extends List implements CommandListener, Runnable
         } else {
             try {
                 if (fc == null) {
-                    fc = new File(Connector.open("file:///" + path, Connector.READ));
+                    fc = new api.file.File(Connector.open("file:///" + path, Connector.READ));
                 } else {
                     fc.setFileConnection(path);
                 }

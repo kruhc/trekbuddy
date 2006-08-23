@@ -7,7 +7,6 @@ import api.location.LocationProvider;
 import api.location.LocationException;
 import api.location.LocationListener;
 import api.location.Location;
-import api.file.File;
 
 import cz.kruch.track.configuration.Config;
 import cz.kruch.track.ui.Desktop;
@@ -52,7 +51,7 @@ public class Jsr82LocationProvider extends StreamReadingLocationProvider impleme
     private long timestamp;
     private int state;
 
-    private File nmeaFc;
+    private api.file.File nmeaFc;
     private OutputStream nmeaObserver;
 
     public Jsr82LocationProvider(Callback recordingCallback) {
@@ -159,7 +158,7 @@ public class Jsr82LocationProvider extends StreamReadingLocationProvider impleme
         if (Config.getSafeInstance().isTracklogsOn() && Config.TRACKLOG_FORMAT_NMEA.equals(Config.getSafeInstance().getTracklogsFormat())) {
             String path = Config.getSafeInstance().getTracklogsDir() + "/trekbuddy-" + GpxTracklog.dateToFileDate(System.currentTimeMillis()) + ".nmea";
             try {
-                nmeaFc = new File(Connector.open(path, Connector.WRITE));
+                nmeaFc = new api.file.File(Connector.open(path, Connector.WRITE));
                 nmeaFc.create();
                 nmeaObserver = new BufferedOutputStream(nmeaFc.openOutputStream(), 512);
 
@@ -170,7 +169,7 @@ public class Jsr82LocationProvider extends StreamReadingLocationProvider impleme
                 recordingCallback.invoke(new Integer(1), null);
 
             } catch (Throwable t) {
-                Desktop.showError("Failed to start NMEA log.", t);
+                Desktop.showError("Failed to start NMEA log.", t, null);
             }
         }
     }
@@ -217,7 +216,7 @@ public class Jsr82LocationProvider extends StreamReadingLocationProvider impleme
                 try {
                     location = nextLocation(in);
                 } catch (AssertionFailedException e) {
-                    Desktop.showError(e.getMessage(), null);
+                    Desktop.showError(e.getMessage(), null, null);
                 } catch (Exception e) {
 //#ifdef __LOG__
                     if (log.isEnabled()) log.warn("Failed to get location.", e);
@@ -378,7 +377,7 @@ public class Jsr82LocationProvider extends StreamReadingLocationProvider impleme
             try {
                 transactionID = agent.searchServices(null, uuidSet, device, this);
             } catch (javax.bluetooth.BluetoothStateException e) {
-                Desktop.showError("Service search failed", e);
+                Desktop.showError("Service search failed", e, null);
                 showDevices();
             }
         }
@@ -470,7 +469,7 @@ public class Jsr82LocationProvider extends StreamReadingLocationProvider impleme
                 if (cancel) {
                     letsGo(false);
                 } else {
-                    Desktop.showError("No devices discovered", null);
+                    Desktop.showError("No devices discovered", null, null);
                 }
             } else {
                 setTicker(new Ticker("Resolving names"));
@@ -511,7 +510,7 @@ public class Jsr82LocationProvider extends StreamReadingLocationProvider impleme
                 try {
                     goDevices();
                 } catch (LocationException e) {
-                    Desktop.showError("Unable to restart discovery", e);
+                    Desktop.showError("Unable to restart discovery", e, null);
                 }
             }
         }

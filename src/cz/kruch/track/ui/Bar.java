@@ -25,19 +25,20 @@ abstract class Bar {
     protected Bar(int gx, int gy, int width, int height) {
         this.gx = gx;
         this.gy = gy;
-        this.width = width;
-        this.height = height;
-        init();
+        this.bh = Desktop.font.getHeight();
     }
 
-    private void init() {
-        bh = Desktop.font.getHeight();
+    public void resize(int width, int height) {
+        this.width = width;
+        this.height = height;
+
+        // create bg bar
         int color = TrackingMIDlet.numAlphaLevels() > 2 ? 0x807f7f7f : 0xff7f7f7f;
         int[] shadow = new int[width * bh];
         for (int i = shadow.length; --i >= 0; ) {
             shadow[i] = color;
         }
-        bar = Image.createRGBImage(shadow, width, bh, true);
+        this.bar = Image.createRGBImage(shadow, width, bh, true);
     }
 
     public void setInfo(String info, boolean ok) {

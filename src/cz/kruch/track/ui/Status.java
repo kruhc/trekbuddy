@@ -9,6 +9,7 @@ final class Status extends Bar {
 
     public Status(int gx, int gy, int width, int height) {
         super(gx, gy, width, height);
+        resize(width, height);
     }
 
     public void render(Graphics graphics) {

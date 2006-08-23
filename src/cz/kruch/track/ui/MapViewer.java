@@ -44,9 +44,6 @@ final class MapViewer {
     public MapViewer(int gx, int gy, int width, int height) throws IOException {
         this.gx = gx;
         this.gy = gy;
-        this.width = width;
-        this.height = height;
-        this.x = this.y = 0;
         this.crosshairs = new Image[] {
             Image.createImage("/resources/crosshair_tp_full.png"),
             Image.createImage("/resources/crosshair_tp_white.png"),
@@ -67,19 +64,15 @@ final class MapViewer {
         this.crosshairHeight = crosshairs[0].getHeight();
         this.arrowWidth = courses[0].getWidth();
         this.arrowHeight = courses[0].getHeight();
-        this.chx0 = this.chx = (width - crosshairWidth) / 2;
-        this.chy0 = this.chy = (height - crosshairHeight) / 2;
+        resize(width, height);
     }
 
-    public void reset(int gx, int gy, int width, int height) {
-        this.gx = gx;
-        this.gy = gy;
+    public void resize(int width, int height) {
         this.width = width;
         this.height = height;
-        chx = chx0;
-        chy = chy0;
-        x = y = 0;
-        visible = true;
+        this.chx0 = this.chx = (width - crosshairWidth) / 2;
+        this.chy0 = this.chy = (height - crosshairHeight) / 2;
+        this.x = this.y = 0;
     }
 
     public void hide() {
@@ -99,6 +92,7 @@ final class MapViewer {
         this.mWidth = map.getWidth();
         this.mHeight = map.getHeight();
         this.slices = new Vector(0);
+        resize(width, height);
     }
 
     /**
@@ -405,9 +399,10 @@ final class MapViewer {
 
     public boolean ensureSlices() {
 //#ifdef __LOG__
-        if (log.isEnabled()) log.debug("ensure slices from map @" + Integer.toHexString(map.hashCode()));
+        if (log.isEnabled()) log.debug("ensure slices from map " + map);
 //#endif
 
+        // assert map not null
         if (map == null) {
             throw new AssertionFailedException("No map");
         }
@@ -460,6 +455,10 @@ final class MapViewer {
     }
 
     private Slice ensureSlice(int x, int y, Vector newSlices) {
+//#ifdef __LOG__
+        if (log.isEnabled()) log.debug("ensure slice for " + x + "-" + y);
+//#endif
+
         Slice slice = null;
 
         // look for suitable slice in current set
@@ -473,6 +472,12 @@ final class MapViewer {
 
         // next try map slices
         if (slice == null) {
+
+            // assert map not null
+            if (map == null) {
+                throw new AssertionFailedException("No map");
+            }
+
             slice = map.getSlice(x, y);
         }
 

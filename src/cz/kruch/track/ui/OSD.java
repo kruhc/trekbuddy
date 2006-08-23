@@ -25,12 +25,17 @@ final class OSD extends Bar {
 
     public OSD(int gx, int gy, int width, int height) throws IOException {
         super(gx, gy, width, height);
+        this.rw = Desktop.font.charWidth('R');
         this.providerAvailable = Image.createImage("/resources/s_green.png");
         this.providerUnavailable = Image.createImage("/resources/s_orange.png");
         this.providerOutOfService = Image.createImage("/resources/s_red.png");
+        resize(width, height);
+    }
+
+    public void resize(int width, int height) {
+        super.resize(width, height);
         this.semaforX = this.width - this.providerAvailable.getWidth() - BORDER;
         this.semaforY = Math.abs((this.bh - this.providerAvailable.getHeight())) / 2;
-        this.rw = Desktop.font.charWidth('R');
     }
 
     public void render(Graphics graphics) {

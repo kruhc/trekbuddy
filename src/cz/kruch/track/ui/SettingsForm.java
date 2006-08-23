@@ -6,6 +6,7 @@ package cz.kruch.track.ui;
 import cz.kruch.track.configuration.Config;
 import cz.kruch.track.configuration.ConfigurationException;
 import cz.kruch.track.event.Callback;
+import cz.kruch.track.TrackingMIDlet;
 
 import javax.microedition.lcdui.Display;
 import javax.microedition.lcdui.Displayable;
@@ -38,12 +39,14 @@ final class SettingsForm extends Form implements CommandListener, ItemStateListe
 
     public void show() {
         // default map path field
-        fieldMapPath = new TextField("Default Map", Config.getSafeInstance().getMapPath(), MAX_URL_LENGTH, TextField.URL);
-        append(fieldMapPath);
+        if (TrackingMIDlet.isFs()) {
+            fieldMapPath = new TextField("Default Map", Config.getSafeInstance().getMapPath(), MAX_URL_LENGTH, TextField.URL);
+            append(fieldMapPath);
+        }
 
         // location provider choice
-        choiceProvider = new ChoiceGroup("Location Provider", ChoiceGroup.EXCLUSIVE);
         String[] providers = Config.getSafeInstance().getLocationProviders();
+        choiceProvider = new ChoiceGroup("Location Provider", ChoiceGroup.EXCLUSIVE);
         for (int N = providers.length, i = 0; i < N; i++) {
             String provider = providers[i];
             int idx = choiceProvider.append(provider, null);
@@ -51,7 +54,9 @@ final class SettingsForm extends Form implements CommandListener, ItemStateListe
                 choiceProvider.setSelectedIndex(idx, true);
             }
         }
-        append(choiceProvider);
+        if (providers.length > 0) {
+            append(choiceProvider);
+        }
 
         // timezone
         choiceTimezone = new ChoiceGroup("Timezone", ChoiceGroup.POPUP);
@@ -68,20 +73,24 @@ final class SettingsForm extends Form implements CommandListener, ItemStateListe
         append(choiceTimezone);
 
         // tracklogs
-        choiceTracklog = new ChoiceGroup("Tracklog", ChoiceGroup.MULTIPLE);
-        choiceTracklog.setSelectedIndex(choiceTracklog.append("enabled", null), Config.getSafeInstance().isTracklogsOn());
-        choiceTracklogsFormat = new ChoiceGroup("Tracklog Fomat", ChoiceGroup.EXCLUSIVE);
-        for (int N = Config.TRACKLOGS_FORMAT.length, i = 0; i < N; i++) {
-            String format = Config.TRACKLOGS_FORMAT[i];
-            int idx = choiceTracklogsFormat.append(format, null);
-            if (format.equals(Config.getSafeInstance().getTracklogsFormat())) {
-                choiceTracklogsFormat.setSelectedIndex(idx, true);
+        if (TrackingMIDlet.isFs()) {
+            choiceTracklog = new ChoiceGroup("Tracklog", ChoiceGroup.MULTIPLE);
+            choiceTracklog.setSelectedIndex(choiceTracklog.append("enabled", null), Config.getSafeInstance().isTracklogsOn());
+            choiceTracklogsFormat = new ChoiceGroup("Tracklog Fomat", ChoiceGroup.EXCLUSIVE);
+            for (int N = Config.TRACKLOGS_FORMAT.length, i = 0; i < N; i++) {
+                String format = Config.TRACKLOGS_FORMAT[i];
+                int idx = choiceTracklogsFormat.append(format, null);
+                if (format.equals(Config.getSafeInstance().getTracklogsFormat())) {
+                    choiceTracklogsFormat.setSelectedIndex(idx, true);
+                }
             }
+            fieldTracklogsDir = new TextField("Tracklogs Dir", Config.getSafeInstance().getTracklogsDir(), MAX_URL_LENGTH, TextField.URL);
         }
-        fieldTracklogsDir = new TextField("Tracklogs Dir", Config.getSafeInstance().getTracklogsDir(), MAX_URL_LENGTH, TextField.URL);
 
         // simulator
-        fieldSimulatorDelay = new TextField("Simulator Delay", Integer.toString(Config.getSafeInstance().getSimulatorDelay()), 8, TextField.NUMERIC);
+        if (TrackingMIDlet.isFs()) {
+            fieldSimulatorDelay = new TextField("Simulator Delay", Integer.toString(Config.getSafeInstance().getSimulatorDelay()), 8, TextField.NUMERIC);
+        }
 
         // misc settings
         choiceMisc = new ChoiceGroup("Desktop", ChoiceGroup.MULTIPLE);
@@ -121,18 +130,27 @@ final class SettingsForm extends Form implements CommandListener, ItemStateListe
         if (command.getCommandType() == Command.SCREEN) { // "Apply", "Save"
             Config config = Config.getSafeInstance();
             // map path
-            config.setMapPath(fieldMapPath.getString());
+            if (TrackingMIDlet.isFs()) {
+                config.setMapPath(fieldMapPath.getString());
+            }
             // provider
-            config.setLocationProvider(choiceProvider.getString(choiceProvider.getSelectedIndex()));
+            if (choiceProvider.size() > 0) {
+                config.setLocationProvider(choiceProvider.getString(choiceProvider.getSelectedIndex()));
+            }
             // tracklog
-            config.setTracklogsOn(choiceTracklog.isSelected(0));
-            config.setTracklogsFormat(choiceTracklogsFormat.getString(choiceTracklogsFormat.getSelectedIndex()));
-            config.setTracklogsDir(fieldTracklogsDir.getString());
+            if (TrackingMIDlet.isFs()) {
+                config.setTracklogsOn(choiceTracklog.isSelected(0));
+                config.setTracklogsFormat(choiceTracklogsFormat.getString(choiceTracklogsFormat.getSelectedIndex()));
+                config.setTracklogsDir(fieldTracklogsDir.getString());
+            }
             // provider-specific
-            config.setSimulatorDelay(Integer.parseInt(fieldSimulatorDelay.getString()));
+            if (TrackingMIDlet.isFs()) {
+                config.setSimulatorDelay(Integer.parseInt(fieldSimulatorDelay.getString()));
+            }
             // misc
             boolean[] misc = new boolean[choiceMisc.size()];
             choiceMisc.getSelectedFlags(misc);
+            changed = config.isFullscreen() != misc[0];
             config.setFullscreen(misc[0]);
             config.setOsdExtended(misc[1]);
             config.setNoSounds(misc[2]);
@@ -162,8 +180,6 @@ final class SettingsForm extends Form implements CommandListener, ItemStateListe
                     Desktop.showError("Failed to save configuration.", e, Desktop.screen);
                 }
             }
-
-            // TODO detect any change and set 'changed' flagged accordingly
         }
 
         // notify that we are done
@@ -171,6 +187,14 @@ final class SettingsForm extends Form implements CommandListener, ItemStateListe
     }
 
     private void showProviderOptions(boolean soft) {
+        if (choiceProvider.size() == 0) { // dumb phone
+            return;
+        }
+
+        if (!TrackingMIDlet.isFs()) { // all options are fs-related anyway
+            return;
+        }
+
         for (int i = 0; i < size(); i++) {
             Item item = get(i);
             if (fieldMapPath == item || choiceProvider == item || choiceMisc == item || choiceTimezone == item)
@@ -197,21 +221,24 @@ final class SettingsForm extends Form implements CommandListener, ItemStateListe
             if (choiceTracklog.isSelected(0)) {
                 insert(insertAt, fieldTracklogsDir);
             }
-            if (!soft)
+            if (!soft) {
                 insert(insertAt, choiceTracklog);
+            }
         } else if (Config.LOCATION_PROVIDER_JSR82.equals(provider)) {
             if (choiceTracklog.isSelected(0)) {
                 insert(insertAt, fieldTracklogsDir);
                 insert(insertAt, choiceTracklogsFormat);
             }
-            if (!soft)
+            if (!soft) {
                 insert(insertAt, choiceTracklog);
+            }
         } else if (Config.LOCATION_PROVIDER_JSR179.equals(provider)) {
             if (choiceTracklog.isSelected(0)) {
                 insert(insertAt, fieldTracklogsDir);
             }
-            if (!soft)
+            if (!soft) {
                 insert(insertAt, choiceTracklog);
+            }
         }
     }
 }

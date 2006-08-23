@@ -25,6 +25,7 @@ public class TrackingMIDlet extends MIDlet {
     private static boolean logEnabled;
     private static boolean jsr179;
     private static boolean jsr82;
+    private static boolean fs;
     private static int numAlphaLevels = 2;
 
     static {
@@ -44,11 +45,21 @@ public class TrackingMIDlet extends MIDlet {
             Class clazz = Class.forName("javax.microedition.location.LocationProvider");
             TrackingMIDlet.jsr179 = true;
         } catch (ClassNotFoundException e) {
+        } catch (NoClassDefFoundError e) {
         }
         try {
             Class clazz = Class.forName("javax.bluetooth.DiscoveryAgent");
             TrackingMIDlet.jsr82 = true;
         } catch (ClassNotFoundException e) {
+        } catch (NoClassDefFoundError e) {
+        }
+
+        // fs type
+        try {
+            System.out.println("* fs type: " + api.file.File.getFsType());
+            TrackingMIDlet.fs = api.file.File.getFsType() > api.file.File.FS_NONE;
+        } catch (NoClassDefFoundError e) {
+            System.out.println("* no fs");
         }
 
         // setup environment
@@ -84,7 +95,8 @@ public class TrackingMIDlet extends MIDlet {
                 console.show("loading config...");
                 Config.getInstance();
                 console.result(0, "ok");
-            } catch (ConfigurationException e) {
+            } catch (Throwable t) {
+                t.printStackTrace();
                 console.result(-1, "failed");
             }
 
@@ -93,28 +105,30 @@ public class TrackingMIDlet extends MIDlet {
 
             // 4. read default map
             console.show("loading map...");
-            if ("".equals(Config.getSafeInstance().getMapPath())) {
-                desktop.initDefaultMap();
-                console.result(1, "skipped");
-            } else {
-                try {
+            try {
+                if ("".equals(Config.getSafeInstance().getMapPath())) {
+                    desktop.initDefaultMap();
+                    console.result(1, "skipped");
+                } else {
                     desktop.initMap();
                     console.result(0, "ok");
-                } catch (Exception e) {
-                    e.printStackTrace();
-                    console.result(-1, "failed");
                 }
+            } catch (Throwable t) {
+                t.printStackTrace();
+                console.result(-1, "failed");
             }
 
+/*
             // 5. preparing desktop
             console.show("preparing gui...");
             try {
                 desktop.resetGui();
                 console.result(0, "ok");
-            } catch (Exception e) {
-                e.printStackTrace();
+            } catch (Throwable t) {
+                t.printStackTrace();
                 console.result(-1, "failed");
             }
+*/
 
             // 5. about to show desktop
             console.show("starting...");
@@ -148,6 +162,10 @@ public class TrackingMIDlet extends MIDlet {
 
     public static boolean isJsr82() {
         return jsr82;
+    }
+
+    public static boolean isFs() {
+        return fs;
     }
 
     public static String getFlags() {

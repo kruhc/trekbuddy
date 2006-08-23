@@ -22,9 +22,9 @@ import cz.kruch.track.ui.Position;
 import cz.kruch.track.util.Logger;
 //#endif
 import cz.kruch.track.maps.io.LoaderIO;
+import cz.kruch.track.TrackingMIDlet;
 
 import api.location.QualifiedCoordinates;
-import api.file.File;
 
 public final class Map {
 
@@ -266,25 +266,52 @@ public final class Map {
     /**
      * Creates default map from embedded resources.
      */
-    public static Map defaultMap(StateListener listener) throws IOException {
+    public static Map defaultMap(StateListener listener) throws InvalidMapException {
         Map map = new Map("resource:///resources/world.map", "default", listener);
         map.type = TYPE_BEST;
-        InputStream in = Map.class.getResourceAsStream("/resources/world.map");
-        if (in == null) {
-            in = Map.class.getResourceAsStream("/resources/world.gmi");
-            if (in == null) {
+
+        // load calibration
+        InputStream in = TrackingMIDlet.class.getResourceAsStream("/resources/world.map");
+        if (in == null) { // no Ozi calibration found
+            in = TrackingMIDlet.class.getResourceAsStream("/resources/world.gmi");
+            if (in == null) { // neither MapCalibrator calibration
                 throw new InvalidMapException("No default map calibration");
-            } else {
-                map.calibration = new Calibration.GMI(in, "/resources/world.map");
+            } else { // got MapCalibrator calibration
+                try {
+                    map.calibration = new Calibration.GMI(in, "/resources/world.gmi");
+                } catch (IOException e) {
+                    throw new InvalidMapException("Resource '/resources/world.gmi': " + e.toString());
+                } finally {
+                    try {
+                        in.close();
+                    } catch (IOException e) {
+                        // ignore
+                    }
+                }
             }
-        } else {
-            map.calibration = new Calibration.Ozi(in, "/resources/world.map");
+        } else { // got Ozi calibration
+            try {
+                map.calibration = new Calibration.Ozi(in, "/resources/world.map");
+            } catch (IOException e) {
+                throw new InvalidMapException("Resource '/resources/world.map': " + e.toString());
+            } finally {
+                try {
+                    in.close();
+                } catch (IOException e) {
+                    // ignore
+                }
+            }
         }
-        in.close();
+
+        // initialize slice
         Slice slice = new Slice(new Calibration.Best("/resources/world_0_0.png"));
-        in = Map.class.getResourceAsStream("/resources/world_0_0.png");
-        slice.setImage(Image.createImage(in));
-        in.close();
+        try {
+            slice.setImage(Image.createImage("/resources/world_0_0.png"));
+        } catch (IOException e) {
+            throw new InvalidMapException("Resource '/resources/world_0_0.png': " + e.toString());
+        }
+
+        // finalize map
         map.slices = new Slice[]{ slice };
         map.doFinal();
 
@@ -352,7 +379,7 @@ public final class Map {
      */
     static final class FileInput {
         private String url;
-        private File fc;
+        private api.file.File fc;
         private InputStream in;
 
         FileInput(String url) {
@@ -360,7 +387,7 @@ public final class Map {
         }
 
         InputStream getInputStream() throws IOException {
-            fc = new File(Connector.open(url, Connector.READ));
+            fc = new api.file.File(Connector.open(url, Connector.READ));
             in = new BufferedInputStream(fc.openInputStream(), TEXT_FILE_BUFFER_SIZE);
 
             return in;
@@ -449,10 +476,10 @@ public final class Map {
     }
 
     private final class TarLoader extends Loader {
-        private File file;
+        private api.file.File file;
 
         public void init() throws IOException {
-            file = new File(Connector.open(path, Connector.READ));
+            file = new api.file.File(Connector.open(path, Connector.READ));
         }
 
         public void destroy() {
@@ -550,7 +577,7 @@ public final class Map {
         }
 
         public void run() {
-            File fc = null;
+            api.file.File fc = null;
             BufferedReader reader = null;
 
             try {
@@ -586,7 +613,7 @@ public final class Map {
                 }
 
                 // do we have a list?
-                fc = new File(Connector.open(path.substring(0, path.lastIndexOf('.')) + ".set", Connector.READ));
+                fc = new api.file.File(Connector.open(path.substring(0, path.lastIndexOf('.')) + ".set", Connector.READ));
                 if (fc.exists()) {
                     // each line is a slice filename
                     reader = new BufferedReader(new InputStreamReader(fc.openInputStream()), LARGE_BUFFER_SIZE);
@@ -600,7 +627,7 @@ public final class Map {
                     fc.close();
 
                     // iterate over set
-                    fc = new File(Connector.open(dir + setDir, Connector.READ));
+                    fc = new api.file.File(Connector.open(dir + setDir, Connector.READ));
                     for (Enumeration e = fc.list("*.png", false); e.hasMoreElements(); ) {
                         String entry = e.nextElement().toString();
                         addSlice(new Slice(new Calibration.Best(setDir + entry)));
@@ -628,7 +655,7 @@ public final class Map {
 
         public void loadSlice(Slice slice) throws IOException {
             String slicePath = dir + slice.getURL();
-            File fc = null;
+            api.file.File fc = null;
             InputStream in = null;
 
 //#ifdef __LOG__
@@ -636,7 +663,7 @@ public final class Map {
 //#endif
 
             try {
-                fc = new File(Connector.open(slicePath, Connector.READ));
+                fc = new api.file.File(Connector.open(slicePath, Connector.READ));
                 in = new BufferedInputStream(fc.openInputStream(), LARGE_BUFFER_SIZE);
                 slice.setImage(Image.createImage(in));
             } finally {

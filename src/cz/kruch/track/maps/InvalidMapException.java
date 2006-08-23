@@ -10,7 +10,7 @@ public class InvalidMapException extends IOException {
         super(string);
     }
 
-    public InvalidMapException(Exception exception) {
-        super(exception.toString());
+    public InvalidMapException(Throwable throwable) {
+        super(throwable.toString());
     }
 }

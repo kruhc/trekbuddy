@@ -9,9 +9,6 @@ import cz.kruch.track.maps.Atlas;
 import cz.kruch.track.maps.io.LoaderIO;
 import cz.kruch.track.configuration.Config;
 import cz.kruch.track.configuration.ConfigurationException;
-import cz.kruch.track.location.SimulatorLocationProvider;
-import cz.kruch.track.location.Jsr179LocationProvider;
-import cz.kruch.track.location.Jsr82LocationProvider;
 import cz.kruch.track.location.GpxTracklog;
 import cz.kruch.track.location.Waypoint;
 //#ifdef __LOG__
@@ -19,6 +16,7 @@ import cz.kruch.track.util.Logger;
 //#endif
 import cz.kruch.track.event.Callback;
 import cz.kruch.track.AssertionFailedException;
+import cz.kruch.track.TrackingMIDlet;
 import cz.kruch.j2se.util.StringTokenizer;
 
 import javax.microedition.lcdui.Canvas;
@@ -108,7 +106,7 @@ public final class Desktop extends GameCanvas
     private boolean browsing = true;
 
     // loading states and last-op message
-    private volatile boolean initializingMap = false;
+    private volatile boolean initializingMap = true;
     private volatile boolean loadingSlices = false;
     private volatile String loadingResult = "No default map. Use Options->Load Map/Atlas to load a map/atlas";
 
@@ -150,16 +148,20 @@ public final class Desktop extends GameCanvas
         this.cmdOSD = new Command("OSD", Command.BACK, 1);
         this.cmdFocus = new Command("Focus", Command.SCREEN, 1); // hope for MSK
         this.cmdRun = new Command("Start", Command.SCREEN, 2);
-        this.cmdLoadMap = new Command("Load Map", Command.SCREEN, 3);
-        this.cmdLoadAtlas = new Command("Load Atlas", Command.SCREEN, 4);
+        if (TrackingMIDlet.isFs()) {
+            this.cmdLoadMap = new Command("Load Map", Command.SCREEN, 3);
+            this.cmdLoadAtlas = new Command("Load Atlas", Command.SCREEN, 4);
+        }
         this.cmdSettings = new Command("Settings", Command.SCREEN, 5);
         this.cmdInfo = new Command("Info", Command.SCREEN, 6);
         this.cmdExit = new Command("Exit", Command.SCREEN, 7);
         this.addCommand(cmdOSD);
         this.addCommand(cmdFocus);
         this.addCommand(cmdRun);
-        this.addCommand(cmdLoadMap);
-        this.addCommand(cmdLoadAtlas);
+        if (TrackingMIDlet.isFs()) {
+            this.addCommand(cmdLoadMap);
+            this.addCommand(cmdLoadAtlas);
+        }
         this.addCommand(cmdSettings);
         this.addCommand(cmdInfo);
         this.addCommand(cmdExit);
@@ -179,8 +181,16 @@ public final class Desktop extends GameCanvas
         g.setFont(font);
 
         // create components
-        osd = new OSD(0, 0, width, height);
-        status = new Status(0, 0, width, height);
+        if (osd == null) {
+            osd = new OSD(0, 0, width, height);
+        } else {
+            osd.resize(width, height);
+        }
+        if (status == null) {
+            status = new Status(0, 0, width, height);
+        } else {
+            status.resize(width, height);
+        }
 
         // setup map viewer if map is loaded
         if (map != null) {
@@ -190,7 +200,7 @@ public final class Desktop extends GameCanvas
                 mapViewer = new MapViewer(0, 0, width, height);
                 mapViewer.setMap(map);
             } else {
-                mapViewer.reset(0, 0, width, height);
+                mapViewer.resize(width, height);
             }
 
             // update OSD
@@ -202,15 +212,28 @@ public final class Desktop extends GameCanvas
     }
 
     public void initDefaultMap() {
+//#ifdef __LOG__
+        if (log.isEnabled()) log.info("init default map");
+//#endif
+
         try {
             map = Map.defaultMap(this);
-        } catch (IOException e) {
-            _updateLoadingResult(e);
+            _setInitializingMap(false);
+        } catch (Throwable t) {
+            _updateLoadingResult(t);
         }
+
+//#ifdef __LOG__
+        if (log.isEnabled()) log.info("~init default map");
+//#endif
     }
 
     /* hack - call blocking method to show result in boot console */
-    public void initMap() throws ConfigurationException, IOException {
+    public void initMap() throws InvalidMapException {
+//#ifdef __LOG__
+        if (log.isEnabled()) log.info("init map");
+//#endif
+
         try {
             String mapPath = Config.getInstance().getMapPath();
             String mapName = null;
@@ -243,30 +266,41 @@ public final class Desktop extends GameCanvas
             if (t == null) {
                 map = _map;
                 atlas = _atlas;
+                _setInitializingMap(false);
+                // pre-cache initial map
                 if (atlas != null && map != null) {
                     atlas.getMaps().put(map.getPath(), map);
                 }
             } else {
                 throw t;
             }
-        } catch (OutOfMemoryError e) {
-            _updateLoadingResult(e);
-            throw e;
-        } catch (ConfigurationException e) {
-            _updateLoadingResult(e);
-            throw e;
-        } catch (IOException e) {
-            _updateLoadingResult(e);
-            throw e;
-        } catch (RuntimeException e) {
-            _updateLoadingResult(e);
-            throw e;
-        } catch (Error e) {
+        } catch (InvalidMapException e) {
             _updateLoadingResult(e);
             throw e;
         } catch (Throwable t) {
             _updateLoadingResult(t);
-            throw new InvalidMapException((Exception) t);
+            throw new InvalidMapException(t);
+        }
+
+//#ifdef __LOG__
+        if (log.isEnabled()) log.info("~init map");
+//#endif
+    }
+
+    private boolean guiReady = false;
+
+    protected void showNotify() {
+//#ifdef __LOG__
+        if (log.isEnabled()) log.info("show notify");
+//#endif
+
+        if (!guiReady) { // first show
+            try {
+                resetGui();
+                guiReady = true;
+            } catch (IOException e) {
+                // should not happen
+            }
         }
     }
 
@@ -824,10 +858,6 @@ public final class Desktop extends GameCanvas
         showAlert(AlertType.WARNING, message, WARN_DIALOG_TIMEOUT, nextDisplayable);
     }
 
-    public static void showError(String message, Throwable t) {
-        showError(message, t, null);
-    }
-
     public static void showError(String message, Throwable t, Displayable nextDisplayable) {
         if (message == null) {
             message = "";
@@ -843,10 +873,11 @@ public final class Desktop extends GameCanvas
                                   Displayable nextDisplayable) {
         Alert alert = new Alert(APP_TITLE, message, null, type);
         alert.setTimeout(timeout);
-        if (nextDisplayable == null)
+        if (nextDisplayable == null) {
             display.setCurrent(alert);
-        else
+        } else {
             display.setCurrent(alert, nextDisplayable);
+        }
     }
 
     private boolean startTracking() {
@@ -864,11 +895,11 @@ public final class Desktop extends GameCanvas
 
         // instantiate provider
         if (Config.LOCATION_PROVIDER_SIMULATOR.equals(selectedProvider)) {
-            provider = new SimulatorLocationProvider();
+            provider = new cz.kruch.track.location.SimulatorLocationProvider();
         } else if (Config.LOCATION_PROVIDER_JSR179.equals(selectedProvider)) {
-            provider = new Jsr179LocationProvider();
+            provider = new cz.kruch.track.location.Jsr179LocationProvider();
         } else if (Config.LOCATION_PROVIDER_JSR82.equals(selectedProvider)) {
-            provider = new Jsr82LocationProvider(new Event(Event.EVENT_TRACKLOG));
+            provider = new cz.kruch.track.location.Jsr82LocationProvider(new Event(Event.EVENT_TRACKLOG));
         }
 
         // register as listener
@@ -882,7 +913,7 @@ public final class Desktop extends GameCanvas
             if (log.isEnabled()) log.debug("provider started; state " + state);
 //#endif
         } catch (Throwable t) {
-            showError("Failed to start provider " + provider.getName() + ".", t);
+            showError("Failed to start provider " + provider.getName() + ".", t, null);
 
             // clear member
             provider = null;
@@ -923,7 +954,7 @@ public final class Desktop extends GameCanvas
             provider.setLocationListener(null, -1, -1, -1);
             provider.stop();
         } catch (Throwable t) {
-            showError("Failed to stop provider.", t);
+            showError("Failed to stop provider.", t, null);
         } finally {
             provider = null;
         }
@@ -1195,7 +1226,7 @@ public final class Desktop extends GameCanvas
                 try {
                     Desktop.this._render(m.intValue());
                 } catch (Throwable t) {
-                    Desktop.showError("_RENDER FAILURE_", t);
+                    Desktop.showError("_RENDER FAILURE_", t, null);
                 }
             }
         }
@@ -1304,7 +1335,7 @@ public final class Desktop extends GameCanvas
                 if (log.isEnabled()) log.debug("~event run; " + this.toString());
 //#endif
             } catch (Throwable t) {
-                Desktop.showError("_EVENT FAILURE_", t);
+                Desktop.showError("_EVENT FAILURE_", t, null);
             }
         }
 
@@ -1316,11 +1347,12 @@ public final class Desktop extends GameCanvas
             switch (code) {
 
                 case EVENT_CONFIGURATION_CHANGED: {
-                    // TODO
-
-                    // temporary solution
-                    render(MASK_NONE);
-
+//                    if (result == Boolean.TRUE) {
+//                        setFullScreenMode(Config.getSafeInstance().isFullscreen());
+//                    } else {
+                        // temporary solution
+                        render(MASK_NONE);
+//                    }
                 } break;
 
                 case EVENT_FILE_BROWSER_FINISHED: {
@@ -1538,15 +1570,11 @@ public final class Desktop extends GameCanvas
                                 atlas.getMaps().put(map.getPath(), map);
                             }
 
-                            // init map viewer
+                            // update map viewer
                             if (mapViewer != null) {
-                                mapViewer.reset(0, 0, getWidth(), getHeight());
-                            } else {
-                                mapViewer = new MapViewer(0, 0, getWidth(), getHeight());
+                                mapViewer.setMap(map);
+                                mapViewer.show();
                             }
-
-                            // map viewer will use this map
-                            mapViewer.setMap(map);
 
                             // clear flag
                             _setInitializingMap(false);
@@ -1566,7 +1594,7 @@ public final class Desktop extends GameCanvas
                                     }
                                     // transform qc to position, and move to it
                                     Position p = map.transform(_qc);
-                                    if (p != null) {
+                                    if (p != null && mapViewer != null) {
                                         mapViewer.move(p.getX(), p.getY());
                                     }
                                 } finally {
@@ -1574,8 +1602,10 @@ public final class Desktop extends GameCanvas
                                 }
                             }
 
-                            // update OSD (it is still hidden, though)
-                            osd.setInfo(map.transform(mapViewer.getPosition()).toString(), true);  // TODO listener
+                            // update OSD
+                            if (mapViewer != null) {
+                                osd.setInfo(map.transform(mapViewer.getPosition()).toString(), true);  // TODO listener
+                            }
                             osd.setExtendedInfo(null);
 
                             // render screen - it will force slices loading

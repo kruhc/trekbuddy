@@ -93,7 +93,9 @@ public abstract class Config {
         if (TrackingMIDlet.isJsr179()) {
             list.addElement(LOCATION_PROVIDER_JSR179);
         }
-        list.addElement(LOCATION_PROVIDER_SIMULATOR);
+        if (TrackingMIDlet.isFs()) {
+            list.addElement(LOCATION_PROVIDER_SIMULATOR);
+        }
         String[] result = new String[list.size()];
         list.copyInto(result);
 

@@ -286,11 +286,17 @@ public class Jsr82LocationProvider extends StreamReadingLocationProvider impleme
         }
     }
 
-    private final class Discoverer extends List implements javax.bluetooth.DiscoveryListener, CommandListener {
-        // intentionally not static
+    private final class Discoverer extends List
+            implements javax.bluetooth.DiscoveryListener, CommandListener, Runnable {
+
+        // intentionally not static... ehmm - why?
         private javax.bluetooth.UUID[] uuidSet = {
-            new javax.bluetooth.UUID(0x1101),
-            new javax.bluetooth.UUID(0x0003)
+/*
+            new javax.bluetooth.UUID(0x1101),  // SPP
+            new javax.bluetooth.UUID(0x0003),  // RFCOMM
+            new javax.bluetooth.UUID(0x0100)   // L2CAP
+*/
+            new javax.bluetooth.UUID(0x0100)   // L2CAP
         };
 
         private javax.bluetooth.DiscoveryAgent agent;
@@ -400,20 +406,35 @@ public class Jsr82LocationProvider extends StreamReadingLocationProvider impleme
             }
         }
 
+        public void run() {
+            setTicker(new Ticker("Resolving names"));
+            for (int N = devices.size(), i = 0; i < N; i++) {
+                String name;
+                javax.bluetooth.RemoteDevice remoteDevice = ((javax.bluetooth.RemoteDevice) devices.elementAt(i));
+                try {
+                    name = remoteDevice.getFriendlyName(false);
+                } catch (Throwable t) {
+                    name = "#" + remoteDevice.getBluetoothAddress();
+                }
+                append(name, null);
+            }
+            setTicker(null);
+        }
+
         public void deviceDiscovered(javax.bluetooth.RemoteDevice remoteDevice, javax.bluetooth.DeviceClass deviceClass) {
             devices.addElement(remoteDevice);
             append("#" + remoteDevice.getBluetoothAddress(), null); // show bt adresses just to signal we are finding any
         }
 
-        public void servicesDiscovered(int i, javax.bluetooth.ServiceRecord[] serviceRecords) {
+        public void servicesDiscovered(int transId, javax.bluetooth.ServiceRecord[] serviceRecords) {
+            if (url == null) {
                 try {
-                    url = serviceRecords[0].getConnectionURL(javax.bluetooth.ServiceRecord.NOAUTHENTICATE_NOENCRYPT, false);
-                    agent.cancelServiceSearch(transactionID);
-/* called from serviceSearchCompleted
-                    letsGo(true);
-*/
-                } catch (ArrayIndexOutOfBoundsException e) {
-                } catch (NullPointerException e) {
+                    for (int N = serviceRecords.length, i = 0; i < N && url == null; i++) {
+                        url = serviceRecords[i].getConnectionURL(javax.bluetooth.ServiceRecord.NOAUTHENTICATE_NOENCRYPT, false);
+                    }
+                } catch (Throwable t) {
+                    // what to do?
+                }
             }
         }
 
@@ -469,21 +490,25 @@ public class Jsr82LocationProvider extends StreamReadingLocationProvider impleme
                 if (cancel) {
                     letsGo(false);
                 } else {
-                    Desktop.showError("No devices discovered", null, null);
+                    String codeStr;
+                    switch (discType) {
+                        case javax.bluetooth.DiscoveryListener.INQUIRY_COMPLETED:
+                            codeStr = "INQUIRY_COMPLETED";
+                            break;
+                        case javax.bluetooth.DiscoveryListener.INQUIRY_ERROR:
+                            codeStr = "INQUIRY_ERROR";
+                            break;
+                        case javax.bluetooth.DiscoveryListener.INQUIRY_TERMINATED:
+                            codeStr = "INQUIRY_TERMINATED";
+                            break;
+                        default:
+                            codeStr = "UNKNONW";
+                    }
+                    Desktop.showError("No devices discovered (" + codeStr + ")", null, null);
                 }
             } else {
-                setTicker(new Ticker("Resolving names"));
-                for (int N = devices.size(), i = 0; i < N; i++) {
-                    String name;
-                    javax.bluetooth.RemoteDevice remoteDevice = ((javax.bluetooth.RemoteDevice) devices.elementAt(i));
-                    try {
-                        name = remoteDevice.getFriendlyName(true);
-                    } catch (IOException e) {
-                        name = "#" + remoteDevice.getBluetoothAddress();
-                    }
-                    append(name, null);
-                }
-                setTicker(null);
+                // resolve names in a thread
+                (new Thread(this)).start();
             }
         }
 

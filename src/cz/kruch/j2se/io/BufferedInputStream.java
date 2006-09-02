@@ -79,49 +79,6 @@ public final class BufferedInputStream extends /* FilterInputStream */ InputStre
     private int pos;
 
     /**
-     * The value of the <code>pos</code> field at the time the last
-     * <code>mark</code> method was called.
-     * <p/>
-     * This value is always
-     * in the range <code>-1</code> through <code>pos</code>.
-     * If there is no marked position in  the input
-     * stream, this field is <code>-1</code>. If
-     * there is a marked position in the input
-     * stream,  then <code>buf[markpos]</code>
-     * is the first byte to be supplied as input
-     * after a <code>reset</code> operation. If
-     * <code>markpos</code> is not <code>-1</code>,
-     * then all bytes from positions <code>buf[markpos]</code>
-     * through  <code>buf[pos-1]</code> must remain
-     * in the buffer array (though they may be
-     * moved to  another place in the buffer array,
-     * with suitable adjustments to the values
-     * of <code>count</code>,  <code>pos</code>,
-     * and <code>markpos</code>); they may not
-     * be discarded unless and until the difference
-     * between <code>pos</code> and <code>markpos</code>
-     * exceeds <code>marklimit</code>.
-     *
-     * @see java.io.BufferedInputStream#mark(int)
-     * @see java.io.BufferedInputStream#pos
-     */
-    private int markpos = -1;
-
-    /**
-     * The maximum read ahead allowed after a call to the
-     * <code>mark</code> method before subsequent calls to the
-     * <code>reset</code> method fail.
-     * Whenever the difference between <code>pos</code>
-     * and <code>markpos</code> exceeds <code>marklimit</code>,
-     * then the  mark may be dropped by setting
-     * <code>markpos</code> to <code>-1</code>.
-     *
-     * @see java.io.BufferedInputStream#mark(int)
-     * @see java.io.BufferedInputStream#reset()
-     */
-    private int marklimit;
-
-    /**
      * Creates a <code>BufferedInputStream</code>
      * with the specified buffer size,
      * and saves its  argument, the input stream
@@ -160,29 +117,11 @@ public final class BufferedInputStream extends /* FilterInputStream */ InputStre
      * hence pos > count.
      */
     private void fill() throws IOException {
-        if (markpos < 0)
-            pos = 0;        /* no mark: throw away the buffer */
-        else if (pos >= buf.length)    /* no room left in buffer */
-            if (markpos > 0) {    /* can throw away early part of the buffer */
-                int sz = pos - markpos;
-                System.arraycopy(buf, markpos, buf, 0, sz);
-                pos = sz;
-                markpos = 0;
-            } else if (buf.length >= marklimit) {
-                markpos = -1;    /* buffer got too big, invalidate mark */
-                pos = 0;    /* drop buffer contents */
-            } else {        /* grow buffer */
-                int nsz = pos * 2;
-                if (nsz > marklimit)
-                    nsz = marklimit;
-                byte nbuf[] = new byte[nsz];
-                System.arraycopy(buf, 0, nbuf, 0, pos);
-                buf = nbuf;
-            }
-        count = pos;
+        count = pos = 0;
         int n = in.read(buf, pos, buf.length - pos);
-        if (n > 0)
+        if (n > 0) {
             count = n + pos;
+        }
     }
 
     /**
@@ -215,7 +154,7 @@ public final class BufferedInputStream extends /* FilterInputStream */ InputStre
               if there is no mark/reset activity, do not bother to copy the
               bytes into the local buffer.  In this way buffered streams will
               cascade harmlessly. */
-            if (len >= buf.length && markpos < 0) {
+            if (len >= buf.length) {
                 return in.read(b, off, len);
             }
             fill();
@@ -320,15 +259,7 @@ public final class BufferedInputStream extends /* FilterInputStream */ InputStre
         long avail = count - pos;
 
         if (avail <= 0) {
-            // If no mark position set then don't keep in buffer
-            if (markpos < 0)
-                return in.skip(n);
-
-            // Fill in buffer to save bytes for reset
-            fill();
-            avail = count - pos;
-            if (avail <= 0)
-                return 0;
+            return in.skip(n);
         }
 
         long skipped = (avail < n) ? avail : n;
@@ -359,54 +290,6 @@ public final class BufferedInputStream extends /* FilterInputStream */ InputStre
             return n;
         }
         return (count - pos) + in.available();
-    }
-
-    /**
-     * See the general contract of the <code>mark</code>
-     * method of <code>InputStream</code>.
-     *
-     * @param readlimit the maximum limit of bytes that can be read before
-     *                  the mark position becomes invalid.
-     * @see java.io.BufferedInputStream#reset()
-     */
-    public void mark(int readlimit) {
-        marklimit = readlimit;
-        markpos = pos;
-    }
-
-    /**
-     * See the general contract of the <code>reset</code>
-     * method of <code>InputStream</code>.
-     * <p/>
-     * If <code>markpos</code> is <code>-1</code>
-     * (no mark has been set or the mark has been
-     * invalidated), an <code>IOException</code>
-     * is thrown. Otherwise, <code>pos</code> is
-     * set equal to <code>markpos</code>.
-     *
-     * @throws IOException if this stream has not been marked or
-     *                     if the mark has been invalidated.
-     * @see java.io.BufferedInputStream#mark(int)
-     */
-    public void reset() throws IOException {
-        if (markpos < 0)
-            throw new IOException("Resetting to invalid mark");
-        pos = markpos;
-    }
-
-    /**
-     * Tests if this input stream supports the <code>mark</code>
-     * and <code>reset</code> methods. The <code>markSupported</code>
-     * method of <code>BufferedInputStream</code> returns
-     * <code>true</code>.
-     *
-     * @return a <code>boolean</code> indicating if this stream type supports
-     *         the <code>mark</code> and <code>reset</code> methods.
-     * @see java.io.InputStream#mark(int)
-     * @see java.io.InputStream#reset()
-     */
-    public boolean markSupported() {
-        return true;
     }
 
     /**

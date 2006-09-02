@@ -25,6 +25,7 @@ public final class InfoForm extends Form implements CommandListener {
 
         append(new StringItem("Memory", Long.toString(Runtime.getRuntime().totalMemory()) + "/" + Long.toString(Runtime.getRuntime().freeMemory())));
         append(new StringItem("AppFlags", TrackingMIDlet.getFlags()));
+        append(new StringItem("Jsr75", "resetable? " + (new Boolean(cz.kruch.track.maps.Map.fileInputStreamResetable)).toString()));
         append(new StringItem("ProviderStatus", le == null ? "" : le.toString()));
         addCommand(new Command("Close", Command.CANCEL, 1));
         setCommandListener(this);

@@ -475,14 +475,24 @@ public final class Map {
         }
     }
 
+    public static boolean fileInputStreamResetable = false;
+    public static boolean useReset = true;
+
     private final class TarLoader extends Loader {
         private api.file.File file;
+        private InputStream in = null;
 
         public void init() throws IOException {
             file = new api.file.File(Connector.open(path, Connector.READ));
         }
 
         public void destroy() {
+            if (in != null) {
+                try {
+                    in.close();
+                } catch (IOException e) {
+                }
+            }
             if (file != null) {
                 try {
                     file.close();
@@ -494,12 +504,34 @@ public final class Map {
         public void run() {
             TarInputStream tar = null;
             TarEntry entry;
+            InputStream in = null;
 
             try {
-                tar = new TarInputStream(new BufferedInputStream(file.openInputStream(), SMALL_BUFFER_SIZE));
+                tar = new TarInputStream(new BufferedInputStream(in = file.openInputStream(), SMALL_BUFFER_SIZE));
+
+                /*
+                 * test quality of JSR-75/FileConnection
+                 */
+
+                if (useReset && in.markSupported()) {
+                    in.mark(Integer.MAX_VALUE);
+                    this.in = in;
+                    Map.fileInputStreamResetable = true;
+//#ifdef __LOG__
+                    if (log.isEnabled()) log.debug("input stream resetable, very good");
+//#endif
+                }
+
+                /*
+                 * ~
+                 */
+
                 entry = tar.getNextEntry();
                 while (entry != null) {
                     String entryName = entry.getName();
+//#ifdef __LOG__
+                    if (log.isEnabled()) log.debug("tar entry: " + entryName);
+//#endif
                     int indexOf = entryName.lastIndexOf('.');
                     if (indexOf > -1) {
                         String ext = entryName.substring(indexOf + 1);
@@ -528,7 +560,7 @@ public final class Map {
             } catch (Exception e) {
                 exception = e;
             } finally {
-                if (tar != null) {
+                if (tar != null && this.in == null) {
                     try {
                         tar.close();
                     } catch (IOException e) {
@@ -543,12 +575,17 @@ public final class Map {
             TarEntry entry = (TarEntry) slice.getClosure();
             TarInputStream tar = null;
             try {
-                tar = new TarInputStream(new BufferedInputStream(file.openInputStream(), LARGE_BUFFER_SIZE));
+                if (in == null) {
+                    tar = new TarInputStream(new BufferedInputStream(file.openInputStream(), LARGE_BUFFER_SIZE));
+                } else {
+                    in.reset();
+                    tar = new TarInputStream(new BufferedInputStream(in, LARGE_BUFFER_SIZE));
+                }
                 tar.setNextEntry(entry);
                 tar.getNextEntry();
                 slice.setImage(Image.createImage(tar));
             } finally {
-                if (tar != null) {
+                if (tar != null && this.in == null) {
                     try {
                         tar.close();
                     } catch (IOException exc) {

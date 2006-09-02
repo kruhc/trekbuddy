@@ -123,40 +123,21 @@ public final class TarInputStream extends /* FilterInputStream */ InputStream {
     }
 
     /**
-     * Since we do not support marking just yet, we return false.
-     *
-     * @return False.
-     */
-    public boolean markSupported() {
-        return false;
-    }
-
-    /**
-     * Since we do not support marking just yet, we do nothing.
-     *
-     * @param markLimit The limit to mark.
-     */
-    public void mark(int markLimit) {
-    }
-
-    /**
-     * Since we do not support marking just yet, we do nothing.
-     */
-    public void reset() {
-    }
-
-    /**
      * Get the number of bytes into the current TarEntry.
      * This method returns the number of bytes that have been read
      * from the current TarEntry's data.
      *
      * @return The current entry offset.
      */
-
     public long getEntryPosition() {
         return this.entryOffset;
     }
 
+    /**
+     * javadoc todo
+     * @param entry
+     * @throws IOException
+     */
     public void setNextEntry(TarEntry entry) throws IOException {
         if (streamOffset > 0) {
             throw new IllegalStateException("Stream is dirty");

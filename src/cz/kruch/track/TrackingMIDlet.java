@@ -71,6 +71,10 @@ public class TrackingMIDlet extends MIDlet {
             System.out.println("* fs no-available feature on");
             cz.kruch.j2se.io.BufferedInputStream.useAvailable = false;
         }
+        if (hasFlag("fs_no_reset")) {
+            System.out.println("* fs no-reset feature on");
+            cz.kruch.track.maps.Map.useReset = false;
+        }
     }
 
     protected void startApp() throws MIDletStateChangeException {

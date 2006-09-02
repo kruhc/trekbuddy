@@ -25,6 +25,7 @@ public final class FileBrowser extends List implements CommandListener, Runnable
 
     private Command cmdCancel;
     private Command cmdBack;
+    private Command cmdSelect;
 
     private volatile api.file.File fc;
     private volatile String path;
@@ -36,6 +37,7 @@ public final class FileBrowser extends List implements CommandListener, Runnable
         this.callback = callback;
         this.cmdCancel = new Command("Cancel", Command.CANCEL, 1);
         this.cmdBack = new Command("Back", Command.BACK, 1);
+        this.cmdSelect = new Command("Select", Command.SCREEN, 1);
         setCommandListener(this);
         Desktop.display.setCurrent(this);
     }
@@ -98,19 +100,20 @@ public final class FileBrowser extends List implements CommandListener, Runnable
         deleteAll();
         removeCommand(cmdCancel);
         removeCommand(cmdBack);
+        setSelectCommand(null);
         for (Enumeration e = entries; e.hasMoreElements(); ) {
             append((String) e.nextElement(), null);
         }
         if (size() == 0) {
-            append("<no files>", null);
+            append(depth == 0 ? "<no roots>" : "<empty>", null);
         } else {
-            addCommand(List.SELECT_COMMAND);
+            setSelectCommand(cmdSelect);
         }
         addCommand(depth == 0 ? cmdCancel :cmdBack);
     }
 
     public void commandAction(Command command, Displayable displayable) {
-        if (command == List.SELECT_COMMAND) {
+        if (command.getCommandType() == Command.SCREEN) {
             depth++;
             path = getString(getSelectedIndex());
             browse();

@@ -236,7 +236,13 @@ public final class Map {
     public Throwable loadMap() {
         try {
             // load map
-            loader = path.endsWith(".tar") || path.endsWith(".TAR") ? (Loader) new TarLoader() : (Loader) new DirLoader();
+            if (path.endsWith(".tar") || path.endsWith(".TAR")) {
+                loader = new TarLoader();
+            } else if (path.endsWith(".jar")) {
+                loader = new JarLoader();
+            } else {
+                loader = new DirLoader();
+            }
             loader.init();
             loader.run();
             loader.checkException();
@@ -266,54 +272,12 @@ public final class Map {
     /**
      * Creates default map from embedded resources.
      */
-    public static Map defaultMap(StateListener listener) throws InvalidMapException {
-        Map map = new Map("resource:///resources/world.map", "default", listener);
-        map.type = TYPE_BEST;
-
-        // load calibration
-        InputStream in = TrackingMIDlet.class.getResourceAsStream("/resources/world.map");
-        if (in == null) { // no Ozi calibration found
-            in = TrackingMIDlet.class.getResourceAsStream("/resources/world.gmi");
-            if (in == null) { // neither MapCalibrator calibration
-                throw new InvalidMapException("No default map calibration");
-            } else { // got MapCalibrator calibration
-                try {
-                    map.calibration = new Calibration.GMI(in, "/resources/world.gmi");
-                } catch (IOException e) {
-                    throw new InvalidMapException("Resource '/resources/world.gmi': " + e.toString());
-                } finally {
-                    try {
-                        in.close();
-                    } catch (IOException e) {
-                        // ignore
-                    }
-                }
-            }
-        } else { // got Ozi calibration
-            try {
-                map.calibration = new Calibration.Ozi(in, "/resources/world.map");
-            } catch (IOException e) {
-                throw new InvalidMapException("Resource '/resources/world.map': " + e.toString());
-            } finally {
-                try {
-                    in.close();
-                } catch (IOException e) {
-                    // ignore
-                }
-            }
+    public static Map defaultMap(StateListener listener) throws Throwable {
+        Map map = new Map("trekbuddy.jar", "Default", listener);
+        Throwable t = map.loadMap();
+        if (t != null) {
+            throw t;
         }
-
-        // initialize slice
-        Slice slice = new Slice(new Calibration.Best("/resources/world_0_0.png"));
-        try {
-            slice.setImage(Image.createImage("/resources/world_0_0.png"));
-        } catch (IOException e) {
-            throw new InvalidMapException("Resource '/resources/world_0_0.png': " + e.toString());
-        }
-
-        // finalize map
-        map.slices = new Slice[]{ slice };
-        map.doFinal();
 
         return map;
     }
@@ -504,7 +468,7 @@ public final class Map {
         public void run() {
             TarInputStream tar = null;
             TarEntry entry;
-            InputStream in = null;
+            InputStream in;
 
             try {
                 tar = new TarInputStream(new BufferedInputStream(in = file.openInputStream(), SMALL_BUFFER_SIZE));
@@ -513,13 +477,28 @@ public final class Map {
                  * test quality of JSR-75/FileConnection
                  */
 
-                if (useReset && in.markSupported()) {
-                    in.mark(Integer.MAX_VALUE);
-                    this.in = in;
-                    Map.fileInputStreamResetable = true;
+                if (useReset) {
+                    if (in.markSupported()) {
+                        in.mark(Integer.MAX_VALUE);
+                        this.in = in;
+                        fileInputStreamResetable = true;
 //#ifdef __LOG__
-                    if (log.isEnabled()) log.debug("input stream resetable, very good");
+                        if (log.isEnabled()) log.debug("input stream support marking, very good");
 //#endif
+                    } else {
+                        try {
+                            in.reset(); // try reset
+                            this.in = in;
+                            fileInputStreamResetable = true;
+//#ifdef __LOG__
+                            if (log.isEnabled()) log.debug("input stream may be resetable");
+//#endif
+                        } catch (IOException e) {
+//#ifdef __LOG__
+                            if (log.isEnabled()) log.debug("input stream definitely not resetable");
+//#endif
+                        }
+                    }
                 }
 
                 /*
@@ -529,9 +508,6 @@ public final class Map {
                 entry = tar.getNextEntry();
                 while (entry != null) {
                     String entryName = entry.getName();
-//#ifdef __LOG__
-                    if (log.isEnabled()) log.debug("tar entry: " + entryName);
-//#endif
                     int indexOf = entryName.lastIndexOf('.');
                     if (indexOf > -1) {
                         String ext = entryName.substring(indexOf + 1);
@@ -589,6 +565,97 @@ public final class Map {
                     try {
                         tar.close();
                     } catch (IOException exc) {
+                    }
+                }
+            }
+        }
+    }
+
+    private final class JarLoader extends Loader {
+
+        public void init() throws IOException {
+        }
+
+        public void destroy() {
+        }
+
+        public void run() {
+            BufferedReader reader = null;
+
+            try {
+                // type
+                Map.this.type = TYPE_BEST;
+
+                // load calibration
+                InputStream in = TrackingMIDlet.class.getResourceAsStream("/resources/world.map");
+                if (in == null) { // no Ozi calibration found
+                    in = TrackingMIDlet.class.getResourceAsStream("/resources/world.gmi");
+                    if (in == null) { // neither MapCalibrator calibration
+                        throw new InvalidMapException("No default map calibration");
+                    } else { // got MapCalibrator calibration
+                        try {
+                            Map.this.calibration = new Calibration.GMI(in, "/resources/world.gmi");
+                        } catch (IOException e) {
+                            throw new InvalidMapException("Resource '/resources/world.gmi': " + e.toString());
+                        } finally {
+                            try {
+                                in.close();
+                            } catch (IOException e) {
+                                // ignore
+                            }
+                        }
+                    }
+                } else { // got Ozi calibration
+                    try {
+                        Map.this.calibration = new Calibration.Ozi(in, "/resources/world.map");
+                    } catch (IOException e) {
+                        throw new InvalidMapException("Resource '/resources/world.map': " + e.toString());
+                    } finally {
+                        try {
+                            in.close();
+                        } catch (IOException e) {
+                            // ignore
+                        }
+                    }
+                }
+
+                // each line is a slice filename
+                reader = new BufferedReader(new InputStreamReader(TrackingMIDlet.class.getResourceAsStream("/resources/world.set")), LARGE_BUFFER_SIZE);
+                String entry = reader.readLine(false);
+                while (entry != null) {
+                    addSlice(new Slice(new Calibration.Best(entry)));
+                    entry = reader.readLine(false);
+                }
+            } catch (Exception e) {
+                exception = e;
+            } finally {
+                if (reader != null) {
+                    try {
+                        reader.close();
+                    } catch (IOException e) {
+                    }
+                }
+            }
+
+            this.doFinal();
+        }
+
+        public void loadSlice(Slice slice) throws IOException {
+            String slicePath = "/resources/set/" + slice.getURL();
+            InputStream in = null;
+
+//#ifdef __LOG__
+            if (log.isEnabled()) log.debug("load slice image from " + slicePath);
+//#endif
+
+            try {
+                in = new BufferedInputStream(TrackingMIDlet.class.getResourceAsStream(slicePath), LARGE_BUFFER_SIZE);
+                slice.setImage(Image.createImage(in));
+            } finally {
+                if (in != null) {
+                    try {
+                        in.close();
+                    } catch (IOException e) {
                     }
                 }
             }
@@ -675,7 +742,7 @@ public final class Map {
             } finally {
                 if (reader != null) {
                     try {
-                        fc.close();
+                        reader.close();
                     } catch (IOException e) {
                     }
                 }

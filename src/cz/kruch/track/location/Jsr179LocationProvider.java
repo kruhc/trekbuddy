@@ -19,14 +19,21 @@ public class Jsr179LocationProvider extends api.location.LocationProvider {
 
     public int start() throws api.location.LocationException {
         try {
-            impl = javax.microedition.location.LocationProvider.getInstance(null);
-            impl.setLocationListener(adapter, -1, -1, -1);
-        } catch (javax.microedition.location.LocationException e) {
+            javax.microedition.location.Criteria criteria = new javax.microedition.location.Criteria();
+            criteria.setAltitudeRequired(true);
+            criteria.setSpeedAndCourseRequired(true);
+            impl = javax.microedition.location.LocationProvider.getInstance(criteria);
+            if (impl == null) {
+                impl = javax.microedition.location.LocationProvider.getInstance(null);
+                setException(new api.location.LocationException("Default criteria used"));
+            }
+            impl.setLocationListener(adapter, Config.getSafeInstance().getLocationInterval(),
+                                     -1, -1);
+        } catch (Exception e) {
             throw new api.location.LocationException(e);
         }
 
-        // start gpx
-        notifyListener(api.location.LocationProvider._STARTING);
+        notifyListener(impl.getState());
 
         return impl.getState();
     }
@@ -50,18 +57,21 @@ public class Jsr179LocationProvider extends api.location.LocationProvider {
         }
 
         public void locationUpdated(javax.microedition.location.LocationProvider locationProvider, javax.microedition.location.Location xlocation) {
-            javax.microedition.location.QualifiedCoordinates xc = xlocation.getQualifiedCoordinates();
-            api.location.QualifiedCoordinates c = new api.location.QualifiedCoordinates(xc.getLatitude(),
-                                                                                        xc.getLongitude(),
-                                                                                        xc.getAltitude());
-            long t = xlocation.getTimestamp();
-            int f = xlocation.isValid() ? 1 : 0;
+            if (xlocation.isValid()) {
+                javax.microedition.location.QualifiedCoordinates xc = xlocation.getQualifiedCoordinates();
+                api.location.QualifiedCoordinates c = new api.location.QualifiedCoordinates(xc.getLatitude(),
+                                                                                            xc.getLongitude(),
+                                                                                            xc.getAltitude());
 
-            api.location.Location location = new api.location.Location(c, t, f);
-            location.setCourse(xlocation.getCourse());
-            location.setSpeed(xlocation.getSpeed());
+                api.location.Location location = new api.location.Location(c, xlocation.getTimestamp(), 1);
+                location.setCourse(xlocation.getCourse());
+                location.setSpeed(xlocation.getSpeed());
 
-            notifyListener(location);
+                notifyListener(location);
+
+            } else {
+                notifyListener(api.location.LocationProvider.TEMPORARILY_UNAVAILABLE);
+            }
         }
 
         public void providerStateChanged(javax.microedition.location.LocationProvider locationProvider, int i) {

@@ -26,12 +26,37 @@ import cz.kruch.track.TrackingMIDlet;
 
 import api.location.QualifiedCoordinates;
 
-public final class Map {
+public final class Map implements Runnable {
 
     public interface StateListener {
         public void mapOpened(Object result, Throwable throwable);
         public void slicesLoaded(Object result, Throwable throwable);
         public void loadingChanged(Object result, Throwable throwable);
+    }
+
+    private class SliceLoader implements Runnable {
+        private Vector collection;
+
+        public SliceLoader(Vector collection) {
+            this.collection = collection;
+        }
+
+        public void run() {
+//#ifdef __LOG__
+            if (log.isEnabled()) log.debug("slice loading task started @" + Integer.toHexString(Map.this.hashCode()));
+//#endif
+
+            // load images
+            Throwable throwable = loadImages(collection);
+            collection = null;
+
+//#ifdef __LOG__
+            if (log.isEnabled()) log.debug("all requested slices loaded @" + Integer.toHexString(Map.this.hashCode()));
+//#endif
+
+            // we are done
+            notifyListener(EVENT_SLICES_LOADED, null, throwable);
+        }
     }
 
 //#ifdef __LOG__
@@ -123,6 +148,9 @@ public final class Map {
             slices[i].setImage(null);
         }
 
+        // release loader
+        loader.destroy();
+
         // gc
         System.gc();
     }
@@ -155,51 +183,57 @@ public final class Map {
 //#endif
 
         // open map in background
-        LoaderIO.getInstance().enqueue(new Runnable() {
-            public void run() {
-//#ifdef __LOG__
-                if (log.isEnabled()) log.debug("map loading task starting @" + Integer.toHexString(Map.this.hashCode()));
-//#endif
-
-                // open and init map
-                Throwable throwable = loadMap();
-
-//#ifdef __LOG__
-                if (log.isEnabled()) log.debug("map opened @" + Integer.toHexString(Map.this.hashCode()) + "; " + throwable);
-//#endif
-
-                // we are done
-                notifyListener(EVENT_MAP_OPENED, null, throwable);
-            }
-        });
+        LoaderIO.getInstance().enqueue(this);
 
         return true;
     }
 
     /**
-     * Ensures slices have their images loaded.
-     * @param slices
+     * Runnable's run() implementation.
      */
-    public boolean prepareSlices(Vector slices) {
+    public void run() {
+//#ifdef __LOG__
+        if (log.isEnabled()) log.debug("map loading task starting @" + Integer.toHexString(Map.this.hashCode()));
+//#endif
+
+        // open and init map
+        Throwable throwable = loadMap();
+
+//#ifdef __LOG__
+        if (log.isEnabled()) log.debug("map opened @" + Integer.toHexString(Map.this.hashCode()) + "; " + throwable);
+//#endif
+
+        // we are done
+        notifyListener(EVENT_MAP_OPENED, null, throwable);
+    }
+
+    /**
+     * Ensures slices have their images loaded.
+     */
+    public boolean prepareSlices(Vector list) {
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("prepare slices @" + Integer.toHexString(hashCode()));
 //#endif
 
-        final Vector collection = new Vector(0);
+        // holds list of slices for which images are missing
+        Vector v = null;
 
         // create list of slices whose images are to be loaded
-        for (Enumeration e = slices.elements(); e.hasMoreElements(); ) {
+        for (Enumeration e = list.elements(); e.hasMoreElements(); ) {
             Slice slice = (Slice) e.nextElement();
             if (slice.getImage() == null) {
 //#ifdef __LOG__
                 if (log.isEnabled()) log.debug("image missing for slice " + slice);
 //#endif
-                collection.addElement(slice);
+                if (v == null) {
+                    v = new Vector(4);
+                }
+                v.addElement(slice);
             }
         }
 
         // no images to be loaded
-        if (collection.size() == 0) {
+        if (v == null) {
 //#ifdef __LOG__
             if (log.isEnabled()) log.debug("got all slices with images");
 //#endif
@@ -211,23 +245,10 @@ public final class Map {
 //#endif
 
         // load images at background
-        LoaderIO.getInstance().enqueue(new Runnable() {
-            public void run() {
-//#ifdef __LOG__
-                if (log.isEnabled()) log.debug("slice loading task started @" + Integer.toHexString(Map.this.hashCode()));
-//#endif
+        LoaderIO.getInstance().enqueue(new SliceLoader(v));
 
-                // load images
-                Throwable throwable = loadImages(collection);
-
-//#ifdef __LOG__
-                if (log.isEnabled()) log.debug("all requested slices loaded @" + Integer.toHexString(Map.this.hashCode()));
-//#endif
-
-                // we are done
-                notifyListener(EVENT_SLICES_LOADED, null, throwable);
-            }
-        });
+        // gc hint
+        v = null;
 
         return true;
     }
@@ -427,6 +448,7 @@ public final class Map {
             if (collection != null) {
                 slices = new Slice[collection.size()];
                 collection.copyInto(slices);
+                collection = null;
             }
         }
 
@@ -667,8 +689,8 @@ public final class Map {
 
         public void init() throws IOException {
             int i = path.lastIndexOf('/');
-            if (i == -1) {
-                throw new InvalidMapException("Invalid map URL");
+            if (i == -1 || i + 1 == path.length()) {
+                throw new InvalidMapException("Invalid map URL '" + path + "'");
             }
             dir = path.substring(0, i + 1);
 
@@ -705,6 +727,8 @@ public final class Map {
                         Map.this.calibration = new Calibration.J2N(fileInput.getInputStream(), path);
                         Map.this.type = TYPE_J2N;
                         setDir = "pictures/";
+                    } else {
+                        throw new InvalidMapException("Unknown calibration file");
                     }
 
                     // close hellper loader
@@ -719,22 +743,31 @@ public final class Map {
                 // do we have a list?
                 fc = new api.file.File(Connector.open(path.substring(0, path.lastIndexOf('.')) + ".set", Connector.READ));
                 if (fc.exists()) {
-                    // each line is a slice filename
-                    reader = new BufferedReader(new InputStreamReader(fc.openInputStream()), LARGE_BUFFER_SIZE);
-                    String entry = reader.readLine(false);
-                    while (entry != null) {
-                        addSlice(new Slice(new Calibration.Best(setDir + entry.trim())));
-                        entry = reader.readLine(false);
+                    try {
+                        // each line is a slice filename
+                        reader = new BufferedReader(new InputStreamReader(fc.openInputStream()), LARGE_BUFFER_SIZE);
+                        String entry = reader.readLine(false);
+                        while (entry != null) {
+                            addSlice(new Slice(new Calibration.Best(setDir + entry.trim())));
+                            entry = reader.readLine(false);
+                        }
+                    } catch (IOException e) {
+                        throw new InvalidMapException("Failed to parse listing file", e);
                     }
                 } else {
                     // close connection for reuse
                     fc.close();
+                    fc = null; // gc hint
 
                     // iterate over set
                     fc = new api.file.File(Connector.open(dir + setDir, Connector.READ));
-                    for (Enumeration e = fc.list("*.png", false); e.hasMoreElements(); ) {
-                        String entry = e.nextElement().toString();
-                        addSlice(new Slice(new Calibration.Best(setDir + entry)));
+                    if (fc.exists()) {
+                        for (Enumeration e = fc.list("*.png", false); e.hasMoreElements(); ) {
+                            String entry = e.nextElement().toString();
+                            addSlice(new Slice(new Calibration.Best(setDir + entry)));
+                        }
+                    } else {
+                        throw new InvalidMapException("Slices directory not found");
                     }
                 }
             } catch (Exception e) {

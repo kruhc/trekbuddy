@@ -21,7 +21,10 @@ public final class FileBrowser extends List implements CommandListener, Runnable
     private static final Logger log = new Logger("FileBrowser");
 //#endif
 
+    private final static String PARENT_DIR      = "..";
+
     private Callback callback;
+    private Displayable next;
 
     private Command cmdCancel;
     private Command cmdBack;
@@ -32,10 +35,11 @@ public final class FileBrowser extends List implements CommandListener, Runnable
     private volatile String selection;
     private volatile int depth = 0;
 
-    public FileBrowser(String title, Callback callback) {
+    public FileBrowser(String title, Callback callback, Displayable next) {
         super(title, List.IMPLICIT);
         this.callback = callback;
-        this.cmdCancel = new Command("Cancel", Command.CANCEL, 1);
+        this.next = next;
+        this.cmdCancel = new Command("Cancel", Command.BACK, 1);
         this.cmdBack = new Command("Back", Command.BACK, 1);
         this.cmdSelect = new Command("Select", Command.SCREEN, 1);
         setCommandListener(this);
@@ -78,35 +82,54 @@ public final class FileBrowser extends List implements CommandListener, Runnable
             }
         } else {
             try {
+                boolean isDir = false;
+                String url = null;
+
                 if (fc == null) {
                     fc = new api.file.File(Connector.open("file:///" + path, Connector.READ));
+                    url = fc.getURL();
+                    isDir = fc.isDirectory();
                 } else {
                     fc.setFileConnection(path);
+                    url = fc.getURL();
+                    isDir = url.endsWith(api.file.File.FILE_SEPARATOR);
                 }
 
-                if (fc.isDirectory()) {
+                if (isDir) {
                     show(fc.list());
                 } else {
-                    selection = fc.getURL();
+                    selection = url;
                     quit(null);
                 }
             } catch (Throwable t) {
+//#ifdef __LOG__
+                if (log.isEnabled()) log.error("browse error", t);
+//#endif
+
                 quit(t);
             }
         }
     }
 
     private void show(Enumeration entries) {
+//#ifdef __LOG__
+        if (log.isEnabled()) log.debug("show; depth = " + depth);
+//#endif
+
         deleteAll();
         removeCommand(cmdCancel);
         removeCommand(cmdBack);
         setSelectCommand(null);
-        for (Enumeration e = entries; e.hasMoreElements(); ) {
-            append((String) e.nextElement(), null);
+        if (depth > 0) {
+            append(PARENT_DIR, null);
         }
-        if (size() == 0) {
-            append(depth == 0 ? "<no roots>" : "<empty>", null);
-        } else {
+        while (entries.hasMoreElements()) {
+            append(entries.nextElement().toString(), null);
+        }
+//#ifdef __LOG__
+        if (log.isEnabled()) log.debug(size() + " entries");
+//#endif
+        if (size() > 0) {
             setSelectCommand(cmdSelect);
         }
         addCommand(depth == 0 ? cmdCancel :cmdBack);
@@ -114,13 +137,17 @@ public final class FileBrowser extends List implements CommandListener, Runnable
 
     public void commandAction(Command command, Displayable displayable) {
         if (command.getCommandType() == Command.SCREEN) {
-            depth++;
             path = getString(getSelectedIndex());
+            if (PARENT_DIR.equals(path)) {
+                depth--;
+            } else {
+                depth++;
+            }
             browse();
         } else if (command.getCommandType() == Command.BACK) {
             depth--;
             if (depth > 0) {
-                path = "..";
+                path = PARENT_DIR;
                 browse();
             } else {
                 browse();
@@ -142,11 +169,8 @@ public final class FileBrowser extends List implements CommandListener, Runnable
             }
         }
 
-        // gc hint
-        fc = null;
-
-        // restore desktop
-        Desktop.display.setCurrent(Desktop.screen);
+        // show parent
+        Desktop.display.setCurrent(next);
 
         // we are done
         callback.invoke(selection, throwable);

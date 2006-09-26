@@ -9,9 +9,12 @@ import javax.microedition.lcdui.Graphics;
 import javax.microedition.lcdui.Image;
 import java.io.IOException;
 
+import cz.kruch.track.configuration.Config;
+
 final class OSD extends Bar {
     private static final String NO_INFO = "Lon: ? Lat: ?";
 
+    private Image providerStarting;
     private Image providerAvailable;
     private Image providerUnavailable;
     private Image providerOutOfService;
@@ -26,6 +29,7 @@ final class OSD extends Bar {
     public OSD(int gx, int gy, int width, int height) throws IOException {
         super(gx, gy, width, height);
         this.rw = Desktop.font.charWidth('R');
+        this.providerStarting = Image.createImage("/resources/s_blue.png");
         this.providerAvailable = Image.createImage("/resources/s_green.png");
         this.providerUnavailable = Image.createImage("/resources/s_orange.png");
         this.providerOutOfService = Image.createImage("/resources/s_red.png");
@@ -42,51 +46,58 @@ final class OSD extends Bar {
         if (!visible) {
             return;
         }
-        
+
         if (info == null) {
             info = NO_INFO;
         }
 
+        boolean isExtInfo = extendedInfo != null && Config.getSafeInstance().isOsdExtended();
+
         // draw info + extended info bg
-        graphics.drawImage(bar, gx, gy, Graphics.TOP | Graphics.LEFT);
-        if (extendedInfo != null) {
-            graphics.drawImage(bar, gx, gy + bh, Graphics.TOP | Graphics.LEFT);
+        if (!Config.getSafeInstance().isOsdNoBackground()) {
+            graphics.drawImage(bar, gx, gy, 0/*Graphics.TOP | Graphics.LEFT*/);
+            if (isExtInfo) {
+                graphics.drawImage(bar, gx, gy + bh, 0/*Graphics.TOP | Graphics.LEFT*/);
+            }
         }
 
         // not ok? change color...
         if (!ok) {
-            graphics.setColor(255, 0, 0);
+            graphics.setColor(0xff, 0, 0);
         }
 
         // draw info + extended info text
-        graphics.drawString(info, gx, gy, Graphics.TOP | Graphics.LEFT);
-        if (extendedInfo != null) {
-            graphics.drawString(extendedInfo, gx, gy + bh, Graphics.TOP | Graphics.LEFT);
+        graphics.drawString(info, gx + BORDER, gy, 0/*Graphics.TOP | Graphics.LEFT*/);
+        if (isExtInfo) {
+            graphics.drawString(extendedInfo, gx + BORDER, gy + bh, 0/*Graphics.TOP | Graphics.LEFT*/);
         }
 
         // gpx recording
         if (recording != null) {
             if (ok) { // text was 'ok', so change the color now
-                graphics.setColor(255, 0, 0);
+                graphics.setColor(0xff, 0, 0);
             }
-            graphics.drawChar('R', semaforX - rw, 0, Graphics.TOP | Graphics.LEFT);
+            graphics.drawChar('R', semaforX - rw, 0, 0/*Graphics.TOP | Graphics.LEFT*/);
         }
 
         // restore default color
         if (!ok || recording != null) {
-            graphics.setColor(255, 255, 255);
+            graphics.setColor(Config.getSafeInstance().isOsdBlackColor() ? 0x00000000 : 0x00ffffff);
         }
 
         // draw provider status
         switch (providerStatus) {
+            case LocationProvider._STARTING:
+                graphics.drawImage(providerStarting, semaforX, semaforY, 0/*Graphics.TOP | Graphics.LEFT*/);
+                break;
             case LocationProvider.AVAILABLE:
-                graphics.drawImage(providerAvailable, semaforX, semaforY, Graphics.TOP | Graphics.LEFT);
+                graphics.drawImage(providerAvailable, semaforX, semaforY, 0/*Graphics.TOP | Graphics.LEFT*/);
                 break;
             case LocationProvider.TEMPORARILY_UNAVAILABLE:
-                graphics.drawImage(providerUnavailable, semaforX, semaforY, Graphics.TOP | Graphics.LEFT);
+                graphics.drawImage(providerUnavailable, semaforX, semaforY, 0/*Graphics.TOP | Graphics.LEFT*/);
                 break;
             case LocationProvider.OUT_OF_SERVICE:
-                graphics.drawImage(providerOutOfService,  semaforX, semaforY, Graphics.TOP | Graphics.LEFT);
+                graphics.drawImage(providerOutOfService,  semaforX, semaforY, 0/*Graphics.TOP | Graphics.LEFT*/);
                 break;
         }
     }

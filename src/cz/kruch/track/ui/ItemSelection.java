@@ -19,7 +19,7 @@ final class ItemSelection extends List implements CommandListener {
         super(title, List.IMPLICIT);
         this.callback = callback;
         this.next = next;
-        addCommand(new Command("Cancel", Command.CANCEL, 1));
+        addCommand(new Command("Cancel", Command.BACK, 1));
         setCommandListener(this);
         Desktop.display.setCurrent(this);
     }

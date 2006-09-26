@@ -111,6 +111,7 @@ public final class BufferedReader extends Reader {
                     /* Reallocate buffer to accomodate read-ahead limit */
                     char ncb[] = new char[readAheadLimit];
                     System.arraycopy(cb, markedChar, ncb, 0, delta);
+                    cb = null; // gc hint
                     cb = ncb;
                     markedChar = 0;
                     dst = delta;

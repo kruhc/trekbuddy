@@ -58,7 +58,7 @@ public class SimulatorLocationProvider
     }
 
     public int start() throws LocationException {
-        (new FileBrowser("PlaybackSelection", this)).show();
+        (new FileBrowser("PlaybackSelection", this, Desktop.screen)).show();
 
         return LocationProvider.TEMPORARILY_UNAVAILABLE;
     }

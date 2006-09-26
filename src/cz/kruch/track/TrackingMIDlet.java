@@ -25,6 +25,9 @@ public class TrackingMIDlet extends MIDlet {
     private static boolean logEnabled;
     private static boolean jsr179;
     private static boolean jsr82;
+    private static boolean jsr120;
+    private static boolean jsr135;
+    private static boolean videoCapture;
     private static boolean fs;
     private static int numAlphaLevels = 2;
 
@@ -53,14 +56,22 @@ public class TrackingMIDlet extends MIDlet {
         } catch (ClassNotFoundException e) {
         } catch (NoClassDefFoundError e) {
         }
+        try {
+            Class clazz = Class.forName("javax.wireless.messaging.TextMessage");
+            TrackingMIDlet.jsr120 = true;
+        } catch (ClassNotFoundException e) {
+        } catch (NoClassDefFoundError e) {
+        }
+        try {
+            Class clazz = Class.forName("javax.microedition.media.Manager");
+            TrackingMIDlet.jsr135 = "true".equals(System.getProperty("supports.video.capture"));
+        } catch (ClassNotFoundException e) {
+        } catch (NoClassDefFoundError e) {
+        }
 
         // fs type
-        try {
-            System.out.println("* fs type: " + api.file.File.getFsType());
-            TrackingMIDlet.fs = api.file.File.getFsType() > api.file.File.FS_NONE;
-        } catch (NoClassDefFoundError e) {
-            System.out.println("* no fs");
-        }
+        System.out.println("* fs type: " + api.file.File.getFsType());
+        TrackingMIDlet.fs = api.file.File.getFsType() > api.file.File.FS_NONE;
 
         // setup environment
         if (hasFlag("fs_read_skip")) {
@@ -74,6 +85,10 @@ public class TrackingMIDlet extends MIDlet {
         if (hasFlag("fs_no_reset")) {
             System.out.println("* fs no-reset feature on");
             cz.kruch.track.maps.Map.useReset = false;
+        }
+        if (hasFlag("ui_no_partial_flush")) {
+            System.out.println("* ui no-partial-flush feature on");
+            cz.kruch.track.ui.Desktop.partialFlush = false;
         }
     }
 
@@ -166,6 +181,18 @@ public class TrackingMIDlet extends MIDlet {
 
     public static boolean isJsr82() {
         return jsr82;
+    }
+
+    public static boolean isJsr120() {
+        return jsr120;
+    }
+
+    public static boolean isJsr135() {
+        return jsr135;
+    }
+
+    public static boolean isVideoCapture() {
+        return videoCapture;
     }
 
     public static boolean isFs() {

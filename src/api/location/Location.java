@@ -30,6 +30,14 @@ public class Location {
         this.hdop = hdop;
     }
 
+    public Location(Location location) {
+        this.coordinates = location.coordinates;
+        this.timestamp = location.timestamp;
+        this.fix = location.fix;
+        this.sat = location.sat;
+        this.hdop = location.hdop;
+    }
+
     public QualifiedCoordinates getQualifiedCoordinates() {
         return coordinates;
     }
@@ -55,7 +63,7 @@ public class Location {
     }
 
     public void setSpeed(float speed) {
-        this.speed = speed;
+        this.speed = speed == Float.NaN ? -1F : speed;
     }
 
     public float getCourse() {
@@ -63,24 +71,24 @@ public class Location {
     }
 
     public void setCourse(float course) {
-        this.course = course;
+        this.course = course == Float.NaN ? -1F : course;
     }
 
-    public String toInfo() {
-        return coordinates.toString();
-    }
-
-    public String toExtendedInfo(int timezone) {
-        StringBuffer sb = new StringBuffer(24);
+    public String toExtendedInfo(int tzOffset) {
+        StringBuffer sb = new StringBuffer(32);
+/*
         if (timestamp > 0) {
-            CALENDAR.setTime(new Date(timestamp + timezone * 3600000));
+*/
+            CALENDAR.setTime(new Date(timestamp + tzOffset * 1000));
             int hour = CALENDAR.get(Calendar.HOUR_OF_DAY);
             if (hour < 10) sb.append('0');
             sb.append(hour).append(':');
             int min = CALENDAR.get(Calendar.MINUTE);
             if (min < 10) sb.append('0');
             sb.append(min).append(' ');
+/*
         }
+*/
         if (coordinates.getAlt() > -1F) {
             sb.append(coordinates.getAlt()).append(" m ");
         }

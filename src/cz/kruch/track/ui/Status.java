@@ -18,8 +18,8 @@ final class Status extends Bar {
         }
 
         // draw status info
-        graphics.drawImage(bar, gx, height - bh, Graphics.TOP | Graphics.LEFT);
-        graphics.drawString(info, gx, height - bh, Graphics.TOP | Graphics.LEFT);
+        graphics.drawImage(bar, gx, height - bh, 0/*Graphics.TOP | Graphics.LEFT*/);
+        graphics.drawString(info, gx, height - bh, 0/*Graphics.TOP | Graphics.LEFT*/);
     }
 
     public int[] getClip() {

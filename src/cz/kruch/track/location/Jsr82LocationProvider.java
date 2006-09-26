@@ -9,6 +9,7 @@ import api.location.LocationListener;
 import api.location.Location;
 
 import cz.kruch.track.configuration.Config;
+import cz.kruch.track.configuration.ConfigurationException;
 import cz.kruch.track.ui.Desktop;
 //#ifdef __LOG__
 import cz.kruch.track.util.Logger;
@@ -43,13 +44,14 @@ public class Jsr82LocationProvider extends StreamReadingLocationProvider impleme
 
     private Thread thread;
 
+    private String btname = null;
     private String btspp = null;
     private volatile boolean go = false;
 
     private Timer watcher;
     private final Object sync = new Object();
-    private long timestamp;
-    private int state;
+    private long timestamp = 0;
+    private int state = LocationProvider._STARTING;
 
     private api.file.File nmeaFc;
     private OutputStream nmeaObserver;
@@ -57,12 +59,22 @@ public class Jsr82LocationProvider extends StreamReadingLocationProvider impleme
     public Jsr82LocationProvider(Callback recordingCallback) {
         super(Config.LOCATION_PROVIDER_JSR82);
         this.recordingCallback = recordingCallback;
-        this.timestamp = 0;
-        this.state = LocationProvider.TEMPORARILY_UNAVAILABLE;
     }
 
     public void run() {
         try {
+            // start with last known?
+            if (btspp == null) {
+                try {
+                    javax.bluetooth.LocalDevice.getLocalDevice();
+                } catch (javax.bluetooth.BluetoothStateException e) {
+                    throw new LocationException("Bluetooth radio disabled?");
+                }
+                go = true;
+                btspp = Config.getSafeInstance().getBtServiceUrl();
+                thread = Thread.currentThread();
+            }
+
             // start gpx
             notifyListener(LocationProvider._STARTING);
 
@@ -106,7 +118,7 @@ public class Jsr82LocationProvider extends StreamReadingLocationProvider impleme
         // start BT discovery
         (new Discoverer()).start();
 
-        return LocationProvider.TEMPORARILY_UNAVAILABLE;
+        return LocationProvider._STARTING;
     }
 
     public void stop() throws LocationException {
@@ -166,7 +178,7 @@ public class Jsr82LocationProvider extends StreamReadingLocationProvider impleme
                 setObserver(nmeaObserver);
 
                 // signal recording has started
-                recordingCallback.invoke(new Integer(1), null);
+                recordingCallback.invoke(new Integer(GpxTracklog.CODE_RECORDING_START), null);
 
             } catch (Throwable t) {
                 Desktop.showError("Failed to start NMEA log.", t, null);
@@ -177,7 +189,7 @@ public class Jsr82LocationProvider extends StreamReadingLocationProvider impleme
     public void stopNmeaLog() {
 
         // signal recording is stopping
-        recordingCallback.invoke(new Integer(0), null);
+        recordingCallback.invoke(new Integer(GpxTracklog.CODE_RECORDING_STOP), null);
 
         // clear stream 'observer'
         setObserver(null);
@@ -332,10 +344,19 @@ public class Jsr82LocationProvider extends StreamReadingLocationProvider impleme
 
             // good to go or not
             if (ok) {
+                // start
                 go = true;
                 btspp = url;
                 thread = new Thread(Jsr82LocationProvider.this);
                 thread.start();
+                // update bt device info
+                Config.getSafeInstance().setBtDeviceName(btname);
+                Config.getSafeInstance().setBtServiceUrl(btspp);
+                try {
+                    Config.getSafeInstance().update();
+                } catch (ConfigurationException e) {
+                    Desktop.showError("Failed to update config", e, null);
+                }
             } else {
                 notifyListener(LocationProvider.OUT_OF_SERVICE);
             }
@@ -514,6 +535,7 @@ public class Jsr82LocationProvider extends StreamReadingLocationProvider impleme
 
         public void commandAction(Command command, Displayable displayable) {
             if (command == List.SELECT_COMMAND) { /* device selection */
+                btname = getString(getSelectedIndex());
                 device = (javax.bluetooth.RemoteDevice) devices.elementAt(getSelectedIndex());
                 goServices();
             } else if (command.getCommandType() == Command.BACK) {

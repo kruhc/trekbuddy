@@ -18,10 +18,13 @@ import java.io.DataOutputStream;
 */
 
 public final class File /*implements FileConnection*/ {
+    public final static String FILE_SEPARATOR  = "/";
+
     public static final int FS_UNKNOWN = -1;
     public static final int FS_NONE    = 0;
     public static final int FS_JSR75   = 1;
     public static final int FS_SIEMENS = 2;
+    public static final int FS_SXG75   = 3;
 
     private static int fsType = FS_UNKNOWN;
 
@@ -139,11 +142,11 @@ public final class File /*implements FileConnection*/ {
     public void create() throws IOException {
         fc.create();
     }
-/*
+
     public void mkdir() throws IOException {
         fc.mkdir();
     }
-*/
+
     public boolean exists() {
         return fc.exists();
     }
@@ -186,5 +189,6 @@ public final class File /*implements FileConnection*/ {
 */
     public void close() throws IOException {
         fc.close();
+        fc = null; // gc hint
     }
 }

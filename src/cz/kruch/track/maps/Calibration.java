@@ -360,7 +360,7 @@ public abstract class Calibration {
 
             try {
                 KXmlParser parser = new KXmlParser();
-                parser.setInput(new InputStreamReader(in));
+                parser.setInput(in, null); // null is for encoding autodetection
 
                 boolean keepParsing = true;
                 String currentTag = null;
@@ -497,7 +497,7 @@ public abstract class Calibration {
                 }
             }
             if (p0 == -1 || p1 == -1) {
-                throw new InvalidMapException("Invalid slice filename");
+                throw new InvalidMapException("Invalid slice filename: " + path);
             }
 
             x = parseInt(n, p0 + 1, p1);

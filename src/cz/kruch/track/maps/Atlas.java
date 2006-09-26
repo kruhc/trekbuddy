@@ -22,7 +22,7 @@ import api.location.QualifiedCoordinates;
 import com.ice.tar.TarEntry;
 import com.ice.tar.TarInputStream;
 
-public final class Atlas {
+public final class Atlas implements Runnable {
 
     public interface StateListener {
         public void atlasOpened(Object result, Throwable throwable);
@@ -141,31 +141,34 @@ public final class Atlas {
     /**
      * Opens and scans atlas.
      */
-    public boolean prepareAtlas() {
+    public boolean open() {
 //#ifdef __LOG__
-        if (log.isEnabled()) log.debug("prepare atlas");
+        if (log.isEnabled()) log.debug("open atlas");
 //#endif
 
         // open atlas in background
-        LoaderIO.getInstance().enqueue(new Runnable() {
-            public void run() {
-//#ifdef __LOG__
-                if (log.isEnabled()) log.debug("atlas loading task starting");
-//#endif
-
-                // open and init atlas
-                Throwable t = loadAtlas();
-
-//#ifdef __LOG__
-                if (log.isEnabled()) log.debug("atlas opened; " + t);
-//#endif
-
-                // we are done
-                notifyListener(EVENT_ATLAS_OPENED, null, t);
-            }
-        });
+        LoaderIO.getInstance().enqueue(this);
 
         return true;
+    }
+
+    /**
+     * Runnable's run implementation.
+     */
+    public void run() {
+//#ifdef __LOG__
+        if (log.isEnabled()) log.debug("atlas loading task starting");
+//#endif
+
+        // open and init atlas
+        Throwable t = loadAtlas();
+
+//#ifdef __LOG__
+        if (log.isEnabled()) log.debug("atlas opened; " + t);
+//#endif
+
+        // we are done
+        notifyListener(EVENT_ATLAS_OPENED, null, t);
     }
 
     /* (non-javadoc) public only for init loading */
@@ -413,8 +416,10 @@ public final class Atlas {
                                         } else if ("xml".equals(ext)) {
                                             calibration = new Calibration.XML(fileInput.getInputStream(), url);
                                         }
+
                                         // close file input
                                         fileInput.close();
+
                                         // we do not need but one calibration
                                         if (calibration != null) {
 //#ifdef __LOG__

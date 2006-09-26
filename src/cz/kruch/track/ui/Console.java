@@ -46,11 +46,14 @@ public final class Console extends Canvas {
     }
 
     public void show(String text) {
+        if (text == null) {
+            return;
+        }
         y++;
         Graphics g = image.getGraphics();
         g.setFont(font);
         g.setColor(255, 255, 255);
-        g.drawString(text, BORDER, y * h, Graphics.TOP | Graphics.LEFT);
+        g.drawString(text, BORDER, y * h, 0/*Graphics.TOP | Graphics.LEFT*/);
         repaint();
     }
 
@@ -72,11 +75,11 @@ public final class Console extends Canvas {
             skips++;
         }
         g.setFont(font);
-        g.drawString(text, x, y * h, Graphics.TOP | Graphics.LEFT);
+        g.drawString(text, x, y * h, 0/*Graphics.TOP | Graphics.LEFT*/);
         repaint();
     }
 
     protected void paint(Graphics graphics) {
-        graphics.drawImage(image, 0, 0, Graphics.TOP | Graphics.LEFT);
+        graphics.drawImage(image, 0, 0, 0/*Graphics.TOP | Graphics.LEFT*/);
     }
 }

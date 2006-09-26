@@ -263,7 +263,7 @@ public final class NmeaParser {
         return result;
     }
 
-    private static double parseDouble(char[] value, int offset, int length) {
+    public static double parseDouble(char[] value, int offset, int length) {
         if (length == 0) {
             throw new NumberFormatException("No input");
         }

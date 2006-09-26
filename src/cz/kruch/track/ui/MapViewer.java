@@ -37,6 +37,10 @@ final class MapViewer {
     private Map map;
     private Vector slices = new Vector();
 
+    private Image waypoint;
+    private int wptSize2;
+    private Position wptPosition;
+
     private boolean visible = true;
     private Float course;
     private int ci = 0;
@@ -60,6 +64,8 @@ final class MapViewer {
             Image.createImage("/resources/course_70.png"),
             Image.createImage("/resources/course_80.png")
         };
+        this.waypoint = Image.createImage("/resources/wpt.png");
+        this.wptSize2 = this.waypoint.getWidth() / 2;
         this.crosshairWidth = crosshairs[0].getWidth();
         this.crosshairHeight = crosshairs[0].getHeight();
         this.arrowWidth = courses[0].getWidth();
@@ -214,6 +220,10 @@ final class MapViewer {
         this.course = course;
     }
 
+    public void setWaypoint(Position position) {
+        this.wptPosition = position;
+    }
+
     public Character boundsHit() {
         Character result = null;
         if (chx + crosshairWidth / 2 == 0) {
@@ -242,10 +252,6 @@ final class MapViewer {
             return;
         }
 
-        if (clip != null) {
-            graphics.setClip(clip[0], clip[1], clip[2], clip[3]);
-        }
-
         // project slices to window
         for (Enumeration e = slices.elements(); e.hasMoreElements(); ) {
             Slice slice = (Slice) e.nextElement();
@@ -255,11 +261,7 @@ final class MapViewer {
 //#endif
                 continue;
             }
-            drawSlice(graphics, clip, slice);
-        }
-
-        if (clip != null) {
-            graphics.setClip(0, 0, width, height);
+            drawSlice(graphics, /*clip, */slice);
         }
     }
 
@@ -269,7 +271,12 @@ final class MapViewer {
         }
 
         // paint crosshair
-        graphics.drawImage(crosshairs[ci], chx, chy, Graphics.TOP | Graphics.LEFT);
+        graphics.drawImage(crosshairs[ci], chx, chy, 0/*Graphics.TOP | Graphics.LEFT*/);
+
+        // paint waypoint
+        if (wptPosition != null) {
+            drawWaypoint(graphics);
+        }
 
         // paint course
         if (course != null) {
@@ -280,7 +287,8 @@ final class MapViewer {
     // TODO move calculation to setter
     private void drawCourse(Graphics graphics) {
         int ti;
-        switch (course.intValue() / 90) {
+        int courseInt = course.intValue();
+        switch (courseInt / 90) {
             case 0:
                 ti = Sprite.TRANS_NONE;
                 break;
@@ -293,12 +301,15 @@ final class MapViewer {
             case 3:
                 ti = Sprite.TRANS_ROT270;
                 break;
+            case 4:
+                ti = Sprite.TRANS_NONE;
+                break;
             default:
                 // should never happen
                 throw new AssertionFailedException("Course over 360");
         }
 
-        int cwo = course.intValue() % 90;
+        int cwo = courseInt % 90;
         int ci;
         if (cwo >= 0 && cwo < 6) {
             ci = 0;
@@ -335,10 +346,20 @@ final class MapViewer {
                             ti,
                             chx - (arrowWidth - crosshairWidth) / 2,
                             chy - (arrowHeight - crosshairHeight) / 2,
-                            Graphics.TOP | Graphics.LEFT);
+                            0/*Graphics.TOP | Graphics.LEFT*/);
     }
 
-    private void drawSlice(Graphics graphics, int[] clip, Slice slice) {
+    private void drawWaypoint(Graphics graphics) {
+        int x = wptPosition.getX();
+        int y = wptPosition.getY();
+        if (x > this.x && x < this.x + width && y > this.y && y < this.y + height) {
+            graphics.drawImage(waypoint,
+                               x - this.x - wptSize2, y - this.y - wptSize2,
+                               0/*Graphics.TOP | Graphics.LEFT*/);
+        }
+    }
+
+    private void drawSlice(Graphics graphics, /*, int[] clip, */Slice slice) {
         int m_x0 = slice.getX();
         int m_y0 = slice.getY();
         int slice_w = slice.getWidth();
@@ -380,7 +401,7 @@ final class MapViewer {
                                 x_src, y_src, w, h,
                                 Sprite.TRANS_NONE,
                                 x_dest, y_dest,
-                                0);
+                                0/*Graphics.TOP | Graphics.LEFT*/);
         }
     }
 
@@ -407,8 +428,8 @@ final class MapViewer {
             throw new AssertionFailedException("No map");
         }
 
-        // find needed slices "line by line"
-        Vector collection = new Vector(4);
+        // find needed slices ("row by row")
+        Vector v = new Vector(4); // 4 is an pesimistic guess
         int _x = x;
         int _y = y;
         int xmax = x + width > mWidth ? mWidth : x + width;
@@ -416,7 +437,7 @@ final class MapViewer {
         while (_y < ymax) {
             int _l = ymax; // bottom for current "line"
             while (_x < xmax) {
-                Slice s = ensureSlice(_x, _y, collection);
+                Slice s = ensureSlice(_x, _y, v);
                 if (s == null) {
                     throw new AssertionFailedException("Out of map - no slice for " + _x + "-" + _y);
                 } else {
@@ -431,7 +452,7 @@ final class MapViewer {
         // release slices images we will no longer use
         for (Enumeration e = slices.elements(); e.hasMoreElements(); ) {
             Slice slice = (Slice) e.nextElement();
-            if (collection.contains(slice)) {
+            if (v.contains(slice)) {
 //#ifdef __LOG__
                 if (log.isEnabled()) log.debug("reuse slice in current set; " + slice);
 //#endif
@@ -439,16 +460,21 @@ final class MapViewer {
             }
 
 //#ifdef __LOG__
-            if (log.isEnabled()) log.debug("release map image in " + slice);
+            if (log.isEnabled()) log.debug("release image in " + slice);
 //#endif
             slice.setImage(null);
         }
 
         // set new slices
-        slices = collection;
+        slices = null; // gc hint
+        slices = v;
 
-        // prepare slices - returns true is there are images to be loaded
-        boolean loading = map.prepareSlices(collection);
+        // prepare slices - returns true is there is at least one image to be loaded
+        boolean loading = map.prepareSlices(v);
+        v = null; // gc hint
+
+        // gc hint (loading ahead)
+        if (loading) System.gc();
 
         // return the 'loading' flags
         return loading;

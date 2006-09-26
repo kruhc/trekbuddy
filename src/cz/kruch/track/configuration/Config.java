@@ -6,6 +6,7 @@ package cz.kruch.track.configuration;
 //#ifdef __LOG__
 import cz.kruch.track.util.Logger;
 //#endif
+import cz.kruch.track.util.Datum;
 import cz.kruch.track.TrackingMIDlet;
 
 import javax.microedition.rms.RecordStore;
@@ -35,34 +36,60 @@ public abstract class Config {
     };
 
     private static Config instance = null;
-    private static Config safeInstance = new DefaultConfig();
 
     /*
      * Configuration params, initialized to default values.
      */
 
-    // group
+    // group [Map]
     protected String mapPath = ""; // no default map
 
-    // group
+    // group [Map datum]
+    protected String geoDatum = Datum.DATUM_WGS_84.getName();
+/*
+    protected int dX = 0;
+    protected int dY = 0;
+    protected int dZ = 0;
+*/
+
+    // group [Timezone]
+    protected String timeZone = "GMT";
+
+    // group [Provider]
     protected String locationProvider = LOCATION_PROVIDER_JSR82;
 
-    // group
+    // group [common provider options]
     protected boolean tracklogsOn = false;
     protected String tracklogsFormat = TRACKLOG_FORMAT_GPX;
     protected String tracklogsDir = "file:///E:/tracklogs";
+    protected String captureLocator = "capture://video";
+    protected String captureFormat = "";
 
-    // group
+    // group [Simulator provider options]
     protected int simulatorDelay = 100;
 
-    // group
-    protected boolean fullscreen = false;
-    protected boolean osdExtended = true;
-    protected boolean noSounds = false;
-    protected int crosshairType = 0; // hidden
+    // group [Internal provider options]
+    protected int locationInterval = 1;
 
-    // group
-    protected int timeZone = 0;
+    // group [Location sharing]
+    protected boolean locationSharing = false;
+
+    // group [Desktop]
+    protected boolean fullscreen = false;
+    protected boolean noSounds = false;
+    protected boolean useUTM = false;
+    protected boolean osdExtended = true;
+    protected boolean osdNoBackground = false;
+    protected boolean osdMediumFont = false;
+    protected boolean osdBoldFont = false;
+    protected boolean osdBlackColor = false;
+
+    // hidden
+    protected String btDeviceName = "";
+    protected String btServiceUrl = "";
+
+    // precalcs
+    private Integer tzOffset = null;
 
     protected Config() {
     }
@@ -71,7 +98,7 @@ public abstract class Config {
 
     public synchronized static Config getInstance() throws ConfigurationException {
         if (instance == null) {
-            instance = new RMSConfig();
+            instance = new RMSConfig(false);
         }
 
         return instance;
@@ -81,7 +108,15 @@ public abstract class Config {
         try {
             return getInstance();
         } catch (ConfigurationException e) {
-            return safeInstance;
+            if (instance == null) {
+                try {
+                    instance = new RMSConfig(true);
+                } catch (ConfigurationException exc) {
+                    // should never happen
+                }
+            }
+
+            return instance;
         }
     }
 
@@ -142,12 +177,60 @@ public abstract class Config {
         this.tracklogsDir = tracklogsDir;
     }
 
+    public String getCaptureLocator() {
+        return captureLocator;
+    }
+
+    public void setCaptureLocator(String captureLocator) {
+        this.captureLocator = captureLocator;
+    }
+
+    public String getCaptureFormat() {
+        return captureFormat;
+    }
+
+    public void setCaptureFormat(String captureFormat) {
+        this.captureFormat = captureFormat;
+    }
+
+    public String getBtDeviceName() {
+        return btDeviceName;
+    }
+
+    public void setBtDeviceName(String btDeviceName) {
+        this.btDeviceName = btDeviceName;
+    }
+
+    public String getBtServiceUrl() {
+        return btServiceUrl;
+    }
+
+    public void setBtServiceUrl(String btServiceUrl) {
+        this.btServiceUrl = btServiceUrl;
+    }
+
     public int getSimulatorDelay() {
         return simulatorDelay;
     }
 
     public void setSimulatorDelay(int simulatorDelay) {
         this.simulatorDelay = simulatorDelay;
+    }
+
+    public int getLocationInterval() {
+        return locationInterval;
+    }
+
+    public void setLocationInterval(int locationInterval) {
+        this.locationInterval = locationInterval;
+    }
+
+    public boolean isLocationSharing() {
+        return locationSharing;
+    }
+
+    public void setLocationSharing(boolean locationSharing) {
+        this.locationSharing = locationSharing;
     }
 
     public boolean isFullscreen() {
@@ -158,14 +241,6 @@ public abstract class Config {
         this.fullscreen = fullscreen;
     }
 
-    public boolean isOsdExtended() {
-        return osdExtended;
-    }
-
-    public void setOsdExtended(boolean osdExtended) {
-        this.osdExtended = osdExtended;
-    }
-
     public boolean isNoSounds() {
         return noSounds;
     }
@@ -174,45 +249,141 @@ public abstract class Config {
         this.noSounds = noSounds;
     }
 
-    public int getTimeZone() {
+    public boolean isOsdExtended() {
+        return osdExtended;
+    }
+
+    public void setOsdExtended(boolean osdExtended) {
+        this.osdExtended = osdExtended;
+    }
+
+    public boolean isOsdNoBackground() {
+        return osdNoBackground;
+    }
+
+    public void setOsdNoBackground(boolean osdNoBackground) {
+        this.osdNoBackground = osdNoBackground;
+    }
+
+    public boolean isOsdMediumFont() {
+        return osdMediumFont;
+    }
+
+    public void setOsdMediumFont(boolean osdMediumFont) {
+        this.osdMediumFont = osdMediumFont;
+    }
+
+    public boolean isOsdBoldFont() {
+        return osdBoldFont;
+    }
+
+    public void setOsdBoldFont(boolean osdBoldFont) {
+        this.osdBoldFont = osdBoldFont;
+    }
+
+    public boolean isOsdBlackColor() {
+        return osdBlackColor;
+    }
+
+    public void setOsdBlackColor(boolean osdBlackColor) {
+        this.osdBlackColor = osdBlackColor;
+    }
+
+    public String getTimeZone() {
         return timeZone;
     }
 
-    public void setTimeZone(int timeZone) {
+    public int getTimeZoneOffset() {
+        if (tzOffset == null) {
+            String tzString = getTimeZone();
+            int i = tzString.indexOf(':');
+            if (i == -1) {
+                tzOffset = new Integer(0);
+            } else {
+                int hours = 0;
+                if (tzString.charAt(3) == '+') {
+                    hours = Integer.parseInt(tzString.substring(4, 6));
+                } else {
+                    hours = Integer.parseInt(tzString.substring(3, 6));
+                }
+                int mins = Integer.parseInt(tzString.substring(7));
+                tzOffset = new Integer((hours * 60 + mins) * 60);
+            }
+        }
+
+        return tzOffset.intValue();
+    }
+
+    public void setTimeZone(String timeZone) {
         this.timeZone = timeZone;
+        this.tzOffset = null;
     }
 
-    public int getCrosshairType() {
-        return crosshairType;
+    public boolean isUseUTM() {
+        return useUTM;
     }
 
-    public void setCrosshairType(int crosshairType) {
-        this.crosshairType = crosshairType;
+    public void setUseUTM(boolean useUTM) {
+        this.useUTM = useUTM;
     }
 
-    private static final class DefaultConfig extends Config {
-        public DefaultConfig() {
-        }
-
-        public Config ensureInitialized() throws ConfigurationException {
-            return this;
-        }
-
-        public void update() throws ConfigurationException {
-        }
+    public String getGeoDatum() {
+        return geoDatum;
     }
 
+    public void setGeoDatum(String geoDatum) {
+        this.geoDatum = geoDatum;
+    }
+
+/*
+    public int getdX() {
+        return dX;
+    }
+
+    public void setdX(int dX) {
+        this.dX = dX;
+    }
+
+    public int getdY() {
+        return dY;
+    }
+
+    public void setdY(int dY) {
+        this.dY = dY;
+    }
+
+    public int getdZ() {
+        return dZ;
+    }
+
+    public void setdZ(int dZ) {
+        this.dZ = dZ;
+    }
+*/
+
+    /**
+     * RMS configuration.
+     */
     private static final class RMSConfig extends Config {
-        private static final String NAME = "config_086";
+        private static final String NAME = "config_090";
 
         private boolean initialized = false;
 
-        public RMSConfig() throws ConfigurationException {
-            ensureInitialized();
+        public RMSConfig(boolean failSafe) throws ConfigurationException {
+            try {
+                ensureInitialized();
+            } catch (ConfigurationException e) {
+                if (failSafe) {
+                    initialized = true;
+                } else {
+                    throw e;
+                }
+            }
         }
 
         private Config ensureInitialized() throws ConfigurationException {
             if (!initialized) {
+
                 try {
                     // open the store
                     RecordStore rs = RecordStore.openRecordStore(NAME, true, RecordStore.AUTHMODE_PRIVATE, false);
@@ -225,21 +396,37 @@ public abstract class Config {
 //#endif
                             break;
                         case 1: {
-                                DataInputStream din = new DataInputStream(new ByteArrayInputStream(rs.getRecord(1)));
-                                mapPath = din.readUTF();
-                                locationProvider = din.readUTF();
-                                tracklogsOn = din.readBoolean();
-                                tracklogsFormat = din.readUTF();
-                                tracklogsDir = din.readUTF();
-                                simulatorDelay = din.readInt();
-                                fullscreen = din.readBoolean();
-                                osdExtended = din.readBoolean();
-                                noSounds = din.readBoolean();
-                                timeZone = din.readInt();
-                                crosshairType = din.readInt();
-                                din.close();
+                            DataInputStream din = new DataInputStream(new ByteArrayInputStream(rs.getRecord(1)));
+                            mapPath = din.readUTF();
+                            locationProvider = din.readUTF();
+                            timeZone = din.readUTF();
+                            geoDatum = din.readUTF();
+                            tracklogsOn = din.readBoolean();
+                            tracklogsFormat = din.readUTF();
+                            tracklogsDir = din.readUTF();
+                            captureLocator = din.readUTF();
+                            captureFormat = din.readUTF();
+                            btDeviceName = din.readUTF();
+                            btServiceUrl = din.readUTF();
+                            simulatorDelay = din.readInt();
+                            locationInterval = din.readInt();
+                            locationSharing = din.readBoolean();
+                            fullscreen = din.readBoolean();
+                            noSounds = din.readBoolean();
+                            useUTM = din.readBoolean();
+                            osdExtended = din.readBoolean();
+                            osdNoBackground = din.readBoolean();
+                            osdMediumFont = din.readBoolean();
+                            osdBoldFont = din.readBoolean();
+                            osdBlackColor = din.readBoolean();
+/*
+                            dX = din.readInt();
+                            dY = din.readInt();
+                            dZ = din.readInt();
+*/
+                            din.close();
 //#ifdef __LOG__
-                                if (log.isEnabled()) log.info("configuration read");
+                            if (log.isEnabled()) log.info("configuration read");
 //#endif
                             } break;
                         default: {
@@ -257,17 +444,17 @@ public abstract class Config {
                     // close the store
                     rs.closeRecordStore();
 
+//#ifdef __LOG__
+                    if (log.isEnabled()) log.info("configuration initialized");
+//#endif
+
                 } catch (RecordStoreException e) {
                     throw new ConfigurationException(e);
                 } catch (IOException e) {
                     throw new ConfigurationException(e);
+                } finally {
+                    initialized = true;
                 }
-
-//#ifdef __LOG__
-                if (log.isEnabled()) log.info("configuration initialized");
-//#endif
-
-                initialized = true;
             }
 
             return this;
@@ -284,15 +471,31 @@ public abstract class Config {
                 DataOutputStream dout = new DataOutputStream(data);
                 dout.writeUTF(mapPath);
                 dout.writeUTF(locationProvider);
+                dout.writeUTF(timeZone);
+                dout.writeUTF(geoDatum);
                 dout.writeBoolean(tracklogsOn);
                 dout.writeUTF(tracklogsFormat);
                 dout.writeUTF(tracklogsDir);
+                dout.writeUTF(captureLocator);
+                dout.writeUTF(captureFormat);
+                dout.writeUTF(btDeviceName);
+                dout.writeUTF(btServiceUrl);
                 dout.writeInt(simulatorDelay);
+                dout.writeInt(locationInterval);
+                dout.writeBoolean(locationSharing);
                 dout.writeBoolean(fullscreen);
-                dout.writeBoolean(osdExtended);
                 dout.writeBoolean(noSounds);
-                dout.writeInt(timeZone);
-                dout.writeInt(crosshairType);
+                dout.writeBoolean(useUTM);
+                dout.writeBoolean(osdExtended);
+                dout.writeBoolean(osdNoBackground);
+                dout.writeBoolean(osdMediumFont);
+                dout.writeBoolean(osdBoldFont);
+                dout.writeBoolean(osdBlackColor);
+/*
+                dout.writeInt(dX);
+                dout.writeInt(dY);
+                dout.writeInt(dZ);
+*/
                 dout.close();
                 byte[] bytes = data.toByteArray();
                 if (rs.getNumRecords() > 0) {

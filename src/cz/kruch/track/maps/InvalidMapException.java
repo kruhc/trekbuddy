@@ -13,4 +13,8 @@ public class InvalidMapException extends IOException {
     public InvalidMapException(Throwable throwable) {
         super(throwable.toString());
     }
+
+    public InvalidMapException(String message, Throwable throwable) {
+        super(message + ": " + throwable.toString());
+    }
 }

@@ -27,28 +27,34 @@ public final class NmeaParser {
                 switch (index) {
                     case 0: {
                         // TODO optimize (should never happen - remove?)
+/*
                         if (!"$GPGGA".equals(token.toString())) {
                             throw new LocationException("GPGGA expected");
                         }
+*/
                     } break;
                     case 1: {
                         record.timestamp = parseTime(token);
                     } break;
                     case 2: {
-                        record.lat = parseDouble(token.array, token.begin /* + 0*/, 2) + parseDouble(token.array, token.begin + 2, token.length - 2) / 60D;
+//                        record.lat = parseDouble(token.array, token.begin /* + 0*/, 2) + parseDouble(token.array, token.begin + 2, token.length - 2) / 60D;
                     } break;
                     case 3: {
+/*
                         if (token.array[token.begin] == 'S') {
                             record.lat *= -1;
                         }
+*/
                     } break;
                     case 4: {
-                        record.lon = parseDouble(token.array, token.begin /* + 0*/, 3) + parseDouble(token.array, token.begin + 3, token.length - 3) / 60D;
+//                        record.lon = parseDouble(token.array, token.begin /* + 0*/, 3) + parseDouble(token.array, token.begin + 3, token.length - 3) / 60D;
                     } break;
                     case 5: {
+/*
                         if (token.array[token.begin] == 'W') {
                             record.lon *= -1;
                         }
+*/
                     } break;
                     case 6: {
                         record.fix = parseInt(token);
@@ -69,16 +75,22 @@ public final class NmeaParser {
                         // 'm'
                     } break;
                     case 11: {
+/* unused
                         record.geoidh = parseFloat(token);
+*/
                     } break;
                     case 12: {
                         // 'm'
                     } break;
                     case 13: {
+/* unused
                         record.dgpst = parseInt(token);
+*/
                     } break;
                     case 14: {
+/* unused
                         record.dgpsid = token.toString();
+*/
                     } break;
                     case 15: {
                         record.checksum = token.toString();
@@ -105,9 +117,11 @@ public final class NmeaParser {
                 switch (index) {
                     case 0: {
                         // TODO optimize (should never happen - remove?)
+/*
                         if (!"$GPRMC".equals(token.toString())) {
                             throw new LocationException("GPRMC expected");
                         }
+*/
                     } break;
                     case 1: {
                         record.timestamp = parseTime(token);
@@ -116,28 +130,20 @@ public final class NmeaParser {
                         record.status = token.array[token.begin];
                     } break;
                     case 3: {
-/* we already have it from GPGGA
-                    record.lat = Double.parseDouble(token.substring(0, 2)) + Double.parseDouble(token.substring(2)) / 60D;
-*/
+                        record.lat = parseDouble(token.array, token.begin /* + 0*/, 2) + parseDouble(token.array, token.begin + 2, token.length - 2) / 60D;
                     } break;
                     case 4: {
-/* skip N/S
-                    if (token.startsWith("S")) {
-                        record.lat *= -1;
-                    }
-*/
+                        if (token.array[token.begin] == 'S') {
+                            record.lat *= -1;
+                        }
                     } break;
                     case 5: {
-/* we already have it from GPGGA
-                    record.lon = Double.parseDouble(token.substring(0, 3)) + Double.parseDouble(token.substring(3)) / 60D;
-*/
+                        record.lon = parseDouble(token.array, token.begin /* + 0*/, 3) + parseDouble(token.array, token.begin + 3, token.length - 3) / 60D;
                     } break;
                     case 6: {
-/* skip E/W
-                    if (ew.startsWith("W")) {
-                        record.lon *= -1;
-                    }
-*/
+                        if (token.array[token.begin] == 'W') {
+                            record.lon *= -1;
+                        }
                     } break;
                     case 7: {
                         if (record.status == 'A') {
@@ -270,7 +276,7 @@ public final class NmeaParser {
 
         int decSeen = 0;
         int end = offset + length;
-        double result = 0D; // TODO is this correct initial value
+        double result = 0D; // TODO is this correct initial value?
 
         while (offset < end) {
             char ch = value[offset++];
@@ -377,9 +383,11 @@ public final class NmeaParser {
         public int sat = -1;
         public float hdop = -1F;
         public float altitude = -1F;
+/* unused
         public float geoidh;
         public int dgpst;
         public String dgpsid;
+*/
         // RMC
         public char status;
         public float speed = -1F;

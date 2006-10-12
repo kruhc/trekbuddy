@@ -27,13 +27,50 @@ public abstract class Config {
     public static final String LOCATION_PROVIDER_JSR179     = "Internal";
     public static final String LOCATION_PROVIDER_SIMULATOR  = "Simulator";
 
+    public static final String TRACKLOG_NEVER  = "never";
+    public static final String TRACKLOG_ASK    = "ask";
+    public static final String TRACKLOG_ALWAYS = "always";
+
     public static final String TRACKLOG_FORMAT_NMEA         = "NMEA 0183";
     public static final String TRACKLOG_FORMAT_GPX          = "GPX 1.1";
 
-    public static final String[] TRACKLOGS_FORMAT = new String[] {
-        TRACKLOG_FORMAT_GPX,
-        TRACKLOG_FORMAT_NMEA
+/*
+    public static final Object[] TZ = new Object[]{
+        new Object[]{ "GMT-12:00", new Integer(-12 * 60 * 60) },
+        new Object[]{ "GMT-11:00", new Integer(-11 * 60 * 60) },
+        new Object[]{ "GMT-10:00", new Integer(-10 * 60 * 60) },
+        new Object[]{ "GMT-09:00", new Integer(-9 * 60 * 60) },
+        new Object[]{ "GMT-08:00", new Integer(-8 * 60 * 60) },
+        new Object[]{ "GMT-07:00", new Integer(-7 * 60 * 60) },
+        new Object[]{ "GMT-06:00", new Integer(-6 * 60 * 60) },
+        new Object[]{ "GMT-05:00", new Integer(-5 * 60 * 60) },
+        new Object[]{ "GMT-04:00", new Integer(-4 * 60 * 60) },
+        new Object[]{ "GMT-03:30", new Integer((-3 * 60 + 30) * 60) },
+        new Object[]{ "GMT-03:00", new Integer(-3 * 60 * 60) },
+        new Object[]{ "GMT-02:00", new Integer(-2 * 60 * 60) },
+        new Object[]{ "GMT-01:00", new Integer(-1 * 60 * 60) },
+        new Object[]{ "GMT", new Integer(0) },
+        new Object[]{ "GMT+01:00", new Integer(1 * 60 * 60) },
+        new Object[]{ "GMT+02:00", new Integer(2 * 60 * 60) },
+        new Object[]{ "GMT+03:00", new Integer(3 * 60 * 60) },
+        new Object[]{ "GMT+03:30", new Integer((3 * 60 + 30) * 60) },
+        new Object[]{ "GMT+04:00", new Integer(4 * 60 * 60) },
+        new Object[]{ "GMT+04:30", new Integer((4 * 60 + 30) * 60) },
+        new Object[]{ "GMT+05:00", new Integer(5 * 60 * 60) },
+        new Object[]{ "GMT+05:30", new Integer((5 * 60 + 30) * 60) },
+        new Object[]{ "GMT+05:45", new Integer((5 * 60 + 45) * 60) },
+        new Object[]{ "GMT+06:00", new Integer(6 * 60 * 60) },
+        new Object[]{ "GMT+06:30", new Integer((6 * 60 + 30) * 60) },
+        new Object[]{ "GMT+07:00", new Integer(7 * 60 * 60) },
+        new Object[]{ "GMT+08:00", new Integer(8 * 60 * 60) },
+        new Object[]{ "GMT+09:00", new Integer(9 * 60 * 60) },
+        new Object[]{ "GMT+09:30", new Integer((9 * 60 + 30) * 60) },
+        new Object[]{ "GMT+10:00", new Integer(10 * 60 * 60) },
+        new Object[]{ "GMT+11:00", new Integer(11 * 60 * 60) },
+        new Object[]{ "GMT+12:00", new Integer(12 * 60 * 60) },
+        new Object[]{ "GMT+13:00", new Integer(13 * 60 * 60) }
     };
+*/
 
     private static Config instance = null;
 
@@ -52,14 +89,16 @@ public abstract class Config {
     protected int dZ = 0;
 */
 
+/*
     // group [Timezone]
     protected String timeZone = "GMT";
+*/
 
     // group [Provider]
     protected String locationProvider = LOCATION_PROVIDER_JSR82;
 
     // group [common provider options]
-    protected boolean tracklogsOn = false;
+    protected String tracklogsOn = TRACKLOG_NEVER;
     protected String tracklogsFormat = TRACKLOG_FORMAT_GPX;
     protected String tracklogsDir = "file:///E:/tracklogs";
     protected String captureLocator = "capture://video";
@@ -88,8 +127,10 @@ public abstract class Config {
     protected String btDeviceName = "";
     protected String btServiceUrl = "";
 
+/*
     // precalcs
     private Integer tzOffset = null;
+*/
 
     protected Config() {
     }
@@ -153,11 +194,11 @@ public abstract class Config {
         this.locationProvider = locationProvider;
     }
 
-    public boolean isTracklogsOn() {
+    public String getTracklogsOn() {
         return tracklogsOn;
     }
 
-    public void setTracklogsOn(boolean tracklogsOn) {
+    public void setTracklogsOn(String tracklogsOn) {
         this.tracklogsOn = tracklogsOn;
     }
 
@@ -289,25 +330,22 @@ public abstract class Config {
         this.osdBlackColor = osdBlackColor;
     }
 
+/*
     public String getTimeZone() {
         return timeZone;
     }
 
     public int getTimeZoneOffset() {
         if (tzOffset == null) {
-            String tzString = getTimeZone();
-            int i = tzString.indexOf(':');
-            if (i == -1) {
-                tzOffset = new Integer(0);
-            } else {
-                int hours = 0;
-                if (tzString.charAt(3) == '+') {
-                    hours = Integer.parseInt(tzString.substring(4, 6));
-                } else {
-                    hours = Integer.parseInt(tzString.substring(3, 6));
+            for (int N = TZ.length, i = 0; i < N; i++) {
+                String tz = (String) ((Object[]) Config.TZ[i])[0];
+                if (tz.equals(getTimeZone())) {
+                    tzOffset = (Integer) ((Object[]) Config.TZ[i])[1];
+                    break;
                 }
-                int mins = Integer.parseInt(tzString.substring(7));
-                tzOffset = new Integer((hours * 60 + mins) * 60);
+            }
+            if (tzOffset == null) {
+                tzOffset = new Integer(0);
             }
         }
 
@@ -318,6 +356,7 @@ public abstract class Config {
         this.timeZone = timeZone;
         this.tzOffset = null;
     }
+*/
 
     public boolean isUseUTM() {
         return useUTM;
@@ -384,76 +423,82 @@ public abstract class Config {
         private Config ensureInitialized() throws ConfigurationException {
             if (!initialized) {
 
+                RecordStore rs = null;
+                DataInputStream din = null;
                 try {
                     // open the store
-                    RecordStore rs = RecordStore.openRecordStore(NAME, true, RecordStore.AUTHMODE_PRIVATE, false);
+                    rs = RecordStore.openRecordStore(NAME, true, RecordStore.AUTHMODE_PRIVATE, false);
 
                     // new store? existing store? corrupted store?
-                    switch (rs.getNumRecords()) {
-                        case 0:
+                    int numRecords = rs.getNumRecords();
+                    if (numRecords == 0) {
 //#ifdef __LOG__
-                            if (log.isEnabled()) log.info("new configuration");
+                        if (log.isEnabled()) log.info("new configuration");
 //#endif
-                            break;
-                        case 1: {
-                            DataInputStream din = new DataInputStream(new ByteArrayInputStream(rs.getRecord(1)));
-                            mapPath = din.readUTF();
-                            locationProvider = din.readUTF();
-                            timeZone = din.readUTF();
-                            geoDatum = din.readUTF();
-                            tracklogsOn = din.readBoolean();
-                            tracklogsFormat = din.readUTF();
-                            tracklogsDir = din.readUTF();
-                            captureLocator = din.readUTF();
-                            captureFormat = din.readUTF();
-                            btDeviceName = din.readUTF();
-                            btServiceUrl = din.readUTF();
-                            simulatorDelay = din.readInt();
-                            locationInterval = din.readInt();
-                            locationSharing = din.readBoolean();
-                            fullscreen = din.readBoolean();
-                            noSounds = din.readBoolean();
-                            useUTM = din.readBoolean();
-                            osdExtended = din.readBoolean();
-                            osdNoBackground = din.readBoolean();
-                            osdMediumFont = din.readBoolean();
-                            osdBoldFont = din.readBoolean();
-                            osdBlackColor = din.readBoolean();
+                    } else {
+                        din = new DataInputStream(new ByteArrayInputStream(rs.getRecord(1)));
+                        mapPath = din.readUTF();
+                        locationProvider = din.readUTF();
+/*
+                        timeZone = din.readUTF();
+*/
+                        String sUnused = din.readUTF();
+                        geoDatum = din.readUTF();
+/*
+                        tracklogsOn = din.readUTF();
+*/
+                        boolean bUnused = din.readBoolean();
+                        tracklogsFormat = din.readUTF();
+                        tracklogsDir = din.readUTF();
+                        captureLocator = din.readUTF();
+                        captureFormat = din.readUTF();
+                        btDeviceName = din.readUTF();
+                        btServiceUrl = din.readUTF();
+                        simulatorDelay = din.readInt();
+                        locationInterval = din.readInt();
+                        locationSharing = din.readBoolean();
+                        fullscreen = din.readBoolean();
+                        noSounds = din.readBoolean();
+                        useUTM = din.readBoolean();
+                        osdExtended = din.readBoolean();
+                        osdNoBackground = din.readBoolean();
+                        osdMediumFont = din.readBoolean();
+                        osdBoldFont = din.readBoolean();
+                        osdBlackColor = din.readBoolean();
 /*
                             dX = din.readInt();
                             dY = din.readInt();
                             dZ = din.readInt();
 */
-                            din.close();
-//#ifdef __LOG__
-                            if (log.isEnabled()) log.info("configuration read");
-//#endif
-                            } break;
-                        default: {
-
-                            // close the store
-                            rs.closeRecordStore();
-
-                            // delete the store
-                            RecordStore.deleteRecordStore(NAME);
-
-                            throw new ConfigurationException("Corrupted store");
+                        // 0.9.1 extension
+                        try {
+                            tracklogsOn = din.readUTF();
+                        } catch (Exception e) {
+                            tracklogsOn = bUnused ? Config.TRACKLOG_ASK : Config.TRACKLOG_NEVER;
                         }
+//#ifdef __LOG__
+                        if (log.isEnabled()) log.info("configuration read");
+//#endif
                     }
-
-                    // close the store
-                    rs.closeRecordStore();
-
 //#ifdef __LOG__
                     if (log.isEnabled()) log.info("configuration initialized");
 //#endif
-
-                } catch (RecordStoreException e) {
-                    throw new ConfigurationException(e);
-                } catch (IOException e) {
+                } catch (Exception e) {
                     throw new ConfigurationException(e);
                 } finally {
                     initialized = true;
+                    if (din != null) {
+                        try {
+                            din.close();
+                        } catch (IOException e) {
+                        }
+                    }
+                    if (rs != null) {
+                        try {
+                            rs.closeRecordStore();
+                        } catch (RecordStoreException e) {
+                        }
+                    }
                 }
             }
 
@@ -465,15 +510,21 @@ public abstract class Config {
                 throw new ConfigurationException("Not initialized");
             }
 
+            RecordStore rs = null;
             try {
-                RecordStore rs = RecordStore.openRecordStore(NAME, true, RecordStore.AUTHMODE_PRIVATE, true);
                 ByteArrayOutputStream data = new ByteArrayOutputStream();
                 DataOutputStream dout = new DataOutputStream(data);
                 dout.writeUTF(mapPath);
                 dout.writeUTF(locationProvider);
+/*
                 dout.writeUTF(timeZone);
+*/
+                dout.writeUTF("<unused>");
                 dout.writeUTF(geoDatum);
+/*
                 dout.writeBoolean(tracklogsOn);
+*/
+                dout.writeBoolean(false);
                 dout.writeUTF(tracklogsFormat);
                 dout.writeUTF(tracklogsDir);
                 dout.writeUTF(captureLocator);
@@ -496,18 +547,27 @@ public abstract class Config {
                 dout.writeInt(dY);
                 dout.writeInt(dZ);
 */
+                dout.writeUTF(tracklogsOn);
+                dout.flush();
                 dout.close();
                 byte[] bytes = data.toByteArray();
+                rs = RecordStore.openRecordStore(NAME, true, RecordStore.AUTHMODE_PRIVATE, true);
                 if (rs.getNumRecords() > 0) {
                     rs.setRecord(1, bytes, 0, bytes.length);
                 } else {
                     rs.addRecord(bytes, 0, bytes.length);
                 }
-                rs.closeRecordStore();
             } catch (RecordStoreException e) {
                 throw new ConfigurationException(e);
             } catch (IOException e) {
                 throw new ConfigurationException(e);
+            } finally {
+                if (rs != null) {
+                    try {
+                        rs.closeRecordStore();
+                    } catch (RecordStoreException e) {
+                    }
+                }
             }
 
 //#ifdef __LOG__

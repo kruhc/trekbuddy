@@ -25,7 +25,9 @@ final class SettingsForm extends Form implements CommandListener, ItemStateListe
 
     private TextField fieldMapPath;
     private ChoiceGroup choiceDatum;
+/*
     private ChoiceGroup choiceTimezone;
+*/
     private ChoiceGroup choiceProvider;
     private ChoiceGroup choiceTracklog;
     private ChoiceGroup choiceTracklogsFormat;
@@ -90,60 +92,30 @@ final class SettingsForm extends Form implements CommandListener, ItemStateListe
             append(choiceProvider);
         }
 
+/*
         // timezone
         choiceTimezone = new ChoiceGroup("Timezone", ChoiceGroup.POPUP);
-        for (int i = -12; i <= 13; i++) {
-            String tz;
-            if (i == 0) {
-                tz = "GMT";
-            } else if (i > 0) {
-                tz = "GMT+" + (i < 10 ? "0" : "") + Integer.toString(i) + ":00";
-            } else {
-                tz = "GMT-" + (i > -10 ? "0" : "") + Integer.toString(Math.abs(i)) + ":00";
-            }
-
-            choiceTimezone.setSelectedIndex(choiceTimezone.append(tz, null),
-                                            tz.equals(config.getTimeZone()));
-
-            // extra zones
-            if (i == 3) {
-                tz = "GMT+03:30";
-            } else if (i == 4) {
-                tz = "GMT+04:30";
-            } else if (i == 5) {
-                tz = "GMT+05:30";
-                choiceTimezone.setSelectedIndex(choiceTimezone.append(tz, null),
-                                                tz.equals(config.getTimeZone()));
-                tz = "GMT+05:45";
-            } else if (i == 6) {
-                tz = "GMT+06:30";
-            } else if (i == 9) {
-                tz = "GMT+09:30";
-            } else if (i == -3) {
-                tz = "GMT-03:30";
-            } else {
-                tz = null;
-            }
-
-            if (tz != null) {
-                choiceTimezone.setSelectedIndex(choiceTimezone.append(tz, null),
-                                                tz.equals(config.getTimeZone()));
+        for (int N = Config.TZ.length, i = 0; i < N; i++) {
+            String tz = (String) ((Object[]) Config.TZ[i])[0];
+            int index = choiceTimezone.append(tz, null);
+            if (tz.equals(config.getTimeZone())) {
+                choiceTimezone.setSelectedIndex(index, true);
             }
         }
         append(choiceTimezone);
+*/
 
         // tracklogs
         if (TrackingMIDlet.isFs()) {
-            choiceTracklog = new ChoiceGroup("Tracklog", ChoiceGroup.MULTIPLE);
-            choiceTracklog.setSelectedIndex(choiceTracklog.append("enabled", null), config.isTracklogsOn());
+            choiceTracklog = new ChoiceGroup("Tracklog", ChoiceGroup.EXCLUSIVE);
+            String tracklogsOn = config.getTracklogsOn();
+            choiceTracklog.setSelectedIndex(choiceTracklog.append(Config.TRACKLOG_NEVER, null), Config.TRACKLOG_NEVER.equals(tracklogsOn));
+            choiceTracklog.setSelectedIndex(choiceTracklog.append(Config.TRACKLOG_ASK, null), Config.TRACKLOG_ASK.equals(tracklogsOn));
+            choiceTracklog.setSelectedIndex(choiceTracklog.append(Config.TRACKLOG_ALWAYS, null), Config.TRACKLOG_ALWAYS.equals(tracklogsOn));
             choiceTracklogsFormat = new ChoiceGroup("Tracklog Format", ChoiceGroup.EXCLUSIVE);
-            for (int N = Config.TRACKLOGS_FORMAT.length, i = 0; i < N; i++) {
-                String format = Config.TRACKLOGS_FORMAT[i];
-                int idx = choiceTracklogsFormat.append(format, null);
-                if (format.equals(config.getTracklogsFormat())) {
-                    choiceTracklogsFormat.setSelectedIndex(idx, true);
-                }
-            }
+            String tracklogsFormat = config.getTracklogsFormat();
+            choiceTracklogsFormat.setSelectedIndex(choiceTracklogsFormat.append(Config.TRACKLOG_FORMAT_GPX, null), Config.TRACKLOG_FORMAT_GPX.equals(tracklogsFormat));
+            choiceTracklogsFormat.setSelectedIndex(choiceTracklogsFormat.append(Config.TRACKLOG_FORMAT_NMEA, null), Config.TRACKLOG_FORMAT_NMEA.equals(tracklogsFormat));
             fieldTracklogsDir = new TextField("Tracklogs Dir", config.getTracklogsDir(), MAX_URL_LENGTH, TextField.URL);
             if (TrackingMIDlet.isJsr135()) {
                 fieldCaptureLocator = new TextField("Capture Locator", config.getCaptureLocator(), 16, TextField.URL);
@@ -222,7 +194,7 @@ final class SettingsForm extends Form implements CommandListener, ItemStateListe
             }
             // tracklog
             if (TrackingMIDlet.isFs()) {
-                config.setTracklogsOn(choiceTracklog.isSelected(0));
+                config.setTracklogsOn(choiceTracklog.getString(choiceTracklog.getSelectedIndex()));
                 config.setTracklogsFormat(choiceTracklogsFormat.getString(choiceTracklogsFormat.getSelectedIndex()));
                 config.setTracklogsDir(fieldTracklogsDir.getString());
                 if (TrackingMIDlet.isJsr135()) {
@@ -254,8 +226,10 @@ final class SettingsForm extends Form implements CommandListener, ItemStateListe
             config.setOsdBoldFont(misc[6]);
             config.setOsdBlackColor(misc[7]);
             Desktop.resetFont();
+/*
             // timezone
             config.setTimeZone(choiceTimezone.getString(choiceTimezone.getSelectedIndex()));
+*/
             // datum
             config.setGeoDatum(Datum.use(choiceDatum.getString(choiceDatum.getSelectedIndex())));
 /*
@@ -291,7 +265,7 @@ final class SettingsForm extends Form implements CommandListener, ItemStateListe
 
         for (int N = size(), i = 0; i < N; i++) {
             Item item = get(i);
-            if (fieldMapPath == item || choiceProvider == item || /*choiceMisc == item || */choiceTimezone == item || choiceDatum == item/*|| (dX == item || dY == item || dZ == item)*/)
+            if (fieldMapPath == item || choiceProvider == item || /*choiceMisc == item || *//*choiceTimezone == item || */choiceDatum == item/*|| (dX == item || dY == item || dZ == item)*/)
                 continue;
             if (soft) {
                 if (fieldSimulatorDelay == item || fieldLocationInterval == item || choiceFriends == item || choiceTracklog == item)
@@ -359,13 +333,14 @@ final class SettingsForm extends Form implements CommandListener, ItemStateListe
         }
 */
         String provider = choiceProvider.getString(choiceProvider.getSelectedIndex());
+        boolean tracklogsOn = !Config.TRACKLOG_NEVER.equals(choiceTracklog.getString(choiceTracklog.getSelectedIndex()));
         if (Config.LOCATION_PROVIDER_SIMULATOR.equals(provider)) {
             if (TrackingMIDlet.isFs()) {
                 if (!soft) {
                     append(fieldSimulatorDelay);
                     append(choiceTracklog);
                 }
-                if (choiceTracklog.isSelected(0)) {
+                if (tracklogsOn) {
                     append(fieldTracklogsDir);
                 }
             }
@@ -380,7 +355,7 @@ final class SettingsForm extends Form implements CommandListener, ItemStateListe
                 if (!soft) {
                     append(choiceTracklog);
                 }
-                if (choiceTracklog.isSelected(0)) {
+                if (tracklogsOn) {
                     append(choiceTracklogsFormat);
                     append(fieldTracklogsDir);
                     if (fieldCaptureLocator != null && fieldCaptureFormat != null) {

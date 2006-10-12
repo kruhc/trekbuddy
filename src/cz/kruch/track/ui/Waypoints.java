@@ -7,10 +7,11 @@ import cz.kruch.track.event.Callback;
 import cz.kruch.track.util.Logger;
 import cz.kruch.track.location.Waypoint;
 import cz.kruch.track.location.Navigator;
+//#ifndef __NO_FS__
 import cz.kruch.track.location.GpxTracklog;
+//#endif
 import cz.kruch.track.maps.io.LoaderIO;
 import cz.kruch.track.TrackingMIDlet;
-import cz.kruch.track.configuration.Config;
 
 import javax.microedition.lcdui.CommandListener;
 import javax.microedition.lcdui.Command;
@@ -69,7 +70,9 @@ public final class Waypoints extends List
         deleteAll();
 
         // create menu
+//#ifndef __NO_FS__
         append(ITEM_ADD_NEW, null);
+//#endif
         append(ITEM_SHOW_CURRENT, null);
         if (TrackingMIDlet.isJsr120()) {
             if (navigator.isTracking()) {
@@ -80,7 +83,9 @@ public final class Waypoints extends List
         append(ITEM_ENTER_MANUALY, null);
         append(ITEM_CLEAR_ALL, null);
         append(ITEM_LIST_ALL, null);
+//#ifndef __NO_FS__
         append(ITEM_LOAD, null);
+//#endif
 
         // create commands
         removeCommand(cmdSelect);
@@ -107,15 +112,23 @@ public final class Waypoints extends List
 //#endif
             // menu action
             String item = getString(getSelectedIndex());
+//#ifndef __NO_FS__
             if (ITEM_ADD_NEW.equals(item)) {
                 // only when tracking
                 if (navigator.isTracking()) {
-                    // open form
-                    (new WaypointForm(this, navigator.getLocation(), this)).show();
+                    // and we have position
+                    if (navigator.getLocation() != null) {
+                        // open form
+                        (new WaypointForm(this, navigator.getLocation(), this)).show();
+                    } else {
+                        Desktop.showInfo("No position yet", this);
+                    }
                 } else {
                     Desktop.showInfo("Not tracking", this);
                 }
-            } else if (ITEM_SHOW_CURRENT.equals(item)) {
+            } else
+//#endif
+              if (ITEM_SHOW_CURRENT.equals(item)) {
                 if (navigator.getPath().length == 0) {
                     Desktop.showInfo("No waypoints", this);
                 } else if (navigator.getNavigateTo() == -1) {
@@ -126,7 +139,12 @@ public final class Waypoints extends List
             } else if (ITEM_ENTER_MANUALY.equals(item)) {
                 (new WaypointForm(this, this, navigator.getPointer())).show();
             } else if (ITEM_FRIEND_HERE.equals(item)) {
-                (new FriendForm(this, ITEM_FRIEND_HERE, navigator.getLocation().getQualifiedCoordinates(), this, ITEM_FRIEND_HERE)).show();
+                  // we have position?
+                  if (navigator.getLocation() != null) {
+                    (new FriendForm(this, ITEM_FRIEND_HERE, navigator.getLocation().getQualifiedCoordinates(), this, ITEM_FRIEND_HERE)).show();
+                  } else {
+                      Desktop.showInfo("No position yet", this);
+                  }
             } else if (ITEM_FRIEND_THERE.equals(item)) {
                 (new FriendForm(this, ITEM_FRIEND_THERE, navigator.getPointer(), this, ITEM_FRIEND_THERE)).show();
             } else if (ITEM_CLEAR_ALL.equals(item)) {
@@ -140,6 +158,7 @@ public final class Waypoints extends List
                 })).show("Clear waypoint list?", "(" + navigator.getPath().length + " waypoints)");
             } else if (ITEM_LIST_ALL.equals(item)) {
                 actionListAll();
+//#ifndef __NO_FS__
             } else if (ITEM_LOAD.equals(item)) {
                 (new FileBrowser("SelectWaypoints", new Callback() {
                     public void invoke(Object result, Throwable throwable) {
@@ -148,6 +167,7 @@ public final class Waypoints extends List
                         }
                     }
                 }, this)).show();
+//#endif
             }
         } else if (depth == 1) { // wpt action
             /*
@@ -179,10 +199,14 @@ public final class Waypoints extends List
                 // call navigator
                 navigator.setNavigateTo(getSelectedIndex());
 
+//#ifndef __NO_FS__
+
             } else if (WaypointForm.MENU_SAVE == ret[0]) { // save to GPX tracklog
 
                 // call navigator
                 navigator.recordWaypoint((Waypoint) ret[1]);
+
+//#endif
 
             } else if (WaypointForm.MENU_USE == ret[0]) { // enlist manually entered
 
@@ -221,6 +245,9 @@ public final class Waypoints extends List
      * Runnable's run() implementation for LoaderIO operation.
      */
     public void run() {
+
+//#ifndef __NO_FS__
+
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("parse waypoints: " + _urlToRead);
 //#endif
@@ -230,16 +257,16 @@ public final class Waypoints extends List
             // parse new waypoints
             Waypoint[] waypoints = new Waypoint[0];
             if (_urlToRead.endsWith(".gpx")) {
-                waypoints = GpxTracklog.parseGpx(_urlToRead);
+                waypoints = GpxTracklog.parseWaypoints(_urlToRead, "GPX");
             } else if (_urlToRead.endsWith(".loc")) {
-                waypoints = GpxTracklog.parseLoc(_urlToRead);
+                waypoints = GpxTracklog.parseWaypoints(_urlToRead, "LOC");
             }
 
             // show result
             if (waypoints.length > 0) {
-                Desktop.showConfirmation(waypoints.length + " waypoints loaded", Waypoints.this);
+                Desktop.showConfirmation(waypoints.length + " waypoints loaded", this);
             } else {
-                Desktop.showWarning("No waypoints found in " + _urlToRead, null, Waypoints.this);
+                Desktop.showWarning("No waypoints found in " + _urlToRead, null, this);
             }
 
             // update title
@@ -247,6 +274,7 @@ public final class Waypoints extends List
 
             // update navigator
             navigator.setPath(waypoints);
+            navigator.setNavigateTo(-1);
 
         } catch (Throwable t) {
 
@@ -260,7 +288,12 @@ public final class Waypoints extends List
             menu();
 
         }
+
+//#endif
+
     }
+
+//#ifndef __NO_FS__
 
     String _urlToRead = null;
 
@@ -271,6 +304,8 @@ public final class Waypoints extends List
         _urlToRead = url;
         LoaderIO.getInstance().enqueue(this);
     }
+
+//#endif
 
     private void actionClearAll() {
         navigator.setPath(new Waypoint[0]);

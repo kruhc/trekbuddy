@@ -17,7 +17,9 @@ import cz.kruch.track.util.Logger;
 import cz.kruch.track.event.Callback;
 import cz.kruch.track.AssertionFailedException;
 import cz.kruch.j2se.io.BufferedInputStream;
+//#ifndef __NO_FS__
 import cz.kruch.j2se.io.BufferedOutputStream;
+//#endif
 
 import javax.microedition.lcdui.Displayable;
 import javax.microedition.lcdui.List;
@@ -53,8 +55,10 @@ public class Jsr82LocationProvider extends StreamReadingLocationProvider impleme
     private long timestamp = 0;
     private int state = LocationProvider._STARTING;
 
+//#ifndef __NO_FS__
     private api.file.File nmeaFc;
     private OutputStream nmeaObserver;
+//#endif
 
     public Jsr82LocationProvider(Callback recordingCallback) {
         super(Config.LOCATION_PROVIDER_JSR82);
@@ -81,23 +85,33 @@ public class Jsr82LocationProvider extends StreamReadingLocationProvider impleme
             // start watcher
             startWatcher();
 
+//#ifndef __NO_FS__
+
             // start NMEA log
             startNmeaLog();
+
+//#endif
 
             // GPS
             gps();
 
         } catch (Exception e) {
+
             if (e instanceof InterruptedException) {
                 // probably stop request
             } else {
                 // record exception
                 setException(e instanceof LocationException ? (LocationException) e : new LocationException(e));
             }
+
         } finally {
+
+//#ifndef __NO_FS__
 
             // stop NMEA log
             stopNmeaLog();
+
+//#endif
 
             // stop watcher
             stopWatcher();
@@ -166,8 +180,10 @@ public class Jsr82LocationProvider extends StreamReadingLocationProvider impleme
         }
     }
 
+//#ifndef __NO_FS__
+
     private void startNmeaLog() {
-        if (Config.getSafeInstance().isTracklogsOn() && Config.TRACKLOG_FORMAT_NMEA.equals(Config.getSafeInstance().getTracklogsFormat())) {
+        if (isTracklog() && Config.TRACKLOG_FORMAT_NMEA.equals(Config.getSafeInstance().getTracklogsFormat())) {
             String path = Config.getSafeInstance().getTracklogsDir() + "/trekbuddy-" + GpxTracklog.dateToFileDate(System.currentTimeMillis()) + ".nmea";
             try {
                 nmeaFc = new api.file.File(Connector.open(path, Connector.WRITE));
@@ -210,6 +226,8 @@ public class Jsr82LocationProvider extends StreamReadingLocationProvider impleme
         }
     }
 
+//#endif
+
     private void gps() throws IOException {
         // open connection
         StreamConnection connection = (StreamConnection) Connector.open(btspp, Connector.READ);
@@ -227,12 +245,25 @@ public class Jsr82LocationProvider extends StreamReadingLocationProvider impleme
                 // get next location
                 try {
                     location = nextLocation(in);
-                } catch (AssertionFailedException e) {
-                    Desktop.showError(e.getMessage(), null, null);
+                /*} catch (AssertionFailedException e) { // never happens, see nextLocation(...)
+
+                    // warn
+                    Desktop.showWarning(e.getMessage(), null, null);
+
+                    // ignore
+                    continue;
+
+                } */
+                } catch (IOException e) {
+
+                    // record exception
+                    setException(new LocationException(e));
+
+                    /*
+                     * location is null, therefore the loop quits
+                     */
+
                 } catch (Exception e) {
-//#ifdef __LOG__
-                    if (log.isEnabled()) log.warn("Failed to get location.", e);
-//#endif
 
                     // record exception
                     if (e instanceof InterruptedException) {
@@ -254,17 +285,15 @@ public class Jsr82LocationProvider extends StreamReadingLocationProvider impleme
                 boolean stateChange = false;
 
                 // is position valid?
-                if (location.getFix() > 0) {
-                    // fix state - we may be in TEMPORARILY_UNAVAILABLE state
-                    synchronized (sync) {
+                synchronized (sync) {
+                    if (location.getFix() > 0) {
+                        // fix state - we may be in TEMPORARILY_UNAVAILABLE state
                         if (state != LocationProvider.AVAILABLE) {
                             state = LocationProvider.AVAILABLE;
                             stateChange = true;
                         }
                         timestamp = System.currentTimeMillis();
-                    }
-                } else {
-                    synchronized (sync) {
+                    } else {
                         if (state != LocationProvider.TEMPORARILY_UNAVAILABLE) {
                             state = LocationProvider.TEMPORARILY_UNAVAILABLE;
                             stateChange = true;
@@ -279,7 +308,9 @@ public class Jsr82LocationProvider extends StreamReadingLocationProvider impleme
 
                 // send new location
                 notifyListener(location);
-            }
+
+            } // for (; go ;)
+
         } finally {
 
             // close anyway

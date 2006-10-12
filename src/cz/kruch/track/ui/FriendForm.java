@@ -3,22 +3,16 @@
 
 package cz.kruch.track.ui;
 
-import api.location.Location;
 import api.location.QualifiedCoordinates;
 
 import javax.microedition.lcdui.Form;
 import javax.microedition.lcdui.CommandListener;
 import javax.microedition.lcdui.Displayable;
 import javax.microedition.lcdui.TextField;
-import javax.microedition.lcdui.ChoiceGroup;
 import javax.microedition.lcdui.StringItem;
 import javax.microedition.lcdui.Command;
-import javax.microedition.lcdui.Item;
-import javax.microedition.lcdui.Image;
 
 import cz.kruch.track.event.Callback;
-import cz.kruch.track.location.GpxTracklog;
-import cz.kruch.track.location.Waypoint;
 
 public final class FriendForm extends Form implements CommandListener {
     public static final String MENU_SEND = "Send";

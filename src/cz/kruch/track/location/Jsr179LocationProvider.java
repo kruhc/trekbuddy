@@ -4,10 +4,12 @@
 package cz.kruch.track.location;
 
 import cz.kruch.track.configuration.Config;
+import cz.kruch.track.TrackingMIDlet;
 
 public class Jsr179LocationProvider extends api.location.LocationProvider {
     private javax.microedition.location.LocationProvider impl;
     private LocationListenerAdapter adapter;
+    private int lastState;
 
     public Jsr179LocationProvider() {
         super(Config.LOCATION_PROVIDER_JSR179);
@@ -33,13 +35,14 @@ public class Jsr179LocationProvider extends api.location.LocationProvider {
             throw new api.location.LocationException(e);
         }
 
-        notifyListener(impl.getState());
+        lastState = impl.getState();
+        notifyListener(_STARTING); // trick to start GPX tracklog
 
-        return impl.getState();
+        return lastState;
     }
 
     public void stop() throws api.location.LocationException {
-        // anything to do?
+        impl = null;
     }
 
     public void setLocationListener(api.location.LocationListener listener, int interval, int timeout, int maxAge) {
@@ -51,27 +54,50 @@ public class Jsr179LocationProvider extends api.location.LocationProvider {
     }
 
     private final class LocationListenerAdapter implements javax.microedition.location.LocationListener {
+        private static final String APPLICATION_X_JSR179_LOCATION_NMEA = "application/X-jsr179-location-nmea";
 
         public LocationListenerAdapter(api.location.LocationListener listener) {
             setListener(listener);
         }
 
-        public void locationUpdated(javax.microedition.location.LocationProvider locationProvider, javax.microedition.location.Location xlocation) {
-            if (xlocation.isValid()) {
-                javax.microedition.location.QualifiedCoordinates xc = xlocation.getQualifiedCoordinates();
-                api.location.QualifiedCoordinates c = new api.location.QualifiedCoordinates(xc.getLatitude(),
-                                                                                            xc.getLongitude(),
-                                                                                            xc.getAltitude());
+        public void locationUpdated(javax.microedition.location.LocationProvider p,
+                                    javax.microedition.location.Location l) {
+            // valid location?
+            if (l.isValid()) {
 
-                api.location.Location location = new api.location.Location(c, xlocation.getTimestamp(), 1);
-                location.setCourse(xlocation.getCourse());
-                location.setSpeed(xlocation.getSpeed());
+                // signal state change
+                if (lastState != api.location.LocationProvider.AVAILABLE) {
+                    lastState = api.location.LocationProvider.AVAILABLE;
+                    notifyListener(lastState);
+                }
 
+                // create up-to-date location
+                javax.microedition.location.QualifiedCoordinates xc = l.getQualifiedCoordinates();
+                api.location.QualifiedCoordinates qc = new api.location.QualifiedCoordinates(xc.getLatitude(),
+                                                                                             xc.getLongitude(),
+                                                                                             xc.getAltitude());
+                api.location.Location location = new api.location.Location(qc, l.getTimestamp(), 1);
+                location.setCourse(l.getCourse());
+                if (TrackingMIDlet.isSxg75() && (l.getSpeed() != Float.NaN)) {
+                    location.setSpeed(l.getSpeed() * 2);
+                } else {
+                    location.setSpeed(l.getSpeed());
+                }
+
+                // notify
                 notifyListener(location);
 
             } else {
-                notifyListener(api.location.LocationProvider.TEMPORARILY_UNAVAILABLE);
+
+                // signal state change
+                if (lastState != api.location.LocationProvider.TEMPORARILY_UNAVAILABLE) {
+                    lastState = api.location.LocationProvider.TEMPORARILY_UNAVAILABLE;
+                    notifyListener(lastState);
+                }
             }
+
+            // set raw NMEA to status
+            setStatus(l.getExtraInfo(APPLICATION_X_JSR179_LOCATION_NMEA));
         }
 
         public void providerStateChanged(javax.microedition.location.LocationProvider locationProvider, int i) {

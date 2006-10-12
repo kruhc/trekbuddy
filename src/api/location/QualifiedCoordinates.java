@@ -64,7 +64,7 @@ public final class QualifiedCoordinates {
                 throw new IllegalArgumentException("Malformed coordinate: " + value);
             }
             this.deg = Integer.parseInt(value.substring(1, i).trim());
-            this.min = Double.parseDouble(value.substring(i + SIGN.length()).trim()) / 60D;
+            this.min = Double.parseDouble(value.substring(i + SIGN.length()).trim());
         }
 
         private MinDec(String value, String sign) {

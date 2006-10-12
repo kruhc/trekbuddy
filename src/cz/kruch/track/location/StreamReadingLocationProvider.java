@@ -50,12 +50,19 @@ public abstract class StreamReadingLocationProvider extends LocationProvider {
         NmeaParser.Record rmc = NmeaParser.parseRMC(rmcSentence);
         if (rmc.timestamp == gga.timestamp) {
             long datetime = rmc.date + rmc.timestamp;
-            location = new Location(new QualifiedCoordinates(gga.lat, gga.lon, gga.altitude),
+            location = new Location(new QualifiedCoordinates(rmc.lat, rmc.lon, gga.altitude),
                                     datetime, gga.fix, gga.sat, gga.hdop);
             location.setCourse(rmc.angle);
             location.setSpeed(rmc.speed);
         } else {
+/*
             throw new AssertionFailedException("Invalid NMEA flow");
+*/
+            long datetime = rmc.date + rmc.timestamp;
+            location = new Location(new QualifiedCoordinates(rmc.lat, gga.lon),
+                                    datetime, rmc.status == 'A' ? 1 : 0);
+            location.setCourse(rmc.angle);
+            location.setSpeed(rmc.speed);
         }
 
         return location;
@@ -109,6 +116,10 @@ public abstract class StreamReadingLocationProvider extends LocationProvider {
             char[] result = new char[pos];
             System.arraycopy(sb, 0, result, 0, pos);
             return result;
+        }
+
+        if (c == -1) {
+            setStatus("End of stream");
         }
 
         return null;

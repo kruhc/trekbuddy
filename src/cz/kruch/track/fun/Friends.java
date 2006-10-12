@@ -191,7 +191,7 @@ public final class Friends implements MessageListener, Runnable {
                     navigator.addWaypoint(wpt);
 
                     // UI notification
-                    Desktop.showAlarm("Location from " + wpt.getName() + " received", null);
+                    Desktop.showAlarm("Received location info from " + wpt.getName(), null);
                 }
             }
         } catch (Throwable t) {

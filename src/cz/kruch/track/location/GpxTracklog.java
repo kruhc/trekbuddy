@@ -298,7 +298,7 @@ public final class GpxTracklog extends Thread {
             // save picture
             fc = new api.file.File(Connector.open(imgdir + fileName, Connector.WRITE));
             fc.create();
-            output = new BufferedOutputStream(fc.openOutputStream(), 512);
+            output = new BufferedOutputStream(fc.openOutputStream(), 4096);
             output.write(raw);
             output.flush();
 
@@ -374,7 +374,7 @@ public final class GpxTracklog extends Thread {
         boolean bLog = false;
         boolean bTimeDiff = (timestamp - refLocation.getTimestamp()) > MIN_DT;
 
-        if (bTimeDiff == false) {
+        if (!bTimeDiff) {
             if (location.getFix() > 0) {
                 if (refLocation.getFix() > 0) {
                     QualifiedCoordinates refCoordinates = refLocation.getQualifiedCoordinates();
@@ -431,75 +431,33 @@ public final class GpxTracklog extends Thread {
         }
     }
 
-    public static Waypoint[] parseGpx(String url)
+    public static Waypoint[] parseWaypoints(String url, String fileType)
             throws IOException, XmlPullParserException {
-
         Vector waypoints = new Vector(0);
+        api.file.File file = null;
         InputStream in = null;
 
         try {
-            in = new BufferedInputStream(Connector.openInputStream(url), 512);
-            int eventType = XmlPullParser.START_TAG;
-            int wptDepth = 0;
-            String name = null;
-            String comment = null;
-            double lat = -1D, lon = -1D;
+            file = new api.file.File(Connector.open(url, Connector.READ));
+            in = new BufferedInputStream(file.openInputStream(), 512);
             KXmlParser parser = new KXmlParser();
             parser.setInput(in, null); // null is for encoding autodetection
-            while (eventType != XmlPullParser.END_DOCUMENT) {
-                if (eventType == XmlPullParser.START_TAG) {
-                    String tag = parser.getName();
-                    if ("wpt".equals(tag)){
-                        // start level
-                        wptDepth = 1;
-                        // get lat and lon
-                        lat = Double.parseDouble(parser.getAttributeValue(null, "lat"));
-                        lon = Double.parseDouble(parser.getAttributeValue(null, "lon"));
-                    } else if ("name".equals(tag) && (wptDepth == 1)) {
-                        // get name
-                        name = parser.nextText();
-/*
-                        // down one level
-                        wptDepth++;
-*/
-                    } else if ("cmt".equals(tag) && (wptDepth == 1)) {
-                        // get comment
-                        comment = parser.nextText();
-/*
-                        // down one level
-                        wptDepth++;
-*/
-                    } else {
-                        // down one level
-                        wptDepth++;
-                    }
-                } else if (eventType == XmlPullParser.END_TAG) {
-                    String tag = parser.getName();
-                    if ("wpt".equals(tag)){
-                        // got wpt
-                        waypoints.addElement(new Waypoint(new QualifiedCoordinates(lat, lon),
-                                                     name, comment));
-
-                        // reset temps
-                        lat = lon = -1D;
-                        name = comment = null;
-
-                        // reset depth
-                        wptDepth = 0;
-                    } else {
-                        // up one level
-                        wptDepth--;
-                    }
-                }
-
-                // next event
-                eventType = parser.next();
+            if ("GPX".equals(fileType)) {
+                parseGpx(parser, waypoints);
+            } else if ("LOC".equals(fileType)) {
+                parseLoc(parser, waypoints);
             }
-
         } finally {
             if (in != null) {
                 try {
                     in.close();
+                } catch (IOException e) {
+                    // ignore
+                }
+            }
+            if (file != null) {
+                try {
+                    file.close();
                 } catch (IOException e) {
                     // ignore
                 }
@@ -512,81 +470,119 @@ public final class GpxTracklog extends Thread {
         return result;
     }
 
-    public static Waypoint[] parseLoc(String url)
+    private static void parseGpx(KXmlParser parser, Vector v)
             throws IOException, XmlPullParserException {
 
-        Vector waypoints = new Vector(0);
-        InputStream in = null;
-        try {
-            in = new BufferedInputStream(Connector.openInputStream(url), 512);
-            int eventType = XmlPullParser.START_TAG;
-            int wptDepth = 0;
-            String name = null;
-            String comment = null;
-            double lat = -1D, lon = -1D;
-            KXmlParser parser = new KXmlParser();
-            parser.setInput(in, null); // null for encoding autodetection
-            while (eventType != XmlPullParser.END_DOCUMENT) {
-                if (eventType == XmlPullParser.START_TAG) {
-                    String tag = parser.getName();
-                    if ("waypoint".equals(tag)){
-                        // start level
-                        wptDepth = 1;
-                    } else if ("name".equals(tag) && (wptDepth == 1)) {
-                        // get name and comment
-                        name = parser.getAttributeValue(null, "id");
-                        comment = parser.nextText();
-/*
-                        // down one level
-                        wptDepth++;
-*/
-                    } else if ("coord".equals(tag) && (wptDepth == 1)) {
-                        // get lat and lon
-                        lat = Double.parseDouble(parser.getAttributeValue(null, "lat"));
-                        lon = Double.parseDouble(parser.getAttributeValue(null, "lon"));
-                        // down one level
-                        wptDepth++;
-                    } else {
-                        // down one level
-                        wptDepth++;
-                    }
-                } else if (eventType == XmlPullParser.END_TAG) {
-                    String tag = parser.getName();
-                    if ("waypoint".equals(tag)){
-                        // got wpt
-                        waypoints.addElement(new Waypoint(new QualifiedCoordinates(lat, lon),
-                                                     name, comment));
-
-                        // reset temps
-                        lat = lon = -1D;
-                        name = comment = null;
-
-                        // reset depth
-                        wptDepth = 0;
-                    } else {
-                        // up one level
-                        wptDepth--;
-                    }
+        int eventType = XmlPullParser.START_TAG;
+        int wptDepth = 0;
+        String name = null;
+        String comment = null;
+        double lat = -1D, lon = -1D;
+        while (eventType != XmlPullParser.END_DOCUMENT) {
+            if (eventType == XmlPullParser.START_TAG) {
+                String tag = parser.getName();
+                if ("wpt".equals(tag)){
+                    // start level
+                    wptDepth = 1;
+                    // get lat and lon
+                    lat = Double.parseDouble(parser.getAttributeValue(null, "lat"));
+                    lon = Double.parseDouble(parser.getAttributeValue(null, "lon"));
+                } else if ("name".equals(tag) && (wptDepth == 1)) {
+                    // get name
+                    name = parser.nextText();
+    /*
+                    // down one level
+                    wptDepth++;
+    */
+                } else if ("cmt".equals(tag) && (wptDepth == 1)) {
+                    // get comment
+                    comment = parser.nextText();
+    /*
+                    // down one level
+                    wptDepth++;
+    */
+                } else {
+                    // down one level
+                    wptDepth++;
                 }
+            } else if (eventType == XmlPullParser.END_TAG) {
+                String tag = parser.getName();
+                if ("wpt".equals(tag)){
+                    // got wpt
+                    v.addElement(new Waypoint(new QualifiedCoordinates(lat, lon),
+                                              name, comment));
 
-                // next event
-                eventType = parser.next();
-            }
+                    // reset temps
+                    lat = lon = -1D;
+                    name = comment = null;
 
-        } finally {
-            if (in != null) {
-                try {
-                    in.close();
-                } catch (IOException e) {
-                    // ignore
+                    // reset depth
+                    wptDepth = 0;
+                } else {
+                    // up one level
+                    wptDepth--;
                 }
             }
+
+            // next event
+            eventType = parser.next();
         }
+    }
 
-        Waypoint[] result = new Waypoint[waypoints.size()];
-        waypoints.copyInto(result);
+    private static void parseLoc(KXmlParser parser, Vector v)
+            throws IOException, XmlPullParserException {
 
-        return result;
+        int eventType = XmlPullParser.START_TAG;
+        int wptDepth = 0;
+        String name = null;
+        String comment = null;
+        double lat = -1D, lon = -1D;
+        while (eventType != XmlPullParser.END_DOCUMENT) {
+            if (eventType == XmlPullParser.START_TAG) {
+                String tag = parser.getName();
+                if ("waypoint".equals(tag)){
+                    // start level
+                    wptDepth = 1;
+                } else if ("name".equals(tag) && (wptDepth == 1)) {
+                    // get name and comment
+                    name = parser.getAttributeValue(null, "id");
+                    comment = parser.nextText();
+/*
+                    // down one level
+                    wptDepth++;
+*/
+                } else if ("coord".equals(tag) && (wptDepth == 1)) {
+                    // get lat and lon
+                    lat = Double.parseDouble(parser.getAttributeValue(null, "lat"));
+                    lon = Double.parseDouble(parser.getAttributeValue(null, "lon"));
+                    // down one level
+                    wptDepth++;
+                } else {
+                    // down one level
+                    wptDepth++;
+                }
+            } else if (eventType == XmlPullParser.END_TAG) {
+                String tag = parser.getName();
+                if ("waypoint".equals(tag)){
+                    // got wpt
+                    v.addElement(new Waypoint(new QualifiedCoordinates(lat, lon),
+                                              name, comment));
+
+                    // reset temps
+                    lat = lon = -1D;
+                    name = comment = null;
+
+                    // reset depth
+                    wptDepth = 0;
+                } else {
+                    // up one level
+                    wptDepth--;
+                }
+            }
+
+            // next event
+            eventType = parser.next();
+        }
     }
 
     public static String dateToXsdDate(long timestamp) {
@@ -604,7 +600,8 @@ public final class GpxTracklog extends Thread {
     }
 
     public static String dateToFileDate(long time) {
-        CALENDAR.setTime(new Date(time + Config.getSafeInstance().getTimeZoneOffset() * 1000));
+        CALENDAR.setTimeZone(TimeZone.getDefault());
+        CALENDAR.setTime(new Date(time/* + Config.getSafeInstance().getTimeZoneOffset() * 1000*/));
         StringBuffer sb = new StringBuffer();
         sb.append(CALENDAR.get(Calendar.YEAR)).append('-');
         appendTwoDigitStr(sb, CALENDAR.get(Calendar.MONTH) + 1).append('-');

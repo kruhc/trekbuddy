@@ -3,8 +3,10 @@
 
 package cz.kruch.track.maps;
 
+//#ifndef __NO_FS__
 import com.ice.tar.TarInputStream;
 import com.ice.tar.TarEntry;
+//#endif
 
 import javax.microedition.io.Connector;
 import javax.microedition.lcdui.Image;
@@ -257,12 +259,14 @@ public final class Map implements Runnable {
     public Throwable loadMap() {
         try {
             // load map
-            if (path.endsWith(".tar") || path.endsWith(".TAR")) {
-                loader = new TarLoader();
-            } else if (path.endsWith(".jar")) {
+            if (path.endsWith(".jar")) {
                 loader = new JarLoader();
+//#ifndef __NO_FS__
+            } else if (path.endsWith(".tar") || path.endsWith(".TAR")) {
+                loader = new TarLoader();
             } else {
                 loader = new DirLoader();
+//#endif
             }
             loader.init();
             loader.run();
@@ -359,6 +363,8 @@ public final class Map implements Runnable {
         return null;
     }
 
+//#ifndef __NO_FS__
+
     /**
      * File input helper class.
      */
@@ -387,6 +393,8 @@ public final class Map implements Runnable {
             }
         }
     }
+
+//#endif
 
     /**
      * Finalizes map initialization.
@@ -461,8 +469,10 @@ public final class Map implements Runnable {
         }
     }
 
-    public static boolean fileInputStreamResetable = false;
+    public static int fileInputStreamResetable = 0;
     public static boolean useReset = true;
+
+//#ifndef __NO_FS__
 
     private final class TarLoader extends Loader {
         private api.file.File file;
@@ -503,7 +513,7 @@ public final class Map implements Runnable {
                     if (in.markSupported()) {
                         in.mark(Integer.MAX_VALUE);
                         this.in = in;
-                        fileInputStreamResetable = true;
+                        fileInputStreamResetable = 1;
 //#ifdef __LOG__
                         if (log.isEnabled()) log.debug("input stream support marking, very good");
 //#endif
@@ -511,7 +521,7 @@ public final class Map implements Runnable {
                         try {
                             in.reset(); // try reset
                             this.in = in;
-                            fileInputStreamResetable = true;
+                            fileInputStreamResetable = 2;
 //#ifdef __LOG__
                             if (log.isEnabled()) log.debug("input stream may be resetable");
 //#endif
@@ -592,6 +602,8 @@ public final class Map implements Runnable {
             }
         }
     }
+
+//#endif
 
     private final class JarLoader extends Loader {
 
@@ -683,6 +695,8 @@ public final class Map implements Runnable {
             }
         }
     }
+
+//#ifndef __NO_FS__
 
     private final class DirLoader extends Loader {
         private String dir;
@@ -819,4 +833,7 @@ public final class Map implements Runnable {
             }
         }
     }
+
+//#endif
+
 }

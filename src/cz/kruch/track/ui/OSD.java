@@ -23,6 +23,7 @@ final class OSD extends Bar {
     private volatile int providerStatus = LocationProvider.OUT_OF_SERVICE;
     private volatile String recording = null;
     private volatile String extendedInfo;
+    private volatile String sat;
 
     private int rw;
 
@@ -70,6 +71,9 @@ final class OSD extends Bar {
         graphics.drawString(info, gx + BORDER, gy, 0/*Graphics.TOP | Graphics.LEFT*/);
         if (isExtInfo) {
             graphics.drawString(extendedInfo, gx + BORDER, gy + bh, 0/*Graphics.TOP | Graphics.LEFT*/);
+            if (sat != null) {
+                graphics.drawString(sat, width - BORDER - Desktop.font.stringWidth(sat), gy + bh, 0/*Graphics.TOP | Graphics.LEFT*/);
+            }
         }
 
         // gpx recording
@@ -112,6 +116,10 @@ final class OSD extends Bar {
 
     public void setExtendedInfo(String extendedInfo) {
         this.extendedInfo = extendedInfo;
+    }
+
+    public void setSat(int sat) {
+        this.sat = sat > 0 ? sat + "*" : null;
     }
 
     public int[] getClip() {

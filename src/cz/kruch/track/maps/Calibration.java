@@ -319,6 +319,8 @@ public abstract class Calibration {
             while (line != null) {
                 if (line.startsWith("Additional Calibration Data"))
                     break;
+                if (line.startsWith("Border and Scale"))
+                    break;
                 parsePoint(line, pos, coords);
                 line = reader.readLine(false);
             }

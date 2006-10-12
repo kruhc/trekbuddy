@@ -10,17 +10,24 @@ import javax.microedition.lcdui.Display;
 import cz.kruch.track.ui.Desktop;
 import cz.kruch.track.ui.Console;
 import cz.kruch.track.configuration.Config;
-import cz.kruch.track.configuration.ConfigurationException;
 
 import java.io.UnsupportedEncodingException;
 
 public class TrackingMIDlet extends MIDlet {
-
     private static String APP_NAME = Desktop.APP_TITLE + " (C) 2006 KrUcH";
+
+    public static final int FS_UNKNOWN = -1;
+    public static final int FS_NONE    = 0;
+    public static final int FS_JSR75   = 1;
+    public static final int FS_SIEMENS = 2;
+    public static final int FS_SXG75   = 3;
+
+    private static int fsType = FS_UNKNOWN;
 
     private Desktop desktop;
 
     // system info
+    private static String platform;
     private static String flags;
     private static boolean logEnabled;
     private static boolean jsr179;
@@ -29,6 +36,7 @@ public class TrackingMIDlet extends MIDlet {
     private static boolean jsr135;
     private static boolean videoCapture;
     private static boolean fs;
+    private static boolean sxg75;
     private static int numAlphaLevels = 2;
 
     static {
@@ -42,6 +50,7 @@ public class TrackingMIDlet extends MIDlet {
         this.desktop = null;
 
         // detect environment
+        TrackingMIDlet.platform = System.getProperty("microedition.platform");
         TrackingMIDlet.flags = getAppProperty("App-Flags");
         TrackingMIDlet.logEnabled = "true".equals(getAppProperty("Log-Enable"));
         try {
@@ -70,10 +79,31 @@ public class TrackingMIDlet extends MIDlet {
         }
 
         // fs type
-        System.out.println("* fs type: " + api.file.File.getFsType());
-        TrackingMIDlet.fs = api.file.File.getFsType() > api.file.File.FS_NONE;
+        fsType = FS_UNKNOWN;
+//#ifndef __NO_FS__
+        try {
+            Class clazz = Class.forName("javax.microedition.io.file.FileConnection");
+            fsType = FS_JSR75;
+        } catch (ClassNotFoundException e) {
+        } catch (NoClassDefFoundError e) {
+        }
+        if (fsType == FS_UNKNOWN) {
+            try {
+                Class clazz = Class.forName("com.siemens.mp.io.file.FileConnection");
+                fsType = FS_SIEMENS;
+            } catch (ClassNotFoundException e) {
+            } catch (NoClassDefFoundError e) {
+            }
+        }
+//#endif
+        if (fsType == FS_UNKNOWN) {
+            fsType = FS_NONE;
+        }
+        System.out.println("* fs type: " + fsType);
+        TrackingMIDlet.fs = fsType > FS_NONE;
 
         // setup environment
+//#ifndef __NO_FS__
         if (hasFlag("fs_read_skip")) {
             System.out.println("* fs read-skip feature on");
             com.ice.tar.TarInputStream.useReadSkip = true;
@@ -86,7 +116,9 @@ public class TrackingMIDlet extends MIDlet {
             System.out.println("* fs no-reset feature on");
             cz.kruch.track.maps.Map.useReset = false;
         }
-        if (hasFlag("ui_no_partial_flush")) {
+//#endif
+        sxg75 = "SXG75".equals(platform);
+        if (hasFlag("ui_no_partial_flush") || sxg75) {
             System.out.println("* ui no-partial-flush feature on");
             cz.kruch.track.ui.Desktop.partialFlush = false;
         }
@@ -197,6 +229,14 @@ public class TrackingMIDlet extends MIDlet {
 
     public static boolean isFs() {
         return fs;
+    }
+
+    public static boolean isSxg75() {
+        return sxg75;
+    }
+
+    public static String getPlatform() {
+        return platform;
     }
 
     public static String getFlags() {

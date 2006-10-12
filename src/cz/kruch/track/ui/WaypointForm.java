@@ -3,9 +3,10 @@
 
 package cz.kruch.track.ui;
 
-import cz.kruch.track.configuration.Config;
 import cz.kruch.track.event.Callback;
+//#ifndef __NO_FS__
 import cz.kruch.track.fun.Camera;
+//#endif
 import cz.kruch.track.location.Waypoint;
 import cz.kruch.track.TrackingMIDlet;
 
@@ -66,12 +67,14 @@ public final class WaypointForm extends Form
         appendWithNewlineAfter(this.fieldComment = new TextField("Comment", null, 256, TextField.ANY));
         appendWithNewlineAfter(new StringItem("Time", dateToString(location.getTimestamp())));
         appendWithNewlineAfter(new StringItem("Location", location.getQualifiedCoordinates().toString()));
+//#ifndef __NO_FS__
         if (TrackingMIDlet.isJsr135()) {
             StringItem snapshot = new StringItem("Snapshot", "Take", Item.BUTTON);
             snapshot.setDefaultCommand(new Command("Take", Command.ITEM, 1));
             snapshot.setItemCommandListener(this);
             append(snapshot);
         }
+//#endif
         addCommand(new Command("Cancel", Command.BACK, 1));
         addCommand(new Command(MENU_SAVE, Command.SCREEN, 1));
     }
@@ -144,6 +147,7 @@ public final class WaypointForm extends Form
         } else if (item == fieldLon) {
             editCoordinate(new QualifiedCoordinates.MinDec(QualifiedCoordinates.LAT, coordinates.getLat()));
         } else */
+//#ifndef __NO_FS__
         if ("Take".equals(command.getLabel())) {
             try {
                 (new Camera(this, this)).show();
@@ -151,6 +155,7 @@ public final class WaypointForm extends Form
                 Desktop.showError("Camera failed", t, this);
             }
         }
+//#endif        
     }
 
     public void invoke(Object result, Throwable throwable) {
@@ -206,7 +211,8 @@ public final class WaypointForm extends Form
     }
 
     private static String dateToString(long time) {
-        CALENDAR.setTime(new Date(time + Config.getSafeInstance().getTimeZoneOffset() * 1000));
+        CALENDAR.setTimeZone(TimeZone.getDefault());
+        CALENDAR.setTime(new Date(time/* + Config.getSafeInstance().getTimeZoneOffset() * 1000*/));
         StringBuffer sb = new StringBuffer();
         sb.append(CALENDAR.get(Calendar.YEAR)).append('-');
         appendTwoDigitStr(sb, CALENDAR.get(Calendar.MONTH) + 1).append('-');

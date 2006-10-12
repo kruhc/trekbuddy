@@ -5,9 +5,68 @@ package cz.kruch.track.ui.nokia;
 
 import cz.kruch.track.ui.Desktop;
 
-public final class DeviceControl {
+import java.util.Timer;
+import java.util.TimerTask;
 
+public final class DeviceControl extends TimerTask {
+
+    private static final int NOKIA   = 0;
+    private static final int SE      = 1;
+    private static final int SIEMENS = 2;
+
+    private static int phone = -1;
     private static int backlight = 0;
+    private static Timer clock;
+
+    private static DeviceControl instance;
+
+    static {
+        try {
+            Class.forName("com.nokia.mid.ui.DeviceControl");
+            if (System.getProperty("com.sonyericsson.imei") == null) {
+                phone = NOKIA;
+            } else {
+                phone = SE;
+            }
+        } catch (ClassNotFoundException e) {
+        } catch (NoClassDefFoundError e) {
+        }
+        if (phone == -1) {
+            try {
+                Class.forName("com.siemens.mp.game.Light");
+                phone = SIEMENS;
+            } catch (ClassNotFoundException e) {
+            } catch (NoClassDefFoundError e) {
+            }
+        }
+    }
+
+    public static void destroy() {
+        if (clock != null) {
+            clock.cancel();
+        }
+    }
+
+    public static void setBacklight() {
+        switch (phone) {
+            case NOKIA:
+                setBacklightNokia();
+                break;
+            case SE:
+                if (instance == null) {
+                    instance = new DeviceControl();
+                }
+                if (clock == null) {
+                    clock = new Timer();
+                    clock.schedule(instance, 5000, 15000);
+                }
+                setBacklightSonyEricsson();
+                break;
+            case SIEMENS:
+                setBacklightSiemens();
+                break;
+        }
+    }
 
     public static void setBacklightNokia() {
         try {
@@ -32,6 +91,29 @@ public final class DeviceControl {
             }
             Desktop.showConfirmation("Backlight " + (backlight == 0 ? "off" : "on"), null);
         } catch (Throwable t) {
+        }
+    }
+
+    public static void setBacklightSonyEricsson() {
+        try {
+            if (backlight == 0) {
+                com.nokia.mid.ui.DeviceControl.setLights(0, 100);
+                backlight = 1;
+            } else {
+                com.nokia.mid.ui.DeviceControl.setLights(0, 0);
+                backlight = 0;
+            }
+            Desktop.showConfirmation("Backlight " + (backlight == 0 ? "off" : "on"), null);
+        } catch (Throwable t) {
+        }
+    }
+
+    public void run() {
+        if (phone == SE) {
+            if (backlight == 1) {
+                com.nokia.mid.ui.DeviceControl.setLights(0, 0);
+                com.nokia.mid.ui.DeviceControl.setLights(0, 100);
+            }
         }
     }
 }

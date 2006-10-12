@@ -3,63 +3,23 @@
 
 package api.file;
 
-import javax.microedition.io.file.FileConnection;
-import javax.microedition.io.file.FileSystemRegistry;
 import javax.microedition.io.Connection;
 import java.util.Enumeration;
 import java.io.InputStream;
 import java.io.IOException;
-/*
-import java.io.DataInputStream;
-*/
 import java.io.OutputStream;
-/*
-import java.io.DataOutputStream;
-*/
 
 public final class File /*implements FileConnection*/ {
     public final static String FILE_SEPARATOR  = "/";
 
-    public static final int FS_UNKNOWN = -1;
-    public static final int FS_NONE    = 0;
-    public static final int FS_JSR75   = 1;
-    public static final int FS_SIEMENS = 2;
-    public static final int FS_SXG75   = 3;
-
-    private static int fsType = FS_UNKNOWN;
-
-    private FileConnection fc;
+    private javax.microedition.io.file.FileConnection fc;
 
     public static Enumeration listRoots() {
-        return FileSystemRegistry.listRoots();
-    }
-
-    public static int getFsType() {
-        if (fsType == FS_UNKNOWN) {
-            try {
-                Class clazz = Class.forName("javax.microedition.io.file.FileConnection");
-                fsType = FS_JSR75;
-            } catch (ClassNotFoundException e) {
-            } catch (NoClassDefFoundError e) {
-            }
-            if (fsType == FS_UNKNOWN) {
-                try {
-                    Class clazz = Class.forName("com.siemens.mp.io.file.FileConnection");
-                    fsType = FS_SIEMENS;
-                } catch (ClassNotFoundException e) {
-                } catch (NoClassDefFoundError e) {
-                }
-            }
-            if (fsType == FS_UNKNOWN) {
-                fsType = FS_NONE;
-            }
-        }
-
-        return fsType;
+        return javax.microedition.io.file.FileSystemRegistry.listRoots();
     }
 
     public File(Connection c) {
-        this.fc = (FileConnection) c;
+        this.fc = (javax.microedition.io.file.FileConnection) c;
     }
 
 /*

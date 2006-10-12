@@ -4,7 +4,6 @@
 package cz.kruch.track.ui;
 
 import cz.kruch.track.TrackingMIDlet;
-import cz.kruch.track.configuration.Config;
 
 import javax.microedition.lcdui.Form;
 import javax.microedition.lcdui.StringItem;
@@ -14,21 +13,25 @@ import javax.microedition.lcdui.Displayable;
 
 import api.location.LocationException;
 
+import java.util.TimeZone;
+
 public final class InfoForm extends Form implements CommandListener {
 
     public InfoForm() {
         super("Info");
     }
 
-    public void show(LocationException le) {
+    public void show(LocationException le, Object ps) {
         // gc (for memory info to be correct)
         System.gc();
 
         append(new StringItem("Memory", Long.toString(Runtime.getRuntime().totalMemory()) + "/" + Long.toString(Runtime.getRuntime().freeMemory())));
         append(new StringItem("AppFlags", TrackingMIDlet.getFlags()));
-        append(new StringItem("Platform", System.getProperty("microedition.platform")));
-        append(new StringItem("Jsr75/fc", "resetable? " + (new Boolean(cz.kruch.track.maps.Map.fileInputStreamResetable)).toString()));
-        append(new StringItem("ProviderStatus", le == null ? "" : le.toString()));
+        append(new StringItem("Platform", TrackingMIDlet.getPlatform()));
+        append(new StringItem("TimeZone", TimeZone.getDefault().getID() + "; " + TimeZone.getDefault().useDaylightTime() + "; " + TimeZone.getDefault().getRawOffset()));
+        append(new StringItem("Jsr75/Fc", "resetable? " + Integer.toString(cz.kruch.track.maps.Map.fileInputStreamResetable)));
+        append(new StringItem("ProviderError", le == null ? "" : le.toString()));
+        append(new StringItem("ProviderStatus", ps == null ? "" : ps.toString()));
         append(new StringItem("SnapshotEncodings", System.getProperty("video.snapshot.encodings")));
         addCommand(new Command("Close", Command.BACK, 1));
         setCommandListener(this);

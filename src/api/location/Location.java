@@ -79,7 +79,8 @@ public class Location {
 /*
         if (timestamp > 0) {
 */
-            CALENDAR.setTime(new Date(timestamp + tzOffset * 1000));
+            CALENDAR.setTimeZone(TimeZone.getDefault());
+            CALENDAR.setTime(new Date(timestamp/* + tzOffset*/));
             int hour = CALENDAR.get(Calendar.HOUR_OF_DAY);
             if (hour < 10) sb.append('0');
             sb.append(hour).append(':');
@@ -100,9 +101,11 @@ public class Location {
             sb.append((new Float(course)).intValue()).append(QualifiedCoordinates.SIGN).append(' ');
         }
 */
+/* rendered by OSD directly
         if (sat > -1) {
             sb.append(sat).append('*');
         }
+*/
 
         if (sb.length() > 0) {
             return sb.toString();

@@ -10,8 +10,10 @@ public abstract class LocationProvider {
     public static final int OUT_OF_SERVICE = 3;
 
     private String name;
+    private boolean tracklog;
     private LocationListener listener;
     private LocationException exception;
+    private Object status;
 
     protected LocationProvider(String name) {
         this.name = name;
@@ -31,6 +33,22 @@ public abstract class LocationProvider {
 
     protected synchronized void setException(LocationException exception) {
         this.exception = exception;
+    }
+
+    public boolean isTracklog() {
+        return tracklog;
+    }
+
+    public void setTracklog(boolean tracklog) {
+        this.tracklog = tracklog;
+    }
+
+    public Object getStatus() {
+        return status;
+    }
+
+    protected void setStatus(Object status) {
+        this.status = status;
     }
 
     public abstract int start() throws LocationException;

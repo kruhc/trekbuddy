@@ -30,9 +30,8 @@ public final class FileBrowser extends List implements CommandListener, Runnable
     private Command cmdBack;
     private Command cmdSelect;
 
-    private volatile api.file.File fc;
+    private volatile api.file.File file;
     private volatile String path;
-    private volatile String selection;
     private volatile int depth = 0;
 
     public FileBrowser(String title, Callback callback, Displayable next) {
@@ -50,10 +49,6 @@ public final class FileBrowser extends List implements CommandListener, Runnable
         browse();
     }
 
-    public String getSelection() {
-        return selection;
-    }
-
     public void browse() {
         (new Thread(this)).start();
     }
@@ -61,16 +56,16 @@ public final class FileBrowser extends List implements CommandListener, Runnable
     public void run() {
         if (depth == 0) {
             try {
-                if (fc != null) {
+                if (file != null) {
 //#ifdef __LOG__
                     if (log.isEnabled()) log.debug("close existing fc");
 //#endif
                     try {
-                        fc.close();
+                        file.close();
                     } catch (IOException e) {
                     }
                 }
-                fc = null;
+                file = null;
 
                 show(api.file.File.listRoots());
 
@@ -85,20 +80,19 @@ public final class FileBrowser extends List implements CommandListener, Runnable
                 boolean isDir = false;
                 String url = null;
 
-                if (fc == null) {
-                    fc = new api.file.File(Connector.open("file:///" + path, Connector.READ));
-                    url = fc.getURL();
-                    isDir = fc.isDirectory();
+                if (file == null) {
+                    file = new api.file.File(Connector.open("file:///" + path, Connector.READ));
+                    url = file.getURL();
+                    isDir = file.isDirectory();
                 } else {
-                    fc.setFileConnection(path);
-                    url = fc.getURL();
+                    file.setFileConnection(path);
+                    url = file.getURL();
                     isDir = url.endsWith(api.file.File.FILE_SEPARATOR);
                 }
 
                 if (isDir) {
-                    show(fc.list());
+                    show(file.list());
                 } else {
-                    selection = url;
                     quit(null);
                 }
             } catch (Throwable t) {
@@ -158,21 +152,10 @@ public final class FileBrowser extends List implements CommandListener, Runnable
     }
 
     private void quit(Throwable throwable) {
-        // close connection
-        if (fc != null) {
-//#ifdef __LOG__
-            if (log.isEnabled()) log.debug("join left fc");
-//#endif
-            try {
-                fc.close();
-            } catch (IOException e) {
-            }
-        }
-
         // show parent
         Desktop.display.setCurrent(next);
 
         // we are done
-        callback.invoke(selection, throwable);
+        callback.invoke(file, throwable);
     }
 }

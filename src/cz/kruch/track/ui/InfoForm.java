@@ -30,8 +30,8 @@ public final class InfoForm extends Form implements CommandListener {
         append(new StringItem("Platform", TrackingMIDlet.getPlatform()));
         append(new StringItem("TimeZone", TimeZone.getDefault().getID() + "; " + TimeZone.getDefault().useDaylightTime() + "; " + TimeZone.getDefault().getRawOffset()));
         append(new StringItem("Jsr75/Fc", "resetable? " + Integer.toString(cz.kruch.track.maps.Map.fileInputStreamResetable)));
-        append(new StringItem("ProviderError", le == null ? "" : le.toString()));
         append(new StringItem("ProviderStatus", ps == null ? "" : ps.toString()));
+        append(new StringItem("ProviderError", le == null ? "" : le.toString()));
         append(new StringItem("SnapshotEncodings", System.getProperty("video.snapshot.encodings")));
         addCommand(new Command("Close", Command.BACK, 1));
         setCommandListener(this);

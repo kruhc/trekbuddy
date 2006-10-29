@@ -11,11 +11,7 @@ import api.location.Location;
 import cz.kruch.track.configuration.Config;
 import cz.kruch.track.configuration.ConfigurationException;
 import cz.kruch.track.ui.Desktop;
-//#ifdef __LOG__
-import cz.kruch.track.util.Logger;
-//#endif
-import cz.kruch.track.event.Callback;
-import cz.kruch.track.AssertionFailedException;
+import cz.kruch.track.TrackingMIDlet;
 import cz.kruch.j2se.io.BufferedInputStream;
 //#ifndef __NO_FS__
 import cz.kruch.j2se.io.BufferedOutputStream;
@@ -36,13 +32,7 @@ import java.util.Timer;
 import java.util.TimerTask;
 
 public class Jsr82LocationProvider extends StreamReadingLocationProvider implements Runnable {
-//#ifdef __LOG__
-    private static final Logger log = new Logger("Jsr82LocationProvider");
-//#endif
-
     private static final int WATCHER_PERIOD = 60 * 1000;
-
-    private Callback recordingCallback;
 
     private Thread thread;
 
@@ -60,9 +50,11 @@ public class Jsr82LocationProvider extends StreamReadingLocationProvider impleme
     private OutputStream nmeaObserver;
 //#endif
 
-    public Jsr82LocationProvider(Callback recordingCallback) {
+    public Jsr82LocationProvider(/*Callback recordingCallback*/) {
         super(Config.LOCATION_PROVIDER_JSR82);
+/*
         this.recordingCallback = recordingCallback;
+*/
     }
 
     public void run() {
@@ -105,6 +97,9 @@ public class Jsr82LocationProvider extends StreamReadingLocationProvider impleme
             }
 
         } finally {
+
+            // be ready for restart
+            btspp = null;
 
 //#ifndef __NO_FS__
 
@@ -193,8 +188,10 @@ public class Jsr82LocationProvider extends StreamReadingLocationProvider impleme
                 // set stream 'observer'
                 setObserver(nmeaObserver);
 
+/*
                 // signal recording has started
                 recordingCallback.invoke(new Integer(GpxTracklog.CODE_RECORDING_START), null);
+*/
 
             } catch (Throwable t) {
                 Desktop.showError("Failed to start NMEA log.", t, null);
@@ -204,8 +201,10 @@ public class Jsr82LocationProvider extends StreamReadingLocationProvider impleme
 
     public void stopNmeaLog() {
 
+/*
         // signal recording is stopping
         recordingCallback.invoke(new Integer(GpxTracklog.CODE_RECORDING_STOP), null);
+*/
 
         // clear stream 'observer'
         setObserver(null);
@@ -346,17 +345,19 @@ public class Jsr82LocationProvider extends StreamReadingLocationProvider impleme
         private javax.bluetooth.RemoteDevice device;
         private Vector devices = new Vector();
         private String url;
-        private int transactionID;
+        private int transactionID = 0;
         private boolean inquiryCompleted;
 
         private boolean cancel = false;
 
         private Command cmdBack = new Command("Cancel", Command.BACK, 1);
-        private Command cmdRefresh = new Command("Refresh", Command.SCREEN, List.SELECT_COMMAND.getPriority() + 1);
+        private Command cmdRefresh = new Command("Refresh", Command.SCREEN, 1);
+        private Command cmdConnect = new Command("Connect", Command.ITEM, 1);
 
         public Discoverer() {
             super("DeviceSelection", List.IMPLICIT);
             this.setCommandListener(this);
+            this.removeCommand(List.SELECT_COMMAND);
         }
 
         public void start() throws LocationException {
@@ -389,7 +390,7 @@ public class Jsr82LocationProvider extends StreamReadingLocationProvider impleme
                     Desktop.showError("Failed to update config", e, null);
                 }
             } else {
-                notifyListener(LocationProvider.OUT_OF_SERVICE);
+                notifyListener(LocationProvider._CANCELLED);
             }
         }
 
@@ -441,20 +442,15 @@ public class Jsr82LocationProvider extends StreamReadingLocationProvider impleme
         }
 
         private void setupCommands(boolean ready) {
+            removeCommand(cmdBack);
+            removeCommand(cmdRefresh);
+            removeCommand(cmdConnect);
+            addCommand(cmdBack);
             if (ready) {
-                removeCommand(cmdBack);
-                removeCommand(cmdRefresh);
-                removeCommand(List.SELECT_COMMAND);
-                addCommand(cmdBack);
                 addCommand(cmdRefresh);
                 if (devices.size() > 0) {
-                    addCommand(List.SELECT_COMMAND);
+                    addCommand(cmdConnect);
                 }
-            } else {
-                removeCommand(cmdBack);
-                removeCommand(cmdRefresh);
-                removeCommand(List.SELECT_COMMAND);
-                addCommand(cmdBack);
             }
         }
 
@@ -565,10 +561,15 @@ public class Jsr82LocationProvider extends StreamReadingLocationProvider impleme
         }
 
         public void commandAction(Command command, Displayable displayable) {
-            if (command == List.SELECT_COMMAND) { /* device selection */
+            if (command == cmdConnect) { /* device selection */
                 btname = getString(getSelectedIndex());
                 device = (javax.bluetooth.RemoteDevice) devices.elementAt(getSelectedIndex());
-                goServices();
+                if (TrackingMIDlet.hasFlag("bt_service_search")) {
+                    goServices();
+                } else {
+                    url = "btspp://" + device.getBluetoothAddress() + ":1";
+                    letsGo(true);
+                }
             } else if (command.getCommandType() == Command.BACK) {
                 cancel = true;
                 if (transactionID > 0) {
@@ -584,7 +585,7 @@ public class Jsr82LocationProvider extends StreamReadingLocationProvider impleme
                 } else { /* offer device selection */
                     showDevices();
                 }
-            } else if ("Refresh".equals(command.getLabel())) { /* refresh device list */
+            } else if (command == cmdRefresh) { /* refresh device list */
                 try {
                     goDevices();
                 } catch (LocationException e) {

@@ -42,7 +42,7 @@ public final class TarInputStream extends /* FilterInputStream */ InputStream {
 
     private InputStream in;
 
-    private int blockSize;
+//    private int blockSize;
     private int recordSize;
     private boolean hasHitEOF;
     private long entrySize;
@@ -59,7 +59,7 @@ public final class TarInputStream extends /* FilterInputStream */ InputStream {
 
     private TarInputStream(InputStream is, int blockSize, int recordSize) {
         this.in = is; /* super(is); */
-        this.blockSize = blockSize;
+//        this.blockSize = blockSize;
         this.recordSize = recordSize;
         this.oneBuffer = new byte[1];
         this.headerBuffer = new byte[blockSize];
@@ -106,7 +106,7 @@ public final class TarInputStream extends /* FilterInputStream */ InputStream {
                 numRead = this.in.skip(num);
             }
 
-            if (numRead == -1) {
+            if (numRead < 0) {
                 break;
             }
 

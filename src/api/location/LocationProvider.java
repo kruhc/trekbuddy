@@ -8,6 +8,7 @@ public abstract class LocationProvider {
     public static final int AVAILABLE = 1;
     public static final int TEMPORARILY_UNAVAILABLE = 2;
     public static final int OUT_OF_SERVICE = 3;
+    public static final int _CANCELLED = 4; // non-JSR_179
 
     private String name;
     private boolean tracklog;

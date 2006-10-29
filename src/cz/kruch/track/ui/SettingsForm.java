@@ -135,19 +135,36 @@ final class SettingsForm extends Form implements CommandListener, ItemStateListe
 
         // 'Friends'
         choiceFriends = new ChoiceGroup("Location Sharing", ChoiceGroup.MULTIPLE);
-        choiceFriends.setSelectedIndex(choiceFriends.append("receive", null), config.isLocationSharing());
+        choiceFriends.append("receive", null);
+        choiceFriends.setSelectedFlags(new boolean[] {
+            config.isLocationSharing()
+        });
 
         // desktop settings
         choiceMisc = new ChoiceGroup("Desktop", ChoiceGroup.MULTIPLE);
-        choiceMisc.setSelectedIndex(choiceMisc.append("fullscreen", null), config.isFullscreen());
-        choiceMisc.setSelectedIndex(choiceMisc.append("no sounds", null), config.isNoSounds());
-        choiceMisc.setSelectedIndex(choiceMisc.append("UTM coordinates", null), config.isUseUTM());
-        choiceMisc.setSelectedIndex(choiceMisc.append("OSD extended", null), config.isOsdExtended());
-        choiceMisc.setSelectedIndex(choiceMisc.append("OSD no background", null), config.isOsdNoBackground());
-        choiceMisc.setSelectedIndex(choiceMisc.append("OSD larger font", null), config.isOsdMediumFont());
-        choiceMisc.setSelectedIndex(choiceMisc.append("OSD bold font", null), config.isOsdBoldFont());
-        choiceMisc.setSelectedIndex(choiceMisc.append("OSD black color", null), config.isOsdBlackColor());
-        append(choiceMisc);
+        choiceMisc.append("fullscreen", null);
+        choiceMisc.append("no sounds", null);
+        choiceMisc.append("decimal precision", null);
+        choiceMisc.append("UTM coordinates", null);
+        choiceMisc.append("OSD extended", null);
+        choiceMisc.append("OSD no background", null);
+        choiceMisc.append("OSD larger font", null);
+        choiceMisc.append("OSD bold font", null);
+        choiceMisc.append("OSD black color", null);
+        choiceMisc.setSelectedFlags(new boolean[] {
+            config.isFullscreen(),
+            config.isNoSounds(),
+            config.isDecimalPrecision(),
+            config.isUseUTM(),
+            config.isOsdExtended(),
+            config.isOsdNoBackground(),
+            config.isOsdMediumFont(),
+            config.isOsdBoldFont(),
+            config.isOsdBlackColor()
+        });
+        if (choiceProvider.size() == 0) { // dumb phone
+            append(choiceMisc);
+        }
 
         // show current provider and tracklog specific options
         showProviderOptions(false);
@@ -209,22 +226,23 @@ final class SettingsForm extends Form implements CommandListener, ItemStateListe
             if (TrackingMIDlet.isJsr179()) {
                 config.setLocationInterval(Integer.parseInt(fieldLocationInterval.getString()));
             }
-            // 'Friends'
-            boolean[] misc = new boolean[choiceFriends.size()];
-            choiceFriends.getSelectedFlags(misc);
-            config.setLocationSharing(misc[0]);
+            // location sharing
+            boolean[] friends = new boolean[choiceFriends.size()];
+            choiceFriends.getSelectedFlags(friends);
+            config.setLocationSharing(friends[0]);
             // desktop
             changed = true;
-            misc = new boolean[choiceMisc.size()];
+            boolean[] misc = new boolean[choiceMisc.size()];
             choiceMisc.getSelectedFlags(misc);
             config.setFullscreen(misc[0]);
             config.setNoSounds(misc[1]);
-            config.setUseUTM(misc[2]);
-            config.setOsdExtended(misc[3]);
-            config.setOsdNoBackground(misc[4]);
-            config.setOsdMediumFont(misc[5]);
-            config.setOsdBoldFont(misc[6]);
-            config.setOsdBlackColor(misc[7]);
+            config.setDecimalPrecision(misc[2]);
+            config.setUseUTM(misc[3]);
+            config.setOsdExtended(misc[4]);
+            config.setOsdNoBackground(misc[5]);
+            config.setOsdMediumFont(misc[6]);
+            config.setOsdBoldFont(misc[7]);
+            config.setOsdBlackColor(misc[8]);
             Desktop.resetFont();
 /*
             // timezone
@@ -272,6 +290,7 @@ final class SettingsForm extends Form implements CommandListener, ItemStateListe
                     continue;
             }
 
+            System.out.println("Deleting " + item);
             delete(i);
 
             // restart cycle
@@ -279,59 +298,6 @@ final class SettingsForm extends Form implements CommandListener, ItemStateListe
             N = size();
         }
 
-/*
-        int insertAt = 0;
-        for (int N = size(), i = 0; i < N; i++) {
-            Item item = get(i);
-            if (choiceMisc == item) {
-                insertAt = i;
-                break;
-            }
-        }
-
-        String provider = choiceProvider.getString(choiceProvider.getSelectedIndex());
-        if (Config.LOCATION_PROVIDER_SIMULATOR.equals(provider)) {
-            if (TrackingMIDlet.isFs()) {
-                if (choiceTracklog.isSelected(0)) {
-                    insert(insertAt, fieldTracklogsDir);
-                }
-                insert(insertAt, choiceTracklog);
-                if (!soft) {
-                    insert(insertAt, fieldSimulatorDelay);
-                }
-            }
-        } else if (Config.LOCATION_PROVIDER_JSR82.equals(provider)) {
-            if (TrackingMIDlet.isFs()) {
-                if (choiceTracklog.isSelected(0)) {
-                    if (fieldCaptureLocator != null && fieldCaptureFormat != null) {
-                        insert(insertAt, fieldCaptureFormat);
-                        insert(insertAt, fieldCaptureLocator);
-                    }
-                    insert(insertAt, fieldTracklogsDir);
-                    insert(insertAt, choiceTracklogsFormat);
-                }
-                insert(insertAt, choiceTracklog);
-            }
-            if (!soft) {
-                insert(insertAt, choiceFriends);
-            }
-        } else if (Config.LOCATION_PROVIDER_JSR179.equals(provider)) {
-            if (TrackingMIDlet.isFs()) {
-                if (choiceTracklog.isSelected(0)) {
-                    if (fieldCaptureLocator != null && fieldCaptureFormat != null) {
-                        insert(insertAt, fieldCaptureFormat);
-                        insert(insertAt, fieldCaptureLocator);
-                    }
-                    insert(insertAt, fieldTracklogsDir);
-                }
-                insert(insertAt, choiceTracklog);
-            }
-            if (!soft) {
-                insert(insertAt, fieldLocationInterval);
-                insert(insertAt, choiceFriends);
-            }
-        }
-*/
         String provider = choiceProvider.getString(choiceProvider.getSelectedIndex());
         boolean tracklogsOn = !Config.TRACKLOG_NEVER.equals(choiceTracklog.getString(choiceTracklog.getSelectedIndex()));
         if (Config.LOCATION_PROVIDER_SIMULATOR.equals(provider)) {

@@ -59,32 +59,16 @@ public final class Friends implements MessageListener, Runnable {
         }
     }
 
-    private static Friends instance;
-
     private Navigator navigator;
     private MessageConnection connection;
 
-    public static Friends getInstance(Navigator navigator) {
-        if (instance == null) {
-            instance = new Friends(navigator);
-            if (instance.connection == null) {
-                try {
-                    instance.connection = (MessageConnection) Connector.open("sms://" + PORT, Connector.READ);
-                    instance.connection.setMessageListener(instance);
-                } catch (Throwable t) {
-                    Desktop.showError("Location sharing initialization failed", t, null);
-                }
-            }
-        }
-
-        return instance;
-    }
-
-    private Friends(Navigator navigator) {
+    public Friends(Navigator navigator) throws IOException {
         this.navigator = navigator;
+        this.connection = (MessageConnection) Connector.open("sms://" + PORT, Connector.READ);
+        this.connection.setMessageListener(this);
     }
 
-    public void stop() {
+    public void destroy() {
         if (connection != null) {
             try {
                 connection.close();

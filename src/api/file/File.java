@@ -10,7 +10,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 
 public final class File /*implements FileConnection*/ {
-    public final static String FILE_SEPARATOR  = "/";
+    public static final String FILE_SEPARATOR  = "/";
 
     private javax.microedition.io.file.FileConnection fc;
 

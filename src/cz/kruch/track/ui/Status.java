@@ -7,8 +7,11 @@ import javax.microedition.lcdui.Graphics;
 
 final class Status extends Bar {
 
+    private int[] clip;
+
     public Status(int gx, int gy, int width, int height) {
         super(gx, gy, width, height);
+        this.clip = new int[]{ gx, -1, -1, -1 };
         resize(width, height);
     }
 
@@ -26,6 +29,10 @@ final class Status extends Bar {
         if (!visible && !update)
             return null;
 
-        return new int[]{ gx, height - bh, width, bh };
+        clip[1] = height - bh;
+        clip[2] = width;
+        clip[3] = bh;
+
+        return clip;
     }
 }

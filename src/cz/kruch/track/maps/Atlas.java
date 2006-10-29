@@ -286,12 +286,22 @@ public final class Atlas implements Runnable {
     private final class TarLoader extends Loader {
 
         public void run() {
+//#ifdef __ALWAYS_USE_FILE__
+/*
             api.file.File fc = null;
+*/
+//#endif
             TarInputStream tar = null;
 
             try {
+//#ifdef __ALWAYS_USE_FILE__
+/*
                 fc = new api.file.File(Connector.open(url, Connector.READ));
                 tar = new TarInputStream(new BufferedInputStream(fc.openInputStream(), Map.SMALL_BUFFER_SIZE));
+*/
+//#else
+                tar = new TarInputStream(new BufferedInputStream(Connector.openInputStream(url), Map.SMALL_BUFFER_SIZE));
+//#endif
 
                 // iterate over archive
                 TarEntry entry = tar.getNextEntry();
@@ -349,12 +359,16 @@ public final class Atlas implements Runnable {
                     } catch (IOException e) {
                     }
                 }
+//#ifdef __ALWAYS_USE_FILE__
+/*
                 if (fc != null) {
                     try {
                         fc.close();
                     } catch (IOException e) {
                     }
                 }
+*/
+//#endif
             }
         }
     }

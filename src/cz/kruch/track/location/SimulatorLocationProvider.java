@@ -31,7 +31,7 @@ public class SimulatorLocationProvider
 
     private Thread thread;
     private boolean go;
-    private String url;
+    private api.file.File file;
     private int delay;
 
     private int interval;
@@ -86,7 +86,7 @@ public class SimulatorLocationProvider
 
         if (result != null) {
             go = true;
-            url = (String) result;
+            file = (api.file.File) result;
             thread = new Thread(this);
             thread.start();
         } else {
@@ -96,16 +96,17 @@ public class SimulatorLocationProvider
 
     public void run() {
 //#ifdef __LOG__
-        if (log.isEnabled()) log.info("simulator task starting; url " + url);
+        if (log.isEnabled()) log.info("simulator task starting; url " + file.getURL());
 //#endif
 
-        // for start gpx
-        notifyListener(LocationProvider._STARTING);
-
         InputStream in = null;
+
         try {
+            // for start gpx
+            notifyListener(LocationProvider._STARTING);
+
             // open input
-            in = new BufferedInputStream(Connector.openInputStream(url), BUFFER_SIZE);
+            in = new BufferedInputStream(file.openInputStream(), BUFFER_SIZE);
 
             // notify
             notifyListener(LocationProvider.AVAILABLE);
@@ -159,11 +160,18 @@ public class SimulatorLocationProvider
                 setException(e instanceof LocationException ? (LocationException) e : new LocationException(e));
             }
         } finally {
+            // close the stream
             if (in != null) {
                 try {
                     in.close();
                 } catch (IOException e) {
                 }
+            }
+
+            // close file connection
+            try {
+                file.close();
+            } catch (IOException e) {
             }
 
             // notify

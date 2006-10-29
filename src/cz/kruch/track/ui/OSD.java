@@ -26,6 +26,7 @@ final class OSD extends Bar {
     private volatile String sat;
 
     private int rw;
+    private int[] clip;
 
     public OSD(int gx, int gy, int width, int height) throws IOException {
         super(gx, gy, width, height);
@@ -34,6 +35,7 @@ final class OSD extends Bar {
         this.providerAvailable = Image.createImage("/resources/s_green.png");
         this.providerUnavailable = Image.createImage("/resources/s_orange.png");
         this.providerOutOfService = Image.createImage("/resources/s_red.png");
+        this.clip = new int[]{ gx, gy, -1, -1 };
         resize(width, height);
     }
 
@@ -101,6 +103,7 @@ final class OSD extends Bar {
                 graphics.drawImage(providerUnavailable, semaforX, semaforY, 0/*Graphics.TOP | Graphics.LEFT*/);
                 break;
             case LocationProvider.OUT_OF_SERVICE:
+            case LocationProvider._CANCELLED:
                 graphics.drawImage(providerOutOfService,  semaforX, semaforY, 0/*Graphics.TOP | Graphics.LEFT*/);
                 break;
         }
@@ -116,6 +119,7 @@ final class OSD extends Bar {
 
     public void setExtendedInfo(String extendedInfo) {
         this.extendedInfo = extendedInfo;
+        this.clip = new int[]{ gx, gy, width, extendedInfo == null ? bh : 2 * bh };
     }
 
     public void setSat(int sat) {
@@ -126,6 +130,9 @@ final class OSD extends Bar {
         if (!visible && !update)
             return null;
 
-        return new int[]{ gx, gy, width, extendedInfo == null ? bh : 2 * bh };
+        clip[2] = width;
+        clip[3] = extendedInfo == null ? bh : 2 * bh;
+        
+        return clip;
     }
 }

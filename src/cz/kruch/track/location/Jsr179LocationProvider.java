@@ -71,18 +71,26 @@ public class Jsr179LocationProvider extends api.location.LocationProvider {
                     notifyListener(lastState);
                 }
 
-                // create up-to-date location
+                // vars
                 javax.microedition.location.QualifiedCoordinates xc = l.getQualifiedCoordinates();
+                float spd = l.getSpeed();
+                float alt = xc.getAltitude();
+                if (TrackingMIDlet.isSxg75()) {
+                    if (spd != Float.NaN) {
+                        spd *= 2;
+                    }
+                    if (alt != Float.NaN) {
+                        alt -= 540;
+                    }
+                }
+
+                // create up-to-date location
                 api.location.QualifiedCoordinates qc = new api.location.QualifiedCoordinates(xc.getLatitude(),
                                                                                              xc.getLongitude(),
-                                                                                             xc.getAltitude());
+                                                                                             alt);
                 api.location.Location location = new api.location.Location(qc, l.getTimestamp(), 1);
                 location.setCourse(l.getCourse());
-                if (TrackingMIDlet.isSxg75() && (l.getSpeed() != Float.NaN)) {
-                    location.setSpeed(l.getSpeed() * 2);
-                } else {
-                    location.setSpeed(l.getSpeed());
-                }
+                location.setSpeed(spd);
 
                 // notify
                 notifyListener(location);

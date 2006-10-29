@@ -44,6 +44,7 @@ final class MapViewer {
     private boolean visible = true;
     private Float course;
     private int ci = 0;
+    private int[] clip;
 
     public MapViewer(int gx, int gy, int width, int height) throws IOException {
         this.gx = gx;
@@ -70,6 +71,7 @@ final class MapViewer {
         this.crosshairHeight = crosshairs[0].getHeight();
         this.arrowWidth = courses[0].getWidth();
         this.arrowHeight = courses[0].getHeight();
+        this.clip = new int[] { -1, -1, crosshairWidth, crosshairHeight };
         resize(width, height);
     }
 
@@ -415,7 +417,10 @@ final class MapViewer {
         if (!visible)
             return null;
 
-        return new int[] { chx, chy, crosshairWidth, crosshairHeight };
+        clip[0] = chx;
+        clip[1] = chy;
+
+        return clip;
     }
 
     public boolean ensureSlices() {
@@ -429,7 +434,7 @@ final class MapViewer {
         }
 
         // find needed slices ("row by row")
-        Vector v = new Vector(4); // 4 is an pesimistic guess
+        Vector v = new Vector(4); // 4 is a pesimistic guess
         int _x = x;
         int _y = y;
         int xmax = x + width > mWidth ? mWidth : x + width;
@@ -468,10 +473,10 @@ final class MapViewer {
         // set new slices
         slices = null; // gc hint
         slices = v;
+        v = null; // gc hint
 
         // prepare slices - returns true is there is at least one image to be loaded
-        boolean loading = map.prepareSlices(v);
-        v = null; // gc hint
+        boolean loading = map.prepareSlices(slices);
 
         // gc hint (loading ahead)
         if (loading) System.gc();

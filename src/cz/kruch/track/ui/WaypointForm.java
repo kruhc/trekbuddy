@@ -126,6 +126,9 @@ public final class WaypointForm extends Form
 */
         addCommand(new Command("Close", Command.BACK, 1));
         addCommand(new Command(MENU_USE, Command.SCREEN, 1));
+/* TODO
+        addCommand(new Command(MENU_SAVE, Command.SCREEN, 2));
+*/
     }
 
     private void appendWithNewlineAfter(Item item) {
@@ -165,6 +168,15 @@ public final class WaypointForm extends Form
                 Image image = Image.createImage(imageBytes, 0, imageBytes.length);
                 delete(imageNum);
                 imageNum = append(image);
+/* restarts on K750i
+                javax.microedition.media.Player p = javax.microedition.media.Manager.createPlayer(new java.io.ByteArrayInputStream(imageBytes), "image/jpeg");
+                p.realize();
+                p.prefetch();
+                javax.microedition.media.control.GUIControl vc;
+                if ((vc = (javax.microedition.media.control.GUIControl) p.getControl("GUIControl")) != null)
+                    append((Item) vc.initDisplayMode(vc.USE_GUI_PRIMITIVE, null));
+                p.start();
+*/
             } catch (Throwable t) {
                 Desktop.showError("Could not create preview but do not worry - image has been saved", t, this);
             }

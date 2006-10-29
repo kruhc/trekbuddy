@@ -23,6 +23,7 @@ import cz.kruch.track.util.Datum;
 import cz.kruch.track.event.Callback;
 import cz.kruch.track.AssertionFailedException;
 import cz.kruch.track.TrackingMIDlet;
+import cz.kruch.track.fun.Friends;
 import cz.kruch.j2se.util.StringTokenizer;
 
 import javax.microedition.lcdui.Canvas;
@@ -100,6 +101,9 @@ public final class Desktop extends GameCanvas
     private Atlas atlas;
 //#endif
 
+    // groupware components
+    private Friends friends;
+
     // LSM/MSK commands
     private Command cmdFocus; // hope for MSK
     private Command cmdRun;
@@ -129,6 +133,8 @@ public final class Desktop extends GameCanvas
     private volatile LocationProvider provider;
     private volatile Object providerStatus;
     private volatile LocationException providerError;
+    private volatile boolean stopRequest;
+    private volatile boolean providerRestart;
 
 //#ifndef __NO_FS__
     // logs
@@ -150,6 +156,10 @@ public final class Desktop extends GameCanvas
     // repeated event simulation for dumb devices
     private Timer repeatedKeyChecker;
     private int inAction = -1;
+
+    // start/initialization
+    private boolean guiReady = false;
+    private boolean postInit = false;
 
     public Desktop(MIDlet midlet) {
         super(false);
@@ -359,15 +369,13 @@ public final class Desktop extends GameCanvas
 //#ifdef __LOG__
              if (log.isEnabled()) log.info("starting SMS listener");
 //#endif
-             (new Thread(new Runnable() {
-                 public void run() {
-                     cz.kruch.track.fun.Friends.getInstance(Desktop.this);
-                 }
-             })).start();
+            try {
+                friends = new Friends(this);
+            } catch (Throwable t) {
+                showError("Failed to init location sharing", t, this);
+            }
         }
     }
-
-    private boolean guiReady = false;
 
     protected void showNotify() {
 //#ifdef __LOG__
@@ -377,7 +385,6 @@ public final class Desktop extends GameCanvas
         if (!guiReady) { // first show
             try {
                 resetGui();
-                postInit();
             } catch (IOException e) {
                 _updateLoadingResult("UI reset failed: " + e);
             } finally {
@@ -467,15 +474,18 @@ public final class Desktop extends GameCanvas
         } else if (command == cmdRun) {
             if ("Start".equals(cmdRun.getLabel())) {
                 // start tracking
+                stopRequest = providerRestart = false;
                 preTracking(false);
             } else {
                 // stop tracking
+                stopRequest = true;
                 stopTracking(false);
             }
             // update OSD
             render(MASK_OSD);
         } else if (command == cmdRunLast) {
             // start tracking with known device
+            stopRequest = providerRestart = false;
             preTracking(true);
             // update OSD
             render(MASK_OSD);
@@ -497,6 +507,11 @@ public final class Desktop extends GameCanvas
             // close map (fs handles)
             if (map != null) map.close();
 */
+
+            // stop Friends
+            if (friends != null) {
+                friends.destroy();
+            }
 
             // stop I/O loader
             LoaderIO.destroy();
@@ -557,7 +572,8 @@ public final class Desktop extends GameCanvas
         // start GPX waypoint logging if needed
         if (gpxWaypointlog == null) {
             gpxWaypointlog = new GpxTracklog(GpxTracklog.LOG_WPT, new Event(Event.EVENT_WAYPOINTLOG),
-                                             APP_TITLE + " " + midlet.getAppProperty("MIDlet-Version"));
+                                             APP_TITLE + " " + midlet.getAppProperty("MIDlet-Version"),
+                                             gpxTracklog == null ? System.currentTimeMillis() : gpxTracklog.getTime());
             gpxWaypointlog.start();
         }
 
@@ -917,7 +933,7 @@ public final class Desktop extends GameCanvas
                                 // cycle crosshair
                                 mapViewer.nextCrosshair();
                                 // update desktop
-                                render(MASK_OSD | MASK_CROSSHAIR);
+                                render((TrackingMIDlet.isSonyEricsson() ? MASK_MAP : MASK_NONE) | MASK_OSD | MASK_CROSSHAIR);
                             }
                         } break;
                         case KEY_NUM1: {
@@ -1151,16 +1167,22 @@ public final class Desktop extends GameCanvas
 
         // which provider?
         String selectedProvider = Config.getSafeInstance().getLocationProvider();
+        Class providerClass = null;
 
         // instantiate provider
-        if (Config.LOCATION_PROVIDER_JSR179.equals(selectedProvider)) {
-            provider = new cz.kruch.track.location.Jsr179LocationProvider();
-        } else if (Config.LOCATION_PROVIDER_JSR82.equals(selectedProvider)) {
-            provider = new cz.kruch.track.location.Jsr82LocationProvider(new Event(Event.EVENT_TRACKLOG));
+        try {
+            if (Config.LOCATION_PROVIDER_JSR179.equals(selectedProvider)) {
+                providerClass = Class.forName("cz.kruch.track.location.Jsr179LocationProvider");
+            } else if (Config.LOCATION_PROVIDER_JSR82.equals(selectedProvider)) {
+                providerClass = Class.forName("cz.kruch.track.location.Jsr82LocationProvider");
 //#ifndef __NO_FS__
-        } else if (Config.LOCATION_PROVIDER_SIMULATOR.equals(selectedProvider)) {
-            provider = new cz.kruch.track.location.SimulatorLocationProvider();
+            } else if (Config.LOCATION_PROVIDER_SIMULATOR.equals(selectedProvider)) {
+                providerClass = Class.forName("cz.kruch.track.location.SimulatorLocationProvider");
 //#endif
+            }
+            provider = (LocationProvider) providerClass.newInstance();
+        } catch (Exception e) {
+            throw new RuntimeException(e.toString());
         }
 
 //#ifndef __NO_FS__
@@ -1214,7 +1236,12 @@ public final class Desktop extends GameCanvas
 //#endif
 
         // instantiate BT provider
-        provider = new cz.kruch.track.location.Jsr82LocationProvider(new Event(Event.EVENT_TRACKLOG));
+        try {
+            Class providerClass = Class.forName("cz.kruch.track.location.Jsr82LocationProvider");
+            provider = (LocationProvider) providerClass.newInstance();
+        } catch (Exception e) {
+            throw new RuntimeException(e.toString());
+        }
 
 //#ifndef __NO_FS__
 
@@ -1229,7 +1256,7 @@ public final class Desktop extends GameCanvas
         // update OSD
         osd.setProviderStatus(LocationProvider._STARTING);
 
-        // start BT provider
+        // (re)start BT provider
         (new Thread((Runnable) provider)).start();
 
         // not browsing
@@ -1243,6 +1270,32 @@ public final class Desktop extends GameCanvas
 
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("~start tracking");
+//#endif
+
+        return true;
+    }
+
+    private boolean restartTracking() {
+//#ifdef __LOG__
+        if (log.isEnabled()) log.debug("restart tracking");
+//#endif
+
+        // be aware
+        providerRestart = true;
+
+        // prepare tracklog
+        if (gpxTracklog != null) {
+            gpxTracklog.setReconnected();
+        }
+
+        // update OSD
+        osd.setProviderStatus(LocationProvider._STARTING);
+
+        // (re)start BT provider
+        (new Thread((Runnable) provider)).start();
+
+//#ifdef __LOG__
+        if (log.isEnabled()) log.debug("~restart tracking");
 //#endif
 
         return true;
@@ -1324,15 +1377,25 @@ public final class Desktop extends GameCanvas
 //#ifndef __NO_FS__
 
     private void startGpxTracklog() {
-        // assert
-        if (gpxTracklog != null) {
+        // assertion
+        if (!providerRestart && gpxTracklog != null) {
             throw new AssertionFailedException("GPX tracklog already started");
         }
 
         if (provider.isTracklog() && Config.TRACKLOG_FORMAT_GPX.equals(Config.getSafeInstance().getTracklogsFormat())) {
-            gpxTracklog = new GpxTracklog(GpxTracklog.LOG_TRK, new Event(Event.EVENT_TRACKLOG),
-                                       APP_TITLE + " " + midlet.getAppProperty("MIDlet-Version"));
-            gpxTracklog.start();
+            // assertion
+            if (providerRestart && gpxTracklog == null) {
+                throw new AssertionFailedException("GPX tracklog not started");
+            }
+
+            if (providerRestart) {
+                gpxTracklog.insert(Boolean.TRUE);
+            } else {
+                gpxTracklog = new GpxTracklog(GpxTracklog.LOG_TRK, new Event(Event.EVENT_TRACKLOG),
+                                              APP_TITLE + " " + midlet.getAppProperty("MIDlet-Version"),
+                                              System.currentTimeMillis());
+                gpxTracklog.start();
+            }
         }
     }
 
@@ -1504,7 +1567,7 @@ public final class Desktop extends GameCanvas
     }
 
     public String _getLoadingResult() {
-        return new String(loadingResult);
+        return loadingResult;
     }
 
     private boolean _getLoadingSlices() {
@@ -1580,9 +1643,15 @@ public final class Desktop extends GameCanvas
                     Desktop.this._render(m.intValue());
                 } catch (Throwable t) {
 //#ifdef __LOG__
-                    if (log.isEnabled()) log.debug("render failure", t);
+                    if (log.isEnabled()) log.error("render failure", t);
+                    t.printStackTrace();
 //#endif
                     Desktop.showError("_RENDER FAILURE_", t, null);
+                }
+
+                if (!postInit && guiReady) {
+                    postInit = true;
+                    postInit();
                 }
             }
         }
@@ -1733,11 +1802,21 @@ public final class Desktop extends GameCanvas
                         // user intention to load map or atlas
                         _switch = false;
 
+                        // cast to file connection
+                        api.file.File file = (api.file.File) result;
+                        String url = file.getURL();
+
+                        // close file connection
+                        try {
+                            file.close();
+                        } catch (IOException e) {
+                        }
+
                         // background task
                         if ("atlas".equals(closure)) {
-                            startOpenAtlas((String) result);
+                            startOpenAtlas(url);
                         } else {
-                            startOpenMap((String) result, null);
+                            startOpenMap(url, null);
                         }
                     }
                 } break;
@@ -2112,18 +2191,19 @@ public final class Desktop extends GameCanvas
                 case EVENT_TRACKING_STATUS_CHANGED: {
                     // grab event data
                     int newState = ((Integer) result).intValue();
-                    LocationProvider provider = (LocationProvider) closure;
+
+                    // update OSD
+                    osd.setProviderStatus(newState);
 
                     // how severe is the change
                     switch (newState) {
                         case LocationProvider._STARTING: {
-
 //#ifndef __NO_FS__
-
                             // start gpx tracklog
                             startGpxTracklog();
-
 //#endif
+                            // clear restart flag
+                            providerRestart = false;
 
                             // update desktop
                             render(MASK_OSD);
@@ -2139,9 +2219,6 @@ public final class Desktop extends GameCanvas
                                 } catch (Throwable t) {
                                 }
                             }
-
-                            // update OSD
-                            osd.setProviderStatus(newState);
 
                             // update desktop
                             render(MASK_OSD);
@@ -2164,7 +2241,21 @@ public final class Desktop extends GameCanvas
                             display.vibrate(1500);
 */
 
-                            // stop tracking completely
+                            // stop tracking completely or restart
+                            if (stopRequest) {
+                                stopTracking(false);
+                            } else {
+                                restartTracking();
+                            }
+
+                            // update desktop
+                            render(MASK_OSD);
+
+                        } break;
+
+                        case LocationProvider._CANCELLED: {
+
+                            // stop
                             stopTracking(false);
 
                             // update desktop

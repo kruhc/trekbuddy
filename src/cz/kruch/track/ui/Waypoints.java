@@ -7,11 +7,10 @@ import cz.kruch.track.event.Callback;
 import cz.kruch.track.util.Logger;
 import cz.kruch.track.location.Waypoint;
 import cz.kruch.track.location.Navigator;
-//#ifndef __NO_FS__
-import cz.kruch.track.location.GpxTracklog;
-//#endif
 import cz.kruch.track.maps.io.LoaderIO;
 import cz.kruch.track.TrackingMIDlet;
+import cz.kruch.track.fun.Friends;
+import cz.kruch.j2se.io.BufferedInputStream;
 
 import javax.microedition.lcdui.CommandListener;
 import javax.microedition.lcdui.Command;
@@ -20,6 +19,14 @@ import javax.microedition.lcdui.List;
 import javax.microedition.lcdui.Ticker;
 
 import api.location.QualifiedCoordinates;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.Vector;
+
+import org.xmlpull.v1.XmlPullParserException;
+import org.xmlpull.v1.XmlPullParser;
+import org.kxml2.io.KXmlParser;
 
 public final class Waypoints extends List
         implements CommandListener, Callback, Runnable {
@@ -42,8 +49,10 @@ public final class Waypoints extends List
 
     private static final String ITEM_VIEW_DETAIL = "View";
 
+    private static boolean initialized = false;
+
     private Navigator navigator;
-    private int depth = 0;
+    private int depth;
 
     private Command cmdSelect;
     private Command cmdCancel;
@@ -51,7 +60,46 @@ public final class Waypoints extends List
     public Waypoints(Navigator navigator) {
         super("Waypoints (?)", List.IMPLICIT);
         this.navigator = navigator;
+        this.depth = 0;
+        this.initialize();
         this.setTitle("Waypoints (" + navigator.getPath().length + ")");
+    }
+
+    /**
+     * Loads in-jar waypoint(s).
+     */
+    private void initialize() {
+        if (!initialized) {
+            initialized = true;
+
+//#ifndef __NO_FS__
+
+            // do we have in-jar waypoint(s) resource?
+            InputStream in = null;
+            String type = "GPX";
+            in = TrackingMIDlet.class.getResourceAsStream("/resources/waypoints.gpx");
+            if (in == null) {
+                in = TrackingMIDlet.class.getResourceAsStream("/resources/waypoint.loc");
+                type = "LOC";
+            }
+
+            // if yes, load it
+            if (in != null) {
+                try {
+                    navigator.setPath(parseWaypoints(in, type));
+                } catch (Throwable t) {
+                    Desktop.showError("Failed to load in-jar waypoint(s)", t, null);
+                } finally {
+                    try {
+                        in.close();
+                    } catch (IOException e) {
+                    }
+                }
+            }
+
+//#endif
+
+        }
     }
 
     public void show() {
@@ -139,7 +187,7 @@ public final class Waypoints extends List
             } else if (ITEM_ENTER_MANUALY.equals(item)) {
                 (new WaypointForm(this, this, navigator.getPointer())).show();
             } else if (ITEM_FRIEND_HERE.equals(item)) {
-                  // we have position?
+                  // do we have position?
                   if (navigator.getLocation() != null) {
                     (new FriendForm(this, ITEM_FRIEND_HERE, navigator.getLocation().getQualifiedCoordinates(), this, ITEM_FRIEND_HERE)).show();
                   } else {
@@ -160,13 +208,7 @@ public final class Waypoints extends List
                 actionListAll();
 //#ifndef __NO_FS__
             } else if (ITEM_LOAD.equals(item)) {
-                (new FileBrowser("SelectWaypoints", new Callback() {
-                    public void invoke(Object result, Throwable throwable) {
-                        if (result != null) {
-                            actionLoad((String) result);
-                        }
-                    }
-                }, this)).show();
+                (new FileBrowser("SelectWaypoints", this, this)).show();
 //#endif
             }
         } else if (depth == 1) { // wpt action
@@ -236,8 +278,11 @@ public final class Waypoints extends List
                 }
 
                 // send the message
-                cz.kruch.track.fun.Friends.send((String) ret[1], type, (String) ret[2], qc, time);
+                Friends.send((String) ret[1], type, (String) ret[2], qc, time);
             }
+        } else if (result instanceof api.file.File) {
+            // load waypoints from a file
+            actionLoad((api.file.File) result);
         }
     }
 
@@ -248,25 +293,27 @@ public final class Waypoints extends List
 
 //#ifndef __NO_FS__
 
+        String url = _file.getURL();
+
 //#ifdef __LOG__
-        if (log.isEnabled()) log.debug("parse waypoints: " + _urlToRead);
+        if (log.isEnabled()) log.debug("parse waypoints: " + url);
 //#endif
 
         setTicker(new Ticker("Loading..."));
         try {
             // parse new waypoints
             Waypoint[] waypoints = new Waypoint[0];
-            if (_urlToRead.endsWith(".gpx")) {
-                waypoints = GpxTracklog.parseWaypoints(_urlToRead, "GPX");
-            } else if (_urlToRead.endsWith(".loc")) {
-                waypoints = GpxTracklog.parseWaypoints(_urlToRead, "LOC");
+            if (url.endsWith(".gpx")) {
+                waypoints = parseWaypoints(_file, "GPX");
+            } else if (url.endsWith(".loc")) {
+                waypoints = parseWaypoints(_file, "LOC");
             }
 
             // show result
             if (waypoints.length > 0) {
                 Desktop.showConfirmation(waypoints.length + " waypoints loaded", this);
             } else {
-                Desktop.showWarning("No waypoints found in " + _urlToRead, null, this);
+                Desktop.showWarning("No waypoints found in " + url, null, this);
             }
 
             // update title
@@ -283,10 +330,15 @@ public final class Waypoints extends List
 
         } finally {
 
+            // close file connection
+            try {
+                _file.close();
+            } catch (IOException e) {
+            }
+
             // remove ticker and refreh menu
             setTicker(null);
             menu();
-
         }
 
 //#endif
@@ -295,13 +347,13 @@ public final class Waypoints extends List
 
 //#ifndef __NO_FS__
 
-    String _urlToRead = null;
+    api.file.File _file = null;
 
     /**
      * Load waypoints from file.
      */
-    private void actionLoad(String url) {
-        _urlToRead = url;
+    private void actionLoad(api.file.File file) {
+        _file = file;
         LoaderIO.getInstance().enqueue(this);
     }
 
@@ -345,4 +397,164 @@ public final class Waypoints extends List
             depth++;
         }
     }
+
+//#ifndef __NO_FS__
+
+    private static Waypoint[] parseWaypoints(api.file.File file, String fileType)
+            throws IOException, XmlPullParserException {
+        Waypoint[] result = new Waypoint[0];
+        InputStream in = null;
+
+        try {
+            in = new BufferedInputStream(file.openInputStream(), 512);
+            result = parseWaypoints(in, fileType);
+        } finally {
+            if (in != null) {
+                try {
+                    in.close();
+                } catch (IOException e) {
+                    // ignore
+                }
+            }
+//            if (file != null) {
+//                try {
+//                    file.close();
+//                } catch (IOException e) {
+//                    // ignore
+//                }
+//            }
+        }
+
+        return result;
+    }
+
+    private static Waypoint[] parseWaypoints(InputStream in, String fileType)
+            throws IOException, XmlPullParserException {
+
+        Vector waypoints = new Vector(0);
+
+        // parse XML
+        KXmlParser parser = new KXmlParser();
+        parser.setInput(in, null); // null is for encoding autodetection
+        if ("GPX".equals(fileType)) {
+            parseGpx(parser, waypoints);
+        } else if ("LOC".equals(fileType)) {
+            parseLoc(parser, waypoints);
+        }
+        // gc hint
+        parser = null;
+
+        // create result
+        Waypoint[] result = new Waypoint[waypoints.size()];
+        waypoints.copyInto(result);
+
+        return result;
+    }
+
+    private static void parseGpx(KXmlParser parser, Vector v)
+            throws IOException, XmlPullParserException {
+
+        int eventType = XmlPullParser.START_TAG;
+        int wptDepth = 0;
+        String name = null;
+        String comment = null;
+        double lat = -1D, lon = -1D;
+        while (eventType != XmlPullParser.END_DOCUMENT) {
+            if (eventType == XmlPullParser.START_TAG) {
+                String tag = parser.getName();
+                if ("wpt".equals(tag)){
+                    // start level
+                    wptDepth = 1;
+                    // get lat and lon
+                    lat = Double.parseDouble(parser.getAttributeValue(null, "lat"));
+                    lon = Double.parseDouble(parser.getAttributeValue(null, "lon"));
+                } else if ("name".equals(tag) && (wptDepth == 1)) {
+                    // get name
+                    name = parser.nextText();
+                } else if ("cmt".equals(tag) && (wptDepth == 1)) {
+                    // get comment
+                    comment = parser.nextText();
+                } else {
+                    // down one level
+                    wptDepth++;
+                }
+            } else if (eventType == XmlPullParser.END_TAG) {
+                String tag = parser.getName();
+                if ("wpt".equals(tag)){
+                    // got wpt
+                    v.addElement(new Waypoint(new QualifiedCoordinates(lat, lon),
+                                              name, comment));
+
+                    // reset temps
+                    lat = lon = -1D;
+                    name = comment = null;
+
+                    // reset depth
+                    wptDepth = 0;
+                } else {
+                    // up one level
+                    wptDepth--;
+                }
+            }
+            // next event
+            eventType = parser.next();
+        }
+    }
+
+    private static void parseLoc(KXmlParser parser, Vector v)
+            throws IOException, XmlPullParserException {
+
+        int eventType = XmlPullParser.START_TAG;
+        int wptDepth = 0;
+        String name = null;
+        String comment = null;
+        double lat = -1D, lon = -1D;
+        while (eventType != XmlPullParser.END_DOCUMENT) {
+            if (eventType == XmlPullParser.START_TAG) {
+                String tag = parser.getName();
+                if ("waypoint".equals(tag)){
+                    // start level
+                    wptDepth = 1;
+                } else if ("name".equals(tag) && (wptDepth == 1)) {
+                    // get name and comment
+                    name = parser.getAttributeValue(null, "id");
+                    comment = parser.nextText();
+                    // down one level
+                    wptDepth++;
+                } else if ("coord".equals(tag) && (wptDepth == 1)) {
+                    // get lat and lon
+                    lat = Double.parseDouble(parser.getAttributeValue(null, "lat"));
+                    lon = Double.parseDouble(parser.getAttributeValue(null, "lon"));
+                    // down one level
+                    wptDepth++;
+                } else {
+                    // down one level
+                    wptDepth++;
+                }
+            } else if (eventType == XmlPullParser.END_TAG) {
+                String tag = parser.getName();
+                if ("waypoint".equals(tag)){
+                    // got wpt
+                    v.addElement(new Waypoint(new QualifiedCoordinates(lat, lon),
+                                              name, comment));
+
+                    // reset temps
+                    lat = lon = -1D;
+                    name = comment = null;
+
+                    // reset depth
+                    wptDepth = 0;
+                } else {
+                    // up one level
+                    wptDepth--;
+                }
+            }
+
+            // next event
+            eventType = parser.next();
+        }
+    }
+
+//#endif
+
 }

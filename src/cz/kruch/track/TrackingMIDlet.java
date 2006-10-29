@@ -15,6 +15,7 @@ import java.io.UnsupportedEncodingException;
 
 public class TrackingMIDlet extends MIDlet {
     private static String APP_NAME = Desktop.APP_TITLE + " (C) 2006 KrUcH";
+    private static String APP_WWW = "www.trekbuddy.net";
 
     public static final int FS_UNKNOWN = -1;
     public static final int FS_NONE    = 0;
@@ -37,6 +38,7 @@ public class TrackingMIDlet extends MIDlet {
     private static boolean videoCapture;
     private static boolean fs;
     private static boolean sxg75;
+    private static boolean sonyEricsson;
     private static int numAlphaLevels = 2;
 
     static {
@@ -102,9 +104,12 @@ public class TrackingMIDlet extends MIDlet {
         System.out.println("* fs type: " + fsType);
         TrackingMIDlet.fs = fsType > FS_NONE;
 
+        sxg75 = "SXG75".equals(platform);
+        sonyEricsson = System.getProperty("com.sonyericsson.imei") != null;
+
         // setup environment
 //#ifndef __NO_FS__
-        if (hasFlag("fs_read_skip")) {
+        if (hasFlag("fs_read_skip") || sonyEricsson) {
             System.out.println("* fs read-skip feature on");
             com.ice.tar.TarInputStream.useReadSkip = true;
         }
@@ -117,7 +122,6 @@ public class TrackingMIDlet extends MIDlet {
             cz.kruch.track.maps.Map.useReset = false;
         }
 //#endif
-        sxg75 = "SXG75".equals(platform);
         if (hasFlag("ui_no_partial_flush") || sxg75) {
             System.out.println("* ui no-partial-flush feature on");
             cz.kruch.track.ui.Desktop.partialFlush = false;
@@ -138,6 +142,7 @@ public class TrackingMIDlet extends MIDlet {
             Console console = new Console();
             display.setCurrent(console);
             console.show(APP_NAME);
+            console.show(APP_WWW);
             console.show("");
             console.show("initializing...");
 
@@ -233,6 +238,10 @@ public class TrackingMIDlet extends MIDlet {
 
     public static boolean isSxg75() {
         return sxg75;
+    }
+
+    public static boolean isSonyEricsson() {
+        return sonyEricsson;
     }
 
     public static String getPlatform() {

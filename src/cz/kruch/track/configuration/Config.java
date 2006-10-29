@@ -13,7 +13,6 @@ import javax.microedition.rms.RecordStore;
 import javax.microedition.rms.RecordStoreException;
 import java.io.DataInputStream;
 import java.io.ByteArrayInputStream;
-import java.io.IOException;
 import java.io.DataOutputStream;
 import java.io.ByteArrayOutputStream;
 import java.util.Vector;
@@ -117,6 +116,7 @@ public abstract class Config {
     protected boolean fullscreen = false;
     protected boolean noSounds = false;
     protected boolean useUTM = false;
+    protected boolean decimalPrecision = false;
     protected boolean osdExtended = true;
     protected boolean osdNoBackground = false;
     protected boolean osdMediumFont = false;
@@ -374,6 +374,14 @@ public abstract class Config {
         this.geoDatum = geoDatum;
     }
 
+    public boolean isDecimalPrecision() {
+        return decimalPrecision;
+    }
+
+    public void setDecimalPrecision(boolean decimalPrecision) {
+        this.decimalPrecision = decimalPrecision;
+    }
+
 /*
     public int getdX() {
         return dX;
@@ -422,9 +430,9 @@ public abstract class Config {
 
         private Config ensureInitialized() throws ConfigurationException {
             if (!initialized) {
+                initialized = true;
 
                 RecordStore rs = null;
-                DataInputStream din = null;
                 try {
                     // open the store
                     rs = RecordStore.openRecordStore(NAME, true, RecordStore.AUTHMODE_PRIVATE, false);
@@ -436,7 +444,7 @@ public abstract class Config {
                         if (log.isEnabled()) log.info("new configuration");
 //#endif
                     } else {
-                        din = new DataInputStream(new ByteArrayInputStream(rs.getRecord(1)));
+                        DataInputStream din = new DataInputStream(new ByteArrayInputStream(rs.getRecord(1)));
                         mapPath = din.readUTF();
                         locationProvider = din.readUTF();
 /*
@@ -476,23 +484,15 @@ public abstract class Config {
                         } catch (Exception e) {
                             tracklogsOn = bUnused ? Config.TRACKLOG_ASK : Config.TRACKLOG_NEVER;
                         }
-//#ifdef __LOG__
-                        if (log.isEnabled()) log.info("configuration read");
-//#endif
+                        // 0.9.2 extension
+                        try {
+                            decimalPrecision = din.readBoolean();
+                        } catch (Exception e) {
+                        }
                     }
-//#ifdef __LOG__
-                    if (log.isEnabled()) log.info("configuration initialized");
-//#endif
                 } catch (Exception e) {
                     throw new ConfigurationException(e);
                 } finally {
-                    initialized = true;
-                    if (din != null) {
-                        try {
-                            din.close();
-                        } catch (IOException e) {
-                        }
-                    }
                     if (rs != null) {
                         try {
                             rs.closeRecordStore();
@@ -500,6 +500,10 @@ public abstract class Config {
                         }
                     }
                 }
+
+//#ifdef __LOG__
+                if (log.isEnabled()) log.info("configuration read");
+//#endif
             }
 
             return this;
@@ -548,8 +552,8 @@ public abstract class Config {
                 dout.writeInt(dZ);
 */
                 dout.writeUTF(tracklogsOn);
+                dout.writeBoolean(decimalPrecision);
                 dout.flush();
-                dout.close();
                 byte[] bytes = data.toByteArray();
                 rs = RecordStore.openRecordStore(NAME, true, RecordStore.AUTHMODE_PRIVATE, true);
                 if (rs.getNumRecords() > 0) {
@@ -557,9 +561,8 @@ public abstract class Config {
                 } else {
                     rs.addRecord(bytes, 0, bytes.length);
                 }
-            } catch (RecordStoreException e) {
-                throw new ConfigurationException(e);
-            } catch (IOException e) {
+                dout.close();
+            } catch (Exception e) {
                 throw new ConfigurationException(e);
             } finally {
                 if (rs != null) {

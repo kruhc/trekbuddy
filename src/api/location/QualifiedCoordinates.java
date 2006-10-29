@@ -372,27 +372,30 @@ public final class QualifiedCoordinates {
         l -= m;
         l *= 60D;
         int s = (int) Math.floor(l);
+        int ss = 0;
 
-        if ((l - s) > 0.5D) {
-            s++;
-            if (s == 60) {
-                s = 0;
-                m++;
-                if (m == 60) {
-                    m = 0;
-                    h++;
+        boolean b = Config.getSafeInstance().isDecimalPrecision();
+        if (b) { // round decimals
+            l -= s;
+            l *= 10;
+            ss = (int) Math.floor(l);
+            if ((l - ss) > 0.5D) {
+                ss++;
+                if (ss == 10) {
+                    ss = 0;
+                    s++;
+                    if (s == 60) {
+                        s = 0;
+                        m++;
+                        if (m == 60) {
+                            m = 0;
+                            h++;
+                        }
+                    }
                 }
             }
-        }
-/*
-        int s = (int) Math.floor(l);
-        l -= s;
-        l *= 10;
-        int ss = (int) Math.floor(l);
-        if ((l - ss) > 0.5D) {
-            ss++;
-            if (ss == 10) {
-                ss = 0;
+        } else { // round secs
+            if ((l - s) > 0.5D) {
                 s++;
                 if (s == 60) {
                     s = 0;
@@ -404,7 +407,6 @@ public final class QualifiedCoordinates {
                 }
             }
         }
-*/
 
         sb.append(h).append(SIGN);
 /*
@@ -414,10 +416,11 @@ public final class QualifiedCoordinates {
 /*
         if (s < 10) sb.append('0');
 */
-/*
-        sb.append(s).append('"');
-*/
-        sb.append(s)./*append('.').append(ss).*/append('"');
+        sb.append(s);
+        if (b) {
+            sb.append('.').append(ss);
+        }
+        sb.append('"');
 
         return sb;
     }

@@ -471,7 +471,7 @@ public final class Waypoints extends List
                 } else if ("name".equals(tag) && (wptDepth == 1)) {
                     // get name
                     name = parser.nextText();
-                } else if ("cmt".equals(tag) && (wptDepth == 1)) {
+                } else if ("desc".equals(tag) && (wptDepth == 1)) {
                     // get comment
                     comment = parser.nextText();
                 } else {
@@ -519,8 +519,6 @@ public final class Waypoints extends List
                     // get name and comment
                     name = parser.getAttributeValue(null, "id");
                     comment = parser.nextText();
-                    // down one level
-                    wptDepth++;
                 } else if ("coord".equals(tag) && (wptDepth == 1)) {
                     // get lat and lon
                     lat = Double.parseDouble(parser.getAttributeValue(null, "lat"));
@@ -538,12 +536,8 @@ public final class Waypoints extends List
                     v.addElement(new Waypoint(new QualifiedCoordinates(lat, lon),
                                               name, comment));
 
-                    // reset temps
-                    lat = lon = -1D;
-                    name = comment = null;
-
-                    // reset depth
-                    wptDepth = 0;
+                    // only 1 waypoint for LOC files
+                    break;
                 } else {
                     // up one level
                     wptDepth--;

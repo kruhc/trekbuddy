@@ -211,9 +211,9 @@ public final class GpxTracklog extends Thread {
                 serializer.endTag(DEFAULT_NAMESPACE, "name");
             }
             if (w.getComment() != null && w.getComment().length() > 0) {
-                serializer.startTag(DEFAULT_NAMESPACE, "cmt");
+                serializer.startTag(DEFAULT_NAMESPACE, "desc");
                 serializer.text(w.getComment());
-                serializer.endTag(DEFAULT_NAMESPACE, "cmt");
+                serializer.endTag(DEFAULT_NAMESPACE, "desc");
             }
             if (w.getLinkPath() != null && w.getLinkPath().length() > 0) {
                 serializer.startTag(DEFAULT_NAMESPACE, "link");

@@ -135,15 +135,15 @@ public final class TarInputStream extends /* FilterInputStream */ InputStream {
 
     /**
      * javadoc todo
-     * @param entry
+     * @param position stream position
      * @throws IOException
      */
-    public void setNextEntry(TarEntry entry) throws IOException {
+    public void setPosition(long position) throws IOException {
         if (streamOffset > 0) {
             throw new IllegalStateException("Stream is dirty");
         }
 
-        this.skip(entry.getPosition());
+        this.skip(position);
     }
 
     /**

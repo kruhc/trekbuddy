@@ -11,7 +11,7 @@ public class Location {
     private static final Calendar CALENDAR = Calendar.getInstance(TimeZone.getTimeZone("GMT"));
 
     private QualifiedCoordinates coordinates;
-    private long timestamp;
+    private long timestamp = - 1;
     private int fix;
     private int sat;
     private float hdop = -1F;

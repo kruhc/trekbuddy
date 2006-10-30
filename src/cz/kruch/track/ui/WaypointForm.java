@@ -65,7 +65,10 @@ public final class WaypointForm extends Form
         this.callback = callback;
         appendWithNewlineAfter(this.fieldName = new TextField("Name", null, 16, TextField.ANY));
         appendWithNewlineAfter(this.fieldComment = new TextField("Comment", null, 256, TextField.ANY));
-        appendWithNewlineAfter(new StringItem("Time", dateToString(location.getTimestamp())));
+        long timestamp = location.getTimestamp();
+        if (timestamp > 0) {
+            appendWithNewlineAfter(new StringItem("Time", dateToString(timestamp)));
+        }
         appendWithNewlineAfter(new StringItem("Location", location.getQualifiedCoordinates().toString()));
 //#ifndef __NO_FS__
         if (TrackingMIDlet.isJsr135()) {
@@ -86,7 +89,10 @@ public final class WaypointForm extends Form
         this.callback = callback;
         appendWithNewlineAfter(new StringItem("Name", wpt.getName()));
         appendWithNewlineAfter(new StringItem("Comment", wpt.getComment()));
-        appendWithNewlineAfter(new StringItem("Time", dateToString(wpt.getTimestamp())));
+        long timestamp = wpt.getTimestamp();
+        if (timestamp > 0) {
+            appendWithNewlineAfter(new StringItem("Time", dateToString(timestamp)));
+        }
         append(new StringItem("Location", wpt.getQualifiedCoordinates().toString()));
         addCommand(new Command("Close", Command.BACK, 1));
         addCommand(new Command(MENU_NAVIGATE_TO, Command.SCREEN, 1));
@@ -200,15 +206,14 @@ public final class WaypointForm extends Form
                 } catch (IllegalArgumentException e) {
                     Desktop.showWarning("Malformed coordinate", e, null);
                 }
-            } else {
+            } else if (MENU_SAVE.equals(label)) {
+                Waypoint wpt = new Waypoint(location, fieldName.getString(),
+                                            fieldComment.getString());
                 Desktop.display.setCurrent(next);
-                if (MENU_SAVE.equals(label)) {
-                    Waypoint wpt = new Waypoint(location, fieldName.getString(), fieldComment.getString());
-                    wpt.setUserObject(imageBytes);
-                    callback.invoke(new Object[]{ MENU_SAVE, wpt }, null);
-                } else if (MENU_NAVIGATE_TO.equals(label)) {
-                    callback.invoke(new Object[]{ MENU_NAVIGATE_TO, null }, null);
-                }
+                callback.invoke(new Object[]{ MENU_SAVE, wpt }, null);
+            } else if (MENU_NAVIGATE_TO.equals(label)) {
+                Desktop.display.setCurrent(next);
+                callback.invoke(new Object[]{ MENU_NAVIGATE_TO, null }, null);
             }
         } else {
             Desktop.display.setCurrent(next);

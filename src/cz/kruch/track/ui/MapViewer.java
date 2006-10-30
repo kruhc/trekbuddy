@@ -255,8 +255,8 @@ final class MapViewer {
         }
 
         // project slices to window
-        for (Enumeration e = slices.elements(); e.hasMoreElements(); ) {
-            Slice slice = (Slice) e.nextElement();
+        for (int N = slices.size(), i = 0; i < N; i++) {
+            Slice slice = (Slice) slices.elementAt(i);
             if (slice.getImage() == null) {
 //#ifdef __LOG__
                 if (log.isEnabled()) log.debug("image for slice " + slice + " being loaded?");
@@ -455,8 +455,8 @@ final class MapViewer {
         }
 
         // release slices images we will no longer use
-        for (Enumeration e = slices.elements(); e.hasMoreElements(); ) {
-            Slice slice = (Slice) e.nextElement();
+        for (int N = slices.size(), i = 0; i < N; i++) {
+            Slice slice = (Slice) slices.elementAt(i);
             if (v.contains(slice)) {
 //#ifdef __LOG__
                 if (log.isEnabled()) log.debug("reuse slice in current set; " + slice);
@@ -493,8 +493,8 @@ final class MapViewer {
         Slice slice = null;
 
         // look for suitable slice in current set
-        for (Enumeration e = slices.elements(); e.hasMoreElements(); ) {
-            Slice s = (Slice) e.nextElement();
+        for (int N = slices.size(), i = 0; i < N; i++) {
+            Slice s = (Slice) slices.elementAt(i);
             if (s.isWithin(x, y)) {
                 slice = s;
                 break;

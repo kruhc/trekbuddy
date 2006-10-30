@@ -37,11 +37,10 @@ public final class Map implements Runnable {
     }
 
     private class SliceLoader implements Runnable {
-        private Slice[] slices;
+        private Vector slices;
 
         public SliceLoader(Vector collection) {
-            this.slices = new Slice[collection.size()];
-            collection.copyInto(slices);
+            this.slices = collection;
         }
 
         public void run() {
@@ -222,8 +221,8 @@ public final class Map implements Runnable {
         Vector v = null;
 
         // create list of slices whose images are to be loaded
-        for (Enumeration e = list.elements(); e.hasMoreElements(); ) {
-            Slice slice = (Slice) e.nextElement();
+        for (int N = list.size(), i = 0; i < N; i++) {
+            Slice slice = (Slice) list.elementAt(i);
             if (slice.getImage() == null) {
 //#ifdef __LOG__
                 if (log.isEnabled()) log.debug("image missing for slice " + slice);
@@ -328,10 +327,10 @@ public final class Map implements Runnable {
     /**
      * Loads images for given slices.
      */
-    private Throwable loadImages(Slice[] slices) {
+    private Throwable loadImages(Vector slices) {
         try {
-            for (int N = slices.length, i = 0; i < N; i++) {
-                Slice slice = slices[i];
+            for (int N = slices.size(), i = 0; i < N; i++) {
+                Slice slice = (Slice) slices.elementAt(i);
                 Throwable throwable = null;
 
                 try {
@@ -578,7 +577,7 @@ public final class Map implements Runnable {
                     if (indexOf > -1) {
                         String ext = entryName.substring(indexOf + 1);
                         if ("png".equals(ext) && (entryName.startsWith("set/", 0) || entryName.startsWith("pictures/", 0))) { // slice
-                            addSlice(new Slice(new Calibration.Best(entryName), entry));
+                            addSlice(new Slice(new Calibration.Best(entryName), new Long(entry.getPosition())));
                         } else {
                             if (Map.this.calibration == null && entryName.indexOf('/') == -1) {
                                 if ("gmi".equals(ext)) {
@@ -617,7 +616,7 @@ public final class Map implements Runnable {
         }
 
         public void loadSlice(Slice slice) throws IOException {
-            TarEntry entry = (TarEntry) slice.getClosure();
+            Long entryPosition = (Long) slice.getClosure();
             TarInputStream tar = null;
             try {
                 if (in == null) {
@@ -632,7 +631,7 @@ public final class Map implements Runnable {
                     in.reset();
                     tar = new TarInputStream(new BufferedInputStream(in, LARGE_BUFFER_SIZE));
                 }
-                tar.setNextEntry(entry);
+                tar.setPosition(entryPosition.longValue());
                 tar.getNextEntry();
                 slice.setImage(Image.createImage(tar));
             } finally {

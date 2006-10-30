@@ -134,11 +134,11 @@ public final class QualifiedCoordinates {
             int m = (int) Math.floor(min);
             double l = min - m;
             l *= 1000D;
-            int s = (int) Math.floor(l);
-            if ((l - s) > 0.5D) {
-                s++;
-                if (s == 1000) {
-                    s = 0;
+            int dec = (int) Math.floor(l);
+            if ((l - dec) > 0.5D) {
+                dec++;
+                if (dec == 1000) {
+                    dec = 0;
                     m++;
                     if (m == 60) {
                         m = 0;
@@ -147,9 +147,10 @@ public final class QualifiedCoordinates {
                 }
             }
 
-            return new int[]{ h, m, s };
+            return new int[]{ h, m, dec };
         }
 
+/*
         public String toString() {
             StringBuffer sb = new StringBuffer(16);
 
@@ -171,6 +172,7 @@ public final class QualifiedCoordinates {
 
             return sb.toString();
         }
+*/
 
         public String toSentence() {
             StringBuffer sb = new StringBuffer(16);
@@ -203,9 +205,11 @@ public final class QualifiedCoordinates {
             return sb.toString();
         }
 
+/*
         public static String toDecimalString(int type, double value) {
             return (new MinDec(type, value)).toString();
         }
+*/
 
         public static MinDec fromDecimalString(String value) {
             return new MinDec(value);
@@ -365,24 +369,70 @@ public final class QualifiedCoordinates {
     }
 
     private StringBuffer append(double l, StringBuffer sb) {
-        int h = (int) Math.floor(l);
-        l -= h;
-        l *= 60D;
-        int m = (int) Math.floor(l);
-        l -= m;
-        l *= 60D;
-        int s = (int) Math.floor(l);
-        int ss = 0;
+        if (Config.getSafeInstance().isUseGeocachingFormat()) {
+            int h = (int) Math.floor(l);
+            l -= h;
+            l *= 60D;
+            int m = (int) Math.floor(l);
+            l -= m;
+            l *= 1000D;
+            int dec = (int) Math.floor(l);
+            if ((l - dec) > 0.5D) {
+                dec++;
+                if (dec == 1000) {
+                    dec = 0;
+                    m++;
+                    if (m == 60) {
+                        m = 0;
+                        h++;
+                    }
+                }
+            }
 
-        boolean b = Config.getSafeInstance().isDecimalPrecision();
-        if (b) { // round decimals
-            l -= s;
-            l *= 10;
-            ss = (int) Math.floor(l);
-            if ((l - ss) > 0.5D) {
-                ss++;
-                if (ss == 10) {
-                    ss = 0;
+            sb.append(h).append(SIGN);
+            sb.append(m).append('.');
+            if (dec < 100) {
+                sb.append('0');
+            }
+            if (dec < 10) {
+                sb.append('0');
+            }
+            sb.append(dec);
+            sb.append('"');
+        } else {
+            int h = (int) Math.floor(l);
+            l -= h;
+            l *= 60D;
+            int m = (int) Math.floor(l);
+            l -= m;
+            l *= 60D;
+            int s = (int) Math.floor(l);
+/*
+            int ss = 0;
+            boolean b = false;
+
+            if (b) { // round decimals
+                l -= s;
+                l *= 10;
+                ss = (int) Math.floor(l);
+                if ((l - ss) > 0.5D) {
+                    ss++;
+                    if (ss == 10) {
+                        ss = 0;
+                        s++;
+                        if (s == 60) {
+                            s = 0;
+                            m++;
+                            if (m == 60) {
+                                m = 0;
+                                h++;
+                            }
+                        }
+                    }
+                }
+            } else { // round secs
+*/
+                if ((l - s) > 0.5D) {
                     s++;
                     if (s == 60) {
                         s = 0;
@@ -393,34 +443,20 @@ public final class QualifiedCoordinates {
                         }
                     }
                 }
+/*
             }
-        } else { // round secs
-            if ((l - s) > 0.5D) {
-                s++;
-                if (s == 60) {
-                    s = 0;
-                    m++;
-                    if (m == 60) {
-                        m = 0;
-                        h++;
-                    }
-                }
-            }
-        }
+*/
 
-        sb.append(h).append(SIGN);
+            sb.append(h).append(SIGN);
+            sb.append(m).append('\'');
+            sb.append(s);
 /*
-        if (m < 10) sb.append('0');
+            if (b) {
+                sb.append('.').append(ss);
+            }
 */
-        sb.append(m).append('\'');
-/*
-        if (s < 10) sb.append('0');
-*/
-        sb.append(s);
-        if (b) {
-            sb.append('.').append(ss);
+            sb.append('"');
         }
-        sb.append('"');
 
         return sb;
     }

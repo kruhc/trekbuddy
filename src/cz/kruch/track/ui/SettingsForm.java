@@ -144,7 +144,7 @@ final class SettingsForm extends Form implements CommandListener, ItemStateListe
         choiceMisc = new ChoiceGroup("Desktop", ChoiceGroup.MULTIPLE);
         choiceMisc.append("fullscreen", null);
         choiceMisc.append("no sounds", null);
-        choiceMisc.append("decimal precision", null);
+        choiceMisc.append("geocaching format", null);
         choiceMisc.append("UTM coordinates", null);
         choiceMisc.append("OSD extended", null);
         choiceMisc.append("OSD no background", null);
@@ -154,7 +154,7 @@ final class SettingsForm extends Form implements CommandListener, ItemStateListe
         choiceMisc.setSelectedFlags(new boolean[] {
             config.isFullscreen(),
             config.isNoSounds(),
-            config.isDecimalPrecision(),
+            config.isUseGeocachingFormat(),
             config.isUseUTM(),
             config.isOsdExtended(),
             config.isOsdNoBackground(),
@@ -236,7 +236,7 @@ final class SettingsForm extends Form implements CommandListener, ItemStateListe
             choiceMisc.getSelectedFlags(misc);
             config.setFullscreen(misc[0]);
             config.setNoSounds(misc[1]);
-            config.setDecimalPrecision(misc[2]);
+            config.setUseGeocachingFormat(misc[2]);
             config.setUseUTM(misc[3]);
             config.setOsdExtended(misc[4]);
             config.setOsdNoBackground(misc[5]);

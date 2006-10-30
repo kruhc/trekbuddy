@@ -116,7 +116,7 @@ public abstract class Config {
     protected boolean fullscreen = false;
     protected boolean noSounds = false;
     protected boolean useUTM = false;
-    protected boolean decimalPrecision = false;
+    protected boolean useGeocachingFormat = false;
     protected boolean osdExtended = true;
     protected boolean osdNoBackground = false;
     protected boolean osdMediumFont = false;
@@ -374,12 +374,12 @@ public abstract class Config {
         this.geoDatum = geoDatum;
     }
 
-    public boolean isDecimalPrecision() {
-        return decimalPrecision;
+    public boolean isUseGeocachingFormat() {
+        return useGeocachingFormat;
     }
 
-    public void setDecimalPrecision(boolean decimalPrecision) {
-        this.decimalPrecision = decimalPrecision;
+    public void setUseGeocachingFormat(boolean useGeocachingFormat) {
+        this.useGeocachingFormat = useGeocachingFormat;
     }
 
 /*
@@ -486,7 +486,7 @@ public abstract class Config {
                         }
                         // 0.9.2 extension
                         try {
-                            decimalPrecision = din.readBoolean();
+                            useGeocachingFormat = din.readBoolean();
                         } catch (Exception e) {
                         }
                     }
@@ -552,7 +552,7 @@ public abstract class Config {
                 dout.writeInt(dZ);
 */
                 dout.writeUTF(tracklogsOn);
-                dout.writeBoolean(decimalPrecision);
+                dout.writeBoolean(useGeocachingFormat);
                 dout.flush();
                 byte[] bytes = data.toByteArray();
                 rs = RecordStore.openRecordStore(NAME, true, RecordStore.AUTHMODE_PRIVATE, true);

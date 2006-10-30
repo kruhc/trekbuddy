@@ -148,7 +148,7 @@ public final class Desktop extends GameCanvas
 
     // navigation
     private volatile Waypoint[] waypoints = new Waypoint[0];
-    private int currentWaypoint = -1;
+    private volatile int currentWaypoint = -1;
 
     // focus/navigation
     private boolean navigating = false;

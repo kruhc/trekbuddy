@@ -35,7 +35,7 @@ public class Jsr179LocationProvider extends api.location.LocationProvider {
             throw new api.location.LocationException(e);
         }
 
-        lastState = impl.getState();
+        lastState = _STARTING;
         notifyListener(_STARTING); // trick to start GPX tracklog
 
         return lastState;

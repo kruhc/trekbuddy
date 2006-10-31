@@ -727,7 +727,7 @@ public final class Desktop extends GameCanvas
 
             // get navigation info
             StringBuffer extInfo = new StringBuffer();
-            Float azimuth = getNavigationInfo(extInfo, getPointer());
+            float azimuth = getNavigationInfo(extInfo, getPointer());
 
             // set course and delta
             mapViewer.setCourse(azimuth);
@@ -1429,7 +1429,7 @@ public final class Desktop extends GameCanvas
 
 //#endif
 
-    private Float getNavigationInfo(StringBuffer extInfo, QualifiedCoordinates from) {
+    private float getNavigationInfo(StringBuffer extInfo, QualifiedCoordinates from) {
         // get distance and azimuth to current waypoint
         Waypoint waypoint = waypoints[currentWaypoint];
         QualifiedCoordinates to = waypoint.getQualifiedCoordinates();
@@ -1452,7 +1452,7 @@ public final class Desktop extends GameCanvas
         }
         extInfo.append(uString).append(azimuth).append(QualifiedCoordinates.SIGN);
 
-        return new Float(azimuth);
+        return azimuth;
     }
 
     // temp map and/or atlas
@@ -2305,7 +2305,11 @@ public final class Desktop extends GameCanvas
                     boolean onMap = map.isWithin(localQc);
 
                     // set course
-                    mapViewer.setCourse(new Float(location.getCourse()));
+                    if (location.getSpeed() > 0F) {
+                        mapViewer.setCourse(location.getCourse());
+                    } else {
+                        mapViewer.setCourse(Float.NaN);
+                    }
 
                     // update OSD
                     osd.setInfo(localQc.toString(), onMap);
@@ -2315,7 +2319,7 @@ public final class Desktop extends GameCanvas
 
                         // get navigation info
                         StringBuffer extInfo = new StringBuffer();
-                        Float azimuth = getNavigationInfo(extInfo, location.getQualifiedCoordinates());
+                        float azimuth = getNavigationInfo(extInfo, location.getQualifiedCoordinates());
 
                         // set course & navigation info
                         mapViewer.setCourse(azimuth);

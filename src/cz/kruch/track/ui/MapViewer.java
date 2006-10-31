@@ -42,7 +42,7 @@ final class MapViewer {
     private Position wptPosition;
 
     private boolean visible = true;
-    private Float course;
+    private float course;
     private int ci = 0;
     private int[] clip;
 
@@ -218,7 +218,7 @@ final class MapViewer {
         return dirty;
     }
 
-    public void setCourse(Float course) {
+    public void setCourse(float course) {
         this.course = course;
     }
 
@@ -281,7 +281,7 @@ final class MapViewer {
         }
 
         // paint course
-        if (course != null) {
+        if (course != Float.NaN) {
             drawCourse(graphics);
         }
     }
@@ -289,7 +289,7 @@ final class MapViewer {
     // TODO move calculation to setter
     private void drawCourse(Graphics graphics) {
         int ti;
-        int courseInt = course.intValue();
+        int courseInt = (int) course;
         switch (courseInt / 90) {
             case 0:
                 ti = Sprite.TRANS_NONE;

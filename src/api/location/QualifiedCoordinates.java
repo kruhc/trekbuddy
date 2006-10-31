@@ -150,7 +150,6 @@ public final class QualifiedCoordinates {
             return new int[]{ h, m, dec };
         }
 
-/*
         public String toString() {
             StringBuffer sb = new StringBuffer(16);
 
@@ -172,7 +171,6 @@ public final class QualifiedCoordinates {
 
             return sb.toString();
         }
-*/
 
         public String toSentence() {
             StringBuffer sb = new StringBuffer(16);
@@ -230,7 +228,9 @@ public final class QualifiedCoordinates {
     public static String SIGN = "^";
     public static String DELTA = "d";
 
+/*
     private static double SINS[] = new double[90 + 1];
+*/
 
     private double lat, lon;
     private float alt;
@@ -241,9 +241,11 @@ public final class QualifiedCoordinates {
             DELTA = new String(new byte[]{ (byte) 0xce, (byte) 0x94 }, "UTF-8");
         } catch (UnsupportedEncodingException e) {
         }
+/*
         for (int N = SINS.length, i = 0; i < N; i++) {
             SINS[i] = Math.sin(Math.toRadians(i));
         }
+*/
     }
 
     public QualifiedCoordinates(double lat, double lon) {
@@ -326,10 +328,11 @@ public final class QualifiedCoordinates {
         // gc hint
         artifical = null;
 
+/*
         // find best match
         double matchVal = Double.MAX_VALUE;
         int matchIdx = -1;
-        for (int N = SINS.length, i = 0; i < N; i++) {
+        for (int i = SINS.length; --i >= 0; ) {
             double diff = Math.abs(sinAlpha - SINS[i]);
             if (diff < matchVal) {
                 matchVal = diff;
@@ -338,6 +341,8 @@ public final class QualifiedCoordinates {
         }
 
         return offset + matchIdx;
+*/
+        return offset + (int) Math.toDegrees(sinAlpha);
     }
 
     public String toString() {
@@ -348,27 +353,18 @@ public final class QualifiedCoordinates {
             sb.append("E ").append((int) utmCoords.easting).append(' ');
             sb.append("N ").append((int) utmCoords.northing);
         } else {
-            if (lat > 0D) {
-                sb.append("N ");
-                append(lat, sb);
-            } else {
-                sb.append("S ");
-                append(-1 * lat, sb);
-            }
+            sb.append(lat > 0D ? "N " : "S ");
+            append(LAT, sb);
             sb.append("  ");
-            if (lon > 0D) {
-                sb.append("E ");
-                append(lon, sb);
-            } else {
-                sb.append("W ");
-                append(-1 * lon, sb);
-            }
+            sb.append(lon > 0D ? "E " : "W ");
+            append(LON, sb);
         }
 
         return sb.toString();
     }
 
-    private StringBuffer append(double l, StringBuffer sb) {
+    private StringBuffer append(int type, StringBuffer sb) {
+        double l = Math.abs(type == LAT ? lat : lon);
         if (Config.getSafeInstance().isUseGeocachingFormat()) {
             int h = (int) Math.floor(l);
             l -= h;
@@ -389,6 +385,12 @@ public final class QualifiedCoordinates {
                 }
             }
 
+            if (type == LON && h < 100) {
+                sb.append('0');
+            }
+            if (h < 10) {
+                sb.append('0');
+            }
             sb.append(h).append(SIGN);
             sb.append(m).append('.');
             if (dec < 100) {
@@ -398,7 +400,6 @@ public final class QualifiedCoordinates {
                 sb.append('0');
             }
             sb.append(dec);
-            sb.append('"');
         } else {
             int h = (int) Math.floor(l);
             l -= h;

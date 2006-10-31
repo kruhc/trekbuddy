@@ -133,7 +133,7 @@ final class MapViewer {
         }
 
         int absDx = Math.abs(dx);
-        for (int i = 0; i < absDx; i++) {
+        for (int i = absDx; --i >= 0; ) {
             dirty |= scroll(direction);
         }
 
@@ -145,7 +145,7 @@ final class MapViewer {
         }
 
         int absDy = Math.abs(dy);
-        for (int i = 0; i < absDy; i++) {
+        for (int i = absDy; --i >= 0; ) {
             dirty |= scroll(direction);
         }
 
@@ -255,7 +255,7 @@ final class MapViewer {
         }
 
         // project slices to window
-        for (int N = slices.size(), i = 0; i < N; i++) {
+        for (int i = slices.size(); --i >= 0; ) {
             Slice slice = (Slice) slices.elementAt(i);
             if (slice.getImage() == null) {
 //#ifdef __LOG__
@@ -455,7 +455,7 @@ final class MapViewer {
         }
 
         // release slices images we will no longer use
-        for (int N = slices.size(), i = 0; i < N; i++) {
+        for (int i = slices.size(); --i >= 0; ) {
             Slice slice = (Slice) slices.elementAt(i);
             if (v.contains(slice)) {
 //#ifdef __LOG__
@@ -493,7 +493,7 @@ final class MapViewer {
         Slice slice = null;
 
         // look for suitable slice in current set
-        for (int N = slices.size(), i = 0; i < N; i++) {
+        for (int i = slices.size(); --i >= 0; ) {
             Slice s = (Slice) slices.elementAt(i);
             if (s.isWithin(x, y)) {
                 slice = s;

@@ -221,7 +221,7 @@ public final class Map implements Runnable {
         Vector v = null;
 
         // create list of slices whose images are to be loaded
-        for (int N = list.size(), i = 0; i < N; i++) {
+        for (int i = list.size(); --i >= 0; ) {
             Slice slice = (Slice) list.elementAt(i);
             if (slice.getImage() == null) {
 //#ifdef __LOG__
@@ -329,7 +329,7 @@ public final class Map implements Runnable {
      */
     private Throwable loadImages(Vector slices) {
         try {
-            for (int N = slices.size(), i = 0; i < N; i++) {
+            for (int i = slices.size(); --i >= 0; ) {
                 Slice slice = (Slice) slices.elementAt(i);
                 Throwable throwable = null;
 

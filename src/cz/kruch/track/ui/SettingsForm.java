@@ -281,7 +281,7 @@ final class SettingsForm extends Form implements CommandListener, ItemStateListe
             return;
         }
 
-        for (int N = size(), i = 0; i < N; i++) {
+        for (int i = size(); --i >= 0; ) {
             Item item = get(i);
             if (fieldMapPath == item || choiceProvider == item || /*choiceMisc == item || *//*choiceTimezone == item || */choiceDatum == item/*|| (dX == item || dY == item || dZ == item)*/)
                 continue;
@@ -294,8 +294,7 @@ final class SettingsForm extends Form implements CommandListener, ItemStateListe
             delete(i);
 
             // restart cycle
-            i = -1;
-            N = size();
+            i = size();
         }
 
         String provider = choiceProvider.getString(choiceProvider.getSelectedIndex());

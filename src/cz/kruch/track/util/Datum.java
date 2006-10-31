@@ -79,7 +79,7 @@ public final class Datum {
     public static Datum current = DATUM_WGS_84;
 
     public static String use(String id) {
-        for (int N = DATUMS.length, i = 0; i < N; i++) {
+        for (int i = DATUMS.length; --i >= 0; ) {
             if (id.equals(DATUMS[i].getName())) {
                 current = DATUMS[i];
             }

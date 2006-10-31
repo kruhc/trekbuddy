@@ -309,7 +309,7 @@ public final class TarInputStream extends /* FilterInputStream */ InputStream {
      * @param block block data to check.
      */
     private boolean isEOFBlock(byte[] block) {
-        for (int i = 0, sz = this.recordSize; i < sz; ++i) {
+        for (int i = this.recordSize; --i >= 0; ) {
             if (block[i] != 0)
                 return false;
         }

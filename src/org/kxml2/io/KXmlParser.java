@@ -95,10 +95,10 @@ public final class KXmlParser implements XmlPullParser {
     private boolean token;
 
     public KXmlParser() {
-        this.srcBuf =new char[8192];
+        this.srcBuf = new char[1024];
     }
 
-    private final boolean isProp(String n1, boolean prop, String n2) {
+    private boolean isProp(String n1, boolean prop, String n2) {
         if (!n1.startsWith("http://xmlpull.org/v1/doc/"))
             return false;
         if (prop)
@@ -107,7 +107,7 @@ public final class KXmlParser implements XmlPullParser {
             return n1.substring(40).equals(n2);
     }
 
-    private final boolean adjustNsp() throws XmlPullParserException {
+    private boolean adjustNsp() throws XmlPullParserException {
 
         boolean any = false;
 
@@ -219,7 +219,7 @@ public final class KXmlParser implements XmlPullParser {
         return any;
     }
 
-    private final String[] ensureCapacity(String[] arr, int required) {
+    private String[] ensureCapacity(String[] arr, int required) {
         if (arr.length >= required)
             return arr;
         String[] bigger = new String[required + 16];
@@ -227,7 +227,7 @@ public final class KXmlParser implements XmlPullParser {
         return bigger;
     }
 
-    private final void error(String desc) throws XmlPullParserException {
+    private void error(String desc) throws XmlPullParserException {
         if (relaxed) {
             if (error == null)
                 error = "ERR: " + desc;
@@ -236,7 +236,7 @@ public final class KXmlParser implements XmlPullParser {
             exception(desc);
     }
 
-    private final void exception(String desc) throws XmlPullParserException {
+    private void exception(String desc) throws XmlPullParserException {
         throw new XmlPullParserException(
             desc.length() < 100 ? desc : desc.substring(0, 100) + "\n",
             this,
@@ -247,7 +247,7 @@ public final class KXmlParser implements XmlPullParser {
      * common base for next and nextToken. Clears the state, except from 
      * txtPos and whitespace. Does not set the type variable */
 
-    private final void nextImpl() throws IOException, XmlPullParserException {
+    private void nextImpl() throws IOException, XmlPullParserException {
 
         if (reader == null)
             exception("No Input specified");
@@ -269,7 +269,7 @@ public final class KXmlParser implements XmlPullParser {
 
 
             if (error != null) {
-                for (int i = 0; i < error.length(); i++)
+                for (int N = error.length(), i = 0; i < N; i++)
                     push(error.charAt(i));
                 //				text = error;
                 error = null;
@@ -335,7 +335,7 @@ public final class KXmlParser implements XmlPullParser {
         }
     }
 
-    private final int parseLegacy(boolean push)
+    private int parseLegacy(boolean push)
         throws IOException, XmlPullParserException {
 
         String req = "";
@@ -429,7 +429,7 @@ public final class KXmlParser implements XmlPullParser {
             return COMMENT;
         }
 
-        for (int i = 0; i < req.length(); i++)
+        for (int N = req.length(), i = 0; i < N; i++)
             read(req.charAt(i));
 
         if (result == DOCDECL)
@@ -468,7 +468,7 @@ public final class KXmlParser implements XmlPullParser {
 
     /** precondition: &lt! consumed */
 
-    private final void parseDoctype(boolean push)
+    private void parseDoctype(boolean push)
         throws IOException, XmlPullParserException {
 
         int nesting = 1;
@@ -507,7 +507,7 @@ public final class KXmlParser implements XmlPullParser {
 
     /* precondition: &lt;/ consumed */
 
-    private final void parseEndTag()
+    private void parseEndTag()
         throws IOException, XmlPullParserException {
 
         read(); // '<'
@@ -548,7 +548,7 @@ public final class KXmlParser implements XmlPullParser {
         name = elementStack[sp + 2];
     }
 
-    private final int peekType() throws IOException {
+    private int peekType() throws IOException {
         switch (peek(0)) {
             case -1 :
                 return END_DOCUMENT;
@@ -569,19 +569,19 @@ public final class KXmlParser implements XmlPullParser {
         }
     }
 
-    private final String get(int pos) {
+    private String get(int pos) {
         return new String(txtBuf, pos, txtPos - pos);
     }
 
     /*
-    private final String pop (int pos) {
+    private String pop (int pos) {
     String result = new String (txtBuf, pos, txtPos - pos);
     txtPos = pos;
     return result;
     }
     */
 
-    private final void push(int c) {
+    private void push(int c) {
 
         isWhitespace &= c <= ' ';
 
@@ -596,7 +596,7 @@ public final class KXmlParser implements XmlPullParser {
 
     /** Sets name and attributes */
 
-    private final void parseStartTag(boolean xmldecl)
+    private void parseStartTag(boolean xmldecl)
         throws IOException, XmlPullParserException {
 
         if (!xmldecl)
@@ -719,7 +719,7 @@ public final class KXmlParser implements XmlPullParser {
      * result: isWhitespace; if the setName parameter is set,
      * the name of the entity is stored in "name" */
 
-    private final void pushEntity()
+    private void pushEntity()
         throws IOException, XmlPullParserException {
 
         push(read()); // &
@@ -774,7 +774,7 @@ public final class KXmlParser implements XmlPullParser {
                 error("unresolved: &" + code + ";");
         }
         else {
-            for (int i = 0; i < result.length(); i++)
+            for (int N = result.length(), i = 0; i < N; i++)
                 push(result.charAt(i));
         }
     }
@@ -785,7 +785,7 @@ public final class KXmlParser implements XmlPullParser {
     ' ': parse to whitespace or '>'
     */
 
-    private final void pushText(int delimiter, boolean resolveEntities)
+    private void pushText(int delimiter, boolean resolveEntities)
         throws IOException, XmlPullParserException {
 
         int next = peek(0);
@@ -822,14 +822,14 @@ public final class KXmlParser implements XmlPullParser {
         }
     }
 
-    private final void read(char c)
+    private void read(char c)
         throws IOException, XmlPullParserException {
         int a = read();
         if (a != c)
             error("expected: '" + c + "' actual: '" + ((char) a) + "'");
     }
 
-    private final int read() throws IOException {
+    private int read() throws IOException {
         int result;
 
         if (peekCount == 0)
@@ -857,7 +857,7 @@ public final class KXmlParser implements XmlPullParser {
 
     /** Does never read more than needed */
 
-    private final int peek(int pos) throws IOException {
+    private int peek(int pos) throws IOException {
 
         while (pos >= peekCount) {
 
@@ -896,7 +896,7 @@ public final class KXmlParser implements XmlPullParser {
         return peek[pos];
     }
 
-    private final String readName()
+    private String readName()
         throws IOException, XmlPullParserException {
 
         int pos = txtPos;
@@ -927,7 +927,7 @@ public final class KXmlParser implements XmlPullParser {
         return result;
     }
 
-    private final void skip() throws IOException {
+    private void skip() throws IOException {
 
         while (true) {
             int c = peek(0);

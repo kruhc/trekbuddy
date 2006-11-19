@@ -52,6 +52,10 @@ public abstract class LocationProvider {
         this.status = status;
     }
 
+    public boolean isRestartable() {
+        return false;
+    }
+
     public abstract int start() throws LocationException;
     public abstract void stop() throws LocationException;
     public abstract Object getImpl();

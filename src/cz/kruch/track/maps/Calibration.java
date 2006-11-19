@@ -243,7 +243,7 @@ public abstract class Calibration {
         return new Calibration.ProximitePosition(x, y);
     }
 
-    private final boolean minorDiff(QualifiedCoordinates qc1, QualifiedCoordinates qc2, int axis) {
+    private boolean minorDiff(QualifiedCoordinates qc1, QualifiedCoordinates qc2, int axis) {
         if (axis == 0) {
             return Math.abs(qc1.getLon() - qc2.getLon()) < halfHStep;
         } else {
@@ -786,6 +786,7 @@ public abstract class Calibration {
         }
     }
 
+    // TODO optimize
     public static final class ProximitePosition extends Position {
         public ProximitePosition(int x, int y) {
             super(x, y);

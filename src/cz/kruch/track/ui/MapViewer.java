@@ -29,24 +29,21 @@ final class MapViewer {
     private int chx, chy;
     private int chx0, chy0;
     private int crosshairWidth, crosshairHeight;
-    private int arrowWidth, arrowHeight;
     private int mWidth, mHeight;
 
     private Image[] crosshairs;
-    private Image[] courses;
     private Map map;
     private Vector slices = new Vector();
 
-    private Image waypoint;
-    private int wptSize2;
+    private float course = -1f;
     private Position wptPosition;
 
     private boolean visible = true;
-    private float course;
     private int ci = 0;
     private int[] clip;
 
     public MapViewer(int gx, int gy, int width, int height) throws IOException {
+        NavigationScreens.ensureInitialized();
         this.gx = gx;
         this.gy = gy;
         this.crosshairs = new Image[] {
@@ -54,23 +51,8 @@ final class MapViewer {
             Image.createImage("/resources/crosshair_tp_white.png"),
             Image.createImage("/resources/crosshair_tp_grey.png")
         };
-        this.courses = new Image[] {
-            Image.createImage("/resources/course_0.png"),
-            Image.createImage("/resources/course_10.png"),
-            Image.createImage("/resources/course_20.png"),
-            Image.createImage("/resources/course_30.png"),
-            Image.createImage("/resources/course_40.png"),
-            Image.createImage("/resources/course_50.png"),
-            Image.createImage("/resources/course_60.png"),
-            Image.createImage("/resources/course_70.png"),
-            Image.createImage("/resources/course_80.png")
-        };
-        this.waypoint = Image.createImage("/resources/wpt.png");
-        this.wptSize2 = this.waypoint.getWidth() / 2;
         this.crosshairWidth = crosshairs[0].getWidth();
         this.crosshairHeight = crosshairs[0].getHeight();
-        this.arrowWidth = courses[0].getWidth();
-        this.arrowHeight = courses[0].getHeight();
         this.clip = new int[] { -1, -1, crosshairWidth, crosshairHeight };
         resize(width, height);
     }
@@ -101,6 +83,10 @@ final class MapViewer {
         this.mHeight = map.getHeight();
         this.slices = new Vector(0);
         resize(width, height);
+    }
+
+    public void setCourse(float course) {
+        this.course = course;
     }
 
     /**
@@ -218,10 +204,6 @@ final class MapViewer {
         return dirty;
     }
 
-    public void setCourse(float course) {
-        this.course = course;
-    }
-
     public void setWaypoint(Position position) {
         this.wptPosition = position;
     }
@@ -265,6 +247,11 @@ final class MapViewer {
             }
             drawSlice(graphics, /*clip, */slice);
         }
+
+        // paint waypoint
+        if (wptPosition != null) {
+            drawWaypoint(graphics);
+        }
     }
 
     public void render2(Graphics graphics) {
@@ -275,89 +262,30 @@ final class MapViewer {
         // paint crosshair
         graphics.drawImage(crosshairs[ci], chx, chy, 0/*Graphics.TOP | Graphics.LEFT*/);
 
-        // paint waypoint
-        if (wptPosition != null) {
-            drawWaypoint(graphics);
-        }
-
         // paint course
-        if (course != Float.NaN) {
+        if (course > -1f) {
             drawCourse(graphics);
         }
     }
 
     // TODO move calculation to setter
     private void drawCourse(Graphics graphics) {
-        int ti;
-        int courseInt = (int) course;
-        switch (courseInt / 90) {
-            case 0:
-                ti = Sprite.TRANS_NONE;
-                break;
-            case 1:
-                ti = Sprite.TRANS_ROT90;
-                break;
-            case 2:
-                ti = Sprite.TRANS_ROT180;
-                break;
-            case 3:
-                ti = Sprite.TRANS_ROT270;
-                break;
-            case 4:
-                ti = Sprite.TRANS_NONE;
-                break;
-            default:
-                // should never happen
-                throw new AssertionFailedException("Course over 360");
-        }
-
-        int cwo = courseInt % 90;
-        int ci;
-        if (cwo >= 0 && cwo < 6) {
-            ci = 0;
-        } else if (cwo >= 6 && cwo < 16) {
-            ci = 1;
-        } else if (cwo >= 16 && cwo < 26) {
-            ci = 2;
-        } else if (cwo >= 26 && cwo < 36) {
-            ci = 3;
-        } else if (cwo >= 36 && cwo < 46) {
-            ci = 4;
-        } else if (cwo >= 46 && cwo < 56) {
-            ci = 5;
-        } else if (cwo >= 56 && cwo < 66) {
-            ci = 6;
-        } else if (cwo >= 66 && cwo < 76) {
-            ci = 7;
-        } else if (cwo >= 76 && cwo < 86) {
-            ci = 8;
-        } else {
-            ci = 0;
-            if (ti == Sprite.TRANS_NONE) {
-                ti = Sprite.TRANS_ROT90;
-            } else if (ti == Sprite.TRANS_ROT90) {
-                ti = Sprite.TRANS_ROT180;
-            } else if (ti == Sprite.TRANS_ROT180) {
-                ti = Sprite.TRANS_ROT270;
-            } else if (ti == Sprite.TRANS_ROT270) {
-                ti = Sprite.TRANS_NONE;
-            }
-        }
-
-        graphics.drawRegion(courses[ci], 0, 0, arrowWidth, arrowHeight,
-                            ti,
-                            chx - (arrowWidth - crosshairWidth) / 2,
-                            chy - (arrowHeight - crosshairHeight) / 2,
-                            0/*Graphics.TOP | Graphics.LEFT*/);
+        NavigationScreens.drawArrow(graphics, course,
+//                                    chx - (arrowSize - crosshairWidth) / 2,
+//                                    chy - (arrowSize - crosshairHeight) / 2,
+                                    chx + crosshairWidth / 2,
+                                    chy + crosshairHeight / 2,
+                                    0);
     }
 
     private void drawWaypoint(Graphics graphics) {
         int x = wptPosition.getX();
         int y = wptPosition.getY();
         if (x > this.x && x < this.x + width && y > this.y && y < this.y + height) {
-            graphics.drawImage(waypoint,
-                               x - this.x - wptSize2, y - this.y - wptSize2,
-                               0/*Graphics.TOP | Graphics.LEFT*/);
+//            graphics.drawImage(waypoint,
+//                               x - this.x - wptSize2, y - this.y - wptSize2,
+//                               0/*Graphics.TOP | Graphics.LEFT*/);
+            NavigationScreens.drawWaypoint(graphics, x - this.x, y - this.y, 0);
         }
     }
 

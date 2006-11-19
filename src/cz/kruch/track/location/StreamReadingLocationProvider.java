@@ -21,6 +21,7 @@ public abstract class StreamReadingLocationProvider extends LocationProvider {
     protected static final int BUFFER_SIZE = 512;
 
     private OutputStream observer;
+    private int order = 0;
 
     protected StreamReadingLocationProvider(String name) {
         super(name);
@@ -31,35 +32,56 @@ public abstract class StreamReadingLocationProvider extends LocationProvider {
     }
 
     protected final Location nextLocation(InputStream in) throws IOException, LocationException {
-        // read GGA
-        char[] ggaSentence = nextSentence(in, HEADER_GGA);
-        if (ggaSentence == null) {
-            return null;
+        // records
+        NmeaParser.Record gga = null;
+        NmeaParser.Record rmc = null;
+
+        // get pair
+        while (gga == null || rmc == null) {
+            char[] s = nextSentence(in);
+            if (s == null) {
+                return null;
+            }
+            if (isType(s, HEADER_GGA)) {
+                gga = NmeaParser.parseGGA(s);
+            } else if (isType(s, HEADER_RMC)) {
+                rmc = NmeaParser.parseRMC(s);
+            } else {
+                continue;
+            }
+            // sync
+            if (order == 0 && rmc != null && gga != null) {
+                System.out.println("detect order");
+                int i = rmc.timestamp - gga.timestamp;
+                System.out.println("i = " + i);
+                switch (i) {
+                    case 0:
+                        order = 1;
+                        break;
+                    case 1000:
+                        gga = null;
+                        break;
+                    case -1000:
+                        rmc = null;
+                        break;
+                }
+            }
         }
 
-        // read RMC
-        char[] rmcSentence = nextSentence(in, HEADER_RMC);
-        if (rmcSentence == null) {
-            return null;
-        }
-
+        // new location
         Location location = null;
 
-        // parse GGA and RMC
-        NmeaParser.Record gga = NmeaParser.parseGGA(ggaSentence);
-        NmeaParser.Record rmc = NmeaParser.parseRMC(rmcSentence);
+        // combine
         if (rmc.timestamp == gga.timestamp) {
             long datetime = rmc.date + rmc.timestamp;
             location = new Location(new QualifiedCoordinates(rmc.lat, rmc.lon, gga.altitude),
                                     datetime, gga.fix, gga.sat, gga.hdop);
             location.setCourse(rmc.angle);
             location.setSpeed(rmc.speed);
+            System.out.println("got matching pair: " + location);
         } else {
-/*
-            throw new AssertionFailedException("Invalid NMEA flow");
-*/
             long datetime = rmc.date + rmc.timestamp;
-            location = new Location(new QualifiedCoordinates(rmc.lat, gga.lon),
+            location = new Location(new QualifiedCoordinates(rmc.lat, rmc.lon),
                                     datetime, rmc.status == 'A' ? 1 : 0);
             location.setCourse(rmc.angle);
             location.setSpeed(rmc.speed);
@@ -68,13 +90,12 @@ public abstract class StreamReadingLocationProvider extends LocationProvider {
         return location;
     }
 
-    protected final char[] nextSentence(InputStream in, char[] header) throws IOException {
+    protected final char[] nextSentence(InputStream in) throws IOException {
         char[] sb = new char[0x80];
         int pos = 0;
 
         boolean nl = false;
         boolean match = false;
-        int hlen = header.length;
 
         int c = in.read();
         while (c > -1) {
@@ -91,21 +112,12 @@ public abstract class StreamReadingLocationProvider extends LocationProvider {
 
                 if (nl) break;
 
-                // header check
-                if (pos < hlen) {
-                    if (ch != header[pos]) {
-                        match = false;
-                    }
-                }
+                // add char to array
+                sb[pos++] = ch;
 
-                if (match) { // only if header still matches
-                    // add char to array
-                    sb[pos++] = ch;
-
-                    // weird content check
-                    if (pos >= 0x80) {
-                        throw new IOException("Hmm, is this really NMEA stream?");
-                    }
+                // weird content check
+                if (pos >= 0x80) {
+                    throw new IOException("Hmm, is this really NMEA stream?");
                 }
             }
 
@@ -123,5 +135,19 @@ public abstract class StreamReadingLocationProvider extends LocationProvider {
         }
 
         return null;
+    }
+
+    private boolean isType(char[] sentence, char[] header) {
+        if (sentence.length < header.length) {
+            return false;
+        }
+
+        for (int i = header.length; --i >= 0; ) {
+            if (sentence[i] != header[i]) {
+                return false;
+            }
+        }
+
+        return true;
     }
 }

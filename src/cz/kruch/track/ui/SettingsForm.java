@@ -24,7 +24,7 @@ final class SettingsForm extends Form implements CommandListener, ItemStateListe
     private Callback callback;
 
     private TextField fieldMapPath;
-    private ChoiceGroup choiceDatum;
+    private ChoiceGroup choiceMapDatum;
 /*
     private ChoiceGroup choiceTimezone;
 */
@@ -56,13 +56,13 @@ final class SettingsForm extends Form implements CommandListener, ItemStateListe
             append(fieldMapPath);
         }
 
-        // geodetic datum
-        choiceDatum = new ChoiceGroup("Map Datum", ChoiceGroup.POPUP);
+        // map datum
+        choiceMapDatum = new ChoiceGroup("Map Datum", ChoiceGroup.POPUP);
         for (int N = Datum.DATUMS.length, i = 0; i < N; i++) {
             String id = Datum.DATUMS[i].toString();
-            choiceDatum.setSelectedIndex(choiceDatum.append(id, null), config.getGeoDatum().equals(id));
+            choiceMapDatum.setSelectedIndex(choiceMapDatum.append(id, null), config.getGeoDatum().equals(id));
         }
-        append(choiceDatum);
+        append(choiceMapDatum);
 /*
         dX = new TextField("dX", null, 5, TextField.DECIMAL);
         dX.setString(Integer.toString(config.getdX()));
@@ -77,6 +77,32 @@ final class SettingsForm extends Form implements CommandListener, ItemStateListe
         dZ.setLayout(Item.LAYOUT_SHRINK | Item.LAYOUT_2);
         append(dZ);
 */
+
+        // desktop settings
+        choiceMisc = new ChoiceGroup("Desktop", ChoiceGroup.MULTIPLE);
+        choiceMisc.append("fullscreen", null);
+        choiceMisc.append("no sounds", null);
+        choiceMisc.append("geocaching format", null);
+        choiceMisc.append("UTM coordinates", null);
+        choiceMisc.append("OSD extended", null);
+        choiceMisc.append("OSD no background", null);
+        choiceMisc.append("OSD larger font", null);
+        choiceMisc.append("OSD bold font", null);
+        choiceMisc.append("OSD black color", null);
+        choiceMisc.setSelectedFlags(new boolean[] {
+            config.isFullscreen(),
+            config.isNoSounds(),
+            config.isUseGeocachingFormat(),
+            config.isUseUTM(),
+            config.isOsdExtended(),
+            config.isOsdNoBackground(),
+            config.isOsdMediumFont(),
+            config.isOsdBoldFont(),
+            config.isOsdBlackColor()
+        });
+//        if (choiceProvider.size() == 0) { // dumb phone
+            append(choiceMisc);
+//        }
 
         // location provider choice
         String[] providers = config.getLocationProviders();
@@ -140,32 +166,6 @@ final class SettingsForm extends Form implements CommandListener, ItemStateListe
             config.isLocationSharing()
         });
 
-        // desktop settings
-        choiceMisc = new ChoiceGroup("Desktop", ChoiceGroup.MULTIPLE);
-        choiceMisc.append("fullscreen", null);
-        choiceMisc.append("no sounds", null);
-        choiceMisc.append("geocaching format", null);
-        choiceMisc.append("UTM coordinates", null);
-        choiceMisc.append("OSD extended", null);
-        choiceMisc.append("OSD no background", null);
-        choiceMisc.append("OSD larger font", null);
-        choiceMisc.append("OSD bold font", null);
-        choiceMisc.append("OSD black color", null);
-        choiceMisc.setSelectedFlags(new boolean[] {
-            config.isFullscreen(),
-            config.isNoSounds(),
-            config.isUseGeocachingFormat(),
-            config.isUseUTM(),
-            config.isOsdExtended(),
-            config.isOsdNoBackground(),
-            config.isOsdMediumFont(),
-            config.isOsdBoldFont(),
-            config.isOsdBlackColor()
-        });
-        if (choiceProvider.size() == 0) { // dumb phone
-            append(choiceMisc);
-        }
-
         // show current provider and tracklog specific options
         showProviderOptions(false);
 /*
@@ -188,7 +188,7 @@ final class SettingsForm extends Form implements CommandListener, ItemStateListe
             showProviderOptions(false);
         } else if (choiceTracklog == item) {
             showProviderOptions(true);
-        }/* else if (choiceDatum == item) {
+        }/* else if (choiceMapDatum == item) {
             showDatumOptions();
         }*/
     }
@@ -249,7 +249,7 @@ final class SettingsForm extends Form implements CommandListener, ItemStateListe
             config.setTimeZone(choiceTimezone.getString(choiceTimezone.getSelectedIndex()));
 */
             // datum
-            config.setGeoDatum(Datum.use(choiceDatum.getString(choiceDatum.getSelectedIndex())));
+            config.setGeoDatum(Datum.use(choiceMapDatum.getString(choiceMapDatum.getSelectedIndex())));
 /*
             config.setdX(Integer.parseInt(dX.getString()));
             config.setdY(Integer.parseInt(dY.getString()));
@@ -283,7 +283,7 @@ final class SettingsForm extends Form implements CommandListener, ItemStateListe
 
         for (int i = size(); --i >= 0; ) {
             Item item = get(i);
-            if (fieldMapPath == item || choiceProvider == item || /*choiceMisc == item || *//*choiceTimezone == item || */choiceDatum == item/*|| (dX == item || dY == item || dZ == item)*/)
+            if (fieldMapPath == item || choiceProvider == item || choiceMisc == item || /*choiceTimezone == item || */choiceMapDatum == item/*|| (dX == item || dY == item || dZ == item)*/)
                 continue;
             if (soft) {
                 if (fieldSimulatorDelay == item || fieldLocationInterval == item || choiceFriends == item || choiceTracklog == item)
@@ -299,6 +299,7 @@ final class SettingsForm extends Form implements CommandListener, ItemStateListe
 
         String provider = choiceProvider.getString(choiceProvider.getSelectedIndex());
         boolean tracklogsOn = !Config.TRACKLOG_NEVER.equals(choiceTracklog.getString(choiceTracklog.getSelectedIndex()));
+
         if (Config.LOCATION_PROVIDER_SIMULATOR.equals(provider)) {
             if (TrackingMIDlet.isFs()) {
                 if (!soft) {
@@ -330,12 +331,11 @@ final class SettingsForm extends Form implements CommandListener, ItemStateListe
                 }
             }
         }
-        append(choiceMisc);
     }
 
 /*
     private void showDatumOptions() {
-        String id = choiceDatum.getString(choiceDatum.getSelectedIndex());
+        String id = choiceMapDatum.getString(choiceMapDatum.getSelectedIndex());
         if (id.startsWith("--")) {
             // fake
         } else if (id.indexOf('-') > -1) {

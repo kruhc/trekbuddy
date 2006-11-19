@@ -59,9 +59,9 @@ public final class Datum {
     public static final Datum DATUM_CH_1903         = new Datum("CH1903", ELLIPSOID_BESSEL_1841, 660, 14, 369);
     public static final Datum DATUM_NAD_27_CONUS    = new Datum("NAD27 (CONUS)", ELLIPSOID_CLARKE_1866, -8, 160, 176);
     public static final Datum DATUM_OSGB_36         = new Datum("OSGB36", ELLIPSOID_AIRY_1830, 375, -111, 431);
-    public static final Datum DATUM_S_42_CZ         = new Datum("Pulkovo 1942 (CZ)", ELLIPSOID_KRASSOVSKY_1940, 26, -121, -78);
-    public static final Datum DATUM_S_42_POLAND     = new Datum("Pulkovo 1942 (Poland)", ELLIPSOID_KRASSOVSKY_1940, 23, -124, -82);
-    public static final Datum DATUM_S_42_RUSSIA     = new Datum("Pulkovo 1942 (Russia)", ELLIPSOID_KRASSOVSKY_1940, 28, -130, -95);
+    public static final Datum DATUM_S_42_CZ         = new Datum("S-42 (CZ)", ELLIPSOID_KRASSOVSKY_1940, 26, -121, -78);
+    public static final Datum DATUM_S_42_POLAND     = new Datum("S-42 (Poland)", ELLIPSOID_KRASSOVSKY_1940, 23, -124, -82);
+    public static final Datum DATUM_S_42_RUSSIA     = new Datum("S-42 (Russia)", ELLIPSOID_KRASSOVSKY_1940, 28, -130, -95);
     public static final Datum DATUM_S_JTSK          = new Datum("S-JTSK", ELLIPSOID_BESSEL_1841, 589, 76, 480);
 
     public static final Datum[] DATUMS = new Datum[]{
@@ -93,37 +93,7 @@ public final class Datum {
             return wgs84;
         }
 
-        double da = ellipsoid.equatorialRadius - DATUM_WGS_84.ellipsoid.equatorialRadius;
-        double df = ellipsoid.flattening - DATUM_WGS_84.ellipsoid.flattening;
-        double lat = Math.toRadians(wgs84.getLat());
-        double lon = Math.toRadians(wgs84.getLon());
-
-        double slat = Math.sin(lat);
-        double clat = Math.cos(lat);
-        double slon = Math.sin(lon);
-        double clon = Math.cos(lon);
-        double ssqlat = slat * slat;
-        double bda = 1D - DATUM_WGS_84.ellipsoid.flattening;
-        double dlat, dlon /*, dh*/;
-
-        double v = 1D - DATUM_WGS_84.ellipsoid.eccentricitySquared * ssqlat;
-        double rn = DATUM_WGS_84.ellipsoid.equatorialRadius / Math.sqrt(v);
-        double rm = DATUM_WGS_84.ellipsoid.equatorialRadius * (1D - DATUM_WGS_84.ellipsoid.eccentricitySquared) / Math.sqrt(v * v * v); // sqrt(v^3) = pow(v, 1.5)
-
-        dlat = (((((- dx * slat * clon - dy * slat * slon) + dz * clat)
-                + (da * ((rn * DATUM_WGS_84.ellipsoid.eccentricitySquared * slat * clat) / DATUM_WGS_84.ellipsoid.equatorialRadius)))
-                + (df * (rm * bda + rn / bda) * slat * clat)))
-                / (rm /* + from.h*/);
-
-        dlon = (- dx * slon + dy * clon) / ((rn /* + from.h*/) * clat);
-
-/*
-        dh = (dx * clat * clon) + (dy * clat * slon) + (dz * slat)
-                - (da * (from_a / rn)) + ((df * rn * ssqlat) / adb);
-*/
-
-        return new QualifiedCoordinates(Math.toDegrees(lat + dlat),
-                                        Math.toDegrees(lon + dlon)/*, from.h + dh*/);
+        return transform(wgs84, DATUM_WGS_84.ellipsoid, ellipsoid, -1);
     }
 
     public QualifiedCoordinates toWgs84(QualifiedCoordinates local) {
@@ -131,8 +101,15 @@ public final class Datum {
             return local;
         }
 
-        double da = DATUM_WGS_84.ellipsoid.equatorialRadius - ellipsoid.equatorialRadius;
-        double df = DATUM_WGS_84.ellipsoid.flattening - ellipsoid.flattening;
+        return transform(local, ellipsoid, DATUM_WGS_84.ellipsoid, 1);
+    }
+
+    private QualifiedCoordinates transform(QualifiedCoordinates local,
+                                           Ellipsoid fromEllipsoid,
+                                           Ellipsoid toEllipsoid,
+                                           int sign) {
+        double da = toEllipsoid.equatorialRadius - fromEllipsoid.equatorialRadius;
+        double df = toEllipsoid.flattening - fromEllipsoid.flattening;
         double lat = Math.toRadians(local.getLat());
         double lon = Math.toRadians(local.getLon());
 
@@ -141,19 +118,19 @@ public final class Datum {
         double slon = Math.sin(lon);
         double clon = Math.cos(lon);
         double ssqlat = slat * slat;
-        double bda = 1D - ellipsoid.flattening;
+        double bda = 1D - fromEllipsoid.flattening;
         double dlat, dlon /*, dh*/;
 
-        double v = 1D - ellipsoid.eccentricitySquared * ssqlat;
-        double rn = ellipsoid.equatorialRadius / Math.sqrt(v);
-        double rm = ellipsoid.equatorialRadius * (1D - ellipsoid.eccentricitySquared) / Math.sqrt(v * v * v); // sqrt(v^3) = pow(v, 1.5)
+        double v = 1D - fromEllipsoid.eccentricitySquared * ssqlat;
+        double rn = fromEllipsoid.equatorialRadius / Math.sqrt(v);
+        double rm = fromEllipsoid.equatorialRadius * (1D - fromEllipsoid.eccentricitySquared) / Math.sqrt(v * v * v); // sqrt(v^3) = pow(v, 1.5)
 
-        dlat = (((((dx * slat * clon + dy * slat * slon) - dz * clat)
-                + (da * ((rn * ellipsoid.eccentricitySquared * slat * clat) / ellipsoid.equatorialRadius)))
+        dlat = ((((((sign * dx) * slat * clon + (sign * dy) * slat * slon) - (sign * dz) * clat)
+                + (da * ((rn * fromEllipsoid.eccentricitySquared * slat * clat) / fromEllipsoid.equatorialRadius)))
                 + (df * (rm * bda + rn / bda) * slat * clat)))
                 / (rm /* + from.h*/);
 
-        dlon = (dx * slon - dy * clon) / ((rn /* + from.h*/) * clat);
+        dlon = ((sign * dx) * slon - (sign * dy) * clon) / ((rn /* + from.h*/) * clat);
 
 /*
         dh = (- dx * clat * clon) + (- dy * clat * slon) + (- dz * slat)
@@ -162,6 +139,7 @@ public final class Datum {
 
         return new QualifiedCoordinates(Math.toDegrees(lat + dlat),
                                         Math.toDegrees(lon + dlon)/*, from.h + dh*/);
+
     }
 
     public final static class Ellipsoid {

@@ -82,7 +82,6 @@ public class TrackingMIDlet extends MIDlet {
 
         // fs type
         fsType = FS_UNKNOWN;
-//#ifndef __NO_FS__
         try {
             Class clazz = Class.forName("javax.microedition.io.file.FileConnection");
             fsType = FS_JSR75;
@@ -97,7 +96,6 @@ public class TrackingMIDlet extends MIDlet {
             } catch (NoClassDefFoundError e) {
             }
         }
-//#endif
         if (fsType == FS_UNKNOWN) {
             fsType = FS_NONE;
         }
@@ -108,7 +106,6 @@ public class TrackingMIDlet extends MIDlet {
         sonyEricsson = System.getProperty("com.sonyericsson.imei") != null;
 
         // setup environment
-//#ifndef __NO_FS__
         if (hasFlag("fs_read_skip") || sonyEricsson) {
             System.out.println("* fs read-skip feature on");
             com.ice.tar.TarInputStream.useReadSkip = true;
@@ -121,7 +118,6 @@ public class TrackingMIDlet extends MIDlet {
             System.out.println("* fs no-reset feature on");
             cz.kruch.track.maps.Map.useReset = false;
         }
-//#endif
         if (hasFlag("ui_no_partial_flush") || sxg75) {
             System.out.println("* ui no-partial-flush feature on");
             cz.kruch.track.ui.Desktop.partialFlush = false;

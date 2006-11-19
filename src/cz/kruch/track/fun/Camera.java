@@ -20,12 +20,20 @@ import javax.microedition.media.Manager;
 import javax.microedition.media.MediaException;
 import javax.microedition.media.control.VideoControl;
 import javax.microedition.media.control.GUIControl;
+import java.io.InputStream;
+import java.io.ByteArrayInputStream;
+import java.io.IOException;
+import java.io.ByteArrayOutputStream;
 
-public final class Camera extends Form
-        implements CommandListener, Runnable {
+public final class Camera extends Form implements CommandListener, Runnable {
+
+    private static final byte BYTE_FF = (byte)0xFF;
+    private static final String MSG_UNEXPECTED_END_OF_STREAM = "Unexpected end of stream";
+
 //#ifdef __LOG__
     private static final Logger log = new Logger("Desktop");
 //#endif
+
 
     private Displayable next;
     private Callback callback;
@@ -111,7 +119,7 @@ public final class Camera extends Form
             System.gc();
 
             // take the snapshot
-            byte[] raw = video.getSnapshot(format);
+            byte[] raw = getThumbnail(video.getSnapshot(format));
 
             // close the player
             destroy();
@@ -127,5 +135,121 @@ public final class Camera extends Form
             // report snapshot taking problem
             callback.invoke(null, t);
         }
+    }
+
+    public static byte[] getThumbnail(byte[] image) throws Exception {
+        byte[] result = image;
+        InputStream in = new ByteArrayInputStream(image);
+
+        // JPEG check
+        isJpeg(in);
+
+        // find EXIF
+        do {
+            // segment identifier
+            int identifier = in.read();
+            if (identifier == -1) {
+                break;
+            }
+            if (((byte)(identifier & 0xFF)) != BYTE_FF) {
+                throw new IOException("Segment start not found");
+            }
+
+            // segment marker
+            byte marker = readByte(in);
+
+            // segment size [high-byte] [low-byte]
+            byte[] lengthBytes = new byte[2];
+            lengthBytes[0] = readByte(in);
+            lengthBytes[1] = readByte(in);
+            int length = ((lengthBytes[0] << 8) & 0xFF00) | (lengthBytes[1] & 0xFF);
+
+            // segment length includes size bytes
+            length -= 2;
+            if (length < 0) {
+                throw new IOException("Negative segment size");
+            }
+
+            if (marker == (byte)0xDA) {
+                goTo(in, (byte)0xD9, null);
+            } else if (marker == (byte)0xE1) {
+                int l = length;
+                ByteArrayOutputStream out = new ByteArrayOutputStream();
+                l -= goTo(in, (byte)0xD8, null);
+                out.write(BYTE_FF);
+                out.write((byte)0xD8);
+                l -= goTo(in, (byte)0xD9, out);
+                out.write(BYTE_FF);
+                out.write((byte)0xD9);
+                out.flush();
+                // assertion
+                if (l != 0) {
+                    throw new Exception("Wrong thumbnail position");
+                }
+                // result
+                result = out.toByteArray();
+            } else {
+                skipSegment(in, length);
+            }
+        } while (true);
+
+        in.close();
+
+        return result;
+    }
+
+    private static boolean isJpeg(InputStream in) throws IOException {
+        byte[] header = new byte[2];
+        header[0] = readByte(in);
+        header[1] = readByte(in);
+
+        return (header[0] & 0xFF) == 0xFF && (header[1] & 0xFF) == 0xD8;
+    }
+
+    private static void skipSegment(InputStream in, long length) throws IOException {
+        while (length > 0) {
+            long l = in.skip(length);
+            if (l == -1) {
+                throw new IOException(MSG_UNEXPECTED_END_OF_STREAM);
+            }
+            length -= l;
+        }
+    }
+
+    private static byte readByte(InputStream in) throws IOException {
+        int b = in.read();
+        if (b == -1) {
+            throw new IOException(MSG_UNEXPECTED_END_OF_STREAM);
+        }
+
+        return (byte)(b & 0xFF);
+    }
+
+    private static int goTo(InputStream in, byte marker, ByteArrayOutputStream out) throws IOException {
+//        System.out.println("goto " + Integer.toHexString(0xFF & marker) + "; record? " + (out != null));
+        int count = 0;
+        while (true) {
+            int b = readByte(in);
+            count++;
+            if ((byte)(b & 0xFF) == BYTE_FF) {
+                b = readByte(in);
+                count++;
+                if (marker == (byte)(b & 0xFF)) {
+//                    System.out.println("mark " + Integer.toHexString(0xFF & marker) + " found");
+                    break;
+                } else {
+                    if (out != null) {
+                        out.write(BYTE_FF);
+                        out.write(b);
+                    }
+                }
+            } else {
+                if (out != null) {
+                    out.write(b);
+                }
+            }
+        }
+
+        return count;
     }
 }

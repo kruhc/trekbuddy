@@ -7,6 +7,8 @@ package cz.kruch.track.ui;
 import cz.kruch.track.util.Logger;
 //#endif
 import cz.kruch.track.event.Callback;
+import cz.kruch.track.util.Arrays;
+import cz.kruch.track.util.Comparator;
 
 import javax.microedition.io.Connector;
 import javax.microedition.lcdui.List;
@@ -14,6 +16,7 @@ import javax.microedition.lcdui.Command;
 import javax.microedition.lcdui.CommandListener;
 import javax.microedition.lcdui.Displayable;
 import java.util.Enumeration;
+import java.util.Vector;
 import java.io.IOException;
 
 public final class FileBrowser extends List implements CommandListener, Runnable {
@@ -117,9 +120,27 @@ public final class FileBrowser extends List implements CommandListener, Runnable
         if (depth > 0) {
             append(PARENT_DIR, null);
         }
+
+/*
         while (entries.hasMoreElements()) {
             append(entries.nextElement().toString(), null);
         }
+*/
+
+        /*
+         * Directories first, then files.
+         */
+        Vector v = new Vector();
+        while (entries.hasMoreElements()) {
+            v.addElement(entries.nextElement());
+        }
+        String[] array = new String[v.size()];
+        v.copyInto(array);
+        Arrays.sort(array, new FilenameComparator());
+        for (int N = array.length, i = 0; i < N; i++) {
+            append(array[i], null);
+        }
+
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug(size() + " entries");
 //#endif
@@ -157,5 +178,27 @@ public final class FileBrowser extends List implements CommandListener, Runnable
 
         // we are done
         callback.invoke(file, throwable);
+    }
+
+    private class FilenameComparator implements Comparator {
+        public int compare(Object o1, Object o2) {
+            String s1 = ((String) o1).toLowerCase();
+            String s2 = ((String) o2).toLowerCase();
+            boolean isDir1 = s1.endsWith("/");
+            boolean isDir2 = s2.endsWith("/");
+            if (isDir1) {
+                if (isDir2) {
+                    return s1.compareTo(s2);
+                } else {
+                    return -1;
+                }
+            } else {
+                if (isDir2) {
+                    return 1;
+                } else {
+                    return s1.compareTo(s2);
+                }
+            }
+        }
     }
 }

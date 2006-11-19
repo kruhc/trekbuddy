@@ -2247,8 +2247,9 @@ public final class Desktop extends GameCanvas
                         return;
                     }
 
-                    // local coordinates
-                    QualifiedCoordinates localQc = Datum.current.toLocal(location.getQualifiedCoordinates());
+                    // global & local coordinates
+                    QualifiedCoordinates qc = location.getQualifiedCoordinates();
+                    QualifiedCoordinates localQc = Datum.current.toLocal(qc);
 
                     // on map detection
                     boolean onMap = map.isWithin(localQc);
@@ -2262,7 +2263,7 @@ public final class Desktop extends GameCanvas
 
                     // update OSD
                     if (Config.getSafeInstance().isUseGeocachingFormat() || Config.getSafeInstance().isUseUTM()) {
-                        osd.setInfo(location.toString(), onMap);
+                        osd.setInfo(qc.toString(), onMap);
                     } else {
                         osd.setInfo(localQc.toString(), onMap);
                     }
@@ -2272,7 +2273,7 @@ public final class Desktop extends GameCanvas
 
                         // get navigation info
                         StringBuffer extInfo = new StringBuffer();
-                        float azimuth = getNavigationInfo(extInfo, location.getQualifiedCoordinates());
+                        float azimuth = getNavigationInfo(extInfo, qc);
 
                         // set course & navigation info
                         mapViewer.setCourse(azimuth);
@@ -2297,14 +2298,14 @@ public final class Desktop extends GameCanvas
                         if (atlas != null) {
 
                             // got map for given coords?
-                            String url = atlas.getMapURL(location.getQualifiedCoordinates());
+                            String url = atlas.getMapURL(qc);
                             if (url != null) {
 
                                 // 'switch' flag
                                 _switch = true;
 
                                 // focus on these coords in new map once it is loaded
-                                _qc = location.getQualifiedCoordinates();
+                                _qc = qc;
 
                                 // start map loading task
                                 startOpenMap(url, null);

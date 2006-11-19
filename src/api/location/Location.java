@@ -62,8 +62,12 @@ public class Location {
         return speed;
     }
 
+    public void setHdop(float hdop) {
+        this.hdop = hdop;
+    }
+
     public void setSpeed(float speed) {
-        this.speed = speed == Float.NaN ? -1F : speed;
+        this.speed = speed;
     }
 
     public float getCourse() {
@@ -71,7 +75,7 @@ public class Location {
     }
 
     public void setCourse(float course) {
-        this.course = course == Float.NaN ? -1F : course;
+        this.course = -1F;
     }
 
     public String toExtendedInfo(int tzOffset) {

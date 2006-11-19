@@ -133,11 +133,11 @@ public final class QualifiedCoordinates {
             int h = deg;
             int m = (int) Math.floor(min);
             double l = min - m;
-            l *= 1000D;
+            l *= 100000D;
             int dec = (int) Math.floor(l);
             if ((l - dec) > 0.5D) {
                 dec++;
-                if (dec == 1000) {
+                if (dec == 100000) {
                     dec = 0;
                     m++;
                     if (m == 60) {
@@ -161,6 +161,12 @@ public final class QualifiedCoordinates {
             sb.append(type == LAT ? (sign == -1 ? "S" : "N") : (sign == -1 ? "W" : "E"));
             sb.append(' ');
             sb.append(h).append(SIGN).append(m).append('.');
+            if (s < 10000) {
+                sb.append('0');
+            }
+            if (s < 1000) {
+                sb.append('0');
+            }
             if (s < 100) {
                 sb.append('0');
             }
@@ -191,6 +197,12 @@ public final class QualifiedCoordinates {
                 sb.append('0');
             }
             sb.append(m).append('.');
+            if (s < 10000) {
+                sb.append('0');
+            }
+            if (s < 1000) {
+                sb.append('0');
+            }
             if (s < 100) {
                 sb.append('0');
             }
@@ -228,12 +240,11 @@ public final class QualifiedCoordinates {
     public static String SIGN = "^";
     public static String DELTA = "d";
 
-/*
     private static double SINS[] = new double[90 + 1];
-*/
 
     private double lat, lon;
     private float alt;
+    private boolean hp;
 
     static {
         try {
@@ -241,11 +252,9 @@ public final class QualifiedCoordinates {
             DELTA = new String(new byte[]{ (byte) 0xce, (byte) 0x94 }, "UTF-8");
         } catch (UnsupportedEncodingException e) {
         }
-/*
         for (int N = SINS.length, i = 0; i < N; i++) {
             SINS[i] = Math.sin(Math.toRadians(i));
         }
-*/
     }
 
     public QualifiedCoordinates(double lat, double lon) {
@@ -255,7 +264,7 @@ public final class QualifiedCoordinates {
     public QualifiedCoordinates(double lat, double lon, float alt) {
         this.lat = lat;
         this.lon = lon;
-        this.alt = alt == Float.NaN ? -1F : alt;
+        this.alt = alt;
     }
 
     public double getLat() {
@@ -268,6 +277,10 @@ public final class QualifiedCoordinates {
 
     public float getAlt() {
         return alt;
+    }
+
+    public void setHp(boolean hp) {
+        this.hp = hp;
     }
 
     public float distance(QualifiedCoordinates neighbour) {
@@ -328,7 +341,6 @@ public final class QualifiedCoordinates {
         // gc hint
         artifical = null;
 
-/*
         // find best match
         double matchVal = Double.MAX_VALUE;
         int matchIdx = -1;
@@ -341,8 +353,9 @@ public final class QualifiedCoordinates {
         }
 
         return offset + matchIdx;
-*/
+/*
         return offset + (int) Math.toDegrees(sinAlpha);
+*/
     }
 
     public String toString() {
@@ -408,11 +421,10 @@ public final class QualifiedCoordinates {
             l -= m;
             l *= 60D;
             int s = (int) Math.floor(l);
-/*
             int ss = 0;
-            boolean b = false;
+//            boolean b = true;
 
-            if (b) { // round decimals
+            if (hp) { // round decimals
                 l -= s;
                 l *= 10;
                 ss = (int) Math.floor(l);
@@ -432,7 +444,6 @@ public final class QualifiedCoordinates {
                     }
                 }
             } else { // round secs
-*/
                 if ((l - s) > 0.5D) {
                     s++;
                     if (s == 60) {
@@ -444,18 +455,14 @@ public final class QualifiedCoordinates {
                         }
                     }
                 }
-/*
             }
-*/
 
             sb.append(h).append(SIGN);
             sb.append(m).append('\'');
             sb.append(s);
-/*
-            if (b) {
+            if (hp) {
                 sb.append('.').append(ss);
             }
-*/
             sb.append('"');
         }
 

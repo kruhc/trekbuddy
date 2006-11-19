@@ -33,7 +33,7 @@ abstract class Bar {
         this.height = height;
 
         // create bg bar
-        int color = TrackingMIDlet.numAlphaLevels() > 2 ? 0x807f7f7f : 0xff7f7f7f;
+        int color = TrackingMIDlet.numAlphaLevels() > 2 ? (TrackingMIDlet.isSonyEricsson() ? 0xA03f3f3f : 0x807f7f7f) : 0xff7f7f7f;
         int[] shadow = new int[width * bh];
         for (int i = shadow.length; --i >= 0; ) {
             shadow[i] = color;

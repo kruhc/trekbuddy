@@ -175,7 +175,7 @@ public final class NmeaParser {
         return record;
     }
 
-    private static long parseTime(Token token) {
+    private static int parseTime(Token token) {
         int tl = parseInt(token.array, token.begin, 6/*token.length*/);
         int hours = /*(int)*/ tl / 10000;
         tl -= hours * 10000;
@@ -375,7 +375,7 @@ public final class NmeaParser {
      */
     public static final class Record {
         // NMEA COMMON
-        public long timestamp;
+        public int timestamp;
         public double lat, lon;
         public String checksum;
         // GGA

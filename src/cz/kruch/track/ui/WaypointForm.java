@@ -4,9 +4,7 @@
 package cz.kruch.track.ui;
 
 import cz.kruch.track.event.Callback;
-//#ifndef __NO_FS__
 import cz.kruch.track.fun.Camera;
-//#endif
 import cz.kruch.track.location.Waypoint;
 import cz.kruch.track.TrackingMIDlet;
 
@@ -58,6 +56,8 @@ public final class WaypointForm extends Form
     private TextField editorMin;
 */
 
+    static int cnt = 0;
+
     public WaypointForm(Displayable next, Location location, Callback callback) {
         super("Waypoint");
         this.next = next;
@@ -70,14 +70,12 @@ public final class WaypointForm extends Form
             appendWithNewlineAfter(new StringItem("Time", dateToString(timestamp)));
         }
         appendWithNewlineAfter(new StringItem("Location", location.getQualifiedCoordinates().toString()));
-//#ifndef __NO_FS__
         if (TrackingMIDlet.isJsr135()) {
             StringItem snapshot = new StringItem("Snapshot", "Take", Item.BUTTON);
             snapshot.setDefaultCommand(new Command("Take", Command.ITEM, 1));
             snapshot.setItemCommandListener(this);
             append(snapshot);
         }
-//#endif
         addCommand(new Command("Cancel", Command.BACK, 1));
         addCommand(new Command(MENU_SAVE, Command.SCREEN, 1));
     }
@@ -115,17 +113,19 @@ public final class WaypointForm extends Form
 /*
         this.coordinates = pointer;
 */
-        appendWithNewlineAfter(this.fieldName = new TextField("Name", null, 16, TextField.ANY));
-        appendWithNewlineAfter(this.fieldComment = new TextField("Comment", null, 64, TextField.ANY));
+        int c = cnt + 1;
+        String name = c < 10 ? "WPT00" + c : (c < 100 ? "WPT0" + c : "WPT" + Integer.toString(c));
+        appendWithNewlineAfter(this.fieldName = new TextField("Name", name, 16, TextField.ANY));
+        appendWithNewlineAfter(this.fieldComment = new TextField("Comment", CALENDAR.getTime().toString(), 64, TextField.ANY));
         appendWithNewlineAfter(this.fieldLat = new TextField("Lat", (new QualifiedCoordinates.MinDec(QualifiedCoordinates.LAT, pointer.getLat())).toString(),
-                                                             12, TextField.ANY));
+                                                             13, TextField.ANY));
 /*
         Command editCmd = new Command("Edit", Command.ITEM, 1);
         this.fieldLat.setDefaultCommand(editCmd);
         this.fieldLat.setItemCommandListener(this);
 */
         appendWithNewlineAfter(this.fieldLon = new TextField("Lon", (new QualifiedCoordinates.MinDec(QualifiedCoordinates.LON, pointer.getLon())).toString(),
-                                                             12, TextField.ANY));
+                                                             14, TextField.ANY));
 /*
         this.fieldLat.setDefaultCommand(editCmd);
         this.fieldLat.setItemCommandListener(this);
@@ -156,7 +156,6 @@ public final class WaypointForm extends Form
         } else if (item == fieldLon) {
             editCoordinate(new QualifiedCoordinates.MinDec(QualifiedCoordinates.LAT, coordinates.getLat()));
         } else */
-//#ifndef __NO_FS__
         if ("Take".equals(command.getLabel())) {
             try {
                 (new Camera(this, this)).show();
@@ -164,7 +163,6 @@ public final class WaypointForm extends Form
                 Desktop.showError("Camera failed", t, this);
             }
         }
-//#endif        
     }
 
     public void invoke(Object result, Throwable throwable) {
@@ -184,10 +182,10 @@ public final class WaypointForm extends Form
                 p.start();
 */
             } catch (Throwable t) {
-                Desktop.showError("Could not create preview but do not worry - image has been saved", t, this);
+                Desktop.showError("Could not create preview but do not worry - image has been saved.", t, this);
             }
         } else if (throwable != null) {
-            Desktop.showError("Snapshot failed", throwable, this);
+            Desktop.showError("Snapshot failed.", throwable, this);
         } else {
             Desktop.showError("No snapshot", null, this);
         }
@@ -203,12 +201,14 @@ public final class WaypointForm extends Form
                                                 fieldComment.getString(), System.currentTimeMillis());
                     Desktop.display.setCurrent(next);
                     callback.invoke(new Object[]{ MENU_USE, wpt }, null);
+                    cnt++;
                 } catch (IllegalArgumentException e) {
                     Desktop.showWarning("Malformed coordinate", e, null);
                 }
             } else if (MENU_SAVE.equals(label)) {
                 Waypoint wpt = new Waypoint(location, fieldName.getString(),
                                             fieldComment.getString());
+                wpt.setUserObject(imageBytes);
                 Desktop.display.setCurrent(next);
                 callback.invoke(new Object[]{ MENU_SAVE, wpt }, null);
             } else if (MENU_NAVIGATE_TO.equals(label)) {

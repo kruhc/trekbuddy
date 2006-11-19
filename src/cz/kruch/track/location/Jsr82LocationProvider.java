@@ -13,9 +13,7 @@ import cz.kruch.track.configuration.ConfigurationException;
 import cz.kruch.track.ui.Desktop;
 import cz.kruch.track.TrackingMIDlet;
 import cz.kruch.j2se.io.BufferedInputStream;
-//#ifndef __NO_FS__
 import cz.kruch.j2se.io.BufferedOutputStream;
-//#endif
 
 import javax.microedition.lcdui.Displayable;
 import javax.microedition.lcdui.List;
@@ -45,16 +43,18 @@ public class Jsr82LocationProvider extends StreamReadingLocationProvider impleme
     private long timestamp = 0;
     private int state = LocationProvider._STARTING;
 
-//#ifndef __NO_FS__
     private api.file.File nmeaFc;
     private OutputStream nmeaObserver;
-//#endif
 
     public Jsr82LocationProvider(/*Callback recordingCallback*/) {
         super(Config.LOCATION_PROVIDER_JSR82);
 /*
         this.recordingCallback = recordingCallback;
 */
+    }
+
+    public boolean isRestartable() {
+        return true;
     }
 
     public void run() {
@@ -77,12 +77,8 @@ public class Jsr82LocationProvider extends StreamReadingLocationProvider impleme
             // start watcher
             startWatcher();
 
-//#ifndef __NO_FS__
-
             // start NMEA log
             startNmeaLog();
-
-//#endif
 
             // GPS
             gps();
@@ -101,12 +97,8 @@ public class Jsr82LocationProvider extends StreamReadingLocationProvider impleme
             // be ready for restart
             btspp = null;
 
-//#ifndef __NO_FS__
-
             // stop NMEA log
             stopNmeaLog();
-
-//#endif
 
             // stop watcher
             stopWatcher();
@@ -175,10 +167,11 @@ public class Jsr82LocationProvider extends StreamReadingLocationProvider impleme
         }
     }
 
-//#ifndef __NO_FS__
-
     private void startNmeaLog() {
         if (isTracklog() && Config.TRACKLOG_FORMAT_NMEA.equals(Config.getSafeInstance().getTracklogsFormat())) {
+            if (nmeaFc != null) {
+                return; // already started, probably just reconnected
+            }
             String path = Config.getSafeInstance().getTracklogsDir() + "/trekbuddy-" + GpxTracklog.dateToFileDate(System.currentTimeMillis()) + ".nmea";
             try {
                 nmeaFc = new api.file.File(Connector.open(path, Connector.WRITE));
@@ -205,6 +198,9 @@ public class Jsr82LocationProvider extends StreamReadingLocationProvider impleme
         // signal recording is stopping
         recordingCallback.invoke(new Integer(GpxTracklog.CODE_RECORDING_STOP), null);
 */
+        if (go) {
+            return;
+        }
 
         // clear stream 'observer'
         setObserver(null);
@@ -224,8 +220,6 @@ public class Jsr82LocationProvider extends StreamReadingLocationProvider impleme
             nmeaFc = null;
         }
     }
-
-//#endif
 
     private void gps() throws IOException {
         // open connection

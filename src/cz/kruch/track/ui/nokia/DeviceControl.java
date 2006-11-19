@@ -5,6 +5,7 @@ package cz.kruch.track.ui.nokia;
 
 import cz.kruch.track.ui.Desktop;
 
+import javax.microedition.lcdui.game.GameCanvas;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -18,9 +19,15 @@ public final class DeviceControl extends TimerTask {
     private static int backlight = 0;
     private static Timer clock;
 
+    private static boolean initialized = false;
+
     private static DeviceControl instance;
 
-    static {
+    private static void init() {
+        if (initialized) {
+            return;
+        }
+
         try {
             Class.forName("com.nokia.mid.ui.DeviceControl");
             if (System.getProperty("com.sonyericsson.imei") == null) {
@@ -39,6 +46,8 @@ public final class DeviceControl extends TimerTask {
             } catch (NoClassDefFoundError e) {
             }
         }
+
+        initialized = true;
     }
 
     public static void destroy() {
@@ -48,6 +57,8 @@ public final class DeviceControl extends TimerTask {
     }
 
     public static void setBacklight() {
+        init();
+
         switch (phone) {
             case NOKIA:
                 setBacklightNokia();

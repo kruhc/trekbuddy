@@ -3,10 +3,8 @@
 
 package cz.kruch.track.maps;
 
-//#ifndef __NO_FS__
 import com.ice.tar.TarInputStream;
 import com.ice.tar.TarEntry;
-//#endif
 
 import javax.microedition.io.Connector;
 import javax.microedition.lcdui.Image;
@@ -164,7 +162,6 @@ public final class Map implements Runnable {
      * @return slice
      */
     public Slice getSlice(int x, int y) {
-//        for (int N = slices.length, i = 0; i < N; i++) {
         for (int i = slices.length; --i >= 0; ) {
             Slice slice = slices[i];
             if (slice.isWithin(x, y)) {
@@ -261,12 +258,10 @@ public final class Map implements Runnable {
             // load map
             if (path.endsWith(".jar")) {
                 loader = new JarLoader();
-//#ifndef __NO_FS__
-            } else if (path.endsWith(".tar") || path.endsWith(".TAR")) {
+            } else if (path.toLowerCase().endsWith(".tar")) {
                 loader = new TarLoader();
             } else {
                 loader = new DirLoader();
-//#endif
             }
             loader.init();
             loader.run();
@@ -363,8 +358,6 @@ public final class Map implements Runnable {
         return null;
     }
 
-//#ifndef __NO_FS__
-
     /**
      * File input helper class.
      */
@@ -407,8 +400,6 @@ public final class Map implements Runnable {
 //#endif
         }
     }
-
-//#endif
 
     /**
      * Finalizes map initialization.
@@ -485,8 +476,6 @@ public final class Map implements Runnable {
 
     public static int fileInputStreamResetable = 0;
     public static boolean useReset = true;
-
-//#ifndef __NO_FS__
 
     private final class TarLoader extends Loader {
 //#ifdef __ALWAYS_USE_FILE__
@@ -648,8 +637,6 @@ public final class Map implements Runnable {
         }
     }
 
-//#endif
-
     private final class JarLoader extends Loader {
 
         public void init() throws IOException {
@@ -740,8 +727,6 @@ public final class Map implements Runnable {
             }
         }
     }
-
-//#ifndef __NO_FS__
 
     private final class DirLoader extends Loader {
         private String dir;
@@ -892,7 +877,4 @@ public final class Map implements Runnable {
             }
         }
     }
-
-//#endif
-
 }

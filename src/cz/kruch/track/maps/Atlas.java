@@ -19,10 +19,8 @@ import java.util.Hashtable;
 
 import api.location.QualifiedCoordinates;
 
-//#ifndef __NO_FS__
 import com.ice.tar.TarEntry;
 import com.ice.tar.TarInputStream;
-//#endif
 
 public final class Atlas implements Runnable {
 
@@ -175,12 +173,9 @@ public final class Atlas implements Runnable {
 
     /* (non-javadoc) public only for init loading */
     public Throwable loadAtlas() {
-
-//#ifndef __NO_FS__
-
         try {
             // load map
-            loader = url.endsWith(".tar") || url.endsWith(".TAR") ? (Loader) new TarLoader() : (Loader) new DirLoader();
+            loader = url.toLowerCase().endsWith(".tar") ? (Loader) new TarLoader() : (Loader) new DirLoader();
             loader.init();
             loader.run();
             loader.checkException();
@@ -191,8 +186,6 @@ public final class Atlas implements Runnable {
             return t;
         }
 
-//#endif
-        
         return null;
     }
 
@@ -280,8 +273,6 @@ public final class Atlas implements Runnable {
             return collection;
         }
     }
-
-//#ifndef __NO_FS__
 
     private final class TarLoader extends Loader {
 
@@ -486,7 +477,4 @@ public final class Atlas implements Runnable {
             }
         }
     }
-
-//#endif
-
 }

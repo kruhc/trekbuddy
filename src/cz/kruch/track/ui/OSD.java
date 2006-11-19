@@ -23,7 +23,9 @@ final class OSD extends Bar {
     private volatile int providerStatus = LocationProvider.OUT_OF_SERVICE;
     private volatile String recording = null;
     private volatile String extendedInfo;
-    private volatile String sat;
+    private volatile int sat;
+
+    private int str1Width, str2Width;
 
     private int rw;
     private int[] clip;
@@ -36,6 +38,8 @@ final class OSD extends Bar {
         this.providerUnavailable = Image.createImage("/resources/s_orange.png");
         this.providerOutOfService = Image.createImage("/resources/s_red.png");
         this.clip = new int[]{ gx, gy, -1, -1 };
+        this.str1Width = Desktop.font.stringWidth("4*");
+        this.str2Width = Desktop.font.stringWidth("44*");
         resize(width, height);
     }
 
@@ -73,8 +77,15 @@ final class OSD extends Bar {
         graphics.drawString(info, gx + BORDER, gy, 0/*Graphics.TOP | Graphics.LEFT*/);
         if (isExtInfo) {
             graphics.drawString(extendedInfo, gx + BORDER, gy + bh, 0/*Graphics.TOP | Graphics.LEFT*/);
-            if (sat != null) {
-                graphics.drawString(sat, width - BORDER - Desktop.font.stringWidth(sat), gy + bh, 0/*Graphics.TOP | Graphics.LEFT*/);
+            if (sat > 0) {
+                String s = sat + "*";
+                int w;
+                if (sat < 10) {
+                    w = str1Width;
+                } else {
+                    w = str2Width;
+                }
+                graphics.drawString(s, width - BORDER - w, gy + bh, 0/*Graphics.TOP | Graphics.LEFT*/);
             }
         }
 
@@ -123,7 +134,7 @@ final class OSD extends Bar {
     }
 
     public void setSat(int sat) {
-        this.sat = sat > 0 ? sat + "*" : null;
+        this.sat = sat;
     }
 
     public int[] getClip() {

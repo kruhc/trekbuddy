@@ -341,13 +341,10 @@ public final class GpxTracklog extends Thread {
 
     public void insert(Boolean b) {
         synchronized (this) {
+            reconnected = true;
             queue = b;
             notify();
         }
-    }
-
-    public void setReconnected() {
-        reconnected = true;
     }
 
     public void update(Location location) {

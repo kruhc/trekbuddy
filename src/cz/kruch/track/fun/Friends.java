@@ -17,6 +17,7 @@ import java.io.IOException;
 import java.util.Date;
 
 import api.location.QualifiedCoordinates;
+import api.location.MinDec;
 
 public final class Friends implements MessageListener, Runnable {
     public static final String TYPE_IAH = "IAH";
@@ -95,11 +96,11 @@ public final class Friends implements MessageListener, Runnable {
         StringBuffer sb = new StringBuffer();
         sb.append(TBSMS_HEADER).append(type).append(SEPARATOR_CHAR);
         sb.append(time / 1000).append(SEPARATOR_CHAR);
-        sb.append(QualifiedCoordinates.MinDec.toSentence(QualifiedCoordinates.LAT,
-                                                         coordinates.getLat()));
+        sb.append(MinDec.toSentence(QualifiedCoordinates.LAT,
+                                                 coordinates.getLat()));
         sb.append(SEPARATOR_CHAR);
-        sb.append(QualifiedCoordinates.MinDec.toSentence(QualifiedCoordinates.LON,
-                                                         coordinates.getLon()));
+        sb.append(MinDec.toSentence(QualifiedCoordinates.LON,
+                                    coordinates.getLon()));
         sb.append(SEPARATOR_CHAR);
         sb.append(message.replace(',', ' ').replace('*', ' '));
         sb.append("*00");
@@ -156,8 +157,8 @@ public final class Friends implements MessageListener, Runnable {
 
                     // parse tokens
                     long time = Long.parseLong(times) * 1000;
-                    double lat = QualifiedCoordinates.MinDec.fromSentence(latv, lats).doubleValue();
-                    double lon = QualifiedCoordinates.MinDec.fromSentence(lonv, lons).doubleValue();
+                    double lat = MinDec.fromSentence(latv, lats).doubleValue();
+                    double lon = MinDec.fromSentence(lonv, lons).doubleValue();
                     String address = message.getAddress();
                     if (address.startsWith("sms://")) {
                         address = address.substring(6);
@@ -212,8 +213,8 @@ public final class Friends implements MessageListener, Runnable {
             }
 
             long time = Long.parseLong(times) * 1000;
-            double lat = QualifiedCoordinates.MinDec.fromSentence(latv, lats).doubleValue();
-            double lon = QualifiedCoordinates.MinDec.fromSentence(lonv, lons).doubleValue();
+            double lat = MinDec.fromSentence(latv, lats).doubleValue();
+            double lon = MinDec.fromSentence(lonv, lons).doubleValue();
             String xxx = (new Date(time)).toString();
             Waypoint wpt = new Waypoint(new QualifiedCoordinates(lat, lon),
                                         null, chat, time);

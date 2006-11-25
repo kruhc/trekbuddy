@@ -20,6 +20,7 @@ import javax.microedition.lcdui.Image;
 
 import api.location.Location;
 import api.location.QualifiedCoordinates;
+import api.location.MinDec;
 
 import java.util.Date;
 import java.util.Calendar;
@@ -117,14 +118,14 @@ public final class WaypointForm extends Form
         String name = c < 10 ? "WPT00" + c : (c < 100 ? "WPT0" + c : "WPT" + Integer.toString(c));
         appendWithNewlineAfter(this.fieldName = new TextField("Name", name, 16, TextField.ANY));
         appendWithNewlineAfter(this.fieldComment = new TextField("Comment", CALENDAR.getTime().toString(), 64, TextField.ANY));
-        appendWithNewlineAfter(this.fieldLat = new TextField("Lat", (new QualifiedCoordinates.MinDec(QualifiedCoordinates.LAT, pointer.getLat())).toString(),
+        appendWithNewlineAfter(this.fieldLat = new TextField("Lat", (new MinDec(QualifiedCoordinates.LAT, pointer.getLat())).toString(),
                                                              13, TextField.ANY));
 /*
         Command editCmd = new Command("Edit", Command.ITEM, 1);
         this.fieldLat.setDefaultCommand(editCmd);
         this.fieldLat.setItemCommandListener(this);
 */
-        appendWithNewlineAfter(this.fieldLon = new TextField("Lon", (new QualifiedCoordinates.MinDec(QualifiedCoordinates.LON, pointer.getLon())).toString(),
+        appendWithNewlineAfter(this.fieldLon = new TextField("Lon", (new MinDec(QualifiedCoordinates.LON, pointer.getLon())).toString(),
                                                              14, TextField.ANY));
 /*
         this.fieldLat.setDefaultCommand(editCmd);
@@ -221,8 +222,8 @@ public final class WaypointForm extends Form
     }
 
     private QualifiedCoordinates getCoordinates() {
-        double lat = QualifiedCoordinates.MinDec.fromDecimalString(fieldLat.getString()).doubleValue();
-        double lon = QualifiedCoordinates.MinDec.fromDecimalString(fieldLon.getString()).doubleValue();
+        double lat = MinDec.fromDecimalString(fieldLat.getString()).doubleValue();
+        double lon = MinDec.fromDecimalString(fieldLon.getString()).doubleValue();
 
         return new QualifiedCoordinates(lat, lon);
     }

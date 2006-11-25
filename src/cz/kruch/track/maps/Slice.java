@@ -9,11 +9,13 @@ public final class Slice {
     private Calibration.Best calibration;
     private Image image;
 
+/*
     // slice absolute position
     protected int x = -1, y = -1; // protected for direct access from Map.doFinal()
 
     // slice width
     private int width = -1, height = -1;
+*/
 
     // slice range (absolute) - precomputed for better performance of isWithin
     private int maxx, maxy;
@@ -43,19 +45,19 @@ public final class Slice {
     }
 
     public int getX() {
-        return x;
+        return calibration.x;
     }
 
     public int getY() {
-        return y;
+        return calibration.y;
     }
 
     public int getWidth() {
-        return width;
+        return calibration.width;
     }
 
     public int getHeight() {
-        return height;
+        return calibration.height;
     }
 
     public String getURL() {
@@ -64,25 +66,30 @@ public final class Slice {
 
     public void doFinal(boolean friendly) throws InvalidMapException {
         calibration.computeAbsolutePosition(friendly);
+/*
         x = calibration.x;
         y = calibration.y;
+*/
     }
 
     public void doFinal(int mapWidth, int mapHeight, int xi, int yi) {
-        calibration.fixDimension(mapWidth, mapHeight, xi, yi);
+        Calibration.Best _calibration = calibration;
+        _calibration.fixDimension(mapWidth, mapHeight, xi, yi);
+/*
         width = calibration.width;
         height = calibration.height;
-        maxx = x + width - 1;
-        maxy = y + height - 1;
+*/
+        maxx = _calibration.x + _calibration.width - 1;
+        maxy = _calibration.y + _calibration.height - 1;
     }
 
     public boolean isWithin(int x, int y) {
-        return (x >= this.x && x <= maxx && y >= this.y && y <= maxy);
+        return (x >= calibration.x && x <= maxx && y >= calibration.y && y <= maxy);
     }
 
     // debug
     public String toString() {
-        return "Slice " + getURL() + " pos " + x + "-" + y + " " + getWidth() + "x" + getHeight() + " " + image;
+        return "Slice " + getURL() + " pos " + calibration.x + "-" + calibration.y + " " + getWidth() + "x" + getHeight() + " " + image;
     }
     // ~debug
 }

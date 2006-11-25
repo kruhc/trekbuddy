@@ -15,6 +15,7 @@ import java.io.DataInputStream;
 import java.io.ByteArrayInputStream;
 import java.io.DataOutputStream;
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.util.Vector;
 
 public abstract class Config {
@@ -433,6 +434,8 @@ public abstract class Config {
                 initialized = true;
 
                 RecordStore rs = null;
+                DataInputStream din = null;
+
                 try {
                     // open the store
                     rs = RecordStore.openRecordStore(NAME, true, RecordStore.AUTHMODE_PRIVATE, false);
@@ -444,7 +447,7 @@ public abstract class Config {
                         if (log.isEnabled()) log.info("new configuration");
 //#endif
                     } else {
-                        DataInputStream din = new DataInputStream(new ByteArrayInputStream(rs.getRecord(1)));
+                        din = new DataInputStream(new ByteArrayInputStream(rs.getRecord(1)));
                         mapPath = din.readUTF();
                         locationProvider = din.readUTF();
 /*
@@ -493,6 +496,12 @@ public abstract class Config {
                 } catch (Exception e) {
                     throw new ConfigurationException(e);
                 } finally {
+                    if (din != null) {
+                        try {
+                            din.close();
+                        } catch (IOException e) {
+                        }
+                    }
                     if (rs != null) {
                         try {
                             rs.closeRecordStore();
@@ -515,9 +524,11 @@ public abstract class Config {
             }
 
             RecordStore rs = null;
+            DataOutputStream dout = null;
+
             try {
                 ByteArrayOutputStream data = new ByteArrayOutputStream();
-                DataOutputStream dout = new DataOutputStream(data);
+                dout = new DataOutputStream(data);
                 dout.writeUTF(mapPath);
                 dout.writeUTF(locationProvider);
 /*
@@ -561,10 +572,15 @@ public abstract class Config {
                 } else {
                     rs.addRecord(bytes, 0, bytes.length);
                 }
-                dout.close();
             } catch (Exception e) {
                 throw new ConfigurationException(e);
             } finally {
+                if (dout != null) {
+                    try {
+                        dout.close();
+                    } catch (IOException e) {
+                    }
+                }
                 if (rs != null) {
                     try {
                         rs.closeRecordStore();

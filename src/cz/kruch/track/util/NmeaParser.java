@@ -12,11 +12,17 @@ import java.util.Date;
 
 public final class NmeaParser {
     private static final Calendar CALENDAR = Calendar.getInstance(TimeZone.getTimeZone("GMT"));
+    private static final Date DATE_0 = new Date(0);
+    private static final CharArrayTokenizer tokenizer = new CharArrayTokenizer();
 
     public static Record parseGGA(char[] nmea) throws LocationException {
         Record record = new Record();
         int index = 0;
-        CharArrayTokenizer tokenizer = new CharArrayTokenizer(nmea, ',', false);
+
+        // init tokenizer with current data
+        tokenizer.init(nmea, ',', false);
+
+        // process
         while (tokenizer.hasMoreTokens() && (index < 10)) {
             Token token = tokenizer.next();
             if (token.isEmpty()) {
@@ -98,6 +104,7 @@ public final class NmeaParser {
                 }
             }
             index++;
+            token = null; // gc hint
         }
 
         return record;
@@ -106,7 +113,11 @@ public final class NmeaParser {
     public static Record parseRMC(char[] nmea) throws LocationException {
         Record record = new Record();
         int index = 0;
-        CharArrayTokenizer tokenizer = new CharArrayTokenizer(nmea, ',', false);
+
+        // init tokenizer with current data
+        tokenizer.init(nmea, ',', false);
+
+        // process
         while (tokenizer.hasMoreTokens() && (index < 10)) {
             Token token = tokenizer.next();
             if (token.isEmpty()) {
@@ -170,6 +181,7 @@ public final class NmeaParser {
                 }
             }
             index++;
+            token = null; // gc hint
         }
 
         return record;
@@ -190,7 +202,7 @@ public final class NmeaParser {
         int day = 10 * (token.array[token.begin + 0] - '0') + token.array[token.begin + 1] - '0';
         int month = 10 * (token.array[token.begin + 2] - '0') + token.array[token.begin + 3] - '0';
         int year = 2000 + 10 * (token.array[token.begin + 4] - '0') + token.array[token.begin + 5] - '0';
-        CALENDAR.setTime(new Date(0));
+        CALENDAR.setTime(DATE_0);
         CALENDAR.set(Calendar.DAY_OF_MONTH, day);
         CALENDAR.set(Calendar.MONTH, month - 1); // zero-based
         CALENDAR.set(Calendar.YEAR, year);
@@ -311,10 +323,17 @@ public final class NmeaParser {
 
         private int pos = 0;
 
-        public CharArrayTokenizer(char[] array, char delimiter, boolean returnDelim) {
+        private Token token;
+
+        public CharArrayTokenizer() {
+            this.token = new Token();
+        }
+
+        public void init(char[] array, char delimiter, boolean returnDelim) {
             this.array = array;
             this.delimiter = delimiter;
             this.returnDelim = returnDelim;
+            this.pos = 0;
         }
 
         public boolean hasMoreTokens() {
@@ -327,7 +346,11 @@ public final class NmeaParser {
                 if (array[pos] == delimiter) {
                     pos++;
                     if (returnDelim) {
-                        return new Token(array, begin, pos - begin);
+                        // init the token with valid data
+                        token.init(array, begin, pos - begin);
+
+                        // return
+                        return token;
                     } else {
                         begin++;
                     }
@@ -343,7 +366,10 @@ public final class NmeaParser {
                 }
                 pos = i;
 
-                return new Token(array, begin, pos - begin);
+                // init the token with valid data
+                token.init(array, begin, pos - begin);
+
+                return token;
             }
 
             throw new NoSuchElementException();
@@ -355,7 +381,7 @@ public final class NmeaParser {
         public int begin;
         public int length;
 
-        public Token(char[] array, int begin, int length) {
+        public void init(char[] array, int begin, int length) {
             this.array = array;
             this.begin = begin;
             this.length = length;

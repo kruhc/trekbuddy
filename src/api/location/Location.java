@@ -9,6 +9,7 @@ import java.util.TimeZone;
 
 public class Location {
     private static final Calendar CALENDAR = Calendar.getInstance(TimeZone.getTimeZone("GMT"));
+    private static final Date DATE = new Date();
 
     private QualifiedCoordinates coordinates;
     private long timestamp = - 1;
@@ -75,16 +76,16 @@ public class Location {
     }
 
     public void setCourse(float course) {
-        this.course = -1F;
+        this.course = course;
     }
 
-    public String toExtendedInfo(int tzOffset) {
-        StringBuffer sb = new StringBuffer(32);
+    public String toExtendedInfo(StringBuffer sb) {
 /*
         if (timestamp > 0) {
 */
+            DATE.setTime(timestamp);
             CALENDAR.setTimeZone(TimeZone.getDefault());
-            CALENDAR.setTime(new Date(timestamp/* + tzOffset*/));
+            CALENDAR.setTime(DATE);
             int hour = CALENDAR.get(Calendar.HOUR_OF_DAY);
             if (hour < 10) sb.append('0');
             sb.append(hour).append(':');
@@ -98,7 +99,7 @@ public class Location {
             sb.append(coordinates.getAlt()).append(" m ");
         }
         if (speed > -1F) {
-            sb.append((new Float(speed * 1.852F)).intValue()).append(" km/h ");
+            sb.append((int) (speed * 1.852F)).append(" km/h ");
         }
 /* course arrow is good enough
         if (course > -1F) {

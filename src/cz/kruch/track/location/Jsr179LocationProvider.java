@@ -75,22 +75,30 @@ public class Jsr179LocationProvider extends api.location.LocationProvider {
                 javax.microedition.location.QualifiedCoordinates xc = l.getQualifiedCoordinates();
                 float spd = l.getSpeed();
                 float alt = xc.getAltitude();
+                float course = l.getCourse();
                 if (TrackingMIDlet.isSxg75()) {
-                    if (!Float.isNaN(spd)) {
+                    if (Float.isNaN(spd)) {
+                        spd = -1F;
+                    } else {
                         spd *= 2;
                     }
-                    if (!Float.isNaN(alt)) {
+                    if (Float.isNaN(alt)) {
+                        alt = -1F;
+                    } else {
                         alt -= 540;
+                    }
+                    if (Float.isNaN(course)) {
+                        course = -1F;
                     }
                 }
 
                 // create up-to-date location
                 api.location.QualifiedCoordinates qc = new api.location.QualifiedCoordinates(xc.getLatitude(),
                                                                                              xc.getLongitude(),
-                                                                                             Float.isNaN(alt) ? -1F : alt);
+                                                                                             alt);
                 api.location.Location location = new api.location.Location(qc, l.getTimestamp(), 1);
-                location.setCourse(l.getCourse());
-                location.setSpeed(Float.isNaN(spd) ? -1F : spd);
+                location.setCourse(course);
+                location.setSpeed(spd);
                 location.setHdop(1F);
                 // DEBUG
                 setStatus(new Float(xc.getHorizontalAccuracy()));

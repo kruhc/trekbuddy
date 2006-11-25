@@ -9,6 +9,7 @@ import cz.kruch.track.maps.Map;
 import cz.kruch.track.util.Logger;
 //#endif
 import cz.kruch.track.AssertionFailedException;
+import cz.kruch.track.TrackingMIDlet;
 
 import javax.microedition.lcdui.Graphics;
 import javax.microedition.lcdui.Canvas;
@@ -28,12 +29,13 @@ final class MapViewer {
     private int x, y;
     private int chx, chy;
     private int chx0, chy0;
-    private int crosshairWidth, crosshairHeight;
+    private int crosshairSize, crosshairSize2;
     private int mWidth, mHeight;
+    private Position position;
 
-    private Image[] crosshairs;
     private Map map;
     private Vector slices = new Vector();
+    private Vector slicesTemp = new Vector(); // temp for reuse
 
     private float course = -1f;
     private Position wptPosition;
@@ -42,31 +44,30 @@ final class MapViewer {
     private int ci = 0;
     private int[] clip;
 
-    public MapViewer(int gx, int gy, int width, int height) throws IOException {
-        NavigationScreens.ensureInitialized();
+    public MapViewer(int gx, int gy, int width, int height) {
         this.gx = gx;
         this.gy = gy;
-        this.crosshairs = new Image[] {
-            Image.createImage("/resources/crosshair_tp_full.png"),
-            Image.createImage("/resources/crosshair_tp_white.png"),
-            Image.createImage("/resources/crosshair_tp_grey.png")
-        };
-        this.crosshairWidth = crosshairs[0].getWidth();
-        this.crosshairHeight = crosshairs[0].getHeight();
-        this.clip = new int[] { -1, -1, crosshairWidth, crosshairHeight };
+        this.crosshairSize = TrackingMIDlet.crosshairs.getHeight();
+        this.crosshairSize2 = this.crosshairSize >> 1;
+        this.clip = new int[] { -1, -1, crosshairSize, crosshairSize };
+        this.position = new Position(0, 0);
         resize(width, height);
     }
 
     public void resize(int width, int height) {
         this.width = width;
         this.height = height;
-        this.chx0 = this.chx = (width - crosshairWidth) / 2;
-        this.chy0 = this.chy = (height - crosshairHeight) / 2;
+        this.chx0 = this.chx = (width - crosshairSize) >> 1;
+        this.chy0 = this.chy = (height - crosshairSize) >> 1;
         this.x = this.y = 0;
     }
 
     public void hide() {
         visible = false;
+        /*
+         * dispose images and do gc
+         */
+        map.dispose();
     }
 
     public void show() {
@@ -81,7 +82,7 @@ final class MapViewer {
         this.map = map;
         this.mWidth = map.getWidth();
         this.mHeight = map.getHeight();
-        this.slices = new Vector(0);
+        this.slices.removeAllElements();
         resize(width, height);
     }
 
@@ -93,13 +94,15 @@ final class MapViewer {
      * Returns crosshair position.
      */
     public Position getPosition() {
-        Position p = new Position(x + chx + crosshairWidth / 2, y + chy + crosshairHeight / 2);
+        position.setXy(x + chx + crosshairSize2, y + chy + crosshairSize2);
+//        Position p = new Position(x + chx + crosshairSize2, y + chy + crosshairSize2);
 
 //#ifdef __LOG__
-        if (log.isEnabled()) log.debug(p.toString());
+//        if (log.isEnabled()) log.debug(p.toString());
 //#endif
 
-        return p;
+//        return p;
+        return position;
     }
 
     // TODO better name - x,y is desired position of crosshair!
@@ -111,7 +114,7 @@ final class MapViewer {
         boolean dirty = false;
         int direction = -1;
 
-        int dx = x - (width / 2) - this.x ;
+        int dx = x - (width >> 1) - this.x ;
         if (dx > 0) {
             direction = Canvas.RIGHT;
         } else {
@@ -123,7 +126,7 @@ final class MapViewer {
             dirty |= scroll(direction);
         }
 
-        int dy = y - (height / 2) - this.y;
+        int dy = y - (height >> 1) - this.y;
         if (dy > 0) {
             direction = Canvas.DOWN;
         } else {
@@ -135,8 +138,8 @@ final class MapViewer {
             dirty |= scroll(direction);
         }
 
-        chx = x - this.x - crosshairWidth / 2;
-        chy = y - this.y - crosshairHeight / 2;
+        chx = x - this.x - crosshairSize2;
+        chy = y - this.y - crosshairSize2;
 
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("move made, dirty? " + dirty + ";current position " + this.x + "," + this.y + "; dirty = " + dirty + "; crosshair requested at " + x + "-" + y + " -> screen position at " + chx + "-" + chy);
@@ -156,7 +159,7 @@ final class MapViewer {
                 } else if (y + height < mHeight - 1) {
                     y++;
                     dirty = true;
-                } else if (chy < height - 1 - crosshairHeight / 2 - 1) {
+                } else if (chy < height - 1 - crosshairSize2 - 1) {
                     chy++;
                     dirty = true;
                 }
@@ -168,7 +171,7 @@ final class MapViewer {
                 } else if (y > 0) {
                     y--;
                     dirty = true;
-                } else if (chy > 0 - crosshairHeight / 2) {
+                } else if (chy > 0 - crosshairSize2) {
                     chy--;
                     dirty = true;
                 }
@@ -180,7 +183,7 @@ final class MapViewer {
                 } else if (x > 0) {
                     x--;
                     dirty = true;
-                } else if (chx > 0 - crosshairWidth / 2) {
+                } else if (chx > 0 - crosshairSize2) {
                     chx--;
                     dirty = true;
                 }
@@ -192,7 +195,7 @@ final class MapViewer {
                 } else if (x + width < mWidth - 1) {
                     x++;
                     dirty = true;
-                } else if (chx < width - 1 - crosshairWidth / 2 - 1) {
+                } else if (chx < width - 1 - crosshairSize2 - 1) {
                     chx++;
                     dirty = true;
                 }
@@ -210,13 +213,13 @@ final class MapViewer {
 
     public Character boundsHit() {
         Character result = null;
-        if (chx + crosshairWidth / 2 == 0) {
+        if (chx + crosshairSize2 == 0) {
             result = new Character('W');
-        } else if (chx + crosshairWidth / 2 >= width - 2) {
+        } else if (chx + crosshairSize2 >= width - 2) {
             result = new Character('E');
-        } else if (chy + crosshairHeight / 2 == 0) {
+        } else if (chy + crosshairSize2 == 0) {
             result = new Character('N');
-        } else if (chy + crosshairHeight / 2 >= height - 2) {
+        } else if (chy + crosshairSize2 >= height - 2) {
             result = new Character('S');
         }
 
@@ -260,10 +263,17 @@ final class MapViewer {
         }
 
         // paint crosshair
-        graphics.drawImage(crosshairs[ci], chx, chy, 0/*Graphics.TOP | Graphics.LEFT*/);
+/*
+        graphics.drawImage(TrackingMIDlet.crosshairs[ci],
+                           chx, chy, 0);
+*/
+        graphics.drawRegion(TrackingMIDlet.crosshairs,
+                            ci * crosshairSize, 0, crosshairSize, crosshairSize,
+                            Sprite.TRANS_NONE,
+                            chx, chy, 0);
 
         // paint course
-        if (course > -1f) {
+        if (course > -1F) {
             drawCourse(graphics);
         }
     }
@@ -273,8 +283,8 @@ final class MapViewer {
         NavigationScreens.drawArrow(graphics, course,
 //                                    chx - (arrowSize - crosshairWidth) / 2,
 //                                    chy - (arrowSize - crosshairHeight) / 2,
-                                    chx + crosshairWidth / 2,
-                                    chy + crosshairHeight / 2,
+                                    chx + crosshairSize2,
+                                    chy + crosshairSize2,
                                     0);
     }
 
@@ -337,7 +347,7 @@ final class MapViewer {
 
     public void nextCrosshair() {
         ci++;
-        if (ci == crosshairs.length)
+        if ((ci * crosshairSize) == TrackingMIDlet.crosshairs.getWidth())
             ci = 0;
     }
 
@@ -362,7 +372,9 @@ final class MapViewer {
         }
 
         // find needed slices ("row by row")
-        Vector v = new Vector(4); // 4 is a pesimistic guess
+        Vector _slices = slices;
+        Vector _slicesTemp = slicesTemp;
+        _slicesTemp.removeAllElements();
         int _x = x;
         int _y = y;
         int xmax = x + width > mWidth ? mWidth : x + width;
@@ -370,7 +382,7 @@ final class MapViewer {
         while (_y < ymax) {
             int _l = ymax; // bottom for current "line"
             while (_x < xmax) {
-                Slice s = ensureSlice(_x, _y, v);
+                Slice s = ensureSlice(_x, _y, _slicesTemp);
                 if (s == null) {
                     throw new AssertionFailedException("Out of map - no slice for " + _x + "-" + _y);
                 } else {
@@ -382,10 +394,12 @@ final class MapViewer {
             _x = x;  // start on "line"
         }
 
+        boolean releasing = false;
+
         // release slices images we will no longer use
-        for (int i = slices.size(); --i >= 0; ) {
-            Slice slice = (Slice) slices.elementAt(i);
-            if (v.contains(slice)) {
+        for (int i = _slices.size(); --i >= 0; ) {
+            Slice slice = (Slice) _slices.elementAt(i);
+            if (_slicesTemp.contains(slice)) {
 //#ifdef __LOG__
                 if (log.isEnabled()) log.debug("reuse slice in current set; " + slice);
 //#endif
@@ -396,18 +410,21 @@ final class MapViewer {
             if (log.isEnabled()) log.debug("release image in " + slice);
 //#endif
             slice.setImage(null);
+            releasing = true;
         }
 
-        // set new slices
-        slices = null; // gc hint
-        slices = v;
-        v = null; // gc hint
+        // exchange vectors
+        Vector v = slices;
+        slices = slicesTemp;
+        slicesTemp = v;
 
         // prepare slices - returns true is there is at least one image to be loaded
         boolean loading = map.prepareSlices(slices);
 
-        // gc hint (loading ahead)
-        if (loading) System.gc();
+        // gc hint (loading ahead or after release)
+        if (loading || releasing) {
+            System.gc();
+        }
 
         // return the 'loading' flags
         return loading;

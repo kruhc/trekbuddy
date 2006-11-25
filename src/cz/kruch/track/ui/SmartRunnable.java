@@ -45,6 +45,7 @@ public final class SmartRunnable implements Runnable {
     }
 
     private static synchronized void removeCurrent() {
+        runnables.setElementAt(null, 0);
         runnables.removeElementAt(0);
         current = null;
     }
@@ -52,6 +53,7 @@ public final class SmartRunnable implements Runnable {
     public void run() {
         try {
             runnable.run();
+            runnable = null; // gc hint
         } finally {
 //#ifdef __LOG__
             if (log.isEnabled()) log.debug("call serially finished");

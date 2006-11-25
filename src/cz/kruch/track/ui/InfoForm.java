@@ -15,7 +15,6 @@ import javax.microedition.lcdui.Displayable;
 import java.util.TimeZone;
 
 public final class InfoForm extends Form implements CommandListener {
-
     public InfoForm() {
         super("Info");
     }

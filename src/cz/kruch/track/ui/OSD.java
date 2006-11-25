@@ -4,49 +4,47 @@
 package cz.kruch.track.ui;
 
 import api.location.LocationProvider;
+import api.location.QualifiedCoordinates;
+import api.location.Location;
 
 import javax.microedition.lcdui.Graphics;
 import javax.microedition.lcdui.Image;
-import java.io.IOException;
+import javax.microedition.lcdui.game.Sprite;
 
 import cz.kruch.track.configuration.Config;
+import cz.kruch.track.TrackingMIDlet;
 
 final class OSD extends Bar {
     private static final String NO_INFO = "Lon: ? Lat: ?";
 
-    private Image providerStarting;
-    private Image providerAvailable;
-    private Image providerUnavailable;
-    private Image providerOutOfService;
-
     private int semaforX, semaforY;
+    private int bulletSize;
     private volatile int providerStatus = LocationProvider.OUT_OF_SERVICE;
     private volatile String recording = null;
     private volatile String extendedInfo;
     private volatile int sat;
 
     private int str1Width, str2Width;
+    private StringBuffer sb;
 
     private int rw;
     private int[] clip;
 
-    public OSD(int gx, int gy, int width, int height) throws IOException {
-        super(gx, gy, width, height);
+    public OSD(int gx, int gy, int width, int height, Image bar) {
+        super(gx, gy, width, height, bar);
         this.rw = Desktop.font.charWidth('R');
-        this.providerStarting = Image.createImage("/resources/s_blue.png");
-        this.providerAvailable = Image.createImage("/resources/s_green.png");
-        this.providerUnavailable = Image.createImage("/resources/s_orange.png");
-        this.providerOutOfService = Image.createImage("/resources/s_red.png");
         this.clip = new int[]{ gx, gy, -1, -1 };
         this.str1Width = Desktop.font.stringWidth("4*");
         this.str2Width = Desktop.font.stringWidth("44*");
-        resize(width, height);
+        this.sb = new StringBuffer(32);
+        resize(width, height, bar);
     }
 
-    public void resize(int width, int height) {
-        super.resize(width, height);
-        this.semaforX = this.width - this.providerAvailable.getWidth() - BORDER;
-        this.semaforY = Math.abs((this.bh - this.providerAvailable.getHeight())) / 2;
+    public void resize(int width, int height, Image bar) {
+        super.resize(width, height, bar);
+        this.bulletSize = TrackingMIDlet.providers/*[0]*/.getHeight();
+        this.semaforX = this.width - this.bulletSize - BORDER;
+        this.semaforY = Math.abs((this.bh - this.bulletSize)) >> 1;
     }
 
     public void render(Graphics graphics) {
@@ -103,21 +101,19 @@ final class OSD extends Bar {
         }
 
         // draw provider status
-        switch (providerStatus) {
-            case LocationProvider._STARTING:
-                graphics.drawImage(providerStarting, semaforX, semaforY, 0/*Graphics.TOP | Graphics.LEFT*/);
-                break;
-            case LocationProvider.AVAILABLE:
-                graphics.drawImage(providerAvailable, semaforX, semaforY, 0/*Graphics.TOP | Graphics.LEFT*/);
-                break;
-            case LocationProvider.TEMPORARILY_UNAVAILABLE:
-                graphics.drawImage(providerUnavailable, semaforX, semaforY, 0/*Graphics.TOP | Graphics.LEFT*/);
-                break;
-            case LocationProvider.OUT_OF_SERVICE:
-            case LocationProvider._CANCELLED:
-                graphics.drawImage(providerOutOfService,  semaforX, semaforY, 0/*Graphics.TOP | Graphics.LEFT*/);
-                break;
-        }
+        int status = providerStatus < LocationProvider._CANCELLED ? providerStatus : LocationProvider.OUT_OF_SERVICE;
+/*
+        graphics.drawImage(TrackingMIDlet.providers[status], semaforX, semaforY, 0);
+*/
+        graphics.drawRegion(TrackingMIDlet.providers,
+                            status * bulletSize, 0, bulletSize, bulletSize,
+                            Sprite.TRANS_NONE,
+                            semaforX, semaforY, 0);
+    }
+
+    public StringBuffer _getSb() {
+        sb.setLength(0);
+        return sb;
     }
 
     public void setProviderStatus(int providerStatus) {
@@ -129,12 +125,17 @@ final class OSD extends Bar {
     }
 
     public void setExtendedInfo(String extendedInfo) {
+        this.extendedInfo = null;
         this.extendedInfo = extendedInfo;
-        this.clip = new int[]{ gx, gy, width, extendedInfo == null ? bh : 2 * bh };
     }
 
     public void setSat(int sat) {
         this.sat = sat;
+    }
+
+    public void setInfo(QualifiedCoordinates qc, boolean ok) {
+        sb.setLength(0);
+        setInfo(qc.toStringBuffer(sb).toString(), ok);
     }
 
     public int[] getClip() {
@@ -143,7 +144,7 @@ final class OSD extends Bar {
 
         clip[2] = width;
         clip[3] = extendedInfo == null ? bh : 2 * bh;
-        
+
         return clip;
     }
 }

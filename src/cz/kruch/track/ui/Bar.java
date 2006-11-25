@@ -22,26 +22,23 @@ abstract class Bar {
     protected boolean visible = true;
     protected boolean update = false;
 
-    protected Bar(int gx, int gy, int width, int height) {
+    protected Bar(int gx, int gy, int width, int height, Image bar) {
         this.gx = gx;
         this.gy = gy;
+        this.width = width;
+        this.height = height;
+        this.bar = bar;
         this.bh = Desktop.font.getHeight();
     }
 
-    public void resize(int width, int height) {
+    public void resize(int width, int height, Image bar) {
         this.width = width;
         this.height = height;
-
-        // create bg bar
-        int color = TrackingMIDlet.numAlphaLevels() > 2 ? (TrackingMIDlet.isSonyEricsson() ? 0xA03f3f3f : 0x807f7f7f) : 0xff7f7f7f;
-        int[] shadow = new int[width * bh];
-        for (int i = shadow.length; --i >= 0; ) {
-            shadow[i] = color;
-        }
-        this.bar = Image.createRGBImage(shadow, width, bh, true);
+        this.bar = bar;
     }
 
     public void setInfo(String info, boolean ok) {
+        this.info = null;
         this.info = info;
         this.ok = ok;
     }

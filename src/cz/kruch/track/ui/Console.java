@@ -3,40 +3,41 @@
 
 package cz.kruch.track.ui;
 
-import javax.microedition.lcdui.Canvas;
 import javax.microedition.lcdui.Graphics;
-import javax.microedition.lcdui.Image;
 import javax.microedition.lcdui.Font;
+import javax.microedition.lcdui.game.GameCanvas;
 
-public final class Console extends Canvas {
+public final class Console extends GameCanvas {
     // spacing from horizontal edges
     private static final int BORDER = 2;
 
     private int y, h, width;
-    private Image image;
     private Font font;
+    private Graphics graphics;
     private int errors;
     private int skips;
 
+    // relict
+    private boolean isS65 = false;
+
     public Console() {
+        super(true);
         this.setFullScreenMode(true);
         this.y = -1;
         this.errors = this.skips = 0;
         this.width = getWidth();
-        this.image = Image.createImage(width, getHeight());
         this.font = Font.getFont(Font.FACE_MONOSPACE, Font.STYLE_PLAIN, Font.SIZE_SMALL);
         this.h = font.getHeight();
-        init();
-    }
-
-    private void init() {
-        Graphics g = image.getGraphics();
-        g.setColor(0, 0, 0);
-        g.fillRect(0, 0, width, getHeight());
+        this.graphics = getGraphics();
+//#ifdef __S65__
+        this.isS65 = cz.kruch.track.TrackingMIDlet.isS65();
+//#endif
+        graphics.setColor(0, 0, 0);
+        graphics.fillRect(0, 0, width, getHeight());
     }
 
     public void delay() {
-        long delay = errors > 0 ? 2000 : (skips > 0 ? 750: 0);
+        long delay = errors > 0 ? 1500 : (skips > 0 ? 750 : 0);
         if (delay > 0) {
             try {
                 Thread.sleep(delay);
@@ -50,11 +51,11 @@ public final class Console extends Canvas {
             return;
         }
         y++;
-        Graphics g = image.getGraphics();
+        Graphics g = isS65 ? getGraphics() : graphics;
         g.setFont(font);
         g.setColor(255, 255, 255);
         g.drawString(text, BORDER, y * h, 0/*Graphics.TOP | Graphics.LEFT*/);
-        repaint();
+        flushGraphics();
     }
 
     public void result(int code, String text) {
@@ -64,7 +65,7 @@ public final class Console extends Canvas {
         // ~hack
 
         int x = width - BORDER - font.stringWidth(text);
-        Graphics g = image.getGraphics();
+        Graphics g = isS65 ? getGraphics() : graphics;
         if (code == 0) {
             g.setColor(0, 255, 0);
         } else if (code == -1) {
@@ -76,10 +77,6 @@ public final class Console extends Canvas {
         }
         g.setFont(font);
         g.drawString(text, x, y * h, 0/*Graphics.TOP | Graphics.LEFT*/);
-        repaint();
-    }
-
-    protected void paint(Graphics graphics) {
-        graphics.drawImage(image, 0, 0, 0/*Graphics.TOP | Graphics.LEFT*/);
+        flushGraphics();
     }
 }

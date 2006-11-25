@@ -1,40 +1,15 @@
 package cz.kruch.track.ui;
 
 import cz.kruch.track.AssertionFailedException;
+import cz.kruch.track.TrackingMIDlet;
 
 import javax.microedition.lcdui.game.Sprite;
-import javax.microedition.lcdui.Image;
 import javax.microedition.lcdui.Graphics;
-import java.io.IOException;
+import javax.microedition.lcdui.Image;
 
 final class NavigationScreens {
-    private static boolean initialized = false;
-
-    private static Image[] courses;
-    private static int arrowSize;
-
-    private static Image waypoint;
+    private static int arrowSize, arrowSize2;
     private static int wptSize2;
-
-    public static void ensureInitialized() throws IOException {
-        if (!initialized) {
-            initialized = true;
-            courses = new Image[]{
-                Image.createImage("/resources/course_0.png"),
-                Image.createImage("/resources/course_10.png"),
-                Image.createImage("/resources/course_20.png"),
-                Image.createImage("/resources/course_30.png"),
-                Image.createImage("/resources/course_40.png"),
-                Image.createImage("/resources/course_50.png"),
-                Image.createImage("/resources/course_60.png"),
-                Image.createImage("/resources/course_70.png"),
-                Image.createImage("/resources/course_80.png")
-            };
-            arrowSize = courses[0].getWidth();
-            waypoint = Image.createImage("/resources/wpt.png");
-            wptSize2 = waypoint.getWidth() / 2;
-        }
-    }
 
     public static void drawArrow(Graphics graphics, float course,
                                  int x, int y, int anchor) {
@@ -94,11 +69,34 @@ final class NavigationScreens {
             }
         }
 
-        graphics.drawRegion(courses[ci], 0, 0, arrowSize, arrowSize,
-                            ti, x - arrowSize / 2, y - arrowSize / 2, anchor);
+        Image _courses = TrackingMIDlet.courses;
+        if (ti == Sprite.TRANS_ROT90) {
+            _courses = TrackingMIDlet.courses2;
+            ti = Sprite.TRANS_NONE;
+        } else if (ti == Sprite.TRANS_ROT270) {
+            _courses = TrackingMIDlet.courses2;
+            ti = Sprite.TRANS_ROT180;
+        }
+
+/*
+//#ifdef __S65__
+        // TODO
+        if (TrackingMIDlet.isS65() && ((ti == Sprite.TRANS_NONE) || (ti == Sprite.TRANS_MIRROR_ROT180)))
+//#endif
+*/
+
+        graphics.drawRegion(_courses,
+                            ci * arrowSize, 0, arrowSize, arrowSize,
+                            ti, x - arrowSize2, y - arrowSize2, anchor);
     }
 
     public static void drawWaypoint(Graphics graphics, int x, int y, int anchor) {
-        graphics.drawImage(waypoint, x - wptSize2, y - wptSize2, anchor);
+        graphics.drawImage(TrackingMIDlet.waypoint, x - wptSize2, y - wptSize2, anchor);
+    }
+
+    static void initialize() {
+        arrowSize = TrackingMIDlet.courses/*[0]*/.getHeight();
+        arrowSize2 = arrowSize >> 1;
+        wptSize2 = TrackingMIDlet.waypoint.getWidth() >> 1;
     }
 }

@@ -290,7 +290,6 @@ final class SettingsForm extends Form implements CommandListener, ItemStateListe
                     continue;
             }
 
-            System.out.println("Deleting " + item);
             delete(i);
 
             // restart cycle

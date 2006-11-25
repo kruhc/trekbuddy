@@ -21,10 +21,14 @@ public abstract class StreamReadingLocationProvider extends LocationProvider {
     protected static final int BUFFER_SIZE = 512;
 
     private OutputStream observer;
+    private char[] buffer;
+/*
     private int order = 0;
+*/
 
     protected StreamReadingLocationProvider(String name) {
         super(name);
+        this.buffer = new char[128];
     }
 
     protected void setObserver(OutputStream observer) {
@@ -50,10 +54,9 @@ public abstract class StreamReadingLocationProvider extends LocationProvider {
                 continue;
             }
             // sync
-            if (order == 0 && rmc != null && gga != null) {
-                System.out.println("detect order");
+            if (/*order == 0 && */rmc != null && gga != null) {
                 int i = rmc.timestamp - gga.timestamp;
-                System.out.println("i = " + i);
+/*
                 switch (i) {
                     case 0:
                         order = 1;
@@ -65,6 +68,12 @@ public abstract class StreamReadingLocationProvider extends LocationProvider {
                         rmc = null;
                         break;
                 }
+*/
+                if (i > 0) {
+                    gga = null;
+                } else if (i < 0) {
+                    rmc = null;
+                }
             }
         }
 
@@ -72,13 +81,15 @@ public abstract class StreamReadingLocationProvider extends LocationProvider {
         Location location = null;
 
         // combine
+/*
         if (rmc.timestamp == gga.timestamp) {
+*/
             long datetime = rmc.date + rmc.timestamp;
             location = new Location(new QualifiedCoordinates(rmc.lat, rmc.lon, gga.altitude),
                                     datetime, gga.fix, gga.sat, gga.hdop);
             location.setCourse(rmc.angle);
             location.setSpeed(rmc.speed);
-            System.out.println("got matching pair: " + location);
+/*
         } else {
             long datetime = rmc.date + rmc.timestamp;
             location = new Location(new QualifiedCoordinates(rmc.lat, rmc.lon),
@@ -86,12 +97,13 @@ public abstract class StreamReadingLocationProvider extends LocationProvider {
             location.setCourse(rmc.angle);
             location.setSpeed(rmc.speed);
         }
+*/
+        rmc = gga = null;
 
         return location;
     }
 
     protected final char[] nextSentence(InputStream in) throws IOException {
-        char[] sb = new char[0x80];
         int pos = 0;
 
         boolean nl = false;
@@ -113,7 +125,7 @@ public abstract class StreamReadingLocationProvider extends LocationProvider {
                 if (nl) break;
 
                 // add char to array
-                sb[pos++] = ch;
+                buffer[pos++] = ch;
 
                 // weird content check
                 if (pos >= 0x80) {
@@ -126,7 +138,8 @@ public abstract class StreamReadingLocationProvider extends LocationProvider {
 
         if (nl) {
             char[] result = new char[pos];
-            System.arraycopy(sb, 0, result, 0, pos);
+            System.arraycopy(buffer, 0, result, 0, pos);
+            
             return result;
         }
 

@@ -6,14 +6,13 @@ package cz.kruch.track.maps;
 import api.location.QualifiedCoordinates;
 
 import cz.kruch.j2se.util.StringTokenizer;
-import cz.kruch.j2se.io.BufferedReader;
 //#ifdef __LOG__
 import cz.kruch.track.util.Logger;
 //#endif
 import cz.kruch.track.ui.Position;
+import cz.kruch.track.io.LineReader;
 
 import java.util.Vector;
-import java.io.InputStreamReader;
 import java.io.IOException;
 import java.io.InputStream;
 
@@ -24,8 +23,6 @@ public abstract class Calibration {
 //#ifdef __LOG__
     private static final Logger log = new Logger("Calibration");
 //#endif
-
-    public static final Vector KNOWN_EXTENSIONS = new Vector();
 
     // map/slice path // TODO bad design - path to slice should be in Slice
     protected String path;
@@ -38,19 +35,16 @@ public abstract class Calibration {
     protected Position[] positions;
     protected QualifiedCoordinates[] coordinates;
 
+    // helper
+    private ProximitePosition proximite;
+
     // range and scales
     private QualifiedCoordinates[] range;
     private double xScale, yScale;
 
-    static {
-        KNOWN_EXTENSIONS.addElement("gmi");
-        KNOWN_EXTENSIONS.addElement("map");
-        KNOWN_EXTENSIONS.addElement("xml");
-        KNOWN_EXTENSIONS.addElement("j2n");
-    }
-
     protected Calibration(String path) {
         this.path = path;
+        this.proximite = new ProximitePosition(0, 0);
     }
 
     public String getPath() {
@@ -97,29 +91,29 @@ public abstract class Calibration {
         int[] index = horizontalAxisByY(new Position(0, 0));
         gridTHx = positions[index[0]].getX();
         gridTHlon = coordinates[index[0]].getLon();
-        gridTHy = (positions[index[0]].getY() + positions[index[1]].getY()) / 2;
+        gridTHy = (positions[index[0]].getY() + positions[index[1]].getY()) >> 1;
         gridTHscale = Math.abs((coordinates[index[1]].getLon() - coordinates[index[0]].getLon()) / (positions[index[1]].getX() - positions[index[0]].getX()));
 
         index = horizontalAxisByY(new Position(0, getHeight()));
         gridBHx = positions[index[0]].getX();
         gridBHlon = coordinates[index[0]].getLon();
-        gridBHy = (positions[index[0]].getY() + positions[index[1]].getY()) / 2;
+        gridBHy = (positions[index[0]].getY() + positions[index[1]].getY()) >> 1;
         gridBHscale = Math.abs((coordinates[index[1]].getLon() - coordinates[index[0]].getLon()) / (positions[index[1]].getX() - positions[index[0]].getX()));
 
         index = verticalAxisByX(new Position(0, 0));
         gridLVy = positions[index[0]].getY();
         gridLVlat = coordinates[index[0]].getLat();
-        gridLVx = (positions[index[0]].getX() + positions[index[1]].getX()) / 2;
+        gridLVx = (positions[index[0]].getX() + positions[index[1]].getX()) >> 1;
         gridLVscale = Math.abs((coordinates[index[1]].getLat() - coordinates[index[0]].getLat()) / (positions[index[1]].getY() - positions[index[0]].getY()));
 
         index = verticalAxisByX(new Position(getWidth(), 0));
         gridRVy = positions[index[0]].getY();
         gridRVlat = coordinates[index[0]].getLat();
-        gridRVx = (positions[index[0]].getX() + positions[index[1]].getX()) / 2;
+        gridRVx = (positions[index[0]].getX() + positions[index[1]].getX()) >> 1;
         gridRVscale = Math.abs((coordinates[index[1]].getLat() - coordinates[index[0]].getLat()) / (positions[index[1]].getY() - positions[index[0]].getY()));
         
-        halfHStep = Math.min(gridTHscale / 2, gridBHscale / 2);
-        halfVStep = Math.min(gridLVscale / 2, gridRVscale / 2);
+        halfHStep = Math.min(gridTHscale / 2D, gridBHscale / 2D);
+        halfVStep = Math.min(gridLVscale / 2D, gridRVscale / 2D);
     }
 
     private void computeRange() {
@@ -136,8 +130,9 @@ public abstract class Calibration {
     public boolean isWithin(QualifiedCoordinates coordinates) {
         double lat = coordinates.getLat();
         double lon = coordinates.getLon();
-        return (lat <= range[0].getLat() && lat >= range[3].getLat())
-                && (lon >= range[0].getLon() && lon <= range[3].getLon());
+        QualifiedCoordinates[] _range = range;
+        return (lat <= _range[0].getLat() && lat >= _range[3].getLat())
+                && (lon >= _range[0].getLon() && lon <= _range[3].getLon());
     }
 
     public QualifiedCoordinates[] getRange() {
@@ -207,18 +202,22 @@ public abstract class Calibration {
 
         while ((qc.getLon() > coords.getLon()) && !minorDiff(qc, coords, 0)) {
             proximite.decrementX();
+            qc = null;
             qc = transform(proximite);
         }
         while ((qc.getLon() < coords.getLon()) && !minorDiff(qc, coords, 0)) {
             proximite.incrementX();
+            qc = null;
             qc = transform(proximite);
         }
         while ((qc.getLat() > coords.getLat()) && !minorDiff(qc, coords, 1)) {
             proximite.incrementY();
+            qc = null;
             qc = transform(proximite);
         }
         while ((qc.getLat() < coords.getLat()) && !minorDiff(qc, coords, 1)) {
             proximite.decrementY();
+            qc = null;
             qc = transform(proximite);
         }
 
@@ -231,16 +230,12 @@ public abstract class Calibration {
         double dlon = coordinates.getLon() - leftTopQc.getLon();
         double dlat = coordinates.getLat() - leftTopQc.getLat();
 
-        Double dx = new Double(dlon / xScale);
-        Double dy = new Double(dlat / yScale);
+        int intDx = (int) (dlon / xScale);
+        int intDy = (int) (dlat / yScale);
 
-        int intDx = dx.intValue();
-        int intDy = dy.intValue();
+        proximite.setXy(0 + intDx, 0 - intDy);
 
-        int x = 0 + intDx;
-        int y = 0 - intDy;
-
-        return new Calibration.ProximitePosition(x, y);
+        return proximite;
     }
 
     private boolean minorDiff(QualifiedCoordinates qc1, QualifiedCoordinates qc2, int axis) {
@@ -307,7 +302,7 @@ public abstract class Calibration {
         public GMI(InputStream in, String path) throws IOException {
             super(path);
 
-            BufferedReader reader = new BufferedReader(new InputStreamReader(in), Map.SMALL_BUFFER_SIZE);
+            LineReader reader = new LineReader(in);
             reader.readLine(false); // ignore - intro line
             reader.readLine(false); // ignore - path to image file
             width = Integer.parseInt(reader.readLine(false));   // image width
@@ -445,11 +440,19 @@ public abstract class Calibration {
         protected int width = -1, height = -1;
         protected int x = -1, y = -1;
 
-        public Best(String path) {
+        public Best(String path) throws InvalidMapException {
             this.path = path;
+            parseXy(path);
+        }
+
+        public Best(String path, boolean tar) throws InvalidMapException {
+            parseXy(path);
         }
 
         public String getPath() {
+            if (path == null) {
+                return (new StringBuffer(32)).append("set/*_").append(x).append('_').append(y).append(".png").toString();  
+            }
             return path;
         }
 
@@ -473,7 +476,8 @@ public abstract class Calibration {
 
         protected void computeAbsolutePosition(boolean friendly) throws InvalidMapException {
             if (friendly) { // slice of trekbuddy or j2n map
-                parseXy();
+/* already calculated */
+//                parseXy(path);
             } else { // single slice of gpska map
                 x = y = 0;
             }
@@ -488,12 +492,14 @@ public abstract class Calibration {
             height = yNext - y;
         }
 
-        private void parseXy() throws InvalidMapException {
-            char[] n = path.toCharArray();
+        private void parseXy(String path) throws InvalidMapException {
+//            char[] n = path.toCharArray();
             int p0 = -1, p1 = -1;
             int i = 0;
-            for (int N = n.length - 4; i < N; i++) {
-                if ('_' == n[i]) {
+//            for (int N = n.length - 4; i < N; i++) {
+//                if ('_' == n[i]) {
+            for (int N = path.length() - 4; i < N; i++) {
+                if ('_' == path.charAt(i)) {
                     p0 = p1;
                     p1 = i;
                 }
@@ -502,11 +508,11 @@ public abstract class Calibration {
                 throw new InvalidMapException("Invalid slice filename: " + path);
             }
 
-            x = parseInt(n, p0 + 1, p1);
-            y = parseInt(n, p1 + 1, i);
+            x = parseInt(path, p0 + 1, p1);
+            y = parseInt(path, p1 + 1, i);
         }
 
-        private static int parseInt(char[] value, int offset, int end) {
+        private static int parseInt(String value, int offset, int end) {
             if (offset == end || value == null) {
                 throw new NumberFormatException("No input");
             }
@@ -514,7 +520,8 @@ public abstract class Calibration {
             int result = 0;
 
             while (offset < end) {
-                char ch = value[offset++];
+//                char ch = value[offset++];
+                char ch = value.charAt(offset++);
                 if (ch >= '0' && ch <= '9') {
                     result *= 10;
                     result += ch - '0';
@@ -541,7 +548,7 @@ public abstract class Calibration {
 
             int count = 0;
             Vector xy = new Vector(), ll = new Vector()/*, utm = new Vector()*/;
-            BufferedReader reader = new BufferedReader(new InputStreamReader(in), Map.SMALL_BUFFER_SIZE);
+            LineReader reader = new LineReader(in);
             String line = reader.readLine(false);
             while (line != null) {
                 if (line.startsWith("Point")) {

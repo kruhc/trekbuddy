@@ -7,6 +7,7 @@ package cz.kruch.track.maps;
 import cz.kruch.track.util.Logger;
 //#endif
 import cz.kruch.track.AssertionFailedException;
+import cz.kruch.track.TrackingMIDlet;
 import cz.kruch.track.maps.io.LoaderIO;
 import cz.kruch.j2se.io.BufferedInputStream;
 import cz.kruch.j2se.util.StringTokenizer;
@@ -213,9 +214,6 @@ public final class Atlas implements Runnable {
                 loader = null;
             }
         }
-
-        // gc
-        System.gc();
     }
 
     private void notifyListener(final int code, final Object result, final Throwable t) {
@@ -277,22 +275,11 @@ public final class Atlas implements Runnable {
     private final class TarLoader extends Loader {
 
         public void run() {
-//#ifdef __ALWAYS_USE_FILE__
-/*
-            api.file.File fc = null;
-*/
-//#endif
             TarInputStream tar = null;
 
             try {
-//#ifdef __ALWAYS_USE_FILE__
-/*
-                fc = new api.file.File(Connector.open(url, Connector.READ));
-                tar = new TarInputStream(new BufferedInputStream(fc.openInputStream(), Map.SMALL_BUFFER_SIZE));
-*/
-//#else
+                // create stream
                 tar = new TarInputStream(new BufferedInputStream(Connector.openInputStream(url), Map.SMALL_BUFFER_SIZE));
-//#endif
 
                 // iterate over archive
                 TarEntry entry = tar.getNextEntry();
@@ -304,7 +291,7 @@ public final class Atlas implements Runnable {
                             continue;
 
                         String ext = entryName.substring(indexOf + 1);
-                        if (Calibration.KNOWN_EXTENSIONS.contains(ext)) {
+                        if (TrackingMIDlet.KNOWN_EXTENSIONS.contains(ext)) {
                             // get layer and map name
                             String lName = null;
                             String mName = null;
@@ -339,6 +326,7 @@ public final class Atlas implements Runnable {
                             }
                         }
                     }
+                    entry = null; // gc hint
                     entry = tar.getNextEntry();
                 }
             } catch (Exception e) {
@@ -350,16 +338,6 @@ public final class Atlas implements Runnable {
                     } catch (IOException e) {
                     }
                 }
-//#ifdef __ALWAYS_USE_FILE__
-/*
-                if (fc != null) {
-                    try {
-                        fc.close();
-                    } catch (IOException e) {
-                    }
-                }
-*/
-//#endif
             }
         }
     }
@@ -411,7 +389,7 @@ public final class Atlas implements Runnable {
                                     }
                                     String ext = iEntry.substring(indexOf + 1);
 
-                                    if (Calibration.KNOWN_EXTENSIONS.contains(ext)) {
+                                    if (TrackingMIDlet.KNOWN_EXTENSIONS.contains(ext)) {
 //#ifdef __LOG__
                                         if (log.isEnabled()) log.debug("found map calibration: " + iEntry);
 //#endif

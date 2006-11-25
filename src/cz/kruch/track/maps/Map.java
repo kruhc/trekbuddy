@@ -10,12 +10,10 @@ import javax.microedition.io.Connector;
 import javax.microedition.lcdui.Image;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.util.Vector;
 import java.util.Enumeration;
 
 import cz.kruch.j2se.io.BufferedInputStream;
-import cz.kruch.j2se.io.BufferedReader;
 
 import cz.kruch.track.ui.Position;
 //#ifdef __LOG__
@@ -23,6 +21,7 @@ import cz.kruch.track.util.Logger;
 //#endif
 import cz.kruch.track.maps.io.LoaderIO;
 import cz.kruch.track.TrackingMIDlet;
+import cz.kruch.track.io.LineReader;
 
 import api.location.QualifiedCoordinates;
 
@@ -106,6 +105,10 @@ public final class Map implements Runnable {
         return name;
     }
 
+    public int numberOfSlices() {
+        return slices.length;
+    }
+
     public int getWidth() {
         return calibration.getWidth();
     }
@@ -148,11 +151,23 @@ public final class Map implements Runnable {
             slices[i].setImage(null);
         }
 
+        // GC
+        System.gc();
+    }
+
+    /**
+     * Closes map.
+     */
+    public void close() {
+//#ifdef __LOG__
+        if (log.isEnabled()) log.info("close map");
+//#endif
+
+        // dispose
+        dispose();
+
         // release loader
         loader.destroy();
-
-        // gc
-        System.gc();
     }
 
     /**
@@ -214,25 +229,22 @@ public final class Map implements Runnable {
         if (log.isEnabled()) log.debug("prepare slices @" + Integer.toHexString(hashCode()));
 //#endif
 
-        // holds list of slices for which images are missing
-        Vector v = null;
+        // have-all-images flag
+        boolean gotAll = true;
 
         // create list of slices whose images are to be loaded
-        for (int i = list.size(); --i >= 0; ) {
+        for (int i = list.size(); gotAll && --i >= 0; ) {
             Slice slice = (Slice) list.elementAt(i);
             if (slice.getImage() == null) {
 //#ifdef __LOG__
                 if (log.isEnabled()) log.debug("image missing for slice " + slice);
 //#endif
-                if (v == null) {
-                    v = new Vector(4);
-                }
-                v.addElement(slice);
+                gotAll = false;
             }
         }
 
         // no images to be loaded
-        if (v == null) {
+        if (gotAll) {
 //#ifdef __LOG__
             if (log.isEnabled()) log.debug("got all slices with images");
 //#endif
@@ -244,10 +256,7 @@ public final class Map implements Runnable {
 //#endif
 
         // load images at background
-        LoaderIO.getInstance().enqueue(new SliceLoader(v));
-
-        // gc hint
-        v = null;
+        LoaderIO.getInstance().enqueue(new SliceLoader(list));
 
         return true;
     }
@@ -328,27 +337,29 @@ public final class Map implements Runnable {
                 Slice slice = (Slice) slices.elementAt(i);
                 Throwable throwable = null;
 
-                try {
-                    // notify
-                    notifyListener(EVENT_LOADING_CHANGED, "Loading " + slice.getURL() + "...", null);
+                if (slice.getImage() == null) {
+                    try {
+                        // notify
+                        notifyListener(EVENT_LOADING_CHANGED, "Loading " + slice.getURL() + "...", null);
 
-                    // use loader
-                    loader.loadSlice(slice);
+                        // use loader
+                        loader.loadSlice(slice);
 
-                    // got image?
-                    if (slice.getImage() == null) {
-                        throw new InvalidMapException("No image " + slice.getURL());
-                    }
+                        // got image?
+                        if (slice.getImage() == null) {
+                            throw new InvalidMapException("No image " + slice.getURL());
+                        }
 
 //#ifdef __LOG__
-                    if (log.isEnabled()) log.debug("image loaded for slice " + slice.getURL());
+                        if (log.isEnabled()) log.debug("image loaded for slice " + slice.getURL());
 //#endif
-                } catch (Throwable t) {
-                    throwable = t;
-                    throw t;
-                } finally {
-                    // notify
-                    notifyListener(EVENT_LOADING_CHANGED, null, throwable);
+                    } catch (Throwable t) {
+                        throwable = t;
+                        throw t;
+                    } finally {
+                        // notify
+                        notifyListener(EVENT_LOADING_CHANGED, null, throwable);
+                    }
                 }
             }
         } catch (Throwable t) {
@@ -363,11 +374,6 @@ public final class Map implements Runnable {
      */
     static final class FileInput {
         private String url;
-//#ifdef __ALWAYS_USE_FILE__
-/*
-        private api.file.File fc;
-*/
-//#endif
         private InputStream in;
 
         FileInput(String url) {
@@ -375,14 +381,7 @@ public final class Map implements Runnable {
         }
 
         InputStream getInputStream() throws IOException {
-//#ifdef __ALWAYS_USE_FILE__
-/*
-            fc = new api.file.File(Connector.open(url, Connector.READ));
-            in = new BufferedInputStream(fc.openInputStream(), TEXT_FILE_BUFFER_SIZE);
-*/
-//#else
             in = new BufferedInputStream(Connector.openInputStream(url), TEXT_FILE_BUFFER_SIZE);
-//#endif
 
             return in;
         }
@@ -390,14 +389,8 @@ public final class Map implements Runnable {
         void close() throws IOException {
             if (in != null) {
                 in.close();
+                in = null;
             }
-//#ifdef __ALWAYS_USE_FILE__
-/*
-            if (fc != null) {
-                fc.close();
-            }
-*/
-//#endif
         }
     }
 
@@ -417,10 +410,10 @@ public final class Map implements Runnable {
             slice.doFinal(friendly);
 
             // look for dimensions increments
-            int x = slice.x;
+            int x = slice.getX();
             if (x > 0 && x < xi)
                 xi = x;
-            int y = slice.y;
+            int y = slice.getY();
             if (y > 0 && y < yi)
                 yi = y;
         }
@@ -451,6 +444,8 @@ public final class Map implements Runnable {
         public abstract void destroy();
         public abstract void loadSlice(Slice slice) throws IOException;
 
+        protected BufferedInputStream bufferedIn;
+
         public void checkException() throws Exception {
             if (exception != null) {
                 throw exception;
@@ -478,53 +473,29 @@ public final class Map implements Runnable {
     public static boolean useReset = true;
 
     private final class TarLoader extends Loader {
-//#ifdef __ALWAYS_USE_FILE__
-/*
-        private api.file.File file;
-*/
-//#endif
-        private InputStream in = null;
+        private InputStream fsIn;
+        private TarInputStream tarIn;
 
         public void init() throws IOException {
-//#ifdef __ALWAYS_USE_FILE__
-/*
-            file = new api.file.File(Connector.open(path, Connector.READ));
-*/
-//#endif
+            fsIn = null;
+            tarIn = null;
         }
 
         public void destroy() {
-            if (in != null) {
+            if (fsIn != null) {
                 try {
-                    in.close();
+                    fsIn.close();
                 } catch (IOException e) {
                 }
             }
-//#ifdef __ALWAYS_USE_FILE__
-/*
-            if (file != null) {
-                try {
-                    file.close();
-                } catch (IOException e) {
-                }
-            }
-*/
-//#endif
         }
 
         public void run() {
-            TarInputStream tar = null;
-            TarEntry entry;
-            InputStream in;
+            InputStream in = null;
 
             try {
-//#ifdef __ALWAYS_USE_FILE__
-/*
-                tar = new TarInputStream(new BufferedInputStream(in = file.openInputStream(), SMALL_BUFFER_SIZE));
-*/
-//#else
-                tar = new TarInputStream(new BufferedInputStream(in = Connector.openInputStream(path), SMALL_BUFFER_SIZE));
-//#endif
+                bufferedIn = new BufferedInputStream(in = Connector.openInputStream(path), SMALL_BUFFER_SIZE);
+                tarIn = new TarInputStream(bufferedIn);
 
                 /*
                  * test quality of JSR-75/FileConnection
@@ -533,7 +504,7 @@ public final class Map implements Runnable {
                 if (useReset) {
                     if (in.markSupported()) {
                         in.mark(Integer.MAX_VALUE);
-                        this.in = in;
+                        fsIn = in;
                         fileInputStreamResetable = 1;
 //#ifdef __LOG__
                         if (log.isEnabled()) log.debug("input stream support marking, very good");
@@ -541,7 +512,7 @@ public final class Map implements Runnable {
                     } else {
                         try {
                             in.reset(); // try reset
-                            this.in = in;
+                            fsIn = in;
                             fileInputStreamResetable = 2;
 //#ifdef __LOG__
                             if (log.isEnabled()) log.debug("input stream may be resetable");
@@ -559,77 +530,76 @@ public final class Map implements Runnable {
                  * ~
                  */
 
-                entry = tar.getNextEntry();
+                TarEntry entry = tarIn.getNextEntry();
                 while (entry != null) {
                     String entryName = entry.getName();
                     int indexOf = entryName.lastIndexOf('.');
                     if (indexOf > -1) {
                         String ext = entryName.substring(indexOf + 1);
                         if ("png".equals(ext) && (entryName.startsWith("set/", 0) || entryName.startsWith("pictures/", 0))) { // slice
-                            addSlice(new Slice(new Calibration.Best(entryName), new Long(entry.getPosition())));
+                            addSlice(new Slice(new Calibration.Best(entryName, true), new Long(entry.getPosition())));
                         } else {
                             if (Map.this.calibration == null && entryName.indexOf('/') == -1) {
                                 if ("gmi".equals(ext)) {
-                                    Map.this.calibration = new Calibration.GMI(tar, entryName);
+                                    Map.this.calibration = new Calibration.GMI(tarIn, entryName);
                                     Map.this.type = TYPE_BEST;
                                 } else if ("map".equals(ext)) {
-                                    Map.this.calibration = new Calibration.Ozi(tar, entryName);
+                                    Map.this.calibration = new Calibration.Ozi(tarIn, entryName);
                                     Map.this.type = TYPE_BEST;
                                 } else if ("xml".equals(ext)) {
-                                    Map.this.calibration = new Calibration.XML(tar, entryName);
+                                    Map.this.calibration = new Calibration.XML(tarIn, entryName);
                                     Map.this.type = TYPE_GPSKA;
                                 } else if ("j2n".equals(ext)) {
-                                    Map.this.calibration = new Calibration.J2N(tar, entryName);
+                                    Map.this.calibration = new Calibration.J2N(tarIn, entryName);
                                     Map.this.type = TYPE_J2N;
                                 }
                             }
                         }
                     }
-                    entry = tar.getNextEntry();
+                    entry = null; // gc hint
+                    entry = tarIn.getNextEntry();
                 }
             } catch (Exception e) {
                 exception = e;
             } finally {
-                if (tar != null && this.in == null) {
+                if ((fsIn == null) /* no reuse */ && (in != null)) {
 //#ifdef __LOG__
                     if (log.isEnabled()) log.debug("input stream not reusable -> close it");
 //#endif
                     try {
-                        tar.close();
+                        in.close();
                     } catch (IOException e) {
                     }
                 }
             }
 
-            this.doFinal();
+            doFinal();
         }
 
         public void loadSlice(Slice slice) throws IOException {
-            Long entryPosition = (Long) slice.getClosure();
-            TarInputStream tar = null;
+            InputStream in = null;
+
             try {
-                if (in == null) {
-//#ifdef __ALWAYS_USE_FILE__
-/*
-                    tar = new TarInputStream(new BufferedInputStream(file.openInputStream(), LARGE_BUFFER_SIZE));
-*/
-//#else
-                    tar = new TarInputStream(new BufferedInputStream(Connector.openInputStream(path), LARGE_BUFFER_SIZE));
-//#endif
+                if (fsIn == null) {
+                    bufferedIn.reuse(in = Connector.openInputStream(path));
                 } else {
-                    in.reset();
-                    tar = new TarInputStream(new BufferedInputStream(in, LARGE_BUFFER_SIZE));
+                    fsIn.reset();
+                    bufferedIn.reuse(fsIn);
                 }
-                tar.setPosition(entryPosition.longValue());
-                tar.getNextEntry();
-                slice.setImage(Image.createImage(tar));
+                tarIn.reuse(bufferedIn);
+                Long offset = (Long) slice.getClosure();
+                tarIn.setPosition(offset.longValue());
+                tarIn.getNextEntry();
+                slice.setImage(Image.createImage(tarIn));
+            } catch (IOException e) {
+                fsIn = null;
             } finally {
-                if (tar != null && this.in == null) {
+                if ((fsIn == null) /* no reuse */ && (in != null)) {
 //#ifdef __LOG__
                     if (log.isEnabled()) log.debug("input stream not reusable -> close it");
 //#endif
                     try {
-                        tar.close();
+                        in.close();
                     } catch (IOException e) {
                     }
                 }
@@ -646,7 +616,7 @@ public final class Map implements Runnable {
         }
 
         public void run() {
-            BufferedReader reader = null;
+            LineReader reader = null;
 
             try {
                 // type
@@ -686,7 +656,7 @@ public final class Map implements Runnable {
                 }
 
                 // each line is a slice filename
-                reader = new BufferedReader(new InputStreamReader(TrackingMIDlet.class.getResourceAsStream("/resources/world.set")), LARGE_BUFFER_SIZE);
+                reader = new LineReader(new BufferedInputStream(TrackingMIDlet.class.getResourceAsStream("/resources/world.set"), SMALL_BUFFER_SIZE));
                 String entry = reader.readLine(false);
                 while (entry != null) {
                     addSlice(new Slice(new Calibration.Best(entry)));
@@ -703,7 +673,7 @@ public final class Map implements Runnable {
                 }
             }
 
-            this.doFinal();
+            doFinal();
         }
 
         public void loadSlice(Slice slice) throws IOException {
@@ -715,8 +685,12 @@ public final class Map implements Runnable {
 //#endif
 
             try {
-                in = new BufferedInputStream(TrackingMIDlet.class.getResourceAsStream(slicePath), LARGE_BUFFER_SIZE);
-                slice.setImage(Image.createImage(in));
+                if (bufferedIn == null) {
+                    bufferedIn = new BufferedInputStream(in = TrackingMIDlet.class.getResourceAsStream(slicePath), LARGE_BUFFER_SIZE);
+                } else {
+                    bufferedIn.reuse(in = TrackingMIDlet.class.getResourceAsStream(slicePath));
+                }
+                slice.setImage(Image.createImage(bufferedIn));
             } finally {
                 if (in != null) {
                     try {
@@ -748,7 +722,7 @@ public final class Map implements Runnable {
 
         public void run() {
             api.file.File fc = null;
-            BufferedReader reader = null;
+            LineReader reader = null;
 
             try {
                 String setDir = "set/";
@@ -789,7 +763,7 @@ public final class Map implements Runnable {
                 if (fc.exists()) {
                     try {
                         // each line is a slice filename
-                        reader = new BufferedReader(new InputStreamReader(fc.openInputStream()), LARGE_BUFFER_SIZE);
+                        reader = new LineReader(new BufferedInputStream(fc.openInputStream(), SMALL_BUFFER_SIZE));
                         String entry = reader.readLine(false);
                         while (entry != null) {
                             addSlice(new Slice(new Calibration.Best(setDir + entry.trim())));
@@ -831,16 +805,11 @@ public final class Map implements Runnable {
                 }
             }
 
-            this.doFinal();
+            doFinal();
         }
 
         public void loadSlice(Slice slice) throws IOException {
             String slicePath = dir + slice.getURL();
-//#ifdef __ALWAYS_USE_FILE__
-/*
-            api.file.File fc = null;
-*/
-//#endif
             InputStream in = null;
 
 //#ifdef __LOG__
@@ -848,15 +817,12 @@ public final class Map implements Runnable {
 //#endif
 
             try {
-//#ifdef __ALWAYS_USE_FILE__
-/*
-                fc = new api.file.File(Connector.open(slicePath, Connector.READ));
-                in = new BufferedInputStream(fc.openInputStream(), LARGE_BUFFER_SIZE);
-*/
-//#else
-                in = new BufferedInputStream(Connector.openInputStream(slicePath), LARGE_BUFFER_SIZE);
-//#endif
-                slice.setImage(Image.createImage(in));
+                if (bufferedIn == null) {
+                    bufferedIn = new BufferedInputStream(in = Connector.openInputStream(slicePath), LARGE_BUFFER_SIZE);
+                } else {
+                    bufferedIn.reuse(in = Connector.openInputStream(slicePath));
+                }
+                slice.setImage(Image.createImage(bufferedIn));
             } finally {
                 if (in != null) {
                     try {
@@ -864,16 +830,6 @@ public final class Map implements Runnable {
                     } catch (IOException e) {
                     }
                 }
-//#ifdef __ALWAYS_USE_FILE__
-/*
-                if (fc != null) {
-                    try {
-                        fc.close();
-                    } catch (IOException e) {
-                    }
-                }
-*/
-//#endif
             }
         }
     }

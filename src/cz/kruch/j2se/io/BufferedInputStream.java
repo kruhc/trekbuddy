@@ -40,8 +40,8 @@ public final class BufferedInputStream extends /* FilterInputStream */ InputStre
     private InputStream in;
 
     // for optimistic lie
-    public static boolean useAvailable = true;
-    private int available = -1;
+    public static boolean useAvailableLie = true;
+    private int available;
 
     /**
      * The internal buffer array where the data is stored. When necessary,
@@ -98,14 +98,10 @@ public final class BufferedInputStream extends /* FilterInputStream */ InputStre
         buf = new byte[size];
 
         // prepare lie
-        if (useAvailable) {
-            try {
-                available = in.available();
-                if (available == 0) {
-                    available = size;
-                }
-            } catch (IOException e) {
-            }
+        if (useAvailableLie) {
+            available = size;
+        } else {
+            available = -1;
         }
     }
 
@@ -137,9 +133,11 @@ public final class BufferedInputStream extends /* FilterInputStream */ InputStre
     public int read() throws IOException {
         if (pos >= count) {
             fill();
-            if (pos >= count)
+            if (pos >= count) {
                 return -1;
+            }
         }
+
         return buf[pos++] & 0xff;
     }
 
@@ -159,11 +157,14 @@ public final class BufferedInputStream extends /* FilterInputStream */ InputStre
             }
             fill();
             avail = count - pos;
-            if (avail <= 0) return -1;
+            if (avail <= 0) {
+                return -1;
+            }
         }
         int cnt = (avail < len) ? avail : len;
         System.arraycopy(buf, pos, b, off, cnt);
         pos += cnt;
+
         return cnt;
     }
 
@@ -238,9 +239,11 @@ public final class BufferedInputStream extends /* FilterInputStream */ InputStre
         if (n <= 0) return n;
         while ((n < len) && (in.available() > 0)) {
             int n1 = read1(b, off + n, len - n);
-            if (n1 <= 0) break;
+            if (n1 <= 0)
+                break;
             n += n1;
         }
+
         return n;
     }
 
@@ -264,6 +267,7 @@ public final class BufferedInputStream extends /* FilterInputStream */ InputStre
 
         long skipped = (avail < n) ? avail : n;
         pos += skipped;
+
         return skipped;
     }
 
@@ -284,11 +288,13 @@ public final class BufferedInputStream extends /* FilterInputStream */ InputStre
      * @see java.io.FilterInputStream#in
      */
     public int available() throws IOException {
+        // lie upon first query
         if (available > -1) {
             int n = available;
             available = -1;
             return n;
         }
+
         return (count - pos) + in.available();
     }
 
@@ -299,10 +305,26 @@ public final class BufferedInputStream extends /* FilterInputStream */ InputStre
      * @throws IOException if an I/O error occurs.
      */
     public void close() throws IOException {
-        if (in == null)
+        if (in == null) {
             return;
+        }
         in.close();
-        in = null;
-        buf = null;
+    }
+
+    /**
+     * Reuse this with new stream.
+     * @param in new input stream
+     * @throws IOException
+     */
+    public void reuse(InputStream in) throws IOException {
+        this.in = in;
+        this.pos = this.count = 0;
+
+        // prepare lie
+        if (useAvailableLie) {
+            available = buf.length;
+        } else {
+            available = -1;
+        }
     }
 }

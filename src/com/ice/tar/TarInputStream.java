@@ -32,9 +32,7 @@ import java.io.IOException;
  * @see TarHeader
  * @see TarEntry
  */
-
-
-public final class TarInputStream extends /* FilterInputStream */ InputStream {
+public final class TarInputStream extends InputStream {
     private static final int DEFAULT_RCDSIZE = 512;
     private static final int DEFAULT_BLKSIZE = DEFAULT_RCDSIZE * 20;
 
@@ -42,7 +40,9 @@ public final class TarInputStream extends /* FilterInputStream */ InputStream {
 
     private InputStream in;
 
-//    private int blockSize;
+/*
+    private int blockSize;
+*/
     private int recordSize;
     private boolean hasHitEOF;
     private long entrySize;
@@ -58,19 +58,24 @@ public final class TarInputStream extends /* FilterInputStream */ InputStream {
     }
 
     private TarInputStream(InputStream is, int blockSize, int recordSize) {
-        this.in = is; /* super(is); */
-//        this.blockSize = blockSize;
+        this.in = is;
+/*
+        this.blockSize = blockSize;
+*/
         this.recordSize = recordSize;
         this.oneBuffer = new byte[1];
         this.headerBuffer = new byte[blockSize];
         this.hasHitEOF = false;
-        this.streamOffset = 0;
+        this.streamOffset = this.entryOffset = this.entrySize = 0;
     }
 
     /**
      * Closes this stream.
      */
     public void close() throws IOException {
+        if (this.in == null) {
+            return;
+        }
         this.in.close();
     }
 
@@ -112,6 +117,9 @@ public final class TarInputStream extends /* FilterInputStream */ InputStream {
 
             num -= numRead;
         }
+
+        // gc hint
+        rsbuffer = null;
 
         if (num > 0) {
             throw new IOException(num + " bytes left to be skipped");
@@ -315,6 +323,18 @@ public final class TarInputStream extends /* FilterInputStream */ InputStream {
         }
 
         return true;
+    }
+
+    /**
+     * Reuse this with new stream.
+     * @param in new input stream
+     * @throws IOException
+     */
+    public void reuse(InputStream in) throws IOException {
+        this.in = in;
+        this.currEntry = null;
+        this.hasHitEOF = false;
+        this.streamOffset = this.entryOffset = this.entrySize = 0;
     }
 }
 

@@ -4,15 +4,16 @@
 package cz.kruch.track.ui;
 
 import javax.microedition.lcdui.Graphics;
+import javax.microedition.lcdui.Image;
 
 final class Status extends Bar {
 
     private int[] clip;
 
-    public Status(int gx, int gy, int width, int height) {
-        super(gx, gy, width, height);
+    public Status(int gx, int gy, int width, int height, Image bar) {
+        super(gx, gy, width, height, bar);
         this.clip = new int[]{ gx, -1, -1, -1 };
-        resize(width, height);
+        resize(width, height, bar);
     }
 
     public void render(Graphics graphics) {

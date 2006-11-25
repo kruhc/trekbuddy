@@ -3,11 +3,11 @@
 
 package api.location;
 
+/* bad design - dependency */
 import cz.kruch.track.configuration.Config;
 import cz.kruch.track.util.Mercator;
 import cz.kruch.track.util.Datum;
-
-import java.io.UnsupportedEncodingException;
+import cz.kruch.track.TrackingMIDlet;
 
 public final class QualifiedCoordinates {
 
@@ -15,247 +15,12 @@ public final class QualifiedCoordinates {
     public static final int LAT = 1;
     public static final int LON = 2;
 
-    public static class MinDec {
-        private static final String[] NS = new String[]{ "N", "S" };
-        private static final String[] EW = new String[]{ "E", "W" };
-
-        private int type = UNKNOWN;
-        private int sign = 0;
-        private int deg = 0;
-        private double min = 0D;
-
-        public MinDec(int type, double value) {
-            this.type = type;
-            this.sign = value < 0D ? -1 : 1;
-            value = Math.abs(value);
-            this.deg = (int) Math.floor(value);
-            value -= this.deg;
-            value *= 60D;
-            this.min = value;
-        }
-
-        private MinDec(String value) {
-            value = value.trim();
-            if (value.length() < 5) {
-                throw new IllegalArgumentException("Malformed coordinate: " + value);
-            }
-            switch (value.charAt(0)) {
-                case 'N': {
-                    this.type = LAT;
-                    this.sign = 1;
-                } break;
-                case 'S': {
-                    this.type = LAT;
-                    this.sign = -1;
-                } break;
-                case 'E': {
-                    this.type = LON;
-                    this.sign = 1;
-                } break;
-                case 'W': {
-                    this.type = LON;
-                    this.sign = -1;
-                } break;
-                default:
-                    throw new IllegalArgumentException("Malformed coordinate: " + value);
-            }
-            int i = value.indexOf(SIGN);
-            if (i < 3) {
-                throw new IllegalArgumentException("Malformed coordinate: " + value);
-            }
-            this.deg = Integer.parseInt(value.substring(1, i).trim());
-            this.min = Double.parseDouble(value.substring(i + SIGN.length()).trim());
-        }
-
-        private MinDec(String value, String sign) {
-            int degl;
-            switch (sign.charAt(0)) {
-                case 'N': {
-                    this.type = LAT;
-                    this.sign = 1;
-                    degl = 2;
-                } break;
-                case 'S': {
-                    this.type = LAT;
-                    this.sign = -1;
-                    degl = 2;
-                } break;
-                case 'E': {
-                    this.type = LON;
-                    this.sign = 1;
-                    degl = 3;
-                } break;
-                case 'W': {
-                    this.type = LON;
-                    this.sign = -1;
-                    degl = 3;
-                } break;
-                default:
-                    throw new IllegalArgumentException("Malformed coordinate: " + value);
-            }
-            int i = value.indexOf('.');
-            if ((type == LAT && (i != 4)) || (type == LON && i != 5)) {
-                throw new IllegalArgumentException("Malformed coordinate: " + value);
-            }
-            this.deg = Integer.parseInt(value.substring(0, degl));
-            this.min = Double.parseDouble(value.substring(degl));
-        }
-
-        public String getLabel() {
-            return type == LAT ? "Latitude" : "Longitude";
-        }
-
-        public String[] getLetters() {
-            return type == LAT ? NS : EW;
-        }
-
-        public int getType() {
-            return type;
-        }
-
-        public int getSign() {
-            return sign;
-        }
-
-        public int getDeg() {
-            return deg;
-        }
-
-        public double getMin() {
-            return min;
-        }
-
-        public double doubleValue() {
-            return sign * (deg + min / 60D);
-        }
-
-        private int[] toArray() {
-            int h = deg;
-            int m = (int) Math.floor(min);
-            double l = min - m;
-            l *= 100000D;
-            int dec = (int) Math.floor(l);
-            if ((l - dec) > 0.5D) {
-                dec++;
-                if (dec == 100000) {
-                    dec = 0;
-                    m++;
-                    if (m == 60) {
-                        m = 0;
-                        h++;
-                    }
-                }
-            }
-
-            return new int[]{ h, m, dec };
-        }
-
-        public String toString() {
-            StringBuffer sb = new StringBuffer(16);
-
-            int[] hms = toArray();
-            int h = hms[0];
-            int m = hms[1];
-            int s = hms[2];
-
-            sb.append(type == LAT ? (sign == -1 ? "S" : "N") : (sign == -1 ? "W" : "E"));
-            sb.append(' ');
-            sb.append(h).append(SIGN).append(m).append('.');
-            if (s < 10000) {
-                sb.append('0');
-            }
-            if (s < 1000) {
-                sb.append('0');
-            }
-            if (s < 100) {
-                sb.append('0');
-            }
-            if (s < 10) {
-                sb.append('0');
-            }
-            sb.append(s);
-
-            return sb.toString();
-        }
-
-        public String toSentence() {
-            StringBuffer sb = new StringBuffer(16);
-
-            int[] hms = toArray();
-            int h = hms[0];
-            int m = hms[1];
-            int s = hms[2];
-
-            if (type == LON && h < 100) {
-                sb.append('0');
-            }
-            if (h < 10) {
-                sb.append('0');
-            }
-            sb.append(h);
-            if (m < 10) {
-                sb.append('0');
-            }
-            sb.append(m).append('.');
-            if (s < 10000) {
-                sb.append('0');
-            }
-            if (s < 1000) {
-                sb.append('0');
-            }
-            if (s < 100) {
-                sb.append('0');
-            }
-            if (s < 10) {
-                sb.append('0');
-            }
-            sb.append(s);
-            sb.append(',').append(type == LAT ? (sign == -1 ? "S" : "N") : (sign == -1 ? "W" : "E"));
-
-            return sb.toString();
-        }
-
-/*
-        public static String toDecimalString(int type, double value) {
-            return (new MinDec(type, value)).toString();
-        }
-*/
-
-        public static MinDec fromDecimalString(String value) {
-            return new MinDec(value);
-        }
-
-        public static String toSentence(int type, double value) {
-            return (new MinDec(type, value)).toSentence();
-        }
-
-        public static MinDec fromSentence(String value, String sign) {
-            return new MinDec(value, sign);
-        }
-    }
-
     public static final int DD_MM_SS  = 1;
     public static final int DD_MM     = 2;
-
-    public static String SIGN = "^";
-    public static String DELTA = "d";
-
-    private static double SINS[] = new double[90 + 1];
 
     private double lat, lon;
     private float alt;
     private boolean hp;
-
-    static {
-        try {
-            SIGN = new String(new byte[]{ (byte) 0xc2, (byte) 0xb0 }, "UTF-8");
-            DELTA = new String(new byte[]{ (byte) 0xce, (byte) 0x94 }, "UTF-8");
-        } catch (UnsupportedEncodingException e) {
-        }
-        for (int N = SINS.length, i = 0; i < N; i++) {
-            SINS[i] = Math.sin(Math.toRadians(i));
-        }
-    }
 
     public QualifiedCoordinates(double lat, double lon) {
         this(lat, lon, -1F);
@@ -305,7 +70,7 @@ public final class QualifiedCoordinates {
         double dy = (y2 - y1);
         double dz = (z2 - z1);
 
-        return (new Double(Math.sqrt(dx * dx + dy * dy + dz * dz))).floatValue();
+        return (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
     }
 
     /* non-JSR179 signature */
@@ -344,8 +109,9 @@ public final class QualifiedCoordinates {
         // find best match
         double matchVal = Double.MAX_VALUE;
         int matchIdx = -1;
-        for (int i = SINS.length; --i >= 0; ) {
-            double diff = Math.abs(sinAlpha - SINS[i]);
+        double[] sins = TrackingMIDlet.SINS;
+        for (int i = sins.length; --i >= 0; ) {
+            double diff = Math.abs(sinAlpha - sins[i]);
             if (diff < matchVal) {
                 matchVal = diff;
                 matchIdx = i;
@@ -359,7 +125,10 @@ public final class QualifiedCoordinates {
     }
 
     public String toString() {
-        StringBuffer sb = new StringBuffer(16);
+        return toStringBuffer(new StringBuffer(32)).toString();
+    }
+
+    public StringBuffer toStringBuffer(StringBuffer sb) {
         if (Config.getSafeInstance().isUseUTM()) {
             Mercator.UTMCoordinates utmCoords = Mercator.LLtoUTM(lat, lon);
             sb.append(utmCoords.zone).append(' ');
@@ -373,7 +142,7 @@ public final class QualifiedCoordinates {
             append(LON, sb);
         }
 
-        return sb.toString();
+        return sb;
     }
 
     private StringBuffer append(int type, StringBuffer sb) {
@@ -404,7 +173,7 @@ public final class QualifiedCoordinates {
             if (h < 10) {
                 sb.append('0');
             }
-            sb.append(h).append(SIGN);
+            sb.append(h).append(TrackingMIDlet.SIGN);
             sb.append(m).append('.');
             if (dec < 100) {
                 sb.append('0');
@@ -457,7 +226,7 @@ public final class QualifiedCoordinates {
                 }
             }
 
-            sb.append(h).append(SIGN);
+            sb.append(h).append(TrackingMIDlet.SIGN);
             sb.append(m).append('\'');
             sb.append(s);
             if (hp) {

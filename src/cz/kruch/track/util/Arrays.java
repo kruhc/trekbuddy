@@ -24,7 +24,7 @@ public class Arrays {
         }
 
         // Recursively sort halves of dest into src
-        int mid = (low + high) / 2;
+        int mid = (low + high) >> 1;
         mergeSort(dest, src, low, mid, c);
         mergeSort(dest, src, mid, high, c);
 

@@ -80,17 +80,14 @@ public final class FileBrowser extends List implements CommandListener, Runnable
             }
         } else {
             try {
-                boolean isDir = false;
-                String url = null;
+                boolean isDir;
 
                 if (file == null) {
                     file = new api.file.File(Connector.open("file:///" + path, Connector.READ));
-                    url = file.getURL();
                     isDir = file.isDirectory();
                 } else {
                     file.setFileConnection(path);
-                    url = file.getURL();
-                    isDir = url.endsWith(api.file.File.FILE_SEPARATOR);
+                    isDir = file.getURL().endsWith(api.file.File.FILE_SEPARATOR);
                 }
 
                 if (isDir) {

@@ -7,7 +7,6 @@ package cz.kruch.track.maps;
 import cz.kruch.track.util.Logger;
 //#endif
 import cz.kruch.track.AssertionFailedException;
-import cz.kruch.track.TrackingMIDlet;
 import cz.kruch.track.maps.io.LoaderIO;
 import cz.kruch.j2se.io.BufferedInputStream;
 import cz.kruch.j2se.util.StringTokenizer;
@@ -199,20 +198,27 @@ public final class Atlas implements Runnable {
         if (log.isEnabled()) log.info("close atlas");
 //#endif
 
+        // destroy all cached maps
+        for (Enumeration e = maps.elements(); e.hasMoreElements(); ) {
+            Map map = (Map) e.nextElement();
+//#ifdef __LOG__
+            if (log.isEnabled()) log.debug("closing map " + map.getPath());
+//#endif
+            map.close();
+        }
+
+        // dispose
+        maps.clear();
+        layers.clear();
+        maps = null;
+        layers = null;
+
         // destroy loader
-        if (loader != null) {
-            try {
-                loader.destroy();
-//#ifdef __LOG__
-                if (log.isEnabled()) log.debug("loader destroyed");
-//#endif
-            } catch (IOException e) {
-//#ifdef __LOG__
-                if (log.isEnabled()) log.warn("failed to destroy loader");
-//#endif
-            } finally {
-                loader = null;
-            }
+        try {
+            loader.destroy();
+        } catch (IOException e) {
+        } finally {
+            loader = null;
         }
     }
 
@@ -279,7 +285,7 @@ public final class Atlas implements Runnable {
 
             try {
                 // create stream
-                tar = new TarInputStream(new BufferedInputStream(Connector.openInputStream(url), Map.SMALL_BUFFER_SIZE));
+                tar = new TarInputStream(new BufferedInputStream(Connector.openInputStream(url), Map.LARGE_BUFFER_SIZE));
 
                 // iterate over archive
                 TarEntry entry = tar.getNextEntry();
@@ -291,7 +297,7 @@ public final class Atlas implements Runnable {
                             continue;
 
                         String ext = entryName.substring(indexOf + 1);
-                        if (TrackingMIDlet.KNOWN_EXTENSIONS.contains(ext)) {
+                        if (cz.kruch.track.TrackingMIDlet.KNOWN_EXTENSIONS.contains(ext)) {
                             // get layer and map name
                             String lName = null;
                             String mName = null;
@@ -305,7 +311,7 @@ public final class Atlas implements Runnable {
                             if (lName == null || mName == null)
                                 continue;
 
-                            String url = dir + lName + "/" + mName + "/" + mName + ".tar";
+                            String url = (new StringBuffer(32)).append(dir).append(lName).append('/').append(mName).append('/').append(mName).append(".tar").toString();
                             Calibration calibration = null;
 
                             // load map calibration file
@@ -389,7 +395,7 @@ public final class Atlas implements Runnable {
                                     }
                                     String ext = iEntry.substring(indexOf + 1);
 
-                                    if (TrackingMIDlet.KNOWN_EXTENSIONS.contains(ext)) {
+                                    if (cz.kruch.track.TrackingMIDlet.KNOWN_EXTENSIONS.contains(ext)) {
 //#ifdef __LOG__
                                         if (log.isEnabled()) log.debug("found map calibration: " + iEntry);
 //#endif

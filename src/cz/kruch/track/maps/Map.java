@@ -20,7 +20,6 @@ import cz.kruch.track.ui.Position;
 import cz.kruch.track.util.Logger;
 //#endif
 import cz.kruch.track.maps.io.LoaderIO;
-import cz.kruch.track.TrackingMIDlet;
 import cz.kruch.track.io.LineReader;
 
 import api.location.QualifiedCoordinates;
@@ -46,8 +45,8 @@ public final class Map implements Runnable {
 //#endif
 
             // load images
-            Throwable throwable = loadImages(slices);
-            slices = null;
+            Throwable throwable = loadImages(this.slices);
+            this.slices = null;
 
 //#ifdef __LOG__
             if (log.isEnabled()) log.debug("all requested slices loaded @" + Integer.toHexString(Map.this.hashCode()));
@@ -163,11 +162,23 @@ public final class Map implements Runnable {
         if (log.isEnabled()) log.info("close map");
 //#endif
 
+        // already closed?
+        if (slices == null) {
+            return;
+        }
+
         // dispose
         dispose();
+        slices = null;
+        calibration = null;
 
         // release loader
-        loader.destroy();
+        try {
+            loader.destroy();
+        } catch (IOException e) {
+        } finally {
+            loader = null;
+        }
     }
 
     /**
@@ -441,7 +452,7 @@ public final class Map implements Runnable {
         protected Exception exception;
 
         public abstract void init() throws IOException;
-        public abstract void destroy();
+        public abstract void destroy() throws IOException;
         public abstract void loadSlice(Slice slice) throws IOException;
 
         protected BufferedInputStream bufferedIn;
@@ -481,13 +492,18 @@ public final class Map implements Runnable {
             tarIn = null;
         }
 
-        public void destroy() {
+        public void destroy() throws IOException {
             if (fsIn != null) {
+//#ifdef __LOG__
+                if (log.isEnabled()) log.debug("closing native stream");
+//#endif
                 try {
                     fsIn.close();
-                } catch (IOException e) {
+                } finally {
+                    fsIn = null;
                 }
             }
+            tarIn = null; // no need to close, just forget
         }
 
         public void run() {
@@ -583,16 +599,18 @@ public final class Map implements Runnable {
                 if (fsIn == null) {
                     bufferedIn.reuse(in = Connector.openInputStream(path));
                 } else {
-                    fsIn.reset();
-                    bufferedIn.reuse(fsIn);
+                    try {
+                        fsIn.reset();
+                        bufferedIn.reuse(fsIn);
+                    } catch (IOException e) {
+                        fsIn = null;
+                    }
                 }
                 tarIn.reuse(bufferedIn);
                 Long offset = (Long) slice.getClosure();
                 tarIn.setPosition(offset.longValue());
                 tarIn.getNextEntry();
                 slice.setImage(Image.createImage(tarIn));
-            } catch (IOException e) {
-                fsIn = null;
             } finally {
                 if ((fsIn == null) /* no reuse */ && (in != null)) {
 //#ifdef __LOG__
@@ -612,7 +630,7 @@ public final class Map implements Runnable {
         public void init() throws IOException {
         }
 
-        public void destroy() {
+        public void destroy() throws IOException {
         }
 
         public void run() {
@@ -623,9 +641,9 @@ public final class Map implements Runnable {
                 Map.this.type = TYPE_BEST;
 
                 // load calibration
-                InputStream in = TrackingMIDlet.class.getResourceAsStream("/resources/world.map");
+                InputStream in = cz.kruch.track.TrackingMIDlet.class.getResourceAsStream("/resources/world.map");
                 if (in == null) { // no Ozi calibration found
-                    in = TrackingMIDlet.class.getResourceAsStream("/resources/world.gmi");
+                    in = cz.kruch.track.TrackingMIDlet.class.getResourceAsStream("/resources/world.gmi");
                     if (in == null) { // neither MapCalibrator calibration
                         throw new InvalidMapException("No default map calibration");
                     } else { // got MapCalibrator calibration
@@ -656,7 +674,7 @@ public final class Map implements Runnable {
                 }
 
                 // each line is a slice filename
-                reader = new LineReader(new BufferedInputStream(TrackingMIDlet.class.getResourceAsStream("/resources/world.set"), SMALL_BUFFER_SIZE));
+                reader = new LineReader(new BufferedInputStream(cz.kruch.track.TrackingMIDlet.class.getResourceAsStream("/resources/world.set"), SMALL_BUFFER_SIZE));
                 String entry = reader.readLine(false);
                 while (entry != null) {
                     addSlice(new Slice(new Calibration.Best(entry)));
@@ -686,9 +704,9 @@ public final class Map implements Runnable {
 
             try {
                 if (bufferedIn == null) {
-                    bufferedIn = new BufferedInputStream(in = TrackingMIDlet.class.getResourceAsStream(slicePath), LARGE_BUFFER_SIZE);
+                    bufferedIn = new BufferedInputStream(in = cz.kruch.track.TrackingMIDlet.class.getResourceAsStream(slicePath), LARGE_BUFFER_SIZE);
                 } else {
-                    bufferedIn.reuse(in = TrackingMIDlet.class.getResourceAsStream(slicePath));
+                    bufferedIn.reuse(in = cz.kruch.track.TrackingMIDlet.class.getResourceAsStream(slicePath));
                 }
                 slice.setImage(Image.createImage(bufferedIn));
             } finally {
@@ -717,7 +735,7 @@ public final class Map implements Runnable {
 //#endif
         }
 
-        public void destroy() {
+        public void destroy() throws IOException {
         }
 
         public void run() {
@@ -781,7 +799,7 @@ public final class Map implements Runnable {
                     fc = new api.file.File(Connector.open(dir + setDir, Connector.READ));
                     if (fc.exists()) {
                         for (Enumeration e = fc.list("*.png", false); e.hasMoreElements(); ) {
-                            String entry = e.nextElement().toString();
+                            String entry = (String) e.nextElement();
                             addSlice(new Slice(new Calibration.Best(setDir + entry)));
                         }
                     } else {

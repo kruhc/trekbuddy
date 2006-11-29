@@ -20,6 +20,9 @@ public abstract class StreamReadingLocationProvider extends LocationProvider {
     protected static final char[] HEADER_RMC = "$GPRMC".toCharArray();
     protected static final int BUFFER_SIZE = 512;
 
+    public static int syncs;
+    public static int mismatches;
+
     private OutputStream observer;
     private char[] buffer;
 /*
@@ -29,6 +32,7 @@ public abstract class StreamReadingLocationProvider extends LocationProvider {
     protected StreamReadingLocationProvider(String name) {
         super(name);
         this.buffer = new char[128];
+        syncs = mismatches = 0;
     }
 
     protected void setObserver(OutputStream observer) {
@@ -54,51 +58,37 @@ public abstract class StreamReadingLocationProvider extends LocationProvider {
                 continue;
             }
             // sync
-            if (/*order == 0 && */rmc != null && gga != null) {
+            if (rmc != null && gga != null) {
                 int i = rmc.timestamp - gga.timestamp;
-/*
-                switch (i) {
-                    case 0:
-                        order = 1;
-                        break;
-                    case 1000:
-                        gga = null;
-                        break;
-                    case -1000:
-                        rmc = null;
-                        break;
-                }
-*/
                 if (i > 0) {
                     gga = null;
+                    syncs++;
                 } else if (i < 0) {
                     rmc = null;
+                    syncs++;
                 }
             }
         }
 
         // new location
-        Location location = null;
+        Location location;
 
         // combine
-/*
+        long datetime = rmc.date + rmc.timestamp;
         if (rmc.timestamp == gga.timestamp) {
-*/
-            long datetime = rmc.date + rmc.timestamp;
             location = new Location(new QualifiedCoordinates(rmc.lat, rmc.lon, gga.altitude),
                                     datetime, gga.fix, gga.sat, gga.hdop);
-            location.setCourse(rmc.angle);
-            location.setSpeed(rmc.speed);
-/*
         } else {
-            long datetime = rmc.date + rmc.timestamp;
             location = new Location(new QualifiedCoordinates(rmc.lat, rmc.lon),
                                     datetime, rmc.status == 'A' ? 1 : 0);
-            location.setCourse(rmc.angle);
-            location.setSpeed(rmc.speed);
+            mismatches++;
         }
-*/
-        rmc = gga = null;
+        location.setCourse(rmc.angle);
+        location.setSpeed(rmc.speed);
+
+        // gc hint
+        rmc = null;
+        gga = null;
 
         return location;
     }
@@ -109,10 +99,13 @@ public abstract class StreamReadingLocationProvider extends LocationProvider {
         boolean nl = false;
         boolean match = false;
 
+        OutputStream _observer = observer;
+        char[] _buffer = buffer;
+
         int c = in.read();
         while (c > -1) {
-            if (observer != null) {
-                observer.write(c);
+            if (_observer != null) {
+                _observer.write(c);
             }
             if (c == '$') { // beginning of NMEA sentence
                 pos = 0;
@@ -125,7 +118,7 @@ public abstract class StreamReadingLocationProvider extends LocationProvider {
                 if (nl) break;
 
                 // add char to array
-                buffer[pos++] = ch;
+                _buffer[pos++] = ch;
 
                 // weird content check
                 if (pos >= 0x80) {
@@ -138,7 +131,7 @@ public abstract class StreamReadingLocationProvider extends LocationProvider {
 
         if (nl) {
             char[] result = new char[pos];
-            System.arraycopy(buffer, 0, result, 0, pos);
+            System.arraycopy(_buffer, 0, result, 0, pos);
             
             return result;
         }

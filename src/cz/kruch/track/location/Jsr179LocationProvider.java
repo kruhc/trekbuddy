@@ -4,7 +4,6 @@
 package cz.kruch.track.location;
 
 import cz.kruch.track.configuration.Config;
-import cz.kruch.track.TrackingMIDlet;
 
 public class Jsr179LocationProvider extends api.location.LocationProvider {
     private javax.microedition.location.LocationProvider impl;
@@ -76,7 +75,7 @@ public class Jsr179LocationProvider extends api.location.LocationProvider {
                 float spd = l.getSpeed();
                 float alt = xc.getAltitude();
                 float course = l.getCourse();
-                if (TrackingMIDlet.isSxg75()) {
+                if (cz.kruch.track.TrackingMIDlet.isSxg75()) {
                     if (Float.isNaN(spd)) {
                         spd = -1F;
                     } else {

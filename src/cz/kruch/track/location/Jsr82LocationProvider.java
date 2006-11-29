@@ -11,7 +11,6 @@ import api.location.Location;
 import cz.kruch.track.configuration.Config;
 import cz.kruch.track.configuration.ConfigurationException;
 import cz.kruch.track.ui.Desktop;
-import cz.kruch.track.TrackingMIDlet;
 import cz.kruch.j2se.io.BufferedInputStream;
 import cz.kruch.j2se.io.BufferedOutputStream;
 
@@ -558,7 +557,7 @@ public class Jsr82LocationProvider extends StreamReadingLocationProvider impleme
             if (command == cmdConnect) { /* device selection */
                 btname = getString(getSelectedIndex());
                 device = (javax.bluetooth.RemoteDevice) devices.elementAt(getSelectedIndex());
-                if (TrackingMIDlet.hasFlag("bt_service_search")) {
+                if (cz.kruch.track.TrackingMIDlet.hasFlag("bt_service_search")) {
                     goServices();
                 } else {
                     url = "btspp://" + device.getBluetoothAddress() + ":1";

@@ -194,14 +194,17 @@ public final class NmeaParser {
         int mins = /*(int)*/ tl / 100;
         tl -= mins * 100;
         int sec = /*(int)*/ tl;
+//        int ms = parseInt(token.array, token.begin + 7, 3);
 
-        return (3600 * hours + 60 * mins + sec) * 1000; // in millis
+        return (3600 * hours + 60 * mins + sec) * 1000/* + ms*/; // in millis
     }
 
     private static long parseDate(Token token) {
-        int day = 10 * (token.array[token.begin + 0] - '0') + token.array[token.begin + 1] - '0';
-        int month = 10 * (token.array[token.begin + 2] - '0') + token.array[token.begin + 3] - '0';
-        int year = 2000 + 10 * (token.array[token.begin + 4] - '0') + token.array[token.begin + 5] - '0';
+        char[] _tarray = token.array;
+        int _tbegin = token.begin;
+        int day = 10 * (_tarray[_tbegin + 0] - '0') + _tarray[_tbegin + 1] - '0';
+        int month = 10 * (_tarray[_tbegin + 2] - '0') + _tarray[_tbegin + 3] - '0';
+        int year = 2000 + 10 * (_tarray[_tbegin + 4] - '0') + _tarray[_tbegin + 5] - '0';
         CALENDAR.setTime(DATE_0);
         CALENDAR.set(Calendar.DAY_OF_MONTH, day);
         CALENDAR.set(Calendar.MONTH, month - 1); // zero-based

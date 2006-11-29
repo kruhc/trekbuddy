@@ -7,7 +7,6 @@ package cz.kruch.track.configuration;
 import cz.kruch.track.util.Logger;
 //#endif
 import cz.kruch.track.util.Datum;
-import cz.kruch.track.TrackingMIDlet;
 
 import javax.microedition.rms.RecordStore;
 import javax.microedition.rms.RecordStoreException;
@@ -34,44 +33,6 @@ public abstract class Config {
     public static final String TRACKLOG_FORMAT_NMEA         = "NMEA 0183";
     public static final String TRACKLOG_FORMAT_GPX          = "GPX 1.1";
 
-/*
-    public static final Object[] TZ = new Object[]{
-        new Object[]{ "GMT-12:00", new Integer(-12 * 60 * 60) },
-        new Object[]{ "GMT-11:00", new Integer(-11 * 60 * 60) },
-        new Object[]{ "GMT-10:00", new Integer(-10 * 60 * 60) },
-        new Object[]{ "GMT-09:00", new Integer(-9 * 60 * 60) },
-        new Object[]{ "GMT-08:00", new Integer(-8 * 60 * 60) },
-        new Object[]{ "GMT-07:00", new Integer(-7 * 60 * 60) },
-        new Object[]{ "GMT-06:00", new Integer(-6 * 60 * 60) },
-        new Object[]{ "GMT-05:00", new Integer(-5 * 60 * 60) },
-        new Object[]{ "GMT-04:00", new Integer(-4 * 60 * 60) },
-        new Object[]{ "GMT-03:30", new Integer((-3 * 60 + 30) * 60) },
-        new Object[]{ "GMT-03:00", new Integer(-3 * 60 * 60) },
-        new Object[]{ "GMT-02:00", new Integer(-2 * 60 * 60) },
-        new Object[]{ "GMT-01:00", new Integer(-1 * 60 * 60) },
-        new Object[]{ "GMT", new Integer(0) },
-        new Object[]{ "GMT+01:00", new Integer(1 * 60 * 60) },
-        new Object[]{ "GMT+02:00", new Integer(2 * 60 * 60) },
-        new Object[]{ "GMT+03:00", new Integer(3 * 60 * 60) },
-        new Object[]{ "GMT+03:30", new Integer((3 * 60 + 30) * 60) },
-        new Object[]{ "GMT+04:00", new Integer(4 * 60 * 60) },
-        new Object[]{ "GMT+04:30", new Integer((4 * 60 + 30) * 60) },
-        new Object[]{ "GMT+05:00", new Integer(5 * 60 * 60) },
-        new Object[]{ "GMT+05:30", new Integer((5 * 60 + 30) * 60) },
-        new Object[]{ "GMT+05:45", new Integer((5 * 60 + 45) * 60) },
-        new Object[]{ "GMT+06:00", new Integer(6 * 60 * 60) },
-        new Object[]{ "GMT+06:30", new Integer((6 * 60 + 30) * 60) },
-        new Object[]{ "GMT+07:00", new Integer(7 * 60 * 60) },
-        new Object[]{ "GMT+08:00", new Integer(8 * 60 * 60) },
-        new Object[]{ "GMT+09:00", new Integer(9 * 60 * 60) },
-        new Object[]{ "GMT+09:30", new Integer((9 * 60 + 30) * 60) },
-        new Object[]{ "GMT+10:00", new Integer(10 * 60 * 60) },
-        new Object[]{ "GMT+11:00", new Integer(11 * 60 * 60) },
-        new Object[]{ "GMT+12:00", new Integer(12 * 60 * 60) },
-        new Object[]{ "GMT+13:00", new Integer(13 * 60 * 60) }
-    };
-*/
-
     private static Config instance = null;
 
     /*
@@ -87,11 +48,6 @@ public abstract class Config {
     protected int dX = 0;
     protected int dY = 0;
     protected int dZ = 0;
-*/
-
-/*
-    // group [Timezone]
-    protected String timeZone = "GMT";
 */
 
     // group [Provider]
@@ -124,14 +80,13 @@ public abstract class Config {
     protected boolean osdBoldFont = false;
     protected boolean osdBlackColor = false;
 
+    // group [Performance]
+    protected boolean optimisticIo = true;
+    protected boolean cache = false;
+
     // hidden
     protected String btDeviceName = "";
     protected String btServiceUrl = "";
-
-/*
-    // precalcs
-    private Integer tzOffset = null;
-*/
 
     protected Config() {
     }
@@ -164,13 +119,13 @@ public abstract class Config {
 
     public String[] getLocationProviders() {
         Vector list = new Vector();
-        if (TrackingMIDlet.isJsr82()) {
+        if (cz.kruch.track.TrackingMIDlet.isJsr82()) {
             list.addElement(LOCATION_PROVIDER_JSR82);
         }
-        if (TrackingMIDlet.isJsr179()) {
+        if (cz.kruch.track.TrackingMIDlet.isJsr179()) {
             list.addElement(LOCATION_PROVIDER_JSR179);
         }
-        if (TrackingMIDlet.isFs()) {
+        if (cz.kruch.track.TrackingMIDlet.isFs()) {
             list.addElement(LOCATION_PROVIDER_SIMULATOR);
         }
         String[] result = new String[list.size()];
@@ -331,34 +286,6 @@ public abstract class Config {
         this.osdBlackColor = osdBlackColor;
     }
 
-/*
-    public String getTimeZone() {
-        return timeZone;
-    }
-
-    public int getTimeZoneOffset() {
-        if (tzOffset == null) {
-            for (int N = TZ.length, i = 0; i < N; i++) {
-                String tz = (String) ((Object[]) Config.TZ[i])[0];
-                if (tz.equals(getTimeZone())) {
-                    tzOffset = (Integer) ((Object[]) Config.TZ[i])[1];
-                    break;
-                }
-            }
-            if (tzOffset == null) {
-                tzOffset = new Integer(0);
-            }
-        }
-
-        return tzOffset.intValue();
-    }
-
-    public void setTimeZone(String timeZone) {
-        this.timeZone = timeZone;
-        this.tzOffset = null;
-    }
-*/
-
     public boolean isUseUTM() {
         return useUTM;
     }
@@ -383,6 +310,21 @@ public abstract class Config {
         this.useGeocachingFormat = useGeocachingFormat;
     }
 
+    public boolean isOptimisticIo() {
+        return optimisticIo;
+    }
+
+    public void setOptimisticIo(boolean optimisticIo) {
+        this.optimisticIo = optimisticIo;
+    }
+
+    public boolean isCache() {
+        return cache;
+    }
+
+    public void setCache(boolean cache) {
+        this.cache = cache;
+    }
 /*
     public int getdX() {
         return dX;
@@ -492,6 +434,12 @@ public abstract class Config {
                             useGeocachingFormat = din.readBoolean();
                         } catch (Exception e) {
                         }
+                        // pre 0.9.4 extension
+                        try {
+                            optimisticIo = din.readBoolean();
+                            cache = din.readBoolean();
+                        } catch (Exception e) {
+                        }
                     }
                 } catch (Exception e) {
                     throw new ConfigurationException(e);
@@ -564,6 +512,8 @@ public abstract class Config {
 */
                 dout.writeUTF(tracklogsOn);
                 dout.writeBoolean(useGeocachingFormat);
+                dout.writeBoolean(optimisticIo);
+                dout.writeBoolean(cache);
                 dout.flush();
                 byte[] bytes = data.toByteArray();
                 rs = RecordStore.openRecordStore(NAME, true, RecordStore.AUTHMODE_PRIVATE, true);

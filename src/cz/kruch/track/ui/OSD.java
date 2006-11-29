@@ -12,7 +12,6 @@ import javax.microedition.lcdui.Image;
 import javax.microedition.lcdui.game.Sprite;
 
 import cz.kruch.track.configuration.Config;
-import cz.kruch.track.TrackingMIDlet;
 
 final class OSD extends Bar {
     private static final String NO_INFO = "Lon: ? Lat: ?";
@@ -42,7 +41,7 @@ final class OSD extends Bar {
 
     public void resize(int width, int height, Image bar) {
         super.resize(width, height, bar);
-        this.bulletSize = TrackingMIDlet.providers/*[0]*/.getHeight();
+        this.bulletSize = cz.kruch.track.TrackingMIDlet.providers/*[0]*/.getHeight();
         this.semaforX = this.width - this.bulletSize - BORDER;
         this.semaforY = Math.abs((this.bh - this.bulletSize)) >> 1;
     }
@@ -56,12 +55,12 @@ final class OSD extends Bar {
             info = NO_INFO;
         }
 
-        boolean isExtInfo = extendedInfo != null && Config.getSafeInstance().isOsdExtended();
+        boolean isExtInfo = Config.getSafeInstance().isOsdExtended();
 
         // draw info + extended info bg
         if (!Config.getSafeInstance().isOsdNoBackground()) {
             graphics.drawImage(bar, gx, gy, 0/*Graphics.TOP | Graphics.LEFT*/);
-            if (isExtInfo) {
+            if (isExtInfo && extendedInfo != null) {
                 graphics.drawImage(bar, gx, gy + bh, 0/*Graphics.TOP | Graphics.LEFT*/);
             }
         }
@@ -73,7 +72,7 @@ final class OSD extends Bar {
 
         // draw info + extended info text
         graphics.drawString(info, gx + BORDER, gy, 0/*Graphics.TOP | Graphics.LEFT*/);
-        if (isExtInfo) {
+        if (isExtInfo && extendedInfo != null) {
             graphics.drawString(extendedInfo, gx + BORDER, gy + bh, 0/*Graphics.TOP | Graphics.LEFT*/);
             if (sat > 0) {
                 String s = sat + "*";
@@ -105,7 +104,7 @@ final class OSD extends Bar {
 /*
         graphics.drawImage(TrackingMIDlet.providers[status], semaforX, semaforY, 0);
 */
-        graphics.drawRegion(TrackingMIDlet.providers,
+        graphics.drawRegion(cz.kruch.track.TrackingMIDlet.providers,
                             status * bulletSize, 0, bulletSize, bulletSize,
                             Sprite.TRANS_NONE,
                             semaforX, semaforY, 0);

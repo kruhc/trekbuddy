@@ -3,8 +3,6 @@
 
 package cz.kruch.track.util;
 
-import cz.kruch.track.TrackingMIDlet;
-
 public final class Logger {
     private static final String LEVEL_DEBUG  = "DEBUG";
     private static final String LEVEL_INFO   = "INFO";
@@ -16,7 +14,7 @@ public final class Logger {
 
     public Logger(String componentName) {
         this.cname = componentName;
-        this.enabled = TrackingMIDlet.isLogEnabled();
+        this.enabled = cz.kruch.track.TrackingMIDlet.isLogEnabled();
     }
 
     public boolean isEnabled() {

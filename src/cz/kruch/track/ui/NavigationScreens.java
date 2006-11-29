@@ -1,7 +1,6 @@
 package cz.kruch.track.ui;
 
 import cz.kruch.track.AssertionFailedException;
-import cz.kruch.track.TrackingMIDlet;
 
 import javax.microedition.lcdui.game.Sprite;
 import javax.microedition.lcdui.Graphics;
@@ -69,12 +68,12 @@ final class NavigationScreens {
             }
         }
 
-        Image _courses = TrackingMIDlet.courses;
+        Image _courses = cz.kruch.track.TrackingMIDlet.courses;
         if (ti == Sprite.TRANS_ROT90) {
-            _courses = TrackingMIDlet.courses2;
+            _courses = cz.kruch.track.TrackingMIDlet.courses2;
             ti = Sprite.TRANS_NONE;
         } else if (ti == Sprite.TRANS_ROT270) {
-            _courses = TrackingMIDlet.courses2;
+            _courses = cz.kruch.track.TrackingMIDlet.courses2;
             ti = Sprite.TRANS_ROT180;
         }
 
@@ -91,12 +90,13 @@ final class NavigationScreens {
     }
 
     public static void drawWaypoint(Graphics graphics, int x, int y, int anchor) {
-        graphics.drawImage(TrackingMIDlet.waypoint, x - wptSize2, y - wptSize2, anchor);
+        graphics.drawImage(cz.kruch.track.TrackingMIDlet.waypoint,
+                           x - wptSize2, y - wptSize2, anchor);
     }
 
     static void initialize() {
-        arrowSize = TrackingMIDlet.courses/*[0]*/.getHeight();
+        arrowSize = cz.kruch.track.TrackingMIDlet.courses/*[0]*/.getHeight();
         arrowSize2 = arrowSize >> 1;
-        wptSize2 = TrackingMIDlet.waypoint.getWidth() >> 1;
+        wptSize2 = cz.kruch.track.TrackingMIDlet.waypoint.getWidth() >> 1;
     }
 }

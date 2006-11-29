@@ -6,7 +6,6 @@ package cz.kruch.track.ui;
 import cz.kruch.track.configuration.Config;
 import cz.kruch.track.configuration.ConfigurationException;
 import cz.kruch.track.event.Callback;
-import cz.kruch.track.TrackingMIDlet;
 import cz.kruch.track.util.Datum;
 
 import javax.microedition.lcdui.Displayable;
@@ -25,9 +24,6 @@ final class SettingsForm extends Form implements CommandListener, ItemStateListe
 
     private TextField fieldMapPath;
     private ChoiceGroup choiceMapDatum;
-/*
-    private ChoiceGroup choiceTimezone;
-*/
     private ChoiceGroup choiceProvider;
     private ChoiceGroup choiceTracklog;
     private ChoiceGroup choiceTracklogsFormat;
@@ -38,6 +34,7 @@ final class SettingsForm extends Form implements CommandListener, ItemStateListe
     private TextField fieldLocationInterval;
     private ChoiceGroup choiceFriends;
     private ChoiceGroup choiceMisc;
+    private ChoiceGroup choicePerformance;
 /*
     private TextField dX, dY, dZ;
 */
@@ -51,7 +48,7 @@ final class SettingsForm extends Form implements CommandListener, ItemStateListe
         Config config = Config.getSafeInstance();
 
         // default map path field
-        if (TrackingMIDlet.isFs()) {
+        if (cz.kruch.track.TrackingMIDlet.isFs()) {
             fieldMapPath = new TextField("Default Map", config.getMapPath(), MAX_URL_LENGTH, TextField.URL);
             append(fieldMapPath);
         }
@@ -104,6 +101,16 @@ final class SettingsForm extends Form implements CommandListener, ItemStateListe
             append(choiceMisc);
 //        }
 
+        // desktop settings
+        choicePerformance = new ChoiceGroup("Performance", ChoiceGroup.MULTIPLE);
+        choicePerformance.append("optimistic I/O", null);
+        choicePerformance.append("cache", null);
+        choicePerformance.setSelectedFlags(new boolean[] {
+            config.isOptimisticIo(),
+            config.isCache()
+        });
+        append(choicePerformance);
+
         // location provider choice
         String[] providers = config.getLocationProviders();
         choiceProvider = new ChoiceGroup("Location Provider", ChoiceGroup.EXCLUSIVE);
@@ -132,7 +139,7 @@ final class SettingsForm extends Form implements CommandListener, ItemStateListe
 */
 
         // tracklogs
-        if (TrackingMIDlet.isFs()) {
+        if (cz.kruch.track.TrackingMIDlet.isFs()) {
             choiceTracklog = new ChoiceGroup("Tracklog", ChoiceGroup.EXCLUSIVE);
             String tracklogsOn = config.getTracklogsOn();
             choiceTracklog.setSelectedIndex(choiceTracklog.append(Config.TRACKLOG_NEVER, null), Config.TRACKLOG_NEVER.equals(tracklogsOn));
@@ -143,19 +150,19 @@ final class SettingsForm extends Form implements CommandListener, ItemStateListe
             choiceTracklogsFormat.setSelectedIndex(choiceTracklogsFormat.append(Config.TRACKLOG_FORMAT_GPX, null), Config.TRACKLOG_FORMAT_GPX.equals(tracklogsFormat));
             choiceTracklogsFormat.setSelectedIndex(choiceTracklogsFormat.append(Config.TRACKLOG_FORMAT_NMEA, null), Config.TRACKLOG_FORMAT_NMEA.equals(tracklogsFormat));
             fieldTracklogsDir = new TextField("Tracklogs Dir", config.getTracklogsDir(), MAX_URL_LENGTH, TextField.URL);
-            if (TrackingMIDlet.isJsr135()) {
+            if (cz.kruch.track.TrackingMIDlet.isJsr135()) {
                 fieldCaptureLocator = new TextField("Capture Locator", config.getCaptureLocator(), 16, TextField.URL);
                 fieldCaptureFormat = new TextField("Capture Format", config.getCaptureFormat(), 64, TextField.ANY);
             }
         }
 
         // simulator
-        if (TrackingMIDlet.isFs()) {
+        if (cz.kruch.track.TrackingMIDlet.isFs()) {
             fieldSimulatorDelay = new TextField("Simulator Delay", Integer.toString(config.getSimulatorDelay()), 8, TextField.NUMERIC);
         }
 
         // internal
-        if (TrackingMIDlet.isJsr179()) {
+        if (cz.kruch.track.TrackingMIDlet.isJsr179()) {
             fieldLocationInterval = new TextField("Location Interval", Integer.toString(config.getLocationInterval()), 4, TextField.NUMERIC);
         }
 
@@ -202,7 +209,7 @@ final class SettingsForm extends Form implements CommandListener, ItemStateListe
         if (command.getCommandType() == Command.SCREEN) { // "Apply", "Save"
             Config config = Config.getSafeInstance();
             // map path
-            if (TrackingMIDlet.isFs()) {
+            if (cz.kruch.track.TrackingMIDlet.isFs()) {
                 config.setMapPath(fieldMapPath.getString());
             }
             // provider
@@ -210,20 +217,20 @@ final class SettingsForm extends Form implements CommandListener, ItemStateListe
                 config.setLocationProvider(choiceProvider.getString(choiceProvider.getSelectedIndex()));
             }
             // tracklog
-            if (TrackingMIDlet.isFs()) {
+            if (cz.kruch.track.TrackingMIDlet.isFs()) {
                 config.setTracklogsOn(choiceTracklog.getString(choiceTracklog.getSelectedIndex()));
                 config.setTracklogsFormat(choiceTracklogsFormat.getString(choiceTracklogsFormat.getSelectedIndex()));
                 config.setTracklogsDir(fieldTracklogsDir.getString());
-                if (TrackingMIDlet.isJsr135()) {
+                if (cz.kruch.track.TrackingMIDlet.isJsr135()) {
                     config.setCaptureLocator(fieldCaptureLocator.getString());
                     config.setCaptureFormat(fieldCaptureFormat.getString());
                 }
             }
             // provider-specific
-            if (TrackingMIDlet.isFs()) {
+            if (cz.kruch.track.TrackingMIDlet.isFs()) {
                 config.setSimulatorDelay(Integer.parseInt(fieldSimulatorDelay.getString()));
             }
-            if (TrackingMIDlet.isJsr179()) {
+            if (cz.kruch.track.TrackingMIDlet.isJsr179()) {
                 config.setLocationInterval(Integer.parseInt(fieldLocationInterval.getString()));
             }
             // location sharing
@@ -244,12 +251,13 @@ final class SettingsForm extends Form implements CommandListener, ItemStateListe
             config.setOsdBoldFont(misc[7]);
             config.setOsdBlackColor(misc[8]);
             Desktop.resetFont();
-/*
-            // timezone
-            config.setTimeZone(choiceTimezone.getString(choiceTimezone.getSelectedIndex()));
-*/
             // datum
             config.setGeoDatum(Datum.use(choiceMapDatum.getString(choiceMapDatum.getSelectedIndex())));
+            // desktop
+            boolean[] perf = new boolean[choicePerformance.size()];
+            choicePerformance.getSelectedFlags(perf);
+            config.setOptimisticIo(perf[0]);
+            config.setCache(perf[1]);
 /*
             config.setdX(Integer.parseInt(dX.getString()));
             config.setdY(Integer.parseInt(dY.getString()));
@@ -283,7 +291,7 @@ final class SettingsForm extends Form implements CommandListener, ItemStateListe
 
         for (int i = size(); --i >= 0; ) {
             Item item = get(i);
-            if (fieldMapPath == item || choiceProvider == item || choiceMisc == item || /*choiceTimezone == item || */choiceMapDatum == item/*|| (dX == item || dY == item || dZ == item)*/)
+            if (fieldMapPath == item || choiceProvider == item || choiceMisc == item || choicePerformance == item || choiceMapDatum == item/*|| (dX == item || dY == item || dZ == item)*/)
                 continue;
             if (soft) {
                 if (fieldSimulatorDelay == item || fieldLocationInterval == item || choiceFriends == item || choiceTracklog == item)
@@ -300,7 +308,7 @@ final class SettingsForm extends Form implements CommandListener, ItemStateListe
         boolean tracklogsOn = !Config.TRACKLOG_NEVER.equals(choiceTracklog.getString(choiceTracklog.getSelectedIndex()));
 
         if (Config.LOCATION_PROVIDER_SIMULATOR.equals(provider)) {
-            if (TrackingMIDlet.isFs()) {
+            if (cz.kruch.track.TrackingMIDlet.isFs()) {
                 if (!soft) {
                     append(fieldSimulatorDelay);
                     append(choiceTracklog);
@@ -316,7 +324,7 @@ final class SettingsForm extends Form implements CommandListener, ItemStateListe
                 }
                 append(choiceFriends);
             }
-            if (TrackingMIDlet.isFs()) {
+            if (cz.kruch.track.TrackingMIDlet.isFs()) {
                 if (!soft) {
                     append(choiceTracklog);
                 }

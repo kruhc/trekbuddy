@@ -3,8 +3,6 @@
 
 package cz.kruch.track.ui;
 
-import cz.kruch.track.TrackingMIDlet;
-
 import javax.microedition.lcdui.Image;
 import javax.microedition.lcdui.Graphics;
 

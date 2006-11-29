@@ -8,7 +8,6 @@ import cz.kruch.track.util.Logger;
 import cz.kruch.track.location.Waypoint;
 import cz.kruch.track.location.Navigator;
 import cz.kruch.track.maps.io.LoaderIO;
-import cz.kruch.track.TrackingMIDlet;
 import cz.kruch.track.fun.Friends;
 import cz.kruch.j2se.io.BufferedInputStream;
 
@@ -75,9 +74,9 @@ public final class Waypoints extends List
             // do we have in-jar waypoint(s) resource?
             InputStream in = null;
             String type = "GPX";
-            in = TrackingMIDlet.class.getResourceAsStream("/resources/waypoints.gpx");
+            in = cz.kruch.track.TrackingMIDlet.class.getResourceAsStream("/resources/waypoints.gpx");
             if (in == null) {
-                in = TrackingMIDlet.class.getResourceAsStream("/resources/waypoint.loc");
+                in = cz.kruch.track.TrackingMIDlet.class.getResourceAsStream("/resources/waypoint.loc");
                 type = "LOC";
             }
 
@@ -115,7 +114,7 @@ public final class Waypoints extends List
         // create menu
         append(ITEM_ADD_NEW, null);
         append(ITEM_SHOW_CURRENT, null);
-        if (TrackingMIDlet.isJsr120()) {
+        if (cz.kruch.track.TrackingMIDlet.isJsr120()) {
             if (navigator.isTracking()) {
                 append(ITEM_FRIEND_HERE, null);
             }

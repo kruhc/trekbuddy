@@ -6,7 +6,6 @@ package cz.kruch.track.ui;
 import cz.kruch.track.event.Callback;
 import cz.kruch.track.fun.Camera;
 import cz.kruch.track.location.Waypoint;
-import cz.kruch.track.TrackingMIDlet;
 
 import javax.microedition.lcdui.Form;
 import javax.microedition.lcdui.CommandListener;
@@ -71,7 +70,7 @@ public final class WaypointForm extends Form
             appendWithNewlineAfter(new StringItem("Time", dateToString(timestamp)));
         }
         appendWithNewlineAfter(new StringItem("Location", location.getQualifiedCoordinates().toString()));
-        if (TrackingMIDlet.isJsr135()) {
+        if (cz.kruch.track.TrackingMIDlet.isJsr135()) {
             StringItem snapshot = new StringItem("Snapshot", "Take", Item.BUTTON);
             snapshot.setDefaultCommand(new Command("Take", Command.ITEM, 1));
             snapshot.setItemCommandListener(this);

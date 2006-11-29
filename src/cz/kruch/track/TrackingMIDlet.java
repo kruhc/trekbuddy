@@ -34,13 +34,13 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
     private static boolean jsr82;
     private static boolean jsr120;
     private static boolean jsr135;
-    private static boolean videoCapture;
     private static boolean fs;
     private static boolean sxg75;
 //#ifdef __S65__
     private static boolean s65;
 //#endif
     private static boolean sonyEricsson;
+    private static boolean nokia;
     private static int numAlphaLevels = 2;
 
     // image cache
@@ -125,6 +125,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         TrackingMIDlet.fs = fsType > FS_NONE;
 
         sxg75 = "SXG75".equals(platform);
+        nokia = platform.startsWith("Nokia");
 //#ifdef __S65__
         s65 = "S65".equals(platform);
 //#endif
@@ -132,19 +133,27 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
 
         // setup environment
         if (hasFlag("fs_read_skip") || sonyEricsson) {
+//#ifdef __LOG__
             System.out.println("* fs read-skip feature on");
+//#endif
             com.ice.tar.TarInputStream.useReadSkip = true;
         }
-        if (hasFlag("fs_no_available_lie") || s65) {
+        if (hasFlag("fs_no_available_lie")) {
+//#ifdef __LOG__
             System.out.println("* fs no-available_lie feature on");
+//#endif
             cz.kruch.j2se.io.BufferedInputStream.useAvailableLie = false;
         }
-        if (hasFlag("fs_no_reset")) {
+        if (hasFlag("fs_no_reset") || sxg75) {
+//#ifdef __LOG__
             System.out.println("* fs no-reset feature on");
+//#endif
             cz.kruch.track.maps.Map.useReset = false;
         }
         if (hasFlag("ui_no_partial_flush") || sxg75) {
+//#ifdef __LOG__
             System.out.println("* ui no-partial-flush feature on");
+//#endif
             cz.kruch.track.ui.Desktop.partialFlush = false;
         }
     }
@@ -245,6 +254,18 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
             console.result(-1, "failed");
         }
 
+        // 2a. preinit
+        cz.kruch.j2se.io.BufferedInputStream.useAvailableLie = cz.kruch.track.configuration.Config.getSafeInstance().isOptimisticIo();
+//#ifdef __S65__
+        if (s65) {
+            cz.kruch.j2se.io.BufferedInputStream.useAvailableLie = false;
+            com.ice.tar.TarInputStream.useReadSkip = true;
+        }
+//#endif
+//#ifdef __LOG__
+        System.out.println("* use available lie? " + cz.kruch.j2se.io.BufferedInputStream.useAvailableLie);
+//#endif
+
         // 3. create desktop
         desktop = new cz.kruch.track.ui.Desktop(this);
 
@@ -308,10 +329,6 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         return jsr135;
     }
 
-    public static boolean isVideoCapture() {
-        return videoCapture;
-    }
-
     public static boolean isFs() {
         return fs;
     }
@@ -328,6 +345,10 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
 
     public static boolean isSonyEricsson() {
         return sonyEricsson;
+    }
+
+    public static boolean isNokia() {
+        return nokia;
     }
 
     public static String getPlatform() {

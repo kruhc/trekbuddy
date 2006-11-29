@@ -547,7 +547,7 @@ public abstract class Calibration {
             super(path);
 
             int count = 0;
-            Vector xy = new Vector(), ll = new Vector()/*, utm = new Vector()*/;
+            Vector xy = new Vector(4), ll = new Vector(4)/*, utm = new Vector()*/;
             LineReader reader = new LineReader(in);
             String line = reader.readLine(false);
             while (line != null) {

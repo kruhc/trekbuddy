@@ -153,32 +153,19 @@ final class TarHeader {
             this.ustarFormat = false;
 */
         } else {
-            StringBuffer buf = new StringBuffer(128);
+            StringBuffer sb = new StringBuffer(64);
 
-            buf.append("header magic is not 'ustar' or unix-style zeros, it is '");
-            buf.append(headerBuf[257]);
-            buf.append(headerBuf[258]);
-            buf.append(headerBuf[259]);
-            buf.append(headerBuf[260]);
-            buf.append(headerBuf[261]);
-            buf.append(headerBuf[262]);
-            buf.append(headerBuf[263]);
-            buf.append("', or (dec) ");
-            buf.append((int) headerBuf[257]);
-            buf.append(", ");
-            buf.append((int) headerBuf[258]);
-            buf.append(", ");
-            buf.append((int) headerBuf[259]);
-            buf.append(", ");
-            buf.append((int) headerBuf[260]);
-            buf.append(", ");
-            buf.append((int) headerBuf[261]);
-            buf.append(", ");
-            buf.append((int) headerBuf[262]);
-            buf.append(", ");
-            buf.append((int) headerBuf[263]);
+            sb.append("Unknown header magic: '");
+            sb.append(headerBuf[257]);
+            sb.append(headerBuf[258]);
+            sb.append(headerBuf[259]);
+            sb.append(headerBuf[260]);
+            sb.append(headerBuf[261]);
+            sb.append(headerBuf[262]);
+            sb.append(headerBuf[263]);
+            sb.append("'");
 
-            throw new InvalidHeaderException(buf.toString());
+            throw new InvalidHeaderException(sb.toString());
         }
 
         hdr.name = parseFileName(headerBuf);

@@ -67,22 +67,23 @@ public abstract class Config {
     protected int locationInterval = 1;
 
     // group [Location sharing]
-    protected boolean locationSharing = false;
+    protected boolean locationSharing;
 
     // group [Desktop]
-    protected boolean fullscreen = false;
-    protected boolean noSounds = false;
-    protected boolean useUTM = false;
-    protected boolean useGeocachingFormat = false;
+    protected boolean fullscreen;
+    protected boolean noSounds;
+    protected boolean useUTM;
+    protected boolean useGeocachingFormat;
     protected boolean osdExtended = true;
-    protected boolean osdNoBackground = false;
-    protected boolean osdMediumFont = false;
-    protected boolean osdBoldFont = false;
-    protected boolean osdBlackColor = false;
+    protected boolean osdNoBackground;
+    protected boolean osdMediumFont;
+    protected boolean osdBoldFont;
+    protected boolean osdBlackColor;
 
-    // group [Performance]
+    // group [Tweaks]
     protected boolean optimisticIo = true;
-    protected boolean cache = false;
+    protected boolean S60renderer;
+    protected boolean cache;
 
     // hidden
     protected String btDeviceName = "";
@@ -318,6 +319,14 @@ public abstract class Config {
         this.optimisticIo = optimisticIo;
     }
 
+    public boolean isS60renderer() {
+        return S60renderer;
+    }
+
+    public void setS60renderer(boolean s60renderer) {
+        S60renderer = s60renderer;
+    }
+
     public boolean isCache() {
         return cache;
     }
@@ -395,12 +404,12 @@ public abstract class Config {
 /*
                         timeZone = din.readUTF();
 */
-                        String sUnused = din.readUTF();
+                        din.readUTF(); // unused
                         geoDatum = din.readUTF();
 /*
                         tracklogsOn = din.readUTF();
 */
-                        boolean bUnused = din.readBoolean();
+                        boolean oldTracklogsOn = din.readBoolean();
                         tracklogsFormat = din.readUTF();
                         tracklogsDir = din.readUTF();
                         captureLocator = din.readUTF();
@@ -418,16 +427,11 @@ public abstract class Config {
                         osdMediumFont = din.readBoolean();
                         osdBoldFont = din.readBoolean();
                         osdBlackColor = din.readBoolean();
-/*
-                            dX = din.readInt();
-                            dY = din.readInt();
-                            dZ = din.readInt();
-*/
                         // 0.9.1 extension
                         try {
                             tracklogsOn = din.readUTF();
                         } catch (Exception e) {
-                            tracklogsOn = bUnused ? Config.TRACKLOG_ASK : Config.TRACKLOG_NEVER;
+                            tracklogsOn = oldTracklogsOn ? Config.TRACKLOG_ASK : Config.TRACKLOG_NEVER;
                         }
                         // 0.9.2 extension
                         try {
@@ -437,6 +441,7 @@ public abstract class Config {
                         // pre 0.9.4 extension
                         try {
                             optimisticIo = din.readBoolean();
+                            S60renderer = din.readBoolean();
                             cache = din.readBoolean();
                         } catch (Exception e) {
                         }
@@ -479,12 +484,12 @@ public abstract class Config {
                 dout = new DataOutputStream(data);
                 dout.writeUTF(mapPath);
                 dout.writeUTF(locationProvider);
-/*
+/* bc
                 dout.writeUTF(timeZone);
 */
-                dout.writeUTF("<unused>");
+                dout.writeUTF("");
                 dout.writeUTF(geoDatum);
-/*
+/* bc
                 dout.writeBoolean(tracklogsOn);
 */
                 dout.writeBoolean(false);
@@ -505,14 +510,10 @@ public abstract class Config {
                 dout.writeBoolean(osdMediumFont);
                 dout.writeBoolean(osdBoldFont);
                 dout.writeBoolean(osdBlackColor);
-/*
-                dout.writeInt(dX);
-                dout.writeInt(dY);
-                dout.writeInt(dZ);
-*/
                 dout.writeUTF(tracklogsOn);
                 dout.writeBoolean(useGeocachingFormat);
                 dout.writeBoolean(optimisticIo);
+                dout.writeBoolean(S60renderer);
                 dout.writeBoolean(cache);
                 dout.flush();
                 byte[] bytes = data.toByteArray();

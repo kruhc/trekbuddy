@@ -332,6 +332,7 @@ public final class Atlas implements Runnable {
                             }
                         }
                     }
+                    entry.dispose();
                     entry = null; // gc hint
                     entry = tar.getNextEntry();
                 }

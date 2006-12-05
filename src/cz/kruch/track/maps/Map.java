@@ -484,12 +484,12 @@ public final class Map implements Runnable {
     public static boolean useReset = true;
 
     private final class TarLoader extends Loader {
+        private static final int MARK_SIZE = 64 * 1024 * 1024;
+
         private InputStream fsIn;
         private TarInputStream tarIn;
 
         public void init() throws IOException {
-            fsIn = null;
-            tarIn = null;
         }
 
         public void destroy() throws IOException {
@@ -519,7 +519,7 @@ public final class Map implements Runnable {
 
                 if (useReset) {
                     if (in.markSupported()) {
-                        in.mark(Integer.MAX_VALUE);
+                        in.mark(MARK_SIZE); // max 64 MB map
                         fsIn = in;
                         fileInputStreamResetable = 1;
 //#ifdef __LOG__
@@ -572,6 +572,7 @@ public final class Map implements Runnable {
                             }
                         }
                     }
+                    entry.dispose();
                     entry = null; // gc hint
                     entry = tarIn.getNextEntry();
                 }
@@ -596,21 +597,25 @@ public final class Map implements Runnable {
             InputStream in = null;
 
             try {
+                long offset = ((Long) slice.getClosure()).longValue();
                 if (fsIn == null) {
                     bufferedIn.reuse(in = Connector.openInputStream(path));
                 } else {
                     try {
-                        fsIn.reset();
+//                        if (offset < tarIn.getPosition()) {
+                            fsIn.reset();
+//                        }
                         bufferedIn.reuse(fsIn);
                     } catch (IOException e) {
                         fsIn = null;
                     }
                 }
-                tarIn.reuse(bufferedIn);
-                Long offset = (Long) slice.getClosure();
-                tarIn.setPosition(offset.longValue());
-                tarIn.getNextEntry();
+                tarIn.reuse(bufferedIn/*, offset > tarIn.getPosition()*/);
+                tarIn.setPosition(offset);
+                TarEntry entry = tarIn.getNextEntry();
                 slice.setImage(Image.createImage(tarIn));
+                entry.dispose();
+                entry = null; // gc hint
             } finally {
                 if ((fsIn == null) /* no reuse */ && (in != null)) {
 //#ifdef __LOG__

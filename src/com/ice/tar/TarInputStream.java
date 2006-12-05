@@ -143,6 +143,14 @@ public final class TarInputStream extends InputStream {
 
     /**
      * javadoc todo
+     * @throws IOException
+     */
+    public long getPosition() throws IOException {
+        return streamOffset;
+    }
+
+    /**
+     * javadoc todo
      * @param position stream position
      * @throws IOException
      */
@@ -152,6 +160,13 @@ public final class TarInputStream extends InputStream {
         }
 
         this.skip(position);
+/*
+        if (position < streamOffset) {
+            throw new IllegalStateException("Stream is dirty");
+        }
+
+        this.skip(position - streamOffset);
+*/
     }
 
     /**
@@ -200,15 +215,15 @@ public final class TarInputStream extends InputStream {
             this.currEntry = null;
         } else {
             try {
+                this.currEntry = null; // gc hint
                 this.currEntry = new TarEntry(headerBuf, entryPosition);
                 this.entryOffset = 0;
                 this.entrySize = this.currEntry.getSize();
-            }
-            catch (InvalidHeaderException ex) {
+            } catch (InvalidHeaderException e) {
                 this.entrySize = 0;
                 this.entryOffset = 0;
                 this.currEntry = null;
-                throw new InvalidHeaderException("Bad header. " + ex.toString());
+                throw new InvalidHeaderException("Bad header: " + e.toString());
             }
         }
 
@@ -330,11 +345,14 @@ public final class TarInputStream extends InputStream {
      * @param in new input stream
      * @throws IOException
      */
-    public void reuse(InputStream in) throws IOException {
+    public void reuse(InputStream in/*, boolean keepPosition*/) throws IOException {
         this.in = in;
         this.currEntry = null;
         this.hasHitEOF = false;
-        this.streamOffset = this.entryOffset = this.entrySize = 0;
+        this.entryOffset = this.entrySize = 0;
+//        if (!keepPosition) {
+            this.streamOffset = 0;
+//        }
     }
 }
 

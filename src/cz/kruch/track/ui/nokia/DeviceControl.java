@@ -5,7 +5,6 @@ package cz.kruch.track.ui.nokia;
 
 import cz.kruch.track.ui.Desktop;
 
-import javax.microedition.lcdui.game.GameCanvas;
 import java.util.Timer;
 import java.util.TimerTask;
 

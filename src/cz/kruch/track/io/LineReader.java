@@ -49,7 +49,7 @@ public final class LineReader extends InputStreamReader {
                 break;
             }
             if ((c == '\n') || (c == '\r')) {
-                if (chars > 0) {
+                if (chars > 0 || sb != null) {
                     break;
                 }
             } else {
@@ -72,5 +72,14 @@ public final class LineReader extends InputStreamReader {
         }
 
         return sb.append(buffer, start, chars).toString();
+    }
+
+    public void dispose() {
+        buffer = null;
+    }
+
+    public void close() throws IOException {
+        super.close();
+        this.dispose();
     }
 }

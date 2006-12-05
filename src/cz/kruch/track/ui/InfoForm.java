@@ -12,6 +12,8 @@ import javax.microedition.lcdui.Command;
 import javax.microedition.lcdui.Displayable;
 import java.util.TimeZone;
 
+import cz.kruch.track.configuration.Config;
+
 public final class InfoForm extends Form implements CommandListener {
     public InfoForm() {
         super("Info");
@@ -28,7 +30,7 @@ public final class InfoForm extends Form implements CommandListener {
         append(new StringItem("Platform", cz.kruch.track.TrackingMIDlet.getPlatform()));
         append(new StringItem("TimeZone", TimeZone.getDefault().getID() + "; " + TimeZone.getDefault().useDaylightTime() + "; " + TimeZone.getDefault().getRawOffset()));
         append(new StringItem("Jsr75/Fc", "resetable? " + Integer.toString(cz.kruch.track.maps.Map.fileInputStreamResetable) + "; read-skip? " + com.ice.tar.TarInputStream.useReadSkip));
-        append(new StringItem("Desktop", "S60 renderer? " + cz.kruch.track.TrackingMIDlet.isNokia() + "; hasRepeatEvents? " + desktop.hasRepeatEvents()));
+        append(new StringItem("Desktop", "S60 renderer? " + Config.getSafeInstance().isS60renderer() + "; hasRepeatEvents? " + desktop.hasRepeatEvents()));
         append(new StringItem("ProviderStatus", (ps == null ? "" : ps.toString()) + "; syncs=" + cz.kruch.track.location.StreamReadingLocationProvider.syncs + "; mismatches=" + cz.kruch.track.location.StreamReadingLocationProvider.mismatches));
         append(new StringItem("ProviderError", le == null ? "" : le.toString()));
         append(new StringItem("SnapshotEncodings", System.getProperty("video.snapshot.encodings")));

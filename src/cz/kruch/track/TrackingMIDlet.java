@@ -126,10 +126,10 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
 
         sxg75 = "SXG75".equals(platform);
         nokia = platform.startsWith("Nokia");
+        sonyEricsson = System.getProperty("com.sonyericsson.imei") != null;
 //#ifdef __S65__
         s65 = "S65".equals(platform);
 //#endif
-        sonyEricsson = System.getProperty("com.sonyericsson.imei") != null;
 
         // setup environment
         if (hasFlag("fs_read_skip") || sonyEricsson) {
@@ -280,7 +280,9 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
                 console.result(0, "ok");
             }
         } catch (Throwable t) {
+//#ifdef __LOG__
             t.printStackTrace();
+//#endif
             console.result(-1, "failed");
         }
 

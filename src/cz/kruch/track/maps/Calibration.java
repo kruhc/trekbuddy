@@ -320,9 +320,13 @@ public abstract class Calibration {
                 parsePoint(line, pos, coords);
                 line = reader.readLine(false);
             }
+            reader.dispose();
+            reader = null; // gc hint
+
             if ((pos.size() < 2) || (coords.size() < 2)) {
                 throw new InvalidMapException("Too few calibration points");
             }
+
             positions = new Position[pos.size()];
             coordinates = new QualifiedCoordinates[coords.size()];
             pos.copyInto(positions);
@@ -593,6 +597,8 @@ public abstract class Calibration {
                 }
                 line = reader.readLine(false);
             }
+            reader.dispose();
+            reader = null; // gc hint
 
             // dispose tokenizer
             tokenizer.dispose();

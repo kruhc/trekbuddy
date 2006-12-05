@@ -155,18 +155,18 @@ public final class TarInputStream extends InputStream {
      * @throws IOException
      */
     public void setPosition(long position) throws IOException {
+/*
         if (streamOffset > 0) {
             throw new IllegalStateException("Stream is dirty");
         }
 
         this.skip(position);
-/*
+*/
         if (position < streamOffset) {
             throw new IllegalStateException("Stream is dirty");
         }
 
         this.skip(position - streamOffset);
-*/
     }
 
     /**
@@ -345,14 +345,14 @@ public final class TarInputStream extends InputStream {
      * @param in new input stream
      * @throws IOException
      */
-    public void reuse(InputStream in/*, boolean keepPosition*/) throws IOException {
+    public void reuse(InputStream in, boolean keepPosition) throws IOException {
         this.in = in;
         this.currEntry = null;
         this.hasHitEOF = false;
         this.entryOffset = this.entrySize = 0;
-//        if (!keepPosition) {
+        if (!keepPosition) {
             this.streamOffset = 0;
-//        }
+        }
     }
 }
 

@@ -415,7 +415,6 @@ public final class Map implements Runnable {
         int mapHeight = calibration.height;
 
         // absolutize slices position
-//        for (int N = slices.length, i = 0; i < N; i++) {
         for (int i = slices.length; --i >= 0; ) {
             Slice slice = slices[i];
             slice.doFinal(friendly);
@@ -430,7 +429,6 @@ public final class Map implements Runnable {
         }
 
         // finalize slices creation
-//        for (int N = slices.length, i = 0; i < N; i++) {
         for (int i = slices.length; --i >= 0; ) {
             Slice slice = slices[i];
 
@@ -456,6 +454,11 @@ public final class Map implements Runnable {
         public abstract void loadSlice(Slice slice) throws IOException;
 
         protected BufferedInputStream bufferedIn;
+        protected StringBuffer pathSb;
+
+        protected Loader() {
+            this.pathSb = new StringBuffer(32);
+        }
 
         public void checkException() throws Exception {
             if (exception != null) {
@@ -602,15 +605,15 @@ public final class Map implements Runnable {
                     bufferedIn.reuse(in = Connector.openInputStream(path));
                 } else {
                     try {
-//                        if (offset < tarIn.getPosition()) {
+                        if (offset < tarIn.getPosition()) {
                             fsIn.reset();
-//                        }
-                        bufferedIn.reuse(fsIn);
+                            bufferedIn.reuse(fsIn);
+                        }
                     } catch (IOException e) {
                         fsIn = null;
                     }
                 }
-                tarIn.reuse(bufferedIn/*, offset > tarIn.getPosition()*/);
+                tarIn.reuse(bufferedIn, offset > tarIn.getPosition());
                 tarIn.setPosition(offset);
                 TarEntry entry = tarIn.getNextEntry();
                 slice.setImage(Image.createImage(tarIn));
@@ -700,7 +703,11 @@ public final class Map implements Runnable {
         }
 
         public void loadSlice(Slice slice) throws IOException {
-            String slicePath = "/resources/set/" + slice.getURL();
+            // reuse sb
+            pathSb.setLength(0);
+
+            // get slice path
+            String slicePath = pathSb.append("/resources/set/").append(slice.getURL()).toString();
             InputStream in = null;
 
 //#ifdef __LOG__
@@ -767,7 +774,9 @@ public final class Map implements Runnable {
                     } else if (path.endsWith(".j2n")) {
                         Map.this.calibration = new Calibration.J2N(fileInput.getInputStream(), path);
                         Map.this.type = TYPE_J2N;
+/*
                         setDir = "pictures/";
+*/
                     } else {
                         throw new InvalidMapException("Unknown calibration file");
                     }
@@ -775,11 +784,11 @@ public final class Map implements Runnable {
                     // close helper loader
                     fileInput.close();
 
-                } else {
+                }/* else {
                     if (Map.this.type == TYPE_J2N) {
                         setDir = "pictures/";
                     }
-                }
+                }*/
 
                 // do we have a list?
                 fc = new api.file.File(Connector.open(path.substring(0, path.lastIndexOf('.')) + ".set", Connector.READ));
@@ -789,7 +798,7 @@ public final class Map implements Runnable {
                         reader = new LineReader(new BufferedInputStream(fc.openInputStream(), SMALL_BUFFER_SIZE));
                         String entry = reader.readLine(false);
                         while (entry != null) {
-                            addSlice(new Slice(new Calibration.Best(setDir + entry.trim())));
+                            addSlice(new Slice(new Calibration.Best(entry)));
                             entry = reader.readLine(false);
                         }
                     } catch (IOException e) {
@@ -832,7 +841,11 @@ public final class Map implements Runnable {
         }
 
         public void loadSlice(Slice slice) throws IOException {
-            String slicePath = dir + slice.getURL();
+            // reuse sb
+            pathSb.setLength(0);
+
+            // get slice path
+            String slicePath = pathSb.append(dir).append("set/").append(slice.getURL()).toString();
             InputStream in = null;
 
 //#ifdef __LOG__

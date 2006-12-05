@@ -7,7 +7,6 @@ package api.location;
 import cz.kruch.track.configuration.Config;
 import cz.kruch.track.util.Mercator;
 import cz.kruch.track.util.Datum;
-import cz.kruch.track.TrackingMIDlet;
 
 public final class QualifiedCoordinates {
 
@@ -109,7 +108,7 @@ public final class QualifiedCoordinates {
         // find best match
         double matchVal = Double.MAX_VALUE;
         int matchIdx = -1;
-        double[] sins = TrackingMIDlet.SINS;
+        double[] sins = cz.kruch.track.TrackingMIDlet.SINS;
         for (int i = sins.length; --i >= 0; ) {
             double diff = Math.abs(sinAlpha - sins[i]);
             if (diff < matchVal) {
@@ -173,7 +172,7 @@ public final class QualifiedCoordinates {
             if (h < 10) {
                 sb.append('0');
             }
-            sb.append(h).append(TrackingMIDlet.SIGN);
+            sb.append(h).append(cz.kruch.track.TrackingMIDlet.SIGN);
             sb.append(m).append('.');
             if (dec < 100) {
                 sb.append('0');
@@ -226,7 +225,7 @@ public final class QualifiedCoordinates {
                 }
             }
 
-            sb.append(h).append(TrackingMIDlet.SIGN);
+            sb.append(h).append(cz.kruch.track.TrackingMIDlet.SIGN);
             sb.append(m).append('\'');
             sb.append(s);
             if (hp) {

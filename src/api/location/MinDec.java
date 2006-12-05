@@ -3,8 +3,6 @@
 
 package api.location;
 
-import cz.kruch.track.TrackingMIDlet;
-
 public final class MinDec {
     private static final String[] NS = new String[]{ "N", "S" };
     private static final String[] EW = new String[]{ "E", "W" };
@@ -49,12 +47,12 @@ public final class MinDec {
             default:
                 throw new IllegalArgumentException("Malformed coordinate: " + value);
         }
-        int i = value.indexOf(TrackingMIDlet.SIGN);
+        int i = value.indexOf(cz.kruch.track.TrackingMIDlet.SIGN);
         if (i < 3) {
             throw new IllegalArgumentException("Malformed coordinate: " + value);
         }
         this.deg = Integer.parseInt(value.substring(1, i).trim());
-        this.min = Double.parseDouble(value.substring(i + TrackingMIDlet.SIGN.length()).trim());
+        this.min = Double.parseDouble(value.substring(i + cz.kruch.track.TrackingMIDlet.SIGN.length()).trim());
     }
 
     private MinDec(String value, String sign) {
@@ -151,7 +149,7 @@ public final class MinDec {
 
         sb.append(type == QualifiedCoordinates.LAT ? (sign == -1 ? "S" : "N") : (sign == -1 ? "W" : "E"));
         sb.append(' ');
-        sb.append(h).append(TrackingMIDlet.SIGN).append(m).append('.');
+        sb.append(h).append(cz.kruch.track.TrackingMIDlet.SIGN).append(m).append('.');
         if (s < 10000) {
             sb.append('0');
         }

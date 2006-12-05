@@ -6,6 +6,7 @@ package cz.kruch.track.maps;
 import api.location.QualifiedCoordinates;
 
 import cz.kruch.j2se.util.StringTokenizer;
+import cz.kruch.track.util.CharArrayTokenizer;
 //#ifdef __LOG__
 import cz.kruch.track.util.Logger;
 //#endif
@@ -437,21 +438,23 @@ public abstract class Calibration {
      */
     public static final class Best /*extends Calibration*/ {
         private String path;
-        protected int width = -1, height = -1;
-        protected int x = -1, y = -1;
+        protected int width, height;
+        protected int x, y;
 
         public Best(String path) throws InvalidMapException {
             this.path = path;
+            this.x = this.y = this.width = this.height = -1;
             parseXy(path);
         }
 
         public Best(String path, boolean tar) throws InvalidMapException {
+            this.x = this.y = this.width = this.height = -1;
             parseXy(path);
         }
 
         public String getPath() {
             if (path == null) {
-                return (new StringBuffer(32)).append("set/*_").append(x).append('_').append(y).append(".png").toString();  
+                path = (new StringBuffer(32)).append("set/*_").append(x).append('_').append(y).append(".png").toString();
             }
             return path;
         }
@@ -547,19 +550,23 @@ public abstract class Calibration {
             super(path);
 
             int count = 0;
+            CharArrayTokenizer tokenizer = new CharArrayTokenizer();
             Vector xy = new Vector(4), ll = new Vector(4)/*, utm = new Vector()*/;
             LineReader reader = new LineReader(in);
+
             String line = reader.readLine(false);
             while (line != null) {
                 if (line.startsWith("Point")) {
-                    boolean b = parsePoint(line, xy, ll/*, utm*/);
+                    tokenizer.init(line, ',', true);
+                    boolean b = parsePoint(tokenizer, xy, ll/*, utm*/);
                     if (b) count++;
 //#ifdef __LOG__
                     if (log.isEnabled()) log.debug("point parsed? " + b);
 //#endif
                 } else if (line.startsWith("MMPXY")) {
                     if (count < 2) {
-                        boolean b = parseXy(line, xy);
+                        tokenizer.init(line, ',', false);
+                        boolean b = parseXY(tokenizer, xy);
 //#ifdef __LOG__
                         if (log.isEnabled()) log.debug("mmpxy parsed? " + b);
 //#endif
@@ -571,7 +578,8 @@ public abstract class Calibration {
                     }
                 }*/ else if (line.startsWith("MMPLL")) {
                     if (count < 2) {
-                        boolean b = parseLl(line, ll);
+                        tokenizer.init(line, ',', false);
+                        boolean b = parseLL(tokenizer, ll);
 //#ifdef __LOG__
                         if (log.isEnabled()) log.debug("mmpll parsed? " + b);
 //#endif
@@ -580,10 +588,15 @@ public abstract class Calibration {
 //#ifdef __LOG__
                     if (log.isEnabled()) log.debug("parse IWH");
 //#endif
-                    parseIwh(line);
+                    tokenizer.init(line, ',', false);
+                    parseIwh(tokenizer);
                 }
                 line = reader.readLine(false);
             }
+
+            // dispose tokenizer
+            tokenizer.dispose();
+            tokenizer = null;
 
             // check
             if (width == -1  || height == -1) {
@@ -592,7 +605,7 @@ public abstract class Calibration {
 
             // paranoia
             if (xy.size() != ll.size()) {
-                throw new IllegalStateException("Collection size mismatch");
+                throw new IllegalStateException("MMPXY:MMPLL size mismatch");
             }
 
             positions = new Position[xy.size()];
@@ -600,84 +613,88 @@ public abstract class Calibration {
             xy.copyInto(positions);
             ll.copyInto(coordinates);
 
+            // gc hints
+            xy.removeAllElements();
+            ll.removeAllElements();
+
             doFinal();
         }
 
-        private boolean parsePoint(String line, Vector xy, Vector ll/*, Vector utm*/) {
+        private boolean parsePoint(CharArrayTokenizer tokenizer,
+                                   Vector xy, Vector ll/*, Vector utm*/) {
             int index = 0;
-            String px = null, py = null;
-            String lath = null, latm = null, lats = "N";
-            String lonh = null, lonm = null, lons = "E";
-            String easting = null, northing = null, zone = "N";
-            StringTokenizer st = new StringTokenizer(line, ",", true);
-            while (st.hasMoreTokens()) {
-                String token = st.nextToken().trim();
-                if (",".equals(token)) {
-                    index++;
-                } else if (index == 2) {
-                    px = token;
-                    if (token == null || token.length() == 0) {
-                        index = Integer.MAX_VALUE;
-                    }
-                } else if (index == 3) {
-                    py = token;
-                    if (token == null || token.length() == 0) {
-                        index = Integer.MAX_VALUE;
-                    }
-                } else if (index == 6) {
-                    lath = token;
-                } else if (index == 7) {
-                    latm = token;
-                } else if (index == 8) {
-                    lats = token;
-                } else if (index == 9) {
-                    lonh = token;
-                } else if (index == 10) {
-                    lonm = token;
-                } else if (index == 11) {
-                    lons = token;
-                } else if (index == 14) {
-                    easting = token;
-                } else if (index == 15) {
-                    northing = token;
-                } else if (index == 16) {
-                    zone = token;
-                }
-                if (index > 16) {
-                    break;
-                }
-            }
-
-            // empty cal point
-            if (px == null || px.length() == 0 || py == null || py.length() == 0) {
-                return false;
-            }
-            if (lath == null || lath.length() == 0 || lonh == null || lonh.length() == 0) {
-                return false;
-            }
+            int x = -1;
+            int y = -1;
+//            String easting, northing, zone = "N";
+            double lat = 0D;
+            double lon = 0D;
 
             try {
-                int x = Integer.parseInt(px);
-                int y = Integer.parseInt(py);
+                while (tokenizer.hasMoreTokens()) {
+                    CharArrayTokenizer.Token token = tokenizer.next();
+                    if (token.isDelimiter) {
+                        index++;
+                    } else if (index == 2) {
+                        if (token.isEmpty()) {
+                            index = Integer.MAX_VALUE;
+                        } else {
+                            x = CharArrayTokenizer.parseInt(token);
+                        }
+                    } else if (index == 3) {
+                        if (token.isEmpty()) {
+                            index = Integer.MAX_VALUE;
+                        } else {
+                            y = CharArrayTokenizer.parseInt(token);
+                        }
+                    } else if (index == 6) {
+                        lat += CharArrayTokenizer.parseInt(token);
+                    } else if (index == 7) {
+                        lat += CharArrayTokenizer.parseDouble(token) / 60D;
+                    } else if (index == 8) {
+                        if (token.startsWith('S')) {
+                            lat *= -1D;
+                        }
+                    } else if (index == 9) {
+                        lon += CharArrayTokenizer.parseInt(token);
+                    } else if (index == 10) {
+                        lon += CharArrayTokenizer.parseDouble(token) / 60D;
+                    } else if (index == 11) {
+                        if (token.startsWith('W')) {
+                            lon *= -1D;
+                        }
+                    } else if (index == 14) {
+    //                    easting = token;
+                    } else if (index == 15) {
+    //                    northing = token;
+                    } else if (index == 16) {
+    //                    zone = token;
+                    }
+                    if (index > 16) {
+                        break;
+                    }
+                }
 
-                if (lath != null && lath.length() > 0 && lonh != null && lonh.length() > 0) {
-                    double lat = Integer.parseInt(lath) + (Double.parseDouble(latm) / 60D);
-                    if (lats.startsWith("S")) lat *= -1.0D;
-                    double lon = Integer.parseInt(lonh) + (Double.parseDouble(lonm) / 60D);
-                    if (lons.startsWith("W")) lon *= -1.0D;
+                // empty cal point
+                if (x < -1 || y < -1) {
+                    return false;
+                }
+                if (lat == 0D || lon == 0D) {
+                    return false;
+                }
 
-                    Position p = new Position(x, y);
-                    xy.addElement(p);
-                    QualifiedCoordinates qc = new QualifiedCoordinates(lat, lon);
-                    ll.addElement(qc);
-                }/* else if (easting != null && easting.length() > 0 && northing != null & northing.length() > 0) {
-                    Integer east = Integer.valueOf(easting);
-                    Integer north = Integer.valueOf(northing);
+                Position p = new Position(x, y);
+                xy.addElement(p);
+                QualifiedCoordinates qc = new QualifiedCoordinates(lat, lon);
+                ll.addElement(qc);
 
-                    Position p = new Position(x, y);
-                    xy.addElement(p);
-                    utm.addElement(new Object[]{ east, north, zone });
-                }*/
+            /* else if (easting != null && easting.length() > 0 && northing != null & northing.length() > 0) {
+                Integer east = Integer.valueOf(easting);
+                Integer north = Integer.valueOf(northing);
+
+                Position p = new Position(x, y);
+                xy.addElement(p);
+                utm.addElement(new Object[]{ east, north, zone });
+            */
 
             } catch (NumberFormatException e) {
                 return false;
@@ -741,13 +758,12 @@ public abstract class Calibration {
         }
 */
 
-        private boolean parseXy(String line, Vector xy) {
+        private boolean parseXY(CharArrayTokenizer tokenizer, Vector xy) {
             try {
-                StringTokenizer st = new StringTokenizer(line, ",", false);
-                st.nextToken();
-                String index = st.nextToken();
-                int x = Integer.parseInt(st.nextToken().trim());
-                int y = Integer.parseInt(st.nextToken().trim());
+                tokenizer.next(); // MMPXY
+                tokenizer.next(); // index [1-4]
+                int x = CharArrayTokenizer.parseInt(tokenizer.next());
+                int y = CharArrayTokenizer.parseInt(tokenizer.next());
 
                 Position p = new Position(x, y);
                 xy.addElement(p);
@@ -759,13 +775,12 @@ public abstract class Calibration {
             return true;
         }
 
-        private boolean parseLl(String line, Vector ll) {
+        private boolean parseLL(CharArrayTokenizer tokenizer, Vector ll) {
             try {
-                StringTokenizer st = new StringTokenizer(line, ",", false);
-                st.nextToken();
-                String index = st.nextToken();
-                double lon = Double.parseDouble(st.nextToken().trim());
-                double lat = Double.parseDouble(st.nextToken().trim());
+                tokenizer.next(); // MMPLL
+                tokenizer.next(); // index [1-4]
+                double lon = CharArrayTokenizer.parseDouble(tokenizer.next());
+                double lat = CharArrayTokenizer.parseDouble(tokenizer.next());
 
                 QualifiedCoordinates qc = new QualifiedCoordinates(lat, lon);
                 ll.addElement(qc);
@@ -777,18 +792,14 @@ public abstract class Calibration {
             return true;
         }
 
-        private void parseIwh(String line) {
-            int index = 0;
-            StringTokenizer st = new StringTokenizer(line, ",", true);
-            while (st.hasMoreTokens()) {
-                String token = st.nextToken().trim();
-                if (",".equals(token)) {
-                    index++;
-                } else if (index == 2) {
-                    width = Integer.parseInt(token);
-                } else if (index == 3) {
-                    height = Integer.parseInt(token);
-                }
+        private void parseIwh(CharArrayTokenizer tokenizer) {
+            try {
+                tokenizer.next(); // IWH
+                tokenizer.next(); // Map Image Width/Height
+                width = CharArrayTokenizer.parseInt(tokenizer.next());
+                height = CharArrayTokenizer.parseInt(tokenizer.next());
+            } catch (NumberFormatException e) {
+                throw new IllegalArgumentException("Invalid IWH");
             }
         }
     }

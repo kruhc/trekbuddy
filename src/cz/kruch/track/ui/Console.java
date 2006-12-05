@@ -51,7 +51,12 @@ public final class Console extends GameCanvas {
             return;
         }
         y++;
-        Graphics g = isS65 ? getGraphics() : graphics;
+        Graphics g = graphics;
+//#ifdef __S65__
+        if (isS65) {
+            g = getGraphics();
+        }
+//#endif
         g.setFont(font);
         g.setColor(255, 255, 255);
         g.drawString(text, BORDER, y * h, 0/*Graphics.TOP | Graphics.LEFT*/);
@@ -65,7 +70,12 @@ public final class Console extends GameCanvas {
         // ~hack
 
         int x = width - BORDER - font.stringWidth(text);
-        Graphics g = isS65 ? getGraphics() : graphics;
+        Graphics g = graphics;
+//#ifdef __S65__
+        if (isS65) {
+            g = getGraphics();
+        }
+//#endif
         if (code == 0) {
             g.setColor(0, 255, 0);
         } else if (code == -1) {

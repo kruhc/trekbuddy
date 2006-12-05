@@ -9,15 +9,13 @@ import cz.kruch.track.maps.Map;
 import cz.kruch.track.util.Logger;
 //#endif
 import cz.kruch.track.AssertionFailedException;
-import cz.kruch.track.TrackingMIDlet;
+import cz.kruch.track.configuration.Config;
 
 import javax.microedition.lcdui.Graphics;
 import javax.microedition.lcdui.Canvas;
 import javax.microedition.lcdui.Image;
 import javax.microedition.lcdui.game.Sprite;
 import java.util.Vector;
-import java.util.Enumeration;
-import java.io.IOException;
 
 final class MapViewer {
 //#ifdef __LOG__
@@ -44,14 +42,32 @@ final class MapViewer {
     private int ci = 0;
     private int[] clip;
 
+/*
+    private Image[] crosshairs;
+*/
+    private boolean S60renderer;
+
     public MapViewer(int gx, int gy, int width, int height) {
         this.gx = gx;
         this.gy = gy;
-        this.crosshairSize = TrackingMIDlet.crosshairs.getHeight();
+        this.crosshairSize = cz.kruch.track.TrackingMIDlet.crosshairs.getHeight();
         this.crosshairSize2 = this.crosshairSize >> 1;
         this.clip = new int[] { -1, -1, crosshairSize, crosshairSize };
         this.position = new Position(0, 0);
+        this.S60renderer = Config.getSafeInstance().isS60renderer();
         resize(width, height);
+/*
+        if (Config.getSafeInstance().isS60renderer()) {
+            crosshairs = new Image[]{
+                Image.createImage(cz.kruch.track.TrackingMIDlet.crosshairs,
+                                  0, 0, crosshairSize, crosshairSize, 0),
+                Image.createImage(cz.kruch.track.TrackingMIDlet.crosshairs,
+                                  1 * crosshairSize, 0, crosshairSize, crosshairSize, 0),
+                Image.createImage(cz.kruch.track.TrackingMIDlet.crosshairs,
+                                  2 * crosshairSize, 0, crosshairSize, crosshairSize, 0)
+            };
+        }
+*/
     }
 
     public void resize(int width, int height) {
@@ -64,10 +80,6 @@ final class MapViewer {
 
     public void hide() {
         visible = false;
-        /*
-         * dispose images and do gc
-         */
-        map.dispose();
     }
 
     public void show() {
@@ -78,12 +90,19 @@ final class MapViewer {
         return visible;
     }
 
+    public boolean hasMap() {
+        return map != null;
+    }
+
     public void setMap(Map map) {
-        this.map = map;
-        this.mWidth = map.getWidth();
-        this.mHeight = map.getHeight();
-        this.slices.removeAllElements();
-        resize(width, height);
+        this.map = null;
+        this.slices.removeAllElements(); // slicesTemp is always empty
+        if (map != null) {
+            this.map = map;
+            this.mWidth = map.getWidth();
+            this.mHeight = map.getHeight();
+            resize(width, height);
+        }
     }
 
     public void setCourse(float course) {
@@ -112,7 +131,7 @@ final class MapViewer {
 //#endif
 
         boolean dirty = false;
-        int direction = -1;
+        int direction;
 
         int dx = x - (width >> 1) - this.x ;
         if (dx > 0) {
@@ -264,13 +283,17 @@ final class MapViewer {
 
         // paint crosshair
 /*
-        graphics.drawImage(TrackingMIDlet.crosshairs[ci],
-                           chx, chy, 0);
+        if (crosshairs != null) { // S60 renderer
+            graphics.drawImage(crosshairs[ci], chx, chy, 0);
+        } else {
 */
-        graphics.drawRegion(TrackingMIDlet.crosshairs,
-                            ci * crosshairSize, 0, crosshairSize, crosshairSize,
-                            Sprite.TRANS_NONE,
-                            chx, chy, 0);
+            graphics.drawRegion(cz.kruch.track.TrackingMIDlet.crosshairs,
+                                ci * crosshairSize, 0, crosshairSize, crosshairSize,
+                                Sprite.TRANS_NONE,
+                                chx, chy, 0);
+/*
+        }
+*/
 
         // paint course
         if (course > -1F) {
@@ -292,9 +315,6 @@ final class MapViewer {
         int x = wptPosition.getX();
         int y = wptPosition.getY();
         if (x > this.x && x < this.x + width && y > this.y && y < this.y + height) {
-//            graphics.drawImage(waypoint,
-//                               x - this.x - wptSize2, y - this.y - wptSize2,
-//                               0/*Graphics.TOP | Graphics.LEFT*/);
             NavigationScreens.drawWaypoint(graphics, x - this.x, y - this.y, 0);
         }
     }
@@ -305,9 +325,9 @@ final class MapViewer {
         int slice_w = slice.getWidth();
         int slice_h = slice.getHeight();
 
-        int x_src = -1;
-        int w = -1;
-        int x_dest = -1;
+        int x_src;
+        int w;
+        int x_dest;
         if (x > m_x0) {
             x_src = x - m_x0;
             w = slice_w - x_src;
@@ -320,9 +340,9 @@ final class MapViewer {
         if (w > (width - x_dest)) w = width - x_dest;
         if (w > slice_w) w = slice_w;
 
-        int y_src = -1;
-        int h = -1;
-        int y_dest = -1;
+        int y_src;
+        int h;
+        int y_dest;
         if (y > m_y0) {
             y_src = y - m_y0;
             h = slice_h - y_src;
@@ -332,22 +352,29 @@ final class MapViewer {
             h = y + height - m_y0;
             y_dest = gy + m_y0 - y;
         }
-        if (h > (height - y_dest)) h = height - y_dest;
-        if (h > slice_h) h = slice_h;
+        if (h > (height - y_dest))
+            h = height - y_dest;
+        if (h > slice_h)
+            h = slice_h;
 
-//        if (log.isEnabled()) log.debug("draw " + w + "x" + h + " from " + slice.getURL() + ";" + x_src + "-" + y_src + " at " + x_dest + "-" + y_dest + " ");
         if (w > 0 && h > 0) {
-            graphics.drawRegion(slice.getImage(),
-                                x_src, y_src, w, h,
-                                Sprite.TRANS_NONE,
-                                x_dest, y_dest,
-                                0/*Graphics.TOP | Graphics.LEFT*/);
+            if (S60renderer) { // S60 renderer
+                graphics.drawImage(slice.getImage(),
+                                   - x_src + x_dest,
+                                   - y_src + y_dest, 0);
+            } else {
+                graphics.drawRegion(slice.getImage(),
+                                    x_src, y_src, w, h,
+                                    Sprite.TRANS_NONE,
+                                    x_dest, y_dest,
+                                    0/*Graphics.TOP | Graphics.LEFT*/);
+            }
         }
     }
 
     public void nextCrosshair() {
         ci++;
-        if ((ci * crosshairSize) == TrackingMIDlet.crosshairs.getWidth())
+        if ((ci * crosshairSize) == cz.kruch.track.TrackingMIDlet.crosshairs.getWidth())
             ci = 0;
     }
 
@@ -374,7 +401,6 @@ final class MapViewer {
         // find needed slices ("row by row")
         Vector _slices = slices;
         Vector _slicesTemp = slicesTemp;
-        _slicesTemp.removeAllElements();
         int _x = x;
         int _y = y;
         int xmax = x + width > mWidth ? mWidth : x + width;
@@ -413,10 +439,11 @@ final class MapViewer {
             releasing = true;
         }
 
-        // exchange vectors
+        // exchange vectors and do cleanup
         Vector v = slices;
         slices = slicesTemp;
         slicesTemp = v;
+        slicesTemp.removeAllElements();
 
         // prepare slices - returns true is there is at least one image to be loaded
         boolean loading = map.prepareSlices(slices);

@@ -77,13 +77,6 @@ final class NavigationScreens {
             ti = Sprite.TRANS_ROT180;
         }
 
-/*
-//#ifdef __S65__
-        // TODO
-        if (TrackingMIDlet.isS65() && ((ti == Sprite.TRANS_NONE) || (ti == Sprite.TRANS_MIRROR_ROT180)))
-//#endif
-*/
-
         graphics.drawRegion(_courses,
                             ci * arrowSize, 0, arrowSize, arrowSize,
                             ti, x - arrowSize2, y - arrowSize2, anchor);

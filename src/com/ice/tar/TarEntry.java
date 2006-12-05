@@ -202,5 +202,12 @@ public final class TarEntry {
 
         return false;
     }
+
+    /**
+     * Dispose.
+     */
+    public void dispose() {
+        this.header = null;
+    }
 }
 

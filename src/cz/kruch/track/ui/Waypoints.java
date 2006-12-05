@@ -322,6 +322,7 @@ public final class Waypoints extends List
             // close file connection
             try {
                 _file.close();
+                _file = null; // gc hint
             } catch (IOException e) {
             }
 
@@ -331,7 +332,7 @@ public final class Waypoints extends List
         }
     }
 
-    api.file.File _file = null;
+    private api.file.File _file = null;
 
     /**
      * Load waypoints from file.
@@ -397,13 +398,6 @@ public final class Waypoints extends List
                     // ignore
                 }
             }
-//            if (file != null) {
-//                try {
-//                    file.close();
-//                } catch (IOException e) {
-//                    // ignore
-//                }
-//            }
         }
 
         return result;

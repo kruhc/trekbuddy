@@ -35,9 +35,6 @@ final class SettingsForm extends Form implements CommandListener, ItemStateListe
     private ChoiceGroup choiceFriends;
     private ChoiceGroup choiceMisc;
     private ChoiceGroup choicePerformance;
-/*
-    private TextField dX, dY, dZ;
-*/
 
     public SettingsForm(Callback callback) {
         super("Settings");
@@ -60,20 +57,6 @@ final class SettingsForm extends Form implements CommandListener, ItemStateListe
             choiceMapDatum.setSelectedIndex(choiceMapDatum.append(id, null), config.getGeoDatum().equals(id));
         }
         append(choiceMapDatum);
-/*
-        dX = new TextField("dX", null, 5, TextField.DECIMAL);
-        dX.setString(Integer.toString(config.getdX()));
-        dX.setLayout(Item.LAYOUT_SHRINK | Item.LAYOUT_2);
-        append(dX);
-        dY = new TextField("dY", null, 5, TextField.DECIMAL);
-        dY.setString(Integer.toString(config.getdY()));
-        dY.setLayout(Item.LAYOUT_SHRINK | Item.LAYOUT_2);
-        append(dY);
-        dZ = new TextField("dZ", null, 5, TextField.DECIMAL);
-        dZ.setString(Integer.toString(config.getdZ()));
-        dZ.setLayout(Item.LAYOUT_SHRINK | Item.LAYOUT_2);
-        append(dZ);
-*/
 
         // desktop settings
         choiceMisc = new ChoiceGroup("Desktop", ChoiceGroup.MULTIPLE);
@@ -102,11 +85,13 @@ final class SettingsForm extends Form implements CommandListener, ItemStateListe
 //        }
 
         // desktop settings
-        choicePerformance = new ChoiceGroup("Performance", ChoiceGroup.MULTIPLE);
+        choicePerformance = new ChoiceGroup("Tweaks", ChoiceGroup.MULTIPLE);
         choicePerformance.append("optimistic I/O", null);
+        choicePerformance.append("S60 renderer", null);
         choicePerformance.append("cache", null);
         choicePerformance.setSelectedFlags(new boolean[] {
             config.isOptimisticIo(),
+            config.isS60renderer(),
             config.isCache()
         });
         append(choicePerformance);
@@ -124,19 +109,6 @@ final class SettingsForm extends Form implements CommandListener, ItemStateListe
         if (providers.length > 0) {
             append(choiceProvider);
         }
-
-/*
-        // timezone
-        choiceTimezone = new ChoiceGroup("Timezone", ChoiceGroup.POPUP);
-        for (int N = Config.TZ.length, i = 0; i < N; i++) {
-            String tz = (String) ((Object[]) Config.TZ[i])[0];
-            int index = choiceTimezone.append(tz, null);
-            if (tz.equals(config.getTimeZone())) {
-                choiceTimezone.setSelectedIndex(index, true);
-            }
-        }
-        append(choiceTimezone);
-*/
 
         // tracklogs
         if (cz.kruch.track.TrackingMIDlet.isFs()) {
@@ -175,9 +147,6 @@ final class SettingsForm extends Form implements CommandListener, ItemStateListe
 
         // show current provider and tracklog specific options
         showProviderOptions(false);
-/*
-        showDatumOptions();
-*/
 
         // add command and handling
         addCommand(new Command("Cancel", Command.BACK, 1));
@@ -195,9 +164,7 @@ final class SettingsForm extends Form implements CommandListener, ItemStateListe
             showProviderOptions(false);
         } else if (choiceTracklog == item) {
             showProviderOptions(true);
-        }/* else if (choiceMapDatum == item) {
-            showDatumOptions();
-        }*/
+        }
     }
 
     public void commandAction(Command command, Displayable displayable) {
@@ -257,12 +224,8 @@ final class SettingsForm extends Form implements CommandListener, ItemStateListe
             boolean[] perf = new boolean[choicePerformance.size()];
             choicePerformance.getSelectedFlags(perf);
             config.setOptimisticIo(perf[0]);
-            config.setCache(perf[1]);
-/*
-            config.setdX(Integer.parseInt(dX.getString()));
-            config.setdY(Integer.parseInt(dY.getString()));
-            config.setdZ(Integer.parseInt(dZ.getString()));
-*/
+            config.setS60renderer(perf[1]);
+            config.setCache(perf[2]);
 
             // save
             if ("Save".equals(command.getLabel())) {
@@ -339,21 +302,4 @@ final class SettingsForm extends Form implements CommandListener, ItemStateListe
             }
         }
     }
-
-/*
-    private void showDatumOptions() {
-        String id = choiceMapDatum.getString(choiceMapDatum.getSelectedIndex());
-        if (id.startsWith("--")) {
-            // fake
-        } else if (id.indexOf('-') > -1) {
-            dX.setConstraints(dX.getConstraints() | TextField.UNEDITABLE);
-            dY.setConstraints(dY.getConstraints() | TextField.UNEDITABLE);
-            dZ.setConstraints(dZ.getConstraints() | TextField.UNEDITABLE);
-        } else {
-            dX.setConstraints(dX.getConstraints() & ~TextField.UNEDITABLE);
-            dY.setConstraints(dY.getConstraints() & ~TextField.UNEDITABLE);
-            dZ.setConstraints(dZ.getConstraints() & ~TextField.UNEDITABLE);
-        }
-    }
-*/
 }

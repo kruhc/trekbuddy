@@ -7,7 +7,6 @@ import api.location.LocationException;
 
 import java.util.Calendar;
 import java.util.TimeZone;
-import java.util.NoSuchElementException;
 import java.util.Date;
 
 public final class NmeaParser {
@@ -24,7 +23,7 @@ public final class NmeaParser {
 
         // process
         while (tokenizer.hasMoreTokens() && (index < 10)) {
-            Token token = tokenizer.next();
+            CharArrayTokenizer.Token token = tokenizer.next();
             if (token.isEmpty()) {
                 if (index == 0) {
                     throw new LocationException("GPGGA expected");
@@ -63,19 +62,19 @@ public final class NmeaParser {
 */
                     } break;
                     case 6: {
-                        record.fix = parseInt(token);
+                        record.fix = CharArrayTokenizer.parseInt(token);
                         if (record.fix == 0) { // no fix
                             index = 1000; // break cycle
                         }
                     } break;
                     case 7: {
-                        record.sat = parseInt(token);
+                        record.sat = CharArrayTokenizer.parseInt(token);
                     } break;
                     case 8: {
-                        record.hdop = parseFloat(token);
+                        record.hdop = CharArrayTokenizer.parseFloat(token);
                     } break;
                     case 9: {
-                        record.altitude = parseFloat(token);
+                        record.altitude = CharArrayTokenizer.parseFloat(token);
                     } break;
                     case 10: {
                         // 'm'
@@ -119,7 +118,7 @@ public final class NmeaParser {
 
         // process
         while (tokenizer.hasMoreTokens() && (index < 10)) {
-            Token token = tokenizer.next();
+            CharArrayTokenizer.Token token = tokenizer.next();
             if (token.isEmpty()) {
                 if (index == 0) {
                     throw new LocationException("GPRMC expected");
@@ -141,7 +140,7 @@ public final class NmeaParser {
                         record.status = token.array[token.begin];
                     } break;
                     case 3: {
-                        record.lat = parseDouble(token.array, token.begin /* + 0*/, 2) + parseDouble(token.array, token.begin + 2, token.length - 2) / 60D;
+                        record.lat = CharArrayTokenizer.parseDouble(token.array, token.begin /* + 0*/, 2) + CharArrayTokenizer.parseDouble(token.array, token.begin + 2, token.length - 2) / 60D;
                     } break;
                     case 4: {
                         if (token.array[token.begin] == 'S') {
@@ -149,7 +148,7 @@ public final class NmeaParser {
                         }
                     } break;
                     case 5: {
-                        record.lon = parseDouble(token.array, token.begin /* + 0*/, 3) + parseDouble(token.array, token.begin + 3, token.length - 3) / 60D;
+                        record.lon = CharArrayTokenizer.parseDouble(token.array, token.begin /* + 0*/, 3) + CharArrayTokenizer.parseDouble(token.array, token.begin + 3, token.length - 3) / 60D;
                     } break;
                     case 6: {
                         if (token.array[token.begin] == 'W') {
@@ -158,12 +157,12 @@ public final class NmeaParser {
                     } break;
                     case 7: {
                         if (record.status == 'A') {
-                            record.speed = parseFloat(token);
+                            record.speed = CharArrayTokenizer.parseFloat(token);
                         }
                     } break;
                     case 8: {
                         if (record.status == 'A') {
-                            record.angle = parseFloat(token);
+                            record.angle = CharArrayTokenizer.parseFloat(token);
                         }
                     } break;
                     case 9: {
@@ -187,8 +186,8 @@ public final class NmeaParser {
         return record;
     }
 
-    private static int parseTime(Token token) {
-        int tl = parseInt(token.array, token.begin, 6/*token.length*/);
+    private static int parseTime(CharArrayTokenizer.Token token) {
+        int tl = CharArrayTokenizer.parseInt(token.array, token.begin, 6/*token.length*/);
         int hours = /*(int)*/ tl / 10000;
         tl -= hours * 10000;
         int mins = /*(int)*/ tl / 100;
@@ -199,7 +198,7 @@ public final class NmeaParser {
         return (3600 * hours + 60 * mins + sec) * 1000/* + ms*/; // in millis
     }
 
-    private static long parseDate(Token token) {
+    private static long parseDate(CharArrayTokenizer.Token token) {
         char[] _tarray = token.array;
         int _tbegin = token.begin;
         int day = 10 * (_tarray[_tbegin + 0] - '0') + _tarray[_tbegin + 1] - '0';
@@ -211,192 +210,6 @@ public final class NmeaParser {
         CALENDAR.set(Calendar.YEAR, year);
 
         return CALENDAR.getTime().getTime();
-    }
-
-    private static int parseInt(Token token) {
-        return parseInt(token.array, token.begin, token.length);
-    }
-
-    public static int parseInt(char[] value, int offset, int length) {
-        if (length == 0) {
-            throw new NumberFormatException("No input");
-        }
-
-        int end = offset + length;
-        int result = 0; // TODO is this correct initial value???
-
-        while (offset < end) {
-            char ch = value[offset++];
-/* too slow
-            int digit = Character.digit(ch, 10);
-*/
-            int digit = -1;
-            if (ch >= '0' && ch <= '9') {
-                digit = ch - '0';
-            }
-            if (digit > -1) {
-                result *= 10;
-                result += digit;
-            } else {
-                throw new NumberFormatException("Not a digit: " + ch);
-            }
-        }
-
-        return result;
-    }
-
-    private static float parseFloat(Token token) {
-        return parseFloat(token.array, token.begin, token.length);
-    }
-
-    private static float parseFloat(char[] value, int offset, int length) {
-        if (length == 0) {
-            throw new NumberFormatException("No input");
-        }
-
-        int decSeen = 0;
-        int end = offset + length;
-        float result = 0F; // TODO is this correct initial value
-
-        while (offset < end) {
-            char ch = value[offset++];
-            if (ch == '.') {
-                decSeen = 10;
-            } else {
-/* too slow
-                int idigit = Character.digit(ch, 10);
-*/
-                if (ch >= '0' && ch <= '9') {
-                    float fdigit = ch - '0';
-                    if (decSeen > 0) {
-                        result += (fdigit / decSeen);
-                        decSeen *= 10;
-                    } else {
-                        result *= 10F;
-                        result += fdigit;
-                    }
-                } else {
-                    throw new NumberFormatException("Not a digit: " + ch);
-                }
-            }
-        }
-
-        return result;
-    }
-
-    public static double parseDouble(char[] value, int offset, int length) {
-        if (length == 0) {
-            throw new NumberFormatException("No input");
-        }
-
-        int decSeen = 0;
-        int end = offset + length;
-        double result = 0D; // TODO is this correct initial value?
-
-        while (offset < end) {
-            char ch = value[offset++];
-            if (ch == '.') {
-                decSeen = 10;
-            } else {
-/* too slow
-                int idigit = Character.digit(ch, 10);
-*/
-                if (ch >= '0' && ch <= '9') {
-                    double fdigit = ch - '0';
-                    if (decSeen > 0) {
-                        result += (fdigit / decSeen);
-                        decSeen *= 10;
-                    } else {
-                        result *= 10D;
-                        result += fdigit;
-                    }
-                } else {
-                    throw new NumberFormatException("Not a digit: " + ch);
-                }
-            }
-        }
-
-        return result;
-    }
-
-    private final static class CharArrayTokenizer {
-        private char[] array;
-        private char delimiter;
-        private boolean returnDelim;
-
-        private int pos = 0;
-
-        private Token token;
-
-        public CharArrayTokenizer() {
-            this.token = new Token();
-        }
-
-        public void init(char[] array, char delimiter, boolean returnDelim) {
-            this.array = array;
-            this.delimiter = delimiter;
-            this.returnDelim = returnDelim;
-            this.pos = 0;
-        }
-
-        public boolean hasMoreTokens() {
-            return pos < array.length;
-        }
-
-        public Token next() {
-            if (hasMoreTokens()) {
-                int begin = pos;
-                if (array[pos] == delimiter) {
-                    pos++;
-                    if (returnDelim) {
-                        // init the token with valid data
-                        token.init(array, begin, pos - begin);
-
-                        // return
-                        return token;
-                    } else {
-                        begin++;
-                    }
-                }
-                int i = pos;
-                while (i < array.length) {
-                    char ch = array[i];
-                    if (ch == delimiter) {
-                        break;
-                    } else {
-                        i++;
-                    }
-                }
-                pos = i;
-
-                // init the token with valid data
-                token.init(array, begin, pos - begin);
-
-                return token;
-            }
-
-            throw new NoSuchElementException();
-        }
-    }
-
-    private static final class Token {
-        public char[] array;
-        public int begin;
-        public int length;
-
-        public void init(char[] array, int begin, int length) {
-            this.array = array;
-            this.begin = begin;
-            this.length = length;
-        }
-
-        public boolean isEmpty() {
-            return length == 0;
-        }
-
-        public String toString() {
-            return new String(array, begin, length);
-        }
     }
 
     /**

@@ -5,7 +5,6 @@ package cz.kruch.track.ui;
 
 import api.location.LocationProvider;
 import api.location.QualifiedCoordinates;
-import api.location.Location;
 
 import javax.microedition.lcdui.Graphics;
 import javax.microedition.lcdui.Image;
@@ -29,6 +28,10 @@ final class OSD extends Bar {
     private int rw;
     private int[] clip;
 
+/*
+    private Image[] providers;
+*/
+
     public OSD(int gx, int gy, int width, int height, Image bar) {
         super(gx, gy, width, height, bar);
         this.rw = Desktop.font.charWidth('R');
@@ -37,6 +40,20 @@ final class OSD extends Bar {
         this.str2Width = Desktop.font.stringWidth("44*");
         this.sb = new StringBuffer(32);
         resize(width, height, bar);
+/*
+        if (Config.getSafeInstance().isS60renderer()) {
+            providers = new Image[]{
+                Image.createImage(cz.kruch.track.TrackingMIDlet.providers,
+                                  0, 0, bulletSize, bulletSize, 0),
+                Image.createImage(cz.kruch.track.TrackingMIDlet.providers,
+                                  1 * bulletSize, 0, bulletSize, bulletSize, 0),
+                Image.createImage(cz.kruch.track.TrackingMIDlet.providers,
+                                  2 * bulletSize, 0, bulletSize, bulletSize, 0),
+                Image.createImage(cz.kruch.track.TrackingMIDlet.providers,
+                                  3 * bulletSize, 0, bulletSize, bulletSize, 0)
+            };
+        }
+*/
     }
 
     public void resize(int width, int height, Image bar) {
@@ -102,12 +119,17 @@ final class OSD extends Bar {
         // draw provider status
         int status = providerStatus < LocationProvider._CANCELLED ? providerStatus : LocationProvider.OUT_OF_SERVICE;
 /*
-        graphics.drawImage(TrackingMIDlet.providers[status], semaforX, semaforY, 0);
+        if (providers != null) { // S60 renderer
+            graphics.drawImage(providers[status], semaforX, semaforY, 0);
+        } else {
 */
-        graphics.drawRegion(cz.kruch.track.TrackingMIDlet.providers,
-                            status * bulletSize, 0, bulletSize, bulletSize,
-                            Sprite.TRANS_NONE,
-                            semaforX, semaforY, 0);
+            graphics.drawRegion(cz.kruch.track.TrackingMIDlet.providers,
+                                status * bulletSize, 0, bulletSize, bulletSize,
+                                Sprite.TRANS_NONE,
+                                semaforX, semaforY, 0);
+/*
+        }
+*/
     }
 
     public StringBuffer _getSb() {

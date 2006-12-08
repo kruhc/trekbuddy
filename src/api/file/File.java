@@ -4,7 +4,6 @@
 package api.file;
 
 import javax.microedition.io.Connection;
-import javax.microedition.io.Connector;
 import java.util.Enumeration;
 import java.io.InputStream;
 import java.io.IOException;
@@ -14,7 +13,6 @@ public final class File /*implements FileConnection*/ {
     public static final String FILE_SEPARATOR  = "/";
 
     private javax.microedition.io.file.FileConnection fc;
-    private String url;
 
     public static Enumeration listRoots() {
         return javax.microedition.io.file.FileSystemRegistry.listRoots();

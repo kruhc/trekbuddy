@@ -134,16 +134,6 @@ public final class TarEntry {
      *
      * @param headerBuf The header bytes from a tar archive entry.
      */
-    public TarEntry(byte[] headerBuf) throws InvalidHeaderException {
-        this(headerBuf, -1);
-    }
-
-    /**
-     * Construct an entry from an archive's header bytes. File is set
-     * to null.
-     *
-     * @param headerBuf The header bytes from a tar archive entry.
-     */
     public TarEntry(byte[] headerBuf, long position) throws InvalidHeaderException {
         this.position = position;
         this.header = new TarHeader(headerBuf);
@@ -207,6 +197,7 @@ public final class TarEntry {
      * Dispose.
      */
     public void dispose() {
+        this.header.dispose();
         this.header = null;
     }
 }

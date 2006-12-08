@@ -62,7 +62,7 @@ public final class Datum {
     public static final Datum DATUM_S_42_CZ         = new Datum("S-42 (CZ)", ELLIPSOID_KRASSOVSKY_1940, 26, -121, -78);
     public static final Datum DATUM_S_42_POLAND     = new Datum("S-42 (Poland)", ELLIPSOID_KRASSOVSKY_1940, 23, -124, -82);
     public static final Datum DATUM_S_42_RUSSIA     = new Datum("S-42 (Russia)", ELLIPSOID_KRASSOVSKY_1940, 28, -130, -95);
-    public static final Datum DATUM_S_JTSK          = new Datum("S-JTSK", ELLIPSOID_BESSEL_1841, 589, 76, 480);
+//    public static final Datum DATUM_S_JTSK          = new Datum("S-JTSK", ELLIPSOID_BESSEL_1841, 589, 76, 480);
 
     public static final Datum[] DATUMS = new Datum[]{
         DATUM_WGS_84,
@@ -72,8 +72,8 @@ public final class Datum {
         DATUM_OSGB_36,
         DATUM_S_42_CZ,
         DATUM_S_42_POLAND,
-        DATUM_S_42_RUSSIA,
-        DATUM_S_JTSK
+        DATUM_S_42_RUSSIA
+//        DATUM_S_JTSK
     };
 
     public static Datum current = DATUM_WGS_84;

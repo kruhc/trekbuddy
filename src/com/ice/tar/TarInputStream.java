@@ -54,17 +54,13 @@ public final class TarInputStream extends InputStream {
     private long streamOffset;
 
     public TarInputStream(InputStream is) {
-        this(is, DEFAULT_BLKSIZE, DEFAULT_RCDSIZE);
-    }
-
-    private TarInputStream(InputStream is, int blockSize, int recordSize) {
         this.in = is;
 /*
-        this.blockSize = blockSize;
+        this.blockSize = DEFAULT_BLKSIZE;
 */
-        this.recordSize = recordSize;
+        this.recordSize = DEFAULT_RCDSIZE;
         this.oneBuffer = new byte[1];
-        this.headerBuffer = new byte[blockSize];
+        this.headerBuffer = new byte[this.recordSize/*blockSize*/];
         this.hasHitEOF = false;
         this.streamOffset = this.entryOffset = this.entrySize = 0;
     }
@@ -319,7 +315,7 @@ public final class TarInputStream extends InputStream {
         }
 
         if (offset != this.recordSize) {
-            throw new IOException("ReadBlock: INCOMPLETE READ " + offset + " of " + this.recordSize + " bytes read.");
+            throw new IOException("Incomplete header: " + offset + " of " + this.recordSize + " bytes read.");
         }
 
         return headerBuffer;

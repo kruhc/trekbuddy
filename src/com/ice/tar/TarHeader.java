@@ -15,6 +15,8 @@
 
 package com.ice.tar;
 
+import java.io.UnsupportedEncodingException;
+
 /**
  * This class encapsulates the Tar Entry Header used in Tar Archives.
  * The class also holds a number of tar constants, used mostly in headers.
@@ -102,43 +104,13 @@ final class TarHeader {
      * Default constructor.
      */
     public TarHeader(byte[] headerBuf) throws InvalidHeaderException {
-        this.name = null;
-        parseTarHeader(this, headerBuf);
-    }
-
-    /**
-     * Parse an entry's TarHeader information from a header buffer.
-     * Old unix-style code contributed by David Mehringer <dmehring@astro.uiuc.edu>.
-     *
-     * @param hdr header to fill in from the buffer information
-     * @param headerBuf The tar entry header buffer to get information from
-     */
-    private static void parseTarHeader(TarHeader hdr, byte[] headerBuf)
-            throws InvalidHeaderException {
-        //
-        // NOTE Recognize archive header format.
-        //
-        if (headerBuf[257] == 0
-                && headerBuf[258] == 0
-                && headerBuf[259] == 0
-                && headerBuf[260] == 0
-                && headerBuf[261] == 0) {
-/*
-            this.unixFormat = true;
-            this.ustarFormat = false;
-            this.gnuFormat = false;
-*/
-        } else if (headerBuf[257] == 'u'
+        if (headerBuf[257] == 'u'
                 && headerBuf[258] == 's'
                 && headerBuf[259] == 't'
                 && headerBuf[260] == 'a'
                 && headerBuf[261] == 'r'
                 && headerBuf[262] == 0) {
-/*
-            this.ustarFormat = true;
-            this.gnuFormat = false;
-            this.unixFormat = false;
-*/
+            // OK
         } else if (headerBuf[257] == 'u'
                 && headerBuf[258] == 's'
                 && headerBuf[259] == 't'
@@ -146,16 +118,17 @@ final class TarHeader {
                 && headerBuf[261] == 'r'
                 && headerBuf[262] != 0
                 && headerBuf[263] != 0) {
-            // REVIEW
-/*
-            this.gnuFormat = true;
-            this.unixFormat = false;
-            this.ustarFormat = false;
-*/
+            // OK?
+        } else if (headerBuf[257] == 0
+                && headerBuf[258] == 0
+                && headerBuf[259] == 0
+                && headerBuf[260] == 0
+                && headerBuf[261] == 0) {
+            // OK
         } else {
             StringBuffer sb = new StringBuffer(64);
 
-            sb.append("Unknown header magic: '");
+            sb.append("Unknown tar format. Header: '");
             sb.append(headerBuf[257]);
             sb.append(headerBuf[258]);
             sb.append(headerBuf[259]);
@@ -168,37 +141,20 @@ final class TarHeader {
             throw new InvalidHeaderException(sb.toString());
         }
 
-        hdr.name = parseFileName(headerBuf);
+        name = parseFileName(headerBuf);
 
         int offset = NAMELEN;
-
-//        hdr.mode = (int) TarHeader.parseOctal(headerBuf, offset, TarHeader.MODELEN);
-
         offset += MODELEN;
-
-//        hdr.userId = (int) TarHeader.parseOctal(headerBuf, offset, TarHeader.UIDLEN);
-
         offset += UIDLEN;
-
-//        hdr.groupId = (int) TarHeader.parseOctal(headerBuf, offset, TarHeader.GIDLEN);
-
         offset += GIDLEN;
 
-        hdr.size = parseOctal(headerBuf, offset, TarHeader.SIZELEN);
+        size = parseOctal(headerBuf, offset, TarHeader.SIZELEN);
 
         offset += SIZELEN;
-
-//        hdr.modTime = TarHeader.parseOctal(headerBuf, offset, TarHeader.MODTIMELEN);
-
         offset += MODTIMELEN;
-
-//        hdr.checkSum = (int) TarHeader.parseOctal(headerBuf, offset, TarHeader.CHKSUMLEN);
-
         offset += CHKSUMLEN;
 
-        hdr.linkFlag = headerBuf[offset++];
-
-//        hdr.linkName = TarHeader.parseName(headerBuf, offset, TarHeader.NAMELEN);
+        linkFlag = headerBuf[offset++];
 
         offset += NAMELEN;
     }
@@ -216,7 +172,6 @@ final class TarHeader {
         long result = 0;
         boolean stillPadding = true;
         int end = offset + length;
-        byte space = (byte) ' ';
 
         for (int i = offset; i < end; ++i) {
             byte b = header[i];
@@ -224,11 +179,10 @@ final class TarHeader {
             if (b == 0)
                 break;
 
-            if (b == space || b == '0') {
+            if (b == ' ' || b == '0') {
                 if (stillPadding)
                     continue;
-
-                if (b == space)
+                if (b == ' ')
                     break;
             }
 
@@ -251,31 +205,62 @@ final class TarHeader {
      * @return The header's entry name.
      */
     private static String parseFileName(byte[] header) {
-        /*StringBuffer result = new StringBuffer(256);*/
+/*
         char[] result = new char[256];
         int k = 0;
+*/
+        String prefix = null;
 
         // If header[345] is not equal to zero, then it is the "prefix"
         // that 'ustar' defines. It must be prepended to the "normal"
         // name field. We are responsible for the separating '/'.
-        //
         if (header[PREFIXOFFSET] != 0) {
-            for (int i = PREFIXOFFSET; header[i] != 0 && i < 500; ++i) {
-                /*result.append((char) header[i]);*/
+            int l = 0;
+            for (int i = PREFIXOFFSET; i < 500; i++) {
+                byte b = header[i];
+                if (b == 0)
+                    break;
+                l++;
+/*
                 result[k++] = (char) header[i];
+*/
             }
 
-            /*result.append("/");*/
+            prefix = new String(header, PREFIXOFFSET, l);
+/*
             result[k++] = '/';
+*/
         }
 
-        for (int i = 0; header[i] != 0 && i < 100; ++i) {
-            /*result.append((char) header[i]);*/
+        int i = 0;
+        for (; i < 100; i++) {
+            byte b = header[i];
+            if (b == 0)
+                break;
+/*
             result[k++] = (char) header[i];
+*/
         }
 
-        /*return result.toString();*/
+        try {
+            String name = new String(header, 0, i, "US-ASCII");
+            if (prefix != null) {
+                return (new StringBuffer(prefix)).append('/').append(name).toString();
+            }
+            return name;
+        } catch (UnsupportedEncodingException e) {
+            throw new RuntimeException(e.toString());
+        }
+/*
         return new String(result, 0, k);
+*/
+    }
+
+    /**
+     * Dispose all resources.
+     */
+    public void dispose() {
+        name = null;
     }
 }
  

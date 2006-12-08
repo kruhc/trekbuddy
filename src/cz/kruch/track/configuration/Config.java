@@ -44,11 +44,6 @@ public abstract class Config {
 
     // group [Map datum]
     protected String geoDatum = Datum.DATUM_WGS_84.getName();
-/*
-    protected int dX = 0;
-    protected int dY = 0;
-    protected int dZ = 0;
-*/
 
     // group [Provider]
     protected String locationProvider = LOCATION_PROVIDER_JSR82;
@@ -81,9 +76,9 @@ public abstract class Config {
     protected boolean osdBlackColor;
 
     // group [Tweaks]
-    protected boolean optimisticIo = true;
+    protected boolean optimisticIo;
     protected boolean S60renderer;
-    protected boolean cache;
+    protected boolean cacheOffline;
 
     // hidden
     protected String btDeviceName = "";
@@ -327,38 +322,13 @@ public abstract class Config {
         S60renderer = s60renderer;
     }
 
-    public boolean isCache() {
-        return cache;
+    public boolean isCacheOffline() {
+        return cacheOffline;
     }
 
-    public void setCache(boolean cache) {
-        this.cache = cache;
+    public void setCacheOffline(boolean cacheOffline) {
+        this.cacheOffline = cacheOffline;
     }
-/*
-    public int getdX() {
-        return dX;
-    }
-
-    public void setdX(int dX) {
-        this.dX = dX;
-    }
-
-    public int getdY() {
-        return dY;
-    }
-
-    public void setdY(int dY) {
-        this.dY = dY;
-    }
-
-    public int getdZ() {
-        return dZ;
-    }
-
-    public void setdZ(int dZ) {
-        this.dZ = dZ;
-    }
-*/
 
     /**
      * RMS configuration.
@@ -442,7 +412,7 @@ public abstract class Config {
                         try {
                             optimisticIo = din.readBoolean();
                             S60renderer = din.readBoolean();
-                            cache = din.readBoolean();
+                            cacheOffline = din.readBoolean();
                         } catch (Exception e) {
                         }
                     }
@@ -514,7 +484,7 @@ public abstract class Config {
                 dout.writeBoolean(useGeocachingFormat);
                 dout.writeBoolean(optimisticIo);
                 dout.writeBoolean(S60renderer);
-                dout.writeBoolean(cache);
+                dout.writeBoolean(cacheOffline);
                 dout.flush();
                 byte[] bytes = data.toByteArray();
                 rs = RecordStore.openRecordStore(NAME, true, RecordStore.AUTHMODE_PRIVATE, true);

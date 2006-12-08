@@ -16,12 +16,16 @@ final class ItemSelection extends List implements CommandListener {
     private Displayable next;
 
     public ItemSelection(Displayable next, String title, Callback callback) {
+        this(next, title, "Select", callback);
+    }
+
+    public ItemSelection(Displayable next, String title, String selectLabel, Callback callback) {
         super(title, List.IMPLICIT);
         this.callback = callback;
         this.next = next;
         addCommand(new Command("Cancel", Command.BACK, 1));
+        setSelectCommand(new Command(selectLabel, Command.ITEM, 1));
         setCommandListener(this);
-        Desktop.display.setCurrent(this);
     }
 
     public void show(Enumeration items) {
@@ -29,12 +33,14 @@ final class ItemSelection extends List implements CommandListener {
             String item = items.nextElement().toString();
             append(item, null);
         }
-        addCommand(List.SELECT_COMMAND);
+        Desktop.display.setCurrent(this);
     }
 
     public void commandAction(Command command, Displayable displayable) {
+        // restore desktop UI
         Desktop.display.setCurrent(next);
-        if (command == List.SELECT_COMMAND) {
+        // invoke callback
+        if (command.getCommandType() == Command.ITEM) {
             callback.invoke(getString(getSelectedIndex()), null);
         } else {
             callback.invoke(null, null);

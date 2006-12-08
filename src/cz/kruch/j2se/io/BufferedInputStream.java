@@ -9,6 +9,7 @@ package cz.kruch.j2se.io;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 
 /**
  * A <code>BufferedInputStream</code> adds
@@ -33,14 +34,18 @@ import java.io.InputStream;
  * @since JDK1.0
  */
 public final class BufferedInputStream extends /* FilterInputStream */ InputStream {
-
     /**
      * Underlying stream.
      */
     private InputStream in;
 
-    // for optimistic lie
+    /* observer */
+    private OutputStream observer;
+
+    /* for optimistic lie */
     public static boolean useAvailableLie = true;
+
+    /* for optimistic lie */
     private int available;
 
     /**
@@ -138,6 +143,10 @@ public final class BufferedInputStream extends /* FilterInputStream */ InputStre
             }
         }
 
+        if (observer != null) {
+            observer.write(buf[pos] & 0xff);
+        }
+
         return buf[pos++] & 0xff;
     }
 
@@ -153,7 +162,11 @@ public final class BufferedInputStream extends /* FilterInputStream */ InputStre
               bytes into the local buffer.  In this way buffered streams will
               cascade harmlessly. */
             if (len >= buf.length) {
-                return in.read(b, off, len);
+                int c = in.read(b, off, len);
+                if (observer != null) {
+                    observer.write(b, off, c);
+                }
+                return c;
             }
             fill();
             avail = count - pos;
@@ -163,6 +176,9 @@ public final class BufferedInputStream extends /* FilterInputStream */ InputStre
         }
         int cnt = (avail < len) ? avail : len;
         System.arraycopy(buf, pos, b, off, cnt);
+        if (observer != null) {
+            observer.write(buf, pos, cnt);
+        }
         pos += cnt;
 
         return cnt;
@@ -314,9 +330,9 @@ public final class BufferedInputStream extends /* FilterInputStream */ InputStre
     /**
      * Reuse this with new stream.
      * @param in new input stream
-     * @throws IOException
      */
-    public void reuse(InputStream in) throws IOException {
+    public void reuse(InputStream in) {
+        this.in = null; // gc hint
         this.in = in;
         this.pos = this.count = 0;
 
@@ -326,5 +342,14 @@ public final class BufferedInputStream extends /* FilterInputStream */ InputStre
         } else {
             available = -1;
         }
+    }
+
+    /**
+     * Injects observer.
+     * @param observer
+     */
+    public void setObserver(OutputStream observer) {
+        this.observer = null; // gc hint
+        this.observer = observer;
     }
 }

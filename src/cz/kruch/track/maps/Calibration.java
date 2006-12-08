@@ -145,20 +145,25 @@ public abstract class Calibration {
         if (log.isEnabled()) log.debug("transform " + position);
 //#endif
 
+        int _gridRVx = gridRVx;
+        int _gridLVx = gridLVx;
+        int _gridTHy = gridTHy;
+        int _gridBHy = gridBHy;
+
         int x = position.getX();
         int y = position.getY();
 
         double latLshare;
         double latRshare;
-        if (x <= gridLVx) {
+        if (x <= _gridLVx) {
             latLshare = 1D;
             latRshare = 0D;
-        } else if (x >= gridRVx) {
+        } else if (x >= _gridRVx) {
             latLshare = 0D;
             latRshare = 1D;
         } else {
-            latLshare = 1 - Math.abs((double) (x - gridLVx) / (gridRVx - gridLVx));
-            latRshare = 1 - Math.abs((double) (x - gridRVx) / (gridRVx - gridLVx));
+            latLshare = 1 - Math.abs((double) (x - _gridLVx) / (_gridRVx - _gridLVx));
+            latRshare = 1 - Math.abs((double) (x - _gridRVx) / (_gridRVx - _gridLVx));
         }
         double latL = (gridLVlat - (y - gridLVy) * gridLVscale);
         double latR = (gridRVlat - (y - gridRVy) * gridRVscale);
@@ -166,15 +171,15 @@ public abstract class Calibration {
 
         double lonTshare;
         double lonBshare;
-        if (y <= gridTHy) {
+        if (y <= _gridTHy) {
             lonTshare = 1D;
             lonBshare = 0D;
-        } else if (y >= gridBHy) {
+        } else if (y >= _gridBHy) {
             lonTshare = 0D;
             lonBshare = 1D;
         } else {
-            lonTshare = 1 - Math.abs((double) (y - gridTHy) / (gridTHy - gridBHy));
-            lonBshare = 1 - Math.abs((double) (y - gridBHy) / (gridTHy - gridBHy));
+            lonTshare = 1 - Math.abs((double) (y - _gridTHy) / (_gridTHy - _gridBHy));
+            lonBshare = 1 - Math.abs((double) (y - _gridBHy) / (_gridTHy - _gridBHy));
         }
         double lonT = (gridTHlon + (x - gridTHx) * gridTHscale);
         double lonB = (gridBHlon + (x - gridBHx) * gridBHscale);
@@ -318,6 +323,7 @@ public abstract class Calibration {
                 if (line.startsWith("Border and Scale"))
                     break;
                 parsePoint(line, pos, coords);
+                line = null; // gc hint
                 line = reader.readLine(false);
             }
             reader.dispose();
@@ -441,53 +447,40 @@ public abstract class Calibration {
      * Slice info.
      */
     public static final class Best /*extends Calibration*/ {
-        private String path;
         protected int width, height;
         protected int x, y;
 
         public Best(String path) throws InvalidMapException {
-            this.path = path;
             this.x = this.y = this.width = this.height = -1;
             parseXy(path);
         }
 
-        public Best(String path, boolean tar) throws InvalidMapException {
-            this.x = this.y = this.width = this.height = -1;
-            parseXy(path);
+        public static String getBasename(String path) throws InvalidMapException {
+//            char[] n = path.toCharArray();
+            int p0 = -1, p1 = -1;
+            int i = 0;
+//            for (int N = n.length - 4; i < N; i++) {
+//                if ('_' == n[i]) {
+            for (int N = path.length() - 4; i < N; i++) {
+                if ('_' == path.charAt(i)) {
+                    p0 = p1;
+                    p1 = i;
+                }
+            }
+            if (p0 == -1 || p1 == -1) {
+                throw new InvalidMapException("Invalid slice filename: " + path);
+            }
+
+            return path.substring(0, p0);
         }
 
         public String getPath() {
-            if (path == null) {
-                path = (new StringBuffer(32)).append("set/*_").append(x).append('_').append(y).append(".png").toString();
-            }
-            return path;
+            return (new StringBuffer(16)).append("_").append(x).append('_').append(y).append(".png").toString();
         }
 
-/*
-        public int getX() {
-            return x;
-        }
-
-        public int getY() {
-            return y;
-        }
-
-        public int getWidth() {
-            return width;
-        }
-
-        public int getHeight() {
-            return height;
-        }
-*/
-
-        protected void computeAbsolutePosition(boolean friendly) throws InvalidMapException {
-            if (friendly) { // slice of trekbuddy or j2n map
-/* already calculated */
-//                parseXy(path);
-            } else { // single slice of gpska map
-                x = y = 0;
-            }
+        protected void gpskaFix() {
+            // single slice of gpska map
+            x = y = 0;
         }
 
         protected void fixDimension(int xNext, int yNext, int xs, int ys) {
@@ -595,6 +588,7 @@ public abstract class Calibration {
                     tokenizer.init(line, ',', false);
                     parseIwh(tokenizer);
                 }
+                line = null; // gc hint
                 line = reader.readLine(false);
             }
             reader.dispose();
@@ -830,6 +824,10 @@ public abstract class Calibration {
 
         public void incrementY() {
             y += 1;
+        }
+
+        public Position getPosition() {
+            return new Position(x, y);
         }
     }
 }

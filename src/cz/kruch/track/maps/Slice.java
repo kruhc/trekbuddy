@@ -27,13 +27,12 @@ public final class Slice {
         this.calibration = calibration;
     }
 
-    public Slice(Calibration.Best calibration, Object closure) {
-        this.calibration = calibration;
-        this.closure = closure;
-    }
-
     public Object getClosure() {
         return closure;
+    }
+
+    public void setClosure(Object closure) {
+        this.closure = closure;
     }
 
     public synchronized Image getImage() {
@@ -60,12 +59,12 @@ public final class Slice {
         return calibration.height;
     }
 
-    public String getURL() {
+    public String getPath() {
         return calibration.getPath();
     }
 
-    public void doFinal(boolean friendly) throws InvalidMapException {
-        calibration.computeAbsolutePosition(friendly);
+    public void gpskaFix() {
+        calibration.gpskaFix();
 /*
         x = calibration.x;
         y = calibration.y;
@@ -87,9 +86,7 @@ public final class Slice {
         return (x >= calibration.x && x <= maxx && y >= calibration.y && y <= maxy);
     }
 
-    // debug
     public String toString() {
-        return "Slice " + getURL() + " pos " + calibration.x + "-" + calibration.y + " " + getWidth() + "x" + getHeight() + " " + image;
+        return (new StringBuffer(16)).append(calibration.x).append('-').append(calibration.y).toString();
     }
-    // ~debug
 }

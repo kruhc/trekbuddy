@@ -104,7 +104,7 @@ public final class Atlas implements Runnable {
         }
 
         for (Enumeration e = layer.keys(); e.hasMoreElements(); ) {
-            String mapName = e.nextElement().toString();
+            String mapName = (String) e.nextElement();
             Calibration calibration = (Calibration) layer.get(mapName);
             if (calibration.isWithin(qc)) {
                 return mapName;
@@ -237,10 +237,12 @@ public final class Atlas implements Runnable {
     * Atlas loaders.
     */
 
-    private abstract class Loader extends Thread {
+    private abstract class Loader {
         protected Exception exception;
 
         protected String dir;
+
+        protected abstract void run();
 
         public String getDir() {
             return dir;
@@ -290,14 +292,17 @@ public final class Atlas implements Runnable {
                 // iterate over archive
                 TarEntry entry = tar.getNextEntry();
                 while (entry != null) {
+                    // plain file
                     if (!entry.isDirectory()) {
                         String entryName = entry.getName();
                         int indexOf = entryName.lastIndexOf('.');
                         if (indexOf == -1) // not a file with extension
                             continue;
-
                         String ext = entryName.substring(indexOf + 1);
+
+                        // is it calibration file?
                         if (cz.kruch.track.TrackingMIDlet.KNOWN_EXTENSIONS.contains(ext)) {
+
                             // get layer and map name
                             String lName = null;
                             String mName = null;
@@ -324,11 +329,16 @@ public final class Atlas implements Runnable {
                             } else if ("xml".equals(ext)) {
                                 calibration = new Calibration.XML(tar, url);
                             }
+
+                            // found calibration file?
                             if (calibration != null) {
 //#ifdef __LOG__
                                 if (log.isEnabled()) log.debug("calibration loaded; " + calibration);
 //#endif
-                                getLayerCollection(lName).put(mName, calibration);
+                                // save calibration for given map - only one calibration per map allowed :-)
+                                if (!getLayerCollection(lName).contains(mName)) {
+                                    getLayerCollection(lName).put(mName, calibration);
+                                }
                             }
                         }
                     }
@@ -361,21 +371,18 @@ public final class Atlas implements Runnable {
 
                 // iterate over layers
                 for (Enumeration le = fc.list(); le.hasMoreElements(); ) {
-                    String lEntry = le.nextElement().toString();
+                    String lEntry = (String) le.nextElement();
                     if (lEntry.endsWith("/")) {
 //#ifdef __LOG__
                         if (log.isEnabled()) log.debug("new layer: " + lEntry);
 //#endif
-
-                        // get collection
-                        Hashtable collection = getLayerCollection(lEntry);
 
                         // set file connection
                         fc.setFileConnection(lEntry);
 
                         // iterate over layer
                         for (Enumeration me = fc.list(); me.hasMoreElements(); ) {
-                            String mEntry = me.nextElement().toString();
+                            String mEntry = (String) me.nextElement();
                             if (mEntry.endsWith("/")) {
 //#ifdef __LOG__
                                 if (log.isEnabled()) log.debug("new map? " + mEntry);
@@ -384,58 +391,59 @@ public final class Atlas implements Runnable {
                                 // set file connection
                                 fc.setFileConnection(mEntry);
 
+                                // get layer
+                                Hashtable layerCollection = getLayerCollection(lEntry.substring(0, lEntry.length() - 1));
+
                                 // iterate over map dir
                                 for (Enumeration ie = fc.list(); ie.hasMoreElements(); ) {
-                                    String iEntry = ie.nextElement().toString();
+                                    String iEntry = (String) ie.nextElement();
                                     if (iEntry.endsWith("/"))
                                         continue;
-
                                     int indexOf = iEntry.lastIndexOf('.');
                                     if (indexOf == -1) {
                                         continue;
                                     }
                                     String ext = iEntry.substring(indexOf + 1);
 
+                                    // is this calibration file
                                     if (cz.kruch.track.TrackingMIDlet.KNOWN_EXTENSIONS.contains(ext)) {
 //#ifdef __LOG__
                                         if (log.isEnabled()) log.debug("found map calibration: " + iEntry);
 //#endif
 
+                                        // calibration
                                         Calibration calibration = null;
-                                        String url = fc.getURL() + iEntry;
-                                        Map.FileInput fileInput = new Map.FileInput(url);
+                                        Map.FileInput fileInput = new Map.FileInput((new StringBuffer(64)).append(fc.getURL()).append(iEntry).toString());
 
                                         // load map calibration file
                                         if ("gmi".equals(ext)) {
-                                            calibration = new Calibration.GMI(fileInput.getInputStream(), url);
+                                            calibration = new Calibration.GMI(fileInput.getInputStream(), fileInput.getUrl());
                                         } else if ("map".equals(ext)) {
-                                            calibration = new Calibration.Ozi(fileInput.getInputStream(), url);
+                                            calibration = new Calibration.Ozi(fileInput.getInputStream(), fileInput.getUrl());
                                         } else if ("j2n".equals(ext)) {
-                                            calibration = new Calibration.J2N(fileInput.getInputStream(), url);
+                                            calibration = new Calibration.J2N(fileInput.getInputStream(), fileInput.getUrl());
                                         } else if ("xml".equals(ext)) {
-                                            calibration = new Calibration.XML(fileInput.getInputStream(), url);
+                                            calibration = new Calibration.XML(fileInput.getInputStream(), fileInput.getUrl());
                                         }
 
                                         // close file input
                                         fileInput.close();
 
-                                        // we do not need but one calibration
+                                        // found calibration
                                         if (calibration != null) {
 //#ifdef __LOG__
                                             if (log.isEnabled()) log.debug("calibration loaded; " + calibration);
 //#endif
-                                            collection.put(mEntry, calibration);
+                                            // save calibration for given map
+                                            layerCollection.put(mEntry.substring(0, mEntry.length() - 1), calibration);
 
-                                            /*
-                                             * one calibration is enough - first one wins
-                                             */
-
+                                            /* only one calibration per map allowed :-) */
                                             break;
                                         }
                                     }
                                 }
 
-                                // back to layer root
+                                // back to layer dir
                                 fc.setFileConnection("..");
                             }
                         }

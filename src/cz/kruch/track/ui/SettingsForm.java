@@ -88,11 +88,11 @@ final class SettingsForm extends Form implements CommandListener, ItemStateListe
         choicePerformance = new ChoiceGroup("Tweaks", ChoiceGroup.MULTIPLE);
         choicePerformance.append("optimistic I/O", null);
         choicePerformance.append("S60 renderer", null);
-        choicePerformance.append("cache", null);
+        choicePerformance.append("cache offline maps", null);
         choicePerformance.setSelectedFlags(new boolean[] {
             config.isOptimisticIo(),
             config.isS60renderer(),
-            config.isCache()
+            config.isCacheOffline()
         });
         append(choicePerformance);
 
@@ -225,7 +225,7 @@ final class SettingsForm extends Form implements CommandListener, ItemStateListe
             choicePerformance.getSelectedFlags(perf);
             config.setOptimisticIo(perf[0]);
             config.setS60renderer(perf[1]);
-            config.setCache(perf[2]);
+            config.setCacheOffline(perf[2]);
 
             // save
             if ("Save".equals(command.getLabel())) {

@@ -119,7 +119,7 @@ public final class Camera extends Form implements CommandListener, Runnable {
             System.gc();
 
             // take the snapshot
-            byte[] raw = getThumbnail(video.getSnapshot(format));
+            byte[] raw = video.getSnapshot(format);
 
             // close the player
             destroy();

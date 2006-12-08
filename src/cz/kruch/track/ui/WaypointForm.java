@@ -169,9 +169,15 @@ public final class WaypointForm extends Form
         if (result instanceof byte[]) {
             imageBytes = (byte[]) result;
             try {
-                Image image = Image.createImage(imageBytes, 0, imageBytes.length);
+                // create preview
+                byte[] thumbnail = Camera.getThumbnail(imageBytes);
+                Image image = Image.createImage(thumbnail, 0, thumbnail.length);
+                thumbnail = null; // gc hint
+
+                // replace image
                 delete(imageNum);
                 imageNum = append(image);
+
 /* restarts on K750i
                 javax.microedition.media.Player p = javax.microedition.media.Manager.createPlayer(new java.io.ByteArrayInputStream(imageBytes), "image/jpeg");
                 p.realize();
@@ -182,10 +188,10 @@ public final class WaypointForm extends Form
                 p.start();
 */
             } catch (Throwable t) {
-                Desktop.showError("Could not create preview but do not worry - image has been saved.", t, this);
+                Desktop.showError("Could not create preview but do not worry - image has been saved", t, this);
             }
         } else if (throwable != null) {
-            Desktop.showError("Snapshot failed.", throwable, this);
+            Desktop.showError("Snapshot failed", throwable, this);
         } else {
             Desktop.showError("No snapshot", null, this);
         }

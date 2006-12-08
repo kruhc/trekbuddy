@@ -6,6 +6,7 @@ package cz.kruch.track.ui;
 import cz.kruch.track.maps.Map;
 import cz.kruch.track.maps.InvalidMapException;
 import cz.kruch.track.maps.Atlas;
+import cz.kruch.track.maps.Calibration;
 import cz.kruch.track.maps.io.LoaderIO;
 import cz.kruch.track.configuration.Config;
 import cz.kruch.track.configuration.ConfigurationException;
@@ -520,10 +521,13 @@ public final class Desktop extends GameCanvas
             // stop tracking (close GPS connection, close tracklog)
             stopTracking(true);
 
-/* read-only anyway, so let's hope it's ok to skip this
-            // close map (fs handles)
-            if (map != null) map.close();
-*/
+            // close atlas/map
+            if (atlas != null) {
+                atlas.close();
+            }
+            if (map != null) {
+                map.close();
+            }
 
             // stop Friends
             if (friends != null) {
@@ -618,7 +622,7 @@ public final class Desktop extends GameCanvas
         if (currentWaypoint > -1) {
             QualifiedCoordinates qc = Datum.current.toLocal(waypoints[currentWaypoint].getQualifiedCoordinates());
             if (map.isWithin(qc)) {
-                mapViewer.setWaypoint(map.transform(qc));
+                mapViewer.setWaypoint(((Calibration.ProximitePosition) map.transform(qc)).getPosition());
                 Desktop.showConfirmation("Waypoint set", this);
             } else {
                 mapViewer.setWaypoint(null);
@@ -1169,7 +1173,7 @@ public final class Desktop extends GameCanvas
             message = "";
         }
         if (t != null) {
-            if (message.length() > 0) message += " ";
+            if (message.length() > 0) message += ": ";
             message += t.toString();
         }
         showAlert(AlertType.ERROR, message, Alert.FOREVER, nextDisplayable);
@@ -1748,17 +1752,8 @@ public final class Desktop extends GameCanvas
         }
 
         private void append(Location[] array, Location l) {
-            int idx = -1;
-            for (int N = array.length, i = 0; i < N; i++) {
-                if (array[i] == null) {
-                    array[idx = i] = l;
-                    break;
-                }
-            }
-            if (idx == -1) {
-                System.arraycopy(array, 1, array, 0, array.length - 1);
-                array[array.length - 1] = l;
-            }
+            System.arraycopy(array, 0, array, 1, array.length - 1);
+            array[0] = l;
         }
 
         private void recalc() {
@@ -1887,12 +1882,14 @@ public final class Desktop extends GameCanvas
                         QualifiedCoordinates qc = l.getQualifiedCoordinates();
                         int x = _width2 + (int) ((qc.getLon() - lonAvg) * xScale);
                         int y = _height2 - (int) ((qc.getLat() - latAvg) * yScale);
-//                    System.out.println("x = " + x + ", y = " + y + " [" + width / 2 + ", " + height / 2);
-/*
-                        g.drawImage(_point, x - _ptSize2, y - _ptSize2, 0);
-*/
-                        g.drawArc(x - 3, y - 3, 7, 7, 0, 360);
-//                    System.out.println(l);
+                        if (i > 0) {
+                            g.drawArc(x - 4, y - 4, 9, 9, 0, 360);
+                        } else {
+                            g.setColor(0xff, 0x7c, 0);
+                            g.fillArc(x - 4, y - 4, 9, 9, 0, 360);
+                            g.setColor(_color);
+                            g.drawArc(x - 4, y - 4, 9, 9, 0, 360);
+                        }
                     }
                 }
 
@@ -1904,11 +1901,8 @@ public final class Desktop extends GameCanvas
                 g.drawString(_coordinates.toStringBuffer(sb).toString(), 0, 0, 0);
                 g.drawString(Double.toString(_hdopAvg).substring(0, 3), 0, fontHeight, 0);
                 g.drawString(Integer.toString(_location.getSat()), 0, 2 * fontHeight, 0);
-/*
-                g.drawImage(TrackingMIDlet.pointAvg, _width2 - _ptSize2, _height2 - _ptSize2, 0);
-*/
                 g.setColor(0xff, 0xff, 0);
-                g.drawArc(_width2 - 3/*_ptSize2*/, _height2 - 3/*_ptSize2*/, 7, 7, 0, 360);
+                g.drawArc(_width2 - 4/*_ptSize2*/, _height2 - 4/*_ptSize2*/, 9, 9, 0, 360);
 
                 // draw waypoint
                 g.setColor(0xff, 0xff, 0);
@@ -2376,7 +2370,7 @@ public final class Desktop extends GameCanvas
                             map = _map;
                             _map = null;
 
-                            // cache map
+                            // cacheOffline map
                             if (atlas != null && map != null) {
 //#ifdef __LOG__
                                 if (log.isEnabled()) log.debug("caching map " + map.getPath());

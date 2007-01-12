@@ -8,7 +8,6 @@ import api.location.QualifiedCoordinates;
 
 import javax.microedition.lcdui.Graphics;
 import javax.microedition.lcdui.Image;
-import javax.microedition.lcdui.game.Sprite;
 
 import cz.kruch.track.configuration.Config;
 
@@ -16,7 +15,6 @@ final class OSD extends Bar {
     private static final String NO_INFO = "Lon: ? Lat: ?";
 
     private int semaforX, semaforY;
-    private int bulletSize;
     private volatile int providerStatus = LocationProvider.OUT_OF_SERVICE;
     private volatile String recording = null;
     private volatile String extendedInfo;
@@ -28,10 +26,6 @@ final class OSD extends Bar {
     private int rw;
     private int[] clip;
 
-/*
-    private Image[] providers;
-*/
-
     public OSD(int gx, int gy, int width, int height, Image bar) {
         super(gx, gy, width, height, bar);
         this.rw = Desktop.font.charWidth('R');
@@ -40,27 +34,12 @@ final class OSD extends Bar {
         this.str2Width = Desktop.font.stringWidth("44*");
         this.sb = new StringBuffer(32);
         resize(width, height, bar);
-/*
-        if (Config.getSafeInstance().isS60renderer()) {
-            providers = new Image[]{
-                Image.createImage(cz.kruch.track.TrackingMIDlet.providers,
-                                  0, 0, bulletSize, bulletSize, 0),
-                Image.createImage(cz.kruch.track.TrackingMIDlet.providers,
-                                  1 * bulletSize, 0, bulletSize, bulletSize, 0),
-                Image.createImage(cz.kruch.track.TrackingMIDlet.providers,
-                                  2 * bulletSize, 0, bulletSize, bulletSize, 0),
-                Image.createImage(cz.kruch.track.TrackingMIDlet.providers,
-                                  3 * bulletSize, 0, bulletSize, bulletSize, 0)
-            };
-        }
-*/
     }
 
     public void resize(int width, int height, Image bar) {
         super.resize(width, height, bar);
-        this.bulletSize = cz.kruch.track.TrackingMIDlet.providers/*[0]*/.getHeight();
-        this.semaforX = this.width - this.bulletSize - BORDER;
-        this.semaforY = Math.abs((this.bh - this.bulletSize)) >> 1;
+        this.semaforX = this.width - NavigationScreens.bulletSize - BORDER;
+        this.semaforY = Math.abs((this.bh - NavigationScreens.bulletSize)) >> 1;
     }
 
     public void render(Graphics graphics) {
@@ -72,69 +51,63 @@ final class OSD extends Bar {
             info = NO_INFO;
         }
 
-        boolean isExtInfo = Config.getSafeInstance().isOsdExtended();
+        Config cfg = Config.getSafeInstance();
+        boolean isBasicInfo = cfg.isOsdBasic();
+        boolean isExtInfo = cfg.isOsdExtended();
 
         // draw info + extended info bg
-        if (!Config.getSafeInstance().isOsdNoBackground()) {
-            graphics.drawImage(bar, gx, gy, 0/*Graphics.TOP | Graphics.LEFT*/);
+        if (!cfg.isOsdNoBackground()) {
+            if (isBasicInfo) {
+                graphics.drawImage(bar, gx, gy, 0);
+            }
             if (isExtInfo && extendedInfo != null) {
-                graphics.drawImage(bar, gx, gy + bh, 0/*Graphics.TOP | Graphics.LEFT*/);
+                graphics.drawImage(bar, gx, gy + (isBasicInfo ? bh : 0), 0);
             }
         }
 
         // not ok? change color...
         if (!ok) {
-            graphics.setColor(0xff, 0, 0);
+            graphics.setColor(0x00FF0000);
         }
 
         // draw info + extended info text
-        graphics.drawString(info, gx + BORDER, gy, 0/*Graphics.TOP | Graphics.LEFT*/);
+        if (isBasicInfo) {
+            graphics.drawString(info, gx + BORDER, gy, 0);
+        }
         if (isExtInfo && extendedInfo != null) {
-            graphics.drawString(extendedInfo, gx + BORDER, gy + bh, 0/*Graphics.TOP | Graphics.LEFT*/);
+            graphics.drawString(extendedInfo, gx + BORDER, gy + (isBasicInfo ? bh : 0), 0);
             if (sat > 0) {
-                String s = sat + "*";
-                int w;
-                if (sat < 10) {
-                    w = str1Width;
-                } else {
-                    w = str2Width;
-                }
-                graphics.drawString(s, width - BORDER - w, gy + bh, 0/*Graphics.TOP | Graphics.LEFT*/);
+                String s = cz.kruch.track.TrackingMIDlet.nStr[sat];
+                graphics.drawString(s, width - BORDER - (sat < 10 ? str1Width : str2Width),
+                                    gy + bh, 0);
             }
         }
 
         // gpx recording
         if (recording != null) {
             if (ok) { // text was 'ok', so change the color now
-                graphics.setColor(0xff, 0, 0);
+                graphics.setColor(0x00FF0000);
             }
             graphics.drawChar('R', semaforX - rw, 0, 0/*Graphics.TOP | Graphics.LEFT*/);
         }
 
         // restore default color
         if (!ok || recording != null) {
-            graphics.setColor(Config.getSafeInstance().isOsdBlackColor() ? 0x00000000 : 0x00ffffff);
+            graphics.setColor(cfg.isOsdBlackColor() ? 0x00000000 : 0x00FFFFFF);
         }
 
         // draw provider status
-        int status = providerStatus < LocationProvider._CANCELLED ? providerStatus : LocationProvider.OUT_OF_SERVICE;
-/*
-        if (providers != null) { // S60 renderer
-            graphics.drawImage(providers[status], semaforX, semaforY, 0);
-        } else {
-*/
-            graphics.drawRegion(cz.kruch.track.TrackingMIDlet.providers,
-                                status * bulletSize, 0, bulletSize, bulletSize,
-                                Sprite.TRANS_NONE,
-                                semaforX, semaforY, 0);
-/*
-        }
-*/
+        NavigationScreens.drawProviderStatus(graphics, providerStatus,
+                                             semaforX, semaforY, 0);
     }
 
     public StringBuffer _getSb() {
         sb.setLength(0);
         return sb;
+    }
+
+    public int getProviderStatus() {
+        return providerStatus;
     }
 
     public void setProviderStatus(int providerStatus) {
@@ -156,6 +129,10 @@ final class OSD extends Bar {
 
     public void setInfo(QualifiedCoordinates qc, boolean ok) {
         sb.setLength(0);
+        if (Config.getSafeInstance().isUseGeocachingFormat() || Config.getSafeInstance().isUseUTM()) {
+            qc = qc.toWgs84();
+        }
+        qc.setHp(Config.getSafeInstance().isDecimalPrecision());
         setInfo(qc.toStringBuffer(sb).toString(), ok);
     }
 

@@ -5,6 +5,7 @@ package cz.kruch.track.ui;
 
 import javax.microedition.lcdui.Graphics;
 import javax.microedition.lcdui.Font;
+import javax.microedition.lcdui.Display;
 import javax.microedition.lcdui.game.GameCanvas;
 
 public final class Console extends GameCanvas {
@@ -20,7 +21,7 @@ public final class Console extends GameCanvas {
     // relict
     private boolean isS65 = false;
 
-    public Console() {
+    public Console(Display display) {
         super(true);
         this.setFullScreenMode(true);
         this.y = -1;
@@ -32,7 +33,7 @@ public final class Console extends GameCanvas {
 //#ifdef __S65__
         this.isS65 = cz.kruch.track.TrackingMIDlet.isS65();
 //#endif
-        graphics.setColor(0, 0, 0);
+        graphics.setColor(0x0);
         graphics.fillRect(0, 0, width, getHeight());
     }
 
@@ -44,6 +45,10 @@ public final class Console extends GameCanvas {
             } catch (InterruptedException e) {
             }
         }
+
+        // we are about to be gone forever....
+        graphics = null;
+        font = null;
     }
 
     public void show(String text) {
@@ -58,7 +63,7 @@ public final class Console extends GameCanvas {
         }
 //#endif
         g.setFont(font);
-        g.setColor(255, 255, 255);
+        g.setColor(0x00FFFFFF);
         g.drawString(text, BORDER, y * h, 0/*Graphics.TOP | Graphics.LEFT*/);
         flushGraphics();
     }
@@ -77,12 +82,12 @@ public final class Console extends GameCanvas {
         }
 //#endif
         if (code == 0) {
-            g.setColor(0, 255, 0);
+            g.setColor(0x0000FF00);
         } else if (code == -1) {
-            g.setColor(255, 0, 0);
+            g.setColor(0x00FF0000);
             errors++;
         } else {
-            g.setColor(255, 185, 0);
+            g.setColor(0x00FFB900);
             skips++;
         }
         g.setFont(font);

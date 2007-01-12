@@ -22,21 +22,27 @@
 
 package org.kxml2.io;
 
-import java.io.*;
-import java.util.*;
+import org.xmlpull.v1.XmlPullParser;
+import org.xmlpull.v1.XmlPullParserException;
 
-import org.xmlpull.v1.*;
+import java.util.Hashtable;
+import java.io.Reader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+
 
 /** A simple, pull based XML parser. This classe replaces the kXML 1
     XmlParser class and the corresponding event classes. */
 
 public final class KXmlParser implements XmlPullParser {
 
+    private static final String UNEXPECTED_EOF = "Unexpected EOF";
+    private static final String ILLEGAL_TYPE = "Wrong event type";
+    private static final int LEGACY = 999;
+    private static final int XML_DECL = 998;
+
     private Object location;
-	static final private String UNEXPECTED_EOF = "Unexpected EOF";
-    static final private String ILLEGAL_TYPE = "Wrong event type";
-    static final private int LEGACY = 999;
-    static final private int XML_DECL = 998;
 
     // general
 
@@ -47,9 +53,9 @@ public final class KXmlParser implements XmlPullParser {
     private boolean relaxed;
     private Hashtable entityMap;
     private int depth;
-    private String[] elementStack = new String[16];
-    private String[] nspStack = new String[8];
-    private int[] nspCounts = new int[4];
+    private String[] elementStack;
+    private String[] nspStack;
+    private int[] nspCounts;
 
     // source
 
@@ -65,7 +71,7 @@ public final class KXmlParser implements XmlPullParser {
 
     // txtbuffer
 
-    private char[] txtBuf = new char[128];
+    private char[] txtBuf;
     private int txtPos;
 
     // Event-related
@@ -79,15 +85,16 @@ public final class KXmlParser implements XmlPullParser {
 
     private boolean degenerated;
     private int attributeCount;
-    private String[] attributes = new String[16];
+    private String[] attributes;
     private int stackMismatch = 0;
     private String error;
 
-    /** 
+    /**
      * A separate peek buffer seems simpler than managing
-     * wrap around in the first level read buffer */
+     * wrap around in the first level read buffer
+     */
 
-    private int[] peek = new int[2];
+    private int[] peek;
     private int peekCount;
     private boolean wasCR;
 
@@ -95,7 +102,13 @@ public final class KXmlParser implements XmlPullParser {
     private boolean token;
 
     public KXmlParser() {
-        this.srcBuf = new char[1024];
+        this.elementStack = new String[16];
+        this.nspStack = new String[8];
+        this.nspCounts = new int[4];
+        this.txtBuf = new char[128];
+        this.srcBuf = new char[512];
+        this.attributes = new String[16];
+        this.peek = new int[2];
     }
 
     private boolean isProp(String n1, boolean prop, String n2) {
@@ -243,7 +256,7 @@ public final class KXmlParser implements XmlPullParser {
             null);
     }
 
-    /** 
+    /**
      * common base for next and nextToken. Clears the state, except from 
      * txtPos and whitespace. Does not set the type variable */
 
@@ -258,14 +271,14 @@ public final class KXmlParser implements XmlPullParser {
         while (true) {
             attributeCount = -1;
 
-			// degenerated needs to be handled before error because of possible
-			// processor expectations(!)
+            // degenerated needs to be handled before error because of possible
+            // processor expectations(!)
 
-			if (degenerated) {
-				degenerated = false;
-				type = END_TAG;
-				return;
-			}
+            if (degenerated) {
+                degenerated = false;
+                type = END_TAG;
+                return;
+            }
 
 
             if (error != null) {
@@ -527,7 +540,7 @@ public final class KXmlParser implements XmlPullParser {
         if (!name.equals(elementStack[sp + 3])) {
             error("expected: /" + elementStack[sp + 3] + " read: " + name);
 
-			// become case insensitive in relaxed mode
+            // become case insensitive in relaxed mode
 
             int probe = sp;
             while (probe >= 0 && !name.toLowerCase().equals(elementStack[probe + 3].toLowerCase())) {
@@ -656,7 +669,7 @@ public final class KXmlParser implements XmlPullParser {
             skip();
 
             if (peek(0) != '=') {
-				error("Attr.value missing f. "+attrName);
+                error("Attr.value missing f. "+attrName);
                 attributes[i] = "1";
             }
             else {
@@ -668,9 +681,9 @@ public final class KXmlParser implements XmlPullParser {
                     error("attr value delimiter missing!");
                     delimiter = ' ';
                 }
-				else 
-					read();
-				
+                else
+                    read();
+
                 int p = txtPos;
                 pushText(delimiter, true);
 
@@ -715,7 +728,7 @@ public final class KXmlParser implements XmlPullParser {
         elementStack[sp + 2] = name;
     }
 
-    /** 
+    /**
      * result: isWhitespace; if the setName parameter is set,
      * the name of the entity is stored in "name" */
 
@@ -723,8 +736,8 @@ public final class KXmlParser implements XmlPullParser {
         throws IOException, XmlPullParserException {
 
         push(read()); // &
-        
-        
+
+
         int pos = txtPos;
 
         while (true) {
@@ -738,9 +751,9 @@ public final class KXmlParser implements XmlPullParser {
                 && c != '_'
                 && c != '-'
                 && c != '#') {
-            	if(!relaxed){
-            		error("unterminated entity ref");
-            	}
+                if(!relaxed){
+                    error("unterminated entity ref");
+                }
                 //; ends with:"+(char)c);           
                 if (c != -1)
                     push(c);
@@ -1052,6 +1065,7 @@ public final class KXmlParser implements XmlPullParser {
                                     break;
                                 }
                             }
+                            break;
 
                         default :
                             if ((chk & 0x0ffff0000) == 0x0FEFF0000) {
@@ -1116,8 +1130,8 @@ public final class KXmlParser implements XmlPullParser {
             return version;
         if (isProp(property, true, "xmldecl-standalone"))
             return standalone;
-		if (isProp(property, true, "location"))            
-			return location != null ? location : reader.toString();
+        if (isProp(property, true, "location"))
+            return location != null ? location : reader.toString();
         return null;
     }
 
@@ -1197,15 +1211,15 @@ public final class KXmlParser implements XmlPullParser {
             buf.append(text);
         }
 
-		buf.append("@"+line + ":" + column);
-		if(location != null){
-			buf.append(" in ");
-			buf.append(location);
-		}
-		else if(reader != null){
-			buf.append(" in ");
-			buf.append(reader.toString());
-		}
+        buf.append("@"+line + ":" + column);
+        if(location != null){
+            buf.append(" in ");
+            buf.append(location);
+        }
+        else if(reader != null){
+            buf.append(" in ");
+            buf.append(reader.toString());
+        }
         return buf.toString();
     }
 
@@ -1406,9 +1420,9 @@ public final class KXmlParser implements XmlPullParser {
     public void setProperty(String property, Object value)
         throws XmlPullParserException {
         if(isProp(property, true, "location"))
-        	location = value;
+            location = value;
         else
-	        throw new XmlPullParserException("unsupported property: " + property);
+            throw new XmlPullParserException("unsupported property: " + property);
     }
 
     /**

@@ -39,7 +39,7 @@ public final class Waypoints extends List
 
     private static final String ITEM_ADD_NEW        = "Record Current";
     private static final String ITEM_SHOW_CURRENT   = "Show Destination";
-    private static final String ITEM_ENTER_MANUALY  = "Enter Manually";
+    private static final String ITEM_ENTER_MANUALY  = "Enter Custom";
     private static final String ITEM_FRIEND_HERE    = "SMS 'I Am Here'";
     private static final String ITEM_FRIEND_THERE   = "SMS 'Meet You There'";
     private static final String ITEM_CLEAR_ALL      = "Clear All";
@@ -113,6 +113,7 @@ public final class Waypoints extends List
 
         // create menu
         append(ITEM_ADD_NEW, null);
+        append(ITEM_ENTER_MANUALY, null);
         append(ITEM_SHOW_CURRENT, null);
         if (cz.kruch.track.TrackingMIDlet.isJsr120()) {
             if (navigator.isTracking()) {
@@ -120,10 +121,9 @@ public final class Waypoints extends List
             }
             append(ITEM_FRIEND_THERE, null);
         }
-        append(ITEM_ENTER_MANUALY, null);
         append(ITEM_CLEAR_ALL, null);
-        append(ITEM_LIST_ALL, null);
         append(ITEM_LOAD, null);
+        append(ITEM_LIST_ALL, null);
 
         // create commands
         removeCommand(cmdSelect);
@@ -297,6 +297,9 @@ public final class Waypoints extends List
             } else if (url.endsWith(".loc")) {
                 waypoints = parseWaypoints(_file, "LOC");
             }
+//#ifdef __LOG__
+            if (log.isEnabled()) log.debug("parsed waypoints: " + waypoints.length);
+//#endif
 
             // show result
             if (waypoints.length > 0) {
@@ -313,6 +316,10 @@ public final class Waypoints extends List
             navigator.setNavigateTo(-1);
 
         } catch (Throwable t) {
+
+//#ifdef __LOG__
+            t.printStackTrace();
+//#endif
 
             // too bad
             Desktop.showError("Failed to parse waypoints", t, null);

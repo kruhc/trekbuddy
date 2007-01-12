@@ -6,6 +6,7 @@ package cz.kruch.track.ui;
 import cz.kruch.track.event.Callback;
 import cz.kruch.track.fun.Camera;
 import cz.kruch.track.location.Waypoint;
+import cz.kruch.track.util.CharArrayTokenizer;
 
 import javax.microedition.lcdui.Form;
 import javax.microedition.lcdui.CommandListener;
@@ -227,10 +228,51 @@ public final class WaypointForm extends Form
     }
 
     private QualifiedCoordinates getCoordinates() {
-        double lat = MinDec.fromDecimalString(fieldLat.getString()).doubleValue();
-        double lon = MinDec.fromDecimalString(fieldLon.getString()).doubleValue();
+        double lat = stringToLatOrLon(fieldLat.getString());
+        double lon = stringToLatOrLon(fieldLon.getString());
 
         return new QualifiedCoordinates(lat, lon);
+    }
+
+    private static double stringToLatOrLon(String value) {
+        value = value.trim();
+        if (value.length() < 5) {
+            throw new IllegalArgumentException("Malformed coordinate: " + value);
+        }
+
+        int type, sign;
+        switch (value.charAt(0)) {
+            case 'N': {
+                sign = 1;
+            } break;
+            case 'S': {
+                sign = -1;
+            } break;
+            case 'E': {
+                sign = 1;
+            } break;
+            case 'W': {
+                sign = -1;
+            } break;
+            default:
+                throw new IllegalArgumentException("Malformed coordinate: " + value);
+        }
+
+        int idxSign = value.indexOf(cz.kruch.track.TrackingMIDlet.SIGN);
+        if (idxSign < 3) {
+            throw new IllegalArgumentException("Malformed coordinate: " + value);
+        }
+        int idxApo = value.indexOf("\'", idxSign);
+
+        double result = Integer.parseInt(value.substring(1, idxSign).trim());
+        if (idxApo == -1) {
+            result += Double.parseDouble(value.substring(idxSign + cz.kruch.track.TrackingMIDlet.SIGN.length()).trim()) / 60D;
+        } else {
+            result += Integer.parseInt(value.substring(idxSign + cz.kruch.track.TrackingMIDlet.SIGN.length(), idxApo).trim()) / 60D;
+            result += Double.parseDouble(value.substring(idxApo + 1).trim()) / 3600D;
+        }
+
+        return result * sign;
     }
 
     private static String dateToString(long time) {

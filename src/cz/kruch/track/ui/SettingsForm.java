@@ -6,7 +6,6 @@ package cz.kruch.track.ui;
 import cz.kruch.track.configuration.Config;
 import cz.kruch.track.configuration.ConfigurationException;
 import cz.kruch.track.event.Callback;
-import cz.kruch.track.util.Datum;
 
 import javax.microedition.lcdui.Displayable;
 import javax.microedition.lcdui.Form;
@@ -24,6 +23,7 @@ final class SettingsForm extends Form implements CommandListener, ItemStateListe
 
     private TextField fieldMapPath;
     private ChoiceGroup choiceMapDatum;
+    private ChoiceGroup choiceCoordinates;
     private ChoiceGroup choiceProvider;
     private ChoiceGroup choiceTracklog;
     private ChoiceGroup choiceTracklogsFormat;
@@ -46,34 +46,50 @@ final class SettingsForm extends Form implements CommandListener, ItemStateListe
 
         // default map path field
         if (cz.kruch.track.TrackingMIDlet.isFs()) {
-            fieldMapPath = new TextField("Default Map", config.getMapPath(), MAX_URL_LENGTH, TextField.URL);
+            fieldMapPath = new TextField("Startup Map", config.getMapPath(), MAX_URL_LENGTH, TextField.URL);
             append(fieldMapPath);
         }
 
         // map datum
-        choiceMapDatum = new ChoiceGroup("Map Datum", ChoiceGroup.POPUP);
-        for (int N = Datum.DATUMS.length, i = 0; i < N; i++) {
-            String id = Datum.DATUMS[i].toString();
+        choiceMapDatum = new ChoiceGroup("Default Datum", ChoiceGroup.POPUP);
+        for (int N = Config.DATUMS.length, i = 0; i < N; i++) {
+            String id = Config.DATUMS[i].getName();
             choiceMapDatum.setSelectedIndex(choiceMapDatum.append(id, null), config.getGeoDatum().equals(id));
         }
         append(choiceMapDatum);
+
+        // coordinates format
+        choiceCoordinates = new ChoiceGroup("Coordinates", ChoiceGroup.POPUP);
+        choiceCoordinates.append(Config.COORDS_MAP_LATLON, null);
+        choiceCoordinates.append(Config.COORDS_MAP_GRID, null);
+        choiceCoordinates.append(Config.COORDS_UTM, null);
+        choiceCoordinates.append(Config.COORDS_GC_LATLON, null);
+        choiceCoordinates.setSelectedFlags(new boolean[]{
+            false,
+            config.isUseGridFormat(),
+            config.isUseUTM(),
+            config.isUseGeocachingFormat()
+        });
+        append(choiceCoordinates);
 
         // desktop settings
         choiceMisc = new ChoiceGroup("Desktop", ChoiceGroup.MULTIPLE);
         choiceMisc.append("fullscreen", null);
         choiceMisc.append("no sounds", null);
-        choiceMisc.append("geocaching format", null);
-        choiceMisc.append("UTM coordinates", null);
+        choiceMisc.append("decimal precision", null);
+        choiceMisc.append("HPS wpt true azimuth", null);
+        choiceMisc.append("OSD basic", null);
         choiceMisc.append("OSD extended", null);
         choiceMisc.append("OSD no background", null);
-        choiceMisc.append("OSD larger font", null);
+        choiceMisc.append("OSD medium font", null);
         choiceMisc.append("OSD bold font", null);
         choiceMisc.append("OSD black color", null);
         choiceMisc.setSelectedFlags(new boolean[] {
             config.isFullscreen(),
             config.isNoSounds(),
-            config.isUseGeocachingFormat(),
-            config.isUseUTM(),
+            config.isDecimalPrecision(),
+            config.isHpsWptTrueAzimuth(),
+            config.isOsdBasic(),
             config.isOsdExtended(),
             config.isOsdNoBackground(),
             config.isOsdMediumFont(),
@@ -84,7 +100,7 @@ final class SettingsForm extends Form implements CommandListener, ItemStateListe
             append(choiceMisc);
 //        }
 
-        // desktop settings
+        // tweaks
         choicePerformance = new ChoiceGroup("Tweaks", ChoiceGroup.MULTIPLE);
         choicePerformance.append("optimistic I/O", null);
         choicePerformance.append("S60 renderer", null);
@@ -210,16 +226,22 @@ final class SettingsForm extends Form implements CommandListener, ItemStateListe
             choiceMisc.getSelectedFlags(misc);
             config.setFullscreen(misc[0]);
             config.setNoSounds(misc[1]);
-            config.setUseGeocachingFormat(misc[2]);
-            config.setUseUTM(misc[3]);
-            config.setOsdExtended(misc[4]);
-            config.setOsdNoBackground(misc[5]);
-            config.setOsdMediumFont(misc[6]);
-            config.setOsdBoldFont(misc[7]);
-            config.setOsdBlackColor(misc[8]);
+            config.setDecimalPrecision(misc[2]);
+            config.setHpsWptTrueAzimuth(misc[3]);
+            config.setOsdBasic(misc[4]);
+            config.setOsdExtended(misc[5]);
+            config.setOsdNoBackground(misc[6]);
+            config.setOsdMediumFont(misc[7]);
+            config.setOsdBoldFont(misc[8]);
+            config.setOsdBlackColor(misc[9]);
             Desktop.resetFont();
             // datum
-            config.setGeoDatum(Datum.use(choiceMapDatum.getString(choiceMapDatum.getSelectedIndex())));
+            config.setGeoDatum(Config.useDatum(choiceMapDatum.getString(choiceMapDatum.getSelectedIndex())));
+            // coordinates format ('==' is ok for comparison)
+            String fmt = choiceCoordinates.getString(choiceCoordinates.getSelectedIndex());
+            config.setUseGridFormat(Config.COORDS_MAP_GRID == fmt);
+            config.setUseUTM(Config.COORDS_UTM == fmt);
+            config.setUseGeocachingFormat(Config.COORDS_GC_LATLON == fmt);
             // desktop
             boolean[] perf = new boolean[choicePerformance.size()];
             choicePerformance.getSelectedFlags(perf);
@@ -231,7 +253,7 @@ final class SettingsForm extends Form implements CommandListener, ItemStateListe
             if ("Save".equals(command.getLabel())) {
                 try {
                     // update config
-                    config.update();
+                    config.update(0);
 
                     // show confirmation
                     Desktop.showConfirmation("Configuration saved.", Desktop.screen);
@@ -254,7 +276,7 @@ final class SettingsForm extends Form implements CommandListener, ItemStateListe
 
         for (int i = size(); --i >= 0; ) {
             Item item = get(i);
-            if (fieldMapPath == item || choiceProvider == item || choiceMisc == item || choicePerformance == item || choiceMapDatum == item/*|| (dX == item || dY == item || dZ == item)*/)
+            if (fieldMapPath == item || choiceProvider == item || choiceMisc == item || choicePerformance == item || choiceCoordinates == item || choiceMapDatum == item)
                 continue;
             if (soft) {
                 if (fieldSimulatorDelay == item || fieldLocationInterval == item || choiceFriends == item || choiceTracklog == item)
@@ -268,10 +290,11 @@ final class SettingsForm extends Form implements CommandListener, ItemStateListe
         }
 
         String provider = choiceProvider.getString(choiceProvider.getSelectedIndex());
-        boolean tracklogsOn = !Config.TRACKLOG_NEVER.equals(choiceTracklog.getString(choiceTracklog.getSelectedIndex()));
+        boolean isFs = cz.kruch.track.TrackingMIDlet.isFs();
+        boolean tracklogsOn = isFs && !Config.TRACKLOG_NEVER.equals(choiceTracklog.getString(choiceTracklog.getSelectedIndex()));
 
         if (Config.LOCATION_PROVIDER_SIMULATOR.equals(provider)) {
-            if (cz.kruch.track.TrackingMIDlet.isFs()) {
+            if (isFs) {
                 if (!soft) {
                     append(fieldSimulatorDelay);
                     append(choiceTracklog);
@@ -287,7 +310,7 @@ final class SettingsForm extends Form implements CommandListener, ItemStateListe
                 }
                 append(choiceFriends);
             }
-            if (cz.kruch.track.TrackingMIDlet.isFs()) {
+            if (isFs) {
                 if (!soft) {
                     append(choiceTracklog);
                 }

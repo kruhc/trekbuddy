@@ -96,11 +96,15 @@ public final class BufferedInputStream extends /* FilterInputStream */ InputStre
      * @throws IllegalArgumentException if size <= 0.
      */
     public BufferedInputStream(InputStream in, int size) {
-        this.in = in; /* super(in); */
+        if (in == null) {
+            throw new IllegalArgumentException("Underlying stream is null");
+        }
         if (size <= 0) {
             throw new IllegalArgumentException("Buffer size <= 0");
         }
-        buf = new byte[size];
+
+        this.in = in; /* super(in); */
+        this.buf = new byte[size];
 
         // prepare lie
         if (useAvailableLie) {

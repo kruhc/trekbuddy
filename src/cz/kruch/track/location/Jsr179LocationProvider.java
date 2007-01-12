@@ -20,16 +20,35 @@ public class Jsr179LocationProvider extends api.location.LocationProvider {
 
     public int start() throws api.location.LocationException {
         try {
+            // prepare criteria
+            int timeout = -1;
+            int interval = Config.getSafeInstance().getLocationInterval();
             javax.microedition.location.Criteria criteria = new javax.microedition.location.Criteria();
-            criteria.setAltitudeRequired(true);
-            criteria.setSpeedAndCourseRequired(true);
+
+            // adjust criteria for current device
+//#ifdef __A780__
+            if (cz.kruch.track.TrackingMIDlet.isA780()) {
+                /* from http://www.kiu.weite-welt.com/de.schoar.blog/?p=186 */
+                interval = timeout = 2;
+                /* from bikeator */
+                criteria.setHorizontalAccuracy(javax.microedition.location.Criteria.NO_REQUIREMENT);
+                criteria.setPreferredPowerConsumption(javax.microedition.location.Criteria.POWER_USAGE_HIGH);
+            }
+            else
+//#endif            
+            {
+                criteria.setAltitudeRequired(true);
+                criteria.setSpeedAndCourseRequired(true);
+            }
+
+            // init provider
             impl = javax.microedition.location.LocationProvider.getInstance(criteria);
             if (impl == null) {
                 impl = javax.microedition.location.LocationProvider.getInstance(null);
                 setException(new api.location.LocationException("Default criteria used"));
             }
-            impl.setLocationListener(adapter, Config.getSafeInstance().getLocationInterval(),
-                                     -1, -1);
+            impl.setLocationListener(adapter, interval, timeout, -1);
+
         } catch (Exception e) {
             throw new api.location.LocationException(e);
         }
@@ -75,20 +94,24 @@ public class Jsr179LocationProvider extends api.location.LocationProvider {
                 float spd = l.getSpeed();
                 float alt = xc.getAltitude();
                 float course = l.getCourse();
-                if (cz.kruch.track.TrackingMIDlet.isSxg75()) {
-                    if (Float.isNaN(spd)) {
-                        spd = -1F;
-                    } else {
-                        spd *= 2;
-                    }
-                    if (Float.isNaN(alt)) {
-                        alt = -1F;
-                    } else {
-                        alt -= 540;
-                    }
-                    if (Float.isNaN(course)) {
-                        course = -1F;
-                    }
+
+                if (Float.isNaN(spd)) {
+                    spd = -1F;
+                } else if (cz.kruch.track.TrackingMIDlet.isSxg75()) {
+                    spd *= 2;
+                }
+//#ifdef __A780__
+                  else if (cz.kruch.track.TrackingMIDlet.isA780()) {
+                    spd *= 2;
+                }
+//#endif
+                if (Float.isNaN(alt)) {
+                    alt = -1F;
+                } else if (cz.kruch.track.TrackingMIDlet.isSxg75()) {
+                    alt -= 540;
+                }
+                if (Float.isNaN(course)) {
+                    course = -1F;
                 }
 
                 // create up-to-date location

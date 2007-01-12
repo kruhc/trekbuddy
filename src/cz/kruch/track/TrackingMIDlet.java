@@ -3,6 +3,8 @@
 
 package cz.kruch.track;
 
+import cz.kruch.track.ui.NavigationScreens;
+
 import javax.microedition.midlet.MIDlet;
 import javax.microedition.midlet.MIDletStateChangeException;
 import javax.microedition.lcdui.Display;
@@ -10,19 +12,10 @@ import javax.microedition.lcdui.Image;
 
 import java.io.UnsupportedEncodingException;
 import java.io.IOException;
-import java.util.Vector;
 
 public class TrackingMIDlet extends MIDlet implements Runnable {
     private static String APP_NAME = cz.kruch.track.ui.Desktop.APP_TITLE + " (C) 2006 KrUcH";
     private static String APP_WWW = "www.trekbuddy.net";
-
-    public static final int FS_UNKNOWN = -1;
-    public static final int FS_NONE    = 0;
-    public static final int FS_JSR75   = 1;
-    public static final int FS_SIEMENS = 2;
-    public static final int FS_SXG75   = 3;
-
-    private static int fsType = FS_UNKNOWN;
 
     private cz.kruch.track.ui.Desktop desktop;
 
@@ -36,6 +29,9 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
     private static boolean jsr135;
     private static boolean fs;
     private static boolean sxg75;
+//#ifdef __A780__
+    private static boolean a780;
+//#endif
 //#ifdef __S65__
     private static boolean s65;
 //#endif
@@ -46,19 +42,33 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
     // image cache
     public static Image/*[]*/ courses, courses2;
     public static Image waypoint;
-    /*public static Image point, point2, pointAvg;*/
     public static Image/*[]*/ crosshairs;
     public static Image/*[]*/ providers;
 
     // common vars
     public static String SIGN = "^";
-    public static final Vector KNOWN_EXTENSIONS = new Vector();
     public static final double SINS[] = new double[90 + 1];
-    public static double[][] ranges;
-    public static String[] rangesStr;
+    public static final int[] ranges = {
+        500, 250, 100, 50, 25, 10, 5
+    };
+    public static final String[] rangesStr = {
+        "500 m", "250 m", "100 m", "50 m", "25 m", "10 m", "5 m"
+    };
+    public static final String[] nStr = {
+         "0*",  "1*",  "2*",  "3*",  "4*",  "5*",  "6*",  "7*",  "8*",  "9*",
+        "10*", "11*", "12*", "13*", "14*", "15*", "16*", "17*", "18*", "19*",
+        "20*", "21*", "22*", "23*", "24*"
+    };
 
     public TrackingMIDlet() {
         this.desktop = null;
+
+        final int FS_UNKNOWN = -1;
+        final int FS_NONE    = 0;
+        final int FS_JSR75   = 1;
+        final int FS_SIEMENS = 2;
+        final int FS_SXG75   = 3;
+        final int FS_MOTOROLA = 4;
 
         // init common vars
         try {
@@ -66,48 +76,61 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
             SIGN = new String(new byte[]{ (byte) 0xc2, (byte) 0xb0 }, "UTF-8");
         } catch (UnsupportedEncodingException e) {
         }
-        KNOWN_EXTENSIONS.addElement("gmi");
-        KNOWN_EXTENSIONS.addElement("map");
-        KNOWN_EXTENSIONS.addElement("xml");
-        KNOWN_EXTENSIONS.addElement("j2n");
-        for (int N = SINS.length, i = 0; i < N; i++) {
+        for (int i = 0; i <= 90; i++) {
             SINS[i] = Math.sin(Math.toRadians(i));
         }
 
         // detect environment
         TrackingMIDlet.platform = System.getProperty("microedition.platform");
         TrackingMIDlet.flags = getAppProperty("App-Flags");
+//#ifdef __LOG__
         TrackingMIDlet.logEnabled = "true".equals(getAppProperty("Log-Enable"));
+//#endif
         try {
             Class clazz = Class.forName("javax.microedition.location.LocationProvider");
             TrackingMIDlet.jsr179 = true;
+//#ifdef __LOG__
+            System.out.println("* JSR-179");
+//#endif
         } catch (ClassNotFoundException e) {
         } catch (NoClassDefFoundError e) {
         }
         try {
             Class clazz = Class.forName("javax.bluetooth.DiscoveryAgent");
             TrackingMIDlet.jsr82 = true;
+//#ifdef __LOG__
+            System.out.println("* JSR-82");
+//#endif
         } catch (ClassNotFoundException e) {
         } catch (NoClassDefFoundError e) {
         }
         try {
             Class clazz = Class.forName("javax.wireless.messaging.TextMessage");
             TrackingMIDlet.jsr120 = true;
+//#ifdef __LOG__
+            System.out.println("* JSR-120");
+//#endif
         } catch (ClassNotFoundException e) {
         } catch (NoClassDefFoundError e) {
         }
         try {
             Class clazz = Class.forName("javax.microedition.media.Manager");
             TrackingMIDlet.jsr135 = "true".equals(System.getProperty("supports.video.capture"));
+//#ifdef __LOG__
+            System.out.println("* JSR-135");
+//#endif
         } catch (ClassNotFoundException e) {
         } catch (NoClassDefFoundError e) {
         }
 
         // fs type
-        fsType = FS_UNKNOWN;
+        int fsType = FS_UNKNOWN;
         try {
             Class clazz = Class.forName("javax.microedition.io.file.FileConnection");
             fsType = FS_JSR75;
+//#ifdef __LOG__
+            System.out.println("* JSR-75/FC");
+//#endif
         } catch (ClassNotFoundException e) {
         } catch (NoClassDefFoundError e) {
         }
@@ -120,13 +143,25 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
             }
         }
         if (fsType == FS_UNKNOWN) {
+            try {
+                Class clazz = Class.forName("com.motorola.io.FileConnection");
+                fsType = FS_MOTOROLA;
+            } catch (ClassNotFoundException e) {
+            } catch (NoClassDefFoundError e) {
+            }
+        }
+        if (fsType == FS_UNKNOWN) {
             fsType = FS_NONE;
         }
         TrackingMIDlet.fs = fsType > FS_NONE;
 
+        // detect brand/device
         sxg75 = "SXG75".equals(platform);
         nokia = platform.startsWith("Nokia");
         sonyEricsson = System.getProperty("com.sonyericsson.imei") != null;
+//#ifdef __A780__
+        a780 = "j2me".equals(platform);
+//#endif
 //#ifdef __S65__
         s65 = "S65".equals(platform);
 //#endif
@@ -176,60 +211,15 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
     public void run() {
         // init image cache
         try {
-/*
-            courses = new Image[]{
-                Image.createImage("/resources/course_0.png"),
-                Image.createImage("/resources/course_10.png"),
-                Image.createImage("/resources/course_20.png"),
-                Image.createImage("/resources/course_30.png"),
-                Image.createImage("/resources/course_40.png"),
-                Image.createImage("/resources/course_50.png"),
-                Image.createImage("/resources/course_60.png"),
-                Image.createImage("/resources/course_70.png"),
-                Image.createImage("/resources/course_80.png")
-            };
-*/
             courses = Image.createImage("/resources/courses.png");
             courses2 = Image.createImage("/resources/courses2.png");
             waypoint = Image.createImage("/resources/wpt.png");
-/*
-            point = Image.createImage("/resources/lpt_green.png");
-            point2 = Image.createImage("/resources/lpt_blue.png");
-            pointAvg = Image.createImage("/resources/lpt_yellow.png");
-            crosshairs = new Image[] {
-                Image.createImage("/resources/crosshair_tp_full.png"),
-                Image.createImage("/resources/crosshair_tp_white.png"),
-                Image.createImage("/resources/crosshair_tp_grey.png")
-            };
-            providers = new Image[]{
-                Image.createImage("/resources/s_blue.png"),
-                Image.createImage("/resources/s_green.png"),
-                Image.createImage("/resources/s_orange.png"),
-                Image.createImage("/resources/s_red.png")
-            };
-*/
             crosshairs = Image.createImage("/resources/crosshairs.png");
             providers = Image.createImage("/resources/bullets.png");
+            NavigationScreens.initialize();
         } catch (IOException e) {
 //                throw new MIDletStateChangeException(e.toString());
         }
-
-        // init constants
-        ranges = new double[][]{
-/*  0^ */   { 0.0045, 0.00225, 0.0009, 0.00045, 0.000225, 0.00009, 0.000045 },
-/* 10^ */   { 0.0045694, 0.0022847, 0.0009139, 0.00045694, 0.00022847, 0.00009139, 0.000045694 },
-/* 20^ */   { 0.0047889, 0.002394, 0.000958, 0.000478, 0.0002394, 0.0000958, 0.0000478 },
-/* 30^ */   { 0.0051958, 0.0025981, 0.0010392, 0.00051958, 0.00025981, 0.00010392, 0.000051958 },
-/* 40^ */   { 0.0058778, 0.0029444, 0.001175, 0.0005872, 0.0002936, 0.0001175, 0.0000589 },
-/* 50^ */   { 0.007, 0.0035, 0.0014, 0.0007, 0.00035, 0.00014, 0.00007 },
-/* 60^ */   { 0.009, 0.0045, 0.0018, 0.0009, 0.00045, 0.00018, 0.00009 },
-/* 70^ */   { 0.0131583, 0.0065778, 0.0026333, 0.0013158, 0.0006577, 0.0002633, 0.00013158 },
-/* 80^ */   { 0.02597, 0.012958, 0.005194, 0.002597, 0.0012958, 0.0005194, 0.0002597 },
-/* 90^ */   { 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 }
-            };
-        rangesStr = new String[]{
-                "500 m", "250 m", "100 m", "50 m", "25 m", "10 m", "5 m"
-        };
 
         Display display = Display.getDisplay(this);
 
@@ -237,7 +227,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         TrackingMIDlet.numAlphaLevels = display.numAlphaLevels();
 
         // 1. show boot screen
-        cz.kruch.track.ui.Console console = new cz.kruch.track.ui.Console();
+        cz.kruch.track.ui.Console console = new cz.kruch.track.ui.Console(display);
         display.setCurrent(console);
         console.show(APP_NAME);
         console.show(APP_WWW);
@@ -256,6 +246,11 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
 
         // 2a. preinit
         cz.kruch.j2se.io.BufferedInputStream.useAvailableLie = cz.kruch.track.configuration.Config.getSafeInstance().isOptimisticIo();
+//#ifdef __A780__
+        if (a780) {
+            cz.kruch.track.ui.Desktop.partialFlush = false;
+        }
+//#endif
 //#ifdef __S65__
         if (s65) {
             cz.kruch.j2se.io.BufferedInputStream.useAvailableLie = false;
@@ -265,6 +260,8 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
 //#ifdef __LOG__
         System.out.println("* use available lie? " + cz.kruch.j2se.io.BufferedInputStream.useAvailableLie);
 //#endif
+        cz.kruch.track.configuration.Config.initDatums(this);
+        cz.kruch.track.util.Mercator.initialize();
 
         // 3. create desktop
         desktop = new cz.kruch.track.ui.Desktop(this);
@@ -339,6 +336,12 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         return sxg75;
     }
 
+//#ifdef __A780__
+    public static boolean isA780() {
+        return a780;
+    }
+//#endif
+
 //#ifdef __S65__
     public static boolean isS65() {
         return s65;
@@ -367,5 +370,54 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
 
     public static int numAlphaLevels() {
         return numAlphaLevels;
+    }
+
+    public static int asin(double sina) {
+        if (sina < 0D) {
+            throw new IllegalArgumentException("Invalid sin(a) value: " + sina);
+        }
+        if (sina > 1D) {
+            return 90;
+        }
+
+        float step = 23;
+        int direction = 0;
+        int cycles = 0;
+        double[] sins = SINS;
+        int i = 45;
+
+        for ( ; i >= 0 && i <= 90; ) {
+            boolean b;
+            if (sins[i] > sina) {
+                b = direction != 0 && direction != -1;
+                direction = -1;
+                i -= step;
+            } else if (sins[i] < sina) {
+                b = direction != 0 && direction != 1;
+                direction = 1;
+                i += step;
+            } else {
+                return i;
+            }
+
+            if (step == 1 && b) {
+                return i;
+            }
+
+            if (!b) {
+                step /= 2;
+            } else {
+                step--;
+            }
+            if (step < 1) {
+                step = 1;
+            }
+
+            if (cycles++ > 25) {
+                throw new IllegalStateException("asin(a) failure - too many cycles");
+            }
+        }
+
+        return i;
     }
 }

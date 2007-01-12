@@ -4,10 +4,10 @@
 package cz.kruch.track.ui;
 
 import javax.microedition.lcdui.Displayable;
-import javax.microedition.lcdui.Form;
-import javax.microedition.lcdui.StringItem;
 import javax.microedition.lcdui.Command;
 import javax.microedition.lcdui.CommandListener;
+import javax.microedition.lcdui.Alert;
+import javax.microedition.lcdui.AlertType;
 
 public final class YesNoDialog implements CommandListener {
 
@@ -27,12 +27,11 @@ public final class YesNoDialog implements CommandListener {
     }
 
     public void show(String question, String item) {
-        Form form = new Form("YesNo");
-        form.append(new StringItem(question, item));
-        form.addCommand(new Command("Yes", Command.OK, 1));
-        form.addCommand(new Command("No", Command.CANCEL, 1));
-        form.setCommandListener(this);
-        Desktop.display.setCurrent(form);
+        Alert dialog = new Alert(null, question, null, null);
+        dialog.addCommand(new Command("Yes", Command.OK, 1));
+        dialog.addCommand(new Command("No", Command.CANCEL, 1));
+        dialog.setCommandListener(this);
+        Desktop.display.setCurrent(dialog);
     }
 
     public void commandAction(final Command command, Displayable displayable) {

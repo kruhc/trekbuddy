@@ -8,6 +8,8 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 
 public final class LineReader extends InputStreamReader {
+    public static final String EMPTY_LINE = "";
+
     private char[] buffer;
     private int count, offset;
 
@@ -45,19 +47,25 @@ public final class LineReader extends InputStreamReader {
             } else {
                 c = _buffer[offset++];
             }
+
             if (c == -1) {
                 break;
             }
-            if ((c == '\n') || (c == '\r')) {
+
+            if (c == '\r') {
+                // do nothing, \n should follow
+            } else if (c == '\n') {
                 if (chars > 0 || sb != null) {
                     break;
                 }
+                return EMPTY_LINE;
             } else {
                 if (start < 0) {
                     start = offset - 1;
                 }
                 chars++;
             }
+
             if (chars > 512) {
                 throw new IllegalStateException("Line length > 512");
             }

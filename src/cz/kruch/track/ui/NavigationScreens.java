@@ -6,14 +6,17 @@ import javax.microedition.lcdui.game.Sprite;
 import javax.microedition.lcdui.Graphics;
 import javax.microedition.lcdui.Image;
 
-final class NavigationScreens {
+import api.location.LocationProvider;
+
+public final class NavigationScreens {
     private static int arrowSize, arrowSize2;
     private static int wptSize2;
+    public static int bulletSize;
 
     public static void drawArrow(Graphics graphics, float course,
                                  int x, int y, int anchor) {
         int ti;
-        int courseInt = (int) course;
+        int courseInt = ((int) course) % 360;
         switch (courseInt / 90) {
             case 0:
                 ti = Sprite.TRANS_NONE;
@@ -87,9 +90,19 @@ final class NavigationScreens {
                            x - wptSize2, y - wptSize2, anchor);
     }
 
-    static void initialize() {
+    public static void drawProviderStatus(Graphics graphics, int status,
+                                          int x, int y, int anchor) {
+        int ci = status < LocationProvider._CANCELLED ? status : LocationProvider.OUT_OF_SERVICE;
+
+        graphics.drawRegion(cz.kruch.track.TrackingMIDlet.providers,
+                            ci * bulletSize, 0, bulletSize, bulletSize,
+                            Sprite.TRANS_NONE, x, y, anchor);
+    }
+
+    public static void initialize() {
         arrowSize = cz.kruch.track.TrackingMIDlet.courses/*[0]*/.getHeight();
         arrowSize2 = arrowSize >> 1;
         wptSize2 = cz.kruch.track.TrackingMIDlet.waypoint.getWidth() >> 1;
+        bulletSize = cz.kruch.track.TrackingMIDlet.providers/*[0]*/.getHeight();
     }
 }

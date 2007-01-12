@@ -17,6 +17,7 @@ import java.util.Vector;
 
 import cz.kruch.track.configuration.Config;
 import cz.kruch.track.event.Callback;
+import cz.kruch.track.maps.Map;
 
 public final class InfoForm extends Form implements CommandListener, Callback {
     private Vector caches;
@@ -27,7 +28,7 @@ public final class InfoForm extends Form implements CommandListener, Callback {
         this.caches = new Vector();
     }
 
-    public void show(Desktop desktop, LocationException le, Object ps) {
+    public void show(Desktop desktop, LocationException le, Object ps, Map map) {
         // gc (for memory info to be correct)
         System.gc();
         long totalMemory = Runtime.getRuntime().totalMemory();
@@ -39,10 +40,15 @@ public final class InfoForm extends Form implements CommandListener, Callback {
         // items
         append(new StringItem("Platform", cz.kruch.track.TrackingMIDlet.getPlatform()));
         append(new StringItem("Memory", Long.toString(totalMemory) + "/" + Long.toString(freeMemory)));
+        append(new StringItem("ExtraJsr", (cz.kruch.track.TrackingMIDlet.isJsr179() ? "179 " : "")
+                                   + (cz.kruch.track.TrackingMIDlet.isJsr82() ? "82 " : "")
+                                   + (cz.kruch.track.TrackingMIDlet.isJsr135() ? "135" : "")));
         append(new StringItem("AppFlags", cz.kruch.track.TrackingMIDlet.getFlags()));
+        append(new StringItem("Ports", System.getProperty("microedition.commports")));
         append(new StringItem("TimeZone", TimeZone.getDefault().getID() + "; " + TimeZone.getDefault().useDaylightTime() + "; " + TimeZone.getDefault().getRawOffset()));
-        append(new StringItem("Jsr75/Fc", "resetable? " + Integer.toString(cz.kruch.track.maps.Map.fileInputStreamResetable) + "; read-skip? " + com.ice.tar.TarInputStream.useReadSkip));
+        append(new StringItem("Jsr75/Fc", (cz.kruch.track.TrackingMIDlet.isFs() ? "OK; " : "") + "resetable? " + Integer.toString(cz.kruch.track.maps.Map.fileInputStreamResetable) + "; read-skip? " + com.ice.tar.TarInputStream.useReadSkip));
         append(new StringItem("Desktop", "S60 renderer? " + Config.getSafeInstance().isS60renderer() + "; hasRepeatEvents? " + desktop.hasRepeatEvents()));
+        append(new StringItem("Map", "datum: " + map.getDatum() + " projection: " + map.getProjection()));
         cachesItem = new StringItem("Caches", Integer.toString(caches.size()));
         append(cachesItem);
         append(new StringItem("ProviderStatus", (ps == null ? "" : ps.toString()) + "; syncs=" + cz.kruch.track.location.StreamReadingLocationProvider.syncs + "; mismatches=" + cz.kruch.track.location.StreamReadingLocationProvider.mismatches));

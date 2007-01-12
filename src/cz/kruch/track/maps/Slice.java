@@ -63,14 +63,6 @@ public final class Slice {
         return calibration.getPath();
     }
 
-    public void gpskaFix() {
-        calibration.gpskaFix();
-/*
-        x = calibration.x;
-        y = calibration.y;
-*/
-    }
-
     public void doFinal(int mapWidth, int mapHeight, int xi, int yi) {
         Calibration.Best _calibration = calibration;
         _calibration.fixDimension(mapWidth, mapHeight, xi, yi);

@@ -24,7 +24,8 @@ public final class FileBrowser extends List implements CommandListener, Runnable
     private static final Logger log = new Logger("FileBrowser");
 //#endif
 
-    private final static String PARENT_DIR      = "..";
+    private static final String PARENT_DIR = "..";
+    private static final String FILE_PROTOCOL = "file://";
 
     private Callback callback;
     private Displayable next;
@@ -36,14 +37,16 @@ public final class FileBrowser extends List implements CommandListener, Runnable
     private volatile api.file.File file;
     private volatile String path;
     private volatile int depth = 0;
+    private FilenameComparator comparator;
 
     public FileBrowser(String title, Callback callback, Displayable next) {
         super(title, List.IMPLICIT);
         this.callback = callback;
         this.next = next;
-        this.cmdCancel = new Command("Cancel", Command.BACK, 1);
+        this.cmdCancel = new Command("Cancel", Command.CANCEL, 1);
         this.cmdBack = new Command("Back", Command.BACK, 1);
         this.cmdSelect = new Command("Select", Command.SCREEN, 1);
+        this.comparator = new FilenameComparator();
         setCommandListener(this);
         Desktop.display.setCurrent(this);
     }
@@ -57,8 +60,10 @@ public final class FileBrowser extends List implements CommandListener, Runnable
     }
 
     public void run() {
-        if (depth == 0) {
-            try {
+        try {
+            if (depth == 0) {
+
+                // close existing fc
                 if (file != null) {
 //#ifdef __LOG__
                     if (log.isEnabled()) log.debug("close existing fc");
@@ -66,42 +71,103 @@ public final class FileBrowser extends List implements CommandListener, Runnable
                     try {
                         file.close();
                     } catch (IOException e) {
+                        // ignore
                     }
-                }
-                file = null;
 
+                    // gc hint
+                    file = null;
+                }
+
+                // list fs roots
                 show(api.file.File.listRoots());
 
 //#ifdef __LOG__
                 if (log.isEnabled()) log.debug("scanner thread exits");
 //#endif
-            } catch (Throwable t) {
-                quit(t);
-            }
-        } else {
-            try {
+
+            } else {
+
+                // dir flag
                 boolean isDir;
 
+                // start browsing
                 if (file == null) {
-                    file = new api.file.File(Connector.open("file:///" + path, Connector.READ));
-                    isDir = file.isDirectory();
-                } else {
-                    file.setFileConnection(path);
-                    isDir = file.getURL().endsWith(api.file.File.FILE_SEPARATOR);
-                }
-
-                if (isDir) {
-                    show(file.list());
-                } else {
-                    quit(null);
-                }
-            } catch (Throwable t) {
 //#ifdef __LOG__
-                if (log.isEnabled()) log.error("browse error", t);
+                    if (log.isEnabled()) log.debug("start browsing " + path);
 //#endif
 
-                quit(t);
+                    // open root dir
+                    file = new api.file.File(Connector.open(FILE_PROTOCOL + (path.startsWith("/") ? "" : "/") + path, Connector.READ));
+                    isDir = file.isDirectory();
+
+                } else { // traverse
+//#ifdef __LOG__
+                    if (log.isEnabled()) log.debug("goto " + path);
+//#endif
+                    // handle broken devices
+                    boolean brokenTraversal = false;
+//#ifdef __A780__
+                    brokenTraversal = cz.kruch.track.TrackingMIDlet.isA780();
+//#else
+                    brokenTraversal = cz.kruch.track.TrackingMIDlet.isSxg75();
+//#endif
+                    if (brokenTraversal) {
+                        String url = file.getURL();
+                        if (PARENT_DIR.equals(path)) {
+                            path = "";
+                            url = url.substring(0, url.length() - 1);
+                            url = url.substring(0, url.lastIndexOf('/') + 1);
+                        }
+//#ifdef __A780__
+                          else {
+                            if (url.endsWith("/") && path.startsWith("/")) {
+                                url = url.substring(0, url.length() - 1);
+                            }
+                        }
+//#endif
+//#ifdef __LOG__
+                        if (log.isEnabled()) log.error("SXG75 hack; url: " + url + "+" + path);
+//#endif
+
+                        // close existing file
+                        try {
+                            file.close();
+                        } catch (IOException e) {
+                            // ignore
+                        }
+                        file = null; // gc hint
+
+                        // open new fc
+                        file = new api.file.File(Connector.open(url + path, Connector.READ));
+                        isDir = file.isDirectory();
+
+                    } else {
+
+                        // use traversal capability
+                        file.setFileConnection(path);
+                        isDir = file.getURL().endsWith(api.file.File.FILE_SEPARATOR);
+
+                    }
+                }
+
+//#ifdef __LOG__
+                if (log.isEnabled()) log.error("isDir? " + isDir);
+//#endif
+
+                // list dir content
+                if (isDir) {
+                    show(file.list());
+                } else { // otherwise we got a file selected
+                    quit(null);
+                }
             }
+        } catch (Throwable t) {
+//#ifdef __LOG__
+            if (log.isEnabled()) log.error("browse error", t);
+//#endif
+
+            // quit with throwable
+            quit(t);
         }
     }
 
@@ -110,6 +176,7 @@ public final class FileBrowser extends List implements CommandListener, Runnable
         if (log.isEnabled()) log.debug("show; depth = " + depth);
 //#endif
 
+        // menu options
         deleteAll();
         removeCommand(cmdCancel);
         removeCommand(cmdBack);
@@ -118,22 +185,23 @@ public final class FileBrowser extends List implements CommandListener, Runnable
             append(PARENT_DIR, null);
         }
 
-/*
-        while (entries.hasMoreElements()) {
-            append(entries.nextElement().toString(), null);
-        }
-*/
-
         /*
-         * Directories first, then files.
+         * Sort items - directories first, then files.
          */
+
+        // 1. enumeration to vector
         Vector v = new Vector();
         while (entries.hasMoreElements()) {
-            v.addElement(entries.nextElement());
+            v.addElement((String) entries.nextElement());
         }
+
+        // 2. vector to array
         String[] array = new String[v.size()];
         v.copyInto(array);
-        Arrays.sort(array, new FilenameComparator());
+        v = null; // gc hint
+
+        // sort array
+        Arrays.sort(array, comparator);
         for (int N = array.length, i = 0; i < N; i++) {
             append(array[i], null);
         }
@@ -170,6 +238,9 @@ public final class FileBrowser extends List implements CommandListener, Runnable
     }
 
     private void quit(Throwable throwable) {
+        // gc hint
+        comparator = null;
+
         // show parent
         Desktop.display.setCurrent(next);
 

@@ -6,7 +6,6 @@ package cz.kruch.track.ui;
 import cz.kruch.track.maps.Map;
 import cz.kruch.track.maps.InvalidMapException;
 import cz.kruch.track.maps.Atlas;
-import cz.kruch.track.maps.Calibration;
 import cz.kruch.track.maps.io.LoaderIO;
 import cz.kruch.track.configuration.Config;
 import cz.kruch.track.configuration.ConfigurationException;
@@ -16,11 +15,10 @@ import cz.kruch.track.location.Navigator;
 //#ifdef __LOG__
 import cz.kruch.track.util.Logger;
 //#endif
-import cz.kruch.track.util.Datum;
+import cz.kruch.track.util.CharArrayTokenizer;
 import cz.kruch.track.event.Callback;
 import cz.kruch.track.AssertionFailedException;
 import cz.kruch.track.fun.Friends;
-import cz.kruch.j2se.util.StringTokenizer;
 
 import javax.microedition.lcdui.Canvas;
 import javax.microedition.lcdui.Display;
@@ -111,22 +109,23 @@ public final class Desktop extends GameCanvas
     private int mode = 0;
 
     // LSM/MSK commands
-    private Command cmdFocus; // hope for MSK
-    private Command cmdRun;
-    private Command cmdRunLast;
+//    private Command cmdFocus; // hope for MSK
+    private Command cmdRun, cmdRunLast, cmdStop;
     private Command cmdLoadMap;
     private Command cmdLoadAtlas;
     private Command cmdSettings;
     private Command cmdInfo;
     private Command cmdExit;
     // RSK commands
-    private Command cmdOSD;
+//    private Command cmdOSD;
+    private Command cmdPause, cmdContinue;
 
     // for faster movement
     private volatile int scrolls = 0;
 
     // browsing or tracking
     private boolean browsing = true;
+    private boolean paused;
 
     // loading states and last-op message
     private volatile boolean initializingMap = true;
@@ -179,8 +178,8 @@ public final class Desktop extends GameCanvas
         } catch (UnsupportedEncodingException e) {
         }
         resetFont();
-        Datum.use(Config.getSafeInstance().getGeoDatum());
-        NavigationScreens.initialize();
+        Config cfg = Config.getSafeInstance();
+        Config.useDatum(cfg.getGeoDatum());
         this.midlet = midlet;
         this.repeatedKeyChecker = new Timer();
 //#ifdef __S65__
@@ -188,7 +187,7 @@ public final class Desktop extends GameCanvas
 //#endif
 
         // adjust appearance
-        this.setFullScreenMode(Config.getSafeInstance().isFullscreen());
+        this.setFullScreenMode(cfg.isFullscreen());
         this.setTitle(APP_TITLE);
 
         // start renderer
@@ -197,28 +196,35 @@ public final class Desktop extends GameCanvas
         this.renderer.start();
 
         // create and add commands to the screen
-        this.cmdOSD = new Command("OSD", Command.BACK, 1);
-        this.cmdFocus = new Command("Track", Command.SCREEN, 1); // hope for MSK
-        this.cmdRun = new Command("Start", Command.SCREEN, 2);
-        if (Config.getSafeInstance().getBtDeviceName().length() > 0) {
-            this.cmdRunLast = new Command("Start (" + Config.getSafeInstance().getBtDeviceName() + ")", Command.SCREEN, 3);
+//        this.cmdOSD = new Command("OSD", Command.BACK, 1);
+//        this.cmdFocus = new Command("Track", Command.SCREEN, 1); // hope for MSK
+        this.cmdRun = new Command("Start <New>", Command.SCREEN, 2);
+        if (cfg.getBtDeviceName().length() > 0) {
+            this.cmdRunLast = new Command("Start " + cfg.getBtDeviceName(), Command.SCREEN, 1);
         }
+        this.cmdStop = new Command("Stop", Command.SCREEN, 2);
         if (cz.kruch.track.TrackingMIDlet.isFs()) {
             this.cmdLoadMap = new Command("Load Map", Command.SCREEN, 4);
+//#ifndef __A780__
             this.cmdLoadAtlas = new Command("Load Atlas", Command.SCREEN, 5);
+//#endif
         }
         this.cmdSettings = new Command("Settings", Command.SCREEN, 6);
         this.cmdInfo = new Command("Info", Command.SCREEN, 7);
         this.cmdExit = new Command("Exit", Command.SCREEN, 8);
-        this.addCommand(cmdOSD);
-        this.addCommand(cmdFocus);
+        this.cmdPause = new Command("Pause", Command.BACK, 1);
+        this.cmdContinue = new Command("Continue", Command.BACK, 1);
+//        this.addCommand(cmdOSD);
+//        this.addCommand(cmdFocus);
         this.addCommand(cmdRun);
-        if (Config.getSafeInstance().getBtDeviceName().length() > 0) {
+        if (cmdRunLast != null) {
             this.addCommand(cmdRunLast);
         }
         if (cz.kruch.track.TrackingMIDlet.isFs()) {
             this.addCommand(cmdLoadMap);
+//#ifndef __A780__
             this.addCommand(cmdLoadAtlas);
+//#endif
         }
         this.addCommand(cmdSettings);
         this.addCommand(cmdInfo);
@@ -239,6 +245,7 @@ public final class Desktop extends GameCanvas
         int height = getHeight();
 
         // remember graphics
+        graphics = null; // gc hint
         graphics = getGraphics();
 
         // clear main area with black
@@ -248,7 +255,7 @@ public final class Desktop extends GameCanvas
             g = getGraphics();
         }
 //#endif
-        g.setColor(0, 0, 0);
+        g.setColor(0x0);
         g.fillRect(0, 0, width, height);
         g.setFont(font);
         g.clipRect(0, 0, width, height);
@@ -290,6 +297,7 @@ public final class Desktop extends GameCanvas
                 mapViewer.setMap(map);
             } else {
                 mapViewer.resize(width, height);
+                mapViewer.setMap(map);
             }
 
             // update OSD
@@ -339,16 +347,17 @@ public final class Desktop extends GameCanvas
 
             // load atlas first
             if (mapPath.indexOf('?') > -1) {
-                StringTokenizer st = new StringTokenizer(mapPath, "?&=");
-                String token = st.nextToken();
+                CharArrayTokenizer tokenizer = new CharArrayTokenizer();
+                tokenizer.init(mapPath, new char[]{ '?', '&','=' }, false);
+                String token = tokenizer.next().toString();
                 _atlas = new Atlas(token, this);
                 Throwable t = _atlas.loadAtlas();
                 if (t == null) {
-                    st.nextToken(); // layer
-                    token = st.nextToken();
+                    tokenizer.next(); // layer
+                    token = tokenizer.next().toString();
                     _atlas.setLayer(token);
-                    st.nextToken(); // map
-                    mapName = st.nextToken();
+                    tokenizer.next(); // map
+                    mapName = tokenizer.next().toString();
                     mapPath = _atlas.getMapURL(mapName);
                 } else {
                     throw t;
@@ -357,7 +366,7 @@ public final class Desktop extends GameCanvas
 
             // load map now
             Map _map = new Map(mapPath, mapName, this);
-            if (_atlas != null) {
+            if (_atlas != null) { // calibration may already be parsed
                 _map.setCalibration(_atlas.getMapCalibration(mapName));
             }
             Throwable t = _map.loadMap();
@@ -376,6 +385,9 @@ public final class Desktop extends GameCanvas
             _updateLoadingResult(e);
             throw e;
         } catch (Throwable t) {
+//#ifdef __LOG__
+            t.printStackTrace();
+//#endif
             _updateLoadingResult(t);
             throw new InvalidMapException(t);
         }
@@ -418,7 +430,20 @@ public final class Desktop extends GameCanvas
         if (log.isEnabled()) log.info("size changed: " + w + "x" + h);
 //#endif
 
-        resetGui();
+        if (w != getWidth() || h != getHeight()) {
+            resetGui();
+        }
+    }
+
+    protected void pointerPressed(int x, int y) {
+//#ifdef __LOG__
+        if (log.isEnabled()) log.info("pointerPressed");
+//#endif
+
+        // HPS
+        if ((x > (getWidth() * 4) / 5) && (y > (getHeight() * 4) / 5)) {
+            handleKey(KEY_POUND, false);
+        }
     }
 
     protected void keyPressed(int i) {
@@ -460,7 +485,7 @@ public final class Desktop extends GameCanvas
     }
 
     public void commandAction(Command command, Displayable displayable) {
-        if (command == cmdOSD) {
+        /*if (command == cmdOSD) {
             if (isMapViewer()) {
                 // invert OSD visibility
                 osd.setVisible(!osd.isVisible());
@@ -479,10 +504,11 @@ public final class Desktop extends GameCanvas
             } else if (isTracking()) {
                 showWarning(_getLoadingResultText(), null, this);
             }
-        } else if (command == cmdInfo) {
+        } else*/ if (command == cmdInfo) {
             (new InfoForm()).show(this,
                                   isTracking() ? provider.getException() : providerError,
-                                  isTracking() ? provider.getStatus() : providerStatus);
+                                  isTracking() ? provider.getStatus() : providerStatus,
+                                  map);
         } else if (command == cmdSettings) {
             (new SettingsForm(new Event(Event.EVENT_CONFIGURATION_CHANGED))).show();
         } else if (command == cmdLoadMap) {
@@ -490,15 +516,15 @@ public final class Desktop extends GameCanvas
         } else if (command == cmdLoadAtlas) {
             (new FileBrowser("SelectAtlas", new Event(Event.EVENT_FILE_BROWSER_FINISHED, "atlas"), this)).show();
         } else if (command == cmdRun) {
-            if ("Start".equals(cmdRun.getLabel())) {
-                // start tracking
-                stopRequest = providerRestart = false;
-                preTracking(false);
-            } else {
-                // stop tracking
-                stopRequest = true;
-                stopTracking(false);
-            }
+            // start tracking
+            stopRequest = providerRestart = false;
+            preTracking(false);
+            // update OSD
+            render(MASK_OSD);
+        } else if (command == cmdStop) {
+            // stop tracking
+            stopRequest = true;
+            stopTracking(false);
             // update OSD
             render(MASK_OSD);
         } else if (command == cmdRunLast) {
@@ -508,7 +534,20 @@ public final class Desktop extends GameCanvas
             // update OSD
             render(MASK_OSD);
         } else if (command == cmdExit) {
-            (new YesNoDialog(this, this)).show("Do you want to quit?", "Yes / No");
+            (new YesNoDialog(this, this)).show("Do you want to quit?", null);
+        } else if (command.getCommandType() == Command.BACK) {
+            // update flag
+            paused = !paused;
+            // update menu
+            if (paused) {
+                removeCommand(cmdPause);
+                addCommand(cmdContinue);
+            } else {
+                removeCommand(cmdContinue);
+                addCommand(cmdPause);
+            }
+            // update OSD
+            render(MASK_ALL);
         }
     }
 
@@ -527,6 +566,11 @@ public final class Desktop extends GameCanvas
             }
             if (map != null) {
                 map.close();
+            }
+
+            // close mapviewer
+            if (mapViewer != null) {
+                mapViewer.setMap(null);
             }
 
             // stop Friends
@@ -554,7 +598,7 @@ public final class Desktop extends GameCanvas
 //#endif
 
         callSerially(new Event(Event.EVENT_TRACKING_POSITION_UPDATED,
-                     location, null, provider));
+                               location, null, provider));
     }
 
     public void providerStateChanged(LocationProvider provider, int newState) {
@@ -563,7 +607,7 @@ public final class Desktop extends GameCanvas
 //#endif
 
         callSerially(new Event(Event.EVENT_TRACKING_STATUS_CHANGED,
-                     new Integer(newState), null, provider));
+                               new Integer(newState), null, provider));
     }
 
     //
@@ -588,7 +632,7 @@ public final class Desktop extends GameCanvas
      */
     public QualifiedCoordinates getPointer() {
         if (mode == 0) {
-            return Datum.current.toWgs84(map.transform(mapViewer.getPosition()));
+            return map.getDatum().toWgs84(map.transform(mapViewer.getPosition()));
         } else {
             return locator.getPointer();
         }
@@ -620,9 +664,9 @@ public final class Desktop extends GameCanvas
 
         // set waypoint for showing
         if (currentWaypoint > -1) {
-            QualifiedCoordinates qc = Datum.current.toLocal(waypoints[currentWaypoint].getQualifiedCoordinates());
-            if (map.isWithin(qc)) {
-                mapViewer.setWaypoint(((Calibration.ProximitePosition) map.transform(qc)).getPosition());
+            QualifiedCoordinates localQc = map.getDatum().toLocal(waypoints[currentWaypoint].getQualifiedCoordinates());
+            if (map.isWithin(localQc)) {
+                mapViewer.setWaypoint((map.transform(localQc)).clone());
                 Desktop.showConfirmation("Waypoint set", this);
             } else {
                 mapViewer.setWaypoint(null);
@@ -764,7 +808,7 @@ public final class Desktop extends GameCanvas
     private boolean updateNavigationUI() {
 
         // navigating to a waypoint?
-        if ((navigating || browsing) && (currentWaypoint > -1)) {
+        if ((/*navigating || */browsing) && (currentWaypoint > -1)) {
 
             // get navigation info
             StringBuffer extInfo = osd._getSb();
@@ -811,7 +855,7 @@ public final class Desktop extends GameCanvas
         }
 
         // when on map, update position
-        Position position = map.transform(Datum.current.toLocal(location.getQualifiedCoordinates()));
+        Position position = map.transform(map.getDatum().toLocal(location.getQualifiedCoordinates()));
 
         // do we have a real position?
         if (position == null) {
@@ -833,6 +877,10 @@ public final class Desktop extends GameCanvas
     }
 
     private void handleKey(int i, boolean repeated) {
+        if (paused) {
+            return;
+        }
+
         int action = getGameAction(i);
         switch (action) {
             case Canvas.DOWN:
@@ -880,7 +928,8 @@ public final class Desktop extends GameCanvas
                         } else { // out of current map - find sibling map
 
                             String url = null;
-                            QualifiedCoordinates fakeQc = null;
+//                            QualifiedCoordinates fakeQc = null;
+                            QualifiedCoordinates newQc = null;
                             if (atlas != null) {
                                 Character neighbour = mapViewer.boundsHit();
 
@@ -890,33 +939,39 @@ public final class Desktop extends GameCanvas
 
                                 if (neighbour != null) {
                                     QualifiedCoordinates qc = map.transform(mapViewer.getPosition());
-                                    QualifiedCoordinates newQc = null;
-                                    switch (neighbour.charValue()) {
+                                    char c = neighbour.charValue();
+                                    switch (c) {
                                         case 'N':
-                                            newQc = new QualifiedCoordinates(qc.getLat() + 0.01D, qc.getLon());
-                                            fakeQc = new QualifiedCoordinates(90D, qc.getLon());
+                                            newQc = new QualifiedCoordinates(qc.getLat() + 5 * map.getStep(c), qc.getLon());
                                             break;
                                         case 'S':
-                                            newQc = new QualifiedCoordinates(qc.getLat() - 0.01D, qc.getLon());
-                                            fakeQc = new QualifiedCoordinates(-90D, qc.getLon());
+                                                newQc = new QualifiedCoordinates(qc.getLat() + 5 * map.getStep(c), qc.getLon());
                                             break;
                                         case 'E':
-                                            newQc = new QualifiedCoordinates(qc.getLat(), qc.getLon() + 0.01D);
-                                            fakeQc = new QualifiedCoordinates(qc.getLat(), 180D);
+                                                newQc = new QualifiedCoordinates(qc.getLat(), qc.getLon() + 5 * map.getStep(c));
                                             break;
                                         case 'W':
-                                            newQc = new QualifiedCoordinates(qc.getLat(), qc.getLon() - 0.01D);
-                                            fakeQc = new QualifiedCoordinates(qc.getLat(), -180D);
+                                            newQc = new QualifiedCoordinates(qc.getLat(), qc.getLon() + 5 * map.getStep(c));
                                             break;
                                     }
                                     url = atlas.getMapURL(newQc);
                                 }
                             }
                             if (url != null) {
+//#ifdef __LOG__
+                                if (log.isEnabled()) log.debug("loading neghbour map " + url);
+//#endif
                                 // 'switch' flag
                                 _switch = true;
+
                                 // focus on these coords once the new map is loaded
-                                _qc = fakeQc;
+                                _qc = newQc.toWgs84();
+
+                                // dispose current map
+                                if (map != null) {
+                                    map.dispose();
+                                }
+
                                 // start loading task
                                 startOpenMap(url, null);
                             }
@@ -951,26 +1006,13 @@ public final class Desktop extends GameCanvas
             default: {
                 if (!repeated) {
                     switch (i) {
-                        case KEY_STAR: {
-                            if (atlas != null) {
-                                Enumeration e = atlas.getLayers();
-                                if (e.hasMoreElements()) {
-                                    (new ItemSelection(this, "LayerSelection",
-                                                       new Event(Event.EVENT_LAYER_SELECTION_FINISHED, "switch"))).show(e);
-                                } else {
-                                    showInfo("No layers in current atlas.", this);
-                                }
-                            }
-                        } break;
                         case KEY_POUND: {
-                            if (atlas != null) {
-                                Enumeration e = atlas.getMapNames();
-                                if (e.hasMoreElements()) {
-                                    (new ItemSelection(this, "MapSelection",
-                                                       new Event(Event.EVENT_MAP_SELECTION_FINISHED, "switch"))).show(e);
-                                } else {
-                                    showInfo("No maps in current layer.", this);
-                                }
+                            if (mode == 0) {
+                                mode = 1;
+                                render(0);
+                            } else {
+                                mode = 0;
+                                render(MASK_ALL);
                             }
                         } break;
                         case KEY_NUM0: {
@@ -997,13 +1039,26 @@ public final class Desktop extends GameCanvas
                                 showWarning(_getLoadingResultText(), null, this);
                             }
                         } break;
+                        case KEY_NUM7: {
+                            if (mode == 0 && atlas != null) {
+                                Enumeration e = atlas.getLayers();
+                                if (e.hasMoreElements()) {
+                                    (new ItemSelection(this, "LayerSelection",
+                                                       new Event(Event.EVENT_LAYER_SELECTION_FINISHED, "switch"))).show(e);
+                                } else {
+                                    showInfo("No layers in current atlas.", this);
+                                }
+                            }
+                        } break;
                         case KEY_NUM9: {
-                            if (mode == 0) {
-                                mode = 1;
-                                render(0);
-                            } else {
-                                mode = 0;
-                                render(MASK_ALL);
+                            if (mode == 0 && atlas != null) {
+                                Enumeration e = atlas.getMapNames();
+                                if (e.hasMoreElements()) {
+                                    (new ItemSelection(this, "MapSelection",
+                                                       new Event(Event.EVENT_MAP_SELECTION_FINISHED, "switch"))).show(e);
+                                } else {
+                                    showInfo("No maps in current layer.", this);
+                                }
                             }
                         } break;
                     }
@@ -1031,15 +1086,15 @@ public final class Desktop extends GameCanvas
 
         // common screen params
         g.setFont(font);
-        g.setColor(Config.getSafeInstance().isOsdBlackColor() ? 0x00000000 : 0x00ffffff);
+        g.setColor(Config.getSafeInstance().isOsdBlackColor() ? 0x00000000 : 0x00FFFFFF);
 
         // is map(viewer) ready?
         if (_getInitializingMap() || (isMapViewer() && !mapViewer.hasMap())) {
 
             // clear window
-            g.setColor(0, 0, 0);
+            g.setColor(0x0);
             g.fillRect(0, 0, getWidth(), getHeight());
-            g.setColor(0xff, 0xff, 0xff);
+            g.setColor(0x00FFFFFF);
 
             // draw loaded target
             if (_getLoadingResult()[0] != null) {
@@ -1210,7 +1265,7 @@ public final class Desktop extends GameCanvas
                     }
                     boolean unused = last ? startTrackingLast() : startTracking();
                 }
-            })).show("Start tracklog?", "Yes / No");
+            })).show("Start tracklog?", null);
         } else if (Config.TRACKLOG_ALWAYS.equals(on)) {
             tracklog = true; // !
             boolean unused = last ? startTrackingLast() : startTracking();
@@ -1236,8 +1291,10 @@ public final class Desktop extends GameCanvas
                 providerClass = Class.forName("cz.kruch.track.location.SimulatorLocationProvider");
             }
             provider = (LocationProvider) providerClass.newInstance();
-        } catch (Exception e) {
-            throw new RuntimeException(e.toString());
+        } catch (Throwable t) {
+            showError("Could not create provider [" + selectedProvider + "]", t, this);
+
+            return false;
         }
 
         // set tracklog flag
@@ -1254,7 +1311,7 @@ public final class Desktop extends GameCanvas
             if (log.isEnabled()) log.debug("provider started; state " + state);
 //#endif
         } catch (Throwable t) {
-            showError("Failed to start provider " + provider.getName() + ".", t, null);
+            showError("Failed to start provider [" + provider.getName() + "]", t, null);
 
             // clear member
             provider = null;
@@ -1271,8 +1328,8 @@ public final class Desktop extends GameCanvas
         // update menu
         removeCommand(cmdRun);
         removeCommand(cmdRunLast);
-        cmdRun = new Command("Stop", Command.SCREEN, 2);
-        addCommand(cmdRun);
+        addCommand(cmdStop);
+        addCommand(cmdPause);
 
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("~start tracking");
@@ -1290,8 +1347,10 @@ public final class Desktop extends GameCanvas
         try {
             Class providerClass = Class.forName("cz.kruch.track.location.Jsr82LocationProvider");
             provider = (LocationProvider) providerClass.newInstance();
-        } catch (Exception e) {
-            throw new RuntimeException(e.toString());
+        } catch (Throwable t) {
+            showError("Could not create provider [Bluetooth]", t, this);
+
+            return false;
         }
 
         // set tracklog flag
@@ -1310,10 +1369,11 @@ public final class Desktop extends GameCanvas
         browsing = false;
 
         // update menu
+        // update menu
         removeCommand(cmdRun);
         removeCommand(cmdRunLast);
-        cmdRun = new Command("Stop", Command.SCREEN, 2);
-        addCommand(cmdRun);
+        addCommand(cmdStop);
+        addCommand(cmdPause);
 
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("~start tracking");
@@ -1394,14 +1454,11 @@ public final class Desktop extends GameCanvas
         updateNavigationUI();
 
         // update menu
-        removeCommand(cmdRun);
-        removeCommand(cmdRunLast);
-        cmdRun = new Command("Start", Command.SCREEN, 2);
-        if (Config.getSafeInstance().getBtDeviceName().length() > 0) {
-            cmdRunLast = new Command("Start (" + Config.getSafeInstance().getBtDeviceName() + ")", Command.SCREEN, 3);
-        }
+        removeCommand(cmdStop);
+        removeCommand(cmdPause);
+        removeCommand(cmdContinue);
         addCommand(cmdRun);
-        if (Config.getSafeInstance().getBtDeviceName().length() > 0) {
+        if (cmdRunLast != null) {
             addCommand(cmdRunLast);
         }
 
@@ -1495,6 +1552,33 @@ public final class Desktop extends GameCanvas
         return azimuth;
     }
 
+    private void drawPause() {
+        Graphics g = graphics;
+//#ifdef __S65__
+        if (isS65) {
+            g = getGraphics();
+        }
+//#endif
+        String PAUSED = "PAUSED";
+        Font f = Font.getDefaultFont();
+        int sw = f.stringWidth(PAUSED);
+        int sh = f.getHeight();
+        int w = getWidth() * 7 / 8;
+        int h = getHeight() * 2 / 5;
+        int x = (getWidth() - w) / 2;
+        int y = (getHeight() - h) / 2;
+        g.setColor(0x00D2E9FF);
+        g.fillRect(x, y, w, h);
+        g.setColor(0x0);
+        g.drawRect(x, y, w - 1, h - 1);
+        g.setFont(f);
+        g.drawString(PAUSED, x + (w - sw) / 2, y + (h - sh) / 2, 0);
+//        if (partialFlush) {
+//            flushGraphics(x, y, w, h);
+//        else
+            flushGraphics();
+    }
+
     /*
      * Map.StateListener contract
      */
@@ -1578,32 +1662,37 @@ public final class Desktop extends GameCanvas
         private final Object sync = new Object();
 
         private volatile boolean go;
-        private Integer mask;
+//        private Integer mask;
+        private int mask;
 
         public Renderer() {
             this.go = true;
-            this.mask = null;
+//            this.mask = null;
+            this.mask = 0;
         }
 
         public void enqueue(int mask) {
             synchronized (sync) {
-                if (this.mask == null) {
-                    this.mask = new Integer(mask);
-                } else {
+//                if (this.mask == null) {
+//                    this.mask = new Integer(mask);
+//                } else {
 //#ifdef __LOG__
-                    if (log.isEnabled()) log.debug("merging " + Integer.toBinaryString(this.mask.intValue()) + " with " + Integer.toBinaryString(mask));
+                    if (log.isEnabled()) log.debug("merging " + Integer.toBinaryString(this.mask) + " with " + Integer.toBinaryString(mask));
 //#endif
-                    this.mask = new Integer(this.mask.intValue() | mask);
-                }
+//                    this.mask = new Integer(this.mask.intValue() | mask);
+                    this.mask |= mask;
+//                }
                 sync.notify();
             }
         }
 
         public void run() {
             for (; go ;) {
-                Integer m;
+//                Integer m;
+                int m;
                 synchronized (sync) {
-                    while (mask == null && go) {
+//                    while (mask == null && go) {
+                    while (mask == 0 && go) {
                         try {
                             sync.wait();
                         } catch (InterruptedException e) {
@@ -1611,16 +1700,21 @@ public final class Desktop extends GameCanvas
                     }
 
                     m = mask;
-                    mask = null;
+//                    mask = null;
+                    mask = 0;
                 }
 
                 if (!go) break;
 
                 try {
                     if (mode == 0) {
-                        Desktop.this._render(m.intValue());
+//                        Desktop.this._render(m.intValue());
+                        Desktop.this._render(m);
                     } else {
                         Desktop.this.locator.render();
+                    }
+                    if (paused) {
+                        drawPause();
                     }
                 } catch (Throwable t) {
 //#ifdef __LOG__
@@ -1629,7 +1723,7 @@ public final class Desktop extends GameCanvas
 //#endif
                     Desktop.showError("_RENDER FAILURE_", t, null);
                 } finally {
-                    m = null; // gc hint
+//                    m = null; // gc hint
                 }
 
                 if (!postInit && guiReady) {
@@ -1669,7 +1763,7 @@ public final class Desktop extends GameCanvas
         private int phase = 0;
 
         private int width, height;
-        /*private int ptSize;*/
+        private int semaforX, semaforY;
         private int dx, dy;
         private int lineLength;
 
@@ -1678,10 +1772,11 @@ public final class Desktop extends GameCanvas
 
         private int fontHeight;
         private int navigationStrWidth;
+        private int[] center, vertex;
+        private int[][] triangle;
         private StringBuffer sb;
 
         public Locator() {
-            /*this.ptSize = TrackingMIDlet.point.getWidth();*/
             this.width = getWidth();
             this.height = getHeight();
             this.lineLength = Math.min(width - width / 10, height - height / 10);
@@ -1690,7 +1785,16 @@ public final class Desktop extends GameCanvas
             this.fontHeight = Desktop.font.getHeight();
             this.navigationStrWidth = Math.max(Desktop.font.stringWidth(MSG_NO_WAYPOINT), Desktop.font.stringWidth("14999 m"));
             this.sb = new StringBuffer(32);
+            this.semaforX = this.width - NavigationScreens.bulletSize - 2/*BORDER*/;
+            this.semaforY = Math.abs((font.getHeight() - NavigationScreens.bulletSize)) >> 1;
+            vertexes();
             reset();
+        }
+
+        private void vertexes() {
+            this.center = new int[]{ width >> 1, height >> 1 };
+            this.vertex = new int[2];
+            this.triangle = new int[3][2];
         }
 
         public void reset() {
@@ -1735,11 +1839,11 @@ public final class Desktop extends GameCanvas
                     break;
                 case Canvas.RIGHT:
                     if (termSwitch) {
-                        if (rangeIdx2 < (cz.kruch.track.TrackingMIDlet.ranges[0].length - 1)) {
+                        if (rangeIdx2 < (cz.kruch.track.TrackingMIDlet.rangesStr.length - 1)) {
                             rangeIdx2++;
                         }
                     } else {
-                        if (rangeIdx < (cz.kruch.track.TrackingMIDlet.ranges[0].length - 1)) {
+                        if (rangeIdx < (cz.kruch.track.TrackingMIDlet.rangesStr.length - 1)) {
                             rangeIdx++;
                         }
                     }
@@ -1752,6 +1856,7 @@ public final class Desktop extends GameCanvas
         }
 
         private void append(Location[] array, Location l) {
+            array[array.length - 1] = null; // gc hint
             System.arraycopy(array, 0, array, 1, array.length - 1);
             array[0] = l;
         }
@@ -1821,27 +1926,85 @@ public final class Desktop extends GameCanvas
             return c;
         }
 
+        private boolean transform(int[] center, float bearing, int[] result) {
+            int a = result[0] - center[0];
+            int b = result[1] - center[1];
+            double c = Math.sqrt(a * a + b * b);
+            int alpha = cz.kruch.track.TrackingMIDlet.asin(Math.abs((double) a) / c);
+            if (b > 0) {
+                if (a > 0) {
+                    alpha = 180 - alpha;
+                } else {
+                    alpha = 180 + alpha;
+                }
+            } else {
+                if (a < 0) {
+                    alpha = 360 - alpha;
+                }
+            }
+            int alpha2 = (alpha - (int) bearing) % 360;
+            int xs = 1;
+            int ys = 1;
+            if (alpha2 > 270) {
+                alpha2 = 360 - alpha2;
+                xs = ys = -1;
+            } else if (alpha2 > 180) {
+                alpha2 -= 180;
+                xs = -1;
+            } else if (alpha2 > 90) {
+                alpha2 = 180 - alpha2;
+            } else {
+                ys = -1;
+            }
+            double alpha2Rad = Math.toRadians(alpha2);
+            double da = (c * Math.sin(alpha2Rad)) * xs;
+            a = (int) da;
+            if ((da - a) > 0.5) {
+                a++;
+            }
+            double db = (c * Math.cos(alpha2Rad)) * ys;
+            b = (int) db;
+            if ((db - b) > 0.5) {
+                b++;
+            }
+
+            result[0] = center[0] + a;
+            result[1] = center[1] + b;
+
+            return true;
+        }
+
         private void render() {
             // local copies for faster access
             int _width = width;
             int _width2 = _width >> 1;
             int _height = height;
             int _height2 = _height >> 1;
-/*
-            int _ptSize = ptSize;
-            int _ptSize2 = _ptSize / 2;
-*/
 
             // term vars
-            QualifiedCoordinates _coordinates = termSwitch ? coordinates2 : coordinates;
-            Location[] _locations = termSwitch ? locations2 : locations;
-            Location _location = termSwitch ? location2 : location;
-            /*Image _point = termSwitch ? TrackingMIDlet.point2 : TrackingMIDlet.point;*/
-            float _hdopAvg = termSwitch ? hdopAvg2 : hdopAvg;
-            int _count = termSwitch ? count2 : count;
-            int _rangeIdx = termSwitch ? rangeIdx2 : rangeIdx;
-            int _color = termSwitch ? 0x0000ffff : 0x0000ff00;
-            double[][] _ranges = cz.kruch.track.TrackingMIDlet.ranges;
+            QualifiedCoordinates _coordinates;
+            Location _location;
+            Location[] _locations;
+            float _hdopAvg;
+            int _count, _rangeIdx, _color;
+            if (termSwitch) {
+                _coordinates = coordinates2;
+                _locations = locations2;
+                _location = location2;
+                _hdopAvg = hdopAvg2;
+                _count = count2;
+                _rangeIdx = rangeIdx2;
+                _color = 0x0000ffff;
+            } else {
+                _coordinates = coordinates;
+                _locations = locations;
+                _location = location;
+                _hdopAvg = hdopAvg;
+                _count = count;
+                _rangeIdx = rangeIdx;
+                _color = 0x0000ff00;
+            }
+            int _fontHeight = fontHeight;
 
             // draw crosshair
             Graphics g = graphics;
@@ -1851,26 +2014,32 @@ public final class Desktop extends GameCanvas
             }
 //#endif
             g.setFont(font);
-            g.setColor(0, 0, 0);
+            g.setColor(0x0);
             g.fillRect(0,0, _width, _height);
-            g.setColor(0x80, 0x80, 0x80);
+            g.setColor(0x00404040);
             g.drawLine(_width2, dy, _width2, _height - dy);
             g.drawLine(dx, _height2, _width - dx, _height2);
+
+            float bearing = location == null ? -1F : location.getCourse();
+            if (bearing > -1F) {
+                drawCompas(_width2, _height2, _fontHeight, g, bearing);
+            }
+
+            // compas boundary
+            g.setColor(0x00005050);
+            g.drawArc(dx + _fontHeight, dy + _fontHeight, lineLength - (_fontHeight << 1), lineLength - (_fontHeight << 1), 0, 360);
 
             // draw points
             if (_count > 0) {
                 // locals
                 double latAvg = _coordinates.getLat();
                 double lonAvg = _coordinates.getLon();
+                int[] xy = vertex;
 
-                // get scales for given latitude
-                double flat = latAvg / 10D;
-                int ilat = (int) flat;
-                if ((ilat < 8) && (flat - ilat) > 0.75D) {
-                    ilat++;
-                }
-                double xScale = lineLength / (2 * _ranges[ilat][_rangeIdx]);
-                double yScale = lineLength / (2 * _ranges[0][_rangeIdx]);
+                // get scales
+                double v = ((double) cz.kruch.track.TrackingMIDlet.ranges[_rangeIdx]) / 111319.490;
+                double yScale = ((double) (lineLength >> 1)) / (v);
+                double xScale = ((double) (lineLength >> 1)) / (v / Math.cos(Math.toRadians(latAvg)));
 
                 // points color
                 g.setColor(_color);
@@ -1879,85 +2048,183 @@ public final class Desktop extends GameCanvas
                 for (int i = _locations.length; --i >= 0; ) {
                     Location l = _locations[i];
                     if (l != null) {
+                        // create vertex
                         QualifiedCoordinates qc = l.getQualifiedCoordinates();
-                        int x = _width2 + (int) ((qc.getLon() - lonAvg) * xScale);
-                        int y = _height2 - (int) ((qc.getLat() - latAvg) * yScale);
-                        if (i > 0) {
-                            g.drawArc(x - 4, y - 4, 9, 9, 0, 360);
-                        } else {
-                            g.setColor(0xff, 0x7c, 0);
-                            g.fillArc(x - 4, y - 4, 9, 9, 0, 360);
-                            g.setColor(_color);
-                            g.drawArc(x - 4, y - 4, 9, 9, 0, 360);
+                        xy[0] = _width2 + (int) ((qc.getLon() - lonAvg) * xScale);
+                        xy[1] = _height2 - (int) ((qc.getLat() - latAvg) * yScale);
+
+                        // tranform
+                        if (bearing > 1F) {
+                            transform(center, bearing, xy);
                         }
+
+                        // draw point
+                        if (i > 0) {
+                            g.drawArc(xy[0] - 4, xy[1] - 4, 9, 9, 0, 360);
+                        } else {
+                            g.setColor(0x00FFFFFF);
+                            g.fillArc(xy[0] - 4, xy[1] - 4, 9, 9, 0, 360);
+                            g.setColor(_color);
+                            g.drawArc(xy[0] - 4, xy[1] - 4, 9, 9, 0, 360);
+                        }
+
+                        // gc hints
+                        l = null;
                     }
                 }
 
-                // reset sb
-                sb.setLength(0);
-
                 // draw calculated (avg) position
-                g.setColor(0xff, 0xff, 0xff);
+                g.setColor(0x00FFFFFF);
+                sb.setLength(0);
                 g.drawString(_coordinates.toStringBuffer(sb).toString(), 0, 0, 0);
-                g.drawString(Double.toString(_hdopAvg).substring(0, 3), 0, fontHeight, 0);
-                g.drawString(Integer.toString(_location.getSat()), 0, 2 * fontHeight, 0);
-                g.setColor(0xff, 0xff, 0);
-                g.drawArc(_width2 - 4/*_ptSize2*/, _height2 - 4/*_ptSize2*/, 9, 9, 0, 360);
+                sb.setLength(0);
+                sb.append(_hdopAvg);
+                if (sb.length() > 4) sb.setLength(4);
+                g.drawString(sb.toString(), 0, _fontHeight, 0);
+                g.drawString(_location.getSat() > -1 ? cz.kruch.track.TrackingMIDlet.nStr[_location.getSat()] : "?",
+                             0, _fontHeight << 1, 0);
+                g.setColor(0x00FFFF00);
+                g.drawArc(_width2 - 4, _height2 - 4, 9, 9, 0, 360);
 
                 // draw waypoint
-                g.setColor(0xff, 0xff, 0);
                 int wptIdx = getNavigateTo();
                 if (wptIdx > -1) {
                     QualifiedCoordinates qc = getPath()[wptIdx].getQualifiedCoordinates();
-                    int x = _width2 + (int) ((qc.getLon() - lonAvg) * xScale);
-                    int y = _height2 - (int) ((qc.getLat() - latAvg) * yScale);
+                    xy[0] = _width2 + (int) ((qc.getLon() - lonAvg) * xScale);
+                    xy[1] = _height2 - (int) ((qc.getLat() - latAvg) * yScale);
+
+                    // transform vertex
+                    if (bearing > 1F) {
+                        transform(center, bearing, xy);
+                    }
+
+                    // construct distance string
+                    sb.setLength(0);
                     float distance = _coordinates.distance(qc);
                     String distanceStr;
-                    if (distance < 5f) {
-                        distanceStr = Float.toString(distance).substring(0, 3) + " m";
-                    } else if (distance < 15000f) {
-                        distanceStr = Integer.toString((int) distance) + " m";
+                    if (distance < 5) {
+                        sb.append(Float.toString(distance).substring(0, 3)).append(" m");
+                    } else if (distance < 15000) {
+                        sb.append((int) distance).append(" m");
                     } else {
-                        distanceStr = Integer.toString((int) (distance / 1000)) + " km";
+                        sb.append((int) (distance / 1000)).append(" km");
                     }
-                    int azimuth = _coordinates.azimuthTo(qc, distance);
-                    NavigationScreens.drawWaypoint(g, x, y, 0);
-                    NavigationScreens.drawArrow(g, azimuth, _width2, _height2, 0);
+                    distanceStr = sb.toString();
+
+                    // calculate azimuth and course
+                    int azimuth, course;
+                    azimuth = course = _coordinates.azimuthTo(qc, distance);
+                    if (bearing > 0F) {
+                        course += 360 - (int) bearing;
+                        if (!Config.getSafeInstance().isHpsWptTrueAzimuth()) {
+                            azimuth = course % 360;
+                        }
+                    }
+
+                    // draw info
+                    NavigationScreens.drawWaypoint(g, xy[0], xy[1], 0);
+                    NavigationScreens.drawArrow(g, course, _width2, _height2, 0);
                     g.drawString(distanceStr,
-                                 width - navigationStrWidth,
-                                 height - 2 * fontHeight,
+                                 _width - navigationStrWidth,
+                                 _height - (_fontHeight << 1),
                                  0);
-                    g.drawString(Integer.toString(azimuth) + " " + cz.kruch.track.TrackingMIDlet.SIGN,
-                                 width - navigationStrWidth,
-                                 height - fontHeight,
+                    sb.setLength(0);
+                    sb.append(azimuth).append(' ').append(cz.kruch.track.TrackingMIDlet.SIGN);
+                    g.drawString(sb.toString(),
+                                 _width - navigationStrWidth,
+                                 _height - _fontHeight,
                                  0);
                 } else {
                     g.drawString(MSG_NO_WAYPOINT,
-                                 width - navigationStrWidth,
-                                 height - fontHeight,
+                                 _width - navigationStrWidth,
+                                 _height - _fontHeight,
                                  0);
                 }
             } else {
-                g.setColor(0xff, 0, 0);
+                g.setColor(0x00FF0000);
                 g.drawString("NO POSITION", 0, 0, 0);
+                if (getNavigateTo() == -1) {
+                    g.setColor(0x00FFFF00);
+                    g.drawString(MSG_NO_WAYPOINT,
+                                 _width - navigationStrWidth,
+                                 _height - _fontHeight,
+                                 0);
+                }
             }
 
+            // draw provider status
+            NavigationScreens.drawProviderStatus(g, osd.getProviderStatus(),
+                                                 semaforX, semaforY, 0);
+
             // draw range
-            g.setColor(0x80, 0x80, 0x80);
+            g.setColor(0x00808080);
             g.drawLine(dx, _height - 3, dx, _height - 1);
-            g.drawLine(dx, _height - 2, _width >> 1, _height - 2);
+            g.drawLine(dx, _height - 2, _width2, _height - 2);
             g.drawLine(_width2, _height - 3, _width2, _height - 1);
-            g.drawString(cz.kruch.track.TrackingMIDlet.rangesStr[_rangeIdx], dx + 3, _height - fontHeight - 5, 0);
+            g.drawString(cz.kruch.track.TrackingMIDlet.rangesStr[_rangeIdx],
+                         dx + 3, _height - _fontHeight - 5, 0);
 
             // flush
             flushGraphics();
+        }
+
+        private void drawCompas(int _width2, int _height2, int _fontHeight,
+                                Graphics g, float bearing) {
+            triangle[0][0] = _width2 - 7;
+            triangle[0][1] = _height2;
+            triangle[1][0] = _width2;
+            triangle[1][1] = dy + lineLength - _fontHeight;
+            triangle[2][0] = _width2 + 7;
+            triangle[2][1] = _height2;
+
+            g.setColor(0x00707070);
+            drawTriangle(g, bearing, triangle);
+
+            triangle[0][0] = dx + _fontHeight;
+            triangle[0][1] = _height2;
+            triangle[1][0] = triangle[0][0] + 7;
+            triangle[1][1] = _height2 - 4;
+            triangle[2][0] = triangle[1][0];
+            triangle[2][1] = _height2 + 4;
+
+            drawTriangle(g, bearing, triangle);
+
+            triangle[0][0] = dx + lineLength - _fontHeight;
+            triangle[0][1] = _height2;
+            triangle[1][0] = triangle[0][0] - 7;
+            triangle[1][1] = _height2 - 4;
+            triangle[2][0] = triangle[1][0];
+            triangle[2][1] = _height2 + 4;
+
+            drawTriangle(g, bearing, triangle);
+
+            triangle[0][0] = _width2 - 7;
+            triangle[0][1] = _height2;
+            triangle[1][0] = _width2;
+            triangle[1][1] = dy + _fontHeight;
+            triangle[2][0] = _width2 + 7;
+            triangle[2][1] = triangle[0][1];
+
+            g.setColor(0x00700000);
+            drawTriangle(g, bearing, triangle);
+        }
+
+        private void drawTriangle(Graphics g, float bearing, int[][] triangle) {
+            if (bearing > 1F) {
+                transform(center, bearing, triangle[0]);
+                transform(center, bearing, triangle[1]);
+                transform(center, bearing, triangle[2]);
+            }
+            g.fillTriangle(triangle[0][0], triangle[0][1],
+                           triangle[1][0], triangle[1][1],
+                           triangle[2][0], triangle[2][1]);
         }
     }
 
     // temps for atlas/map loading
     private Map _map;
     private Atlas _atlas;
-    private QualifiedCoordinates _qc;
+    private QualifiedCoordinates _qc; // WGS84
     private String _layer;
     private boolean _switch;
     private String _target;
@@ -2088,7 +2355,8 @@ public final class Desktop extends GameCanvas
                     } else {
                         config.setMapPath(atlas.getURL(map.getName()));
                     }
-                    config.update();
+                    config.setDefaultMapPath(config.getMapPath());
+                    config.update(0);
 
                     // let the user know
                     showConfirmation("Configuration updated.", Desktop.screen);
@@ -2119,6 +2387,7 @@ public final class Desktop extends GameCanvas
 //#endif
                 Desktop.showError("_EVENT FAILURE_ (" + this + ")", t, null);
 
+                // gc hints
                 result = null;
                 throwable = null;
                 closure = null;
@@ -2127,7 +2396,12 @@ public final class Desktop extends GameCanvas
 
         public void _run() {
 //#ifdef __LOG__
-            if (log.isEnabled()) log.debug("event " + this.toString());
+            if (log.isEnabled()) {
+                log.debug("event " + this.toString());
+                if (throwable != null) {
+                    throwable.printStackTrace();
+                }
+            }
 //#endif
 
             switch (code) {
@@ -2179,6 +2453,8 @@ public final class Desktop extends GameCanvas
                             _target = "map";
                             startOpenMap(url, null);
                         }
+                    } else if (throwable != null) {
+                        showError("File I/O error", throwable, Desktop.screen);
                     }
                 } break;
 
@@ -2302,7 +2578,7 @@ public final class Desktop extends GameCanvas
                                                 null, Desktop.screen);
                                 } else {
                                     // set temp holders
-                                    _qc = qc0;
+                                    _qc = qc0.toWgs84();
                                     _layer = layerName;
 
                                     // dispose current map
@@ -2387,9 +2663,6 @@ public final class Desktop extends GameCanvas
                             mapViewer.setMap(map);
                             mapViewer.show();
 
-                            // update waypoint navigation
-                            setNavigateTo(currentWaypoint);
-
                             // move viewer to known position, if any
                             if (_qc != null) {
                                 try {
@@ -2412,6 +2685,9 @@ public final class Desktop extends GameCanvas
                                     _qc = null;
                                 }
                             }
+
+                            // update waypoint navigation
+                            setNavigateTo(currentWaypoint);
 
                             // update OSD & navigation UI
                             osd.setInfo(map.transform(mapViewer.getPosition())/*.toString()*/, true);  // TODO listener
@@ -2582,6 +2858,11 @@ public final class Desktop extends GameCanvas
                 } break;
 
                 case EVENT_TRACKING_POSITION_UPDATED: {
+                    // paused?
+                    if (paused) {
+                        return;
+                    }
+
                     // grab event data
                     Location l = (Location) result;
 
@@ -2613,7 +2894,7 @@ public final class Desktop extends GameCanvas
 
                     // global & local coordinates
                     QualifiedCoordinates qc = location.getQualifiedCoordinates();
-                    QualifiedCoordinates localQc = Datum.current.toLocal(qc);
+                    QualifiedCoordinates localQc = map.getDatum().toLocal(qc);
 
                     // on map detection
                     boolean onMap = map.isWithin(localQc);
@@ -2667,7 +2948,7 @@ public final class Desktop extends GameCanvas
                                 _switch = true;
 
                                 // focus on these coords in new map once it is loaded
-                                _qc = qc;
+                                _qc = qc.toWgs84();
 
                                 // start map loading task
                                 startOpenMap(url, null);

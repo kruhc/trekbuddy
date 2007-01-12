@@ -24,6 +24,10 @@ public class Position {
         return y;
     }
 
+    public Position clone() {
+        return new Position(x, y);
+    }
+
     public boolean equals(Object obj) {
         if (obj instanceof Position) {
             Position position = (Position) obj;

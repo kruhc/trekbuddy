@@ -6,9 +6,8 @@ package api.location;
 /* bad design - dependency */
 import cz.kruch.track.configuration.Config;
 import cz.kruch.track.util.Mercator;
-import cz.kruch.track.util.Datum;
 
-public final class QualifiedCoordinates {
+public final class QualifiedCoordinates implements GeodeticPosition {
 
     public static final int UNKNOWN = 0;
     public static final int LAT = 1;
@@ -21,6 +20,8 @@ public final class QualifiedCoordinates {
     private float alt;
     private boolean hp;
 
+    private Datum datum;
+
     public QualifiedCoordinates(double lat, double lon) {
         this(lat, lon, -1F);
     }
@@ -29,6 +30,14 @@ public final class QualifiedCoordinates {
         this.lat = lat;
         this.lon = lon;
         this.alt = alt;
+    }
+
+    public double getH() {
+        return lon;
+    }
+
+    public double getV() {
+        return lat;
     }
 
     public double getLat() {
@@ -47,9 +56,22 @@ public final class QualifiedCoordinates {
         this.hp = hp;
     }
 
+    public void setDatum(Datum datum) {
+        this.datum = datum;
+    }
+
+    public QualifiedCoordinates toWgs84() {
+        if (datum == null || datum == Datum.DATUM_WGS_84) {
+            return this;
+        }
+
+        return datum.toWgs84(this);
+    }
+
     public float distance(QualifiedCoordinates neighbour) {
+/*
         double h1 = 0, h2 = 0;
-        double R = Datum.current.getEllipsoid().getEquatorialRadius();
+        double R = Datum.DATUM_WGS_84.getEllipsoid().getEquatorialRadius();
 
         double lat1 = Math.toRadians(lat);
         double lon1 = Math.toRadians(lon);
@@ -70,6 +92,12 @@ public final class QualifiedCoordinates {
         double dz = (z2 - z1);
 
         return (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
+*/
+
+        double dx = Math.abs(lon - neighbour.lon) * (111319.490 * Math.cos(Math.toRadians((lat + neighbour.lat) / 2)));
+        double dy = Math.abs(lat - neighbour.lat) * (111319.490);
+
+        return (float) Math.sqrt(dx * dx + dy * dy);
     }
 
     /* non-JSR179 signature */
@@ -79,7 +107,7 @@ public final class QualifiedCoordinates {
         double dx = neighbour.lon - lon;
         double dy = neighbour.lat - lat;
         QualifiedCoordinates artifical;
-        int offset = 0;
+        int offset;
 
         if (dx > 0) {
             if (dy > 0) {
@@ -100,27 +128,12 @@ public final class QualifiedCoordinates {
         }
 
         double a = artifical.distance(neighbour);
-        double sinAlpha = a / c;
+        double sina = a / c;
 
         // gc hint
         artifical = null;
 
-        // find best match
-        double matchVal = Double.MAX_VALUE;
-        int matchIdx = -1;
-        double[] sins = cz.kruch.track.TrackingMIDlet.SINS;
-        for (int i = sins.length; --i >= 0; ) {
-            double diff = Math.abs(sinAlpha - sins[i]);
-            if (diff < matchVal) {
-                matchVal = diff;
-                matchIdx = i;
-            }
-        }
-
-        return offset + matchIdx;
-/*
-        return offset + (int) Math.toDegrees(sinAlpha);
-*/
+        return offset + cz.kruch.track.TrackingMIDlet.asin(sina);
     }
 
     public String toString() {
@@ -128,15 +141,24 @@ public final class QualifiedCoordinates {
     }
 
     public StringBuffer toStringBuffer(StringBuffer sb) {
-        if (Config.getSafeInstance().isUseUTM()) {
-            Mercator.UTMCoordinates utmCoords = Mercator.LLtoUTM(lat, lon);
+        if (Config.getSafeInstance().isUseGridFormat() && (Mercator.isContext())) {
+            Mercator.UTMCoordinates gridCoords = Mercator.LLtoGrid(this);
+            if (gridCoords.zone != null) {
+                sb.append(gridCoords.zone).append(' ');
+            }
+            zeros(sb,gridCoords.easting, 10000).append(round(gridCoords.easting));
+            sb.append(' ');
+            zeros(sb, gridCoords.northing, 10000).append(round(gridCoords.northing));
+        } else if (Config.getSafeInstance().isUseUTM()) {
+            Mercator.UTMCoordinates utmCoords = Mercator.LLtoUTM(this);
             sb.append(utmCoords.zone).append(' ');
-            sb.append("E ").append((int) utmCoords.easting).append(' ');
-            sb.append("N ").append((int) utmCoords.northing);
+            sb.append("E ").append(round(utmCoords.easting));
+            sb.append(' ');
+            sb.append("N ").append(round(utmCoords.northing));
         } else {
             sb.append(lat > 0D ? "N " : "S ");
             append(LAT, sb);
-            sb.append("  ");
+            sb.append(' ');
             sb.append(lon > 0D ? "E " : "W ");
             append(LON, sb);
         }
@@ -190,7 +212,6 @@ public final class QualifiedCoordinates {
             l *= 60D;
             int s = (int) Math.floor(l);
             int ss = 0;
-//            boolean b = true;
 
             if (hp) { // round decimals
                 l -= s;
@@ -232,6 +253,25 @@ public final class QualifiedCoordinates {
                 sb.append('.').append(ss);
             }
             sb.append('"');
+        }
+
+        return sb;
+    }
+
+    public static int round(double d) {
+        int i = (int) d;
+        if ((d - i) > 0.5D) {
+            i++;
+        }
+
+        return i;
+    }
+
+    private static StringBuffer zeros(StringBuffer sb, double d, int c) {
+        int i = Mercator.grade(d);
+        while (i < c) {
+            sb.append('0');
+            i *= 10;
         }
 
         return sb;

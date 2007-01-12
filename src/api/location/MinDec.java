@@ -4,9 +4,6 @@
 package api.location;
 
 public final class MinDec {
-    private static final String[] NS = new String[]{ "N", "S" };
-    private static final String[] EW = new String[]{ "E", "W" };
-
     private int type = QualifiedCoordinates.UNKNOWN;
     private int sign = 0;
     private int deg = 0;
@@ -20,39 +17,6 @@ public final class MinDec {
         value -= this.deg;
         value *= 60D;
         this.min = value;
-    }
-
-    private MinDec(String value) {
-        value = value.trim();
-        if (value.length() < 5) {
-            throw new IllegalArgumentException("Malformed coordinate: " + value);
-        }
-        switch (value.charAt(0)) {
-            case 'N': {
-                this.type = QualifiedCoordinates.LAT;
-                this.sign = 1;
-            } break;
-            case 'S': {
-                this.type = QualifiedCoordinates.LAT;
-                this.sign = -1;
-            } break;
-            case 'E': {
-                this.type = QualifiedCoordinates.LON;
-                this.sign = 1;
-            } break;
-            case 'W': {
-                this.type = QualifiedCoordinates.LON;
-                this.sign = -1;
-            } break;
-            default:
-                throw new IllegalArgumentException("Malformed coordinate: " + value);
-        }
-        int i = value.indexOf(cz.kruch.track.TrackingMIDlet.SIGN);
-        if (i < 3) {
-            throw new IllegalArgumentException("Malformed coordinate: " + value);
-        }
-        this.deg = Integer.parseInt(value.substring(1, i).trim());
-        this.min = Double.parseDouble(value.substring(i + cz.kruch.track.TrackingMIDlet.SIGN.length()).trim());
     }
 
     private MinDec(String value, String sign) {
@@ -87,30 +51,6 @@ public final class MinDec {
         }
         this.deg = Integer.parseInt(value.substring(0, degl));
         this.min = Double.parseDouble(value.substring(degl));
-    }
-
-    public String getLabel() {
-        return type == QualifiedCoordinates.LAT ? "Latitude" : "Longitude";
-    }
-
-    public String[] getLetters() {
-        return type == QualifiedCoordinates.LAT ? NS : EW;
-    }
-
-    public int getType() {
-        return type;
-    }
-
-    public int getSign() {
-        return sign;
-    }
-
-    public int getDeg() {
-        return deg;
-    }
-
-    public double getMin() {
-        return min;
     }
 
     public double doubleValue() {
@@ -203,16 +143,6 @@ public final class MinDec {
         sb.append(',').append(type == QualifiedCoordinates.LAT ? (sign == -1 ? "S" : "N") : (sign == -1 ? "W" : "E"));
 
         return sb.toString();
-    }
-
-/*
-        public static String toDecimalString(int type, double value) {
-            return (new MinDec(type, value)).toString();
-        }
-*/
-
-    public static MinDec fromDecimalString(String value) {
-        return new MinDec(value);
     }
 
     public static String toSentence(int type, double value) {

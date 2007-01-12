@@ -180,7 +180,7 @@ public class Jsr82LocationProvider extends StreamReadingLocationProvider impleme
                 // set stream 'observer'
                 setObserver(nmeaObserver);
 
-/*
+/* fix
                 // signal recording has started
                 recordingCallback.invoke(new Integer(GpxTracklog.CODE_RECORDING_START), null);
 */
@@ -375,10 +375,11 @@ public class Jsr82LocationProvider extends StreamReadingLocationProvider impleme
                 thread = new Thread(Jsr82LocationProvider.this);
                 thread.start();
                 // update bt device info
-                Config.getSafeInstance().setBtDeviceName(btname);
-                Config.getSafeInstance().setBtServiceUrl(btspp);
+                Config cfg = Config.getSafeInstance();
+                cfg.setBtDeviceName(btname);
+                cfg.setBtServiceUrl(btspp);
                 try {
-                    Config.getSafeInstance().update();
+                    cfg.update(1);
                 } catch (ConfigurationException e) {
                     Desktop.showError("Failed to update config", e, null);
                 }

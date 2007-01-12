@@ -1,3 +1,4 @@
+Map Projection,Latitude/Longitude
 Point01,xy,0,0,in,deg,90,0,N,180,0,W,grid,,,,N
 Point02,xy,639,0,in,deg,90,0,N,180,0,E,grid,,,,N
 Point03,xy,0,319,in,deg,90,0,S,180,0,W,grid,,,,N

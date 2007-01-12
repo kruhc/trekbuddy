@@ -8,12 +8,13 @@ import cz.kruch.track.maps.Map;
 //#ifdef __LOG__
 import cz.kruch.track.util.Logger;
 //#endif
+import cz.kruch.track.util.Mercator;
 import cz.kruch.track.AssertionFailedException;
 import cz.kruch.track.configuration.Config;
+import cz.kruch.track.configuration.ConfigurationException;
 
 import javax.microedition.lcdui.Graphics;
 import javax.microedition.lcdui.Canvas;
-import javax.microedition.lcdui.Image;
 import javax.microedition.lcdui.game.Sprite;
 import java.util.Vector;
 
@@ -95,14 +96,71 @@ final class MapViewer {
     }
 
     public void setMap(Map map) {
+        // store position on map
+        if (isDefaultMap(this.map)) {
+            Position p = getPosition();
+            Config cfg = Config.getSafeInstance();
+            cfg.setX(p.getX());
+            cfg.setY(p.getY());
+            try {
+                cfg.update(1);
+            } catch (ConfigurationException e) {
+                // ignore
+            }
+        }
+
+        // gc hint
         this.map = null;
         this.slices.removeAllElements(); // slicesTemp is always empty
+
+        // use new map (if any)
         if (map != null) {
+
+            // update Mercator context // TODO ugly
+            if (map.getProjection() instanceof Mercator.ProjectionSetup) {
+                Mercator.contextDatum = map.getDatum();
+                Mercator.contextProjection = (Mercator.ProjectionSetup) map.getProjection();
+            } else {
+                Mercator.contextDatum = null;
+                Mercator.contextProjection = null;
+            }
+
+            // use new map
             this.map = map;
             this.mWidth = map.getWidth();
             this.mHeight = map.getHeight();
             resize(width, height);
+
+            // restore position on map
+            if (isDefaultMap(map)) {
+                Config cfg = Config.getSafeInstance();
+                int x = cfg.getX();
+                int y = cfg.getY();
+                if (x > -1 && y > -1 && x < mWidth && y < mHeight) {
+                    move(x, y);
+                }
+            }
         }
+    }
+
+    public static boolean isDefaultMap(Map map) {
+        if (map == null) {
+            return false;
+        }
+
+        String mapPath = Config.getSafeInstance().getMapPath();
+        if (mapPath.equals(Config.getSafeInstance().getDefaultMapPath())) {
+            String mapName = map.getName();
+            if (mapName == null) {
+                return mapPath.equals(map.getPath());
+            } else if (mapPath.length() == 0) {
+                return "Default".equals(mapName);
+            } else {
+                return mapPath.endsWith(mapName);
+            }
+        }
+
+        return false;
     }
 
     public void setCourse(float course) {
@@ -127,7 +185,7 @@ final class MapViewer {
     // TODO better name - x,y is desired position of crosshair!
     public boolean move(int x, int y) {
 //#ifdef __LOG__
-        if (log.isEnabled()) log.debug("move, current position " + this.x + "," + this.y);
+        if (log.isEnabled()) log.debug("move to " + x + "-" + y + ", current position " + this.x + "," + this.y);
 //#endif
 
         boolean dirty = false;

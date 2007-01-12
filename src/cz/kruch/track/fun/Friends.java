@@ -6,7 +6,7 @@ package cz.kruch.track.fun;
 import cz.kruch.track.ui.Desktop;
 import cz.kruch.track.location.Navigator;
 import cz.kruch.track.location.Waypoint;
-import cz.kruch.j2se.util.StringTokenizer;
+import cz.kruch.track.util.CharArrayTokenizer;
 
 import javax.wireless.messaging.MessageListener;
 import javax.wireless.messaging.MessageConnection;
@@ -127,8 +127,9 @@ public final class Friends implements MessageListener, Runnable {
                 String text = ((TextMessage) message).getPayloadText();
 
                 // decode message type
-                StringTokenizer st = new StringTokenizer(text, ",*", false);
-                String header = st.nextToken();
+                CharArrayTokenizer tokenizer = new CharArrayTokenizer();
+                tokenizer.init(text, new char[]{ ',', '*' }, false);
+                String header = tokenizer.next().toString();
                 String type = null;
                 String chat = null;
                 if (TBSMS_IAH.equals(header)) {
@@ -143,13 +144,13 @@ public final class Friends implements MessageListener, Runnable {
                     Desktop.showWarning("Unknown message '" + text + "'", null, null);
                 } else {
                     // get tokens
-                    String times = st.nextToken();
-                    String latv = st.nextToken();
-                    String lats = st.nextToken();
-                    String lonv = st.nextToken();
-                    String lons = st.nextToken();
-                    String unknown = st.nextToken();
-                    if (st.hasMoreTokens()) {
+                    String times = tokenizer.next().toString();
+                    String latv = tokenizer.next().toString();
+                    String lats = tokenizer.next().toString();
+                    String lonv = tokenizer.next().toString();
+                    String lons = tokenizer.next().toString();
+                    String unknown = tokenizer.next().toString();
+                    if (tokenizer.hasMoreTokens()) {
                         chat += unknown;
                     } else {
                         // unknown is checksum with leading '*'
@@ -187,8 +188,9 @@ public final class Friends implements MessageListener, Runnable {
 //#ifdef __LOG__
     private static void debug(String text) {
         // decode
-        StringTokenizer st = new StringTokenizer(text, ",*", false);
-        String header = st.nextToken();
+        CharArrayTokenizer tokenizer = new CharArrayTokenizer();
+        tokenizer.init(text, new char[]{ ',', '*' }, false);
+        String header = tokenizer.next().toString();
         String type = null;
         String chat = null;
         if (TBSMS_IAH.equals(header)) {
@@ -200,13 +202,13 @@ public final class Friends implements MessageListener, Runnable {
         }
         if (type != null) {
             // get tokens
-            String times = st.nextToken();
-            String latv = st.nextToken();
-            String lats = st.nextToken();
-            String lonv = st.nextToken();
-            String lons = st.nextToken();
-            String unknown = st.nextToken();
-            if (st.hasMoreTokens()) {
+            String times = tokenizer.next().toString();
+            String latv = tokenizer.next().toString();
+            String lats = tokenizer.next().toString();
+            String lonv = tokenizer.next().toString();
+            String lons = tokenizer.next().toString();
+            String unknown = tokenizer.next().toString();
+            if (tokenizer.hasMoreTokens()) {
                 chat += unknown;
             } else {
                 // unknown is checksum with leading '*'

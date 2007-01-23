@@ -5,13 +5,9 @@ package cz.kruch.track.ui;
 
 import java.util.Vector;
 
-//#ifdef __LOG__
-import cz.kruch.track.util.Logger;
-//#endif
-
 public final class SmartRunnable implements Runnable {
 //#ifdef __LOG__
-    private static final Logger log = new Logger("SmartRunnable");
+    private static final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("SmartRunnable");
 //#endif
 
     private static Vector runnables = new Vector();
@@ -53,11 +49,11 @@ public final class SmartRunnable implements Runnable {
     public void run() {
         try {
             runnable.run();
-            runnable = null; // gc hint
         } finally {
 //#ifdef __LOG__
             if (log.isEnabled()) log.debug("call serially finished");
 //#endif
+            runnable = null; // gc hint
             removeCurrent();
             callNext();
         }

@@ -6,9 +6,6 @@ package cz.kruch.track.fun;
 import cz.kruch.track.event.Callback;
 import cz.kruch.track.configuration.Config;
 import cz.kruch.track.ui.Desktop;
-//#ifdef __LOG__
-import cz.kruch.track.util.Logger;
-//#endif
 
 import javax.microedition.lcdui.CommandListener;
 import javax.microedition.lcdui.Command;
@@ -31,7 +28,7 @@ public final class Camera extends Form implements CommandListener, Runnable {
     private static final String MSG_UNEXPECTED_END_OF_STREAM = "Unexpected end of stream";
 
 //#ifdef __LOG__
-    private static final Logger log = new Logger("Desktop");
+    private static final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("Desktop");
 //#endif
 
 

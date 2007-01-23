@@ -20,15 +20,23 @@ public final class CharArrayTokenizer {
         this.token = new Token();
     }
 
+    public void init(char[] array, int length, char[] delimiters, boolean returnDelim) {
+        this.init(array, delimiters, returnDelim);
+        this.length = length; // set length explicitly
+    }
+
     public void init(char[] array, char delimiter, boolean returnDelim) {
-        init(array, new char[]{ delimiter }, returnDelim);
+        this.init(array, new char[]{ delimiter }, returnDelim);
     }
 
     public void init(String s, char delimiter, boolean returnDelim) {
-        init(s, new char[]{ delimiter }, returnDelim);
+        this.init(s, new char[]{ delimiter }, returnDelim);
     }
 
     public void init(char[] array, char[] delimiters, boolean returnDelim) {
+        this.array = null; // gc hint
+        this.delimiters = null; // gc hint
+        // init
         this.array = array;
         this.delimiters = delimiters;
         this.returnDelim = returnDelim;
@@ -39,12 +47,15 @@ public final class CharArrayTokenizer {
 
     public void init(String s, char[] delimiters, boolean returnDelim) {
         int sLength = s.length();
+        // if current array is not big enough, just release it
         if (this.array != null && this.array.length < sLength) {
             this.array = null;
         }
+        // allocate new array if needed
         if (this.array == null) {
             this.array = new char[sLength + sLength >> 1];
         }
+        this.delimiters = null; // gc hint
         s.getChars(0, sLength, this.array, 0);
         this.delimiters = delimiters;
         this.returnDelim = returnDelim;
@@ -55,6 +66,7 @@ public final class CharArrayTokenizer {
 
     public void dispose() {
         array = null;
+        delimiters = null;
     }
 
     public boolean hasMoreTokens() {
@@ -62,14 +74,14 @@ public final class CharArrayTokenizer {
     }
 
     public Token next() {
-        if (hasMoreTokens()) {
+        int l = length;
+        if (pos < l /* == hasMoreTokens()*/) {
             int begin = pos;
             if (isDelim(array[pos])) {
                 pos++;
                 if (returnDelim) {
                     // init the token with valid data
                     token.delimiter();
-
                     // return
                     return token;
                 } else {
@@ -77,7 +89,7 @@ public final class CharArrayTokenizer {
                 }
             }
             int i = pos;
-            while (i < length) {
+            while (i < l) {
                 char ch = array[i];
                 if (isDelim(ch)) {
                     break;
@@ -85,6 +97,8 @@ public final class CharArrayTokenizer {
                     i++;
                 }
             }
+
+            // update offset
             pos = i;
 
             // init the token with valid data

@@ -31,7 +31,7 @@ public abstract class StreamReadingLocationProvider extends LocationProvider {
 
     protected StreamReadingLocationProvider(String name) {
         super(name);
-        this.buffer = new char[128];
+        this.buffer = new char[0x80];
         syncs = mismatches = 0;
     }
 
@@ -46,14 +46,14 @@ public abstract class StreamReadingLocationProvider extends LocationProvider {
 
         // get pair
         while (gga == null || rmc == null) {
-            char[] s = nextSentence(in);
-            if (s == null) {
+            int l = nextSentence(in);
+            if (l == -1) {
                 return null;
             }
-            if (isType(s, HEADER_GGA)) {
-                gga = NmeaParser.parseGGA(s);
-            } else if (isType(s, HEADER_RMC)) {
-                rmc = NmeaParser.parseRMC(s);
+            if (isType(buffer, l, HEADER_GGA)) {
+                gga = NmeaParser.parseGGA(buffer, l);
+            } else if (isType(buffer, l, HEADER_RMC)) {
+                rmc = NmeaParser.parseRMC(buffer, l);
             } else {
                 continue;
             }
@@ -93,7 +93,7 @@ public abstract class StreamReadingLocationProvider extends LocationProvider {
         return location;
     }
 
-    protected final char[] nextSentence(InputStream in) throws IOException {
+    private int nextSentence(InputStream in) throws IOException {
         int pos = 0;
 
         boolean nl = false;
@@ -130,21 +130,18 @@ public abstract class StreamReadingLocationProvider extends LocationProvider {
         }
 
         if (nl) {
-            char[] result = new char[pos];
-            System.arraycopy(_buffer, 0, result, 0, pos);
-            
-            return result;
+            return pos;
         }
 
         if (c == -1) {
             setStatus("End of stream");
         }
 
-        return null;
+        return -1;
     }
 
-    private boolean isType(char[] sentence, char[] header) {
-        if (sentence.length < header.length) {
+    private static boolean isType(char[] sentence, int length, char[] header) {
+        if (length < header.length) {
             return false;
         }
 

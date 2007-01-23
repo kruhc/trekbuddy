@@ -4,6 +4,7 @@
 package cz.kruch.track.ui;
 
 import cz.kruch.track.event.Callback;
+import cz.kruch.track.util.Arrays;
 
 import javax.microedition.lcdui.List;
 import javax.microedition.lcdui.CommandListener;
@@ -29,10 +30,9 @@ final class ItemSelection extends List implements CommandListener {
     }
 
     public void show(Enumeration items) {
-        while (items.hasMoreElements()) {
-            String item = items.nextElement().toString();
-            append(item, null);
-        }
+        // add items
+        Arrays.sort2list(this, items);
+        // show selection
         Desktop.display.setCurrent(this);
     }
 

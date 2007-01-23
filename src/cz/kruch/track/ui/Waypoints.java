@@ -4,7 +4,6 @@
 package cz.kruch.track.ui;
 
 import cz.kruch.track.event.Callback;
-import cz.kruch.track.util.Logger;
 import cz.kruch.track.location.Waypoint;
 import cz.kruch.track.location.Navigator;
 import cz.kruch.track.maps.io.LoaderIO;
@@ -30,7 +29,7 @@ import org.kxml2.io.KXmlParser;
 public final class Waypoints extends List
         implements CommandListener, Callback, Runnable {
 //#ifdef __LOG__
-    private static final Logger log = new Logger("Waypoints");
+    private static final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("Waypoints");
 //#endif
 
     private static final String ITEM_BACK   = "Back";
@@ -90,6 +89,7 @@ public final class Waypoints extends List
                     try {
                         in.close();
                     } catch (IOException e) {
+                        // ignore
                     }
                 }
             }

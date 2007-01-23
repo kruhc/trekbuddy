@@ -5,9 +5,6 @@ package cz.kruch.track.ui;
 
 import cz.kruch.track.maps.Slice;
 import cz.kruch.track.maps.Map;
-//#ifdef __LOG__
-import cz.kruch.track.util.Logger;
-//#endif
 import cz.kruch.track.util.Mercator;
 import cz.kruch.track.AssertionFailedException;
 import cz.kruch.track.configuration.Config;
@@ -20,7 +17,7 @@ import java.util.Vector;
 
 final class MapViewer {
 //#ifdef __LOG__
-    private static final Logger log = new Logger("MapViewer");
+    private static final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("MapViewer");
 //#endif
 
     private int gx, gy;
@@ -51,7 +48,7 @@ final class MapViewer {
     public MapViewer(int gx, int gy, int width, int height) {
         this.gx = gx;
         this.gy = gy;
-        this.crosshairSize = cz.kruch.track.TrackingMIDlet.crosshairs.getHeight();
+        this.crosshairSize = NavigationScreens.crosshairs.getHeight();
         this.crosshairSize2 = this.crosshairSize >> 1;
         this.clip = new int[] { -1, -1, crosshairSize, crosshairSize };
         this.position = new Position(0, 0);
@@ -345,7 +342,7 @@ final class MapViewer {
             graphics.drawImage(crosshairs[ci], chx, chy, 0);
         } else {
 */
-            graphics.drawRegion(cz.kruch.track.TrackingMIDlet.crosshairs,
+            graphics.drawRegion(NavigationScreens.crosshairs,
                                 ci * crosshairSize, 0, crosshairSize, crosshairSize,
                                 Sprite.TRANS_NONE,
                                 chx, chy, 0);
@@ -432,7 +429,7 @@ final class MapViewer {
 
     public void nextCrosshair() {
         ci++;
-        if ((ci * crosshairSize) == cz.kruch.track.TrackingMIDlet.crosshairs.getWidth())
+        if ((ci * crosshairSize) == NavigationScreens.crosshairs.getWidth())
             ci = 0;
     }
 

@@ -6,6 +6,8 @@ package api.location;
 /* bad design - dependency */
 import cz.kruch.track.configuration.Config;
 import cz.kruch.track.util.Mercator;
+import cz.kruch.track.util.ExtraMath;
+import cz.kruch.track.ui.NavigationScreens;
 
 public final class QualifiedCoordinates implements GeodeticPosition {
 
@@ -133,7 +135,7 @@ public final class QualifiedCoordinates implements GeodeticPosition {
         // gc hint
         artifical = null;
 
-        return offset + cz.kruch.track.TrackingMIDlet.asin(sina);
+        return offset + ExtraMath.asin(sina);
     }
 
     public String toString() {
@@ -141,7 +143,7 @@ public final class QualifiedCoordinates implements GeodeticPosition {
     }
 
     public StringBuffer toStringBuffer(StringBuffer sb) {
-        if (Config.getSafeInstance().isUseGridFormat() && (Mercator.isContext())) {
+        if (Config.getSafeInstance().isUseGridFormat() && (Mercator.isGrid())) {
             Mercator.UTMCoordinates gridCoords = Mercator.LLtoGrid(this);
             if (gridCoords.zone != null) {
                 sb.append(gridCoords.zone).append(' ');
@@ -194,7 +196,7 @@ public final class QualifiedCoordinates implements GeodeticPosition {
             if (h < 10) {
                 sb.append('0');
             }
-            sb.append(h).append(cz.kruch.track.TrackingMIDlet.SIGN);
+            sb.append(h).append(NavigationScreens.SIGN);
             sb.append(m).append('.');
             if (dec < 100) {
                 sb.append('0');
@@ -246,7 +248,7 @@ public final class QualifiedCoordinates implements GeodeticPosition {
                 }
             }
 
-            sb.append(h).append(cz.kruch.track.TrackingMIDlet.SIGN);
+            sb.append(h).append(NavigationScreens.SIGN);
             sb.append(m).append('\'');
             sb.append(s);
             if (hp) {

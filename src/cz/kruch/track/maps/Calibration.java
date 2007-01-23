@@ -9,9 +9,6 @@ import api.location.ProjectionSetup;
 import api.location.GeodeticPosition;
 
 import cz.kruch.track.util.CharArrayTokenizer;
-//#ifdef __LOG__
-import cz.kruch.track.util.Logger;
-//#endif
 import cz.kruch.track.util.Mercator;
 import cz.kruch.track.ui.Position;
 import cz.kruch.track.io.LineReader;
@@ -27,7 +24,7 @@ import org.kxml2.io.KXmlParser;
 
 public abstract class Calibration {
 //#ifdef __LOG__
-    private static final Logger log = new Logger("Calibration");
+    private static final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("Calibration");
 //#endif
 
     // map/slice path // TODO bad design - path to slice should be in Slice
@@ -109,18 +106,21 @@ public abstract class Calibration {
         // compute grid
         if (projectionSetup instanceof Mercator.ProjectionSetup) {
 
+            // setup is for Mercator projection
+            Mercator.ProjectionSetup msetup = (Mercator.ProjectionSetup) projectionSetup;
+            Datum.Ellipsoid ellipsoid = getDatum().getEllipsoid();
+
             // lat,lon -> easting,northing
             Vector tm = new Vector(ll.size());
             for (Enumeration e = ll.elements(); e.hasMoreElements(); ) {
                 QualifiedCoordinates local = (QualifiedCoordinates) e.nextElement();
-                Mercator.UTMCoordinates utm = Mercator.LLtoTM(local, getDatum().getEllipsoid(),
-                                                              (Mercator.ProjectionSetup) projectionSetup);
+                Mercator.UTMCoordinates utm = Mercator.LLtoMercator(local, ellipsoid, msetup);
                 tm.addElement(utm);
             }
 
             // remember main calibration point easting-northing and zone
             calibrationGp = (GeodeticPosition) tm.elementAt(0);
-            zone = ((Mercator.UTMCoordinates) tm.elementAt(0)).zone;
+            zone = ((Mercator.UTMCoordinates) calibrationGp).zone;
 
             // compute pixel grid for TM
             computeGrid(xy, tm);
@@ -142,10 +142,6 @@ public abstract class Calibration {
 
     private double gridTHscale, gridLVscale;
     private double ek0, nk0;
-
-/*
-    double halfHStep, halfVStep;
-*/
 
     double h2, v2;
     double hScale, vScale;
@@ -172,11 +168,6 @@ public abstract class Calibration {
         int v0 = ((Position) xy.elementAt(index[0])).getX();
         double ek0d = (((Position) xy.elementAt(index[1])).getX() - v0) * gridBHscale;
         ek0 = (((GeodeticPosition) gp.elementAt(index[1])).getH() - ek0d - ((GeodeticPosition) gp.elementAt(index[0])).getH()) / dy;
-
-/*
-        halfHStep = Math.min(gridTHscale / 2D, gridBHscale / 2D);
-        halfVStep = Math.min(gridLVscale / 2D, gridRVscale / 2D);
-*/
 
         h2 = (gridTHscale + gridBHscale) / 2D;
         v2 = (gridLVscale + gridRVscale) / 2D;
@@ -224,9 +215,9 @@ public abstract class Calibration {
         QualifiedCoordinates qc = null;
 
         if (calibrationGp instanceof Mercator.UTMCoordinates) {
-            qc = Mercator.TMtoLL((Mercator.UTMCoordinates) toGp(position),
-                                 getDatum().getEllipsoid(),
-                                 (Mercator.ProjectionSetup) projectionSetup);
+            qc = Mercator.MercatortoLL((Mercator.UTMCoordinates) toGp(position),
+                                       getDatum().getEllipsoid(),
+                                       (Mercator.ProjectionSetup) projectionSetup);
             qc.setDatum(datum == Datum.DATUM_WGS_84 ? null : datum);
         } else /*if (calibrationGp instanceof QualifiedCoordinates)*/ {
             qc = (QualifiedCoordinates) toGp(position);
@@ -256,8 +247,8 @@ public abstract class Calibration {
         GeodeticPosition gp = null;
 
         if (calibrationGp instanceof Mercator.UTMCoordinates) {
-            gp = Mercator.LLtoTM(coordinates, getDatum().getEllipsoid(),
-                                 (Mercator.ProjectionSetup) projectionSetup);
+            gp = Mercator.LLtoMercator(coordinates, getDatum().getEllipsoid(),
+                                       (Mercator.ProjectionSetup) projectionSetup);
         } else /*if (calibrationGp instanceof QualifiedCoordinates)*/ {
             gp = coordinates;
         }
@@ -444,14 +435,8 @@ public abstract class Calibration {
                         } break;
                         case XmlPullParser.END_TAG: {
                             if (TAG_POSITION.equals(parser.getName())) {
-//                                if ((x0 == 0 && y0 == 0) || (x0 != 0 && y0 != 0)) {
-                                    xy.addElement(new Position(x0, y0));
-                                    ll.addElement(new QualifiedCoordinates(lat0, lon0));
-//                                } else {
-//#ifdef __LOG__
-//                                    if (log.isEnabled()) log.debug("ignore cal point " + new Position(x0, y0));
-//#endif
-//                                }
+                                xy.addElement(new Position(x0, y0));
+                                ll.addElement(new QualifiedCoordinates(lat0, lon0));
                             }
                             currentTag = null;
                         } break;
@@ -527,7 +512,11 @@ public abstract class Calibration {
         }
 
         public String getPath() {
-            return (new StringBuffer(16)).append("_").append(x).append('_').append(y).append(".png").toString();
+            return (new StringBuffer(16)).append('_').append(x).append('_').append(y).append(".png").toString();
+        }
+
+        public StringBuffer appendPath(StringBuffer sb) {
+            return sb.append('_').append(x).append('_').append(y).append(".png");
         }
 
         protected void fixDimension(int xNext, int yNext, int xs, int ys) {
@@ -582,21 +571,12 @@ public abstract class Calibration {
     }
 
     public static final class Ozi extends Calibration {
-        private static final String PROJ_TRANSVERSE_MERCATOR = "Transverse Mercator";
-/*
-        public Position computeAbsolutePosition(Calibration parent) {
-            int absx = parent.positions[0].getX() - positions[0].getX();
-            int absy = parent.positions[0].getY() - positions[0].getY();
-            return new Position(absx, absy);
-        }
-*/
-
         public Ozi(InputStream in, String path) throws IOException {
             super(path);
 
             int lines = 0;
             CharArrayTokenizer tokenizer = new CharArrayTokenizer();
-            String projectionType = PROJ_TRANSVERSE_MERCATOR;
+            String projectionType = Mercator.PROJ_TRANSVERSE_MERCATOR;
             Vector xy = new Vector(4), ll = new Vector(4)/*, utm = new Vector()*/;
             Datum datum = null;
             ProjectionSetup projectionSetup = null;
@@ -618,15 +598,15 @@ public abstract class Calibration {
                     /*
                      * projection setup for known grids
                      */
-                    if ("Latitude/Longitude".equals(projectionType)) {
-                        projectionSetup = new ProjectionSetup("Latitude/Longitude");
-                    } else if ("(BNG) British National Grid".equals(projectionType)) {
-                            projectionSetup = new Mercator.ProjectionSetup(projectionType,
+                    if (Mercator.PROJ_LATLON.equals(projectionType)) {
+                        projectionSetup = new ProjectionSetup(Mercator.PROJ_LATLON);
+                    } else if (Mercator.PROJ_BNG.equals(projectionType)) {
+                            projectionSetup = new Mercator.ProjectionSetup(Mercator.PROJ_BNG,
                                                                            null, -2D, 49D,
                                                                            0.9996012717,
                                                                            400000, -100000);
-                    } else if ("(SG) Swedish Grid".equals(projectionType)) {
-                            projectionSetup = new Mercator.ProjectionSetup(projectionType,
+                    } else if (Mercator.PROJ_SG.equals(projectionType)) {
+                            projectionSetup = new Mercator.ProjectionSetup(Mercator.PROJ_SG,
                                                                            null, 15.808277777778, 0D,
                                                                            1D,
                                                                            1500000, 0);
@@ -641,7 +621,7 @@ public abstract class Calibration {
                     xy.removeAllElements();
                     ll.removeAllElements();
 
-                    if (PROJ_TRANSVERSE_MERCATOR.equals(projectionType)) {
+                    if (Mercator.PROJ_TRANSVERSE_MERCATOR.equals(projectionType)) {
                         tokenizer.init(line, ',', true);
                         projectionSetup = parseProjectionSetup(tokenizer);
 //#ifdef __LOG__
@@ -682,12 +662,7 @@ public abstract class Calibration {
             tokenizer.dispose();
             tokenizer = null;
 
-            // fix projection
-            if ("(UTM) Universal Transverse Mercator".equals(projectionType)) {
-                projectionSetup = Mercator.getUTMSetup((QualifiedCoordinates) ll.firstElement());
-            }
-
-            // check
+            // dimension check
             if (width == -1  || height == -1) {
                 throw new InvalidMapException("Invalid map dimension");
             }
@@ -695,6 +670,15 @@ public abstract class Calibration {
             // paranoia
             if (xy.size() != ll.size()) {
                 throw new IllegalStateException("MMPXY:MMPLL size mismatch");
+            }
+
+            // fix projection
+            if (Mercator.PROJ_UTM.equals(projectionType)) {
+                projectionSetup = Mercator.getUTMSetup((QualifiedCoordinates) ll.firstElement());
+            } else if (Mercator.PROJ_MERCATOR.equals(projectionType)) {
+                projectionSetup = Mercator.getMSetup(ll);
+            } else if (Mercator.PROJ_GMERCATOR.equals(projectionType)) {
+                projectionSetup = Mercator.getGoogleSetup();
             }
 
             doFinal(datum, projectionSetup, xy, ll);
@@ -821,7 +805,7 @@ public abstract class Calibration {
                     throw new NumberFormatException("?");
                 }
 
-                return new Mercator.ProjectionSetup(PROJ_TRANSVERSE_MERCATOR,
+                return new Mercator.ProjectionSetup(Mercator.PROJ_TRANSVERSE_MERCATOR,
                                                     null, lonOrigin, latOrigin,
                                                     k, falseEasting, falseNorthing);
 

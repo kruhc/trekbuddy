@@ -14,17 +14,17 @@ abstract class Bar {
     protected Image bar;
     protected int bh;
 
-    protected volatile String info;
-    protected volatile boolean ok;
+    protected int[] clip;
 
-    protected boolean visible = true;
-    protected boolean update = false;
+    protected boolean visible;
+    protected boolean update;
 
     protected Bar(int gx, int gy, int width, int height, Image bar) {
         this.gx = gx;
         this.gy = gy;
         this.width = width;
         this.height = height;
+        this.visible = true;
         this.bar = bar;
         this.bh = Desktop.font.getHeight();
     }
@@ -33,12 +33,6 @@ abstract class Bar {
         this.width = width;
         this.height = height;
         this.bar = bar;
-    }
-
-    public void setInfo(String info, boolean ok) {
-        this.info = null;
-        this.info = info;
-        this.ok = ok;
     }
 
     public boolean isVisible() {

@@ -33,16 +33,16 @@ public class Jsr82LocationProvider extends StreamReadingLocationProvider impleme
 
     private Thread thread;
 
-    private String btname = null;
-    private String btspp = null;
-    private volatile boolean go = false;
+    private String btname;
+    private String btspp;
+    private volatile boolean go;
 
     private Timer watcher;
     private final Object sync = new Object();
     private long timestamp = 0;
     private int state = LocationProvider._STARTING;
 
-    private api.file.File nmeaFc;
+    private api.file.File nmeaFile;
     private OutputStream nmeaObserver;
 
     public Jsr82LocationProvider(/*Callback recordingCallback*/) {
@@ -66,8 +66,8 @@ public class Jsr82LocationProvider extends StreamReadingLocationProvider impleme
                     throw new LocationException("Bluetooth radio disabled?");
                 }
                 go = true;
-                btspp = Config.getSafeInstance().getBtServiceUrl();
                 thread = Thread.currentThread();
+                btspp = Config.getSafeInstance().getBtServiceUrl();
             }
 
             // start gpx
@@ -168,14 +168,16 @@ public class Jsr82LocationProvider extends StreamReadingLocationProvider impleme
 
     private void startNmeaLog() {
         if (isTracklog() && Config.TRACKLOG_FORMAT_NMEA.equals(Config.getSafeInstance().getTracklogsFormat())) {
-            if (nmeaFc != null) {
+            if (nmeaFile != null) {
                 return; // already started, probably just reconnected
             }
             String path = Config.getSafeInstance().getTracklogsDir() + "/trekbuddy-" + GpxTracklog.dateToFileDate(System.currentTimeMillis()) + ".nmea";
             try {
-                nmeaFc = new api.file.File(Connector.open(path, Connector.WRITE));
-                nmeaFc.create();
-                nmeaObserver = new BufferedOutputStream(nmeaFc.openOutputStream(), 512);
+                nmeaFile = new api.file.File(Connector.open(path, Connector.READ_WRITE));
+                if (!nmeaFile.exists()) {
+                    nmeaFile.create();
+                }
+                nmeaObserver = new BufferedOutputStream(nmeaFile.openOutputStream(), 512);
 
                 // set stream 'observer'
                 setObserver(nmeaObserver);
@@ -208,15 +210,17 @@ public class Jsr82LocationProvider extends StreamReadingLocationProvider impleme
             try {
                 nmeaObserver.close();
             } catch (IOException e) {
+                // ignore
             }
             nmeaObserver = null;
         }
-        if (nmeaFc != null) {
+        if (nmeaFile != null) {
             try {
-                nmeaFc.close();
+                nmeaFile.close();
             } catch (IOException e) {
+                // ignore
             }
-            nmeaFc = null;
+            nmeaFile = null;
         }
     }
 

@@ -10,20 +10,32 @@ import java.util.TimeZone;
 import java.util.Date;
 
 public final class NmeaParser {
-    private static final Calendar CALENDAR = Calendar.getInstance(TimeZone.getTimeZone("GMT"));
-    private static final Date DATE_0 = new Date(0);
-    private static final CharArrayTokenizer tokenizer = new CharArrayTokenizer();
+    private static final char[] DELIMITERS = new char[]{ ',' };
+    private static CharArrayTokenizer tokenizer;
+    private static Record gga, rmc;
+    private static int day, month, year;
+    private static long date;
 
-    public static Record parseGGA(char[] nmea) throws LocationException {
-        Record record = new Record();
+    public static Record parseGGA(char[] nmea, int length) throws LocationException {
+        if (gga == null) {
+            gga = new Record();
+        } else {
+            gga.invalidate();
+        }
+        if (tokenizer == null) {
+            tokenizer = new CharArrayTokenizer();
+        }
+
         int index = 0;
+        Record record = gga;
+        CharArrayTokenizer _tokenizer = tokenizer;
 
-        // init tokenizer with current data
-        tokenizer.init(nmea, ',', false);
+        // init tokenizer
+        _tokenizer.init(nmea, length, DELIMITERS, false);
 
         // process
-        while (tokenizer.hasMoreTokens() && (index < 10)) {
-            CharArrayTokenizer.Token token = tokenizer.next();
+        while (_tokenizer.hasMoreTokens() && (index < 10)) {
+            CharArrayTokenizer.Token token = _tokenizer.next();
             if (token.isEmpty()) {
                 if (index == 0) {
                     throw new LocationException("GPGGA expected");
@@ -98,7 +110,9 @@ public final class NmeaParser {
 */
                     } break;
                     case 15: {
+/*
                         record.checksum = token.toString();
+*/
                     } break;
                 }
             }
@@ -109,16 +123,26 @@ public final class NmeaParser {
         return record;
     }
 
-    public static Record parseRMC(char[] nmea) throws LocationException {
-        Record record = new Record();
-        int index = 0;
+    public static Record parseRMC(char[] nmea, int length) throws LocationException {
+        if (rmc == null) {
+            rmc = new Record();
+        } else {
+            rmc.invalidate();
+        }
+        if (tokenizer == null) {
+            tokenizer = new CharArrayTokenizer();
+        }
 
-        // init tokenizer with current data
-        tokenizer.init(nmea, ',', false);
+        int index = 0;
+        Record record = rmc;
+        CharArrayTokenizer _tokenizer = tokenizer;
+
+        // init tokenizer
+        _tokenizer.init(nmea, length, DELIMITERS, false);
 
         // process
-        while (tokenizer.hasMoreTokens() && (index < 10)) {
-            CharArrayTokenizer.Token token = tokenizer.next();
+        while (_tokenizer.hasMoreTokens() && (index < 10)) {
+            CharArrayTokenizer.Token token = _tokenizer.next();
             if (token.isEmpty()) {
                 if (index == 0) {
                     throw new LocationException("GPRMC expected");
@@ -175,7 +199,9 @@ public final class NmeaParser {
                         // variation W?
                     } break;
                     case 12: {
+/*
                         record.checksum = token.toString();
+*/
                     } break;
                 }
             }
@@ -204,12 +230,19 @@ public final class NmeaParser {
         int day = 10 * (_tarray[_tbegin + 0] - '0') + _tarray[_tbegin + 1] - '0';
         int month = 10 * (_tarray[_tbegin + 2] - '0') + _tarray[_tbegin + 3] - '0';
         int year = 2000 + 10 * (_tarray[_tbegin + 4] - '0') + _tarray[_tbegin + 5] - '0';
-        CALENDAR.setTime(DATE_0);
-        CALENDAR.set(Calendar.DAY_OF_MONTH, day);
-        CALENDAR.set(Calendar.MONTH, month - 1); // zero-based
-        CALENDAR.set(Calendar.YEAR, year);
+        if (day != NmeaParser.day || month != NmeaParser.month || year != NmeaParser.year) {
+            NmeaParser.day = day;
+            NmeaParser.month = month;
+            NmeaParser.year = year;
+            Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone("GMT"));
+            calendar.setTime(new Date(0));
+            calendar.set(Calendar.DAY_OF_MONTH, day);
+            calendar.set(Calendar.MONTH, month - 1); // zero-based
+            calendar.set(Calendar.YEAR, year);
+            date = calendar.getTime().getTime();
+        }
 
-        return CALENDAR.getTime().getTime();
+        return date;
     }
 
     /**
@@ -219,12 +252,14 @@ public final class NmeaParser {
         // NMEA COMMON
         public int timestamp;
         public double lat, lon;
+/* unused
         public String checksum;
+*/
         // GGA
-        public int fix = -1;
-        public int sat = -1;
-        public float hdop = -1F;
-        public float altitude = -1F;
+        public int fix;
+        public int sat;
+        public float hdop;
+        public float altitude;
 /* unused
         public float geoidh;
         public int dgpst;
@@ -232,8 +267,18 @@ public final class NmeaParser {
 */
         // RMC
         public char status;
-        public float speed = -1F;
-        public float angle = -1F;
+        public float speed;
+        public float angle;
         public long date;
+
+        public Record() {
+            this.invalidate();
+        }
+
+        public void invalidate() {
+            this.timestamp = -1;
+            this.fix = this.sat = -1;
+            this.hdop = this.altitude = this.speed = this.angle = -1F;
+        }
     }
 }

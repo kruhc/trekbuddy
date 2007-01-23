@@ -3,19 +3,15 @@
 
 package cz.kruch.track.maps.io;
 
-//#ifdef __LOG__
-import cz.kruch.track.util.Logger;
-//#endif
-
 public final class LoaderIO extends Thread {
 //#ifdef __LOG__
-    private static final Logger log = new Logger("LoaderIO");
+    private static final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("LoaderIO");
 //#endif
 
     private static LoaderIO instance;
 
     private Runnable task = null;
-    private volatile boolean go = true;
+    private boolean go = true;
     private boolean ready = true;
 
     private LoaderIO() {
@@ -30,16 +26,15 @@ public final class LoaderIO extends Thread {
         return instance;
     }
 
-    public static void destroy() {
-        if (instance != null) {
-            instance.go = false;
-            synchronized (instance) {
-                instance.notify();
-            }
-            try {
-                instance.join();
-            } catch (InterruptedException e) {
-            }
+    public void destroy() {
+        synchronized (this) {
+            go = false;
+            notify();
+        }
+        try {
+            join();
+        } catch (InterruptedException e) {
+            // ignore
         }
     }
 
@@ -54,6 +49,7 @@ public final class LoaderIO extends Thread {
                 try {
                     wait();
                 } catch (InterruptedException e) {
+                    // ignore
                 }
             }
             ready = false;
@@ -67,14 +63,15 @@ public final class LoaderIO extends Thread {
         if (log.isEnabled()) log.debug("I/O thread starting...");
 //#endif
 
-        for (;;) {
+        for (; go ;) {
             // pop task
-            Runnable r = null;
+            Runnable r;
             synchronized (this) {
                 while (go && task == null) {
                     try {
                         wait();
                     } catch (InterruptedException e) {
+                        // ignore
                     }
                 }
                 r = task;

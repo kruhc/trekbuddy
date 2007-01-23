@@ -8,14 +8,14 @@ import java.util.Calendar;
 import java.util.TimeZone;
 
 public class Location {
-    private static final Calendar CALENDAR = Calendar.getInstance(TimeZone.getTimeZone("GMT"));
+    private static final Calendar CALENDAR = Calendar.getInstance(TimeZone.getDefault());
     private static final Date DATE = new Date();
 
     private QualifiedCoordinates coordinates;
-    private long timestamp = - 1;
-    private int fix;
-    private int sat;
-    private float hdop = -1F;
+    private long timestamp;
+    private short fix;
+    private short sat;
+    private float hdop;
     private float speed = -1F;
     private float course = -1F;
 
@@ -23,11 +23,12 @@ public class Location {
         this(coordinates, timestamp, fix, -1, -1F);
     }
 
-    public Location(QualifiedCoordinates coordinates, long timestamp, int fix, int sat, float hdop) {
+    public Location(QualifiedCoordinates coordinates, long timestamp, int fix,
+                    int sat, float hdop) {
         this.coordinates = coordinates;
         this.timestamp = timestamp;
-        this.fix = fix;
-        this.sat = sat;
+        this.fix = (short) fix;
+        this.sat = (short) sat;
         this.hdop = hdop;
     }
 
@@ -79,12 +80,11 @@ public class Location {
         this.course = course;
     }
 
-    public String toExtendedInfo(StringBuffer sb) {
+    public StringBuffer toStringBuffer(StringBuffer sb) {
 /*
         if (timestamp > 0) {
 */
             DATE.setTime(timestamp);
-            CALENDAR.setTimeZone(TimeZone.getDefault());
             CALENDAR.setTime(DATE);
             int hour = CALENDAR.get(Calendar.HOUR_OF_DAY);
             if (hour < 10) sb.append('0');
@@ -112,11 +112,7 @@ public class Location {
         }
 */
 
-        if (sb.length() > 0) {
-            return sb.toString();
-        }
-
-        return null;
+        return sb;
     }
 
     // debug

@@ -3,6 +3,8 @@
 
 package api.location;
 
+import cz.kruch.track.ui.NavigationScreens;
+
 public final class MinDec {
     private int type = QualifiedCoordinates.UNKNOWN;
     private int sign = 0;
@@ -89,7 +91,7 @@ public final class MinDec {
 
         sb.append(type == QualifiedCoordinates.LAT ? (sign == -1 ? "S" : "N") : (sign == -1 ? "W" : "E"));
         sb.append(' ');
-        sb.append(h).append(cz.kruch.track.TrackingMIDlet.SIGN).append(m).append('.');
+        sb.append(h).append(NavigationScreens.SIGN).append(m).append('.');
         if (s < 10000) {
             sb.append('0');
         }

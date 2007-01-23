@@ -96,9 +96,11 @@ public final class BufferedInputStream extends /* FilterInputStream */ InputStre
      * @throws IllegalArgumentException if size <= 0.
      */
     public BufferedInputStream(InputStream in, int size) {
+/* null supported since 0.9.5
         if (in == null) {
             throw new IllegalArgumentException("Underlying stream is null");
         }
+*/
         if (size <= 0) {
             throw new IllegalArgumentException("Buffer size <= 0");
         }
@@ -335,7 +337,7 @@ public final class BufferedInputStream extends /* FilterInputStream */ InputStre
      * Reuse this with new stream.
      * @param in new input stream
      */
-    public void reuse(InputStream in) {
+    public InputStream reuse(InputStream in) {
         this.in = null; // gc hint
         this.in = in;
         this.pos = this.count = 0;
@@ -346,6 +348,8 @@ public final class BufferedInputStream extends /* FilterInputStream */ InputStre
         } else {
             available = -1;
         }
+
+        return this;
     }
 
     /**

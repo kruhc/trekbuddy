@@ -8,10 +8,66 @@ import javax.microedition.lcdui.Image;
 
 import api.location.LocationProvider;
 
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+
 public final class NavigationScreens {
+    /*
+     * public constants
+     */
+    public static final int[] ranges = {
+        500, 250, 100, 50, 25, 10, 5
+    };
+    public static final String[] rangesStr = {
+        "500 m", "250 m", "100 m", "50 m", "25 m", "10 m", "5 m"
+    };
+    public static final String[] nStr = {
+         "0*",  "1*",  "2*",  "3*",  "4*",  "5*",  "6*",  "7*",  "8*",  "9*",
+        "10*", "11*", "12*", "13*", "14*", "15*", "16*", "17*", "18*", "19*",
+        "20*", "21*", "22*", "23*", "24*"
+    };
+    public static String SIGN = "^";
+
+    /*
+     * image cache
+     */
+    public static Image courses, courses2;
+    public static Image waypoint;
+    public static Image crosshairs;
+    public static Image providers;
+
+    // private vars
     private static int arrowSize, arrowSize2;
     private static int wptSize2;
+
+    // public (???) vars
     public static int bulletSize;
+
+    public static void initialize() {
+        // init image cache
+        try {
+            courses = Image.createImage("/resources/courses.png");
+            courses2 = Image.createImage("/resources/courses2.png");
+            waypoint = Image.createImage("/resources/wpt.png");
+            crosshairs = Image.createImage("/resources/crosshairs.png");
+            providers = Image.createImage("/resources/bullets.png");
+        } catch (IOException e) {
+            // TODO what???
+        }
+
+        // init constants
+        try {
+            SIGN = new String(new byte[]{ (byte) 0xc2, (byte) 0xb0 }, "UTF-8");
+        } catch (UnsupportedEncodingException e) {
+            // ignore
+        }
+
+        // setup vars
+        arrowSize = courses.getHeight();
+        arrowSize2 = arrowSize >> 1;
+        wptSize2 = waypoint.getWidth() >> 1;
+        bulletSize = providers.getHeight();
+    }
 
     public static void drawArrow(Graphics graphics, float course,
                                  int x, int y, int anchor) {
@@ -71,12 +127,12 @@ public final class NavigationScreens {
             }
         }
 
-        Image _courses = cz.kruch.track.TrackingMIDlet.courses;
+        Image _courses = courses;
         if (ti == Sprite.TRANS_ROT90) {
-            _courses = cz.kruch.track.TrackingMIDlet.courses2;
+            _courses = courses2;
             ti = Sprite.TRANS_NONE;
         } else if (ti == Sprite.TRANS_ROT270) {
-            _courses = cz.kruch.track.TrackingMIDlet.courses2;
+            _courses = courses2;
             ti = Sprite.TRANS_ROT180;
         }
 
@@ -86,7 +142,7 @@ public final class NavigationScreens {
     }
 
     public static void drawWaypoint(Graphics graphics, int x, int y, int anchor) {
-        graphics.drawImage(cz.kruch.track.TrackingMIDlet.waypoint,
+        graphics.drawImage(waypoint,
                            x - wptSize2, y - wptSize2, anchor);
     }
 
@@ -94,15 +150,8 @@ public final class NavigationScreens {
                                           int x, int y, int anchor) {
         int ci = status < LocationProvider._CANCELLED ? status : LocationProvider.OUT_OF_SERVICE;
 
-        graphics.drawRegion(cz.kruch.track.TrackingMIDlet.providers,
+        graphics.drawRegion(providers,
                             ci * bulletSize, 0, bulletSize, bulletSize,
                             Sprite.TRANS_NONE, x, y, anchor);
-    }
-
-    public static void initialize() {
-        arrowSize = cz.kruch.track.TrackingMIDlet.courses/*[0]*/.getHeight();
-        arrowSize2 = arrowSize >> 1;
-        wptSize2 = cz.kruch.track.TrackingMIDlet.waypoint.getWidth() >> 1;
-        bulletSize = cz.kruch.track.TrackingMIDlet.providers/*[0]*/.getHeight();
     }
 }

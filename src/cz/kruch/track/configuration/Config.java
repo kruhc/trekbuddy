@@ -3,9 +3,6 @@
 
 package cz.kruch.track.configuration;
 
-//#ifdef __LOG__
-import cz.kruch.track.util.Logger;
-//#endif
 import cz.kruch.track.util.CharArrayTokenizer;
 
 import javax.microedition.rms.RecordStore;
@@ -23,7 +20,7 @@ import api.location.Datum;
 
 public final class Config {
 //#ifdef __LOG__
-    private static final Logger log = new Logger("Config");
+    private static final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("Config");
 //#endif
 
     private static final String[] CONFIGS = new String[]{

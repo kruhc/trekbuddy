@@ -33,7 +33,7 @@ public final class WaypointForm extends Form
     public static final String MENU_SAVE = "Save";
     public static final String MENU_USE = "Add";
 
-    private static final Calendar CALENDAR = Calendar.getInstance(TimeZone.getTimeZone("GMT"));
+    private static final Calendar CALENDAR = Calendar.getInstance(TimeZone.getDefault());
 
     private Displayable next;
     private Location location;
@@ -258,7 +258,7 @@ public final class WaypointForm extends Form
                 throw new IllegalArgumentException("Malformed coordinate: " + value);
         }
 
-        int idxSign = value.indexOf(cz.kruch.track.TrackingMIDlet.SIGN);
+        int idxSign = value.indexOf(NavigationScreens.SIGN);
         if (idxSign < 3) {
             throw new IllegalArgumentException("Malformed coordinate: " + value);
         }
@@ -266,9 +266,9 @@ public final class WaypointForm extends Form
 
         double result = Integer.parseInt(value.substring(1, idxSign).trim());
         if (idxApo == -1) {
-            result += Double.parseDouble(value.substring(idxSign + cz.kruch.track.TrackingMIDlet.SIGN.length()).trim()) / 60D;
+            result += Double.parseDouble(value.substring(idxSign + NavigationScreens.SIGN.length()).trim()) / 60D;
         } else {
-            result += Integer.parseInt(value.substring(idxSign + cz.kruch.track.TrackingMIDlet.SIGN.length(), idxApo).trim()) / 60D;
+            result += Integer.parseInt(value.substring(idxSign + NavigationScreens.SIGN.length(), idxApo).trim()) / 60D;
             result += Double.parseDouble(value.substring(idxApo + 1).trim()) / 3600D;
         }
 
@@ -276,7 +276,6 @@ public final class WaypointForm extends Form
     }
 
     private static String dateToString(long time) {
-        CALENDAR.setTimeZone(TimeZone.getDefault());
         CALENDAR.setTime(new Date(time/* + Config.getSafeInstance().getTimeZoneOffset() * 1000*/));
         StringBuffer sb = new StringBuffer();
         sb.append(CALENDAR.get(Calendar.YEAR)).append('-');

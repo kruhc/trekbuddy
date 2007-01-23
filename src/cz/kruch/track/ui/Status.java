@@ -8,7 +8,7 @@ import javax.microedition.lcdui.Image;
 
 final class Status extends Bar {
 
-    private int[] clip;
+    private String status;
 
     public Status(int gx, int gy, int width, int height, Image bar) {
         super(gx, gy, width, height, bar);
@@ -17,13 +17,17 @@ final class Status extends Bar {
     }
 
     public void render(Graphics graphics) {
-        if (!visible || info == null) {
+        if (!visible || status == null) {
             return;
         }
 
         // draw status info
         graphics.drawImage(bar, gx, height - bh, 0/*Graphics.TOP | Graphics.LEFT*/);
-        graphics.drawString(info, gx, height - bh, 0/*Graphics.TOP | Graphics.LEFT*/);
+        graphics.drawString(status, gx, height - bh, 0/*Graphics.TOP | Graphics.LEFT*/);
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
     }
 
     public int[] getClip() {

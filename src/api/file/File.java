@@ -4,13 +4,26 @@
 package api.file;
 
 import javax.microedition.io.Connection;
+import javax.microedition.io.Connector;
 import java.util.Enumeration;
 import java.io.InputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 
 public final class File {
+
+    public static final String FILE_PROTOCOL = "file://";
     public static final String FILE_SEPARATOR  = "/";
+    public static final String PARENT_DIR = "..";
+
+    public static final int FS_UNKNOWN = -1;
+    public static final int FS_NONE    = 0;
+    public static final int FS_JSR75   = 1;
+    public static final int FS_SIEMENS = 2;
+    public static final int FS_SXG75   = 3;
+    public static final int FS_MOTOROLA = 4;
+
+    public static int fsType = FS_UNKNOWN;
 
 //#ifdef __JSR75__
     private javax.microedition.io.file.FileConnection fc;
@@ -181,16 +194,20 @@ public final class File {
         throw new Error("Corrupted build: isDirectory()");
     }
 
-    public void setFileConnection(String string) throws IOException {
+    public void setFileConnection(String path) throws IOException {
 //#ifdef __JSR75__
-        fc.setFileConnection(string);
+        if (cz.kruch.track.TrackingMIDlet.isSxg75()) {
+            traverse(path);
+        } else {
+            fc.setFileConnection(path);
+        }
 //#elif __S65__
         if (cz.kruch.track.TrackingMIDlet.isS65()) {
-            fc_S65.setFileConnection(string);
+            fc_S65.setFileConnection(path);
         }
 //#elif __A780__
         if (cz.kruch.track.TrackingMIDlet.isA780()) {
-            throw new Error("Unsupported operation: setFileConnection");
+            traverse(path);
         }
 //#endif
     }
@@ -225,6 +242,51 @@ public final class File {
         if (cz.kruch.track.TrackingMIDlet.isA780()) {
             fc_a780.close();
             fc_a780 = null;
+        }
+//#endif
+    }
+
+    private void traverse(String path) throws IOException {
+        // get current path
+        String url = getURL();
+
+        // handle broken paths
+        if ("..".equals(path)) {
+            path = "";
+            url = url.substring(0, url.length() - 1);
+            url = url.substring(0, url.lastIndexOf('/') + 1);
+        }
+//#ifdef __A780__
+          else {
+            if (url.endsWith("/") && path.startsWith("/")) {
+                url = url.substring(0, url.length() - 1);
+            }
+        }
+//#endif
+
+        // close existing connection
+        try {
+            close();
+        } catch (IOException e) {
+            // ignore
+        }
+//#ifdef __JSR75__
+        fc = null; // gc hint
+//#elif __A780__
+        fc_a780 = null; // gc hint
+//#endif
+
+        // open new connection
+        Connection c = Connector.open(url + path, Connector.READ);
+//#ifdef __JSR75__
+        if (cz.kruch.track.TrackingMIDlet.isSxg75()) {
+            fc = (javax.microedition.io.file.FileConnection) c;
+        } else {
+            throw new IllegalStateException("Not SXG75");
+        }
+//#elif __A780__
+        if (cz.kruch.track.TrackingMIDlet.isA780()) {
+            this.fc_a780 = (com.motorola.io.FileConnection) c;
         }
 //#endif
     }

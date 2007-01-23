@@ -3,9 +3,6 @@
 
 package cz.kruch.track.maps;
 
-//#ifdef __LOG__
-import cz.kruch.track.util.Logger;
-//#endif
 import cz.kruch.track.util.CharArrayTokenizer;
 import cz.kruch.track.AssertionFailedException;
 import cz.kruch.track.maps.io.LoaderIO;
@@ -13,7 +10,6 @@ import cz.kruch.j2se.io.BufferedInputStream;
 
 import javax.microedition.io.Connector;
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.Enumeration;
 import java.util.Hashtable;
 
@@ -30,7 +26,7 @@ public final class Atlas implements Runnable {
     }
 
 //#ifdef __LOG__
-    private static final Logger log = new Logger("Atlas");
+    private static final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("Atlas");
 //#endif
 
     private static final int EVENT_ATLAS_OPENED     = 0;
@@ -238,14 +234,14 @@ public final class Atlas implements Runnable {
     */
 
     private abstract class Loader {
-        protected Exception exception;
-
         protected String dir;
+        protected Exception exception;
+        protected BufferedInputStream shared;
 
         protected abstract void run();
 
-        public String getDir() {
-            return dir;
+        protected Loader() {
+            this.shared = new BufferedInputStream(null, Map.TEXT_FILE_BUFFER_SIZE);
         }
 
         public void init() throws IOException {
@@ -261,6 +257,8 @@ public final class Atlas implements Runnable {
         }
 
         public void destroy() throws IOException {
+            shared.reuse(null);
+            shared = null; // gc hint
         }
 
         public void checkException() throws Exception {
@@ -284,13 +282,17 @@ public final class Atlas implements Runnable {
 
         public void run() {
             // vars
+            api.file.File file = null;
             TarInputStream tar = null;
-            CharArrayTokenizer tokenizer = null;
 
             try {
                 // create stream
-                tar = new TarInputStream(new BufferedInputStream(Connector.openInputStream(url), Map.LARGE_BUFFER_SIZE));
-                tokenizer = new CharArrayTokenizer();
+                file = new api.file.File(Connector.open(url, Connector.READ));
+                tar = new TarInputStream(shared.reuse(file.openInputStream()));
+
+                // shared vars
+                CharArrayTokenizer tokenizer = new CharArrayTokenizer();
+                StringBuffer sb = new StringBuffer(128);
 
                 // iterate over archive
                 TarEntry entry = tar.getNextEntry();
@@ -315,7 +317,8 @@ public final class Atlas implements Runnable {
 
                             // got layer and map name?
                             if (lName != null && mName != null) {
-                                String url = (new StringBuffer(32)).append(dir).append(lName).append('/').append(mName).append('/').append(mName).append(".tar").toString();
+                                sb.setLength(0);
+                                String url = sb.append(dir).append(lName).append('/').append(mName).append('/').append(mName).append(".tar").toString();
                                 Calibration calibration = null;
 
                                 // load map calibration file
@@ -346,15 +349,27 @@ public final class Atlas implements Runnable {
                     entry = null; // gc hint
                     entry = tar.getNextEntry();
                 }
+
+                // dispose vars
+                tokenizer.dispose();
+
             } catch (Exception e) {
                 exception = e;
             } finally {
-                if (tokenizer != null) {
-                    tokenizer.dispose();
-                }
+
+                // close stream
                 if (tar != null) {
                     try {
                         tar.close();
+                    } catch (IOException e) {
+                        // ignore
+                    }
+                }
+
+                // close file
+                if (file != null) {
+                    try {
+                        file.close();
                     } catch (IOException e) {
                         // ignore
                     }
@@ -372,6 +387,9 @@ public final class Atlas implements Runnable {
             try {
                 // open atlas dir
                 file = new api.file.File(Connector.open(dir, Connector.READ));
+
+                // path holder
+                StringBuffer sb = new StringBuffer(128);
 
                 // iterate over layers
                 for (Enumeration le = file.list(); le.hasMoreElements(); ) {
@@ -410,18 +428,24 @@ public final class Atlas implements Runnable {
                                     String ext = iEntry.substring(indexOf + 1);
 
                                     // calibration
+                                    sb.setLength(0);
+                                    String path = sb.append(file.getURL()).append(iEntry).toString();
                                     Calibration calibration = null;
-                                    Map.FileInput fileInput = new Map.FileInput((new StringBuffer(64)).append(file.getURL()).append(iEntry).toString());
+                                    Map.FileInput fileInput = new Map.FileInput(path);
 
                                     // load map calibration file
                                     if ("map".equals(ext)) {
-                                        calibration = new Calibration.Ozi(fileInput.getInputStream(), fileInput.getUrl());
+                                        calibration = new Calibration.Ozi(shared.reuse(fileInput._getInputStream()),
+                                                                          path);
                                     } else if ("gmi".equals(ext)) {
-                                        calibration = new Calibration.GMI(fileInput.getInputStream(), fileInput.getUrl());
+                                        calibration = new Calibration.GMI(shared.reuse(fileInput._getInputStream()),
+                                                                          path);
                                     } else if ("j2n".equals(ext)) {
-                                        calibration = new Calibration.J2N(fileInput.getInputStream(), fileInput.getUrl());
+                                        calibration = new Calibration.J2N(shared.reuse(fileInput._getInputStream()),
+                                                                          path);
                                     } else if ("xml".equals(ext)) {
-                                        calibration = new Calibration.XML(fileInput.getInputStream(), fileInput.getUrl());
+                                        calibration = new Calibration.XML(shared.reuse(fileInput._getInputStream()),
+                                                                          path);
                                     }
 
                                     // close file input
@@ -452,6 +476,7 @@ public final class Atlas implements Runnable {
             } catch (Exception e) {
                 exception = e;
             } finally {
+                // close file
                 if (file != null) {
                     try {
                         file.close();

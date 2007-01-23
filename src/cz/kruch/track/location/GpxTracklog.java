@@ -53,7 +53,7 @@ public final class GpxTracklog extends Thread {
     private long time;
     private String date;
 
-    private volatile boolean go = true;
+    private boolean go = true;
     private Object queue;
 
     private Location refLocation;
@@ -76,132 +76,142 @@ public final class GpxTracklog extends Thread {
     }
 
     public void destroy() {
-        go = false;
         synchronized (this) {
+            go = false;
             notify();
         }
     }
 
     public void run() {
-        api.file.File fc = null;
+        api.file.File file = null;
         OutputStream output = null;
         String path = Config.getSafeInstance().getTracklogsDir() + "/trekbuddy-" + date + "-" + type + ".gpx";
+        Throwable throwable = null;
 
+        // try to create file - isolated operation
         try {
-            fc = new api.file.File(Connector.open(path, Connector.WRITE));
-            fc.create();
-            output = new BufferedOutputStream(fc.openOutputStream(), 512);
+            file = new api.file.File(Connector.open(path, Connector.READ_WRITE));
+            if (!file.exists()) {
+                file.create();
+            }
         } catch (Throwable t) {
-            if (output != null) {
-                try {
-                    output.close();
-                } catch (IOException e) {
-                }
-            }
-            if (fc != null) {
-                try {
-                    fc.close();
-                } catch (IOException e) {
-                }
-            }
-
-            // signal failure
-            callback.invoke("Failed to create GPX file " + path, t);
-
-            return; // no tracklog
+            throwable = t;
         }
 
-        // signal recording start
-        callback.invoke(new Integer(CODE_RECORDING_START), null);
+        // file created?
+        if (throwable == null) {
 
-        KXmlSerializer serializer = null;
+            // signal recording start
+            callback.invoke(new Integer(CODE_RECORDING_START), null);
 
-        try {
-            serializer = new KXmlSerializer();
-            serializer.setFeature("http://xmlpull.org/v1/doc/features.html#indent-output", true);
-            serializer.setOutput(output, "UTF-8");
-            serializer.startDocument("UTF-8", null);
-            serializer.setPrefix(null, GPX_1_1_NAMESPACE);
-            serializer.setPrefix(EXT_PREFIX, EXT_NAMESPACE);
-            serializer.startTag(DEFAULT_NAMESPACE, "gpx");
-            serializer.attribute(DEFAULT_NAMESPACE, "version", "1.1");
-            serializer.attribute(DEFAULT_NAMESPACE, "creator", creator);
-            if (type == LOG_TRK) {
-                serializer.startTag(DEFAULT_NAMESPACE, "trk");
-                serializer.startTag(DEFAULT_NAMESPACE, "trkseg");
-            }
+            KXmlSerializer serializer = null;
 
-            for (;;) {
-                Object item;
-                synchronized (this) {
-                    while (go && queue == null) {
-                        try {
-                            wait();
-                        } catch (InterruptedException e) {
+            try {
+                output = new BufferedOutputStream(file.openOutputStream(), 512);
+                serializer = new KXmlSerializer();
+                serializer.setFeature("http://xmlpull.org/v1/doc/features.html#indent-output", true);
+                serializer.setOutput(output, "UTF-8");
+                serializer.startDocument("UTF-8", null);
+                serializer.setPrefix(null, GPX_1_1_NAMESPACE);
+                serializer.setPrefix(EXT_PREFIX, EXT_NAMESPACE);
+                serializer.startTag(DEFAULT_NAMESPACE, "gpx");
+                serializer.attribute(DEFAULT_NAMESPACE, "version", "1.1");
+                serializer.attribute(DEFAULT_NAMESPACE, "creator", creator);
+                if (type == LOG_TRK) {
+                    serializer.startTag(DEFAULT_NAMESPACE, "trk");
+                    serializer.startTag(DEFAULT_NAMESPACE, "trkseg");
+                }
+
+                for (; go ;) {
+                    // pop item
+                    Object item;
+                    synchronized (this) {
+                        while (go && queue == null) {
+                            try {
+                                wait();
+                            } catch (InterruptedException e) {
+                                // ignore
+                            }
+                        }
+                        item = queue;
+                        queue = null;
+                    }
+
+                    if (!go) break;
+
+                    if (type == LOG_WPT) {
+                        if (item instanceof Waypoint) {
+                            Waypoint w = (Waypoint) item;
+                            if (w.getUserObject() != null) {
+                                w.setLinkPath(saveImage((byte[]) w.getUserObject()));
+                            }
+                            serializeWpt(serializer, w);
+                            callback.invoke(new Integer(CODE_WAYPOINT_INSERTED), null);
+                        }
+                    } else { // type == LOG_TRK
+                        if (item instanceof Location) {
+                            Location l = check((Location) item);
+                            if (l != null) {
+                                serializeTrkpt(serializer, l);
+                                serializer.flush();
+                            }
+                        } else if (item instanceof Boolean) {
+                            serializer.endTag(DEFAULT_NAMESPACE, "trkseg");
+                            serializer.startTag(DEFAULT_NAMESPACE, "trkseg");
                         }
                     }
-                    item = queue;
-                    queue = null;
                 }
 
-                if (!go) break;
+                // signal recording stop
+                callback.invoke(new Integer(CODE_RECORDING_STOP), null);
 
-                if (type == LOG_WPT) {
-                    if (item instanceof Waypoint) {
-                        Waypoint w = (Waypoint) item;
-                        if (w.getUserObject() != null) {
-                            w.setLinkPath(saveImage((byte[]) w.getUserObject()));
+            } catch (Throwable t) {
+
+                // signal error
+                callback.invoke(null, t);
+
+            } finally {
+
+                // close XML
+                if (serializer != null) {
+                    try {
+                        if (type == LOG_TRK) {
+                            serializer.endTag(DEFAULT_NAMESPACE, "trkseg");
+                            serializer.endTag(DEFAULT_NAMESPACE, "trk");
                         }
-                        serializeWpt(serializer, w);
-                        callback.invoke(new Integer(CODE_WAYPOINT_INSERTED), null);
-                    }
-                } else { // type == LOG_TRK
-                    if (item instanceof Location) {
-                        Location l = check((Location) item);
-                        if (l != null) {
-                            serializeTrkpt(serializer, l);
-                            serializer.flush();
-                        }
-                    } else if (item instanceof Boolean) {
-                        serializer.endTag(DEFAULT_NAMESPACE, "trkseg");
-                        serializer.startTag(DEFAULT_NAMESPACE, "trkseg");
+                        serializer.endTag(null, "gpx");
+                        serializer.endDocument();
+                        serializer.flush();
+                    } catch (IOException e) {
+                        // TODO ignore???
                     }
                 }
-            }
-        } catch (Throwable t) {
-            callback.invoke(null, t);
-        } finally {
-            if (serializer != null) {
-                try {
-                    if (type == LOG_TRK) {
-                        serializer.endTag(DEFAULT_NAMESPACE, "trkseg");
-                        serializer.endTag(DEFAULT_NAMESPACE, "trk");
-                    }
-                    serializer.endTag(null, "gpx");
-                    serializer.endDocument();
-                    serializer.flush();
-                } catch (IOException e) {
-                }
-            }
-            if (output != null) {
-                try {
-                    output.close();
-                } catch (IOException e) {
-                }
-            }
-            if (fc != null) {
-                try {
-                    fc.close();
-                } catch (IOException e) {
-                }
-            }
 
-            // signal recording stop
-            callback.invoke(new Integer(CODE_RECORDING_STOP), null);
+                // close output
+                if (output != null) {
+                    try {
+                        output.close();
+                    } catch (IOException e) {
+                        // ignore
+                    }
+                }
+            }
+        } else {
+            // signal failure
+            callback.invoke("Failed to create GPX file " + path, throwable);
+        }
+
+        // close file
+        if (file != null) {
+            try {
+                file.close();
+            } catch (IOException e) {
+                // ignore
+            }
         }
     }
 
-    private void serializePt(KXmlSerializer serializer, Location l) throws IOException {
+    private static void serializePt(KXmlSerializer serializer, Location l) throws IOException {
         QualifiedCoordinates qc = l.getQualifiedCoordinates();
         serializer.attribute(DEFAULT_NAMESPACE, "lat", Double.toString(qc.getLat()));
         serializer.attribute(DEFAULT_NAMESPACE, "lon", Double.toString(qc.getLon()));
@@ -280,13 +290,13 @@ public final class GpxTracklog extends Thread {
         }
     }
 
-    private void serializeTrkpt(KXmlSerializer serializer, Location l) throws IOException {
+    private static void serializeTrkpt(KXmlSerializer serializer, Location l) throws IOException {
         serializer.startTag(DEFAULT_NAMESPACE, "trkpt");
         serializePt(serializer, l);
         serializer.endTag(DEFAULT_NAMESPACE, "trkpt");
     }
 
-    private void serializeWpt(KXmlSerializer serializer, Waypoint w) throws IOException {
+    private static void serializeWpt(KXmlSerializer serializer, Waypoint w) throws IOException {
         serializer.startTag(DEFAULT_NAMESPACE, "wpt");
         serializePt(serializer, w);
         serializer.endTag(DEFAULT_NAMESPACE, "wpt");
@@ -294,25 +304,31 @@ public final class GpxTracklog extends Thread {
     }
 
     private String saveImage(byte[] raw) throws IOException {
-        api.file.File fc = null;
+        api.file.File file = null;
         OutputStream output = null;
-        String relPath = "Images-" + date;
-        String fileName = "pic-" + imgNum++ + ".jpg";
 
         try {
+            // images path
+            String relPath = "Images-" + date;
+
             // check for 'Images' subdir existence
             String imgdir = Config.getSafeInstance().getTracklogsDir() + "/" + relPath + "/";
-            fc = new api.file.File(Connector.open(imgdir, Connector.READ_WRITE));
-            if (!fc.exists()) {
-                fc.mkdir();
+            file = new api.file.File(Connector.open(imgdir, Connector.READ_WRITE));
+            if (!file.exists()) {
+                file.mkdir();
             }
-            fc.close();
-            fc = null;
+            file.close();
+            file = null;
+
+            // image filename
+            String fileName = "pic-" + imgNum++ + ".jpg";
 
             // save picture
-            fc = new api.file.File(Connector.open(imgdir + fileName, Connector.WRITE));
-            fc.create();
-            output = new BufferedOutputStream(fc.openOutputStream(), 4096);
+            file = new api.file.File(Connector.open(imgdir + fileName, Connector.READ_WRITE));
+            if (!file.exists()) {
+                file.create();
+            }
+            output = new BufferedOutputStream(file.openOutputStream(), 4096);
             output.write(raw);
             output.flush();
 
@@ -324,12 +340,14 @@ public final class GpxTracklog extends Thread {
                 try {
                     output.close();
                 } catch (IOException e) {
+                    // ignore
                 }
             }
-            if (fc != null) {
+            if (file != null) {
                 try {
-                    fc.close();
+                    file.close();
                 } catch (IOException e) {
+                    // ignore
                 }
             }
         }
@@ -493,7 +511,6 @@ public final class GpxTracklog extends Thread {
     }
 
     public static String dateToFileDate(long time) {
-        CALENDAR.setTimeZone(TimeZone.getDefault());
         CALENDAR.setTime(new Date(time/* + Config.getSafeInstance().getTimeZoneOffset() * 1000*/));
         StringBuffer sb = new StringBuffer();
         sb.append(CALENDAR.get(Calendar.YEAR)).append('-');

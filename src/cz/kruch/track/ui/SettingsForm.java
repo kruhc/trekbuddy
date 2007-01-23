@@ -237,11 +237,11 @@ final class SettingsForm extends Form implements CommandListener, ItemStateListe
             Desktop.resetFont();
             // datum
             config.setGeoDatum(Config.useDatum(choiceMapDatum.getString(choiceMapDatum.getSelectedIndex())));
-            // coordinates format ('==' is ok for comparison)
+            // coordinates format
             String fmt = choiceCoordinates.getString(choiceCoordinates.getSelectedIndex());
-            config.setUseGridFormat(Config.COORDS_MAP_GRID == fmt);
-            config.setUseUTM(Config.COORDS_UTM == fmt);
-            config.setUseGeocachingFormat(Config.COORDS_GC_LATLON == fmt);
+            config.setUseGridFormat(Config.COORDS_MAP_GRID.equals(fmt));
+            config.setUseUTM(Config.COORDS_UTM.equals(fmt));
+            config.setUseGeocachingFormat(Config.COORDS_GC_LATLON.equals(fmt));
             // desktop
             boolean[] perf = new boolean[choicePerformance.size()];
             choicePerformance.getSelectedFlags(perf);

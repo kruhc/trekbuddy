@@ -8,13 +8,9 @@ import api.location.LocationListener;
 import api.location.LocationException;
 import api.location.Location;
 
-import javax.microedition.io.Connector;
 import java.io.InputStream;
 import java.io.IOException;
 
-//#ifdef __LOG__
-import cz.kruch.track.util.Logger;
-//#endif
 import cz.kruch.track.configuration.Config;
 import cz.kruch.track.ui.FileBrowser;
 import cz.kruch.track.ui.Desktop;
@@ -26,7 +22,7 @@ public class SimulatorLocationProvider
         extends StreamReadingLocationProvider
         implements Runnable, Callback {
 //#ifdef __LOG__
-    private static final Logger log = new Logger("Simulator");
+    private static final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("Simulator");
 //#endif
 
     private Thread thread;

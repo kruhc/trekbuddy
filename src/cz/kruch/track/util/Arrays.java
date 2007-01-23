@@ -3,50 +3,122 @@
 
 package cz.kruch.track.util;
 
-public class Arrays {
+import javax.microedition.lcdui.List;
+import java.util.Enumeration;
+import java.util.Vector;
 
-    public static void sort(Object[] a, Comparator c) {
-        Object aux[] = new Object[a.length];
-        System.arraycopy(a, 0, aux, 0, a.length);
-        mergeSort(aux, a, 0, a.length, c);
+/**
+ * Helper for arrays.
+ */
+public final class Arrays {
+
+    /**
+     * Clears array.
+     * @param a array
+     */
+    public static void clear(Object[] a) {
+        for (int i = a.length; --i >= 0; ) {
+            a[i] = null;
+        }
     }
 
-    private static void mergeSort(Object src[], Object dest[],
-                                  int low, int high, Comparator c) {
+    /**
+     * Sorts enumeration of strings to GUI list.
+     * @param list list
+     * @param items enumeration of strings
+     */
+    public static void sort2list(List list, Enumeration items) {
+        // enum to list
+        Vector v = new Vector();
+        while (items.hasMoreElements()) {
+            v.addElement((String) items.nextElement());
+        }
+
+        // list to array
+        String[] array = new String[v.size()];
+        v.copyInto(array);
+
+        // sort array
+        sort(array);
+
+        // add items sorted
+        for (int N = array.length, i = 0; i < N; i++) {
+            list.append(array[i], null);
+        }
+    }
+
+    /*
+     * String array sorting.
+     */
+
+    private static void sort(String[] a) {
+        String aux[] = new String[a.length];
+        System.arraycopy(a, 0, aux, 0, a.length);
+        mergeSort(aux, a, 0, a.length);
+    }
+
+    private static void mergeSort(String src[], String dest[], int low, int high) {
         int length = high - low;
 
-        // Insertion sort on smallest arrays
+        // small arrays sorting
         if (length < 7) {
             for (int i = low; i < high; i++)
-                for (int j = i; j > low && c.compare(dest[j - 1], dest[j]) > 0; j--)
+                for (int j = i; j > low && compare(dest[j - 1], dest[j]) > 0; j--)
                     swap(dest, j, j - 1);
             return;
         }
 
-        // Recursively sort halves of dest into src
+        // half
         int mid = (low + high) >> 1;
-        mergeSort(dest, src, low, mid, c);
-        mergeSort(dest, src, mid, high, c);
+        mergeSort(dest, src, low, mid);
+        mergeSort(dest, src, mid, high);
 
-        // If list is already sorted, just copy from src to dest.  This is an
-        // optimization that results in faster sorts for nearly ordered lists.
-        if (c.compare(src[mid - 1], src[mid]) <= 0) {
+        /*
+         * If list is already sorted, just copy from src to dest.  This is an
+         * optimization that results in faster sorts for nearly ordered lists.
+         */
+        if (compare(src[mid - 1], src[mid]) <= 0) {
             System.arraycopy(src, low, dest, low, length);
             return;
         }
 
-        // Merge sorted halves (now in src) into dest
+        // merge sorted halves (now in src) into dest
         for (int i = low, p = low, q = mid; i < high; i++) {
-            if (q >= high || p < mid && c.compare(src[p], src[q]) <= 0)
+            if (q >= high || p < mid && compare(src[p], src[q]) <= 0)
                 dest[i] = src[p++];
             else
                 dest[i] = src[q++];
         }
     }
 
-    private static void swap(Object x[], int a, int b) {
-        Object t = x[a];
+    private static void swap(String x[], int a, int b) {
+        String t = x[a];
         x[a] = x[b];
         x[b] = t;
+    }
+
+    /*
+     * ~
+     */
+
+    /**
+     * Compares objects as filenames, with directories first.
+     */
+    private static int compare(String s1, String s2) {
+        boolean isDir1 = s1.endsWith("/");
+        boolean isDir2 = s2.endsWith("/");
+        if (isDir1) {
+            if (isDir2) {
+                return s1.compareTo(s2);
+            } else {
+                return -1;
+            }
+        } else {
+            if (isDir2) {
+                return 1;
+            } else {
+                return s1.compareTo(s2);
+            }
+        }
     }
 }

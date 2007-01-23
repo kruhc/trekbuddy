@@ -5,34 +5,39 @@ package cz.kruch.track.ui;
 
 import api.location.LocationProvider;
 import api.location.QualifiedCoordinates;
+import api.location.Location;
 
 import javax.microedition.lcdui.Graphics;
 import javax.microedition.lcdui.Image;
 
 import cz.kruch.track.configuration.Config;
+import cz.kruch.track.AssertionFailedException;
 
 final class OSD extends Bar {
-    private static final String NO_INFO = "Lon: ? Lat: ?";
+    private int providerStatus;
+    private String recording;
+    private boolean ok;
+    private int sat;
 
     private int semaforX, semaforY;
-    private volatile int providerStatus = LocationProvider.OUT_OF_SERVICE;
-    private volatile String recording = null;
-    private volatile String extendedInfo;
-    private volatile int sat;
-
     private int str1Width, str2Width;
     private StringBuffer sb;
-
     private int rw;
-    private int[] clip;
+
+    private char[] cInfo, cExtInfo;
+    private int cInfoLength, cExtInfoLength;
 
     public OSD(int gx, int gy, int width, int height, Image bar) {
         super(gx, gy, width, height, bar);
+        this.providerStatus = LocationProvider.OUT_OF_SERVICE;
         this.rw = Desktop.font.charWidth('R');
         this.clip = new int[]{ gx, gy, -1, -1 };
         this.str1Width = Desktop.font.stringWidth("4*");
         this.str2Width = Desktop.font.stringWidth("44*");
         this.sb = new StringBuffer(32);
+        this.cInfo = new char[32];
+        this.cExtInfo = new char[32];
+        this.cInfoLength = this.cExtInfoLength = 0;
         resize(width, height, bar);
     }
 
@@ -47,10 +52,6 @@ final class OSD extends Bar {
             return;
         }
 
-        if (info == null) {
-            info = NO_INFO;
-        }
-
         Config cfg = Config.getSafeInstance();
         boolean isBasicInfo = cfg.isOsdBasic();
         boolean isExtInfo = cfg.isOsdExtended();
@@ -60,7 +61,7 @@ final class OSD extends Bar {
             if (isBasicInfo) {
                 graphics.drawImage(bar, gx, gy, 0);
             }
-            if (isExtInfo && extendedInfo != null) {
+            if (isExtInfo && cExtInfoLength > 0) {
                 graphics.drawImage(bar, gx, gy + (isBasicInfo ? bh : 0), 0);
             }
         }
@@ -71,13 +72,13 @@ final class OSD extends Bar {
         }
 
         // draw info + extended info text
-        if (isBasicInfo) {
-            graphics.drawString(info, gx + BORDER, gy, 0);
+        if (isBasicInfo && cInfoLength > 0) {
+            graphics.drawChars(cInfo, 0, cInfoLength, gx + BORDER, gy, 0);
         }
-        if (isExtInfo && extendedInfo != null) {
-            graphics.drawString(extendedInfo, gx + BORDER, gy + (isBasicInfo ? bh : 0), 0);
+        if (isExtInfo && cExtInfoLength > 0) {
+            graphics.drawChars(cExtInfo, 0, cExtInfoLength, gx + BORDER, gy + (isBasicInfo ? bh : 0), 0);
             if (sat > 0) {
-                String s = cz.kruch.track.TrackingMIDlet.nStr[sat];
+                String s = NavigationScreens.nStr[sat];
                 graphics.drawString(s, width - BORDER - (sat < 10 ? str1Width : str2Width),
                                     gy + bh, 0);
             }
@@ -102,8 +103,8 @@ final class OSD extends Bar {
     }
 
     public StringBuffer _getSb() {
-        sb.setLength(0);
-        return sb;
+//        sb.setLength(0);
+        return sb.delete(0, sb.length());
     }
 
     public int getProviderStatus() {
@@ -118,22 +119,40 @@ final class OSD extends Bar {
         this.recording = recording;
     }
 
-    public void setExtendedInfo(String extendedInfo) {
-        this.extendedInfo = null;
-        this.extendedInfo = extendedInfo;
-    }
-
     public void setSat(int sat) {
         this.sat = sat;
     }
 
+    public void resetExtendedInfo() {
+        this.cExtInfoLength = 0;
+    }
+
+    public void setExtendedInfo(StringBuffer sb) {
+        if (sb != this.sb) {
+            throw new AssertionFailedException("Alien StringBuffer");
+        }
+        cExtInfoLength = sb.length();
+        if (cExtInfoLength > cExtInfo.length) {
+            throw new AssertionFailedException("Extended info length = " + cExtInfoLength);
+        }
+        sb.getChars(0, sb.length(), cExtInfo, 0);
+    }
+
     public void setInfo(QualifiedCoordinates qc, boolean ok) {
-        sb.setLength(0);
-        if (Config.getSafeInstance().isUseGeocachingFormat() || Config.getSafeInstance().isUseUTM()) {
+//        sb.setLength(0);
+        sb.delete(0, sb.length());
+        Config config = Config.getSafeInstance();
+        if (config.isUseGeocachingFormat() || config.isUseUTM()) {
             qc = qc.toWgs84();
         }
-        qc.setHp(Config.getSafeInstance().isDecimalPrecision());
-        setInfo(qc.toStringBuffer(sb).toString(), ok);
+        qc.setHp(config.isDecimalPrecision());
+        qc.toStringBuffer(sb);
+        cInfoLength = sb.length();
+        if (cInfoLength > cInfo.length) {
+            throw new AssertionFailedException("Info length = " + cInfoLength);
+        }
+        sb.getChars(0, sb.length(), cInfo, 0);
+        this.ok = ok;
     }
 
     public int[] getClip() {
@@ -141,7 +160,7 @@ final class OSD extends Bar {
             return null;
 
         clip[2] = width;
-        clip[3] = extendedInfo == null ? bh : 2 * bh;
+        clip[3] = cExtInfoLength == 0 ? bh : 2 * bh;
 
         return clip;
     }

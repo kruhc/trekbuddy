@@ -27,6 +27,7 @@ public final class NavigationScreens {
         "20*", "21*", "22*", "23*", "24*"
     };
     public static String SIGN = "^";
+    public static String PLUSMINUS = "+-";
 
     /*
      * image cache
@@ -58,6 +59,7 @@ public final class NavigationScreens {
         // init constants
         try {
             SIGN = new String(new byte[]{ (byte) 0xc2, (byte) 0xb0 }, "UTF-8");
+            PLUSMINUS = new String(new byte[]{ (byte) 0xc2, (byte) 0xb1 }, "UTF-8");
         } catch (UnsupportedEncodingException e) {
             // ignore
         }

@@ -195,7 +195,7 @@ public final class Desktop extends GameCanvas
 
         // start renderer
         this.renderer = new Renderer();
-        this.renderer.setPriority(Thread.MAX_PRIORITY);
+//        this.renderer.setPriority(Thread.MAX_PRIORITY);
         this.renderer.start();
 
         // create and add commands to the screen
@@ -1764,14 +1764,12 @@ public final class Desktop extends GameCanvas
 
         private int phase = 0;
 
-        private int semaforX, semaforY;
         private int dx, dy;
         private int lineLength;
 
         private int[] rangeIdx = new int[]{ 3, 2 };
         private int term = 0;
 
-        private int fontHeight;
         private int navigationStrWidth;
         private int[] center, vertex;
         private int[][] triangle;
@@ -1792,12 +1790,9 @@ public final class Desktop extends GameCanvas
             this.lineLength = Math.min(width - width / 10, height - height / 10);
             this.dx = (width - lineLength) >> 1;
             this.dy = (height - lineLength) >> 1;
-            this.fontHeight = Desktop.font.getHeight();
             this.navigationStrWidth = Math.max(Desktop.font.stringWidth(MSG_NO_WAYPOINT), Desktop.font.stringWidth("14999 m"));
             this.sb = new StringBuffer(32);
             this.sbChars = new char[32];
-            this.semaforX = width - NavigationScreens.bulletSize - 2/*BORDER*/;
-            this.semaforY = Math.abs((font.getHeight() - NavigationScreens.bulletSize)) >> 1;
             vertexes();
             reset();
         }
@@ -1976,7 +1971,7 @@ public final class Desktop extends GameCanvas
             Location[] _locations = locations[term];
             int _rangeIdx = rangeIdx[term];
             int _color = term == 0 ? 0x0000ff00 : 0x0000ffff;
-            int _fontHeight = fontHeight;
+            int _fontHeight = osd.bh;
 
             // draw crosshair
             Graphics g = graphics;
@@ -2059,20 +2054,31 @@ public final class Desktop extends GameCanvas
                 _coordinates.toStringBuffer(sb);
                 int _l = sb.length();
                 sb.getChars(0, _l, sbChars, 0);
-                g.drawChars(sbChars, 0, _l, 0, 0, 0);
+                g.drawChars(sbChars, 0, _l, OSD.BORDER, 0, 0);
 
                 // draw hdop
 //                sb.setLength(0);
                 sb.delete(0, sb.length());
-                sb.append(hdopAvg[term]);
-                if (sb.length() > 4) sb.setLength(4);
-                _l = sb.length();
+                if (hdopAvg[term] > 10F) {
+                    sb.append((int) hdopAvg[term]);
+                    _l = sb.length();
+                } else {
+                    sb.append(hdopAvg[term]);
+                    _l = sb.length();
+                    if (_l > 3) {
+                        _l = 3;
+                    }
+                }
                 sb.getChars(0, _l, sbChars, 0);
-                g.drawChars(sbChars, 0, _l, 0, _fontHeight, 0);
+                g.drawChars(sbChars, 0, _l, OSD.BORDER, _fontHeight, 0);
 
                 // draw sat
-                g.drawString(satAvg[term] > -1 ? NavigationScreens.nStr[satAvg[term]] : "?",
-                             0, _fontHeight << 1, 0);
+                if (satAvg[term] > 0) {
+                    // same position as in OSD
+                    graphics.drawString(NavigationScreens.nStr[satAvg[term]],
+                                        osd.width - OSD.BORDER - (satAvg[term] < 10 ? osd.str1Width : osd.str2Width),
+                                        osd.gy + osd.bh, 0);
+                }
 
                 // draw central point
                 g.setColor(0x00FFFF00);
@@ -2144,7 +2150,7 @@ public final class Desktop extends GameCanvas
                 }
             } else {
                 g.setColor(0x00FF0000);
-                g.drawString("NO POSITION", 0, 0, 0);
+                g.drawString("NO POSITION", OSD.BORDER, 0, 0);
                 if (getNavigateTo() == -1) {
                     g.setColor(0x00FFFF00);
                     g.drawString(MSG_NO_WAYPOINT,
@@ -2155,8 +2161,8 @@ public final class Desktop extends GameCanvas
             }
 
             // draw provider status
-            NavigationScreens.drawProviderStatus(g, osd.getProviderStatus(),
-                                                 semaforX, semaforY, 0);
+            NavigationScreens.drawProviderStatus(g, osd.providerStatus,
+                                                 osd.semaforX, osd.semaforY, 0);
 
             // draw range
             g.setColor(0x00808080);

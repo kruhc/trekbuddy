@@ -14,13 +14,13 @@ import cz.kruch.track.configuration.Config;
 import cz.kruch.track.AssertionFailedException;
 
 final class OSD extends Bar {
-    private int providerStatus;
+    protected int providerStatus;
     private String recording;
     private boolean ok;
     private int sat;
 
-    private int semaforX, semaforY;
-    private int str1Width, str2Width;
+    protected int semaforX, semaforY;
+    protected int str1Width, str2Width;
     private StringBuffer sb;
     private int rw;
 
@@ -105,10 +105,6 @@ final class OSD extends Bar {
     public StringBuffer _getSb() {
 //        sb.setLength(0);
         return sb.delete(0, sb.length());
-    }
-
-    public int getProviderStatus() {
-        return providerStatus;
     }
 
     public void setProviderStatus(int providerStatus) {

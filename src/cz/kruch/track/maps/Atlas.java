@@ -317,7 +317,7 @@ public final class Atlas implements Runnable {
 
                             // got layer and map name?
                             if (lName != null && mName != null) {
-                                sb.setLength(0);
+                                sb.delete(0, sb.length());
                                 String url = sb.append(dir).append(lName).append('/').append(mName).append('/').append(mName).append(".tar").toString();
                                 Calibration calibration = null;
 
@@ -393,43 +393,43 @@ public final class Atlas implements Runnable {
 
                 // iterate over layers
                 for (Enumeration le = file.list(); le.hasMoreElements(); ) {
-                    String lEntry = (String) le.nextElement();
-                    if (lEntry.endsWith("/")) {
+                    String layerEntry = (String) le.nextElement();
+                    if ('/' == layerEntry.charAt(layerEntry.length() - 1)) {
 //#ifdef __LOG__
-                        if (log.isEnabled()) log.debug("new layer: " + lEntry);
+                        if (log.isEnabled()) log.debug("new layer: " + layerEntry);
 //#endif
 
+                        // get map collection for current layer
+                        Hashtable layerCollection = getLayerCollection(layerEntry.substring(0, layerEntry.length() - 1));
+
                         // set file connection
-                        file.setFileConnection(lEntry);
+                        file.setFileConnection(layerEntry);
 
                         // iterate over layer
                         for (Enumeration me = file.list(); me.hasMoreElements(); ) {
-                            String mEntry = (String) me.nextElement();
-                            if (mEntry.endsWith("/")) {
+                            String mapEntry = (String) me.nextElement();
+                            if ('/' == mapEntry.charAt(mapEntry.length() - 1)) {
 //#ifdef __LOG__
-                                if (log.isEnabled()) log.debug("new map? " + mEntry);
+                                if (log.isEnabled()) log.debug("new map? " + mapEntry);
 //#endif
 
                                 // set file connection
-                                file.setFileConnection(mEntry);
-
-                                // get layer
-                                Hashtable layerCollection = getLayerCollection(lEntry.substring(0, lEntry.length() - 1));
+                                file.setFileConnection(mapEntry);
 
                                 // iterate over map dir
                                 for (Enumeration ie = file.list(); ie.hasMoreElements(); ) {
-                                    String iEntry = (String) ie.nextElement();
-                                    if (iEntry.endsWith("/"))
+                                    String fileEntry = (String) ie.nextElement();
+                                    if ('/' == fileEntry.charAt(fileEntry.length() - 1))
                                         continue;
-                                    int indexOf = iEntry.lastIndexOf('.');
+                                    int indexOf = fileEntry.lastIndexOf('.');
                                     if (indexOf == -1) {
                                         continue;
                                     }
-                                    String ext = iEntry.substring(indexOf + 1);
+                                    String ext = fileEntry.substring(indexOf + 1);
 
                                     // calibration
-                                    sb.setLength(0);
-                                    String path = sb.append(file.getURL()).append(iEntry).toString();
+                                    sb.delete(0, sb.length());
+                                    String path = sb.append(file.getURL()).append(fileEntry).toString();
                                     Calibration calibration = null;
                                     Map.FileInput fileInput = new Map.FileInput(path);
 
@@ -457,7 +457,7 @@ public final class Atlas implements Runnable {
                                         if (log.isEnabled()) log.debug("calibration loaded; " + calibration);
 //#endif
                                         // save calibration for given map
-                                        layerCollection.put(mEntry.substring(0, mEntry.length() - 1), calibration);
+                                        layerCollection.put(mapEntry.substring(0, mapEntry.length() - 1), calibration);
 
                                         /* only one calibration per map allowed :-) */
                                         break;

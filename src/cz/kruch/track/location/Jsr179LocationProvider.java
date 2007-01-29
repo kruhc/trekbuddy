@@ -94,6 +94,7 @@ public class Jsr179LocationProvider extends api.location.LocationProvider {
                 float spd = l.getSpeed();
                 float alt = xc.getAltitude();
                 float course = l.getCourse();
+                float accuracy = xc.getHorizontalAccuracy();
 
                 if (Float.isNaN(spd)) {
                     spd = -1F;
@@ -113,6 +114,9 @@ public class Jsr179LocationProvider extends api.location.LocationProvider {
                 if (Float.isNaN(course)) {
                     course = -1F;
                 }
+                if (Float.isNaN(accuracy)) {
+                    accuracy = -1F;
+                }
 
                 // create up-to-date location
                 api.location.QualifiedCoordinates qc = new api.location.QualifiedCoordinates(xc.getLatitude(),
@@ -121,9 +125,7 @@ public class Jsr179LocationProvider extends api.location.LocationProvider {
                 api.location.Location location = new api.location.Location(qc, l.getTimestamp(), 1);
                 location.setCourse(course);
                 location.setSpeed(spd);
-                location.setHdop(1F);
-                // DEBUG
-                setStatus(new Float(xc.getHorizontalAccuracy()));
+                location.setHdop(accuracy);
 
                 // notify
                 notifyListener(location);

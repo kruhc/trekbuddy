@@ -68,8 +68,7 @@ public final class DeviceControl extends TimerTask {
                 }
                 if (backlight == 0) {
                     instance = new DeviceControl();
-                    clock.schedule(instance, 250, 750);
-//                    clock.schedule(instance, 5000, 15000);
+                    clock.schedule(instance, 1000, 1000);
                 }
                 setBacklightSonyEricsson();
                 if (backlight == 0) {
@@ -111,11 +110,13 @@ public final class DeviceControl extends TimerTask {
     public static void setBacklightSonyEricsson() {
         try {
             if (backlight == 0) {
-                Desktop.display.flashBacklight(1000);
+//                Desktop.display.flashBacklight(1000);
+                  com.nokia.mid.ui.DeviceControl.flashLights(1);
 //                com.nokia.mid.ui.DeviceControl.setLights(0, 100);
                 backlight = 1;
             } else {
-                Desktop.display.flashBacklight(0);
+//                Desktop.display.flashBacklight(0);
+                com.nokia.mid.ui.DeviceControl.setLights(0, 0);
 //                com.nokia.mid.ui.DeviceControl.setLights(0, 0); // for immediate effect
                 backlight = 0;
             }
@@ -127,9 +128,10 @@ public final class DeviceControl extends TimerTask {
     public void run() {
         if (phone == SE) {
             if (backlight == 1) {
-                Desktop.display.flashBacklight(1000);
+//                Desktop.display.flashBacklight(1000);
 //                com.nokia.mid.ui.DeviceControl.setLights(0, 0);
 //                com.nokia.mid.ui.DeviceControl.setLights(0, 100);
+                com.nokia.mid.ui.DeviceControl.flashLights(1);
             }
         }
     }

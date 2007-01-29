@@ -105,8 +105,8 @@ public final class Arrays {
      * Compares objects as filenames, with directories first.
      */
     private static int compare(String s1, String s2) {
-        boolean isDir1 = s1.endsWith("/");
-        boolean isDir2 = s2.endsWith("/");
+        boolean isDir1 = '/' == s1.charAt(s1.length() - 1);
+        boolean isDir2 = '/' == s2.charAt(s2.length() - 1);
         if (isDir1) {
             if (isDir2) {
                 return s1.compareTo(s2);

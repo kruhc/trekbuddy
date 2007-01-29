@@ -853,33 +853,4 @@ public abstract class Calibration {
             }
         }
     }
-
-/*
-    // TODO optimize
-    public static final class ProximitePosition extends Position {
-        public ProximitePosition(int x, int y) {
-            super(x, y);
-        }
-
-        public void decrementX() {
-            x -= 1;
-        }
-
-        public void incrementX() {
-            x += 1;
-        }
-
-        public void decrementY() {
-            y -= 1;
-        }
-
-        public void incrementY() {
-            y += 1;
-        }
-
-        public Position getPosition() {
-            return new Position(x, y);
-        }
-    }
-*/
 }

@@ -269,11 +269,13 @@ public final class GpxTracklog extends Thread {
             serializer.text(Integer.toString(l.getSat()));
             serializer.endTag(DEFAULT_NAMESPACE, "sat");
         }
+/*
         if (l.getHdop() > -1F) {
             serializer.startTag(DEFAULT_NAMESPACE, "hdop");
             serializer.text(Float.toString(l.getHdop()));
             serializer.endTag(DEFAULT_NAMESPACE, "hdop");
         }
+*/
         if (l.getCourse() > -1F || l.getSpeed() > -1F) {
             serializer.startTag(DEFAULT_NAMESPACE, "extensions");
             if (l.getCourse() > -1F) {

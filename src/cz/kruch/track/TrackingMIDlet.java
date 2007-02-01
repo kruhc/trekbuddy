@@ -304,7 +304,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
     }
 
     public static boolean isSxg75() {
-        return true; //sxg75;
+        return sxg75;
     }
 
 //#ifdef __A780__

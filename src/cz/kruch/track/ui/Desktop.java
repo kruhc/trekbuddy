@@ -43,6 +43,7 @@ import api.location.LocationListener;
 import api.location.Location;
 import api.location.QualifiedCoordinates;
 import api.location.LocationException;
+import public_domain.Xedarius;
 
 /**
  * Application desktop.
@@ -199,18 +200,23 @@ public final class Desktop extends GameCanvas
         this.renderer.start();
 
         // create and add commands to the screen
-        this.cmdRun = new Command("Start <New>", Command.SCREEN, 2);
+        if (cfg.isFullscreen() && cz.kruch.track.TrackingMIDlet.isSxg75()) {
+            this.addCommand(new Command("", Command.SCREEN, 0));
+        }
         if (cfg.getBtDeviceName().length() > 0) {
             this.cmdRunLast = new Command("Start " + cfg.getBtDeviceName(), Command.SCREEN, 1);
+            this.cmdRun = new Command("Start <New>", Command.SCREEN, 2);
+        } else {
+            this.cmdRun = new Command("Start", Command.SCREEN, 1);
         }
-        this.cmdStop = new Command("Stop", Command.SCREEN, 2);
+        this.cmdStop = new Command("Stop", Command.SCREEN, 1);
         if (cz.kruch.track.TrackingMIDlet.isFs()) {
-            this.cmdLoadMap = new Command("Load Map", Command.SCREEN, 4);
-            this.cmdLoadAtlas = new Command("Load Atlas", Command.SCREEN, 5);
+            this.cmdLoadMap = new Command("Load Map", Command.SCREEN, 3);
+            this.cmdLoadAtlas = new Command("Load Atlas", Command.SCREEN, 4);
         }
-        this.cmdSettings = new Command("Settings", Command.SCREEN, 6);
-        this.cmdInfo = new Command("Info", Command.SCREEN, 7);
-        this.cmdExit = new Command("Exit", Command.SCREEN, 8);
+        this.cmdSettings = new Command("Settings", Command.SCREEN, 5);
+        this.cmdInfo = new Command("Info", Command.SCREEN, 6);
+        this.cmdExit = new Command("Exit", Command.SCREEN, 7);
         this.cmdPause = new Command("Pause", Command.BACK, 1);
         this.cmdContinue = new Command("Continue", Command.BACK, 1);
         this.addCommand(cmdRun);
@@ -1759,10 +1765,10 @@ public final class Desktop extends GameCanvas
         private int[] count;
 
         private QualifiedCoordinates[] coordinatesAvg;
-        private float[] hdopAvg;
+        private float[] accuracyAvg;
         private int[] satAvg;
 
-        private int phase = 0;
+        private short phase = 0;
 
         private int dx, dy;
         private int lineLength;
@@ -1785,7 +1791,7 @@ public final class Desktop extends GameCanvas
             this.locations[1] = new Location[LONG_HISTORY_DEPTH];
             this.coordinatesAvg = new QualifiedCoordinates[2];
             this.count = new int[2];
-            this.hdopAvg = new float[2];
+            this.accuracyAvg = new float[2];
             this.satAvg = new int[2];
             this.lineLength = Math.min(width - width / 10, height - height / 10);
             this.dx = (width - lineLength) >> 1;
@@ -1807,7 +1813,7 @@ public final class Desktop extends GameCanvas
             Arrays.clear(locations[0]);
             Arrays.clear(locations[1]);
             count[0] = count[1] = 0;
-            hdopAvg[0] = hdopAvg[1] = -1F;
+            accuracyAvg[0] = accuracyAvg[1] = -1F;
         }
 
         public Location getLocation() {
@@ -1862,7 +1868,7 @@ public final class Desktop extends GameCanvas
                     // create long-term avg location (some values are irrelevant)
                     Location l = new Location(coordinatesAvg[0], -1, -1,
                                               location.getSat(),
-                                              hdopAvg[0]);
+                                              accuracyAvg[0]);
 
                     // update long-term array
                     append(locations[1], l);
@@ -1875,7 +1881,7 @@ public final class Desktop extends GameCanvas
 
         private int compute(int _term) {
             double latAvg = 0D, lonAvg = 0D;
-            float hdopSum = 0F, wSum = 0F;
+            float accuracySum = 0F, wSum = 0F;
             int c = 0, satSum = 0;
             Location[] array = locations[_term];
 
@@ -1883,10 +1889,10 @@ public final class Desktop extends GameCanvas
             for (int i = array.length; --i >= 0; ) {
                 Location l = array[i];
                 if (l != null) {
-                    float hdop = l.getHdop();
-                    hdopSum += hdop;
+                    float accuracy = l.getAccuracy();
+                    accuracySum += accuracy;
                     satSum += l.getSat();
-                    float w = 1f / hdop;
+                    float w = 5F / accuracy;
                     QualifiedCoordinates qc = l.getQualifiedCoordinates();
                     latAvg += qc.getLat() * w;
                     lonAvg += qc.getLon() * w;
@@ -1900,7 +1906,7 @@ public final class Desktop extends GameCanvas
                 // calculate avg coordinates
                 latAvg /= wSum;
                 lonAvg /= wSum;
-                hdopAvg[_term] = hdopSum / c;
+                accuracyAvg[_term] = accuracySum / c;
                 satAvg[_term] = satSum / c;
                 coordinatesAvg[_term] = null; // gc hint
                 coordinatesAvg[_term] = new QualifiedCoordinates(latAvg, lonAvg, -1F);
@@ -1915,6 +1921,11 @@ public final class Desktop extends GameCanvas
             int a = result[0] - center[0];
             int b = result[1] - center[1];
             double c = Math.sqrt(a * a + b * b);
+
+            if (Double.isNaN(c)) {
+                return false;
+            }
+
             int alpha = ExtraMath.asin(Math.abs((double) a) / c);
             if (b > 0) {
                 if (a > 0) {
@@ -1942,6 +1953,37 @@ public final class Desktop extends GameCanvas
                 ys = -1;
             }
             double alpha2Rad = Math.toRadians(alpha2);
+
+/*
+            double alpha = Xedarius.asin(Math.abs((double) a) / c);
+            if (b > 0) {
+                if (a > 0) {
+                    alpha = Math.PI - alpha;
+                } else {
+                    alpha = Math.PI + alpha;
+                }
+            } else {
+                if (a < 0) {
+                    alpha = 2 * Math.PI - alpha;
+                }
+            }
+            double alpha2 = (alpha - Math.toRadians(bearing)) % (2 * Math.PI);
+            int xs = 1;
+            int ys = 1;
+            if (alpha2 > (1.5 * Math.PI)) {
+                alpha2 = 2 * Math.PI - alpha2;
+                xs = ys = -1;
+            } else if (alpha2 > Math.PI) {
+                alpha2 -= Math.PI;
+                xs = -1;
+            } else if (alpha2 > (0.5 * Math.PI)) {
+                alpha2 = Math.PI - alpha2;
+            } else {
+                ys = -1;
+            }
+            double alpha2Rad = alpha2;
+*/
+
             double da = (c * Math.sin(alpha2Rad)) * xs;
             a = (int) da;
             if ((da - a) > 0.5) {
@@ -2010,7 +2052,12 @@ public final class Desktop extends GameCanvas
                 double xScale = ((double) (lineLength >> 1)) / (v / Math.cos(Math.toRadians(latAvg)));
 
                 // points color
-                g.setColor(_color);
+                int inc = (192/* = 256 - 64*/) / _locations.length;
+                int cstep = inc;
+                cstep <<= 8;
+                if (term > 0) cstep += inc;
+                int c = _color - count[term] * cstep;
+                g.setColor(c);
 
                 // draw points
                 for (int i = _locations.length; --i >= 0; ) {
@@ -2026,14 +2073,20 @@ public final class Desktop extends GameCanvas
                             transform(center, bearing, xy);
                         }
 
+                        // 
+                        xy[0] -= 4;
+                        xy[1] -= 4;
+
                         // draw point
                         if (i > 0) {
-                            g.drawArc(xy[0] - 4, xy[1] - 4, 9, 9, 0, 360);
+                            g.drawArc(xy[0]/* - 4*/, xy[1]/* - 4*/, 9, 9, 0, 360);
+                            c += cstep;
+                            g.setColor(c);
                         } else {
                             g.setColor(0x00FFFFFF);
-                            g.fillArc(xy[0] - 4, xy[1] - 4, 9, 9, 0, 360);
+                            g.fillArc(xy[0]/* - 4*/, xy[1]/* - 4*/, 9, 9, 0, 360);
                             g.setColor(_color);
-                            g.drawArc(xy[0] - 4, xy[1] - 4, 9, 9, 0, 360);
+                            g.drawArc(xy[0]/* - 4*/, xy[1]/* - 4*/, 9, 9, 0, 360);
                         }
 
                         // gc hints
@@ -2059,14 +2112,19 @@ public final class Desktop extends GameCanvas
                 // draw hdop
 //                sb.setLength(0);
                 sb.delete(0, sb.length());
-                if (hdopAvg[term] > 10F) {
-                    sb.append((int) hdopAvg[term]);
+                sb.append(NavigationScreens.PLUSMINUS);
+                if (accuracyAvg[term] >= 10F) {
+                    sb.append((int) accuracyAvg[term]).append(" m");
                     _l = sb.length();
                 } else {
-                    sb.append(hdopAvg[term]);
+                    sb.append(accuracyAvg[term]);
                     _l = sb.length();
-                    if (_l > 3) {
-                        _l = 3;
+                    if (_l > 4) {
+                        sb.insert(4, " m");
+                        _l = 4 + 2;
+                    } else {
+                        sb.append(" m");
+                        _l += 2;
                     }
                 }
                 sb.getChars(0, _l, sbChars, 0);
@@ -2092,8 +2150,9 @@ public final class Desktop extends GameCanvas
                     xy[1] = _height2 - (int) ((qc.getLat() - latAvg) * yScale);
 
                     // transform vertex
+                    boolean onScreen = true;
                     if (bearing > 1F) {
-                        transform(center, bearing, xy);
+                        onScreen = transform(center, bearing, xy);
                     }
 
                     // calculate distance
@@ -2110,7 +2169,9 @@ public final class Desktop extends GameCanvas
                     }
 
                     // draw info
-                    NavigationScreens.drawWaypoint(g, xy[0], xy[1], 0);
+                    if (onScreen) {
+                        NavigationScreens.drawWaypoint(g, xy[0], xy[1], 0);
+                    }
                     NavigationScreens.drawArrow(g, course, _width2, _height2, 0);
 
                     // construct distance string

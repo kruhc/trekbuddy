@@ -125,7 +125,7 @@ public class Jsr179LocationProvider extends api.location.LocationProvider {
                 api.location.Location location = new api.location.Location(qc, l.getTimestamp(), 1);
                 location.setCourse(course);
                 location.setSpeed(spd);
-                location.setHdop(accuracy);
+                location.setAccuracy(accuracy);
 
                 // notify
                 notifyListener(location);

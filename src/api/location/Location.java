@@ -15,7 +15,7 @@ public class Location {
     private long timestamp;
     private short fix;
     private short sat;
-    private float hdop;
+    private float accuracy;
     private float speed = -1F;
     private float course = -1F;
 
@@ -24,12 +24,12 @@ public class Location {
     }
 
     public Location(QualifiedCoordinates coordinates, long timestamp, int fix,
-                    int sat, float hdop) {
+                    int sat, float accuracy) {
         this.coordinates = coordinates;
         this.timestamp = timestamp;
         this.fix = (short) fix;
         this.sat = (short) sat;
-        this.hdop = hdop;
+        this.accuracy = accuracy;
     }
 
     public Location(Location location) {
@@ -37,7 +37,7 @@ public class Location {
         this.timestamp = location.timestamp;
         this.fix = location.fix;
         this.sat = location.sat;
-        this.hdop = location.hdop;
+        this.accuracy = location.accuracy;
     }
 
     public QualifiedCoordinates getQualifiedCoordinates() {
@@ -56,16 +56,16 @@ public class Location {
         return sat;
     }
 
-    public float getHdop() {
-        return hdop;
+    public float getAccuracy() {
+        return accuracy;
     }
 
     public float getSpeed() {
         return speed;
     }
 
-    public void setHdop(float hdop) {
-        this.hdop = hdop;
+    public void setAccuracy(float accuracy) {
+        this.accuracy = accuracy;
     }
 
     public void setSpeed(float speed) {

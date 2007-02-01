@@ -77,7 +77,7 @@ public abstract class StreamReadingLocationProvider extends LocationProvider {
         long datetime = rmc.date + rmc.timestamp;
         if (rmc.timestamp == gga.timestamp) {
             location = new Location(new QualifiedCoordinates(rmc.lat, rmc.lon, gga.altitude),
-                                    datetime, gga.fix, gga.sat, gga.hdop);
+                                    datetime, gga.fix, gga.sat, gga.hdop * 5);
         } else {
             location = new Location(new QualifiedCoordinates(rmc.lat, rmc.lon),
                                     datetime, rmc.status == 'A' ? 1 : 0);

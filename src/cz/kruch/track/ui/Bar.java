@@ -3,7 +3,6 @@
 
 package cz.kruch.track.ui;
 
-import javax.microedition.lcdui.Image;
 import javax.microedition.lcdui.Graphics;
 
 abstract class Bar {
@@ -11,7 +10,6 @@ abstract class Bar {
     
     protected int gx, gy;
     protected int width, height;
-    protected Image bar;
     protected int bh;
 
     protected int[] clip;
@@ -19,20 +17,18 @@ abstract class Bar {
     protected boolean visible;
     protected boolean update;
 
-    protected Bar(int gx, int gy, int width, int height, Image bar) {
+    protected Bar(int gx, int gy, int width, int height) {
         this.gx = gx;
         this.gy = gy;
         this.width = width;
         this.height = height;
         this.visible = true;
-        this.bar = bar;
         this.bh = Desktop.font.getHeight();
     }
 
-    public void resize(int width, int height, Image bar) {
+    public void resize(int width, int height) {
         this.width = width;
         this.height = height;
-        this.bar = bar;
     }
 
     public boolean isVisible() {
@@ -45,6 +41,5 @@ abstract class Bar {
     }
 
     public abstract int[] getClip();
-
     public abstract void render(Graphics graphics);
 }

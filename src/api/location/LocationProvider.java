@@ -16,6 +16,8 @@ public abstract class LocationProvider {
     private LocationException exception;
     private Object status;
 
+    protected int lastState;
+
     protected LocationProvider(String name) {
         this.name = name;
     }

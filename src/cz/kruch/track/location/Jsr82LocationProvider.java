@@ -5,331 +5,42 @@ package cz.kruch.track.location;
 
 import api.location.LocationProvider;
 import api.location.LocationException;
-import api.location.LocationListener;
-import api.location.Location;
 
 import cz.kruch.track.configuration.Config;
 import cz.kruch.track.configuration.ConfigurationException;
 import cz.kruch.track.ui.Desktop;
-import cz.kruch.j2se.io.BufferedInputStream;
-import cz.kruch.j2se.io.BufferedOutputStream;
 
 import javax.microedition.lcdui.Displayable;
 import javax.microedition.lcdui.List;
 import javax.microedition.lcdui.CommandListener;
 import javax.microedition.lcdui.Command;
 import javax.microedition.lcdui.Ticker;
-import javax.microedition.io.StreamConnection;
-import javax.microedition.io.Connector;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
 import java.util.Vector;
-import java.util.Timer;
-import java.util.TimerTask;
 
-public class Jsr82LocationProvider extends StreamReadingLocationProvider implements Runnable {
-    private static final int WATCHER_PERIOD = 60 * 1000;
+public final class Jsr82LocationProvider extends SerialLocationProvider {
 
-    private Thread thread;
-
-    private String btname;
-    private String btspp;
-    private volatile boolean go;
-
-    private Timer watcher;
-    private final Object sync = new Object();
-    private long timestamp = 0;
-    private int state = LocationProvider._STARTING;
-
-    private api.file.File nmeaFile;
-    private OutputStream nmeaObserver;
-
-    public Jsr82LocationProvider(/*Callback recordingCallback*/) {
+    public Jsr82LocationProvider() throws LocationException {
         super(Config.LOCATION_PROVIDER_JSR82);
-/*
-        this.recordingCallback = recordingCallback;
-*/
-    }
 
-    public boolean isRestartable() {
-        return true;
-    }
-
-    public void run() {
+        /* BT turned on check */
         try {
-            // start with last known?
-            if (btspp == null) {
-                try {
-                    javax.bluetooth.LocalDevice.getLocalDevice();
-                } catch (javax.bluetooth.BluetoothStateException e) {
-                    throw new LocationException("Bluetooth radio disabled?");
-                }
-                go = true;
-                thread = Thread.currentThread();
-                btspp = Config.getSafeInstance().getBtServiceUrl();
-            }
-
-            // start gpx
-            notifyListener(LocationProvider._STARTING);
-
-            // start watcher
-            startWatcher();
-
-            // start NMEA log
-            startNmeaLog();
-
-            // GPS
-            gps();
-
-        } catch (Exception e) {
-
-            if (e instanceof InterruptedException) {
-                // probably stop request
-            } else {
-                // record exception
-                setException(e instanceof LocationException ? (LocationException) e : new LocationException(e));
-            }
-
-        } finally {
-
-            // be ready for restart
-            btspp = null;
-
-            // stop NMEA log
-            stopNmeaLog();
-
-            // stop watcher
-            stopWatcher();
-
-            // update status
-            notifyListener(LocationProvider.OUT_OF_SERVICE);
+            javax.bluetooth.LocalDevice.getLocalDevice();
+        } catch (javax.bluetooth.BluetoothStateException e) {
+            throw new LocationException("Bluetooth turned off?");
         }
     }
 
     public int start() throws LocationException {
-        // BT turned on?
-        try {
-            javax.bluetooth.LocalDevice.getLocalDevice();
-        } catch (javax.bluetooth.BluetoothStateException e) {
-            throw new LocationException("Bluetooth radio disabled?");
-        }
-
         // start BT discovery
         (new Discoverer()).start();
 
         return LocationProvider._STARTING;
     }
 
-    public void stop() throws LocationException {
-        if (go) {
-            go = false;
-            try {
-                thread.interrupt();
-                thread.join();
-            } catch (InterruptedException e) {
-            }
-            thread = null;
-        }
-    }
-
-    public void setLocationListener(LocationListener listener, int interval, int timeout, int maxAge) {
-        setListener(listener);
-    }
-
-    public Object getImpl() {
-        return null;
-    }
-
-    private void startWatcher() {
-        watcher = new Timer();
-        watcher.schedule(new TimerTask() {
-            public void run() {
-                boolean notify = false;
-                synchronized (sync) {
-                    if (System.currentTimeMillis() > (timestamp + WATCHER_PERIOD)) {
-                        state = LocationProvider.TEMPORARILY_UNAVAILABLE;
-                        notify = true;
-                    }
-                }
-                if (notify) {
-                    notifyListener(state);
-                }
-            }
-        }, WATCHER_PERIOD, WATCHER_PERIOD); // delay = period = 1 min
-    }
-
-    private void stopWatcher() {
-        if (watcher != null) {
-            watcher.cancel();
-            watcher = null;
-        }
-    }
-
-    private void startNmeaLog() {
-        if (isTracklog() && Config.TRACKLOG_FORMAT_NMEA.equals(Config.getSafeInstance().getTracklogsFormat())) {
-            if (nmeaFile != null) {
-                return; // already started, probably just reconnected
-            }
-            String path = Config.getSafeInstance().getTracklogsDir() + "/trekbuddy-" + GpxTracklog.dateToFileDate(System.currentTimeMillis()) + ".nmea";
-            try {
-                nmeaFile = new api.file.File(Connector.open(path, Connector.READ_WRITE));
-                if (!nmeaFile.exists()) {
-                    nmeaFile.create();
-                }
-                nmeaObserver = new BufferedOutputStream(nmeaFile.openOutputStream(), 512);
-
-                // set stream 'observer'
-                setObserver(nmeaObserver);
-
-/* fix
-                // signal recording has started
-                recordingCallback.invoke(new Integer(GpxTracklog.CODE_RECORDING_START), null);
-*/
-
-            } catch (Throwable t) {
-                Desktop.showError("Failed to start NMEA log.", t, null);
-            }
-        }
-    }
-
-    public void stopNmeaLog() {
-
-/*
-        // signal recording is stopping
-        recordingCallback.invoke(new Integer(GpxTracklog.CODE_RECORDING_STOP), null);
-*/
-        if (go) {
-            return;
-        }
-
-        // clear stream 'observer'
-        setObserver(null);
-
-        if (nmeaObserver != null) {
-            try {
-                nmeaObserver.close();
-            } catch (IOException e) {
-                // ignore
-            }
-            nmeaObserver = null;
-        }
-        if (nmeaFile != null) {
-            try {
-                nmeaFile.close();
-            } catch (IOException e) {
-                // ignore
-            }
-            nmeaFile = null;
-        }
-    }
-
-    private void gps() throws IOException {
-        // open connection
-        StreamConnection connection = (StreamConnection) Connector.open(btspp, Connector.READ);
-        InputStream in = null;
-
-        try {
-            // open stream for reading
-            in = new BufferedInputStream(connection.openInputStream(), BUFFER_SIZE);
-
-            // read NMEA until error or stop request
-            for (; go ;) {
-
-                Location location = null;
-
-                // get next location
-                try {
-                    location = nextLocation(in);
-                /*} catch (AssertionFailedException e) { // never happens, see nextLocation(...)
-
-                    // warn
-                    Desktop.showWarning(e.getMessage(), null, null);
-
-                    // ignore
-                    continue;
-
-                } */
-                } catch (IOException e) {
-
-                    // record exception
-                    setException(new LocationException(e));
-
-                    /*
-                     * location is null, therefore the loop quits
-                     */
-
-                } catch (Exception e) {
-
-                    // record exception
-                    if (e instanceof InterruptedException) {
-                        // probably stop request
-                    } else {
-                        // record exception
-                        setException(e instanceof LocationException ? (LocationException) e : new LocationException(e));
-                    }
-
-                    // ignore
-                    continue;
-                }
-
-                // end of data?
-                if (location == null) {
-                    break;
-                }
-
-                boolean stateChange = false;
-
-                // is position valid?
-                synchronized (sync) {
-                    if (location.getFix() > 0) {
-                        // fix state - we may be in TEMPORARILY_UNAVAILABLE state
-                        if (state != LocationProvider.AVAILABLE) {
-                            state = LocationProvider.AVAILABLE;
-                            stateChange = true;
-                        }
-                        timestamp = System.currentTimeMillis();
-                    } else {
-                        if (state != LocationProvider.TEMPORARILY_UNAVAILABLE) {
-                            state = LocationProvider.TEMPORARILY_UNAVAILABLE;
-                            stateChange = true;
-                        }
-                    }
-                }
-
-                // stateChange about state, if necessary
-                if (stateChange) {
-                    notifyListener(state);
-                }
-
-                // send new location
-                notifyListener(location);
-
-            } // for (; go ;)
-
-        } finally {
-
-            // close anyway
-            if (in != null) {
-                try {
-                    in.close();
-                } catch (IOException e) {
-                }
-            }
-
-            // close anyway
-            try {
-                connection.close();
-            } catch (IOException e) {
-            }
-        }
-    }
-
     private final class Discoverer extends List
             implements javax.bluetooth.DiscoveryListener, CommandListener, Runnable {
 
-        // intentionally not static... ehmm - why?
-        private javax.bluetooth.UUID[] uuidSet = {
+        private final javax.bluetooth.UUID[] uuidSet = {
 /*
             new javax.bluetooth.UUID(0x1101),  // SPP
             new javax.bluetooth.UUID(0x0003),  // RFCOMM
@@ -340,16 +51,17 @@ public class Jsr82LocationProvider extends StreamReadingLocationProvider impleme
 
         private javax.bluetooth.DiscoveryAgent agent;
         private javax.bluetooth.RemoteDevice device;
-        private Vector devices = new Vector();
-        private String url;
-        private int transactionID = 0;
+        private String btspp, btname;
+        private int transactionID;
         private boolean inquiryCompleted;
 
-        private boolean cancel = false;
+        private boolean cancel;
 
-        private Command cmdBack = new Command("Cancel", Command.BACK, 1);
-        private Command cmdRefresh = new Command("Refresh", Command.SCREEN, 1);
-        private Command cmdConnect = new Command("Connect", Command.ITEM, 1);
+        private final Vector devices = new Vector();
+        
+        private final Command cmdBack = new Command("Cancel", Command.BACK, 1);
+        private final Command cmdRefresh = new Command("Refresh", Command.SCREEN, 1);
+        private final Command cmdConnect = new Command("Connect", Command.ITEM, 1);
 
         public Discoverer() {
             super("DeviceSelection", List.IMPLICIT);
@@ -373,20 +85,20 @@ public class Jsr82LocationProvider extends StreamReadingLocationProvider impleme
 
             // good to go or not
             if (ok) {
-                // start
-                go = true;
-                btspp = url;
-                thread = new Thread(Jsr82LocationProvider.this);
-                thread.start();
+
                 // update bt device info
-                Config cfg = Config.getSafeInstance();
-                cfg.setBtDeviceName(btname);
-                cfg.setBtServiceUrl(btspp);
+                Config.btDeviceName = btname;
+                Config.btServiceUrl = btspp;
                 try {
-                    cfg.update(1);
+                    Config.update(Config.VARS_090);
                 } catch (ConfigurationException e) {
                     Desktop.showError("Failed to update config", e, null);
                 }
+
+                // start
+                Jsr82LocationProvider.this.url = btspp;
+                (new Thread(Jsr82LocationProvider.this)).start();
+
             } else {
                 notifyListener(LocationProvider._CANCELLED);
             }
@@ -396,7 +108,7 @@ public class Jsr82LocationProvider extends StreamReadingLocationProvider impleme
             // reset UI and state
             deleteAll();
             devices.removeAllElements();
-            url = null;
+            btspp = null;
             device = null;
             inquiryCompleted = false;
             cancel = false;
@@ -473,10 +185,10 @@ public class Jsr82LocationProvider extends StreamReadingLocationProvider impleme
         }
 
         public void servicesDiscovered(int transId, javax.bluetooth.ServiceRecord[] serviceRecords) {
-            if (url == null) {
+            if (btspp == null) {
                 try {
-                    for (int N = serviceRecords.length, i = 0; i < N && url == null; i++) {
-                        url = serviceRecords[i].getConnectionURL(javax.bluetooth.ServiceRecord.NOAUTHENTICATE_NOENCRYPT, false);
+                    for (int N = serviceRecords.length, i = 0; i < N && btspp == null; i++) {
+                        btspp = serviceRecords[i].getConnectionURL(javax.bluetooth.ServiceRecord.NOAUTHENTICATE_NOENCRYPT, false);
                     }
                 } catch (Throwable t) {
                     // what to do?
@@ -487,7 +199,7 @@ public class Jsr82LocationProvider extends StreamReadingLocationProvider impleme
         public void serviceSearchCompleted(int transID, int respCode) {
             transactionID = 0;
 
-            if (url == null) {
+            if (btspp == null) {
                 String respMsg;
 
                 switch (respCode) {
@@ -565,7 +277,7 @@ public class Jsr82LocationProvider extends StreamReadingLocationProvider impleme
                 if (cz.kruch.track.TrackingMIDlet.hasFlag("bt_service_search")) {
                     goServices();
                 } else {
-                    url = "btspp://" + device.getBluetoothAddress() + ":1";
+                    btspp = "btspp://" + device.getBluetoothAddress() + ":1";
                     letsGo(true);
                 }
             } else if (command.getCommandType() == Command.BACK) {

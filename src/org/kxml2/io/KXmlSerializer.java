@@ -24,7 +24,7 @@ package org.kxml2.io;
 import java.io.*;
 import org.xmlpull.v1.*;
 
-public class KXmlSerializer implements XmlSerializer {
+public final class KXmlSerializer implements XmlSerializer {
 
     //    static final String UNDEFINED = ":";
 
@@ -43,7 +43,7 @@ public class KXmlSerializer implements XmlSerializer {
     private boolean unicode;
     private String encoding;
 
-    private final void check(boolean close) throws IOException {
+    private void check(boolean close) throws IOException {
         if (!pending)
             return;
 
@@ -57,9 +57,7 @@ public class KXmlSerializer implements XmlSerializer {
         }
         indent[depth] = indent[depth - 1];
 
-        for (int i = nspCounts[depth - 1];
-            i < nspCounts[depth];
-            i++) {
+        for (int i = nspCounts[depth - 1]; i < nspCounts[depth]; i++) {
             writer.write(' ');
             writer.write("xmlns");
             if (!"".equals(nspStack[i * 2])) {
@@ -85,7 +83,7 @@ public class KXmlSerializer implements XmlSerializer {
         writer.write(close ? " />" : ">");
     }
 
-    private final void writeEscaped(String s, int quot)
+    private void writeEscaped(String s, int quot)
         throws IOException {
 
         for (int N = s.length(), i = 0; i < N; i++) {
@@ -94,10 +92,10 @@ public class KXmlSerializer implements XmlSerializer {
             	case '\n':
             	case '\r':
             	case '\t':
-            		if(quot == -1) 
+            		if (quot == -1)
             			writer.write(c);
             		else 
-            			writer.write("&#"+((int) c)+';');
+            			writer.write("&#" + ((int) c) + ';');
             		break;
                 case '&' :
                     writer.write("&amp;");
@@ -111,8 +109,7 @@ public class KXmlSerializer implements XmlSerializer {
                 case '"' :
                 case '\'' :
                     if (c == quot) {
-                        writer.write(
-                            c == '"' ? "&quot;" : "&apos;");
+                        writer.write(c == '"' ? "&quot;" : "&apos;");
                         break;
                     }
                 default :
@@ -176,21 +173,17 @@ public class KXmlSerializer implements XmlSerializer {
         }
     }
 
-    private final String getPrefix(
+    private String getPrefix(
         String namespace,
         boolean includeDefault,
         boolean create)
         throws IOException {
 
-        for (int i = nspCounts[depth + 1] * 2 - 2;
-            i >= 0;
-            i -= 2) {
+        for (int i = nspCounts[depth + 1] * 2 - 2; i >= 0; i -= 2) {
             if (nspStack[i + 1].equals(namespace)
                 && (includeDefault || !nspStack[i].equals(""))) {
                 String cand = nspStack[i];
-                for (int j = i + 2;
-                    j < nspCounts[depth + 1] * 2;
-                    j++) {
+                for (int j = i + 2; j < nspCounts[depth + 1] * 2; j++) {
                     if (nspStack[j].equals(cand)) {
                         cand = null;
                         break;
@@ -211,9 +204,7 @@ public class KXmlSerializer implements XmlSerializer {
         else {
             do {
                 prefix = "n" + (auto++);
-                for (int i = nspCounts[depth + 1] * 2 - 2;
-                    i >= 0;
-                    i -= 2) {
+                for (int i = nspCounts[depth + 1] * 2 - 2; i >= 0; i -= 2) {
                     if (prefix.equals(nspStack[i])) {
                         prefix = null;
                         break;
@@ -336,15 +327,13 @@ public class KXmlSerializer implements XmlSerializer {
 
         if (standalone != null) {
             writer.write("standalone='");
-            writer.write(
-                standalone.booleanValue() ? "yes" : "no");
+            writer.write(standalone.booleanValue() ? "yes" : "no");
             writer.write("' ");
         }
         writer.write("?>");
     }
 
-    public XmlSerializer startTag(String namespace, String name)
-        throws IOException {
+    public XmlSerializer startTag(String namespace, String name) throws IOException {
         check(false);
 
         //        if (namespace == null)
@@ -370,9 +359,7 @@ public class KXmlSerializer implements XmlSerializer {
                 : getPrefix(namespace, true, true);
 
         if ("".equals(namespace)) {
-            for (int i = nspCounts[depth];
-                i < nspCounts[depth + 1];
-                i++) {
+            for (int i = nspCounts[depth]; i < nspCounts[depth + 1]; i++) {
                 if ("".equals(nspStack[i * 2]) && !"".equals(nspStack[i * 2 + 1])) {
                     throw new IllegalStateException("Cannot set default namespace for elements in no namespace");
                 }

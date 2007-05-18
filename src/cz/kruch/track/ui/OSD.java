@@ -5,10 +5,8 @@ package cz.kruch.track.ui;
 
 import api.location.LocationProvider;
 import api.location.QualifiedCoordinates;
-import api.location.Location;
 
 import javax.microedition.lcdui.Graphics;
-import javax.microedition.lcdui.Image;
 
 import cz.kruch.track.configuration.Config;
 import cz.kruch.track.AssertionFailedException;
@@ -20,29 +18,28 @@ final class OSD extends Bar {
     private int sat;
 
     protected int semaforX, semaforY;
-    protected int str1Width, str2Width;
-    private StringBuffer sb;
-    private int rw;
+    protected final int str1Width, str2Width;
+    private final StringBuffer sb;
+    private final int rw;
 
-    private char[] cInfo, cExtInfo;
+    private final char[] cInfo, cExtInfo;
     private int cInfoLength, cExtInfoLength;
 
-    public OSD(int gx, int gy, int width, int height, Image bar) {
-        super(gx, gy, width, height, bar);
+    public OSD(int gx, int gy, int width, int height) {
+        super(gx, gy, width, height);
         this.providerStatus = LocationProvider.OUT_OF_SERVICE;
         this.rw = Desktop.font.charWidth('R');
         this.clip = new int[]{ gx, gy, -1, -1 };
         this.str1Width = Desktop.font.stringWidth("4*");
         this.str2Width = Desktop.font.stringWidth("44*");
-        this.sb = new StringBuffer(32);
-        this.cInfo = new char[32];
-        this.cExtInfo = new char[32];
-        this.cInfoLength = this.cExtInfoLength = 0;
-        resize(width, height, bar);
+        this.sb = new StringBuffer(64);
+        this.cInfo = new char[64];
+        this.cExtInfo = new char[64];
+        resize(width, height);
     }
 
-    public void resize(int width, int height, Image bar) {
-        super.resize(width, height, bar);
+    public void resize(int width, int height) {
+        super.resize(width, height);
         this.semaforX = this.width - NavigationScreens.bulletSize - BORDER;
         this.semaforY = Math.abs((this.bh - NavigationScreens.bulletSize)) >> 1;
     }
@@ -52,17 +49,16 @@ final class OSD extends Bar {
             return;
         }
 
-        Config cfg = Config.getSafeInstance();
-        boolean isBasicInfo = cfg.isOsdBasic();
-        boolean isExtInfo = cfg.isOsdExtended();
+        final boolean isBasicInfo = Config.osdBasic;
+        final boolean isExtInfo = Config.osdExtended;
 
         // draw info + extended info bg
-        if (!cfg.isOsdNoBackground()) {
+        if (!Config.osdNoBackground) {
             if (isBasicInfo) {
-                graphics.drawImage(bar, gx, gy, 0);
+                graphics.drawImage(Desktop.bar, gx, gy, 0);
             }
-            if (isExtInfo && cExtInfoLength > 0) {
-                graphics.drawImage(bar, gx, gy + (isBasicInfo ? bh : 0), 0);
+            if (isExtInfo && isBasicInfo && cExtInfoLength > 0) {
+                graphics.drawImage(Desktop.bar, gx, gy + bh, 0);
             }
         }
 
@@ -94,7 +90,7 @@ final class OSD extends Bar {
 
         // restore default color
         if (!ok || recording != null) {
-            graphics.setColor(cfg.isOsdBlackColor() ? 0x00000000 : 0x00FFFFFF);
+            graphics.setColor(Config.osdBlackColor ? 0x00000000 : 0x00FFFFFF);
         }
 
         // draw provider status
@@ -135,13 +131,8 @@ final class OSD extends Bar {
     }
 
     public void setInfo(QualifiedCoordinates qc, boolean ok) {
-//        sb.setLength(0);
         sb.delete(0, sb.length());
-        Config config = Config.getSafeInstance();
-        if (config.isUseGeocachingFormat() || config.isUseUTM()) {
-            qc = qc.toWgs84();
-        }
-        qc.setHp(config.isDecimalPrecision());
+        qc.setHp(Config.decimalPrecision);
         qc.toStringBuffer(sb);
         cInfoLength = sb.length();
         if (cInfoLength > cInfo.length) {
@@ -156,7 +147,7 @@ final class OSD extends Bar {
             return null;
 
         clip[2] = width;
-        clip[3] = cExtInfoLength == 0 ? bh : 2 * bh;
+        clip[3] = /*cExtInfoLength == 0 ? bh : */2 * bh;
 
         return clip;
     }

@@ -13,25 +13,27 @@ import java.io.IOException;
 import java.io.OutputStream;
 
 import cz.kruch.track.util.NmeaParser;
-import cz.kruch.track.AssertionFailedException;
 
 public abstract class StreamReadingLocationProvider extends LocationProvider {
     protected static final char[] HEADER_GGA = "$GPGGA".toCharArray();
     protected static final char[] HEADER_RMC = "$GPRMC".toCharArray();
+
     protected static final int BUFFER_SIZE = 512;
+
+    private static final int LINE_SIZE = 128;
 
     public static int syncs;
     public static int mismatches;
 
     private OutputStream observer;
-    private char[] buffer;
+    private char[] line;
 /*
     private int order = 0;
 */
 
     protected StreamReadingLocationProvider(String name) {
         super(name);
-        this.buffer = new char[0x80];
+        this.line = new char[LINE_SIZE];
         syncs = mismatches = 0;
     }
 
@@ -46,14 +48,14 @@ public abstract class StreamReadingLocationProvider extends LocationProvider {
 
         // get pair
         while (gga == null || rmc == null) {
-            int l = nextSentence(in);
+            final int l = nextSentence(in);
             if (l == -1) {
                 return null;
             }
-            if (isType(buffer, l, HEADER_GGA)) {
-                gga = NmeaParser.parseGGA(buffer, l);
-            } else if (isType(buffer, l, HEADER_RMC)) {
-                rmc = NmeaParser.parseRMC(buffer, l);
+            if (isType(line, l, HEADER_GGA)) {
+                gga = NmeaParser.parseGGA(line, l);
+            } else if (isType(line, l, HEADER_RMC)) {
+                rmc = NmeaParser.parseRMC(line, l);
             } else {
                 continue;
             }
@@ -74,13 +76,13 @@ public abstract class StreamReadingLocationProvider extends LocationProvider {
         Location location;
 
         // combine
-        long datetime = rmc.date + rmc.timestamp;
+        final long datetime = rmc.date + rmc.timestamp;
         if (rmc.timestamp == gga.timestamp) {
-            location = new Location(new QualifiedCoordinates(rmc.lat, rmc.lon, gga.altitude),
-                                    datetime, gga.fix, gga.sat, gga.hdop * 5);
+            location = Location.newInstance(QualifiedCoordinates.newInstance(rmc.lat, rmc.lon, gga.altitude),
+                                            datetime, gga.fix, gga.sat, gga.hdop * 5);
         } else {
-            location = new Location(new QualifiedCoordinates(rmc.lat, rmc.lon),
-                                    datetime, rmc.status == 'A' ? 1 : 0);
+            location = Location.newInstance(QualifiedCoordinates.newInstance(rmc.lat, rmc.lon),
+                                            datetime, rmc.status == 'A' ? 1 : 0);
             mismatches++;
         }
         location.setCourse(rmc.angle);
@@ -99,13 +101,13 @@ public abstract class StreamReadingLocationProvider extends LocationProvider {
         boolean nl = false;
         boolean match = false;
 
-        OutputStream _observer = observer;
-        char[] _buffer = buffer;
+        OutputStream observer = this.observer;
+        char[] line = this.line;
 
         int c = in.read();
         while (c > -1) {
-            if (_observer != null) {
-                _observer.write(c);
+            if (observer != null) {
+                observer.write(c);
             }
             if (c == '$') { // beginning of NMEA sentence
                 pos = 0;
@@ -118,10 +120,10 @@ public abstract class StreamReadingLocationProvider extends LocationProvider {
                 if (nl) break;
 
                 // add char to array
-                _buffer[pos++] = ch;
+                line[pos++] = ch;
 
                 // weird content check
-                if (pos >= 0x80) {
+                if (pos >= LINE_SIZE) {
                     throw new IOException("Hmm, is this really NMEA stream?");
                 }
             }

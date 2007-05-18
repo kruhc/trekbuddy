@@ -8,6 +8,7 @@ import cz.kruch.track.configuration.Config;
 import cz.kruch.track.util.Mercator;
 import cz.kruch.track.util.ExtraMath;
 import cz.kruch.track.ui.NavigationScreens;
+import public_domain.Xedarius;
 
 public final class QualifiedCoordinates implements GeodeticPosition {
 
@@ -20,15 +21,53 @@ public final class QualifiedCoordinates implements GeodeticPosition {
 
     private double lat, lon;
     private float alt;
+
     private boolean hp;
 
-    private Datum datum;
+    /*
+     * POOL
+     */
 
-    public QualifiedCoordinates(double lat, double lon) {
-        this(lat, lon, -1F);
+    private static final QualifiedCoordinates[] pool = new QualifiedCoordinates[8];
+    private static int countFree;
+
+    public static QualifiedCoordinates newInstance(double lat, double lon) {
+        return newInstance(lat, lon, -1F);
     }
 
-    public QualifiedCoordinates(double lat, double lon, float alt) {
+    public synchronized static QualifiedCoordinates newInstance(double lat,
+                                                                double lon,
+                                                                float alt) {
+        QualifiedCoordinates result;
+
+        if (countFree == 0) {
+            result = new QualifiedCoordinates(lat, lon, alt);
+        } else {
+            result = pool[--countFree];
+            if (result == null) throw new RuntimeException("NULL");
+            result.lat = lat;
+            result.lon = lon;
+            result.alt = alt;
+        }
+
+        return result;
+    }
+
+    public synchronized static void releaseInstance(QualifiedCoordinates qc) {
+        if (countFree < pool.length && qc != null) {
+            pool[countFree++] = qc;
+        }
+    }
+
+    /*
+     * ~POOL
+     */
+
+    public QualifiedCoordinates clone() {
+        return newInstance(lat, lon, alt);
+    }
+
+    private QualifiedCoordinates(double lat, double lon, float alt) {
         this.lat = lat;
         this.lon = lon;
         this.alt = alt;
@@ -58,19 +97,11 @@ public final class QualifiedCoordinates implements GeodeticPosition {
         this.hp = hp;
     }
 
-    public void setDatum(Datum datum) {
-        this.datum = datum;
-    }
-
-    public QualifiedCoordinates toWgs84() {
-        if (datum == null || datum == Datum.DATUM_WGS_84) {
-            return this;
-        }
-
-        return datum.toWgs84(this);
-    }
-
     public float distance(QualifiedCoordinates neighbour) {
+        return distance(neighbour.lat, neighbour.lon);
+    }
+
+    private float distance(double neighbourLat, double neighbourLon) {
 /*
         double h1 = 0, h2 = 0;
         double R = Datum.DATUM_WGS_84.getEllipsoid().getEquatorialRadius();
@@ -96,46 +127,48 @@ public final class QualifiedCoordinates implements GeodeticPosition {
         return (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
 */
 
-        double dx = Math.abs(lon - neighbour.lon) * (111319.490 * Math.cos(Math.toRadians((lat + neighbour.lat) / 2)));
-        double dy = Math.abs(lat - neighbour.lat) * (111319.490);
+        final double dx = Math.abs(lon - neighbourLon) * (111319.490 * Math.cos(Math.toRadians((lat + neighbourLat) / 2)));
+        final double dy = Math.abs(lat - neighbourLat) * (111319.490);
 
         return (float) Math.sqrt(dx * dx + dy * dy);
     }
 
-    /* non-JSR179 signature */
-    public int azimuthTo(QualifiedCoordinates neighbour, double distance) {
-        double c = distance; // distance to neighbour
-
-        double dx = neighbour.lon - lon;
-        double dy = neighbour.lat - lat;
-        QualifiedCoordinates artifical;
-        int offset;
+    /* non-JSR179 signature TODO fix */
+    public float azimuthTo(QualifiedCoordinates neighbour, final double distance) {
+        final double dx = neighbour.lon - lon;
+        final double dy = neighbour.lat - lat;
+        double artificalLat, artificalLon;
+        final int offset;
 
         if (dx > 0) {
             if (dy > 0) {
-                artifical = new QualifiedCoordinates(neighbour.lat, lon);
+                artificalLat = lat;
+                artificalLon = neighbour.lon;
                 offset = 0;
             } else {
-                artifical = new QualifiedCoordinates(lat, neighbour.lon);
+                artificalLat = neighbour.lat;
+                artificalLon = lon;
                 offset = 90;
             }
         } else {
             if (dy > 0) {
-                artifical = new QualifiedCoordinates(lat, neighbour.lon);
+                artificalLat = neighbour.lat;
+                artificalLon = lon;
                 offset = 270;
             } else {
-                artifical = new QualifiedCoordinates(neighbour.lat, lon);
+                artificalLat = lat;
+                artificalLon = neighbour.lon;
                 offset = 180;
             }
         }
 
-        double a = artifical.distance(neighbour);
-        double sina = a / c;
+        final double a = distance(artificalLat, artificalLon);
+        double sina = a / distance /* c */;
+        if (sina > 1.0D && sina < 1.001D) { // tolerate calculation inaccuracy 
+            sina = 1.0D;
+        }
 
-        // gc hint
-        artifical = null;
-
-        return offset + ExtraMath.asin(sina);
+        return (float) (offset + Math.toDegrees(Xedarius.asin(sina)));
     }
 
     public String toString() {
@@ -143,20 +176,22 @@ public final class QualifiedCoordinates implements GeodeticPosition {
     }
 
     public StringBuffer toStringBuffer(StringBuffer sb) {
-        if (Config.getSafeInstance().isUseGridFormat() && (Mercator.isGrid())) {
+        if (Config.useGridFormat && (Mercator.isGrid())) {
             Mercator.UTMCoordinates gridCoords = Mercator.LLtoGrid(this);
             if (gridCoords.zone != null) {
                 sb.append(gridCoords.zone).append(' ');
             }
-            zeros(sb,gridCoords.easting, 10000).append(round(gridCoords.easting));
+            zeros(sb, gridCoords.easting, 10000).append(round(gridCoords.easting));
             sb.append(' ');
             zeros(sb, gridCoords.northing, 10000).append(round(gridCoords.northing));
-        } else if (Config.getSafeInstance().isUseUTM()) {
+            Mercator.UTMCoordinates.releaseInstance(gridCoords);
+        } else if (Config.useUTM) {
             Mercator.UTMCoordinates utmCoords = Mercator.LLtoUTM(this);
             sb.append(utmCoords.zone).append(' ');
             sb.append("E ").append(round(utmCoords.easting));
             sb.append(' ');
             sb.append("N ").append(round(utmCoords.northing));
+            Mercator.UTMCoordinates.releaseInstance(utmCoords);
         } else {
             sb.append(lat > 0D ? "N " : "S ");
             append(LAT, sb);
@@ -170,7 +205,7 @@ public final class QualifiedCoordinates implements GeodeticPosition {
 
     private StringBuffer append(int type, StringBuffer sb) {
         double l = Math.abs(type == LAT ? lat : lon);
-        if (Config.getSafeInstance().isUseGeocachingFormat()) {
+        if (Config.useGeocachingFormat) {
             int h = (int) Math.floor(l);
             l -= h;
             l *= 60D;
@@ -260,7 +295,7 @@ public final class QualifiedCoordinates implements GeodeticPosition {
         return sb;
     }
 
-    public static int round(double d) {
+    public static int round(final double d) {
         int i = (int) d;
         if ((d - i) > 0.5D) {
             i++;
@@ -269,7 +304,7 @@ public final class QualifiedCoordinates implements GeodeticPosition {
         return i;
     }
 
-    private static StringBuffer zeros(StringBuffer sb, double d, int c) {
+    private static StringBuffer zeros(StringBuffer sb, final double d, final int c) {
         int i = Mercator.grade(d);
         while (i < c) {
             sb.append('0');

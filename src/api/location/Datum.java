@@ -60,7 +60,7 @@ public final class Datum {
 
     public QualifiedCoordinates toLocal(QualifiedCoordinates wgs84) {
         if (this == DATUM_WGS_84) {
-            return wgs84;
+            return wgs84.clone();
         }
 
         return transform(wgs84, DATUM_WGS_84.ellipsoid, ellipsoid, -1);
@@ -68,7 +68,7 @@ public final class Datum {
 
     public QualifiedCoordinates toWgs84(QualifiedCoordinates local) {
         if (this == DATUM_WGS_84) {
-            return local;
+            return local.clone();
         }
 
         return transform(local, ellipsoid, DATUM_WGS_84.ellipsoid, 1);
@@ -110,8 +110,8 @@ public final class Datum {
                 - (da * (from_a / rn)) + ((df * rn * ssqlat) / adb);
 */
 
-        return new QualifiedCoordinates(Math.toDegrees(lat + dlat),
-                                        Math.toDegrees(lon + dlon)/*, from.h + dh*/);
+        return QualifiedCoordinates.newInstance(Math.toDegrees(lat + dlat),
+                                                Math.toDegrees(lon + dlon)/*, from.h + dh*/);
 
     }
 

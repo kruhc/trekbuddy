@@ -3,6 +3,8 @@
 
 package cz.kruch.track.util;
 
+import api.file.File;
+
 import javax.microedition.lcdui.List;
 import java.util.Enumeration;
 import java.util.Vector;
@@ -16,7 +18,7 @@ public final class Arrays {
      * Clears array.
      * @param a array
      */
-    public static void clear(Object[] a) {
+    public static void clear(final Object[] a) {
         for (int i = a.length; --i >= 0; ) {
             a[i] = null;
         }
@@ -29,7 +31,7 @@ public final class Arrays {
      */
     public static void sort2list(List list, Enumeration items) {
         // enum to list
-        Vector v = new Vector();
+        Vector v = new Vector(8, 8);
         while (items.hasMoreElements()) {
             v.addElement((String) items.nextElement());
         }
@@ -38,6 +40,10 @@ public final class Arrays {
         String[] array = new String[v.size()];
         v.copyInto(array);
 
+        // gc hint
+        v.removeAllElements();
+        v = null;
+
         // sort array
         sort(array);
 
@@ -45,19 +51,23 @@ public final class Arrays {
         for (int N = array.length, i = 0; i < N; i++) {
             list.append(array[i], null);
         }
+
+        // gc hint
+        clear(array);
     }
 
     /*
      * String array sorting.
      */
 
-    private static void sort(String[] a) {
+    private static void sort(final String[] a) {
         String aux[] = new String[a.length];
         System.arraycopy(a, 0, aux, 0, a.length);
         mergeSort(aux, a, 0, a.length);
     }
 
-    private static void mergeSort(String src[], String dest[], int low, int high) {
+    private static void mergeSort(final String src[], final String dest[],
+                                  final int low, final int high) {
         int length = high - low;
 
         // small arrays sorting
@@ -91,7 +101,7 @@ public final class Arrays {
         }
     }
 
-    private static void swap(String x[], int a, int b) {
+    private static void swap(final String x[], final int a, final int b) {
         String t = x[a];
         x[a] = x[b];
         x[b] = t;
@@ -105,8 +115,8 @@ public final class Arrays {
      * Compares objects as filenames, with directories first.
      */
     private static int compare(String s1, String s2) {
-        boolean isDir1 = '/' == s1.charAt(s1.length() - 1);
-        boolean isDir2 = '/' == s2.charAt(s2.length() - 1);
+        boolean isDir1 = File.isDir(s1);
+        boolean isDir2 = File.isDir(s2);
         if (isDir1) {
             if (isDir2) {
                 return s1.compareTo(s2);

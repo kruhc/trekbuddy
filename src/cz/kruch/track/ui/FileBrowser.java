@@ -14,6 +14,8 @@ import javax.microedition.lcdui.Displayable;
 import java.util.Enumeration;
 import java.io.IOException;
 
+import api.file.File;
+
 public final class FileBrowser extends List implements CommandListener, Runnable {
 //#ifdef __LOG__
     private static final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("FileBrowser");
@@ -26,9 +28,9 @@ public final class FileBrowser extends List implements CommandListener, Runnable
     private Command cmdBack;
     private Command cmdSelect;
 
-    private volatile api.file.File file;
+    private volatile File file;
     private volatile String path;
-    private volatile int depth = 0;
+    private volatile int depth;
 
     public FileBrowser(String title, Callback callback, Displayable next) {
         super(title, List.IMPLICIT);
@@ -87,7 +89,7 @@ public final class FileBrowser extends List implements CommandListener, Runnable
 //#endif
 
                     // open root dir
-                    file = new api.file.File(Connector.open(api.file.File.FILE_PROTOCOL + (path.startsWith("/") ? "" : "/") + path, Connector.READ));
+                    file = File.open(Connector.open(api.file.File.FILE_PROTOCOL + (path.startsWith("/") ? "" : "/") + path, Connector.READ));
                     isDir = file.isDirectory();
 
                 } else { // traverse
@@ -97,20 +99,12 @@ public final class FileBrowser extends List implements CommandListener, Runnable
 
                     // traverse
                     file.setFileConnection(path);
-
-                    // traversal on some devices is broken
-                    boolean brokenTraversal = false;
-//#ifdef __A780__
-                    brokenTraversal = cz.kruch.track.TrackingMIDlet.isA780();
-//#else
-                    brokenTraversal = cz.kruch.track.TrackingMIDlet.isSxg75();
-//#endif
-                    if (brokenTraversal) {
+                    if (file.isBrokenTraversal()) {
                         // we know special traversal code is used underneath
                         isDir = file.isDirectory();
                     } else {
-                        // use traversal capability
-                        isDir = file.getURL().endsWith(api.file.File.FILE_SEPARATOR);
+                        // detect from URL
+                        isDir = file.getURL().endsWith(File.PATH_SEPARATOR);
                     }
                 }
 
@@ -158,11 +152,12 @@ public final class FileBrowser extends List implements CommandListener, Runnable
         if (size() > 0) {
             setSelectCommand(cmdSelect);
         }
-        addCommand(depth == 0 ? cmdCancel :cmdBack);
+        addCommand(depth == 0 ? cmdCancel : cmdBack);
     }
 
     public void commandAction(Command command, Displayable displayable) {
-        if (command.getCommandType() == Command.SCREEN) {
+        if (Command.SCREEN == command.getCommandType()) {
+            path = null; // gc hint
             path = getString(getSelectedIndex());
             if (api.file.File.PARENT_DIR.equals(path)) {
                 depth--;
@@ -170,9 +165,10 @@ public final class FileBrowser extends List implements CommandListener, Runnable
                 depth++;
             }
             browse();
-        } else if (command.getCommandType() == Command.BACK) {
+        } else if (Command.BACK == command.getCommandType()) {
             depth--;
             if (depth > 0) {
+                path = null; // gc hint
                 path = api.file.File.PARENT_DIR;
                 browse();
             } else {
@@ -184,10 +180,16 @@ public final class FileBrowser extends List implements CommandListener, Runnable
     }
 
     private void quit(Throwable throwable) {
+        // gc hint
+        deleteAll();
+        
         // show parent
         Desktop.display.setCurrent(next);
 
         // we are done
-        callback.invoke(file, throwable);
+        callback.invoke(file, throwable, this);
+
+        // gc hint
+        file = null;
     }
 }

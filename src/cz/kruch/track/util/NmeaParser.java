@@ -10,32 +10,25 @@ import java.util.TimeZone;
 import java.util.Date;
 
 public final class NmeaParser {
-    private static final char[] DELIMITERS = new char[]{ ',' };
-    private static CharArrayTokenizer tokenizer;
-    private static Record gga, rmc;
+    private static final CharArrayTokenizer tokenizer = new CharArrayTokenizer();
+    private static final Record gga = new Record();
+    private static final Record rmc = new Record();
+
     private static int day, month, year;
     private static long date;
 
     public static Record parseGGA(char[] nmea, int length) throws LocationException {
-        if (gga == null) {
-            gga = new Record();
-        } else {
-            gga.invalidate();
-        }
-        if (tokenizer == null) {
-            tokenizer = new CharArrayTokenizer();
-        }
-
         int index = 0;
+        CharArrayTokenizer tokenizer = NmeaParser.tokenizer;
         Record record = gga;
-        CharArrayTokenizer _tokenizer = tokenizer;
 
-        // init tokenizer
-        _tokenizer.init(nmea, length, DELIMITERS, false);
+        // init tokenizer and record
+        tokenizer.init(nmea, length, false);
+        record.invalidate();
 
         // process
-        while (_tokenizer.hasMoreTokens() && (index < 10)) {
-            CharArrayTokenizer.Token token = _tokenizer.next();
+        while (tokenizer.hasMoreTokens() && (index < 10)) {
+            CharArrayTokenizer.Token token = tokenizer.next();
             if (token.isEmpty()) {
                 if (index == 0) {
                     throw new LocationException("GPGGA expected");
@@ -124,25 +117,17 @@ public final class NmeaParser {
     }
 
     public static Record parseRMC(char[] nmea, int length) throws LocationException {
-        if (rmc == null) {
-            rmc = new Record();
-        } else {
-            rmc.invalidate();
-        }
-        if (tokenizer == null) {
-            tokenizer = new CharArrayTokenizer();
-        }
-
         int index = 0;
+        CharArrayTokenizer tokenizer = NmeaParser.tokenizer;
         Record record = rmc;
-        CharArrayTokenizer _tokenizer = tokenizer;
 
-        // init tokenizer
-        _tokenizer.init(nmea, length, DELIMITERS, false);
+        // init tokenizer and record
+        tokenizer.init(nmea, length, false);
+        record.invalidate();
 
         // process
-        while (_tokenizer.hasMoreTokens() && (index < 10)) {
-            CharArrayTokenizer.Token token = _tokenizer.next();
+        while (tokenizer.hasMoreTokens() && (index < 10)) {
+            CharArrayTokenizer.Token token = tokenizer.next();
             if (token.isEmpty()) {
                 if (index == 0) {
                     throw new LocationException("GPRMC expected");
@@ -182,6 +167,9 @@ public final class NmeaParser {
                     case 7: {
                         if (record.status == 'A') {
                             record.speed = CharArrayTokenizer.parseFloat(token);
+                            if (record.speed > 0F) {
+                                record.speed *= 1.852F / 3.6F;
+                            }
                         }
                     } break;
                     case 8: {
@@ -227,7 +215,7 @@ public final class NmeaParser {
     private static long parseDate(CharArrayTokenizer.Token token) {
         char[] _tarray = token.array;
         int _tbegin = token.begin;
-        int day = 10 * (_tarray[_tbegin + 0] - '0') + _tarray[_tbegin + 1] - '0';
+        int day = 10 * (_tarray[_tbegin/* + 0*/] - '0') + _tarray[_tbegin + 1] - '0';
         int month = 10 * (_tarray[_tbegin + 2] - '0') + _tarray[_tbegin + 3] - '0';
         int year = 2000 + 10 * (_tarray[_tbegin + 4] - '0') + _tarray[_tbegin + 5] - '0';
         if (day != NmeaParser.day || month != NmeaParser.month || year != NmeaParser.year) {

@@ -45,7 +45,7 @@ public final class LoaderIO extends Thread {
 
         // enqueu task (wait for previous task to finish)
         synchronized (this) {
-            while (!ready) {
+            while (go && !ready) {
                 try {
                     wait();
                 } catch (InterruptedException e) {
@@ -85,18 +85,22 @@ public final class LoaderIO extends Thread {
             if (log.isEnabled()) log.debug("popped task: " + r);
 //#endif
 
-            // run task
-            r.run();
+            try {
+                // run task
+                r.run();
+            } catch (Throwable t) {
+                // ignore
+            } finally {
+                // signal ready for next task
+                synchronized (this) {
+                    ready = true;
+                    notify();
+                }
+            }
 
 //#ifdef __LOG__
             if (log.isEnabled()) log.debug("task finished");
 //#endif
-
-            // signal ready for next task
-            synchronized (this) {
-                ready = true;
-                notify();
-            }
         }
     }
 }

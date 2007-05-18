@@ -11,4 +11,8 @@ public class ConfigurationException extends Exception {
     public ConfigurationException(Exception exception) {
         super(exception.toString());
     }
+
+    public ConfigurationException(String message, Throwable throwable) {
+        super(message + ": " + throwable.toString());
+    }
 }

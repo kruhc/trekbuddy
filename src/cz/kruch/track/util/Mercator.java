@@ -21,7 +21,41 @@ public final class Mercator {
         public String zone;
         public double easting, northing;
 
-        public UTMCoordinates(String zone, double easting, double northing) {
+        /*
+         * POOL
+         */
+
+        private static final UTMCoordinates[] pool = new UTMCoordinates[8];
+        private static int countFree;
+
+        public synchronized static UTMCoordinates newInstance(String zone,
+                                                              double easting,
+                                                              double northing) {
+            UTMCoordinates result;
+
+            if (countFree == 0) {
+                result = new UTMCoordinates(zone, easting, northing);
+            } else {
+                result = pool[--countFree];
+                result.zone = zone;
+                result.easting = easting;
+                result.northing = northing;
+            }
+
+            return result;
+        }
+
+        public synchronized static void releaseInstance(UTMCoordinates utm) {
+            if (countFree < pool.length) {
+                pool[countFree++] = utm;
+            }
+        }
+
+        /*
+         * ~POOL
+         */
+
+        private UTMCoordinates(String zone, double easting, double northing) {
             this.zone = zone;
             this.easting = easting;
             this.northing = northing;
@@ -95,6 +129,8 @@ public final class Mercator {
      * Projection setup helpers.
      */
 
+    private static ProjectionSetup cachedUtmSetup = null;
+
     public static ProjectionSetup getUTMSetup(QualifiedCoordinates qc) {
         double lon = qc.getLon();
         double lat = qc.getLat();
@@ -113,8 +149,20 @@ public final class Mercator {
         double lonOrigin = (zoneNumber - 1) * 6 - 180 + 3; // +3 puts origin in middle of zone
         double falseNorthing = lat < 0D ? 10000000D : 0D;
 
-        return new ProjectionSetup("UTM", zone, lonOrigin, 0D,
-                                   0.9996, 500000D, falseNorthing);
+        if (cachedUtmSetup != null) {
+            if (cachedUtmSetup.lonOrigin == lonOrigin
+                && cachedUtmSetup.falseNorthing == falseNorthing
+                && cachedUtmSetup.zone.equals(zone)) {
+                return cachedUtmSetup;
+            } else {
+                cachedUtmSetup = null;
+            }
+        }
+
+        cachedUtmSetup = new ProjectionSetup("UTM", zone, lonOrigin, 0D,
+                                             0.9996, 500000D, falseNorthing);
+
+        return cachedUtmSetup;
     }
 
 /*
@@ -131,8 +179,8 @@ public final class Mercator {
         double lmin = Double.MAX_VALUE;
         double lmax = Double.MIN_VALUE;
 
-        for (Enumeration e = ll.elements(); e.hasMoreElements(); ) {
-            double lon = ((QualifiedCoordinates) e.nextElement()).getLon();
+        for (int i = ll.size(); --i >= 0; ) {
+            double lon = ((QualifiedCoordinates) ll.elementAt(i)).getLon();
             if (lon < lmin) {
                 lmin = lon;
             }
@@ -249,7 +297,7 @@ public final class Mercator {
                               * ExtraMath.ln(((1 + sinPhi) / (1 - sinPhi)));
 */
 
-            return new UTMCoordinates(null, easting, northing);
+            return UTMCoordinates.newInstance(null, easting, northing);
 
         } else { // Transverse Mercator
 
@@ -287,7 +335,7 @@ public final class Mercator {
             double northing = setup.falseNorthing + setup.k0 * (M - Mo + N * temp_tanLatRad * (A * A / 2 + ((5 - T + 9 * C + 4 * C * C) * A * A * A * A / 24)
                                   + ((61 - 58 * T + T * T + 600 * C - 330 * eccPrimeSquared) * A * A * A * A * A * A / 720)));
 
-            return new UTMCoordinates(setup.zone, easting, northing);
+            return UTMCoordinates.newInstance(setup.zone, easting, northing);
         }
     }
 
@@ -320,7 +368,7 @@ public final class Mercator {
             lon = ((utm.easting -  setup.falseEasting) / (a * setup.k0));
             lon = setup.lonOrigin + Math.toDegrees(lon);
 
-            return new QualifiedCoordinates(lat, lon);
+            return QualifiedCoordinates.newInstance(lat, lon);
 
         } else { // Transverse Mercator
 
@@ -372,7 +420,7 @@ public final class Mercator {
                     * D * D * D * D * D / 120) / temp_cosPhi1;
             lon = setup.lonOrigin + Math.toDegrees(lon);
 
-            return new QualifiedCoordinates(lat, lon);
+            return QualifiedCoordinates.newInstance(lat, lon);
         }
     }
 

@@ -21,7 +21,7 @@ final class ItemSelection extends List implements CommandListener {
     }
 
     public ItemSelection(Displayable next, String title, String selectLabel, Callback callback) {
-        super(title, List.IMPLICIT);
+        super(cz.kruch.track.TrackingMIDlet.wm ? title + " (TrekBuddy)" : title, List.IMPLICIT);
         this.callback = callback;
         this.next = next;
         addCommand(new Command("Cancel", Command.BACK, 1));
@@ -32,18 +32,20 @@ final class ItemSelection extends List implements CommandListener {
     public void show(Enumeration items) {
         // add items
         Arrays.sort2list(this, items);
+
         // show selection
         Desktop.display.setCurrent(this);
     }
 
     public void commandAction(Command command, Displayable displayable) {
-        // restore desktop UI
+        // close selection
         Desktop.display.setCurrent(next);
+
         // invoke callback
         if (command.getCommandType() == Command.ITEM) {
-            callback.invoke(getString(getSelectedIndex()), null);
+            callback.invoke(getString(getSelectedIndex()), null, this);
         } else {
-            callback.invoke(null, null);
+            callback.invoke(null, null, this);
         }
     }
 }

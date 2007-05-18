@@ -327,7 +327,7 @@ public interface XmlPullParser {
      * applications may alter the array, although it is final, due
      * to limitations of the Java language.
      */
-    String [] TYPES = {
+    String[] TYPES = {
         "START_DOCUMENT",
             "END_DOCUMENT",
             "START_TAG",
@@ -417,8 +417,7 @@ public interface XmlPullParser {
      * @exception XmlPullParserException If the feature is not supported or can not be set
      * @exception IllegalArgumentException If string with the feature name is null
      */
-    void setFeature(String name,
-                           boolean state) throws XmlPullParserException;
+    void setFeature(String name, boolean state) throws XmlPullParserException;
 
     /**
      * Returns the current value of the given feature.
@@ -440,8 +439,7 @@ public interface XmlPullParser {
      * @exception XmlPullParserException If the property is not supported or can not be set
      * @exception IllegalArgumentException If string with the property name is null
      */
-    void setProperty(String name,
-                            Object value) throws XmlPullParserException;
+    void setProperty(String name, Object value) throws XmlPullParserException;
 
     /**
      * Look up the value of a property.
@@ -534,8 +532,7 @@ public interface XmlPullParser {
      * @see #FEATURE_PROCESS_DOCDECL
      * @see #FEATURE_VALIDATION
      */
-    void defineEntityReplacementText( String entityName,
-                                            String replacementText ) throws XmlPullParserException;
+    void defineEntityReplacementText(String entityName, String replacementText ) throws XmlPullParserException;
 
     /**
      * Returns the numbers of elements in the namespace stack for the given
@@ -648,7 +645,7 @@ public interface XmlPullParser {
      * This method is especially useful to provide meaningful
      * error messages and for debugging purposes.
      */
-    String getPositionDescription ();
+    String getPositionDescription();
 
 
     /**
@@ -708,7 +705,7 @@ public interface XmlPullParser {
      * @see #next
      * @see #nextToken
      */
-    String getText ();
+    String getText();
 
 
     /**
@@ -736,7 +733,7 @@ public interface XmlPullParser {
      * @return char buffer that contains the text of the current event
      *  (null if the current event has no text associated).
      */
-    char[] getTextCharacters(int [] holderForStartAndLength);
+    char[] getTextCharacters(int[] holderForStartAndLength);
 
     // --------------------------------------------------------------------------
     // START_TAG / END_TAG shared methods
@@ -749,7 +746,7 @@ public interface XmlPullParser {
      * The current event must be START_TAG or END_TAG; otherwise,
      * null is returned.
      */
-    String getNamespace ();
+    String getNamespace();
 
     /**
      * For START_TAG or END_TAG events, the (local) name of the current
@@ -820,7 +817,7 @@ public interface XmlPullParser {
      *   empty string ("") is returned  if namesapces processing is not enabled or
      *   namespaces processing is enabled but attribute has no namespace (it has no prefix).
      */
-    String getAttributeNamespace (int index);
+    String getAttributeNamespace(int index);
 
     /**
      * Returns the local name of the specified attribute
@@ -831,7 +828,7 @@ public interface XmlPullParser {
      * @param zero based index of attribute
      * @return attribute name (null is never returned)
      */
-    String getAttributeName (int index);
+    String getAttributeName(int index);
 
     /**
      * Returns the prefix of the specified attribute
@@ -897,8 +894,7 @@ public interface XmlPullParser {
      * @param name If namespaces enabled local name of attribute otherwise just attribute name
      * @return value of attribute or null if attribute with given name does not exist
      */
-    String getAttributeValue(String namespace,
-                                    String name);
+    String getAttributeValue(String namespace, String name);
 
     // --------------------------------------------------------------------------
     // actual parsing methods
@@ -909,8 +905,7 @@ public interface XmlPullParser {
      * @see #next()
      * @see #nextToken()
      */
-    int getEventType()
-        throws XmlPullParserException;
+    int getEventType() throws XmlPullParserException;
 
     /**
      * Get next parsing event - element content wil be coalesced and only one
@@ -931,8 +926,7 @@ public interface XmlPullParser {
      * @see #END_DOCUMENT
      */
 
-    int next()
-        throws XmlPullParserException, IOException;
+    int next() throws XmlPullParserException, IOException;
 
 
     /**
@@ -1023,8 +1017,7 @@ public interface XmlPullParser {
      * @see #ENTITY_REF
      * @see #IGNORABLE_WHITESPACE
      */
-    int nextToken()
-        throws XmlPullParserException, IOException;
+    int nextToken() throws XmlPullParserException, IOException;
 
     //-----------------------------------------------------------------------------
     // utility methods to mak XML parsing easier ...

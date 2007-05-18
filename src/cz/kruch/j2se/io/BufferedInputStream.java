@@ -9,7 +9,6 @@ package cz.kruch.j2se.io;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 
 /**
  * A <code>BufferedInputStream</code> adds
@@ -38,9 +37,6 @@ public final class BufferedInputStream extends /* FilterInputStream */ InputStre
      * Underlying stream.
      */
     private InputStream in;
-
-    /* observer */
-    private OutputStream observer;
 
     /* for optimistic lie */
     public static boolean useAvailableLie = true;
@@ -96,11 +92,12 @@ public final class BufferedInputStream extends /* FilterInputStream */ InputStre
      * @throws IllegalArgumentException if size <= 0.
      */
     public BufferedInputStream(InputStream in, int size) {
-/* null supported since 0.9.5
+/* null supported since 0.9.5 for reuse
         if (in == null) {
             throw new IllegalArgumentException("Underlying stream is null");
         }
 */
+
         if (size <= 0) {
             throw new IllegalArgumentException("Buffer size <= 0");
         }
@@ -110,7 +107,7 @@ public final class BufferedInputStream extends /* FilterInputStream */ InputStre
 
         // prepare lie
         if (useAvailableLie) {
-            available = size;
+            available = buf.length;
         } else {
             available = -1;
         }
@@ -149,10 +146,6 @@ public final class BufferedInputStream extends /* FilterInputStream */ InputStre
             }
         }
 
-        if (observer != null) {
-            observer.write(buf[pos] & 0xff);
-        }
-
         return buf[pos++] & 0xff;
     }
 
@@ -168,11 +161,7 @@ public final class BufferedInputStream extends /* FilterInputStream */ InputStre
               bytes into the local buffer.  In this way buffered streams will
               cascade harmlessly. */
             if (len >= buf.length) {
-                int c = in.read(b, off, len);
-                if (observer != null) {
-                    observer.write(b, off, c);
-                }
-                return c;
+                return in.read(b, off, len);
             }
             fill();
             avail = count - pos;
@@ -182,9 +171,6 @@ public final class BufferedInputStream extends /* FilterInputStream */ InputStre
         }
         int cnt = (avail < len) ? avail : len;
         System.arraycopy(buf, pos, b, off, cnt);
-        if (observer != null) {
-            observer.write(buf, pos, cnt);
-        }
         pos += cnt;
 
         return cnt;
@@ -287,7 +273,8 @@ public final class BufferedInputStream extends /* FilterInputStream */ InputStre
             return in.skip(n);
         }
 
-        long skipped = (avail < n) ? avail : n;
+        long skipped = avail < n ? avail : n;
+
         pos += skipped;
 
         return skipped;
@@ -310,7 +297,7 @@ public final class BufferedInputStream extends /* FilterInputStream */ InputStre
      * @see java.io.FilterInputStream#in
      */
     public int available() throws IOException {
-        // lie upon first query
+        /* lie upon first query */
         if (available > -1) {
             int n = available;
             available = -1;
@@ -331,6 +318,14 @@ public final class BufferedInputStream extends /* FilterInputStream */ InputStre
             return;
         }
         in.close();
+        in = null; // gc hint
+    }
+
+    /**
+     * Disposes buffer.
+     */
+    public void dispose() {
+        buf = null;
     }
 
     /**
@@ -338,11 +333,15 @@ public final class BufferedInputStream extends /* FilterInputStream */ InputStre
      * @param in new input stream
      */
     public InputStream reuse(InputStream in) {
+        if (buf == null) {
+            throw new IllegalStateException("Stream is not reusable");
+        }
+
         this.in = null; // gc hint
         this.in = in;
         this.pos = this.count = 0;
 
-        // prepare lie
+        /* prepare lie again */
         if (useAvailableLie) {
             available = buf.length;
         } else {
@@ -350,14 +349,5 @@ public final class BufferedInputStream extends /* FilterInputStream */ InputStre
         }
 
         return this;
-    }
-
-    /**
-     * Injects observer.
-     * @param observer
-     */
-    public void setObserver(OutputStream observer) {
-        this.observer = null; // gc hint
-        this.observer = observer;
     }
 }

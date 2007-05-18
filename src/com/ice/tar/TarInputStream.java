@@ -34,15 +34,11 @@ import java.io.IOException;
  */
 public final class TarInputStream extends InputStream {
     private static final int DEFAULT_RCDSIZE = 512;
-    private static final int DEFAULT_BLKSIZE = DEFAULT_RCDSIZE * 20;
 
-    public static boolean useReadSkip;
-
+    // underlying stream
     private InputStream in;
 
-/*
-    private int blockSize;
-*/
+    // stream state
     private int recordSize;
     private boolean hasHitEOF;
     private long entrySize;
@@ -51,28 +47,43 @@ public final class TarInputStream extends InputStream {
     private byte[] headerBuffer;
     private TarEntry currEntry;
 
+    /* rewind support */
     private long streamOffset;
 
-    public TarInputStream(InputStream is) {
-        this.in = is;
-/*
-        this.blockSize = DEFAULT_BLKSIZE;
-*/
+    /* for skip bug workaround */
+    private static final int READ_SKIP_BUFFER_LENGTH = 4096;
+    public static boolean useSkipBug;
+    private byte[] readSkipBuffer;
+
+    /**
+     * Creates tar input stream.
+     * @param in native input stream
+     */
+    public TarInputStream(InputStream in) {
+        this.in = in;
         this.recordSize = DEFAULT_RCDSIZE;
         this.oneBuffer = new byte[1];
         this.headerBuffer = new byte[this.recordSize/*blockSize*/];
         this.hasHitEOF = false;
-        this.streamOffset = this.entryOffset = this.entrySize = 0;
+        this.entryOffset = this.entrySize = 0;
+        this.streamOffset = 0;
+
+        /* broken skip */
+        if (useSkipBug) {
+            readSkipBuffer = new byte[READ_SKIP_BUFFER_LENGTH];
+        }
     }
 
     /**
      * Closes this stream.
      */
     public void close() throws IOException {
+/* underlying stream is closed elsewhere
         if (this.in == null) {
             return;
         }
         this.in.close();
+*/
     }
 
     /**
@@ -90,21 +101,27 @@ public final class TarInputStream extends InputStream {
 
     /**
      * Skips bytes using underlying stream skip(long bytes) method.
+     *
      * @param numToSkip
-     * @return
+     * @return number of bytes actually skipped
      * @throws IOException
      */
     public long skip(long numToSkip) throws IOException {
         long num = numToSkip;
-        byte[] rsbuffer = useReadSkip ? new byte[4096] : null;
 
         for (; num > 0;) {
             long numRead = -1;
 
-            if (useReadSkip) {
-                numRead = this.in.read(rsbuffer, 0, num > 4096 ? 4096 : (int) num);
-            } else {
+            if (readSkipBuffer == null) {
                 numRead = this.in.skip(num);
+                /*
+                 * Check for vendor bug - stream position returned by skip
+                 */
+                if (numRead == streamOffset + numToSkip) {
+                    num = numRead; // trick - 'for' cycle will quit
+                }
+            } else {
+                numRead = this.in.read(readSkipBuffer, 0, num > READ_SKIP_BUFFER_LENGTH ? READ_SKIP_BUFFER_LENGTH : (int) num);
             }
 
             if (numRead < 0) {
@@ -113,9 +130,6 @@ public final class TarInputStream extends InputStream {
 
             num -= numRead;
         }
-
-        // gc hint
-        rsbuffer = null;
 
         if (num > 0) {
             throw new IOException(num + " bytes left to be skipped");
@@ -127,37 +141,25 @@ public final class TarInputStream extends InputStream {
     }
 
     /**
-     * Get the number of bytes into the current TarEntry.
-     * This method returns the number of bytes that have been read
-     * from the current TarEntry's data.
-     *
-     * @return The current entry offset.
+     * Gets stream offset.
      */
-    public long getEntryPosition() {
-        return this.entryOffset;
-    }
-
-    /**
-     * javadoc todo
-     * @throws IOException
-     */
-    public long getPosition() throws IOException {
+    public long getStreamOffset() {
         return streamOffset;
     }
 
     /**
-     * javadoc todo
+     * Sets stream offset.
+     */
+    public void setStreamOffset(long streamOffset) {
+        this.streamOffset = streamOffset;
+    }
+
+    /**
+     * Sets stream offset to given value.
      * @param position stream position
      * @throws IOException
      */
-    public void setPosition(long position) throws IOException {
-/*
-        if (streamOffset > 0) {
-            throw new IllegalStateException("Stream is dirty");
-        }
-
-        this.skip(position);
-*/
+    public void rewind(long position) throws IOException {
         if (position < streamOffset) {
             throw new IllegalStateException("Stream is dirty");
         }
@@ -211,15 +213,18 @@ public final class TarInputStream extends InputStream {
             this.currEntry = null;
         } else {
             try {
-                this.currEntry = null; // gc hint
-                this.currEntry = new TarEntry(headerBuf, entryPosition);
+                if (this.currEntry == null) {
+                    this.currEntry = new TarEntry(headerBuf, entryPosition);
+                } else {
+                    this.currEntry.update(headerBuf, entryPosition);
+                }
                 this.entryOffset = 0;
                 this.entrySize = this.currEntry.getSize();
             } catch (InvalidHeaderException e) {
-                this.entrySize = 0;
-                this.entryOffset = 0;
                 this.currEntry = null;
-                throw new InvalidHeaderException("Bad header: " + e.toString());
+                this.entryOffset = 0;
+                this.entrySize = 0;
+                throw e;
             }
         }
 
@@ -255,12 +260,11 @@ public final class TarInputStream extends InputStream {
 
     /**
      * Reads bytes from the current tar archive entry.
-     * <p/>
      * This method is aware of the boundaries of the current
      * entry in the archive and will deal with them as if they
      * were this stream's start and EOF.
      *
-     * @param buffer       The buffer into which to place bytes read.
+     * @param buffer    The buffer into which to place bytes read.
      * @param offset    The offset at which to place bytes read.
      * @param numToRead The number of bytes to read.
      * @return The number of bytes read, or -1 at EOF.
@@ -291,22 +295,9 @@ public final class TarInputStream extends InputStream {
         for (; bytesNeeded > 0;) {
             long numBytes = this.in.read(headerBuffer, offset, bytesNeeded);
 
-            //
-            // NOTE
-            // We have fit EOF, and the block is not full!
-            //
-            // This is a broken archive. It does not follow the standard
-            // blocking algorithm. However, because we are generous, and
-            // it requires little effort, we will simply ignore the error
-            // and continue as if the entire block were read. This does
-            // not appear to break anything upstream. We used to return
-            // false in this case.
-            //
-            // Thanks to 'Yohann.Roussel@alcatel.fr' for this fix.
-            //
-
-            if (numBytes == -1)
-                break;
+            if (numBytes == -1) {
+                throw new IOException("Broken archive - EOF block not found");
+            }
 
             offset += numBytes;
             bytesNeeded -= numBytes;
@@ -339,17 +330,21 @@ public final class TarInputStream extends InputStream {
     /**
      * Reuse this with new stream.
      * @param in new input stream
-     * @throws IOException
      */
-    public void reuse(InputStream in, boolean keepPosition) throws IOException {
+    public void reuse(InputStream in) {
+        this.in = null; // gc hint
         this.in = in;
-        this.currEntry = null;
         this.hasHitEOF = false;
+        this.currEntry = null;
         this.entryOffset = this.entrySize = 0;
-        if (!keepPosition) {
-            this.streamOffset = 0;
-        }
+    }
+
+    /**
+     * Disposes resources.
+     */
+    public void dispose() {
+        this.oneBuffer = null;
+        this.headerBuffer = null;
+        this.readSkipBuffer = null;
     }
 }
-
-

@@ -15,6 +15,8 @@
 
 package com.ice.tar;
 
+import java.io.UnsupportedEncodingException;
+
 /**
  * This class represents an entry in a Tar archive. It consists
  * of the entry's header, as well as the entry's File. Entries
@@ -119,14 +121,86 @@ package com.ice.tar;
 
 public final class TarEntry {
     /**
-     * This is the entry's header information.
+     * The length of the name field in a header buffer.
      */
-    private TarHeader header;
+    public static final int NAMELEN = 100;
+    /**
+     * The offset of the name field in a header buffer.
+     */
+    public static final int NAMEOFFSET = 0;
+    /**
+     * The length of the name prefix field in a header buffer.
+     */
+    public static final int PREFIXLEN = 155;
+    /**
+     * The offset of the name prefix field in a header buffer.
+     */
+    public static final int PREFIXOFFSET = 345;
+    /**
+     * The length of the mode field in a header buffer.
+     */
+    public static final int MODELEN = 8;
+    /**
+     * The length of the user id field in a header buffer.
+     */
+    public static final int UIDLEN = 8;
+    /**
+     * The length of the group id field in a header buffer.
+     */
+    public static final int GIDLEN = 8;
+    /**
+     * The length of the checksum field in a header buffer.
+     */
+    public static final int CHKSUMLEN = 8;
+    /**
+     * The length of the size field in a header buffer.
+     */
+    public static final int SIZELEN = 12;
+    /**
+     * The length of the magic field in a header buffer.
+     */
+    public static final int MAGICLEN = 8;
+    /**
+     * The length of the modification time field in a header buffer.
+     */
+    public static final int MODTIMELEN = 12;
+    /**
+     * The length of the user name field in a header buffer.
+     */
+    public static final int UNAMELEN = 32;
+    /**
+     * The length of the group name field in a header buffer.
+     */
+    public static final int GNAMELEN = 32;
+    /**
+     * The length of the devices field in a header buffer.
+     */
+    public static final int DEVLEN = 8;
+
+    /**
+     * Directory file type.
+     */
+    public static final byte LF_DIR = (byte) '5';
+
+    /**
+     * The entry's name.
+     */
+    public String name;
 
     /**
      * Entry's absolute position in archive.
      */
     private long position;
+
+    /**
+     * The entry's size.
+     */
+    public long size;
+
+    /**
+     * The entry's link flag.
+     */
+    public byte linkFlag;
 
     /**
      * Construct an entry from an archive's header bytes. File is set
@@ -135,8 +209,19 @@ public final class TarEntry {
      * @param headerBuf The header bytes from a tar archive entry.
      */
     public TarEntry(byte[] headerBuf, long position) throws InvalidHeaderException {
+        this.parseHeader(headerBuf);
         this.position = position;
-        this.header = new TarHeader(headerBuf);
+    }
+
+    /**
+     * Injects new initial data.
+     *
+     * @param headerBuf
+     * @param position
+     */
+    public void update(byte[] headerBuf, long position) throws InvalidHeaderException {
+        this.parseHeader(headerBuf);
+        this.position = position;
     }
 
     /**
@@ -146,7 +231,7 @@ public final class TarEntry {
      * @return True if the entries are equal.
      */
     public boolean equals(TarEntry it) {
-        return this.header.name.equals(it.header.name);
+        return this.name.equals(it.name);
     }
 
     /**
@@ -155,7 +240,7 @@ public final class TarEntry {
      * @return This entry's name.
      */
     public String getName() {
-        return this.header.name;
+        return this.name;
     }
 
     /**
@@ -164,7 +249,7 @@ public final class TarEntry {
      * @return This entry's file size.
      */
     public long getSize() {
-        return this.header.size;
+        return this.size;
     }
 
     /**
@@ -173,7 +258,7 @@ public final class TarEntry {
      * @return position in archive (header start).
      */
     public long getPosition() {
-        return position;
+        return this.position;
     }
 
     /**
@@ -182,23 +267,149 @@ public final class TarEntry {
      * @return True if this entry is a directory.
      */
     public boolean isDirectory() {
-        if (this.header != null) {
-            if (this.header.linkFlag == TarHeader.LF_DIR)
-                return true;
+        if (this.linkFlag == TarHeader.LF_DIR)
+            return true;
 
-            if (this.header.name.endsWith("/"))
-                return true;
-        }
+        if (this.name.endsWith("/"))
+            return true;
 
         return false;
     }
 
     /**
-     * Dispose.
+     * Parses header.
      */
-    public void dispose() {
-        this.header.dispose();
-        this.header = null;
+    private void parseHeader(byte[] headerBuf) throws InvalidHeaderException {
+        if (headerBuf[257] == 'u'
+                && headerBuf[258] == 's'
+                && headerBuf[259] == 't'
+                && headerBuf[260] == 'a'
+                && headerBuf[261] == 'r'
+                && headerBuf[262] == 0) {
+        } else if (headerBuf[257] == 'u'
+                && headerBuf[258] == 's'
+                && headerBuf[259] == 't'
+                && headerBuf[260] == 'a'
+                && headerBuf[261] == 'r'
+                && headerBuf[262] != 0
+                && headerBuf[263] != 0) {
+        } else if (headerBuf[257] == 0
+                && headerBuf[258] == 0
+                && headerBuf[259] == 0
+                && headerBuf[260] == 0
+                && headerBuf[261] == 0) {
+        } else {
+            StringBuffer sb = new StringBuffer(64);
+
+            sb.append("Invalid header: '");
+            sb.append((char) headerBuf[257]).append(' ');
+            sb.append((char) headerBuf[258]).append(' ');
+            sb.append((char) headerBuf[259]).append(' ');
+            sb.append((char) headerBuf[260]).append(' ');
+            sb.append((char) headerBuf[261]).append(' ');
+            sb.append((char) headerBuf[262]).append(' ');
+            sb.append((char) headerBuf[263]);
+            sb.append("'");
+
+            throw new InvalidHeaderException(sb.toString());
+        }
+
+        name = parseFileName(headerBuf);
+
+        int offset = NAMELEN + MODELEN + UIDLEN + GIDLEN;
+
+        size = parseOctal(headerBuf, offset, TarHeader.SIZELEN);
+
+        offset += SIZELEN + MODTIMELEN + CHKSUMLEN;
+
+        linkFlag = headerBuf[offset++];
+
+        offset += NAMELEN;
+    }
+
+    /**
+     * Parse an octal string from a header buffer. This is used for the
+     * file permission mode value.
+     *
+     * @param header The header buffer from which to parse.
+     * @param offset The offset into the buffer from which to parse.
+     * @param length The number of header bytes to parse.
+     * @return The long value of the octal string.
+     */
+    private static long parseOctal(byte[] header, int offset, int length) {
+        long result = 0;
+        boolean stillPadding = true;
+        int end = offset + length;
+
+        for (int i = offset; i < end; ++i) {
+            byte b = header[i];
+
+            if (b == 0)
+                break;
+
+            if (b == ' ' || b == '0') {
+                if (stillPadding)
+                    continue;
+                if (b == ' ')
+                    break;
+            }
+
+            stillPadding = false;
+
+            result = (result << 3) + (b - '0');
+        }
+
+        return result;
+    }
+
+    /**
+     * Parse a file name from a header buffer. This is different from
+     * parseName() in that is recognizes 'ustar' names and will handle
+     * adding on the "prefix" field to the name.
+     *
+     * Contributed by Dmitri Tikhonov <dxt2431@yahoo.com>
+     *
+     * @param header The header buffer from which to parse.
+     * @return The header's entry name.
+     */
+    private static String parseFileName(byte[] header) throws InvalidHeaderException {
+//        String prefix = null;
+
+        /*
+         * If header[345] is not equal to zero, then it is the "prefix"
+         * that 'ustar' defines. It must be prepended to the "normal"
+         * name field. We are responsible for the separating '/'.
+         */
+//        if (header[PREFIXOFFSET] != 0) {
+//            int l = 0;
+//            for (int i = PREFIXOFFSET; i < 500; i++) {
+//                byte b = header[i];
+//                if (b == 0)
+//                    break;
+//                l++;
+//            }
+//
+//            prefix = new String(header, PREFIXOFFSET, l);
+//        }
+
+        int i = 0;
+        for (; i < 100; i++) {
+            byte b = header[i];
+            if (b == 0) {
+                break;
+            }
+        }
+
+        try {
+            return new String(header, 0, i, "US-ASCII");
+//            String name = new String(header, 0, i, "US-ASCII");
+//            if (prefix == null) {
+//                return name;
+//            }
+//            return (new StringBuffer(prefix)).append('/').append(name).toString();
+        } catch (UnsupportedEncodingException e) {
+            throw new InvalidHeaderException(e.toString());
+        }
     }
 }
 

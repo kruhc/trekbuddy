@@ -3,6 +3,8 @@
 
 package cz.kruch.track.ui;
 
+import cz.kruch.track.configuration.Config;
+
 import javax.microedition.lcdui.Graphics;
 import javax.microedition.lcdui.Font;
 import javax.microedition.lcdui.Display;
@@ -18,21 +20,15 @@ public final class Console extends GameCanvas {
     private int errors;
     private int skips;
 
-    // relict
-    private boolean isS65 = false;
-
-    public Console(Display display) {
+    public Console() {
         super(true);
-        this.setFullScreenMode(true);
+        this.setFullScreenMode(Config.fullscreen);
         this.y = -1;
         this.errors = this.skips = 0;
         this.width = getWidth();
         this.font = Font.getFont(Font.FACE_MONOSPACE, Font.STYLE_PLAIN, Font.SIZE_SMALL);
         this.h = font.getHeight();
         this.graphics = getGraphics();
-//#ifdef __S65__
-        this.isS65 = cz.kruch.track.TrackingMIDlet.isS65();
-//#endif
         graphics.setColor(0x0);
         graphics.fillRect(0, 0, width, getHeight());
     }
@@ -58,13 +54,13 @@ public final class Console extends GameCanvas {
         y++;
         Graphics g = graphics;
 //#ifdef __S65__
-        if (isS65) {
+        if (cz.kruch.track.TrackingMIDlet.s65) {
             g = getGraphics();
         }
 //#endif
         g.setFont(font);
         g.setColor(0x00FFFFFF);
-        g.drawString(text, BORDER, y * h, 0/*Graphics.TOP | Graphics.LEFT*/);
+        g.drawString(text, BORDER, y * h, Graphics.TOP | Graphics.LEFT);
         flushGraphics();
     }
 
@@ -77,7 +73,7 @@ public final class Console extends GameCanvas {
         int x = width - BORDER - font.stringWidth(text);
         Graphics g = graphics;
 //#ifdef __S65__
-        if (isS65) {
+        if (cz.kruch.track.TrackingMIDlet.s65) {
             g = getGraphics();
         }
 //#endif
@@ -91,7 +87,7 @@ public final class Console extends GameCanvas {
             skips++;
         }
         g.setFont(font);
-        g.drawString(text, x, y * h, 0/*Graphics.TOP | Graphics.LEFT*/);
+        g.drawString(text, x, y * h, Graphics.TOP | Graphics.LEFT);
         flushGraphics();
     }
 }

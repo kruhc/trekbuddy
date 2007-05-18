@@ -6,12 +6,14 @@ package cz.kruch.track.util;
 import java.util.NoSuchElementException;
 
 public final class CharArrayTokenizer {
+    private static final char[] DEFAULT_DELIMS = { ',' };
+
     private char[] array;
     private char[] delimiters;
     private boolean returnDelim;
 
-    private int pos;
-    private int length;
+    private int position;
+    private int end;
     private int dl;
 
     private Token token;
@@ -20,47 +22,67 @@ public final class CharArrayTokenizer {
         this.token = new Token();
     }
 
+    public void init(Token token, boolean returnDelim) {
+        this.init(token, DEFAULT_DELIMS, returnDelim);
+    }
+
+/* unused
+    public void init(char[] array, boolean returnDelim) {
+        this.init(array, DEFAULT_DELIMS, returnDelim);
+    }
+*/
+
+    public void init(String s, boolean returnDelim) {
+        this.init(s, DEFAULT_DELIMS, returnDelim);
+    }
+
+    private void init(Token token, char[] delimiters, boolean returnDelim) {
+        this.init(token.array, delimiters, returnDelim);
+        /* set start and end explicitly */
+        this.position = token.begin;
+        this.end = token.begin + token.length;
+    }
+
     public void init(char[] array, int length, char[] delimiters, boolean returnDelim) {
         this.init(array, delimiters, returnDelim);
-        this.length = length; // set length explicitly
+        /* set end explicitly */
+        this.end = length;
     }
 
-    public void init(char[] array, char delimiter, boolean returnDelim) {
-        this.init(array, new char[]{ delimiter }, returnDelim);
+    public void init(char[] array, int length, boolean returnDelim) {
+        this.init(array, DEFAULT_DELIMS, returnDelim);
+        /* set end explicitly */
+        this.end = length;
     }
 
-    public void init(String s, char delimiter, boolean returnDelim) {
-        this.init(s, new char[]{ delimiter }, returnDelim);
-    }
-
-    public void init(char[] array, char[] delimiters, boolean returnDelim) {
+    private void init(char[] array, char[] delimiters, boolean returnDelim) {
         this.array = null; // gc hint
         this.delimiters = null; // gc hint
-        // init
+        /* init */
         this.array = array;
         this.delimiters = delimiters;
         this.returnDelim = returnDelim;
-        this.pos = 0;
-        this.length = array.length;
+        this.position = 0;
+        this.end = array.length;
         this.dl = delimiters.length;
     }
 
     public void init(String s, char[] delimiters, boolean returnDelim) {
         int sLength = s.length();
-        // if current array is not big enough, just release it
+        /* if current array is not big enough, just release it */
         if (this.array != null && this.array.length < sLength) {
             this.array = null;
         }
-        // allocate new array if needed
+        /* allocate new array if needed */
         if (this.array == null) {
             this.array = new char[sLength + sLength >> 1];
         }
-        this.delimiters = null; // gc hint
         s.getChars(0, sLength, this.array, 0);
+        this.delimiters = null; // gc hint
         this.delimiters = delimiters;
         this.returnDelim = returnDelim;
-        this.pos = 0;
-        this.length = sLength;
+        this.position = 0;
+        this.end = sLength;
         this.dl = delimiters.length;
     }
 
@@ -70,39 +92,59 @@ public final class CharArrayTokenizer {
     }
 
     public boolean hasMoreTokens() {
-        return pos < length;
+        return position < end;
+    }
+
+    public int nextInt() {
+        return parseInt(next());
+    }
+
+    public double nextDouble() {
+        return parseDouble(next());
     }
 
     public Token next() {
-        int l = length;
-        if (pos < l /* == hasMoreTokens()*/) {
-            int begin = pos;
-            if (isDelim(array[pos])) {
-                pos++;
+        final int end = this.end;
+        char[] array = this.array;
+
+        if (position < end) {  /* == hasMoreTokens() */
+
+            // clear flag
+            token.isDelimiter = false;
+
+            // token beginning
+            int begin = position;
+
+            if (isDelim(array[position])) {
+                // step fwd
+                position++;
+                // delims wanted?
                 if (returnDelim) {
-                    // init the token with valid data
-                    token.delimiter();
+                    // set delimiter flag
+                    token.isDelimiter = true;
                     // return
                     return token;
                 } else {
                     begin++;
                 }
             }
-            int i = pos;
-            while (i < l) {
-                char ch = array[i];
+
+            int offset = position;
+            while (offset < end) {
+                char ch = array[offset];
                 if (isDelim(ch)) {
+                    /*if (offset == position) return next();*/
                     break;
                 } else {
-                    i++;
+                    offset++;
                 }
             }
 
-            // update offset
-            pos = i;
+            // update position
+            position = offset;
 
-            // init the token with valid data
-            token.init(array, begin, pos - begin);
+            // fill token
+            token.init(array, begin, offset - begin);
 
             return token;
         }
@@ -110,7 +152,7 @@ public final class CharArrayTokenizer {
         throw new NoSuchElementException();
     }
 
-    private boolean isDelim(char c) {
+    private boolean isDelim(final char c) {
         for (int i = dl; --i >= 0; ) {
             if (delimiters[i] == c) {
                 return true;
@@ -129,8 +171,9 @@ public final class CharArrayTokenizer {
             throw new NumberFormatException("No input");
         }
 
-        int end = offset + length;
+        final int end = offset + length;
         int result = 0; // TODO is this correct initial value???
+        int sign = 1;
 
         while (offset < end) {
             char ch = value[offset++];
@@ -146,12 +189,14 @@ public final class CharArrayTokenizer {
                 result += digit;
             } else if (ch == ' ') {
                 // ignore whitespace
+            } else if (ch == '-') {
+                sign = -1;
             } else {
                 throw new NumberFormatException("Not a digit: " + ch);
             }
         }
 
-        return result;
+        return result * sign;
     }
 
     public static float parseFloat(CharArrayTokenizer.Token token) {
@@ -163,8 +208,8 @@ public final class CharArrayTokenizer {
             throw new NumberFormatException("No input");
         }
 
+        final int end = offset + length;
         long decSeen = 0;
-        int end = offset + length;
         float result = 0F; // TODO is this correct initial value
 
         while (offset < end) {
@@ -204,8 +249,8 @@ public final class CharArrayTokenizer {
             throw new NumberFormatException("No input");
         }
 
+        final int end = offset + length;
         long decSeen = 0;
-        int end = offset + length;
         double result = 0D; // TODO is this correct initial value?
         int sign = 1;
 
@@ -252,10 +297,6 @@ public final class CharArrayTokenizer {
             this.isDelimiter = false;
         }
 
-        public void delimiter() {
-            this.isDelimiter = true;
-        }
-
         public boolean startsWith(char c) {
             int offset = 0;
             while (offset < length) {
@@ -267,6 +308,35 @@ public final class CharArrayTokenizer {
             }
 
             return false;
+        }
+
+        public boolean startsWith(String s) {
+            final int sl = s.length();
+            if (sl > length) {
+                return false;
+            }
+
+            char[] array = this.array;
+            final int begin = this.begin;
+            int offset = 0;
+
+            while (offset < sl) {
+                char b = array[begin + offset];
+                if (b != s.charAt(offset)) {
+                    return false;
+                }
+                offset++;
+            }
+
+            return true;
+        }
+
+        public boolean equals(String s) {
+            if (s.length() != length) {
+                return false;
+            }
+
+            return startsWith(s);
         }
 
         public boolean isEmpty() {

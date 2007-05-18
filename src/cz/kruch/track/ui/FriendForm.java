@@ -58,7 +58,7 @@ public final class FriendForm extends Form implements CommandListener {
                                           fieldNumber.getString(),
                                           fieldMessage.getString(),
                                           closure
-                                        }, null);
+                                        }, null, this);
         }
     }
 }

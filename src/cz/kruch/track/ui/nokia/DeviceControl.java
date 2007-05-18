@@ -5,134 +5,49 @@ package cz.kruch.track.ui.nokia;
 
 import cz.kruch.track.ui.Desktop;
 
-import java.util.Timer;
 import java.util.TimerTask;
 
-public final class DeviceControl extends TimerTask {
-
-    private static final int NOKIA   = 0;
-    private static final int SE      = 1;
-    private static final int SIEMENS = 2;
-
-    private static int phone = -1;
-    private static int backlight = 0;
-    private static Timer clock;
-
-    private static boolean initialized = false;
-
+public abstract class DeviceControl extends TimerTask {
     private static DeviceControl instance;
 
-    private static void init() {
-        if (initialized) {
-            return;
-        }
+    protected static int backlight = 0;
 
+    public static void initialize() {
         try {
             Class.forName("com.nokia.mid.ui.DeviceControl");
             if (System.getProperty("com.sonyericsson.imei") == null) {
-                phone = NOKIA;
+                instance = (DeviceControl) Class.forName("cz.kruch.track.ui.nokia.NokiaDeviceControl").newInstance();
             } else {
-                phone = SE;
+                instance = (DeviceControl) Class.forName("cz.kruch.track.ui.nokia.SonyEricssonDeviceControl").newInstance();
             }
-        } catch (ClassNotFoundException e) {
-        } catch (NoClassDefFoundError e) {
+        } catch (Throwable t) {
         }
-        if (phone == -1) {
+        if (instance == null) {
             try {
                 Class.forName("com.siemens.mp.game.Light");
-                phone = SIEMENS;
-            } catch (ClassNotFoundException e) {
-            } catch (NoClassDefFoundError e) {
+                instance = (DeviceControl) Class.forName("cz.kruch.track.ui.nokia.SiemensDeviceControl").newInstance();
+            } catch (Throwable t) {
             }
         }
-
-        initialized = true;
     }
 
     public static void destroy() {
-        if (clock != null) {
-            clock.cancel();
+        if (instance != null) {
+            instance.close();
         }
     }
 
     public static void setBacklight() {
-        init();
-
-        switch (phone) {
-            case NOKIA:
-                setBacklightNokia();
-                break;
-            case SE:
-                if (clock == null) {
-                    clock = new Timer();
-                }
-                if (backlight == 0) {
-                    instance = new DeviceControl();
-                    clock.schedule(instance, 1000, 1000);
-                }
-                setBacklightSonyEricsson();
-                if (backlight == 0) {
-                    instance.cancel();
-                }
-                break;
-            case SIEMENS:
-                setBacklightSiemens();
-                break;
+        if (instance != null) {
+            instance.nextLevel();
         }
     }
 
-    public static void setBacklightNokia() {
-        try {
-            backlight += 50;
-            if (backlight == 150) {
-                backlight = 0;
-            }
-            com.nokia.mid.ui.DeviceControl.setLights(0, backlight);
-            Desktop.showConfirmation("Backlight " + backlight + "%", null);
-        } catch (Throwable t) {
-        }
+    protected final void confirm(String message) {
+        Desktop.showConfirmation(message, null);
     }
 
-    public static void setBacklightSiemens() {
-        try {
-            if (backlight == 0) {
-                com.siemens.mp.game.Light.setLightOn();
-                backlight = 1;
-            } else {
-                com.siemens.mp.game.Light.setLightOff();
-                backlight = 0;
-            }
-            Desktop.showConfirmation("Backlight " + (backlight == 0 ? "off" : "on"), null);
-        } catch (Throwable t) {
-        }
-    }
-
-    public static void setBacklightSonyEricsson() {
-        try {
-            if (backlight == 0) {
-//                Desktop.display.flashBacklight(1000);
-                  com.nokia.mid.ui.DeviceControl.flashLights(1);
-//                com.nokia.mid.ui.DeviceControl.setLights(0, 100);
-                backlight = 1;
-            } else {
-//                Desktop.display.flashBacklight(0);
-                com.nokia.mid.ui.DeviceControl.setLights(0, 0);
-//                com.nokia.mid.ui.DeviceControl.setLights(0, 0); // for immediate effect
-                backlight = 0;
-            }
-            Desktop.showConfirmation("Backlight " + (backlight == 0 ? "off" : "on"), null);
-        } catch (Throwable t) {
-        }
-    }
-
-    public void run() {
-        if (phone == SE) {
-            if (backlight == 1) {
-//                Desktop.display.flashBacklight(1000);
-//                com.nokia.mid.ui.DeviceControl.setLights(0, 0);
-//                com.nokia.mid.ui.DeviceControl.setLights(0, 100);
-                com.nokia.mid.ui.DeviceControl.flashLights(1);
-            }
-        }
-    }
+    abstract void nextLevel();
+    void close() {}
+    public void run() {}
 }

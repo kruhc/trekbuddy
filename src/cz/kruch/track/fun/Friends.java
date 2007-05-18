@@ -4,6 +4,7 @@
 package cz.kruch.track.fun;
 
 import cz.kruch.track.ui.Desktop;
+import cz.kruch.track.ui.Waypoints;
 import cz.kruch.track.location.Navigator;
 import cz.kruch.track.location.Waypoint;
 import cz.kruch.track.util.CharArrayTokenizer;
@@ -97,7 +98,7 @@ public final class Friends implements MessageListener, Runnable {
         sb.append(TBSMS_HEADER).append(type).append(SEPARATOR_CHAR);
         sb.append(time / 1000).append(SEPARATOR_CHAR);
         sb.append(MinDec.toSentence(QualifiedCoordinates.LAT,
-                                                 coordinates.getLat()));
+                                    coordinates.getLat()));
         sb.append(SEPARATOR_CHAR);
         sb.append(MinDec.toSentence(QualifiedCoordinates.LON,
                                     coordinates.getLon()));
@@ -170,11 +171,11 @@ public final class Friends implements MessageListener, Runnable {
                     }
 
                     // create waypoint
-                    Waypoint wpt = new Waypoint(new QualifiedCoordinates(lat, lon),
+                    Waypoint wpt = new Waypoint(QualifiedCoordinates.newInstance(lat, lon),
                                                 address, chat, time);
 
                     // notify
-                    navigator.addWaypoint(wpt);
+                    (new Waypoints(navigator)).invoke(new Object[]{ type, wpt }, null, this);
 
                     // UI notification
                     Desktop.showAlarm("Received location info from " + wpt.getName(), null);
@@ -218,7 +219,7 @@ public final class Friends implements MessageListener, Runnable {
             double lat = MinDec.fromSentence(latv, lats).doubleValue();
             double lon = MinDec.fromSentence(lonv, lons).doubleValue();
             String xxx = (new Date(time)).toString();
-            Waypoint wpt = new Waypoint(new QualifiedCoordinates(lat, lon),
+            Waypoint wpt = new Waypoint(QualifiedCoordinates.newInstance(lat, lon),
                                         null, chat, time);
 
         } else {

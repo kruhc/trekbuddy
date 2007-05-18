@@ -141,6 +141,7 @@ public final class BufferedOutputStream extends /* FilterOutputStream */ OutputS
             flush();
         } catch (IOException ignored) {
         }
+        buf = null; // gc hint
         out.close();
     }
 }

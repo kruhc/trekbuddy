@@ -3,6 +3,8 @@
 
 package cz.kruch.track.io;
 
+import cz.kruch.track.util.CharArrayTokenizer;
+
 import java.io.InputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -10,38 +12,44 @@ import java.io.InputStreamReader;
 public final class LineReader extends InputStreamReader {
     public static final String EMPTY_LINE = "";
 
+    private static final int MAX_LEN = 512;
+
     private char[] buffer;
-    private int count, offset;
+    private int count;
+    private int position;
+
+    private CharArrayTokenizer.Token token;
 
     public LineReader(InputStream in) {
         super(in);
-        this.buffer = new char[512];
-        this.count = this.offset = 0;
+        this.buffer = new char[MAX_LEN];
     }
 
-    public String readLine(boolean ignoreLF) throws IOException {
+    public LineReader(InputStream in, boolean tokenized) {
+        this(in);
+        this.token = new CharArrayTokenizer.Token();
+        this.token.array = buffer;
+    }
+
+    public String readLine(final boolean ignoreLF) throws IOException {
         if (count < 0) {
             return null;
         }
 
-        char[] _buffer = buffer;
-        int _count = count;
+        final char[] _buffer = buffer;
+        final int maxlen = _buffer.length;
+        int offset = this.position;
+        int chars = 0;
+        String result = null;
 
-        int chars = 0, start = -1;
-        StringBuffer sb = null;
-
-        for (;;) {
+        for ( ; offset < maxlen; ) {
             int c;
-            if (offset == _count) {
-                if (start > -1) {
-                    sb = new StringBuffer(chars).append(buffer, start, chars);
-                    start = chars = 0;
-                }
-                _count = count = read(_buffer, 0, _buffer.length);
+            if (offset == count) {
+                int _count = read(_buffer, offset, maxlen - offset);
                 if (_count == -1) {
-                    c = -1;
+                    count = c = -1;
                 } else {
-                    offset = 0;
+                    count += _count;
                     c = _buffer[offset++];
                 }
             } else {
@@ -53,41 +61,108 @@ public final class LineReader extends InputStreamReader {
             }
 
             if (c == '\r') {
-                // do nothing, \n should follow
+                // '\n' should follow
             } else if (c == '\n') {
-                if (chars > 0 || sb != null) {
-                    break;
+                if (chars == 0) {
+                    result = EMPTY_LINE;
                 }
-                return EMPTY_LINE;
+                break;
             } else {
-                if (start < 0) {
-                    start = offset - 1;
-                }
                 chars++;
-            }
-
-            if (chars > 512) {
-                throw new IllegalStateException("Line length > 512");
             }
         }
 
-        if (chars == 0 && sb == null) {
+        if (offset >= maxlen) {
+            throw new IllegalStateException("Line length > " + maxlen);
+        }
+
+        if (chars != 0) {
+            result = new String(_buffer, position, chars);
+        }
+
+        position = offset;
+
+        if (position > maxlen >> 1) {
+            System.arraycopy(_buffer, position, _buffer, 0, count - position);
+            count -= position;
+            position = 0;
+        }
+
+        return result;
+    }
+
+    public CharArrayTokenizer.Token readToken(final boolean ignoreLF) throws IOException {
+        if (token == null) {
+            throw new IllegalStateException("Not in token mode");
+        }
+        if (count == -1) {
             return null;
         }
 
-        if (sb == null) {
-            return new String(buffer, start, chars);
+        final char[] _buffer = buffer;
+        final int maxlen = _buffer.length;
+
+        if (position > (maxlen >> 1)) {
+            System.arraycopy(_buffer, position, _buffer, 0, count - position);
+            count -= position;
+            position = 0;
         }
 
-        return sb.append(buffer, start, chars).toString();
-    }
+        int offset = position;
+        int chars = 0;
+//        CharArrayTokenizer.Token result = null;
 
-    public void dispose() {
-        buffer = null;
+        for ( ; offset < maxlen; ) {
+            int c;
+            if (offset == count) {
+                int _count = read(_buffer, offset, maxlen - offset);
+                if (_count == -1) {
+                    count = c = -1;
+                } else {
+                    count += _count;
+                    c = _buffer[offset++];
+                }
+            } else {
+                c = _buffer[offset++];
+            }
+
+            if (c == -1) {
+                if (chars == 0) {
+                    return null;
+                } else {
+                    break;
+                }
+            }
+
+            if (c == '\r') {
+                // '\n' should follow
+            } else if (c == '\n') {
+                break;
+            } else {
+                chars++;
+            }
+        }
+
+        if (offset >= maxlen) {
+            throw new IllegalStateException("Line length > " + maxlen);
+        }
+
+//        if (chars != 0) {
+            token.begin = position;
+            token.length = chars;
+//            result = token;
+//        }
+
+        position = offset;
+
+//        return result;
+        return token;
     }
 
     public void close() throws IOException {
         super.close();
-        this.dispose();
+        /* gc hints */
+        buffer = null;
+        token = null;
     }
 }

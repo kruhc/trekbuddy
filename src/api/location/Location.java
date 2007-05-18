@@ -3,11 +3,18 @@
 
 package api.location;
 
+import cz.kruch.track.configuration.Config;
+import cz.kruch.track.ui.NavigationScreens;
+
 import java.util.Date;
 import java.util.Calendar;
 import java.util.TimeZone;
 
 public class Location {
+    private static final String STR_KN = " kn ";
+    private static final String STR_KMH = " km/h ";
+    private static final String STR_M = " m";
+    
     private static final Calendar CALENDAR = Calendar.getInstance(TimeZone.getDefault());
     private static final Date DATE = new Date();
 
@@ -19,12 +26,51 @@ public class Location {
     private float speed = -1F;
     private float course = -1F;
 
-    public Location(QualifiedCoordinates coordinates, long timestamp, int fix) {
-        this(coordinates, timestamp, fix, -1, -1F);
+    /*
+     * POOL
+     */
+
+    private static final Location[] pool = new Location[8];
+    private static int countFree;
+
+    public static Location newInstance(QualifiedCoordinates coordinates, long timestamp, int fix) {
+        return newInstance(coordinates, timestamp, fix, -1, -1F);
     }
 
-    public Location(QualifiedCoordinates coordinates, long timestamp, int fix,
-                    int sat, float accuracy) {
+    public synchronized static Location newInstance(QualifiedCoordinates coordinates, long timestamp, int fix,
+                                                    int sat, float accuracy) {
+        Location result;
+
+        if (countFree == 0) {
+            result = new Location(coordinates, timestamp, fix, sat, accuracy);
+        } else {
+            result = pool[--countFree];
+            result.coordinates = coordinates;
+            result.timestamp = timestamp;
+            result.fix = (short) fix;
+            result.sat = (short) sat;
+            result.accuracy = accuracy;
+        }
+
+        return result;
+    }
+
+    public synchronized static void releaseInstance(Location location) {
+        if (countFree < pool.length && location != null) {
+            pool[countFree++] = location;
+        }
+    }
+
+    /*
+     * ~POOL
+     */
+
+    public Location clone() {
+        return newInstance(coordinates.clone(), timestamp, fix, sat, accuracy);
+    }
+
+    private Location(QualifiedCoordinates coordinates, long timestamp, int fix,
+                     int sat, float accuracy) {
         this.coordinates = coordinates;
         this.timestamp = timestamp;
         this.fix = (short) fix;
@@ -32,7 +78,11 @@ public class Location {
         this.accuracy = accuracy;
     }
 
-    public Location(Location location) {
+    protected Location(QualifiedCoordinates coordinates, long timestamp, int fix) {
+        this(coordinates, timestamp, fix, -1, -1F);
+    }
+
+    protected Location(Location location) {
         this.coordinates = location.coordinates;
         this.timestamp = location.timestamp;
         this.fix = location.fix;
@@ -81,31 +131,32 @@ public class Location {
     }
 
     public StringBuffer toStringBuffer(StringBuffer sb) {
-/*
-        if (timestamp > 0) {
-*/
-            DATE.setTime(timestamp);
-            CALENDAR.setTime(DATE);
-            int hour = CALENDAR.get(Calendar.HOUR_OF_DAY);
-            if (hour < 10) sb.append('0');
-            sb.append(hour).append(':');
-            int min = CALENDAR.get(Calendar.MINUTE);
-            if (min < 10) sb.append('0');
-            sb.append(min).append(' ');
-/*
+        DATE.setTime(timestamp);
+        CALENDAR.setTime(DATE);
+        int hour = CALENDAR.get(Calendar.HOUR_OF_DAY);
+        int min = CALENDAR.get(Calendar.MINUTE);
+        if (hour < 10)
+            sb.append('0');
+        sb.append(hour).append(':');
+        if (min < 10)
+            sb.append('0');
+        sb.append(min).append(' ');
+
+        if (Config.nauticalView) {
+            if (speed > -1F) {
+                NavigationScreens.append(sb, speed * 3.6F / 1.852F, 1).append(STR_KN);
+            }
+            if (course > -1F) {
+                sb.append((int) course).append(NavigationScreens.SIGN);
+            }
+        } else {
+            if (speed > -1F) {
+                NavigationScreens.append(sb, speed * 3.6F, 1).append(STR_KMH);
+            }
+            if (coordinates.getAlt() > -1F) {
+                sb.append(coordinates.getAlt()).append(STR_M);
+            }
         }
-*/
-        if (coordinates.getAlt() > -1F) {
-            sb.append(coordinates.getAlt()).append(" m ");
-        }
-        if (speed > -1F) {
-            sb.append((int) (speed * 1.852F)).append(" km/h ");
-        }
-/* course arrow is good enough
-        if (course > -1F) {
-            sb.append((new Float(course)).intValue()).append(QualifiedCoordinates.SIGN).append(' ');
-        }
-*/
 /* rendered by OSD directly
         if (sat > -1) {
             sb.append(sat).append('*');

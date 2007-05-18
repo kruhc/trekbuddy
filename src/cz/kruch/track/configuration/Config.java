@@ -17,20 +17,20 @@ import java.util.Vector;
 import java.util.Hashtable;
 
 import api.location.Datum;
+import api.file.File;
 
 public final class Config {
 //#ifdef __LOG__
     private static final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("Config");
 //#endif
 
-    private static final String[] CONFIGS = new String[]{
-        "config_090",
-        "vars_090"
-    };
-
     public static final String LOCATION_PROVIDER_JSR82      = "Bluetooth";
     public static final String LOCATION_PROVIDER_JSR179     = "Internal";
+    public static final String LOCATION_PROVIDER_SERIAL     = "Serial";
     public static final String LOCATION_PROVIDER_SIMULATOR  = "Simulator";
+//#ifdef __A1000__
+    public static final String LOCATION_PROVIDER_MOTOROLA   = "Motorola";
+//#endif
 
     public static final String TRACKLOG_NEVER  = "never";
     public static final String TRACKLOG_ASK    = "ask";
@@ -44,131 +44,127 @@ public final class Config {
     public static final String COORDS_UTM           = "UTM";
     public static final String COORDS_GC_LATLON     = "Geocaching Lat/Lon";
 
-    private static Config instance;
+    public static final String FOLDER_MAPS      = "maps/";
+    public static final String FOLDER_NMEA      = "tracks-nmea/";
+    public static final String FOLDER_TRACKS    = "tracks-gpx/";
+    public static final String FOLDER_WPTS      = "wpts/";
+    public static final String FOLDER_PROFILES  = "ui-profiles/";
+    public static final String FOLDER_RESOURCES = "resources/";
 
-    private boolean initialized[] = new boolean[]{
-        false,
-        false
-    };
+    public static final String VARS_090         = "vars_090";
+    public static final String CONFIG_090       = "config_090";
+
+    private static final String EMPTY_STRING    = "";
 
     /*
      * Configuration params, initialized to default values.
      */
 
     // group [Map]
-    protected String mapPath = ""; // no default map
+    public static String mapPath            = ""; //file:///E:/trekbuddy/maps/CZ_auto/cr.tba?layer=CZ_auto&map=ch"; //file:///E:/trekbuddy/maps/fredrik/cr.tba?layer=tvaaker1&map=tvaaker1000001"; // no default map
 
     // group [Map datum]
-    protected String geoDatum = Datum.DATUM_WGS_84.getName();
+    public static String geoDatum           = Datum.DATUM_WGS_84.getName();
 
     // group [Provider]
-    protected String locationProvider = "";
+    public static String locationProvider   = EMPTY_STRING;
+
+    // group [DataDir]
+    private static String dataDir           = "file:///E:/trekbuddy/";
 
     // group [common provider options]
-    protected String tracklogsOn = TRACKLOG_NEVER;
-    protected String tracklogsFormat = TRACKLOG_FORMAT_GPX;
-    protected String tracklogsDir = "file:///E:/tracklogs";
-    protected String captureLocator = "capture://video";
-    protected String captureFormat = "";
+    public static String tracklog           = TRACKLOG_NEVER;
+    public static String tracklogFormat     = TRACKLOG_FORMAT_GPX;
+    public static String captureLocator     = "capture://video";
+    public static String captureFormat      = EMPTY_STRING;
 
     // group [Simulator provider options]
-    protected int simulatorDelay = 100;
+    public static int simulatorDelay        = 1000;
 
     // group [Internal provider options]
-    protected int locationInterval = 1;
+    private static String locationTimings   = EMPTY_STRING;
+
+    // group [Serial provider options]
+    public static String commUrl            = "comm:com0;baudrate=9600";
 
     // group [Location sharing]
-    protected boolean locationSharing;
+    public static boolean locationSharing;
 
     // group [Desktop]
-    protected boolean fullscreen;
-    protected boolean noSounds;
-    protected boolean decimalPrecision;
-    protected boolean osdBasic = true;
-    protected boolean osdExtended = true;
-    protected boolean osdNoBackground;
-    protected boolean osdMediumFont;
-    protected boolean osdBoldFont;
-    protected boolean osdBlackColor;
-    protected boolean hpsWptTrueAzimuth = true;
+    public static boolean fullscreen            = true;
+    public static boolean noSounds;
+    public static boolean decimalPrecision;
+    public static boolean osdBasic              = true;
+    public static boolean osdExtended           = true;
+    public static boolean osdNoBackground;
+    public static boolean osdMediumFont;
+    public static boolean osdBoldFont;
+    public static boolean osdBlackColor;
+    public static boolean hpsWptTrueAzimuth     = true;
+    public static boolean nauticalView;
 
     // [Coordinates]
-    protected boolean useGridFormat;
-    protected boolean useUTM;
-    protected boolean useGeocachingFormat;
+    public static boolean useGridFormat;
+    public static boolean useUTM;
+    public static boolean useGeocachingFormat;
 
     // group [Tweaks]
-    protected boolean optimisticIo;
-    protected boolean S60renderer;
-    protected boolean cacheOffline;
+    public static boolean optimisticIo;
+    public static boolean S60renderer;
+    public static boolean cacheOffline; // obsolete
+    public static boolean forcedGc              = true;
+    public static boolean oneTileScroll;
+
+    // group [GPX options]
+    public static boolean gpxRaw;
+
+    // group [Trajectory]
+    public static boolean trajectoryOn;
 
     // hidden
-    protected String btDeviceName = "";
-    protected String btServiceUrl = "";
-    protected String defaultMapPath = "";
-    protected int x = -1;
-    protected int y = -1;
+    public static String btDeviceName   = EMPTY_STRING;
+    public static String btServiceUrl   = EMPTY_STRING;
+    public static String defaultMapPath = EMPTY_STRING;
+    public static int x = -1;
+    public static int y = -1;
+    public static int dayNight;
 
-    private Config(boolean failSafe) throws ConfigurationException {
+    public static Throwable initialize() {
+        Throwable result = null;
         try {
-            initialize(0);
-        } catch (ConfigurationException e) {
-            if (failSafe) {
-                initialized[0] = true;
-            } else {
-                throw e;
-            }
+            initialize(CONFIG_090);
+        } catch (Throwable t) {
+            result = t;
         }
         try {
-            initialize(1);
-        } catch (ConfigurationException e) {
-            if (true /*failSafe*/ ) { // always fail-safe init
-                initialized[1] = true;
-            } else {
-                throw e;
-            }
-        } finally {
-            // trick to recognize map loaded upon start as default
-            defaultMapPath = mapPath;
+            initialize(VARS_090);
+        } catch (Throwable t) {
+            // ignore
         }
+
+        // trick to recognize map loaded upon start as default
+        defaultMapPath = mapPath;
+
+        // gc
+        System.gc();
 
         // correct initial values
         if (locationProvider == null || locationProvider.length() == 0) {
-            if (cz.kruch.track.TrackingMIDlet.isJsr179()) {
+            if (cz.kruch.track.TrackingMIDlet.jsr179) {
                 locationProvider = Config.LOCATION_PROVIDER_JSR179;
-            } else if (cz.kruch.track.TrackingMIDlet.isJsr82()) {
+            } else if (cz.kruch.track.TrackingMIDlet.jsr82) {
                 locationProvider = Config.LOCATION_PROVIDER_JSR82;
             } else if (cz.kruch.track.TrackingMIDlet.isFs()) {
                 locationProvider = Config.LOCATION_PROVIDER_SIMULATOR;
+            } else if (cz.kruch.track.TrackingMIDlet.hasPorts()) {
+                locationProvider = Config.LOCATION_PROVIDER_SERIAL;
             }
         }
+
+        return result;
     }
 
-    public synchronized static Config getInstance() throws ConfigurationException {
-        if (instance == null) {
-            instance = new Config(false);
-        }
-
-        return instance;
-    }
-
-    public synchronized static Config getSafeInstance() {
-        try {
-            return getInstance();
-        } catch (ConfigurationException e) {
-            if (instance == null) {
-                try {
-                    instance = new Config(true);
-                } catch (ConfigurationException exc) {
-                    // should never happen
-                }
-            }
-
-            return instance;
-        }
-    }
-
-    protected void readMain(DataInputStream din) throws IOException {
+    private static void readMain(DataInputStream din) throws IOException {
         mapPath = din.readUTF();
         locationProvider = din.readUTF();
 /*
@@ -180,14 +176,17 @@ public final class Config {
             tracklogsOn = din.readUTF();
 */
         boolean oldTracklogsOn = din.readBoolean(); // unused
-        tracklogsFormat = din.readUTF();
-        tracklogsDir = din.readUTF();
+        tracklogFormat = din.readUTF();
+        dataDir = din.readUTF();
         captureLocator = din.readUTF();
         captureFormat = din.readUTF();
         btDeviceName = din.readUTF();
         btServiceUrl = din.readUTF();
         simulatorDelay = din.readInt();
+/*
         locationInterval = din.readInt();
+*/
+        din.readInt(); // unused
         locationSharing = din.readBoolean();
         fullscreen = din.readBoolean();
         noSounds = din.readBoolean();
@@ -200,9 +199,9 @@ public final class Config {
 
         // 0.9.1 extension
         try {
-            tracklogsOn = din.readUTF();
+            tracklog = din.readUTF();
         } catch (Exception e) {
-            tracklogsOn = oldTracklogsOn ? Config.TRACKLOG_ASK : Config.TRACKLOG_NEVER;
+            tracklog = oldTracklogsOn ? Config.TRACKLOG_ASK : Config.TRACKLOG_NEVER;
         }
 
         // 0.9.2 extension
@@ -228,31 +227,43 @@ public final class Config {
         } catch (Exception e) {
         }
 
+        // 0.9.6 extension
+        try {
+            locationTimings = din.readUTF();
+            trajectoryOn = din.readBoolean();
+            forcedGc = din.readBoolean();
+            oneTileScroll = din.readBoolean();
+            gpxRaw = din.readBoolean();
+            nauticalView = din.readBoolean();
+            commUrl = din.readUTF();
+        } catch (Exception e) {
+        }
+
 //#ifdef __LOG__
         if (log.isEnabled()) log.info("configuration read");
 //#endif
     }
 
-    protected void writeMain(DataOutputStream dout) throws IOException {
+    private static void writeMain(DataOutputStream dout) throws IOException {
         dout.writeUTF(mapPath);
         dout.writeUTF(locationProvider);
 /* bc
             dout.writeUTF(timeZone);
-*/
-        dout.writeUTF("");
+*/      dout.writeUTF("");
         dout.writeUTF(geoDatum);
 /* bc
             dout.writeBoolean(tracklogsOn);
-*/
-        dout.writeBoolean(false);
-        dout.writeUTF(tracklogsFormat);
-        dout.writeUTF(tracklogsDir);
+*/      dout.writeBoolean(false);
+        dout.writeUTF(tracklogFormat);
+        dout.writeUTF(dataDir);
         dout.writeUTF(captureLocator);
         dout.writeUTF(captureFormat);
         dout.writeUTF(btDeviceName);
         dout.writeUTF(btServiceUrl);
         dout.writeInt(simulatorDelay);
+/* bc
         dout.writeInt(locationInterval);
+*/      dout.writeInt(-1);
         dout.writeBoolean(locationSharing);
         dout.writeBoolean(fullscreen);
         dout.writeBoolean(noSounds);
@@ -262,7 +273,7 @@ public final class Config {
         dout.writeBoolean(osdMediumFont);
         dout.writeBoolean(osdBoldFont);
         dout.writeBoolean(osdBlackColor);
-        dout.writeUTF(tracklogsOn);
+        dout.writeUTF(tracklog);
         dout.writeBoolean(useGeocachingFormat);
         dout.writeBoolean(optimisticIo);
         dout.writeBoolean(S60renderer);
@@ -271,77 +282,76 @@ public final class Config {
         dout.writeBoolean(useGridFormat);
         dout.writeBoolean(hpsWptTrueAzimuth);
         dout.writeBoolean(osdBasic);
+        dout.writeUTF(locationTimings);
+        dout.writeBoolean(trajectoryOn);
+        dout.writeBoolean(forcedGc);
+        dout.writeBoolean(oneTileScroll);
+        dout.writeBoolean(gpxRaw);
+        dout.writeBoolean(nauticalView);
+        dout.writeUTF(commUrl);
 
 //#ifdef __LOG__
         if (log.isEnabled()) log.info("configuration updated");
 //#endif
     }
 
-    private void initialize(int idx) throws ConfigurationException {
-        if (!initialized[idx]) {
-            initialized[idx] = true;
+    private static void initialize(String rms) throws ConfigurationException {
+        RecordStore rs = null;
+        DataInputStream din = null;
 
-            RecordStore rs = null;
-            DataInputStream din = null;
+        try {
+            // open the store
+            rs = RecordStore.openRecordStore(rms, true,
+                                             RecordStore.AUTHMODE_PRIVATE,
+                                             false);
 
-            try {
-                // open the store
-                rs = RecordStore.openRecordStore(CONFIGS[idx], true,
-                                                 RecordStore.AUTHMODE_PRIVATE,
-                                                 false);
-
-                // new store? existing store? corrupted store?
-                int numRecords = rs.getNumRecords();
-                if (numRecords == 0) {
+            // new store? existing store? corrupted store?
+            int numRecords = rs.getNumRecords();
+            if (numRecords == 0) {
 //#ifdef __LOG__
-                    if (log.isEnabled()) log.info("new configuration");
+                if (log.isEnabled()) log.info("new configuration (" + rms + ")");
 //#endif
+            } else {
+                din = new DataInputStream(new ByteArrayInputStream(rs.getRecord(1)));
+                if (CONFIG_090.equals(rms)) {
+                    readMain(din);
                 } else {
-                    din = new DataInputStream(new ByteArrayInputStream(rs.getRecord(1)));
-                    if (idx == 0) {
-                        readMain(din);
-                    } else {
-                        readVars(din);
-                    }
+                    readVars(din);
                 }
-            } catch (Exception e) {
-                throw new ConfigurationException(e);
-            } finally {
-                if (din != null) {
-                    try {
-                        din.close();
-                    } catch (IOException e) {
-                    }
+            }
+        } catch (Exception e) {
+            throw new ConfigurationException(e);
+        } finally {
+            if (din != null) {
+                try {
+                    din.close();
+                } catch (IOException e) {
                 }
-                if (rs != null) {
-                    try {
-                        rs.closeRecordStore();
-                    } catch (RecordStoreException e) {
-                    }
+            }
+            if (rs != null) {
+                try {
+                    rs.closeRecordStore();
+                } catch (RecordStoreException e) {
                 }
             }
         }
     }
 
-    public void update(int idx) throws ConfigurationException {
-        if (!initialized[idx]) {
-            throw new ConfigurationException("Not initialized");
-        }
-
+    public static void update(String rms) throws ConfigurationException {
         RecordStore rs = null;
         DataOutputStream dout = null;
 
         try {
             ByteArrayOutputStream data = new ByteArrayOutputStream();
             dout = new DataOutputStream(data);
-            if (idx == 0) {
+            if (CONFIG_090.equals(rms)) {
                 writeMain(dout);
             } else {
                 writeVars(dout);
             }
             dout.flush();
             byte[] bytes = data.toByteArray();
-            rs = RecordStore.openRecordStore(CONFIGS[idx], true,
+            rs = RecordStore.openRecordStore(rms, true,
                                              RecordStore.AUTHMODE_PRIVATE,
                                              true);
             if (rs.getNumRecords() > 0) {
@@ -367,24 +377,26 @@ public final class Config {
         }
     }
 
-    protected void readVars(DataInputStream din) throws IOException {
+    private static void readVars(DataInputStream din) throws IOException {
         btDeviceName = din.readUTF();
         btServiceUrl = din.readUTF();
         defaultMapPath = din.readUTF();
         x = din.readInt();
         y = din.readInt();
+        dayNight = din.readInt();
 
 //#ifdef __LOG__
         if (log.isEnabled()) log.info("vars read");
 //#endif
     }
 
-    protected void writeVars(DataOutputStream dout) throws IOException {
+    private static void writeVars(DataOutputStream dout) throws IOException {
         dout.writeUTF(btDeviceName);
         dout.writeUTF(btServiceUrl);
         dout.writeUTF(defaultMapPath);
         dout.writeInt(x);
         dout.writeInt(y);
+        dout.writeInt(dayNight);
 
 //#ifdef __LOG__
         if (log.isEnabled()) log.info("vars updated");
@@ -399,62 +411,67 @@ public final class Config {
         int idx = 1;
 
         Vector datums = new Vector();
+        char[] delims = { '{', '}', ',', '=' };
+        CharArrayTokenizer tokenizer = new CharArrayTokenizer();
+
         datums.addElement(Datum.DATUM_WGS_84);
         datumMappings.put("map:WGS 84", Datum.DATUM_WGS_84);
 
-        initDatum(datums, "AGD 66{Australian National,-133,-48,148}=map:Australian Geodetic 1966");
-        initDatum(datums, "CH-1903{Bessel 1841,674,15,405}=map:CH-1903");
-        initDatum(datums, "NAD27 (CONUS){Clarke 1866,-8,160,176}=map:NAD27 CONUS");
-        initDatum(datums, "OSGB 36{Airy 1830,375,-111,431}=map:Ord Srvy Grt Britn");
-        initDatum(datums, "RT 90{Bessel 1841,498,-36,568}=map:RT 90");
-        initDatum(datums, "S-42 (Russia){Krassovsky 1940,28,-130,-95}=map:Pulkovo 1942 (1)");
+        initDatum(tokenizer, delims, datums, "AGD 66{Australian National,-133,-48,148}=map:Australian Geodetic 1966");
+        initDatum(tokenizer, delims, datums, "CH-1903{Bessel 1841,674,15,405}=map:CH-1903");
+        initDatum(tokenizer, delims, datums, "NAD27 (CONUS){Clarke 1866,-8,160,176}=map:NAD27 CONUS");
+        initDatum(tokenizer, delims, datums, "OSGB 36{Airy 1830,375,-111,431}=map:Ord Srvy Grt Britn");
+        initDatum(tokenizer, delims, datums, "RT 90{Bessel 1841,498,-36,568}=map:RT 90");
+        initDatum(tokenizer, delims, datums, "S-42 (Russia){Krassovsky 1940,28,-130,-95}=map:Pulkovo 1942 (1)");
 
         String s = midlet.getAppProperty("Datum-" + Integer.toString(idx++));
         while (s != null) {
-            initDatum(datums, s);
+            initDatum(tokenizer, delims, datums, s);
             s = midlet.getAppProperty("Datum-" + Integer.toString(idx++));
         }
+
+        tokenizer.dispose();
 
         DATUMS = new Datum[datums.size()];
         datums.copyInto(DATUMS);
     }
 
-    private static void initDatum(Vector datums, String s) {
-        int i0 = s.indexOf('{');
-        int i1 = s.indexOf('}');
-        int r = s.indexOf('=');
-        if (i1 > i0 && r > i1) {
-            CharArrayTokenizer tokenizer = new CharArrayTokenizer();
-            String datumName = s.substring(0, i0);
-            tokenizer.init(s.substring(i0 + 1, i1).toCharArray(), ',', false);
+    private static void initDatum(CharArrayTokenizer tokenizer, char[] delims,
+                                  Vector datums, String s) {
+        try {
+            tokenizer.init(s, delims, false);
+            String datumName = tokenizer.next().toString();
             String ellipsoidName = tokenizer.next().toString();
             Datum.Ellipsoid ellipsoid = null;
-            for (int N = Datum.ELLIPSOIDS.length, i = 0; i < N; i++) {
-                if (ellipsoidName.equals(Datum.ELLIPSOIDS[i].getName())) {
-                    ellipsoid = Datum.ELLIPSOIDS[i];
+            Datum.Ellipsoid[] ellipsoids = Datum.ELLIPSOIDS;
+            for (int i = ellipsoids.length; --i >= 0; ) {
+                if (ellipsoidName.equals(ellipsoids[i].getName())) {
+                    ellipsoid = ellipsoids[i];
                     break;
                 }
             }
             if (ellipsoid != null) {
-                double dx = CharArrayTokenizer.parseDouble(tokenizer.next());
-                double dy = CharArrayTokenizer.parseDouble(tokenizer.next());
-                double dz = CharArrayTokenizer.parseDouble(tokenizer.next());
+                double dx = tokenizer.nextDouble();
+                double dy = tokenizer.nextDouble();
+                double dz = tokenizer.nextDouble();
                 Datum datum = new Datum(datumName, ellipsoid, dx, dy, dz);
                 datums.addElement(datum);
 
-                tokenizer.init(s.substring(r + 1).toCharArray(), ',', false);
                 while (tokenizer.hasMoreTokens()) {
                     String nm = tokenizer.next().toString();
                     datumMappings.put(nm, datum);
                 }
             }
+        } catch (Throwable t) {
+            // ignore
         }
     }
 
     public static String useDatum(String id) {
-        for (int i = DATUMS.length; --i >= 0; ) {
-            if (id.equals(DATUMS[i].getName())) {
-                currentDatum = DATUMS[i];
+        Datum[] datums = DATUMS;
+        for (int i = datums.length; --i >= 0; ) {
+            if (id.equals(datums[i].getName())) {
+                currentDatum = datums[i];
                 break;
             }
         }
@@ -466,276 +483,77 @@ public final class Config {
      * properties getters/setters
      */
 
-    public String[] getLocationProviders() {
+    public static String[] getLocationProviders() {
         Vector list = new Vector();
-        if (cz.kruch.track.TrackingMIDlet.isJsr82()) {
+        if (cz.kruch.track.TrackingMIDlet.jsr82) {
             list.addElement(LOCATION_PROVIDER_JSR82);
         }
-        if (cz.kruch.track.TrackingMIDlet.isJsr179()) {
+        if (cz.kruch.track.TrackingMIDlet.jsr179) {
             list.addElement(LOCATION_PROVIDER_JSR179);
+        }
+        if (cz.kruch.track.TrackingMIDlet.hasPorts()) {
+            list.addElement(LOCATION_PROVIDER_SERIAL);
         }
         if (cz.kruch.track.TrackingMIDlet.isFs()) {
             list.addElement(LOCATION_PROVIDER_SIMULATOR);
         }
+//#ifdef __A1000__
+        if (cz.kruch.track.TrackingMIDlet.motorola179) {
+            list.addElement(LOCATION_PROVIDER_MOTOROLA);
+        }
+//#endif
         String[] result = new String[list.size()];
         list.copyInto(result);
 
         return result;
     }
 
-    public String getMapPath() {
-        return mapPath;
+    public static String getDataDir() {
+        if (!File.isDir(dataDir)) { // make sure it ends with '/'
+            dataDir += File.PATH_SEPARATOR;
+        }
+        return dataDir;
     }
 
-    public void setMapPath(String mapPath) {
-        this.mapPath = mapPath;
+    public static void setDataDir(String dir) {
+        dataDir = dir;
     }
 
-    public String getLocationProvider() {
-        return locationProvider;
+    public static String getFolderTracks() {
+        return getDataDir() + FOLDER_TRACKS;
     }
 
-    public void setLocationProvider(String locationProvider) {
-        this.locationProvider = locationProvider;
+    public static String getFolderNmea() {
+        return getDataDir() + FOLDER_NMEA;
     }
 
-    public String getTracklogsOn() {
-        return tracklogsOn;
+    public static String getFolderWaypoints() {
+        return getDataDir() + FOLDER_WPTS;
     }
 
-    public void setTracklogsOn(String tracklogsOn) {
-        this.tracklogsOn = tracklogsOn;
+    public static String getFolderProfiles() {
+        return getDataDir() + FOLDER_PROFILES;
     }
 
-    public String getTracklogsFormat() {
-        return tracklogsFormat;
+    public static String getFolderResources() {
+        return getDataDir() + FOLDER_RESOURCES;
     }
 
-    public void setTracklogsFormat(String tracklogsFormat) {
-        this.tracklogsFormat = tracklogsFormat;
+    public static String getLocationTimings() {
+        if (locationTimings == null || locationTimings.length() == 0) {
+            if (cz.kruch.track.TrackingMIDlet.a780) {
+                locationTimings = "2,2,-1"; /* from http://www.kiu.weite-welt.com/de.schoar.blog/?p=186 */
+            } else if (LOCATION_PROVIDER_MOTOROLA.equals(locationProvider)) {
+                locationTimings = "9999,1,2000";
+            } else {
+                locationTimings = "1,-1,-1";
+            }
+        }
+
+        return locationTimings;
     }
 
-    public String getTracklogsDir() {
-        return tracklogsDir;
-    }
-
-    public void setTracklogsDir(String tracklogsDir) {
-        this.tracklogsDir = tracklogsDir;
-    }
-
-    public String getCaptureLocator() {
-        return captureLocator;
-    }
-
-    public void setCaptureLocator(String captureLocator) {
-        this.captureLocator = captureLocator;
-    }
-
-    public String getCaptureFormat() {
-        return captureFormat;
-    }
-
-    public void setCaptureFormat(String captureFormat) {
-        this.captureFormat = captureFormat;
-    }
-
-    public String getBtDeviceName() {
-        return btDeviceName;
-    }
-
-    public void setBtDeviceName(String btDeviceName) {
-        this.btDeviceName = btDeviceName;
-    }
-
-    public String getBtServiceUrl() {
-        return btServiceUrl;
-    }
-
-    public void setBtServiceUrl(String btServiceUrl) {
-        this.btServiceUrl = btServiceUrl;
-    }
-
-    public int getSimulatorDelay() {
-        return simulatorDelay;
-    }
-
-    public void setSimulatorDelay(int simulatorDelay) {
-        this.simulatorDelay = simulatorDelay;
-    }
-
-    public int getLocationInterval() {
-        return locationInterval;
-    }
-
-    public void setLocationInterval(int locationInterval) {
-        this.locationInterval = locationInterval;
-    }
-
-    public boolean isLocationSharing() {
-        return locationSharing;
-    }
-
-    public void setLocationSharing(boolean locationSharing) {
-        this.locationSharing = locationSharing;
-    }
-
-    public boolean isFullscreen() {
-        return fullscreen;
-    }
-
-    public void setFullscreen(boolean fullscreen) {
-        this.fullscreen = fullscreen;
-    }
-
-    public boolean isNoSounds() {
-        return noSounds;
-    }
-
-    public void setNoSounds(boolean noSounds) {
-        this.noSounds = noSounds;
-    }
-
-    public boolean isOsdBasic() {
-        return osdBasic;
-    }
-
-    public void setOsdBasic(boolean osdBasic) {
-        this.osdBasic = osdBasic;
-    }
-
-    public boolean isOsdExtended() {
-        return osdExtended;
-    }
-
-    public void setOsdExtended(boolean osdExtended) {
-        this.osdExtended = osdExtended;
-    }
-
-    public boolean isOsdNoBackground() {
-        return osdNoBackground;
-    }
-
-    public void setOsdNoBackground(boolean osdNoBackground) {
-        this.osdNoBackground = osdNoBackground;
-    }
-
-    public boolean isOsdMediumFont() {
-        return osdMediumFont;
-    }
-
-    public void setOsdMediumFont(boolean osdMediumFont) {
-        this.osdMediumFont = osdMediumFont;
-    }
-
-    public boolean isOsdBoldFont() {
-        return osdBoldFont;
-    }
-
-    public void setOsdBoldFont(boolean osdBoldFont) {
-        this.osdBoldFont = osdBoldFont;
-    }
-
-    public boolean isOsdBlackColor() {
-        return osdBlackColor;
-    }
-
-    public void setOsdBlackColor(boolean osdBlackColor) {
-        this.osdBlackColor = osdBlackColor;
-    }
-
-    public boolean isUseGridFormat() {
-        return useGridFormat;
-    }
-
-    public void setUseGridFormat(boolean useGrid) {
-        this.useGridFormat = useGrid;
-    }
-
-    public boolean isUseUTM() {
-        return useUTM;
-    }
-
-    public void setUseUTM(boolean useUTM) {
-        this.useUTM = useUTM;
-    }
-
-    public String getGeoDatum() {
-        return geoDatum;
-    }
-
-    public void setGeoDatum(String geoDatum) {
-        this.geoDatum = geoDatum;
-    }
-
-    public boolean isUseGeocachingFormat() {
-        return useGeocachingFormat;
-    }
-
-    public void setUseGeocachingFormat(boolean useGeocachingFormat) {
-        this.useGeocachingFormat = useGeocachingFormat;
-    }
-
-    public boolean isDecimalPrecision() {
-        return decimalPrecision;
-    }
-
-    public void setDecimalPrecision(boolean decimalPrecision) {
-        this.decimalPrecision = decimalPrecision;
-    }
-
-    public boolean isHpsWptTrueAzimuth() {
-        return hpsWptTrueAzimuth;
-    }
-
-    public void setHpsWptTrueAzimuth(boolean hpsWptTrueAzimuth) {
-        this.hpsWptTrueAzimuth = hpsWptTrueAzimuth;
-    }
-
-    public boolean isOptimisticIo() {
-        return optimisticIo;
-    }
-
-    public void setOptimisticIo(boolean optimisticIo) {
-        this.optimisticIo = optimisticIo;
-    }
-
-    public boolean isS60renderer() {
-        return S60renderer;
-    }
-
-    public void setS60renderer(boolean s60renderer) {
-        S60renderer = s60renderer;
-    }
-
-    public boolean isCacheOffline() {
-        return cacheOffline;
-    }
-
-    public void setCacheOffline(boolean cacheOffline) {
-        this.cacheOffline = cacheOffline;
-    }
-
-    public String getDefaultMapPath() {
-        return defaultMapPath;
-    }
-
-    public void setDefaultMapPath(String defaultMapPath) {
-        this.defaultMapPath = defaultMapPath;
-    }
-
-    public int getX() {
-        return x;
-    }
-
-    public void setX(int x) {
-        this.x = x;
-    }
-
-    public int getY() {
-        return y;
-    }
-
-    public void setY(int y) {
-        this.y = y;
+    public static void setLocationTimings(String timings) {
+        locationTimings = timings;
     }
 }

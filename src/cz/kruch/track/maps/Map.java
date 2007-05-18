@@ -7,24 +7,16 @@ import com.ice.tar.TarInputStream;
 import com.ice.tar.TarEntry;
 
 import javax.microedition.io.Connector;
-import javax.microedition.lcdui.Image;
-import javax.microedition.rms.RecordStore;
-import javax.microedition.rms.RecordStoreException;
-import javax.microedition.rms.RecordEnumeration;
-import javax.microedition.rms.RecordStoreFullException;
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.DataInputStream;
-import java.io.ByteArrayInputStream;
-import java.io.DataOutputStream;
 import java.util.Vector;
 import java.util.Enumeration;
-import java.util.Hashtable;
 
 import cz.kruch.j2se.io.BufferedInputStream;
 
 import cz.kruch.track.ui.Position;
+import cz.kruch.track.ui.Desktop;
+import cz.kruch.track.ui.NavigationScreens;
 import cz.kruch.track.maps.io.LoaderIO;
 import cz.kruch.track.io.LineReader;
 import cz.kruch.track.AssertionFailedException;
@@ -32,39 +24,49 @@ import cz.kruch.track.AssertionFailedException;
 import api.location.QualifiedCoordinates;
 import api.location.Datum;
 import api.location.ProjectionSetup;
+import api.file.File;
 
 public final class Map implements Runnable {
+    public static final String JAR_EXT = ".jar";
+    public static final String TAR_EXT = ".tar";
 
+/*
     public interface StateListener {
         public void mapOpened(Object result, Throwable throwable);
+        public void slicesLoading(Object result, Throwable throwable);
         public void slicesLoaded(Object result, Throwable throwable);
         public void loadingChanged(Object result, Throwable throwable);
     }
+*/
 
 //#ifdef __LOG__
     private static final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("Map");
 //#endif
 
+/*
     private static final int EVENT_MAP_OPENED       = 0;
-    private static final int EVENT_SLICES_LOADED    = 1;
-    private static final int EVENT_LOADING_CHANGED  = 2;
+    private static final int EVENT_SLICES_LOADING   = 1;
+    private static final int EVENT_SLICES_LOADED    = 2;
+    private static final int EVENT_LOADING_CHANGED  = 3;
+*/
 
-    static final int TEXT_FILE_BUFFER_SIZE = 512; // for map calibration files content and tar header blocks
-    static final int LARGE_BUFFER_SIZE = 512 * 8; // for map image files - 4 kB
+    static final int TEXT_FILE_BUFFER_SIZE  = 512;  // for map calibration files content and tar header blocks
+    static final int LARGE_BUFFER_SIZE      = 4096; // for map image files - 4 kB
 
     private static final String SET_DIR_PREFIX = "set/";
+    private static final int SET_DIR_PREFIX_LENGTH = 4;
 
     // interaction with outside world
     private String path;
     private String name;
-    private StateListener listener;
+    private /*StateListener*/Desktop listener;
 
     // map state
     private Loader loader;
     private Slice[] slices;
     private Calibration calibration;
 
-    public Map(String path, String name, StateListener listener) {
+    public Map(String path, String name, /*StateListener*/Desktop listener) {
         this.path = path;
         this.name = name;
         this.listener = listener;
@@ -136,18 +138,29 @@ public final class Map implements Runnable {
     }
 
     /**
-     * Disposes map - releases map images.
+     * Disposes map - releases map images and disposes loader.
      * Does gc at the end.
      */
     public void dispose() {
 //#ifdef __LOG__
-        if (log.isEnabled()) log.info("dispose map @" + Integer.toHexString(hashCode()));
+        if (log.isEnabled()) log.info("dispose map " + getPath());
 //#endif
+
+        // dispose loader resources
+        try {
+            loader.dispose();
+        } catch (IOException e) {
+            // ignore
+        }
 
         // release slices images
         for (int i = slices.length; --i >= 0; ) {
             slices[i].setImage(null);
         }
+
+        /*
+         * slices and calibration are kept
+         */
 
         // GC
         System.gc();
@@ -158,26 +171,21 @@ public final class Map implements Runnable {
      */
     public void close() {
 //#ifdef __LOG__
-        if (log.isEnabled()) log.info("close map");
+        if (log.isEnabled()) log.info("close map " + getPath());
 //#endif
 
         // already closed?
-        if (slices == null) {
+        if (loader == null) {
             return;
         }
 
         // dispose
         dispose();
+
+        // gc hints
+        loader = null;
         slices = null;
         calibration = null;
-
-        // release loader
-        try {
-            loader.destroy();
-        } catch (IOException e) {
-            // ignore
-        }
-        loader = null; // gc hint
     }
 
     /**
@@ -187,6 +195,7 @@ public final class Map implements Runnable {
      * @return slice
      */
     public Slice getSlice(int x, int y) {
+        Slice[] slices = this.slices; // local ref for faster access
         for (int i = slices.length; --i >= 0; ) {
             Slice slice = slices[i];
             if (slice.isWithin(x, y)) {
@@ -203,7 +212,7 @@ public final class Map implements Runnable {
      */
     public boolean open() {
 //#ifdef __LOG__
-        if (log.isEnabled()) log.debug("open map @" + Integer.toHexString(hashCode()));
+        if (log.isEnabled()) log.debug("open map " + getPath());
 //#endif
 
         // open map in background
@@ -217,53 +226,36 @@ public final class Map implements Runnable {
      */
     public void run() {
 //#ifdef __LOG__
-        if (log.isEnabled()) log.debug("map loading task starting @" + Integer.toHexString(Map.this.hashCode()));
+        if (log.isEnabled()) log.debug("map loading task starting for " + getPath());
 //#endif
 
         // open and init map
         Throwable throwable = loadMap();
 
 //#ifdef __LOG__
-        if (log.isEnabled()) log.debug("map opened @" + Integer.toHexString(Map.this.hashCode()) + "; " + throwable);
+        if (log.isEnabled()) log.debug("map loading finished for " + getPath() + "; " + throwable);
 //#endif
 
         // we are done
-        notifyListener(EVENT_MAP_OPENED, null, throwable);
+        listener.mapOpened(null, throwable);
     }
 
     /**
      * Ensures slices have their images loaded.
+     * @return always <code>true</code>
      */
-    public boolean prepareSlices(Vector list) {
-//#ifdef __LOG__
-        if (log.isEnabled()) log.debug("prepare slices @" + Integer.toHexString(hashCode()));
-//#endif
-
-        // have-all-images flag
-        boolean gotAll = true;
-
-        // create list of slices whose images are to be loaded
-        for (int i = list.size(); gotAll && --i >= 0; ) {
-            Slice slice = (Slice) list.elementAt(i);
-            if (slice.getImage() == null) {
-//#ifdef __LOG__
-                if (log.isEnabled()) log.debug("image missing for slice " + slice);
-//#endif
-                gotAll = false;
-            }
-        }
-
-        // no images to be loaded
-        if (gotAll) {
-//#ifdef __LOG__
-            if (log.isEnabled()) log.debug("got all slices with images");
-//#endif
-            return false;
-        }
-
+    public boolean ensureImages(Vector list) {
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("about to load new slices");
 //#endif
+
+        // assertion
+        if (loader.buffered == null) {
+            throw new AssertionFailedException("Loading images for disposed map: " + path);
+        }
+
+        // notify listener
+        listener.slicesLoading(null, null);
 
         // load images at background
         LoaderIO.getInstance().enqueue(loader.use(list));
@@ -274,16 +266,18 @@ public final class Map implements Runnable {
     /* (non-javadoc) public only for loading upon startup */
     public Throwable loadMap() {
         try {
-            // load map
-            if (path.endsWith(".jar")) {
-                loader = new JarLoader();
-            } else if (path.toLowerCase().endsWith(".tar")) {
-                loader = new TarLoader();
-            } else {
-                loader = new DirLoader();
+            // create loader
+            if (loader == null) {
+                if (path.endsWith(JAR_EXT)) {
+                    loader = new JarLoader();
+                } else if (path.toLowerCase().endsWith(TAR_EXT)) {
+                    loader = new TarLoader();
+                } else {
+                    loader = new DirLoader();
+                }
             }
             loader.init(path);
-            loader.doFinal();
+            boolean finalize = loader.doFinal();
             loader.checkException();
 
 //#ifdef __LOG__
@@ -299,7 +293,7 @@ public final class Map implements Runnable {
             }
 
             // finalize map preparation
-            doFinal();
+            if (finalize) doFinal();
 
         } catch (Throwable t) {
             return t;
@@ -311,7 +305,7 @@ public final class Map implements Runnable {
     /**
      * Creates default map from embedded resources.
      */
-    public static Map defaultMap(StateListener listener) throws Throwable {
+    public static Map defaultMap(/*StateListener*/Desktop listener) throws Throwable {
         Map map = new Map("trekbuddy.jar", "Default", listener);
         Throwable t = map.loadMap();
         if (t != null) {
@@ -319,64 +313,6 @@ public final class Map implements Runnable {
         }
 
         return map;
-    }
-
-    /**
-     * Notififies listener.
-     */
-    private void notifyListener(int code, Object result, Throwable throwable) {
-        switch (code) {
-            case EVENT_MAP_OPENED:
-                listener.mapOpened(result, throwable);
-                break;
-            case EVENT_SLICES_LOADED:
-                listener.slicesLoaded(result, throwable);
-                break;
-            case EVENT_LOADING_CHANGED:
-                listener.loadingChanged(result, throwable);
-                break;
-        }
-    }
-
-    /**
-     * Loads images for given slices.
-     */
-    private Throwable loadImages(Vector slices) {
-        try {
-            for (int i = slices.size(); --i >= 0; ) {
-                Slice slice = (Slice) slices.elementAt(i);
-                Throwable throwable = null;
-
-                if (slice.getImage() == null) {
-                    try {
-                        // notify
-                        notifyListener(EVENT_LOADING_CHANGED, "Loading " + slice.toString(), null);
-
-                        // use loader
-                        loader.load(slice);
-
-                        // got image?
-                        if (slice.getImage() == null) {
-                            throw new InvalidMapException("No image for slice " + slice.toString());
-                        }
-
-//#ifdef __LOG__
-                        if (log.isEnabled()) log.debug("image loaded for slice " + slice.getPath());
-//#endif
-                    } catch (Throwable t) {
-                        throwable = t;
-                        throw t;
-                    } finally {
-                        // notify
-                        notifyListener(EVENT_LOADING_CHANGED, null, throwable);
-                    }
-                }
-            }
-        } catch (Throwable t) {
-            return t;
-        }
-
-        return null;
     }
 
     /**
@@ -392,7 +328,7 @@ public final class Map implements Runnable {
         }
 
         InputStream _getInputStream() throws IOException {
-            file = new api.file.File(Connector.open(url, Connector.READ));
+            file = File.open(Connector.open(url, Connector.READ));
             if (!file.exists()) {
                 throw new InvalidMapException("File does not exist: " + url);
             }
@@ -425,20 +361,24 @@ public final class Map implements Runnable {
     /**
      * Finalizes map initialization.
      */
-    public void doFinal() throws InvalidMapException {
-        int xi = getWidth(), yi = getHeight();
+    private void doFinal() throws InvalidMapException {
+        // local ref for faster access
         int mapWidth = calibration.width;
         int mapHeight = calibration.height;
+        Slice[] slices = this.slices;
+
+        // vars
+        int xi = getWidth(), yi = getHeight();
 
         // absolutize slices position
         for (int i = slices.length; --i >= 0; ) {
             Slice slice = slices[i];
 
             // look for dimensions increments
-            int x = slice.getX();
+            short x = slice.getX();
             if (x > 0 && x < xi)
                 xi = x;
-            int y = slice.getY();
+            short y = slice.getY();
             if (y > 0 && y < yi)
                 yi = y;
         }
@@ -461,22 +401,18 @@ public final class Map implements Runnable {
      */
 
     private abstract class Loader implements Runnable {
-        private Vector collection;
-        protected Exception exception;
         protected String basename;
+        protected Exception exception;
+        protected StringBuffer pathSb;
+        protected BufferedInputStream buffered;
 
-        public abstract void init(String url) throws IOException;
+        private Vector list;
+
         public abstract void loadSlice(Slice slice) throws IOException;
 
-        protected StringBuffer pathSb;
-        protected BufferedInputStream shared;
-
-        private Vector loadList;
-
-        protected Loader() {
-            this.shared = new BufferedInputStream(null, LARGE_BUFFER_SIZE);
-            this.pathSb = new StringBuffer(32);
-            this.collection = new Vector();
+        public void init(String url) throws IOException {
+            this.buffered = new BufferedInputStream(null, LARGE_BUFFER_SIZE);
+            this.pathSb = new StringBuffer(64);
         }
 
         public void checkException() throws Exception {
@@ -485,17 +421,21 @@ public final class Map implements Runnable {
             }
         }
 
-        public void destroy() throws IOException {
-            shared.reuse(null);
-            shared = null;
+        public void dispose() throws IOException {
+            pathSb = null;
+            if (buffered != null) {
+                buffered.close();
+                buffered.dispose();
+                buffered = null;
+            }
         }
 
         public Loader use(Vector list) {
             synchronized (this) {
-                if (loadList != null) {
+                if (this.list != null) {
                     throw new AssertionFailedException("Loading in progress");
                 }
-                loadList = list;
+                this.list = list;
             }
 
             return this;
@@ -503,35 +443,41 @@ public final class Map implements Runnable {
 
         public void run() {
 //#ifdef __LOG__
-            if (log.isEnabled()) log.debug("slice loading task started @" + Integer.toHexString(Map.this.hashCode()));
+            if (log.isEnabled()) log.debug("slice loading task started for " + getPath());
 //#endif
 
             // load images
-            Throwable throwable = loadImages(loadList);
+            Throwable throwable = loadImages(list);
 
             // end of job
             synchronized (this) {
-                loadList = null;
+                list = null;
             }
 
 //#ifdef __LOG__
-            if (log.isEnabled()) log.debug("all requested slices loaded @" + Integer.toHexString(Map.this.hashCode()));
+            if (log.isEnabled()) log.debug("all requested slices loaded for " + getPath());
 //#endif
 
             // we are done
-            notifyListener(EVENT_SLICES_LOADED, null, throwable);
+            listener.slicesLoaded(null, throwable);
         }
 
-        public void load(Slice slice) throws IOException {
-            loadSlice(slice);
-        }
+        public boolean doFinal() {
+            // got new slices info
+            if (list != null) {
 
-        protected void doFinal() {
-            slices = new Slice[collection.size()];
-            collection.copyInto(slices);
-            // gc hints
-            collection.removeAllElements();
-            collection = null;
+                // vector to array
+                slices = new Slice[list.size()];
+                list.copyInto(slices);
+
+                // gc hints
+                list.removeAllElements();
+                list = null;
+
+                return true;
+            }
+
+            return false;
         }
 
         protected Slice addSlice(String filename) throws InvalidMapException {
@@ -539,139 +485,74 @@ public final class Map implements Runnable {
                 if (calibration instanceof Calibration.XML) { // GPSka
                     basename = filename;
                 } else {
-                    basename = Calibration.Best.getBasename(filename);
+                    basename = Slice.getBasename(filename);
                 }
             }
 
-            Slice slice = new Slice(new Calibration.Best(filename, !(calibration instanceof Calibration.XML)));
-            collection.addElement(slice);
+            if (list == null) {
+                list = new Vector(16);
+            }
+
+            Slice slice = new Slice(filename, calibration instanceof Calibration.XML);
+            list.addElement(slice);
 
             return slice;
         }
-    }
 
-    private abstract class CachingLoader extends Loader {
-        private RecordStore rsTiles, rsMeta;
-        private Hashtable meta;
-        protected ByteArrayOutputStream observer;
+        private Throwable loadImages(Vector slices) {
 
-        protected CachingLoader() throws IOException, RecordStoreException {
-            if (cz.kruch.track.configuration.Config.getSafeInstance().isCacheOffline()) {
-                String cacheName = path.substring(path.lastIndexOf('/') + 1, path.lastIndexOf('.'));
-                this.rsTiles = RecordStore.openRecordStore("cache_" + cacheName + ".bin",
-                                                           true,
-                                                           RecordStore.AUTHMODE_ANY,
-                                                           true);
-                this.rsMeta = RecordStore.openRecordStore("cache_" + cacheName + ".set",
-                                                          true,
-                                                          RecordStore.AUTHMODE_ANY,
-                                                          true);
-                this.meta = new Hashtable(this.rsMeta.getNumRecords());
-                for (RecordEnumeration e = this.rsMeta.enumerateRecords(null, null, false); e.hasNextElement(); ) {
-                    DataInputStream din = new DataInputStream(new ByteArrayInputStream(e.nextRecord()));
-                    this.meta.put(din.readUTF(), new Integer(din.readInt()));
-                    din.close();
-                }
-            }
-        }
-
-        public void destroy() throws IOException {
-            if (rsTiles != null) {
-                try {
-                    rsTiles.closeRecordStore();
-                } catch (RecordStoreException e) {
-                    // TODO ignore???
-                }
-                rsTiles = null; // gc hint
-            }
-            if (rsMeta != null) {
-                try {
-                    rsMeta.closeRecordStore();
-                } catch (RecordStoreException e) {
-                    // TODO ignore ???
-                }
-                rsMeta = null; // gc hint
-            }
-            if (observer != null) {
-                try {
-                    observer.close();
-                } catch (IOException e) {
-                    // ignore
-                }
-                observer = null; // gc hint
-            }
-            if (meta != null) {
-                meta.clear();
-                meta = null;
+            // assertions
+            if (slices == null) {
+                throw new AssertionFailedException("Slice list is null");
             }
 
-            // parent
-            super.destroy();
-        }
+            try {
+//                for (int i = slices.size(); --i >= 0; ) {
+                for (int N = slices.size(), i = 0; i < N; i++) {
+                    Slice slice = (Slice) slices.elementAt(i);
+                    Throwable throwable = null;
 
-        public void load(Slice slice) throws IOException {
-            if (meta != null) {
-
-                // look for slice in cacheOffline
-                Integer idx = (Integer) meta.get(slice.getPath());
-                if (idx != null) {
-
-                    // init image from cacheOffline
-                    try {
-                        slice.setImage(Image.createImage(rsTiles.getRecord(idx.intValue()), 0, rsTiles.getRecordSize(idx.intValue())));
-                    } catch (RecordStoreException e) {
-                        cz.kruch.track.ui.Desktop.showError("Failed to load image from cacheOffline", e, null);
-                    }
-                }
-
-                // still no image?
-                if (slice.getImage() == null) {
-
-                    // load slice with observer
-                    if (observer == null) {
-                        observer = new ByteArrayOutputStream(LARGE_BUFFER_SIZE);
-                    } else {
-                        observer.reset();
-                    }
-                    loadSlice(slice); // same as super.load(slice);
-
-                    // put to cacheOffline
-                    try {
-                        // store tile image
-                        int i = rsTiles.addRecord(observer.toByteArray(), 0, observer.size());
-
-                        // construct meta record
-                        ByteArrayOutputStream out = new ByteArrayOutputStream();
-                        DataOutputStream dout = new DataOutputStream(out);
-                        dout.writeUTF(slice.getPath());
-                        dout.writeInt(i);
-                        dout.flush();
-
-                        // store meta record
+                    if (slice.getImage() == null) {
                         try {
-                            rsMeta.addRecord(out.toByteArray(), 0, out.size());
-                            meta.put(slice.getPath(), new Integer(i));
-                        } catch (RecordStoreException e) {
-                            // rollback
+                            // notify
+                            listener.loadingChanged("Loading " + slice.toString(), null);
+
                             try {
-                                rsTiles.deleteRecord(i);
-                            } catch (RecordStoreException e1) {
-                                // ignore
+                                // load image
+                                loadSlice(slice);
+                            } catch (Throwable t) {
+                                throw new InvalidMapException("Slice loading failed: " + t.toString());
                             }
-                            throw e; // rethrow
+
+                            // got image?
+                            if (slice.getImage() == null) {
+                                throw new InvalidMapException("No image for slice " + slice.toString());
+                            }
+
+//#ifdef __LOG__
+                            if (log.isEnabled()) log.debug("image loaded for slice " + slice.getPath());
+//#endif
+                        } catch (Throwable t) {
+//#ifdef __LOG__
+                            t.printStackTrace();
+//#endif
+                            // record and rethrow
+                            throwable = t;
+                            throw t;
+
                         } finally {
-                            dout.close();
+
+                            // notify
+                            listener.loadingChanged(null, throwable);
+
                         }
-                    } catch (RecordStoreFullException e) {
-                        cz.kruch.track.ui.Desktop.showWarning("Failed to cacheOffline image - not enough memory?", null, null);
-                    } catch (RecordStoreException e) {
-                        cz.kruch.track.ui.Desktop.showError("Failed to cacheOffline image", e, null);
                     }
                 }
-            } else {
-                // non-cached loading
-                loadSlice(slice); // same as super.load(slice);
+            } catch (Throwable t) {
+                return t;
             }
+
+            return null;
         }
     }
 
@@ -684,37 +565,43 @@ public final class Map implements Runnable {
      * Loader implementations.
      */
 
-    private final class TarLoader extends CachingLoader {
+    private final class TarLoader extends Loader {
         private static final int MARK_SIZE = 64 * 1024 * 1024;
 
-        private api.file.File file;
+        private File file;
         private InputStream nativeIn;
         private TarInputStream tarIn;
 
-        public TarLoader() throws IOException, RecordStoreException {
-            super();
-        }
-
         public void init(String url) throws IOException {
+            super.init(url);
+
+//#ifdef __LOG__
+            if (log.isEnabled()) log.debug("init map " + url);
+//#endif
+
             // input stream
             InputStream in = null;
 
             try {
-                file = new api.file.File(Connector.open(path, Connector.READ));
-                tarIn = new TarInputStream(shared.reuse(in = file.openInputStream()));
+                file = File.open(Connector.open(path, Connector.READ));
+                tarIn = new TarInputStream(in = file.openInputStream());
 
                 /*
-                 * test quality of JSR-75/FileConnection
+                 * test quality of file API
                  */
 
                 if (useReset) {
                     if (in.markSupported()) {
-                        in.mark(MARK_SIZE); // max 64 MB map
-                        nativeIn = in;
-                        fileInputStreamResetable = 1;
+                        try {
+                            in.mark(MARK_SIZE); // max 64 MB map
+                            nativeIn = in;
+                            fileInputStreamResetable = 1;
 //#ifdef __LOG__
-                        if (log.isEnabled()) log.debug("input stream support marking, very good");
+                            if (log.isEnabled()) log.debug("input stream support marking, very good");
 //#endif
+                        } catch (Throwable t) {
+                            /* OutOfMemoryError on S60 */
+                        }
                     } else {
                         try {
                             in.reset(); // try reset
@@ -736,31 +623,51 @@ public final class Map implements Runnable {
                  * ~
                  */
 
-                TarEntry entry = tarIn.getNextEntry();
-                while (entry != null) {
-                    String entryName = entry.getName();
-                    if (entryName.startsWith(SET_DIR_PREFIX) && entryName.endsWith(".png")) { // slice
-                        addSlice(entryName.substring(SET_DIR_PREFIX.length())).setClosure(new Long(entry.getPosition()));
-                    } else {
-                        if (Map.this.calibration == null && entryName.indexOf('/') == -1) {
-                            if (entryName.endsWith(".map")) {
-                                Map.this.calibration = new Calibration.Ozi(tarIn, entryName);
-                            } else if (entryName.endsWith(".gmi")) {
-                                Map.this.calibration = new Calibration.GMI(tarIn, entryName);
-                            } else if (entryName.endsWith(".xml")) {
-                                Map.this.calibration = new Calibration.XML(tarIn, entryName);
-                            } else if (entryName.endsWith(".j2n")) {
-                                Map.this.calibration = new Calibration.J2N(tarIn, entryName);
+                // do not have calibration or slices
+                if (Map.this.calibration == null || Map.this.slices == null) {
+
+                    // iterate over tar
+                    TarEntry entry = tarIn.getNextEntry();
+                    while (entry != null) {
+
+                        // get entry
+                        String entryName = entry.getName();
+
+                        // is it tile (in basedir only)
+                        if (entryName.startsWith(SET_DIR_PREFIX) && entryName.endsWith(Slice.PNG_EXT)) { // slice
+
+                            // no slices yest
+                            if (Map.this.slices == null) {
+                                addSlice(entryName.substring(SET_DIR_PREFIX_LENGTH)).setClosure(new Long(entry.getPosition()));
+                            }
+
+                        } else { // no, maybe calibration file
+
+                            // no calibration yet
+                            if (Map.this.calibration == null && entryName.indexOf(File.PATH_SEPCHAR) == -1) {
+//#ifdef __LOG__
+                                if (log.isEnabled()) log.debug("do not have calibration yet");
+//#endif
+                                // load calibration
+                                if (entryName.endsWith(Calibration.OZI_EXT)) {
+                                    Map.this.calibration = new Calibration.Ozi(tarIn, entryName);
+                                } else if (entryName.endsWith(Calibration.GMI_EXT)) {
+                                    Map.this.calibration = new Calibration.GMI(tarIn, entryName);
+                                } else if (entryName.endsWith(Calibration.XML_EXT)) {
+                                    Map.this.calibration = new Calibration.XML(tarIn, entryName);
+                                } else if (entryName.endsWith(Calibration.J2N_EXT)) {
+                                    Map.this.calibration = new Calibration.J2N(tarIn, entryName);
+                                }
                             }
                         }
+                        entry = null; // gc hint
+                        entry = tarIn.getNextEntry();
                     }
-                    entry.dispose();
-                    entry = null; // gc hint
-                    entry = tarIn.getNextEntry();
                 }
             } catch (Exception e) {
                 exception = e;
             } finally {
+
                 // close native stream when not reusable
                 if (nativeIn == null) {
 //#ifdef __LOG__
@@ -773,26 +680,51 @@ public final class Map implements Runnable {
                             // ignore
                         }
                     }
+
+                } else { // otherwise prepare for reuse
+
+                    // reset the stream
+                    nativeIn.reset();
+
+                    // and reuse it in buffered stream
+                    buffered.reuse(nativeIn);
                 }
             }
         }
 
-        public void destroy() throws IOException {
-            // close reusable stream
+        public void dispose() throws IOException {
+            // dispose tar stream
+            if (tarIn != null) {
+                tarIn.reuse(null);
+                tarIn.dispose();
+                tarIn = null;
+            }
+
+            // close native stream
             if (nativeIn != null) {
 //#ifdef __LOG__
                 if (log.isEnabled()) log.debug("closing native stream");
 //#endif
-                nativeIn.close();
+                try {
+                    nativeIn.close();
+                } catch (IOException e) {
+                    // ignore
+                }
                 nativeIn = null; // gc hint
             }
 
             // close file
-            file.close();
-            file = null; // gc hint
+            if (file != null) {
+                try {
+                    file.close();
+                } catch (IOException e) {
+                    // ignore
+                }
+                file = null; // gc hint
+            }
 
-            // parent (caching loader)
-            super.destroy();
+            // parent
+            super.dispose();
         }
 
         public void loadSlice(Slice slice) throws IOException {
@@ -800,42 +732,35 @@ public final class Map implements Runnable {
             InputStream in = null;
 
             try {
-                long offset = ((Long) slice.getClosure()).longValue();
+                long streamOffset = ((Long) slice.getClosure()).longValue();
                 boolean keepPosition = false;
 
                 // prepare buffered stream
                 if (nativeIn == null) {
-                    shared.reuse(in = file.openInputStream());
+                    buffered.reuse(in = file.openInputStream());
                 } else {
-                    try {
-                        if (offset < tarIn.getPosition()) {
-                            nativeIn.reset();
-                            shared.reuse(nativeIn);
-                        } else {
-                            keepPosition = true;
-                        }
-                    } catch (IOException e) {
-                        nativeIn = null;
+                    if (streamOffset >= tarIn.getStreamOffset()) {
+                        keepPosition = true;
+                    } else {
+                        nativeIn.reset();
+                        buffered.reuse(nativeIn);
                     }
                 }
 
                 // prepare tar stream
-                tarIn.reuse(shared, keepPosition);
-                tarIn.setPosition(offset);
+                tarIn.reuse(buffered);
+                if (keepPosition == false) {
+                    tarIn.setStreamOffset(0);
+                }
+                tarIn.rewind(streamOffset);
 
                 // get corresponding entry
-                TarEntry entry = tarIn.getNextEntry();
+                Object unused = tarIn.getNextEntry();
 
                 // read image
-                shared.setObserver(observer); // caching
-                slice.setImage(Image.createImage(tarIn));
-                shared.setObserver(null); // caching
-
-                // dispose entry
-                entry.dispose();
+                slice.setImage(NavigationScreens.createImage(tarIn));
 
             } finally {
-
                 // close native stream when not reusable
                 if (nativeIn == null) {
 //#ifdef __LOG__
@@ -847,6 +772,9 @@ public final class Map implements Runnable {
                         } catch (IOException e) {
                             // ignore
                         }
+
+                        // clean buffered
+                        buffered.reuse(null);
                     }
                 }
             }
@@ -854,44 +782,71 @@ public final class Map implements Runnable {
     }
 
     private final class JarLoader extends Loader {
-        private static final String RESOURCES_SET = "/resources/set/";
+        private static final String DEFAULT_OZI_MAP = "/resources/world.map";
+        private static final String DEFAULT_GMI_MAP = "/resources/world.gmi";
+        private static final String RESOURCES_SET_DIR   = "/resources/set/";
+        private static final String RESOURCES_SET_FILE  = "/resources/world.set";
 
         public void init(String url) throws IOException {
+            super.init(url);
+
             try {
-                // load calibration
-                InputStream in = cz.kruch.track.TrackingMIDlet.class.getResourceAsStream("/resources/world.map");
-                if (in == null) { // no Ozi calibration found
-                    in = cz.kruch.track.TrackingMIDlet.class.getResourceAsStream("/resources/world.gmi");
-                    if (in == null) { // neither MapCalibrator calibration
+                // look for Ozi calibration first
+                InputStream in = cz.kruch.track.TrackingMIDlet.class.getResourceAsStream(DEFAULT_OZI_MAP);
+                if (in == null) {
+                    // look for GMI then
+                    in = cz.kruch.track.TrackingMIDlet.class.getResourceAsStream(DEFAULT_GMI_MAP);
+                    if (in == null) {
+                        // neither MapCalibrator calibration
                         throw new InvalidMapException("No default map calibration");
                     } else { // got MapCalibrator calibration
                         try {
-                            Map.this.calibration = new Calibration.GMI(in, "/resources/world.gmi");
+                            Map.this.calibration = new Calibration.GMI(in, DEFAULT_GMI_MAP);
+                        } catch (InvalidMapException e) {
+                            throw e;
                         } catch (IOException e) {
                             throw new InvalidMapException("Resource '/resources/world.gmi': " + e.toString());
                         }
                     }
                 } else { // got Ozi calibration
                     try {
-                        Map.this.calibration = new Calibration.Ozi(in, "/resources/world.map");
+                        Map.this.calibration = new Calibration.Ozi(in, DEFAULT_OZI_MAP);
+                    } catch (InvalidMapException e) {
+                        throw e;
                     } catch (IOException e) {
                         throw new InvalidMapException("Resource '/resources/world.map': " + e.toString());
                     }
                 }
+//#ifdef __LOG__
+                if (log.isEnabled()) log.debug("in-jar calibration loaded");
+//#endif
 
                 // close stream
-                in.close();
+                try {
+                    in.close();
+                } catch (IOException e) {
+                    // ignore
+                }
                 in = null; // gc hint
 
                 // each line is a slice filename
-                LineReader reader = new LineReader(shared.reuse(cz.kruch.track.TrackingMIDlet.class.getResourceAsStream("/resources/world.set")));
+                LineReader reader = new LineReader(cz.kruch.track.TrackingMIDlet.class.getResourceAsStream(RESOURCES_SET_FILE));
                 String entry = reader.readLine(false);
                 while (entry != null) {
+//#ifdef __LOG__
+                    if (log.isEnabled()) log.debug("in-jar tile - " + entry);
+//#endif
                     addSlice(entry);
                     entry = null; // gc hint
                     entry = reader.readLine(false);
                 }
+
+                // close reader (closes the stream)
                 reader.close();
+
+//#ifdef __LOG__
+                if (log.isEnabled()) log.debug("in-jar .set processed");
+//#endif
             } catch (Exception e) {
                 exception = e;
             }
@@ -899,11 +854,11 @@ public final class Map implements Runnable {
 
         public void loadSlice(Slice slice) throws IOException {
             // reuse sb
-//            pathSb.setLength(0);
+            StringBuffer pathSb = this.pathSb;
             pathSb.delete(0, pathSb.length());
 
             // construct slice path
-            pathSb.append(RESOURCES_SET).append(basename);
+            pathSb.append(RESOURCES_SET_DIR).append(basename);
             if (!(calibration instanceof Calibration.XML)) {
                 slice.appendPath(pathSb);
             }
@@ -920,8 +875,12 @@ public final class Map implements Runnable {
 
             // read image
             try {
-                slice.setImage(Image.createImage(shared.reuse(in = cz.kruch.track.TrackingMIDlet.class.getResourceAsStream(slicePath))));
+
+                // read image
+                slice.setImage(NavigationScreens.createImage(buffered.reuse(in = cz.kruch.track.TrackingMIDlet.class.getResourceAsStream(slicePath))));
+
             } finally {
+
                 // close stream
                 if (in != null) {
                     try {
@@ -929,20 +888,25 @@ public final class Map implements Runnable {
                     } catch (IOException e) {
                         // ignore
                     }
+
+                    // clean buffered
+                    buffered.reuse(null);
                 }
             }
         }
     }
 
-    private final class DirLoader extends CachingLoader {
+    private final class DirLoader extends Loader {
         private String dir;
 
-        public DirLoader() throws IOException, RecordStoreException {
-            super();
-        }
-
         public void init(String url) throws IOException {
-            int i = url.lastIndexOf('/');
+            super.init(url);
+
+//#ifdef __LOG__
+            if (log.isEnabled()) log.debug("init map " + url);
+//#endif
+
+            int i = url.lastIndexOf(File.PATH_SEPCHAR);
             if (i == -1 || i + 1 == url.length()) {
                 throw new InvalidMapException("Invalid map URL '" + url + "'");
             }
@@ -955,64 +919,102 @@ public final class Map implements Runnable {
             try {
                 // read calibration
                 if (Map.this.calibration == null) {
+//#ifdef __LOG__
+                    if (log.isEnabled()) log.debug("do not have calibration yet");
+//#endif
+
                     // helper loader
                     FileInput fileInput = new FileInput(path);
+
                     // parse known calibration
                     try {
-                        // path points to calibration file
-                        if (path.endsWith(".map")) {
-                            Map.this.calibration = new Calibration.Ozi(shared.reuse(fileInput._getInputStream()), path);
-                        } else if (path.endsWith(".gmi")) {
-                            Map.this.calibration = new Calibration.GMI(shared.reuse(fileInput._getInputStream()), path);
-                        } else if (path.endsWith(".xml")) {
-                            Map.this.calibration = new Calibration.XML(shared.reuse(fileInput._getInputStream()), path);
-                        } else if (path.endsWith(".j2n")) {
-                            Map.this.calibration = new Calibration.J2N(shared.reuse(fileInput._getInputStream()), path);
-                        } else {
+                        i = path.lastIndexOf('.');
+                        if (i > -1) {
+                            // extension
+                            String ext = path.substring(i).toLowerCase();
+
+                            // path points to calibration file
+                            if (ext.equals(Calibration.OZI_EXT)) {
+                                Map.this.calibration = new Calibration.Ozi(buffered.reuse(fileInput._getInputStream()), path);
+                            } else if (ext.equals(Calibration.GMI_EXT)) {
+                                Map.this.calibration = new Calibration.GMI(buffered.reuse(fileInput._getInputStream()), path);
+                            } else if (ext.equals(Calibration.XML_EXT)) {
+                                Map.this.calibration = new Calibration.XML(buffered.reuse(fileInput._getInputStream()), path);
+                            } else if (ext.equals(Calibration.J2N_EXT)) {
+                                Map.this.calibration = new Calibration.J2N(buffered.reuse(fileInput._getInputStream()), path);
+                            }
+
+                            // clear buffered
+                            buffered.reuse(null);
+                        }
+
+                        // check calibration
+                        if (Map.this.calibration == null) {
                             throw new InvalidMapException("Unknown calibration file: " + path);
                         }
+                    } catch (InvalidMapException e) {
+                        throw e;
                     } catch (IOException e) {
                         throw new InvalidMapException("Failed to parse calibration file: " + path, e);
                     } finally {
+
                         // close helper loader
                         fileInput.close();
-                        fileInput = null; // gc hint
+
                     }
                 }
 
-                // do we have a listing file?
-                api.file.File file = new api.file.File(Connector.open(path.substring(0, path.lastIndexOf('.')) + ".set", Connector.READ));
-                if (file.exists()) {
-                    try {
-                        // each line is a slice filename
-                        LineReader reader = new LineReader(shared.reuse(file.openInputStream()));
-                        String entry = reader.readLine(false);
-                        while (entry != null) {
-                            addSlice(entry);
-                            entry = null; // gc hint
-                            entry = reader.readLine(false);
-                        }
-                        reader.close();
-                    } catch (IOException e) {
-                        throw new InvalidMapException("Failed to parse listing file", e);
-                    }
-                } else {
-                    // close file
-                    file.close();
-                    file = null; // gc hint
+                // prepare slices
+                if (slices == null) {
+//#ifdef __LOG__
+                    if (log.isEnabled()) log.debug("do not have slices yet");
+//#endif
 
-                    // iterate over set directory
-                    file = new api.file.File(Connector.open(dir + SET_DIR_PREFIX, Connector.READ));
+                    // do we have a listing file?
+                    String setFile = path.substring(0, path.lastIndexOf('.')) + ".set";
+                    File file = File.open(Connector.open(setFile, Connector.READ));
                     if (file.exists()) {
                         try {
-                            for (Enumeration e = file.list("*.png", false); e.hasMoreElements(); ) {
-                                addSlice((String) e.nextElement());
+                            // each line is a slice filename
+                            LineReader reader = new LineReader(buffered.reuse(file.openInputStream()));
+                            String entry = reader.readLine(false);
+                            while (entry != null) {
+                                addSlice(entry);
+                                entry = null; // gc hint
+                                entry = reader.readLine(false);
                             }
+
+                            // clear buffered
+                            buffered.reuse(null);
+
+                            // close reader (closes the file stream)
+                            reader.close();
+
+                        } catch (InvalidMapException e) {
+                            throw e;
                         } catch (IOException e) {
-                            throw new InvalidMapException("Could not list tiles in " + file.getURL(), e);
+                            throw new InvalidMapException("Failed to parse listing file", e);
                         }
+                        
                     } else {
-                        throw new InvalidMapException("Slices directory not found");
+
+                        // close file
+                        file.close();
+                        file = null; // gc hint
+
+                        // iterate over set directory
+                        file = File.open(Connector.open(dir + SET_DIR_PREFIX, Connector.READ));
+                        if (file.exists()) {
+                            try {
+                                for (Enumeration e = file.list("*.png", false); e.hasMoreElements(); ) {
+                                    addSlice((String) e.nextElement());
+                                }
+                            } catch (IOException e) {
+                                throw new InvalidMapException("Could not list tiles in " + file.getURL(), e);
+                            }
+                        } else {
+                            throw new InvalidMapException("Slices directory not found");
+                        }
                     }
 
                     // close file
@@ -1026,7 +1028,7 @@ public final class Map implements Runnable {
 
         public void loadSlice(Slice slice) throws IOException {
             // reuse sb
-//            pathSb.setLength(0);
+            StringBuffer pathSb = this.pathSb;
             pathSb.delete(0, pathSb.length());
 
             // construct slice path
@@ -1045,16 +1047,11 @@ public final class Map implements Runnable {
             // file input
             FileInput input = new FileInput(slicePath);
 
-            // get slice path
+            // read image
             try {
 
-                // prepare buffered stream
-                shared.reuse(input._getInputStream());
-
                 // read image
-                shared.setObserver(observer); // caching
-                slice.setImage(Image.createImage(shared));
-                shared.setObserver(null);  // caching
+                slice.setImage(NavigationScreens.createImage(buffered.reuse(input._getInputStream())));
 
             } finally {
 
@@ -1064,6 +1061,9 @@ public final class Map implements Runnable {
                 } catch (IOException e) {
                     // ignore
                 }
+
+                // gc hint
+                buffered.reuse(null);
             }
         }
     }

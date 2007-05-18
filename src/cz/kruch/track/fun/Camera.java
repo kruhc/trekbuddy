@@ -48,12 +48,12 @@ public final class Camera extends Form implements CommandListener, Runnable {
 
     public void show() throws Exception {
 //#ifdef __LOG__
-        if (log.isEnabled()) log.debug("capture locator: " + Config.getSafeInstance().getCaptureLocator());
+        if (log.isEnabled()) log.debug("capture locator: " + Config.captureLocator);
 //#endif
 
         try {
             // get video control
-            player = Manager.createPlayer(Config.getSafeInstance().getCaptureLocator());
+            player = Manager.createPlayer(Config.captureLocator);
             player.realize();
             video = (VideoControl) player.getControl("VideoControl");
             if (video == null) {
@@ -107,7 +107,7 @@ public final class Camera extends Form implements CommandListener, Runnable {
     public void run() {
         try {
             // fix the format
-            String format = Config.getSafeInstance().getCaptureFormat();
+            String format = Config.captureFormat;
             if ("".equals(format)) {
                 format = null;
             }
@@ -122,7 +122,7 @@ public final class Camera extends Form implements CommandListener, Runnable {
             destroy();
 
             // report result
-            callback.invoke(raw, null);
+            callback.invoke(raw, null, this);
 
         } catch (Throwable t) {
 
@@ -130,7 +130,7 @@ public final class Camera extends Form implements CommandListener, Runnable {
             destroy();
 
             // report snapshot taking problem
-            callback.invoke(null, t);
+            callback.invoke(null, t, this);
         }
     }
 

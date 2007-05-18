@@ -15,7 +15,6 @@ import cz.kruch.track.io.LineReader;
 import cz.kruch.track.configuration.Config;
 
 import java.util.Vector;
-import java.util.Enumeration;
 import java.io.IOException;
 import java.io.InputStream;
 
@@ -27,10 +26,17 @@ public abstract class Calibration {
     private static final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("Calibration");
 //#endif
 
-    // map/slice path // TODO bad design - path to slice should be in Slice
-    protected String path;
+    public static final String OZI_EXT = ".map";
+    public static final String GMI_EXT = ".gmi";
+    public static final String XML_EXT = ".xml";
+    public static final String J2N_EXT = ".j2n";
 
-    // map/slice dimensions
+    private static final ProjectionSetup LATLON_PROJ_SETUP = new ProjectionSetup(Mercator.PROJ_LATLON);
+
+    // map path
+    private String path;
+
+    // map dimensions
     protected int width = -1;
     protected int height = -1;
 
@@ -111,19 +117,22 @@ public abstract class Calibration {
             Datum.Ellipsoid ellipsoid = getDatum().getEllipsoid();
 
             // lat,lon -> easting,northing
-            Vector tm = new Vector(ll.size());
-            for (Enumeration e = ll.elements(); e.hasMoreElements(); ) {
-                QualifiedCoordinates local = (QualifiedCoordinates) e.nextElement();
+//            Vector tm = new Vector(ll.size());
+            for (int N = ll.size(), i = 0; i < N; i++) {
+                QualifiedCoordinates local = (QualifiedCoordinates) ll.elementAt(i);
                 Mercator.UTMCoordinates utm = Mercator.LLtoMercator(local, ellipsoid, msetup);
-                tm.addElement(utm);
+//                tm.addElement(utm);
+                ll.setElementAt(utm, i);
             }
 
             // remember main calibration point easting-northing and zone
-            calibrationGp = (GeodeticPosition) tm.elementAt(0);
+//            calibrationGp = (GeodeticPosition) tm.elementAt(0);
+            calibrationGp = (GeodeticPosition) ll.elementAt(0);
             zone = ((Mercator.UTMCoordinates) calibrationGp).zone;
 
             // compute pixel grid for TM
-            computeGrid(xy, tm);
+//            computeGrid(xy, tm);
+            computeGrid(xy, ll);
 
         } else {
 
@@ -143,26 +152,40 @@ public abstract class Calibration {
     private double gridTHscale, gridLVscale;
     private double ek0, nk0;
 
-    double h2, v2;
-    double hScale, vScale;
+    private double h2, v2;
+    private double hScale, vScale;
 
     private void computeGrid(Vector xy, Vector gp) {
-        int[] index = verticalAxisByX(xy, new Position(getWidth(), 0));
+        Position p;
+
+        p = Position.newInstance(width, 0);
+        int[] index = verticalAxisByX(xy, p);
+        Position.releaseInstance(p);
+
         double gridRVscale = Math.abs((((GeodeticPosition) gp.elementAt(index[1])).getV() - ((GeodeticPosition) gp.elementAt(index[0])).getV()) / (((Position) xy.elementAt(index[1])).getY() - ((Position) xy.elementAt(index[0])).getY()));
         int v1 = ((Position) xy.elementAt(index[0])).getX();
 
-        index = horizontalAxisByY(xy, new Position(0, 0));
+        p = Position.newInstance(0, 0);
+        index = horizontalAxisByY(xy, p);
+        Position.releaseInstance(p);
+
         int dx = (((Position) xy.elementAt(index[1])).getX() - ((Position) xy.elementAt(index[0])).getX());
         gridTHscale = Math.abs((((GeodeticPosition) gp.elementAt(index[1])).getH() - ((GeodeticPosition) gp.elementAt(index[0])).getH()) / dx);
         int h0 = ((Position) xy.elementAt(index[0])).getY();
         double nk0d = (((Position) xy.elementAt(index[1])).getY() - h0) * gridRVscale;
         nk0 = (((GeodeticPosition) gp.elementAt(index[1])).getV() + nk0d - ((GeodeticPosition) gp.elementAt(index[0])).getV()) / dx;
 
-        index = horizontalAxisByY(xy, new Position(0, getHeight()));
+        p = Position.newInstance(0, height);
+        index = horizontalAxisByY(xy, p);
+        Position.releaseInstance(p);
+
         double gridBHscale = Math.abs((((GeodeticPosition) gp.elementAt(index[1])).getH() - ((GeodeticPosition) gp.elementAt(index[0])).getH()) / (((Position) xy.elementAt(index[1])).getX() - ((Position) xy.elementAt(index[0])).getX()));
         int h1 = ((Position) xy.elementAt(index[0])).getY();
 
-        index = verticalAxisByX(xy, new Position(0, 0));
+        p = Position.newInstance(0, 0);
+        index = verticalAxisByX(xy, p);
+        Position.releaseInstance(p);
+
         int dy = (((Position) xy.elementAt(index[1])).getY() - ((Position) xy.elementAt(index[0])).getY());
         gridLVscale = Math.abs((((GeodeticPosition) gp.elementAt(index[1])).getV() - ((GeodeticPosition) gp.elementAt(index[0])).getV()) / dy);
         int v0 = ((Position) xy.elementAt(index[0])).getX();
@@ -182,10 +205,19 @@ public abstract class Calibration {
 
     private void computeRange() {
         range = new QualifiedCoordinates[4];
-        range[0] = transform(new Position(0, 0));
-        range[1] = transform(new Position(width, 0));
-        range[2] = transform(new Position(0, height));
-        range[3] = transform(new Position(width, height));
+        Position p;
+        p = Position.newInstance(0, 0);
+        range[0] = transform(p);
+        Position.releaseInstance(p);
+        p = Position.newInstance(width, 0);
+        range[1] = transform(p);
+        Position.releaseInstance(p);
+        p = Position.newInstance(0, height);
+        range[2] = transform(p);
+        Position.releaseInstance(p);
+        p = Position.newInstance(width, height);
+        range[3] = transform(p);
+        Position.releaseInstance(p);
     }
 
     public boolean isWithin(QualifiedCoordinates coordinates) {
@@ -212,13 +244,16 @@ public abstract class Calibration {
         if (log.isEnabled()) log.debug("transform " + position);
 //#endif
 
-        QualifiedCoordinates qc = null;
+        QualifiedCoordinates qc;
 
         if (calibrationGp instanceof Mercator.UTMCoordinates) {
-            qc = Mercator.MercatortoLL((Mercator.UTMCoordinates) toGp(position),
-                                       getDatum().getEllipsoid(),
+            Mercator.UTMCoordinates utm = (Mercator.UTMCoordinates) toGp(position);
+            qc = Mercator.MercatortoLL(utm, getDatum().getEllipsoid(),
                                        (Mercator.ProjectionSetup) projectionSetup);
+/*
             qc.setDatum(datum == Datum.DATUM_WGS_84 ? null : datum);
+*/
+            Mercator.UTMCoordinates.releaseInstance(utm);
         } else /*if (calibrationGp instanceof QualifiedCoordinates)*/ {
             qc = (QualifiedCoordinates) toGp(position);
         }
@@ -233,9 +268,9 @@ public abstract class Calibration {
         double v = calibrationGp.getV() + (nk0 * dx) - (dy * (gridLVscale + dx * vScale));
 
         if (calibrationGp instanceof Mercator.UTMCoordinates) {
-            return new Mercator.UTMCoordinates(zone, h, v);
+            return Mercator.UTMCoordinates.newInstance(zone, h, v);
         } else /*if (calibrationGp instanceof QualifiedCoordinates)*/ {
-            return new QualifiedCoordinates(v, h);
+            return QualifiedCoordinates.newInstance(v, h);
         }
     }
 
@@ -278,10 +313,14 @@ public abstract class Calibration {
 
         proximite.setXy(x, y);
 
+        if (gp instanceof Mercator.UTMCoordinates) {
+            Mercator.UTMCoordinates.releaseInstance((Mercator.UTMCoordinates) gp);
+        }
+
         return proximite;
     }
 
-    private int[] verticalAxisByX(Vector xy, Position position) {
+    private static int[] verticalAxisByX(Vector xy, Position position) {
         int x = position.getX();
         int i0 = -1, i1 = -1;
         int d0 = Integer.MAX_VALUE, d1 = Integer.MAX_VALUE;
@@ -307,7 +346,7 @@ public abstract class Calibration {
         }
     }
 
-    private int[] horizontalAxisByY(Vector xy, Position position) {
+    private static int[] horizontalAxisByY(Vector xy, Position position) {
         int y = position.getY();
         int i0 = -1, i1 = -1;
         int d0 = Integer.MAX_VALUE, d1 = Integer.MAX_VALUE;
@@ -334,19 +373,26 @@ public abstract class Calibration {
     }
 
     public static final class GMI extends Calibration {
+
+        private static final char[] DELIM = { ';' };
+
         public GMI(InputStream in, String path) throws IOException {
             super(path);
 
-            LineReader reader = new LineReader(in);
-            reader.readLine(false); // ignore - intro line
-            reader.readLine(false); // ignore - path to image file
-            width = Integer.parseInt(reader.readLine(false));   // image width
-            height = Integer.parseInt(reader.readLine(false));  // image height
-
             Vector xy = new Vector();
             Vector ll = new Vector();
-
             CharArrayTokenizer tokenizer = new CharArrayTokenizer();
+
+            // text reader
+            LineReader reader = new LineReader(in);
+
+            // base info
+            reader.readLine(false); // ignore - intro line
+            reader.readLine(false); // ignore - path to image file
+            width = Integer.parseInt(reader.readLine(false)); // image width
+            height = Integer.parseInt(reader.readLine(false)); // image width
+
+            // additional data
             String line = reader.readLine(false);
             while (line != null) {
                 if (line.startsWith("Additional Calibration Data"))
@@ -356,7 +402,7 @@ public abstract class Calibration {
                     if (line != null) {
                         xy.removeAllElements();
                         ll.removeAllElements();
-                        tokenizer.init(line, ';', false);
+                        tokenizer.init(line, DELIM, false);
                         parseBorder(tokenizer, xy, ll);
                     }
                     break;
@@ -364,39 +410,46 @@ public abstract class Calibration {
                 if (line == LineReader.EMPTY_LINE) // '==' is ok
                     break;
 
-                tokenizer.init(line, ';', false);
+                tokenizer.init(line, DELIM, false);
                 parsePoint(tokenizer, xy, ll);
 
                 line = null; // gc hint
                 line = reader.readLine(false);
             }
-            reader.dispose();
+
+            // close reader
+            reader.close();
             reader = null; // gc hint
 
+            // dispose tokenizer
             tokenizer.dispose();
             tokenizer = null; // gc hint
 
-            doFinal(null, new ProjectionSetup("Latitude/Longitude"), xy, ll);
+            doFinal(null, LATLON_PROJ_SETUP, xy, ll);
+
+            // gc hints
+            xy.removeAllElements();
+            ll.removeAllElements();
         }
 
-        private void parsePoint(CharArrayTokenizer tokenizer, Vector xy, Vector ll) {
-            int x = CharArrayTokenizer.parseInt(tokenizer.next());
-            int y = CharArrayTokenizer.parseInt(tokenizer.next());
-            double lon = CharArrayTokenizer.parseDouble(tokenizer.next());
-            double lat = CharArrayTokenizer.parseDouble(tokenizer.next());
-            xy.addElement(new Position(x, y));
-            ll.addElement(new QualifiedCoordinates(lat, lon));
+        private static void parsePoint(CharArrayTokenizer tokenizer, Vector xy, Vector ll) {
+            int x = tokenizer.nextInt();
+            int y = tokenizer.nextInt();
+            double lon = tokenizer.nextDouble();
+            double lat = tokenizer.nextDouble();
+            xy.addElement(Position.newInstance(x, y));
+            ll.addElement(QualifiedCoordinates.newInstance(lat, lon));
         }
 
         private void parseBorder(CharArrayTokenizer tokenizer, Vector xy, Vector ll) {
-            double lat = CharArrayTokenizer.parseDouble(tokenizer.next());
-            double lon = CharArrayTokenizer.parseDouble(tokenizer.next());
-            xy.addElement(new Position(0, 0));
-            ll.addElement(new QualifiedCoordinates(lat, lon));
-            lat = CharArrayTokenizer.parseDouble(tokenizer.next());
-            lon = CharArrayTokenizer.parseDouble(tokenizer.next());
-            xy.addElement(new Position(width - 1, height - 1));
-            ll.addElement(new QualifiedCoordinates(lat, lon));
+            double lat = tokenizer.nextDouble();
+            double lon = tokenizer.nextDouble();
+            xy.addElement(Position.newInstance(0, 0));
+            ll.addElement(QualifiedCoordinates.newInstance(lat, lon));
+            lat = tokenizer.nextDouble();
+            lon = tokenizer.nextDouble();
+            xy.addElement(Position.newInstance(width - 1, height - 1));
+            ll.addElement(QualifiedCoordinates.newInstance(lat, lon));
         }
     }
 
@@ -413,9 +466,9 @@ public abstract class Calibration {
 
             Vector xy = new Vector();
             Vector ll = new Vector();
+            KXmlParser parser = new KXmlParser();
 
             try {
-                KXmlParser parser = new KXmlParser();
                 parser.setInput(in, null); // null is for encoding autodetection
 
                 boolean keepParsing = true;
@@ -435,8 +488,8 @@ public abstract class Calibration {
                         } break;
                         case XmlPullParser.END_TAG: {
                             if (TAG_POSITION.equals(parser.getName())) {
-                                xy.addElement(new Position(x0, y0));
-                                ll.addElement(new QualifiedCoordinates(lat0, lon0));
+                                xy.addElement(Position.newInstance(x0, y0));
+                                ll.addElement(QualifiedCoordinates.newInstance(lat0, lon0));
                             }
                             currentTag = null;
                         } break;
@@ -464,9 +517,19 @@ public abstract class Calibration {
 
             } catch (Exception e) {
                 throw new InvalidMapException(e);
+            } finally {
+                try {
+                    parser.close();
+                } catch (IOException e) {
+                    // ignore
+                }
             }
 
-            doFinal(null, new ProjectionSetup("Latitude/Longitude"), xy, ll);
+            doFinal(null, LATLON_PROJ_SETUP, xy, ll);
+
+            // gc hints
+            xy.removeAllElements();
+            ll.removeAllElements();
         }
     }
 
@@ -476,130 +539,45 @@ public abstract class Calibration {
         }
     }
 
-    /**
-     * Slice info.
-     */
-    public static final class Best /*extends Calibration*/ {
-        protected int width, height;
-        protected int x, y;
-
-        public Best(String path, boolean standard) throws InvalidMapException {
-            this.x = this.y = this.width = this.height = -1;
-            if (standard) {
-                parseXy(path);
-            } else { // single slice of gpska map
-                x = y = 0;
-            }
-        }
-
-        public static String getBasename(String path) throws InvalidMapException {
-//            char[] n = path.toCharArray();
-            int p0 = -1, p1 = -1;
-            int i = 0;
-//            for (int N = n.length - 4; i < N; i++) {
-//                if ('_' == n[i]) {
-            for (int N = path.length() - 4; i < N; i++) {
-                if ('_' == path.charAt(i)) {
-                    p0 = p1;
-                    p1 = i;
-                }
-            }
-            if (p0 == -1 || p1 == -1) {
-                throw new InvalidMapException("Invalid slice filename: " + path);
-            }
-
-            return path.substring(0, p0);
-        }
-
-        public String getPath() {
-            return (new StringBuffer(16)).append('_').append(x).append('_').append(y).append(".png").toString();
-        }
-
-        public StringBuffer appendPath(StringBuffer sb) {
-            return sb.append('_').append(x).append('_').append(y).append(".png");
-        }
-
-        protected void fixDimension(int xNext, int yNext, int xs, int ys) {
-            if (x + xs < xNext)
-                xNext = x + xs;
-            if (y + ys < yNext)
-                yNext = y + ys;
-            width = xNext - x;
-            height = yNext - y;
-        }
-
-        private void parseXy(String path) throws InvalidMapException {
-//            char[] n = path.toCharArray();
-            int p0 = -1, p1 = -1;
-            int i = 0;
-//            for (int N = n.length - 4; i < N; i++) {
-//                if ('_' == n[i]) {
-            for (int N = path.length() - 4; i < N; i++) {
-                if ('_' == path.charAt(i)) {
-                    p0 = p1;
-                    p1 = i;
-                }
-            }
-            if (p0 == -1 || p1 == -1) {
-                throw new InvalidMapException("Invalid slice filename: " + path);
-            }
-
-            x = parseInt(path, p0 + 1, p1);
-            y = parseInt(path, p1 + 1, i);
-        }
-
-        private static int parseInt(String value, int offset, int end) {
-            if (offset == end || value == null) {
-                throw new NumberFormatException("No input");
-            }
-
-            int result = 0;
-
-            while (offset < end) {
-//                char ch = value[offset++];
-                char ch = value.charAt(offset++);
-                if (ch >= '0' && ch <= '9') {
-                    result *= 10;
-                    result += ch - '0';
-                } else {
-                    throw new NumberFormatException("Not a digit: " + ch);
-                }
-            }
-
-            return result;
-        }
-    }
-
     public static final class Ozi extends Calibration {
+
+        private static final String LINE_POINT              = "Point";
+        private static final String LINE_MAP_PROJECTION     = "Map Projection";
+        private static final String LINE_PROJECTION_SETUP   = "Projection Setup";
+        private static final String LINE_MMPXY              = "MMPXY";
+        private static final String LINE_MMPLL              = "MMPLL";
+        private static final String LINE_IWH                = "IWH";
+
         public Ozi(InputStream in, String path) throws IOException {
             super(path);
 
             int lines = 0;
-            CharArrayTokenizer tokenizer = new CharArrayTokenizer();
+
             String projectionType = Mercator.PROJ_TRANSVERSE_MERCATOR;
-            Vector xy = new Vector(4), ll = new Vector(4)/*, utm = new Vector()*/;
+            Vector xy = new Vector(4), ll = new Vector(4);
             Datum datum = null;
             ProjectionSetup projectionSetup = null;
+            CharArrayTokenizer tokenizer = new CharArrayTokenizer();
 
-            LineReader reader = new LineReader(in);
-            String line = reader.readLine(false);
+            // read content
+            LineReader reader = new LineReader(in, true);
+            CharArrayTokenizer.Token line = reader.readToken(false);
             while (line != null) {
                 lines++;
-                if (line.startsWith("Point")) {
-                    tokenizer.init(line, ',', true);
+                if (line.startsWith(LINE_POINT)) {
+                    tokenizer.init(line, true);
                     boolean b = parsePoint(tokenizer, xy, ll);
 //#ifdef __LOG__
                     if (log.isEnabled()) log.debug("point parsed? " + b);
 //#endif
-                } else
-                if (line.startsWith("Map Projection")) {
-                    tokenizer.init(line, ',', false);
+                } else if (line.startsWith(LINE_MAP_PROJECTION)) {
+                    tokenizer.init(line, false);
                     projectionType = parseProjectionType(tokenizer);
                     /*
                      * projection setup for known grids
                      */
                     if (Mercator.PROJ_LATLON.equals(projectionType)) {
-                        projectionSetup = new ProjectionSetup(Mercator.PROJ_LATLON);
+                        projectionSetup = LATLON_PROJ_SETUP;
                     } else if (Mercator.PROJ_BNG.equals(projectionType)) {
                             projectionSetup = new Mercator.ProjectionSetup(Mercator.PROJ_BNG,
                                                                            null, -2D, 49D,
@@ -614,7 +592,7 @@ public abstract class Calibration {
 //#ifdef __LOG__
                     if (log.isEnabled()) log.debug("projection type: " + projectionType);
 //#endif
-                } else if (line.startsWith("Projection Setup")) {
+                } else if (line.startsWith(LINE_PROJECTION_SETUP)) {
                     /*
                      * not-crippled Ozi calibration - use MMPXY/LL instead
                      */
@@ -622,40 +600,42 @@ public abstract class Calibration {
                     ll.removeAllElements();
 
                     if (Mercator.PROJ_TRANSVERSE_MERCATOR.equals(projectionType)) {
-                        tokenizer.init(line, ',', true);
+                        tokenizer.init(line, true);
                         projectionSetup = parseProjectionSetup(tokenizer);
 //#ifdef __LOG__
                         if (log.isEnabled()) log.debug("projection setup parsed");
 //#endif
                     }
-                } else if (line.startsWith("MMPXY")) {
-                    tokenizer.init(line, ',', false);
+                } else if (line.startsWith(LINE_MMPXY)) {
+                    tokenizer.init(line, false);
                     boolean b = parseXY(tokenizer, xy);
 //#ifdef __LOG__
                     if (log.isEnabled()) log.debug("mmpxy parsed? " + b);
 //#endif
-                } else if (line.startsWith("MMPLL")) {
-                    tokenizer.init(line, ',', false);
+                } else if (line.startsWith(LINE_MMPLL)) {
+                    tokenizer.init(line, false);
                     boolean b = parseLL(tokenizer, ll);
 //#ifdef __LOG__
                     if (log.isEnabled()) log.debug("mmpll parsed? " + b);
 //#endif
-                } else if (line.startsWith("IWH")) {
+                } else if (line.startsWith(LINE_IWH)) {
 //#ifdef __LOG__
                     if (log.isEnabled()) log.debug("parse IWH");
 //#endif
-                    tokenizer.init(line, ',', false);
+                    tokenizer.init(line, false);
                     parseIwh(tokenizer);
                 } else {
                     if (lines == 5) {
-                        tokenizer.init(line, ',', false);
+                        tokenizer.init(line, false);
                         datum = (Datum) Config.datumMappings.get("map:" + parseDatum(tokenizer));
                     }
                 }
                 line = null; // gc hint
-                line = reader.readLine(false);
+                line = reader.readToken(false);
             }
-            reader.dispose();
+
+            // close reader
+            reader.close();
             reader = null; // gc hint
 
             // dispose tokenizer
@@ -663,13 +643,13 @@ public abstract class Calibration {
             tokenizer = null;
 
             // dimension check
-            if (width == -1  || height == -1) {
+            if (width == -1 || height == -1) {
                 throw new InvalidMapException("Invalid map dimension");
             }
 
             // paranoia
             if (xy.size() != ll.size()) {
-                throw new IllegalStateException("MMPXY:MMPLL size mismatch");
+                throw new InvalidMapException("MMPXY:MMPLL size mismatch");
             }
 
             // fix projection
@@ -682,10 +662,14 @@ public abstract class Calibration {
             }
 
             doFinal(datum, projectionSetup, xy, ll);
+
+            // gc hints
+            xy.removeAllElements();
+            ll.removeAllElements();
         }
 
-        private boolean parsePoint(CharArrayTokenizer tokenizer,
-                                   Vector xy, Vector ll/*, Vector utm*/) throws InvalidMapException {
+        private static boolean parsePoint(CharArrayTokenizer tokenizer,
+                                          Vector xy, Vector ll/*, Vector utm*/) throws InvalidMapException {
             int index = 0;
             int x = -1;
             int y = -1;
@@ -746,30 +730,34 @@ public abstract class Calibration {
                     return false;
                 }
 
-                xy.addElement(new Position(x, y));
-                ll.addElement(new QualifiedCoordinates(lat, lon));
+                xy.addElement(Position.newInstance(x, y));
+                ll.addElement(QualifiedCoordinates.newInstance(lat, lon));
 
-            } catch (NumberFormatException e) {
-                throw new InvalidMapException("Invalid Projection Setup", e);
-            } catch (NullPointerException e) {
+            } catch (Exception e) {
                 throw new InvalidMapException("Invalid Projection Setup", e);
             }
 
             return true;
         }
 
-        private String parseProjectionType(CharArrayTokenizer tokenizer) throws InvalidMapException {
-            tokenizer.next(); // Map Projection
-            CharArrayTokenizer.Token token = tokenizer.next();
-
-            return token.toString();
+        private static String parseProjectionType(CharArrayTokenizer tokenizer) throws InvalidMapException {
+            try {
+                tokenizer.next(); // Map Projection
+                return tokenizer.next().toString();
+            } catch (Exception e) {
+                throw new InvalidMapException("Failed to parse projection type", e);
+            }
         }
 
-        private String parseDatum(CharArrayTokenizer tokenizer) {
-            return tokenizer.next().toString();
+        private static String parseDatum(CharArrayTokenizer tokenizer) throws InvalidMapException {
+            try {
+                return tokenizer.next().toString();
+            } catch (Exception e) {
+                throw new InvalidMapException("Failed to parse map datum", e);
+            }
         }
 
-        private Mercator.ProjectionSetup parseProjectionSetup(CharArrayTokenizer tokenizer)
+        private static Mercator.ProjectionSetup parseProjectionSetup(CharArrayTokenizer tokenizer)
                 throws InvalidMapException {
 
             int index = 0;
@@ -808,49 +796,56 @@ public abstract class Calibration {
                 return new Mercator.ProjectionSetup(Mercator.PROJ_TRANSVERSE_MERCATOR,
                                                     null, lonOrigin, latOrigin,
                                                     k, falseEasting, falseNorthing);
-
-            } catch (NumberFormatException e) {
+            } catch (Exception e) {
                 throw new InvalidMapException("Invalid Projection Setup", e);
             }
         }
 
-        private boolean parseXY(CharArrayTokenizer tokenizer, Vector xy) throws InvalidMapException {
+        private static boolean parseXY(CharArrayTokenizer tokenizer, Vector xy) throws InvalidMapException {
             try {
                 tokenizer.next(); // MMPXY
                 tokenizer.next(); // index [1-4]
-                int x = CharArrayTokenizer.parseInt(tokenizer.next());
-                int y = CharArrayTokenizer.parseInt(tokenizer.next());
-                xy.addElement(new Position(x, y));
-            } catch (NumberFormatException e) {
+                int x = tokenizer.nextInt();
+                int y = tokenizer.nextInt();
+                xy.addElement(Position.newInstance(x, y));
+            } catch (Exception e) {
                 throw new InvalidMapException("Invalid Projection Setup", e);
             }
 
             return true;
         }
 
-        private boolean parseLL(CharArrayTokenizer tokenizer, Vector ll) {
+        private static boolean parseLL(CharArrayTokenizer tokenizer, Vector ll) {
             try {
                 tokenizer.next(); // MMPLL
                 tokenizer.next(); // index [1-4]
-                double lon = CharArrayTokenizer.parseDouble(tokenizer.next());
-                double lat = CharArrayTokenizer.parseDouble(tokenizer.next());
-                ll.addElement(new QualifiedCoordinates(lat, lon));
-            } catch (NumberFormatException e) {
+                double lon = tokenizer.nextDouble();
+                double lat = tokenizer.nextDouble();
+                ll.addElement(QualifiedCoordinates.newInstance(lat, lon));
+            } catch (Exception e) {
                 return false;
             }
 
             return true;
         }
 
-        private void parseIwh(CharArrayTokenizer tokenizer) {
+        private void parseIwh(CharArrayTokenizer tokenizer) throws InvalidMapException {
             try {
                 tokenizer.next(); // IWH
                 tokenizer.next(); // Map Image Width/Height
-                width = CharArrayTokenizer.parseInt(tokenizer.next());
-                height = CharArrayTokenizer.parseInt(tokenizer.next());
-            } catch (NumberFormatException e) {
-                throw new IllegalArgumentException("Invalid IWH");
+                width = getDimension(tokenizer.nextInt());
+                height = getDimension(tokenizer.nextInt());
+            } catch (Exception e) {
+                throw new InvalidMapException("Invalid IWH");
             }
+        }
+
+        private static short getDimension(int i) throws InvalidMapException {
+            if (i > Short.MAX_VALUE) {
+                throw new InvalidMapException("Map too large");
+            }
+
+            return (short) i;
         }
     }
 }

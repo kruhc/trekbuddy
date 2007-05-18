@@ -18,7 +18,7 @@ import cz.kruch.track.event.Callback;
 import cz.kruch.track.AssertionFailedException;
 import cz.kruch.j2se.io.BufferedInputStream;
 
-public class SimulatorLocationProvider
+public final class SimulatorLocationProvider
         extends StreamReadingLocationProvider
         implements Runnable, Callback {
 //#ifdef __LOG__
@@ -36,7 +36,7 @@ public class SimulatorLocationProvider
 
     public SimulatorLocationProvider() {
         super(Config.LOCATION_PROVIDER_SIMULATOR);
-        this.delay = Config.getSafeInstance().getSimulatorDelay();
+        this.delay = Config.simulatorDelay;
         if (this.delay < 25) {
             this.delay = 25;
         }
@@ -75,7 +75,7 @@ public class SimulatorLocationProvider
         }
     }
 
-    public void invoke(Object result, Throwable throwable) {
+    public void invoke(Object result, Throwable throwable, Object source) {
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("playback selection: " + result);
 //#endif
@@ -105,7 +105,7 @@ public class SimulatorLocationProvider
             in = new BufferedInputStream(file.openInputStream(), BUFFER_SIZE);
 
             // notify
-            notifyListener(LocationProvider.AVAILABLE);
+            notifyListener(LocationProvider.TEMPORARILY_UNAVAILABLE);
 
             for (; go ;) {
 
@@ -136,6 +136,26 @@ public class SimulatorLocationProvider
                 // end of data?
                 if (location == null) {
                     break;
+                }
+
+                boolean stateChange = false;
+
+                // is position valid?
+                if (location.getFix() > 0) {
+                    if (lastState != LocationProvider.AVAILABLE) {
+                        lastState = LocationProvider.AVAILABLE;
+                        stateChange = true;
+                    }
+                } else {
+                    if (lastState != LocationProvider.TEMPORARILY_UNAVAILABLE) {
+                        lastState = LocationProvider.TEMPORARILY_UNAVAILABLE;
+                        stateChange = true;
+                    }
+                }
+
+                // stateChange about state, if necessary
+                if (stateChange) {
+                    notifyListener(lastState);
                 }
 
                 // send the location

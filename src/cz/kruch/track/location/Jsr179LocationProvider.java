@@ -4,11 +4,11 @@
 package cz.kruch.track.location;
 
 import cz.kruch.track.configuration.Config;
+import cz.kruch.track.util.CharArrayTokenizer;
 
-public class Jsr179LocationProvider extends api.location.LocationProvider {
+public final class Jsr179LocationProvider extends api.location.LocationProvider {
     private javax.microedition.location.LocationProvider impl;
     private LocationListenerAdapter adapter;
-    private int lastState;
 
     public Jsr179LocationProvider() {
         super(Config.LOCATION_PROVIDER_JSR179);
@@ -21,15 +21,17 @@ public class Jsr179LocationProvider extends api.location.LocationProvider {
     public int start() throws api.location.LocationException {
         try {
             // prepare criteria
-            int timeout = -1;
-            int interval = Config.getSafeInstance().getLocationInterval();
+            CharArrayTokenizer tokenizer = new CharArrayTokenizer();
+            tokenizer.init(Config.getLocationTimings(), false);
+            int interval = tokenizer.nextInt();
+            int timeout = tokenizer.nextInt();
+            int maxage = tokenizer.nextInt();
+            tokenizer.dispose();
             javax.microedition.location.Criteria criteria = new javax.microedition.location.Criteria();
 
             // adjust criteria for current device
 //#ifdef __A780__
-            if (cz.kruch.track.TrackingMIDlet.isA780()) {
-                /* from http://www.kiu.weite-welt.com/de.schoar.blog/?p=186 */
-                interval = timeout = 2;
+            if (cz.kruch.track.TrackingMIDlet.a780) {
                 /* from bikeator */
                 criteria.setHorizontalAccuracy(javax.microedition.location.Criteria.NO_REQUIREMENT);
                 criteria.setPreferredPowerConsumption(javax.microedition.location.Criteria.POWER_USAGE_HIGH);
@@ -47,7 +49,7 @@ public class Jsr179LocationProvider extends api.location.LocationProvider {
                 impl = javax.microedition.location.LocationProvider.getInstance(null);
                 setException(new api.location.LocationException("Default criteria used"));
             }
-            impl.setLocationListener(adapter, interval, timeout, -1);
+            impl.setLocationListener(adapter, interval, timeout, maxage);
 
         } catch (Exception e) {
             throw new api.location.LocationException(e);
@@ -98,17 +100,10 @@ public class Jsr179LocationProvider extends api.location.LocationProvider {
 
                 if (Float.isNaN(spd)) {
                     spd = -1F;
-                } else if (cz.kruch.track.TrackingMIDlet.isSxg75()) {
-                    spd *= 2;
                 }
-//#ifdef __A780__
-                  else if (cz.kruch.track.TrackingMIDlet.isA780()) {
-                    spd *= 2;
-                }
-//#endif
                 if (Float.isNaN(alt)) {
                     alt = -1F;
-                } else if (cz.kruch.track.TrackingMIDlet.isSxg75()) {
+                } else if (cz.kruch.track.TrackingMIDlet.sxg75) {
                     alt -= 540;
                 }
                 if (Float.isNaN(course)) {
@@ -119,10 +114,10 @@ public class Jsr179LocationProvider extends api.location.LocationProvider {
                 }
 
                 // create up-to-date location
-                api.location.QualifiedCoordinates qc = new api.location.QualifiedCoordinates(xc.getLatitude(),
-                                                                                             xc.getLongitude(),
-                                                                                             alt);
-                api.location.Location location = new api.location.Location(qc, l.getTimestamp(), 1);
+                api.location.QualifiedCoordinates qc = api.location.QualifiedCoordinates.newInstance(xc.getLatitude(),
+                                                                                                     xc.getLongitude(),
+                                                                                                     alt);
+                api.location.Location location = api.location.Location.newInstance(qc, l.getTimestamp(), 1);
                 location.setCourse(course);
                 location.setSpeed(spd);
                 location.setAccuracy(accuracy);

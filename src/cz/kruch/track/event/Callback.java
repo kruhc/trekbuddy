@@ -4,5 +4,5 @@
 package cz.kruch.track.event;
 
 public interface Callback {
-    public void invoke(Object result, Throwable throwable);
+    public void invoke(Object result, Throwable throwable, Object source);
 }

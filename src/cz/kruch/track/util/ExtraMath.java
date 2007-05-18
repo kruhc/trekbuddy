@@ -1,10 +1,7 @@
-// Copyright 2001-2006 Systinet Corp. All rights reserved.
-// Use is subject to license terms.
-
 package cz.kruch.track.util;
 
 public final class ExtraMath {
-    private static final double SINS[] = new double[90 + 1];
+//    private static final double SINS[] = new double[90 + 1];
     private static final double[] N = {
             2,
             1.1,
@@ -39,60 +36,61 @@ public final class ExtraMath {
         };
     private static final double LN10 = 2.3025850929940456840179914546844;
 
-    public static void initialize() {
-        for (int i = 0; i <= 90; i++) {
-            SINS[i] = Math.sin(Math.toRadians(i));
-        }
-    }
+//    public static void initialize() {
+//        final double[] sins = SINS;
+//        for (int i = 0; i <= 90; i++) {
+//            sins[i] = Math.sin(Math.toRadians(i));
+//        }
+//    }
 
-    public static int asin(double sina) {
-        if (sina < 0D) {
-            throw new IllegalArgumentException("Invalid sin(a) value: " + sina);
-        }
-        if (sina > 1D) {
-            return 90;
-        }
-
-        float step = 23;
-        int direction = 0;
-        int cycles = 0;
-        double[] sins = SINS;
-        int i = 45;
-
-        for ( ; i >= 0 && i <= 90; ) {
-            boolean b;
-            if (sins[i] > sina) {
-                b = direction != 0 && direction != -1;
-                direction = -1;
-                i -= step;
-            } else if (sins[i] < sina) {
-                b = direction != 0 && direction != 1;
-                direction = 1;
-                i += step;
-            } else {
-                return i;
-            }
-
-            if (step == 1 && b) {
-                return i;
-            }
-
-            if (!b) {
-                step /= 2;
-            } else {
-                step--;
-            }
-            if (step < 1) {
-                step = 1;
-            }
-
-            if (cycles++ > 25) {
-                throw new IllegalStateException("asin(a) failure - too many cycles");
-            }
-        }
-
-        return i;
-    }
+//    public static int asin(final double sina) {
+//        if (sina < 0D) {
+//            throw new IllegalArgumentException("Invalid sin(a) value: " + sina);
+//        }
+//        if (sina > 1D) {
+//            return 90;
+//        }
+//
+//        final double[] sins = SINS;
+//        float step = 23;
+//        int direction = 0;
+//        int cycles = 0;
+//        int i = 45;
+//
+//        for ( ; i >= 0 && i <= 90; ) {
+//            boolean b;
+//            if (sins[i] > sina) {
+//                b = direction != 0 && direction != -1;
+//                direction = -1;
+//                i -= step;
+//            } else if (sins[i] < sina) {
+//                b = direction != 0 && direction != 1;
+//                direction = 1;
+//                i += step;
+//            } else {
+//                return i;
+//            }
+//
+//            if (step == 1 && b) {
+//                return i;
+//            }
+//
+//            if (!b) {
+//                step /= 2;
+//            } else {
+//                step--;
+//            }
+//            if (step < 1) {
+//                step = 1;
+//            }
+//
+//            if (cycles++ > 25) {
+//                throw new IllegalStateException("asin(a) failure - too many cycles");
+//            }
+//        }
+//
+//        return i;
+//    }
 
     public static double ln(double value) {
         if (value < 0D) {
@@ -109,6 +107,8 @@ public final class ExtraMath {
             fix += LN10;
         }
 
+        final double[] N = ExtraMath.N;
+        final double[] LN = ExtraMath.LN;
         double result = LN10;
         double inter = value;
 
@@ -125,7 +125,7 @@ public final class ExtraMath {
         return result + fix;
     }
 
-    public static double pow(double arg1, double arg2) {
+    public static double pow(final double arg1, final double arg2) {
         if (arg1 == 0D) {
             return 0D;
         }
@@ -133,12 +133,14 @@ public final class ExtraMath {
             return 1D;
         }
 
+        final double[] N = ExtraMath.N;
+        final double[] LN = ExtraMath.LN;
         double lnresult = arg2 * ln(arg1);
         double result = 1D;
         double inter = lnresult;
 
         if (lnresult < 0D) {
-            for (int i = 1; i < N.length; ) {
+            for (int n = N.length, i = 1; i < n; ) {
                 double interi = inter + LN[i];
                 if (interi > 0D) {
                     i++;
@@ -148,7 +150,7 @@ public final class ExtraMath {
                 }
             }
         } else {
-            for (int i = 1; i < N.length; ) {
+            for (int n = N.length, i = 1; i < n; ) {
                 double interi = inter - LN[i];
                 if (interi < 0D) {
                     i++;

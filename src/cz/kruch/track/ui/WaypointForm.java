@@ -29,11 +29,22 @@ import java.util.TimeZone;
 public final class WaypointForm extends Form
         implements CommandListener, ItemCommandListener, Callback {
 
-    public static final String MENU_NAVIGATE_TO = "NavigateTo";
-    public static final String MENU_SAVE = "Save";
-    public static final String MENU_USE = "Add";
+    static final String MENU_NAVIGATE_TO    = "NavigateTo";
+    static final String MENU_GO_TO          = "GoTo";
+    static final String MENU_SAVE           = "Save";
+    static final String MENU_USE            = "Add";
+    static final String MENU_CLOSE          = "Close";
+    static final String MENU_CANCEL         = "Cancel";
 
     private static final Calendar CALENDAR = Calendar.getInstance(TimeZone.getDefault());
+
+    private static final String FIELD_NAME = "Name";
+    private static final String FIELD_COMMENT = "Comment";
+    private static final String FIELD_LAT = "Lat";
+    private static final String FIELD_LON = "Lon";
+    private static final String FIELD_TIME = "Time";
+    private static final String FIELD_LOCATION = "Location";
+    private static final String TITLE = "Waypoint";
 
     private Displayable next;
     private Location location;
@@ -48,7 +59,7 @@ public final class WaypointForm extends Form
     private TextField fieldLat;
     private TextField fieldLon;
 
-    private byte[] imageBytes = null;
+    private byte[] imageBytes;
     private int imageNum = -1;
 
 /*
@@ -60,55 +71,46 @@ public final class WaypointForm extends Form
     static int cnt = 0;
 
     public WaypointForm(Displayable next, Location location, Callback callback) {
-        super("Waypoint");
+        super(TITLE);
         this.next = next;
         this.location = location;
         this.callback = callback;
-        appendWithNewlineAfter(this.fieldName = new TextField("Name", null, 16, TextField.ANY));
-        appendWithNewlineAfter(this.fieldComment = new TextField("Comment", null, 256, TextField.ANY));
-        long timestamp = location.getTimestamp();
-        if (timestamp > 0) {
-            appendWithNewlineAfter(new StringItem("Time", dateToString(timestamp)));
-        }
-        appendWithNewlineAfter(new StringItem("Location", location.getQualifiedCoordinates().toString()));
-        if (cz.kruch.track.TrackingMIDlet.isJsr135()) {
+        appendWithNewlineAfter(this.fieldName = new TextField(FIELD_NAME, null, 16, TextField.ANY));
+        appendWithNewlineAfter(this.fieldComment = new TextField(FIELD_COMMENT, null, 256, TextField.ANY));
+        appendWithNewlineAfter(new StringItem(FIELD_TIME, dateToString(location.getTimestamp())));
+        appendWithNewlineAfter(new StringItem(FIELD_LOCATION, location.getQualifiedCoordinates().toString()));
+        if (cz.kruch.track.TrackingMIDlet.supportsVideoCapture()) {
             StringItem snapshot = new StringItem("Snapshot", "Take", Item.BUTTON);
             snapshot.setDefaultCommand(new Command("Take", Command.ITEM, 1));
             snapshot.setItemCommandListener(this);
             append(snapshot);
         }
-        addCommand(new Command("Cancel", Command.BACK, 1));
+        addCommand(new Command(MENU_CANCEL, Command.BACK, 1));
         addCommand(new Command(MENU_SAVE, Command.SCREEN, 1));
     }
 
     public WaypointForm(Displayable next, Waypoint wpt, Callback callback) {
-        super("Waypoint");
+        super(TITLE);
         this.next = next;
         this.location = wpt;
         this.callback = callback;
-        appendWithNewlineAfter(new StringItem("Name", wpt.getName()));
-        appendWithNewlineAfter(new StringItem("Comment", wpt.getComment()));
+        appendWithNewlineAfter(new StringItem(FIELD_NAME, wpt.getName()));
+        appendWithNewlineAfter(new StringItem(FIELD_COMMENT, wpt.getComment()));
         long timestamp = wpt.getTimestamp();
         if (timestamp > 0) {
-            appendWithNewlineAfter(new StringItem("Time", dateToString(timestamp)));
+            appendWithNewlineAfter(new StringItem(FIELD_TIME, dateToString(timestamp)));
         }
-        append(new StringItem("Location", wpt.getQualifiedCoordinates().toString()));
-        addCommand(new Command("Close", Command.BACK, 1));
+        append(new StringItem(FIELD_LOCATION, wpt.getQualifiedCoordinates().toString()));
+        addCommand(new Command(MENU_CLOSE, Command.BACK, 1));
         addCommand(new Command(MENU_NAVIGATE_TO, Command.SCREEN, 1));
-    }
-
-    public WaypointForm(Displayable next, Waypoint wpt) {
-        super("Waypoint");
-        this.next = next;
-        appendWithNewlineAfter(new StringItem("Name", wpt.getName()));
-        appendWithNewlineAfter(new StringItem("Comment", wpt.getComment()));
-        append(new StringItem("Location", wpt.getQualifiedCoordinates().toString()));
-        addCommand(new Command("Close", Command.BACK, 1));
+/* TODO in 0.9.58
+        addCommand(new Command(MENU_GO_TO, Command.SCREEN, 2));
+*/
     }
 
     public WaypointForm(Displayable next, Callback callback,
                         QualifiedCoordinates pointer) {
-        super("Waypoint");
+        super(TITLE);
         this.next = next;
         this.callback = callback;
 /*
@@ -116,26 +118,23 @@ public final class WaypointForm extends Form
 */
         int c = cnt + 1;
         String name = c < 10 ? "WPT00" + c : (c < 100 ? "WPT0" + c : "WPT" + Integer.toString(c));
-        appendWithNewlineAfter(this.fieldName = new TextField("Name", name, 16, TextField.ANY));
-        appendWithNewlineAfter(this.fieldComment = new TextField("Comment", CALENDAR.getTime().toString(), 64, TextField.ANY));
-        appendWithNewlineAfter(this.fieldLat = new TextField("Lat", (new MinDec(QualifiedCoordinates.LAT, pointer.getLat())).toString(),
+        appendWithNewlineAfter(this.fieldName = new TextField(FIELD_NAME, name, 16, TextField.ANY));
+        appendWithNewlineAfter(this.fieldComment = new TextField(FIELD_COMMENT, CALENDAR.getTime().toString(), 64, TextField.ANY));
+        appendWithNewlineAfter(this.fieldLat = new TextField(FIELD_LAT, (new MinDec(QualifiedCoordinates.LAT, pointer.getLat())).toString(),
                                                              13, TextField.ANY));
 /*
         Command editCmd = new Command("Edit", Command.ITEM, 1);
         this.fieldLat.setDefaultCommand(editCmd);
         this.fieldLat.setItemCommandListener(this);
 */
-        appendWithNewlineAfter(this.fieldLon = new TextField("Lon", (new MinDec(QualifiedCoordinates.LON, pointer.getLon())).toString(),
+        appendWithNewlineAfter(this.fieldLon = new TextField(FIELD_LON, (new MinDec(QualifiedCoordinates.LON, pointer.getLon())).toString(),
                                                              14, TextField.ANY));
 /*
         this.fieldLat.setDefaultCommand(editCmd);
         this.fieldLat.setItemCommandListener(this);
 */
-        addCommand(new Command("Close", Command.BACK, 1));
+        addCommand(new Command(MENU_CLOSE, Command.BACK, 1));
         addCommand(new Command(MENU_USE, Command.SCREEN, 1));
-/* TODO
-        addCommand(new Command(MENU_SAVE, Command.SCREEN, 2));
-*/
     }
 
     private void appendWithNewlineAfter(Item item) {
@@ -166,7 +165,7 @@ public final class WaypointForm extends Form
         }
     }
 
-    public void invoke(Object result, Throwable throwable) {
+    public void invoke(Object result, Throwable throwable, Object source) {
         if (result instanceof byte[]) {
             imageBytes = (byte[]) result;
             try {
@@ -174,6 +173,7 @@ public final class WaypointForm extends Form
                 byte[] thumbnail = Camera.getThumbnail(imageBytes);
                 Image image = Image.createImage(thumbnail, 0, thumbnail.length);
                 thumbnail = null; // gc hint
+                System.gc(); // forced GC
 
                 // replace image
                 delete(imageNum);
@@ -199,28 +199,33 @@ public final class WaypointForm extends Form
     }
 
     public void commandAction(Command command, Displayable displayable) {
-        // handle action
-        if (command.getCommandType() == Command.SCREEN) {
+        if (Command.SCREEN == command.getCommandType()) {
             String label = command.getLabel();
             if (MENU_USE.equals(label)) {
                 try {
-                    Waypoint wpt = new Waypoint(getCoordinates(), fieldName.getString(),
-                                                fieldComment.getString(), System.currentTimeMillis());
+                    Waypoint wpt = new Waypoint(getCoordinates(),
+                                                fieldName.getString(),
+                                                fieldComment.getString(),
+                                                System.currentTimeMillis());
                     Desktop.display.setCurrent(next);
-                    callback.invoke(new Object[]{ MENU_USE, wpt }, null);
+                    callback.invoke(new Object[]{ MENU_USE, wpt }, null, this);
                     cnt++;
                 } catch (IllegalArgumentException e) {
                     Desktop.showWarning("Malformed coordinate", e, null);
                 }
             } else if (MENU_SAVE.equals(label)) {
-                Waypoint wpt = new Waypoint(location, fieldName.getString(),
+                Waypoint wpt = new Waypoint(location,
+                                            fieldName.getString(),
                                             fieldComment.getString());
                 wpt.setUserObject(imageBytes);
                 Desktop.display.setCurrent(next);
-                callback.invoke(new Object[]{ MENU_SAVE, wpt }, null);
+                callback.invoke(new Object[]{ MENU_SAVE, wpt }, null, this);
             } else if (MENU_NAVIGATE_TO.equals(label)) {
                 Desktop.display.setCurrent(next);
-                callback.invoke(new Object[]{ MENU_NAVIGATE_TO, null }, null);
+                callback.invoke(new Object[]{ MENU_NAVIGATE_TO, null }, null, this);
+            } else if (MENU_GO_TO.equals(label)) {
+                Desktop.display.setCurrent(next);
+                callback.invoke(new Object[]{ MENU_GO_TO, null }, null, this);
             }
         } else {
             Desktop.display.setCurrent(next);
@@ -231,7 +236,7 @@ public final class WaypointForm extends Form
         double lat = stringToLatOrLon(fieldLat.getString());
         double lon = stringToLatOrLon(fieldLon.getString());
 
-        return new QualifiedCoordinates(lat, lon);
+        return QualifiedCoordinates.newInstance(lat, lon);
     }
 
     private static double stringToLatOrLon(String value) {
@@ -240,7 +245,7 @@ public final class WaypointForm extends Form
             throw new IllegalArgumentException("Malformed coordinate: " + value);
         }
 
-        int type, sign;
+        final int sign;
         switch (value.charAt(0)) {
             case 'N': {
                 sign = 1;
@@ -258,11 +263,11 @@ public final class WaypointForm extends Form
                 throw new IllegalArgumentException("Malformed coordinate: " + value);
         }
 
-        int idxSign = value.indexOf(NavigationScreens.SIGN);
+        final int idxSign = value.indexOf(NavigationScreens.SIGN);
         if (idxSign < 3) {
             throw new IllegalArgumentException("Malformed coordinate: " + value);
         }
-        int idxApo = value.indexOf("\'", idxSign);
+        final int idxApo = value.indexOf("\'", idxSign);
 
         double result = Integer.parseInt(value.substring(1, idxSign).trim());
         if (idxApo == -1) {
@@ -275,7 +280,7 @@ public final class WaypointForm extends Form
         return result * sign;
     }
 
-    private static String dateToString(long time) {
+    private static String dateToString(final long time) {
         CALENDAR.setTime(new Date(time/* + Config.getSafeInstance().getTimeZoneOffset() * 1000*/));
         StringBuffer sb = new StringBuffer();
         sb.append(CALENDAR.get(Calendar.YEAR)).append('-');
@@ -288,7 +293,7 @@ public final class WaypointForm extends Form
         return sb.toString();
     }
 
-    private static StringBuffer appendTwoDigitStr(StringBuffer sb, int i) {
+    private static StringBuffer appendTwoDigitStr(StringBuffer sb, final int i) {
         if (i < 10) {
             sb.append('0');
         }

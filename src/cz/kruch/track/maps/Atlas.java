@@ -5,44 +5,51 @@ package cz.kruch.track.maps;
 
 import cz.kruch.track.util.CharArrayTokenizer;
 import cz.kruch.track.AssertionFailedException;
+import cz.kruch.track.ui.Desktop;
 import cz.kruch.track.maps.io.LoaderIO;
-import cz.kruch.j2se.io.BufferedInputStream;
+//import cz.kruch.j2se.io.BufferedInputStream;
 
 import javax.microedition.io.Connector;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.Enumeration;
 import java.util.Hashtable;
 
 import api.location.QualifiedCoordinates;
+import api.file.File;
 
 import com.ice.tar.TarEntry;
 import com.ice.tar.TarInputStream;
 
 public final class Atlas implements Runnable {
 
+/*
     public interface StateListener {
         public void atlasOpened(Object result, Throwable throwable);
         public void loadingChanged(Object result, Throwable throwable);
     }
+*/
 
 //#ifdef __LOG__
     private static final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("Atlas");
 //#endif
 
+/*
     private static final int EVENT_ATLAS_OPENED     = 0;
     private static final int EVENT_LOADING_CHANGED  = 1;
+*/
+    private static final String TBA_EXT = ".tba";
 
     // interaction with outside world
     private String url;
-    private StateListener listener;
+    private /*StateListener*/ Desktop listener;
 
     // atlas state
-    private Loader loader;
     private Hashtable layers;
     private String current;
     private Hashtable maps;
 
-    public Atlas(String url, StateListener listener) {
+    public Atlas(String url, /*StateListener*/Desktop listener) {
         this.url = url;
         this.listener = listener;
         this.layers = new Hashtable();
@@ -110,22 +117,6 @@ public final class Atlas implements Runnable {
         return null;
     }
 
-    public String getMapURL(QualifiedCoordinates qc) {
-        Hashtable layer = (Hashtable) layers.get(current);
-        if (layer == null) {
-            throw new AssertionFailedException("Nonexistent layer");
-        }
-
-        for (Enumeration e = layer.elements(); e.hasMoreElements(); ) {
-            Calibration calibration = (Calibration) e.nextElement();
-            if (calibration.isWithin(qc)) {
-                return calibration.getPath();
-            }
-        }
-
-        return null;
-    }
-
     public String getURL(String name) {
         return url + "?layer=" + current + "&map=" + name;
     }
@@ -164,14 +155,18 @@ public final class Atlas implements Runnable {
 //#endif
 
         // we are done
-        notifyListener(EVENT_ATLAS_OPENED, null, t);
+        listener.atlasOpened(null, t);
     }
 
     /* (non-javadoc) public only for init loading */
     public Throwable loadAtlas() {
+        Loader loader = null;
         try {
-            // load map
-            loader = url.toLowerCase().endsWith(".tar") ? (Loader) new TarLoader() : (Loader) new DirLoader();
+            if (url.toLowerCase().endsWith(TBA_EXT)) {
+                loader = new DirLoader();
+            } else {
+                loader = new TarLoader();
+            }
             loader.init();
             loader.run();
             loader.checkException();
@@ -180,6 +175,12 @@ public final class Atlas implements Runnable {
 //#endif
         } catch (Throwable t) {
             return t;
+        } finally {
+            try {
+                loader.dispose();
+            } catch (IOException e) {
+                // ignore
+            }
         }
 
         return null;
@@ -206,27 +207,10 @@ public final class Atlas implements Runnable {
         // dispose
         maps.clear();
         layers.clear();
+
+        // gc hints
         maps = null;
         layers = null;
-
-        // destroy loader
-        try {
-            loader.destroy();
-        } catch (IOException e) {
-        } finally {
-            loader = null;
-        }
-    }
-
-    private void notifyListener(final int code, final Object result, final Throwable t) {
-        switch (code) {
-            case EVENT_ATLAS_OPENED:
-                listener.atlasOpened(result, t);
-                break;
-            case EVENT_LOADING_CHANGED:
-                listener.loadingChanged(result, t);
-                break;
-        }
     }
 
     /*
@@ -236,16 +220,11 @@ public final class Atlas implements Runnable {
     private abstract class Loader {
         protected String dir;
         protected Exception exception;
-        protected BufferedInputStream shared;
 
         protected abstract void run();
 
-        protected Loader() {
-            this.shared = new BufferedInputStream(null, Map.TEXT_FILE_BUFFER_SIZE);
-        }
-
         public void init() throws IOException {
-            int i = url.lastIndexOf('/');
+            int i = url.lastIndexOf(File.PATH_SEPCHAR);
             if (i == -1) {
                 throw new InvalidMapException("Invalid atlas URL");
             }
@@ -256,9 +235,7 @@ public final class Atlas implements Runnable {
 //#endif
         }
 
-        public void destroy() throws IOException {
-            shared.reuse(null);
-            shared = null; // gc hint
+        public void dispose() throws IOException {
         }
 
         public void checkException() throws Exception {
@@ -283,14 +260,17 @@ public final class Atlas implements Runnable {
         public void run() {
             // vars
             api.file.File file = null;
+            InputStream in = null;
             TarInputStream tar = null;
+            boolean isIdx = url.endsWith(".idx");
 
             try {
                 // create stream
-                file = new api.file.File(Connector.open(url, Connector.READ));
-                tar = new TarInputStream(shared.reuse(file.openInputStream()));
+                file = File.open(Connector.open(url, Connector.READ));
+                tar = new TarInputStream(in = file.openInputStream());
 
                 // shared vars
+                char[] delims = new char[]{ File.PATH_SEPCHAR };
                 CharArrayTokenizer tokenizer = new CharArrayTokenizer();
                 StringBuffer sb = new StringBuffer(128);
 
@@ -301,13 +281,10 @@ public final class Atlas implements Runnable {
                         String entryName = entry.getName();
                         int indexOf = entryName.lastIndexOf('.');
                         if (indexOf > -1) {
-                            // get file extension
-                            String ext = entryName.substring(indexOf + 1);
-
                             // get layer and map name
                             String lName = null;
                             String mName = null;
-                            tokenizer.init(entryName, '/', false);
+                            tokenizer.init(entryName, delims, false);
                             if (tokenizer.hasMoreTokens()) {
                                 lName = tokenizer.next().toString();
                                 if (tokenizer.hasMoreTokens()) {
@@ -317,26 +294,27 @@ public final class Atlas implements Runnable {
 
                             // got layer and map name?
                             if (lName != null && mName != null) {
-                                sb.delete(0, sb.length());
-                                String url = sb.append(dir).append(lName).append('/').append(mName).append('/').append(mName).append(".tar").toString();
                                 Calibration calibration = null;
+                                String ext = entryName.substring(indexOf);
+                                sb.delete(0, sb.length());
+                                String url = isIdx ? sb.append(dir).append(entryName).toString() : sb.append(dir).append(lName).append(File.PATH_SEPCHAR).append(mName).append(File.PATH_SEPCHAR).append(mName).append(Map.TAR_EXT).toString();
 
                                 // load map calibration file
-                                if ("map".equals(ext)) {
+                                if (Calibration.OZI_EXT.equals(ext)) {
                                     calibration = new Calibration.Ozi(tar, url);
-                                } else if ("gmi".equals(ext)) {
+                                } else if (Calibration.GMI_EXT.equals(ext)) {
                                     calibration = new Calibration.GMI(tar, url);
-                                } else if ("j2n".equals(ext)) {
+                                } else if (Calibration.J2N_EXT.equals(ext)) {
                                     calibration = new Calibration.J2N(tar, url);
-                                } else if ("xml".equals(ext)) {
+                                } else if (Calibration.XML_EXT.equals(ext)) {
                                     calibration = new Calibration.XML(tar, url);
                                 }
 
                                 // found calibration file?
                                 if (calibration != null) {
-        //#ifdef __LOG__
-                                    if (log.isEnabled()) log.debug("calibration loaded; " + calibration);
-        //#endif
+//#ifdef __LOG__
+                                    if (log.isEnabled()) log.debug("calibration loaded: " + calibration + "; layer = " + lName + "; mName = " + mName);
+//#endif
                                     // save calibration for given map - only one calibration per map allowed :-)
                                     if (!getLayerCollection(lName).contains(mName)) {
                                         getLayerCollection(lName).put(mName, calibration);
@@ -345,7 +323,6 @@ public final class Atlas implements Runnable {
                             }
                         }
                     }
-                    entry.dispose();
                     entry = null; // gc hint
                     entry = tar.getNextEntry();
                 }
@@ -354,16 +331,25 @@ public final class Atlas implements Runnable {
                 tokenizer.dispose();
 
             } catch (Exception e) {
-                exception = e;
-            } finally {
 
-                // close stream
+                // record problem
+                exception = e;
+                
+            } finally {
+                // dispose tar stream
                 if (tar != null) {
+                    tar.reuse(null);
+                    tar.dispose();
+                    tar = null;
+                }
+
+                if (in != null) {
                     try {
-                        tar.close();
+                        in.close();
                     } catch (IOException e) {
                         // ignore
                     }
+                    in = null;
                 }
 
                 // close file
@@ -373,6 +359,7 @@ public final class Atlas implements Runnable {
                     } catch (IOException e) {
                         // ignore
                     }
+                    file = null;
                 }
             }
         }
@@ -386,7 +373,7 @@ public final class Atlas implements Runnable {
 
             try {
                 // open atlas dir
-                file = new api.file.File(Connector.open(dir, Connector.READ));
+                file = File.open(Connector.open(dir, Connector.READ));
 
                 // path holder
                 StringBuffer sb = new StringBuffer(128);
@@ -394,7 +381,7 @@ public final class Atlas implements Runnable {
                 // iterate over layers
                 for (Enumeration le = file.list(); le.hasMoreElements(); ) {
                     String layerEntry = (String) le.nextElement();
-                    if ('/' == layerEntry.charAt(layerEntry.length() - 1)) {
+                    if (File.isDir(layerEntry)) {
 //#ifdef __LOG__
                         if (log.isEnabled()) log.debug("new layer: " + layerEntry);
 //#endif
@@ -408,7 +395,7 @@ public final class Atlas implements Runnable {
                         // iterate over layer
                         for (Enumeration me = file.list(); me.hasMoreElements(); ) {
                             String mapEntry = (String) me.nextElement();
-                            if ('/' == mapEntry.charAt(mapEntry.length() - 1)) {
+                            if (File.isDir(mapEntry)) {
 //#ifdef __LOG__
                                 if (log.isEnabled()) log.debug("new map? " + mapEntry);
 //#endif
@@ -419,13 +406,19 @@ public final class Atlas implements Runnable {
                                 // iterate over map dir
                                 for (Enumeration ie = file.list(); ie.hasMoreElements(); ) {
                                     String fileEntry = (String) ie.nextElement();
-                                    if ('/' == fileEntry.charAt(fileEntry.length() - 1))
+
+                                    // is dir
+                                    if (File.isDir(fileEntry))
                                         continue;
+
+                                    // has ext
                                     int indexOf = fileEntry.lastIndexOf('.');
                                     if (indexOf == -1) {
                                         continue;
                                     }
-                                    String ext = fileEntry.substring(indexOf + 1);
+
+                                    // get ext
+                                    String ext = fileEntry.substring(indexOf);
 
                                     // calibration
                                     sb.delete(0, sb.length());
@@ -434,18 +427,14 @@ public final class Atlas implements Runnable {
                                     Map.FileInput fileInput = new Map.FileInput(path);
 
                                     // load map calibration file
-                                    if ("map".equals(ext)) {
-                                        calibration = new Calibration.Ozi(shared.reuse(fileInput._getInputStream()),
-                                                                          path);
-                                    } else if ("gmi".equals(ext)) {
-                                        calibration = new Calibration.GMI(shared.reuse(fileInput._getInputStream()),
-                                                                          path);
-                                    } else if ("j2n".equals(ext)) {
-                                        calibration = new Calibration.J2N(shared.reuse(fileInput._getInputStream()),
-                                                                          path);
-                                    } else if ("xml".equals(ext)) {
-                                        calibration = new Calibration.XML(shared.reuse(fileInput._getInputStream()),
-                                                                          path);
+                                    if (Calibration.OZI_EXT.equals(ext)) {
+                                        calibration = new Calibration.Ozi(fileInput._getInputStream(), path);
+                                    } else if (Calibration.GMI_EXT.equals(ext)) {
+                                        calibration = new Calibration.GMI(fileInput._getInputStream(), path);
+                                    } else if (Calibration.J2N_EXT.equals(ext)) {
+                                        calibration = new Calibration.J2N(fileInput._getInputStream(), path);
+                                    } else if (Calibration.XML_EXT.equals(ext)) {
+                                        calibration = new Calibration.XML(fileInput._getInputStream(), path);
                                     }
 
                                     // close file input
@@ -454,7 +443,7 @@ public final class Atlas implements Runnable {
                                     // found calibration
                                     if (calibration != null) {
 //#ifdef __LOG__
-                                        if (log.isEnabled()) log.debug("calibration loaded; " + calibration);
+                                        if (log.isEnabled()) log.debug("calibration loaded: " + calibration + "; layer = " + layerEntry + "; mName = " + mapEntry);
 //#endif
                                         // save calibration for given map
                                         layerCollection.put(mapEntry.substring(0, mapEntry.length() - 1), calibration);
@@ -465,12 +454,12 @@ public final class Atlas implements Runnable {
                                 }
 
                                 // back to layer dir
-                                file.setFileConnection("..");
+                                file.setFileConnection(File.PARENT_DIR);
                             }
                         }
 
                         // go back to atlas root
-                        file.setFileConnection("..");
+                        file.setFileConnection(File.PARENT_DIR);
                     }
                 }
             } catch (Exception e) {

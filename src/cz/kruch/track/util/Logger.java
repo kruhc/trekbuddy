@@ -14,7 +14,9 @@ public final class Logger {
 
     public Logger(String componentName) {
         this.cname = componentName;
+//#ifdef __LOG__
         this.enabled = cz.kruch.track.TrackingMIDlet.isLogEnabled();
+//#endif        
     }
 
     public boolean isEnabled() {

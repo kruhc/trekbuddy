@@ -5,15 +5,22 @@ package cz.kruch.track.location;
 
 import api.location.Location;
 import api.location.QualifiedCoordinates;
+import cz.kruch.track.maps.Map;
 
 public interface Navigator {
     public boolean isTracking();
+
     public Location getLocation();
     public QualifiedCoordinates getPointer();
-    public Waypoint[] getPath();
-    public void setPath(Waypoint[] path);
-    public void setNavigateTo(int pathIdx);
-    public int getNavigateTo();
-    public void addWaypoint(Waypoint wpt);
-    public void recordWaypoint(Waypoint wpt);
+
+    public Waypoint getNavigateTo();
+    public void setNavigateTo(Waypoint wpt);
+    public int getWptAzimuth();
+    public float getWptDistance();
+
+    public void saveLocation(Location l);
+    public long getTracklogTime();
+    public String getTracklogCreator();
+
+    public Map getMap();
 }

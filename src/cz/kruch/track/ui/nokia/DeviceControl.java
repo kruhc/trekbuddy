@@ -14,6 +14,7 @@ public abstract class DeviceControl extends TimerTask {
 
     /** @deprecated make instance member of Desktop */
     public static void initialize() {
+//#ifndef __RIM__
         try {
             Class.forName("com.nokia.mid.ui.DeviceControl");
             if (System.getProperty("com.sonyericsson.imei") == null) {
@@ -28,6 +29,7 @@ public abstract class DeviceControl extends TimerTask {
             } catch (Throwable t) {
             }
         }
+//#endif
         if (instance == null) {
             try {
                 instance = (DeviceControl) Class.forName("cz.kruch.track.ui.nokia.Midp2DeviceControl").newInstance();

@@ -6,7 +6,6 @@ package api.location;
 /* bad design - dependency */
 import cz.kruch.track.configuration.Config;
 import cz.kruch.track.util.Mercator;
-import cz.kruch.track.util.ExtraMath;
 import cz.kruch.track.ui.NavigationScreens;
 import public_domain.Xedarius;
 
@@ -21,8 +20,7 @@ public final class QualifiedCoordinates implements GeodeticPosition {
 
     private double lat, lon;
     private float alt;
-
-    private boolean hp;
+    private float accuracy;
 
     /*
      * POOL
@@ -31,30 +29,37 @@ public final class QualifiedCoordinates implements GeodeticPosition {
     private static final QualifiedCoordinates[] pool = new QualifiedCoordinates[8];
     private static int countFree;
 
-    public static QualifiedCoordinates newInstance(double lat, double lon) {
-        return newInstance(lat, lon, -1F);
+    public static QualifiedCoordinates newInstance(final double lat, final double lon) {
+        return newInstance(lat, lon, Float.NaN, -1F);
     }
 
-    public synchronized static QualifiedCoordinates newInstance(double lat,
-                                                                double lon,
-                                                                float alt) {
+    public static QualifiedCoordinates newInstance(final double lat, final double lon,
+                                                   final float alt) {
+        return newInstance(lat, lon, alt, -1F);
+    }
+
+    public synchronized static QualifiedCoordinates newInstance(final double lat,
+                                                                final double lon,
+                                                                final float alt,
+                                                                final float accuracy) {
         QualifiedCoordinates result;
 
         if (countFree == 0) {
-            result = new QualifiedCoordinates(lat, lon, alt);
+            result = new QualifiedCoordinates(lat, lon, alt, -1F);
         } else {
             result = pool[--countFree];
-            if (result == null) throw new RuntimeException("NULL");
+            pool[countFree] = null;
             result.lat = lat;
             result.lon = lon;
             result.alt = alt;
+            result.accuracy = accuracy;
         }
 
         return result;
     }
 
     public synchronized static void releaseInstance(QualifiedCoordinates qc) {
-        if (countFree < pool.length && qc != null) {
+        if (qc != null && countFree < pool.length) {
             pool[countFree++] = qc;
         }
     }
@@ -64,13 +69,22 @@ public final class QualifiedCoordinates implements GeodeticPosition {
      */
 
     public QualifiedCoordinates clone() {
-        return newInstance(lat, lon, alt);
+        return newInstance(lat, lon, alt, accuracy);
     }
 
-    private QualifiedCoordinates(double lat, double lon, float alt) {
+    private QualifiedCoordinates(final double lat, final double lon,
+                                 final float alt, final float accuracy) {
         this.lat = lat;
         this.lon = lon;
         this.alt = alt;
+        this.accuracy = accuracy;
+    }
+
+    protected QualifiedCoordinates(QualifiedCoordinates qc) {
+        this.lat = qc.lat;
+        this.lon = qc.lon;
+        this.alt = qc.alt;
+        this.accuracy = qc.accuracy;
     }
 
     public double getH() {
@@ -93,15 +107,19 @@ public final class QualifiedCoordinates implements GeodeticPosition {
         return alt;
     }
 
-    public void setHp(boolean hp) {
-        this.hp = hp;
+    public float getAccuracy() {
+        return accuracy;
+    }
+
+    public void setAccuracy(float accuracy) {
+        this.accuracy = accuracy;
     }
 
     public float distance(QualifiedCoordinates neighbour) {
         return distance(neighbour.lat, neighbour.lon);
     }
 
-    private float distance(double neighbourLat, double neighbourLon) {
+    private float distance(final double neighbourLat, final double neighbourLon) {
 /*
         double h1 = 0, h2 = 0;
         double R = Datum.DATUM_WGS_84.getEllipsoid().getEquatorialRadius();
@@ -177,33 +195,48 @@ public final class QualifiedCoordinates implements GeodeticPosition {
 
     public StringBuffer toStringBuffer(StringBuffer sb) {
         if (Config.useGridFormat && (Mercator.isGrid())) {
-            Mercator.UTMCoordinates gridCoords = Mercator.LLtoGrid(this);
+            Mercator.Coordinates gridCoords = Mercator.LLtoGrid(this);
             if (gridCoords.zone != null) {
                 sb.append(gridCoords.zone).append(' ');
             }
-            zeros(sb, gridCoords.easting, 10000).append(round(gridCoords.easting));
+            zeros(sb, gridCoords.easting, 10000);
+            NavigationScreens.append(sb, round(gridCoords.easting));
             sb.append(' ');
-            zeros(sb, gridCoords.northing, 10000).append(round(gridCoords.northing));
-            Mercator.UTMCoordinates.releaseInstance(gridCoords);
+            zeros(sb, gridCoords.northing, 10000);
+            NavigationScreens.append(sb, round(gridCoords.northing));
+            Mercator.Coordinates.releaseInstance(gridCoords);
         } else if (Config.useUTM) {
-            Mercator.UTMCoordinates utmCoords = Mercator.LLtoUTM(this);
+            Mercator.Coordinates utmCoords = Mercator.LLtoUTM(this);
             sb.append(utmCoords.zone).append(' ');
-            sb.append("E ").append(round(utmCoords.easting));
+            sb.append('E').append(' ');
+            NavigationScreens.append(sb, round(utmCoords.easting));
             sb.append(' ');
-            sb.append("N ").append(round(utmCoords.northing));
-            Mercator.UTMCoordinates.releaseInstance(utmCoords);
+            sb.append('N').append(' ');
+            NavigationScreens.append(sb, round(utmCoords.northing));
+            Mercator.Coordinates.releaseInstance(utmCoords);
         } else {
-            sb.append(lat > 0D ? "N " : "S ");
-            append(LAT, sb);
-            sb.append(' ');
-            sb.append(lon > 0D ? "E " : "W ");
-            append(LON, sb);
+            // condensed for SXG75
+            if (cz.kruch.track.TrackingMIDlet.sxg75 && Config.decimalPrecision) {
+                sb.append(lat > 0D ? 'N' : 'S');
+                append(LAT, true, sb);
+                sb.deleteCharAt(sb.length() - 1);
+                sb.append(' ');
+                sb.append(lon > 0D ? 'E' : 'W');
+                append(LON, true, sb);
+                sb.deleteCharAt(sb.length() - 1);
+            } else { // decent devices
+                sb.append(lat > 0D ? 'N' : 'S').append(' ');
+                append(LAT, Config.decimalPrecision, sb);
+                sb.append(' ');
+                sb.append(lon > 0D ? 'E' : 'W').append(' ');
+                append(LON, Config.decimalPrecision, sb);
+            }
         }
 
         return sb;
     }
 
-    private StringBuffer append(int type, StringBuffer sb) {
+    private StringBuffer append(final int type, final boolean hp, StringBuffer sb) {
         double l = Math.abs(type == LAT ? lat : lon);
         if (Config.useGeocachingFormat) {
             int h = (int) Math.floor(l);
@@ -231,15 +264,15 @@ public final class QualifiedCoordinates implements GeodeticPosition {
             if (h < 10) {
                 sb.append('0');
             }
-            sb.append(h).append(NavigationScreens.SIGN);
-            sb.append(m).append('.');
+            NavigationScreens.append(sb, h).append(NavigationScreens.SIGN);
+            NavigationScreens.append(sb, m).append('.');
             if (dec < 100) {
                 sb.append('0');
             }
             if (dec < 10) {
                 sb.append('0');
             }
-            sb.append(dec);
+            NavigationScreens.append(sb, dec);
         } else {
             int h = (int) Math.floor(l);
             l -= h;
@@ -283,11 +316,12 @@ public final class QualifiedCoordinates implements GeodeticPosition {
                 }
             }
 
-            sb.append(h).append(NavigationScreens.SIGN);
-            sb.append(m).append('\'');
-            sb.append(s);
+            NavigationScreens.append(sb, h).append(NavigationScreens.SIGN);
+            NavigationScreens.append(sb, m).append('\'');
+            NavigationScreens.append(sb, s);
             if (hp) {
-                sb.append('.').append(ss);
+                sb.append('.');
+                NavigationScreens.append(sb, ss);
             }
             sb.append('"');
         }

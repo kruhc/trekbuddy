@@ -30,6 +30,10 @@ public final class Jsr82LocationProvider extends SerialLocationProvider {
         }
     }
 
+    protected String getKnownUrl() {
+        return Config.btServiceUrl;
+    }
+
     public int start() throws LocationException {
         // start BT discovery
         (new Discoverer()).start();

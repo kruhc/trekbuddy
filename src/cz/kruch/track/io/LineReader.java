@@ -4,6 +4,7 @@
 package cz.kruch.track.io;
 
 import cz.kruch.track.util.CharArrayTokenizer;
+import cz.kruch.track.AssertionFailedException;
 
 import java.io.InputStream;
 import java.io.IOException;
@@ -25,7 +26,7 @@ public final class LineReader extends InputStreamReader {
         this.buffer = new char[MAX_LEN];
     }
 
-    public LineReader(InputStream in, boolean tokenized) {
+    public LineReader(InputStream in, final boolean tokenized) {
         this(in);
         this.token = new CharArrayTokenizer.Token();
         this.token.array = buffer;
@@ -37,15 +38,14 @@ public final class LineReader extends InputStreamReader {
         }
 
         final char[] _buffer = buffer;
-        final int maxlen = _buffer.length;
         int offset = this.position;
         int chars = 0;
         String result = null;
 
-        for ( ; offset < maxlen; ) {
+        for ( ; offset < MAX_LEN; ) {
             int c;
             if (offset == count) {
-                int _count = read(_buffer, offset, maxlen - offset);
+                int _count = read(_buffer, offset, MAX_LEN - offset);
                 if (_count == -1) {
                     count = c = -1;
                 } else {
@@ -72,8 +72,8 @@ public final class LineReader extends InputStreamReader {
             }
         }
 
-        if (offset >= maxlen) {
-            throw new IllegalStateException("Line length > " + maxlen);
+        if (offset >= MAX_LEN) {
+            throw new AssertionFailedException("NMEA line longer than " + MAX_LEN);
         }
 
         if (chars != 0) {
@@ -82,7 +82,7 @@ public final class LineReader extends InputStreamReader {
 
         position = offset;
 
-        if (position > maxlen >> 1) {
+        if (position > MAX_LEN >> 1 && count > -1) {
             System.arraycopy(_buffer, position, _buffer, 0, count - position);
             count -= position;
             position = 0;

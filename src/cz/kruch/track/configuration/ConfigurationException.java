@@ -8,8 +8,8 @@ public class ConfigurationException extends Exception {
         super(string);
     }
 
-    public ConfigurationException(Exception exception) {
-        super(exception.toString());
+    public ConfigurationException(Throwable t) {
+        super(t.toString());
     }
 
     public ConfigurationException(String message, Throwable throwable) {

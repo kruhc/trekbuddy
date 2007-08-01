@@ -15,16 +15,6 @@ import java.util.Vector;
 public final class Arrays {
 
     /**
-     * Clears array.
-     * @param a array
-     */
-    public static void clear(final Object[] a) {
-        for (int i = a.length; --i >= 0; ) {
-            a[i] = null;
-        }
-    }
-
-    /**
      * Sorts enumeration of strings to GUI list.
      * @param list list
      * @param items enumeration of strings
@@ -53,11 +43,13 @@ public final class Arrays {
         }
 
         // gc hint
-        clear(array);
+        for (int i = array.length; --i >= 0; ) {
+            array[i] = null;
+        }
     }
 
     /*
-     * String array sorting.
+     * String array sorting. From JDK.
      */
 
     private static void sort(final String[] a) {
@@ -73,7 +65,7 @@ public final class Arrays {
         // small arrays sorting
         if (length < 7) {
             for (int i = low; i < high; i++)
-                for (int j = i; j > low && compare(dest[j - 1], dest[j]) > 0; j--)
+                for (int j = i; j > low && compareAsFiles(dest[j - 1], dest[j]) > 0; j--)
                     swap(dest, j, j - 1);
             return;
         }
@@ -87,14 +79,14 @@ public final class Arrays {
          * If list is already sorted, just copy from src to dest.  This is an
          * optimization that results in faster sorts for nearly ordered lists.
          */
-        if (compare(src[mid - 1], src[mid]) <= 0) {
+        if (compareAsFiles(src[mid - 1], src[mid]) <= 0) {
             System.arraycopy(src, low, dest, low, length);
             return;
         }
 
         // merge sorted halves (now in src) into dest
         for (int i = low, p = low, q = mid; i < high; i++) {
-            if (q >= high || p < mid && compare(src[p], src[q]) <= 0)
+            if (q >= high || p < mid && compareAsFiles(src[p], src[q]) <= 0)
                 dest[i] = src[p++];
             else
                 dest[i] = src[q++];
@@ -114,7 +106,7 @@ public final class Arrays {
     /**
      * Compares objects as filenames, with directories first.
      */
-    private static int compare(String s1, String s2) {
+    private static int compareAsFiles(String s1, String s2) {
         boolean isDir1 = File.isDir(s1);
         boolean isDir2 = File.isDir(s2);
         if (isDir1) {

@@ -13,6 +13,8 @@ import javax.microedition.lcdui.game.GameCanvas;
 import api.location.Location;
 import api.location.QualifiedCoordinates;
 
+import java.util.Vector;
+
 abstract class View {
     protected static final char[] MSG_NO_POSITION =
         { 'N', 'O', ' ', 'P', 'O', 'S', 'I', 'T', 'I', 'O', 'N' };
@@ -40,7 +42,11 @@ abstract class View {
         return Desktop.MASK_NONE;
     }
 
-    public int navigationChanged(Waypoint wpt) {
+    public int navigationChanged(Vector wpts, int idx, boolean silent) {
+        return isVisible ? Desktop.MASK_SCREEN : Desktop.MASK_NONE;
+    }
+
+    public int routeChanged(Vector wpts) {
         return isVisible ? Desktop.MASK_SCREEN : Desktop.MASK_NONE;
     }
 
@@ -55,8 +61,7 @@ abstract class View {
         throw new IllegalStateException("Illegal view for this operation");
     }
 
-    public int reset() {
-        return isVisible ? Desktop.MASK_OSD : Desktop.MASK_NONE;
+    public void reset() {
     }
 
     public void sizeChanged(int w, int h) {

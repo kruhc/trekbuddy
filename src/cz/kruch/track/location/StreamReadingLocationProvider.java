@@ -15,15 +15,20 @@ import java.io.OutputStream;
 import cz.kruch.track.util.NmeaParser;
 
 public abstract class StreamReadingLocationProvider extends LocationProvider {
-    protected static final char[] HEADER_GGA = "$GPGGA".toCharArray();
-    protected static final char[] HEADER_RMC = "$GPRMC".toCharArray();
+//#ifdef __LOG__
+    private static final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("StreamReadingLocationProvider");
+//#endif
 
-    protected static final int BUFFER_SIZE = 512;
+    protected static final char[] HEADER_GGA = { '$', 'G', 'P', 'G', 'G', 'A' };
+    protected static final char[] HEADER_RMC = { '$', 'G', 'P', 'R', 'M', 'C' };
+
+    private static final char[] HEADER_SKIP = { '$', 'G', 'P', 'G', 'S' };
+
+    protected static final int BUFFER_SIZE = 2048;
 
     private static final int LINE_SIZE = 128;
 
-    public static int syncs;
-    public static int mismatches;
+    public static int syncs, mismatches, checksums;
 
     private OutputStream observer;
     private char[] line;
@@ -34,7 +39,7 @@ public abstract class StreamReadingLocationProvider extends LocationProvider {
     protected StreamReadingLocationProvider(String name) {
         super(name);
         this.line = new char[LINE_SIZE];
-        syncs = mismatches = 0;
+        syncs = mismatches = checksums = 0;
     }
 
     protected void setObserver(OutputStream observer) {
@@ -53,8 +58,22 @@ public abstract class StreamReadingLocationProvider extends LocationProvider {
                 return null;
             }
             if (isType(line, l, HEADER_GGA)) {
+                if (!validate(line, l)) {
+//#ifdef __LOG__
+                    if (log.isEnabled()) log.warn("Invalid NMEA!");
+//#endif
+                    checksums++;
+                    continue;
+                }
                 gga = NmeaParser.parseGGA(line, l);
             } else if (isType(line, l, HEADER_RMC)) {
+                if (!validate(line, l)) {
+//#ifdef __LOG__
+                    if (log.isEnabled()) log.warn("Invalid NMEA!");
+//#endif
+                    checksums++;
+                    continue;
+                }
                 rmc = NmeaParser.parseRMC(line, l);
             } else {
                 continue;
@@ -78,8 +97,9 @@ public abstract class StreamReadingLocationProvider extends LocationProvider {
         // combine
         final long datetime = rmc.date + rmc.timestamp;
         if (rmc.timestamp == gga.timestamp) {
-            location = Location.newInstance(QualifiedCoordinates.newInstance(rmc.lat, rmc.lon, gga.altitude),
-                                            datetime, gga.fix, gga.sat, gga.hdop * 5);
+            QualifiedCoordinates qc = QualifiedCoordinates.newInstance(rmc.lat, rmc.lon, gga.altitude);
+            qc.setAccuracy(gga.hdop * 5);
+            location = Location.newInstance(qc, datetime, gga.fix, gga.sat);
         } else {
             location = Location.newInstance(QualifiedCoordinates.newInstance(rmc.lat, rmc.lon),
                                             datetime, rmc.status == 'A' ? 1 : 0);
@@ -124,7 +144,28 @@ public abstract class StreamReadingLocationProvider extends LocationProvider {
 
                 // weird content check
                 if (pos >= LINE_SIZE) {
-                    throw new IOException("Hmm, is this really NMEA stream?");
+
+                    // record state
+                    setThrowable(new LocationException("NMEA sentence too long"));
+
+                    // reset
+                    pos = 0;
+                    match = false;
+                }
+
+                // skip sentence we do not want - GSA/GSV are spam
+                if (pos == 5) { // '$GPGS...'
+                    int i = 5;
+                    for ( ; --i >= 0; ) {
+                        if (line[i] != HEADER_SKIP[i]) {
+                            break;
+                        }
+                    }
+                    if (i < 0) {
+                        // reset
+                        pos = 0;
+                        match = false;
+                    }
                 }
             }
 
@@ -142,7 +183,36 @@ public abstract class StreamReadingLocationProvider extends LocationProvider {
         return -1;
     }
 
-    private static boolean isType(char[] sentence, int length, char[] header) {
+    private static boolean validate(char[] raw, final int length) {
+        int result = 0;
+        for (int i = 1; i < length; i++) {
+            final byte b = (byte) raw[i];
+            if (b == '*') {
+                if (length - i >= 2) {
+                    byte hi = (byte) raw[i + 1];
+                    byte lo = (byte) raw[i + 2];
+                    if (hi >= '0' && hi <= '9') {
+                        hi -= '0';
+                    } else if (hi >= 'A' && hi <= 'F') {
+                        hi -= 'A' - 10;
+                    }
+                    if (lo >= '0' && lo <= '9') {
+                        lo -= '0';
+                    } else if (lo >= 'A' && lo <= 'F') {
+                        lo -= 'A' - 10;
+                    }
+                    return result == (hi << 4) + lo;
+                }
+                break;
+            } else {
+                result ^= raw[i];
+            }
+        }
+
+        return false;
+    }
+
+    private static boolean isType(char[] sentence, final int length, char[] header) {
         if (length < header.length) {
             return false;
         }

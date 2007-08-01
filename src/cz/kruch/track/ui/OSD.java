@@ -12,15 +12,16 @@ import cz.kruch.track.configuration.Config;
 import cz.kruch.track.AssertionFailedException;
 
 final class OSD extends Bar {
+    private static final char[] MM = { '<', '>' };
+
     protected int providerStatus;
-    private String recording;
+    private boolean recording;
     private boolean ok;
     private int sat;
 
     protected int semaforX, semaforY;
-    protected final int str1Width, str2Width;
     private final StringBuffer sb;
-    private final int rw;
+    private final int rw, mmw, str1w, str2w;
 
     private final char[] cInfo, cExtInfo;
     private int cInfoLength, cExtInfoLength;
@@ -29,9 +30,10 @@ final class OSD extends Bar {
         super(gx, gy, width, height);
         this.providerStatus = LocationProvider.OUT_OF_SERVICE;
         this.rw = Desktop.font.charWidth('R');
+        this.mmw = Desktop.font.stringWidth("<>");
+        this.str1w = Desktop.font.stringWidth("4*");
+        this.str2w = Desktop.font.stringWidth("44*");
         this.clip = new int[]{ gx, gy, -1, -1 };
-        this.str1Width = Desktop.font.stringWidth("4*");
-        this.str2Width = Desktop.font.stringWidth("44*");
         this.sb = new StringBuffer(64);
         this.cInfo = new char[64];
         this.cExtInfo = new char[64];
@@ -51,14 +53,16 @@ final class OSD extends Bar {
 
         final boolean isBasicInfo = Config.osdBasic;
         final boolean isExtInfo = Config.osdExtended;
+        final int gx = this.gx;
+        final int gy = this.gy;
 
         // draw info + extended info bg
         if (!Config.osdNoBackground) {
             if (isBasicInfo) {
-                graphics.drawImage(Desktop.bar, gx, gy, 0);
+                graphics.drawImage(Desktop.bar, gx, gy, Graphics.TOP | Graphics.LEFT);
             }
-            if (isExtInfo && isBasicInfo && cExtInfoLength > 0) {
-                graphics.drawImage(Desktop.bar, gx, gy + bh, 0);
+            if (isExtInfo && cExtInfoLength > 0) {
+                graphics.drawImage(Desktop.bar, gx, gy + (isBasicInfo ? bh : 0), Graphics.TOP | Graphics.LEFT);
             }
         }
 
@@ -69,33 +73,42 @@ final class OSD extends Bar {
 
         // draw info + extended info text
         if (isBasicInfo && cInfoLength > 0) {
-            graphics.drawChars(cInfo, 0, cInfoLength, gx + BORDER, gy, 0);
+            graphics.drawChars(cInfo, 0, cInfoLength, gx + BORDER, gy, Graphics.TOP | Graphics.LEFT);
         }
         if (isExtInfo && cExtInfoLength > 0) {
             graphics.drawChars(cExtInfo, 0, cExtInfoLength, gx + BORDER, gy + (isBasicInfo ? bh : 0), 0);
-            if (sat > 0) {
-                String s = NavigationScreens.nStr[sat];
-                graphics.drawString(s, width - BORDER - (sat < 10 ? str1Width : str2Width),
-                                    gy + bh, 0);
+            if (Desktop.browsing) {
+                graphics.drawChars(MM, 0, MM.length,
+                                   width - BORDER - mmw,
+                                   gy + bh, Graphics.TOP | Graphics.LEFT);
+            } else {
+                final int sat = this.sat;
+                if (sat >= 3 && sat <= 12) {
+                    char[] chars = NavigationScreens.nStr[sat - 3];
+                    graphics.drawChars(chars, 0, chars.length,
+                                       width - BORDER - (sat < 10 ? str1w : str2w),
+                                       gy + bh, Graphics.TOP | Graphics.LEFT);
+                }
             }
         }
 
-        // gpx recording
-        if (recording != null) {
+        // recording
+        if (recording) {
             if (ok) { // text was 'ok', so change the color now
                 graphics.setColor(0x00FF0000);
             }
-            graphics.drawChar('R', semaforX - rw, 0, 0/*Graphics.TOP | Graphics.LEFT*/);
+            graphics.drawChar('R', semaforX - rw, 0, Graphics.TOP | Graphics.LEFT);
         }
 
         // restore default color
-        if (!ok || recording != null) {
+        if (!ok || recording) {
             graphics.setColor(Config.osdBlackColor ? 0x00000000 : 0x00FFFFFF);
         }
 
         // draw provider status
         NavigationScreens.drawProviderStatus(graphics, providerStatus,
-                                             semaforX, semaforY, 0);
+                                             semaforX, semaforY,
+                                             Graphics.TOP | Graphics.LEFT);
     }
 
     public StringBuffer _getSb() {
@@ -107,8 +120,8 @@ final class OSD extends Bar {
         this.providerStatus = providerStatus;
     }
 
-    public void setRecording(String recording) {
-        this.recording = recording;
+    public void setRecording(boolean b) {
+        this.recording = b;
     }
 
     public void setSat(int sat) {
@@ -131,8 +144,8 @@ final class OSD extends Bar {
     }
 
     public void setInfo(QualifiedCoordinates qc, boolean ok) {
+        StringBuffer sb = this.sb;
         sb.delete(0, sb.length());
-        qc.setHp(Config.decimalPrecision);
         qc.toStringBuffer(sb);
         cInfoLength = sb.length();
         if (cInfoLength > cInfo.length) {

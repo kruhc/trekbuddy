@@ -7,6 +7,8 @@ import api.location.Location;
 import api.location.QualifiedCoordinates;
 import cz.kruch.track.maps.Map;
 
+import java.util.Vector;
+
 public interface Navigator {
     public boolean isTracking();
 
@@ -14,7 +16,7 @@ public interface Navigator {
     public QualifiedCoordinates getPointer();
 
     public Waypoint getNavigateTo();
-    public void setNavigateTo(Waypoint wpt);
+    public void setNavigateTo(Vector wpts, int fromIndex, int toIndex);
     public int getWptAzimuth();
     public float getWptDistance();
 

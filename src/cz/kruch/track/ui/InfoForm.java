@@ -11,6 +11,7 @@ import javax.microedition.lcdui.StringItem;
 import javax.microedition.lcdui.Command;
 import javax.microedition.lcdui.Displayable;
 import javax.microedition.lcdui.Item;
+import javax.microedition.media.Manager;
 import java.util.TimeZone;
 
 import cz.kruch.track.configuration.Config;
@@ -29,7 +30,7 @@ public final class InfoForm extends Form implements CommandListener/*, Callback*
 */
     }
 
-    public void show(Desktop desktop, LocationException le, Object ps, Map map) {
+    public void show(Desktop desktop, Throwable le, Object ps, Map map) {
         // gc (for memory info to be correct)
         System.gc();
         long totalMemory = Runtime.getRuntime().totalMemory();
@@ -43,13 +44,15 @@ public final class InfoForm extends Form implements CommandListener/*, Callback*
         // items
         append(newItem("Platform", cz.kruch.track.TrackingMIDlet.getPlatform()));
         append(newItem("Memory", Long.toString(totalMemory) + "/" + Long.toString(freeMemory)));
-        append(newItem("ExtraJsr", (api.file.File.fsType == api.file.File.FS_JSR75 ? "75 " : "")
+        append(newItem("ExtraJsr", (api.file.File.fsType == api.file.File.FS_JSR75 || api.file.File.fsType == api.file.File.FS_SXG75 ? "75 " : "")
                                    + (cz.kruch.track.TrackingMIDlet.jsr82 ? "82 " : "")
                                    + (cz.kruch.track.TrackingMIDlet.jsr120 ? "120 " : "")
                                    + (cz.kruch.track.TrackingMIDlet.jsr135 ? "135 " : "")
                                    + (cz.kruch.track.TrackingMIDlet.jsr179 ? "179" : "")));
-        append(newItem("AppFlags", cz.kruch.track.TrackingMIDlet.getFlags()));
-        append(newItem("Fs", "type? " + Integer.toString(api.file.File.fsType) + "; resetable? " + Integer.toString(cz.kruch.track.maps.Map.fileInputStreamResetable) + "; graphics? " + (System.getProperty("fileconn.dir.graphics") == null ? System.getProperty("filconn.dir.graphics") : System.getProperty("fileconn.dir.graphics"))));
+        if (cz.kruch.track.TrackingMIDlet.getFlags() != null) {
+            append(newItem("AppFlags", cz.kruch.track.TrackingMIDlet.getFlags()));
+        }
+        append(newItem("Fs", "type? " + Integer.toString(api.file.File.fsType) + "; resetable? " + Integer.toString(cz.kruch.track.maps.Map.fileInputStreamResetable)));
         append(newItem("Ports", System.getProperty("microedition.commports")));
         append(newItem("TimeZone", TimeZone.getDefault().getID() + "; " + TimeZone.getDefault().useDaylightTime() + "; " + TimeZone.getDefault().getRawOffset()));
         append(newItem("Desktop", "S60 renderer? " + Config.S60renderer + "; hasRepeatEvents? " + desktop.hasRepeatEvents() + "; " + Desktop.screen.getWidth() + "x" + Desktop.screen.getHeight()));
@@ -63,11 +66,21 @@ public final class InfoForm extends Form implements CommandListener/*, Callback*
         cachesItem.setLayout(Item.LAYOUT_NEWLINE_AFTER);
         append(cachesItem);
 */
-        append(new StringItem("ProviderStatus", (ps == null ? "" : ps.toString()) + "; syncs=" + cz.kruch.track.location.StreamReadingLocationProvider.syncs + "; mismatches=" + cz.kruch.track.location.StreamReadingLocationProvider.mismatches));
+        append(new StringItem("ProviderStatus", (ps == null ? "" : ps.toString()) + "; syncs=" + cz.kruch.track.location.StreamReadingLocationProvider.syncs + "; mismatches=" + cz.kruch.track.location.StreamReadingLocationProvider.mismatches + "; checksums=" + cz.kruch.track.location.StreamReadingLocationProvider.checksums));
         append(new StringItem("ProviderError", le == null ? "" : le.toString()));
         if (cz.kruch.track.TrackingMIDlet.supportsVideoCapture()) {
             append(new StringItem("SnapshotEncodings", System.getProperty("video.snapshot.encodings")));
         }
+/*
+        StringBuffer sb = new StringBuffer(64);
+        sb.append("amr=");
+        appendEncodings("audio/amr", sb);
+        sb.append(";mp3(1)=");
+        appendEncodings("audio/mpeg", sb);
+        sb.append(";mp3(2)=");
+        appendEncodings("audio/mp3", sb);
+        append(new StringItem("Audio", sb.toString()));
+*/
 /* OBSOLETE
         if (caches.size() > 0) {
             addCommand(new Command("Caches", Command.SCREEN, 1));
@@ -134,5 +147,12 @@ public final class InfoForm extends Form implements CommandListener/*, Callback*
         StringItem item = new StringItem(label, text);
         item.setLayout(Item.LAYOUT_NEWLINE_AFTER);
         return item;
+    }
+
+    private static StringBuffer appendEncodings(String contentType, StringBuffer sb) {
+        String[] protocolsXWav = Manager.getSupportedProtocols(contentType);
+        for (int i = protocolsXWav.length; --i >= 0; )
+            sb.append(protocolsXWav[i]).append(' ');
+        return sb;
     }
 }

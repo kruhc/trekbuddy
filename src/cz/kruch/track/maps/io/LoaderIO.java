@@ -10,11 +10,11 @@ public final class LoaderIO extends Thread {
 
     private static LoaderIO instance;
 
-    private Runnable task = null;
-    private boolean go = true;
-    private boolean ready = true;
+    private volatile Runnable task;
+    private volatile boolean go;
 
     private LoaderIO() {
+        this.go = true;
     }
 
     public static LoaderIO getInstance() {
@@ -45,14 +45,13 @@ public final class LoaderIO extends Thread {
 
         // enqueu task (wait for previous task to finish)
         synchronized (this) {
-            while (go && !ready) {
+            while (go && task != null) {
                 try {
                     wait();
                 } catch (InterruptedException e) {
                     // ignore
                 }
             }
-            ready = false;
             task = r;
             notify();
         }
@@ -64,8 +63,8 @@ public final class LoaderIO extends Thread {
 //#endif
 
         for (; go ;) {
-            // pop task
-            Runnable r;
+            
+            // wait for task
             synchronized (this) {
                 while (go && task == null) {
                     try {
@@ -74,26 +73,24 @@ public final class LoaderIO extends Thread {
                         // ignore
                     }
                 }
-                r = task;
-                task = null;
             }
 
             // good to go?
             if (!go) break;
 
 //#ifdef __LOG__
-            if (log.isEnabled()) log.debug("popped task: " + r);
+            if (log.isEnabled()) log.debug("popped task: " + task);
 //#endif
 
             try {
                 // run task
-                r.run();
+                task.run();
             } catch (Throwable t) {
                 // ignore
             } finally {
-                // signal ready for next task
+                // signal readiness for next task
                 synchronized (this) {
-                    ready = true;
+                    task = null;
                     notify();
                 }
             }

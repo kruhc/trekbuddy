@@ -34,7 +34,6 @@ public final class Datum {
         new Ellipsoid("Australian National", 6378160, 298.25),
         new Ellipsoid("Bessel 1841 (Namibia)", 6377483.865, 299.1528128),
         new Ellipsoid("Bessel 1841", 6377397.155, 299.1528153513206),
-//        new Ellipsoid("Bessel 1841", 6377397.155, 299.1528128),
         new Ellipsoid("Clarke 1866", 6378206.4, 294.9786982),
         new Ellipsoid("Clarke 1880", 6378249.145, 293.465),
         new Ellipsoid("Everest (1830)", 6377276.345, 300.8017),

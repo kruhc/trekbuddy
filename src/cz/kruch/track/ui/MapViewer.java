@@ -7,6 +7,7 @@ import cz.kruch.track.maps.Slice;
 import cz.kruch.track.maps.Map;
 import cz.kruch.track.util.Mercator;
 import cz.kruch.track.AssertionFailedException;
+import cz.kruch.track.location.Waypoint;
 import cz.kruch.track.configuration.Config;
 import cz.kruch.track.configuration.ConfigurationException;
 
@@ -27,6 +28,11 @@ final class MapViewer {
     private static final int TRAJECTORY_LENGTH = 64;
 */
 
+    public static final byte WPT_STATUS_VOID    = 0;
+    public static final byte WPT_STATUS_REACHED = 1;
+    public static final byte WPT_STATUS_MISSED  = 2;
+    public static final byte WPT_STATUS_CURRENT = 10;
+
     private int x, y;
     private int chx, chy;
     private int chx0, chy0;
@@ -40,7 +46,12 @@ final class MapViewer {
     private Vector slices2; // for reuse during switch
 
     private float course = -1F;
+
     private Position wptPosition;
+    private Position[] routePositions;
+    private byte[] wptStatuses;
+
+    private short star;
 
 /*
     private QualifiedCoordinates[] trajectory;
@@ -50,7 +61,7 @@ final class MapViewer {
 */
 
     private boolean visible = true;
-    private int ci = 0;
+    private int ci, li;
 
     public MapViewer() {
         this.crosshairSize = NavigationScreens.crosshairs.getHeight();
@@ -151,8 +162,8 @@ final class MapViewer {
 
             // restore position on map
             if (isDefaultMap(map)) {
-                int x = Config.x;
-                int y = Config.y;
+                final int x = Config.x;
+                final int y = Config.y;
                 if (x > -1 && y > -1 && x < mWidth && y < mHeight) {
                     setPosition(new Position(x, y));
                 }
@@ -422,8 +433,30 @@ final class MapViewer {
         return dirty;
     }
 
+    public void starTick() {
+        if (routePositions != null || wptPosition != null) {
+            star++;
+        }
+    }
+
+    public void setRoute(Position[] positions, final boolean soft) {
+        this.routePositions = null;
+        this.routePositions = positions;
+        if (!soft) {
+            wptStatuses = null;
+            if (positions != null) {
+                wptStatuses = new byte[positions.length];
+            }
+        }
+    }
+
     public void setWaypoint(Position position) {
-        this.wptPosition = position;
+        wptPosition = null;
+        wptPosition = position;
+    }
+
+    public void setPoiStatus(int idx, byte status) {
+        wptStatuses[idx] = status;
     }
 
     public char boundsHit() {
@@ -517,16 +550,82 @@ final class MapViewer {
             drawTrajectory(graphics);
         }
 */
+        // hack! setup graphics for waypoints
+        final int color = graphics.getColor();
+        graphics.setFont(Desktop.fontWpt);
 
-        // paint waypoint
-        if (wptPosition != null) {
-            int x = wptPosition.getX();
-            int y = wptPosition.getY();
-            if (x > this.x && x < this.x + Desktop.width && y > this.y && y < this.y + Desktop.height) {
-                NavigationScreens.drawWaypoint(graphics, x - this.x, y - this.y,
-                                               Graphics.TOP | Graphics.LEFT);
+        // paint route with navigation or single navigation point
+        if (routePositions != null) {
+
+            // line color and style
+            graphics.setColor(Config.routeLineColor);
+            if (Config.routeLineStyle) {
+                graphics.setStrokeStyle(Graphics.DOTTED);
             }
+
+            // local ref for faster access
+            Position[] positions = routePositions;
+            byte[] statuses = wptStatuses;
+
+            // draw route as dotted line
+            final int x = this.x;
+            final int y = this.y;
+            Position p0 = null;
+            for (int i = positions.length; --i >= 0; ) {
+                if (positions[i] != null) {
+                    Position p1 = positions[i];
+                    if (p0 != null) {
+                        graphics.drawLine(p0.getX() - x, p0.getY() - y,
+                                          p1.getX() - x, p1.getY() - y);
+                    }
+                    p0 = p1;
+                }
+            }
+
+            // restore line style
+            if (Config.routeLineStyle) {
+                graphics.setStrokeStyle(Graphics.SOLID);
+            }
+            graphics.setColor(0x00404040);
+
+            // active wpt index
+            final int wptIdx = Desktop.wptIdx;
+
+            // draw POIs
+            for (int i = positions.length; --i >= 0; ) {
+                if (positions[i] != null) {
+                    byte status = statuses[i];
+                    if (status == WPT_STATUS_VOID) {
+                        if (i < wptIdx) {
+                            status = WPT_STATUS_MISSED;
+                        } else if (i == wptIdx) {
+                            continue; // skip for now
+                        }
+                    }
+                    drawPoi(graphics, positions[i], status, i);
+                }
+            }
+
+            // setup color
+            graphics.setColor(0);
+
+            // draw current wpt last
+            drawPoi(graphics, positions[wptIdx], WPT_STATUS_CURRENT, wptIdx);
+
+        } else if (wptPosition != null) { // single navigation point
+
+            // setup color
+            graphics.setColor(0);
+
+            // draw POI
+            drawPoi(graphics, wptPosition, WPT_STATUS_CURRENT, Desktop.wptIdx);
+
         }
+
+        // hack! restore graphics
+        graphics.setColor(color);
+        graphics.setFont(Desktop.font);
+
 /*
     }
 
@@ -556,6 +655,56 @@ final class MapViewer {
                                         chx + crosshairSize2,
                                         chy + crosshairSize2,
                                         Graphics.TOP | Graphics.LEFT);
+        }
+    }
+
+    private void drawPoi(Graphics graphics, Position position,
+                         final byte status, final int idx) {
+        int x = position.getX() - this.x;
+        int y = position.getY() - this.y;
+
+        // on screen?
+        if (x > 0 && x < Desktop.width && y > 0 && y < Desktop.height) {
+
+            final boolean current = status == WPT_STATUS_CURRENT;
+            final boolean showtext = current || li % 2 > 0;
+
+            // draw point
+            if (current) {
+                NavigationScreens.drawWaypoint(graphics, x, y,
+                                               Graphics.TOP | Graphics.LEFT);
+            } else if (Config.routePoiMarks) {
+                NavigationScreens.drawPOI(graphics, status, x, y,
+                                          Graphics.TOP | Graphics.LEFT);
+            }
+
+            // draw text (either label or comment/description)
+            if (showtext) {
+                Waypoint waypoint = (Waypoint) Desktop.wpts.elementAt(idx);
+                String text;
+                if (li % 4 < 2) {
+                    text = waypoint.getName();
+                } else {
+                    text = waypoint.getComment();
+                    if (text == null) {
+                        text = waypoint.getName();
+                    }
+                }
+                if (text != null) {
+                    final int fh = Desktop.barWpt.getHeight();
+                    final int bwMax = Desktop.barWpt.getWidth();
+                    int bw = Desktop.fontWpt.stringWidth(text) + 2;
+                    if (bw > bwMax) {
+                        bw = bwMax;
+                    }
+                    // TODO S60 renderer path
+                    graphics.drawRegion(Desktop.barWpt, 0, 0, bw, fh,
+                                        Sprite.TRANS_NONE, x + 3, y - fh - 3,
+                                        Graphics.TOP | Graphics.LEFT);
+                    graphics.drawString(text, x + 3 + 1, y - fh - 3 - 1,
+                                        Graphics.TOP | Graphics.LEFT);
+                }
+            }
         }
     }
 
@@ -655,11 +804,21 @@ final class MapViewer {
     }
 */
 
-    public void nextCrosshair() {
-        ci++;
-        if ((ci * crosshairSize) == NavigationScreens.crosshairs.getWidth()) {
-            ci = 0;
+    public int nextCrosshair() {
+        int mask = 0;
+
+        if (star % 2 == 0) {
+            ci++;
+            if ((ci * crosshairSize) == NavigationScreens.crosshairs.getWidth()) {
+                ci = 0;
+            }
+            mask = Desktop.MASK_OSD | (cz.kruch.track.TrackingMIDlet.nokia ? Desktop.MASK_CROSSHAIR : Desktop.MASK_SCREEN);
+        } else {
+            li++;
+            mask = Desktop.MASK_OSD | Desktop.MASK_MAP;
         }
+
+        return mask;
     }
 
     public int[] getClip() {

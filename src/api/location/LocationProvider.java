@@ -13,7 +13,7 @@ public abstract class LocationProvider {
     private String name;
     private boolean tracklog;
     private LocationListener listener;
-    private LocationException exception;
+    private Throwable throwable;
     private Object status;
 
     protected int lastState;
@@ -30,12 +30,12 @@ public abstract class LocationProvider {
         this.listener = listener;
     }
 
-    public synchronized LocationException getException() {
-        return exception;
+    public synchronized Throwable getThrowable() {
+        return throwable;
     }
 
-    protected synchronized void setException(LocationException exception) {
-        this.exception = exception;
+    protected synchronized void setThrowable(Throwable throwable) {
+        this.throwable = throwable;
     }
 
     public boolean isTracklog() {
@@ -64,30 +64,32 @@ public abstract class LocationProvider {
     public abstract void setLocationListener(LocationListener listener,
                                              int interval, int timeout, int maxAge);
 
-    protected synchronized void notifyListener(int newState) {
-        if (listener != null) {
-            try {
-                listener.providerStateChanged(this, newState);
-            } catch (Throwable t) {
-                if (t instanceof LocationException) {
-                    setException((LocationException) t);
-                } else {
-                    setException(new LocationException(t.toString()));
-                }
-            }
-        }
-    }
-
     protected synchronized void notifyListener(Location location) {
         if (listener != null) {
             try {
                listener.locationUpdated(this, location);
             } catch (Throwable t) {
-                if (t instanceof LocationException) {
-                    setException((LocationException) t);
-                } else {
-                    setException(new LocationException(t.toString()));
-                }
+                setThrowable(new IllegalStateException(t.toString()));
+            }
+        }
+    }
+
+    protected synchronized void notifyListener(boolean isRecording) {
+        if (listener != null) {
+            try {
+                listener.tracklogStateChanged(this, isRecording);
+            } catch (Throwable t) {
+                setThrowable(new IllegalStateException(t.toString()));
+            }
+        }
+    }
+
+    protected synchronized void notifyListener(int newState) {
+        if (listener != null) {
+            try {
+                listener.providerStateChanged(this, newState);
+            } catch (Throwable t) {
+                setThrowable(new IllegalStateException(t.toString()));
             }
         }
     }

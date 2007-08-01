@@ -104,10 +104,13 @@ public final class CharArrayTokenizer {
     }
 
     public Token next() {
+        // local ref
         final int end = this.end;
-        char[] array = this.array;
 
         if (position < end) {  /* == hasMoreTokens() */
+            // local refs
+            char[] array = this.array;
+            Token token = this.token;
 
             // clear flag
             token.isDelimiter = false;
@@ -211,6 +214,7 @@ public final class CharArrayTokenizer {
         final int end = offset + length;
         long decSeen = 0;
         float result = 0F; // TODO is this correct initial value
+        int sign = 1;
 
         while (offset < end) {
             char ch = value[offset++];
@@ -231,13 +235,15 @@ public final class CharArrayTokenizer {
                     }
                 } else if (ch == ' ') {
                     // ignore whitespace
-                }  else {
+                }  else if (ch == '-') {
+                    sign = -1;
+                } else {
                     throw new NumberFormatException("Not a digit: " + ch);
                 }
             }
         }
 
-        return result;
+        return result * sign;
     }
 
     public static double parseDouble(CharArrayTokenizer.Token token) {
@@ -319,6 +325,27 @@ public final class CharArrayTokenizer {
             char[] array = this.array;
             final int begin = this.begin;
             int offset = 0;
+
+            while (offset < sl) {
+                char b = array[begin + offset];
+                if (b != s.charAt(offset)) {
+                    return false;
+                }
+                offset++;
+            }
+
+            return true;
+        }
+
+        public boolean endsWith(String s) {
+            final int sl = s.length();
+            if (sl > length) {
+                return false;
+            }
+
+            char[] array = this.array;
+            final int begin = this.begin;
+            int offset = array.length - sl;
 
             while (offset < sl) {
                 char b = array[begin + offset];

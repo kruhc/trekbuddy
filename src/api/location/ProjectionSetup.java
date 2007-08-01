@@ -4,6 +4,14 @@
 package api.location;
 
 public class ProjectionSetup {
+    public static final String PROJ_LATLON      = "Latitude/Longitude";
+    public static final String PROJ_MERCATOR    = "Mercator";
+    public static final String PROJ_TRANSVERSE_MERCATOR = "Transverse Mercator";
+    public static final String PROJ_UTM         = "(UTM) Universal Transverse Mercator";
+    public static final String PROJ_BNG         = "(BNG) British National Grid";
+    public static final String PROJ_SG          = "(SG) Swedish Grid";
+    public static final String PROJ_IG          = "(IG) Irish Grid";
+
     private String name;
 
     public ProjectionSetup(String name) {

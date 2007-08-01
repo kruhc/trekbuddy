@@ -202,11 +202,11 @@ public final class NmeaParser {
 
     private static int parseTime(CharArrayTokenizer.Token token) {
         int tl = CharArrayTokenizer.parseInt(token.array, token.begin, 6/*token.length*/);
-        int hours = /*(int)*/ tl / 10000;
+        final int hours = /*(int)*/ tl / 10000;
         tl -= hours * 10000;
-        int mins = /*(int)*/ tl / 100;
+        final int mins = /*(int)*/ tl / 100;
         tl -= mins * 100;
-        int sec = /*(int)*/ tl;
+        final int sec = /*(int)*/ tl;
 //        int ms = parseInt(token.array, token.begin + 7, 3);
 
         return (3600 * hours + 60 * mins + sec) * 1000/* + ms*/; // in millis
@@ -214,10 +214,10 @@ public final class NmeaParser {
 
     private static long parseDate(CharArrayTokenizer.Token token) {
         char[] _tarray = token.array;
-        int _tbegin = token.begin;
-        int day = 10 * (_tarray[_tbegin/* + 0*/] - '0') + _tarray[_tbegin + 1] - '0';
-        int month = 10 * (_tarray[_tbegin + 2] - '0') + _tarray[_tbegin + 3] - '0';
-        int year = 2000 + 10 * (_tarray[_tbegin + 4] - '0') + _tarray[_tbegin + 5] - '0';
+        final int _tbegin = token.begin;
+        final int day = 10 * (_tarray[_tbegin/* + 0*/] - '0') + _tarray[_tbegin + 1] - '0';
+        final int month = 10 * (_tarray[_tbegin + 2] - '0') + _tarray[_tbegin + 3] - '0';
+        final int year = 2000 + 10 * (_tarray[_tbegin + 4] - '0') + _tarray[_tbegin + 5] - '0';
         if (day != NmeaParser.day || month != NmeaParser.month || year != NmeaParser.year) {
             NmeaParser.day = day;
             NmeaParser.month = month;

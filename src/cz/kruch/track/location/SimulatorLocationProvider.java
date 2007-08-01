@@ -7,6 +7,7 @@ import api.location.LocationProvider;
 import api.location.LocationListener;
 import api.location.LocationException;
 import api.location.Location;
+import api.file.File;
 
 import java.io.InputStream;
 import java.io.IOException;
@@ -27,12 +28,8 @@ public final class SimulatorLocationProvider
 
     private Thread thread;
     private boolean go;
-    private api.file.File file;
+    private File file;
     private int delay;
-
-    private int interval;
-    private int timeout;
-    private int maxAge;
 
     public SimulatorLocationProvider() {
         super(Config.LOCATION_PROVIDER_SIMULATOR);
@@ -42,11 +39,9 @@ public final class SimulatorLocationProvider
         }
     }
 
-    public void setLocationListener(LocationListener locationListener, int interval, int timeout, int maxAge) {
+    public void setLocationListener(LocationListener locationListener,
+                                    int interval, int timeout, int maxAge) {
         setListener(locationListener);
-        this.interval = interval;
-        this.timeout = timeout;
-        this.maxAge = maxAge;
     }
 
     public Object getImpl() {
@@ -82,7 +77,7 @@ public final class SimulatorLocationProvider
 
         if (result != null) {
             go = true;
-            file = (api.file.File) result;
+            file = (File) result;
             thread = new Thread(this);
             thread.start();
         } else {
@@ -116,17 +111,17 @@ public final class SimulatorLocationProvider
                     location = nextLocation(in);
                 } catch (AssertionFailedException e) {
                     Desktop.showError(e.getMessage(), null, null);
-                } catch (Exception e) {
+                } catch (Throwable t) {
 //#ifdef __LOG__
-                    if (log.isEnabled()) log.warn("Failed to get location.", e);
+                    if (log.isEnabled()) log.warn("Failed to get location.", t);
 //#endif
 
                     // record exception
-                    if (e instanceof InterruptedException) {
+                    if (t instanceof InterruptedException) {
                         // probably stop request
                     } else {
-                        // record exception
-                        setException(e instanceof LocationException ? (LocationException) e : new LocationException(e));
+                        // record
+                        setThrowable(t);
                     }
 
                     // ignore
@@ -165,15 +160,16 @@ public final class SimulatorLocationProvider
                 try {
                     Thread.sleep(delay);
                 } catch (InterruptedException e) {
+                    // ignore
                 }
             }
 
-        } catch (Exception e) {
-            if (e instanceof InterruptedException) {
+        } catch (Throwable t) {
+            if (t instanceof InterruptedException) {
                 // stop request
-            } else {
-                // record exception
-                setException(e instanceof LocationException ? (LocationException) e : new LocationException(e));
+            }  else {
+                // record
+                setThrowable(t);
             }
         } finally {
             // close the stream
@@ -181,6 +177,7 @@ public final class SimulatorLocationProvider
                 try {
                     in.close();
                 } catch (IOException e) {
+                    // ignore
                 }
             }
 
@@ -188,7 +185,9 @@ public final class SimulatorLocationProvider
             try {
                 file.close();
             } catch (IOException e) {
+                // ignore
             }
+            file = null; // gc hint
 
             // notify
             notifyListener(LocationProvider.OUT_OF_SERVICE);

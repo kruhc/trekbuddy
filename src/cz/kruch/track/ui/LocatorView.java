@@ -6,7 +6,6 @@ package cz.kruch.track.ui;
 import api.location.QualifiedCoordinates;
 import api.location.Location;
 
-import cz.kruch.track.util.Arrays;
 import cz.kruch.track.configuration.Config;
 import cz.kruch.track.location.Navigator;
 import cz.kruch.track.location.Waypoint;
@@ -26,29 +25,33 @@ final class LocatorView extends View {
     public static final int[] RANGES = {
         1000, 500, 250, 100, 50, 25, 10, 5
     };
-    public static final String[] RANGES_STR = {
-        "1000 m", "500 m", "250 m", "100 m", "50 m", "25 m", "10 m", "5 m"
+    public static final char[][] RANGES_STR = {
+        { '1', '0', '0', '0', ' ', 'm' },
+        { '5', '0', '0', ' ', 'm' },
+        { '2', '5', '0', ' ', 'm' },
+        { '1', '0', '0', ' ', 'm' },
+        { '5', '0', ' ', 'm' },
+        { '2', '5', ' ', 'm' },
+        { '1', '0', ' ', 'm' },
+        { '5', ' ', 'm' }
     };
 
     private static final int COLOR_RANGE        = 0x00808080;
     private static final int COLOR_NO_POSITION  = 0x00FF0000;
     private static final int COLOR_MIDST        = 0x00E0E000;
-    private static final int COLOR_SHORTT       = 0x0000ff00;
-    private static final int COLOR_LONGT        = 0x0000ffff;
+    private static final int COLOR_AVGT         = 0x0000ff00;
+    private static final int COLOR_NONAVGT      = 0x0000ffff;
 
-    private static final int SHORT_HISTORY_DEPTH = 20;
-    private static final int LONG_HISTORY_DEPTH =  40;
+    private static final int HISTORY_DEPTH = 20;
 
-    private final Location[][] locations;
-    private final int[] count;
-    private final int[] positions;
+    private final Location[] locations;
+    private int count;
+    private int position;
 
     private final QualifiedCoordinates[] coordinatesAvg;
-    private final float[] accuracyAvg;
-    private final int[] satAvg;
+//    private final int[] satAvg;
     private final int[] rangeIdx;
 
-    private short phase;
     private int term;
 
     private int dx, dy;
@@ -66,17 +69,12 @@ final class LocatorView extends View {
 
     public LocatorView(Navigator navigator) {
         super(navigator);
-        this.locations = new Location[2][];
-        this.locations[0] = new Location[SHORT_HISTORY_DEPTH];
-        this.locations[1] = new Location[LONG_HISTORY_DEPTH];
+        this.locations = new Location[HISTORY_DEPTH];
         this.coordinatesAvg = new QualifiedCoordinates[2];
-        this.count = new int[2];
-        this.positions = new int[2];
-        this.accuracyAvg = new float[2];
-        this.satAvg = new int[2];
-        this.rangeIdx = new int[]{ 3, 2 };
+//        this.satAvg = new int[2];
+        this.rangeIdx = new int[]{ 2, 2 };
         this.navigationStrWidth = Math.max(Desktop.font.charsWidth(MSG_NO_WAYPOINT, 0, MSG_NO_WAYPOINT.length),
-                                           Desktop.font.stringWidth("99.999 M"));
+                                           Desktop.font.stringWidth("9.999 M"));
         this.sb = new StringBuffer(32);
         this.sbChars = new char[32];
         this.center = new int[2];
@@ -93,15 +91,16 @@ final class LocatorView extends View {
         this.center[1] = h >> 1;
     }
 
-    public int reset() {
-        Arrays.clear(locations[0]);
-        Arrays.clear(locations[1]);
-        count[0] = count[1] = 0;
-        positions[0] = positions[1] = 0;
-        accuracyAvg[0] = accuracyAvg[1] = -1F;
+    public void reset() {
+        final Location[] array = locations;
+        for (int i = array.length; --i >= 0; ) {
+            if (array[i] != null) {
+                Location.releaseInstance(array[i]);
+                array[i] = null; // gc hint
+            }
+        }
+        count = position = 0;
         lastCourse = -1F;
-
-        return super.reset();
     }
 
     public int locationUpdated(Location l) {
@@ -109,8 +108,8 @@ final class LocatorView extends View {
             return Desktop.MASK_NONE;
         }
         
-        // update short-term array
-        append(0, l);
+        // update array
+        append(l);
 
         // recalc
         recalc();
@@ -143,84 +142,64 @@ final class LocatorView extends View {
         return Desktop.MASK_ALL;
     }
 
-    private void append(final int term, Location l) {
-        final Location[] array = locations[term];
-        int position = positions[term];
+    private void append(Location l) {
+        final Location[] array = locations;
+        int position = this.position;
 
         if (++position == array.length) {
             position = 0;
         }
         if (array[position] != null) {
-            QualifiedCoordinates.releaseInstance(array[position].getQualifiedCoordinates());
             Location.releaseInstance(array[position]);
             array[position] = null; // gc hint
         }
         array[position] = l.clone();
-
-        positions[term] = position;
+        this.position = position;
     }
 
     private void recalc() {
-        // compute short-term avg
-        int c = compute(0);
-
-        // is we have some data, compute long-term avg
-        if (c > 0) {
-            // if we are in right phase... what the fuck is this?!?
-            if ((phase++ % 5) == 0) {
-                // create long-term avg location (some values are irrelevant)
-                Location l = Location.newInstance(coordinatesAvg[0].clone(),
-                                                  -1, -1, -1,
-                                                  accuracyAvg[0]);
-
-                // update long-term array
-                append(1, l);
-
-                // compute long-term avg
-                c = compute(1);
-            }
-        }
-    }
-
-    private int compute(final int term) {
-        double latAvg = 0D, lonAvg = 0D;
-        float accuracySum = 0F, wSum = 0F;
-        int c = 0, satSum = 0;
-
         // local ref for faster access
-        final Location[] array = locations[term];
-        final QualifiedCoordinates[] qcAvg = coordinatesAvg;
+        final Location[] array = locations;
 
-        // calculate avg lat/lon and accuracy
+        // calc avg-mode values
+        double latAvg = 0D, lonAvg = 0D;
+        float accuracySum = 0F, wSum = 0F/*, altAvg = 0F*/;
+        int c = 0/*, satSum = 0*/;
+
+        // calculate avg qcoordinates
         for (int i = array.length; --i >= 0; ) {
             Location l = array[i];
             if (l != null) {
-                final float accuracy = l.getAccuracy();
+                QualifiedCoordinates qc = l.getQualifiedCoordinates();
+                final float accuracy = qc.getAccuracy();
                 final float w = 5F / accuracy;
                 accuracySum += accuracy;
-                satSum += l.getSat();
-                QualifiedCoordinates qc = l.getQualifiedCoordinates();
+//                satSum += l.getSat();
                 latAvg += qc.getLat() * w;
                 lonAvg += qc.getLon() * w;
+//                altAvg += qc.getAlt();
                 wSum += w;
                 c++;
             }
         }
-
-        // calculate avg coordinates
         if (c > 0) {
             latAvg /= wSum;
             lonAvg /= wSum;
-            QualifiedCoordinates.releaseInstance(qcAvg[term]);
-            qcAvg[term] = null; // gc hint
-            qcAvg[term] = QualifiedCoordinates.newInstance(latAvg, lonAvg, -1F);
-            qcAvg[term].setHp(true);
-            accuracyAvg[term] = accuracySum / c;
-            satAvg[term] = satSum / c;
-            count[term] = c;
+//            altAvg /= c;
+            QualifiedCoordinates.releaseInstance(coordinatesAvg[0]);
+            coordinatesAvg[0] = null; // gc hint
+            coordinatesAvg[0] = QualifiedCoordinates.newInstance(latAvg, lonAvg/*, altAvg*/);
+            coordinatesAvg[0].setAccuracy(accuracySum / c);
+//            satAvg[term] = satSum / c;
         }
 
-        return c;
+        // set non-avg qcoordinates - it is last position
+        QualifiedCoordinates.releaseInstance(coordinatesAvg[1]);
+        coordinatesAvg[1] = null; // gc hint
+        coordinatesAvg[1] = locations[position].getQualifiedCoordinates().clone();
+
+        // remember number of valid position in array
+        count = c;
     }
 
     private boolean transform(final int[] center, final float course, final int[] result) {
@@ -333,13 +312,14 @@ final class LocatorView extends View {
         } else {
             bgColor = 0x00000000;
             fgColor = 0x00ffffff;
-            wptColor = 0x00e0e00b/*0x00e0e00*/;
+            wptColor = 0x00e0e00b;
         }
 
         // clear
         graphics.setFont(font);
         graphics.setColor(bgColor);
         graphics.fillRect(0,0, w, h);
+        graphics.setStrokeStyle(Graphics.SOLID);
 
         // draw crosshair
         graphics.setColor(0x00404040);
@@ -380,10 +360,10 @@ final class LocatorView extends View {
         Waypoint wpt = navigator.getNavigateTo();
 
         // draw points
-        if (count[term] > 0) {
+        if (count/*[term]*/ > 0) {
 
             // local refs
-            final Location[] locations = this.locations[term];
+            final Location[] locations = this.locations;
             final QualifiedCoordinates coordsAvg = this.coordinatesAvg[term];
             final double latAvg = coordsAvg.getLat();
             final double lonAvg = coordsAvg.getLon();
@@ -400,10 +380,10 @@ final class LocatorView extends View {
             int cstep = inc;
             cstep <<= 8;
             if (term > 0) cstep += inc;
-            int color = (term == 0 ? COLOR_SHORTT : COLOR_LONGT) - count[term] * cstep;
+            int color = (term == 0 ? COLOR_AVGT : COLOR_NONAVGT) - count * cstep;
 
             // draw points
-            int offset = this.positions[term] + 1;
+            int offset = this.position + 1; // to start from the oldest
             if (offset == locations.length) {
                 offset = 0;
             }
@@ -413,7 +393,7 @@ final class LocatorView extends View {
                     offset = 0;
                 }
                 if (l != null) {
-                    // create vertex
+                    // set vertex
                     QualifiedCoordinates qc = l.getQualifiedCoordinates();
                     xy[0] = wHalf + (int) ((qc.getLon() - lonAvg) * xScale);
                     xy[1] = hHalf - (int) ((qc.getLat() - latAvg) * yScale);
@@ -457,9 +437,9 @@ final class LocatorView extends View {
             // draw hdop
             sb.delete(0, sb.length());
             sb.append(NavigationScreens.PLUSMINUS);
-            float accuracy = accuracyAvg[term];
+            float accuracy = coordsAvg.getAccuracy();
             if (accuracy >= 10F) {
-                sb.append((int) accuracy);
+                NavigationScreens.append(sb, (int) accuracy);
             } else {
                 NavigationScreens.append(sb, accuracy, 1);
             }
@@ -469,6 +449,7 @@ final class LocatorView extends View {
             graphics.drawChars(sbChars, 0, l, OSD.BORDER, fh, 0);
 
             // draw sat
+/* makes little sense
             if (satAvg[term] > 0) {
                 // same position as in OSD
                 graphics.drawString(NavigationScreens.nStr[satAvg[term]],
@@ -476,6 +457,7 @@ final class LocatorView extends View {
                                     osd.gy + osd.bh,
                                     Graphics.LEFT | Graphics.TOP);
             }
+*/
 
             // draw central point
             graphics.setColor(COLOR_MIDST);
@@ -518,15 +500,17 @@ final class LocatorView extends View {
 
                 // construct distance string
                 sb.delete(0, sb.length());
-                if (Config.nauticalView) {
+                if (Config.unitsNautical) {
                     NavigationScreens.append(sb, distance / 1852F, 0).append(Desktop.DIST_STR_NMI);
+                } else if (Config.unitsImperial) {
+                    NavigationScreens.append(sb, distance / 1609F, 0).append(Desktop.DIST_STR_NMI);
                 } else {
                     if (distance >= 10000F) { // dist > 10 km
                         NavigationScreens.append(sb, distance / 1000F, 1).append(Desktop.DIST_STR_KM);
                     } else if (distance < 5F) {
                         NavigationScreens.append(sb, distance, 1).append(Desktop.DIST_STR_M);
                     } else {
-                        sb.append((int) distance).append(Desktop.DIST_STR_M);
+                        NavigationScreens.append(sb, (int) distance).append(Desktop.DIST_STR_M);
                     }
                 }
                 l = sb.length();
@@ -539,12 +523,12 @@ final class LocatorView extends View {
 
                 // true or relative wpt-azi?
                 if (!Config.hpsWptTrueAzimuth) {
-                    bearing = arrowa;
+                    bearing = arrowa % 360;
                 }
                 
                 // draw azimuth
                 sb.delete(0, sb.length());
-                sb.append((int) bearing).append(' ').append(NavigationScreens.SIGN);
+                NavigationScreens.append(sb, (int) bearing).append(' ').append(NavigationScreens.SIGN);
                 l = sb.length();
                 sb.getChars(0, l, sbChars, 0);
                 graphics.drawChars(sbChars, 0, l,
@@ -577,9 +561,8 @@ final class LocatorView extends View {
         graphics.drawLine(dx, h - 3, dx, h - 1);
         graphics.drawLine(dx, h - 2, wHalf, h - 2);
         graphics.drawLine(wHalf, h - 3, wHalf, h - 1);
-        graphics.drawString(RANGES_STR[rangeIdx],
-                            dx + 3, h - fh - 5,
-                            Graphics.LEFT | Graphics.TOP);
+        graphics.drawChars(RANGES_STR[rangeIdx], 0, RANGES_STR[rangeIdx].length,
+                           dx + 3, h - fh - 5, Graphics.LEFT | Graphics.TOP);
 
         // flush
         flushGraphics();

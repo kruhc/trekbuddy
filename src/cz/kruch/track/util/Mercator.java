@@ -3,40 +3,33 @@ package cz.kruch.track.util;
 import api.location.QualifiedCoordinates;
 import api.location.Datum;
 import api.location.GeodeticPosition;
+import api.location.ProjectionSetup;
 
 import java.util.Vector;
-import java.util.Enumeration;
 
 public final class Mercator {
 
-    public static final String PROJ_LATLON      = "Latitude/Longitude";
-    public static final String PROJ_MERCATOR    = "Mercator";
-    public static final String PROJ_TRANSVERSE_MERCATOR = "Transverse Mercator";
-    public static final String PROJ_GMERCATOR   = "(G) Mercator";
-    public static final String PROJ_UTM         = "(UTM) Universal Transverse Mercator";
-    public static final String PROJ_BNG         = "(BNG) British National Grid";
-    public static final String PROJ_SG          = "(SG) Swedish Grid";
-
-    public static final class UTMCoordinates implements GeodeticPosition {
-        public String zone;
+    public static final class Coordinates implements GeodeticPosition {
         public double easting, northing;
+        public char[] zone;
 
         /*
          * POOL
          */
 
-        private static final UTMCoordinates[] pool = new UTMCoordinates[8];
+        private static final Coordinates[] pool = new Coordinates[8];
         private static int countFree;
 
-        public synchronized static UTMCoordinates newInstance(String zone,
-                                                              double easting,
-                                                              double northing) {
-            UTMCoordinates result;
+        public synchronized static Coordinates newInstance(char[] zone,
+                                                           final double easting,
+                                                           final double northing) {
+            Coordinates result;
 
             if (countFree == 0) {
-                result = new UTMCoordinates(zone, easting, northing);
+                result = new Coordinates(zone, easting, northing);
             } else {
                 result = pool[--countFree];
+                pool[countFree] = null;
                 result.zone = zone;
                 result.easting = easting;
                 result.northing = northing;
@@ -45,7 +38,7 @@ public final class Mercator {
             return result;
         }
 
-        public synchronized static void releaseInstance(UTMCoordinates utm) {
+        public synchronized static void releaseInstance(Coordinates utm) {
             if (countFree < pool.length) {
                 pool[countFree++] = utm;
             }
@@ -55,7 +48,7 @@ public final class Mercator {
          * ~POOL
          */
 
-        private UTMCoordinates(String zone, double easting, double northing) {
+        private Coordinates(char[] zone, final double easting, final double northing) {
             this.zone = zone;
             this.easting = easting;
             this.northing = northing;
@@ -71,23 +64,30 @@ public final class Mercator {
 
 //#ifdef __LOG__
         public String toString() {
-            return zone + " " + easting + " " + northing;
+            return (new String(zone) + " " + easting + " " + northing);
         }
 //#endif
     }
 
     public static final class ProjectionSetup extends api.location.ProjectionSetup {
-        public String zone;
         public double lonOrigin, latOrigin;
         public double k0;
         public double falseEasting, falseNorthing;
+        public short zoneNumber;
+        public char zoneLetter;
+        public char[] zone;
 
-        public ProjectionSetup(String name, String zone,
-                               double lonOrigin, double latOrigin,
-                               double k0,
-                               double falseEasting, double falseNorthing) {
+        public ProjectionSetup(String name,
+                               final int zoneNumber, final char zoneLetter,
+                               final double lonOrigin, final double latOrigin,
+                               final double k0,
+                               final double falseEasting, final double falseNorthing) {
             super(name);
-            this.zone = zone;
+            this.zoneNumber = (short) zoneNumber;
+            this.zoneLetter = zoneLetter;
+            if ("UTM".equals(name)) {
+                this.zone = (new StringBuffer().append(zoneNumber).append(zoneLetter)).toString().toCharArray();
+            }
             this.lonOrigin = lonOrigin;
             this.latOrigin = latOrigin;
             this.k0 = k0;
@@ -95,13 +95,21 @@ public final class Mercator {
             this.falseNorthing = falseNorthing;
         }
 
+        // TODO optimize
         public String toString() {
 /*
             if (PROJ_GMERCATOR.equals(getName())) {
                 return super.toString();
             }
 */
-            return (new StringBuffer(32)).append(getName()).append('{').append(zone).append(',').append(lonOrigin).append(',').append(latOrigin).append(',').append(k0).append(',').append(falseEasting).append(',').append(falseNorthing).append('}').toString();
+            StringBuffer sb = new StringBuffer(32);
+            sb.append(getName()).append('{');
+            if (zone != null) {
+                sb.append(zone).append(',');
+            }
+            sb.append(lonOrigin).append(',').append(latOrigin).append(',').append(k0).append(',').append(falseEasting).append(',').append(falseNorthing).append('}');
+
+            return sb.toString();
         }
     }
 
@@ -122,7 +130,7 @@ public final class Mercator {
 */
 
     public static boolean isGrid() {
-        return contextProjection != null && !PROJ_MERCATOR.equals(contextProjection.getName());
+        return contextProjection != null && !api.location.ProjectionSetup.PROJ_MERCATOR.equals(contextProjection.getName());
     }
 
     /*
@@ -132,8 +140,8 @@ public final class Mercator {
     private static ProjectionSetup cachedUtmSetup = null;
 
     public static ProjectionSetup getUTMSetup(QualifiedCoordinates qc) {
-        double lon = qc.getLon();
-        double lat = qc.getLat();
+        final double lon = qc.getLon();
+        final double lat = qc.getLat();
 
         int zoneNumber = (int) ((lon + 180) / 6) + 1;
         if (lat >= 56D && lat < 64D && lon >= 3D && lon < 12D) {
@@ -145,37 +153,29 @@ public final class Mercator {
             else if (lon >= 21D && lon < 33D) zoneNumber = 35;
             else if (lon >= 33D && lon < 42D) zoneNumber = 37;
         }
-        String zone = Integer.toString(zoneNumber) + UTMLetterDesignator(lat);
+        char zoneLetter = UTMLetterDesignator(lat);
         double lonOrigin = (zoneNumber - 1) * 6 - 180 + 3; // +3 puts origin in middle of zone
         double falseNorthing = lat < 0D ? 10000000D : 0D;
 
         if (cachedUtmSetup != null) {
             if (cachedUtmSetup.lonOrigin == lonOrigin
                 && cachedUtmSetup.falseNorthing == falseNorthing
-                && cachedUtmSetup.zone.equals(zone)) {
+                && cachedUtmSetup.zoneNumber == zoneNumber
+                && cachedUtmSetup.zoneLetter == zoneLetter) {
                 return cachedUtmSetup;
             } else {
                 cachedUtmSetup = null;
             }
         }
 
-        cachedUtmSetup = new ProjectionSetup("UTM", zone, lonOrigin, 0D,
+        cachedUtmSetup = new ProjectionSetup("UTM", zoneNumber, zoneLetter,
+                                             lonOrigin, 0D,
                                              0.9996, 500000D, falseNorthing);
 
         return cachedUtmSetup;
     }
 
-/*
-    private static ProjectionSetup getUTMSetup(UTMCoordinates utm) {
-        double lonOrigin = (Integer.parseInt(utm.zone.substring(0, utm.zone.length() - 1)) - 1) * 6 - 180 + 3; // +3 puts origin in middle of zone
-        double falseNorthing = utm.zone.charAt(utm.zone.length() - 1) < 'N' ? 10000000D : 0D;
-
-        return new ProjectionSetup(utm.zone, lonOrigin, 0D,
-                                   0.9996, 500000D, falseNorthing);
-    }
-*/
-
-    public static ProjectionSetup getMSetup(Vector ll) {
+    public static ProjectionSetup getMercatorSetup(Vector ll) {
         double lmin = Double.MAX_VALUE;
         double lmax = Double.MIN_VALUE;
 
@@ -189,12 +189,8 @@ public final class Mercator {
             }
         }
 
-        return new ProjectionSetup(PROJ_MERCATOR, null, (lmin + lmax) / 2, 0D,
+        return new ProjectionSetup(api.location.ProjectionSetup.PROJ_MERCATOR, -1, 'Z', (lmin + lmax) / 2, 0D,
                                    1D, 0D, 0D);
-    }
-
-    public static ProjectionSetup getGoogleSetup() {
-        return new ProjectionSetup(PROJ_MERCATOR, null, 0D, 0D, 1D, 0D, 0D);
     }
 
 /*
@@ -232,57 +228,88 @@ public final class Mercator {
      * Conversions.
      */
 
-    public static UTMCoordinates LLtoUTM(QualifiedCoordinates qc) {
+    public static Coordinates LLtoUTM(QualifiedCoordinates qc) {
         return LLtoMercator(qc, Datum.DATUM_WGS_84.getEllipsoid(), getUTMSetup(qc));
     }
 
-    public static UTMCoordinates LLtoGrid(QualifiedCoordinates qc) {
-        UTMCoordinates utm = LLtoMercator(qc, contextDatum.getEllipsoid(), contextProjection);
+    public static Coordinates LLtoGrid(QualifiedCoordinates qc) {
+        Coordinates utm = LLtoMercator(qc, contextDatum.getEllipsoid(), contextProjection);
 
-        // convert to grid coordinates
-        if (PROJ_BNG.equals(contextProjection.getName())) {
-            char[] zone = new char[2];
+        /*
+         * handle specific grids
+         */
+
+        if (api.location.ProjectionSetup.PROJ_BNG.equals(contextProjection.getName())) {
+            if (utm.zone == null || utm.zone.length != 2) {
+                utm.zone = new char[2];
+            }
             utm.easting = QualifiedCoordinates.round(utm.easting);
             utm.northing = QualifiedCoordinates.round(utm.northing);
-            int ek = (int) (utm.easting / 500000);
-            int nk = (int) (utm.northing / 500000);
+            final int ek = (int) (utm.easting / 500000);
+            final int nk = (int) (utm.northing / 500000);
             if (ek > 0) {
                 if (nk > 0) {
-                    zone[0] = 'O';
+                    utm.zone[0] = 'O';
                 } else {
-                    zone[0] = 'T';
+                    utm.zone[0] = 'T';
                 }
             } else {
                 if (nk > 1) {
-                    zone[0] = 'H';
+                    utm.zone[0] = 'H';
                 } else if (nk > 0) {
-                    zone[0] = 'N';
+                    utm.zone[0] = 'N';
                 } else {
-                    zone[0] = 'S';
+                    utm.zone[0] = 'S';
                 }
             }
-            int row = (int) (utm.northing - nk * 500000) / 100000;
-            double column = (int) (utm.easting - ek * 500000) / 100000;
+            final int row = (int) (utm.northing - nk * 500000) / 100000;
+            final double column = (int) (utm.easting - ek * 500000) / 100000;
             int i = (int) ((4 - row) * 5 + column);
             if (i > ('H' - 'A')) { // skip 'I'
                 i++;
             }
-            zone[1] = (char) ('A' + i);
-            utm.zone = new String(zone);
+            utm.zone[1] = (char) ('A' + i);
             utm.easting -= (int) (utm.easting / grade(utm.easting)) * grade(utm.easting);
             utm.northing -= (int) (utm.northing / grade(utm.northing)) * grade(utm.northing);
+        } else if (api.location.ProjectionSetup.PROJ_IG.equals(contextProjection.getName())) {
+            if (utm.zone == null || utm.zone.length != 1) {
+                utm.zone = new char[1];
+            }
+            utm.easting = QualifiedCoordinates.round(utm.easting);
+            utm.northing = QualifiedCoordinates.round(utm.northing);
+            final int ek = (int) (utm.easting / 100000);
+            final int nk = (int) (utm.northing / 100000);
+            switch (nk) {
+                case 0:
+                    utm.zone[0] = (char) ((byte) 'V' + ek);
+                    break;
+                case 1:
+                    utm.zone[0] = (char) ((byte) 'Q' + ek);
+                    break;
+                case 2:
+                    utm.zone[0] = (char) ((byte) 'L' + ek);
+                    break;
+                case 3:
+                    utm.zone[0] = (char) ((byte) 'F' + ek);
+                    break;
+                case 4:
+                    utm.zone[0] = (char) ((byte) 'A' + ek);
+                    break;
+            }
+            utm.easting -= ek * 100000;
+            utm.northing -= nk * 100000;
         }
 
         return utm;
     }
 
-    public static UTMCoordinates LLtoMercator(QualifiedCoordinates qc,
+    public static Coordinates LLtoMercator(QualifiedCoordinates qc,
                                               Datum.Ellipsoid ellipsoid,
                                               ProjectionSetup setup) {
         double a = ellipsoid.getEquatorialRadius();
         double eccSquared = ellipsoid.getEccentricitySquared();
 
-        if (PROJ_MERCATOR.equals(setup.getName())) {  // Mercator (1SP)
+        if (api.location.ProjectionSetup.PROJ_MERCATOR.equals(setup.getName())) {  // Mercator (1SP)
 
             double e = Math.sqrt(eccSquared);
             double latRad = Math.toRadians(qc.getLat());
@@ -291,13 +318,13 @@ public final class Mercator {
             double easting = setup.falseEasting + a * setup.k0
                              * (Math.toRadians(qc.getLon() - setup.lonOrigin));
             double northing = setup.falseNorthing + (a * setup.k0) / 2
-                              * ExtraMath.ln(((1 + sinPhi) / (1 - sinPhi))* ExtraMath.pow((1 - e * sinPhi) / (1 + e * sinPhi), e));
+                              * ln(((1 + sinPhi) / (1 - sinPhi))* pow((1 - e * sinPhi) / (1 + e * sinPhi), e));
 /* simplified Google
             double northing = setup.falseNorthing + (a * setup.k0) / 2
                               * ExtraMath.ln(((1 + sinPhi) / (1 - sinPhi)));
 */
 
-            return UTMCoordinates.newInstance(null, easting, northing);
+            return Coordinates.newInstance(setup.zone, easting, northing);
 
         } else { // Transverse Mercator
 
@@ -335,21 +362,21 @@ public final class Mercator {
             double northing = setup.falseNorthing + setup.k0 * (M - Mo + N * temp_tanLatRad * (A * A / 2 + ((5 - T + 9 * C + 4 * C * C) * A * A * A * A / 24)
                                   + ((61 - 58 * T + T * T + 600 * C - 330 * eccPrimeSquared) * A * A * A * A * A * A / 720)));
 
-            return UTMCoordinates.newInstance(setup.zone, easting, northing);
+            return Coordinates.newInstance(setup.zone, easting, northing);
         }
     }
 
-    public static QualifiedCoordinates MercatortoLL(UTMCoordinates utm,
+    public static QualifiedCoordinates MercatortoLL(Coordinates utm,
                                               Datum.Ellipsoid ellipsoid,
                                               ProjectionSetup setup) {
         double a = ellipsoid.getEquatorialRadius();
         double eccSquared = ellipsoid.getEccentricitySquared();
 
-        if (PROJ_MERCATOR.equals(setup.getName())) {  // Mercator
+        if (api.location.ProjectionSetup.PROJ_MERCATOR.equals(setup.getName())) {  // Mercator
 
             double eccSquared6 = eccSquared * eccSquared * eccSquared;
             double eccSquared8 = eccSquared * eccSquared * eccSquared * eccSquared;
-            double t = ExtraMath.pow(Math.E, (setup.falseNorthing - utm.northing) / (a * setup.k0));
+            double t = pow(Math.E, (setup.falseNorthing - utm.northing) / (a * setup.k0));
             double chi = Math.PI / 2 - 2 * public_domain.Xedarius.atan(t);
 
             double lat, lon;
@@ -424,40 +451,146 @@ public final class Mercator {
         }
     }
 
-    private static char UTMLetterDesignator(double lat) {
-        char etterDesignator;
+    private static char UTMLetterDesignator(final double lat) {
+        char letterDesignator;
 
-        if ((84D >= lat) && (lat >= 72D)) etterDesignator = 'X';
-        else if ((72D > lat) && (lat >= 64D)) etterDesignator = 'W';
-        else if ((64D > lat) && (lat >= 56D)) etterDesignator = 'V';
-        else if ((56D > lat) && (lat >= 48D)) etterDesignator = 'U';
-        else if ((48D > lat) && (lat >= 40D)) etterDesignator = 'T';
-        else if ((40D > lat) && (lat >= 32D)) etterDesignator = 'S';
-        else if ((32D > lat) && (lat >= 24D)) etterDesignator = 'R';
-        else if ((24D > lat) && (lat >= 16D)) etterDesignator = 'Q';
-        else if ((16D > lat) && (lat >= 8D)) etterDesignator = 'P';
-        else if ((8D > lat) && (lat >= 0D)) etterDesignator = 'N';
-        else if ((0D > lat) && (lat >= -8D)) etterDesignator = 'M';
-        else if ((-8D > lat) && (lat >= -16D)) etterDesignator = 'L';
-        else if ((-16D > lat) && (lat >= -24D)) etterDesignator = 'K';
-        else if ((-24D > lat) && (lat >= -32D)) etterDesignator = 'J';
-        else if ((-32D > lat) && (lat >= -40D)) etterDesignator = 'H';
-        else if ((-40D > lat) && (lat >= -48D)) etterDesignator = 'G';
-        else if ((-48D > lat) && (lat >= -56D)) etterDesignator = 'F';
-        else if ((-56D > lat) && (lat >= -64D)) etterDesignator = 'E';
-        else if ((-64D > lat) && (lat >= -72D)) etterDesignator = 'D';
-        else if ((-72D > lat) && (lat >= -80D)) etterDesignator = 'C';
-        else etterDesignator = 'Z'; // error flag to show that the latitude is outside the UTM limits
+        if ((84D >= lat) && (lat >= 72D)) letterDesignator = 'X';
+        else if ((72D > lat) && (lat >= 64D)) letterDesignator = 'W';
+        else if ((64D > lat) && (lat >= 56D)) letterDesignator = 'V';
+        else if ((56D > lat) && (lat >= 48D)) letterDesignator = 'U';
+        else if ((48D > lat) && (lat >= 40D)) letterDesignator = 'T';
+        else if ((40D > lat) && (lat >= 32D)) letterDesignator = 'S';
+        else if ((32D > lat) && (lat >= 24D)) letterDesignator = 'R';
+        else if ((24D > lat) && (lat >= 16D)) letterDesignator = 'Q';
+        else if ((16D > lat) && (lat >= 8D)) letterDesignator = 'P';
+        else if ((8D > lat) && (lat >= 0D)) letterDesignator = 'N';
+        else if ((0D > lat) && (lat >= -8D)) letterDesignator = 'M';
+        else if ((-8D > lat) && (lat >= -16D)) letterDesignator = 'L';
+        else if ((-16D > lat) && (lat >= -24D)) letterDesignator = 'K';
+        else if ((-24D > lat) && (lat >= -32D)) letterDesignator = 'J';
+        else if ((-32D > lat) && (lat >= -40D)) letterDesignator = 'H';
+        else if ((-40D > lat) && (lat >= -48D)) letterDesignator = 'G';
+        else if ((-48D > lat) && (lat >= -56D)) letterDesignator = 'F';
+        else if ((-56D > lat) && (lat >= -64D)) letterDesignator = 'E';
+        else if ((-64D > lat) && (lat >= -72D)) letterDesignator = 'D';
+        else if ((-72D > lat) && (lat >= -80D)) letterDesignator = 'C';
+        else letterDesignator = 'Z'; // error flag to show that the latitude is outside the UTM limits
 
-        return etterDesignator;
+        return letterDesignator;
     }
 
-    public static int grade(double d) {
+    public static int grade(final double d) {
         int i = 1;
-        while ((d / i) > 10) {
+        while ((d / i) >= 10) {
             i *= 10;
         }
 
         return i;
+    }
+
+    private static final double[] EXTRA_MATH_N = {
+            2,
+            1.1,
+            1.01,
+            1.001,
+            1.0001,
+            1.00001,
+            1.000001,
+            1.0000001,
+            1.00000001,
+            1.000000001,
+            1.0000000001,
+            1.00000000001,
+            1.000000000001,
+            1.0000000000001
+    };
+    private static final double[] EXTRA_MATH_LN = {
+            0.69314718055994531941723212145818,
+            0.095310179804324860043952123280765,
+            0.0099503308531680828482153575442607,
+            9.9950033308353316680939892053501e-4,
+            9.9995000333308335333166680951131e-5,
+            9.9999500003333308333533331666681e-6,
+            9.9999950000033333308333353333317e-7,
+            9.9999995000000333333308333335333e-8,
+            9.9999999500000003333333308333334e-9,
+            9.9999999950000000033333333308333e-10,
+            9.9999999995000000000333333333308e-11,
+            9.9999999999500000000003333333333e-12,
+            9.9999999999950000000000033333333e-13,
+            9.9999999999995000000000000333333e-14
+        };
+    private static final double EXTRA_MATH_LN10 = 2.3025850929940456840179914546844;
+
+    public static double ln(double value) {
+        if (value < 0D) {
+            throw new IllegalArgumentException("ln(" + value + ")");
+        }
+
+        double fix = 0D;
+        while (value < 1D) {
+            value *= 10;
+            fix -= EXTRA_MATH_LN10;
+        }
+        while (value > 10D) {
+            value /= 10;
+            fix += EXTRA_MATH_LN10;
+        }
+
+        final double[] N = EXTRA_MATH_N;
+        final double[] LN = EXTRA_MATH_LN;
+        double result = EXTRA_MATH_LN10;
+        double inter = value;
+
+        for (int n = N.length, i = 0; i < n; ) {
+            double interi = inter * N[i];
+            if (interi > 10D) {
+                i++;
+            } else {
+                inter *= N[i];
+                result -= LN[i];
+            }
+        }
+
+        return result + fix;
+    }
+
+    public static double pow(final double arg1, final double arg2) {
+        if (arg1 == 0D) {
+            return 0D;
+        }
+        if (arg2 == 0D) {
+            return 1D;
+        }
+
+        final double[] N = EXTRA_MATH_N;
+        final double[] LN = EXTRA_MATH_LN;
+        double lnresult = arg2 * ln(arg1);
+        double result = 1D;
+        double inter = lnresult;
+
+        if (lnresult < 0D) {
+            for (int n = N.length, i = 1; i < n; ) {
+                double interi = inter + LN[i];
+                if (interi > 0D) {
+                    i++;
+                } else {
+                    inter += LN[i];
+                    result /= N[i];
+                }
+            }
+        } else {
+            for (int n = N.length, i = 1; i < n; ) {
+                double interi = inter - LN[i];
+                if (interi < 0D) {
+                    i++;
+                } else {
+                    inter -= LN[i];
+                    result *= N[i];
+                }
+            }
+        }
+
+        return result;
     }
 }

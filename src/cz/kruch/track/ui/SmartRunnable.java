@@ -52,6 +52,7 @@ public final class SmartRunnable extends Thread {
             result = new QueuedRunnable(r);
         } else {
             result = pool[--countFree];
+            pool[countFree] = null;
             result.runnable = r;
         }
 

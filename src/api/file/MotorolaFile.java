@@ -7,6 +7,10 @@ import java.util.Enumeration;
 import java.io.IOException;
 
 final class MotorolaFile extends File {
+
+    MotorolaFile() {
+    }
+
     Enumeration getRoots() {
         return new StringEnumeration(com.motorola.io.FileSystemRegistry.listRoots());
     }

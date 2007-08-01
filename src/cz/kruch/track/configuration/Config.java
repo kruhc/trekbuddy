@@ -4,6 +4,7 @@
 package cz.kruch.track.configuration;
 
 import cz.kruch.track.util.CharArrayTokenizer;
+import cz.kruch.track.ui.I18n;
 
 import javax.microedition.rms.RecordStore;
 import javax.microedition.rms.RecordStoreException;
@@ -28,9 +29,7 @@ public final class Config {
     public static final String LOCATION_PROVIDER_JSR179     = "Internal";
     public static final String LOCATION_PROVIDER_SERIAL     = "Serial";
     public static final String LOCATION_PROVIDER_SIMULATOR  = "Simulator";
-//#ifdef __A1000__
     public static final String LOCATION_PROVIDER_MOTOROLA   = "Motorola";
-//#endif
 
     public static final String TRACKLOG_NEVER  = "never";
     public static final String TRACKLOG_ASK    = "ask";
@@ -44,12 +43,17 @@ public final class Config {
     public static final String COORDS_UTM           = "UTM";
     public static final String COORDS_GC_LATLON     = "Geocaching Lat/Lon";
 
+    public static final String UNITS_METRIC        = "metric";
+    public static final String UNITS_IMPERIAL      = "imperial";
+    public static final String UNITS_NAUTICAL      = "nautical";
+
     public static final String FOLDER_MAPS      = "maps/";
     public static final String FOLDER_NMEA      = "tracks-nmea/";
     public static final String FOLDER_TRACKS    = "tracks-gpx/";
     public static final String FOLDER_WPTS      = "wpts/";
     public static final String FOLDER_PROFILES  = "ui-profiles/";
     public static final String FOLDER_RESOURCES = "resources/";
+    public static final String FOLDER_SOUNDS    = "sounds/";
 
     public static final String VARS_090         = "vars_090";
     public static final String CONFIG_090       = "config_090";
@@ -61,7 +65,10 @@ public final class Config {
      */
 
     // group [Map]
-    public static String mapPath            = ""; //file:///E:/trekbuddy/maps/CZ_auto/cr.tba?layer=CZ_auto&map=ch"; //file:///E:/trekbuddy/maps/fredrik/cr.tba?layer=tvaaker1&map=tvaaker1000001"; // no default map
+    public static String mapPath            = EMPTY_STRING; // file:///E:/trekbuddy/maps/GPSBasti/pasing.tar";
+
+    // group [Language]
+    public static String language           = I18n.ENGLISH;
 
     // group [Map datum]
     public static String geoDatum           = Datum.DATUM_WGS_84.getName();
@@ -85,7 +92,7 @@ public final class Config {
     private static String locationTimings   = EMPTY_STRING;
 
     // group [Serial provider options]
-    public static String commUrl            = "comm:com0;baudrate=9600";
+    public static String commUrl            = "comm:COM0;baudrate=9600";
 
     // group [Location sharing]
     public static boolean locationSharing;
@@ -101,7 +108,10 @@ public final class Config {
     public static boolean osdBoldFont;
     public static boolean osdBlackColor;
     public static boolean hpsWptTrueAzimuth     = true;
-    public static boolean nauticalView;
+
+    // [Units]
+    public static boolean unitsNautical;
+    public static boolean unitsImperial;
 
     // [Coordinates]
     public static boolean useGridFormat;
@@ -120,6 +130,13 @@ public final class Config {
 
     // group [Trajectory]
     public static boolean trajectoryOn;
+
+    // group [Navigation]
+    public static int wptProximity = 50;
+    public static int poiProximity = 1000;
+    public static int routeLineColor = 0x0;
+    public static boolean routeLineStyle;
+    public static boolean routePoiMarks = true;
 
     // hidden
     public static String btDeviceName   = EMPTY_STRING;
@@ -234,8 +251,15 @@ public final class Config {
             forcedGc = din.readBoolean();
             oneTileScroll = din.readBoolean();
             gpxRaw = din.readBoolean();
-            nauticalView = din.readBoolean();
+            unitsNautical = din.readBoolean();
             commUrl = din.readUTF();
+            unitsImperial = din.readBoolean();
+            wptProximity = din.readInt();
+            poiProximity = din.readInt();
+            language = din.readUTF();
+            routeLineColor = din.readInt();
+            routeLineStyle = din.readBoolean();
+            routePoiMarks = din.readBoolean();
         } catch (Exception e) {
         }
 
@@ -287,8 +311,15 @@ public final class Config {
         dout.writeBoolean(forcedGc);
         dout.writeBoolean(oneTileScroll);
         dout.writeBoolean(gpxRaw);
-        dout.writeBoolean(nauticalView);
+        dout.writeBoolean(unitsNautical);
         dout.writeUTF(commUrl);
+        dout.writeBoolean(unitsImperial);
+        dout.writeInt(wptProximity);
+        dout.writeInt(poiProximity);
+        dout.writeUTF(language);
+        dout.writeInt(routeLineColor);
+        dout.writeBoolean(routeLineStyle);
+        dout.writeBoolean(routePoiMarks);
 
 //#ifdef __LOG__
         if (log.isEnabled()) log.info("configuration updated");
@@ -326,12 +357,14 @@ public final class Config {
                 try {
                     din.close();
                 } catch (IOException e) {
+                    // ignore
                 }
             }
             if (rs != null) {
                 try {
                     rs.closeRecordStore();
                 } catch (RecordStoreException e) {
+                    // ignore
                 }
             }
         }
@@ -359,19 +392,21 @@ public final class Config {
             } else {
                 rs.addRecord(bytes, 0, bytes.length);
             }
-        } catch (Exception e) {
-            throw new ConfigurationException(e);
+        } catch (Throwable t) {
+            throw new ConfigurationException(t);
         } finally {
             if (dout != null) {
                 try {
                     dout.close();
                 } catch (IOException e) {
+                    // ignore
                 }
             }
             if (rs != null) {
                 try {
                     rs.closeRecordStore();
                 } catch (RecordStoreException e) {
+                    // ignore
                 }
             }
         }
@@ -421,6 +456,7 @@ public final class Config {
         initDatum(tokenizer, delims, datums, "CH-1903{Bessel 1841,674,15,405}=map:CH-1903");
         initDatum(tokenizer, delims, datums, "NAD27 (CONUS){Clarke 1866,-8,160,176}=map:NAD27 CONUS");
         initDatum(tokenizer, delims, datums, "OSGB 36{Airy 1830,375,-111,431}=map:Ord Srvy Grt Britn");
+        initDatum(tokenizer, delims, datums, "Ireland 1965{Modified Airy,506,-122,611}=map:Ireland 1965");
         initDatum(tokenizer, delims, datums, "RT 90{Bessel 1841,498,-36,568}=map:RT 90");
         initDatum(tokenizer, delims, datums, "S-42 (Russia){Krassovsky 1940,28,-130,-95}=map:Pulkovo 1942 (1)");
 
@@ -539,13 +575,23 @@ public final class Config {
         return getDataDir() + FOLDER_RESOURCES;
     }
 
+    public static String getFolderSounds() {
+        return getDataDir() + FOLDER_SOUNDS;
+    }
+
     public static String getLocationTimings() {
         if (locationTimings == null || locationTimings.length() == 0) {
+//#ifdef __A780__
             if (cz.kruch.track.TrackingMIDlet.a780) {
                 locationTimings = "2,2,-1"; /* from http://www.kiu.weite-welt.com/de.schoar.blog/?p=186 */
-            } else if (LOCATION_PROVIDER_MOTOROLA.equals(locationProvider)) {
+            } else
+//#endif
+//#ifdef __A1000__
+            if (LOCATION_PROVIDER_MOTOROLA.equals(locationProvider)) {
                 locationTimings = "9999,1,2000";
-            } else {
+            } else
+//#endif            
+            {
                 locationTimings = "1,-1,-1";
             }
         }

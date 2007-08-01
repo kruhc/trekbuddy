@@ -91,7 +91,8 @@ public final class MinDec {
 
         sb.append(type == QualifiedCoordinates.LAT ? (sign == -1 ? "S" : "N") : (sign == -1 ? "W" : "E"));
         sb.append(' ');
-        sb.append(h).append(NavigationScreens.SIGN).append(m).append('.');
+        NavigationScreens.append(sb, h).append(NavigationScreens.SIGN);
+        NavigationScreens.append(sb, m).append('.');
         if (s < 10000) {
             sb.append('0');
         }
@@ -104,7 +105,7 @@ public final class MinDec {
         if (s < 10) {
             sb.append('0');
         }
-        sb.append(s);
+        NavigationScreens.append(sb, s);
 
         return sb.toString();
     }
@@ -124,11 +125,11 @@ public final class MinDec {
         if (h < 10) {
             sb.append('0');
         }
-        sb.append(h);
+        NavigationScreens.append(sb, h);
         if (m < 10) {
             sb.append('0');
         }
-        sb.append(m).append('.');
+        NavigationScreens.append(sb, m).append('.');
         if (s < 10000) {
             sb.append('0');
         }
@@ -141,13 +142,13 @@ public final class MinDec {
         if (s < 10) {
             sb.append('0');
         }
-        sb.append(s);
+        NavigationScreens.append(sb, s);
         sb.append(',').append(type == QualifiedCoordinates.LAT ? (sign == -1 ? "S" : "N") : (sign == -1 ? "W" : "E"));
 
         return sb.toString();
     }
 
-    public static String toSentence(int type, double value) {
+    public static String toSentence(final int type, final double value) {
         return (new MinDec(type, value)).toSentence();
     }
 

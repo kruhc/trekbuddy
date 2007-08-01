@@ -19,16 +19,16 @@ public final class Position {
             result = new Position(x, y);
         } else {
             result = pool[--countFree];
-            if (result == null) throw new RuntimeException("NULL");
-            result.x = (short) x;
-            result.y = (short) y;
+            pool[countFree] = null;
+            result.x = x;
+            result.y = y;
         }
 
         return result;
     }
 
     public synchronized static void releaseInstance(Position p) {
-        if (countFree < pool.length && p != null) {
+        if (p != null && countFree < pool.length) {
             pool[countFree++] = p;
         }
     }
@@ -37,16 +37,16 @@ public final class Position {
      * ~POOL
      */
 
-    protected short x, y;
+    private int x, y;
 
     public Position(int x, int y) {
-        this.x = (short) x;
-        this.y = (short) y;
+        this.x = x;
+        this.y = y;
     }
 
     public void setXy(int x, int y) {
-        this.x = (short) x;
-        this.y = (short) y;
+        this.x = x;
+        this.y = y;
     }
 
     public int getX() {

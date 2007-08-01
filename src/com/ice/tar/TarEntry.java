@@ -220,6 +220,7 @@ public final class TarEntry {
      * @param position
      */
     public void update(byte[] headerBuf, long position) throws InvalidHeaderException {
+        this.name = null; // gc hint
         this.parseHeader(headerBuf);
         this.position = position;
     }

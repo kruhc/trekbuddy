@@ -7,13 +7,11 @@ import javax.microedition.lcdui.game.Sprite;
 import javax.microedition.lcdui.Graphics;
 import javax.microedition.lcdui.Image;
 import javax.microedition.io.Connector;
-import javax.microedition.midlet.MIDlet;
 
 import api.location.LocationProvider;
 import api.file.File;
 
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.io.InputStream;
 
 public final class NavigationScreens {
@@ -22,29 +20,38 @@ public final class NavigationScreens {
      * public constants
      */
 
-    public static final String[] nStr = {
-         "0*",  "1*",  "2*",  "3*",  "4*",  "5*",  "6*",  "7*",  "8*",  "9*",
-        "10*", "11*", "12*", "13*", "14*", "15*", "16*", "17*", "18*", "19*",
-        "20*", "21*", "22*", "23*", "24*"
+    public static final char[][] nStr = {
+        { '3', '*'}, { '4', '*'}, { '5', '*'}, { '6', '*'},
+        { '7', '*'}, { '8', '*'}, { '9', '*'},
+        { '1', '0', '*'}, { '1', '1', '*'}, { '1', '2', '*'}
     };
 
-    public static String SIGN = "^";
-    public static String PLUSMINUS = "+-";
-    public static String DELTA = "d";
+    private static final char[] digits = {
+	    '0' , '1' , '2' , '3' , '4' , '5' , '6' , '7' , '8' , '9'
+    };
+    
+    public static final char SIGN         = 0xb0;
+    public static final char PLUSMINUS    = 0xb1;
+    public static final char DELTA_D      = 0x394;
+    public static final char DELTA_d      = 0x3b4;
 
     /*
      * image cache
      */
 
     public static Image crosshairs;
-    public static Image courses, courses2;
-    public static Image waypoint;
+    public static Image courses/*, courses2*/;
+    public static Image waypoint, pois;
     public static Image providers;
     public static Image[] stores;
+
+    // number formatter buffer
+    private static final char[] print = new char[64];
 
     // private vars
     private static int arrowSize, arrowSize2;
     private static int wptSize2;
+    private static int poiSize, poiSize2;
 
     // public (???) vars
     public static int bulletSize;
@@ -53,9 +60,10 @@ public final class NavigationScreens {
         // init image cache
         try {
             crosshairs = createImage("/resources/crosshairs.png");
-            courses = createImage("/resources/courses.png");
-            courses2 = createImage("/resources/courses2.png");
+            courses = createImage("/resources/arrows.png");
+//            courses2 = createImage("/resources/courses2.png");
             waypoint = createImage("/resources/wpt.png");
+            pois = createImage("/resources/pois.png");
             providers = createImage("/resources/bullets.png");
             stores = new Image[] {
                 createImage("/resources/icon.store.xml.png"),
@@ -67,20 +75,13 @@ public final class NavigationScreens {
             throw new IllegalStateException("Image resources could not be loaded");
         }
 
-        // init constants
-        try {
-            SIGN = new String(new byte[]{ (byte) 0xc2, (byte) 0xb0 }, "UTF-8");
-            PLUSMINUS = new String(new byte[]{ (byte) 0xc2, (byte) 0xb1 }, "UTF-8");
-            DELTA = new String(new byte[]{ (byte) 0xce, (byte) 0x94 }, "UTF-8");
-        } catch (UnsupportedEncodingException e) {
-            // ignore
-        }
-
         // setup vars
         arrowSize = courses.getHeight();
         arrowSize2 = arrowSize >> 1;
         wptSize2 = waypoint.getWidth() >> 1;
-        bulletSize = providers.getHeight();
+        bulletSize = providers.getHeight(); // = 10
+        poiSize = pois.getHeight();
+        poiSize2 = poiSize >> 1;
     }
 
     public static int customize() throws IOException {
@@ -93,7 +94,7 @@ public final class NavigationScreens {
             System.gc();
             i++;
         }
-        image = loadImage("courses.png");
+        image = loadImage("arrows.png");
         if (image != null) {
             courses = null;
             courses = image;
@@ -102,20 +103,29 @@ public final class NavigationScreens {
             arrowSize = courses.getHeight();
             arrowSize2 = arrowSize >> 1;
         }
-        image = loadImage("courses2.png");
-        if (image != null) {
-            courses2 = null;
-            courses2 = image;
-            System.gc();
-            i++;
-        }
+//        image = loadImage("courses2.png");
+//        if (image != null) {
+//            courses2 = null;
+//            courses2 = image;
+//            System.gc();
+//            i++;
+//        }
         image = loadImage("wpt.png");
         if (image != null) {
             waypoint = null;
             waypoint = image;
             System.gc();
             i++;
-            wptSize2 = waypoint.getWidth() >> 1;
+            wptSize2 = waypoint.getHeight() >> 1;
+        }
+        image = loadImage("pois.png");
+        if (image != null) {
+            pois = null;
+            pois = image;
+            System.gc();
+            i++;
+            poiSize = pois.getHeight();
+            poiSize2 = poiSize >> 1;
         }
 
         return i;
@@ -178,56 +188,51 @@ public final class NavigationScreens {
         return image;
     }
 
-    public static void drawArrow(Graphics graphics, float course,
-                                 int x, int y, int anchor) {
-        int ti;
+    public static void drawArrow(Graphics graphics, final float course,
+                                 final int x, final int y, final int anchor) {
         int courseInt = ((int) course) % 360;
-        switch (courseInt / 90) {
+        int cr = courseInt / 90;
+        int cwo = courseInt % 90;
+        int ci = (cwo + 5) / 10;
+        if (ci == 9) {
+            ci = 0;
+            cr++;
+        }
+
+        int ti;
+
+        switch (cr) {
             case 0:
                 ti = Sprite.TRANS_NONE;
                 break;
             case 1:
-                ti = Sprite.TRANS_ROT90;
+//                ti = Sprite.TRANS_ROT90;
+                ci = 9 /*- 1*/ - ci;
+                ti = Sprite.TRANS_MIRROR_ROT180;
                 break;
             case 2:
                 ti = Sprite.TRANS_ROT180;
                 break;
             case 3:
-                ti = Sprite.TRANS_ROT270;
+//                ti = Sprite.TRANS_ROT270;
+                ci = 9 /*- 1*/ - ci;
+                ti = Sprite.TRANS_MIRROR;
                 break;
             case 4:
                 ti = Sprite.TRANS_NONE;
                 break;
             default:
                 // should never happen
-                throw new AssertionFailedException("Course over 360");
+                throw new AssertionFailedException("Course over 360?");
         }
 
-        int cwo = courseInt % 90;
-        int ci = (cwo + 5) / 10;
-        if (ci == 9) {
-            ci = 0;
-            switch (ti) {
-                case Sprite.TRANS_NONE:
-                    ti = Sprite.TRANS_ROT90;
-                break;
-                case Sprite.TRANS_ROT90:
-                    ti = Sprite.TRANS_ROT180;
-                break;
-                case Sprite.TRANS_ROT180:
-                    ti = Sprite.TRANS_ROT270;
-                break;
-                case Sprite.TRANS_ROT270:
-                    ti = Sprite.TRANS_NONE;
-                break;
-            }
-        }
-
+/*
         Image courses;
         switch (ti) {
             case Sprite.TRANS_ROT90: {
                 courses = NavigationScreens.courses2;
                 ti = Sprite.TRANS_NONE;
+
             } break;
             case Sprite.TRANS_ROT270: {
                 courses = NavigationScreens.courses2;
@@ -236,26 +241,42 @@ public final class NavigationScreens {
             default:
                 courses = NavigationScreens.courses;
         }
+*/
 
-//        if (Desktop.S60renderer) {
-//            graphics.setClip(x - arrowSize2, y - arrowSize2, arrowSize, arrowSize);
-//            graphics.drawImage(courses,
-//                               x - arrowSize2 - ci * arrowSize, y - arrowSize2,
-//                               anchor);
-//            graphics.setClip(0, 0, Desktop.width, Desktop.height);
-//        } else {
+/* S60 renderer path is impossible - drawImage does not support rotation
+        if (Config.S60renderer) {
+        } else {
+*/
             graphics.drawRegion(courses,
                                 ci * arrowSize, 0, arrowSize, arrowSize,
                                 ti, x - arrowSize2, y - arrowSize2, anchor);
-//        }
+/*
+        }
+*/
     }
 
-    public static void drawWaypoint(Graphics graphics, int x, int y, int anchor) {
+    public static void drawWaypoint(Graphics graphics, final int x, final int y,
+                                    final int anchor) {
         graphics.drawImage(waypoint, x - wptSize2, y - wptSize2, anchor);
     }
 
-    public static void drawProviderStatus(Graphics graphics, int status,
-                                          int x, int y, int anchor) {
+    public static void drawPOI(Graphics graphics, final int status,
+                               final int x, final int y, final int anchor) {
+        if (Config.S60renderer) {
+            graphics.setClip(x - poiSize2, y - poiSize2, poiSize, poiSize);
+            graphics.drawImage(pois,
+                               x - status * poiSize - poiSize2, y - poiSize2,
+                               anchor);
+            graphics.setClip(0, 0, Desktop.width, Desktop.height);
+        } else {
+            graphics.drawRegion(pois,
+                                status * poiSize, 0, poiSize, poiSize,
+                                Sprite.TRANS_NONE, x - poiSize2, y - poiSize2, anchor);
+        }
+    }
+
+    public static void drawProviderStatus(Graphics graphics, final int status,
+                                          final int x, final int y, final int anchor) {
         int ci = status < LocationProvider._CANCELLED ? status : LocationProvider.OUT_OF_SERVICE;
 
         if (Config.S60renderer) {
@@ -271,37 +292,62 @@ public final class NavigationScreens {
         }
     }
 
-    public static StringBuffer append(StringBuffer sb, float value, int precision) {
-        if (value < 0F) {
-            sb.append('-');
-            value = -value;
-        }
-        precision = adjustPrecision(value, precision);
-        int i = (int) value;
-        sb.append(i).append('.');
-        for ( ; precision > 0; precision--) {
-            value -= i;
-            value *= 10;
-            i = (int) value;
-            sb.append(i);
-        }
-
-        return sb;
-    }
-
     public static StringBuffer append(StringBuffer sb, double value, int precision) {
         if (value < 0D) {
             sb.append('-');
             value = -value;
         }
+
         precision = adjustPrecision(value, precision);
-        long i = (long) value;
-        sb.append(i).append('.');
-        for ( ; precision > 0; precision--) {
-            value -= i;
+
+        final long m = (long) value;
+        append(sb, m);
+
+        sb.append('.');
+        
+        value -= m;
+        while (precision-- > 0) {
             value *= 10;
-            i = (long) value;
-            sb.append(i);
+            if (value < 1D) {
+                sb.append('0');
+            }
+        }
+
+        final long n = (long) value;
+        if (n != 0 || sb.charAt(sb.length() - 1) != '0') { // avoids formatting like "51.00"
+            append(sb, n);
+        }
+
+        return sb;
+    }
+
+    public static StringBuffer append(StringBuffer sb, long value) {
+        if (value < 0) {
+            sb.append('-');
+        } else {
+            value = -value;
+        }
+
+        if (value > -10) {
+            sb.append(digits[(int)(-value)]);
+        } else if (value > -100) {
+            sb.append(digits[(int)(-(value / 10))]);
+            sb.append(digits[(int)(-(value % 10))]);
+        } else {
+            synchronized (print) {
+                final char[] print = NavigationScreens.print;
+                final char[] digits = NavigationScreens.digits;
+                int c = 0;
+                long i = value;
+                while (i <= -10) {
+                    print[c++] = digits[(int)(-(i % 10))];
+                    i = i / 10;
+                }
+                print[c++] = digits[(int)(-i)];
+                while (--c >= 0) {
+                    sb.append(print[c]);
+                }
+            }
         }
 
         return sb;
@@ -311,7 +357,7 @@ public final class NavigationScreens {
         if (precision == 0) {
             if (value < 10D) {
                 precision = 3;
-            } else if (value < 100F) {
+            } else if (value < 100D) {
                 precision = 2;
             } else {
                 precision = 1;

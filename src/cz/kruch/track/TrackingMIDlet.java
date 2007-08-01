@@ -7,52 +7,44 @@ import javax.microedition.midlet.MIDlet;
 import javax.microedition.midlet.MIDletStateChangeException;
 import javax.microedition.lcdui.Display;
 
-import java.io.UnsupportedEncodingException;
-
 public class TrackingMIDlet extends MIDlet implements Runnable {
     public static final String APP_TITLE = "TrekBuddy";
-    public static final String APP_WWW = "www.trekbuddy.net";
-    public static String APP_NAME = APP_TITLE + " (C) 2007 KrUcH";
 
     private cz.kruch.track.ui.Desktop desktop;
 
     // system info
-//#ifdef __LOG__
-    private static boolean logEnabled;
-//#endif
     private static String platform;
     private static String flags;
 
-    public static boolean jsr82;
-    public static boolean jsr120;
-    public static boolean jsr135;
-    public static boolean jsr179;
-    public static boolean motorola179;
+    public static boolean jsr82, jsr120, jsr135, jsr179, motorola179;
 
-    public static boolean sonyEricsson;
-    public static boolean nokia;
-    public static boolean wm;
-    public static boolean sxg75;
-//#ifdef __A780__
-    public static boolean a780;
-//#endif
-//#ifdef __S65__
-    public static boolean s65;
+    public static boolean sonyEricsson, nokia, siemens, wm, rim;
+    public static boolean sxg75, a780, s65;
+
+//#ifdef __LOG__
+    private static boolean logEnabled;
 //#endif
 
     public TrackingMIDlet() {
-        // init common vars
-        try {
-            APP_NAME = APP_TITLE + new String(new byte[]{ ' ', (byte) 0xc2, (byte) 0xa9, ' ', '2', '0', '0', '7', ' ', 'K', 'r', 'U', 'c', 'H' }, "UTF-8");
-        } catch (UnsupportedEncodingException e) {
-            // ignored
-        }
-
         // detect environment
         TrackingMIDlet.platform = System.getProperty("microedition.platform");
         TrackingMIDlet.flags = getAppProperty("App-Flags");
 //#ifdef __LOG__
-        TrackingMIDlet.logEnabled = "true".equals(getAppProperty("Log-Enable"));
+        TrackingMIDlet.logEnabled = hasFlag("log_enable");
+//#endif
+
+        // detect brand/device
+        nokia = platform.startsWith("Nokia");
+        sonyEricsson = System.getProperty("com.sonyericsson.imei") != null;
+        siemens = System.getProperty("com.siemens.IMEI") != null;
+        wm = platform.startsWith("Windows CE");
+        rim = platform.startsWith("RIM");
+        sxg75 = "SXG75".equals(platform);
+//#ifdef __A780__
+        a780 = "j2me".equals(platform);
+//#endif
+//#ifdef __S65__
+        s65 = "S65".equals(platform);
 //#endif
 
         // detect runtime capabilities
@@ -99,19 +91,6 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         } catch (Throwable t) {
         }
 
-        // detect brand/device
-        sxg75 = "SXG75".equals(platform);
-        nokia = platform.startsWith("Nokia");
-        sonyEricsson = System.getProperty("com.sonyericsson.imei") != null;
-        wm = platform.startsWith("Windows CE");
-        boolean siemens = System.getProperty("com.siemens.IMEI") != null;
-//#ifdef __A780__
-        a780 = "j2me".equals(platform);
-//#endif
-//#ifdef __S65__
-        s65 = "S65".equals(platform);
-//#endif
-
         // setup environment
         if (hasFlag("fs_skip_bug")) {
 //#ifdef __LOG__
@@ -148,10 +127,11 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
     private boolean running;
 
     protected void startApp() throws MIDletStateChangeException {
-        if (!running) {
-            running = true;
-            (new Thread(this)).start();
+        if (running) {
+            return;
         }
+        running = true;
+        (new Thread(this)).start();
     }
 
     protected void pauseApp() {
@@ -193,18 +173,20 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
             configLoaded = false;
         }
 
-        // detect file API
-        api.file.File.detect(sxg75 || hasFlag("fs_traverse_bug"));
+        // initialize file API
+        api.file.File.initialize(sxg75 || hasFlag("fs_traverse_bug"));
 
         // customize UI
         int customized = 0;
-        try {
-            customized = cz.kruch.track.ui.NavigationScreens.customize();
-        } catch (Throwable t) {
+        if (isFs()) {
+            try {
+                customized = cz.kruch.track.ui.NavigationScreens.customize();
+            } catch (Throwable t) {
 //#ifdef __LOG__
-            t.printStackTrace();
+                t.printStackTrace();
 //#endif
-            customized = -1;
+                customized = -1;
+            }
         }
 
         // create desktop canvas

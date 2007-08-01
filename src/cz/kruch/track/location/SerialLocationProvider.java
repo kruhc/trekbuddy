@@ -18,19 +18,19 @@ import javax.microedition.io.StreamConnection;
 import java.io.OutputStream;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Timer;
 import java.util.TimerTask;
 
 public class SerialLocationProvider extends StreamReadingLocationProvider implements Runnable {
-    private static final int WATCHER_PERIOD = 15 * 1000;
+    private static final long WATCHER_PERIOD = 15 * 1000;
 
-    protected Thread thread;
+    private Thread thread;
 
     protected volatile String url;
-    protected volatile boolean go;
+    private volatile boolean go;
+    private volatile StreamConnection connection;
 
-    private Timer watcher;
     private long timestamp;
+    private TimerTask watcher;
 
     private File nmeaFile;
     private OutputStream nmeaObserver;
@@ -49,23 +49,23 @@ public class SerialLocationProvider extends StreamReadingLocationProvider implem
         return true;
     }
 
+    protected String getKnownUrl() {
+        return Config.commUrl;
+    }
+
     public void run() {
         // start with last known?
         if (url == null) {
-            if (this instanceof Jsr82LocationProvider) {
-                url = Config.btServiceUrl;
-            } else {
-                url = Config.commUrl;
-            }
+            url = getKnownUrl();
         }
 
         // let's roll
-        thread = Thread.currentThread();
         go = true;
+        thread = Thread.currentThread();
 
         try {
             // notify
-            notifyListener(LocationProvider._STARTING);
+            notifyListener(this.lastState = LocationProvider._STARTING);
 
             // start watcher
             startWatcher();
@@ -76,20 +76,18 @@ public class SerialLocationProvider extends StreamReadingLocationProvider implem
             // GPS
             gps();
 
-        } catch (Exception e) {
+        } catch (Throwable t) {
 
-            if (e instanceof InterruptedException) {
-                // probably stop request
-            } else {
-                // record exception
-                setException(e instanceof LocationException ? (LocationException) e : new LocationException(e));
-            }
+            // record
+            setThrowable(t);
 
         } finally {
 
             // be ready for restart
+            go = false;
             url = null;
             thread = null;
+            connection = null;
 
             // stop NMEA log
             stopNmeaLog();
@@ -112,12 +110,20 @@ public class SerialLocationProvider extends StreamReadingLocationProvider implem
     public void stop() throws LocationException {
         if (go) {
             go = false;
+            if (connection != null) {
+                try {
+                    connection.close(); // TODO null check?
+                } catch (IOException e) {
+                    // ignore
+                }
+            }
+        }
+        if (thread != null) {
             try {
-                thread.interrupt();
                 thread.join();
             } catch (InterruptedException e) {
+                // should never happen
             }
-            thread = null;
         }
     }
 
@@ -130,14 +136,15 @@ public class SerialLocationProvider extends StreamReadingLocationProvider implem
     }
 
     private void startWatcher() {
-        watcher = new Timer();
-        watcher.schedule(new TimerTask() {
+        Desktop.timer.schedule(watcher = new TimerTask() {
             public void run() {
                 boolean notify = false;
                 synchronized (this) {
                     if (System.currentTimeMillis() > (timestamp + WATCHER_PERIOD)) {
-                        lastState = LocationProvider.TEMPORARILY_UNAVAILABLE;
-                        notify = true;
+                        if (lastState != LocationProvider.TEMPORARILY_UNAVAILABLE) {
+                            lastState = LocationProvider.TEMPORARILY_UNAVAILABLE;
+                            notify = true;
+                        }
                     }
                 }
                 if (notify) {
@@ -155,23 +162,31 @@ public class SerialLocationProvider extends StreamReadingLocationProvider implem
     }
 
     private void startNmeaLog() {
+        // use NMEA tracklog?
         if (isTracklog() && Config.TRACKLOG_FORMAT_NMEA.equals(Config.tracklogFormat)) {
-            if (nmeaFile == null) { // not yet started
+
+            // not yet started
+            if (nmeaFile == null) {
                 String path = Config.getFolderNmea() + GpxTracklog.dateToFileDate(System.currentTimeMillis()) + ".nmea";
+
                 try {
+                    // create file
                     nmeaFile = File.open(Connector.open(path, Connector.READ_WRITE));
                     if (!nmeaFile.exists()) {
                         nmeaFile.create();
                     }
-                    nmeaObserver = new BufferedOutputStream(nmeaFile.openOutputStream(), 512);
+
+                    // create writer
+                    nmeaObserver = new BufferedOutputStream(nmeaFile.openOutputStream(), 1024);
 
                     // set stream 'observer'
                     setObserver(nmeaObserver);
 
 /* fix
-                // signal recording has started
-                recordingCallback.invoke(new Integer(GpxTracklog.CODE_RECORDING_START), null);
+                    // signal recording has started
+                    recordingCallback.invoke(new Integer(GpxTracklog.CODE_RECORDING_START), null);
 */
+                    notifyListener(true);
 
                 } catch (Throwable t) {
                     Desktop.showError("Failed to start NMEA log.", t, null);
@@ -180,19 +195,17 @@ public class SerialLocationProvider extends StreamReadingLocationProvider implem
         }
     }
 
-    public void stopNmeaLog() {
-
+    private void stopNmeaLog() {
 /*
         // signal recording is stopping
         recordingCallback.invoke(new Integer(GpxTracklog.CODE_RECORDING_STOP), null);
 */
-        if (go) {
-            return;
-        }
+        notifyListener(false);
 
         // clear stream 'observer'
         setObserver(null);
 
+        // close writer
         if (nmeaObserver != null) {
             try {
                 nmeaObserver.close();
@@ -201,6 +214,8 @@ public class SerialLocationProvider extends StreamReadingLocationProvider implem
             }
             nmeaObserver = null;
         }
+
+        // close file
         if (nmeaFile != null) {
             try {
                 nmeaFile.close();
@@ -212,9 +227,10 @@ public class SerialLocationProvider extends StreamReadingLocationProvider implem
     }
 
     private void gps() throws IOException {
-        // open connection
-        StreamConnection connection = (StreamConnection) Connector.open(url, Connector.READ);
         InputStream in = null;
+
+        // open connection
+        /*StreamConnection */connection = (StreamConnection) Connector.open(url, Connector.READ);
 
         try {
             // open stream for reading
@@ -239,21 +255,21 @@ public class SerialLocationProvider extends StreamReadingLocationProvider implem
                 } */
                 } catch (IOException e) {
 
-                    // record exception
-                    setException(new LocationException(e));
+                    // record
+                    setThrowable(e);
 
                     /*
                      * location is null, therefore the loop quits
                      */
 
-                } catch (Exception e) {
+                } catch (Throwable t) {
 
-                    // record exception
-                    if (e instanceof InterruptedException) {
+                    // record
+                    if (t instanceof InterruptedException) {
                         // probably stop request
                     } else {
-                        // record exception
-                        setException(e instanceof LocationException ? (LocationException) e : new LocationException(e));
+                        // record
+                        setThrowable(t);
                     }
 
                     // ignore
@@ -300,6 +316,7 @@ public class SerialLocationProvider extends StreamReadingLocationProvider implem
                 try {
                     in.close();
                 } catch (IOException e) {
+                    // ignore
                 }
             }
 
@@ -307,6 +324,9 @@ public class SerialLocationProvider extends StreamReadingLocationProvider implem
             try {
                 connection.close();
             } catch (IOException e) {
+                // ignore
+            } finally {
+                connection = null;
             }
         }
     }

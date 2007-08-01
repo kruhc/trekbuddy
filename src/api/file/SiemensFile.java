@@ -7,6 +7,10 @@ import java.util.Enumeration;
 import java.io.IOException;
 
 final class SiemensFile extends File {
+
+    SiemensFile() {
+    }
+
     Enumeration getRoots() {
         return com.siemens.mp.io.file.FileSystemRegistry.listRoots();
     }

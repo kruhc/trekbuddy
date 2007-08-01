@@ -6,26 +6,32 @@ package cz.kruch.track.location;
 import api.location.Location;
 import api.location.QualifiedCoordinates;
 
-public final class Waypoint extends Location {
+public final class Waypoint {
     private String name;
     private String comment;
-    private Object userObject;
-    private String linkPath = null;
+    private QualifiedCoordinates coordinates;
+    private long timestamp;
 
-    public Waypoint(Location location, String name, String comment) {
-        super(location);
-        this.name = name;
-        this.comment = comment;
-    }
+    private Object userObject;
+    private String linkPath;
 
     public Waypoint(QualifiedCoordinates qc, String name, String comment) {
         this(qc, name, comment, -1);
     }
 
-    public Waypoint(QualifiedCoordinates qc, String name, String comment, long time) {
-        super(qc, time, -1);
+    public Waypoint(QualifiedCoordinates qc, String name, String comment, long timestamp) {
         this.name = name;
         this.comment = comment;
+        this.timestamp = timestamp;
+        this.coordinates = qc;
+    }
+
+    public QualifiedCoordinates getQualifiedCoordinates() {
+        return coordinates;
+    }
+
+    public long getTimestamp() {
+        return timestamp;
     }
 
     public String getName() {

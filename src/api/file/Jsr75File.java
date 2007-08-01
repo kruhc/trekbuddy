@@ -3,51 +3,57 @@
 
 package api.file;
 
+import javax.microedition.io.file.FileSystemRegistry;
+import javax.microedition.io.file.FileConnection;
 import java.util.Enumeration;
 import java.io.IOException;
 
 final class Jsr75File extends File {
+
+    Jsr75File() {
+    }
+
     Enumeration getRoots() {
-        return javax.microedition.io.file.FileSystemRegistry.listRoots();
+        return FileSystemRegistry.listRoots();
     }
 
     public Enumeration list() throws IOException {
-        return ((javax.microedition.io.file.FileConnection) fc).list();
+        return ((FileConnection) fc).list();
     }
 
     public Enumeration list(String pattern, boolean hidden) throws IOException {
-        return ((javax.microedition.io.file.FileConnection) fc).list(pattern, hidden);
+        return ((FileConnection) fc).list(pattern, hidden);
     }
 
     public void create() throws IOException {
-        ((javax.microedition.io.file.FileConnection) fc).create();
+        ((FileConnection) fc).create();
     }
 
     public void mkdir() throws IOException {
-        ((javax.microedition.io.file.FileConnection) fc).mkdir();
+        ((FileConnection) fc).mkdir();
     }
 
     public long fileSize() throws IOException {
-        return ((javax.microedition.io.file.FileConnection) fc).fileSize();
+        return ((FileConnection) fc).fileSize();
     }
 
     public boolean exists() {
-        return ((javax.microedition.io.file.FileConnection) fc).exists();
+        return ((FileConnection) fc).exists();
     }
 
     public boolean isDirectory() {
-        return ((javax.microedition.io.file.FileConnection) fc).isDirectory();
+        return ((FileConnection) fc).isDirectory();
     }
 
     public String getURL() {
-        return ((javax.microedition.io.file.FileConnection) fc).getURL();
+        return ((FileConnection) fc).getURL();
     }
 
     public void setFileConnection(String path) throws IOException {
         if (fsType == FS_SXG75) {
             traverse(path);
         } else {
-            ((javax.microedition.io.file.FileConnection) fc).setFileConnection(path);
+            ((FileConnection) fc).setFileConnection(path);
         }
     }
 }

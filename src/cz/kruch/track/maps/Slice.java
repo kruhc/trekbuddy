@@ -4,6 +4,7 @@
 package cz.kruch.track.maps;
 
 import cz.kruch.track.AssertionFailedException;
+import cz.kruch.track.ui.NavigationScreens;
 
 import javax.microedition.lcdui.Image;
 
@@ -70,6 +71,7 @@ public final class Slice {
         return (dx >= 0 && dx < this.width && dy >= 0 && dy < this.height);
     }
 
+    // TODO optimize
     public String toString() {
         return (new StringBuffer(16)).append(x).append('-').append(y).append(' ').append(width).append('x').append(height).toString();
     }
@@ -100,12 +102,18 @@ public final class Slice {
         return path.substring(0, p0);
     }
 
+//#ifdef __LOG__
     public String getPath() {
         return (new StringBuffer(16)).append('_').append(x).append('_').append(y).append(PNG_EXT).toString();
     }
+//#endif
 
     public StringBuffer appendPath(StringBuffer sb) {
-        return sb.append('_').append(x).append('_').append(y).append(PNG_EXT);
+        sb.append('_');
+        NavigationScreens.append(sb, x);
+        sb.append('_');
+        NavigationScreens.append(sb, y);
+        return sb.append(PNG_EXT);
     }
 
     private void fixDimension(int xNext, int yNext, final int xs, final int ys) throws InvalidMapException {

@@ -99,8 +99,8 @@ public final class BufferedOutputStream extends /* FilterOutputStream */ OutputS
     public void write(byte b[], int off, int len) throws IOException {
         if (len >= buf.length) {
             /* If the request length exceeds the size of the output buffer,
-    flush the output buffer and then write the data directly.
-    In this way buffered streams will cascade harmlessly. */
+               flush the output buffer and then write the data directly.
+               In this way buffered streams will cascade harmlessly. */
             flushBuffer();
             out.write(b, off, len);
             return;

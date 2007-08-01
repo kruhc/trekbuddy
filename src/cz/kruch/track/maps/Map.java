@@ -18,8 +18,10 @@ import cz.kruch.track.ui.Position;
 import cz.kruch.track.ui.Desktop;
 import cz.kruch.track.ui.NavigationScreens;
 import cz.kruch.track.maps.io.LoaderIO;
+import cz.kruch.track.maps.io.FileInput;
 import cz.kruch.track.io.LineReader;
 import cz.kruch.track.AssertionFailedException;
+import cz.kruch.track.util.CharArrayTokenizer;
 
 import api.location.QualifiedCoordinates;
 import api.location.Datum;
@@ -54,7 +56,6 @@ public final class Map implements Runnable {
     static final int LARGE_BUFFER_SIZE      = 4096; // for map image files - 4 kB
 
     private static final String SET_DIR_PREFIX = "set/";
-    private static final int SET_DIR_PREFIX_LENGTH = 4;
 
     // interaction with outside world
     private String path;
@@ -67,6 +68,9 @@ public final class Map implements Runnable {
     private Calibration calibration;
 
     public Map(String path, String name, /*StateListener*/Desktop listener) {
+        if (path == null) {
+            throw new AssertionFailedException("Map without path: " + name);
+        }
         this.path = path;
         this.name = name;
         this.listener = listener;
@@ -121,12 +125,7 @@ public final class Map implements Runnable {
     }
 
     public Position transform(QualifiedCoordinates qc) {
-        Position position = calibration.transform(qc);
-        if (calibration.isWithin(position)) {
-            return position;
-        }
-
-        return null;
+        return calibration.transform(qc);
     }
 
     public QualifiedCoordinates[] getRange() {
@@ -136,6 +135,12 @@ public final class Map implements Runnable {
     public boolean isWithin(QualifiedCoordinates coordinates) {
         return calibration.isWithin(coordinates);
     }
+
+/*
+    public boolean isWithin(Position position) {
+        return calibration.isWithin(position);
+    }
+*/
 
     /**
      * Disposes map - releases map images and disposes loader.
@@ -154,8 +159,11 @@ public final class Map implements Runnable {
         }
 
         // release slices images
-        for (int i = slices.length; --i >= 0; ) {
-            slices[i].setImage(null);
+        if (slices != null) {
+            Slice[] slices = this.slices; // local ref for faster access
+            for (int i = slices.length; --i >= 0; ) {
+                slices[i].setImage(null);
+            }
         }
 
         /*
@@ -316,55 +324,12 @@ public final class Map implements Runnable {
     }
 
     /**
-     * File input helper class.
-     */
-    static final class FileInput {
-        private String url;
-        private api.file.File file;
-        private InputStream in;
-
-        FileInput(String url) {
-            this.url = url;
-        }
-
-        InputStream _getInputStream() throws IOException {
-            file = File.open(Connector.open(url, Connector.READ));
-            if (!file.exists()) {
-                throw new InvalidMapException("File does not exist: " + url);
-            }
-            in = file.openInputStream();
-
-            return in;
-        }
-
-        void close() throws IOException {
-            if (in != null) {
-                try {
-                    in.close();
-                } catch (IOException e) {
-                    // ignore
-                }
-                in = null;
-            }
-            if (file != null) {
-                try {
-                    file.close();
-                } catch (IOException e) {
-                    // ignore
-                }
-                file = null;
-            }
-            url = null;
-        }
-    }
-
-    /**
      * Finalizes map initialization.
      */
     private void doFinal() throws InvalidMapException {
         // local ref for faster access
-        int mapWidth = calibration.width;
-        int mapHeight = calibration.height;
+        final int mapWidth = calibration.width;
+        final int mapHeight = calibration.height;
         Slice[] slices = this.slices;
 
         // vars
@@ -409,6 +374,9 @@ public final class Map implements Runnable {
         private Vector list;
 
         public abstract void loadSlice(Slice slice) throws IOException;
+
+        protected Loader() {
+        }
 
         public void init(String url) throws IOException {
             this.buffered = new BufferedInputStream(null, LARGE_BUFFER_SIZE);
@@ -483,9 +451,9 @@ public final class Map implements Runnable {
         protected Slice addSlice(String filename) throws InvalidMapException {
             if (basename == null) {
                 if (calibration instanceof Calibration.XML) { // GPSka
-                    basename = filename;
+                    basename = this instanceof TarLoader ? filename.substring(4) : filename;
                 } else {
-                    basename = Slice.getBasename(filename);
+                    basename = Slice.getBasename(this instanceof TarLoader ? filename.substring(4) : filename);
                 }
             }
 
@@ -572,6 +540,10 @@ public final class Map implements Runnable {
         private InputStream nativeIn;
         private TarInputStream tarIn;
 
+        protected TarLoader() {
+            super();
+        }
+
         public void init(String url) throws IOException {
             super.init(url);
 
@@ -587,7 +559,7 @@ public final class Map implements Runnable {
                 tarIn = new TarInputStream(in = file.openInputStream());
 
                 /*
-                 * test quality of file API
+                 * test quality of File API
                  */
 
                 if (useReset) {
@@ -600,7 +572,7 @@ public final class Map implements Runnable {
                             if (log.isEnabled()) log.debug("input stream support marking, very good");
 //#endif
                         } catch (Throwable t) {
-                            /* OutOfMemoryError on S60 */
+                            /* OutOfMemoryError on S60 3rd */
                         }
                     } else {
                         try {
@@ -638,7 +610,7 @@ public final class Map implements Runnable {
 
                             // no slices yest
                             if (Map.this.slices == null) {
-                                addSlice(entryName.substring(SET_DIR_PREFIX_LENGTH)).setClosure(new Long(entry.getPosition()));
+                                addSlice(entryName).setClosure(new Long(entry.getPosition()));
                             }
 
                         } else { // no, maybe calibration file
@@ -749,7 +721,7 @@ public final class Map implements Runnable {
 
                 // prepare tar stream
                 tarIn.reuse(buffered);
-                if (keepPosition == false) {
+                if (!keepPosition) {
                     tarIn.setStreamOffset(0);
                 }
                 tarIn.rewind(streamOffset);
@@ -761,20 +733,23 @@ public final class Map implements Runnable {
                 slice.setImage(NavigationScreens.createImage(tarIn));
 
             } finally {
+
                 // close native stream when not reusable
                 if (nativeIn == null) {
 //#ifdef __LOG__
                     if (log.isEnabled()) log.debug("input stream not reusable -> close it");
 //#endif
                     if (in != null) {
+
+                        // clean buffered
+                        buffered.reuse(null);
+
+                        // close native non-reusable stream
                         try {
                             in.close();
                         } catch (IOException e) {
                             // ignore
                         }
-
-                        // clean buffered
-                        buffered.reuse(null);
                     }
                 }
             }
@@ -786,6 +761,10 @@ public final class Map implements Runnable {
         private static final String DEFAULT_GMI_MAP = "/resources/world.gmi";
         private static final String RESOURCES_SET_DIR   = "/resources/set/";
         private static final String RESOURCES_SET_FILE  = "/resources/world.set";
+
+        protected JarLoader() {
+            super();
+        }
 
         public void init(String url) throws IOException {
             super.init(url);
@@ -899,6 +878,10 @@ public final class Map implements Runnable {
     private final class DirLoader extends Loader {
         private String dir;
 
+        protected DirLoader() {
+            super();
+        }
+
         public void init(String url) throws IOException {
             super.init(url);
 
@@ -957,10 +940,8 @@ public final class Map implements Runnable {
                     } catch (IOException e) {
                         throw new InvalidMapException("Failed to parse calibration file: " + path, e);
                     } finally {
-
                         // close helper loader
                         fileInput.close();
-
                     }
                 }
 
@@ -970,56 +951,60 @@ public final class Map implements Runnable {
                     if (log.isEnabled()) log.debug("do not have slices yet");
 //#endif
 
-                    // do we have a listing file?
-                    String setFile = path.substring(0, path.lastIndexOf('.')) + ".set";
-                    File file = File.open(Connector.open(setFile, Connector.READ));
-                    if (file.exists()) {
-                        try {
-                            // each line is a slice filename
-                            LineReader reader = new LineReader(buffered.reuse(file.openInputStream()));
-                            String entry = reader.readLine(false);
-                            while (entry != null) {
-                                addSlice(entry);
-                                entry = null; // gc hint
-                                entry = reader.readLine(false);
-                            }
-
-                            // clear buffered
-                            buffered.reuse(null);
-
-                            // close reader (closes the file stream)
-                            reader.close();
-
-                        } catch (InvalidMapException e) {
-                            throw e;
-                        } catch (IOException e) {
-                            throw new InvalidMapException("Failed to parse listing file", e);
-                        }
-                        
-                    } else {
-
-                        // close file
-                        file.close();
-                        file = null; // gc hint
-
-                        // iterate over set directory
-                        file = File.open(Connector.open(dir + SET_DIR_PREFIX, Connector.READ));
+                    // try listing file first
+                    File file = null;
+                    try {
+                        String setFile = path.substring(0, path.lastIndexOf('.')) + ".set";
+                        file = File.open(Connector.open(setFile, Connector.READ));
                         if (file.exists()) {
+                            LineReader reader = null;
                             try {
-                                for (Enumeration e = file.list("*.png", false); e.hasMoreElements(); ) {
-                                    addSlice((String) e.nextElement());
+                                // each line is a slice filename
+                                reader = new LineReader(buffered.reuse(file.openInputStream()));
+                                String entry = reader.readLine(false);
+                                while (entry != null) {
+                                    addSlice(entry);
+                                    entry = reader.readLine(false);
                                 }
+                            } catch (InvalidMapException e) {
+                                throw e;
                             } catch (IOException e) {
-                                throw new InvalidMapException("Could not list tiles in " + file.getURL(), e);
+                                throw new InvalidMapException("Failed to parse listing file", e);
+                            } finally {
+                                // clear buffered
+                                buffered.reuse(null);
+
+                                // close reader (closes the file stream)
+                                if (reader != null) {
+                                    reader.close();
+                                }
                             }
                         } else {
-                            throw new InvalidMapException("Slices directory not found");
+                            // close file
+                            file.close();
+                            file = null; // gc hint
+
+                            // iterate over set directory
+                            file = File.open(Connector.open(dir + SET_DIR_PREFIX, Connector.READ));
+                            if (file.exists()) {
+                                try {
+                                    for (Enumeration e = file.list("*.png", false); e.hasMoreElements(); ) {
+                                        addSlice((String) e.nextElement());
+                                    }
+                                } catch (IOException e) {
+                                    throw new InvalidMapException("Could not list tiles in " + file.getURL(), e);
+                                }
+                            } else {
+                                throw new InvalidMapException("Slices directory not found");
+                            }
+                        }
+                    } finally {
+                        // close file
+                        if (file != null) {
+                            file.close();
+                            file = null; // gc hint
                         }
                     }
-
-                    // close file
-                    file.close();
-                    file = null; // gc hint
                 }
             } catch (Exception e) {
                 exception = e;
@@ -1055,15 +1040,15 @@ public final class Map implements Runnable {
 
             } finally {
 
+                // gc hint
+                buffered.reuse(null);
+
                 // close input
                 try {
                     input.close();
                 } catch (IOException e) {
                     // ignore
                 }
-
-                // gc hint
-                buffered.reuse(null);
             }
         }
     }

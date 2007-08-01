@@ -38,7 +38,7 @@ public final class FileBrowser extends List implements CommandListener, Runnable
         this.next = next;
         this.cmdCancel = new Command("Cancel", Command.CANCEL, 1);
         this.cmdBack = new Command("Back", Command.BACK, 1);
-        this.cmdSelect = new Command("Select", Command.SCREEN, 1);
+        this.cmdSelect = new Command("Select", Command.ITEM, 1);
         setCommandListener(this);
         Desktop.display.setCurrent(this);
     }
@@ -79,9 +79,6 @@ public final class FileBrowser extends List implements CommandListener, Runnable
 
             } else {
 
-                // dir flag
-                boolean isDir;
-
                 // start browsing
                 if (file == null) {
 //#ifdef __LOG__
@@ -90,7 +87,6 @@ public final class FileBrowser extends List implements CommandListener, Runnable
 
                     // open root dir
                     file = File.open(Connector.open(api.file.File.FILE_PROTOCOL + (path.startsWith("/") ? "" : "/") + path, Connector.READ));
-                    isDir = file.isDirectory();
 
                 } else { // traverse
 //#ifdef __LOG__
@@ -99,13 +95,17 @@ public final class FileBrowser extends List implements CommandListener, Runnable
 
                     // traverse
                     file.setFileConnection(path);
-                    if (file.isBrokenTraversal()) {
-                        // we know special traversal code is used underneath
-                        isDir = file.isDirectory();
-                    } else {
-                        // detect from URL
-                        isDir = file.getURL().endsWith(File.PATH_SEPARATOR);
-                    }
+                }
+
+                // dir flag
+                boolean isDir;
+
+                if (file.isBrokenTraversal()) {
+                    // we know special traversal code is used underneath
+                    isDir = file.isDirectory();
+                } else {
+                    // detect from URL
+                    isDir = file.getURL().endsWith(File.PATH_SEPARATOR);
                 }
 
 //#ifdef __LOG__
@@ -156,7 +156,7 @@ public final class FileBrowser extends List implements CommandListener, Runnable
     }
 
     public void commandAction(Command command, Displayable displayable) {
-        if (Command.SCREEN == command.getCommandType()) {
+        if (Command.ITEM == command.getCommandType()) {
             path = null; // gc hint
             path = getString(getSelectedIndex());
             if (api.file.File.PARENT_DIR.equals(path)) {

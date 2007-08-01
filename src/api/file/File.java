@@ -18,7 +18,7 @@ public abstract class File {
     public static final char   PATH_SEPCHAR     = '/';
     public static final String PARENT_DIR       = "..";
 
-    public static final int FS_UNKNOWN      = -1;
+    public static final int FS_UNKNOWN      = 0;
     public static final int FS_JSR75        = 1;
     public static final int FS_SIEMENS      = 2;
     public static final int FS_SXG75        = 3;
@@ -32,13 +32,21 @@ public abstract class File {
 
     protected StreamConnection fc;
 
-    public static void detect(boolean isSXG75) {
+    public static void initialize(final boolean traverseBug) {
 //#ifdef __JSR75__
         try {
             Class.forName("javax.microedition.io.file.FileConnection");
-            fsType = isSXG75 ? FS_SXG75 : FS_JSR75;
+            fsType = traverseBug ? FS_SXG75 : FS_JSR75;
             factory = Class.forName("api.file.Jsr75File");
         } catch (Throwable t) {
+        }
+        if (fsType == FS_UNKNOWN) { /* repeat for Blackberry */
+            try {
+                Class.forName("javax.microedition.io.file.FileConnection");
+                fsType = traverseBug ? FS_SXG75 : FS_JSR75;
+                factory = Class.forName("api.file.Jsr75File");
+            } catch (Throwable t) {
+            }
         }
 //#endif
 //#ifdef __S65__

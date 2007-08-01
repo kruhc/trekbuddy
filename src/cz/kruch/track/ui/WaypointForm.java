@@ -6,7 +6,6 @@ package cz.kruch.track.ui;
 import cz.kruch.track.event.Callback;
 import cz.kruch.track.fun.Camera;
 import cz.kruch.track.location.Waypoint;
-import cz.kruch.track.util.CharArrayTokenizer;
 
 import javax.microedition.lcdui.Form;
 import javax.microedition.lcdui.CommandListener;
@@ -29,8 +28,11 @@ import java.util.TimeZone;
 public final class WaypointForm extends Form
         implements CommandListener, ItemCommandListener, Callback {
 
-    static final String MENU_NAVIGATE_TO    = "NavigateTo";
-    static final String MENU_GO_TO          = "GoTo";
+    static final String MENU_NAVIGATE_ALONG = "Route Along";
+    static final String MENU_NAVIGATE_BACK  = "Route Back";
+    static final String MENU_NAVIGATE_TO    = "Navigate To";
+    static final String MENU_SET_CURRENT    = "Set As Active";
+    static final String MENU_GO_TO          = "Go To";
     static final String MENU_SAVE           = "Save";
     static final String MENU_USE            = "Add";
     static final String MENU_CLOSE          = "Close";
@@ -38,16 +40,16 @@ public final class WaypointForm extends Form
 
     private static final Calendar CALENDAR = Calendar.getInstance(TimeZone.getDefault());
 
-    private static final String FIELD_NAME = "Name";
-    private static final String FIELD_COMMENT = "Comment";
-    private static final String FIELD_LAT = "Lat";
-    private static final String FIELD_LON = "Lon";
-    private static final String FIELD_TIME = "Time";
-    private static final String FIELD_LOCATION = "Location";
-    private static final String TITLE = "Waypoint";
+    private static final String FIELD_NAME      = "Name";
+    private static final String FIELD_COMMENT   = "Comment";
+    private static final String FIELD_LAT       = "Lat";
+    private static final String FIELD_LON       = "Lon";
+    private static final String FIELD_TIME      = "Time";
+    private static final String FIELD_LOCATION  = "Location";
+    private static final String TITLE           = "Waypoint";
 
     private Displayable next;
-    private Location location;
+    private QualifiedCoordinates coordinates;
     private Callback callback;
 
     private TextField fieldName;
@@ -73,7 +75,7 @@ public final class WaypointForm extends Form
     public WaypointForm(Displayable next, Location location, Callback callback) {
         super(TITLE);
         this.next = next;
-        this.location = location;
+        this.coordinates = location.getQualifiedCoordinates();
         this.callback = callback;
         appendWithNewlineAfter(this.fieldName = new TextField(FIELD_NAME, null, 16, TextField.ANY));
         appendWithNewlineAfter(this.fieldComment = new TextField(FIELD_COMMENT, null, 256, TextField.ANY));
@@ -83,7 +85,7 @@ public final class WaypointForm extends Form
             StringItem snapshot = new StringItem("Snapshot", "Take", Item.BUTTON);
             snapshot.setDefaultCommand(new Command("Take", Command.ITEM, 1));
             snapshot.setItemCommandListener(this);
-            append(snapshot);
+            appendWithNewlineAfter(snapshot);
         }
         addCommand(new Command(MENU_CANCEL, Command.BACK, 1));
         addCommand(new Command(MENU_SAVE, Command.SCREEN, 1));
@@ -92,7 +94,7 @@ public final class WaypointForm extends Form
     public WaypointForm(Displayable next, Waypoint wpt, Callback callback) {
         super(TITLE);
         this.next = next;
-        this.location = wpt;
+        this.coordinates = wpt.getQualifiedCoordinates();
         this.callback = callback;
         appendWithNewlineAfter(new StringItem(FIELD_NAME, wpt.getName()));
         appendWithNewlineAfter(new StringItem(FIELD_COMMENT, wpt.getComment()));
@@ -103,8 +105,10 @@ public final class WaypointForm extends Form
         append(new StringItem(FIELD_LOCATION, wpt.getQualifiedCoordinates().toString()));
         addCommand(new Command(MENU_CLOSE, Command.BACK, 1));
         addCommand(new Command(MENU_NAVIGATE_TO, Command.SCREEN, 1));
+        addCommand(new Command(MENU_NAVIGATE_ALONG, Command.SCREEN, 2));
+        addCommand(new Command(MENU_NAVIGATE_BACK, Command.SCREEN, 3));
 /* TODO in 0.9.58
-        addCommand(new Command(MENU_GO_TO, Command.SCREEN, 2));
+        addCommand(new Command(MENU_GO_TO, Command.SCREEN, 3));
 */
     }
 
@@ -137,9 +141,9 @@ public final class WaypointForm extends Form
         addCommand(new Command(MENU_USE, Command.SCREEN, 1));
     }
 
-    private void appendWithNewlineAfter(Item item) {
+    private int appendWithNewlineAfter(Item item) {
         item.setLayout(Item.LAYOUT_2 | Item.LAYOUT_NEWLINE_AFTER);
-        append(item);
+        return append(item);
     }
 
     public void show() {
@@ -169,25 +173,20 @@ public final class WaypointForm extends Form
         if (result instanceof byte[]) {
             imageBytes = (byte[]) result;
             try {
+                // release previous preview
+                if (imageNum > -1) {
+                    delete(imageNum);
+                }
+
                 // create preview
                 byte[] thumbnail = Camera.getThumbnail(imageBytes);
-                Image image = Image.createImage(thumbnail, 0, thumbnail.length);
-                thumbnail = null; // gc hint
-                System.gc(); // forced GC
-
-                // replace image
-                delete(imageNum);
-                imageNum = append(image);
-
-/* restarts on K750i
-                javax.microedition.media.Player p = javax.microedition.media.Manager.createPlayer(new java.io.ByteArrayInputStream(imageBytes), "image/jpeg");
-                p.realize();
-                p.prefetch();
-                javax.microedition.media.control.GUIControl vc;
-                if ((vc = (javax.microedition.media.control.GUIControl) p.getControl("GUIControl")) != null)
-                    append((Item) vc.initDisplayMode(vc.USE_GUI_PRIMITIVE, null));
-                p.start();
-*/
+                if (thumbnail == null) {
+                    imageNum = append("<no preview>");
+                } else {
+                    imageNum = append(Image.createImage(thumbnail, 0, thumbnail.length));
+                    thumbnail = null; // gc hint
+                    System.gc();
+                }
             } catch (Throwable t) {
                 Desktop.showError("Could not create preview but do not worry - image has been saved", t, this);
             }
@@ -214,7 +213,7 @@ public final class WaypointForm extends Form
                     Desktop.showWarning("Malformed coordinate", e, null);
                 }
             } else if (MENU_SAVE.equals(label)) {
-                Waypoint wpt = new Waypoint(location,
+                Waypoint wpt = new Waypoint(coordinates,
                                             fieldName.getString(),
                                             fieldComment.getString());
                 wpt.setUserObject(imageBytes);
@@ -223,6 +222,12 @@ public final class WaypointForm extends Form
             } else if (MENU_NAVIGATE_TO.equals(label)) {
                 Desktop.display.setCurrent(next);
                 callback.invoke(new Object[]{ MENU_NAVIGATE_TO, null }, null, this);
+            } else if (MENU_NAVIGATE_ALONG.equals(label)) {
+                Desktop.display.setCurrent(next);
+                callback.invoke(new Object[]{ MENU_NAVIGATE_ALONG, null }, null, this);
+            } else if (MENU_NAVIGATE_BACK.equals(label)) {
+                Desktop.display.setCurrent(next);
+                callback.invoke(new Object[]{ MENU_NAVIGATE_BACK, null }, null, this);
             } else if (MENU_GO_TO.equals(label)) {
                 Desktop.display.setCurrent(next);
                 callback.invoke(new Object[]{ MENU_GO_TO, null }, null, this);
@@ -271,9 +276,9 @@ public final class WaypointForm extends Form
 
         double result = Integer.parseInt(value.substring(1, idxSign).trim());
         if (idxApo == -1) {
-            result += Double.parseDouble(value.substring(idxSign + NavigationScreens.SIGN.length()).trim()) / 60D;
+            result += Double.parseDouble(value.substring(idxSign + 1).trim()) / 60D;
         } else {
-            result += Integer.parseInt(value.substring(idxSign + NavigationScreens.SIGN.length(), idxApo).trim()) / 60D;
+            result += Integer.parseInt(value.substring(idxSign + 1, idxApo).trim()) / 60D;
             result += Double.parseDouble(value.substring(idxApo + 1).trim()) / 3600D;
         }
 
@@ -281,9 +286,9 @@ public final class WaypointForm extends Form
     }
 
     private static String dateToString(final long time) {
-        CALENDAR.setTime(new Date(time/* + Config.getSafeInstance().getTimeZoneOffset() * 1000*/));
+        CALENDAR.setTime(new Date(time));
         StringBuffer sb = new StringBuffer();
-        sb.append(CALENDAR.get(Calendar.YEAR)).append('-');
+        NavigationScreens.append(sb, CALENDAR.get(Calendar.YEAR)).append('-');
         appendTwoDigitStr(sb, CALENDAR.get(Calendar.MONTH) + 1).append('-');
         appendTwoDigitStr(sb, CALENDAR.get(Calendar.DAY_OF_MONTH)).append(' ');
         appendTwoDigitStr(sb, CALENDAR.get(Calendar.HOUR_OF_DAY)).append(':');
@@ -297,7 +302,7 @@ public final class WaypointForm extends Form
         if (i < 10) {
             sb.append('0');
         }
-        sb.append(i);
+        NavigationScreens.append(sb, i);
 
         return sb;
     }

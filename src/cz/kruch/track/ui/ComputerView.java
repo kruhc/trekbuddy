@@ -6,6 +6,7 @@ package cz.kruch.track.ui;
 import cz.kruch.track.location.Navigator;
 import cz.kruch.track.configuration.Config;
 import cz.kruch.track.util.CharArrayTokenizer;
+import cz.kruch.track.util.SimpleCalendar;
 import cz.kruch.j2se.io.BufferedInputStream;
 
 import javax.microedition.lcdui.Graphics;
@@ -56,6 +57,10 @@ final class ComputerView extends View {
     private static final String ATTR_W          = "w";
     private static final String ATTR_H          = "h";
     private static final String ATTR_ALIGN      = "align";
+
+    private static final String[] NAME_CACHE = {
+        TAG_FONT, TAG_AREA, TAG_VALUE, ATTR_X, ATTR_Y, ATTR_H, ATTR_W, ATTR_ALIGN
+    };
 
     // special value
     private static final String TOKEN_COORDS     = "coords";
@@ -118,8 +123,12 @@ final class ComputerView extends View {
     private static final String SIGN_HEXA   = "0x1E";
     private static final char[] NO_TIME = { '?','?', ':', '?', '?', ':', '?', '?' };
 
+/*
     private static final Calendar CALENDAR  = Calendar.getInstance(TimeZone.getDefault());
     private static final Date DATE = new Date();
+*/
+    private static final SimpleCalendar TIME_CALENDAR = new SimpleCalendar(Calendar.getInstance(TimeZone.getDefault()));
+    private static final SimpleCalendar ETA_CALENDAR = new SimpleCalendar(Calendar.getInstance(TimeZone.getDefault()));
 
     private static final int[] CRC_TABLE = new int[256];
 
@@ -127,11 +136,15 @@ final class ComputerView extends View {
         public short x, y, w, h;
         public String fontName;
         public Object fontImpl;
+        public char[] value;
+        public boolean ralign;
         public float cw;
         public short ch;
-        public boolean ralign;
-        public char[] value;
         public short index = -1;
+
+        /** to avoid generation of $1 class */
+        public Area() {
+        }
     }
 
     private final StringBuffer sb;
@@ -186,7 +199,10 @@ final class ComputerView extends View {
         }
     }
 
-    public int reset() {
+    public void reset() {
+        TIME_CALENDAR.reset();
+        ETA_CALENDAR.reset();
+
         valueCoords = null;
         snrefCoords = null;
         for (int i = valuesFloat.length; --i >= 0; ) {
@@ -194,8 +210,6 @@ final class ComputerView extends View {
         }
         timestamp = starttime = 0;
         counter = 0;
-
-        return super.reset();
     }
 
     public int locationUpdated(Location l) {
@@ -218,24 +232,24 @@ final class ComputerView extends View {
             if (snrefCoords == null) {
                 snrefCoords = l.getQualifiedCoordinates().clone();
             } else {
-                final float accuracy = l.getAccuracy();
+                final float accuracy = l.getQualifiedCoordinates().getAccuracy();
                 ds = snrefCoords.distance(l.getQualifiedCoordinates());
                 if (accuracy < 0F) {
                     if (ds < 50) {
                         ds = 0F;
                     }
-                } else if (ds < (3 * accuracy)) {
+                } else if (ds < (3 * accuracy + 5)) {
                     ds = 0F;
                 } else {
                     QualifiedCoordinates.releaseInstance(snrefCoords);
+                    snrefCoords = null;
                     snrefCoords = l.getQualifiedCoordinates().clone();
                 }
             }
 
-            // release current instances
-            QualifiedCoordinates.releaseInstance(valueCoords);
-
             // update coords
+            QualifiedCoordinates.releaseInstance(valueCoords);
+            valueCoords = null;
             valueCoords = l.getQualifiedCoordinates().clone();
 
             // local ref for faster access
@@ -243,7 +257,7 @@ final class ComputerView extends View {
 
             // alt, alt-d
             float f = valueCoords.getAlt();
-            if (f > -1F) {
+            if (f != Float.NaN) {
                 if (dt > 0) {
                     valuesFloat[VALUE_ALT_D] = (f - valuesFloat[VALUE_ALT]) / dt;
                 }
@@ -415,23 +429,28 @@ final class ComputerView extends View {
                             switch (idx) {
                                 case VALUE_ALT:
                                 case VALUE_COURSE:  {
-                                    sb.append((int) valuesFloat[idx]);
+                                    NavigationScreens.append(sb, (int) valuesFloat[idx]);
                                 } break;
                                 case VALUE_SPD:
                                 case VALUE_SPD_MAX:
                                 case VALUE_SPD_AVG: {
                                     float value = valuesFloat[idx];
-                                    if (Config.nauticalView) {
+                                    if (Config.unitsNautical) {
                                         NavigationScreens.append(sb, value / 1.852F, 1);
                                         narrowChars++;
+                                    } else if (Config.unitsImperial) {
+                                        NavigationScreens.append(sb, value / 1.609F, 1);
+                                        narrowChars++;
                                     } else {
-                                        sb.append((int) value);
+                                        NavigationScreens.append(sb, (int) value);
                                     }
                                 } break;
                                 case VALUE_DIST_T: {
                                     float value = valuesFloat[idx];
-                                    if (Config.nauticalView) {
+                                    if (Config.unitsNautical) {
                                         value /= 1.852F;
+                                    } else if (Config.unitsImperial) {
+                                        value /= 1.609F;
                                     }
                                     NavigationScreens.append(sb, value, 0);
                                     narrowChars++;
@@ -442,8 +461,10 @@ final class ComputerView extends View {
                                 case VALUE_SPD_DMAX:
                                 case VALUE_SPD_DAVG: {
                                     float value = valuesFloat[idx];
-                                    if (Config.nauticalView && idx > VALUE_SPD_D) { // spd-d is always in m/s
+                                    if (Config.unitsNautical && idx > VALUE_SPD_D) { // spd-d is always in m/s
                                         value /= 1.852F;
+                                    } else if (Config.unitsImperial && idx > VALUE_SPD_D) { // spd-d is always in m/s
+                                        value /= 1.609F;
                                     }
                                     if (value >= 0F) {
                                         sb.append('+');
@@ -459,11 +480,9 @@ final class ComputerView extends View {
                                         sb.append(MSG_NO_POSITION);
                                     } else {
                                         if (Config.useGeocachingFormat || Config.useUTM) {
-                                            valueCoords.setHp(Config.decimalPrecision);
                                             valueCoords.toStringBuffer(sb);
                                         } else {
                                             QualifiedCoordinates localQc = navigator.getMap().getDatum().toLocal(valueCoords);
-                                            localQc.setHp(Config.decimalPrecision);
                                             localQc.toStringBuffer(sb);
                                             QualifiedCoordinates.releaseInstance(localQc);
                                         }
@@ -473,12 +492,17 @@ final class ComputerView extends View {
                                     if (timestamp == 0) {
                                         sb.append(NO_TIME);
                                     } else {
+/*
                                         DATE.setTime(timestamp);
                                         CALENDAR.setTime(DATE);
                                         int hour = CALENDAR.get(Calendar.HOUR_OF_DAY);
                                         int min = CALENDAR.get(Calendar.MINUTE);
                                         int sec = CALENDAR.get(Calendar.SECOND);
-                                        printTime(sb, hour, min, sec);
+*/
+                                        TIME_CALENDAR.setTime(timestamp);
+                                        printTime(sb, TIME_CALENDAR.hour,
+                                                      TIME_CALENDAR.minute,
+                                                      TIME_CALENDAR.second);
                                     }
                                     narrowChars += 2;
                                 } break;
@@ -486,10 +510,10 @@ final class ComputerView extends View {
                                     if (timestamp == 0) {
                                         sb.append(NO_TIME);
                                     } else {
-                                        int dt = (int) (timestamp - starttime) / 1000;
-                                        int hours = dt / 3600;
-                                        int mins = (dt % 3600) / 60;
-                                        int secs = (dt % 3600) % 60;
+                                        final int dt = (int) (timestamp - starttime) / 1000;
+                                        final int hours = dt / 3600;
+                                        final int mins = (dt % 3600) / 60;
+                                        final int secs = (dt % 3600) % 60;
                                         printTime(sb, hours, mins, secs);
                                     }
                                     narrowChars += 2;
@@ -499,11 +523,11 @@ final class ComputerView extends View {
                                                                          area.x, area.y, 0);
                                 } break;
                                 case VALUE_WPT_AZI: {
-                                    int azi = navigator.getWptAzimuth();
+                                    final int azi = navigator.getWptAzimuth();
                                     if (azi < 0F) {
                                         sb.append('?');
                                     } else {
-                                        sb.append(azi);
+                                        NavigationScreens.append(sb, azi);
                                     }
                                 } break;
                                 case VALUE_WPT_DIST: {
@@ -511,8 +535,10 @@ final class ComputerView extends View {
                                     if (dist < 0F) {
                                         sb.append('?');
                                     } else {
-                                        if (Config.nauticalView) {
+                                        if (Config.unitsNautical) {
                                             dist /= 1852F;
+                                        } else if (Config.unitsImperial) {
+                                            dist /= 1609F;
                                         } else {
                                             dist /= 1000F;
                                         }
@@ -530,15 +556,26 @@ final class ComputerView extends View {
                                             double vmg = valuesFloat[VALUE_SPD] * (Math.cos(Math.toRadians(valuesFloat[VALUE_COURSE] - azi)));
                                             long dt = (long) (1000 * (dist / (vmg / 3.6F)));
                                             long eta = timestamp + (dt < 0F ? 2 * -dt : dt);
+/*
                                             DATE.setTime(eta);
+*/
+                                            ETA_CALENDAR.setTime(eta);
                                         } else {
+/*
                                             DATE.setTime(timestamp);
+*/
+                                            ETA_CALENDAR.setTime(timestamp);
                                         }
+/*
                                         CALENDAR.setTime(DATE);
                                         int hour = CALENDAR.get(Calendar.HOUR_OF_DAY);
                                         int min = CALENDAR.get(Calendar.MINUTE);
                                         int sec = CALENDAR.get(Calendar.SECOND);
                                         printTime(sb, hour, min, sec);
+*/
+                                        printTime(sb, ETA_CALENDAR.hour,
+                                                      ETA_CALENDAR.minute,
+                                                      ETA_CALENDAR.second);
                                     }
                                     narrowChars += 2;
                                 } break;
@@ -548,8 +585,10 @@ final class ComputerView extends View {
                                         sb.append('?');
                                     } else {
                                         double vmg = valuesFloat[VALUE_SPD] * (Math.cos(Math.toRadians(valuesFloat[VALUE_COURSE] - azi)));
-                                        if (Config.nauticalView) {
+                                        if (Config.unitsNautical) {
                                             vmg /= 1.852F;
+                                        } else if (Config.unitsImperial) {
+                                            vmg /= 1.609F;
                                         }
                                         NavigationScreens.append(sb, vmg, 1);
                                         narrowChars++;
@@ -592,21 +631,21 @@ final class ComputerView extends View {
         flushGraphics();
     }
 
-    private StringBuffer printTime(StringBuffer sb, int hour, int min, int sec) {
+    private StringBuffer printTime(StringBuffer sb, final int hour, final int min, final int sec) {
         if (hour < 10)
             sb.append('0');
-        sb.append(hour).append(':');
+        NavigationScreens.append(sb, hour).append(':');
         if (min < 10)
             sb.append('0');
-        sb.append(min).append(':');
+        NavigationScreens.append(sb, min).append(':');
         if (sec < 10)
             sb.append('0');
-        sb.append(sec);
+        NavigationScreens.append(sb, sec);
 
         return sb;
     }
 
-    private void drawChars(Graphics graphics, char[] value, int length,
+    private void drawChars(Graphics graphics, char[] value, final int length,
                            int x, int y, Area area) {
         Image image = (Image) area.fontImpl;
         final float cw = area.cw;
@@ -695,83 +734,86 @@ final class ComputerView extends View {
     private String loadProfile(String filename, InputStream in) throws IOException, XmlPullParserException {
         // instantiate parser
         KXmlParser parser = new KXmlParser();
+        parser.setNameCache(NAME_CACHE);
 
         try {
             // set input
             parser.setInput(in, null); // null is for encoding autodetection
 
-            int eventType = XmlPullParser.START_TAG;
+            // var
             Area area = null;
 
             // sax
-            while (eventType != XmlPullParser.END_DOCUMENT) {
-                if (eventType == XmlPullParser.START_TAG) {
-                    String tag = parser.getName();
-                    if (TAG_FONTS.equals(tag)) {
-                        fonts.clear();
-                        fontsPng.clear();
-                    } else if (TAG_FONT.equals(tag)) {
-                        String name = parser.getAttributeValue(null, ATTR_NAME);
-                        String source = parser.getAttributeValue(null, ATTR_FILE);
-                        if (source != null) {
-                            byte[] image = (byte[]) load(source);
-                            if (image != null) {
-                                fonts.put(name, image);
+            for (int eventType = parser.next(); eventType != XmlPullParser.END_DOCUMENT; eventType = parser.next()) {
+                switch (eventType) {
+                    case XmlPullParser.START_TAG: {
+                        String tag = parser.getName();
+                        if (TAG_FONTS.equals(tag)) {
+                            fonts.clear();
+                            fontsPng.clear();
+                        } else if (TAG_FONT.equals(tag)) {
+                            String name = parser.getAttributeValue(null, ATTR_NAME);
+                            String source = parser.getAttributeValue(null, ATTR_FILE);
+                            if (source != null) {
+                                byte[] image = (byte[]) load(source);
+                                if (image != null) {
+                                    fonts.put(name, image);
+                                }
+                            } else {
+                                source = parser.getAttributeValue(null, ATTR_SYSTEM);
+                                int code = Integer.parseInt(source, 16);
+                                fonts.put(name, Font.getFont((code & 0xFF0000) >> 16,
+                                                             (code & 0x00FF00) >> 8,
+                                                             (code & 0x0000FF)));
                             }
-                        } else {
-                            source = parser.getAttributeValue(null, ATTR_SYSTEM);
-                            int code = Integer.parseInt(source, 16);
-                            fonts.put(name, Font.getFont((code & 0xFF0000) >> 16,
-                                                         (code & 0x00FF00) >> 8,
-                                                         (code & 0x0000FF)));
-                        }
-                    } else if (TAG_SCREEN.equals(tag)){
-                        areas.removeAllElements();
-                    } else if (TAG_COLORS.equals(tag)) {
-                        int offset = 0;
-                        if ("night".equals(parser.getAttributeValue(null, ATTR_MODE))) {
-                            offset = 4;
-                        }
-                        colors[offset] = Integer.parseInt(parser.getAttributeValue(null, ATTR_BGCOLOR), 16);
-                        colors[offset + 1] = Integer.parseInt(parser.getAttributeValue(null, ATTR_FGCOLOR), 16);
-                        colors[offset + 2] = Integer.parseInt(parser.getAttributeValue(null, ATTR_NXCOLOR), 16);
-                        colors[offset + 3] = Integer.parseInt(parser.getAttributeValue(null, ATTR_PXCOLOR), 16);
-                    } else if (TAG_AREA.equals(tag)) {
-                        area = new Area();
-                        area.x = Short.parseShort(parser.getAttributeValue(null, ATTR_X));
-                        area.y = Short.parseShort(parser.getAttributeValue(null, ATTR_Y));
-                        area.w = Short.parseShort(parser.getAttributeValue(null, ATTR_W));
-                        area.h = Short.parseShort(parser.getAttributeValue(null, ATTR_H));
-                        area.ralign = "right".equals(parser.getAttributeValue(null, ATTR_ALIGN));
-                        String font = parser.getAttributeValue(null, TAG_FONT);
-                        if (font != null) {
-/*
-                            if (fo instanceof byte[]) {
-                                Image image = (Image) fo;
-                                area.cw = image.getWidth() / CHARSET.length;
-                                area.ch = (short) image.getHeight();
+                        } else if (TAG_SCREEN.equals(tag)){
+                            areas.removeAllElements();
+                        } else if (TAG_COLORS.equals(tag)) {
+                            int offset = 0;
+                            if ("night".equals(parser.getAttributeValue(null, ATTR_MODE))) {
+                                offset = 4;
                             }
-                            area.font = fo;
-*/
-                            area.fontName = font;
-                            Object fo = fonts.get(font);
-                            if (fo instanceof Font) {
-                                area.fontImpl = fo;
+                            colors[offset] = Integer.parseInt(parser.getAttributeValue(null, ATTR_BGCOLOR), 16);
+                            colors[offset + 1] = Integer.parseInt(parser.getAttributeValue(null, ATTR_FGCOLOR), 16);
+                            colors[offset + 2] = Integer.parseInt(parser.getAttributeValue(null, ATTR_NXCOLOR), 16);
+                            colors[offset + 3] = Integer.parseInt(parser.getAttributeValue(null, ATTR_PXCOLOR), 16);
+                        } else if (TAG_AREA.equals(tag)) {
+                            area = new Area();
+                            area.x = Short.parseShort(parser.getAttributeValue(null, ATTR_X));
+                            area.y = Short.parseShort(parser.getAttributeValue(null, ATTR_Y));
+                            area.w = Short.parseShort(parser.getAttributeValue(null, ATTR_W));
+                            area.h = Short.parseShort(parser.getAttributeValue(null, ATTR_H));
+                            area.ralign = "right".equals(parser.getAttributeValue(null, ATTR_ALIGN));
+                            String font = parser.getAttributeValue(null, TAG_FONT);
+                            if (font != null) {
+    /*
+                                if (fo instanceof byte[]) {
+                                    Image image = (Image) fo;
+                                    area.cw = image.getWidth() / CHARSET.length;
+                                    area.ch = (short) image.getHeight();
+                                }
+                                area.font = fo;
+    */
+                                area.fontName = font;
+                                Object fo = fonts.get(font);
+                                if (fo instanceof Font) {
+                                    area.fontImpl = fo;
+                                }
+                            } else {
+                                area.fontName = "Desktop";
+                                area.fontImpl = Desktop.font;
                             }
-                        } else {
-                            area.fontName = "Desktop";
-                            area.fontImpl = Desktop.font;
+                        } else if (TAG_VALUE.equals(tag)) {
+                            area.value = parser.nextText().toCharArray();
                         }
-                    } else if (TAG_VALUE.equals(tag)) {
-                        area.value = parser.nextText().toCharArray();
-                    }
-                } else if (eventType == XmlPullParser.END_TAG) {
-                    String tag = parser.getName();
-                    if (TAG_AREA.equals(tag)){
-                        areas.addElement(area);
-                    }
+                    } break;
+                    case XmlPullParser.END_TAG: {
+                        String tag = parser.getName();
+                        if (TAG_AREA.equals(tag)){
+                            areas.addElement(area);
+                        }
+                    } break;
                 }
-                eventType = parser.next();
             }
             profile = filename;
         } finally {

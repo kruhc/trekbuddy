@@ -15,78 +15,138 @@ import javax.microedition.lcdui.Item;
 import javax.microedition.media.Player;
 import javax.microedition.media.Manager;
 import javax.microedition.media.MediaException;
+import javax.microedition.media.PlayerListener;
 import javax.microedition.media.control.VideoControl;
-import javax.microedition.media.control.GUIControl;
+import javax.microedition.media.control.VolumeControl;
+import javax.microedition.io.Connector;
 import java.io.InputStream;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.ByteArrayOutputStream;
 
-public final class Camera extends Form implements CommandListener, Runnable {
-
-    private static final byte BYTE_FF = (byte)0xFF;
-    private static final String MSG_UNEXPECTED_END_OF_STREAM = "Unexpected end of stream";
+public final class Camera implements CommandListener, PlayerListener, Runnable {
 
 //#ifdef __LOG__
     private static final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("Desktop");
 //#endif
 
+    private static final byte BYTE_FF = (byte) 0xFF;
+    private static final String MSG_UNEXPECTED_END_OF_STREAM = "Unexpected end of stream";
 
+    // video capture members
     private Displayable next;
     private Callback callback;
-    private Player player = null;
-    private VideoControl video = null;
+    private Player player;
+    private VideoControl video;
+
+    // sound player members
+    private InputStream in;
+    private VolumeControl volume;
+    private int level;
 
     public Camera(Displayable next, Callback callback) {
-        super("Picture");
         this.next = next;
         this.callback = callback;
-        addCommand(new Command("Close", Command.BACK, 1));
-        addCommand(new Command("Capture", Command.SCREEN, 1));
-        setCommandListener(this);
     }
 
-    public void show() throws Exception {
+    private Camera(InputStream in, VolumeControl volume) {
+        this.in = in;
+        if (volume != null) {
+            this.volume = volume;
+            this.level = volume.getLevel();
+        }
+    }
+
+    public void show() throws Throwable {
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("capture locator: " + Config.captureLocator);
 //#endif
 
         try {
-            // get video control
+            // create player
             player = Manager.createPlayer(Config.captureLocator);
             player.realize();
+
+            // get video control
             video = (VideoControl) player.getControl("VideoControl");
             if (video == null) {
                 throw new MediaException("Capture not supported");
             }
 
-            // create view finder item
-            Item item = (Item) video.initDisplayMode(GUIControl.USE_GUI_PRIMITIVE, null);
-            item.setLayout(Item.LAYOUT_CENTER);
-            append(item);
+            // create form
+            Form form = new Form("Capture");
+            form.addCommand(new Command("Close", Command.BACK, 1));
+            form.addCommand(new Command("Capture", Command.SCREEN, 1));
+            form.setCommandListener(this);
 
-            // show camera
+            // create view finder item
+            Item item = (Item) video.initDisplayMode(VideoControl.USE_GUI_PRIMITIVE, null);
+            item.setLayout(Item.LAYOUT_CENTER);
+            form.append(item);
+
+            // start camera
             player.start();
 
-        } catch (Exception e) {
+            // show camera window
+            Desktop.display.setCurrent(form);
+
+        } catch (Throwable t) {
 
             // release video resources
             destroy();
 
             // bail out
-            throw e;
+            throw t;
         }
+    }
 
-        // show camera window
-        Desktop.display.setCurrent(this);
+    public static boolean play(String file) {
+        Player p = null;
+        InputStream in = null;
+        try {
+            p = Manager.createPlayer(in = Connector.openInputStream(Config.getFolderSounds() + file), "audio/amr");
+            p.realize();
+            p.addPlayerListener(new Camera(in, (VolumeControl) p.getControl("VolumeControl")));
+            p.start();
+        } catch (Throwable t) {
+            if (in != null) {
+                try {
+                    in.close();
+                } catch (IOException e) {
+                    // ignore
+                }
+            }
+            if (p != null) {
+                p.close();
+            }
+            return false;
+        }
+        return true;
+    }
+
+    public void playerUpdate(Player player, String event, Object closure) {
+        if (event.equals(PlayerListener.END_OF_MEDIA) || event.equals(PlayerListener.ERROR)) {
+            if (volume != null) {
+                volume.setLevel(level);
+                volume = null; // gc hint
+            }
+            player.close();
+            if (in != null) {
+                try {
+                    in.close();
+                } catch (IOException e) {
+                    // ignore
+                }
+                in = null; // gc hint
+            }
+        }
     }
 
     private void destroy() {
-        // release resources
-        if (video != null) {
-            video.setVisible(false);
-            video = null;
-        }
+        // gc hint
+        video = null;
+
+        // close player
         if (player != null) {
             player.close();
             player = null;
@@ -105,6 +165,9 @@ public final class Camera extends Form implements CommandListener, Runnable {
     }
 
     public void run() {
+        byte[] result = null;
+        Throwable throwable = null;
+
         try {
             // fix the format
             String format = Config.captureFormat;
@@ -116,30 +179,31 @@ public final class Camera extends Form implements CommandListener, Runnable {
             System.gc();
 
             // take the snapshot
-            byte[] raw = video.getSnapshot(format);
-
-            // close the player
-            destroy();
-
-            // report result
-            callback.invoke(raw, null, this);
+            result = video.getSnapshot(format);
 
         } catch (Throwable t) {
 
-            // close the player
-            destroy();
+            // remember
+            throwable = t;
 
-            // report snapshot taking problem
-            callback.invoke(null, t, this);
+        } finally {
+
+            // destroy
+            destroy();
         }
+
+        // report result
+        callback.invoke(result, throwable, this);
     }
 
     public static byte[] getThumbnail(byte[] image) throws Exception {
-        byte[] result = image;
+        // stream
         InputStream in = new ByteArrayInputStream(image);
 
         // JPEG check
-        isJpeg(in);
+        if (!isJpeg(in)) {
+            return null;
+        }
 
         // find EXIF
         do {
@@ -169,9 +233,9 @@ public final class Camera extends Form implements CommandListener, Runnable {
 
             if (marker == (byte)0xDA) {
                 goTo(in, (byte)0xD9, null);
-            } else if (marker == (byte)0xE1) {
+            } else if (marker == (byte)0xE1) { // thumbnail segment
                 int l = length;
-                ByteArrayOutputStream out = new ByteArrayOutputStream();
+                ByteArrayOutputStream out = new ByteArrayOutputStream(length);
                 l -= goTo(in, (byte)0xD8, null);
                 out.write(BYTE_FF);
                 out.write((byte)0xD8);
@@ -179,28 +243,23 @@ public final class Camera extends Form implements CommandListener, Runnable {
                 out.write(BYTE_FF);
                 out.write((byte)0xD9);
                 out.flush();
-                // assertion
                 if (l != 0) {
-                    throw new Exception("Wrong thumbnail position");
+                    throw new IllegalStateException("Wrong thumbnail position");
                 }
-                // result
-                result = out.toByteArray();
+                return out.toByteArray();
             } else {
                 skipSegment(in, length);
             }
         } while (true);
 
-        in.close();
-
-        return result;
+        return null;
     }
 
     private static boolean isJpeg(InputStream in) throws IOException {
-        byte[] header = new byte[2];
-        header[0] = readByte(in);
-        header[1] = readByte(in);
+        final byte header0 = readByte(in);
+        final byte header1 = readByte(in);
 
-        return (header[0] & 0xFF) == 0xFF && (header[1] & 0xFF) == 0xD8;
+        return (header0 & 0xFF) == 0xFF && (header1 & 0xFF) == 0xD8;
     }
 
     private static void skipSegment(InputStream in, long length) throws IOException {
@@ -214,7 +273,7 @@ public final class Camera extends Form implements CommandListener, Runnable {
     }
 
     private static byte readByte(InputStream in) throws IOException {
-        int b = in.read();
+        final int b = in.read();
         if (b == -1) {
             throw new IOException(MSG_UNEXPECTED_END_OF_STREAM);
         }
@@ -223,7 +282,6 @@ public final class Camera extends Form implements CommandListener, Runnable {
     }
 
     private static int goTo(InputStream in, byte marker, ByteArrayOutputStream out) throws IOException {
-//        System.out.println("goto " + Integer.toHexString(0xFF & marker) + "; record? " + (out != null));
         int count = 0;
         while (true) {
             int b = readByte(in);
@@ -232,7 +290,6 @@ public final class Camera extends Form implements CommandListener, Runnable {
                 b = readByte(in);
                 count++;
                 if (marker == (byte)(b & 0xFF)) {
-//                    System.out.println("mark " + Integer.toHexString(0xFF & marker) + " found");
                     break;
                 } else {
                     if (out != null) {

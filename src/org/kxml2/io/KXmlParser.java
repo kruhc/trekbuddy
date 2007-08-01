@@ -64,7 +64,7 @@ public final class KXmlParser implements XmlPullParser {
 
     private Reader reader;
     private String encoding;
-    private char[] srcBuf = new char[512];
+    private char[] srcBuf = new char[1024];
 
     private int srcPos;
     private int srcCount;
@@ -103,7 +103,14 @@ public final class KXmlParser implements XmlPullParser {
     private boolean unresolved;
     private boolean token;
 
+    /* perf hack */
+    private String[] nameCache;
+
     public KXmlParser() {
+    }
+
+    public void setNameCache(String[] nameCache) {
+        this.nameCache = nameCache;
     }
 
     private boolean isProp(String n1, boolean prop, String n2) {
@@ -516,7 +523,7 @@ public final class KXmlParser implements XmlPullParser {
         skip();
         read('>');
 
-        int sp = (depth - 1) << 2;
+        final int sp = (depth - 1) << 2;
 
         if (depth == 0) {
             error("element stack empty");
@@ -569,8 +576,31 @@ public final class KXmlParser implements XmlPullParser {
         }
     }
 
-    private String get(int pos) {
+    private String get(final int pos) {
         return new String(txtBuf, pos, txtPos - pos);
+    }
+
+    private String getCached(final int pos) {
+        if (nameCache != null) {
+            final int length = txtPos - pos;
+            final char[] buf = txtBuf;
+            final String[] cache = nameCache;
+            for (int i = cache.length; --i>= 0; ) {
+                String item = cache[i];
+                if (length != item.length())
+                    continue;
+                int j = length;
+                for ( ; --j>= 0; ) {
+                    if (buf[pos + j] != item.charAt(j))
+                        break;
+                }
+                if (j < 0) {
+                    return item;
+                }
+            }
+        }
+
+        return get(pos);
     }
 
     /*
@@ -609,7 +639,7 @@ public final class KXmlParser implements XmlPullParser {
         while (true) {
             skip();
 
-            int c = peek(0);
+            final int c = peek(0);
 
             if (xmldecl) {
                 if (c == '?') {
@@ -672,7 +702,7 @@ public final class KXmlParser implements XmlPullParser {
                     read();
                 }
 
-                int p = txtPos;
+                final int p = txtPos;
                 pushText(delimiter, true);
 
                 attributes[i] = get(p);
@@ -790,7 +820,7 @@ public final class KXmlParser implements XmlPullParser {
     ' ': parse to whitespace or '>'
     */
 
-    private void pushText(int delimiter, boolean resolveEntities)
+    private void pushText(final int delimiter, final boolean resolveEntities)
         throws IOException, XmlPullParserException {
 
         int next = peek(0);
@@ -827,7 +857,7 @@ public final class KXmlParser implements XmlPullParser {
         }
     }
 
-    private void read(char c)
+    private void read(final char c)
         throws IOException, XmlPullParserException {
         int a = read();
         if (a != c) {
@@ -863,11 +893,7 @@ public final class KXmlParser implements XmlPullParser {
     /** Does never read more than needed */
 
     private int peek(final int pos) throws IOException {
-        char[] srcBuf = this.srcBuf;
-        int[] peek = this.peek;
-
         while (pos >= peekCount) {
-
             int nw;
 
             if (srcBuf.length <= 1) {
@@ -928,7 +954,7 @@ public final class KXmlParser implements XmlPullParser {
                 || c == '.'
                 || c >= 0x0b7);
 
-        String result = get(pos);
+        String result = getCached(pos);
         txtPos = pos;
 
         return result;
@@ -1462,7 +1488,6 @@ public final class KXmlParser implements XmlPullParser {
     public void close() throws IOException {
 
         /* gc hints */
-        entityMap.clear();
         entityMap = null;
         elementStack = null;
         nspStack = null;
@@ -1476,6 +1501,8 @@ public final class KXmlParser implements XmlPullParser {
         if (reader != null) {
             try {
                 reader.close();
+            } catch (IOException e) {
+                // ignore
             } finally {
                 reader = null;
             }

@@ -15,6 +15,7 @@ import javax.microedition.lcdui.Command;
 import javax.microedition.lcdui.TextField;
 import javax.microedition.lcdui.ItemStateListener;
 import javax.microedition.lcdui.Item;
+import javax.microedition.lcdui.Choice;
 
 final class SettingsForm extends Form implements CommandListener, ItemStateListener {
     private static final int MAX_URL_LENGTH = 256;
@@ -22,8 +23,10 @@ final class SettingsForm extends Form implements CommandListener, ItemStateListe
     private Callback callback;
 
     private TextField fieldMapPath;
+    private ChoiceGroup choiceLanguage;
     private ChoiceGroup choiceMapDatum;
     private ChoiceGroup choiceCoordinates;
+    private ChoiceGroup choiceUnits;
     private ChoiceGroup choiceProvider;
     private ChoiceGroup choiceTracklog;
     private ChoiceGroup choiceTracklogFormat;
@@ -37,6 +40,9 @@ final class SettingsForm extends Form implements CommandListener, ItemStateListe
     private ChoiceGroup choiceFriends;
     private ChoiceGroup choiceMisc;
     private ChoiceGroup choicePerformance;
+    private TextField fieldWptProximity;
+    private TextField fieldPoiProximity;
+    private ChoiceGroup choiceRouteLine;
 
     public SettingsForm(Callback callback) {
         super(cz.kruch.track.TrackingMIDlet.wm ? "Settings (TrekBuddy)" : "Settings");
@@ -50,8 +56,19 @@ final class SettingsForm extends Form implements CommandListener, ItemStateListe
             append(fieldMapPath);
         }
 
+        // language
+        choiceLanguage = new ChoiceGroup("Language", ChoiceGroup.POPUP);
+        choiceLanguage.setFitPolicy(Choice.TEXT_WRAP_ON);
+        for (int N = I18n.LANGUAGES.length, i = 0; i < N; i++) {
+            choiceLanguage.setSelectedIndex(choiceLanguage.append(I18n.LANGUAGES[i], null), I18n.LANGUAGES[i].equals(Config.language));
+        }
+/*
+        append(choiceLanguage);
+*/
+
         // map datum
         choiceMapDatum = new ChoiceGroup("Default Datum", ChoiceGroup.POPUP);
+        choiceMapDatum.setFitPolicy(Choice.TEXT_WRAP_ON);
         for (int N = Config.DATUMS.length, i = 0; i < N; i++) {
             String id = Config.DATUMS[i].getName();
             choiceMapDatum.setSelectedIndex(choiceMapDatum.append(id, null), Config.geoDatum.equals(id));
@@ -60,6 +77,7 @@ final class SettingsForm extends Form implements CommandListener, ItemStateListe
 
         // coordinates format
         choiceCoordinates = new ChoiceGroup("Coordinates", ChoiceGroup.POPUP);
+        choiceCoordinates.setFitPolicy(Choice.TEXT_WRAP_ON);
         choiceCoordinates.append(Config.COORDS_MAP_LATLON, null);
         choiceCoordinates.append(Config.COORDS_MAP_GRID, null);
         choiceCoordinates.append(Config.COORDS_UTM, null);
@@ -72,13 +90,24 @@ final class SettingsForm extends Form implements CommandListener, ItemStateListe
         });
         append(choiceCoordinates);
 
+        // units format
+        choiceUnits = new ChoiceGroup("Units", ChoiceGroup.POPUP);
+        choiceUnits.setFitPolicy(Choice.TEXT_WRAP_ON);
+        choiceUnits.append(Config.UNITS_METRIC, null);
+        choiceUnits.append(Config.UNITS_IMPERIAL, null);
+        choiceUnits.append(Config.UNITS_NAUTICAL, null);
+        choiceUnits.setSelectedFlags(new boolean[]{
+            false,
+            Config.unitsImperial,
+            Config.unitsNautical
+        });
+        append(choiceUnits);
+
         // desktop settings
         choiceMisc = new ChoiceGroup("Desktop", ChoiceGroup.MULTIPLE);
         choiceMisc.append("fullscreen", null);
         choiceMisc.append("no sounds", null);
         choiceMisc.append("decimal precision", null);
-        choiceMisc.append("nautical view", null);
-        choiceMisc.append("show trajectory", null);
         choiceMisc.append("HPS wpt true azimuth", null);
         choiceMisc.append("OSD basic", null);
         choiceMisc.append("OSD extended", null);
@@ -90,8 +119,6 @@ final class SettingsForm extends Form implements CommandListener, ItemStateListe
             Config.fullscreen,
             Config.noSounds,
             Config.decimalPrecision,
-            Config.nauticalView,
-            Config.trajectoryOn,
             Config.hpsWptTrueAzimuth,
             Config.osdBasic,
             Config.osdExtended,
@@ -103,6 +130,20 @@ final class SettingsForm extends Form implements CommandListener, ItemStateListe
 //        if (choiceProvider.size() == 0) { // dumb phone
             append(choiceMisc);
 //        }
+
+        // navigation
+        append(fieldWptProximity = new TextField("Wpt Proximity", Integer.toString(Config.wptProximity), 5, TextField.NUMERIC));
+        /*append(*/fieldPoiProximity = new TextField("Poi Proximity", Integer.toString(Config.poiProximity), 5, TextField.NUMERIC)/*)*/;
+        choiceRouteLine = new ChoiceGroup("Route Line", ChoiceGroup.MULTIPLE);
+        choiceRouteLine.append("dotted", null);
+        choiceRouteLine.append("red color", null);
+        choiceRouteLine.append("POI icons", null);
+        choiceRouteLine.setSelectedFlags(new boolean[] {
+            Config.routeLineStyle,
+            Config.routeLineColor != 0,
+            Config.routePoiMarks
+        });
+        append(choiceRouteLine);
 
         // tweaks
         choicePerformance = new ChoiceGroup("Tweaks", ChoiceGroup.MULTIPLE);
@@ -214,7 +255,7 @@ final class SettingsForm extends Form implements CommandListener, ItemStateListe
         for (int i = size(); --i >= 0; ) {
             Item item = get(i);
 
-            if (fieldMapPath == item || choiceProvider == item || choiceMisc == item || choicePerformance == item || choiceCoordinates == item || choiceMapDatum == item || fieldDataDir == item || choiceFriends == item)
+            if (fieldMapPath == item || choiceLanguage == item || choiceProvider == item || choiceMisc == item || choicePerformance == item || choiceCoordinates == item || choiceMapDatum == item || fieldDataDir == item || choiceFriends == item || choiceUnits == item || fieldWptProximity == item || fieldPoiProximity == item || choiceRouteLine == item)
                 continue;
 
             if (choiceTracklogFormat == affected) {
@@ -248,7 +289,7 @@ final class SettingsForm extends Form implements CommandListener, ItemStateListe
             if (isFs) {
                 append(choiceTracklog);
                 if (isTracklog) {
-                    if (Config.LOCATION_PROVIDER_JSR82.equals(provider) || Config.LOCATION_PROVIDER_SERIAL.equals(provider)) {
+                    if (Config.LOCATION_PROVIDER_JSR82.equals(provider) || Config.LOCATION_PROVIDER_SERIAL.equals(provider) || Config.LOCATION_PROVIDER_JSR179.equals(provider)) {
                         append(choiceTracklogFormat);
                     }
                     if (isTracklogGpx) {
@@ -264,7 +305,7 @@ final class SettingsForm extends Form implements CommandListener, ItemStateListe
 
         if (choiceTracklog == affected) {
             if (isTracklog) {
-                if (Config.LOCATION_PROVIDER_JSR82.equals(provider) || Config.LOCATION_PROVIDER_SERIAL.equals(provider)) {
+                if (Config.LOCATION_PROVIDER_JSR82.equals(provider) || Config.LOCATION_PROVIDER_SERIAL.equals(provider) || Config.LOCATION_PROVIDER_JSR179.equals(provider)) {
                     append(choiceTracklogFormat);
                 }
                 if (isTracklogGpx) {
@@ -301,6 +342,9 @@ final class SettingsForm extends Form implements CommandListener, ItemStateListe
                 Config.mapPath = fieldMapPath.getString();
             }
 
+            // language
+            Config.language = choiceLanguage.getString(choiceLanguage.getSelectedIndex());
+
             // provider
             if (choiceProvider.size() > 0) {
                 Config.locationProvider = choiceProvider.getString(choiceProvider.getSelectedIndex());
@@ -317,6 +361,15 @@ final class SettingsForm extends Form implements CommandListener, ItemStateListe
                     Config.captureFormat = fieldCaptureFormat.getString();
                 }
             }
+            
+            // navigation
+            Config.wptProximity = Integer.parseInt(fieldWptProximity.getString());
+            Config.poiProximity = Integer.parseInt(fieldPoiProximity.getString());
+            boolean[] rl = new boolean[choiceRouteLine.size()];
+            choiceRouteLine.getSelectedFlags(rl);
+            Config.routeLineStyle = rl[0];
+            Config.routeLineColor = rl[1] ? 0x00FF0000 : 0x0;
+            Config.routePoiMarks = rl[2];
 
             // provider-specific
             if (cz.kruch.track.TrackingMIDlet.isFs()) {
@@ -343,15 +396,13 @@ final class SettingsForm extends Form implements CommandListener, ItemStateListe
             Config.fullscreen = misc[0];
             Config.noSounds = misc[1];
             Config.decimalPrecision = misc[2];
-            Config.nauticalView = misc[3];
-            Config.trajectoryOn = misc[4];
-            Config.hpsWptTrueAzimuth = misc[5];
-            Config.osdBasic = misc[6];
-            Config.osdExtended = misc[7];
-            Config.osdNoBackground = misc[8];
-            Config.osdMediumFont = misc[9];
-            Config.osdBoldFont = misc[10];
-            Config.osdBlackColor = misc[11];
+            Config.hpsWptTrueAzimuth = misc[3];
+            Config.osdBasic = misc[4];
+            Config.osdExtended = misc[5];
+            Config.osdNoBackground = misc[6];
+            Config.osdMediumFont = misc[7];
+            Config.osdBoldFont = misc[8];
+            Config.osdBlackColor = misc[9];
             Desktop.resetFont();
 
             // datum
@@ -362,6 +413,11 @@ final class SettingsForm extends Form implements CommandListener, ItemStateListe
             Config.useGridFormat = Config.COORDS_MAP_GRID.equals(fmt);
             Config.useUTM = Config.COORDS_UTM.equals(fmt);
             Config.useGeocachingFormat = Config.COORDS_GC_LATLON.equals(fmt);
+             
+            // units format
+            fmt = choiceUnits.getString(choiceUnits.getSelectedIndex());
+            Config.unitsImperial = Config.UNITS_IMPERIAL.equals(fmt);
+            Config.unitsNautical = Config.UNITS_NAUTICAL.equals(fmt);
 
             // performance
             boolean[] perf = new boolean[choicePerformance.size()];

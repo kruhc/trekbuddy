@@ -40,6 +40,8 @@ public abstract class File {
             factory = Class.forName("api.file.Jsr75File");
         } catch (Throwable t) {
         }
+//#endif
+//#ifdef __RIM__
         if (fsType == FS_UNKNOWN) { /* repeat for Blackberry */
             try {
                 Class.forName("javax.microedition.io.file.FileConnection");

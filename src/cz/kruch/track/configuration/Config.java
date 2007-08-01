@@ -77,7 +77,7 @@ public final class Config {
     public static String locationProvider   = EMPTY_STRING;
 
     // group [DataDir]
-    private static String dataDir           = "file:///E:/trekbuddy/";
+    private static String dataDir           = "file:///E:/TrekBuddy/";
 
     // group [common provider options]
     public static String tracklog           = TRACKLOG_NEVER;
@@ -147,6 +147,11 @@ public final class Config {
     public static int dayNight;
 
     public static Throwable initialize() {
+
+//#ifdef __RIM__
+        dataDir = "file:///SDCard/TrekBuddy/";
+//#endif
+
         Throwable result = null;
         try {
             initialize(CONFIG_090);

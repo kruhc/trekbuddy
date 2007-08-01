@@ -1374,7 +1374,7 @@ public final class Desktop extends GameCanvas
 //#endif
             provider = (LocationProvider) providerClass.newInstance();
         } catch (Throwable t) {
-            showError("Could not create provider [" + selectedProvider + "]", t, this);
+            showError("Could not create provider [" + selectedProvider + "] (" + providerClass + ")", t, this);
 
             return false;
         }

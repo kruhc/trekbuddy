@@ -26,7 +26,6 @@ import java.util.Vector;
 import java.util.Hashtable;
 import java.util.Calendar;
 import java.util.TimeZone;
-import java.util.Date;
 
 import org.kxml2.io.KXmlParser;
 import org.xmlpull.v1.XmlPullParser;
@@ -191,12 +190,13 @@ final class ComputerView extends View {
 
         // temporary solution
         try {
-            load("cms.simple.xml");
-            changeDayNight(Config.dayNight);
+            profile = (String) load("cms.simple.xml");
         } catch (Throwable t) {
-            profile = null;
             status = t.toString();
         }
+
+        // adjust mode
+        changeDayNight(Config.dayNight);
     }
 
     public void reset() {
@@ -694,14 +694,26 @@ final class ComputerView extends View {
     private Object load(String filename) {
         Object result = null;
         File file = null;
-        InputStream in = null;
         try {
             file = File.open(Connector.open(Config.getFolderProfiles() + filename, Connector.READ));
-            in = new BufferedInputStream(file.openInputStream(), 512);
-            if (filename.endsWith(".xml")) {
-                result = loadProfile(filename, in);
-            } else if (filename.endsWith(".png")) {
-                result = loadFont(in, file.fileSize());
+            if (file.exists()) {
+                InputStream in = null;
+                try {
+                    in = new BufferedInputStream(file.openInputStream(), 512);
+                    if (filename.endsWith(".xml")) {
+                        result = loadProfile(filename, in);
+                    } else if (filename.endsWith(".png")) {
+                        result = loadFont(in, file.fileSize());
+                    }
+                } finally {
+                    if (in != null) {
+                        try {
+                            in.close();
+                        } catch (IOException e) {
+                            // ignore
+                        }
+                    }
+                }
             }
         } catch (Throwable t) {
             status = t.toString();
@@ -710,21 +722,12 @@ final class ComputerView extends View {
             t.printStackTrace();
 //#endif
         } finally {
-            if (in != null) {
-                try {
-                    in.close();
-                } catch (IOException e) {
-                    // ignore
-                }
-                in = null; // gc hint
-            }
             if (file != null) {
                 try {
                     file.close();
                 } catch (IOException e) {
                     // ignore
                 }
-                file = null; // gc hint
             }
         }
 
@@ -815,7 +818,6 @@ final class ComputerView extends View {
                     } break;
                 }
             }
-            profile = filename;
         } finally {
             try {
                 parser.close();
@@ -824,7 +826,7 @@ final class ComputerView extends View {
             }
         }
 
-        return profile;
+        return filename;
     }
 
     private static byte[] loadFont(InputStream in, long size) throws IOException {

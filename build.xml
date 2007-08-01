@@ -1,19 +1,29 @@
 <?xml version="1.0"?>
-<project name="TrekBuddy" default="all" basedir=".">
+<project name="TrekBuddy" default="generic" basedir=".">
 
-    <taskdef resource="antenna.properties" classpath="lib/antenna-bin-0.9.14.jar"/>
-
-    <property name="version" value="0.9.56"/>
-
-    <property name="wtk.home" value="c:\WTK2.5.1EA"/>
-    <property name="motorola.home" value="c:\Motorola\SDKv6.2\EmulatorM.3"/>
+    <property name="version" value="0.9.57"/>
+    <property name="vendor" value="KrUcH"/>
+    <property name="description" value="J2ME GPS application"/>
 
     <property name="wtk.cldc.version" value="1.1"/>
     <property name="wtk.midp.version" value="2.0"/>
 
-    <property name="proguard.dir" value="Z:\apps\proguard3.8"/>
+    <property name="wtk.home" value="c:\WTK2.5.1"/>
+    <property name="proguard.home" value="Z:\apps\proguard3.8"/>
+    <property name="motorola.home" value="c:\Motorola\SDKv6.2\EmulatorM.3"/>
+    <property name="rim41.home" value="c:\RIM\JDE 4.1.0"/>
+    <property name="rim42.home" value="c:\RIM\JDE"/>
+<!--
+    <property name="bb.buildjars.home" location="${rim41.home}/bin"/>
+-->
 
-    <path id="bootclasspath.all">
+    <taskdef resource="antenna.properties" classpath="lib/antenna-bin-0.9.14.jar"/>
+<!--
+    <taskdef name="wtkrapc" classname="de.pleumann.antenna.WtkRapc" classpath="lib/antenna-bin-0.9.14.jar"/>
+-->
+    <property name="classpath.proguard" value="${proguard.home}\lib\proguard.jar"/>
+
+    <path id="bootclasspath.generic">
         <pathelement location="${wtk.home}\lib\cldcapi11.jar"/>
         <pathelement location="${wtk.home}\lib\midpapi20.jar"/>
         <pathelement location="${wtk.home}\lib\jsr75.jar"/>
@@ -29,7 +39,7 @@
         <pathelement location="lib\siemens-game.jar"/>
     </path>
 
-    <path id="bootclasspath.jsr75">
+    <path id="bootclasspath.std">
         <pathelement location="${wtk.home}\lib\cldcapi11.jar"/>
         <pathelement location="${wtk.home}\lib\midpapi20.jar"/>
         <pathelement location="${wtk.home}\lib\jsr75.jar"/>
@@ -37,59 +47,31 @@
         <pathelement location="${wtk.home}\lib\jsr179.jar"/>
         <pathelement location="${wtk.home}\lib\wma11.jar"/>
         <pathelement location="${wtk.home}\lib\mmapi.jar"/>
-        <pathelement location="lib\nokia-ui.jar"/>
-        <pathelement location="lib\siemens-game.jar"/>
-    </path>
-    
-    <path id="bootclasspath.x65">
-        <pathelement location="${wtk.home}\lib\cldcapi11.jar"/>
-        <pathelement location="${wtk.home}\lib\midpapi20.jar"/>
-        <pathelement location="${wtk.home}\lib\jsr75.jar"/>
-        <pathelement location="${wtk.home}\lib\jsr082.jar"/>
-        <pathelement location="${wtk.home}\lib\jsr179.jar"/>
-        <pathelement location="${wtk.home}\lib\wma11.jar"/>
-        <pathelement location="${wtk.home}\lib\mmapi.jar"/>
-        <pathelement location="lib\siemens-file.jar"/>
-        <pathelement location="lib\siemens-game.jar"/>
     </path>
 
-    <path id="bootclasspath.a780">
-        <pathelement location="${motorola.home}\lib\midp.zip"/>
-        <pathelement location="${motorola.home}\lib\jsr82.jar"/>
-        <pathelement location="${motorola.home}\lib\jsr135.jar"/>
-        <pathelement location="${wtk.home}\lib\jsr179.jar"/>
-        <pathelement location="${wtk.home}\lib\wma11.jar"/>
+    <path id="bootclasspath.rim41">
+        <pathelement location="${rim41.home}\lib\net_rim_api.jar"/>
     </path>
 
-    <path id="bootclasspath.a1000">
-        <pathelement location="${motorola.home}\lib\midp.zip"/>
-        <pathelement location="${motorola.home}\lib\jsr82.jar"/>
-        <pathelement location="${motorola.home}\lib\jsr135.jar"/>
-        <pathelement location="${wtk.home}\lib\jsr179.jar"/>
-        <pathelement location="${wtk.home}\lib\wma11.jar"/>
-        <pathelement location="lib\motorola-location.jar"/>
+    <path id="bootclasspath.rim42">
+        <pathelement location="${rim42.home}\lib\net_rim_api.jar"/>
     </path>
 
-    <path id="fc.hack.cp">
-        <pathelement location="tmp/build/classes"/>
-        <pathelement location="tools/classes"/>
-        <pathelement location="Z:\alljars\bcel-5.1\bcel-5.1.jar"/>
-    </path>
-
-    <property name="classpath.proguard" value="${proguard.dir}\lib\proguard.jar"/>
-
-    <target name="all">
+    <target name="generic">
         <property name="suffix" value=""/>
-        <property name="dist.dir" value="all"/>
+        <property name="dist.dir" value="generic"/>
         <property name="libraryjars" value="${wtk.home}\lib\cldcapi11.jar;${wtk.home}\lib\midpapi20.jar;${wtk.home}\lib\jsr75.jar;${wtk.home}\lib\jsr082.jar;${wtk.home}\lib\jsr179.jar;${wtk.home}\lib\wma11.jar;lib\motorola-location.jar"/>
         <property name="classpath.preverify" value="${libraryjars}"/>
         <antcall target="clean"/>
-        <antcall target="a.pre.all"/>
-        <antcall target="compile.all"/>
+        <antcall target="a.pre.generic"/>
+        <antcall target="compile.generic"/>
         <antcall target="a.pack" inheritall="true"/>
         <antcall target="obfuscate" inheritall="true"/>
         <antcall target="preverify" inheritall="true"/>
         <antcall target="a.pack.obfuscated" inheritall="true"/>
+<!--
+        <antcall target="delegate" inheritall="true"/>
+-->
         <antcall target="sign.and.update" inheritall="true"/>
     </target>
 
@@ -99,13 +81,15 @@
         <property name="libraryjars" value="${wtk.home}\lib\cldcapi11.jar;${wtk.home}\lib\midpapi20.jar;${wtk.home}\lib\jsr75.jar;${wtk.home}\lib\jsr082.jar;${wtk.home}\lib\jsr179.jar;${wtk.home}\lib\wma11.jar"/>
         <property name="classpath.preverify" value="${libraryjars}"/>
         <antcall target="clean"/>
-        <antcall target="a.pre.all"/>
-        <antcall target="compile.all"/>
-        <antcall target="remove.nonstd"/>
+        <antcall target="a.pre.generic"/>
+        <antcall target="compile.std"/>
         <antcall target="a.pack" inheritall="true"/>
         <antcall target="obfuscate" inheritall="true"/>
         <antcall target="preverify" inheritall="true"/>
         <antcall target="a.pack.obfuscated" inheritall="true"/>
+<!--
+        <antcall target="delegate" inheritall="true"/>
+-->
         <antcall target="sign.and.update" inheritall="true"/>
     </target>
 
@@ -115,170 +99,148 @@
         <property name="libraryjars" value="${wtk.home}\lib\cldcapi11.jar;${wtk.home}\lib\midpapi20.jar;${wtk.home}\lib\jsr75.jar;${wtk.home}\lib\jsr082.jar;${wtk.home}\lib\jsr179.jar;${wtk.home}\lib\wma11.jar"/>
         <property name="classpath.preverify" value="${libraryjars}"/>
         <antcall target="clean"/>
-        <antcall target="a.pre.all"/>
-        <antcall target="compile.all"/>
-        <antcall target="remove.nonstd"/>
+        <antcall target="a.pre.generic"/>
+        <antcall target="compile.std"/>
         <antcall target="j9.pack" inheritall="true"/>
         <antcall target="obfuscate" inheritall="true"/>
         <antcall target="preverify" inheritall="true"/>
         <antcall target="j9.pack.obfuscated" inheritall="true"/>
+<!--
+        <antcall target="delegate" inheritall="true"/>
+-->
         <antcall target="sign.and.update" inheritall="true"/>
     </target>
 
-    <target name="jsr75">
-        <property name="suffix" value="-jsr75"/>
-        <property name="dist.dir" value="jsr75"/>
-        <property name="libraryjars" value="${wtk.home}\lib\cldcapi11.jar;${wtk.home}\lib\midpapi20.jar;${wtk.home}\lib\jsr75.jar;${wtk.home}\lib\jsr082.jar;${wtk.home}\lib\jsr179.jar;${wtk.home}\lib\wma11.jar"/>
+    <target name="rim41">
+        <property name="suffix" value="_bb_v41"/>
+        <property name="dist.dir" value="rim41"/>
+        <property name="rim.home" value="${rim41.home}"/>
+        <property name="libraryjars" value="${rim41.home}\lib\net_rim_api.jar"/>
         <property name="classpath.preverify" value="${libraryjars}"/>
         <antcall target="clean"/>
-        <antcall target="a.pre.jsr75"/>
-        <antcall target="compile.jsr75"/>
+        <antcall target="a.pre.rim"/>
+        <antcall target="compile.rim41"/>
         <antcall target="a.pack" inheritall="true"/>
-        <antcall target="obfuscate" inheritall="true"/>
-        <antcall target="preverify" inheritall="true"/>
+        <antcall target="rim.obfuscate" inheritall="true"/>
+        <antcall target="rim.preverify" inheritall="true"/>
         <antcall target="a.pack.obfuscated" inheritall="true"/>
+<!--
+        <antcall target="delegate" inheritall="true"/>
+-->
+<!--
         <antcall target="sign.and.update" inheritall="true"/>
+-->
+        <antcall target="rapc" inheritall="true"/>
     </target>
 
-    <target name="x65">
-        <property name="suffix" value="-x65"/>
-        <property name="dist.dir" value="x65"/>
-        <property name="libraryjars" value="${wtk.home}\lib\cldcapi11.jar;${wtk.home}\lib\midpapi20.jar;${wtk.home}\lib\jsr082.jar;${wtk.home}\lib\jsr179.jar;${wtk.home}\lib\wma11.jar"/>
+    <target name="rim42">
+        <property name="suffix" value="_bb_v42"/>
+        <property name="dist.dir" value="rim42"/>
+        <property name="rim.home" value="${rim42.home}"/>
+        <property name="libraryjars" value="${rim42.home}\lib\net_rim_api.jar"/>
         <property name="classpath.preverify" value="${libraryjars}"/>
         <antcall target="clean"/>
-        <antcall target="a.pre.x65"/>
-        <antcall target="compile.x65"/>
+        <antcall target="a.pre.rim"/>
+        <antcall target="compile.rim42"/>
         <antcall target="a.pack" inheritall="true"/>
-        <antcall target="obfuscate" inheritall="true"/>
-        <antcall target="preverify" inheritall="true"/>
+        <antcall target="rim.obfuscate" inheritall="true"/>
+        <antcall target="rim.preverify" inheritall="true"/>
         <antcall target="a.pack.obfuscated" inheritall="true"/>
+<!--
+        <antcall target="delegate" inheritall="true"/>
+-->
+<!--
         <antcall target="sign.and.update" inheritall="true"/>
-    </target>
-
-    <target name="a780">
-        <property name="suffix" value="-a780"/>
-        <property name="dist.dir" value="a780"/>
-        <property name="libraryjars" value="${wtk.home}\lib\cldcapi11.jar;${wtk.home}\lib\midpapi20.jar;${wtk.home}\lib\jsr082.jar;${wtk.home}\lib\jsr179.jar;${wtk.home}\lib\wma11.jar"/>
-        <property name="classpath.preverify" value="${libraryjars}"/>
-        <antcall target="clean"/>
-        <antcall target="a.pre.a780"/>
-        <antcall target="compile.a780"/>
-        <antcall target="a.pack" inheritall="true"/>
-        <antcall target="obfuscate" inheritall="true"/>
-        <antcall target="preverify" inheritall="true"/>
-        <antcall target="a.pack.obfuscated" inheritall="true"/>
-        <antcall target="sign.and.update" inheritall="true"/>
-    </target>
-
-    <target name="a1000">
-        <property name="suffix" value="-a1000"/>
-        <property name="dist.dir" value="a1000"/>
-        <property name="libraryjars" value="${wtk.home}\lib\cldcapi11.jar;${wtk.home}\lib\midpapi20.jar;${wtk.home}\lib\jsr082.jar;${wtk.home}\lib\jsr179.jar;${wtk.home}\lib\wma11.jar;lib\motorola-location.jar"/>
-        <property name="classpath.preverify" value="${libraryjars}"/>
-        <antcall target="clean"/>
-        <antcall target="a.pre.a1000"/>
-        <antcall target="compile.a1000"/>
-        <antcall target="a.pack" inheritall="true"/>
-        <antcall target="obfuscate" inheritall="true"/>
-        <antcall target="preverify" inheritall="true"/>
-        <antcall target="a.pack.obfuscated" inheritall="true"/>
-        <antcall target="sign.and.update" inheritall="true"/>
+-->
+        <antcall target="rapc" inheritall="true"/>
     </target>
 
     <target name="clean">
         <delete dir="tmp"/>
+<!--
+        <delete dir="r:\trekbuddy\tmp"/>
+-->
     </target>
 
-    <target name="a.pre.all">
+    <target name="a.pre.generic">
         <mkdir dir="tmp/src"/>
         <wtkpreprocess srcdir="src" destdir="tmp/src" symbols="__JSR75__,__S65__,__A780__,__A1000__"/>
     </target>
 
-    <target name="a.pre.jsr75">
+    <target name="a.pre.std">
         <mkdir dir="tmp/src"/>
         <wtkpreprocess srcdir="src" destdir="tmp/src" symbols="__JSR75__"/>
     </target>
 
-    <target name="a.pre.x65">
+    <target name="a.pre.rim">
         <mkdir dir="tmp/src"/>
-        <wtkpreprocess srcdir="src" destdir="tmp/src" symbols="__S65__"/>
+        <wtkpreprocess srcdir="src" destdir="tmp/src" symbols="__JSR75__,__RIM__"/>
     </target>
 
-    <target name="a.pre.a780">
-        <mkdir dir="tmp/src"/>
-        <wtkpreprocess srcdir="src" destdir="tmp/src" symbols="__A780__"/>
-    </target>
-
-    <target name="a.pre.a1000">
-        <mkdir dir="tmp/src"/>
-        <wtkpreprocess srcdir="src" destdir="tmp/src" symbols="__A1000__"/>
-    </target>
-
-    <target name="compile.all">
+    <target name="compile.generic">
         <mkdir dir="tmp/build/classes"/>
         <javac srcdir="tmp/src"
                destdir="tmp/build/classes"
                fork="true"
                target="1.1" source="1.3"
-               bootclasspathref="bootclasspath.all"/>
+               bootclasspathref="bootclasspath.generic"/>
     </target>
 
-    <target name="compile.jsr75">
+    <target name="compile.std" depends="remove.nonstd.src">
         <mkdir dir="tmp/build/classes"/>
         <javac srcdir="tmp/src"
                destdir="tmp/build/classes"
                fork="true"
                target="1.1" source="1.3"
-               bootclasspathref="bootclasspath.jsr75">
-            <exclude name="cz/kruch/track/location/MotorolaLocationProvider.java"/>
-        </javac>
+               bootclasspathref="bootclasspath.std"/>
     </target>
 
-    <target name="compile.x65">
+    <target name="compile.rim41" depends="remove.nonrim41.src">
         <mkdir dir="tmp/build/classes"/>
         <javac srcdir="tmp/src"
                destdir="tmp/build/classes"
                fork="true"
                target="1.1" source="1.3"
-               bootclasspathref="bootclasspath.x65">
-            <exclude name="cz/kruch/track/location/MotorolaLocationProvider.java"/>
-        </javac>
+               bootclasspathref="bootclasspath.rim41"/>
     </target>
 
-    <target name="compile.a780">
-        <mkdir dir="tmp/build/classes"/>
-        <javac sourcepath="" srcdir="tmp/src"
-               destdir="tmp/build/classes"
-               fork="true"
-               target="1.1" source="1.3"
-               bootclasspathref="bootclasspath.a780">
-            <include name="**/*.java"/>
-            <exclude name="cz/kruch/track/location/MotorolaLocationProvider.java"/>
-            <exclude name="cz/kruch/track/ui/nokia/**"/>
-        </javac>
-    </target>
-
-    <target name="compile.a1000">
+    <target name="compile.rim42" depends="remove.nonrim42.src">
         <mkdir dir="tmp/build/classes"/>
         <javac srcdir="tmp/src"
                destdir="tmp/build/classes"
                fork="true"
                target="1.1" source="1.3"
-               bootclasspathref="bootclasspath.a1000">
-            <exclude name="cz/kruch/track/ui/nokia/**"/>
-        </javac>
+               bootclasspathref="bootclasspath.rim42"/>
     </target>
 
-    <target name="remove.nonstd">
-        <delete file="tmp/build/classes/api/file/MotorolaFile.class"/>
-        <delete file="tmp/build/classes/api/file/MotorolaFile$StringEnumeration.class"/>
-        <delete file="tmp/build/classes/api/file/Motorola1000File.class"/>
-        <delete file="tmp/build/classes/api/file/SiemensFile.class"/>
-        <delete file="tmp/build/classes/cz/kruch/track/ui/nokia/NokiaDeviceControl.class"/>
-        <delete file="tmp/build/classes/cz/kruch/track/ui/nokia/SiemensDeviceControl.class"/>
-        <delete file="tmp/build/classes/cz/kruch/track/ui/nokia/SonyEricssonDeviceControl.class"/>
-        <delete file="tmp/build/classes/cz/kruch/track/location/MotorolaLocationProvider.class"/>
-        <delete file="tmp/build/classes/cz/kruch/track/location/MotorolaLocationProvider$LocationListenerAdapter.class"/>
+    <target name="remove.nonstd.src">
+        <delete file="tmp/src/api/file/MotorolaFile.java"/>
+        <delete file="tmp/src/api/file/Motorola1000File.java"/>
+        <delete file="tmp/src/api/file/SiemensFile.java"/>
+        <delete file="tmp/src/cz/kruch/track/ui/nokia/NokiaDeviceControl.java"/>
+        <delete file="tmp/src/cz/kruch/track/ui/nokia/SiemensDeviceControl.java"/>
+        <delete file="tmp/src/cz/kruch/track/ui/nokia/SonyEricssonDeviceControl.java"/>
+        <delete file="tmp/src/cz/kruch/track/location/MotorolaLocationProvider.java"/>
+    </target>
+
+    <target name="remove.nonrim41.src">
+        <delete file="tmp/src/api/file/MotorolaFile.java"/>
+        <delete file="tmp/src/api/file/Motorola1000File.java"/>
+        <delete file="tmp/src/api/file/SiemensFile.java"/>
+        <delete file="tmp/src/api/file/Jsr75File.java"/>
+        <delete file="tmp/src/cz/kruch/track/ui/nokia/NokiaDeviceControl.java"/>
+        <delete file="tmp/src/cz/kruch/track/ui/nokia/SiemensDeviceControl.java"/>
+        <delete file="tmp/src/cz/kruch/track/location/MotorolaLocationProvider.java"/>
+        <delete file="tmp/src/cz/kruch/track/location/Jsr82LocationProvider.java"/>
+    </target>
+
+    <target name="remove.nonrim42.src">
+        <delete file="tmp/src/api/file/MotorolaFile.java"/>
+        <delete file="tmp/src/api/file/Motorola1000File.java"/>
+        <delete file="tmp/src/api/file/SiemensFile.java"/>
+        <delete file="tmp/src/cz/kruch/track/ui/nokia/NokiaDeviceControl.java"/>
+        <delete file="tmp/src/cz/kruch/track/ui/nokia/SiemensDeviceControl.java"/>
+        <delete file="tmp/src/cz/kruch/track/location/MotorolaLocationProvider.java"/>
     </target>
 
     <target name="a.pack">
@@ -299,18 +261,28 @@
         </wtkpackage>
     </target>
 
+    <target name="delegate">
+        <copy file="tmp/trekbuddy${suffix}-obfuscated.jar" todir="r:\trekbuddy\tmp"/>
+        <input>Do preverification on Linux....</input>
+        <copy file="r:\trekbuddy\dist\${dist.dir}\trekbuddy${suffix}.jar" todir="dist/${dist.dir}"/>
+        <copy file="r:\trekbuddy\dist\${dist.dir}\trekbuddy${suffix}.jad" todir="dist/${dist.dir}"/>
+    </target>
+
     <target name="a.pack.obfuscated">
         <delete>
           <fileset dir="dist/${dist.dir}" includes="**/*.jar"/>
         </delete>
         <wtkjad jadfile="dist/${dist.dir}/trekbuddy${suffix}.jad"
+                jarfile="dist/${dist.dir}/trekbuddy${suffix}.jar"
                 name="TrekBuddy"
-                vendor="KrUcH"
+                vendor="${vendor}"
                 version="${version}">
             <midlet name="TrekBuddy" class="cz.kruch.track.TrackingMIDlet"/>
-		    <attribute name="MIDlet-Description" value="GPS Tracking"/>
-		    <attribute name="MIDlet-Info-URL" value="www.trekbuddy.net"/>
-            <attribute name="MIDlet-Permissions-Opt" value="javax.microedition.io.Connector.file.read,javax.microedition.io.Connector.file.write,javax.microedition.io.Connector.bluetooth.client,javax.microedition.location.Location,javax.microedition.media.control.VideoControl.getSnapshot,javax.microedition.io.Connector.sms,javax.wireless.messaging.sms.receive,javax.wireless.messaging.sms.send,javax.microedition.io.Connector.comm"/>
+            <attribute name="MIDlet-Description" value="${description}"/>
+            <attribute name="MIDlet-Info-URL" value="http://www.trekbuddy.net"/>
+            <attribute name="MIDlet-Permissions-Opt" value="javax.microedition.io.Connector.file.read,javax.microedition.io.Connector.file.write,javax.microedition.io.Connector.bluetooth.client,javax.microedition.location.Location,javax.microedition.media.control.VideoControl.getSnapshot,javax.microedition.io.Connector.sms,javax.wireless.messaging.sms.receive,javax.wireless.messaging.sms.send,javax.microedition.io.Connector.comm"/>            <attribute name="MicroEdition-Profile" value="MIDP-2.0"/>
+            <attribute name="MicroEdition-Profile" value="MIDP-2.0"/>
+            <attribute name="MicroEdition-Configuration" value="CLDC-1.1"/>
         </wtkjad>
         <wtkpackage jarfile="dist/${dist.dir}/trekbuddy${suffix}.jar"
                     jadfile="dist/${dist.dir}/trekbuddy${suffix}.jad">
@@ -324,13 +296,16 @@
           <fileset dir="dist/${dist.dir}" includes="**/*.jar"/>
         </delete>
         <wtkjad jadfile="dist/${dist.dir}/trekbuddy${suffix}.jad"
+                jarfile="dist/${dist.dir}/trekbuddy${suffix}.jar"
                 name="TrekBuddy"
-                vendor="KrUcH"
+                vendor="${vendor}"
                 version="${version}">
             <midlet name="TrekBuddy" class="cz.kruch.track.TrackingMIDlet"/>
-		<attribute name="MIDlet-Description" value="GPS Tracking"/>
-		<attribute name="MIDlet-Info-URL" value="www.trekbuddy.net"/>
+		<attribute name="MIDlet-Description" value="${description}"/>
+		<attribute name="MIDlet-Info-URL" value="http://www.trekbuddy.net"/>
             <attribute name="MIDlet-Permissions-Opt" value="javax.microedition.io.Connector.file.read,javax.microedition.io.Connector.file.write,javax.microedition.io.Connector.bluetooth.client,javax.microedition.location.Location,javax.microedition.media.control.VideoControl.getSnapshot,javax.microedition.io.Connector.sms,javax.wireless.messaging.sms.receive,javax.wireless.messaging.sms.send,javax.microedition.io.Connector.comm"/>
+            <attribute name="MicroEdition-Profile" value="MIDP-2.0"/>
+            <attribute name="MicroEdition-Configuration" value="CLDC-1.1"/>
         </wtkjad>
         <wtkpackage jarfile="dist/${dist.dir}/trekbuddy${suffix}.jar"
                     jadfile="dist/${dist.dir}/trekbuddy${suffix}.jad">
@@ -340,19 +315,19 @@
     </target>
 
     <target name="sign.and.update">
-        <java jar="c:\WTK25\bin\JadTool.jar" fork="true">
+        <java jar="${wtk.home}\bin\JadTool.jar" fork="true">
             <arg line="-addcert -certnum 1 -alias 'trekbuddy' -keystore trekbuddy.jks -inputjad dist/${dist.dir}/trekbuddy${suffix}.jad -outputjad dist/${dist.dir}/_trekbuddy${suffix}.jad"/>
         </java>
         <move file="dist/${dist.dir}/_trekbuddy${suffix}.jad" tofile="dist/${dist.dir}/trekbuddy${suffix}.jad"/>
-        <java jar="c:\WTK25\bin\JadTool.jar" fork="true">
+        <java jar="${wtk.home}\bin\JadTool.jar" fork="true">
             <arg line="-addcert -certnum 2 -alias 'trekbuddy' -keystore trekbuddy.jks -inputjad dist/${dist.dir}/trekbuddy${suffix}.jad -outputjad dist/${dist.dir}/_trekbuddy${suffix}.jad"/>
         </java>
         <move file="dist/${dist.dir}/_trekbuddy${suffix}.jad" tofile="dist/${dist.dir}/trekbuddy${suffix}.jad"/>
-        <java jar="c:\WTK25\bin\JadTool.jar" fork="true">
+        <java jar="${wtk.home}\bin\JadTool.jar" fork="true">
             <arg line="-addcert -certnum 3 -alias 'trekbuddy' -keystore trekbuddy.jks -inputjad dist/${dist.dir}/trekbuddy${suffix}.jad -outputjad dist/${dist.dir}/_trekbuddy${suffix}.jad"/>
         </java>
         <move file="dist/${dist.dir}/_trekbuddy${suffix}.jad" tofile="dist/${dist.dir}/trekbuddy${suffix}.jad"/>
-        <java jar="c:\WTK25\bin\JadTool.jar" fork="true">
+        <java jar="${wtk.home}\bin\JadTool.jar" fork="true">
             <arg line="-addjarsig -alias 'trekbuddy' -keystore trekbuddy.jks -keypass changeit -jarfile dist/${dist.dir}/trekbuddy${suffix}.jar -inputjad dist/${dist.dir}/trekbuddy${suffix}.jad -outputjad dist/${dist.dir}/_trekbuddy${suffix}.jad"/>
         </java>
         <move file="dist/${dist.dir}/_trekbuddy${suffix}.jad" tofile="dist/${dist.dir}/trekbuddy${suffix}.jad"/>
@@ -361,26 +336,8 @@
         </wtkjad>
     </target>
 
-    <target name="sign.mgmaps">
-        <java jar="c:\WTK25\bin\JadTool.jar" fork="true">
-            <arg line="-addcert -certnum 1 -alias 'trekbuddy' -keystore trekbuddy.jks -inputjad mgmaps/mgmaps_sprint.jad -outputjad mgmaps/dist/mgmaps_sprint.jad"/>
-        </java>
-        <move file="mgmaps/dist/mgmaps_sprint.jad" tofile="mgmaps/mgmaps_sprint.jad"/>
-        <java jar="c:\WTK25\bin\JadTool.jar" fork="true">
-            <arg line="-addcert -certnum 2 -alias 'trekbuddy' -keystore trekbuddy.jks -inputjad mgmaps/mgmaps_sprint.jad -outputjad mgmaps/dist/mgmaps_sprint.jad"/>
-        </java>
-        <move file="mgmaps/dist/mgmaps_sprint.jad" tofile="mgmaps/mgmaps_sprint.jad"/>
-        <java jar="c:\WTK25\bin\JadTool.jar" fork="true">
-            <arg line="-addcert -certnum 3 -alias 'trekbuddy' -keystore trekbuddy.jks -inputjad mgmaps/mgmaps_sprint.jad -outputjad mgmaps/dist/mgmaps_sprint.jad"/>
-        </java>
-        <move file="mgmaps/dist/mgmaps_sprint.jad" tofile="mgmaps/mgmaps_sprint.jad"/>
-        <java jar="c:\WTK25\bin\JadTool.jar" fork="true">
-            <arg line="-addjarsig -alias 'trekbuddy' -keystore trekbuddy.jks -keypass changeit -jarfile mgmaps/dist/mgmaps_sprint.jar -inputjad mgmaps/mgmaps_sprint.jad -outputjad mgmaps/dist/mgmaps_sprint.jad"/>
-        </java>
-    </target>
-
     <target name="obfuscate">
-	  <java jar="${proguard.dir}\lib\proguard.jar" fork="true">
+	  <java jar="${proguard.home}\lib\proguard.jar" fork="true">
             <arg value="-injars tmp/trekbuddy${suffix}.jar"/>
             <arg value="-outjars tmp/trekbuddy${suffix}-obfuscated.jar"/>
             <arg value="-libraryjars ${libraryjars}"/>
@@ -393,8 +350,9 @@
                 protected void startApp();
                 protected void pauseApp();
                 protected void destroyApp(boolean);
+                public void run();
             }"/>
-<!-- kxml
+<!-- kXML
             <arg value="-keepnames class org.**"/>
 -->
             <arg value="-keepnames class cz.** extends java.lang.Exception"/>
@@ -402,48 +360,94 @@
             <arg value="-whyareyoukeeping class cz.kruch.track.ui.Console"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.util.Logger"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.util.Comparator"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.util.ExtraMath"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.location.MotorolaLocationProvider"/>
             <arg value="-whyareyoukeeping class cz.kruch.j2se.io.BufferedReader"/>
             <arg value="-whyareyoukeeping class cz.kruch.j2se.util.StringTokenizer"/>
             <arg value="-printmapping dist/${dist.dir}/trekbuddy${suffix}.map"/>
             <arg value="-printseeds"/>
-          <arg value="-verbose"/>
+            <arg value="-verbose"/>
+        </java>
+    </target> 
+
+    <target name="rim.obfuscate">
+	  <java jar="${proguard.home}\lib\proguard.jar" fork="true">
+            <arg value="-injars tmp/trekbuddy${suffix}.jar"/>
+            <arg value="-outjars tmp/trekbuddy${suffix}-obfuscated.jar"/>
+            <arg value="-libraryjars '${libraryjars}'"/>
+            <arg value="-dontusemixedcaseclassnames"/>
+            <arg value="-defaultpackage ''"/>
+<!--
+            <arg value="-overloadaggressively"/>
+            <arg value="-allowaccessmodification"/>
+-->
+            <arg value="-keep public class cz.kruch.track.TrackingMIDlet {
+                public TrackingMIDlet();
+                protected void startApp();
+                protected void pauseApp();
+                protected void destroyApp(boolean);
+            }"/>
+<!-- kXML
+            <arg value="-keepnames class org.**"/>
+-->
+            <arg value="-keepnames class cz.** extends java.lang.Exception"/>
+            <arg value="-whyareyoukeeping class com.ice.tar.TarHeader"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.ui.Console"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.util.Logger"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.util.Comparator"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.util.ExtraMath"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.location.MotorolaLocationProvider"/>
+            <arg value="-whyareyoukeeping class cz.kruch.j2se.io.BufferedReader"/>
+            <arg value="-whyareyoukeeping class cz.kruch.j2se.util.StringTokenizer"/>
+            <arg value="-printmapping dist/${dist.dir}/trekbuddy${suffix}.map"/>
+            <arg value="-printseeds"/>
+            <arg value="-verbose"/>
         </java>
     </target> 
 	
 	<target name="preverify">
 	    <unjar src="tmp/trekbuddy${suffix}-obfuscated.jar" dest="tmp/obfuscated"/>
-		<exec executable="${wtk.home}\bin\preverify1.1.exe">
-			<arg line="-classpath ${classpath.preverify} -d tmp/preverified tmp/obfuscated"/>
-		</exec>
+	    <exec executable="${wtk.home}\bin\preverify1.1.exe">
+		  <arg line="-classpath ${classpath.preverify} -d tmp/preverified tmp/obfuscated"/>
+	    </exec>
 	</target>
 
-<!--	
-
-	<target name="fc.hack.x65">
-		<echo message="Change JSR-75 FileConnection to Siemens FileConnection"/>
-		<mkdir dir="tmp/hack/siemens/api/file"/>
-		<java classname="FileConnectionApiSiemensFix" fork="true">
-			<arg line="api.file.File tmp/hack/siemens/api/file/File.class"/>
-			<classpath refid="fc.hack.cp"/>
-		</java>
-		<copy todir="tmp/build/classes" overwrite="true">
-            <fileset dir="tmp/hack/siemens"/>
-        </copy>
+	<target name="rim.preverify">
+	    <unjar src="tmp/trekbuddy${suffix}-obfuscated.jar" dest="tmp/obfuscated"/>
+          <echo>Using ${classpath.preverify} for preverification...</echo>
+	    <exec executable="${rim.home}\bin\preverify.exe">
+		  <arg line="-classpath '${classpath.preverify}' -d tmp/preverified tmp/obfuscated"/>
+        </exec>
 	</target>
 
-	<target name="fc.hack.a780">
-		<echo message="Change JSR-75 FileConnection to Motorola FileConnection"/>
-		<mkdir dir="tmp/hack/motorola/api/file"/>
-		<java classname="FileConnectionApiMotorolaFix" fork="true">
-			<arg line="api.file.File tmp/hack/motorola/api/file/File.class"/>
-			<classpath refid="fc.hack.cp"/>
-		</java>
-		<copy todir="tmp/build/classes" overwrite="true">
-            <fileset dir="tmp/hack/motorola"/>
-        </copy>
-	</target>
-
+      <target name="rapc">
+          <echo>Using rim.home=${rim.home}</echo>
+<!--
+          <ant antfile="bb.xml"/>
 -->
+<!--
+          <wtkrapc quiet="true" midlet="true" codename="trekbuddy${suffix}"
+    	        jadfile="dist/${dist.dir}/trekbuddy${suffix}.jad" 
+    	        source="dist/${dist.dir}/trekbuddy${suffix}.jar" 
+     	        import="${rim.home}/lib/net_rim_api.jar"
+    	        destdir="dist/${dist.dir}/cod"/>
+-->
+<!--
+          <exec dir="${basedir}\dist\${dist.dir}" executable="${rim.home}\bin\rapc.exe">
+            <arg line="import='${rim.home}\lib\net_rim_api.jar' codename=trekbuddy${suffix} -quiet ${basedir}\dist\${dist.dir}\trekbuddy${suffix}.jad ${basedir}\dist\${dist.dir}\trekbuddy${suffix}.jar"/>
+          </exec>
+-->
+          <exec dir="${basedir}\dist\${dist.dir}" executable="${rim.home}\bin\rapc.exe">
+            <arg line="import='${rim.home}\lib\net_rim_api.jar' codename=trekbuddy${suffix} -quiet ${basedir}\dist\${dist.dir}\trekbuddy${suffix}.jad ${basedir}\dist\${dist.dir}\trekbuddy${suffix}.jar"/>
+          </exec>
+          <copy file="${basedir}\trekbuddy.alx" tofile="${basedir}\dist\${dist.dir}\trekbuddy${suffix}.alx"/>
+          <replace file="${basedir}\dist\${dist.dir}\trekbuddy${suffix}.alx" token="@SUFFIX@" value="${suffix}"/>
+          <replace file="${basedir}\dist\${dist.dir}\trekbuddy${suffix}.alx" token="@DESCRIPTION@" value="${description}"/>
+          <replace file="${basedir}\dist\${dist.dir}\trekbuddy${suffix}.alx" token="@VERSION@" value="${version}"/>
+          <replace file="${basedir}\dist\${dist.dir}\trekbuddy${suffix}.alx" token="@VENDOR@" value="${vendor}"/>
+          <delete>
+              <fileset dir="${basedir}\dist\${dist.dir}" excludes="*.jar,*.jad,*.alx,*.cod,*.map"/>
+          </delete>
+      </target>
 
 </project>

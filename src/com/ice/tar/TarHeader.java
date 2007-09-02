@@ -22,6 +22,8 @@ import java.io.UnsupportedEncodingException;
  * The class also holds a number of tar constants, used mostly in headers.
  *
  * @author Timothy Gerard Endres, <time@gjt.org>
+ *
+ * @modified by Ales Pour, <kruhc@seznam.cz>
  */
 
 final class TarHeader {

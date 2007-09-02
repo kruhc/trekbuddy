@@ -117,6 +117,8 @@ import java.io.UnsupportedEncodingException;
  *
  * @author Timothy Gerard Endres, <time@gjt.org>
  * @see TarHeader
+ *
+ * @modified by Ales Pour, <kruhc@seznam.cz>
  */
 
 public final class TarEntry {

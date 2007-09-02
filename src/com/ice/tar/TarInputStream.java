@@ -31,8 +31,11 @@ import java.io.IOException;
  * @version $Revision$
  * @see TarHeader
  * @see TarEntry
+ *
+ * @modified by Ales Pour, <kruhc@seznam.cz> 
  */
 public final class TarInputStream extends InputStream {
+
     private static final int DEFAULT_RCDSIZE = 512;
 
     // underlying stream

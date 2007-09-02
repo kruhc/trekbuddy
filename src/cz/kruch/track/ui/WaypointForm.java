@@ -1,5 +1,18 @@
-// Copyright 2001-2006 Systinet Corp. All rights reserved.
-// Use is subject to license terms.
+/*
+ * Copyright 2006-2007 Ales Pour <kruhc@seznam.cz>.
+ * All Rights Reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ */
 
 package cz.kruch.track.ui;
 
@@ -25,6 +38,11 @@ import java.util.Date;
 import java.util.Calendar;
 import java.util.TimeZone;
 
+/**
+ * Form for waypoints.
+ *
+ * @author Ales Pour <kruhc@seznam.cz>
+ */
 public final class WaypointForm extends Form
         implements CommandListener, ItemCommandListener, Callback {
 
@@ -50,6 +68,7 @@ public final class WaypointForm extends Form
 
     private Displayable next;
     private QualifiedCoordinates coordinates;
+    private long timestamp;
     private Callback callback;
 
     private TextField fieldName;
@@ -76,6 +95,7 @@ public final class WaypointForm extends Form
         super(TITLE);
         this.next = next;
         this.coordinates = location.getQualifiedCoordinates();
+        this.timestamp = location.getTimestamp();
         this.callback = callback;
         appendWithNewlineAfter(this.fieldName = new TextField(FIELD_NAME, null, 16, TextField.ANY));
         appendWithNewlineAfter(this.fieldComment = new TextField(FIELD_COMMENT, null, 256, TextField.ANY));
@@ -215,7 +235,8 @@ public final class WaypointForm extends Form
             } else if (MENU_SAVE.equals(label)) {
                 Waypoint wpt = new Waypoint(coordinates,
                                             fieldName.getString(),
-                                            fieldComment.getString());
+                                            fieldComment.getString(),
+                                            timestamp);
                 wpt.setUserObject(imageBytes);
                 Desktop.display.setCurrent(next);
                 callback.invoke(new Object[]{ MENU_SAVE, wpt }, null, this);

@@ -1,5 +1,18 @@
-// Copyright 2001-2006 Systinet Corp. All rights reserved.
-// Use is subject to license terms.
+/*
+ * Copyright 2006-2007 Ales Pour <kruhc@seznam.cz>.
+ * All Rights Reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ */
 
 package cz.kruch.track.ui;
 
@@ -17,6 +30,11 @@ import java.util.TimeZone;
 import cz.kruch.track.configuration.Config;
 import cz.kruch.track.maps.Map;
 
+/**
+ * Settings->Info form.
+ *
+ * @author Ales Pour <kruhc@seznam.cz>
+ */
 public final class InfoForm extends Form implements CommandListener/*, Callback*/ {
 /* OBSOLETE
     private Vector caches;
@@ -66,7 +84,7 @@ public final class InfoForm extends Form implements CommandListener/*, Callback*
         cachesItem.setLayout(Item.LAYOUT_NEWLINE_AFTER);
         append(cachesItem);
 */
-        append(new StringItem("ProviderStatus", (ps == null ? "" : ps.toString()) + "; syncs=" + cz.kruch.track.location.StreamReadingLocationProvider.syncs + "; mismatches=" + cz.kruch.track.location.StreamReadingLocationProvider.mismatches + "; checksums=" + cz.kruch.track.location.StreamReadingLocationProvider.checksums));
+        append(new StringItem("ProviderStatus", (ps == null ? "" : ps.toString()) + "; restarts=" + cz.kruch.track.location.StreamReadingLocationProvider.restarts + "; syncs=" + cz.kruch.track.location.StreamReadingLocationProvider.syncs + "; mismatches=" + cz.kruch.track.location.StreamReadingLocationProvider.mismatches + "; checksums=" + cz.kruch.track.location.StreamReadingLocationProvider.checksums));
         append(new StringItem("ProviderError", le == null ? "" : le.toString()));
         if (cz.kruch.track.TrackingMIDlet.supportsVideoCapture()) {
             append(new StringItem("SnapshotEncodings", System.getProperty("video.snapshot.encodings")));
@@ -86,6 +104,7 @@ public final class InfoForm extends Form implements CommandListener/*, Callback*
             addCommand(new Command("Caches", Command.SCREEN, 1));
         }
 */
+        append(new StringItem("Diagnostics", Integer.toString(cz.kruch.track.TrackingMIDlet.pauses)));
         addCommand(new Command("Close", Command.BACK, 1));
         setCommandListener(this);
 

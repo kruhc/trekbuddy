@@ -1,5 +1,18 @@
-// Copyright 2001-2006 Systinet Corp. All rights reserved.
-// Use is subject to license terms.
+/*
+ * Copyright 2006-2007 Ales Pour <kruhc@seznam.cz>.
+ * All Rights Reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ */
 
 package cz.kruch.track.ui;
 
@@ -9,13 +22,17 @@ import api.location.Location;
 import cz.kruch.track.configuration.Config;
 import cz.kruch.track.location.Navigator;
 import cz.kruch.track.location.Waypoint;
+import cz.kruch.track.util.ExtraMath;
 
 import javax.microedition.lcdui.Canvas;
 import javax.microedition.lcdui.Graphics;
 import javax.microedition.lcdui.Font;
 
-import public_domain.Xedarius;
-
+/**
+ * HPS.
+ *
+ * @author Ales Pour <kruhc@seznam.cz>
+ */
 final class LocatorView extends View {
     private static final char[] MSG_NO_WAYPOINT =
         { 'N', 'O', ' ', 'W', 'P', 'T' };
@@ -211,7 +228,7 @@ final class LocatorView extends View {
             return false;
         }
 
-        int alpha = (int) Math.toDegrees(Xedarius.asin(Math.abs((double) a) / c));
+        int alpha = (int) Math.toDegrees(ExtraMath.asin(Math.abs((double) a) / c));
         if (b > 0) {
             if (a > 0) {
                 alpha = 180 - alpha;

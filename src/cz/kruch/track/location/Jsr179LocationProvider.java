@@ -1,5 +1,18 @@
-// Copyright 2001-2006 Systinet Corp. All rights reserved.
-// Use is subject to license terms.
+/*
+ * Copyright 2006-2007 Ales Pour <kruhc@seznam.cz>.
+ * All Rights Reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ */
 
 package cz.kruch.track.location;
 
@@ -17,18 +30,23 @@ import javax.microedition.io.Connector;
 import java.io.OutputStream;
 import java.io.IOException;
 
+/**
+ * Internal (JSR-179) provider implementation.
+ *
+ * @author Ales Pour <kruhc@seznam.cz>
+ */
 public final class Jsr179LocationProvider
         extends api.location.LocationProvider
-        implements javax.microedition.location.LocationListener {
+        implements javax.microedition.location.LocationListener, Runnable {
 
     private javax.microedition.location.LocationProvider impl;
+
+    private volatile Thread thread;
+    private volatile boolean go;
+    
     private File nmeaFile;
     private OutputStream nmeaWriter;
-
-/*
-    private LocationListenerAdapter adapter;
-*/
-
+    
     public Jsr179LocationProvider() {
         super(Config.LOCATION_PROVIDER_JSR179);
     }
@@ -48,22 +66,17 @@ public final class Jsr179LocationProvider
             tokenizer.dispose();
             javax.microedition.location.Criteria criteria = new javax.microedition.location.Criteria();
 
+            // common criteria
+            criteria.setAltitudeRequired(true);
+            criteria.setSpeedAndCourseRequired(true);
+
             // adjust criteria for current device
 //#ifdef __A780__
             if (cz.kruch.track.TrackingMIDlet.a780) {
                 /* from bikeator */
-                criteria.setHorizontalAccuracy(javax.microedition.location.Criteria.NO_REQUIREMENT);
                 criteria.setPreferredPowerConsumption(javax.microedition.location.Criteria.POWER_USAGE_HIGH);
             }
-            else
-//#endif            
-            {
-                criteria.setAltitudeRequired(true);
-                criteria.setSpeedAndCourseRequired(true);
-            }
-
-           // start NMEA log
-            startNmeaLog();
+//#endif
 
             // init provider
             impl = javax.microedition.location.LocationProvider.getInstance(criteria);
@@ -74,13 +87,18 @@ public final class Jsr179LocationProvider
             if (impl == null) {
                 throw new LocationException("No provider instance");
             }
-            impl.setLocationListener(/*adapter*/this, interval, timeout, maxage);
+
+            // set listener
+            impl.setLocationListener(this, interval, timeout, maxage);
 
         } catch (LocationException e) {
             throw e;
         } catch (Exception e) {
             throw new LocationException(e);
         }
+
+        // start service thread
+        (new Thread(this)).start();
 
         lastState = _STARTING;
         notifyListener(_STARTING); // trick to start GPX tracklog
@@ -93,17 +111,62 @@ public final class Jsr179LocationProvider
         impl.setLocationListener(null, -1, -1, -1);
         impl = null;
 
-        // stop NMEA log
-        stopNmeaLog();
+        // shutdown service thread
+        synchronized (this) {
+            go = false;
+            notify();
+        }
+
+        // wait for finish
+        if (thread != null) {
+            try {
+                thread.interrupt();
+                thread.join();
+            } catch (InterruptedException e) {
+                // should never happen
+            }
+        }
+    }
+
+    public void run() {
+        // let's roll
+        go = true;
+        thread = Thread.currentThread();
+
+        try {
+            // start NMEA log
+            startNmeaLog();
+
+            // wait for end (kinda stupid variant of gps() from Serial provider ;-) )
+            synchronized (this) {
+                while (go) {
+                    try {
+                        wait();
+                    } catch (InterruptedException e) {
+                        // ignore
+                    }
+                }
+            }
+
+        } catch (Throwable t) {
+
+            // record
+            setThrowable(t);
+
+        } finally {
+
+            // be ready for restart
+            go = false;
+
+            // stop NMEA tracklog
+            stopNmeaLog();
+        }
     }
 
     public void setLocationListener(api.location.LocationListener listener, int interval, int timeout, int maxAge) {
         if (listener == null) {
             impl.setLocationListener(null, interval, timeout, maxAge);
         } else {
-/*
-            adapter = new LocationListenerAdapter(listener);
-*/
             setListener(listener);
         }
     }
@@ -167,102 +230,90 @@ public final class Jsr179LocationProvider
         }
     }
 
-/*
-    private final class LocationListenerAdapter implements javax.microedition.location.LocationListener {
-*/
-        private static final String APPLICATION_X_JSR179_LOCATION_NMEA = "application/X-jsr179-location-nmea";
+    private static final String APPLICATION_X_JSR179_LOCATION_NMEA = "application/X-jsr179-location-nmea";
 
-/*
-        public LocationListenerAdapter(api.location.LocationListener listener) {
-            setListener(listener);
-        }
-*/
+    public void locationUpdated(javax.microedition.location.LocationProvider p,
+                                javax.microedition.location.Location l) {
+        // valid location?
+        if (l.isValid()) {
 
-        public void locationUpdated(javax.microedition.location.LocationProvider p,
-                                    javax.microedition.location.Location l) {
-            // valid location?
-            if (l.isValid()) {
-
-                // signal state change
-                if (lastState != LocationProvider.AVAILABLE) {
-                    lastState = LocationProvider.AVAILABLE;
-                    notifyListener(lastState);
-                }
-
-                // vars
-                javax.microedition.location.QualifiedCoordinates xc = l.getQualifiedCoordinates();
-                float spd = l.getSpeed();
-                float alt = xc.getAltitude();
-                float course = l.getCourse();
-                float accuracy = xc.getHorizontalAccuracy();
-
-                if (Float.isNaN(spd)) {
-                    spd = -1F;
-                }
-                if (Float.isNaN(alt)) {
-                    alt = -1F;
-                } else if (cz.kruch.track.TrackingMIDlet.sxg75) {
-                    alt -= 540;
-                }
-                if (Float.isNaN(course)) {
-                    course = -1F;
-                }
-                if (Float.isNaN(accuracy)) {
-                    accuracy = -1F;
-                }
-
-                // create up-to-date location
-                QualifiedCoordinates qc = QualifiedCoordinates.newInstance(xc.getLatitude(),
-                                                                           xc.getLongitude(),
-                                                                           alt);
-                qc.setAccuracy(accuracy);
-                Location location = Location.newInstance(qc, l.getTimestamp(), 1);
-                location.setCourse(course);
-                location.setSpeed(spd);
-
-                // notify
-                notifyListener(location);
-
-            } else {
-
-                // signal state change
-                if (lastState != LocationProvider.TEMPORARILY_UNAVAILABLE) {
-                    lastState = LocationProvider.TEMPORARILY_UNAVAILABLE;
-                    notifyListener(lastState);
-                }
+            // signal state change
+            if (lastState != LocationProvider.AVAILABLE) {
+                lastState = LocationProvider.AVAILABLE;
+                notifyListener(lastState);
             }
 
-            // NMEA logging
-            if (nmeaWriter != null) {
-                String extra = l.getExtraInfo(APPLICATION_X_JSR179_LOCATION_NMEA);
-                if (extra != null) {
-                    try {
-                        if (extra.indexOf("\n$GP") > -1) {
-                            nmeaWriter.write(extra.getBytes());
-                        } else {
-                            byte[] bytes = extra.getBytes();
-                            for (int N = bytes.length, i = 0; i < N; i++) {
-                                final byte b = bytes[i];
-                                if (b == '$' && i != 0) {
-                                    nmeaWriter.write('\r');
-                                    nmeaWriter.write('\n');
-                                }
-                                nmeaWriter.write(b);
+            // vars
+            javax.microedition.location.QualifiedCoordinates xc = l.getQualifiedCoordinates();
+            float spd = l.getSpeed();
+            float alt = xc.getAltitude();
+            float course = l.getCourse();
+            float accuracy = xc.getHorizontalAccuracy();
+
+            if (Float.isNaN(spd)) {
+                spd = -1F;
+            }
+            if (Float.isNaN(alt)) {
+                alt = -1F;
+            } else if (cz.kruch.track.TrackingMIDlet.sxg75) {
+                alt -= 540;
+            }
+            if (Float.isNaN(course)) {
+                course = -1F;
+            }
+            if (Float.isNaN(accuracy)) {
+                accuracy = -1F;
+            }
+
+            // create up-to-date location
+            QualifiedCoordinates qc = QualifiedCoordinates.newInstance(xc.getLatitude(),
+                                                                       xc.getLongitude(),
+                                                                       alt);
+            qc.setAccuracy(accuracy);
+            Location location = Location.newInstance(qc, l.getTimestamp(), 1);
+            location.setCourse(course);
+            location.setSpeed(spd);
+
+            // notify
+            notifyListener(location);
+
+        } else {
+
+            // signal state change
+            if (lastState != LocationProvider.TEMPORARILY_UNAVAILABLE) {
+                lastState = LocationProvider.TEMPORARILY_UNAVAILABLE;
+                notifyListener(lastState);
+            }
+        }
+
+        // NMEA logging
+        if (nmeaWriter != null) {
+            String extra = l.getExtraInfo(APPLICATION_X_JSR179_LOCATION_NMEA);
+            if (extra != null) {
+                try {
+                    if (extra.indexOf("\n$GP") > -1) {
+                        nmeaWriter.write(extra.getBytes());
+                    } else {
+                        byte[] bytes = extra.getBytes();
+                        for (int N = bytes.length, i = 0; i < N; i++) {
+                            final byte b = bytes[i];
+                            if (b == '$' && i != 0) {
+                                nmeaWriter.write('\r');
+                                nmeaWriter.write('\n');
                             }
-                            nmeaWriter.write('\r');
-                            nmeaWriter.write('\n');
+                            nmeaWriter.write(b);
                         }
-                    } catch (Throwable t) {
-                        setThrowable(t);
+                        nmeaWriter.write('\r');
+                        nmeaWriter.write('\n');
                     }
+                } catch (Throwable t) {
+                    setThrowable(t);
                 }
             }
         }
-
-        public void providerStateChanged(javax.microedition.location.LocationProvider locationProvider, int i) {
-            notifyListener(i);
-        }
-/*
     }
-*/
+
+    public void providerStateChanged(javax.microedition.location.LocationProvider locationProvider, int i) {
+        notifyListener(i);
+    }
 }

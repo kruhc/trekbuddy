@@ -1,167 +1,92 @@
-// Copyright 2001-2006 Systinet Corp. All rights reserved.
-// Use is subject to license terms.
+/*
+ * Copyright 2006-2007 Ales Pour <kruhc@seznam.cz>.
+ * All Rights Reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ */
 
 package cz.kruch.track.ui;
 
 import java.util.Vector;
 
-public final class SmartRunnable extends Thread {
-//#ifdef __LOG__
-    private static final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("SmartRunnable");
-//#endif
-
-    /*
-     * POOL
-     */
-
-    private static final class QueuedRunnable implements Runnable {
-//#ifdef __LOG__
-        private /*static*/ final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("QueuedRunnable");
-//#endif
-
-        private Runnable runnable;
-
-        public QueuedRunnable(Runnable runnable) {
-            this.runnable = runnable;
-        }
-
-        public void run() {
-            try {
-//#ifdef __LOG__
-                if (log.isEnabled()) log.debug("invoking runnable: " + runnable);
-//#endif
-                runnable.run();
-            } finally {
-//#ifdef __LOG__
-                if (log.isEnabled()) log.debug("~invoking runnable: " + runnable);
-//#endif
-                runnable = null;
-                releaseInstance(this); // TODO release by "parent" (ie. introduce 'current')
-                instance.tick();
-            }
-        }
-    }
-
-    private static final QueuedRunnable[] pool = new QueuedRunnable[8];
-    private static int countFree;
-
-    private synchronized static QueuedRunnable newInstance(Runnable r) {
-        QueuedRunnable result;
-
-        if (countFree == 0) {
-            result = new QueuedRunnable(r);
-        } else {
-            result = pool[--countFree];
-            pool[countFree] = null;
-            result.runnable = r;
-        }
-
-        return result;
-    }
-
-    private synchronized static void releaseInstance(QueuedRunnable sr) {
-        if (countFree < pool.length) {
-            pool[countFree++] = sr;
-        }
-    }
-
-    /*
-     * ~POOL
-     */
-
-    private static SmartRunnable instance;
-
-    private Vector runnables;
+/**
+ * Eventing engine.
+ *
+ * @author Ales Pour <kruhc@seznam.cz>
+ */
+public final class SmartRunnable implements Runnable {
+    private static final SmartRunnable instance = new SmartRunnable();
+    private final Vector runnables = new Vector(16);
+    private boolean enqueued;
     private boolean go;
-    private boolean check;
-    private boolean running;
 
     private SmartRunnable() {
-        this.runnables = new Vector(8);
         this.go = true;
     }
 
-    public synchronized static SmartRunnable getInstance() {
-        if (instance == null) {
-            instance = new SmartRunnable();
-            instance.start();
-        }
-
+    public static SmartRunnable getInstance() {
         return instance;
     }
 
     public void destroy() {
         synchronized (this) {
             go = false;
-            notify();
-        }
-        try {
-            join();
-        } catch (InterruptedException e) {
-            // ignore
         }
     }
 
     public void callSerially(Runnable r) {
         synchronized (this) {
-            runnables.addElement(newInstance(r));
-            check = true;
-            notify();
-        }
-    }
-
-    private void tick() {
-        synchronized (this) {
-            running = false;
-            check = true;
-            notify();
+            if (!go) { // probably shutdown, do not accept tasks anymore
+                return;
+            }
+            boolean add = true;
+            if (r instanceof Desktop) {
+                if (runnables.size() > 0) {
+                    if (runnables.lastElement() instanceof Desktop) {
+                        add = false;
+                    }
+                }
+            }
+            if (add) {
+                runnables.addElement(r);
+            }
+            if (enqueued == false) {
+                enqueued = true;
+                Desktop.display.callSerially(this);
+            }
         }
     }
 
     public void run() {
-        for (; go ; ) {
-            // pop task
-            QueuedRunnable r = null;
-            synchronized (this) {
-                while (go && !check) {
-                    try {
-                        wait();
-                    } catch (InterruptedException e) {
-                        // ignore
-                    }
-                }
-                if (!running) {
-                    if (runnables.size() > 0) {
-//#ifdef __LOG__
-                        if (log.isEnabled()) log.debug("got next runnable to call serially: " + r);
-//#endif
-                        r = (QueuedRunnable) runnables.elementAt(0);
-                        runnables.setElementAt(null, 0);
-                        runnables.removeElementAt(0);
-                        running = r != null;
-                    }
-//#ifdef __LOG__
-                    else {
-                        if (log.isEnabled()) log.debug("no next runnable to call serially");
-                    }
-//#endif
-                }
-//#ifdef __LOG__
-                else {
-                    if (log.isEnabled()) log.debug("already running");
-                }
-//#endif
-
-                // clear flag
-                check = false;
+        Runnable r = null;
+        synchronized (this) {
+            if (runnables.size() > 0) {
+                r = (Runnable) runnables.elementAt(0);
+                runnables.setElementAt(null, 0);
+                runnables.removeElementAt(0);
             }
-
-            // good to go?
-            if (!go) break;
-
-            // run task, if any
+        }
+        try {
             if (r != null) {
-                Desktop.display.callSerially(r);
+                r.run();
+            }
+        } catch (Throwable t) {
+            // ignore
+        }
+        synchronized (this) {
+            if (runnables.size() > 0) {
+                Desktop.display.callSerially(this);
+            } else {
+                enqueued = false;
             }
         }
     }

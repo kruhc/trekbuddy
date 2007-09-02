@@ -1,5 +1,18 @@
-// Copyright 2001-2006 Systinet Corp. All rights reserved.
-// Use is subject to license terms.
+/*
+ * Copyright 2006-2007 Ales Pour <kruhc@seznam.cz>.
+ * All Rights Reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ */
 
 package cz.kruch.track.fun;
 
@@ -24,7 +37,12 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.ByteArrayOutputStream;
 
-public final class Camera implements CommandListener, PlayerListener, Runnable {
+/**
+ * Helper for MMAPI. Used to capture snapshots, play sounds etc.
+ *
+ * @author Ales Pour <kruhc@seznam.cz>
+ */
+public final class Camera implements CommandListener, PlayerListener/*, Runnable*/ {
 
 //#ifdef __LOG__
     private static final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("Desktop");
@@ -66,6 +84,7 @@ public final class Camera implements CommandListener, PlayerListener, Runnable {
             // create player
             player = Manager.createPlayer(Config.captureLocator);
             player.realize();
+            player.prefetch(); // workaround for some S60 3rd, harmless(?) to others
 
             // get video control
             video = (VideoControl) player.getControl("VideoControl");
@@ -84,11 +103,11 @@ public final class Camera implements CommandListener, PlayerListener, Runnable {
             item.setLayout(Item.LAYOUT_CENTER);
             form.append(item);
 
-            // start camera
-            player.start();
-
             // show camera window
             Desktop.display.setCurrent(form);
+
+            // start camera
+            player.start();
 
         } catch (Throwable t) {
 
@@ -158,13 +177,15 @@ public final class Camera implements CommandListener, PlayerListener, Runnable {
 
     public void commandAction(Command c, Displayable d) {
         if (c.getCommandType() == Command.SCREEN) {
-            (new Thread(this)).start();
+            /* All samples I saw gets snapshot directly from callback too... */
+//            (new Thread(this)).start();
+            capture();
         } else {
             destroy();
         }
     }
 
-    public void run() {
+    public void capture() {
         byte[] result = null;
         Throwable throwable = null;
 

@@ -1,5 +1,18 @@
-// Copyright 2001-2006 Systinet Corp. All rights reserved.
-// Use is subject to license terms.
+/*
+ * Copyright 2006-2007 Ales Pour <kruhc@seznam.cz>.
+ * All Rights Reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ */
 
 package cz.kruch.track.location;
 
@@ -23,6 +36,8 @@ import cz.kruch.track.ui.NavigationScreens;
 
 /**
  * GPX tracklog.
+ *
+ * @author Ales Pour <kruhc@seznam.cz>
  */
 public final class GpxTracklog extends Thread {
     private static final String GPX_1_1_NAMESPACE   = "http://www.topografix.com/GPX/1/1";
@@ -30,7 +45,6 @@ public final class GpxTracklog extends Thread {
     private static final String EXT_NAMESPACE       = "urn:net:trekbuddy:1.0:nmea:rmc";
     private static final String EXT_PREFIX          = "rmc";
 
-    private static final int    MIN_DT = 5 * 60000;         // 5 min
     private static final float  MIN_SPEED_WALK = 1F;        // 1 m/s ~ 3.6 km/h
     private static final float  MIN_SPEED_BIKE = 5F;        // 5 m/s ~ 18 km/h
     private static final float  MIN_SPEED_CAR  = 10F;       // 10 m/s ~ 36 km/h
@@ -90,7 +104,7 @@ public final class GpxTracklog extends Thread {
     private Object queue;
 
     private Location refLocation;
-//    private Location lastLocation;
+    private float refCourse, courseDeviation; // private Location lastLocation;
     private boolean reconnected;
     private int count;
     private int imgNum = 1;
@@ -506,40 +520,8 @@ public final class GpxTracklog extends Thread {
 
     public Location check(Location location) {
 
-        if (Config.gpxRaw) {
+        if (Config.gpxDt == 0) { // 'raw'
             return location;
-        }
-
-        /*
-         * GPS dancing detection.
-         * Rule #1: no course change over 90 degrees within 1 sec
-         * 2007-06-05: commented out
-         */
-
-/*
-        boolean dance = false;
-*/
-
-        final int fix = location.getFix();
-        if (fix > 0) {
-/*
-            if (lastLocation != null) {
-                if ((location.getTimestamp() - lastLocation.getTimestamp()) < 1250) {
-                    int courseDiff = Math.abs((int) (location.getCourse() - lastLocation.getCourse()));
-                    if (courseDiff >= 180) {
-                        courseDiff = 360 - courseDiff;
-                    }
-                    if (courseDiff >= 90) {
-                        dance = true;
-                    }
-                }
-            }
-
-            // this one becomes last one
-            Location.releaseInstance(lastLocation);
-            lastLocation = null;
-            lastLocation = location.clone();
-*/
         }
 
         if (refLocation == null) {
@@ -547,12 +529,14 @@ public final class GpxTracklog extends Thread {
         }
 
         boolean bLog = false;
-        boolean bTimeDiff = (location.getTimestamp() - refLocation.getTimestamp()) > MIN_DT;
+        boolean bTimeDiff = (location.getTimestamp() - refLocation.getTimestamp()) > (Config.gpxDt * 1000);
 
         if (reconnected) {
             reconnected = false;
             bLog = true;
         }
+
+        final int fix = location.getFix();
 
         if (fix > 0) {
             if (++count == 3) {
@@ -564,43 +548,43 @@ public final class GpxTracklog extends Thread {
             bLog = true;
         } else {
             if (fix > 0) {
-                if (refLocation.getFix() > 0) {
-                    // calculate distance
-                    QualifiedCoordinates refCoordinates = refLocation.getQualifiedCoordinates();
-/*
-                    // compute dist from reference location
-                    double latDiff = qc.getLat() - refCoordinates.getLat();
-                    double lonDiff = qc.getLon() - refCoordinates.getLon();
-                    double r = Math.sqrt(latDiff * latDiff + lonDiff * lonDiff);
-*/
-                    final float r = location.getQualifiedCoordinates().distance(refCoordinates);
 
-                    // get speed and course
+                // check logging criteria
+                if (refLocation.getFix() > 0) {
+
+                    // compute dist from reference location
+                    final float r = location.getQualifiedCoordinates().distance(refLocation.getQualifiedCoordinates());
+
+                    // calculate course deviation
                     final float speed = location.getSpeed();
                     final float course = location.getCourse();
-                    final float refCourse = refLocation.getCourse();
+                    if (course > -1F && speed > MIN_SPEED_WALK) {
+                        float diff = course - refCourse;
+                        if (diff > 180F) {
+                            diff -= 360F;
+                        } else if (diff < -180F) {
+                            diff += 360F;
+                        }
+                        courseDeviation += diff;
+                        refCourse = course;
+                    }
 
                     // depending on speed, find out whether log or not
                     if (speed < MIN_SPEED_WALK) { /* no move or hiking speed */
-//                        boolean bPosDiff = r > MIN_DL_WALK;
-                        boolean bPosDiff = r > 50;
-                        bLog = bPosDiff;
+                        bLog = r > 50;
                     } else if (speed < MIN_SPEED_BIKE) { /* bike speed */
-//                        boolean bPosDiff = r > MIN_DL_BIKE;
-                        boolean bPosDiff = r > 250;
-                        boolean bCourseDiff = course > -1F && refCourse > -1F ? Math.abs(course - refCourse) > MIN_COURSE_DIVERSION : false;
-                        bLog = bPosDiff || bCourseDiff;
-                    } else if (speed < MIN_SPEED_CAR) {
-//                        boolean bPosDiff = r > MIN_DL_CAR;
-                        boolean bPosDiff = r > 500;
-                        boolean bCourseDiff = course > -1F && refCourse > -1F ? Math.abs(course - refCourse) > MIN_COURSE_DIVERSION_FAST : false;
-                        bLog = bPosDiff || bCourseDiff;
-                    } else {
-//                        boolean bPosDiff = r > 2 * MIN_DL_CAR;
-                        boolean bPosDiff = r > 1000;
-                        boolean bCourseDiff = course > -1F && refCourse > -1F ? Math.abs(course - refCourse) > MIN_COURSE_DIVERSION_FAST : false;
-                        bLog = bPosDiff || bCourseDiff;
+                        bLog = r > 250 || Math.abs(courseDeviation) > MIN_COURSE_DIVERSION;
+                    } else if (speed < MIN_SPEED_CAR) { /* car speed */
+                        bLog = r > 500 || Math.abs(courseDeviation) > MIN_COURSE_DIVERSION_FAST;
+                    } else { /* ghost rider */
+                        bLog = r > 1000 || Math.abs(courseDeviation) > MIN_COURSE_DIVERSION_FAST;
                     }
+
+                    // check user's distance criteria if not going to log
+                    if (!bLog && Config.gpxDs > 0) {
+                        bLog = r > Config.gpxDs;
+                    }
+
                 } else {
                     bLog = true;
                 }
@@ -623,6 +607,9 @@ public final class GpxTracklog extends Thread {
             Location.releaseInstance(refLocation);
             refLocation = null;
             refLocation = location.clone();
+
+            // new heading 
+            courseDeviation = 0F;
 
             return location;
         }

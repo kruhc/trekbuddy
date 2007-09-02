@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <project name="TrekBuddy" default="generic" basedir=".">
 
-    <property name="version" value="0.9.57"/>
+    <property name="version" value="0.9.59"/>
     <property name="vendor" value="KrUcH"/>
     <property name="description" value="J2ME GPS application"/>
 
@@ -157,6 +157,9 @@
 
     <target name="clean">
         <delete dir="tmp"/>
+        <delete includeemptydirs="true" verbose="true">
+          <fileset dir="dist/${dist.dir}" includes="**/*"/>
+        </delete>
 <!--
         <delete dir="r:\trekbuddy\tmp"/>
 -->
@@ -230,6 +233,7 @@
         <delete file="tmp/src/api/file/Jsr75File.java"/>
         <delete file="tmp/src/cz/kruch/track/ui/nokia/NokiaDeviceControl.java"/>
         <delete file="tmp/src/cz/kruch/track/ui/nokia/SiemensDeviceControl.java"/>
+        <delete file="tmp/src/cz/kruch/track/ui/nokia/SonyEricssonDeviceControl.java"/>
         <delete file="tmp/src/cz/kruch/track/location/MotorolaLocationProvider.java"/>
         <delete file="tmp/src/cz/kruch/track/location/Jsr82LocationProvider.java"/>
     </target>
@@ -240,6 +244,7 @@
         <delete file="tmp/src/api/file/SiemensFile.java"/>
         <delete file="tmp/src/cz/kruch/track/ui/nokia/NokiaDeviceControl.java"/>
         <delete file="tmp/src/cz/kruch/track/ui/nokia/SiemensDeviceControl.java"/>
+        <delete file="tmp/src/cz/kruch/track/ui/nokia/SonyEricssonDeviceControl.java"/>
         <delete file="tmp/src/cz/kruch/track/location/MotorolaLocationProvider.java"/>
     </target>
 
@@ -332,7 +337,7 @@
         </java>
         <move file="dist/${dist.dir}/_trekbuddy${suffix}.jad" tofile="dist/${dist.dir}/trekbuddy${suffix}.jad"/>
         <wtkjad jadfile="dist/${dist.dir}/trekbuddy${suffix}.jad" update="true">
-            <attribute name="Datum-1" value="S-42 (Poland){Krassovsky 1940,23,-124,-82}=map:Pulkovo 1942 POL"/>
+            <attribute name="Datum-1" value="S-42 (Poland){Krassovsky 1940,24,-124,-82}=map:Pulkovo 1942 POL"/>
         </wtkjad>
     </target>
 
@@ -357,10 +362,11 @@
 -->
             <arg value="-keepnames class cz.** extends java.lang.Exception"/>
             <arg value="-whyareyoukeeping class com.ice.tar.TarHeader"/>
+            <arg value="-whyareyoukeeping class public_domain.Xedarius"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.ui.Desktop$Renderer"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.ui.Console"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.util.Logger"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.util.Comparator"/>
-            <arg value="-whyareyoukeeping class cz.kruch.track.util.ExtraMath"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.location.MotorolaLocationProvider"/>
             <arg value="-whyareyoukeeping class cz.kruch.j2se.io.BufferedReader"/>
             <arg value="-whyareyoukeeping class cz.kruch.j2se.util.StringTokenizer"/>
@@ -392,10 +398,11 @@
 -->
             <arg value="-keepnames class cz.** extends java.lang.Exception"/>
             <arg value="-whyareyoukeeping class com.ice.tar.TarHeader"/>
+            <arg value="-whyareyoukeeping class public_domain.Xedarius"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.ui.Desktop$Renderer"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.ui.Console"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.util.Logger"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.util.Comparator"/>
-            <arg value="-whyareyoukeeping class cz.kruch.track.util.ExtraMath"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.location.MotorolaLocationProvider"/>
             <arg value="-whyareyoukeeping class cz.kruch.j2se.io.BufferedReader"/>
             <arg value="-whyareyoukeeping class cz.kruch.j2se.util.StringTokenizer"/>
@@ -438,7 +445,7 @@
           </exec>
 -->
           <exec dir="${basedir}\dist\${dist.dir}" executable="${rim.home}\bin\rapc.exe">
-            <arg line="import='${rim.home}\lib\net_rim_api.jar' codename=trekbuddy${suffix} -quiet ${basedir}\dist\${dist.dir}\trekbuddy${suffix}.jad ${basedir}\dist\${dist.dir}\trekbuddy${suffix}.jar"/>
+            <arg line="import='${rim.home}\lib\net_rim_api.jar' codename=trekbuddy${suffix} -quiet -midlet ${basedir}\dist\${dist.dir}\trekbuddy${suffix}.jad ${basedir}\dist\${dist.dir}\trekbuddy${suffix}.jar"/>
           </exec>
           <copy file="${basedir}\trekbuddy.alx" tofile="${basedir}\dist\${dist.dir}\trekbuddy${suffix}.alx"/>
           <replace file="${basedir}\dist\${dist.dir}\trekbuddy${suffix}.alx" token="@SUFFIX@" value="${suffix}"/>
@@ -446,7 +453,7 @@
           <replace file="${basedir}\dist\${dist.dir}\trekbuddy${suffix}.alx" token="@VERSION@" value="${version}"/>
           <replace file="${basedir}\dist\${dist.dir}\trekbuddy${suffix}.alx" token="@VENDOR@" value="${vendor}"/>
           <delete>
-              <fileset dir="${basedir}\dist\${dist.dir}" excludes="*.jar,*.jad,*.alx,*.cod,*.map"/>
+              <fileset dir="${basedir}\dist\${dist.dir}" excludes="*.cod,*.alx,*.map"/>
           </delete>
       </target>
 

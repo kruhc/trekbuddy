@@ -1,5 +1,18 @@
-// Copyright 2001-2006 Systinet Corp. All rights reserved.
-// Use is subject to license terms.
+/*
+ * Copyright 2006-2007 Ales Pour <kruhc@seznam.cz>.
+ * All Rights Reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ */
 
 package cz.kruch.track.ui;
 
@@ -33,6 +46,11 @@ import org.xmlpull.v1.XmlPullParserException;
 import org.xmlpull.v1.XmlPullParser;
 import org.kxml2.io.KXmlParser;
 
+/**
+ * Navigation manager.
+ *
+ * @author Ales Pour <kruhc@seznam.cz>
+ */
 public final class Waypoints extends List
         implements CommandListener, Callback, Runnable, YesNoDialog.AnswerListener {
 //#ifdef __LOG__
@@ -78,28 +96,40 @@ public final class Waypoints extends List
         TAG_WPT, TAG_RTEPT, TAG_NAME, TAG_CMT, TAG_DESC, ATTR_LAT, ATTR_LON
     };
     
-    private static boolean initialized;
-    private static Hashtable stores;
-    private static Hashtable logs;
-    private static Vector logNames;
-    private static String currentName, inUseName;
-    private static Vector currentWpts, inUseWpts;
+    private Hashtable stores;
+    private Hashtable logs;
+    private Vector logNames;
+    private String currentName, inUseName;
+    private Vector currentWpts, inUseWpts;
 
     private Navigator navigator;
     private short depth;
 
-    private static Command cmdSelect, cmdCancel, cmdClose;
-    private static Command cmdNavigateTo, cmdNavigateAlong, cmdNavigateBack,
-                           cmdSetAsCurrent;
+    private Command cmdSelect, cmdCancel, cmdClose;
+    private Command cmdNavigateTo, cmdNavigateAlong, cmdNavigateBack, cmdSetAsCurrent;
 
-    public Waypoints(Navigator navigator) {
+    private static Waypoints instance;
+
+    public static void initialize(Navigator navigator) {
+        instance = new Waypoints(navigator);
+    }
+
+    public static Waypoints getInstance() {
+        if (instance == null) {
+            throw new IllegalStateException("Waypoints not initialized");
+        }
+
+        return instance;
+    }
+
+    private Waypoints(Navigator navigator) {
         super("Navigation", List.IMPLICIT);
         this.navigator = navigator;
         this.setFitPolicy(Choice.TEXT_WRAP_OFF);
         this.initialize();
     }
 
-    public static void shutdown() {
+    public void shutdown() {
         for (Enumeration e = logs.elements(); e.hasMoreElements(); ) {
             GpxTracklog gpx = (GpxTracklog) e.nextElement();
             try {
@@ -114,57 +144,53 @@ public final class Waypoints extends List
     }
 
     private void initialize() {
-        if (!initialized) {
-            initialized = true;
+        // init menu
+        cmdSelect = new Command("Select", Command.ITEM, 1);
+        cmdCancel = new Command("Back", Command.BACK, 1);
+        cmdClose = new Command("Close", Command.BACK, 1);
+        cmdNavigateTo = new Command(WaypointForm.MENU_NAVIGATE_TO, Command.ITEM, 2);
+        cmdNavigateAlong = new Command(WaypointForm.MENU_NAVIGATE_ALONG, Command.ITEM, 3);
+        cmdNavigateBack = new Command(WaypointForm.MENU_NAVIGATE_BACK, Command.ITEM, 4);
+        cmdSetAsCurrent = new Command(WaypointForm.MENU_SET_CURRENT, Command.ITEM, 2);
 
-            // init menu
-            cmdSelect = new Command("Select", Command.ITEM, 1);
-            cmdCancel = new Command("Back", Command.BACK, 1);
-            cmdClose = new Command("Close", Command.BACK, 1);
-            cmdNavigateTo = new Command(WaypointForm.MENU_NAVIGATE_TO, Command.ITEM, 2);
-            cmdNavigateAlong = new Command(WaypointForm.MENU_NAVIGATE_ALONG, Command.ITEM, 3);
-            cmdNavigateBack = new Command(WaypointForm.MENU_NAVIGATE_BACK, Command.ITEM, 4);
-            cmdSetAsCurrent = new Command(WaypointForm.MENU_SET_CURRENT, Command.ITEM, 2);
+        // init collection
+        stores = new Hashtable(3);
+        logs = new Hashtable(3);
+        logNames = new Vector(3);
 
-            // init collection
-            stores = new Hashtable(3);
-            logs = new Hashtable(3);
-            logNames = new Vector(3);
+        // init memory waypoints
+        stores.put(USER_CUSTOM_STORE, new Vector());
+        stores.put(USER_RECORDED_STORE, new Vector());
+        stores.put(USER_FRIENDS_STORE, new Vector());
 
-            // init memory waypoints
-            stores.put(USER_CUSTOM_STORE, new Vector());
-            stores.put(USER_RECORDED_STORE, new Vector());
-            stores.put(USER_FRIENDS_STORE, new Vector());
+        // do we have in-jar waypoint(s) resource?
+        int type = TYPE_GPX;
+        InputStream in = cz.kruch.track.TrackingMIDlet.class.getResourceAsStream("/resources/waypoints.gpx");
+        if (in == null) {
+            type = TYPE_LOC;
+            in = cz.kruch.track.TrackingMIDlet.class.getResourceAsStream("/resources/waypoint.loc");
+        }
 
-            // do we have in-jar waypoint(s) resource?
-            int type = TYPE_GPX;
-            InputStream in = cz.kruch.track.TrackingMIDlet.class.getResourceAsStream("/resources/waypoints.gpx");
-            if (in == null) {
-                type = TYPE_LOC;
-                in = cz.kruch.track.TrackingMIDlet.class.getResourceAsStream("/resources/waypoint.loc");
-            }
-
-            // if yes, load it
-            if (in != null) {
+        // if yes, load it
+        if (in != null) {
+            try {
+                stores.put(USER_INJAR_STORE, parseWaypoints(in, type));
+            } catch (Throwable t) {
+                Desktop.showError("Failed to load in-jar waypoints", t, null);
+            } finally {
                 try {
-                    stores.put(USER_INJAR_STORE, parseWaypoints(in, type));
-                } catch (Throwable t) {
-                    Desktop.showError("Failed to load in-jar waypoints", t, null);
-                } finally {
-                    try {
-                        in.close();
-                    } catch (IOException e) {
-                        // ignore
-                    }
+                    in.close();
+                } catch (IOException e) {
+                    // ignore
                 }
             }
         }
+
+        // command handling
+        setCommandListener(this);
     }
 
     public void show() {
-        // command handling
-        setCommandListener(this);
-
         // let's start with basic menu
         menu();
 
@@ -173,8 +199,7 @@ public final class Waypoints extends List
     }
 
     private void menu() {
-
-        // destroy old commands
+        // remove commands
         removeCommand(cmdSelect);
         removeCommand(cmdCancel);
         removeCommand(cmdClose);
@@ -879,13 +904,17 @@ public final class Waypoints extends List
                             // got wpt
                             v.addElement(new Waypoint(QualifiedCoordinates.newInstance(lat, lon),
                                                       name, comment));
-
-                            // only 1 waypoint for LOC files
-                            break;
+                            // reset temps
+                            lat = lon = -1D;
+                            name = comment = null;
+                            // reset depth
+                            depth = 0;
                         }
                     } else {
                         // up one level
-                        depth--;
+                        if (depth > 0) {
+                            depth--;
+                        }
                     }
                 }
             }

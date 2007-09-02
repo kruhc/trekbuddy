@@ -1,14 +1,33 @@
-// Copyright 2001-2006 Systinet Corp. All rights reserved.
-// Use is subject to license terms.
+/*
+ * Copyright 2006-2007 Ales Pour <kruhc@seznam.cz>.
+ * All Rights Reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ */
 
 package api.location;
 
+/**
+ * Location provider abstraction.
+ * 
+ * @author Ales Pour <kruhc@seznam.cz>
+ */
 public abstract class LocationProvider {
-    public static final int _STARTING = 0; // non-JSR_179
-    public static final int AVAILABLE = 1;
-    public static final int TEMPORARILY_UNAVAILABLE = 2;
-    public static final int OUT_OF_SERVICE = 3;
-    public static final int _CANCELLED = 4; // non-JSR_179
+    public static final int _STARTING               = 0x0; // non-JSR_179
+    public static final int AVAILABLE               = 0x01;
+    public static final int TEMPORARILY_UNAVAILABLE = 0x02;
+    public static final int OUT_OF_SERVICE          = 0x03;
+    public static final int _STALLED                = 0x82; // non-JSR_179
+    public static final int _CANCELLED              = 0x83; // non-JSR_179
 
     private String name;
     private boolean tracklog;
@@ -16,7 +35,7 @@ public abstract class LocationProvider {
     private Throwable throwable;
     private Object status;
 
-    protected int lastState;
+    protected volatile int lastState;
 
     protected LocationProvider(String name) {
         this.name = name;

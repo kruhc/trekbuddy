@@ -1,13 +1,25 @@
-// Copyright 2001-2006 Systinet Corp. All rights reserved.
-// Use is subject to license terms.
+/*
+ * Copyright 2006-2007 Ales Pour <kruhc@seznam.cz>. All Rights Reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ */
 
 package api.location;
 
 /* bad design - dependency */
 import cz.kruch.track.configuration.Config;
 import cz.kruch.track.util.Mercator;
+import cz.kruch.track.util.ExtraMath;
 import cz.kruch.track.ui.NavigationScreens;
-import public_domain.Xedarius;
 
 public final class QualifiedCoordinates implements GeodeticPosition {
 
@@ -186,7 +198,7 @@ public final class QualifiedCoordinates implements GeodeticPosition {
             sina = 1.0D;
         }
 
-        return (float) (offset + Math.toDegrees(Xedarius.asin(sina)));
+        return (float) (offset + Math.toDegrees(ExtraMath.asin(sina)));
     }
 
     public String toString() {

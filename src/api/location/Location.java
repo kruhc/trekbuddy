@@ -1,9 +1,22 @@
-// Copyright 2001-2006 Systinet Corp. All rights reserved.
-// Use is subject to license terms.
+/*
+ * Copyright 2006-2007 Ales Pour <kruhc@seznam.cz>.
+ * All Rights Reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ */
 
 package api.location;
 
-/* bad design - dependency */
+/* bad design - dependency on external packages */
 import cz.kruch.track.configuration.Config;
 import cz.kruch.track.ui.NavigationScreens;
 import cz.kruch.track.util.SimpleCalendar;
@@ -12,6 +25,11 @@ import java.util.Date;
 import java.util.Calendar;
 import java.util.TimeZone;
 
+/**
+ * Represents a set of basic location information.
+ * 
+ * @author Ales Pour <kruhc@seznam.cz>
+ */
 public final class Location {
     private static final char[] STR_KN  = { ' ', 'k', 'n', ' ' };
     private static final char[] STR_MPH = { ' ', 'm', 'p', 'h', ' '};
@@ -147,33 +165,35 @@ public final class Location {
         }
         NavigationScreens.append(sb, min).append(' ');
 
-        if (Config.unitsNautical) {
-            if (speed > -1F) {
-                NavigationScreens.append(sb, speed * 3.6F / 1.852F, 1).append(STR_KN);
+        if (fix > 0) {
+            if (Config.unitsNautical) {
+                if (speed > -1F) {
+                    NavigationScreens.append(sb, speed * 3.6F / 1.852F, 1).append(STR_KN);
+                }
+                if (course > -1F) {
+                    NavigationScreens.append(sb, (int) course).append(NavigationScreens.SIGN);
+                }
+            } else if (Config.unitsImperial) {
+                if (speed > -1F) {
+                    NavigationScreens.append(sb, speed * 3.6F / 1.609F, 1).append(STR_MPH);
+                }
+                if (coordinates.getAlt() != Float.NaN) {
+                    NavigationScreens.append(sb, coordinates.getAlt(), 1).append(STR_M);
+                }
+            } else {
+                if (speed > -1F) {
+                    NavigationScreens.append(sb, speed * 3.6F, 1).append(STR_KMH);
+                }
+                if (coordinates.getAlt() != Float.NaN) {
+                    NavigationScreens.append(sb, coordinates.getAlt(), 1).append(STR_M);
+                }
             }
-            if (course > -1F) {
-                NavigationScreens.append(sb, (int) course).append(NavigationScreens.SIGN);
-            }
-        } else if (Config.unitsImperial) {
-            if (speed > -1F) {
-                NavigationScreens.append(sb, speed * 3.6F / 1.609F, 1).append(STR_MPH);
-            }
-            if (coordinates.getAlt() != Float.NaN) {
-                NavigationScreens.append(sb, coordinates.getAlt(), 1).append(STR_M);
-            }
-        } else {
-            if (speed > -1F) {
-                NavigationScreens.append(sb, speed * 3.6F, 1).append(STR_KMH);
-            }
-            if (coordinates.getAlt() != Float.NaN) {
-                NavigationScreens.append(sb, coordinates.getAlt(), 1).append(STR_M);
-            }
-        }
 /* rendered by OSD directly
-        if (sat > -1) {
-            sb.append(sat).append('*');
-        }
+            if (sat > -1) {
+                sb.append(sat).append('*');
+            }
 */
+        }
 
         return sb;
     }

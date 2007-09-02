@@ -1,5 +1,17 @@
-// Copyright 2001-2006 Systinet Corp. All rights reserved.
-// Use is subject to license terms.
+/*
+ * Copyright 2006-2007 Ales Pour <kruhc@seznam.cz>. All Rights Reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ */
 
 package cz.kruch.track.location;
 
@@ -14,6 +26,11 @@ import java.io.OutputStream;
 
 import cz.kruch.track.util.NmeaParser;
 
+/**
+ * Base class for Serial and Simulator location provider.
+ *
+ * @author Ales Pour <kruhc@seznam.cz>
+ */
 public abstract class StreamReadingLocationProvider extends LocationProvider {
 //#ifdef __LOG__
     private static final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("StreamReadingLocationProvider");
@@ -28,7 +45,7 @@ public abstract class StreamReadingLocationProvider extends LocationProvider {
 
     private static final int LINE_SIZE = 128;
 
-    public static int syncs, mismatches, checksums;
+    public static int syncs, mismatches, checksums, restarts;
 
     private OutputStream observer;
     private char[] line;
@@ -39,7 +56,7 @@ public abstract class StreamReadingLocationProvider extends LocationProvider {
     protected StreamReadingLocationProvider(String name) {
         super(name);
         this.line = new char[LINE_SIZE];
-        syncs = mismatches = checksums = 0;
+        syncs = mismatches = checksums = restarts = 0;
     }
 
     protected void setObserver(OutputStream observer) {
@@ -127,7 +144,11 @@ public abstract class StreamReadingLocationProvider extends LocationProvider {
         int c = in.read();
         while (c > -1) {
             if (observer != null) {
-                observer.write(c);
+                try {
+                    observer.write(c);
+                } catch (Exception e) {
+                    // ignore
+                }
             }
             if (c == '$') { // beginning of NMEA sentence
                 pos = 0;

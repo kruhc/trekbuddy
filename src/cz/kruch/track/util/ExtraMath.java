@@ -1,7 +1,40 @@
+/*
+ * Copyright 2006-2007 Ales Pour <kruhc@seznam.cz>.
+ * All Rights Reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ */
+
 package cz.kruch.track.util;
 
+/**
+ * Implementations of math function that are missing in CLDC.
+ * <p>
+ * <tt>ln</tt>, <tt>pow</tt> - based on great article by <b>Jacques Laporte</b> (<i>http://www.jacques-laporte.org/</i>)
+ * </p>
+ * <p>
+ * <tt>asin</tt>, <tt>acos</tt>, <tt>atan</tt> ... - adapted from post
+ * by user 'xedarius' at Nokia developer forum (<i>http://discussion.forum.nokia.com/forum/showthread.php?t=72840</i>)
+ * </p>
+ *
+ * @author xedarius
+ * @author Ales Pour <kruhc@seznam.cz>
+ */
 public final class ExtraMath {
-//    private static final double SINS[] = new double[90 + 1];
+
+    /****************************************
+     *               ln, pow                *
+     ****************************************/
+
     private static final double[] N = {
             2,
             1.1,
@@ -35,62 +68,6 @@ public final class ExtraMath {
             9.9999999999995000000000000333333e-14
         };
     private static final double LN10 = 2.3025850929940456840179914546844;
-
-//    public static void initialize() {
-//        final double[] sins = SINS;
-//        for (int i = 0; i <= 90; i++) {
-//            sins[i] = Math.sin(Math.toRadians(i));
-//        }
-//    }
-
-//    public static int asin(final double sina) {
-//        if (sina < 0D) {
-//            throw new IllegalArgumentException("Invalid sin(a) value: " + sina);
-//        }
-//        if (sina > 1D) {
-//            return 90;
-//        }
-//
-//        final double[] sins = SINS;
-//        float step = 23;
-//        int direction = 0;
-//        int cycles = 0;
-//        int i = 45;
-//
-//        for ( ; i >= 0 && i <= 90; ) {
-//            boolean b;
-//            if (sins[i] > sina) {
-//                b = direction != 0 && direction != -1;
-//                direction = -1;
-//                i -= step;
-//            } else if (sins[i] < sina) {
-//                b = direction != 0 && direction != 1;
-//                direction = 1;
-//                i += step;
-//            } else {
-//                return i;
-//            }
-//
-//            if (step == 1 && b) {
-//                return i;
-//            }
-//
-//            if (!b) {
-//                step /= 2;
-//            } else {
-//                step--;
-//            }
-//            if (step < 1) {
-//                step = 1;
-//            }
-//
-//            if (cycles++ > 25) {
-//                throw new IllegalStateException("asin(a) failure - too many cycles");
-//            }
-//        }
-//
-//        return i;
-//    }
 
     public static double ln(double value) {
         if (value < 0D) {
@@ -162,5 +139,102 @@ public final class ExtraMath {
         }
 
         return result;
+    }
+
+    /****************************************
+     *          asin, acos, atan, ...       *
+     ****************************************/
+
+    // constants
+    private static final double sq2p1 = 2.414213562373095048802e0;
+    private static final double sq2m1 = 0.414213562373095048802e0;
+    private static final double p4 = 0.161536412982230228262e2;
+    private static final double p3 = 0.26842548195503973794141e3;
+    private static final double p2 = 0.11530293515404850115428136e4;
+    private static final double p1 = 0.178040631643319697105464587e4;
+    private static final double p0 = 0.89678597403663861959987488e3;
+    private static final double q4 = 0.5895697050844462222791e2;
+    private static final double q3 = 0.536265374031215315104235e3;
+    private static final double q2 = 0.16667838148816337184521798e4;
+    private static final double q1 = 0.207933497444540981287275926e4;
+    private static final double q0 = 0.89678597403663861962481162e3;
+    private static final double PIO2 = Math.PI / 2;
+    private static final double V2   = 1D / Math.sqrt(2D);
+
+    // implementation of atan
+    public static double atan(final double arg) {
+        if (arg > 0)
+            return msatan(arg);
+
+        return -msatan(-arg);
+    }
+
+    // implementation of atan2
+    public static double atan2(double arg1, final double arg2) {
+        if (arg1 + arg2 == arg1) {
+            if (arg1 >= 0)
+                return PIO2;
+            return -PIO2;
+        }
+        arg1 = atan(arg1 / arg2);
+        if (arg2 < 0) {
+            if (arg1 <= 0)
+                return arg1 + Math.PI;
+            return arg1 - Math.PI;
+        }
+
+        return arg1;
+    }
+
+    // implementation of asin
+    public static double asin(double arg) {
+        double temp;
+        int sign;
+
+        sign = 0;
+        if (arg < 0) {
+            arg = -arg;
+            sign++;
+        }
+        if (arg > 1)
+            return Double.NaN;
+        temp = Math.sqrt(1 - arg * arg);
+        if (arg > V2)
+            temp = PIO2 - atan(temp / arg);
+        else
+            temp = atan(arg / temp);
+        if (sign > 0)
+            temp = -temp;
+
+        return temp;
+    }
+
+    // implementation of acos
+    public static double acos(final double arg) {
+        if (arg > 1 || arg < -1)
+            return Double.NaN;
+
+        return PIO2 - asin(arg);
+    }
+
+    // reduce
+    private static double mxatan(final double arg) {
+        double argsq, value;
+
+        argsq = arg * arg;
+        value = ((((p4 * argsq + p3) * argsq + p2) * argsq + p1) * argsq + p0);
+        value = value / (((((argsq + q4) * argsq + q3) * argsq + q2) * argsq + q1) * argsq + q0);
+
+        return value * arg;
+    }
+
+    // reduce
+    private static double msatan(final double arg) {
+        if (arg < sq2m1)
+            return mxatan(arg);
+        if (arg > sq2p1)
+            return PIO2 - mxatan(1 / arg);
+
+        return PIO2 / 2 + mxatan((arg - 1) / (arg + 1));
     }
 }

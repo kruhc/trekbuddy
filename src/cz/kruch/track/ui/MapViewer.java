@@ -1,5 +1,18 @@
-// Copyright 2001-2006 Systinet Corp. All rights reserved.
-// Use is subject to license terms.
+/*
+ * Copyright 2006-2007 Ales Pour <kruhc@seznam.cz>.
+ * All Rights Reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ */
 
 package cz.kruch.track.ui;
 
@@ -19,6 +32,11 @@ import java.util.Vector;
 
 import api.location.Location;
 
+/**
+ * Map viewer.
+ *
+ * @author Ales Pour <kruhc@seznam.cz>
+ */
 final class MapViewer {
 //#ifdef __LOG__
     private static final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("MapViewer");
@@ -276,9 +294,10 @@ final class MapViewer {
             direction = Canvas.LEFT;
         }
 
-        for (int i = Math.abs(dx); --i >= 0; ) {
-            dirty |= scroll(direction);
-        }
+//        for (int i = Math.abs(dx); --i >= 0; ) {
+//            dirty |= scroll(direction);
+//        }
+        dirty = scroll(direction, Math.abs(dx)) || dirty;
 
         int dy = y - getPosition().getY();
         if (dy > 0) {
@@ -287,9 +306,10 @@ final class MapViewer {
             direction = Canvas.UP;
         }
 
-        for (int i = Math.abs(dy); --i >= 0; ) {
-            dirty |= scroll(direction);
-        }
+//        for (int i = Math.abs(dy); --i >= 0; ) {
+//            dirty |= scroll(direction);
+//        }
+        dirty = scroll(direction, Math.abs(dy)) || dirty;
 
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("move made, dirty? " + dirty + ";current position " + this.x + "," + this.y + "; dirty = " + dirty + "; crosshair requested at " + x + "-" + y + " -> screen position at " + chx + "-" + chy);
@@ -299,7 +319,7 @@ final class MapViewer {
         return dirty;
     }
 
-    public boolean scroll(int direction) {
+    public boolean scroll(final int direction, final int steps) {
         final int dWidth = Desktop.width;
         final int dHeight = Desktop.height;
         final int crosshairSize2 = this.crosshairSize2;
@@ -313,11 +333,13 @@ final class MapViewer {
 
         // 1-tile scrolling?
         if (ots) {
+
             // locals
             Slice slice = null;
             Position p = getPosition();
             final int px = p.getX();
             final int py = p.getY();
+            
             // first look in current set
             if (slice == null) {
                 Vector slices = this.slices;
@@ -348,6 +370,8 @@ final class MapViewer {
         }
 
         boolean dirty = false;
+
+        for (int i = steps; i-- > 0; ) 
 
         switch (direction) {
             case Canvas.UP:

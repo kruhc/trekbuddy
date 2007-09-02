@@ -1,5 +1,18 @@
-// Copyright 2001-2006 Systinet Corp. All rights reserved.
-// Use is subject to license terms.
+/*
+ * Copyright 2006-2007 Ales Pour <kruhc@seznam.cz>.
+ * All Rights Reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ */
 
 package cz.kruch.track;
 
@@ -7,19 +20,28 @@ import javax.microedition.midlet.MIDlet;
 import javax.microedition.midlet.MIDletStateChangeException;
 import javax.microedition.lcdui.Display;
 
+/**
+ * Main MIDlet.
+ *
+ * @author Ales Pour <kruhc@seznam.cz> 
+ */
 public class TrackingMIDlet extends MIDlet implements Runnable {
+
+    /** application title */
     public static final String APP_TITLE = "TrekBuddy";
 
-    private cz.kruch.track.ui.Desktop desktop;
-
     // system info
+
     private static String platform;
     private static String flags;
 
     public static boolean jsr82, jsr120, jsr135, jsr179, motorola179;
-
     public static boolean sonyEricsson, nokia, siemens, wm, rim;
     public static boolean sxg75, a780, s65;
+
+    // diagnostics
+
+    public static int pauses;
 
 //#ifdef __LOG__
     private static boolean logEnabled;
@@ -125,6 +147,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
     }
 
     private boolean running;
+    private cz.kruch.track.ui.Desktop desktop;
 
     protected void startApp() throws MIDletStateChangeException {
         if (running) {
@@ -135,7 +158,10 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
     }
 
     protected void pauseApp() {
-        // anything to do?
+        // diagnostics
+        pauses++;
+
+        // anything else to do?
     }
 
     protected void destroyApp(boolean b) throws MIDletStateChangeException {
@@ -143,6 +169,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
             // same as answering "Yes" in "Do you want to quit?"
             desktop.response(cz.kruch.track.ui.YesNoDialog.YES);
         } else {
+            // refuse
             throw new MIDletStateChangeException();
         }
     }
@@ -192,13 +219,13 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         // create desktop canvas
         desktop = new cz.kruch.track.ui.Desktop(this);
 
-        // init helpers
-//        cz.kruch.track.util.ExtraMath.initialize();
+        // init helpers and 'singletons'
         cz.kruch.track.configuration.Config.initDatums(this);
         cz.kruch.track.configuration.Config.useDatum(cz.kruch.track.configuration.Config.geoDatum);
         if (platform.indexOf("SunMicrosystems_wtk") == -1) {
             cz.kruch.track.ui.nokia.DeviceControl.initialize();
         }
+        cz.kruch.track.ui.Waypoints.initialize(desktop);
 
         // init environment from configuration
         cz.kruch.j2se.io.BufferedInputStream.useAvailableLie = cz.kruch.track.configuration.Config.optimisticIo;

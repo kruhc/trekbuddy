@@ -1,5 +1,18 @@
-// Copyright 2001-2006 Systinet Corp. All rights reserved.
-// Use is subject to license terms.
+/*
+ * Copyright 2006-2007 Ales Pour <kruhc@seznam.cz>.
+ * All Rights Reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ */
 
 package cz.kruch.track.configuration;
 
@@ -20,33 +33,44 @@ import java.util.Hashtable;
 import api.location.Datum;
 import api.file.File;
 
+/**
+ * Represents and handles configuration persisted in RMS.
+ *
+ * @author Ales Pour <kruhc@seznam.cz>
+ */
 public final class Config {
 //#ifdef __LOG__
     private static final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("Config");
 //#endif
 
+    /* known providers */
     public static final String LOCATION_PROVIDER_JSR82      = "Bluetooth";
     public static final String LOCATION_PROVIDER_JSR179     = "Internal";
     public static final String LOCATION_PROVIDER_SERIAL     = "Serial";
     public static final String LOCATION_PROVIDER_SIMULATOR  = "Simulator";
     public static final String LOCATION_PROVIDER_MOTOROLA   = "Motorola";
 
+    /* tracklog options */
     public static final String TRACKLOG_NEVER  = "never";
     public static final String TRACKLOG_ASK    = "ask";
     public static final String TRACKLOG_ALWAYS = "always";
 
+    /* tracklog format */
     public static final String TRACKLOG_FORMAT_NMEA = "NMEA 0183";
     public static final String TRACKLOG_FORMAT_GPX  = "GPX 1.1";
 
+    /* coordinate format */
     public static final String COORDS_MAP_LATLON    = "<Map Lat/Lon>";
     public static final String COORDS_MAP_GRID      = "<Map Grid>";
     public static final String COORDS_UTM           = "UTM";
     public static final String COORDS_GC_LATLON     = "Geocaching Lat/Lon";
 
+    /* units */
     public static final String UNITS_METRIC        = "metric";
     public static final String UNITS_IMPERIAL      = "imperial";
     public static final String UNITS_NAUTICAL      = "nautical";
 
+    /* datadir folders */
     public static final String FOLDER_MAPS      = "maps/";
     public static final String FOLDER_NMEA      = "tracks-nmea/";
     public static final String FOLDER_TRACKS    = "tracks-gpx/";
@@ -55,6 +79,7 @@ public final class Config {
     public static final String FOLDER_RESOURCES = "resources/";
     public static final String FOLDER_SOUNDS    = "sounds/";
 
+    /* rms stores */
     public static final String VARS_090         = "vars_090";
     public static final String CONFIG_090       = "config_090";
 
@@ -126,7 +151,8 @@ public final class Config {
     public static boolean oneTileScroll;
 
     // group [GPX options]
-    public static boolean gpxRaw;
+    public static int gpxDt = 60; // 1 min
+    public static int gpxDs = -1;
 
     // group [Trajectory]
     public static boolean trajectoryOn;
@@ -137,6 +163,9 @@ public final class Config {
     public static int routeLineColor = 0x0;
     public static boolean routeLineStyle;
     public static boolean routePoiMarks = true;
+
+    // group [ScrollDelay]
+    public static int scrollingDelay = 0;
 
     // hidden
     public static String btDeviceName   = EMPTY_STRING;
@@ -191,13 +220,9 @@ public final class Config {
         locationProvider = din.readUTF();
 /*
             timeZone = din.readUTF();
-*/
-        din.readUTF(); // unused
+*/      din.readUTF(); // obsolete
         geoDatum = din.readUTF();
-/*
-            tracklogsOn = din.readUTF();
-*/
-        boolean oldTracklogsOn = din.readBoolean(); // unused
+        boolean bc_TracklogsOn = din.readBoolean(); // bc
         tracklogFormat = din.readUTF();
         dataDir = din.readUTF();
         captureLocator = din.readUTF();
@@ -207,8 +232,7 @@ public final class Config {
         simulatorDelay = din.readInt();
 /*
         locationInterval = din.readInt();
-*/
-        din.readInt(); // unused
+*/      din.readInt(); // obsolete
         locationSharing = din.readBoolean();
         fullscreen = din.readBoolean();
         noSounds = din.readBoolean();
@@ -223,7 +247,7 @@ public final class Config {
         try {
             tracklog = din.readUTF();
         } catch (Exception e) {
-            tracklog = oldTracklogsOn ? Config.TRACKLOG_ASK : Config.TRACKLOG_NEVER;
+            tracklog = bc_TracklogsOn ? Config.TRACKLOG_ASK : Config.TRACKLOG_NEVER;
         }
 
         // 0.9.2 extension
@@ -249,13 +273,14 @@ public final class Config {
         } catch (Exception e) {
         }
 
-        // 0.9.6 extension
+        // 0.9.5x extensions
+        boolean bc_GpxRaw = false;
         try {
             locationTimings = din.readUTF();
             trajectoryOn = din.readBoolean();
             forcedGc = din.readBoolean();
             oneTileScroll = din.readBoolean();
-            gpxRaw = din.readBoolean();
+            bc_GpxRaw = din.readBoolean();
             unitsNautical = din.readBoolean();
             commUrl = din.readUTF();
             unitsImperial = din.readBoolean();
@@ -265,7 +290,13 @@ public final class Config {
             routeLineColor = din.readInt();
             routeLineStyle = din.readBoolean();
             routePoiMarks = din.readBoolean();
+            scrollingDelay = din.readInt();
+            gpxDt = din.readInt();
+            gpxDs = din.readInt();
         } catch (Exception e) {
+            if (bc_GpxRaw) {
+                gpxDt = 0;
+            }
         }
 
 //#ifdef __LOG__
@@ -276,13 +307,13 @@ public final class Config {
     private static void writeMain(DataOutputStream dout) throws IOException {
         dout.writeUTF(mapPath);
         dout.writeUTF(locationProvider);
-/* bc
+/*
             dout.writeUTF(timeZone);
-*/      dout.writeUTF("");
+*/      dout.writeUTF(""); // bc
         dout.writeUTF(geoDatum);
-/* bc
+/*
             dout.writeBoolean(tracklogsOn);
-*/      dout.writeBoolean(false);
+*/      dout.writeBoolean(false); // bc
         dout.writeUTF(tracklogFormat);
         dout.writeUTF(dataDir);
         dout.writeUTF(captureLocator);
@@ -290,9 +321,9 @@ public final class Config {
         dout.writeUTF(btDeviceName);
         dout.writeUTF(btServiceUrl);
         dout.writeInt(simulatorDelay);
-/* bc
+/*
         dout.writeInt(locationInterval);
-*/      dout.writeInt(-1);
+*/      dout.writeInt(-1); // bc
         dout.writeBoolean(locationSharing);
         dout.writeBoolean(fullscreen);
         dout.writeBoolean(noSounds);
@@ -315,7 +346,9 @@ public final class Config {
         dout.writeBoolean(trajectoryOn);
         dout.writeBoolean(forcedGc);
         dout.writeBoolean(oneTileScroll);
+/*
         dout.writeBoolean(gpxRaw);
+*/      dout.writeBoolean(false); // bc
         dout.writeBoolean(unitsNautical);
         dout.writeUTF(commUrl);
         dout.writeBoolean(unitsImperial);
@@ -325,6 +358,9 @@ public final class Config {
         dout.writeInt(routeLineColor);
         dout.writeBoolean(routeLineStyle);
         dout.writeBoolean(routePoiMarks);
+        dout.writeInt(scrollingDelay);
+        dout.writeInt(gpxDt);
+        dout.writeInt(gpxDs);
 
 //#ifdef __LOG__
         if (log.isEnabled()) log.info("configuration updated");

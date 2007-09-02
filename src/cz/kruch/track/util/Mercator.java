@@ -1,3 +1,19 @@
+/*
+ * Copyright 2006-2007 Ales Pour <kruhc@seznam.cz>.
+ * All Rights Reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ */
+
 package cz.kruch.track.util;
 
 import api.location.QualifiedCoordinates;
@@ -7,6 +23,11 @@ import api.location.ProjectionSetup;
 
 import java.util.Vector;
 
+/**
+ * Helper for Mercator transformation.
+ *
+ * @author Ales Pour <kruhc@seznam.cz>
+ */
 public final class Mercator {
 
     public static final class Coordinates implements GeodeticPosition {
@@ -97,11 +118,10 @@ public final class Mercator {
 
         // TODO optimize
         public String toString() {
-/*
-            if (PROJ_GMERCATOR.equals(getName())) {
+            if (PROJ_MERCATOR.equals(getName())) {
                 return super.toString();
             }
-*/
+
             StringBuffer sb = new StringBuffer(32);
             sb.append(getName()).append('{');
             if (zone != null) {
@@ -377,7 +397,7 @@ public final class Mercator {
             double eccSquared6 = eccSquared * eccSquared * eccSquared;
             double eccSquared8 = eccSquared * eccSquared * eccSquared * eccSquared;
             double t = pow(Math.E, (setup.falseNorthing - utm.northing) / (a * setup.k0));
-            double chi = Math.PI / 2 - 2 * public_domain.Xedarius.atan(t);
+            double chi = Math.PI / 2 - 2 * ExtraMath.atan(t);
 
             double lat, lon;
 

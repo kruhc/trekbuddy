@@ -1,5 +1,18 @@
-// Copyright 2001-2006 Systinet Corp. All rights reserved.
-// Use is subject to license terms.
+/*
+ * Copyright 2006-2007 Ales Pour <kruhc@seznam.cz>.
+ * All Rights Reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ */
 
 package cz.kruch.track.ui.nokia;
 
@@ -7,18 +20,25 @@ import cz.kruch.track.ui.Desktop;
 
 import java.util.TimerTask;
 
+/**
+ * Device control - backlight (for now).
+ *
+ * @author Ales Pour <kruhc@seznam.cz>
+ */
 public abstract class DeviceControl extends TimerTask {
     private static DeviceControl instance;
 
     protected volatile int backlight;
 
-    /** @deprecated make instance member of Desktop */
+    /** @deprecated make instance member of Desktop... ??? */
     public static void initialize() {
 //#ifndef __RIM__
         try {
             Class.forName("com.nokia.mid.ui.DeviceControl");
             if (System.getProperty("com.sonyericsson.imei") == null) {
                 instance = (DeviceControl) Class.forName("cz.kruch.track.ui.nokia.NokiaDeviceControl").newInstance();
+            } else {
+                instance = (DeviceControl) Class.forName("cz.kruch.track.ui.nokia.SonyEricssonDeviceControl").newInstance();
             }
         } catch (Throwable t) {
         }
@@ -66,10 +86,6 @@ public abstract class DeviceControl extends TimerTask {
 
     protected final void confirm(String message) {
         Desktop.showConfirmation(message, null);
-    }
-
-    protected final void schedule(TimerTask task, final long delay, final long period) {
-        Desktop.timer.scheduleAtFixedRate(task, delay, period);
     }
 
     abstract void nextLevel();

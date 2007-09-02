@@ -17,26 +17,36 @@
 package cz.kruch.track.ui.nokia;
 
 /**
- * Device control implementation for Siemens phones.
+ * Device control implementation for SonyEricsson phones.
  *
  * @author Ales Pour <kruhc@seznam.cz>
  */
-final class SiemensDeviceControl extends DeviceControl {
+final class SonyEricssonDeviceControl extends DeviceControl {
 
-    SiemensDeviceControl() {
+    SonyEricssonDeviceControl() {
+        cz.kruch.track.ui.Desktop.timer.scheduleAtFixedRate(this, 0L, 5000L);
     }
 
     void nextLevel() {
         try {
             if (backlight == 0) {
                 backlight = 1;
-                com.siemens.mp.game.Light.setLightOn();
             } else {
                 backlight = 0;
-                com.siemens.mp.game.Light.setLightOff();
             }
             confirm("Backlight " + (backlight == 0 ? "off" : "on"));
         } catch (Throwable t) {
+        }
+    }
+
+    void close() {
+        cancel();
+    }
+
+    public void run() {
+        if (backlight != 0) {
+            cz.kruch.track.ui.Desktop.display.flashBacklight(1);
+            com.nokia.mid.ui.DeviceControl.setLights(0, 100);
         }
     }
 }

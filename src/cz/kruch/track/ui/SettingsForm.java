@@ -1,5 +1,18 @@
-// Copyright 2001-2006 Systinet Corp. All rights reserved.
-// Use is subject to license terms.
+/*
+ * Copyright 2006-2007 Ales Pour <kruhc@seznam.cz>.
+ * All Rights Reserved.
+ * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
+ *
+ * This code is free software; you can redistribute it and/or modify it
+ * under the terms of the GNU General Public License version 2 only, as
+ * published by the Free Software Foundation.
+ *
+ * This code is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
+ * version 2 for more details (a copy is included in the LICENSE file that
+ * accompanied this code).
+ */
 
 package cz.kruch.track.ui;
 
@@ -16,7 +29,13 @@ import javax.microedition.lcdui.TextField;
 import javax.microedition.lcdui.ItemStateListener;
 import javax.microedition.lcdui.Item;
 import javax.microedition.lcdui.Choice;
+import javax.microedition.lcdui.Gauge;
 
+/**
+ * Settings form.
+ *
+ * @author Ales Pour <kruhc@seznam.cz>
+ */
 final class SettingsForm extends Form implements CommandListener, ItemStateListener {
     private static final int MAX_URL_LENGTH = 256;
 
@@ -30,7 +49,6 @@ final class SettingsForm extends Form implements CommandListener, ItemStateListe
     private ChoiceGroup choiceProvider;
     private ChoiceGroup choiceTracklog;
     private ChoiceGroup choiceTracklogFormat;
-    private ChoiceGroup choiceTracklogGpx;
     private TextField fieldDataDir;
     private TextField fieldCaptureLocator;
     private TextField fieldCaptureFormat;
@@ -43,6 +61,9 @@ final class SettingsForm extends Form implements CommandListener, ItemStateListe
     private TextField fieldWptProximity;
     private TextField fieldPoiProximity;
     private ChoiceGroup choiceRouteLine;
+    private Gauge gaugeScrollDelay;
+    private TextField fieldGpxDt;
+    private TextField fieldGpxDs;
 
     public SettingsForm(Callback callback) {
         super(cz.kruch.track.TrackingMIDlet.wm ? "Settings (TrekBuddy)" : "Settings");
@@ -131,6 +152,10 @@ final class SettingsForm extends Form implements CommandListener, ItemStateListe
             append(choiceMisc);
 //        }
 
+        // scrolling speed
+        gaugeScrollDelay = new Gauge("Scroll Delay", true, 10, Config.scrollingDelay);
+        append(gaugeScrollDelay);
+
         // navigation
         append(fieldWptProximity = new TextField("Wpt Proximity", Integer.toString(Config.wptProximity), 5, TextField.NUMERIC));
         /*append(*/fieldPoiProximity = new TextField("Poi Proximity", Integer.toString(Config.poiProximity), 5, TextField.NUMERIC)/*)*/;
@@ -202,11 +227,8 @@ final class SettingsForm extends Form implements CommandListener, ItemStateListe
             choiceTracklogFormat.setSelectedIndex(choiceTracklogFormat.append(Config.TRACKLOG_FORMAT_GPX, null), Config.TRACKLOG_FORMAT_GPX.equals(tracklogFormat));
             choiceTracklogFormat.setSelectedIndex(choiceTracklogFormat.append(Config.TRACKLOG_FORMAT_NMEA, null), Config.TRACKLOG_FORMAT_NMEA.equals(tracklogFormat));
 
-            choiceTracklogGpx = new ChoiceGroup("Tracklog GPX", ChoiceGroup.MULTIPLE);
-            choiceTracklogGpx.append("raw", null);
-            choiceTracklogGpx.setSelectedFlags(new boolean[] {
-                Config.gpxRaw
-            });
+            fieldGpxDt = new TextField("GPX dt", Integer.toString(Config.gpxDt), 5, TextField.NUMERIC);
+            fieldGpxDs = new TextField("GPX ds", Integer.toString(Config.gpxDs), 5, TextField.NUMERIC);
 
             if (cz.kruch.track.TrackingMIDlet.supportsVideoCapture()) {
                 fieldCaptureLocator = new TextField("Capture Locator", Config.captureLocator, 16, TextField.URL);
@@ -255,7 +277,7 @@ final class SettingsForm extends Form implements CommandListener, ItemStateListe
         for (int i = size(); --i >= 0; ) {
             Item item = get(i);
 
-            if (fieldMapPath == item || choiceLanguage == item || choiceProvider == item || choiceMisc == item || choicePerformance == item || choiceCoordinates == item || choiceMapDatum == item || fieldDataDir == item || choiceFriends == item || choiceUnits == item || fieldWptProximity == item || fieldPoiProximity == item || choiceRouteLine == item)
+            if (fieldMapPath == item || choiceLanguage == item || choiceProvider == item || choiceMisc == item || choicePerformance == item || choiceCoordinates == item || choiceMapDatum == item || fieldDataDir == item || choiceFriends == item || choiceUnits == item || fieldWptProximity == item || fieldPoiProximity == item || choiceRouteLine == item || gaugeScrollDelay == item)
                 continue;
 
             if (choiceTracklogFormat == affected) {
@@ -293,7 +315,8 @@ final class SettingsForm extends Form implements CommandListener, ItemStateListe
                         append(choiceTracklogFormat);
                     }
                     if (isTracklogGpx) {
-                        append(choiceTracklogGpx);
+                        append(fieldGpxDt);
+                        append(fieldGpxDs);
                         if (fieldCaptureLocator != null && fieldCaptureFormat != null) {
                             append(fieldCaptureLocator);
                             append(fieldCaptureFormat);
@@ -309,7 +332,8 @@ final class SettingsForm extends Form implements CommandListener, ItemStateListe
                     append(choiceTracklogFormat);
                 }
                 if (isTracklogGpx) {
-                    append(choiceTracklogGpx);
+                    append(fieldGpxDt);
+                    append(fieldGpxDs);
                     if (fieldCaptureLocator != null && fieldCaptureFormat != null) {
                         append(fieldCaptureLocator);
                         append(fieldCaptureFormat);
@@ -320,7 +344,8 @@ final class SettingsForm extends Form implements CommandListener, ItemStateListe
 
         if (choiceTracklogFormat == affected) {
             if (isTracklogGpx) {
-                append(choiceTracklogGpx);
+                append(fieldGpxDt);
+                append(fieldGpxDs);
                 if (fieldCaptureLocator != null && fieldCaptureFormat != null) {
                     append(fieldCaptureLocator);
                     append(fieldCaptureFormat);
@@ -354,7 +379,8 @@ final class SettingsForm extends Form implements CommandListener, ItemStateListe
             if (cz.kruch.track.TrackingMIDlet.isFs()) {
                 Config.tracklog = choiceTracklog.getString(choiceTracklog.getSelectedIndex());
                 Config.tracklogFormat = choiceTracklogFormat.getString(choiceTracklogFormat.getSelectedIndex());
-                Config.gpxRaw = choiceTracklogGpx.isSelected(0);
+                Config.gpxDt = Integer.parseInt(fieldGpxDt.getString());
+                Config.gpxDs = Integer.parseInt(fieldGpxDs.getString());
                 Config.setDataDir(fieldDataDir.getString());
                 if (cz.kruch.track.TrackingMIDlet.supportsVideoCapture()) {
                     Config.captureLocator = fieldCaptureLocator.getString();
@@ -426,6 +452,9 @@ final class SettingsForm extends Form implements CommandListener, ItemStateListe
             Config.S60renderer = perf[1];
             Config.forcedGc = perf[2];
             Config.oneTileScroll = perf[3];
+
+            // scrolling
+            Config.scrollingDelay = gaugeScrollDelay.getValue();
 
             // save
             if ("Save".equals(command.getLabel())) {

@@ -575,11 +575,11 @@ final class LocatorView extends View {
 
         // draw range
         graphics.setColor(COLOR_RANGE);
-        graphics.drawLine(dx, h - 3, dx, h - 1);
-        graphics.drawLine(dx, h - 2, wHalf, h - 2);
-        graphics.drawLine(wHalf, h - 3, wHalf, h - 1);
+        graphics.drawLine(dx, h - 4, dx, h - 2);
+        graphics.drawLine(dx, h - 3, wHalf, h - 3);
+        graphics.drawLine(wHalf, h - 4, wHalf, h - 2);
         graphics.drawChars(RANGES_STR[rangeIdx], 0, RANGES_STR[rangeIdx].length,
-                           dx + 3, h - fh - 5, Graphics.LEFT | Graphics.TOP);
+                           dx + 3, h - fh - 2, Graphics.LEFT | Graphics.TOP);
 
         // flush
         flushGraphics();

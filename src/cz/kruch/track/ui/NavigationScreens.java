@@ -24,7 +24,7 @@ import javax.microedition.lcdui.Graphics;
 import javax.microedition.lcdui.Image;
 import javax.microedition.io.Connector;
 
-import api.location.LocationProvider;
+import api.location.QualifiedCoordinates;
 import api.file.File;
 
 import java.io.IOException;
@@ -61,7 +61,7 @@ public final class NavigationScreens {
      */
 
     public static Image crosshairs;
-    public static Image courses/*, courses2*/;
+    public static Image courses;
     public static Image waypoint, pois;
     public static Image providers;
     public static Image[] stores;
@@ -82,7 +82,6 @@ public final class NavigationScreens {
         try {
             crosshairs = createImage("/resources/crosshairs.png");
             courses = createImage("/resources/arrows.png");
-//            courses2 = createImage("/resources/courses2.png");
             waypoint = createImage("/resources/wpt.png");
             pois = createImage("/resources/pois.png");
             providers = createImage("/resources/bullets.png");
@@ -124,13 +123,6 @@ public final class NavigationScreens {
             arrowSize = courses.getHeight();
             arrowSize2 = arrowSize >> 1;
         }
-//        image = loadImage("courses2.png");
-//        if (image != null) {
-//            courses2 = null;
-//            courses2 = image;
-//            System.gc();
-//            i++;
-//        }
         image = loadImage("wpt.png");
         if (image != null) {
             waypoint = null;
@@ -246,23 +238,6 @@ public final class NavigationScreens {
                 // should never happen
                 throw new AssertionFailedException("Course over 360?");
         }
-
-/*
-        Image courses;
-        switch (ti) {
-            case Sprite.TRANS_ROT90: {
-                courses = NavigationScreens.courses2;
-                ti = Sprite.TRANS_NONE;
-
-            } break;
-            case Sprite.TRANS_ROT270: {
-                courses = NavigationScreens.courses2;
-                ti = Sprite.TRANS_ROT180;
-            } break;
-            default:
-                courses = NavigationScreens.courses;
-        }
-*/
 
 /* S60 renderer path is impossible - drawImage does not support rotation
         if (Config.S60renderer) {

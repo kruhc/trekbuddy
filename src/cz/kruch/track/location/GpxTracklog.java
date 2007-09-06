@@ -169,6 +169,7 @@ public final class GpxTracklog extends Thread {
             KXmlSerializer serializer = null;
 
             try {
+/* buffering is in serializer by default in OutputStreamWriter */                
 //                if (type == LOG_TRK) {
 //                    output = new cz.kruch.j2se.io.BufferedOutputStream(file.openOutputStream(), 4096);
 //                } else {

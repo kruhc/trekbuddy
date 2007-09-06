@@ -29,7 +29,6 @@ import javax.microedition.lcdui.TextField;
 import javax.microedition.lcdui.ItemStateListener;
 import javax.microedition.lcdui.Item;
 import javax.microedition.lcdui.Choice;
-import javax.microedition.lcdui.Gauge;
 
 /**
  * Settings form.
@@ -42,7 +41,9 @@ final class SettingsForm extends Form implements CommandListener, ItemStateListe
     private Callback callback;
 
     private TextField fieldMapPath;
+/*
     private ChoiceGroup choiceLanguage;
+*/
     private ChoiceGroup choiceMapDatum;
     private ChoiceGroup choiceCoordinates;
     private ChoiceGroup choiceUnits;
@@ -61,9 +62,13 @@ final class SettingsForm extends Form implements CommandListener, ItemStateListe
     private TextField fieldWptProximity;
     private TextField fieldPoiProximity;
     private ChoiceGroup choiceRouteLine;
+/*
     private Gauge gaugeScrollDelay;
+*/
     private TextField fieldGpxDt;
     private TextField fieldGpxDs;
+
+    private int menu;
 
     public SettingsForm(Callback callback) {
         super(cz.kruch.track.TrackingMIDlet.wm ? "Settings (TrekBuddy)" : "Settings");
@@ -78,11 +83,13 @@ final class SettingsForm extends Form implements CommandListener, ItemStateListe
         }
 
         // language
+/*
         choiceLanguage = new ChoiceGroup("Language", ChoiceGroup.POPUP);
         choiceLanguage.setFitPolicy(Choice.TEXT_WRAP_ON);
         for (int N = I18n.LANGUAGES.length, i = 0; i < N; i++) {
             choiceLanguage.setSelectedIndex(choiceLanguage.append(I18n.LANGUAGES[i], null), I18n.LANGUAGES[i].equals(Config.language));
         }
+*/
 /*
         append(choiceLanguage);
 */
@@ -148,13 +155,15 @@ final class SettingsForm extends Form implements CommandListener, ItemStateListe
             Config.osdBoldFont,
             Config.osdBlackColor
         });
-//        if (choiceProvider.size() == 0) { // dumb phone
+//        if (choiceProvider.size() == 0) { // ignore for dumb phones
             append(choiceMisc);
 //        }
 
+/*
         // scrolling speed
         gaugeScrollDelay = new Gauge("Scroll Delay", true, 10, Config.scrollingDelay);
         append(gaugeScrollDelay);
+*/
 
         // navigation
         append(fieldWptProximity = new TextField("Wpt Proximity", Integer.toString(Config.wptProximity), 5, TextField.NUMERIC));
@@ -277,7 +286,7 @@ final class SettingsForm extends Form implements CommandListener, ItemStateListe
         for (int i = size(); --i >= 0; ) {
             Item item = get(i);
 
-            if (fieldMapPath == item || choiceLanguage == item || choiceProvider == item || choiceMisc == item || choicePerformance == item || choiceCoordinates == item || choiceMapDatum == item || fieldDataDir == item || choiceFriends == item || choiceUnits == item || fieldWptProximity == item || fieldPoiProximity == item || choiceRouteLine == item || gaugeScrollDelay == item)
+            if (fieldMapPath == item /*|| choiceLanguage == item*/ || choiceProvider == item || choiceMisc == item || choicePerformance == item || choiceCoordinates == item || choiceMapDatum == item || fieldDataDir == item || choiceFriends == item || choiceUnits == item || fieldWptProximity == item || fieldPoiProximity == item || choiceRouteLine == item /*|| gaugeScrollDelay == item*/)
                 continue;
 
             if (choiceTracklogFormat == affected) {
@@ -315,8 +324,8 @@ final class SettingsForm extends Form implements CommandListener, ItemStateListe
                         append(choiceTracklogFormat);
                     }
                     if (isTracklogGpx) {
-                        append(fieldGpxDt);
-                        append(fieldGpxDs);
+                        appendWithNewlineAfter(fieldGpxDt);
+                        appendWithNewlineAfter(fieldGpxDs);
                         if (fieldCaptureLocator != null && fieldCaptureFormat != null) {
                             append(fieldCaptureLocator);
                             append(fieldCaptureFormat);
@@ -332,8 +341,8 @@ final class SettingsForm extends Form implements CommandListener, ItemStateListe
                     append(choiceTracklogFormat);
                 }
                 if (isTracklogGpx) {
-                    append(fieldGpxDt);
-                    append(fieldGpxDs);
+                    appendWithNewlineAfter(fieldGpxDt);
+                    appendWithNewlineAfter(fieldGpxDs);
                     if (fieldCaptureLocator != null && fieldCaptureFormat != null) {
                         append(fieldCaptureLocator);
                         append(fieldCaptureFormat);
@@ -344,8 +353,8 @@ final class SettingsForm extends Form implements CommandListener, ItemStateListe
 
         if (choiceTracklogFormat == affected) {
             if (isTracklogGpx) {
-                append(fieldGpxDt);
-                append(fieldGpxDs);
+                appendWithNewlineAfter(fieldGpxDt);
+                appendWithNewlineAfter(fieldGpxDs);
                 if (fieldCaptureLocator != null && fieldCaptureFormat != null) {
                     append(fieldCaptureLocator);
                     append(fieldCaptureFormat);
@@ -367,8 +376,10 @@ final class SettingsForm extends Form implements CommandListener, ItemStateListe
                 Config.mapPath = fieldMapPath.getString();
             }
 
+/*
             // language
             Config.language = choiceLanguage.getString(choiceLanguage.getSelectedIndex());
+*/
 
             // provider
             if (choiceProvider.size() > 0) {
@@ -453,8 +464,10 @@ final class SettingsForm extends Form implements CommandListener, ItemStateListe
             Config.forcedGc = perf[2];
             Config.oneTileScroll = perf[3];
 
+/*
             // scrolling
             Config.scrollingDelay = gaugeScrollDelay.getValue();
+*/
 
             // save
             if ("Save".equals(command.getLabel())) {
@@ -474,5 +487,10 @@ final class SettingsForm extends Form implements CommandListener, ItemStateListe
 
         // notify that we are done
         callback.invoke(changed ? Boolean.TRUE : Boolean.FALSE, null, this);
+    }
+
+    private int appendWithNewlineAfter(Item item) {
+        item.setLayout(Item.LAYOUT_2 | Item.LAYOUT_NEWLINE_AFTER | Item.LAYOUT_SHRINK | Item.LAYOUT_VSHRINK);
+        return append(item);
     }
 }

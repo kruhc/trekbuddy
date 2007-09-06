@@ -348,29 +348,33 @@ public final class Map implements Runnable {
         // local ref for faster access
         final int mapWidth = calibration.width;
         final int mapHeight = calibration.height;
-        Slice[] slices = this.slices;
+        final Slice[] slices = this.slices;
 
         // vars
         int xi = getWidth(), yi = getHeight();
 
-        // absolutize slices position
+        // finds nearest neighbour to 0-0 slice to figure map slice dimensions
         for (int i = slices.length; --i >= 0; ) {
             Slice slice = slices[i];
-
-            // look for dimensions increments
-            short x = slice.getX();
-            if (x > 0 && x < xi)
+            final int x = slice.getX();
+            if (x > 0 && x <= xi) {
                 xi = x;
-            short y = slice.getY();
-            if (y > 0 && y < yi)
-                yi = y;
+                final int y = slice.getY();
+                if (y > 0 && y < yi) {
+                    yi = y;
+                }
+            }
         }
+
+//#ifdef __LOG__
+        if (log.isEnabled()) log.debug("!0-!0 slice is " + xi + "-" + yi);
+//#endif
 
         // finalize slices creation
         for (int i = slices.length; --i >= 0; ) {
             Slice slice = slices[i];
 
-            // figure slice dimension and precalculate range
+            // finalize slice creation
             slice.doFinal(mapWidth, mapHeight, xi, yi);
 
 //#ifdef __LOG__
@@ -476,14 +480,54 @@ public final class Map implements Runnable {
             }
 
             if (list == null) {
-                list = new Vector(16);
+                list = new Vector(64, 16);
             }
 
-            Slice slice = new Slice(filename, calibration instanceof Calibration.XML);
+            Slice slice;
+            if (calibration instanceof Calibration.XML) { // GPSka
+                slice = new Slice();
+            } else {
+                if (this instanceof TarLoader) {
+                    slice = new TarSlice(filename);
+                } else {
+                    slice = new Slice(filename);
+                }
+            }
             list.addElement(slice);
 
             return slice;
         }
+
+/*
+        protected Slice addSlice(CharArrayTokenizer.Token token) throws InvalidMapException {
+            if (basename == null) {
+                String filename = token.toString();
+                if (calibration instanceof Calibration.XML) { // GPSka
+                    basename = this instanceof TarLoader ? filename.substring(4) : filename;
+                } else {
+                    basename = Slice.getBasename(this instanceof TarLoader ? filename.substring(4) : filename);
+                }
+            }
+
+            if (list == null) {
+                list = new Vector(64, 64);
+            }
+
+            Slice slice;
+            if (calibration instanceof Calibration.XML) { // GPSka
+                slice = new Slice();
+            } else {
+                if (this instanceof TarLoader) {
+                    slice = new TarSlice(token);
+                } else {
+                    slice = new Slice(token);
+                }
+            }
+            list.addElement(slice);
+
+            return slice;
+        }
+*/
 
         private Throwable loadImages(Vector slices) {
 
@@ -620,15 +664,15 @@ public final class Map implements Runnable {
                     TarEntry entry = tarIn.getNextEntry();
                     while (entry != null) {
 
-                        // get entry
+                        // get entry name
                         String entryName = entry.getName();
 
                         // is it tile (in basedir only)
                         if (entryName.startsWith(SET_DIR_PREFIX) && entryName.endsWith(Slice.PNG_EXT)) { // slice
 
-                            // no slices yest
+                            // no slices yet
                             if (Map.this.slices == null) {
-                                addSlice(entryName).setClosure(new Long(entry.getPosition()));
+                                ((TarSlice) addSlice(entryName)).setBlockOffset((short) (entry.getPosition() / TarInputStream.DEFAULT_RCDSIZE));
                             }
 
                         } else { // no, maybe calibration file
@@ -722,7 +766,7 @@ public final class Map implements Runnable {
             InputStream in = null;
 
             try {
-                long streamOffset = ((Long) slice.getClosure()).longValue();
+                long streamOffset = ((TarSlice) slice).getBlockOffset() * TarInputStream.DEFAULT_RCDSIZE;
                 boolean keepPosition = false;
 
                 // prepare buffered stream
@@ -895,6 +939,7 @@ public final class Map implements Runnable {
 
     private final class DirLoader extends Loader {
         private String dir;
+        private FileInput input;
 
         protected DirLoader() {
             super();
@@ -984,18 +1029,26 @@ public final class Map implements Runnable {
                                     addSlice(entry);
                                     entry = reader.readLine(false);
                                 }
+/*
+                                reader = new LineReader(buffered.reuse(file.openInputStream()), true);
+                                CharArrayTokenizer.Token token = reader.readToken(false);
+                                while (token != null) {
+                                    addSlice(token);
+                                    token = reader.readToken(false);
+                                }
+*/
                             } catch (InvalidMapException e) {
                                 throw e;
                             } catch (IOException e) {
                                 throw new InvalidMapException("Failed to parse listing file", e);
                             } finally {
-                                // clear buffered
-                                buffered.reuse(null);
-
-                                // close reader (closes the file stream)
+                                // close reader - also closes the file stream
                                 if (reader != null) {
                                     reader.close();
                                 }
+
+                                // detach buffered stream
+                                buffered.reuse(null);
                             }
                         } else {
                             // close file
@@ -1048,7 +1101,11 @@ public final class Map implements Runnable {
 //#endif
 
             // file input
-            FileInput input = new FileInput(slicePath);
+            if (input == null) {
+                input = new FileInput(slicePath);
+            } else {
+                input.setUrl(slicePath);
+            }
 
             // read image
             try {

@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <project name="TrekBuddy" default="generic" basedir=".">
 
-    <property name="version" value="0.9.59"/>
+    <property name="version" value="0.9.61"/>
     <property name="vendor" value="KrUcH"/>
     <property name="description" value="J2ME GPS application"/>
 
@@ -9,7 +9,7 @@
     <property name="wtk.midp.version" value="2.0"/>
 
     <property name="wtk.home" value="c:\WTK2.5.1"/>
-    <property name="proguard.home" value="Z:\apps\proguard3.8"/>
+    <property name="proguard.home" value="Z:\apps\proguard3.10"/>
     <property name="motorola.home" value="c:\Motorola\SDKv6.2\EmulatorM.3"/>
     <property name="rim41.home" value="c:\RIM\JDE 4.1.0"/>
     <property name="rim42.home" value="c:\RIM\JDE"/>
@@ -361,15 +361,9 @@
             <arg value="-keepnames class org.**"/>
 -->
             <arg value="-keepnames class cz.** extends java.lang.Exception"/>
-            <arg value="-whyareyoukeeping class com.ice.tar.TarHeader"/>
-            <arg value="-whyareyoukeeping class public_domain.Xedarius"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.ui.Desktop$Renderer"/>
-            <arg value="-whyareyoukeeping class cz.kruch.track.ui.Console"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.util.Logger"/>
-            <arg value="-whyareyoukeeping class cz.kruch.track.util.Comparator"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.location.MotorolaLocationProvider"/>
-            <arg value="-whyareyoukeeping class cz.kruch.j2se.io.BufferedReader"/>
-            <arg value="-whyareyoukeeping class cz.kruch.j2se.util.StringTokenizer"/>
             <arg value="-printmapping dist/${dist.dir}/trekbuddy${suffix}.map"/>
             <arg value="-printseeds"/>
             <arg value="-verbose"/>
@@ -397,15 +391,9 @@
             <arg value="-keepnames class org.**"/>
 -->
             <arg value="-keepnames class cz.** extends java.lang.Exception"/>
-            <arg value="-whyareyoukeeping class com.ice.tar.TarHeader"/>
-            <arg value="-whyareyoukeeping class public_domain.Xedarius"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.ui.Desktop$Renderer"/>
-            <arg value="-whyareyoukeeping class cz.kruch.track.ui.Console"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.util.Logger"/>
-            <arg value="-whyareyoukeeping class cz.kruch.track.util.Comparator"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.location.MotorolaLocationProvider"/>
-            <arg value="-whyareyoukeeping class cz.kruch.j2se.io.BufferedReader"/>
-            <arg value="-whyareyoukeeping class cz.kruch.j2se.util.StringTokenizer"/>
             <arg value="-printmapping dist/${dist.dir}/trekbuddy${suffix}.map"/>
             <arg value="-printseeds"/>
             <arg value="-verbose"/>

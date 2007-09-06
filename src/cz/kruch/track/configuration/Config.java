@@ -17,7 +17,7 @@
 package cz.kruch.track.configuration;
 
 import cz.kruch.track.util.CharArrayTokenizer;
-import cz.kruch.track.ui.I18n;
+import cz.kruch.track.ui.L10n;
 
 import javax.microedition.rms.RecordStore;
 import javax.microedition.rms.RecordStoreException;
@@ -92,8 +92,10 @@ public final class Config {
     // group [Map]
     public static String mapPath            = EMPTY_STRING; // file:///E:/trekbuddy/maps/GPSBasti/pasing.tar";
 
+/*
     // group [Language]
-    public static String language           = I18n.ENGLISH;
+    public static String language           = L10n.ENGLISH;
+*/
 
     // group [Map datum]
     public static String geoDatum           = Datum.DATUM_WGS_84.getName();
@@ -146,7 +148,9 @@ public final class Config {
     // group [Tweaks]
     public static boolean optimisticIo;
     public static boolean S60renderer;
-    public static boolean cacheOffline; // obsolete
+/* obsolete
+    public static boolean cacheOffline;
+*/
     public static boolean forcedGc              = true;
     public static boolean oneTileScroll;
 
@@ -164,8 +168,10 @@ public final class Config {
     public static boolean routeLineStyle;
     public static boolean routePoiMarks = true;
 
+/*
     // group [ScrollDelay]
     public static int scrollingDelay = 0;
+*/
 
     // hidden
     public static String btDeviceName   = EMPTY_STRING;
@@ -218,11 +224,9 @@ public final class Config {
     private static void readMain(DataInputStream din) throws IOException {
         mapPath = din.readUTF();
         locationProvider = din.readUTF();
-/*
-            timeZone = din.readUTF();
-*/      din.readUTF(); // obsolete
+        /*timeZone = */din.readUTF();
         geoDatum = din.readUTF();
-        boolean bc_TracklogsOn = din.readBoolean(); // bc
+        /*tracklogsOn = */din.readBoolean(); // bc
         tracklogFormat = din.readUTF();
         dataDir = din.readUTF();
         captureLocator = din.readUTF();
@@ -230,9 +234,7 @@ public final class Config {
         btDeviceName = din.readUTF();
         btServiceUrl = din.readUTF();
         simulatorDelay = din.readInt();
-/*
-        locationInterval = din.readInt();
-*/      din.readInt(); // obsolete
+        /*locationInterval = */din.readInt();
         locationSharing = din.readBoolean();
         fullscreen = din.readBoolean();
         noSounds = din.readBoolean();
@@ -247,7 +249,6 @@ public final class Config {
         try {
             tracklog = din.readUTF();
         } catch (Exception e) {
-            tracklog = bc_TracklogsOn ? Config.TRACKLOG_ASK : Config.TRACKLOG_NEVER;
         }
 
         // 0.9.2 extension
@@ -260,7 +261,7 @@ public final class Config {
         try {
             optimisticIo = din.readBoolean();
             S60renderer = din.readBoolean();
-            cacheOffline = din.readBoolean();
+            /*cacheOffline = */din.readBoolean();
         } catch (Exception e) {
         }
 
@@ -274,29 +275,25 @@ public final class Config {
         }
 
         // 0.9.5x extensions
-        boolean bc_GpxRaw = false;
         try {
             locationTimings = din.readUTF();
             trajectoryOn = din.readBoolean();
             forcedGc = din.readBoolean();
             oneTileScroll = din.readBoolean();
-            bc_GpxRaw = din.readBoolean();
+            /*gpxRaw = */din.readBoolean();
             unitsNautical = din.readBoolean();
             commUrl = din.readUTF();
             unitsImperial = din.readBoolean();
             wptProximity = din.readInt();
             poiProximity = din.readInt();
-            language = din.readUTF();
+            /*language = */din.readUTF();
             routeLineColor = din.readInt();
             routeLineStyle = din.readBoolean();
             routePoiMarks = din.readBoolean();
-            scrollingDelay = din.readInt();
+            /*scrollingDelay = */din.readInt();
             gpxDt = din.readInt();
             gpxDs = din.readInt();
         } catch (Exception e) {
-            if (bc_GpxRaw) {
-                gpxDt = 0;
-            }
         }
 
 //#ifdef __LOG__
@@ -307,13 +304,9 @@ public final class Config {
     private static void writeMain(DataOutputStream dout) throws IOException {
         dout.writeUTF(mapPath);
         dout.writeUTF(locationProvider);
-/*
-            dout.writeUTF(timeZone);
-*/      dout.writeUTF(""); // bc
+        dout.writeUTF(""/*timeZone*/);
         dout.writeUTF(geoDatum);
-/*
-            dout.writeBoolean(tracklogsOn);
-*/      dout.writeBoolean(false); // bc
+        dout.writeBoolean(false/*tracklogsOn*/);
         dout.writeUTF(tracklogFormat);
         dout.writeUTF(dataDir);
         dout.writeUTF(captureLocator);
@@ -321,9 +314,7 @@ public final class Config {
         dout.writeUTF(btDeviceName);
         dout.writeUTF(btServiceUrl);
         dout.writeInt(simulatorDelay);
-/*
-        dout.writeInt(locationInterval);
-*/      dout.writeInt(-1); // bc
+        dout.writeInt(-1/*locationInterval*/);
         dout.writeBoolean(locationSharing);
         dout.writeBoolean(fullscreen);
         dout.writeBoolean(noSounds);
@@ -337,7 +328,7 @@ public final class Config {
         dout.writeBoolean(useGeocachingFormat);
         dout.writeBoolean(optimisticIo);
         dout.writeBoolean(S60renderer);
-        dout.writeBoolean(cacheOffline);
+        dout.writeBoolean(false/*cacheOffline*/);
         dout.writeBoolean(decimalPrecision);
         dout.writeBoolean(useGridFormat);
         dout.writeBoolean(hpsWptTrueAzimuth);
@@ -346,19 +337,17 @@ public final class Config {
         dout.writeBoolean(trajectoryOn);
         dout.writeBoolean(forcedGc);
         dout.writeBoolean(oneTileScroll);
-/*
-        dout.writeBoolean(gpxRaw);
-*/      dout.writeBoolean(false); // bc
+        dout.writeBoolean(false/*gpxRaw*/);
         dout.writeBoolean(unitsNautical);
         dout.writeUTF(commUrl);
         dout.writeBoolean(unitsImperial);
         dout.writeInt(wptProximity);
         dout.writeInt(poiProximity);
-        dout.writeUTF(language);
+        dout.writeUTF(""/*language*/); // bc
         dout.writeInt(routeLineColor);
         dout.writeBoolean(routeLineStyle);
         dout.writeBoolean(routePoiMarks);
-        dout.writeInt(scrollingDelay);
+        dout.writeInt(0/*scrollingDelay*/);
         dout.writeInt(gpxDt);
         dout.writeInt(gpxDs);
 

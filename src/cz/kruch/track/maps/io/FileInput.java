@@ -36,6 +36,10 @@ public final class FileInput {
         this.url = url;
     }
 
+    public void setUrl(String url) {
+        this.url = url;
+    }
+
     public InputStream _getInputStream() throws IOException {
         file = File.open(Connector.open(url, Connector.READ));
         if (!file.exists()) {

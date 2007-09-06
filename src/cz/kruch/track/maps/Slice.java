@@ -26,21 +26,28 @@ import javax.microedition.lcdui.Image;
  *
  * @author Ales Pour <kruhc@seznam.cz>
  */
-public final class Slice {
+public class Slice {
     public static final String PNG_EXT = ".png";
 
+    private int wh, xy;
     private Image image;
-    private Object closure;
 
-    public Slice(String path, final boolean obsolete) throws InvalidMapException {
-        this.x = this.y = this.width = this.height = -1;
-        if (obsolete) { // single slice of gpska map
-            x = y = 0;
-        } else { // standard slice
-            parseXy(path);
-        }
+    /** Constructor for TB, J2N map slice. */
+    public Slice(String path) throws InvalidMapException {
+        parseXy(path);
     }
 
+    /** Constructor for TB, J2N map slice. */
+/*
+    public Slice(CharArrayTokenizer.Token token) throws InvalidMapException {
+        parseXy(token);
+    }
+*/
+
+    /** Constructor for GPSka map slice. */
+    public Slice() {
+    }
+    
     public synchronized Image getImage() {
         return image;
     }
@@ -54,59 +61,53 @@ public final class Slice {
         this.image = image;
     }
 
-    public Object getClosure() {
-        return closure;
+    public int getX() {
+        return (xy >> 16) & 0x0000ffff;
     }
 
-    public void setClosure(Object closure) {
-        this.closure = closure;
+    public int getY() {
+        return xy & 0x0000ffff;
     }
 
-    public short getX() {
-        return x;
+    public int getWidth() {
+        return (wh >> 16) & 0x0000ffff;
     }
 
-    public short getY() {
-        return y;
+    public int getHeight() {
+        return wh & 0x0000ffff;
     }
 
-    public short getWidth() {
-        return width;
-    }
-
-    public short getHeight() {
-        return height;
-    }
-
-    public void doFinal(int mapWidth, int mapHeight, int xi, int yi) throws InvalidMapException {
-        fixDimension(mapWidth, mapHeight, xi, yi);
+    public void doFinal(int xmax, int ymax, int xi, int yi) throws InvalidMapException {
+        final int x = getX();
+        final int y = getY();
+        if (x + xi > xmax) {
+            xi = xmax - x;
+        }
+        if (y + yi > ymax) {
+            yi = ymax - y;
+        }
+        wh = asShort(xi) << 16 | asShort(yi);
     }
 
     public boolean isWithin(final int x, final int y) {
-        final int dx = x - this.x;
-        final int dy = y - this.y;
-
-        return (dx >= 0 && dx < this.width && dy >= 0 && dy < this.height);
+        final int dx = x - getX();
+        if (x >= getX() && dx < getWidth()) {
+            final int dy = y - getY();
+            if (dy >= 0 && dy < getHeight()) {
+                return true;
+            }
+        }
+        return false;
     }
 
     // TODO optimize
     public String toString() {
-        return (new StringBuffer(16)).append(x).append('-').append(y).append(' ').append(width).append('x').append(height).toString();
+        return (new StringBuffer(16)).append(getX()).append('-').append(getY()).append(' ').append(getWidth()).append('x').append(getHeight()).toString();
     }
 
-    /*
-     * THIS IS FROM Calibration.Best CLASS.
-     */
-
-    private short width, height;
-    private short x, y;
-
     public static String getBasename(String path) throws InvalidMapException {
-//            char[] n = path.toCharArray();
         int p0 = -1, p1 = -1;
         int i = 0;
-//            for (int N = n.length - 4; i < N; i++) {
-//                if ('_' == n[i]) {
         for (int N = path.length() - 4; i < N; i++) {
             if ('_' == path.charAt(i)) {
                 p0 = p1;
@@ -122,36 +123,23 @@ public final class Slice {
 
 //#ifdef __LOG__
     public String getPath() {
-        return (new StringBuffer(16)).append('_').append(x).append('_').append(y).append(PNG_EXT).toString();
+        return (new StringBuffer(16)).append('_').append(getX()).append('_').append(getY()).append(PNG_EXT).toString();
     }
 //#endif
 
     public StringBuffer appendPath(StringBuffer sb) {
         sb.append('_');
-        NavigationScreens.append(sb, x);
+        NavigationScreens.append(sb, getX());
         sb.append('_');
-        NavigationScreens.append(sb, y);
+        NavigationScreens.append(sb, getY());
+
         return sb.append(PNG_EXT);
     }
 
-    private void fixDimension(int xNext, int yNext, final int xs, final int ys) throws InvalidMapException {
-        if (x + xs < xNext) {
-            xNext = x + xs;
-        }
-        if (y + ys < yNext) {
-            yNext = y + ys;
-        }
-        width = asShort(xNext - x);
-        height = asShort(yNext - y);
-    }
-
     private void parseXy(String path) throws InvalidMapException {
-//            char[] n = path.toCharArray();
         int p0 = -1, p1 = -1;
         int i = 0;
-//            for (int N = n.length - 4; i < N; i++) {
-//                if ('_' == n[i]) {
-        for (int N = path.length() - 4; i < N; i++) {
+        for (final int N = path.length() - 4; i < N; i++) {
             if ('_' == path.charAt(i)) {
                 p0 = p1;
                 p1 = i;
@@ -160,17 +148,32 @@ public final class Slice {
         if (p0 == -1 || p1 == -1) {
             throw new InvalidMapException("Invalid slice filename: " + path);
         }
-
-        x = asShort(parseInt(path, p0 + 1, p1));
-        y = asShort(parseInt(path, p1 + 1, i));
+        xy = asShort(parseInt(path, p0 + 1, p1)) << 16 | asShort(parseInt(path, p1 + 1, i));
     }
 
-    private static short asShort(final int i) throws InvalidMapException {
+/*
+    private void parseXy(CharArrayTokenizer.Token token) throws InvalidMapException {
+        int p0 = -1, p1 = -1;
+        int i = token.begin;
+        for (final int N = token.begin + token.length - 4; i < N; i++) {
+            if ('_' == token.array[i]) {
+                p0 = p1;
+                p1 = i;
+            }
+        }
+        if (p0 == -1 || p1 == -1) {
+            throw new InvalidMapException("Invalid slice filename: " + token.toString());
+        }
+        xy = asShort(parseInt(token.array, p0 + 1, p1)) << 16 | asShort(parseInt(token.array, p1 + 1, i));
+    }
+*/
+
+    private static int asShort(final int i) throws InvalidMapException {
         if (i > Short.MAX_VALUE) {
             throw new InvalidMapException("Slice too big: " + i);
         }
 
-        return (short) i;
+        return i;
     }
 
     private static int parseInt(String value, int offset, final int end) {
@@ -181,7 +184,6 @@ public final class Slice {
         int result = 0;
 
         while (offset < end) {
-//                char ch = value[offset++];
             final char ch = value.charAt(offset++);
             if (ch >= '0' && ch <= '9') {
                 result *= 10;
@@ -193,5 +195,27 @@ public final class Slice {
 
         return result;
     }
+
+/*
+    private static int parseInt(char[] value, int offset, final int end) {
+        if (offset == end || value == null) {
+            throw new NumberFormatException("No input");
+        }
+
+        int result = 0;
+
+        while (offset < end) {
+            final char ch = value[offset++];
+            if (ch >= '0' && ch <= '9') {
+                result *= 10;
+                result += ch - '0';
+            } else {
+                throw new NumberFormatException("Not a digit: " + ch);
+            }
+        }
+
+        return result;
+    }
+*/
 }
 

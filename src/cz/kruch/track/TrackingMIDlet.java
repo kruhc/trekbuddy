@@ -59,7 +59,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         nokia = platform.startsWith("Nokia");
         sonyEricsson = System.getProperty("com.sonyericsson.imei") != null;
         siemens = System.getProperty("com.siemens.IMEI") != null;
-        wm = platform.startsWith("Windows CE");
+        wm = platform.startsWith("Windows CE") || platform.startsWith("Palm OS");
         rim = platform.startsWith("RIM");
         sxg75 = "SXG75".equals(platform);
 //#ifdef __A780__
@@ -216,6 +216,17 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
             }
         }
 
+        // L10n
+        int localized = 0;
+        try {
+            localized = cz.kruch.track.ui.L10n.initialize();
+        } catch (Throwable t) {
+//#ifdef __LOG__
+            t.printStackTrace();
+//#endif
+            localized = -1;
+        }
+
         // create desktop canvas
         desktop = new cz.kruch.track.ui.Desktop(this);
 
@@ -251,7 +262,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         desktop.setFullScreenMode(cz.kruch.track.configuration.Config.fullscreen);
         desktop.setTitle(APP_TITLE);
         Display.getDisplay(this).setCurrent(desktop);
-        desktop.boot(imagesLoaded, configLoaded, customized);
+        desktop.boot(imagesLoaded, configLoaded, customized, localized);
     }
 
     /*

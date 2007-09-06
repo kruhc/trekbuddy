@@ -19,6 +19,7 @@ package cz.kruch.track.ui;
 import cz.kruch.track.maps.Slice;
 import cz.kruch.track.maps.Map;
 import cz.kruch.track.util.Mercator;
+import cz.kruch.track.util.ExtraMath;
 import cz.kruch.track.AssertionFailedException;
 import cz.kruch.track.location.Waypoint;
 import cz.kruch.track.configuration.Config;
@@ -31,6 +32,7 @@ import javax.microedition.lcdui.game.Sprite;
 import java.util.Vector;
 
 import api.location.Location;
+import api.location.QualifiedCoordinates;
 
 /**
  * Map viewer.
@@ -59,11 +61,17 @@ final class MapViewer {
     private final int[] clip;
     private final Position position;
 
+    private int scaleDx/*, dy*/;
+    private int scaleLength;
+    private final StringBuffer sb;
+    private final char[] sInfo;
+    private int sInfoLength;
+
     private Map map;
     private Vector slices;
     private Vector slices2; // for reuse during switch
 
-    private float course = -1F;
+    private float course;
 
     private Position wptPosition;
     private Position[] routePositions;
@@ -88,6 +96,9 @@ final class MapViewer {
         this.position = new Position(0, 0);
         this.slices = new Vector(4);
         this.slices2 = new Vector(4);
+        this.sb = new StringBuffer(8);
+        this.sInfo = new char[8];
+        this.course = -1F;
 /*
         this.trajectory = new QualifiedCoordinates[TRAJECTORY_LENGTH];
         this.trajectoryX = new short[TRAJECTORY_LENGTH];
@@ -110,6 +121,13 @@ final class MapViewer {
         }
         // ~
         setPosition(p);
+
+        // scale drawing x offset (same as in HPS)
+        final int lineLength = Math.min(w - w / 10, h - h / 10);
+        this.scaleDx = (w - lineLength) >> 1;
+
+        // update scale
+        calculateScale();
     }
 
     public boolean hasMap() {
@@ -165,10 +183,6 @@ final class MapViewer {
             // use new map
             this.mWidth = map.getWidth();
             this.mHeight = map.getHeight();
-
-            // ???
-//            sizeChanged(Desktop.width, Desktop.height);
-            // ???
             this.chx0 = this.chx = (Desktop.width - crosshairSize) >> 1;
             this.chy0 = this.chy = (Desktop.height - crosshairSize) >> 1;
             this.x = this.y = 0;
@@ -186,6 +200,9 @@ final class MapViewer {
                     setPosition(new Position(x, y));
                 }
             }
+
+            // update scale
+            calculateScale();
         }
     }
 
@@ -561,7 +578,6 @@ final class MapViewer {
             Vector _slices = slices;
 
             // project slices to window
-//            for (int i = _slices.size(); --i >= 0; ) {
             for (int N = _slices.size(), i = 0; i < N; i++) {
                 drawSlice(graphics, /*clip, */(Slice) _slices.elementAt(i));
             }
@@ -680,6 +696,26 @@ final class MapViewer {
                                         chy + crosshairSize2,
                                         Graphics.TOP | Graphics.LEFT);
         }
+
+        // paint scale
+        if (sInfoLength > 0) {
+            drawScale(graphics);
+        }
+    }
+
+    private void drawScale(Graphics graphics) {
+        // local references for faster access
+        final int h = Desktop.height;
+        final int x0 = scaleDx;
+        final int x1 = scaleDx + scaleLength;
+
+        // scale
+        graphics.setColor(0);
+        graphics.drawLine(x0, h - 4, x0, h - 2);
+        graphics.drawLine(x0, h - 3, x1, h - 3);
+        graphics.drawLine(x1, h - 4, x1, h - 2);
+        graphics.drawChars(sInfo, 0, sInfoLength,
+                           x0 + 3, h - Desktop.osd.bh - 2, Graphics.LEFT | Graphics.TOP);
     }
 
     private void drawPoi(Graphics graphics, Position position,
@@ -774,7 +810,7 @@ final class MapViewer {
             h = Desktop.height - y_dest;
         if (h > slice_h)
             h = slice_h;
-//        System.out.println("draw slice " + slice + "; xsrc=" + x_src + ", ysrc=" + y_src + ", xdest=" + x_dest + ", ydest=" + y_dest);
+
         if (w > 0 && h > 0) {
             if (Config.S60renderer) { // S60 renderer
                 graphics.drawImage(img,
@@ -991,5 +1027,40 @@ final class MapViewer {
         }
 
         return slice;
+    }
+
+    private void calculateScale() {
+        if (map != null) {
+            QualifiedCoordinates[] range = map.getRange();
+            float scale = range[0].distance(range[1]) / map.getWidth();
+            if (scale > 1F) {
+                int half = (int) scale * ((Desktop.width >> 1) - scaleDx);
+                if (half >= 10000) {
+                    int m = half % 1000;
+                    half /= 1000;
+                    if (m > 500) {
+                        half++;
+                    }
+                }
+                int grade = ExtraMath.grade(half);
+                int guess = (half / grade) * grade;
+                if (half - guess > grade / 2) {
+                    guess += grade;
+                }
+                scaleLength = (int) (guess / scale);
+                StringBuffer sb = this.sb;
+                sb.delete(0, sb.length());
+                sb.append(guess);
+                sInfoLength = sb.length();
+                if (sInfoLength > sInfo.length) {
+                    throw new AssertionFailedException("Scale length = " + sInfoLength);
+                }
+                sb.getChars(0, sb.length(), sInfo, 0);
+            } else {
+                sInfoLength = 0;
+            }
+        } else {
+            sInfoLength = 0;
+        }
     }
 }

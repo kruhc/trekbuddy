@@ -575,7 +575,7 @@ public abstract class Calibration {
             CharArrayTokenizer tokenizer = new CharArrayTokenizer();
 
             // read content
-            LineReader reader = new LineReader(in, true);
+            LineReader reader = new LineReader(in/*, true*/);
             CharArrayTokenizer.Token line = reader.readToken(false);
             while (line != null) {
                 lines++;

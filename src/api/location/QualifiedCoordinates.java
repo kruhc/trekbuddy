@@ -230,26 +230,26 @@ public final class QualifiedCoordinates implements GeodeticPosition {
             // condensed for SXG75
             if (cz.kruch.track.TrackingMIDlet.sxg75 && Config.decimalPrecision) {
                 sb.append(lat > 0D ? 'N' : 'S');
-                append(LAT, true, sb);
+                append(LAT, lat, true, sb);
                 sb.deleteCharAt(sb.length() - 1);
                 sb.append(' ');
                 sb.append(lon > 0D ? 'E' : 'W');
-                append(LON, true, sb);
+                append(LON, lon, true, sb);
                 sb.deleteCharAt(sb.length() - 1);
             } else { // decent devices
                 sb.append(lat > 0D ? 'N' : 'S').append(' ');
-                append(LAT, Config.decimalPrecision, sb);
+                append(LAT, lat, Config.decimalPrecision, sb);
                 sb.append(' ');
                 sb.append(lon > 0D ? 'E' : 'W').append(' ');
-                append(LON, Config.decimalPrecision, sb);
+                append(LON, lon, Config.decimalPrecision, sb);
             }
         }
 
         return sb;
     }
 
-    private StringBuffer append(final int type, final boolean hp, StringBuffer sb) {
-        double l = Math.abs(type == LAT ? lat : lon);
+    public static StringBuffer append(final int type, final double value, final boolean hp, StringBuffer sb) {
+        double l = Math.abs(value);
         if (Config.useGeocachingFormat) {
             int h = (int) Math.floor(l);
             l -= h;
@@ -351,7 +351,7 @@ public final class QualifiedCoordinates implements GeodeticPosition {
     }
 
     private static StringBuffer zeros(StringBuffer sb, final double d, final int c) {
-        int i = Mercator.grade(d);
+        int i = ExtraMath.grade(d);
         while (i < c) {
             sb.append('0');
             i *= 10;

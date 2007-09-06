@@ -48,13 +48,13 @@ public final class L10n {
 
         InputStream in = null;
         try {
-            in = Connector.openInputStream(Config.getFolderResources() + "L10n.properties");
+            in = Connector.openInputStream(Config.getFolderResources() + "language.txt");
             result++;
         } catch (Exception e) {
             // ignore
         }
         if (in == null) {
-            in = cz.kruch.track.TrackingMIDlet.class.getResourceAsStream("/resources/L10n.properties");
+            in = cz.kruch.track.TrackingMIDlet.class.getResourceAsStream("/resources/language.txt");
         }
 
         LineReader reader = null;

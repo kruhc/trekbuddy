@@ -153,6 +153,10 @@ public final class Waypoints extends List
         cmdNavigateBack = new Command(WaypointForm.MENU_NAVIGATE_BACK, Command.ITEM, 4);
         cmdSetAsCurrent = new Command(WaypointForm.MENU_SET_CURRENT, Command.ITEM, 2);
 
+        // command handling
+        setSelectCommand(cmdSelect);
+        setCommandListener(this);
+
         // init collection
         stores = new Hashtable(3);
         logs = new Hashtable(3);
@@ -185,9 +189,6 @@ public final class Waypoints extends List
                 }
             }
         }
-
-        // command handling
-        setCommandListener(this);
     }
 
     public void show() {
@@ -198,15 +199,17 @@ public final class Waypoints extends List
         Desktop.display.setCurrent(this);
     }
 
-    private void menu() {
+    private void disable() {
         // remove commands
-        removeCommand(cmdSelect);
         removeCommand(cmdCancel);
         removeCommand(cmdClose);
         removeCommand(cmdNavigateTo);
         removeCommand(cmdNavigateAlong);
+        removeCommand(cmdNavigateBack);
         removeCommand(cmdSetAsCurrent);
+    }
 
+    private void menu() {
         switch (depth) {
             case 0: {
                 // clear list
@@ -228,14 +231,12 @@ public final class Waypoints extends List
 
                 // create commands
                 addCommand(cmdClose);
-                setSelectCommand(cmdSelect);
 
                 // update title
                 setTitle("Navigation");
             } break;
             case 1: {
                 // create commands
-                setSelectCommand(cmdSelect);
                 addCommand(cmdCancel);
 
                 // update title
@@ -243,7 +244,6 @@ public final class Waypoints extends List
             } break;
             case 2: {
                 // create commands
-                setSelectCommand(cmdSelect);
                 if (currentWpts == Desktop.wpts) {
                     addCommand(cmdSetAsCurrent);
                 } else {
@@ -266,6 +266,7 @@ public final class Waypoints extends List
             } else {
                 switch (--depth) {
                     case 0: {
+                        disable();
                         menu();
                     } break;
                     case 1: {
@@ -517,6 +518,7 @@ public final class Waypoints extends List
      * Background task launcher.
      */
     private void onBackground(String storeName) {
+        disable();
         this._storeName = null; // gc hint
         this._storeName = storeName;
         LoaderIO.getInstance().enqueue(this);
@@ -560,17 +562,14 @@ public final class Waypoints extends List
             if (size() == 0) {
                 // notify user
                 Desktop.showInfo("No landmark stores", this);
-                // show std menu
-                menu();
             } else {
                 // increment depth
                 depth = 1;
-                // update menu
-                menu();
             }
         } catch (Throwable t) {
             Desktop.showError("Failed to list landmark stores", t, this);
         } finally {
+            // close dir
             if (dir != null) {
                 try {
                     dir.close();
@@ -579,6 +578,8 @@ public final class Waypoints extends List
                 }
                 dir = null; // gc hint
             }
+            // update menu
+            menu();
         }
     }
 
@@ -684,32 +685,34 @@ public final class Waypoints extends List
         ((Vector) stores.get(storeKey)).addElement(wpt);
 
         // save?
-        if (!save) {
-            return;
-        }
+        if (save) {
 
-        // start GPX log if needed
-        GpxTracklog gpx = (GpxTracklog) logs.get(storeKey);
-        if (gpx == null) {
-            gpx = new GpxTracklog(GpxTracklog.LOG_WPT, this,
-                                  navigator.getTracklogCreator(),
-                                  navigator.getTracklogTime());
-            if (USER_CUSTOM_STORE.equals(storeKey)) {
-                gpx.setFilePrefix("wmap-");
-            } else if (USER_FRIENDS_STORE.equals(storeKey)) {
-                gpx.setFilePrefix("wsms-");
-            } else {
-                gpx.setFilePrefix("wgps-");
+            // start GPX log if needed
+            GpxTracklog gpx = (GpxTracklog) logs.get(storeKey);
+            if (gpx == null) {
+                gpx = new GpxTracklog(GpxTracklog.LOG_WPT, this,
+                                      navigator.getTracklogCreator(),
+                                      navigator.getTracklogTime());
+                if (USER_CUSTOM_STORE.equals(storeKey)) {
+                    gpx.setFilePrefix("wmap-");
+                } else if (USER_FRIENDS_STORE.equals(storeKey)) {
+                    gpx.setFilePrefix("wsms-");
+                } else {
+                    gpx.setFilePrefix("wgps-");
+                }
+                gpx.start();
+
+                // add to collection
+                logs.put(storeKey, gpx);
+                logNames.addElement(gpx.getFileName());
             }
-            gpx.start();
 
-            // add to collection
-            logs.put(storeKey, gpx);
-            logNames.addElement(gpx.getFileName());
+            // record waypoint
+            gpx.insert(wpt);
         }
 
-        // record waypoint
-        gpx.insert(wpt);
+        // release user object
+        wpt.setUserObject(null);
     }
 
     private void listWaypoints(Vector wpts) {

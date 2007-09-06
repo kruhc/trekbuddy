@@ -32,7 +32,6 @@ import javax.microedition.lcdui.Image;
 
 import api.location.Location;
 import api.location.QualifiedCoordinates;
-import api.location.MinDec;
 
 import java.util.Date;
 import java.util.Calendar;
@@ -74,20 +73,11 @@ public final class WaypointForm extends Form
     private TextField fieldName;
     private TextField fieldComment;
 
-/*
-    private QualifiedCoordinates coordinates;
-*/
     private TextField fieldLat;
     private TextField fieldLon;
 
     private byte[] imageBytes;
     private int imageNum = -1;
-
-/*
-    private ChoiceGroup editorSign;
-    private TextField editorDeg;
-    private TextField editorMin;
-*/
 
     static int cnt = 0;
 
@@ -137,26 +127,16 @@ public final class WaypointForm extends Form
         super(TITLE);
         this.next = next;
         this.callback = callback;
-/*
-        this.coordinates = pointer;
-*/
         int c = cnt + 1;
         String name = c < 10 ? "WPT00" + c : (c < 100 ? "WPT0" + c : "WPT" + Integer.toString(c));
+        StringBuffer sb = new StringBuffer(12);
         appendWithNewlineAfter(this.fieldName = new TextField(FIELD_NAME, name, 16, TextField.ANY));
         appendWithNewlineAfter(this.fieldComment = new TextField(FIELD_COMMENT, CALENDAR.getTime().toString(), 64, TextField.ANY));
-        appendWithNewlineAfter(this.fieldLat = new TextField(FIELD_LAT, (new MinDec(QualifiedCoordinates.LAT, pointer.getLat())).toString(),
-                                                             13, TextField.ANY));
-/*
-        Command editCmd = new Command("Edit", Command.ITEM, 1);
-        this.fieldLat.setDefaultCommand(editCmd);
-        this.fieldLat.setItemCommandListener(this);
-*/
-        appendWithNewlineAfter(this.fieldLon = new TextField(FIELD_LON, (new MinDec(QualifiedCoordinates.LON, pointer.getLon())).toString(),
-                                                             14, TextField.ANY));
-/*
-        this.fieldLat.setDefaultCommand(editCmd);
-        this.fieldLat.setItemCommandListener(this);
-*/
+        QualifiedCoordinates.append(QualifiedCoordinates.LAT, pointer.getLat(), true, sb);
+        appendWithNewlineAfter(this.fieldLat = new TextField(FIELD_LAT, sb.toString(), 13, TextField.ANY));
+        sb.delete(0, sb.length());
+        QualifiedCoordinates.append(QualifiedCoordinates.LON, pointer.getLon(), true, sb);
+        appendWithNewlineAfter(this.fieldLon = new TextField(FIELD_LON, sb.toString(), 14, TextField.ANY));
         addCommand(new Command(MENU_CLOSE, Command.BACK, 1));
         addCommand(new Command(MENU_USE, Command.SCREEN, 1));
     }
@@ -175,11 +155,6 @@ public final class WaypointForm extends Form
     }
 
     public void commandAction(Command command, Item item) {
-/*        if (item == fieldLat) {
-            editCoordinate(new QualifiedCoordinates.MinDec(QualifiedCoordinates.LAT, coordinates.getLat()));
-        } else if (item == fieldLon) {
-            editCoordinate(new QualifiedCoordinates.MinDec(QualifiedCoordinates.LAT, coordinates.getLat()));
-        } else */
         if ("Take".equals(command.getLabel())) {
             try {
                 (new Camera(this, this)).show();
@@ -254,6 +229,9 @@ public final class WaypointForm extends Form
                 callback.invoke(new Object[]{ MENU_GO_TO, null }, null, this);
             }
         } else {
+            // gc hint
+            imageBytes = null;
+            // restore previous screen
             Desktop.display.setCurrent(next);
         }
     }

@@ -48,17 +48,30 @@ public final class SmartRunnable implements Runnable {
             if (!go) { // probably shutdown, do not accept tasks anymore
                 return;
             }
+
             boolean add = true;
-            if (r instanceof Desktop) {
+
+            // trick #1: avoid duplicates of key-hold checks
+            if (r instanceof Desktop) { //
                 if (runnables.size() > 0) {
                     if (runnables.lastElement() instanceof Desktop) {
                         add = false;
                     }
                 }
             }
+            // trick #2: merge render tasks
+            if (r instanceof Desktop.RenderTask) {
+                if (runnables.size() > 0) {
+                    if (runnables.lastElement() instanceof Desktop.RenderTask) {
+                        ((Desktop.RenderTask) runnables.lastElement()).merge(((Desktop.RenderTask) r).getMask());
+                    }
+                }
+            }
+
             if (add) {
                 runnables.addElement(r);
             }
+
             if (enqueued == false) {
                 enqueued = true;
                 Desktop.display.callSerially(this);

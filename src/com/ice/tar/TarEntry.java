@@ -118,7 +118,7 @@ import java.io.UnsupportedEncodingException;
  * @author Timothy Gerard Endres, <time@gjt.org>
  * @see TarHeader
  *
- * @modified by Ales Pour, <kruhc@seznam.cz>
+ * @modified by Ales Pour <kruhc@seznam.cz>
  */
 
 public final class TarEntry {
@@ -210,7 +210,7 @@ public final class TarEntry {
      *
      * @param headerBuf The header bytes from a tar archive entry.
      */
-    public TarEntry(byte[] headerBuf, long position) throws InvalidHeaderException {
+    public TarEntry(byte[] headerBuf, final long position) throws InvalidHeaderException {
         this.parseHeader(headerBuf);
         this.position = position;
     }
@@ -218,23 +218,11 @@ public final class TarEntry {
     /**
      * Injects new initial data.
      *
-     * @param headerBuf
-     * @param position
+     * @param headerBuf The header bytes from a tar archive entry.
      */
-    public void update(byte[] headerBuf, long position) throws InvalidHeaderException {
-        this.name = null; // gc hint
+    public void update(byte[] headerBuf, final long position) throws InvalidHeaderException {
         this.parseHeader(headerBuf);
         this.position = position;
-    }
-
-    /**
-     * Determine if the two entries are equal. Equality is determined
-     * by the header names being equal.
-     *
-     * @return True if the entries are equal.
-     */
-    public boolean equals(TarEntry it) {
-        return this.name.equals(it.name);
     }
 
     /**
@@ -270,7 +258,7 @@ public final class TarEntry {
      * @return True if this entry is a directory.
      */
     public boolean isDirectory() {
-        if (this.linkFlag == TarHeader.LF_DIR)
+        if (this.linkFlag == LF_DIR)
             return true;
 
         if (this.name.endsWith("/"))
@@ -321,7 +309,7 @@ public final class TarEntry {
 
         int offset = NAMELEN + MODELEN + UIDLEN + GIDLEN;
 
-        size = parseOctal(headerBuf, offset, TarHeader.SIZELEN);
+        size = parseOctal(headerBuf, offset, SIZELEN);
 
         offset += SIZELEN + MODTIMELEN + CHKSUMLEN;
 
@@ -339,10 +327,10 @@ public final class TarEntry {
      * @param length The number of header bytes to parse.
      * @return The long value of the octal string.
      */
-    private static long parseOctal(byte[] header, int offset, int length) {
+    private static long parseOctal(byte[] header, final int offset, final int length) {
         long result = 0;
         boolean stillPadding = true;
-        int end = offset + length;
+        final int end = offset + length;
 
         for (int i = offset; i < end; ++i) {
             byte b = header[i];

@@ -289,8 +289,8 @@ public final class Mercator {
                 i++;
             }
             utm.zone[1] = (char) ('A' + i);
-            utm.easting -= (int) (utm.easting / grade(utm.easting)) * grade(utm.easting);
-            utm.northing -= (int) (utm.northing / grade(utm.northing)) * grade(utm.northing);
+            utm.easting -= (int) (utm.easting / ExtraMath.grade(utm.easting)) * ExtraMath.grade(utm.easting);
+            utm.northing -= (int) (utm.northing / ExtraMath.grade(utm.northing)) * ExtraMath.grade(utm.northing);
         } else if (api.location.ProjectionSetup.PROJ_IG.equals(contextProjection.getName())) {
             if (utm.zone == null || utm.zone.length != 1) {
                 utm.zone = new char[1];
@@ -497,15 +497,6 @@ public final class Mercator {
         else letterDesignator = 'Z'; // error flag to show that the latitude is outside the UTM limits
 
         return letterDesignator;
-    }
-
-    public static int grade(final double d) {
-        int i = 1;
-        while ((d / i) >= 10) {
-            i *= 10;
-        }
-
-        return i;
     }
 
     private static final double[] EXTRA_MATH_N = {

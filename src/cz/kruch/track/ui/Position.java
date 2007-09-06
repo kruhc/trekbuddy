@@ -17,7 +17,8 @@
 package cz.kruch.track.ui;
 
 /**
- * Pixel position.
+ * Pixel position in map.
+ * TODO compact x y to single int - we have map dim limit to short anyway
  *
  * @author Ales Pour <kruhc@seznam.cz>
  */

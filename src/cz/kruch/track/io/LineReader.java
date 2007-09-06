@@ -42,15 +42,18 @@ public final class LineReader extends InputStreamReader {
     public LineReader(InputStream in) {
         super(in);
         this.buffer = new char[MAX_LEN];
+/*
     }
 
     public LineReader(InputStream in, final boolean tokenized) {
         this(in);
+*/
         this.token = new CharArrayTokenizer.Token();
         this.token.array = buffer;
     }
 
     public String readLine(final boolean ignoreLF) throws IOException {
+/*
         if (count < 0) {
             return null;
         }
@@ -107,6 +110,12 @@ public final class LineReader extends InputStreamReader {
         }
 
         return result;
+*/
+        CharArrayTokenizer.Token result = readToken(ignoreLF);
+        if (result == null) {
+            return null;
+        }
+        return result.toString();
     }
 
     public CharArrayTokenizer.Token readToken(final boolean ignoreLF) throws IOException {
@@ -128,7 +137,6 @@ public final class LineReader extends InputStreamReader {
 
         int offset = position;
         int chars = 0;
-//        CharArrayTokenizer.Token result = null;
 
         for ( ; offset < maxlen; ) {
             int c;
@@ -179,8 +187,7 @@ public final class LineReader extends InputStreamReader {
 
     public void close() throws IOException {
         super.close();
-        /* gc hints */
-        buffer = null;
-        token = null;
+        buffer = null; // gc hint
+        token = null; // gc hint
     }
 }

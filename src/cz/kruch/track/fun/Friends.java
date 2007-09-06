@@ -17,7 +17,7 @@ package cz.kruch.track.fun;
 
 import cz.kruch.track.ui.Desktop;
 import cz.kruch.track.ui.Waypoints;
-import cz.kruch.track.location.Navigator;
+import cz.kruch.track.ui.NavigationScreens;
 import cz.kruch.track.location.Waypoint;
 import cz.kruch.track.util.CharArrayTokenizer;
 
@@ -30,7 +30,6 @@ import java.io.IOException;
 import java.util.Date;
 
 import api.location.QualifiedCoordinates;
-import api.location.MinDec;
 
 public final class Friends implements MessageListener, Runnable {
     public static final String TYPE_IAH = "IAH";
@@ -73,11 +72,9 @@ public final class Friends implements MessageListener, Runnable {
         }
     }
 
-    private Navigator navigator;
     private MessageConnection connection;
 
-    public Friends(Navigator navigator) throws IOException {
-        this.navigator = navigator;
+    public Friends() throws IOException {
         this.connection = (MessageConnection) Connector.open("sms://" + PORT, Connector.READ);
         this.connection.setMessageListener(this);
     }
@@ -109,11 +106,9 @@ public final class Friends implements MessageListener, Runnable {
         StringBuffer sb = new StringBuffer();
         sb.append(TBSMS_HEADER).append(type).append(SEPARATOR_CHAR);
         sb.append(time / 1000).append(SEPARATOR_CHAR);
-        sb.append(MinDec.toSentence(QualifiedCoordinates.LAT,
-                                    coordinates.getLat()));
+        sb.append(toSentence(QualifiedCoordinates.LAT, coordinates.getLat()));
         sb.append(SEPARATOR_CHAR);
-        sb.append(MinDec.toSentence(QualifiedCoordinates.LON,
-                                    coordinates.getLon()));
+        sb.append(toSentence(QualifiedCoordinates.LON, coordinates.getLon()));
         sb.append(SEPARATOR_CHAR);
         sb.append(message.replace(',', ' ').replace('*', ' '));
         sb.append("*00");
@@ -171,8 +166,8 @@ public final class Friends implements MessageListener, Runnable {
 
                     // parse tokens
                     long time = Long.parseLong(times) * 1000;
-                    double lat = MinDec.fromSentence(latv, lats).doubleValue();
-                    double lon = MinDec.fromSentence(lonv, lons).doubleValue();
+                    double lat = parseSentence(latv, lats);
+                    double lon = parseSentence(lonv, lons);
                     String address = message.getAddress();
                     if (address.startsWith("sms://")) {
                         address = address.substring(6);
@@ -196,6 +191,97 @@ public final class Friends implements MessageListener, Runnable {
         } catch (Throwable t) {
             Desktop.showError("Failed to receive SMS", t, null);
         }
+    }
+
+    private static double parseSentence(String value, String letter) {
+        int degl, type, sign;
+        switch (letter.charAt(0)) {
+            case 'N': {
+                type = QualifiedCoordinates.LAT;
+                sign = 1;
+                degl = 2;
+            } break;
+            case 'S': {
+                type = QualifiedCoordinates.LAT;
+                sign = -1;
+                degl = 2;
+            } break;
+            case 'E': {
+                type = QualifiedCoordinates.LON;
+                sign = 1;
+                degl = 3;
+            } break;
+            case 'W': {
+                type = QualifiedCoordinates.LON;
+                sign = -1;
+                degl = 3;
+            } break;
+            default:
+                throw new IllegalArgumentException("Malformed coordinate: " + value);
+        }
+
+        final int i = value.indexOf('.');
+        if ((type == QualifiedCoordinates.LAT && (i != 4)) || (type == QualifiedCoordinates.LON && i != 5)) {
+            throw new IllegalArgumentException("Malformed coordinate: " + value);
+        }
+
+        final int deg = Integer.parseInt(value.substring(0, degl));
+        final double min = Double.parseDouble(value.substring(degl));
+
+        return sign * (deg + min / 60D);
+    }
+
+    private static String toSentence(final int type, double value) {
+        final int sign = value < 0D ? -1 : 1;
+        value = Math.abs(value);
+        int d = (int) Math.floor(value);
+        value -= d;
+        value *= 60D;
+        double min = value;
+        int m = (int) Math.floor(min);
+        double l = min - m;
+        l *= 100000D;
+        int s = (int) Math.floor(l);
+        if ((l - s) > 0.5D) {
+            s++;
+            if (s == 100000) {
+                s = 0;
+                m++;
+                if (m == 60) {
+                    m = 0;
+                    d++;
+                }
+            }
+        }
+
+        StringBuffer sb = new StringBuffer(32);
+        if (type == QualifiedCoordinates.LON && d < 100) {
+            sb.append('0');
+        }
+        if (d < 10) {
+            sb.append('0');
+        }
+        NavigationScreens.append(sb, d);
+        if (m < 10) {
+            sb.append('0');
+        }
+        NavigationScreens.append(sb, m).append('.');
+        if (s < 10000) {
+            sb.append('0');
+        }
+        if (s < 1000) {
+            sb.append('0');
+        }
+        if (s < 100) {
+            sb.append('0');
+        }
+        if (s < 10) {
+            sb.append('0');
+        }
+        NavigationScreens.append(sb, s);
+        sb.append(',').append(type == QualifiedCoordinates.LAT ? (sign == -1 ? "S" : "N") : (sign == -1 ? "W" : "E"));
+
+        return sb.toString();
     }
 
 //#ifdef __LOG__
@@ -228,8 +314,8 @@ public final class Friends implements MessageListener, Runnable {
             }
 
             long time = Long.parseLong(times) * 1000;
-            double lat = MinDec.fromSentence(latv, lats).doubleValue();
-            double lon = MinDec.fromSentence(lonv, lons).doubleValue();
+            double lat = parseSentence(latv, lats);
+            double lon = parseSentence(lonv, lons);
             String xxx = (new Date(time)).toString();
             Waypoint wpt = new Waypoint(QualifiedCoordinates.newInstance(lat, lon),
                                         null, chat, time);

@@ -39,7 +39,7 @@ import org.kxml2.io.KXmlParser;
  *
  * @author Ales Pour <kruhc@seznam.cz>
  */
-public abstract class Calibration {
+abstract class Calibration {
 //#ifdef __LOG__
     private static final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("Calibration");
 //#endif
@@ -99,6 +99,98 @@ public abstract class Calibration {
         }
 
         return datum;
+    }
+
+    boolean isWithin(QualifiedCoordinates coordinates) {
+/* too rough
+        final double lat = coordinates.getLat();
+        final double lon = coordinates.getLon();
+        QualifiedCoordinates[] _range = range;
+        return (lat <= _range[0].getLat() && lat >= _range[3].getLat())
+                && (lon >= _range[0].getLon() && lon <= _range[3].getLon());
+*/
+        Position p = transform(coordinates);
+        final int x = p.getX();
+        if (x >=0 && x < width) {
+            final int y = p.getY();
+            if (y >= 0 && y < height) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    QualifiedCoordinates[] getRange() {
+        return range;
+    }
+
+    QualifiedCoordinates transform(Position position) {
+//#ifdef __LOG__
+        if (log.isEnabled()) log.debug("transform " + position);
+//#endif
+
+        QualifiedCoordinates qc;
+
+        if (calibrationGp instanceof Mercator.Coordinates) {
+            Mercator.Coordinates utm = (Mercator.Coordinates) toGp(position);
+            qc = Mercator.MercatortoLL(utm, getDatum().getEllipsoid(),
+                                       (Mercator.ProjectionSetup) projectionSetup);
+/*
+            qc.setDatum(datum == Datum.DATUM_WGS_84 ? null : datum);
+*/
+            Mercator.Coordinates.releaseInstance(utm);
+        } else /*if (calibrationGp instanceof QualifiedCoordinates)*/ {
+            qc = (QualifiedCoordinates) toGp(position);
+        }
+
+        return qc;
+    }
+
+    Position transform(QualifiedCoordinates coordinates) {
+        GeodeticPosition gp;
+
+        if (calibrationGp instanceof Mercator.Coordinates) {
+            gp = Mercator.LLtoMercator(coordinates, getDatum().getEllipsoid(),
+                                       (Mercator.ProjectionSetup) projectionSetup);
+        } else /*if (calibrationGp instanceof QualifiedCoordinates)*/ {
+            gp = coordinates;
+        }
+
+        double _v = v2;
+        double _h = h2;
+
+        final double cgph = calibrationGp.getH();
+        final double cgpv = calibrationGp.getV();
+        final int cxyx = calibrationXy.getX();
+        final int cxyy = calibrationXy.getY();
+
+        double fx = (gp.getH() - cgph + (cxyx * _h) + (ek0 * cxyy) - (ek0 / _v) * (- gp.getV() + cgpv + (cxyy * _v) - (nk0 * cxyx))) / (_h + (nk0 * ek0) / _v);
+        double fy = (- gp.getV() + cgpv + (cxyy * _v) + (nk0 * (fx - cxyx))) / _v;
+
+        /* better precision calculations with known x,y */
+
+        _v = gridLVscale + (fx - cxyx) * vScale;
+        _h = gridTHscale + (fy - cxyy) * hScale;
+
+        fx = (gp.getH() - cgph + (cxyx * _h) + (ek0 * cxyy) - (ek0 / _v) * (- gp.getV() + cgpv + (cxyy * _v) - (nk0 * cxyx))) / (_h + (nk0 * ek0) / _v);
+        fy = (- gp.getV() + cgpv + (cxyy * _v) + (nk0 * (fx - cxyx))) / _v;
+
+        int x = (int) fx;
+        if ((fx - x) > 0.5) {
+            x++;
+        }
+        int y = (int) fy;
+        if ((fy - y) > 0.5) {
+            y++;
+        }
+
+        proximite.setXy(x, y);
+
+        if (gp instanceof Mercator.Coordinates) {
+            Mercator.Coordinates.releaseInstance((Mercator.Coordinates) gp);
+        }
+
+        return proximite;
     }
 
     protected void doFinal(Datum datum, ProjectionSetup setup,
@@ -235,46 +327,6 @@ public abstract class Calibration {
         range[3] = transform(p);
     }
 
-    public boolean isWithin(QualifiedCoordinates coordinates) {
-/*
-        final double lat = coordinates.getLat();
-        final double lon = coordinates.getLon();
-        QualifiedCoordinates[] _range = range;
-        return (lat <= _range[0].getLat() && lat >= _range[3].getLat())
-                && (lon >= _range[0].getLon() && lon <= _range[3].getLon());
-*/
-        Position p = transform(coordinates);
-        final int x = p.getX();
-        final int y = p.getY();
-        return (x >=0 && y >= 0 && x < width && y < height);
-    }
-    
-    public QualifiedCoordinates[] getRange() {
-        return range;
-    }
-
-    public QualifiedCoordinates transform(Position position) {
-//#ifdef __LOG__
-        if (log.isEnabled()) log.debug("transform " + position);
-//#endif
-
-        QualifiedCoordinates qc;
-
-        if (calibrationGp instanceof Mercator.Coordinates) {
-            Mercator.Coordinates utm = (Mercator.Coordinates) toGp(position);
-            qc = Mercator.MercatortoLL(utm, getDatum().getEllipsoid(),
-                                       (Mercator.ProjectionSetup) projectionSetup);
-/*
-            qc.setDatum(datum == Datum.DATUM_WGS_84 ? null : datum);
-*/
-            Mercator.Coordinates.releaseInstance(utm);
-        } else /*if (calibrationGp instanceof QualifiedCoordinates)*/ {
-            qc = (QualifiedCoordinates) toGp(position);
-        }
-
-        return qc;
-    }
-
     private GeodeticPosition toGp(Position position) {
         int dy = position.getY() - calibrationXy.getY();
         int dx = position.getX() - calibrationXy.getX();
@@ -286,53 +338,6 @@ public abstract class Calibration {
         } else /*if (calibrationGp instanceof QualifiedCoordinates)*/ {
             return QualifiedCoordinates.newInstance(v, h);
         }
-    }
-
-    public Position transform(QualifiedCoordinates coordinates) {
-        GeodeticPosition gp;
-
-        if (calibrationGp instanceof Mercator.Coordinates) {
-            gp = Mercator.LLtoMercator(coordinates, getDatum().getEllipsoid(),
-                                       (Mercator.ProjectionSetup) projectionSetup);
-        } else /*if (calibrationGp instanceof QualifiedCoordinates)*/ {
-            gp = coordinates;
-        }
-
-        double _v = v2;
-        double _h = h2;
-
-        final double cgph = calibrationGp.getH();
-        final double cgpv = calibrationGp.getV();
-        final int cxyx = calibrationXy.getX();
-        final int cxyy = calibrationXy.getY();
-
-        double fx = (gp.getH() - cgph + (cxyx * _h) + (ek0 * cxyy) - (ek0 / _v) * (- gp.getV() + cgpv + (cxyy * _v) - (nk0 * cxyx))) / (_h + (nk0 * ek0) / _v);
-        double fy = (- gp.getV() + cgpv + (cxyy * _v) + (nk0 * (fx - cxyx))) / _v;
-
-        /* better precision calculations with known x,y */
-
-        _v = gridLVscale + (fx - cxyx) * vScale;
-        _h = gridTHscale + (fy - cxyy) * hScale;
-
-        fx = (gp.getH() - cgph + (cxyx * _h) + (ek0 * cxyy) - (ek0 / _v) * (- gp.getV() + cgpv + (cxyy * _v) - (nk0 * cxyx))) / (_h + (nk0 * ek0) / _v);
-        fy = (- gp.getV() + cgpv + (cxyy * _v) + (nk0 * (fx - cxyx))) / _v;
-
-        int x = (int) fx;
-        if ((fx - x) > 0.5) {
-            x++;
-        }
-        int y = (int) fy;
-        if ((fy - y) > 0.5) {
-            y++;
-        }
-
-        proximite.setXy(x, y);
-
-        if (gp instanceof Mercator.Coordinates) {
-            Mercator.Coordinates.releaseInstance((Mercator.Coordinates) gp);
-        }
-
-        return proximite;
     }
 
     private static int[] verticalAxisByX(Vector xy, Position position) {
@@ -387,11 +392,11 @@ public abstract class Calibration {
         }
     }
 
-    public static final class GMI extends Calibration {
+    static final class GMI extends Calibration {
 
         private static final char[] DELIM = { ';' };
 
-        public GMI(InputStream in, String path) throws IOException {
+        GMI(InputStream in, String path) throws IOException {
             super(path);
 
             Vector xy = new Vector();
@@ -468,7 +473,7 @@ public abstract class Calibration {
         }
     }
 
-    public static class J2N extends Calibration {
+    static class J2N extends Calibration {
         private static final String TAG_NAME        = "name";
         private static final String TAG_POSITION    = "position";
         private static final String TAG_LATITUDE    = "latitude";
@@ -476,7 +481,7 @@ public abstract class Calibration {
         private static final String TAG_IMAGEWIDTH  = "imageWidth";
         private static final String TAG_IMAGEHEIGHT = "imageHeight";
 
-        public J2N(InputStream in, String path) throws InvalidMapException {
+        J2N(InputStream in, String path) throws InvalidMapException {
             super(path);
 
             Vector xy = new Vector();
@@ -548,13 +553,13 @@ public abstract class Calibration {
         }
     }
 
-    public static final class XML extends J2N {
-        public XML(InputStream in, String path) throws InvalidMapException {
+    static final class XML extends J2N {
+        XML(InputStream in, String path) throws InvalidMapException {
             super(in, path);
         }
     }
 
-    public static final class Ozi extends Calibration {
+    static final class Ozi extends Calibration {
 
         private static final String LINE_POINT              = "Point";
         private static final String LINE_MAP_PROJECTION     = "Map Projection";
@@ -563,7 +568,7 @@ public abstract class Calibration {
         private static final String LINE_MMPLL              = "MMPLL";
         private static final String LINE_IWH                = "IWH";
 
-        public Ozi(InputStream in, String path) throws IOException {
+        Ozi(InputStream in, String path) throws IOException {
             super(path);
 
             int lines = 0;
@@ -605,6 +610,11 @@ public abstract class Calibration {
                                                                            -1, 'Z', -8D, 53.5D,
                                                                            1.000035D,
                                                                            200000, 250000);
+                    } else if (ProjectionSetup.PROJ_SUI.equals(projectionType)) {
+                            projectionSetup = new Mercator.ProjectionSetup(projectionType,
+                                                                           -1, 'Z', 7.4395833333334D, 46.9524055555556D,
+                                                                           1.0D,
+                                                                           200000, 600000);
                     }
 //#ifdef __LOG__
                     if (log.isEnabled()) log.debug("projection type: " + projectionType);

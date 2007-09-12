@@ -33,7 +33,7 @@ public class Slice {
     private Image image;
 
     /** Constructor for TB, J2N map slice. */
-    public Slice(String path) throws InvalidMapException {
+    Slice(String path) throws InvalidMapException {
         parseXy(path);
     }
 
@@ -45,9 +45,9 @@ public class Slice {
 */
 
     /** Constructor for GPSka map slice. */
-    public Slice() {
+    Slice() {
     }
-    
+
     public synchronized Image getImage() {
         return image;
     }
@@ -75,18 +75,6 @@ public class Slice {
 
     public int getHeight() {
         return wh & 0x0000ffff;
-    }
-
-    public void doFinal(int xmax, int ymax, int xi, int yi) throws InvalidMapException {
-        final int x = getX();
-        final int y = getY();
-        if (x + xi > xmax) {
-            xi = xmax - x;
-        }
-        if (y + yi > ymax) {
-            yi = ymax - y;
-        }
-        wh = asShort(xi) << 16 | asShort(yi);
     }
 
     public boolean isWithin(final int x, final int y) {
@@ -136,6 +124,18 @@ public class Slice {
         return sb.append(PNG_EXT);
     }
 
+    void doFinal(int xmax, int ymax, int xi, int yi) throws InvalidMapException {
+        final int x = getX();
+        final int y = getY();
+        if (x + xi > xmax) {
+            xi = xmax - x;
+        }
+        if (y + yi > ymax) {
+            yi = ymax - y;
+        }
+        wh = asShort(xi) << 16 | asShort(yi);
+    }
+    
     private void parseXy(String path) throws InvalidMapException {
         int p0 = -1, p1 = -1;
         int i = 0;

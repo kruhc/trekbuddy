@@ -70,8 +70,7 @@ public final class Map implements Runnable {
     private static final int EVENT_LOADING_CHANGED  = 3;
 */
 
-    static final int TEXT_FILE_BUFFER_SIZE  = 512;  // for map calibration files content and tar header blocks
-    static final int LARGE_BUFFER_SIZE      = 4096; // for map image files - 4 kB
+    private static final int LARGE_BUFFER_SIZE = 4096; // for map image files - 4 kB
 
     private static final String SET_DIR_PREFIX = "set/";
 
@@ -672,7 +671,7 @@ public final class Map implements Runnable {
 
                             // no slices yet
                             if (Map.this.slices == null) {
-                                ((TarSlice) addSlice(entryName)).setBlockOffset((short) (entry.getPosition() / TarInputStream.DEFAULT_RCDSIZE));
+                                ((TarSlice) addSlice(entryName)).setBlockOffset((int) (entry.getPosition() / TarInputStream.DEFAULT_RCDSIZE));
                             }
 
                         } else { // no, maybe calibration file

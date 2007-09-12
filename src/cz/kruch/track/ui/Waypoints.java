@@ -193,6 +193,21 @@ public final class Waypoints extends List
 
     public void show() {
         // let's start with basic menu
+        depth = 0;
+        menu();
+
+        // show
+        Desktop.display.setCurrent(this);
+    }
+
+    public void showCurrent() {
+        // show current store, if any...
+        if (currentWpts == null) {
+            depth = 0;
+        } else {
+            depth = 2;
+            listWaypoints(currentWpts);
+        }
         menu();
 
         // show
@@ -244,7 +259,7 @@ public final class Waypoints extends List
             } break;
             case 2: {
                 // create commands
-                if (currentWpts == Desktop.wpts) {
+                if (currentWpts == Desktop.wpts && 0 != Desktop.routeDir) {
                     addCommand(cmdSetAsCurrent);
                 } else {
                     addCommand(cmdNavigateTo);
@@ -412,8 +427,11 @@ public final class Waypoints extends List
                 Desktop.display.setCurrent((Displayable) navigator);
 
                 // call navigator
-                navigator.setNavigateTo(currentWpts /* == Desktop.wpts */, getSelectedIndex(), -1 /* == Desktop.wptEndIdx */);
-
+                if (Desktop.routeDir == 1) {
+                    navigator.setNavigateTo(currentWpts /* == Desktop.wpts */, getSelectedIndex(), -1);
+                } else {
+                    navigator.setNavigateTo(currentWpts /* == Desktop.wpts */, -1, getSelectedIndex());
+                }
             } else if (WaypointForm.MENU_SAVE == action) { // record & enlist current location as waypoint
 
                 // restore navigator
@@ -528,59 +546,63 @@ public final class Waypoints extends List
      * Lists landmark stores.
      */
     private void actionListStores() {
-        File dir = null;
-        try {
-            // open stores directory
-            dir = File.open(Connector.open(Config.getFolderWaypoints(), Connector.READ));
+        // clear form
+        deleteAll();
 
-            // clear form
-            deleteAll();
+        // list memory stores
+        listKnown(USER_CUSTOM_STORE);
+        listKnown(USER_RECORDED_STORE);
+        listKnown(USER_FRIENDS_STORE);
+        listKnown(USER_INJAR_STORE);
 
-            // list memory stores
-            listKnown(USER_CUSTOM_STORE);
-            listKnown(USER_RECORDED_STORE);
-            listKnown(USER_FRIENDS_STORE);
-            listKnown(USER_INJAR_STORE);
+        // list persistent stores
+        if (cz.kruch.track.TrackingMIDlet.isFs()) {
+            File dir = null;
+            try {
+                // open stores directory
+                dir = File.open(Connector.open(Config.getFolderWaypoints(), Connector.READ));
 
-            // list file stores
-            if (dir.exists()) {
-                for (Enumeration e = dir.list(); e.hasMoreElements(); ) {
-                    String name = (String) e.nextElement();
-                    int i = name.lastIndexOf('.');
-                    if (i > -1) {
-                        String ext = name.substring(i).toLowerCase();
-                        if (ext.equals(SUFFIX_GPX) || ext.equals(SUFFIX_LOC)) {
-                            if (!logNames.contains(name)) {
-                                append(name, name.equals(inUseName) ? NavigationScreens.stores[FRAME_XMLA] : NavigationScreens.stores[FRAME_XML]);
+                // list file stores
+                if (dir.exists()) {
+                    for (Enumeration e = dir.list(); e.hasMoreElements(); ) {
+                        String name = (String) e.nextElement();
+                        int i = name.lastIndexOf('.');
+                        if (i > -1) {
+                            String ext = name.substring(i).toLowerCase();
+                            if (ext.equals(SUFFIX_GPX) || ext.equals(SUFFIX_LOC)) {
+                                if (!logNames.contains(name)) {
+                                    append(name, name.equals(inUseName) ? NavigationScreens.stores[FRAME_XMLA] : NavigationScreens.stores[FRAME_XML]);
+                                }
                             }
                         }
                     }
                 }
-            }
-
-            // got anything?
-            if (size() == 0) {
-                // notify user
-                Desktop.showInfo("No landmark stores", this);
-            } else {
-                // increment depth
-                depth = 1;
-            }
-        } catch (Throwable t) {
-            Desktop.showError("Failed to list landmark stores", t, this);
-        } finally {
-            // close dir
-            if (dir != null) {
-                try {
-                    dir.close();
-                } catch (IOException e) {
-                    // ignore
+            } catch (Throwable t) {
+                Desktop.showError("Failed to list landmark stores", t, this);
+            } finally {
+                // close dir
+                if (dir != null) {
+                    try {
+                        dir.close();
+                    } catch (IOException e) {
+                        // ignore
+                    }
+                    dir = null; // gc hint
                 }
-                dir = null; // gc hint
             }
-            // update menu
-            menu();
         }
+
+        // got anything?
+        if (size() == 0) {
+            // notify user
+            Desktop.showInfo("No landmark stores", this);
+        } else {
+            // increment depth
+            depth = 1;
+        }
+
+        // update menu
+        menu();
     }
 
     /**

@@ -17,6 +17,7 @@
 package cz.kruch.track.ui;
 
 import cz.kruch.track.AssertionFailedException;
+import cz.kruch.track.TrackingMIDlet;
 import cz.kruch.track.event.Callback;
 import cz.kruch.track.fun.Friends;
 import cz.kruch.track.fun.Camera;
@@ -62,6 +63,9 @@ import api.location.QualifiedCoordinates;
  */
 public final class Desktop extends GameCanvas
         implements Runnable, CommandListener, LocationListener,
+//#ifdef __RIM__
+                   net.rim.device.api.system.TrackwheelListener,
+//#endif
                    /* Map.StateListener, Atlas.StateListener, */
                    YesNoDialog.AnswerListener, Navigator {
 //#ifdef __LOG__
@@ -70,7 +74,7 @@ public final class Desktop extends GameCanvas
 
     // messages
     private static final String MSG_NO_DEFAULT_MAP = "No startup map. Use Options->Load Map/Atlas. ";
-    private static final String MSG_PAUSED = "PAUSED";
+    private static final String MSG_PAUSED = "Paused";
 
     // delta units
     public static final char[] DIST_STR_M      = { ' ', 'm', ' ' };
@@ -94,6 +98,8 @@ public final class Desktop extends GameCanvas
 
     // behaviour flags
     public static int fullScreenHeight = -1;
+    public static boolean partialFlush = true;
+    public static boolean hasRepeatEvents;
 
     // application
     private MIDlet midlet;
@@ -102,13 +108,12 @@ public final class Desktop extends GameCanvas
     private boolean boot = true;
 
     // common desktop components
-    public static Image bar, barWpt;
-    public static OSD osd; // 'public static' is ugly!!! ... is it???
+    static Image bar, barWpt, barScale;
+    static OSD osd;
     private Status status; // TODO map viewer specific?
 
     // desktop dimensions
     public static int width, height;
-    public static boolean partialFlush = true;
 
     // desktop views
     private View[] views;
@@ -144,7 +149,7 @@ public final class Desktop extends GameCanvas
     private volatile int scrolls;
 
     // browsing or tracking
-    static volatile boolean browsing;
+    static volatile boolean browsing = true;
     private volatile boolean paused;
     private volatile boolean navigating;
     private volatile boolean keylock;
@@ -180,7 +185,7 @@ public final class Desktop extends GameCanvas
 
     // repeated event simulation for dumb devices
     private volatile TimerTask repeatedKeyCheck;
-    private volatile int inKey;
+    private /*volatile*/ int inKey;
 
     // start/initialization
     private volatile boolean guiReady;
@@ -190,7 +195,8 @@ public final class Desktop extends GameCanvas
     private final SmartRunnable eventing;
 
     /**
-     * Desktop constructor. Executes minimalistic initialization.
+     * Desktop constructor.
+     * 
      * @param midlet midlet instance
      */
     public Desktop(MIDlet midlet) {
@@ -200,10 +206,10 @@ public final class Desktop extends GameCanvas
         screen = this;
         display = Display.getDisplay(midlet);
         timer = new Timer();
+        hasRepeatEvents = hasRepeatEvents();
 
         // init basic members
         this.midlet = midlet;
-        /*this.*/browsing = true;
         this.eventing = SmartRunnable.getInstance();
 
         // TODO move to Waypoints???
@@ -226,13 +232,9 @@ public final class Desktop extends GameCanvas
         // prepare console
         consoleInit(g);
 
-        // temps
-        String appWeb = "www.trekbuddy.net";
-        String appName = new String(new char[]{ 'T', 'r', 'e', 'k', 'B', 'u', 'd', 'd', 'y', ' ', 0xa9, '2', '0', '0', '7', ' ', 'K', 'r', 'U', 'c', 'H' });
-
         // boot sequence
-        consoleShow(g, appName);
-        consoleShow(g, appWeb);
+        consoleShow(g, "TrekBuddy \u00a9 2007 KrUcH");
+        consoleShow(g, "www.trekbuddy.net");
         consoleShow(g, "");
         consoleShow(g, "caching images...");
         if (imagesLoaded) {
@@ -304,35 +306,41 @@ public final class Desktop extends GameCanvas
     }
 
     private void configure() {
-        final int positiveCmdType = cz.kruch.track.TrackingMIDlet.wm ? Command.ITEM : Command.SCREEN;
+        final int positiveCmdType = TrackingMIDlet.wm ? Command.ITEM : Command.SCREEN;
 
         // create and add commands to the screen
         if (Config.fullscreen && cz.kruch.track.TrackingMIDlet.sxg75) {
             this.addCommand(new Command("", Command.SCREEN, 0));
         }
         if (Config.btDeviceName.length() > 0) {
-            this.addCommand(this.cmdRunLast = new Command(L10n.resolve(L10n.MENU_START) + " " + Config.btDeviceName, positiveCmdType, 1));
-            this.addCommand(this.cmdRun = new Command(L10n.resolve(L10n.MENU_START), positiveCmdType, 2));
+            this.addCommand(this.cmdRunLast = new Command(TrackingMIDlet.resolve(TrackingMIDlet.MENU_START) + " " + Config.btDeviceName, positiveCmdType, 1));
+            this.addCommand(this.cmdRun = new Command(TrackingMIDlet.resolve(TrackingMIDlet.MENU_START), positiveCmdType, 2));
         } else {
-            this.addCommand(this.cmdRun = new Command(L10n.resolve(L10n.MENU_START), positiveCmdType, 1));
+            this.addCommand(this.cmdRun = new Command(TrackingMIDlet.resolve(TrackingMIDlet.MENU_START), positiveCmdType, 1));
         }
         if (cz.kruch.track.TrackingMIDlet.getPlatform().startsWith("NokiaE61")) {
             this.addCommand(this.cmdWaypoints = new Command("Waypoints", positiveCmdType, 3));
         }
         if (cz.kruch.track.TrackingMIDlet.isFs()) {
-            this.addCommand(this.cmdLoadMap = new Command(L10n.resolve(L10n.MENU_LOADMAP), positiveCmdType, 4));
-            this.addCommand(this.cmdLoadAtlas = new Command(L10n.resolve(L10n.MENU_LOADATLAS), positiveCmdType, 5));
+            this.addCommand(this.cmdLoadMap = new Command(TrackingMIDlet.resolve(TrackingMIDlet.MENU_LOADMAP), positiveCmdType, 4));
+            this.addCommand(this.cmdLoadAtlas = new Command(TrackingMIDlet.resolve(TrackingMIDlet.MENU_LOADATLAS), positiveCmdType, 5));
         }
-        this.addCommand(this.cmdSettings = new Command(L10n.resolve(L10n.MENU_SETTINGS), positiveCmdType, 6));
-        this.addCommand(this.cmdInfo = new Command(L10n.resolve(L10n.MENU_INFO), positiveCmdType, 7));
-        this.addCommand(this.cmdExit = new Command(L10n.resolve(L10n.MENU_EXIT), positiveCmdType/*EXIT*/, 8/*1*/));
-        this.cmdPause = new Command(L10n.resolve(L10n.MENU_PAUSE), Config.fullscreen || cz.kruch.track.TrackingMIDlet.sonyEricsson ? positiveCmdType : Command.STOP, 1);
-        this.cmdContinue = new Command(L10n.resolve(L10n.MENU_CONTINUE), Config.fullscreen || cz.kruch.track.TrackingMIDlet.sonyEricsson ? positiveCmdType : (Command.STOP), 1);
-        this.cmdStop = new Command(L10n.resolve(L10n.MENU_STOP), Config.fullscreen || cz.kruch.track.TrackingMIDlet.sonyEricsson ? positiveCmdType : (Command.STOP), 2);
+        this.addCommand(this.cmdSettings = new Command(TrackingMIDlet.resolve(TrackingMIDlet.MENU_SETTINGS), positiveCmdType, 6));
+        this.addCommand(this.cmdInfo = new Command(TrackingMIDlet.resolve(TrackingMIDlet.MENU_INFO), positiveCmdType, 7));
+        this.addCommand(this.cmdExit = new Command(TrackingMIDlet.resolve(TrackingMIDlet.MENU_EXIT), positiveCmdType/*EXIT*/, 8/*1*/));
+        this.cmdPause = new Command(TrackingMIDlet.resolve(TrackingMIDlet.MENU_PAUSE), Config.fullscreen || cz.kruch.track.TrackingMIDlet.sonyEricsson ? positiveCmdType : Command.STOP, 1);
+        this.cmdContinue = new Command(TrackingMIDlet.resolve(TrackingMIDlet.MENU_CONTINUE), Config.fullscreen || cz.kruch.track.TrackingMIDlet.sonyEricsson ? positiveCmdType : (Command.STOP), 1);
+        this.cmdStop = new Command(TrackingMIDlet.resolve(TrackingMIDlet.MENU_STOP), Config.fullscreen || cz.kruch.track.TrackingMIDlet.sonyEricsson ? positiveCmdType : (Command.STOP), 2);
 
         // handle commands
         this.setCommandListener(this);
-
+//#ifdef __RIM__
+        if (TrackingMIDlet.rim) {
+            _rimDesktopScreen = net.rim.device.api.ui.UiApplication.getUiApplication().getActiveScreen();
+            net.rim.device.api.ui.UiApplication.getUiApplication().addTrackwheelListener(this);
+        }
+//#endif
+        
         // start I/O loader
         LoaderIO.getInstance();
 
@@ -363,29 +371,45 @@ public final class Desktop extends GameCanvas
 
     public static void resetBar() {
         // OSD/status bar
-        final int color = display.numAlphaLevels() > 2 ? (cz.kruch.track.TrackingMIDlet.sonyEricsson ? 0xA03f3f3f : 0x807f7f7f) : 0xff7f7f7f;
-        final int fh = font.getHeight();
-        int[] shadow = new int[screen.getWidth() * fh];
+        int color = display.numAlphaLevels() > 2 ? (cz.kruch.track.TrackingMIDlet.sonyEricsson ? 0xA03f3f3f : 0x807f7f7f) : 0xff7f7f7f;
+        int h = font.getHeight();
+        int w = screen.getWidth();
+        int[] shadow = new int[w * h];
         for (int i = shadow.length; --i >= 0; ) {
             shadow[i] = color;
         }
         bar = null; // gc hint
-        bar = Image.createRGBImage(shadow, screen.getWidth(), fh, true);
+        bar = Image.createRGBImage(shadow, w, h, true);
         shadow = null; // gc hint
         if (Config.forcedGc) {
             System.gc();
         }
 
         // wpt label bar
-        final int colorWpt = display.numAlphaLevels() > 2 ? (cz.kruch.track.TrackingMIDlet.sonyEricsson ? 0xA0ffff00 : 0x80ffff00) : 0xffffff00;
-        final int fhWpt = cz.kruch.track.TrackingMIDlet.getPlatform().startsWith("Nokia/6230i") ? fontWpt.getBaselinePosition() + 2 : fontWpt.getHeight();
-        int[] shadowWpt = new int[screen.getWidth() * fhWpt];
-        for (int i = shadowWpt.length; --i >= 0; ) {
-            shadowWpt[i] = colorWpt;
+        color = display.numAlphaLevels() > 2 ? (cz.kruch.track.TrackingMIDlet.sonyEricsson ? 0xA0ffff00 : 0x80ffff00) : 0xffffff00;
+        h = cz.kruch.track.TrackingMIDlet.getPlatform().startsWith("Nokia/6230i") ? font.getBaselinePosition() + 2 : font.getHeight();
+        shadow = new int[w * h];
+        for (int i = shadow.length; --i >= 0; ) {
+            shadow[i] = color;
         }
         barWpt = null; // gc hint
-        barWpt = Image.createRGBImage(shadowWpt, screen.getWidth(), fhWpt, true);
-        shadowWpt = null; // gc hint
+        barWpt = Image.createRGBImage(shadow, w, h, true);
+        shadow = null; // gc hint
+        if (Config.forcedGc) {
+            System.gc();
+        }
+
+        // scale bar
+        color = cz.kruch.track.TrackingMIDlet.sonyEricsson ? 0x80ffffff : 0x80ffffff;
+        h = font.getHeight();
+        w = font.stringWidth("99999 km") + 4;
+        shadow = new int[w * h];
+        for (int i = shadow.length; --i >= 0; ) {
+            shadow[i] = color;
+        }
+        barScale = null; // gc hint
+        barScale = Image.createRGBImage(shadow, w, h, true);
+        shadow = null; // gc hint
         if (Config.forcedGc) {
             System.gc();
         }
@@ -628,7 +652,7 @@ public final class Desktop extends GameCanvas
                         key = Canvas.KEY_NUM1;
                     break;
                     case 1:
-                        inKey = key = getKeyCode(Canvas.UP);
+                        _setInKey(key = getKeyCode(Canvas.UP));
                         repeated = true;
                     break;
                     case 2:
@@ -641,14 +665,14 @@ public final class Desktop extends GameCanvas
             case 5: {
                 switch (j) {
                     case 0:
-                        inKey = key = getKeyCode(Canvas.LEFT);
+                        _setInKey(key = getKeyCode(Canvas.LEFT));
                         repeated = true;
                     break;
                     case 1:
                         key = getKeyCode(Canvas.FIRE);
                     break;
                     case 2:
-                        inKey = key = getKeyCode(Canvas.RIGHT);
+                        _setInKey(key = getKeyCode(Canvas.RIGHT));
                         repeated = true;
                     break;
                 }
@@ -661,7 +685,7 @@ public final class Desktop extends GameCanvas
                         key = Canvas.KEY_NUM7;
                     break;
                     case 1:
-                        inKey = key = getKeyCode(Canvas.DOWN);
+                        _setInKey(key = getKeyCode(Canvas.DOWN));
                         repeated = true;
                     break;
                     case 2:
@@ -702,6 +726,10 @@ public final class Desktop extends GameCanvas
         if (log.isEnabled()) log.info("keyPressed");
 //#endif
 
+        if (i == Canvas.KEY_NUM1) {
+            return;
+        }
+
         handleKey(i, false);
     }
 
@@ -719,8 +747,12 @@ public final class Desktop extends GameCanvas
         if (log.isEnabled()) log.info("keyReleased");
 //#endif
 
+        if (i == Canvas.KEY_NUM1) {
+            handleKey(i, false);
+        }
+
         // no key pressed anymore
-        inKey = 0;
+        _setInKey(0);
 
         // scrolling stops
         scrolls = 0;
@@ -737,6 +769,46 @@ public final class Desktop extends GameCanvas
         // notify device control
         cz.kruch.track.ui.nokia.DeviceControl.keyReleased();
     }
+
+//#ifdef __RIM__
+
+    private net.rim.device.api.ui.Screen _rimDesktopScreen;
+
+    public boolean trackwheelClick(int status, int time) {
+        return false;
+    }
+
+    public boolean trackwheelUnclick(int status, int time) {
+        return false;
+    }
+
+    public boolean trackwheelRoll(int amount, int status, int time) {
+        if (net.rim.device.api.ui.UiApplication.getUiApplication().getActiveScreen() == _rimDesktopScreen) {
+            int key = 0;
+            boolean alt = (status & net.rim.device.api.system.KeypadListener.STATUS_ALT) != 0;
+            if (amount < 0) {
+                key = alt ? Canvas.KEY_NUM4 : Canvas.KEY_NUM2;
+            } else if (amount > 0) {
+                key = alt ? Canvas.KEY_NUM6 : Canvas.KEY_NUM8;
+            }
+            int now = _getInKey();
+            _setInKey(key);
+            if (now == 0 || now == key) {
+/*
+                keyPressed(key);
+*/
+                eventing.callSerially(this);
+            } else {
+                _setInKey(0);
+            }
+
+            return true;
+        }
+
+        return false;
+    }
+
+//#endif
 
     public void commandAction(Command command, Displayable displayable) {
         if (command == cmdInfo) {
@@ -1104,7 +1176,7 @@ public final class Desktop extends GameCanvas
 
         // dumb device without getKeyStates() support?
         if (key == 0) {
-            key = inKey;
+            key = _getInKey();
         }
 
         // action
@@ -1118,6 +1190,18 @@ public final class Desktop extends GameCanvas
         } else {
             // notify
             keyReleased(0); // TODO unknown key?
+        }
+    }
+
+    private int _getInKey() {
+        synchronized (this) {
+            return inKey;
+        }
+    }
+
+    private void _setInKey(final int i) {
+        synchronized (this) {
+            inKey = i;
         }
     }
 
@@ -1145,7 +1229,7 @@ public final class Desktop extends GameCanvas
         }
     }
 
-    private void handleKey(final int i, final boolean repeated) {
+    private void handleKey(int i, final boolean repeated) {
         if (paused || !postInit) {
             return;
         }
@@ -1172,32 +1256,22 @@ public final class Desktop extends GameCanvas
             case Canvas.DOWN: {
 
                 // remember key - some devices do not support getKeyStates()
-                if (!repeated) { inKey = i; }
+                if (!repeated) { _setInKey(i); }
 
                 // handle action
                 mask = views[mode].handleAction(action, repeated);
 
                 // dumb phones check for repetition
-                if (!repeated && !hasRepeatEvents()) {
+                if (!repeated && !hasRepeatEvents) {
 //#ifdef __LOG__
                     if (log.isEnabled()) log.debug("does not have repeat events");
 //#endif
-                    /*
-                     * "A key's bit will be 1 if the key is currently down or has
-                     * been pressed at least once since the last time this method
-                     * was called."
-                     *
-                     * Therefore the dummy getKeyStates() call before invoking run().
-                     */
 
                     // schedule delayed check to emulate key repeated event
-                    repeatedKeyCheck = new TimerTask() {
-                        public void run() {
-                            getKeyStates(); // trick
-                            eventing.callSerially(Desktop.this);
-                        }
-                    };
-                    timer.schedule(repeatedKeyCheck, 1500L);
+                    if (repeatedKeyCheck == null) {
+                        repeatedKeyCheck = new KeyCheckTimerTask();
+                        timer.schedule(repeatedKeyCheck, 1500L);
+                    }
                 }
 
             } break;
@@ -1213,18 +1287,21 @@ public final class Desktop extends GameCanvas
 
             default: { // no game action
 
-                if (!repeated) {
-                    switch (i) {
-                        case Canvas.KEY_POUND: { // change screen
+                switch (i) {
+                    
+                    case Canvas.KEY_POUND: { // change screen
+                        if (!repeated) {
                             views[mode++].setVisible(false);
                             if (mode >= views.length) {
                                 mode = 0;
                             }
                             views[mode].setVisible(true);
                             mask = MASK_ALL;
-                        } break;
+                        }
+                    } break;
 
-                        case Canvas.KEY_NUM0: { // day/night switch
+                    case Canvas.KEY_NUM0: { // day/night switch
+                        if (!repeated) {
                             if (mode == VIEW_MAP) {
                                 mask |= views[VIEW_MAP].handleKey(i, false);
                             } else {
@@ -1236,17 +1313,25 @@ public final class Desktop extends GameCanvas
                                     mask |= views[j].changeDayNight(Config.dayNight);
                                 }
                             }
-                        } break;
+                        }
+                    } break;
 
-                        case Canvas.KEY_NUM1: { // navigation
+                    case Canvas.KEY_NUM1: { // navigation
+                        if (!repeated) {
                             Waypoints.getInstance().show();
-                        } break;
+                        } else {
+                            Waypoints.getInstance().showCurrent();
+                        }
+                    } break;
 
-                        case Canvas.KEY_NUM3: { // backlight control
+                    case Canvas.KEY_NUM3: { // backlight control
+                        if (!repeated) {
                             cz.kruch.track.ui.nokia.DeviceControl.setBacklight();
-                        } break;
+                        }
+                    } break;
 
-                        default: {
+                    default: {
+                        if (!repeated) {
                             mask = views[mode].handleKey(i, repeated);
                         }
                     }
@@ -1257,7 +1342,6 @@ public final class Desktop extends GameCanvas
         // update necessary?
         if (mask > 0) {
             update(mask);
-            Thread.yield();
         }
     }
 
@@ -1616,7 +1700,7 @@ public final class Desktop extends GameCanvas
         g.setColor(0x0);
         g.drawRoundRect(x, y, w - 1, h - 1, 5, 5);
         g.setFont(f);
-        g.drawString(MSG_PAUSED, x + (w - sw) / 2, y + (h - sh) / 2, 0);
+        g.drawString(MSG_PAUSED, x + (w - sw) / 2, y + (h - sh) / 2, Graphics.TOP | Graphics.LEFT);
         flushGraphics();
     }
 
@@ -1888,7 +1972,7 @@ public final class Desktop extends GameCanvas
         private Position[] route;
         private Position waypoint;
 
-        private volatile long lastRepeat;
+//        private volatile long lastRepeat;
         
         public MapView(Navigator navigator) {
             super(navigator);
@@ -2104,13 +2188,13 @@ public final class Desktop extends GameCanvas
                     if (_getLoadingSlices() || _getInitializingMap()) {
                         steps = 0;
                     } else if (repeated) {
-                        long t = System.currentTimeMillis();
-                        if (t < lastRepeat/* + 5 * Config.scrollingDelay*/) {
-                            steps = 0;
-                        } else {
+//                        long t = System.currentTimeMillis();
+//                        if (t < lastRepeat/* + 5 * Config.scrollingDelay*/) {
+//                            steps = 0;
+//                        } else {
                             steps = getScrolls();
-                            lastRepeat = t;
-                        }
+//                            lastRepeat = t;
+//                        }
                     }
 
 //#ifdef __LOG__
@@ -2507,6 +2591,7 @@ public final class Desktop extends GameCanvas
                     steps = 4;
                 }
             }
+
             return steps;
         }
 
@@ -3358,4 +3443,19 @@ public final class Desktop extends GameCanvas
     }
 
     /// ~ CONSOLE
+
+    /*
+     * "A key's bit will be 1 if the key is currently down or has
+     * been pressed at least once since the last time this method
+     * was called."
+     *
+     * Therefore the dummy getKeyStates() call before invoking run().
+     */
+    
+    private final class KeyCheckTimerTask extends TimerTask {
+        public void run() {
+            getKeyStates(); // trick
+            eventing.callSerially(Desktop.this);
+        }
+    }
 }

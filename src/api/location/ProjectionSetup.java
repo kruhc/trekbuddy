@@ -31,8 +31,9 @@ public class ProjectionSetup {
     public static final String PROJ_BNG         = "(BNG) British National Grid";
     public static final String PROJ_SG          = "(SG) Swedish Grid";
     public static final String PROJ_IG          = "(IG) Irish Grid";
+    public static final String PROJ_SUI         = "(SUI) Swiss Grid";
 
-    private String name;
+    protected String name;
 
     public ProjectionSetup(String name) {
         this.name = name;

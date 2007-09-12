@@ -40,6 +40,15 @@ public final class ExtraMath {
         return i;
     }
 
+    public static int round(final double d) {
+        int i = (int) d;
+        if ((d - i) > 0.5D) {
+            i++;
+        }
+
+        return i;
+    }
+
     /****************************************
      *               ln, pow                *
      ****************************************/

@@ -123,7 +123,7 @@
         <antcall target="a.pack" inheritall="true"/>
         <antcall target="rim.obfuscate" inheritall="true"/>
         <antcall target="rim.preverify" inheritall="true"/>
-        <antcall target="a.pack.obfuscated" inheritall="true"/>
+        <antcall target="rim.pack.obfuscated" inheritall="true"/>
 <!--
         <antcall target="delegate" inheritall="true"/>
 -->
@@ -145,7 +145,7 @@
         <antcall target="a.pack" inheritall="true"/>
         <antcall target="rim.obfuscate" inheritall="true"/>
         <antcall target="rim.preverify" inheritall="true"/>
-        <antcall target="a.pack.obfuscated" inheritall="true"/>
+        <antcall target="rim.pack.obfuscated" inheritall="true"/>
 <!--
         <antcall target="delegate" inheritall="true"/>
 -->
@@ -316,6 +316,29 @@
                     jadfile="dist/${dist.dir}/trekbuddy${suffix}.jad">
             <fileset dir="tmp/preverified"/>
             <fileset dir="res-J9"/>
+        </wtkpackage>
+    </target>
+
+    <target name="rim.pack.obfuscated">
+        <delete>
+          <fileset dir="dist/${dist.dir}" includes="**/*.jar"/>
+        </delete>
+        <wtkjad jadfile="dist/${dist.dir}/trekbuddy${suffix}.jad"
+                jarfile="dist/${dist.dir}/trekbuddy${suffix}.jar"
+                name="TrekBuddy"
+                vendor="${vendor}"
+                version="${version}">
+            <midlet name="TrekBuddy" class="cz.kruch.track.TrackingMIDlet"/>
+            <attribute name="MIDlet-Description" value="${description}"/>
+            <attribute name="MIDlet-Info-URL" value="http://www.trekbuddy.net"/>
+            <attribute name="MIDlet-Permissions-Opt" value="javax.microedition.io.Connector.file.read,javax.microedition.io.Connector.file.write,javax.microedition.io.Connector.bluetooth.client,javax.microedition.location.Location,javax.microedition.media.control.VideoControl.getSnapshot,javax.microedition.io.Connector.sms,javax.wireless.messaging.sms.receive,javax.wireless.messaging.sms.send,javax.microedition.io.Connector.comm"/>            <attribute name="MicroEdition-Profile" value="MIDP-2.0"/>
+            <attribute name="MicroEdition-Profile" value="MIDP-2.0"/>
+            <attribute name="MicroEdition-Configuration" value="CLDC-1.1"/>
+        </wtkjad>
+        <wtkpackage jarfile="dist/${dist.dir}/trekbuddy${suffix}.jar"
+                    jadfile="dist/${dist.dir}/trekbuddy${suffix}.jad">
+            <fileset dir="tmp/preverified"/>
+            <fileset dir="res-RIM"/>
         </wtkpackage>
     </target>
 

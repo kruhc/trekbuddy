@@ -22,9 +22,9 @@ package api.location;
  * @author Ales Pour <kruhc@seznam.cz>
  */
 public final class Datum {
-    private String name;
-    private Ellipsoid ellipsoid;
-    public double dx, dy, dz;
+    private final String name;
+    private final Ellipsoid ellipsoid;
+    public final double dx, dy, dz;
 
     public Datum(String name, Ellipsoid ellipsoid, double dx, double dy, double dz) {
         this.name = name;
@@ -133,10 +133,10 @@ public final class Datum {
     }
 
     public final static class Ellipsoid {
-        private String name;
-        private double equatorialRadius;
-        private double flattening;
-        private double eccentricitySquared, eccentricityPrimeSquared;
+        private final String name;
+        private final double equatorialRadius;
+        private final double flattening;
+        private final double eccentricitySquared, eccentricityPrimeSquared;
 
         public Ellipsoid(String name, double radius, double invertedFlattening) {
             this.name = name;

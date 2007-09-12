@@ -16,9 +16,15 @@
 
 package cz.kruch.track;
 
+import cz.kruch.track.configuration.Config;
+
 import javax.microedition.midlet.MIDlet;
 import javax.microedition.midlet.MIDletStateChangeException;
 import javax.microedition.lcdui.Display;
+import javax.microedition.io.Connector;
+import java.util.Hashtable;
+import java.io.IOException;
+import java.io.InputStream;
 
 /**
  * Main MIDlet.
@@ -35,7 +41,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
     private static String platform;
     private static String flags;
 
-    public static boolean jsr82, jsr120, jsr135, jsr179, motorola179;
+    public static boolean jsr82, jsr120, jsr135, jsr179, motorola179, comm;
     public static boolean sonyEricsson, nokia, siemens, wm, rim;
     public static boolean sxg75, a780, s65;
 
@@ -47,12 +53,18 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
     private static boolean logEnabled;
 //#endif
 
+    private static final String JAD_GPS_CONNECTION_URL      = "GPS-Connection-URL";
+    private static final String JAD_GPS_DEVICE_NAME         = "GPS-Device-Name";
+    private static final String JAD_UI_FULL_SCREEN_HEIGHT   = "UI-FullScreen-Height";
+    private static final String JAD_UI_HAS_REPEAT_EVENTS    = "UI-HasRepeatEvents";
+    private static final String JAD_APP_FLAGS               = "App-Flags";
+
     public TrackingMIDlet() {
         // detect environment
-        TrackingMIDlet.platform = System.getProperty("microedition.platform");
-        TrackingMIDlet.flags = getAppProperty("App-Flags");
+        platform = System.getProperty("microedition.platform");
+        flags = getAppProperty(JAD_APP_FLAGS);
 //#ifdef __LOG__
-        TrackingMIDlet.logEnabled = hasFlag("log_enable");
+        logEnabled = hasFlag("log_enable");
 //#endif
 
         // detect brand/device
@@ -109,6 +121,14 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
             TrackingMIDlet.jsr135 = true;
 //#ifdef __LOG__
             System.out.println("* JSR-135");
+//#endif
+        } catch (Throwable t) {
+        }
+        try {
+            Class.forName("javax.microedition.io.CommConnection");
+            TrackingMIDlet.comm = true;
+//#ifdef __LOG__
+            System.out.println("* CommConnection");
 //#endif
         } catch (Throwable t) {
         }
@@ -219,7 +239,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         // L10n
         int localized = 0;
         try {
-            localized = cz.kruch.track.ui.L10n.initialize();
+            localized = localization();
         } catch (Throwable t) {
 //#ifdef __LOG__
             t.printStackTrace();
@@ -233,9 +253,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         // init helpers and 'singletons'
         cz.kruch.track.configuration.Config.initDatums(this);
         cz.kruch.track.configuration.Config.useDatum(cz.kruch.track.configuration.Config.geoDatum);
-        if (platform.indexOf("SunMicrosystems_wtk") == -1) {
-            cz.kruch.track.ui.nokia.DeviceControl.initialize();
-        }
+        cz.kruch.track.ui.nokia.DeviceControl.initialize();
         cz.kruch.track.ui.Waypoints.initialize(desktop);
 
         // init environment from configuration
@@ -245,17 +263,20 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
 //#endif
 
         // custom device handling
-        if (getAppProperty("GPS-Connection-URL") != null) {
-            cz.kruch.track.configuration.Config.btServiceUrl = getAppProperty("GPS-Connection-URL");
+        if (getAppProperty(JAD_GPS_CONNECTION_URL) != null) {
+            cz.kruch.track.configuration.Config.btServiceUrl = getAppProperty(JAD_GPS_CONNECTION_URL);
         }
-        if (getAppProperty("GPS-Device-Name") != null) {
-            cz.kruch.track.configuration.Config.btDeviceName = getAppProperty("GPS-Device-Name");
+        if (getAppProperty(JAD_GPS_DEVICE_NAME) != null) {
+            cz.kruch.track.configuration.Config.btDeviceName = getAppProperty(JAD_GPS_DEVICE_NAME);
         }
         // broken device handling
-        if (getAppProperty("UI-FullScreen-Height") != null) {
+        if (getAppProperty(JAD_UI_FULL_SCREEN_HEIGHT) != null) {
             if (cz.kruch.track.configuration.Config.fullscreen) {
-                cz.kruch.track.ui.Desktop.fullScreenHeight = Integer.parseInt(getAppProperty("UI-FullScreen-Height"));
+                cz.kruch.track.ui.Desktop.fullScreenHeight = Integer.parseInt(getAppProperty(JAD_UI_FULL_SCREEN_HEIGHT));
             }
+        }
+        if (getAppProperty(JAD_UI_HAS_REPEAT_EVENTS) != null) {
+            cz.kruch.track.ui.Desktop.hasRepeatEvents = "true".equals(getAppProperty(JAD_UI_HAS_REPEAT_EVENTS));
         }
 
         // setup & start desktop
@@ -292,10 +313,142 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
     }
 
     public static boolean hasPorts() {
-        return System.getProperty("microedition.commports") != null && System.getProperty("microedition.commports").length() > 0;
+        return comm; // System.getProperty("microedition.commports") != null && System.getProperty("microedition.commports").length() > 0;
     }
 
     public static boolean supportsVideoCapture() {
         return jsr135 && "true".equals(System.getProperty("supports.video.capture"));
+    }
+
+    /*
+     * L10n.
+     */
+
+    public static final String MENU_START       = "menu.start";
+    public static final String MENU_STOP        = "menu.stop";
+    public static final String MENU_PAUSE       = "menu.pause";
+    public static final String MENU_CONTINUE    = "menu.continue";
+    public static final String MENU_LOADMAP     = "menu.loadmap";
+    public static final String MENU_LOADATLAS   = "menu.loadatlas";
+    public static final String MENU_SETTINGS    = "menu.settings";
+    public static final String MENU_INFO        = "menu.info";
+    public static final String MENU_EXIT        = "menu.exit";
+
+    private static final Hashtable table = new Hashtable(16);
+
+    private static int localization() throws IOException {
+        int result = 0;
+
+        InputStream in = null;
+        try {
+            in = Connector.openInputStream(Config.getFolderResources() + "language.txt");
+            result++;
+        } catch (Exception e) {
+            // ignore
+        }
+        if (in == null) {
+            in = TrackingMIDlet.class.getResourceAsStream("/resources/language.txt");
+        }
+
+        cz.kruch.track.io.LineReader reader = null;
+        StringBuffer sb = null;
+
+        try {
+            reader = new cz.kruch.track.io.LineReader(in);
+            String entry = reader.readLine(false);
+            while (entry != null) {
+                if (!entry.startsWith("#")) {
+                    final int i = entry.indexOf('=');
+                    if (i > -1) {
+                        String key = entry.substring(0, i);
+                        String value = entry.substring(i + 1);
+                        if (value.indexOf('\\') > -1) {
+                            if (sb == null) {
+                                sb = new StringBuffer(24);
+                            }
+                            try {
+                                value = convert(value, sb);
+                            } catch (Exception e) {
+                                // ignore
+                            }
+                        }
+                        table.put(key, value);
+                    }
+                }
+                entry = reader.readLine(false);
+            }
+        } finally {
+            // close reader (closes the file stream)
+            if (reader != null) {
+                try {
+                    reader.close();
+                } catch (IOException e) {
+                    // ignore
+                }
+            }
+        }
+
+        return result;
+    }
+
+    public static String resolve(String key) {
+        String value = (String) table.get(key);
+        if (value == null) {
+            return key;
+        }
+        return value;
+    }
+
+    private static String convert(String value, StringBuffer sb) {
+        sb.delete(0, sb.length());
+        for (int N = value.length(), i = 0; i < N; ) {
+            char c = value.charAt(i++);
+            if (c == '\\') {
+                c = value.charAt(i++);
+                if (c == 'u') {
+                    int unicode = 0;
+        		    for (int j = 4; --j >= 0; ) {
+		                c = value.charAt(i++);
+                        switch (c) {
+                            case '0':
+                            case '1':
+                            case '2':
+                            case '3':
+                            case '4':
+                            case '5':
+                            case '6':
+                            case '7':
+                            case '8':
+                            case '9':
+                                unicode = (unicode << 4) + c - '0';
+                            break;
+                            case 'a':
+                            case 'b':
+                            case 'c':
+                            case 'd':
+                            case 'e':
+                            case 'f':
+                                unicode = (unicode << 4) + 10 + c - 'a';
+                            break;
+                            case 'A':
+                            case 'B':
+                            case 'C':
+                            case 'D':
+                            case 'E':
+                            case 'F':
+                                unicode = (unicode << 4) + 10 + c - 'A';
+                            break;
+                            default:
+                                throw new IllegalArgumentException("Malformed \\uxxxx encoding.");
+                        }
+                    }
+                    sb.append((char) unicode);
+                } else {
+                    sb.append('\\').append(c);
+                }
+            } else
+                sb.append(c);
+        }
+        return sb.toString();
     }
 }

@@ -34,7 +34,7 @@ public abstract class DeviceControl extends TimerTask {
     public static void initialize() {
 //#ifndef __RIM__
         try {
-            Class.forName("com.nokia.mid.ui.DeviceControl");
+            Class.forName("com.nokia.mid.ui.DirectUtils");
             if (System.getProperty("com.sonyericsson.imei") == null) {
                 instance = (DeviceControl) Class.forName("cz.kruch.track.ui.nokia.NokiaDeviceControl").newInstance();
             } else {

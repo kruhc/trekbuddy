@@ -498,10 +498,10 @@ final class ComputerView extends View {
                                         sb.append(MSG_NO_POSITION);
                                     } else {
                                         if (Config.useGeocachingFormat || Config.useUTM) {
-                                            valueCoords.toStringBuffer(sb);
+                                            NavigationScreens.toStringBuffer(valueCoords, sb);
                                         } else {
                                             QualifiedCoordinates localQc = navigator.getMap().getDatum().toLocal(valueCoords);
-                                            localQc.toStringBuffer(sb);
+                                            NavigationScreens.toStringBuffer(localQc, sb);
                                             QualifiedCoordinates.releaseInstance(localQc);
                                         }
                                     }

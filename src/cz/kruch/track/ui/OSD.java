@@ -30,7 +30,7 @@ import cz.kruch.track.AssertionFailedException;
  * @author Ales Pour <kruhc@seznam.cz>
  */
 final class OSD extends Bar {
-    private static final char[] MM = { '<', '>' };
+    private static final String MM = "<>";
 
     protected int providerStatus;
     private boolean recording;
@@ -96,16 +96,15 @@ final class OSD extends Bar {
         if (isExtInfo && cExtInfoLength > 0) {
             graphics.drawChars(cExtInfo, 0, cExtInfoLength, gx + BORDER, gy + (isBasicInfo ? bh : 0), 0);
             if (Desktop.browsing) {
-                graphics.drawChars(MM, 0, MM.length,
-                                   width - BORDER - mmw,
-                                   gy + bh, Graphics.TOP | Graphics.LEFT);
+                graphics.drawString(MM,
+                                    width - BORDER - mmw,
+                                    gy + bh, Graphics.TOP | Graphics.LEFT);
             } else {
                 final int sat = this.sat;
                 if (sat >= 3 && sat <= 12) {
-                    char[] chars = NavigationScreens.nStr[sat - 3];
-                    graphics.drawChars(chars, 0, chars.length,
-                                       width - BORDER - (sat < 10 ? str1w : str2w),
-                                       gy + bh, Graphics.TOP | Graphics.LEFT);
+                    graphics.drawString(NavigationScreens.nStr[sat - 3],
+                                        width - BORDER - (sat < 10 ? str1w : str2w),
+                                        gy + bh, Graphics.TOP | Graphics.LEFT);
                 }
             }
         }
@@ -158,18 +157,18 @@ final class OSD extends Bar {
         if (cExtInfoLength > cExtInfo.length) {
             throw new AssertionFailedException("Extended info length = " + cExtInfoLength);
         }
-        sb.getChars(0, sb.length(), cExtInfo, 0);
+        sb.getChars(0, cExtInfoLength, cExtInfo, 0);
     }
 
     public void setInfo(QualifiedCoordinates qc, boolean ok) {
         StringBuffer sb = this.sb;
         sb.delete(0, sb.length());
-        qc.toStringBuffer(sb);
+        NavigationScreens.toStringBuffer(qc, sb);
         cInfoLength = sb.length();
         if (cInfoLength > cInfo.length) {
             throw new AssertionFailedException("Info length = " + cInfoLength);
         }
-        sb.getChars(0, sb.length(), cInfo, 0);
+        sb.getChars(0, cInfoLength, cInfo, 0);
         this.ok = ok;
     }
 

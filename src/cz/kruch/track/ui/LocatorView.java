@@ -34,23 +34,13 @@ import javax.microedition.lcdui.Font;
  * @author Ales Pour <kruhc@seznam.cz>
  */
 final class LocatorView extends View {
-    private static final char[] MSG_NO_WAYPOINT =
-        { 'N', 'O', ' ', 'W', 'P', 'T' };
-    private static final char[] STRING_M =
-        { ' ', 'm' };
+    private static final String MSG_NO_WAYPOINT = "NO WPT";
 
     public static final int[] RANGES = {
         1000, 500, 250, 100, 50, 25, 10, 5
     };
-    public static final char[][] RANGES_STR = {
-        { '1', '0', '0', '0', ' ', 'm' },
-        { '5', '0', '0', ' ', 'm' },
-        { '2', '5', '0', ' ', 'm' },
-        { '1', '0', '0', ' ', 'm' },
-        { '5', '0', ' ', 'm' },
-        { '2', '5', ' ', 'm' },
-        { '1', '0', ' ', 'm' },
-        { '5', ' ', 'm' }
+    public static final String[] RANGES_STR = {
+        "1000 m", "500 m", "250 m", "100 m", "50 m", "25 m", "10 m", "5 m"
     };
 
     private static final int COLOR_RANGE        = 0x00808080;
@@ -90,7 +80,7 @@ final class LocatorView extends View {
         this.coordinatesAvg = new QualifiedCoordinates[2];
 //        this.satAvg = new int[2];
         this.rangeIdx = new int[]{ 2, 2 };
-        this.navigationStrWidth = Math.max(Desktop.font.charsWidth(MSG_NO_WAYPOINT, 0, MSG_NO_WAYPOINT.length),
+        this.navigationStrWidth = Math.max(Desktop.font.stringWidth(MSG_NO_WAYPOINT),
                                            Desktop.font.stringWidth("9.999 M"));
         this.sb = new StringBuffer(32);
         this.sbChars = new char[32];
@@ -446,7 +436,7 @@ final class LocatorView extends View {
 
             // draw lat/lon
             sb.delete(0, sb.length());
-            coordsAvg.toStringBuffer(sb);
+            NavigationScreens.toStringBuffer(coordsAvg, sb);
             int l = sb.length();
             sb.getChars(0, l, sbChars, 0);
             graphics.drawChars(sbChars, 0, l, OSD.BORDER, 0, Graphics.LEFT | Graphics.TOP);
@@ -460,7 +450,7 @@ final class LocatorView extends View {
             } else {
                 NavigationScreens.append(sb, accuracy, 1);
             }
-            sb.append(STRING_M);
+            sb.append(' ').append('m');
             l = sb.length();
             sb.getChars(0, l, sbChars, 0);
             graphics.drawChars(sbChars, 0, l, OSD.BORDER, fh, 0);
@@ -552,17 +542,17 @@ final class LocatorView extends View {
                                    w - navigationStrWidth, h - fh,
                                    Graphics.LEFT | Graphics.TOP);
             } else {
-                graphics.drawChars(MSG_NO_WAYPOINT, 0, MSG_NO_WAYPOINT.length,
+                graphics.drawString(MSG_NO_WAYPOINT,
                                    w - navigationStrWidth, h - fh,
                                    Graphics.LEFT | Graphics.TOP);
             }
         } else {
             graphics.setColor(COLOR_NO_POSITION);
-            graphics.drawChars(MSG_NO_POSITION, 0, MSG_NO_POSITION.length,
-                               OSD.BORDER, 0, Graphics.LEFT | Graphics.TOP);
+            graphics.drawString(MSG_NO_POSITION,
+                                OSD.BORDER, 0, Graphics.LEFT | Graphics.TOP);
             if (wpt == null) {
                 graphics.setColor(wptColor);
-                graphics.drawChars(MSG_NO_WAYPOINT, 0, MSG_NO_WAYPOINT.length,
+                graphics.drawString(MSG_NO_WAYPOINT,
                                    w - navigationStrWidth, h - fh,
                                    Graphics.LEFT | Graphics.TOP);
             }
@@ -578,8 +568,9 @@ final class LocatorView extends View {
         graphics.drawLine(dx, h - 4, dx, h - 2);
         graphics.drawLine(dx, h - 3, wHalf, h - 3);
         graphics.drawLine(wHalf, h - 4, wHalf, h - 2);
-        graphics.drawChars(RANGES_STR[rangeIdx], 0, RANGES_STR[rangeIdx].length,
-                           dx + 3, h - fh - 2, Graphics.LEFT | Graphics.TOP);
+        graphics.drawString(RANGES_STR[rangeIdx],
+                            dx + 3, h - fh - 2,
+                            Graphics.LEFT | Graphics.TOP);
 
         // flush
         flushGraphics();

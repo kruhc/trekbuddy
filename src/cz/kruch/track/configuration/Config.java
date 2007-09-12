@@ -17,7 +17,6 @@
 package cz.kruch.track.configuration;
 
 import cz.kruch.track.util.CharArrayTokenizer;
-import cz.kruch.track.ui.L10n;
 
 import javax.microedition.rms.RecordStore;
 import javax.microedition.rms.RecordStoreException;
@@ -184,7 +183,10 @@ public final class Config {
     public static Throwable initialize() {
 
 //#ifdef __RIM__
+        /* default for Blackberry */
         dataDir = "file:///SDCard/TrekBuddy/";
+        S60renderer = true;
+        forcedGc = false;
 //#endif
 
         Throwable result = null;

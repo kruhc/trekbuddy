@@ -36,14 +36,13 @@ public abstract class StreamReadingLocationProvider extends LocationProvider {
     private static final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("StreamReadingLocationProvider");
 //#endif
 
-    protected static final char[] HEADER_GGA = { '$', 'G', 'P', 'G', 'G', 'A' };
-    protected static final char[] HEADER_RMC = { '$', 'G', 'P', 'R', 'M', 'C' };
-
+    private static final char[] HEADER_GGA = { '$', 'G', 'P', 'G', 'G', 'A' };
+    private static final char[] HEADER_RMC = { '$', 'G', 'P', 'R', 'M', 'C' };
     private static final char[] HEADER_SKIP = { '$', 'G', 'P', 'G', 'S' };
 
-    protected static final int BUFFER_SIZE = 2048;
-
     private static final int LINE_SIZE = 128;
+
+    protected static final int BUFFER_SIZE = 2048;
 
     public static int syncs, mismatches, checksums, restarts;
 
@@ -207,11 +206,11 @@ public abstract class StreamReadingLocationProvider extends LocationProvider {
     private static boolean validate(char[] raw, final int length) {
         int result = 0;
         for (int i = 1; i < length; i++) {
-            final byte b = (byte) raw[i];
+            final byte b = (byte) (raw[i] & 0x00ff);
             if (b == '*') {
                 if (length - i >= 2) {
-                    byte hi = (byte) raw[i + 1];
-                    byte lo = (byte) raw[i + 2];
+                    byte hi = (byte) (raw[i + 1] & 0x00ff);
+                    byte lo = (byte) (raw[i + 2] & 0x00ff);
                     if (hi >= '0' && hi <= '9') {
                         hi -= '0';
                     } else if (hi >= 'A' && hi <= 'F') {
@@ -226,7 +225,7 @@ public abstract class StreamReadingLocationProvider extends LocationProvider {
                 }
                 break;
             } else {
-                result ^= raw[i];
+                result ^= b;
             }
         }
 

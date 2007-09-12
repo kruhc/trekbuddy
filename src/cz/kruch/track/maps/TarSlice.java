@@ -17,12 +17,12 @@
 package cz.kruch.track.maps;
 
 /**
- * Represents map tile in tar.
+ * Represents map tile in a tar.
  *
  * @author Ales Pour <kruhc@seznam.cz>
  */
 public class TarSlice extends Slice {
-    private short blockOffset;
+    private int blockOffset;
 
     TarSlice(String path) throws InvalidMapException {
         super(path);
@@ -34,11 +34,11 @@ public class TarSlice extends Slice {
     }
 */
 
-    short getBlockOffset() {
+    int getBlockOffset() {
         return blockOffset;
     }
 
-    void setBlockOffset(short blockOffset) {
+    void setBlockOffset(int blockOffset) {
         this.blockOffset = blockOffset;
     }
 }

@@ -91,12 +91,12 @@ public final class Mercator {
     }
 
     public static final class ProjectionSetup extends api.location.ProjectionSetup {
-        public double lonOrigin, latOrigin;
-        public double k0;
-        public double falseEasting, falseNorthing;
-        public short zoneNumber;
-        public char zoneLetter;
-        public char[] zone;
+        public final double lonOrigin, latOrigin;
+        public final double k0;
+        public final double falseEasting, falseNorthing;
+        public final short zoneNumber;
+        public final char zoneLetter;
+        public final char[] zone;
 
         public ProjectionSetup(String name,
                                final int zoneNumber, final char zoneLetter,
@@ -108,6 +108,10 @@ public final class Mercator {
             this.zoneLetter = zoneLetter;
             if ("UTM".equals(name)) {
                 this.zone = (new StringBuffer().append(zoneNumber).append(zoneLetter)).toString().toCharArray();
+            } else if (PROJ_SUI.equals(name)) {
+                this.zone = new char[]{ 'S', 'U', 'I' };
+            } else {
+                this.zone = null;
             }
             this.lonOrigin = lonOrigin;
             this.latOrigin = latOrigin;
@@ -118,7 +122,7 @@ public final class Mercator {
 
         // TODO optimize
         public String toString() {
-            if (PROJ_MERCATOR.equals(getName())) {
+            if (PROJ_MERCATOR.equals(name)) {
                 return super.toString();
             }
 
@@ -254,17 +258,18 @@ public final class Mercator {
 
     public static Coordinates LLtoGrid(QualifiedCoordinates qc) {
         Coordinates utm = LLtoMercator(qc, contextDatum.getEllipsoid(), contextProjection);
+        String ctxProjectionName = contextProjection.getName();
 
         /*
          * handle specific grids
          */
 
-        if (api.location.ProjectionSetup.PROJ_BNG.equals(contextProjection.getName())) {
+        if (api.location.ProjectionSetup.PROJ_BNG.equals(ctxProjectionName)) {
             if (utm.zone == null || utm.zone.length != 2) {
                 utm.zone = new char[2];
             }
-            utm.easting = QualifiedCoordinates.round(utm.easting);
-            utm.northing = QualifiedCoordinates.round(utm.northing);
+            utm.easting = ExtraMath.round(utm.easting);
+            utm.northing = ExtraMath.round(utm.northing);
             final int ek = (int) (utm.easting / 500000);
             final int nk = (int) (utm.northing / 500000);
             if (ek > 0) {
@@ -291,12 +296,12 @@ public final class Mercator {
             utm.zone[1] = (char) ('A' + i);
             utm.easting -= (int) (utm.easting / ExtraMath.grade(utm.easting)) * ExtraMath.grade(utm.easting);
             utm.northing -= (int) (utm.northing / ExtraMath.grade(utm.northing)) * ExtraMath.grade(utm.northing);
-        } else if (api.location.ProjectionSetup.PROJ_IG.equals(contextProjection.getName())) {
+        } else if (api.location.ProjectionSetup.PROJ_IG.equals(ctxProjectionName)) {
             if (utm.zone == null || utm.zone.length != 1) {
                 utm.zone = new char[1];
             }
-            utm.easting = QualifiedCoordinates.round(utm.easting);
-            utm.northing = QualifiedCoordinates.round(utm.northing);
+            utm.easting = ExtraMath.round(utm.easting);
+            utm.northing = ExtraMath.round(utm.northing);
             final int ek = (int) (utm.easting / 100000);
             final int nk = (int) (utm.northing / 100000);
             switch (nk) {
@@ -318,143 +323,194 @@ public final class Mercator {
             }
             utm.easting -= ek * 100000;
             utm.northing -= nk * 100000;
+        } else if (api.location.ProjectionSetup.PROJ_SUI.equals(ctxProjectionName)) {
+            double temp = utm.easting;
+            utm.easting = utm.northing;
+            utm.northing = temp;
         }
 
         return utm;
     }
 
     public static Coordinates LLtoMercator(QualifiedCoordinates qc,
-                                              Datum.Ellipsoid ellipsoid,
-                                              ProjectionSetup setup) {
-        double a = ellipsoid.getEquatorialRadius();
-        double eccSquared = ellipsoid.getEccentricitySquared();
+                                           Datum.Ellipsoid ellipsoid,
+                                           ProjectionSetup setup) {
+        String projectionName = setup.getName();
+        Coordinates coords;
 
-        if (api.location.ProjectionSetup.PROJ_MERCATOR.equals(setup.getName())) {  // Mercator (1SP)
+        final double a = ellipsoid.getEquatorialRadius();
+        final double eccSquared = ellipsoid.getEccentricitySquared();
 
-            double e = Math.sqrt(eccSquared);
-            double latRad = Math.toRadians(qc.getLat());
-            double sinPhi = Math.sin(latRad);
+        if (api.location.ProjectionSetup.PROJ_MERCATOR.equals(projectionName)) {  // Mercator (1SP)
 
-            double easting = setup.falseEasting + a * setup.k0
-                             * (Math.toRadians(qc.getLon() - setup.lonOrigin));
-            double northing = setup.falseNorthing + (a * setup.k0) / 2
-                              * ln(((1 + sinPhi) / (1 - sinPhi))* pow((1 - e * sinPhi) / (1 + e * sinPhi), e));
+            final double e = Math.sqrt(eccSquared);
+            final double latRad = Math.toRadians(qc.getLat());
+            final double sinPhi = Math.sin(latRad);
+
+            final double easting = setup.falseEasting + a * setup.k0
+                                   * (Math.toRadians(qc.getLon() - setup.lonOrigin));
+            final double northing = setup.falseNorthing + (a * setup.k0) / 2
+                                    * ln(((1 + sinPhi) / (1 - sinPhi))* pow((1 - e * sinPhi) / (1 + e * sinPhi), e));
 /* simplified Google
             double northing = setup.falseNorthing + (a * setup.k0) / 2
                               * ExtraMath.ln(((1 + sinPhi) / (1 - sinPhi)));
 */
 
-            return Coordinates.newInstance(setup.zone, easting, northing);
+            coords = Coordinates.newInstance(setup.zone, easting, northing);
+
+        } else if (api.location.ProjectionSetup.PROJ_SUI.equals(projectionName)) { // hack!
+
+            final double F = qc.getLat() * (3600D / 10000D) - 16.902866D;
+            final double L = qc.getLon() * (3600D / 10000D) - 2.67825D;
+
+            final double y1 = 0.2114285339D - 0.010939608D * F - 0.000002658D * F * F - 0.00000853D * F * F * F;
+            final double y3 = - 0.0000442327D + 0.000004291D * F - 0.000000309D * F * F;
+            final double y5 = 0.0000000197D;
+
+            final double x0 = 0.3087707463D * F + 0.000075028D * F * F + 0.000120435D * F * F * F + 0.00000007D * F * F * F * F * F;
+            final double x2 = 0.0037454089D - 0.0001937927D * F + 0.000004340D * F * F - 0.000000376D * F * F * F;
+            final double x4 = - 0.0000007346D + 0.0000001444D * F;
+
+            double Y = y1 * L + y3 * L * L * L + y5 * L * L * L * L * L;
+            double X = x0 + x2 * L * L + x4 * L * L * L * L;
+
+            Y *= 1000000;
+            Y += 600000; // LV03
+            X *= 1000000;
+            X += 200000; // LV03
+
+            coords = Coordinates.newInstance(setup.zone, X, Y);
 
         } else { // Transverse Mercator
 
-            double eccPrimeSquared = ellipsoid.getEccentricityPrimeSquared();
+            final double eccPrimeSquared = ellipsoid.getEccentricityPrimeSquared();
 
-            double N, T, C, A, M, Mo;
+            final double lonOriginRad = Math.toRadians(setup.lonOrigin);
+            final double latOriginRad = Math.toRadians(setup.latOrigin);
 
-            double lonOriginRad = Math.toRadians(setup.lonOrigin);
-            double latOriginRad = Math.toRadians(setup.latOrigin);
+            final double latRad = Math.toRadians(qc.getLat());
+            final double lonRad = Math.toRadians(qc.getLon());
 
-            double latRad = Math.toRadians(qc.getLat());
-            double lonRad = Math.toRadians(qc.getLon());
+            final double temp_sinLatRad = Math.sin(latRad);
+            final double temp_tanLatRad = Math.tan(latRad);
+            final double temp_cosLatRad = Math.cos(latRad);
+            final double eccSquared2 = eccSquared * eccSquared;
+            final double eccSquared3 = eccSquared * eccSquared * eccSquared;
 
-            double temp_sinLatRad = Math.sin(latRad);
-            double temp_tanLatRad = Math.tan(latRad);
-            double temp_cosLatRad = Math.cos(latRad);
-            double eccSquared2 = eccSquared * eccSquared;
-            double eccSquared3 = eccSquared * eccSquared * eccSquared;
+            final double N = a / Math.sqrt(1 - eccSquared * temp_sinLatRad * temp_sinLatRad);
+            final double T = temp_tanLatRad * temp_tanLatRad;
+            final double C = eccPrimeSquared * temp_cosLatRad * temp_cosLatRad;
+            final double A = (lonRad - lonOriginRad) * temp_cosLatRad;
+            final double M = a * ((1 - eccSquared / 4 - 3 * eccSquared2 / 64 - 5 * eccSquared3 / 256) * latRad
+                             - (3 * eccSquared / 8 + 3 * eccSquared2 / 32 + 45 * eccSquared3 / 1024) * Math.sin(2 * latRad)
+                             + (15 * eccSquared2 / 256 + 45 * eccSquared3 / 1024) * Math.sin(4 * latRad)
+                             - (35 * eccSquared3 / 3072) * Math.sin(6 * latRad));
+            final double Mo = a * ((1 - eccSquared / 4 - 3 * eccSquared2 / 64 - 5 * eccSquared3 / 256) * latOriginRad
+                              - (3 * eccSquared / 8 + 3 * eccSquared2 / 32 + 45 * eccSquared3 / 1024) * Math.sin(2 * latOriginRad)
+                              + (15 * eccSquared2 / 256 + 45 * eccSquared3 / 1024) * Math.sin(4 * latOriginRad)
+                              - (35 * eccSquared3 / 3072) * Math.sin(6 * latOriginRad));
 
-            N = a / Math.sqrt(1 - eccSquared * temp_sinLatRad * temp_sinLatRad);
-            T = temp_tanLatRad * temp_tanLatRad;
-            C = eccPrimeSquared * temp_cosLatRad * temp_cosLatRad;
-            A = (lonRad - lonOriginRad) * temp_cosLatRad;
-            M = a * ((1 - eccSquared / 4 - 3 * eccSquared2 / 64 - 5 * eccSquared3 / 256) * latRad
-                    - (3 * eccSquared / 8 + 3 * eccSquared2 / 32 + 45 * eccSquared3 / 1024) * Math.sin(2 * latRad)
-                    + (15 * eccSquared2 / 256 + 45 * eccSquared3 / 1024) * Math.sin(4 * latRad)
-                    - (35 * eccSquared3 / 3072) * Math.sin(6 * latRad));
-            Mo = a * ((1 - eccSquared / 4 - 3 * eccSquared2 / 64 - 5 * eccSquared3 / 256) * latOriginRad
-                    - (3 * eccSquared / 8 + 3 * eccSquared2 / 32 + 45 * eccSquared3 / 1024) * Math.sin(2 * latOriginRad)
-                    + (15 * eccSquared2 / 256 + 45 * eccSquared3 / 1024) * Math.sin(4 * latOriginRad)
-                    - (35 * eccSquared3 / 3072) * Math.sin(6 * latOriginRad));
+            final double easting = setup.falseEasting + setup.k0 * N * (A + ((1 - T + C) * A * A * A / 6)
+                                   + ((5 - 18 * T + T * T + 72 * C - 58 * eccPrimeSquared) * A * A * A * A * A / 120));
+            final double northing = setup.falseNorthing + setup.k0 * (M - Mo + N * temp_tanLatRad * (A * A / 2 + ((5 - T + 9 * C + 4 * C * C) * A * A * A * A / 24)
+                                    + ((61 - 58 * T + T * T + 600 * C - 330 * eccPrimeSquared) * A * A * A * A * A * A / 720)));
 
-            double easting = setup.falseEasting + setup.k0 * N * (A + ((1 - T + C) * A * A * A / 6)
-                                 + ((5 - 18 * T + T * T + 72 * C - 58 * eccPrimeSquared) * A * A * A * A * A / 120));
-            double northing = setup.falseNorthing + setup.k0 * (M - Mo + N * temp_tanLatRad * (A * A / 2 + ((5 - T + 9 * C + 4 * C * C) * A * A * A * A / 24)
-                                  + ((61 - 58 * T + T * T + 600 * C - 330 * eccPrimeSquared) * A * A * A * A * A * A / 720)));
-
-            return Coordinates.newInstance(setup.zone, easting, northing);
+            coords = Coordinates.newInstance(setup.zone, easting, northing);
         }
+
+        return coords;
     }
 
     public static QualifiedCoordinates MercatortoLL(Coordinates utm,
-                                              Datum.Ellipsoid ellipsoid,
-                                              ProjectionSetup setup) {
-        double a = ellipsoid.getEquatorialRadius();
-        double eccSquared = ellipsoid.getEccentricitySquared();
+                                                    Datum.Ellipsoid ellipsoid,
+                                                    ProjectionSetup setup) {
+        String projectionName = setup.getName();
+        QualifiedCoordinates qc;
 
-        if (api.location.ProjectionSetup.PROJ_MERCATOR.equals(setup.getName())) {  // Mercator
+        final double a = ellipsoid.getEquatorialRadius();
+        final double eccSquared = ellipsoid.getEccentricitySquared();
 
-            double eccSquared6 = eccSquared * eccSquared * eccSquared;
-            double eccSquared8 = eccSquared * eccSquared * eccSquared * eccSquared;
-            double t = pow(Math.E, (setup.falseNorthing - utm.northing) / (a * setup.k0));
-            double chi = Math.PI / 2 - 2 * ExtraMath.atan(t);
+        if (api.location.ProjectionSetup.PROJ_MERCATOR.equals(projectionName)) {  // Mercator
+
+            final double eccSquared6 = eccSquared * eccSquared * eccSquared;
+            final double eccSquared8 = eccSquared * eccSquared * eccSquared * eccSquared;
+            final double t = pow(Math.E, (setup.falseNorthing - utm.northing) / (a * setup.k0));
+            final double chi = Math.PI / 2 - 2 * ExtraMath.atan(t);
 
             double lat, lon;
 
             lat = chi + (eccSquared / 2 + 5 * eccSquared * eccSquared / 24
-                       + eccSquared6 / 12 + 13 * eccSquared8 / 380) * Math.sin(2 * chi)
-                     + (7 * eccSquared * eccSquared / 48 + 29 * eccSquared6 / 240
-                       + 811 * eccSquared8 / 11520) * Math.sin(4 * chi)
-                     + (7 * eccSquared6 / 120 + 81 * eccSquared8 / 1120) * Math.sin(6 * chi)
-                     + (4279 * eccSquared8 / 161280) * Math.sin(8 * chi);
+                  + eccSquared6 / 12 + 13 * eccSquared8 / 380) * Math.sin(2 * chi)
+                  + (7 * eccSquared * eccSquared / 48 + 29 * eccSquared6 / 240
+                  + 811 * eccSquared8 / 11520) * Math.sin(4 * chi)
+                  + (7 * eccSquared6 / 120 + 81 * eccSquared8 / 1120) * Math.sin(6 * chi)
+                  + (4279 * eccSquared8 / 161280) * Math.sin(8 * chi);
 /* simplified Google
             lat = chi;
 */
             lat = Math.toDegrees(lat);
 
-            lon = ((utm.easting -  setup.falseEasting) / (a * setup.k0));
+            lon = ((utm.easting - setup.falseEasting) / (a * setup.k0));
             lon = setup.lonOrigin + Math.toDegrees(lon);
 
-            return QualifiedCoordinates.newInstance(lat, lon);
+            qc = QualifiedCoordinates.newInstance(lat, lon);
+
+        } else if (api.location.ProjectionSetup.PROJ_SUI.equals(projectionName)) { // hack!
+
+            final double X = (utm.easting - 200000) / 1000000;
+            final double Y = (utm.northing - 600000) / 1000000;
+
+            final double a1 = 4.72973056D + 0.7925714D * X + 0.132812D * X * X + 0.02550D * X * X * X + 0.0048D * X * X * X * X;
+            final double a3 = - 0.044270D - 0.02550D * X - 0.0096D * X * X;
+            final double a5 = 0.00096D;
+
+            final double p0 = 3.23864877D * X - 0.0025486D * X * X - 0.013245D * X * X * X + 0.000048D * X * X * X * X;
+            final double p2 = - 0.27135379D - 0.0450442D * X - 0.007553D * X * X - 0.00146D * X * X * X;
+            final double p4 = 0.002442D + 0.00132D * X;
+
+            double lon = 2.67825D + a1 * Y + a3 * Y * Y * Y + a5 * Y * Y * Y * Y * Y;
+            double lat = 16.902866 + p0 + p2 * Y * Y + p4 * Y * Y * Y * Y;
+
+            lon /= (3600D / 10000D);
+            lat /= (3600D / 10000D);
+
+            qc = QualifiedCoordinates.newInstance(lat, lon);
 
         } else { // Transverse Mercator
 
-            double eccPrimeSquared = ellipsoid.getEccentricityPrimeSquared();
-            double e1 = (1 - Math.sqrt(1 - eccSquared)) / (1 + Math.sqrt(1 - eccSquared));
+            final double eccPrimeSquared = ellipsoid.getEccentricityPrimeSquared();
+            final double e1 = (1 - Math.sqrt(1 - eccSquared)) / (1 + Math.sqrt(1 - eccSquared));
 
-            double N1, T1, C1, R1, D, Mi, Mo;
-            double mu, phi1Rad;
+            final double eccSquared2 = eccSquared * eccSquared;
+            final double eccSquared3 = eccSquared * eccSquared * eccSquared;
+            final double latOriginRad = Math.toRadians(setup.latOrigin);
+            final double Mo = a * ((1 - eccSquared / 4 - 3 * eccSquared2 / 64 - 5 * eccSquared3 / 256) * latOriginRad
+                              - (3 * eccSquared / 8 + 3 * eccSquared2 / 32 + 45 * eccSquared3 / 1024) * Math.sin(2 * latOriginRad)
+                              + (15 * eccSquared2 / 256 + 45 * eccSquared3 / 1024) * Math.sin(4 * latOriginRad)
+                              - (35 * eccSquared3 / 3072) * Math.sin(6 * latOriginRad));
+            final double Mi = Mo + (utm.northing - setup.falseNorthing) / setup.k0;
 
-            double eccSquared2 = eccSquared * eccSquared;
-            double eccSquared3 = eccSquared * eccSquared * eccSquared;
-            double latOriginRad = Math.toRadians(setup.latOrigin);
-            Mo = a * ((1 - eccSquared / 4 - 3 * eccSquared2 / 64 - 5 * eccSquared3 / 256) * latOriginRad
-                    - (3 * eccSquared / 8 + 3 * eccSquared2 / 32 + 45 * eccSquared3 / 1024) * Math.sin(2 * latOriginRad)
-                    + (15 * eccSquared2 / 256 + 45 * eccSquared3 / 1024) * Math.sin(4 * latOriginRad)
-                    - (35 * eccSquared3 / 3072) * Math.sin(6 * latOriginRad));
-            Mi = Mo + (utm.northing - setup.falseNorthing) / setup.k0;
+            final double mu = Mi / (a * (1 - eccSquared / 4 - 3 * eccSquared * eccSquared / 64 - 5 * eccSquared * eccSquared * eccSquared / 256));
+            final double phi1Rad = mu + (3 * e1 / 2 - 27 * e1 * e1 * e1 / 32) * Math.sin(2 * mu)
+                                   + (21 * e1 * e1 / 16 - 55 * e1 * e1 * e1 * e1 / 32) * Math.sin(4 * mu)
+                                   + (151 * e1 * e1 * e1 / 96) * Math.sin(6 * mu)
+                                   + (1097 * e1 * e1 * e1 * e1 / 512) * Math.sin(8 * mu);
 
-            mu = Mi / (a * (1 - eccSquared / 4 - 3 * eccSquared * eccSquared / 64 - 5 * eccSquared * eccSquared * eccSquared / 256));
-            phi1Rad = mu + (3 * e1 / 2 - 27 * e1 * e1 * e1 / 32) * Math.sin(2 * mu)
-                    + (21 * e1 * e1 / 16 - 55 * e1 * e1 * e1 * e1 / 32) * Math.sin(4 * mu)
-                    + (151 * e1 * e1 * e1 / 96) * Math.sin(6 * mu)
-                    + (1097 * e1 * e1 * e1 * e1 / 512) * Math.sin(8 * mu);
+            final double temp_sinPhi1 = Math.sin(phi1Rad);
+            final double temp_tanPhi1 = Math.tan(phi1Rad);
+            final double temp_cosPhi1 = Math.cos(phi1Rad);
 
-            double temp_sinPhi1 = Math.sin(phi1Rad);
-            double temp_tanPhi1 = Math.tan(phi1Rad);
-            double temp_cosPhi1 = Math.cos(phi1Rad);
-
-            N1 = a / Math.sqrt(1 - eccSquared * temp_sinPhi1 * temp_sinPhi1);
-            T1 = temp_tanPhi1 * temp_tanPhi1;
-            C1 = eccPrimeSquared * temp_cosPhi1 * temp_cosPhi1;
+            final double N1 = a / Math.sqrt(1 - eccSquared * temp_sinPhi1 * temp_sinPhi1);
+            final double T1 = temp_tanPhi1 * temp_tanPhi1;
+            final double C1 = eccPrimeSquared * temp_cosPhi1 * temp_cosPhi1;
 
             // pow(x, 1.5)
             double v = 1 - eccSquared * temp_sinPhi1 * temp_sinPhi1;
             v = Math.sqrt(v * v * v);
             // ~
 
-            R1 = a * (1 - eccSquared) / v;
-            D = (utm.easting - setup.falseEasting) / (N1 * setup.k0);
+            final double R1 = a * (1 - eccSquared) / v;
+            final double D = (utm.easting - setup.falseEasting) / (N1 * setup.k0);
 
             double lat;
             double lon;
@@ -467,8 +523,10 @@ public final class Mercator {
                     * D * D * D * D * D / 120) / temp_cosPhi1;
             lon = setup.lonOrigin + Math.toDegrees(lon);
 
-            return QualifiedCoordinates.newInstance(lat, lon);
+            qc = QualifiedCoordinates.newInstance(lat, lon);
         }
+
+        return qc;
     }
 
     private static char UTMLetterDesignator(final double lat) {

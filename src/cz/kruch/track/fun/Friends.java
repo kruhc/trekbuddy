@@ -38,45 +38,26 @@ public final class Friends implements MessageListener, Runnable {
     private static final String TBSMS_HEADER  = "$TB";
     private static final String TBSMS_IAH  = TBSMS_HEADER + TYPE_IAH;
     private static final String TBSMS_MYT  = TBSMS_HEADER + TYPE_MYT;
-    private static final char SEPARATOR_CHAR = ',';
     private static final String PORT = ":16007";
-
-    private static class Sender implements Runnable {
-        private String url;
-        private String text;
-
-        public Sender(String url, String text) {
-            this.url = url;
-            this.text = text;
-        }
-
-        public void run() {
-            MessageConnection connection = null;
-            try {
-                connection = (MessageConnection) Connector.open(url, Connector.WRITE);
-                TextMessage sms = (TextMessage) connection.newMessage(MessageConnection.TEXT_MESSAGE);
-                sms.setPayloadText(text);
-                connection.send(sms);
-                Desktop.showConfirmation("Location sent", null);
-            } catch (Throwable t) {
-                Desktop.showError("Failed to send SMS [" + url + "]", t, null);
-            } finally {
-                try {
-                    if (connection != null) {
-                        connection.close();
-                    }
-                } catch (IOException e) {
-                    // ignore
-                }
-            }
-        }
-    }
+    private static final char SEPARATOR_CHAR = ',';
 
     private MessageConnection connection;
+
+    private String url;
+    private String text;
 
     public Friends() throws IOException {
         this.connection = (MessageConnection) Connector.open("sms://" + PORT, Connector.READ);
         this.connection.setMessageListener(this);
+    }
+
+    private Friends(String url, String text) {
+        this.url = url;
+        this.text = text;
+    }
+
+    public void notifyIncomingMessage(MessageConnection messageConnection) {
+        (new Thread(this)).start();
     }
 
     public void destroy() {
@@ -89,10 +70,6 @@ public final class Friends implements MessageListener, Runnable {
                 connection = null;
             }
         }
-    }
-
-    public void notifyIncomingMessage(MessageConnection messageConnection) {
-        (new Thread(this)).start();
     }
 
     public static void send(String phone, String type, String message,
@@ -121,14 +98,21 @@ public final class Friends implements MessageListener, Runnable {
 //#endif
 
         // send the SMS
-        (new Thread(new Sender(url, text))).start();
+        (new Thread(new Friends(url, text))).start();
     }
 
     public void run() {
-        Message message;
+        if (connection == null) {
+            execSend();
+        } else {
+            execPop();
+        }
+    }
+
+    private void execPop() {
         try {
             // pop message
-            message = connection.receive();
+            Message message = connection.receive();
             if (message instanceof TextMessage) {
 
                 // get payload
@@ -190,6 +174,27 @@ public final class Friends implements MessageListener, Runnable {
             }
         } catch (Throwable t) {
             Desktop.showError("Failed to receive SMS", t, null);
+        }
+    }
+
+    private void execSend() {
+        MessageConnection connection = null;
+        try {
+            connection = (MessageConnection) Connector.open(url, Connector.WRITE);
+            TextMessage sms = (TextMessage) connection.newMessage(MessageConnection.TEXT_MESSAGE);
+            sms.setPayloadText(text);
+            connection.send(sms);
+            Desktop.showConfirmation("Location sent", null);
+        } catch (Throwable t) {
+            Desktop.showError("Failed to send SMS [" + url + "]", t, null);
+        } finally {
+            try {
+                if (connection != null) {
+                    connection.close();
+                }
+            } catch (IOException e) {
+                // ignore
+            }
         }
     }
 

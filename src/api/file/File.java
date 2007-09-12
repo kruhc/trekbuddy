@@ -32,10 +32,10 @@ import java.io.OutputStream;
 public abstract class File {
 
     public static final String FILE_PROTOCOL    = "file://";
-    
+
     public static final String PARENT_DIR       = "..";
     public static final String PATH_SEPARATOR   = "/";
-    public static final char PATH_SEPCHAR     = '/';
+    public static final char PATH_SEPCHAR       = '/';
 
     public static final int FS_UNKNOWN      = 0;
     public static final int FS_JSR75        = 1;

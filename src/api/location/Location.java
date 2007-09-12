@@ -31,10 +31,10 @@ import java.util.TimeZone;
  * @author Ales Pour <kruhc@seznam.cz>
  */
 public final class Location {
-    private static final char[] STR_KN  = { ' ', 'k', 'n', ' ' };
-    private static final char[] STR_MPH = { ' ', 'm', 'p', 'h', ' '};
-    private static final char[] STR_KMH = { ' ', 'k', 'm', '/', 'h', ' '};
-    private static final char[] STR_M   = { ' ', 'm' };
+    private static final String STR_KN  = " kn ";
+    private static final String STR_MPH = " mph ";
+    private static final String STR_KMH = " km/h ";
+    private static final String STR_M   = " m";
     
 /*
     private static final Calendar CALENDAR = Calendar.getInstance(TimeZone.getDefault());

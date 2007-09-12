@@ -16,8 +16,6 @@
 package api.location;
 
 /* bad design - dependency */
-import cz.kruch.track.configuration.Config;
-import cz.kruch.track.util.Mercator;
 import cz.kruch.track.util.ExtraMath;
 import cz.kruch.track.ui.NavigationScreens;
 
@@ -132,39 +130,114 @@ public final class QualifiedCoordinates implements GeodeticPosition {
     }
 
     private float distance(final double neighbourLat, final double neighbourLon) {
+        /*
+         * calculation for ellipsoid model
+         */
+        final double lat1 = Math.toRadians(lat);
+        final double lon1 = - Math.toRadians(lon);
+        final double lat2 = Math.toRadians(neighbourLat);
+        final double lon2 = - Math.toRadians(neighbourLon);
+
+        final double F = (lat1 + lat2) / 2.0D;
+        final double G = (lat1 - lat2) / 2.0D;
+        final double L = (lon1 - lon2) / 2.0D;
+
+        final double sing = Math.sin(G);
+        final double cosl = Math.cos(L);
+        final double cosf = Math.cos(F);
+        final double sinl = Math.sin(L);
+        final double sinf = Math.sin(F);
+        final double cosg = Math.cos(G);
+
+        final double S = sing * sing * cosl * cosl + cosf * cosf * sinl * sinl;
+        final double C = cosg * cosg * cosl * cosl + sinf * sinf * sinl * sinl;
+        final double W = ExtraMath.atan2(Math.sqrt(S), Math.sqrt(C));
+        final double R = Math.sqrt((S * C)) / W;
+        final double H1 = (3D * R - 1.0D) / (2.0D * C);
+        final double H2 = (3D * R + 1.0D) / (2.0D * S);
+        final double D = 2 * W * 6378137;
+        return (float) (D * (1 + (1.0D / 298.257223563D) * H1 * sinf * sinf * cosg * cosg -
+            (1.0D / 298.257223563D) * H2 * cosf * cosf * sing * sing));
+
+        /*
+         * calculation for spherical model
+         */
 /*
-        double h1 = 0, h2 = 0;
-        double R = Datum.DATUM_WGS_84.getEllipsoid().getEquatorialRadius();
+        final double R = Datum.DATUM_WGS_84.getEllipsoid().getEquatorialRadius();
 
-        double lat1 = Math.toRadians(lat);
-        double lon1 = Math.toRadians(lon);
-        double lat2 = Math.toRadians(neighbour.lat);
-        double lon2 = Math.toRadians(neighbour.lon);
+        final double lat1 = Math.toRadians(lat);
+        final double lon1 = Math.toRadians(lon);
+        final double lat2 = Math.toRadians(neighbourLat);
+        final double lon2 = Math.toRadians(neighbourLon);
 
-        double temp_cosLat1 = Math.cos(lat1);
-        double x1 = (R + h1) * (temp_cosLat1 * Math.cos(lon1));
-        double y1 = (R + h1) * (Math.sin(lat1));
-        double z1 = (R + h1) * (temp_cosLat1 * Math.sin(lon1));
-        double temp_cosLat2 = Math.cos(lat2);
-        double x2 = (R + h2) * (temp_cosLat2 * Math.cos(lon2));
-        double y2 = (R + h2) * (Math.sin(lat2));
-        double z2 = (R + h2) * (temp_cosLat2 * Math.sin(lon2));
+        final double temp_cosLat1 = Math.cos(lat1);
+        final double x1 = R * (temp_cosLat1 * Math.cos(lon1));
+        final double y1 = R * (Math.sin(lat1));
+        final double z1 = R * (temp_cosLat1 * Math.sin(lon1));
+        final double temp_cosLat2 = Math.cos(lat2);
+        final double x2 = R * (temp_cosLat2 * Math.cos(lon2));
+        final double y2 = R * (Math.sin(lat2));
+        final double z2 = R * (temp_cosLat2 * Math.sin(lon2));
 
-        double dx = (x2 - x1);
-        double dy = (y2 - y1);
-        double dz = (z2 - z1);
+        final double dx = (x2 - x1);
+        final double dy = (y2 - y1);
+        final double dz = (z2 - z1);
 
         return (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
 */
 
+        /*
+         * good results only for distances up to 10-15 km
+         */
+/*
         final double dx = Math.abs(lon - neighbourLon) * (111319.490 * Math.cos(Math.toRadians((lat + neighbourLat) / 2)));
         final double dy = Math.abs(lat - neighbourLat) * (111319.490);
 
         return (float) Math.sqrt(dx * dx + dy * dy);
+*/
     }
 
     /* non-JSR179 signature TODO fix */
     public float azimuthTo(QualifiedCoordinates neighbour, final double distance) {
+        double result = 0D;
+
+        int ilat1 = (int)(0.50D + lat * 360000D);
+        int ilat2 = (int)(0.50D + neighbour.lat * 360000D);
+        int ilon1 = (int)(0.50D + lon * 360000D);
+        int ilon2 = (int)(0.50D + neighbour.lon * 360000D);
+
+        final double lat1 = Math.toRadians(lat);
+        final double lon1 = Math.toRadians(lon);
+        final double lat2 = Math.toRadians(neighbour.lat);
+        final double lon2 = Math.toRadians(neighbour.lon);
+
+        if (ilat1 == ilat2 && ilon1 == ilon2) {
+            return (float) result;
+        } else if (ilon1 == ilon2) {
+            if (ilat1 > ilat2) {
+                result = 180.0;
+            }
+        } else {
+            final double c = ExtraMath.acos(Math.sin(lat2) * Math.sin(lat1) + Math.cos(lat2) * Math.cos(lat1) * Math.cos((lon2 - lon1)));
+            final double A = ExtraMath.asin(Math.cos(lat2) * Math.sin((lon2 - lon1)) / Math.sin(c));
+            result = Math.toDegrees(A);
+
+            if ((ilat2 > ilat1) && (ilon2 > ilon1)) {
+            } else if ((ilat2 < ilat1) && (ilon2 < ilon1)){
+                result = 180.0 - result;
+            } else if ((ilat2 < ilat1) && (ilon2 > ilon1)) {
+                result = 180.0 - result;
+            } else if ((ilat2 > ilat1) && (ilon2 < ilon1)) {
+                result += 360.0;
+            }
+        }
+
+        return (float) result;
+
+        /*
+         * Pythagoras would be happy :-))))
+         */
+/*
         final double dx = neighbour.lon - lon;
         final double dy = neighbour.lat - lat;
         double artificalLat, artificalLon;
@@ -193,203 +266,16 @@ public final class QualifiedCoordinates implements GeodeticPosition {
         }
 
         final double a = distance(artificalLat, artificalLon);
-        double sina = a / distance /* c */;
+        double sina = a / distance;
         if (sina > 1.0D && sina < 1.001D) { // tolerate calculation inaccuracy 
             sina = 1.0D;
         }
 
         return (float) (offset + Math.toDegrees(ExtraMath.asin(sina)));
+*/
     }
 
     public String toString() {
-        return toStringBuffer(new StringBuffer(32)).toString();
-    }
-
-    public StringBuffer toStringBuffer(StringBuffer sb) {
-        if (Config.useGridFormat && (Mercator.isGrid())) {
-            Mercator.Coordinates gridCoords = Mercator.LLtoGrid(this);
-            if (gridCoords.zone != null) {
-                sb.append(gridCoords.zone).append(' ');
-            }
-            zeros(sb, gridCoords.easting, 10000);
-            NavigationScreens.append(sb, round(gridCoords.easting));
-            sb.append(' ');
-            zeros(sb, gridCoords.northing, 10000);
-            NavigationScreens.append(sb, round(gridCoords.northing));
-            Mercator.Coordinates.releaseInstance(gridCoords);
-        } else if (Config.useUTM) {
-            Mercator.Coordinates utmCoords = Mercator.LLtoUTM(this);
-            sb.append(utmCoords.zone).append(' ');
-            sb.append('E').append(' ');
-            NavigationScreens.append(sb, round(utmCoords.easting));
-            sb.append(' ');
-            sb.append('N').append(' ');
-            NavigationScreens.append(sb, round(utmCoords.northing));
-            Mercator.Coordinates.releaseInstance(utmCoords);
-        } else {
-            // condensed for SXG75
-            if (cz.kruch.track.TrackingMIDlet.sxg75 && Config.decimalPrecision) {
-                sb.append(lat > 0D ? 'N' : 'S');
-                append(LAT, lat, true, sb);
-                sb.deleteCharAt(sb.length() - 1);
-                sb.append(' ');
-                sb.append(lon > 0D ? 'E' : 'W');
-                append(LON, lon, true, sb);
-                sb.deleteCharAt(sb.length() - 1);
-            } else { // decent devices
-                sb.append(lat > 0D ? 'N' : 'S').append(' ');
-                append(LAT, lat, Config.decimalPrecision, sb);
-                sb.append(' ');
-                sb.append(lon > 0D ? 'E' : 'W').append(' ');
-                append(LON, lon, Config.decimalPrecision, sb);
-            }
-        }
-
-        return sb;
-    }
-
-    public static StringBuffer append(final int type, final double value, final boolean hp, StringBuffer sb) {
-        double l = Math.abs(value);
-        if (Config.useGeocachingFormat) {
-            int h = (int) Math.floor(l);
-            l -= h;
-            l *= 60D;
-            int m = (int) Math.floor(l);
-            l -= m;
-            l *= 1000D;
-            int dec = (int) Math.floor(l);
-            if ((l - dec) > 0.5D) {
-                dec++;
-                if (dec == 1000) {
-                    dec = 0;
-                    m++;
-                    if (m == 60) {
-                        m = 0;
-                        h++;
-                    }
-                }
-            }
-
-            if (type == LON && h < 100) {
-                sb.append('0');
-            }
-            if (h < 10) {
-                sb.append('0');
-            }
-            NavigationScreens.append(sb, h).append(NavigationScreens.SIGN);
-            NavigationScreens.append(sb, m).append('.');
-            if (dec < 100) {
-                sb.append('0');
-            }
-            if (dec < 10) {
-                sb.append('0');
-            }
-            NavigationScreens.append(sb, dec);
-        } else {
-            int h = (int) Math.floor(l);
-            l -= h;
-            l *= 60D;
-            int m = (int) Math.floor(l);
-            l -= m;
-            l *= 60D;
-            int s = (int) Math.floor(l);
-            int ss = 0;
-
-            if (hp) { // round decimals
-                l -= s;
-                l *= 10;
-                ss = (int) Math.floor(l);
-                if ((l - ss) > 0.5D) {
-                    ss++;
-                    if (ss == 10) {
-                        ss = 0;
-                        s++;
-                        if (s == 60) {
-                            s = 0;
-                            m++;
-                            if (m == 60) {
-                                m = 0;
-                                h++;
-                            }
-                        }
-                    }
-                }
-            } else { // round secs
-                if ((l - s) > 0.5D) {
-                    s++;
-                    if (s == 60) {
-                        s = 0;
-                        m++;
-                        if (m == 60) {
-                            m = 0;
-                            h++;
-                        }
-                    }
-                }
-            }
-
-            NavigationScreens.append(sb, h).append(NavigationScreens.SIGN);
-            NavigationScreens.append(sb, m).append('\'');
-            NavigationScreens.append(sb, s);
-            if (hp) {
-                sb.append('.');
-                NavigationScreens.append(sb, ss);
-            }
-            sb.append('"');
-        }
-
-        return sb;
-    }
-
-    public static int round(final double d) {
-        int i = (int) d;
-        if ((d - i) > 0.5D) {
-            i++;
-        }
-
-        return i;
-    }
-
-    private static StringBuffer zeros(StringBuffer sb, final double d, final int c) {
-        int i = ExtraMath.grade(d);
-        while (i < c) {
-            sb.append('0');
-            i *= 10;
-        }
-
-        return sb;
+        return NavigationScreens.toStringBuffer(this, new StringBuffer(32)).toString();
     }
 }
-
-/*
-double ApproxDistance(double lat1, double lon1, double lat2,
-                      double lon2)
-{
-   lat1 = GEO::DE2RA * lat1;
-   lon1 = -GEO::DE2RA * lon1;
-   lat2 = GEO::DE2RA * lat2;
-   lon2 = -GEO::DE2RA * lon2;
-
-   double F = (lat1 + lat2) / 2.0;
-   double G = (lat1 - lat2) / 2.0;
-   double L = (lon1 - lon2) / 2.0;
-
-   double sing = sin(G);
-   double cosl = cos(L);
-   double cosf = cos(F);
-   double sinl = sin(L);
-   double sinf = sin(F);
-   double cosg = cos(G);
-
-   double S = sing*sing*cosl*cosl + cosf*cosf*sinl*sinl;
-   double C = cosg*cosg*cosl*cosl + sinf*sinf*sinl*sinl;
-   double W = atan2(sqrt(S),sqrt(C));
-   double R = sqrt((S*C))/W;
-   double H1 = (3 * R - 1.0) / (2.0 * C);
-   double H2 = (3 * R + 1.0) / (2.0 * S);
-   double D = 2 * W * GEO::ERAD;
-   return (D * (1 + GEO::FLATTENING * H1 * sinf*sinf*cosg*cosg -
-   GEO::FLATTENING*H2*cosf*cosf*sing*sing));
-}
-*/
-

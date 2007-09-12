@@ -16,36 +16,26 @@
 
 package cz.kruch.track.ui;
 
-import api.location.LocationException;
-
 import javax.microedition.lcdui.Form;
 import javax.microedition.lcdui.CommandListener;
 import javax.microedition.lcdui.StringItem;
 import javax.microedition.lcdui.Command;
 import javax.microedition.lcdui.Displayable;
 import javax.microedition.lcdui.Item;
-import javax.microedition.media.Manager;
 import java.util.TimeZone;
 
 import cz.kruch.track.configuration.Config;
 import cz.kruch.track.maps.Map;
 
 /**
- * Settings->Info form.
+ * Info form.
  *
  * @author Ales Pour <kruhc@seznam.cz>
  */
-public final class InfoForm extends Form implements CommandListener/*, Callback*/ {
-/* OBSOLETE
-    private Vector caches;
-    private StringItem cachesItem;
-*/
+final class InfoForm extends Form implements CommandListener {
 
     public InfoForm() {
         super(cz.kruch.track.TrackingMIDlet.wm ? "Info (TrekBuddy)" : "Info");
-/* OBSOLETE
-        this.caches = new Vector();
-*/
     }
 
     public void show(Desktop desktop, Throwable le, Object ps, Map map) {
@@ -53,11 +43,6 @@ public final class InfoForm extends Form implements CommandListener/*, Callback*
         System.gc();
         long totalMemory = Runtime.getRuntime().totalMemory();
         long freeMemory = Runtime.getRuntime().freeMemory();
-
-/* OBSOLETE
-        // find caches
-        fill();
-*/
 
         // items
         append(newItem("Platform", cz.kruch.track.TrackingMIDlet.getPlatform()));
@@ -71,19 +56,14 @@ public final class InfoForm extends Form implements CommandListener/*, Callback*
             append(newItem("AppFlags", cz.kruch.track.TrackingMIDlet.getFlags()));
         }
         append(newItem("Fs", "type? " + Integer.toString(api.file.File.fsType) + "; resetable? " + Integer.toString(cz.kruch.track.maps.Map.fileInputStreamResetable)));
-        append(newItem("Ports", System.getProperty("microedition.commports")));
+        append(newItem("Ports", cz.kruch.track.TrackingMIDlet.hasPorts() + "; " + System.getProperty("microedition.commports")));
         append(newItem("TimeZone", TimeZone.getDefault().getID() + "; " + TimeZone.getDefault().useDaylightTime() + "; " + TimeZone.getDefault().getRawOffset()));
-        append(newItem("Desktop", "S60 renderer? " + Config.S60renderer + "; hasRepeatEvents? " + desktop.hasRepeatEvents() + "; " + Desktop.screen.getWidth() + "x" + Desktop.screen.getHeight()));
+        append(newItem("Desktop", "S60 renderer? " + Config.S60renderer + "; hasRepeatEvents? " + Desktop.hasRepeatEvents + "; " + Desktop.screen.getWidth() + "x" + Desktop.screen.getHeight()));
         if (map == null) {
             append(newItem("Map", ""));
         } else {
             append(newItem("Map", "datum: " + map.getDatum() + " projection: " + map.getProjection()));
         }
-/* OBSOLETE
-        cachesItem = new StringItem("Caches", Integer.toString(caches.size()));
-        cachesItem.setLayout(Item.LAYOUT_NEWLINE_AFTER);
-        append(cachesItem);
-*/
         append(new StringItem("ProviderStatus", (ps == null ? "" : ps.toString()) + "; restarts=" + cz.kruch.track.location.StreamReadingLocationProvider.restarts + "; syncs=" + cz.kruch.track.location.StreamReadingLocationProvider.syncs + "; mismatches=" + cz.kruch.track.location.StreamReadingLocationProvider.mismatches + "; checksums=" + cz.kruch.track.location.StreamReadingLocationProvider.checksums));
         append(new StringItem("ProviderError", le == null ? "" : le.toString()));
         if (cz.kruch.track.TrackingMIDlet.supportsVideoCapture()) {
@@ -99,11 +79,6 @@ public final class InfoForm extends Form implements CommandListener/*, Callback*
         appendEncodings("audio/mp3", sb);
         append(new StringItem("Audio", sb.toString()));
 */
-/* OBSOLETE
-        if (caches.size() > 0) {
-            addCommand(new Command("Caches", Command.SCREEN, 1));
-        }
-*/
         append(new StringItem("Diagnostics", Integer.toString(cz.kruch.track.TrackingMIDlet.pauses)));
         addCommand(new Command("Close", Command.BACK, 1));
         setCommandListener(this);
@@ -116,51 +91,8 @@ public final class InfoForm extends Form implements CommandListener/*, Callback*
         if (command.getCommandType() == Command.BACK) {
             // restore desktop UI
             Desktop.display.setCurrent(Desktop.screen);
-/* OBSOLETE
-            // gc hints
-            caches.removeAllElements();
-            caches = null;
-*/
-        }
-/* OBSOLETE
-        else {
-            // show cacheOffline mgmt console
-            (new ItemSelection(this, "Caches", "Delete",this)).show(caches.elements());
-        }
-*/
-    }
-
-/* OBSOLETE
-    public void invoke(Object result, Throwable throwable) {
-        if (result != null) {
-            try {
-                RecordStore.deleteRecordStore("cache_" + (String) result + ".bin");
-                RecordStore.deleteRecordStore("cache_" + (String) result + ".set");
-                fill();
-                cachesItem.setText(Integer.toString(caches.size()));
-                Desktop.showInfo("Cache " + (String) result + " deleted", this);
-            } catch (RecordStoreException e) {
-                Desktop.showError("Failed to delete cacheOffline " + (String) result, e, this);
-            }
         }
     }
-
-    private void fill() {
-        caches.removeAllElements();
-        String[] rsList = RecordStore.listRecordStores();
-        if (rsList != null && rsList.length > 0) {
-            for (int N = rsList.length, i = 0; i < N; i++) {
-                if (rsList[i].startsWith("cache_")) {
-                    String cname = rsList[i].substring("cache_".length(),
-                                                       rsList[i].length() - 4);
-                    if (!caches.contains(cname)) {
-                        caches.addElement(cname);
-                    }
-                }
-            }
-        }
-    }
-*/
 
     private static StringItem newItem(String label, String text) {
         StringItem item = new StringItem(label, text);
@@ -168,10 +100,12 @@ public final class InfoForm extends Form implements CommandListener/*, Callback*
         return item;
     }
 
+/*
     private static StringBuffer appendEncodings(String contentType, StringBuffer sb) {
         String[] protocolsXWav = Manager.getSupportedProtocols(contentType);
         for (int i = protocolsXWav.length; --i >= 0; )
             sb.append(protocolsXWav[i]).append(' ');
         return sb;
     }
+*/
 }

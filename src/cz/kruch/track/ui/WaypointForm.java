@@ -59,8 +59,8 @@ public final class WaypointForm extends Form
 
     private static final String FIELD_NAME      = "Name";
     private static final String FIELD_COMMENT   = "Comment";
-    private static final String FIELD_LAT       = "Lat";
-    private static final String FIELD_LON       = "Lon";
+    private static final String FIELD_LAT       = "WGS-84 Lat";
+    private static final String FIELD_LON       = "WGS-84 Lon";
     private static final String FIELD_TIME      = "Time";
     private static final String FIELD_LOCATION  = "Location";
     private static final String TITLE           = "Waypoint";
@@ -132,10 +132,12 @@ public final class WaypointForm extends Form
         StringBuffer sb = new StringBuffer(12);
         appendWithNewlineAfter(this.fieldName = new TextField(FIELD_NAME, name, 16, TextField.ANY));
         appendWithNewlineAfter(this.fieldComment = new TextField(FIELD_COMMENT, CALENDAR.getTime().toString(), 64, TextField.ANY));
-        QualifiedCoordinates.append(QualifiedCoordinates.LAT, pointer.getLat(), true, sb);
+        sb.append(pointer.getLat() > 0D ? 'N' : 'S').append(' ');
+        NavigationScreens.append(QualifiedCoordinates.LAT, pointer.getLat(), true, sb);
         appendWithNewlineAfter(this.fieldLat = new TextField(FIELD_LAT, sb.toString(), 13, TextField.ANY));
         sb.delete(0, sb.length());
-        QualifiedCoordinates.append(QualifiedCoordinates.LON, pointer.getLon(), true, sb);
+        sb.append(pointer.getLon() > 0D ? 'E' : 'W').append(' ');
+        NavigationScreens.append(QualifiedCoordinates.LON, pointer.getLon(), true, sb);
         appendWithNewlineAfter(this.fieldLon = new TextField(FIELD_LON, sb.toString(), 14, TextField.ANY));
         addCommand(new Command(MENU_CLOSE, Command.BACK, 1));
         addCommand(new Command(MENU_USE, Command.SCREEN, 1));
@@ -247,6 +249,9 @@ public final class WaypointForm extends Form
         value = value.trim();
         if (value.length() < 5) {
             throw new IllegalArgumentException("Malformed coordinate: " + value);
+        }
+        if (value.endsWith("\"")) {
+            value = value.substring(0, value.length() - 1);
         }
 
         final int sign;

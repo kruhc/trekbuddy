@@ -23,10 +23,10 @@ import java.util.Vector;
  *
  * @author Ales Pour <kruhc@seznam.cz>
  */
-public final class SmartRunnable implements Runnable {
+final class SmartRunnable implements Runnable {
     private static final SmartRunnable instance = new SmartRunnable();
     private final Vector runnables = new Vector(16);
-    private boolean enqueued;
+    private boolean running;
     private boolean go;
 
     private SmartRunnable() {
@@ -49,13 +49,11 @@ public final class SmartRunnable implements Runnable {
                 return;
             }
 
-            boolean add = true;
-
             // trick #1: avoid duplicates of key-hold checks
             if (r instanceof Desktop) { //
                 if (runnables.size() > 0) {
                     if (runnables.lastElement() instanceof Desktop) {
-                        add = false;
+                        return;
                     }
                 }
             }
@@ -64,16 +62,17 @@ public final class SmartRunnable implements Runnable {
                 if (runnables.size() > 0) {
                     if (runnables.lastElement() instanceof Desktop.RenderTask) {
                         ((Desktop.RenderTask) runnables.lastElement()).merge(((Desktop.RenderTask) r).getMask());
+                        return;
                     }
                 }
             }
 
-            if (add) {
-                runnables.addElement(r);
-            }
+            // enqueue task
+            runnables.addElement(r);
 
-            if (enqueued == false) {
-                enqueued = true;
+            // run a task if no task is currently running 
+            if (!running) {
+                running = true;
                 Desktop.display.callSerially(this);
             }
         }
@@ -88,18 +87,18 @@ public final class SmartRunnable implements Runnable {
                 runnables.removeElementAt(0);
             }
         }
-        try {
-            if (r != null) {
+        if (r != null) {
+            try {
                 r.run();
+            } catch (Throwable t) {
+                // ignore
             }
-        } catch (Throwable t) {
-            // ignore
         }
         synchronized (this) {
             if (runnables.size() > 0) {
                 Desktop.display.callSerially(this);
             } else {
-                enqueued = false;
+                running = false;
             }
         }
     }

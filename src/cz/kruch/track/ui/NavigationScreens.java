@@ -17,6 +17,8 @@
 package cz.kruch.track.ui;
 
 import cz.kruch.track.AssertionFailedException;
+import cz.kruch.track.util.Mercator;
+import cz.kruch.track.util.ExtraMath;
 import cz.kruch.track.configuration.Config;
 
 import javax.microedition.lcdui.game.Sprite;
@@ -41,10 +43,8 @@ public final class NavigationScreens {
      * public constants
      */
 
-    public static final char[][] nStr = {
-        { '3', '*'}, { '4', '*'}, { '5', '*'}, { '6', '*'},
-        { '7', '*'}, { '8', '*'}, { '9', '*'},
-        { '1', '0', '*'}, { '1', '1', '*'}, { '1', '2', '*'}
+    public static final String[] nStr = {
+        "3*", "4*", "5*", "6*", "7*", "8*", "9*", "10*", "11*", "12*"
     };
 
     private static final char[] digits = {
@@ -73,6 +73,7 @@ public final class NavigationScreens {
     private static int arrowSize, arrowSize2;
     private static int wptSize2;
     private static int poiSize, poiSize2;
+    private static boolean arrowsFull;
 
     // public (???) vars
     public static int bulletSize;
@@ -102,6 +103,7 @@ public final class NavigationScreens {
         bulletSize = providers.getHeight(); // = 10
         poiSize = pois.getHeight();
         poiSize2 = poiSize >> 1;
+        arrowsFull = courses.getWidth() == courses.getHeight() * 36;
     }
 
     public static int customize() throws IOException {
@@ -122,6 +124,7 @@ public final class NavigationScreens {
             i++;
             arrowSize = courses.getHeight();
             arrowSize2 = arrowSize >> 1;
+            arrowsFull = courses.getWidth() == courses.getHeight() * 36;
         }
         image = loadImage("wpt.png");
         if (image != null) {
@@ -203,52 +206,61 @@ public final class NavigationScreens {
 
     public static void drawArrow(Graphics graphics, final float course,
                                  final int x, final int y, final int anchor) {
-        int courseInt = ((int) course) % 360;
-        int cr = courseInt / 90;
-        int cwo = courseInt % 90;
-        int ci = (cwo + 5) / 10;
-        if (ci == 9) {
-            ci = 0;
-            cr++;
-        }
+        final int courseInt = ((int) course) % 360;
 
-        int ti;
-
-        switch (cr) {
-            case 0:
-                ti = Sprite.TRANS_NONE;
-                break;
-            case 1:
-//                ti = Sprite.TRANS_ROT90;
-                ci = 9 /*- 1*/ - ci;
-                ti = Sprite.TRANS_MIRROR_ROT180;
-                break;
-            case 2:
-                ti = Sprite.TRANS_ROT180;
-                break;
-            case 3:
-//                ti = Sprite.TRANS_ROT270;
-                ci = 9 /*- 1*/ - ci;
-                ti = Sprite.TRANS_MIRROR;
-                break;
-            case 4:
-                ti = Sprite.TRANS_NONE;
-                break;
-            default:
-                // should never happen
-                throw new AssertionFailedException("Course over 360?");
-        }
-
-/* S60 renderer path is impossible - drawImage does not support rotation
-        if (Config.S60renderer) {
+        if (arrowsFull) {
+            int ci = courseInt / 10;
+            int cr = courseInt % 10;
+            if (cr > 5) {
+                ci++;
+                if (ci == 36) {
+                    ci = 0;
+                }
+            }
+            graphics.setClip(x - arrowSize2, y - arrowSize2, arrowSize, arrowSize);
+            graphics.drawImage(courses,
+                               x - ci * arrowSize - arrowSize2, y - arrowSize2,
+                               anchor);
+            graphics.setClip(0, 0, Desktop.width, Desktop.height);
         } else {
-*/
+            int cr = courseInt / 90;
+            int cwo = courseInt % 90;
+            int ci = (cwo + 5) / 10;
+            if (ci == 9) {
+                ci = 0;
+                cr++;
+            }
+
+            int ti;
+
+            switch (cr) {
+                case 0:
+                    ti = Sprite.TRANS_NONE;
+                    break;
+                case 1:
+//                ti = Sprite.TRANS_ROT90;
+                    ci = 9 /*- 1*/ - ci;
+                    ti = Sprite.TRANS_MIRROR_ROT180;
+                    break;
+                case 2:
+                    ti = Sprite.TRANS_ROT180;
+                    break;
+                case 3:
+//                ti = Sprite.TRANS_ROT270;
+                    ci = 9 /*- 1*/ - ci;
+                    ti = Sprite.TRANS_MIRROR;
+                    break;
+                case 4:
+                    ti = Sprite.TRANS_NONE;
+                    break;
+                default:
+                    // should never happen
+                    throw new AssertionFailedException("Course over 360?");
+            }
             graphics.drawRegion(courses,
                                 ci * arrowSize, 0, arrowSize, arrowSize,
                                 ti, x - arrowSize2, y - arrowSize2, anchor);
-/*
         }
-*/
     }
 
     public static void drawWaypoint(Graphics graphics, final int x, final int y,
@@ -288,6 +300,176 @@ public final class NavigationScreens {
         }
     }
 
+    public static StringBuffer toStringBuffer(QualifiedCoordinates qc, StringBuffer sb) {
+        if (Config.useGridFormat && (Mercator.isGrid())) {
+            toGrid(qc, sb);
+        } else if (Config.useUTM) {
+            toUTM(qc, sb);
+        } else {
+            // condensed for SXG75
+            if (cz.kruch.track.TrackingMIDlet.sxg75 && Config.decimalPrecision) {
+                toCondensedLL(qc, sb);
+            } else { // decent devices
+                toLL(qc, sb);
+            }
+        }
+
+        return sb;
+    }
+
+    private static StringBuffer toGrid(QualifiedCoordinates qc, StringBuffer sb) {
+        Mercator.Coordinates gridCoords = Mercator.LLtoGrid(qc);
+        if (gridCoords.zone != null) {
+            sb.append(gridCoords.zone).append(' ');
+        }
+        zeros(sb, gridCoords.easting, 10000);
+        NavigationScreens.append(sb, ExtraMath.round(gridCoords.easting));
+        sb.append(' ');
+        zeros(sb, gridCoords.northing, 10000);
+        NavigationScreens.append(sb, ExtraMath.round(gridCoords.northing));
+        Mercator.Coordinates.releaseInstance(gridCoords);
+
+        return sb;
+    }
+
+    private static StringBuffer toUTM(QualifiedCoordinates qc, StringBuffer sb) {
+        Mercator.Coordinates utmCoords = Mercator.LLtoUTM(qc);
+        sb.append(utmCoords.zone).append(' ');
+        sb.append('E').append(' ');
+        NavigationScreens.append(sb, ExtraMath.round(utmCoords.easting));
+        sb.append(' ');
+        sb.append('N').append(' ');
+        NavigationScreens.append(sb, ExtraMath.round(utmCoords.northing));
+        Mercator.Coordinates.releaseInstance(utmCoords);
+
+        return sb;
+    }
+
+    private static StringBuffer toCondensedLL(QualifiedCoordinates qc, StringBuffer sb) {
+        sb.append(qc.getLat() > 0D ? 'N' : 'S');
+        append(QualifiedCoordinates.LAT, qc.getLat(), true, sb);
+        sb.deleteCharAt(sb.length() - 1);
+        sb.append(' ');
+        sb.append(qc.getLon() > 0D ? 'E' : 'W');
+        append(QualifiedCoordinates.LON, qc.getLon(), true, sb);
+        sb.deleteCharAt(sb.length() - 1);
+
+        return sb;
+    }
+
+    private static StringBuffer toLL(QualifiedCoordinates qc, StringBuffer sb) {
+        sb.append(qc.getLat() > 0D ? 'N' : 'S').append(' ');
+        append(QualifiedCoordinates.LAT, qc.getLat(), Config.decimalPrecision, sb);
+        sb.append(' ');
+        sb.append(qc.getLon() > 0D ? 'E' : 'W').append(' ');
+        append(QualifiedCoordinates.LON, qc.getLon(), Config.decimalPrecision, sb);
+
+        return sb;
+    }
+
+    public static StringBuffer append(final int type, final double value, final boolean hp, StringBuffer sb) {
+        double l = Math.abs(value);
+        if (Config.useGeocachingFormat) {
+            int h = (int) Math.floor(l);
+            l -= h;
+            l *= 60D;
+            int m = (int) Math.floor(l);
+            l -= m;
+            l *= 1000D;
+            int dec = (int) Math.floor(l);
+            if ((l - dec) > 0.5D) {
+                dec++;
+                if (dec == 1000) {
+                    dec = 0;
+                    m++;
+                    if (m == 60) {
+                        m = 0;
+                        h++;
+                    }
+                }
+            }
+
+            if (type == QualifiedCoordinates.LON && h < 100) {
+                sb.append('0');
+            }
+            if (h < 10) {
+                sb.append('0');
+            }
+            NavigationScreens.append(sb, h).append(NavigationScreens.SIGN);
+            NavigationScreens.append(sb, m).append('.');
+            if (dec < 100) {
+                sb.append('0');
+            }
+            if (dec < 10) {
+                sb.append('0');
+            }
+            NavigationScreens.append(sb, dec);
+        } else {
+            int h = (int) Math.floor(l);
+            l -= h;
+            l *= 60D;
+            int m = (int) Math.floor(l);
+            l -= m;
+            l *= 60D;
+            int s = (int) Math.floor(l);
+            int ss = 0;
+
+            if (hp) { // round decimals
+                l -= s;
+                l *= 10;
+                ss = (int) Math.floor(l);
+                if ((l - ss) > 0.5D) {
+                    ss++;
+                    if (ss == 10) {
+                        ss = 0;
+                        s++;
+                        if (s == 60) {
+                            s = 0;
+                            m++;
+                            if (m == 60) {
+                                m = 0;
+                                h++;
+                            }
+                        }
+                    }
+                }
+            } else { // round secs
+                if ((l - s) > 0.5D) {
+                    s++;
+                    if (s == 60) {
+                        s = 0;
+                        m++;
+                        if (m == 60) {
+                            m = 0;
+                            h++;
+                        }
+                    }
+                }
+            }
+
+            NavigationScreens.append(sb, h).append(NavigationScreens.SIGN);
+            NavigationScreens.append(sb, m).append('\'');
+            NavigationScreens.append(sb, s);
+            if (hp) {
+                sb.append('.');
+                NavigationScreens.append(sb, ss);
+            }
+            sb.append('"');
+        }
+
+        return sb;
+    }
+
+    private static StringBuffer zeros(StringBuffer sb, final double d, final int c) {
+        int i = ExtraMath.grade(d);
+        while (i < c) {
+            sb.append('0');
+            i *= 10;
+        }
+
+        return sb;
+    }
+    
     public static StringBuffer append(StringBuffer sb, double value, int precision) {
         if (value < 0D) {
             sb.append('-');

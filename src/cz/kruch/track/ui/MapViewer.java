@@ -97,7 +97,7 @@ final class MapViewer {
         this.slices = new Vector(4);
         this.slices2 = new Vector(4);
         this.sb = new StringBuffer(8);
-        this.sInfo = new char[8];
+        this.sInfo = new char[16];
         this.course = -1F;
 /*
         this.trajectory = new QualifiedCoordinates[TRAJECTORY_LENGTH];
@@ -110,6 +110,7 @@ final class MapViewer {
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("size changed");
 //#endif
+
         Position p = getPosition().clone();
         this.chx0 = this.chx = (w - crosshairSize) >> 1;
         this.chy0 = this.chy = (h - crosshairSize) >> 1;
@@ -710,12 +711,16 @@ final class MapViewer {
         final int x1 = scaleDx + scaleLength;
 
         // scale
+        if (!Config.osdNoBackground) {
+            graphics.drawImage(Desktop.barScale, x0 + 3 - 2, h - Desktop.osd.bh - 2, Graphics.TOP | Graphics.LEFT);
+        }
         graphics.setColor(0);
         graphics.drawLine(x0, h - 4, x0, h - 2);
         graphics.drawLine(x0, h - 3, x1, h - 3);
         graphics.drawLine(x1, h - 4, x1, h - 2);
         graphics.drawChars(sInfo, 0, sInfoLength,
-                           x0 + 3, h - Desktop.osd.bh - 2, Graphics.LEFT | Graphics.TOP);
+                           x0 + 3, h - Desktop.osd.bh - 2,
+                           Graphics.LEFT | Graphics.TOP);
     }
 
     private void drawPoi(Graphics graphics, Position position,
@@ -1032,30 +1037,33 @@ final class MapViewer {
     private void calculateScale() {
         if (map != null) {
             QualifiedCoordinates[] range = map.getRange();
-            float scale = range[0].distance(range[1]) / map.getWidth();
+            double scale = range[0].distance(range[1]) / map.getWidth();
             if (scale > 1F) {
-                int half = (int) scale * ((Desktop.width >> 1) - scaleDx);
+                char[] units = Desktop.DIST_STR_M;
+                long half = (long) (scale * ((Desktop.width >> 1) - scaleDx));
                 if (half >= 10000) {
-                    int m = half % 1000;
+                    units = Desktop.DIST_STR_KM;
+                    long m = half % 1000;
                     half /= 1000;
                     if (m > 500) {
                         half++;
                     }
+                    scale /= 1000F;
                 }
                 int grade = ExtraMath.grade(half);
-                int guess = (half / grade) * grade;
+                long guess = (half / grade) * grade;
                 if (half - guess > grade / 2) {
                     guess += grade;
                 }
                 scaleLength = (int) (guess / scale);
                 StringBuffer sb = this.sb;
                 sb.delete(0, sb.length());
-                sb.append(guess);
-                sInfoLength = sb.length();
-                if (sInfoLength > sInfo.length) {
+                sb.append(guess).append(units);
+                if (sb.length() > sInfo.length) {
                     throw new AssertionFailedException("Scale length = " + sInfoLength);
                 }
-                sb.getChars(0, sb.length(), sInfo, 0);
+                sInfoLength = sb.length();
+                sb.getChars(0, sInfoLength, sInfo, 0);
             } else {
                 sInfoLength = 0;
             }

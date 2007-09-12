@@ -17,6 +17,7 @@
 package cz.kruch.track.ui;
 
 import cz.kruch.track.event.Callback;
+import cz.kruch.track.configuration.Config;
 
 import javax.microedition.io.Connector;
 import javax.microedition.lcdui.List;
@@ -62,10 +63,12 @@ public final class FileBrowser extends List implements CommandListener, Runnable
     }
 
     public void show() {
+        // browse
         browse();
     }
 
     public void browse() {
+        // on background
         (new Thread(this)).start();
     }
 

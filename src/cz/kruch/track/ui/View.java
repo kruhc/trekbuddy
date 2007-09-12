@@ -35,8 +35,7 @@ import java.util.Vector;
  * @author Ales Pour <kruhc@seznam.cz>
  */
 abstract class View {
-    protected static final char[] MSG_NO_POSITION =
-        { 'N', 'O', ' ', 'P', 'O', 'S', 'I', 'T', 'I', 'O', 'N' };
+    protected static final String MSG_NO_POSITION = "NO POSITION";
 
     protected Navigator navigator;
     protected boolean isVisible;

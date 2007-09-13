@@ -104,9 +104,10 @@ public final class Waypoints extends List
 
     private Navigator navigator;
     private short depth;
+    private int[] idx;
 
-    private Command cmdSelect, cmdCancel, cmdClose;
-    private Command cmdNavigateTo, cmdNavigateAlong, cmdNavigateBack, cmdSetAsCurrent;
+    private Command cmdCancel, cmdClose;
+    private Command cmdNavigateTo, cmdNavigateAlong, cmdNavigateBack, cmdSetAsCurrent, cmdGoTo;
 
     private static Waypoints instance;
 
@@ -123,8 +124,9 @@ public final class Waypoints extends List
     }
 
     private Waypoints(Navigator navigator) {
-        super("Navigation", List.IMPLICIT);
+        super(null, List.IMPLICIT);
         this.navigator = navigator;
+        this.setCommandListener(this);
         this.setFitPolicy(Choice.TEXT_WRAP_OFF);
         this.initialize();
     }
@@ -144,18 +146,17 @@ public final class Waypoints extends List
     }
 
     private void initialize() {
-        // init menu
-        cmdSelect = new Command("Select", Command.ITEM, 1);
+        // item index
+        idx = new int[3];
+
+        // init commands
         cmdCancel = new Command("Back", Command.BACK, 1);
         cmdClose = new Command("Close", Command.BACK, 1);
         cmdNavigateTo = new Command(WaypointForm.MENU_NAVIGATE_TO, Command.ITEM, 2);
         cmdNavigateAlong = new Command(WaypointForm.MENU_NAVIGATE_ALONG, Command.ITEM, 3);
         cmdNavigateBack = new Command(WaypointForm.MENU_NAVIGATE_BACK, Command.ITEM, 4);
         cmdSetAsCurrent = new Command(WaypointForm.MENU_SET_CURRENT, Command.ITEM, 2);
-
-        // command handling
-        setSelectCommand(cmdSelect);
-        setCommandListener(this);
+        cmdGoTo = new Command(WaypointForm.MENU_GO_TO, Command.ITEM, 5);
 
         // init collection
         stores = new Hashtable(3);
@@ -192,6 +193,9 @@ public final class Waypoints extends List
     }
 
     public void show() {
+        // fresh start
+        disable();
+
         // let's start with basic menu
         depth = 0;
         menu();
@@ -201,6 +205,9 @@ public final class Waypoints extends List
     }
 
     public void showCurrent() {
+        // fresh start
+        disable();
+
         // show current store, if any...
         if (currentWpts == null) {
             depth = 0;
@@ -222,6 +229,8 @@ public final class Waypoints extends List
         removeCommand(cmdNavigateAlong);
         removeCommand(cmdNavigateBack);
         removeCommand(cmdSetAsCurrent);
+        removeCommand(cmdGoTo);
+        setSelectCommand(null);
     }
 
     private void menu() {
@@ -246,6 +255,7 @@ public final class Waypoints extends List
 
                 // create commands
                 addCommand(cmdClose);
+                setSelectCommand(List.SELECT_COMMAND);
 
                 // update title
                 setTitle("Navigation");
@@ -253,6 +263,7 @@ public final class Waypoints extends List
             case 1: {
                 // create commands
                 addCommand(cmdCancel);
+                setSelectCommand(List.SELECT_COMMAND);
 
                 // update title
                 setTitle("Waypoints");
@@ -266,11 +277,18 @@ public final class Waypoints extends List
                     addCommand(cmdNavigateAlong);
                     addCommand(cmdNavigateBack);
                 }
+                addCommand(cmdGoTo);
                 addCommand(cmdCancel);
+                setSelectCommand(List.SELECT_COMMAND);
 
                 // update title
                 setTitle(currentName + " (" + currentWpts.size() + ")");
             } break;
+        }
+
+        // set last known choice
+        if (idx[depth] < size()) {
+            setSelectedIndex(idx[depth], true);
         }
     }
 
@@ -291,7 +309,8 @@ public final class Waypoints extends List
             }
         } else {
             // get selected item
-            String item = getString(getSelectedIndex());
+            idx[depth] = getSelectedIndex();
+            String item = getString(idx[depth]);
             // depth-specific action
             switch (depth) {
                 case 0: {
@@ -344,26 +363,30 @@ public final class Waypoints extends List
                     }
                 } break;
                 case 1: { // store action
-                    if (Command.ITEM == command.getCommandType()) {
-                        if (command == cmdSelect) {
-                            onBackground(item);
-                        } else if (WaypointForm.MENU_NAVIGATE_ALONG.equals(command.getLabel())) {
+                    if (List.SELECT_COMMAND == command) {
+                        onBackground(item);
+                    } else if (Command.ITEM == command.getCommandType()) {
+                        String label = command.getLabel();
+                        if (WaypointForm.MENU_NAVIGATE_ALONG.equals(label)) {
                             invoke(new Object[]{ WaypointForm.MENU_NAVIGATE_ALONG, null }, null, this);
                         }
                     }
                 } break;
                 case 2: { // wpt action
-                    if (Command.ITEM == command.getCommandType()) {
-                        if (command == cmdSelect) {
-                            (new WaypointForm(this, (Waypoint) currentWpts.elementAt(getSelectedIndex()), this)).show();
-                        } else if (WaypointForm.MENU_NAVIGATE_TO.equals(command.getLabel())) {
+                    if (List.SELECT_COMMAND == command) {
+                        (new WaypointForm(this, (Waypoint) currentWpts.elementAt(idx[depth]), this)).show();
+                    } else if (Command.ITEM == command.getCommandType()) {
+                        String label = command.getLabel();
+                        if (WaypointForm.MENU_NAVIGATE_TO.equals(label)) {
                             invoke(new Object[]{ WaypointForm.MENU_NAVIGATE_TO, null }, null, this);
-                        } else if (WaypointForm.MENU_NAVIGATE_ALONG.equals(command.getLabel())) {
+                        } else if (WaypointForm.MENU_NAVIGATE_ALONG.equals(label)) {
                             invoke(new Object[]{ WaypointForm.MENU_NAVIGATE_ALONG, null }, null, this);
-                        } else if (WaypointForm.MENU_NAVIGATE_BACK.equals(command.getLabel())) {
+                        } else if (WaypointForm.MENU_NAVIGATE_BACK.equals(label)) {
                             invoke(new Object[]{ WaypointForm.MENU_NAVIGATE_BACK, null }, null, this);
-                        } else if (WaypointForm.MENU_SET_CURRENT.equals(command.getLabel())) {
+                        } else if (WaypointForm.MENU_SET_CURRENT.equals(label)) {
                             invoke(new Object[]{ WaypointForm.MENU_SET_CURRENT, null }, null, this);
+                        } else if (WaypointForm.MENU_GO_TO.equals(label)) {
+                            invoke(new Object[]{ WaypointForm.MENU_GO_TO, null }, null, this);
                         }
                     }
                 } break;
@@ -432,6 +455,15 @@ public final class Waypoints extends List
                 } else {
                     navigator.setNavigateTo(currentWpts /* == Desktop.wpts */, -1, getSelectedIndex());
                 }
+
+            } else if (WaypointForm.MENU_GO_TO == action) {
+
+                // restore navigator
+                Desktop.display.setCurrent((Displayable) navigator);
+
+                // call navigator
+                navigator.goTo((Waypoint) currentWpts.elementAt(getSelectedIndex()));
+
             } else if (WaypointForm.MENU_SAVE == action) { // record & enlist current location as waypoint
 
                 // restore navigator
@@ -625,10 +657,14 @@ public final class Waypoints extends List
                 setTicker(new Ticker("Loading..."));
 
                 // parse new waypoints
-                if (_storeName.endsWith(SUFFIX_GPX)) {
-                    wpts = parseWaypoints(file, TYPE_GPX);
-                } else if (_storeName.endsWith(SUFFIX_LOC)) {
-                    wpts = parseWaypoints(file, TYPE_LOC);
+                int i = _storeName.lastIndexOf('.');
+                if (i > -1) {
+                    String ext = _storeName.substring(i).toLowerCase();
+                    if (ext.equals(SUFFIX_GPX)) {
+                        wpts = parseWaypoints(file, TYPE_GPX);
+                    } else if (ext.equals(SUFFIX_LOC)) {
+                        wpts = parseWaypoints(file, TYPE_LOC);
+                    }
                 }
 
                 // process result

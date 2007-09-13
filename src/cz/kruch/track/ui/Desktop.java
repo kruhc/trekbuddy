@@ -1070,6 +1070,19 @@ public final class Desktop extends GameCanvas
         return cz.kruch.track.TrackingMIDlet.APP_TITLE + " " + midlet.getAppProperty("MIDlet-Version");
     }
 
+    public void goTo(Waypoint wpt) {
+        QualifiedCoordinates local = map.getDatum().toLocal(wpt.getQualifiedCoordinates());
+        if (map.isWithin(local)) {
+            // scroll to position
+            ((MapView) views[VIEW_MAP]).setPosition(map.transform(local));
+            // update screen
+            update(MASK_ALL);
+        } else {
+            Desktop.showWarning("Selected waypoint is off current map", null, Desktop.this);
+        }
+        QualifiedCoordinates.releaseInstance(local);
+    }
+
     /**
      * @deprecated should be?
      * @return current waypoint

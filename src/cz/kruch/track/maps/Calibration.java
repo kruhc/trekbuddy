@@ -111,7 +111,7 @@ abstract class Calibration {
 */
         Position p = transform(coordinates);
         final int x = p.getX();
-        if (x >=0 && x < width) {
+        if (x >= 0 && x < width) {
             final int y = p.getY();
             if (y >= 0 && y < height) {
                 return true;

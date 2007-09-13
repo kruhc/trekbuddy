@@ -32,6 +32,8 @@ public interface Navigator {
     public int getWptAzimuth();
     public float getWptDistance();
 
+    public void goTo(Waypoint wpt);
+
     public void saveLocation(Location l);
     public long getTracklogTime();
     public String getTracklogCreator();

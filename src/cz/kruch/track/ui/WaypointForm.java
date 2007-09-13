@@ -117,9 +117,7 @@ public final class WaypointForm extends Form
         addCommand(new Command(MENU_NAVIGATE_TO, Command.SCREEN, 1));
         addCommand(new Command(MENU_NAVIGATE_ALONG, Command.SCREEN, 2));
         addCommand(new Command(MENU_NAVIGATE_BACK, Command.SCREEN, 3));
-/* TODO in 0.9.58
-        addCommand(new Command(MENU_GO_TO, Command.SCREEN, 3));
-*/
+        addCommand(new Command(MENU_GO_TO, Command.SCREEN, 4));
     }
 
     public WaypointForm(Displayable next, Callback callback,
@@ -207,7 +205,7 @@ public final class WaypointForm extends Form
                     callback.invoke(new Object[]{ MENU_USE, wpt }, null, this);
                     cnt++;
                 } catch (IllegalArgumentException e) {
-                    Desktop.showWarning("Malformed coordinate", e, null);
+                    Desktop.showWarning("Malformed coordinates", e, null);
                 }
             } else if (MENU_SAVE.equals(label)) {
                 Waypoint wpt = new Waypoint(coordinates,

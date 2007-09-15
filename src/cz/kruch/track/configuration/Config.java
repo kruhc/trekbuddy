@@ -17,15 +17,19 @@
 package cz.kruch.track.configuration;
 
 import cz.kruch.track.util.CharArrayTokenizer;
+import cz.kruch.track.TrackingMIDlet;
+import cz.kruch.track.io.LineReader;
 
 import javax.microedition.rms.RecordStore;
 import javax.microedition.rms.RecordStoreException;
 import javax.microedition.midlet.MIDlet;
+import javax.microedition.io.Connector;
 import java.io.DataInputStream;
 import java.io.ByteArrayInputStream;
 import java.io.DataOutputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.Vector;
 import java.util.Hashtable;
 
@@ -129,6 +133,7 @@ public final class Config {
     public static boolean decimalPrecision;
     public static boolean osdBasic              = true;
     public static boolean osdExtended           = true;
+    public static boolean osdScale              = true;
     public static boolean osdNoBackground;
     public static boolean osdMediumFont;
     public static boolean osdBoldFont;
@@ -298,6 +303,12 @@ public final class Config {
         } catch (Exception e) {
         }
 
+        // 0.9.63 extensions
+        try {
+            osdScale = din.readBoolean();
+        } catch (Exception e) {
+        }
+
 //#ifdef __LOG__
         if (log.isEnabled()) log.info("configuration read");
 //#endif
@@ -352,6 +363,7 @@ public final class Config {
         dout.writeInt(0/*scrollingDelay*/);
         dout.writeInt(gpxDt);
         dout.writeInt(gpxDs);
+        dout.writeBoolean(osdScale);
 
 //#ifdef __LOG__
         if (log.isEnabled()) log.info("configuration updated");
@@ -472,42 +484,81 @@ public final class Config {
 
     public static Datum[] DATUMS;
     public static Datum currentDatum = Datum.DATUM_WGS_84;
-    public static Hashtable datumMappings = new Hashtable();
+    public static final Hashtable datumMappings = new Hashtable();
 
     public static void initDatums(MIDlet midlet) {
         int idx = 1;
-
-        Vector datums = new Vector();
         char[] delims = { '{', '}', ',', '=' };
+        Vector datums = new Vector();
         CharArrayTokenizer tokenizer = new CharArrayTokenizer();
 
+        // WGS-84 is hardcoded
         datums.addElement(Datum.DATUM_WGS_84);
         datumMappings.put("map:WGS 84", Datum.DATUM_WGS_84);
 
-        initDatum(tokenizer, delims, datums, "AGD 66{Australian National,-133,-48,148}=map:Australian Geodetic 1966");
-        initDatum(tokenizer, delims, datums, "CH-1903{Bessel 1841,674,15,405}=map:CH-1903");
-        initDatum(tokenizer, delims, datums, "NAD27 (CONUS){Clarke 1866,-8,160,176}=map:NAD27 CONUS");
-        initDatum(tokenizer, delims, datums, "OSGB 36{Airy 1830,375,-111,431}=map:Ord Srvy Grt Britn");
-        initDatum(tokenizer, delims, datums, "Ireland 1965{Modified Airy,506,-122,611}=map:Ireland 1965");
-        initDatum(tokenizer, delims, datums, "RT 90{Bessel 1841,498,-36,568}=map:RT 90");
-        initDatum(tokenizer, delims, datums, "S-42 (Russia){Krassovsky 1940,28,-130,-95}=map:Pulkovo 1942 (1)");
+        // first try built-in
+        try {
+            initDatums(tokenizer, delims, datums, TrackingMIDlet.class.getResourceAsStream("/resources/datums.txt"));
+        } catch (Throwable t) {
+            // ignore
+        }
 
+        // next try user's
+        try {
+            initDatums(tokenizer, delims, datums, Connector.openInputStream(Config.getFolderResources() + "datums.txt"));
+        } catch (Throwable t) {
+            // ignore
+        }
+
+        // lastly try JAD
+        CharArrayTokenizer.Token t = new CharArrayTokenizer.Token();
         String s = midlet.getAppProperty("Datum-" + Integer.toString(idx++));
         while (s != null) {
-            initDatum(tokenizer, delims, datums, s);
+            t.init(s.toCharArray(), 0, s.length());
+            initDatum(tokenizer, delims, datums, t);
             s = midlet.getAppProperty("Datum-" + Integer.toString(idx++));
         }
 
+        // release resources
         tokenizer.dispose();
 
+        // finalize datum array
         DATUMS = new Datum[datums.size()];
         datums.copyInto(DATUMS);
     }
 
-    private static void initDatum(CharArrayTokenizer tokenizer, char[] delims,
-                                  Vector datums, String s) {
+    private static void initDatums(CharArrayTokenizer tokenizer, char[] delims,
+                                   Vector datums, InputStream in) {
+        if (in == null) {
+            return;
+        }
+
+        LineReader reader = null;
         try {
-            tokenizer.init(s, delims, false);
+            reader = new cz.kruch.track.io.LineReader(in);
+            CharArrayTokenizer.Token line = reader.readToken(false);
+            while (line != null) {
+                initDatum(tokenizer, delims, datums, line);
+                line = reader.readToken(false);
+            }
+        } catch (Throwable t) {
+            // ignore
+        } finally {
+            // close reader - closes the stream as well
+            if (reader != null) {
+                try {
+                    reader.close();
+                } catch (IOException e) {
+                    // ignore
+                }
+            }
+        }
+    }
+
+    private static void initDatum(CharArrayTokenizer tokenizer, char[] delims,
+                                  Vector datums, CharArrayTokenizer.Token token) {
+        try {
+            tokenizer.init(token, delims, false);
             String datumName = tokenizer.next().toString();
             String ellipsoidName = tokenizer.next().toString();
             Datum.Ellipsoid ellipsoid = null;

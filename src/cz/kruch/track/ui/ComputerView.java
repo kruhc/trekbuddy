@@ -16,7 +16,6 @@
 
 package cz.kruch.track.ui;
 
-import cz.kruch.track.location.Navigator;
 import cz.kruch.track.configuration.Config;
 import cz.kruch.track.util.CharArrayTokenizer;
 import cz.kruch.track.util.SimpleCalendar;
@@ -135,10 +134,10 @@ final class ComputerView extends View {
         'h', 'k', 'm', 'p', 's'
     };
 
-    private static final char[] DELIMITERS = { '{', '}' };
+    private static final char[] DELIMITERS  = { '{', '}' };
 
     private static final String SIGN_HEXA   = "0x1E";
-    private static final char[] NO_TIME = { '?','?', ':', '?', '?', ':', '?', '?' };
+    private static final String NO_TIME     = "??:??:??";
 
 /*
     private static final Calendar CALENDAR  = Calendar.getInstance(TimeZone.getDefault());
@@ -179,7 +178,7 @@ final class ComputerView extends View {
     private final float[] valuesFloat;
     private int counter;
 
-    public ComputerView(Navigator navigator) {
+    public ComputerView(/*Navigator*/Desktop navigator) {
         super(navigator);
         this.sb = new StringBuffer(64);
         this.text = new char[64];

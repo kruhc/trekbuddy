@@ -20,7 +20,6 @@ import api.location.QualifiedCoordinates;
 import api.location.Location;
 
 import cz.kruch.track.configuration.Config;
-import cz.kruch.track.location.Navigator;
 import cz.kruch.track.location.Waypoint;
 import cz.kruch.track.util.ExtraMath;
 
@@ -74,7 +73,7 @@ final class LocatorView extends View {
     private final StringBuffer sb;
     private final char[] sbChars;
 
-    public LocatorView(Navigator navigator) {
+    public LocatorView(/*Navigator*/Desktop navigator) {
         super(navigator);
         this.locations = new Location[HISTORY_DEPTH];
         this.coordinatesAvg = new QualifiedCoordinates[2];

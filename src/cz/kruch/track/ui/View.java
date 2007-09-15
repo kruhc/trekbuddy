@@ -16,9 +16,6 @@
 
 package cz.kruch.track.ui;
 
-import cz.kruch.track.location.Navigator;
-import cz.kruch.track.location.Waypoint;
-
 import javax.microedition.lcdui.Graphics;
 import javax.microedition.lcdui.Font;
 import javax.microedition.lcdui.game.GameCanvas;
@@ -37,10 +34,10 @@ import java.util.Vector;
 abstract class View {
     protected static final String MSG_NO_POSITION = "NO POSITION";
 
-    protected Navigator navigator;
+    protected /*Navigator*/Desktop navigator;
     protected boolean isVisible;
 
-    protected View(Navigator navigator) {
+    protected View(/*Navigator*/Desktop navigator) {
         this.navigator = navigator;
     }
 

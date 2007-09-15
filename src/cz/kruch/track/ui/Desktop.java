@@ -28,7 +28,6 @@ import cz.kruch.track.configuration.Config;
 import cz.kruch.track.configuration.ConfigurationException;
 import cz.kruch.track.location.GpxTracklog;
 import cz.kruch.track.location.Waypoint;
-import cz.kruch.track.location.Navigator;
 import cz.kruch.track.util.CharArrayTokenizer;
 
 import javax.microedition.lcdui.Canvas;
@@ -67,7 +66,7 @@ public final class Desktop extends GameCanvas
                    net.rim.device.api.system.TrackwheelListener,
 //#endif
                    /* Map.StateListener, Atlas.StateListener, */
-                   YesNoDialog.AnswerListener, Navigator {
+                   YesNoDialog.AnswerListener/*, Navigator*/ {
 //#ifdef __LOG__
     private static final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("Desktop");
 //#endif
@@ -1987,7 +1986,7 @@ public final class Desktop extends GameCanvas
 
 //        private volatile long lastRepeat;
         
-        public MapView(Navigator navigator) {
+        public MapView(/*Navigator*/Desktop navigator) {
             super(navigator);
 
             // create map viewer

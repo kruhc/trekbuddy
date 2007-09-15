@@ -144,6 +144,7 @@ public final class Location {
         this.course = course;
     }
 
+    // TODO move to NavigationScreens
     public StringBuffer toStringBuffer(StringBuffer sb) {
 /*
         DATE.setTime(timestamp);

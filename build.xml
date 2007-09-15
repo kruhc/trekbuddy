@@ -359,9 +359,11 @@
             <arg line="-addjarsig -alias 'trekbuddy' -keystore trekbuddy.jks -keypass changeit -jarfile dist/${dist.dir}/trekbuddy${suffix}.jar -inputjad dist/${dist.dir}/trekbuddy${suffix}.jad -outputjad dist/${dist.dir}/_trekbuddy${suffix}.jad"/>
         </java>
         <move file="dist/${dist.dir}/_trekbuddy${suffix}.jad" tofile="dist/${dist.dir}/trekbuddy${suffix}.jad"/>
+<!--
         <wtkjad jadfile="dist/${dist.dir}/trekbuddy${suffix}.jad" update="true">
             <attribute name="Datum-1" value="S-42 (Poland){Krassovsky 1940,24,-124,-82}=map:Pulkovo 1942 POL"/>
         </wtkjad>
+-->
     </target>
 
     <target name="obfuscate">

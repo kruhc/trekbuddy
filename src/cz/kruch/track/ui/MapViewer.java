@@ -699,7 +699,7 @@ final class MapViewer {
         }
 
         // paint scale
-        if (sInfoLength > 0) {
+        if (Config.osdScale && sInfoLength > 0) {
             drawScale(graphics);
         }
     }

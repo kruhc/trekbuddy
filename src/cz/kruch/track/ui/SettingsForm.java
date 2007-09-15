@@ -139,6 +139,7 @@ final class SettingsForm extends Form implements CommandListener, ItemStateListe
         choiceMisc.append("HPS wpt true azimuth", null);
         choiceMisc.append("OSD basic", null);
         choiceMisc.append("OSD extended", null);
+        choiceMisc.append("OSD scale", null);
         choiceMisc.append("OSD no background", null);
         choiceMisc.append("OSD medium font", null);
         choiceMisc.append("OSD bold font", null);
@@ -150,6 +151,7 @@ final class SettingsForm extends Form implements CommandListener, ItemStateListe
             Config.hpsWptTrueAzimuth,
             Config.osdBasic,
             Config.osdExtended,
+            Config.osdScale,
             Config.osdNoBackground,
             Config.osdMediumFont,
             Config.osdBoldFont,
@@ -436,10 +438,11 @@ final class SettingsForm extends Form implements CommandListener, ItemStateListe
             Config.hpsWptTrueAzimuth = misc[3];
             Config.osdBasic = misc[4];
             Config.osdExtended = misc[5];
-            Config.osdNoBackground = misc[6];
-            Config.osdMediumFont = misc[7];
-            Config.osdBoldFont = misc[8];
-            Config.osdBlackColor = misc[9];
+            Config.osdScale = misc[6];
+            Config.osdNoBackground = misc[7];
+            Config.osdMediumFont = misc[8];
+            Config.osdBoldFont = misc[9];
+            Config.osdBlackColor = misc[10];
             Desktop.resetFont();
 
             // datum

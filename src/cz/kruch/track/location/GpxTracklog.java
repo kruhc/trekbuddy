@@ -223,6 +223,7 @@ public final class GpxTracklog extends Thread {
                         Waypoint w = (Waypoint) item;
                         if (w.getUserObject() != null) {
                             w.setLinkPath(saveImage((byte[]) w.getUserObject()));
+                            w.setUserObject(null);
                         }
                         serializeWpt(serializer, w);
                         serializer.flush();

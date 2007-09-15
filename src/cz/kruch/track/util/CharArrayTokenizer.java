@@ -44,21 +44,8 @@ public final class CharArrayTokenizer {
         this.init(token, DEFAULT_DELIMS, returnDelim);
     }
 
-/* unused
-    public void init(char[] array, boolean returnDelim) {
-        this.init(array, DEFAULT_DELIMS, returnDelim);
-    }
-*/
-
     public void init(String s, boolean returnDelim) {
         this.init(s, DEFAULT_DELIMS, returnDelim);
-    }
-
-    private void init(Token token, char[] delimiters, boolean returnDelim) {
-        this.init(token.array, delimiters, returnDelim);
-        /* set start and end explicitly */
-        this.position = token.begin;
-        this.end = token.begin + token.length;
     }
 
     public void init(char[] array, int length, char[] delimiters, boolean returnDelim) {
@@ -71,6 +58,13 @@ public final class CharArrayTokenizer {
         this.init(array, DEFAULT_DELIMS, returnDelim);
         /* set end explicitly */
         this.end = length;
+    }
+
+    public void init(Token token, char[] delimiters, boolean returnDelim) {
+        this.init(token.array, delimiters, returnDelim);
+        /* set start and end explicitly */
+        this.position = token.begin;
+        this.end = token.begin + token.length;
     }
 
     private void init(char[] array, char[] delimiters, boolean returnDelim) {

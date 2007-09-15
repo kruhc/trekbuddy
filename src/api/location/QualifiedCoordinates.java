@@ -130,6 +130,10 @@ public final class QualifiedCoordinates implements GeodeticPosition {
     }
 
     private float distance(final double neighbourLat, final double neighbourLon) {
+        if (lat == neighbourLat && lon == neighbourLon) {
+            return 0F;
+        }
+
         /*
          * calculation for ellipsoid model
          */

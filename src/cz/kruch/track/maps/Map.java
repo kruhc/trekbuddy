@@ -391,12 +391,14 @@ public final class Map implements Runnable {
         protected Exception exception;
         protected StringBuffer pathSb;
         protected BufferedInputStream buffered;
+        protected final boolean isGPSka;
 
         private Vector list;
 
         public abstract void loadSlice(Slice slice) throws IOException;
 
         protected Loader() {
+            this.isGPSka = calibration instanceof Calibration.XML;
         }
 
         public void init(String url) throws IOException {
@@ -469,12 +471,12 @@ public final class Map implements Runnable {
             return false;
         }
 
-        protected Slice addSlice(String filename) throws InvalidMapException {
+        protected final Slice addSlice(String filename) throws InvalidMapException {
             if (basename == null) {
-                if (calibration instanceof Calibration.XML) { // GPSka
-                    basename = this instanceof TarLoader ? filename.substring(4) : filename;
-                } else {
+                if (!isGPSka) {
                     basename = Slice.getBasename(this instanceof TarLoader ? filename.substring(4) : filename);
+                } else {
+                    basename = this instanceof TarLoader ? filename.substring(4) : filename;
                 }
             }
 
@@ -482,19 +484,14 @@ public final class Map implements Runnable {
                 list = new Vector(64, 16);
             }
 
-            Slice slice;
-            if (calibration instanceof Calibration.XML) { // GPSka
-                slice = new Slice();
-            } else {
-                if (this instanceof TarLoader) {
-                    slice = new TarSlice(filename);
-                } else {
-                    slice = new Slice(filename);
-                }
-            }
+            Slice slice = newSlice(filename);
             list.addElement(slice);
 
             return slice;
+        }
+
+        protected Slice newSlice(String filename) throws InvalidMapException {
+            return !isGPSka ? new Slice(filename) : new Slice();
         }
 
 /*
@@ -603,6 +600,10 @@ public final class Map implements Runnable {
 
         protected TarLoader() {
             super();
+        }
+
+        protected Slice newSlice(String filename) throws InvalidMapException {
+            return new TarSlice(filename);
         }
 
         public void init(String url) throws IOException {
@@ -899,7 +900,7 @@ public final class Map implements Runnable {
 
             // construct slice path
             pathSb.append(RESOURCES_SET_DIR).append(basename);
-            if (!(calibration instanceof Calibration.XML)) {
+            if (!isGPSka) {
                 slice.appendPath(pathSb);
             }
 
@@ -1088,7 +1089,7 @@ public final class Map implements Runnable {
 
             // construct slice path
             pathSb.append(dir).append(SET_DIR_PREFIX).append(basename);
-            if (!(calibration instanceof Calibration.XML)) {
+            if (!isGPSka) {
                 slice.appendPath(pathSb);
             }
 

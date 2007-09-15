@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <project name="TrekBuddy" default="generic" basedir=".">
 
-    <property name="version" value="0.9.62"/>
+    <property name="version" value="0.9.63"/>
     <property name="vendor" value="KrUcH"/>
     <property name="description" value="J2ME GPS application"/>
 

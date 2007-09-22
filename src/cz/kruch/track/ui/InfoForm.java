@@ -55,6 +55,7 @@ final class InfoForm extends Form implements CommandListener {
         if (cz.kruch.track.TrackingMIDlet.getFlags() != null) {
             append(newItem("AppFlags", cz.kruch.track.TrackingMIDlet.getFlags()));
         }
+        append(newItem("I18n", System.getProperty("microedition.locale") + " " + System.getProperty("microedition.encoding")));
         append(newItem("Fs", "type? " + Integer.toString(api.file.File.fsType) + "; resetable? " + Integer.toString(cz.kruch.track.maps.Map.fileInputStreamResetable)));
         append(newItem("Ports", cz.kruch.track.TrackingMIDlet.hasPorts() + "; " + System.getProperty("microedition.commports")));
         append(newItem("TimeZone", TimeZone.getDefault().getID() + "; " + TimeZone.getDefault().useDaylightTime() + "; " + TimeZone.getDefault().getRawOffset()));

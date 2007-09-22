@@ -303,7 +303,7 @@ public final class Map implements Runnable {
             }
             loader.init(path);
             boolean finalize = loader.doFinal();
-            loader.checkException();
+            loader.checkThrowable();
 
 //#ifdef __LOG__
             if (log.isEnabled()) log.debug("map opened");
@@ -388,7 +388,7 @@ public final class Map implements Runnable {
 
     private abstract class Loader implements Runnable {
         protected String basename;
-        protected Exception exception;
+        protected Throwable throwable;
         protected StringBuffer pathSb;
         protected BufferedInputStream buffered;
         protected final boolean isGPSka;
@@ -406,9 +406,9 @@ public final class Map implements Runnable {
             this.pathSb = new StringBuffer(64);
         }
 
-        public void checkException() throws Exception {
-            if (exception != null) {
-                throw exception;
+        public void checkThrowable() throws Throwable {
+            if (throwable != null) {
+                throw throwable;
             }
         }
 
@@ -416,7 +416,6 @@ public final class Map implements Runnable {
             pathSb = null;
             if (buffered != null) {
                 buffered.close();
-                buffered.dispose();
                 buffered = null;
             }
         }
@@ -698,8 +697,8 @@ public final class Map implements Runnable {
                         entry = tarIn.getNextEntry();
                     }
                 }
-            } catch (Exception e) {
-                exception = e;
+            } catch (Throwable t) {
+                throwable = t;
             } finally {
 
                 // close native stream when not reusable
@@ -831,9 +830,12 @@ public final class Map implements Runnable {
         public void init(String url) throws IOException {
             super.init(url);
 
+            InputStream in = null;
+            LineReader reader = null;
+
             try {
                 // look for Ozi calibration first
-                InputStream in = cz.kruch.track.TrackingMIDlet.class.getResourceAsStream(DEFAULT_OZI_MAP);
+                in = cz.kruch.track.TrackingMIDlet.class.getResourceAsStream(DEFAULT_OZI_MAP);
                 if (in == null) {
                     // look for GMI then
                     in = cz.kruch.track.TrackingMIDlet.class.getResourceAsStream(DEFAULT_GMI_MAP);
@@ -862,34 +864,41 @@ public final class Map implements Runnable {
                 if (log.isEnabled()) log.debug("in-jar calibration loaded");
 //#endif
 
-                // close stream
-                try {
-                    in.close();
-                } catch (IOException e) {
-                    // ignore
-                }
-                in = null; // gc hint
-
                 // each line is a slice filename
-                LineReader reader = new LineReader(cz.kruch.track.TrackingMIDlet.class.getResourceAsStream(RESOURCES_SET_FILE));
+                reader = new LineReader(cz.kruch.track.TrackingMIDlet.class.getResourceAsStream(RESOURCES_SET_FILE));
                 String entry = reader.readLine(false);
                 while (entry != null) {
-//#ifdef __LOG__
-                    if (log.isEnabled()) log.debug("in-jar tile - " + entry);
-//#endif
                     addSlice(entry);
-                    entry = null; // gc hint
                     entry = reader.readLine(false);
                 }
-
-                // close reader (closes the stream)
-                reader.close();
-
 //#ifdef __LOG__
                 if (log.isEnabled()) log.debug("in-jar .set processed");
 //#endif
-            } catch (Exception e) {
-                exception = e;
+            } catch (Throwable t) {
+                throwable = t;
+            } finally {
+
+                // check for Palm - it resets it :-(
+                if (!cz.kruch.track.TrackingMIDlet.palm) {
+
+                    // close stream
+                    if (in != null) {
+                        try {
+                            in.close();
+                        } catch (IOException e) {
+                            // ignore
+                        }
+                    }
+
+                    // close reader (closes the stream)
+                    if (reader != null) {
+                        try {
+                            reader.close();
+                        } catch (IOException e) {
+                            // ignore
+                        }
+                    }
+                }
             }
         }
 
@@ -1044,7 +1053,11 @@ public final class Map implements Runnable {
                             } finally {
                                 // close reader - also closes the file stream
                                 if (reader != null) {
-                                    reader.close();
+                                    try {
+                                        reader.close();
+                                    } catch (IOException e) {
+                                        // ignore
+                                    }
                                 }
 
                                 // detach buffered stream
@@ -1052,7 +1065,11 @@ public final class Map implements Runnable {
                             }
                         } else {
                             // close file
-                            file.close();
+                            try {
+                                file.close();
+                            } catch (IOException e) {
+                                // ignore
+                            }
                             file = null; // gc hint
 
                             // iterate over set directory
@@ -1077,8 +1094,8 @@ public final class Map implements Runnable {
                         }
                     }
                 }
-            } catch (Exception e) {
-                exception = e;
+            } catch (Throwable t) {
+                throwable = t;
             }
         }
 

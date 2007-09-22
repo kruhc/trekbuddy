@@ -39,11 +39,14 @@ public final class SimpleCalendar {
         this.date = null;
     }
 
-    public void setTime(long millis) {
-        final int dt = (int) (millis - last) / 1000;
-        if (dt >= 3600) { // when time jumps too much (1 hour), start from scratch
+    public void setTimeSafe(long millis) {
+        if (Math.abs(millis - last) >= 3600) { // if time jumps too much (1 hour)
             date = null;
         }
+        setTime(millis);
+    }
+
+    public void setTime(long millis) {
         if (date == null) {
             date = new Date(millis);
             calendar.setTime(date);
@@ -51,6 +54,7 @@ public final class SimpleCalendar {
             minute = calendar.get(Calendar.MINUTE);
             second = calendar.get(Calendar.SECOND);
         } else {
+            final int dt = (int) (millis - last) / 1000;
             final int h = dt / 3600;
             final int m = (dt % 3600) / 60;
             final int s = (dt % 3600) % 60;

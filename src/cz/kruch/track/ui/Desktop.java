@@ -90,6 +90,9 @@ public final class Desktop extends GameCanvas
     private static final int VIEW_HPS       = 1;
     private static final int VIEW_CMS       = 2;
 
+    // UI
+    static int POSITIVE_CMD_TYPE;
+
     // desktop screen and display
     public static Displayable screen;
     public static Display display;
@@ -145,11 +148,13 @@ public final class Desktop extends GameCanvas
     private Command cmdPause, cmdContinue;
 
     // for faster movement
-    private volatile int scrolls;
+    static volatile int scrolls;
 
     // browsing or tracking
     static volatile boolean browsing = true;
-    private volatile boolean paused;
+    static volatile boolean paused;
+
+    // other status vars
     private volatile boolean navigating;
     private volatile boolean keylock;
 
@@ -174,10 +179,12 @@ public final class Desktop extends GameCanvas
     private boolean tracklog;
     private GpxTracklog gpxTracklog;
 
-    // navigation // TODO move to Waypoints??? access modifiers???
+    // navigation // TODO move to Waypoints
     /*public*/ static volatile Vector wpts;
     /*public*/ static volatile int wptIdx, wptEndIdx;
     /*public*/ static volatile int routeDir;
+
+    // current waypoint info
     private volatile float wptDistance, wptHeightDiff;
     private volatile int wptAzimuth;
     private volatile int wptsId;
@@ -200,6 +207,9 @@ public final class Desktop extends GameCanvas
      */
     public Desktop(MIDlet midlet) {
         super(false);
+
+        // UI
+        POSITIVE_CMD_TYPE = TrackingMIDlet.wm ? Command.ITEM : Command.SCREEN;
 
         // init static members
         screen = this;
@@ -305,34 +315,33 @@ public final class Desktop extends GameCanvas
     }
 
     private void configure() {
-        final int positiveCmdType = TrackingMIDlet.wm ? Command.ITEM : Command.SCREEN;
-
         // create and add commands to the screen
         if (Config.fullscreen && cz.kruch.track.TrackingMIDlet.sxg75) {
             this.addCommand(new Command("", Command.SCREEN, 0));
         }
         if (Config.btDeviceName.length() > 0) {
-            this.addCommand(this.cmdRunLast = new Command(TrackingMIDlet.resolve(TrackingMIDlet.MENU_START) + " " + Config.btDeviceName, positiveCmdType, 1));
-            this.addCommand(this.cmdRun = new Command(TrackingMIDlet.resolve(TrackingMIDlet.MENU_START), positiveCmdType, 2));
+            this.addCommand(this.cmdRunLast = new Command(TrackingMIDlet.resolve(TrackingMIDlet.MENU_START) + " " + Config.btDeviceName, POSITIVE_CMD_TYPE, 1));
+            this.addCommand(this.cmdRun = new Command(TrackingMIDlet.resolve(TrackingMIDlet.MENU_START), POSITIVE_CMD_TYPE, 2));
         } else {
-            this.addCommand(this.cmdRun = new Command(TrackingMIDlet.resolve(TrackingMIDlet.MENU_START), positiveCmdType, 1));
+            this.addCommand(this.cmdRun = new Command(TrackingMIDlet.resolve(TrackingMIDlet.MENU_START), POSITIVE_CMD_TYPE, 1));
         }
         if (cz.kruch.track.TrackingMIDlet.getPlatform().startsWith("NokiaE61")) {
-            this.addCommand(this.cmdWaypoints = new Command("Waypoints", positiveCmdType, 3));
+            this.addCommand(this.cmdWaypoints = new Command("Waypoints", POSITIVE_CMD_TYPE, 3));
         }
         if (cz.kruch.track.TrackingMIDlet.isFs()) {
-            this.addCommand(this.cmdLoadMap = new Command(TrackingMIDlet.resolve(TrackingMIDlet.MENU_LOADMAP), positiveCmdType, 4));
-            this.addCommand(this.cmdLoadAtlas = new Command(TrackingMIDlet.resolve(TrackingMIDlet.MENU_LOADATLAS), positiveCmdType, 5));
+            this.addCommand(this.cmdLoadMap = new Command(TrackingMIDlet.resolve(TrackingMIDlet.MENU_LOADMAP), POSITIVE_CMD_TYPE, 4));
+            this.addCommand(this.cmdLoadAtlas = new Command(TrackingMIDlet.resolve(TrackingMIDlet.MENU_LOADATLAS), POSITIVE_CMD_TYPE, 5));
         }
-        this.addCommand(this.cmdSettings = new Command(TrackingMIDlet.resolve(TrackingMIDlet.MENU_SETTINGS), positiveCmdType, 6));
-        this.addCommand(this.cmdInfo = new Command(TrackingMIDlet.resolve(TrackingMIDlet.MENU_INFO), positiveCmdType, 7));
-        this.addCommand(this.cmdExit = new Command(TrackingMIDlet.resolve(TrackingMIDlet.MENU_EXIT), positiveCmdType/*EXIT*/, 8/*1*/));
-        this.cmdPause = new Command(TrackingMIDlet.resolve(TrackingMIDlet.MENU_PAUSE), Config.fullscreen || cz.kruch.track.TrackingMIDlet.sonyEricsson ? positiveCmdType : Command.STOP, 1);
-        this.cmdContinue = new Command(TrackingMIDlet.resolve(TrackingMIDlet.MENU_CONTINUE), Config.fullscreen || cz.kruch.track.TrackingMIDlet.sonyEricsson ? positiveCmdType : (Command.STOP), 1);
-        this.cmdStop = new Command(TrackingMIDlet.resolve(TrackingMIDlet.MENU_STOP), Config.fullscreen || cz.kruch.track.TrackingMIDlet.sonyEricsson ? positiveCmdType : (Command.STOP), 2);
+        this.addCommand(this.cmdSettings = new Command(TrackingMIDlet.resolve(TrackingMIDlet.MENU_SETTINGS), POSITIVE_CMD_TYPE, 6));
+        this.addCommand(this.cmdInfo = new Command(TrackingMIDlet.resolve(TrackingMIDlet.MENU_INFO), POSITIVE_CMD_TYPE, 7));
+        this.addCommand(this.cmdExit = new Command(TrackingMIDlet.resolve(TrackingMIDlet.MENU_EXIT), POSITIVE_CMD_TYPE/*EXIT*/, 8/*1*/));
+        this.cmdPause = new Command(TrackingMIDlet.resolve(TrackingMIDlet.MENU_PAUSE), Config.fullscreen || cz.kruch.track.TrackingMIDlet.sonyEricsson ? POSITIVE_CMD_TYPE : Command.STOP, 1);
+        this.cmdContinue = new Command(TrackingMIDlet.resolve(TrackingMIDlet.MENU_CONTINUE), Config.fullscreen || cz.kruch.track.TrackingMIDlet.sonyEricsson ? POSITIVE_CMD_TYPE : (Command.STOP), 1);
+        this.cmdStop = new Command(TrackingMIDlet.resolve(TrackingMIDlet.MENU_STOP), Config.fullscreen || cz.kruch.track.TrackingMIDlet.sonyEricsson ? POSITIVE_CMD_TYPE : (Command.STOP), 2);
 
         // handle commands
         this.setCommandListener(this);
+        
 //#ifdef __RIM__
         if (TrackingMIDlet.rim) {
             _rimDesktopScreen = net.rim.device.api.ui.UiApplication.getUiApplication().getActiveScreen();
@@ -496,6 +505,8 @@ public final class Desktop extends GameCanvas
 /*
             sizeChanged = true; // enforce sizeChanged notification
 */
+            // TODO hack
+            LoaderIO.getInstance().enqueue((Runnable) views[VIEW_CMS]);
         }
 /*
         if (sizeChanged) {
@@ -767,6 +778,9 @@ public final class Desktop extends GameCanvas
 
         // notify device control
         cz.kruch.track.ui.nokia.DeviceControl.keyReleased();
+
+        // update
+        update(MASK_ALL);
     }
 
 //#ifdef __RIM__
@@ -878,7 +892,7 @@ public final class Desktop extends GameCanvas
 
             // stop waypoints
             try {
-                Waypoints.getInstance().shutdown();
+                Waypoints.shutdown();
             } catch (Throwable t) {
                 // ignore
             }
@@ -1357,7 +1371,7 @@ public final class Desktop extends GameCanvas
         }
     }
 
-    private void update(int mask) {
+    public void update(int mask) {
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("update " + Integer.toBinaryString(mask));
 //#endif
@@ -2425,7 +2439,7 @@ public final class Desktop extends GameCanvas
                         }
 
                         // in extended info
-                        osd.setExtendedInfo(l.toStringBuffer(osd._getSb()));
+                        osd.setExtendedInfo(NavigationScreens.toStringBuffer(l, osd._getSb()));
                     }
 
                     // are we on map?
@@ -2454,7 +2468,7 @@ public final class Desktop extends GameCanvas
                     // if not navigating, display extended tracking info (ie. time :-) )
                     if (!navigating || wpts == null) {
                         osd.setSat(0);
-                        osd.setExtendedInfo(l.toStringBuffer(osd._getSb()));
+                        osd.setExtendedInfo(NavigationScreens.toStringBuffer(l, osd._getSb()));
                     }
 
                 }

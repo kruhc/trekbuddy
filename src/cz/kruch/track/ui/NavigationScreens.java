@@ -19,6 +19,7 @@ package cz.kruch.track.ui;
 import cz.kruch.track.AssertionFailedException;
 import cz.kruch.track.util.Mercator;
 import cz.kruch.track.util.ExtraMath;
+import cz.kruch.track.util.SimpleCalendar;
 import cz.kruch.track.configuration.Config;
 
 import javax.microedition.lcdui.game.Sprite;
@@ -27,10 +28,13 @@ import javax.microedition.lcdui.Image;
 import javax.microedition.io.Connector;
 
 import api.location.QualifiedCoordinates;
+import api.location.Location;
 import api.file.File;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Calendar;
+import java.util.TimeZone;
 
 /**
  * UI helper.
@@ -56,6 +60,17 @@ public final class NavigationScreens {
     public static final char DELTA_D      = 0x394;
     public static final char DELTA_d      = 0x3b4;
 
+/*
+    private static final Calendar CALENDAR = Calendar.getInstance(TimeZone.getDefault());
+    private static final Date DATE = new Date();
+*/
+    private static final SimpleCalendar CALENDAR = new SimpleCalendar(Calendar.getInstance(TimeZone.getDefault()));
+
+    private static final String STR_KN  = " kn ";
+    private static final String STR_MPH = " mph ";
+    private static final String STR_KMH = " km/h ";
+    private static final String STR_M   = " m";
+    
     /*
      * image cache
      */
@@ -300,6 +315,63 @@ public final class NavigationScreens {
         }
     }
 
+    // TODO move to NavigationScreens
+    public static StringBuffer toStringBuffer(Location l, StringBuffer sb) {
+/*
+        DATE.setTime(timestamp);
+        CALENDAR.setTime(DATE);
+        final int hour = CALENDAR.get(Calendar.HOUR_OF_DAY);
+        final int min = CALENDAR.get(Calendar.MINUTE);
+*/
+        CALENDAR.setTimeSafe(l.getTimestamp());
+
+        final int hour = CALENDAR.hour;
+        final int min = CALENDAR.minute;
+
+        if (hour < 10) {
+            sb.append('0');
+        }
+        append(sb, hour).append(':');
+        if (min < 10) {
+            sb.append('0');
+        }
+        append(sb, min).append(' ');
+
+        if (l.getFix() > 0) {
+            final float speed = l.getSpeed();
+            final float alt = l.getQualifiedCoordinates().getAlt();
+            if (Config.unitsNautical) {
+                if (speed > -1F) {
+                    append(sb, speed * 3.6F / 1.852F, 1).append(STR_KN);
+                }
+                if (l.getCourse() > -1F) {
+                    append(sb, (int) l.getCourse()).append(SIGN);
+                }
+            } else if (Config.unitsImperial) {
+                if (speed > -1F) {
+                    append(sb, speed * 3.6F / 1.609F, 1).append(STR_MPH);
+                }
+                if (alt != Float.NaN) {
+                    append(sb, alt, 1).append(STR_M);
+                }
+            } else {
+                if (speed > -1F) {
+                    NavigationScreens.append(sb, speed * 3.6F, 1).append(STR_KMH);
+                }
+                if (alt != Float.NaN) {
+                    append(sb, alt, 1).append(STR_M);
+                }
+            }
+/* rendered by OSD directly
+            if (sat > -1) {
+                sb.append(sat).append('*');
+            }
+*/
+        }
+
+        return sb;
+    }
+
     public static StringBuffer toStringBuffer(QualifiedCoordinates qc, StringBuffer sb) {
         if (Config.useGridFormat && (Mercator.isGrid())) {
             toGrid(qc, sb);
@@ -363,6 +435,13 @@ public final class NavigationScreens {
         sb.append(' ');
         sb.append(qc.getLon() > 0D ? 'E' : 'W').append(' ');
         append(QualifiedCoordinates.LON, qc.getLon(), Config.decimalPrecision, sb);
+
+        return sb;
+    }
+
+    public static StringBuffer append(final int index, final int grade, StringBuffer sb) {
+        zeros(sb, index, grade);
+        append(sb, (long) index);
 
         return sb;
     }

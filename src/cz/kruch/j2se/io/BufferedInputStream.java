@@ -39,17 +39,17 @@ public final class BufferedInputStream extends /* FilterInputStream */ InputStre
     private InputStream in;
 
     /* for optimistic lie */
-    public static boolean useAvailableLie = true;
+//    public static boolean useAvailableLie = true;
 
     /* for optimistic lie */
-    private int available;
+//    private int available;
 
     /**
      * The internal buffer array where the data is stored. When necessary,
      * it may be replaced by another array of
      * a different size.
      */
-    private byte buf[];
+    private byte buffer[];
 
     /**
      * The index one greater than the index of the last valid byte in
@@ -103,14 +103,14 @@ public final class BufferedInputStream extends /* FilterInputStream */ InputStre
         }
 
         this.in = in; /* super(in); */
-        this.buf = new byte[size];
+        this.buffer = new byte[size];
 
         // prepare lie
-        if (useAvailableLie) {
-            available = buf.length;
-        } else {
-            available = -1;
-        }
+//        if (useAvailableLie) {
+//            available = buf.length;
+//        } else {
+//            available = -1;
+//        }
     }
 
     /**
@@ -122,7 +122,7 @@ public final class BufferedInputStream extends /* FilterInputStream */ InputStre
      */
     private void fill() throws IOException {
         count = pos = 0;
-        int n = in.read(buf, pos, buf.length - pos);
+        int n = in.read(buffer, pos, buffer.length - pos);
         if (n > 0) {
             count = n + pos;
         }
@@ -146,7 +146,7 @@ public final class BufferedInputStream extends /* FilterInputStream */ InputStre
             }
         }
 
-        return buf[pos++] & 0xff;
+        return buffer[pos++] & 0xff;
     }
 
     /**
@@ -160,7 +160,7 @@ public final class BufferedInputStream extends /* FilterInputStream */ InputStre
               if there is no mark/reset activity, do not bother to copy the
               bytes into the local buffer.  In this way buffered streams will
               cascade harmlessly. */
-            if (len >= buf.length) {
+            if (len >= buffer.length) {
                 return in.read(b, off, len);
             }
             fill();
@@ -169,11 +169,11 @@ public final class BufferedInputStream extends /* FilterInputStream */ InputStre
                 return -1;
             }
         }
-        int cnt = (avail < len) ? avail : len;
-        System.arraycopy(buf, pos, b, off, cnt);
-        pos += cnt;
+        final int n = (avail < len) ? avail : len;
+        System.arraycopy(buffer, pos, b, off, n);
+        pos += n;
 
-        return cnt;
+        return n;
     }
 
     /**
@@ -244,11 +244,15 @@ public final class BufferedInputStream extends /* FilterInputStream */ InputStre
         }
 
         int n = read1(b, off, len);
-        if (n <= 0) return n;
+        if (n <= 0) {
+            return n;
+        }
+
         while ((n < len) && (in.available() > 0)) {
             int n1 = read1(b, off + n, len - n);
-            if (n1 <= 0)
+            if (n1 <= 0) {
                 break;
+            }
             n += n1;
         }
 
@@ -267,13 +271,14 @@ public final class BufferedInputStream extends /* FilterInputStream */ InputStre
         if (n <= 0) {
             return 0;
         }
-        long avail = count - pos;
+
+        final long avail = count - pos;
 
         if (avail <= 0) {
             return in.skip(n);
         }
 
-        long skipped = avail < n ? avail : n;
+        final long skipped = avail < n ? avail : n;
 
         pos += skipped;
 
@@ -298,11 +303,11 @@ public final class BufferedInputStream extends /* FilterInputStream */ InputStre
      */
     public int available() throws IOException {
         /* lie upon first query */
-        if (available > -1) {
-            int n = available;
-            available = -1;
-            return n;
-        }
+//        if (available > -1) {
+//            int n = available;
+//            available = -1;
+//            return n;
+//        }
 
         return (count - pos) + in.available();
     }
@@ -322,18 +327,11 @@ public final class BufferedInputStream extends /* FilterInputStream */ InputStre
     }
 
     /**
-     * Disposes buffer.
-     */
-    public void dispose() {
-        buf = null;
-    }
-
-    /**
      * Reuse this with new stream.
      * @param in new input stream
      */
     public InputStream reuse(InputStream in) {
-        if (buf == null) {
+        if (buffer == null) {
             throw new IllegalStateException("Stream is not reusable");
         }
 
@@ -342,11 +340,11 @@ public final class BufferedInputStream extends /* FilterInputStream */ InputStre
         this.pos = this.count = 0;
 
         /* prepare lie again */
-        if (useAvailableLie) {
-            available = buf.length;
-        } else {
-            available = -1;
-        }
+//        if (useAvailableLie) {
+//            available = buf.length;
+//        } else {
+//            available = -1;
+//        }
 
         return this;
     }

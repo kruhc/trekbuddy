@@ -15,9 +15,7 @@
 
 package api.location;
 
-/* bad design - dependency */
 import cz.kruch.track.util.ExtraMath;
-import cz.kruch.track.ui.NavigationScreens;
 
 public final class QualifiedCoordinates implements GeodeticPosition {
 
@@ -277,9 +275,5 @@ public final class QualifiedCoordinates implements GeodeticPosition {
 
         return (float) (offset + Math.toDegrees(ExtraMath.asin(sina)));
 */
-    }
-
-    public String toString() {
-        return NavigationScreens.toStringBuffer(this, new StringBuffer(32)).toString();
     }
 }

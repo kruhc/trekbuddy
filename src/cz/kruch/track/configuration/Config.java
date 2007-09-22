@@ -151,7 +151,7 @@ public final class Config {
 
     // group [Tweaks]
     public static boolean optimisticIo;
-    public static boolean S60renderer;
+    public static boolean S60renderer           = true;
 /* obsolete
     public static boolean cacheOffline;
 */
@@ -504,10 +504,23 @@ public final class Config {
         }
 
         // next try user's
+        File file = null;
         try {
-            initDatums(tokenizer, delims, datums, Connector.openInputStream(Config.getFolderResources() + "datums.txt"));
+            file = File.open(Connector.open(Config.getFolderResources() + "datums.txt", Connector.READ));
+            if (file.exists()) {
+                initDatums(tokenizer, delims, datums, file.openInputStream());
+            }
         } catch (Throwable t) {
             // ignore
+        } finally {
+            if (file != null) {
+                try {
+                    file.close();
+                } catch (IOException e) {
+                    // ignore
+                }
+                file = null;
+            }
         }
 
         // lastly try JAD
@@ -570,9 +583,9 @@ public final class Config {
                 }
             }
             if (ellipsoid != null) {
-                double dx = tokenizer.nextDouble();
-                double dy = tokenizer.nextDouble();
-                double dz = tokenizer.nextDouble();
+                final double dx = tokenizer.nextDouble();
+                final double dy = tokenizer.nextDouble();
+                final double dz = tokenizer.nextDouble();
                 Datum datum = new Datum(datumName, ellipsoid, dx, dy, dz);
                 datums.addElement(datum);
 

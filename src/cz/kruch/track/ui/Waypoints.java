@@ -82,6 +82,7 @@ public final class Waypoints extends List
     private static final String TAG_RTE     = "rte";
     private static final String TAG_RTEPT   = "rtept";
     private static final String TAG_WPT     = "wpt";
+    private static final String TAG_TRKPT   = "trkpt";
     private static final String TAG_NAME    = "name";
     private static final String TAG_CMT     = "cmt";
     private static final String TAG_DESC    = "desc";
@@ -96,7 +97,7 @@ public final class Waypoints extends List
     private static final String PREFIX_WGPS = "wgps-";
     
     private static final String[] NAME_CACHE = {
-        TAG_WPT, TAG_RTEPT, TAG_NAME, TAG_CMT, TAG_DESC, ATTR_LAT, ATTR_LON
+        TAG_WPT, TAG_RTEPT, TAG_TRKPT, TAG_NAME, TAG_CMT, TAG_DESC, ATTR_LAT, ATTR_LON
     };
     
     private Hashtable stores;
@@ -128,6 +129,12 @@ public final class Waypoints extends List
         return instance;
     }
 
+    public static void shutdown() {
+        if (instance != null) {
+            instance.stopLogs();
+        }
+    }
+
     private Waypoints(/*Navigator*/Desktop navigator) {
         super("Navigation", List.IMPLICIT);
         this.navigator = navigator;
@@ -136,7 +143,7 @@ public final class Waypoints extends List
         this.setCommandListener(this);
     }
 
-    public void shutdown() {
+    private void stopLogs() {
         for (Enumeration e = logs.elements(); e.hasMoreElements(); ) {
             GpxTracklog gpx = (GpxTracklog) e.nextElement();
             try {
@@ -288,7 +295,7 @@ public final class Waypoints extends List
                                 // notify navigator
                                 navigator.saveLocation(navigator.getLocation());
                                 // open form
-                                (new WaypointForm(this, navigator.getLocation().clone(),
+                                (new WaypointForm(navigator.getLocation().clone(),
                                                   this)).show();
                             } else {
                                 Desktop.showInfo("No position yet", this);
@@ -301,7 +308,7 @@ public final class Waypoints extends List
                         if (pointer == null) {
                             Desktop.showInfo("No position", this);
                         } else {
-                            (new WaypointForm(this, this, pointer)).show();
+                            (new WaypointForm(this, pointer)).show();
                         }
                     } else if (ITEM_FRIEND_HERE.equals(item)) {
                           // do we have position?
@@ -341,7 +348,7 @@ public final class Waypoints extends List
                         String label = command.getLabel();
 //                        if (label.equals(cmdSelect.getLabel())) {
                         if (List.SELECT_COMMAND == command) {
-                            (new WaypointForm(this, (Waypoint) currentWpts.elementAt(idx[depth]), this)).show();
+                            (new WaypointForm((Waypoint) currentWpts.elementAt(idx[depth]), this)).show();
                         } else if (WaypointForm.MENU_NAVIGATE_TO.equals(label)) {
                             invoke(new Object[]{ WaypointForm.MENU_NAVIGATE_TO, null }, null, this);
                         } else if (WaypointForm.MENU_NAVIGATE_ALONG.equals(label)) {
@@ -373,7 +380,12 @@ public final class Waypoints extends List
             Object action = ret[0];
 
             // execute action
-            if (WaypointForm.MENU_NAVIGATE_ALONG == action) {
+            if (null == action) {
+
+                // restore wtp list
+                Desktop.display.setCurrent(list);
+
+            } else if (WaypointForm.MENU_NAVIGATE_ALONG == action) {
 
                 // restore navigator
                 Desktop.display.setCurrent(navigator);
@@ -595,7 +607,6 @@ public final class Waypoints extends List
                     } catch (IOException e) {
                         // ignore
                     }
-                    dir = null; // gc hint
                 }
 
                 // remove ticker
@@ -798,7 +809,7 @@ public final class Waypoints extends List
     private static Vector parseWaypoints(InputStream in, final int fileType)
             throws IOException, XmlPullParserException {
 
-        Vector result = new Vector(8, 16);
+        Vector result = new Vector(16, 64);
 
         // parse XML
         KXmlParser parser = new KXmlParser();
@@ -816,7 +827,6 @@ public final class Waypoints extends List
             } catch (IOException e) {
                 // ignore
             }
-            parser = null; // gc hint
         }
 
         return result;
@@ -829,7 +839,9 @@ public final class Waypoints extends List
 
         String name = null;
         String comment = null;
-        double lat = -1D, lon = -1D;
+        StringBuffer sb = null;
+        double lat = -1D;
+        double lon = -1D;
         float alt = -1F;
 
         for (int eventType = parser.next(); eventType != XmlPullParser.END_DOCUMENT; eventType = parser.next()) {
@@ -838,7 +850,7 @@ public final class Waypoints extends List
                     switch (depth) {
                         case 0: {
                             String tag = parser.getName();
-                            if (TAG_WPT.equals(tag) || TAG_RTEPT.equals(tag)){
+                            if (TAG_WPT.equals(tag) || TAG_RTEPT.equals(tag) || TAG_TRKPT.equals(tag)){
                                 // start level
                                 depth = 1;
                                 // get lat and lon
@@ -875,10 +887,17 @@ public final class Waypoints extends List
                 case XmlPullParser.END_TAG: {
                     if (depth == 1) {
                         String tag = parser.getName();
-                        if (TAG_WPT.equals(tag) || TAG_RTEPT.equals(tag)){
+                        if (TAG_WPT.equals(tag) || TAG_RTEPT.equals(tag) || TAG_TRKPT.equals(tag)){
                             // got wpt
                             if (name == null || name.length() == 0) {
-                                name = "#" + Integer.toString(v.size());
+                                if (sb == null) {
+                                    sb = new StringBuffer(16);
+                                } else {
+                                    sb.delete(0, sb.length());
+                                }
+                                sb.append('#');
+                                NavigationScreens.append(v.size(), 1000, sb);
+                                name = sb.toString();
                             }
                             v.addElement(new Waypoint(QualifiedCoordinates.newInstance(lat, lon, alt),
                                                       name, comment));
@@ -907,7 +926,8 @@ public final class Waypoints extends List
 
         String name = null;
         String comment = null;
-        double lat = -1D, lon = -1D;
+        double lat = -1D;
+        double lon = -1D;
 
         for (int eventType = parser.next(); eventType != XmlPullParser.END_DOCUMENT; eventType = parser.next()) {
             switch (eventType) {

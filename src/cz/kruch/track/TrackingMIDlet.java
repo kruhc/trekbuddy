@@ -42,7 +42,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
     private static String flags;
 
     public static boolean jsr82, jsr120, jsr135, jsr179, motorola179, comm;
-    public static boolean sonyEricsson, nokia, siemens, wm, rim;
+    public static boolean sonyEricsson, nokia, siemens, wm, palm, rim;
     public static boolean sxg75, a780, s65;
 
     // diagnostics
@@ -71,9 +71,12 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         nokia = platform.startsWith("Nokia");
         sonyEricsson = System.getProperty("com.sonyericsson.imei") != null;
         siemens = System.getProperty("com.siemens.IMEI") != null;
-        wm = platform.startsWith("Windows CE") || platform.startsWith("Palm OS");
-        rim = platform.startsWith("RIM");
+        wm = platform.startsWith("Windows CE");
+        palm = platform.startsWith("Palm OS");
         sxg75 = "SXG75".equals(platform);
+//#ifdef __RIM__
+        rim = platform.startsWith("RIM");
+//#endif
 //#ifdef __A780__
         a780 = "j2me".equals(platform);
 //#endif
@@ -140,19 +143,21 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
 //#endif
             com.ice.tar.TarInputStream.useSkipBug = true;
         }
+/*
         if (hasFlag("fs_no_available_lie")) {
 //#ifdef __LOG__
             System.out.println("* fs no-available-lie feature on");
 //#endif
             cz.kruch.j2se.io.BufferedInputStream.useAvailableLie = false;
         }
+*/
         if (hasFlag("fs_no_reset") || sxg75) {
 //#ifdef __LOG__
             System.out.println("* fs no-reset feature on");
 //#endif
             cz.kruch.track.maps.Map.useReset = false;
         }
-        if (hasFlag("ui_no_partial_flush") || sxg75 || a780 || siemens || wm) {
+        if (hasFlag("ui_no_partial_flush") || sxg75 || a780 || siemens || wm || palm) {
 //#ifdef __LOG__
             System.out.println("* ui no-partial-flush feature on");
 //#endif
@@ -160,7 +165,9 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         }
 //#ifdef __S65__
         if (s65) {
+/*
             cz.kruch.j2se.io.BufferedInputStream.useAvailableLie = false;
+*/
             com.ice.tar.TarInputStream.useSkipBug = true;
         }
 //#endif
@@ -257,10 +264,12 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         cz.kruch.track.ui.Waypoints.initialize(desktop);
 
         // init environment from configuration
+/*
         cz.kruch.j2se.io.BufferedInputStream.useAvailableLie = cz.kruch.track.configuration.Config.optimisticIo;
 //#ifdef __LOG__
         System.out.println("* use available lie? " + cz.kruch.j2se.io.BufferedInputStream.useAvailableLie);
 //#endif
+*/
 
         // custom device handling
         if (getAppProperty(JAD_GPS_CONNECTION_URL) != null) {
@@ -340,11 +349,24 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         int result = 0;
 
         InputStream in = null;
+        api.file.File file = null;
         try {
-            in = Connector.openInputStream(Config.getFolderResources() + "language.txt");
-            result++;
-        } catch (Exception e) {
+            file = api.file.File.open(Connector.open(Config.getFolderResources() + "language.txt", Connector.READ));
+            if (file.exists()) {
+                in = file.openInputStream();
+                result++;
+            }
+        } catch (Throwable t) {
             // ignore
+        } finally {
+            if (file != null) {
+                try {
+                    file.close();
+                } catch (IOException e) {
+                    // ignore
+                }
+                file = null;
+            }
         }
         if (in == null) {
             in = TrackingMIDlet.class.getResourceAsStream("/resources/language.txt");

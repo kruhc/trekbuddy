@@ -608,7 +608,7 @@ final class MapViewer {
             Position[] positions = routePositions;
             byte[] statuses = wptStatuses;
 
-            // draw route as dotted line
+            // draw route as line
             final int x = this.x;
             final int y = this.y;
             Position p0 = null;
@@ -732,7 +732,7 @@ final class MapViewer {
         if (x > 0 && x < Desktop.width && y > 0 && y < Desktop.height) {
 
             final boolean current = status == WPT_STATUS_CURRENT;
-            final boolean showtext = current || li % 2 > 0;
+            final boolean showtext = current || (li % 2 > 0/* && Desktop.scrolls < 5*/);
 
             // draw point
             if (current) {

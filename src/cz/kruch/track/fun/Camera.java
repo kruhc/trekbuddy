@@ -72,6 +72,7 @@ public final class Camera implements CommandListener, PlayerListener/*, Runnable
         if (volume != null) {
             this.volume = volume;
             this.level = volume.getLevel();
+            volume.setLevel(100);
         }
     }
 

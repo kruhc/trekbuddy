@@ -19,11 +19,17 @@ package cz.kruch.track.ui;
 import cz.kruch.track.configuration.Config;
 import cz.kruch.track.util.CharArrayTokenizer;
 import cz.kruch.track.util.SimpleCalendar;
+import cz.kruch.track.maps.io.LoaderIO;
 import cz.kruch.j2se.io.BufferedInputStream;
 
 import javax.microedition.lcdui.Graphics;
 import javax.microedition.lcdui.Image;
 import javax.microedition.lcdui.Font;
+import javax.microedition.lcdui.List;
+import javax.microedition.lcdui.CommandListener;
+import javax.microedition.lcdui.Command;
+import javax.microedition.lcdui.Displayable;
+import javax.microedition.lcdui.Canvas;
 import javax.microedition.lcdui.game.Sprite;
 import javax.microedition.io.Connector;
 
@@ -38,6 +44,7 @@ import java.util.Vector;
 import java.util.Hashtable;
 import java.util.Calendar;
 import java.util.TimeZone;
+import java.util.Enumeration;
 
 import org.kxml2.io.KXmlParser;
 import org.xmlpull.v1.XmlPullParser;
@@ -48,15 +55,14 @@ import org.xmlpull.v1.XmlPullParserException;
  *
  * @author Ales Pour <kruhc@seznam.cz>
  */
-final class ComputerView extends View {
+final class ComputerView extends View
+        implements Runnable, CommandListener {
 //#ifdef __LOG__
     private static final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("LocatorView");
 //#endif
 
     // xml tags
-    private static final String TAG_FONTS       = "fonts";
     private static final String TAG_FONT        = "font";
-    private static final String TAG_SCREEN      = "screen";
     private static final String TAG_COLORS      = "colors";
     private static final String TAG_AREA        = "area";
     private static final String TAG_VALUE       = "value";
@@ -130,14 +136,14 @@ final class ComputerView extends View {
     // charset
     private static final char[] CHARSET = {
         '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
-        ' ', '+', '-', '.', ':', '/', 0x1E, '"', '\'',
+        ' ', '+', '-', '.', ':', '/', 0xb0, '"', '\'',
         'h', 'k', 'm', 'p', 's'
     };
-
     private static final char[] DELIMITERS  = { '{', '}' };
 
-    private static final String SIGN_HEXA   = "0x1E";
-    private static final String NO_TIME     = "??:??:??";
+    private static final String CMS_SIMPLE_XML  = "cms.simple.xml";
+    private static final String SIGN_HEXA       = "0x1E";
+    private static final String NO_TIME         = "??:??:??";
 
 /*
     private static final Calendar CALENDAR  = Calendar.getInstance(TimeZone.getDefault());
@@ -163,35 +169,41 @@ final class ComputerView extends View {
         }
     }
 
-    private final StringBuffer sb;
-    private final char[] text;
-    private final CharArrayTokenizer tokenizer;
+    private StringBuffer sb;
+    private char[] text;
+    private CharArrayTokenizer tokenizer;
 
+    /* profile vars */
+    private int[] colors;
+    private Vector areas;
+
+    /* shared among profiles */
+    private Hashtable fonts, fontsPng;
+
+    /* profiles and current profile */
     private String profile;
     private String status;
-    private int[] colors;
-    private final Vector areas;
-    private final Hashtable fonts, fontsPng;
+    private Hashtable profiles;
 
+    /* trip vars */
     private QualifiedCoordinates valueCoords, snrefCoords;
-    private long timestamp, starttime;
+    private long timestamp, starttime, counter;
     private final float[] valuesFloat;
-    private int counter;
 
     public ComputerView(/*Navigator*/Desktop navigator) {
         super(navigator);
-        this.sb = new StringBuffer(64);
-        this.text = new char[64];
-        this.tokenizer = new CharArrayTokenizer();
-        this.colors = new int[8];
-        this.areas = new Vector(4);
-        this.fonts = new Hashtable(4);
-        this.fontsPng = new Hashtable(2);
+
+        // trip values
         this.valuesFloat = new float[TOKENS_float.length];
 
+        // reset values
+        reset();
+    }
+
+    private void initialize() {
         // init CRC table
         int[] crc_table = CRC_TABLE;
-        for (int n = 0; n < 256; n++) {
+        for (int n = 0; n < CRC_TABLE.length; n++) {
             int c = n;
             for (int k = 8; --k >= 0;) {
                 if ((c & 1) != 0)
@@ -202,31 +214,25 @@ final class ComputerView extends View {
             crc_table[n] = c;
         }
 
-        // reset values
-        reset();
+        // init vars
+        this.sb = new StringBuffer(64);
+        this.text = new char[64];
+        this.tokenizer = new CharArrayTokenizer();
 
-        // temporary solution
-        try {
-            profile = (String) load("cms.simple.xml");
-        } catch (Throwable t) {
-            status = t.toString();
-        }
-
-        // adjust mode
-        changeDayNight(Config.dayNight);
+        // init shared
+        this.fonts = new Hashtable(4);
+        this.fontsPng = new Hashtable(2);
     }
 
     public void reset() {
         TIME_CALENDAR.reset();
         ETA_CALENDAR.reset();
 
-        valueCoords = null;
-        snrefCoords = null;
+        valueCoords = snrefCoords = null;
+        timestamp = starttime = counter = 0;
         for (int i = valuesFloat.length; --i >= 0; ) {
             valuesFloat[i] = 0F;
         }
-        timestamp = starttime = 0;
-        counter = 0;
     }
 
     public int locationUpdated(Location l) {
@@ -315,11 +321,106 @@ final class ComputerView extends View {
         return isVisible ? Desktop.MASK_SCREEN : Desktop.MASK_NONE;
     }
 
+    public int handleAction(int action, boolean repeated) {
+        if (action == Canvas.DOWN) {
+            if (profiles != null && profiles.size() > 1) {
+                List list = new List("Profiles", List.IMPLICIT);
+                for (Enumeration e = profiles.keys(); e.hasMoreElements(); ) {
+                    String name = (String) e.nextElement();
+                    if (!name.equals(profile)) {
+                        list.append(name, null);
+                    }
+                }
+                list.addCommand(new Command("Cancel", Command.CANCEL, 0));
+                list.setCommandListener(this);
+                Desktop.display.setCurrent(list);
+            }
+        }
+        
+        return super.handleAction(action, repeated);
+    }
+
+    public synchronized void run() {
+
+        // regular run?
+        if (profiles != null) {
+
+            // copy name and clear
+            String name = _profileName;
+            _profileName = null;
+
+            // try to load new profile
+            try {
+
+                // load new profile
+                profile = loadViaCache(name);
+
+                // colorify
+                changeDayNight(Config.dayNight);
+
+                // update desktop
+                navigator.update(Desktop.MASK_SCREEN);
+
+            } catch (Throwable t) {
+                Desktop.showError("Failed to load profile", t, navigator);
+            }
+        } else {
+
+            // not initialized yet
+            profiles = new Hashtable(4);
+
+            // try to load profiles
+            if (cz.kruch.track.TrackingMIDlet.isFs()) {
+                try {
+                    // find profiles
+                    fillProfiles(profiles);
+
+                    // got something?
+                    if (profiles.containsKey(CMS_SIMPLE_XML)) {
+
+                        // finalize initialization
+                        initialize();
+
+                        // load default profile
+                        profile = loadViaCache(CMS_SIMPLE_XML);
+
+                        // adjust mode
+                        changeDayNight(Config.dayNight);
+                    }
+                } catch (Throwable t) {
+                    status = t.toString();
+//#ifdef __LOG__
+                    t.printStackTrace();
+//#endif
+                }
+            }
+        }
+    }
+
+    private String _profileName;
+
+    public void commandAction(Command command, Displayable displayable) {
+        // restore desktop
+        Desktop.display.setCurrent(navigator);
+
+        // load new profile if selected
+        if (Command.CANCEL != command.getCommandType()) {
+
+            // get selection
+            List list = (List) displayable;
+            _profileName = list.getString(list.getSelectedIndex());
+
+            // enqueue load task
+            LoaderIO.getInstance().enqueue(this);
+            Thread.yield();
+        }
+    }
+
     public int changeDayNight(int dayNight) {
         // local refs for faster access
-        Vector areas = this.areas;
-        Hashtable fonts = this.fonts;
-        Hashtable fontsPng = this.fontsPng;
+        final Vector areas = this.areas;
+        final Hashtable fonts = this.fonts;
+        final Hashtable fontsPng = this.fontsPng;
 
         // release refs for Image fonts
         for (int N = areas.size(), i = 0; i < N; i++) {
@@ -366,10 +467,10 @@ final class ComputerView extends View {
         return isVisible ? Desktop.MASK_SCREEN : Desktop.MASK_NONE;
     }
 
-    public void render(Graphics graphics, Font font, int mask) {
+    public synchronized void render(Graphics graphics, Font font, int mask) {
         // local copies for faster access
-        int w = Desktop.width;
-        int h = Desktop.height;
+        final int w = Desktop.width;
+        final int h = Desktop.height;
 
         // default settings
         graphics.setFont(Desktop.font);
@@ -379,13 +480,15 @@ final class ComputerView extends View {
             graphics.setColor(0x00FFFFFF);
             graphics.fillRect(0, 0, w, h);
             graphics.setColor(0x00000000);
-            graphics.drawString("No CMS profile loaded", 2, 2 + Desktop.font.getHeight(), Graphics.TOP | Graphics.LEFT);
+            graphics.drawString("No CMS profile found.", 0, 0, Graphics.TOP | Graphics.LEFT);
             if (status != null) {
-                graphics.drawString(status, 2, 2 + 2 * Desktop.font.getHeight(), Graphics.TOP | Graphics.LEFT);
+                graphics.drawString(status, 0, Desktop.font.getHeight(), Graphics.TOP | Graphics.LEFT);
             }
         } else {
             final CharArrayTokenizer tokenizer = this.tokenizer;
             final StringBuffer sb = this.sb;
+            final char[] text = this.text;
+            final int[] colors = this.colors;
             final Vector areas = this.areas;
             final int mode = Config.dayNight;
             final float[] valuesFloat = this.valuesFloat;
@@ -632,11 +735,11 @@ final class ComputerView extends View {
                     graphics.setClip(area.x, area.y, area.w, area.h);
                     if (area.fontImpl instanceof Font) {
                         Font f = (Font) area.fontImpl;
-                        int xoffset = area.ralign ? area.w - f.charsWidth(text, 0, l) : 0;
+                        final int xoffset = area.ralign ? area.w - f.charsWidth(text, 0, l) : 0;
                         graphics.setFont(f);
                         graphics.drawChars(text, 0, l, area.x + xoffset, area.y, 0);
                     } else {
-                        int xoffset = area.ralign ? area.w - (int)(area.cw * l) + (int)(narrowChars * (2D / 3D * area.cw)) : 0;
+                        final int xoffset = area.ralign ? area.w - (int)(area.cw * l) + (int)(narrowChars * (2D / 3D * area.cw)) : 0;
                         drawChars(graphics, text, l, area.x + xoffset, area.y, area);
                     }
                     graphics.setClip(0, 0, w, h);
@@ -674,7 +777,7 @@ final class ComputerView extends View {
         final boolean S60renderer = Config.S60renderer;
 
         for (int i = 0; i < length; i++) {
-            char c = value[i];
+            final char c = value[i];
             int j = 0;
             for ( ; j < N; j++) {
                 if (c == charset[j]) {
@@ -682,7 +785,7 @@ final class ComputerView extends View {
                 }
             }
             if (j < N) {
-                int z = c == '.' || c == ':' ? (int) (cw / 3) : 0;
+                final int z = c == '.' || c == ':' ? (int) (cw / 3) : 0;
                 if (S60renderer) {
                     graphics.setClip(x + (int) (i * cw), y, icw - 2 * z, ch);
                     graphics.drawImage(image,
@@ -700,12 +803,37 @@ final class ComputerView extends View {
                     x -= 2 * z;
                 }
             } else {
-                int color = graphics.getColor();
+                final int color = graphics.getColor();
                 graphics.setColor(0x00FF0000);
                 graphics.drawChar(c, x + (int) (i * cw), y, 0);
                 graphics.setColor(color);
+//#ifdef __LOG__
+                if (log.isEnabled()) log.debug("unknown char: '" + c + "'");
+//#endif
             }
         }
+    }
+
+    private String loadViaCache(String filename) {
+        Object o = profiles.get(filename);
+        if (o == this) {
+//#ifdef __LOG__
+            if (log.isEnabled()) log.debug("load profile: " + filename);
+//#endif
+            colors = new int[8];
+            areas = new Vector(4, 4);
+            load(filename);
+            profiles.put(filename, new Object[]{ areas, colors });
+        } else {
+//#ifdef __LOG__
+            if (log.isEnabled()) log.debug("found cached profile: " + filename);
+//#endif
+            Object[] cached = (Object[]) o;
+            areas = (Vector) cached[0];
+            colors = (int[]) cached[1];
+        }
+
+        return filename;
     }
 
     private Object load(String filename) {
@@ -751,6 +879,34 @@ final class ComputerView extends View {
         return result;
     }
 
+    private void fillProfiles(Hashtable profiles) throws IOException {
+        File dir = null;
+
+        try {
+            // open stores directory
+            dir = File.open(Connector.open(Config.getFolderProfiles(), Connector.READ));
+
+            // list file stores
+            if (dir.exists()) {
+                for (Enumeration e = dir.list(); e.hasMoreElements(); ) {
+                    String name = ((String) e.nextElement()).toLowerCase();
+                    if (name.startsWith("cms.") && name.endsWith(".xml")) {
+                        profiles.put(name, this/* null not allowed */);
+                    }
+                }
+            }
+        } finally {
+            // close dir
+            if (dir != null) {
+                try {
+                    dir.close();
+                } catch (IOException e) {
+                    // ignore
+                }
+            }
+        }
+    }
+
     private String loadProfile(String filename, InputStream in) throws IOException, XmlPullParserException {
         // instantiate parser
         KXmlParser parser = new KXmlParser();
@@ -758,7 +914,7 @@ final class ComputerView extends View {
 
         try {
             // set input
-            parser.setInput(in, null); // null is for encoding autodetection
+            parser.setInput(in, "UTF-8"); // null is for encoding autodetection
 
             // var
             Area area = null;
@@ -768,26 +924,23 @@ final class ComputerView extends View {
                 switch (eventType) {
                     case XmlPullParser.START_TAG: {
                         String tag = parser.getName();
-                        if (TAG_FONTS.equals(tag)) {
-                            fonts.clear();
-                            fontsPng.clear();
-                        } else if (TAG_FONT.equals(tag)) {
+                        if (TAG_FONT.equals(tag)) {
                             String name = parser.getAttributeValue(null, ATTR_NAME);
-                            String source = parser.getAttributeValue(null, ATTR_FILE);
-                            if (source != null) {
-                                byte[] image = (byte[]) load(source);
-                                if (image != null) {
-                                    fonts.put(name, image);
+                            if (!fonts.containsKey(name)) {
+                                String source = parser.getAttributeValue(null, ATTR_FILE);
+                                if (source != null) {
+                                    byte[] image = (byte[]) load(source);
+                                    if (image != null) {
+                                        fonts.put(name, image);
+                                    }
+                                } else {
+                                    source = parser.getAttributeValue(null, ATTR_SYSTEM);
+                                    final int code = Integer.parseInt(source, 16);
+                                    fonts.put(name, Font.getFont((code & 0xFF0000) >> 16,
+                                                                 (code & 0x00FF00) >> 8,
+                                                                 (code & 0x0000FF)));
                                 }
-                            } else {
-                                source = parser.getAttributeValue(null, ATTR_SYSTEM);
-                                int code = Integer.parseInt(source, 16);
-                                fonts.put(name, Font.getFont((code & 0xFF0000) >> 16,
-                                                             (code & 0x00FF00) >> 8,
-                                                             (code & 0x0000FF)));
                             }
-                        } else if (TAG_SCREEN.equals(tag)){
-                            areas.removeAllElements();
                         } else if (TAG_COLORS.equals(tag)) {
                             int offset = 0;
                             if ("night".equals(parser.getAttributeValue(null, ATTR_MODE))) {
@@ -806,14 +959,14 @@ final class ComputerView extends View {
                             area.ralign = "right".equals(parser.getAttributeValue(null, ATTR_ALIGN));
                             String font = parser.getAttributeValue(null, TAG_FONT);
                             if (font != null) {
-    /*
+/*
                                 if (fo instanceof byte[]) {
                                     Image image = (Image) fo;
                                     area.cw = image.getWidth() / CHARSET.length;
                                     area.ch = (short) image.getHeight();
                                 }
                                 area.font = fo;
-    */
+*/
                                 area.fontName = font;
                                 Object fo = fonts.get(font);
                                 if (fo instanceof Font) {

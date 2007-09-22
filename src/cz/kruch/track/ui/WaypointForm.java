@@ -55,8 +55,6 @@ public final class WaypointForm extends Form
     static final String MENU_CLOSE          = "Close";
     static final String MENU_CANCEL         = "Cancel";
 
-    private static final Calendar CALENDAR = Calendar.getInstance(TimeZone.getDefault());
-
     private static final String FIELD_NAME      = "Name";
     private static final String FIELD_COMMENT   = "Comment";
     private static final String FIELD_LAT       = "WGS-84 Lat";
@@ -65,7 +63,8 @@ public final class WaypointForm extends Form
     private static final String FIELD_LOCATION  = "Location";
     private static final String TITLE           = "Waypoint";
 
-    private Displayable next;
+    private static final Calendar CALENDAR = Calendar.getInstance(TimeZone.getDefault());
+    
     private QualifiedCoordinates coordinates;
     private long timestamp;
     private Callback callback;
@@ -81,16 +80,17 @@ public final class WaypointForm extends Form
 
     static int cnt = 0;
 
-    public WaypointForm(Displayable next, Location location, Callback callback) {
+    public WaypointForm(Location location, Callback callback) {
         super(TITLE);
-        this.next = next;
         this.coordinates = location.getQualifiedCoordinates();
         this.timestamp = location.getTimestamp();
         this.callback = callback;
         appendWithNewlineAfter(this.fieldName = new TextField(FIELD_NAME, null, 16, TextField.ANY));
         appendWithNewlineAfter(this.fieldComment = new TextField(FIELD_COMMENT, null, 256, TextField.ANY));
         appendWithNewlineAfter(new StringItem(FIELD_TIME, dateToString(location.getTimestamp())));
-        appendWithNewlineAfter(new StringItem(FIELD_LOCATION, location.getQualifiedCoordinates().toString()));
+        StringBuffer sb = new StringBuffer(32);
+        NavigationScreens.toStringBuffer(location.getQualifiedCoordinates(), sb);
+        appendWithNewlineAfter(new StringItem(FIELD_LOCATION, sb.toString()));
         if (cz.kruch.track.TrackingMIDlet.supportsVideoCapture()) {
             StringItem snapshot = new StringItem("Snapshot", "Take", Item.BUTTON);
             snapshot.setDefaultCommand(new Command("Take", Command.ITEM, 1));
@@ -98,12 +98,11 @@ public final class WaypointForm extends Form
             appendWithNewlineAfter(snapshot);
         }
         addCommand(new Command(MENU_CANCEL, Command.BACK, 1));
-        addCommand(new Command(MENU_SAVE, Command.SCREEN, 1));
+        addCommand(new Command(MENU_SAVE, Desktop.POSITIVE_CMD_TYPE, 1));
     }
 
-    public WaypointForm(Displayable next, Waypoint wpt, Callback callback) {
+    public WaypointForm(Waypoint wpt, Callback callback) {
         super(TITLE);
-        this.next = next;
         this.coordinates = wpt.getQualifiedCoordinates();
         this.callback = callback;
         appendWithNewlineAfter(new StringItem(FIELD_NAME, wpt.getName()));
@@ -112,18 +111,18 @@ public final class WaypointForm extends Form
         if (timestamp > 0) {
             appendWithNewlineAfter(new StringItem(FIELD_TIME, dateToString(timestamp)));
         }
-        append(new StringItem(FIELD_LOCATION, wpt.getQualifiedCoordinates().toString()));
+        StringBuffer sb = new StringBuffer(32);
+        NavigationScreens.toStringBuffer(wpt.getQualifiedCoordinates(), sb);
+        append(new StringItem(FIELD_LOCATION, sb.toString()));
         addCommand(new Command(MENU_CLOSE, Command.BACK, 1));
-        addCommand(new Command(MENU_NAVIGATE_TO, Command.SCREEN, 1));
-        addCommand(new Command(MENU_NAVIGATE_ALONG, Command.SCREEN, 2));
-        addCommand(new Command(MENU_NAVIGATE_BACK, Command.SCREEN, 3));
-        addCommand(new Command(MENU_GO_TO, Command.SCREEN, 4));
+        addCommand(new Command(MENU_NAVIGATE_TO, Desktop.POSITIVE_CMD_TYPE, 1));
+        addCommand(new Command(MENU_NAVIGATE_ALONG, Desktop.POSITIVE_CMD_TYPE, 2));
+        addCommand(new Command(MENU_NAVIGATE_BACK, Desktop.POSITIVE_CMD_TYPE, 3));
+        addCommand(new Command(MENU_GO_TO, Desktop.POSITIVE_CMD_TYPE, 4));
     }
 
-    public WaypointForm(Displayable next, Callback callback,
-                        QualifiedCoordinates pointer) {
+    public WaypointForm(Callback callback, QualifiedCoordinates pointer) {
         super(TITLE);
-        this.next = next;
         this.callback = callback;
         int c = cnt + 1;
         String name = c < 10 ? "WPT00" + c : (c < 100 ? "WPT0" + c : "WPT" + Integer.toString(c));
@@ -138,7 +137,7 @@ public final class WaypointForm extends Form
         NavigationScreens.append(QualifiedCoordinates.LON, pointer.getLon(), true, sb);
         appendWithNewlineAfter(this.fieldLon = new TextField(FIELD_LON, sb.toString(), 14, TextField.ANY));
         addCommand(new Command(MENU_CLOSE, Command.BACK, 1));
-        addCommand(new Command(MENU_USE, Command.SCREEN, 1));
+        addCommand(new Command(MENU_USE, Desktop.POSITIVE_CMD_TYPE, 1));
     }
 
     private int appendWithNewlineAfter(Item item) {
@@ -193,7 +192,7 @@ public final class WaypointForm extends Form
     }
 
     public void commandAction(Command command, Displayable displayable) {
-        if (Command.SCREEN == command.getCommandType()) {
+        if (Desktop.POSITIVE_CMD_TYPE == command.getCommandType()) {
             String label = command.getLabel();
             if (MENU_USE.equals(label)) {
                 try {
@@ -201,7 +200,6 @@ public final class WaypointForm extends Form
                                                 fieldName.getString(),
                                                 fieldComment.getString(),
                                                 System.currentTimeMillis());
-                    Desktop.display.setCurrent(next);
                     callback.invoke(new Object[]{ MENU_USE, wpt }, null, this);
                     cnt++;
                 } catch (IllegalArgumentException e) {
@@ -213,26 +211,21 @@ public final class WaypointForm extends Form
                                             fieldComment.getString(),
                                             timestamp);
                 wpt.setUserObject(imageBytes);
-                Desktop.display.setCurrent(next);
                 callback.invoke(new Object[]{ MENU_SAVE, wpt }, null, this);
             } else if (MENU_NAVIGATE_TO.equals(label)) {
-                Desktop.display.setCurrent(next);
                 callback.invoke(new Object[]{ MENU_NAVIGATE_TO, null }, null, this);
             } else if (MENU_NAVIGATE_ALONG.equals(label)) {
-                Desktop.display.setCurrent(next);
                 callback.invoke(new Object[]{ MENU_NAVIGATE_ALONG, null }, null, this);
             } else if (MENU_NAVIGATE_BACK.equals(label)) {
-                Desktop.display.setCurrent(next);
                 callback.invoke(new Object[]{ MENU_NAVIGATE_BACK, null }, null, this);
             } else if (MENU_GO_TO.equals(label)) {
-                Desktop.display.setCurrent(next);
                 callback.invoke(new Object[]{ MENU_GO_TO, null }, null, this);
             }
         } else {
             // gc hint
             imageBytes = null;
-            // restore previous screen
-            Desktop.display.setCurrent(next);
+            // dummy invocation
+            callback.invoke(new Object[]{ null, null }, null, this);
         }
     }
 

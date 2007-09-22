@@ -115,13 +115,18 @@ public final class LineReader extends InputStreamReader {
         if (result == null) {
             return null;
         }
+        if (result.isEmpty()) {
+            return EMPTY_LINE;
+        }
         return result.toString();
     }
 
     public CharArrayTokenizer.Token readToken(final boolean ignoreLF) throws IOException {
+/* always true, see contructor
         if (token == null) {
             throw new IllegalStateException("Not in token mode");
         }
+*/
         if (count == -1) {
             return null;
         }

@@ -878,20 +878,22 @@ public final class Map implements Runnable {
                 throwable = t;
             } finally {
 
-                // check for Palm - it resets it :-(
-                if (!cz.kruch.track.TrackingMIDlet.palm) {
-
-                    // close stream
-                    if (in != null) {
+                // close stream
+                if (in != null) {
+                    // check for Palm - it resets it :-(
+                    if (!cz.kruch.track.TrackingMIDlet.palm) {
                         try {
                             in.close();
                         } catch (IOException e) {
                             // ignore
                         }
                     }
+                }
 
-                    // close reader (closes the stream)
-                    if (reader != null) {
+                // close reader (closes the stream)
+                if (reader != null) {
+                    // check for Palm - it resets it :-(
+                    if (!cz.kruch.track.TrackingMIDlet.palm) {
                         try {
                             reader.close();
                         } catch (IOException e) {
@@ -933,10 +935,13 @@ public final class Map implements Runnable {
 
                 // close stream
                 if (in != null) {
-                    try {
-                        in.close();
-                    } catch (IOException e) {
-                        // ignore
+                    // check for Palm - it resets it :-(
+                    if (!cz.kruch.track.TrackingMIDlet.palm) {
+                        try {
+                            in.close();
+                        } catch (IOException e) {
+                            // ignore
+                        }
                     }
 
                     // clean buffered

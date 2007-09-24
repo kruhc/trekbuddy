@@ -51,7 +51,7 @@ import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
 
 /**
- * CMS aka 'Computer' screen.
+ * CMS aka 'Cockpit' screen.
  *
  * @author Ales Pour <kruhc@seznam.cz>
  */
@@ -85,52 +85,58 @@ final class ComputerView extends View
     };
 
     // special value
-    private static final String TOKEN_COORDS     = "coords";
-    private static final String TOKEN_TIME       = "time";
-    private static final String TOKEN_TIME_TOTAL = "time-t";
-    private static final String TOKEN_STATUS     = "status";
-    private static final String TOKEN_WPT_AZI    = "wpt-azi";
-    private static final String TOKEN_WPT_DIST   = "wpt-dist";
-    private static final String TOKEN_WPT_VMG    = "wpt-vmg";
-    private static final String TOKEN_WPT_ETA    = "wpt-eta";
+    private static final String TOKEN_COORDS        = "coords";
+    private static final String TOKEN_TIME          = "time";
+    private static final String TOKEN_TIME_T        = "time-t";
+    private static final String TOKEN_TIME_T_AUTO   = "time-t-auto";
+    private static final String TOKEN_STATUS        = "status";
+    private static final String TOKEN_WPT_AZI       = "wpt-azi";
+    private static final String TOKEN_WPT_DIST      = "wpt-dist";
+    private static final String TOKEN_WPT_VMG       = "wpt-vmg";
+    private static final String TOKEN_WPT_ETA       = "wpt-eta";
 
     // float values
     private static final String[] TOKENS_float = {
-        // base
         "alt",
         "course",
         "spd",
         "spd-max",
         "spd-avg",
+        "spd-avg-auto",
         "dist-t",
-        // deltas
         "alt-d",
         "course-d",
         "spd-d",
         "spd-dmax",
-        "spd-davg"
+        "spd-davg",
+        "asc-t",
+        "desc-t"
     };
 
     // float values indexes
-    private static final int VALUE_ALT      = 0;
-    private static final int VALUE_COURSE   = 1;
-    private static final int VALUE_SPD      = 2;
-    private static final int VALUE_SPD_MAX  = 3;
-    private static final int VALUE_SPD_AVG  = 4;
-    private static final int VALUE_DIST_T   = 5;
-    private static final int VALUE_ALT_D    = 6;
-    private static final int VALUE_COURSE_D = 7;
-    private static final int VALUE_SPD_D    = 8;
-    private static final int VALUE_SPD_DMAX = 9;
-    private static final int VALUE_SPD_DAVG = 10;
+    private static final int VALUE_ALT          = 0;
+    private static final int VALUE_COURSE       = 1;
+    private static final int VALUE_SPD          = 2;
+    private static final int VALUE_SPD_MAX      = 3;
+    private static final int VALUE_SPD_AVG      = 4;
+    private static final int VALUE_SPD_AVG_AUTO = 5;
+    private static final int VALUE_DIST_T       = 6;
+    private static final int VALUE_ALT_D        = 7;
+    private static final int VALUE_COURSE_D     = 8;
+    private static final int VALUE_SPD_D        = 9;
+    private static final int VALUE_SPD_DMAX     = 10;
+    private static final int VALUE_SPD_DAVG     = 11;
+    private static final int VALUE_ASC_T        = 12;
+    private static final int VALUE_DESC_T       = 13;
     private static final int VALUE_COORDS       = 1000;
     private static final int VALUE_TIME         = 1001;
-    private static final int VALUE_TIME_TOTAL   = 1002;
-    private static final int VALUE_STATUS       = 1003;
-    private static final int VALUE_WPT_AZI      = 1004;
-    private static final int VALUE_WPT_DIST     = 1005;
-    private static final int VALUE_WPT_ETA      = 1006;
-    private static final int VALUE_WPT_VMG      = 1007;
+    private static final int VALUE_TIME_T       = 1002;
+    private static final int VALUE_TIME_T_AUTO  = 1003;
+    private static final int VALUE_STATUS       = 1004;
+    private static final int VALUE_WPT_AZI      = 1005;
+    private static final int VALUE_WPT_DIST     = 1006;
+    private static final int VALUE_WPT_ETA      = 1007;
+    private static final int VALUE_WPT_VMG      = 1008;
     private static final int VALUE_SIGN         = 2000;
 
     // charset
@@ -153,6 +159,7 @@ final class ComputerView extends View
     private static final SimpleCalendar ETA_CALENDAR = new SimpleCalendar(Calendar.getInstance(TimeZone.getDefault()));
 
     private static final int[] CRC_TABLE = new int[256];
+    private static final float AUTO_MIN = 2.4F;
 
     private static final class Area {
         public short x, y, w, h;
@@ -187,7 +194,9 @@ final class ComputerView extends View
 
     /* trip vars */
     private QualifiedCoordinates valueCoords, snrefCoords;
-    private long timestamp, starttime, counter;
+    private long timestamp, starttime, /*snreftime,*/ timetauto;
+    /*private float altGood, altDiv;*/
+    private int counter;
     private final float[] valuesFloat;
 
     public ComputerView(/*Navigator*/Desktop navigator) {
@@ -229,17 +238,22 @@ final class ComputerView extends View
         ETA_CALENDAR.reset();
 
         valueCoords = snrefCoords = null;
-        timestamp = starttime = counter = 0;
+        timestamp = starttime = timetauto = 0;
+        counter = 0;
+/*
+        altGood = Float.NaN;
+        altDiv = 0F;
+*/
         for (int i = valuesFloat.length; --i >= 0; ) {
             valuesFloat[i] = 0F;
         }
     }
 
     public int locationUpdated(Location l) {
-        long t = l.getTimestamp();
+        final long t = l.getTimestamp();
 
         // calculate time diff
-        long dt = timestamp == 0 ? 0 : (t - timestamp) / 1000;
+        final long dt = timestamp == 0 ? 0 : (t - timestamp);
 
         // update times
         timestamp = t;
@@ -247,15 +261,21 @@ final class ComputerView extends View
             starttime = t;
         }
 
+        // time since start
+        final long tt = t - starttime;
+
         // everything else needs fix
         if (l.getFix() > 0) {
+
+            // accuracy
+            final float accuracy = l.getQualifiedCoordinates().getAccuracy();
 
             // calculate distance - emulate static navigation
             float ds = 0F;
             if (snrefCoords == null) {
                 snrefCoords = l.getQualifiedCoordinates().clone();
+                /*snreftime = timestamp;*/
             } else {
-                final float accuracy = l.getQualifiedCoordinates().getAccuracy();
                 ds = snrefCoords.distance(l.getQualifiedCoordinates());
                 if (accuracy < 0F) {
                     if (ds < 50) {
@@ -267,6 +287,7 @@ final class ComputerView extends View
                     QualifiedCoordinates.releaseInstance(snrefCoords);
                     snrefCoords = null;
                     snrefCoords = l.getQualifiedCoordinates().clone();
+                    /*snreftime = timestamp;*/
                 }
             }
 
@@ -276,46 +297,84 @@ final class ComputerView extends View
             valueCoords = l.getQualifiedCoordinates().clone();
 
             // local ref for faster access
-            float[] valuesFloat = this.valuesFloat;
+            final float[] valuesFloat = this.valuesFloat;
 
             // alt, alt-d
-            float f = valueCoords.getAlt();
-            if (f != Float.NaN) {
+            final float alt = valueCoords.getAlt();
+            if (!Float.isNaN(alt)) {
+
+                // vertical speed
+                final float da = alt - valuesFloat[VALUE_ALT];
                 if (dt > 0) {
-                    valuesFloat[VALUE_ALT_D] = (f - valuesFloat[VALUE_ALT]) / dt;
+                    valuesFloat[VALUE_ALT_D] = da / (dt / 1000);
                 }
-                valuesFloat[VALUE_ALT] = f;
+
+                // alt
+                valuesFloat[VALUE_ALT] = alt;
             }
 
             // course, course-d
-            f = l.getCourse();
-            if (f > -1F) {
-                valuesFloat[VALUE_COURSE_D] = f - valuesFloat[VALUE_COURSE];
-                valuesFloat[VALUE_COURSE] = f;
-            }
-
-            // spd, spd-d
-            f = l.getSpeed();
-            if (f > -1F) {
-                f *= 3.6F;
-                if (dt > 0) {
-                    valuesFloat[VALUE_SPD_D] = ((f - valuesFloat[VALUE_SPD]) / 3.6F) / dt;
-                }
-                valuesFloat[VALUE_SPD] = f;
-
-                // spd-max, spd-dmax
-//              valuesFloat[3 + DELTAS_OFFSET] = ?
-                if (f > valuesFloat[VALUE_SPD_MAX]) {
-                    valuesFloat[VALUE_SPD_MAX] = f;
-                }
-
-                // spd-avg, spd-davg
-//              valuesFloat[4 + DELTAS_OFFSET] = ?
-                valuesFloat[VALUE_SPD_AVG] = (valuesFloat[VALUE_SPD_AVG] * counter + f) / ++counter;
+            final float course = l.getCourse();
+            if (course > -1F) {
+                valuesFloat[VALUE_COURSE_D] = course - valuesFloat[VALUE_COURSE];
+                valuesFloat[VALUE_COURSE] = course;
             }
 
             // dist-t
             valuesFloat[VALUE_DIST_T] += ds / 1000F;
+
+            // spd, spd-d
+            float f = l.getSpeed();
+            if (f > -1F) {
+                // to km/h
+                f *= 3.6F;
+
+                // time and spd-avg 'auto' - when speed over ~1.8 km/h
+                if (f > AUTO_MIN) {
+                    timetauto += dt;
+                    if (valuesFloat[VALUE_DIST_T] > 0.5F || tt > 30000) {
+                        valuesFloat[VALUE_SPD_AVG_AUTO] = valuesFloat[VALUE_DIST_T] / ((float) timetauto / (1000 * 3600));
+                    }
+                }
+
+                // spd, spd-d
+                if (dt > 0) {
+                    valuesFloat[VALUE_SPD_D] = ((f - valuesFloat[VALUE_SPD]) / 3.6F) / (dt / 1000);
+                }
+                valuesFloat[VALUE_SPD] = f;
+
+                // spd-avg
+                valuesFloat[VALUE_SPD_AVG] = (valuesFloat[VALUE_SPD_AVG] * counter + f) / ++counter;
+
+                // spd-max
+                if (f > valuesFloat[VALUE_SPD_MAX]) {
+                    valuesFloat[VALUE_SPD_MAX] = f;
+                }
+            }
+
+/*
+            // spd-avg as dist / time
+            if (valuesFloat[VALUE_DIST_T] > 0.5F || tt > 30000) {
+                valuesFloat[VALUE_SPD_AVG] = valuesFloat[VALUE_DIST_T] / ((float) tt / (1000 * 3600));
+            }
+*/
+
+/*
+            // asc/desc - decent accuracy, valid altitude
+            if (l.getSat() > 3 && accuracy < 15F && !Float.isNaN(alt)) {
+                if (!Float.isNaN(altGood)) {
+                    altDiv += (alt - altGood);
+                    if (altDiv > 15F) {
+                        valuesFloat[VALUE_ASC_T] += altDiv;
+                        altDiv = 0F;
+                    } else if (altDiv < -15F) {
+                        valuesFloat[VALUE_DESC_T] += altDiv;
+                        altDiv = 0F;
+                    }
+                }
+                altGood = alt;
+            }
+*/
         }
 
         return isVisible ? Desktop.MASK_SCREEN : Desktop.MASK_NONE;
@@ -480,7 +539,7 @@ final class ComputerView extends View
             graphics.setColor(0x00FFFFFF);
             graphics.fillRect(0, 0, w, h);
             graphics.setColor(0x00000000);
-            graphics.drawString("No CMS profile found.", 0, 0, Graphics.TOP | Graphics.LEFT);
+            graphics.drawString("No CMS profile(s) found.", 0, 0, Graphics.TOP | Graphics.LEFT);
             if (status != null) {
                 graphics.drawString(status, 0, Desktop.font.getHeight(), Graphics.TOP | Graphics.LEFT);
             }
@@ -526,8 +585,10 @@ final class ComputerView extends View
                                         area.index = VALUE_COORDS;
                                     } else if (token.equals(TOKEN_TIME)) {
                                         area.index = VALUE_TIME;
-                                    } else if (token.equals(TOKEN_TIME_TOTAL)) {
-                                        area.index = VALUE_TIME_TOTAL;
+                                    } else if (token.equals(TOKEN_TIME_T)) {
+                                        area.index = VALUE_TIME_T;
+                                    } else if (token.equals(TOKEN_TIME_T_AUTO)) {
+                                        area.index = VALUE_TIME_T_AUTO;
                                     } else if (token.equals(TOKEN_STATUS)) {
                                         area.index = VALUE_STATUS;
                                     } else if (token.equals(SIGN_HEXA)) {
@@ -553,7 +614,8 @@ final class ComputerView extends View
                                 } break;
                                 case VALUE_SPD:
                                 case VALUE_SPD_MAX:
-                                case VALUE_SPD_AVG: {
+                                case VALUE_SPD_AVG:
+                                case VALUE_SPD_AVG_AUTO: {
                                     float value = valuesFloat[idx];
                                     if (Config.unitsNautical) {
                                         NavigationScreens.append(sb, value / 1.852F, 1);
@@ -595,6 +657,12 @@ final class ComputerView extends View
                                     NavigationScreens.append(sb, value, 1);
                                     narrowChars++;
                                 } break;
+                                case VALUE_ASC_T: {
+                                    NavigationScreens.append(sb, (long) valuesFloat[idx]);
+                                } break;
+                                case VALUE_DESC_T: {
+                                    NavigationScreens.append(sb, (long) (-1 * valuesFloat[idx]));
+                                } break;
                                 case VALUE_COORDS: {
                                     if (valueCoords == null) {
                                         sb.append(MSG_NO_POSITION);
@@ -626,11 +694,12 @@ final class ComputerView extends View
                                     }
                                     narrowChars += 2;
                                 } break;
-                                case VALUE_TIME_TOTAL: {
+                                case VALUE_TIME_T:
+                                case VALUE_TIME_T_AUTO: {
                                     if (timestamp == 0) {
                                         sb.append(NO_TIME);
                                     } else {
-                                        final int dt = (int) (timestamp - starttime) / 1000;
+                                        final int dt = (int) (idx == VALUE_TIME_T ? (timestamp - starttime) : timetauto) / 1000;
                                         final int hours = dt / 3600;
                                         final int mins = (dt % 3600) / 60;
                                         final int secs = (dt % 3600) % 60;
@@ -914,7 +983,7 @@ final class ComputerView extends View
 
         try {
             // set input
-            parser.setInput(in, "UTF-8"); // null is for encoding autodetection
+            parser.setInput(in, null); // null is for encoding autodetection
 
             // var
             Area area = null;

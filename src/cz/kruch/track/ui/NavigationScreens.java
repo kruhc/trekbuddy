@@ -351,14 +351,14 @@ public final class NavigationScreens {
                 if (speed > -1F) {
                     append(sb, speed * 3.6F / 1.609F, 1).append(STR_MPH);
                 }
-                if (alt != Float.NaN) {
+                if (!Float.isNaN(alt)) {
                     append(sb, alt, 1).append(STR_M);
                 }
             } else {
                 if (speed > -1F) {
                     NavigationScreens.append(sb, speed * 3.6F, 1).append(STR_KMH);
                 }
-                if (alt != Float.NaN) {
+                if (!Float.isNaN(alt)) {
                     append(sb, alt, 1).append(STR_M);
                 }
             }

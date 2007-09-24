@@ -294,7 +294,7 @@ public final class GpxTracklog extends Thread {
         i = doubleToChars(qc.getLon(), 9);
         serializer.attribute(DEFAULT_NAMESPACE, ATTRIBUTE_LON, sbChars, i);
         final float alt = qc.getAlt();
-        if (alt != Float.NaN) {
+        if (!Float.isNaN(alt)) {
             serializer.startTag(DEFAULT_NAMESPACE, ELEMENT_ELEVATION);
             i = doubleToChars(alt, 1);
             serializer.text(sbChars, 0, i);

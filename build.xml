@@ -1,18 +1,18 @@
 <?xml version="1.0"?>
 <project name="TrekBuddy" default="generic" basedir=".">
 
-    <property name="version" value="0.9.63"/>
+    <property name="version" value="0.9.64"/>
     <property name="vendor" value="KrUcH"/>
     <property name="description" value="J2ME GPS application"/>
 
     <property name="wtk.cldc.version" value="1.1"/>
     <property name="wtk.midp.version" value="2.0"/>
 
-    <property name="wtk.home" value="c:\WTK2.5.1"/>
-    <property name="proguard.home" value="Z:\apps\proguard3.10"/>
-    <property name="motorola.home" value="c:\Motorola\SDKv6.2\EmulatorM.3"/>
-    <property name="rim41.home" value="c:\RIM\JDE 4.1.0"/>
-    <property name="rim42.home" value="c:\RIM\JDE"/>
+    <property name="wtk.home" value="c:\J2ME\WTK2.5.1"/>
+    <property name="motorola.home" value="c:\J2ME\Motorola\SDKv6.2\EmulatorM.3"/>
+    <property name="rim41.home" value="c:\J2ME\RIM\JDE 4.1.0"/>
+    <property name="rim42.home" value="c:\J2ME\RIM\JDE"/>
+    <property name="proguard.home" value="z:\apps\proguard3.10"/>
 <!--
     <property name="bb.buildjars.home" location="${rim41.home}/bin"/>
 -->
@@ -81,7 +81,7 @@
         <property name="libraryjars" value="${wtk.home}\lib\cldcapi11.jar;${wtk.home}\lib\midpapi20.jar;${wtk.home}\lib\jsr75.jar;${wtk.home}\lib\jsr082.jar;${wtk.home}\lib\jsr179.jar;${wtk.home}\lib\wma11.jar"/>
         <property name="classpath.preverify" value="${libraryjars}"/>
         <antcall target="clean"/>
-        <antcall target="a.pre.generic"/>
+        <antcall target="a.pre.std"/>
         <antcall target="compile.std"/>
         <antcall target="a.pack" inheritall="true"/>
         <antcall target="obfuscate" inheritall="true"/>
@@ -99,7 +99,7 @@
         <property name="libraryjars" value="${wtk.home}\lib\cldcapi11.jar;${wtk.home}\lib\midpapi20.jar;${wtk.home}\lib\jsr75.jar;${wtk.home}\lib\jsr082.jar;${wtk.home}\lib\jsr179.jar;${wtk.home}\lib\wma11.jar"/>
         <property name="classpath.preverify" value="${libraryjars}"/>
         <antcall target="clean"/>
-        <antcall target="a.pre.generic"/>
+        <antcall target="a.pre.std"/>
         <antcall target="compile.std"/>
         <antcall target="j9.pack" inheritall="true"/>
         <antcall target="obfuscate" inheritall="true"/>
@@ -163,6 +163,8 @@
 <!--
         <delete dir="r:\trekbuddy\tmp"/>
 -->
+        <copy file="res/resources/language.txt" todir="res-J9/resources" overwrite="true"/>
+        <copy file="res/resources/language.txt" todir="res-RIM/resources" overwrite="true"/>
     </target>
 
     <target name="a.pre.generic">

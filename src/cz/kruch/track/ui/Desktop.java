@@ -985,7 +985,7 @@ public final class Desktop extends GameCanvas
             // calculate distance, azimuth and height diff
             wptDistance = from.distance(qc);
             wptAzimuth = (int) from.azimuthTo(qc, wptDistance);
-            if (qc.getAlt() != Float.NaN && from.getAlt() != Float.NaN) {
+            if (!Float.isNaN(qc.getAlt()) && !Float.isNaN(from.getAlt())) {
                 wptHeightDiff = qc.getAlt() - from.getAlt();
             } else {
                 wptHeightDiff = Float.NaN;
@@ -1086,10 +1086,14 @@ public final class Desktop extends GameCanvas
     public void goTo(Waypoint wpt) {
         QualifiedCoordinates local = map.getDatum().toLocal(wpt.getQualifiedCoordinates());
         if (map.isWithin(local)) {
-            // scroll to position
+            // scroll to position and sync OSD
             ((MapView) views[VIEW_MAP]).setPosition(map.transform(local));
+            ((MapView) views[VIEW_MAP]).syncOSD();
             // update screen
             update(MASK_ALL);
+        } else if (atlas != null) {
+            // try to find alternate map
+            startAlternateMap(atlas.getLayer(), local, "Selected waypoint is off current layer");
         } else {
             Desktop.showWarning("Selected waypoint is off current map", null, Desktop.this);
         }
@@ -2237,22 +2241,8 @@ public final class Desktop extends GameCanvas
                     // has map been scrolled?
                     if (scrolled) {
 
-                        // update basic OSD
-                        QualifiedCoordinates qc = map.transform(mapViewer.getPosition());
-                        osd.setInfo(qc, true);
-
-                        // update navigation info
-                        QualifiedCoordinates from = map.getDatum().toWgs84(qc);
-                        updateNavigation(from);
-
-                        // release to pool
-                        QualifiedCoordinates.releaseInstance(from);
-                        QualifiedCoordinates.releaseInstance(qc);
-
-                        // update extended OSD (and navigation, if any)
-                        if (!updateNavigationInfo()) {
-                            osd.resetExtendedInfo();
-                        }
+                        // sync OSD
+                        syncOSD();
 
                         // update mask
                         mask = MASK_MAP | MASK_OSD;
@@ -2584,12 +2574,31 @@ public final class Desktop extends GameCanvas
                 }
             }
             NavigationScreens.append(extInfo, azimuth).append(NavigationScreens.SIGN);
-            if (wptHeightDiff != Float.NaN) {
+            if (!Float.isNaN(wptHeightDiff)) {
                 extInfo.append(' ').append(NavigationScreens.DELTA_d).append('=');
                 NavigationScreens.append(extInfo, (int) wptHeightDiff);
             }
 
             return azimuth;
+        }
+
+        private void syncOSD() {
+            // update basic OSD
+            QualifiedCoordinates qc = map.transform(mapViewer.getPosition());
+            osd.setInfo(qc, true);
+
+            // update navigation info
+            QualifiedCoordinates from = map.getDatum().toWgs84(qc);
+            updateNavigation(from);
+
+            // release to pool
+            QualifiedCoordinates.releaseInstance(from);
+            QualifiedCoordinates.releaseInstance(qc);
+
+            // update extended OSD (and navigation, if any)
+            if (!updateNavigationInfo()) {
+                osd.resetExtendedInfo();
+            }
         }
 
         private boolean syncPosition() {

@@ -190,6 +190,7 @@ public final class Config {
 //#ifdef __RIM__
         /* default for Blackberry */
         dataDir = "file:///SDCard/TrekBuddy/";
+        commUrl = "btspp://000276fd79da:1";
         S60renderer = true;
         forcedGc = false;
 //#endif

@@ -6,5 +6,5 @@ set PATH=%JAVA_HOME%\bin;%PATH%
 cmd /c ant generic
 cmd /c ant std
 cmd /c ant j9
-rem cmd /c ant rim41
+cmd /c ant rim41
 cmd /c ant rim42

@@ -44,13 +44,11 @@ public class SerialLocationProvider extends StreamReadingLocationProvider implem
     protected volatile String url;
 
     private volatile boolean go;
+    private volatile long last;
     private volatile Thread thread;
-    private volatile StreamConnection connection;
     private volatile InputStream stream;
 
-    private volatile long last;
     private TimerTask watcher;
-
     private File nmeaFile;
     private OutputStream nmeaObserver;
 
@@ -75,6 +73,28 @@ public class SerialLocationProvider extends StreamReadingLocationProvider implem
     public void run() {
         // diagnostics
         restarts++;
+
+        // give hardware a while
+        if (restarts > 1) {
+            try {
+                Thread.sleep(1000);
+            } catch (InterruptedException e) {
+                // ignore
+            }
+
+            // old thread running?
+            if (thread != null) {
+                if (thread.isAlive()) {
+                    setThrowable(new IllegalStateException("Previous connection still active"));
+                    try {
+                        thread.join();
+                    } catch (InterruptedException e) {
+                        // ignore
+                    }
+                }
+                thread = null; // gc hint
+            }
+        }
 
         // start with last known?
         if (url == null) {
@@ -105,10 +125,7 @@ public class SerialLocationProvider extends StreamReadingLocationProvider implem
             // be ready for restart
             go = false;
             url = null;
-
-            // no connection/stream held
-            connection = null;
-            stream = null;
+            thread = null;
 
             // stop NMEA log
             stopNmeaLog();
@@ -126,29 +143,22 @@ public class SerialLocationProvider extends StreamReadingLocationProvider implem
     }
 
     public void stop() throws LocationException {
-        // if running, stop it
+        // if running, stop
         if (go) {
             go = false;
-            
-            /*
-             * this forces a thread blocked in read() to receive IOException
-             */
-            if (stream != null) {
-                try {
-                    stream.close();
-                } catch (IOException e) {
-                    // ignore
-                }
-            }
         }
 
-        // wait for finish
+        // interrupt the thead
         if (thread != null) {
+            thread.interrupt();
+        }
+
+        // this forces a thread blocked in read() to receive IOException
+        if (stream != null) {
             try {
-                thread.interrupt();
-                thread.join();
-            } catch (InterruptedException e) {
-                // should never happen
+                stream.close();
+            } catch (IOException e) {
+                // ignore
             }
         }
     }
@@ -257,6 +267,8 @@ public class SerialLocationProvider extends StreamReadingLocationProvider implem
     }
 
     private void gps() throws IOException {
+        StreamConnection connection = null;
+
         try {
             // open connection
             connection = (StreamConnection) Connector.open(url, Connector.READ, true);
@@ -294,6 +306,7 @@ public class SerialLocationProvider extends StreamReadingLocationProvider implem
                     // record
                     if (t instanceof InterruptedException) {
                         // probably stop request
+                        break;
                     } else {
                         // record
                         setThrowable(t);
@@ -337,7 +350,7 @@ public class SerialLocationProvider extends StreamReadingLocationProvider implem
             } // for (; go ;)
 
         } finally {
-                            
+
             // stop watcher
             stopWatcher();
 
@@ -358,9 +371,7 @@ public class SerialLocationProvider extends StreamReadingLocationProvider implem
                     connection.close();
                 } catch (IOException e) {
                     // ignore
-                } finally {
-                    connection = null;
-                }
+                } 
             }
         }
     }

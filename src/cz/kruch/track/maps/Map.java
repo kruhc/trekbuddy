@@ -626,7 +626,7 @@ public final class Map implements Runnable {
                 if (useReset) {
                     if (in.markSupported()) {
                         try {
-                            in.mark(MARK_SIZE); // max 64 MB map
+                            in.mark((int) file.fileSize());
                             nativeIn = in;
                             fileInputStreamResetable = 1;
 //#ifdef __LOG__

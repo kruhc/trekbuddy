@@ -363,7 +363,7 @@ public final class TarEntry {
      * @param header The header buffer from which to parse.
      * @return The header's entry name.
      */
-    private static String parseFileName(byte[] header) throws InvalidHeaderException {
+    private static String parseFileName(byte[] header) /*throws InvalidHeaderException*/ {
 //        String prefix = null;
 
         /*
@@ -391,16 +391,17 @@ public final class TarEntry {
             }
         }
 
-        try {
-            return new String(header, 0, i, "US-ASCII");
+//        try {
+            return new String(header, 0, i);
+//            return new String(header, 0, i, "US-ASCII");
 //            String name = new String(header, 0, i, "US-ASCII");
 //            if (prefix == null) {
 //                return name;
 //            }
 //            return (new StringBuffer(prefix)).append('/').append(name).toString();
-        } catch (UnsupportedEncodingException e) {
-            throw new InvalidHeaderException(e.toString());
-        }
+//        } catch (UnsupportedEncodingException e) {
+//            throw new InvalidHeaderException(e.toString());
+//        }
     }
 }
 

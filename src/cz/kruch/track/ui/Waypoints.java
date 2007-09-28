@@ -149,10 +149,10 @@ public final class Waypoints extends List
             try {
                 if (gpx.isAlive()) {
                     gpx.destroy();
-                    gpx.join();
                 }
-            } catch (Throwable t) {
-                // ignore
+                gpx.join();
+            } catch (InterruptedException exc) {
+                // ignore - should not happen
             }
         }
     }

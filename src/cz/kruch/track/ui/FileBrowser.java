@@ -100,6 +100,11 @@ public final class FileBrowser extends List implements CommandListener, Runnable
 
             } else {
 
+                // hack (J9 only?)
+                if (depth == 1 && "/".equals(path)) {
+                    path = "//";
+                }
+
                 // start browsing
                 if (file == null) {
 //#ifdef __LOG__

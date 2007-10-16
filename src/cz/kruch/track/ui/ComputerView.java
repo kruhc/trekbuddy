@@ -19,7 +19,9 @@ package cz.kruch.track.ui;
 import cz.kruch.track.configuration.Config;
 import cz.kruch.track.util.CharArrayTokenizer;
 import cz.kruch.track.util.SimpleCalendar;
+import cz.kruch.track.util.ExtraMath;
 import cz.kruch.track.maps.io.LoaderIO;
+import cz.kruch.track.Resources;
 import cz.kruch.j2se.io.BufferedInputStream;
 
 import javax.microedition.lcdui.Graphics;
@@ -103,6 +105,10 @@ final class ComputerView extends View
         "spd-max",
         "spd-avg",
         "spd-avg-auto",
+        "spd.d",
+        "spd.d-max",
+        "spd.d-avg",
+        "spd.d-avg-auto",
         "dist-t",
         "alt-d",
         "course-d",
@@ -110,7 +116,8 @@ final class ComputerView extends View
         "spd-dmax",
         "spd-davg",
         "asc-t",
-        "desc-t"
+        "desc-t",
+        "sat"
     };
 
     // float values indexes
@@ -120,14 +127,19 @@ final class ComputerView extends View
     private static final int VALUE_SPD_MAX      = 3;
     private static final int VALUE_SPD_AVG      = 4;
     private static final int VALUE_SPD_AVG_AUTO = 5;
-    private static final int VALUE_DIST_T       = 6;
-    private static final int VALUE_ALT_D        = 7;
-    private static final int VALUE_COURSE_D     = 8;
-    private static final int VALUE_SPD_D        = 9;
-    private static final int VALUE_SPD_DMAX     = 10;
-    private static final int VALUE_SPD_DAVG     = 11;
-    private static final int VALUE_ASC_T        = 12;
-    private static final int VALUE_DESC_T       = 13;
+    private static final int VALUE_SPDd         = 6;
+    private static final int VALUE_SPDd_MAX     = 7;
+    private static final int VALUE_SPDd_AVG     = 8;
+    private static final int VALUE_SPDd_AVG_AUTO = 9;
+    private static final int VALUE_DIST_T       = 10;
+    private static final int VALUE_ALT_D        = 11;
+    private static final int VALUE_COURSE_D     = 12;
+    private static final int VALUE_SPD_D        = 13;
+    private static final int VALUE_SPD_DMAX     = 14;
+    private static final int VALUE_SPD_DAVG     = 15;
+    private static final int VALUE_ASC_T        = 16;
+    private static final int VALUE_DESC_T       = 17;
+    private static final int VALUE_SAT          = 18;
     private static final int VALUE_COORDS       = 1000;
     private static final int VALUE_TIME         = 1001;
     private static final int VALUE_TIME_T       = 1002;
@@ -390,7 +402,7 @@ final class ComputerView extends View
                         list.append(name, null);
                     }
                 }
-                list.addCommand(new Command("Cancel", Command.CANCEL, 0));
+                list.addCommand(new Command(Resources.getString(Resources.CMD_CANCEL), Command.CANCEL, 0));
                 list.setCommandListener(this);
                 Desktop.display.setCurrent(list);
             }
@@ -421,8 +433,9 @@ final class ComputerView extends View
                 navigator.update(Desktop.MASK_SCREEN);
 
             } catch (Throwable t) {
-                Desktop.showError("Failed to load profile", t, navigator);
+                Desktop.showError(Resources.getString(Resources.DESKTOP_MSG_LOAD_PROFILE_FAILED), t, navigator);
             }
+            
         } else {
 
             // not initialized yet
@@ -435,13 +448,18 @@ final class ComputerView extends View
                     fillProfiles(profiles);
 
                     // got something?
+                    String s = null;
                     if (profiles.containsKey(CMS_SIMPLE_XML)) {
-
+                        s = CMS_SIMPLE_XML;
+                    } else if (profiles.size() > 0) {
+                        s = (String) profiles.keys().nextElement();
+                    }
+                    if (s != null) {
                         // finalize initialization
                         initialize();
 
                         // load default profile
-                        profile = loadViaCache(CMS_SIMPLE_XML);
+                        profile = loadViaCache(s);
 
                         // adjust mode
                         changeDayNight(Config.dayNight);
@@ -539,7 +557,7 @@ final class ComputerView extends View
             graphics.setColor(0x00FFFFFF);
             graphics.fillRect(0, 0, w, h);
             graphics.setColor(0x00000000);
-            graphics.drawString("No CMS profile(s) found.", 0, 0, Graphics.TOP | Graphics.LEFT);
+            graphics.drawString(Resources.getString(Resources.DESKTOP_MSG_NO_CMS_PROFILES), 0, 0, Graphics.TOP | Graphics.LEFT);
             if (status != null) {
                 graphics.drawString(status, 0, Desktop.font.getHeight(), Graphics.TOP | Graphics.LEFT);
             }
@@ -624,8 +642,22 @@ final class ComputerView extends View
                                         NavigationScreens.append(sb, value / 1.609F, 1);
                                         narrowChars++;
                                     } else {
-                                        NavigationScreens.append(sb, (int) value);
+                                        NavigationScreens.append(sb, ExtraMath.round(value));
                                     }
+                                } break;
+                                case VALUE_SPDd:
+                                case VALUE_SPDd_MAX:
+                                case VALUE_SPDd_AVG:
+                                case VALUE_SPDd_AVG_AUTO: {
+                                    float value = valuesFloat[idx - 4];
+                                    if (Config.unitsNautical) {
+                                        value /= 1.852F;
+                                    } else if (Config.unitsImperial) {
+                                        value /= 1.609F;
+                                    }
+                                    value -= (int) value;
+                                    value *= 10;
+                                    NavigationScreens.append(sb, (int) value);
                                 } break;
                                 case VALUE_DIST_T: {
                                     float value = valuesFloat[idx];
@@ -662,6 +694,9 @@ final class ComputerView extends View
                                 } break;
                                 case VALUE_DESC_T: {
                                     NavigationScreens.append(sb, (long) (-1 * valuesFloat[idx]));
+                                } break;
+                                case VALUE_SAT: {
+                                    NavigationScreens.append(sb, Desktop.osd.sat);
                                 } break;
                                 case VALUE_COORDS: {
                                     if (valueCoords == null) {

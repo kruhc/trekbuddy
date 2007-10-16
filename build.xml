@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <project name="TrekBuddy" default="generic" basedir=".">
 
-    <property name="version" value="0.9.64"/>
+    <property name="version" value="0.9.65"/>
     <property name="vendor" value="KrUcH"/>
     <property name="description" value="J2ME GPS application"/>
 
@@ -13,14 +13,12 @@
     <property name="rim41.home" value="c:\J2ME\RIM\JDE 4.1.0"/>
     <property name="rim42.home" value="c:\J2ME\RIM\JDE"/>
     <property name="proguard.home" value="z:\apps\proguard3.10"/>
-<!--
-    <property name="bb.buildjars.home" location="${rim41.home}/bin"/>
--->
+    <!--property name="proguard.home" value="z:\apps\proguard4.0"/-->
+    <!--property name="bb.buildjars.home" location="${rim41.home}/bin"/-->
 
     <taskdef resource="antenna.properties" classpath="lib/antenna-bin-0.9.14.jar"/>
-<!--
-    <taskdef name="wtkrapc" classname="de.pleumann.antenna.WtkRapc" classpath="lib/antenna-bin-0.9.14.jar"/>
--->
+    <!--taskdef name="wtkrapc" classname="de.pleumann.antenna.WtkRapc" classpath="lib/antenna-bin-0.9.14.jar"/-->
+
     <property name="classpath.proguard" value="${proguard.home}\lib\proguard.jar"/>
 
     <path id="bootclasspath.generic">
@@ -120,7 +118,7 @@
         <antcall target="clean"/>
         <antcall target="a.pre.rim"/>
         <antcall target="compile.rim41"/>
-        <antcall target="a.pack" inheritall="true"/>
+        <antcall target="rim.pack" inheritall="true"/>
         <antcall target="rim.obfuscate" inheritall="true"/>
         <antcall target="rim.preverify" inheritall="true"/>
         <antcall target="rim.pack.obfuscated" inheritall="true"/>
@@ -142,7 +140,7 @@
         <antcall target="clean"/>
         <antcall target="a.pre.rim"/>
         <antcall target="compile.rim42"/>
-        <antcall target="a.pack" inheritall="true"/>
+        <antcall target="rim.pack" inheritall="true"/>
         <antcall target="rim.obfuscate" inheritall="true"/>
         <antcall target="rim.preverify" inheritall="true"/>
         <antcall target="rim.pack.obfuscated" inheritall="true"/>
@@ -155,6 +153,15 @@
         <antcall target="rapc" inheritall="true"/>
     </target>
 
+    <target name="plugin">
+        <property name="libraryjars" value="${wtk.home}\lib\cldcapi11.jar;${wtk.home}\lib\midpapi20.jar"/>
+        <property name="classpath.preverify" value="${libraryjars}"/>
+        <antcall target="plugin.compile"/>
+        <antcall target="plugin.preverify" inheritall="true"/>
+        <antcall target="plugin.pack.preverified" inheritall="true"/>
+        <antcall target="plugin.sign.and.update" inheritall="true"/>
+    </target>
+
     <target name="clean">
         <delete dir="tmp"/>
         <delete includeemptydirs="true" verbose="true">
@@ -163,8 +170,6 @@
 <!--
         <delete dir="r:\trekbuddy\tmp"/>
 -->
-        <copy file="res/resources/language.txt" todir="res-J9/resources" overwrite="true"/>
-        <copy file="res/resources/language.txt" todir="res-RIM/resources" overwrite="true"/>
     </target>
 
     <target name="a.pre.generic">
@@ -182,7 +187,7 @@
         <wtkpreprocess srcdir="src" destdir="tmp/src" symbols="__JSR75__,__RIM__"/>
     </target>
 
-    <target name="compile.generic">
+    <target name="compile.generic" depends="rescompile">
         <mkdir dir="tmp/build/classes"/>
         <javac srcdir="tmp/src"
                destdir="tmp/build/classes"
@@ -191,7 +196,7 @@
                bootclasspathref="bootclasspath.generic"/>
     </target>
 
-    <target name="compile.std" depends="remove.nonstd.src">
+    <target name="compile.std" depends="remove.nonstd.src,rescompile">
         <mkdir dir="tmp/build/classes"/>
         <javac srcdir="tmp/src"
                destdir="tmp/build/classes"
@@ -200,7 +205,7 @@
                bootclasspathref="bootclasspath.std"/>
     </target>
 
-    <target name="compile.rim41" depends="remove.nonrim41.src">
+    <target name="compile.rim41" depends="remove.nonrim41.src,rescompile">
         <mkdir dir="tmp/build/classes"/>
         <javac srcdir="tmp/src"
                destdir="tmp/build/classes"
@@ -209,13 +214,22 @@
                bootclasspathref="bootclasspath.rim41"/>
     </target>
 
-    <target name="compile.rim42" depends="remove.nonrim42.src">
+    <target name="compile.rim42" depends="remove.nonrim42.src,rescompile">
         <mkdir dir="tmp/build/classes"/>
         <javac srcdir="tmp/src"
                destdir="tmp/build/classes"
                fork="true"
                target="1.1" source="1.3"
                bootclasspathref="bootclasspath.rim42"/>
+    </target>
+
+    <target name="plugin.compile">
+        <mkdir dir="plugin/build/classes"/>
+        <javac srcdir="plugin/src"
+               destdir="plugin/build/classes"
+               fork="true"
+               target="1.1" source="1.3"
+               bootclasspathref="bootclasspath.generic"/>
     </target>
 
     <target name="remove.nonstd.src">
@@ -255,7 +269,9 @@
         <wtkpackage jarfile="tmp/trekbuddy${suffix}.jar"
                     jadfile="tmp/trekbuddy${suffix}.jad">
             <fileset dir="tmp/build/classes"/>
-            <fileset dir="res"/>
+            <fileset dir="res">
+                <exclude name="**/language*.txt"/>
+            </fileset>
         </wtkpackage>
     </target>
 
@@ -265,6 +281,35 @@
                     jadfile="tmp/trekbuddy${suffix}.jad">
             <fileset dir="tmp/build/classes"/>
             <fileset dir="res-J9"/>
+            <fileset dir="res">
+                <include name="**/datums.txt"/>
+                <include name="**/language.res"/>
+                <include name="**/world.*"/>
+                <include name="**/set/**"/>
+            </fileset>
+        </wtkpackage>
+    </target>
+
+    <target name="rim.pack">
+        <copy file="trekbuddy.jad" tofile="tmp/trekbuddy${suffix}.jad" overwrite="true"/>
+        <wtkpackage jarfile="tmp/trekbuddy${suffix}.jar"
+                    jadfile="tmp/trekbuddy${suffix}.jad">
+            <fileset dir="tmp/build/classes"/>
+            <fileset dir="res-RIM"/>
+            <fileset dir="res">
+                <include name="**/datums.txt"/>
+                <include name="**/language.res"/>
+                <include name="**/world.*"/>
+                <include name="**/set/**"/>
+            </fileset>
+        </wtkpackage>
+    </target>
+
+    <target name="plugin.pack">
+        <copy file="plugin.jad" tofile="plugin/plugin.jad" overwrite="true"/>
+        <wtkpackage jarfile="plugin/plugin.jar"
+                    jadfile="plugin/plugin.jad">
+            <fileset dir="plugin/build/classes"/>
         </wtkpackage>
     </target>
 
@@ -287,14 +332,17 @@
             <midlet name="TrekBuddy" class="cz.kruch.track.TrackingMIDlet"/>
             <attribute name="MIDlet-Description" value="${description}"/>
             <attribute name="MIDlet-Info-URL" value="http://www.trekbuddy.net"/>
-            <attribute name="MIDlet-Permissions-Opt" value="javax.microedition.io.Connector.file.read,javax.microedition.io.Connector.file.write,javax.microedition.io.Connector.bluetooth.client,javax.microedition.location.Location,javax.microedition.media.control.VideoControl.getSnapshot,javax.microedition.io.Connector.sms,javax.wireless.messaging.sms.receive,javax.wireless.messaging.sms.send,javax.microedition.io.Connector.comm"/>            <attribute name="MicroEdition-Profile" value="MIDP-2.0"/>
+            <attribute name="MIDlet-Permissions-Opt" value="javax.microedition.io.Connector.file.read,javax.microedition.io.Connector.file.write,javax.microedition.io.Connector.bluetooth.client,javax.microedition.location.Location,javax.microedition.media.control.VideoControl.getSnapshot,javax.microedition.io.Connector.sms,javax.wireless.messaging.sms.receive,javax.wireless.messaging.sms.send,javax.microedition.io.Connector.comm"/>
             <attribute name="MicroEdition-Profile" value="MIDP-2.0"/>
             <attribute name="MicroEdition-Configuration" value="CLDC-1.1"/>
+            <attribute name="Nokia-MIDlet-Category" value="Application"/>
         </wtkjad>
         <wtkpackage jarfile="dist/${dist.dir}/trekbuddy${suffix}.jar"
                     jadfile="dist/${dist.dir}/trekbuddy${suffix}.jad">
             <fileset dir="tmp/preverified"/>
-            <fileset dir="res"/>
+            <fileset dir="res">
+                <exclude name="**/language*.txt"/>
+            </fileset>
         </wtkpackage>
     </target>
 
@@ -308,8 +356,8 @@
                 vendor="${vendor}"
                 version="${version}">
             <midlet name="TrekBuddy" class="cz.kruch.track.TrackingMIDlet"/>
-		<attribute name="MIDlet-Description" value="${description}"/>
-		<attribute name="MIDlet-Info-URL" value="http://www.trekbuddy.net"/>
+		    <attribute name="MIDlet-Description" value="${description}"/>
+		    <attribute name="MIDlet-Info-URL" value="http://www.trekbuddy.net"/>
             <attribute name="MIDlet-Permissions-Opt" value="javax.microedition.io.Connector.file.read,javax.microedition.io.Connector.file.write,javax.microedition.io.Connector.bluetooth.client,javax.microedition.location.Location,javax.microedition.media.control.VideoControl.getSnapshot,javax.microedition.io.Connector.sms,javax.wireless.messaging.sms.receive,javax.wireless.messaging.sms.send,javax.microedition.io.Connector.comm"/>
             <attribute name="MicroEdition-Profile" value="MIDP-2.0"/>
             <attribute name="MicroEdition-Configuration" value="CLDC-1.1"/>
@@ -318,6 +366,12 @@
                     jadfile="dist/${dist.dir}/trekbuddy${suffix}.jad">
             <fileset dir="tmp/preverified"/>
             <fileset dir="res-J9"/>
+            <fileset dir="res">
+                <include name="**/datums.txt"/>
+                <include name="**/language.res"/>
+                <include name="**/world.*"/>
+                <include name="**/set/**"/>
+            </fileset>
         </wtkpackage>
     </target>
 
@@ -341,6 +395,34 @@
                     jadfile="dist/${dist.dir}/trekbuddy${suffix}.jad">
             <fileset dir="tmp/preverified"/>
             <fileset dir="res-RIM"/>
+            <fileset dir="res">
+                <include name="**/datums.txt"/>
+                <include name="**/language.res"/>
+                <include name="**/world.*"/>
+                <include name="**/set/**"/>
+            </fileset>
+        </wtkpackage>
+    </target>
+
+    <target name="plugin.pack.preverified">
+        <delete>
+          <fileset dir="plugin" includes="**/*.jar"/>
+        </delete>
+        <wtkjad jadfile="plugin/plugin.jad"
+                jarfile="plugin/plugin.jar"
+                name="Plugin"
+                vendor="${vendor}"
+                version="1.0">
+            <midlet name="Plugin" class="demo.PluginMIDlet"/>
+            <attribute name="MicroEdition-Profile" value="MIDP-2.0"/>
+            <attribute name="MicroEdition-Configuration" value="CLDC-1.1"/>
+            <attribute name="MIDlet-Permissions" value="javax.microedition.io.PushRegistry,javax.microedition.io.Connector.serversocket"/>
+            <attribute name="MIDlet-Push-1" value="socket://:5000,demo.PluginMIDlet,*"/>
+            <attribute name="Nokia-MIDlet-Category" value="Application"/>
+        </wtkjad>
+        <wtkpackage jarfile="plugin/plugin.jar"
+                    jadfile="plugin/plugin.jad">
+            <fileset dir="plugin/tmp/preverified"/>
         </wtkpackage>
     </target>
 
@@ -368,6 +450,25 @@
 -->
     </target>
 
+    <target name="plugin.sign.and.update">
+        <java jar="${wtk.home}\bin\JadTool.jar" fork="true">
+            <arg line="-addcert -certnum 1 -alias 'trekbuddy' -keystore trekbuddy.jks -inputjad plugin/plugin.jad -outputjad plugin/_plugin.jad"/>
+        </java>
+        <move file="plugin/_plugin.jad" tofile="plugin/plugin.jad"/>
+        <java jar="${wtk.home}\bin\JadTool.jar" fork="true">
+            <arg line="-addcert -certnum 2 -alias 'trekbuddy' -keystore trekbuddy.jks -inputjad plugin/plugin.jad -outputjad plugin/_plugin.jad"/>
+        </java>
+        <move file="plugin/_plugin.jad" tofile="plugin/plugin.jad"/>
+        <java jar="${wtk.home}\bin\JadTool.jar" fork="true">
+            <arg line="-addcert -certnum 3 -alias 'trekbuddy' -keystore trekbuddy.jks -inputjad plugin/plugin.jad -outputjad plugin/_plugin.jad"/>
+        </java>
+        <move file="plugin/_plugin.jad" tofile="plugin/plugin.jad"/>
+        <java jar="${wtk.home}\bin\JadTool.jar" fork="true">
+            <arg line="-addjarsig -alias 'trekbuddy' -keystore trekbuddy.jks -keypass changeit -jarfile plugin/plugin.jar -inputjad plugin/plugin.jad -outputjad plugin/_plugin.jad"/>
+        </java>
+        <move file="plugin/_plugin.jad" tofile="plugin/plugin.jad"/>
+    </target>
+
     <target name="obfuscate">
 	  <java jar="${proguard.home}\lib\proguard.jar" fork="true">
             <arg value="-injars tmp/trekbuddy${suffix}.jar"/>
@@ -388,7 +489,8 @@
             <arg value="-keepnames class org.**"/>
 -->
             <arg value="-keepnames class cz.** extends java.lang.Exception"/>
-            <arg value="-whyareyoukeeping class cz.kruch.track.ui.Desktop$Renderer"/>
+            <arg value="-keepnames class api.** extends java.lang.Exception"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.util.NakedVector"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.util.Logger"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.location.MotorolaLocationProvider"/>
             <arg value="-printmapping dist/${dist.dir}/trekbuddy${suffix}.map"/>
@@ -418,7 +520,8 @@
             <arg value="-keepnames class org.**"/>
 -->
             <arg value="-keepnames class cz.** extends java.lang.Exception"/>
-            <arg value="-whyareyoukeeping class cz.kruch.track.ui.Desktop$Renderer"/>
+            <arg value="-keepnames class api.** extends java.lang.Exception"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.util.NakedVector"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.util.Logger"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.location.MotorolaLocationProvider"/>
             <arg value="-printmapping dist/${dist.dir}/trekbuddy${suffix}.map"/>
@@ -442,34 +545,62 @@
         </exec>
 	</target>
 
-      <target name="rapc">
-          <echo>Using rim.home=${rim.home}</echo>
-<!--
-          <ant antfile="bb.xml"/>
--->
-<!--
-          <wtkrapc quiet="true" midlet="true" codename="trekbuddy${suffix}"
-    	        jadfile="dist/${dist.dir}/trekbuddy${suffix}.jad" 
-    	        source="dist/${dist.dir}/trekbuddy${suffix}.jar" 
-     	        import="${rim.home}/lib/net_rim_api.jar"
-    	        destdir="dist/${dist.dir}/cod"/>
--->
-<!--
-          <exec dir="${basedir}\dist\${dist.dir}" executable="${rim.home}\bin\rapc.exe">
-            <arg line="import='${rim.home}\lib\net_rim_api.jar' codename=trekbuddy${suffix} -quiet ${basedir}\dist\${dist.dir}\trekbuddy${suffix}.jad ${basedir}\dist\${dist.dir}\trekbuddy${suffix}.jar"/>
-          </exec>
--->
-          <exec dir="${basedir}\dist\${dist.dir}" executable="${rim.home}\bin\rapc.exe">
+    <target name="plugin.preverify">
+        <exec executable="${wtk.home}\bin\preverify1.1.exe">
+          <arg line="-classpath ${classpath.preverify} -d plugin/tmp/preverified plugin/build/classes"/>
+        </exec>
+    </target>
+
+    <target name="rapc">
+        <echo>Using rim.home=${rim.home}</echo>
+        <!--
+                  <ant antfile="bb.xml"/>
+        -->
+        <!--
+                  <wtkrapc quiet="true" midlet="true" codename="trekbuddy${suffix}"
+                        jadfile="dist/${dist.dir}/trekbuddy${suffix}.jad"
+                        source="dist/${dist.dir}/trekbuddy${suffix}.jar"
+                         import="${rim.home}/lib/net_rim_api.jar"
+                        destdir="dist/${dist.dir}/cod"/>
+        -->
+        <!--
+                  <exec dir="${basedir}\dist\${dist.dir}" executable="${rim.home}\bin\rapc.exe">
+                    <arg line="import='${rim.home}\lib\net_rim_api.jar' codename=trekbuddy${suffix} -quiet ${basedir}\dist\${dist.dir}\trekbuddy${suffix}.jad ${basedir}\dist\${dist.dir}\trekbuddy${suffix}.jar"/>
+                  </exec>
+        -->
+        <exec dir="${basedir}\dist\${dist.dir}" executable="${rim.home}\bin\rapc.exe">
             <arg line="import='${rim.home}\lib\net_rim_api.jar' codename=trekbuddy${suffix} -quiet -midlet ${basedir}\dist\${dist.dir}\trekbuddy${suffix}.jad ${basedir}\dist\${dist.dir}\trekbuddy${suffix}.jar"/>
-          </exec>
-          <copy file="${basedir}\trekbuddy.alx" tofile="${basedir}\dist\${dist.dir}\trekbuddy${suffix}.alx"/>
-          <replace file="${basedir}\dist\${dist.dir}\trekbuddy${suffix}.alx" token="@SUFFIX@" value="${suffix}"/>
-          <replace file="${basedir}\dist\${dist.dir}\trekbuddy${suffix}.alx" token="@DESCRIPTION@" value="${description}"/>
-          <replace file="${basedir}\dist\${dist.dir}\trekbuddy${suffix}.alx" token="@VERSION@" value="${version}"/>
-          <replace file="${basedir}\dist\${dist.dir}\trekbuddy${suffix}.alx" token="@VENDOR@" value="${vendor}"/>
-          <delete>
-              <fileset dir="${basedir}\dist\${dist.dir}" excludes="*.cod,*.alx,*.map"/>
-          </delete>
-      </target>
+        </exec>
+        <copy file="${basedir}\trekbuddy.alx" tofile="${basedir}\dist\${dist.dir}\trekbuddy${suffix}.alx"/>
+        <replace file="${basedir}\dist\${dist.dir}\trekbuddy${suffix}.alx" token="@SUFFIX@" value="${suffix}"/>
+        <replace file="${basedir}\dist\${dist.dir}\trekbuddy${suffix}.alx" token="@DESCRIPTION@"
+                 value="${description}"/>
+        <replace file="${basedir}\dist\${dist.dir}\trekbuddy${suffix}.alx" token="@VERSION@" value="${version}"/>
+        <replace file="${basedir}\dist\${dist.dir}\trekbuddy${suffix}.alx" token="@VENDOR@" value="${vendor}"/>
+        <delete>
+            <fileset dir="${basedir}\dist\${dist.dir}" excludes="*.cod,*.alx,*.map"/>
+        </delete>
+    </target>
+
+    <target name="rescompile">
+        <exec dir="${basedir}" executable="${java.home}/../bin/native2ascii.exe">
+            <arg line="res/resources/language.en_US.txt res/resources/language.txt"/>
+        </exec>
+        <javac 
+            destdir="tools/classes" 
+            srcdir="tools/src" 
+            includes="ResourceCompiler.java"/>
+        <jar 
+            destfile="tools/dist/rc.jar"
+            basedir="tools/classes"
+            includes="ResourceCompiler.class">
+          <manifest>
+            <attribute name="Main-Class" value="ResourceCompiler"/>
+          </manifest>
+        </jar> 
+        <java fork="true" jar="tools/dist/rc.jar">
+            <arg line="en_US res/resources/language.txt res/resources/language.res"/>
+        </java>
+    </target>
 
 </project>

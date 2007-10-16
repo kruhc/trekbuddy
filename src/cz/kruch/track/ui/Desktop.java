@@ -16,8 +16,8 @@
 
 package cz.kruch.track.ui;
 
-import cz.kruch.track.AssertionFailedException;
 import cz.kruch.track.TrackingMIDlet;
+import cz.kruch.track.Resources;
 import cz.kruch.track.event.Callback;
 import cz.kruch.track.fun.Friends;
 import cz.kruch.track.fun.Camera;
@@ -53,6 +53,44 @@ import api.location.LocationProvider;
 import api.location.LocationListener;
 import api.location.Location;
 import api.location.QualifiedCoordinates;
+import cz.kruch.track.TrackingMIDlet;
+import cz.kruch.track.Resources;
+import cz.kruch.track.event.Callback;
+import cz.kruch.track.fun.Friends;
+import cz.kruch.track.fun.Camera;
+import cz.kruch.track.maps.Map;
+import cz.kruch.track.maps.Atlas;
+import cz.kruch.track.maps.io.LoaderIO;
+import cz.kruch.track.configuration.Config;
+import cz.kruch.track.configuration.ConfigurationException;
+import cz.kruch.track.location.GpxTracklog;
+import cz.kruch.track.location.Waypoint;
+import cz.kruch.track.util.CharArrayTokenizer;
+
+import javax.microedition.lcdui.Canvas;
+import javax.microedition.lcdui.Display;
+import javax.microedition.lcdui.CommandListener;
+import javax.microedition.lcdui.Command;
+import javax.microedition.lcdui.Displayable;
+import javax.microedition.lcdui.Alert;
+import javax.microedition.lcdui.AlertType;
+import javax.microedition.lcdui.Graphics;
+import javax.microedition.lcdui.Font;
+import javax.microedition.lcdui.Image;
+import javax.microedition.lcdui.game.GameCanvas;
+import javax.microedition.midlet.MIDlet;
+import java.io.IOException;
+import java.util.Date;
+import java.util.Enumeration;
+import java.util.Timer;
+import java.util.TimerTask;
+import java.util.Vector;
+
+import api.location.LocationProvider;
+import api.location.LocationListener;
+import api.location.Location;
+import api.location.QualifiedCoordinates;
+import api.location.LocationException;
 
 /**
  * Application desktop.
@@ -70,10 +108,6 @@ public final class Desktop extends GameCanvas
 //#ifdef __LOG__
     private static final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("Desktop");
 //#endif
-
-    // messages
-    private static final String MSG_NO_DEFAULT_MAP = "No startup map. Use Options->Load Map/Atlas. ";
-    private static final String MSG_PAUSED = "Paused";
 
     // delta units
     public static final char[] DIST_STR_M      = { ' ', 'm', ' ' };
@@ -124,7 +158,6 @@ public final class Desktop extends GameCanvas
     private int mode;
 
     // desktop renderer
-//    private Renderer renderer;
     private Graphics graphics;
 
     // data components
@@ -159,10 +192,10 @@ public final class Desktop extends GameCanvas
     private volatile boolean keylock;
 
     // loading states and last-op message
-    private /*volatile */ boolean initializingMap = true;
-    private /*volatile */ boolean loadingSlices;
+    private /*volatile*/ boolean initializingMap = true;
+    private /*volatile*/ boolean loadingSlices;
     private final Object[] loadingResult = {
-        MSG_NO_DEFAULT_MAP, null 
+        Resources.getString(Resources.DESKTOP_MSG_NO_DEFAULT_MAP), null 
     };
 
     // location provider and its last-op throwable and status
@@ -191,11 +224,13 @@ public final class Desktop extends GameCanvas
 
     // repeated event simulation for dumb devices
     private volatile TimerTask repeatedKeyCheck;
-    private /*volatile*/ int inKey;
+    private /*volatile*/ int inKey, keyRepeatedCount;
 
     // start/initialization
     private volatile boolean guiReady;
+/*
     private volatile boolean postInit;
+*/
 
     // eventing
     private final SmartRunnable eventing;
@@ -243,21 +278,24 @@ public final class Desktop extends GameCanvas
 
         // boot sequence
         consoleShow(g, "TrekBuddy \u00a9 2007 KrUcH");
-        consoleShow(g, "www.trekbuddy.net");
+        String lc = Resources.getString(Resources.BOOT_LOCAL_COPY);
+        if (lc.length() > 0) {
+            consoleShow(g, lc);
+        }
         consoleShow(g, "");
-        consoleShow(g, "caching images...");
+        consoleShow(g, Resources.getString(Resources.BOOT_CACHING_IMAGES));
         if (imagesLoaded) {
             consoleResult(g, 0);
         } else {
             consoleResult(g, -1);
         }
-        consoleShow(g, "loading config...");
+        consoleShow(g, Resources.getString(Resources.BOOT_LOADING_CFG));
         if (configLoaded) {
             consoleResult(g, 0);
         } else {
             consoleResult(g, -1);
         }
-        consoleShow(g, "customizing ui...");
+        consoleShow(g, Resources.getString(Resources.BOOT_CUSTOMIZING));
         switch (customized) {
             case -1:
                 consoleResult(g, -1);
@@ -268,6 +306,7 @@ public final class Desktop extends GameCanvas
             default:
                 consoleResult(g, 0);
         }
+/*
         consoleShow(g, "localizing...");
         switch (localized) {
             case -1:
@@ -279,7 +318,8 @@ public final class Desktop extends GameCanvas
             default:
                 consoleResult(g, 0);
         }
-        consoleShow(g, "creating desktop...");
+*/
+        consoleShow(g, Resources.getString(Resources.BOOT_CREATING_UI));
         try {
             configure();
             consoleResult(g, 0);
@@ -289,7 +329,7 @@ public final class Desktop extends GameCanvas
 //#endif
             consoleResult(g, -1);
         }
-        consoleShow(g, "loading map...");
+        consoleShow(g, Resources.getString(Resources.BOOT_LOADING_MAP));
         try {
             if ("".equals(Config.mapPath)) {
                 initDefaultMap();
@@ -302,7 +342,7 @@ public final class Desktop extends GameCanvas
 //#ifdef __LOG__
             t.printStackTrace();
 //#endif
-            _updateLoadingResult("Map init", t);
+            _updateLoadingResult(Resources.getString(Resources.DESKTOP_MSG_INIT_MAP), t);
             consoleResult(g, -1);
         }
         consoleDelay();
@@ -312,6 +352,9 @@ public final class Desktop extends GameCanvas
 
         // create default desktop components
         resetGui();
+
+        // last
+        postInit();
     }
 
     private void configure() {
@@ -320,24 +363,24 @@ public final class Desktop extends GameCanvas
             this.addCommand(new Command("", Command.SCREEN, 0));
         }
         if (Config.btDeviceName.length() > 0) {
-            this.addCommand(this.cmdRunLast = new Command(TrackingMIDlet.resolve(TrackingMIDlet.MENU_START) + " " + Config.btDeviceName, POSITIVE_CMD_TYPE, 1));
-            this.addCommand(this.cmdRun = new Command(TrackingMIDlet.resolve(TrackingMIDlet.MENU_START), POSITIVE_CMD_TYPE, 2));
+            this.addCommand(this.cmdRunLast = new Command(Resources.getString(Resources.DESKTOP_CMD_START) + " " + Config.btDeviceName, POSITIVE_CMD_TYPE, 1));
+            this.addCommand(this.cmdRun = new Command(Resources.getString(Resources.DESKTOP_CMD_START), POSITIVE_CMD_TYPE, 2));
         } else {
-            this.addCommand(this.cmdRun = new Command(TrackingMIDlet.resolve(TrackingMIDlet.MENU_START), POSITIVE_CMD_TYPE, 1));
+            this.addCommand(this.cmdRun = new Command(Resources.getString(Resources.DESKTOP_CMD_START), POSITIVE_CMD_TYPE, 1));
         }
         if (cz.kruch.track.TrackingMIDlet.getPlatform().startsWith("NokiaE61")) {
-            this.addCommand(this.cmdWaypoints = new Command("Waypoints", POSITIVE_CMD_TYPE, 3));
+            this.addCommand(this.cmdWaypoints = new Command(Resources.getString(Resources.DESKTOP_CMD_NAVIGATION), POSITIVE_CMD_TYPE, 3));
         }
         if (cz.kruch.track.TrackingMIDlet.isFs()) {
-            this.addCommand(this.cmdLoadMap = new Command(TrackingMIDlet.resolve(TrackingMIDlet.MENU_LOADMAP), POSITIVE_CMD_TYPE, 4));
-            this.addCommand(this.cmdLoadAtlas = new Command(TrackingMIDlet.resolve(TrackingMIDlet.MENU_LOADATLAS), POSITIVE_CMD_TYPE, 5));
+            this.addCommand(this.cmdLoadMap = new Command(Resources.getString(Resources.DESKTOP_CMD_LOAD_MAP), POSITIVE_CMD_TYPE, 4));
+            this.addCommand(this.cmdLoadAtlas = new Command(Resources.getString(Resources.DESKTOP_CMD_LOAD_ATLAS), POSITIVE_CMD_TYPE, 5));
         }
-        this.addCommand(this.cmdSettings = new Command(TrackingMIDlet.resolve(TrackingMIDlet.MENU_SETTINGS), POSITIVE_CMD_TYPE, 6));
-        this.addCommand(this.cmdInfo = new Command(TrackingMIDlet.resolve(TrackingMIDlet.MENU_INFO), POSITIVE_CMD_TYPE, 7));
-        this.addCommand(this.cmdExit = new Command(TrackingMIDlet.resolve(TrackingMIDlet.MENU_EXIT), POSITIVE_CMD_TYPE/*EXIT*/, 8/*1*/));
-        this.cmdPause = new Command(TrackingMIDlet.resolve(TrackingMIDlet.MENU_PAUSE), Config.fullscreen || cz.kruch.track.TrackingMIDlet.sonyEricsson ? POSITIVE_CMD_TYPE : Command.STOP, 1);
-        this.cmdContinue = new Command(TrackingMIDlet.resolve(TrackingMIDlet.MENU_CONTINUE), Config.fullscreen || cz.kruch.track.TrackingMIDlet.sonyEricsson ? POSITIVE_CMD_TYPE : (Command.STOP), 1);
-        this.cmdStop = new Command(TrackingMIDlet.resolve(TrackingMIDlet.MENU_STOP), Config.fullscreen || cz.kruch.track.TrackingMIDlet.sonyEricsson ? POSITIVE_CMD_TYPE : (Command.STOP), 2);
+        this.addCommand(this.cmdSettings = new Command(Resources.getString(Resources.DESKTOP_CMD_SETTINGS), POSITIVE_CMD_TYPE, 6));
+        this.addCommand(this.cmdInfo = new Command(Resources.getString(Resources.DESKTOP_CMD_INFO), POSITIVE_CMD_TYPE, 7));
+        this.addCommand(this.cmdExit = new Command(Resources.getString(Resources.DESKTOP_CMD_EXIT), POSITIVE_CMD_TYPE/*EXIT*/, 8/*1*/));
+        this.cmdPause = new Command(Resources.getString(Resources.DESKTOP_CMD_PAUSE), Config.fullscreen || cz.kruch.track.TrackingMIDlet.sonyEricsson ? POSITIVE_CMD_TYPE : Command.STOP, 1);
+        this.cmdContinue = new Command(Resources.getString(Resources.DESKTOP_CMD_CONTINUE), Config.fullscreen || cz.kruch.track.TrackingMIDlet.sonyEricsson ? POSITIVE_CMD_TYPE : (Command.STOP), 1);
+        this.cmdStop = new Command(Resources.getString(Resources.DESKTOP_CMD_STOP), Config.fullscreen || cz.kruch.track.TrackingMIDlet.sonyEricsson ? POSITIVE_CMD_TYPE : (Command.STOP), 2);
 
         // handle commands
         this.setCommandListener(this);
@@ -624,7 +667,7 @@ public final class Desktop extends GameCanvas
             try {
                 friends = new Friends();
             } catch (Throwable t) {
-                showError("Failed to init location sharing", t, this);
+                showError(Resources.getString(Resources.DESKTOP_MSG_FRIENDS_FAILED), t, this);
             }
         }
     }
@@ -736,10 +779,15 @@ public final class Desktop extends GameCanvas
         if (log.isEnabled()) log.info("keyPressed");
 //#endif
 
+        // counter
+        keyRepeatedCount = 0;
+
+        // only repeated handled for '1'
         if (i == Canvas.KEY_NUM1) {
             return;
         }
 
+        // handle key
         handleKey(i, false);
     }
 
@@ -747,6 +795,18 @@ public final class Desktop extends GameCanvas
 //#ifdef __LOG__
         if (log.isEnabled()) log.info("keyRepeated");
 //#endif
+
+        // counter
+        keyRepeatedCount++;
+
+        // handle keylock 
+        if (Canvas.KEY_STAR == i) {
+            if (keyRepeatedCount == 1) {
+                keylock = !keylock;
+                showConfirmation(keylock ? Resources.getString(Resources.DESKTOP_MSG_KEYS_LOCKED) : Resources.getString(Resources.DESKTOP_MSG_KEYS_UNLOCKED), null);
+            }
+            return;
+        }
 
         // handle event
         handleKey(i, true);
@@ -757,7 +817,7 @@ public final class Desktop extends GameCanvas
         if (log.isEnabled()) log.info("keyReleased");
 //#endif
 
-        if (i == Canvas.KEY_NUM1) {
+        if (i == Canvas.KEY_NUM1) { // hack
             handleKey(i, false);
         }
 
@@ -832,9 +892,9 @@ public final class Desktop extends GameCanvas
         } else if (command == cmdWaypoints) {
             Waypoints.getInstance().show();
         } else if (command == cmdLoadMap) {
-            (new FileBrowser("SelectMap", new Event(Event.EVENT_FILE_BROWSER_FINISHED, "map"), this)).show();
+            (new FileBrowser(Resources.getString(Resources.DESKTOP_MSG_SELECT_MAP), new Event(Event.EVENT_FILE_BROWSER_FINISHED, "map"), this)).show();
         } else if (command == cmdLoadAtlas) {
-            (new FileBrowser("SelectAtlas", new Event(Event.EVENT_FILE_BROWSER_FINISHED, "atlas"), this)).show();
+            (new FileBrowser(Resources.getString(Resources.DESKTOP_MSG_SELECT_ATLAS), new Event(Event.EVENT_FILE_BROWSER_FINISHED, "atlas"), this)).show();
         } else if (command == cmdRun) {
             // start tracking
             stopRequest = providerRestart = false;
@@ -854,7 +914,7 @@ public final class Desktop extends GameCanvas
             // update OSD
             update(MASK_OSD);
         } else if (command == cmdExit) {
-            (new YesNoDialog(this, this)).show("Do you want to quit?", null);
+            (new YesNoDialog(this, this)).show(Resources.getString(Resources.DESKTOP_MSG_WANT_QUIT), null);
         } else if (command == cmdPause) {
             // update flag
             paused = true;
@@ -1093,9 +1153,9 @@ public final class Desktop extends GameCanvas
             update(MASK_ALL);
         } else if (atlas != null) {
             // try to find alternate map
-            startAlternateMap(atlas.getLayer(), local, "Selected waypoint is off current layer");
+            startAlternateMap(atlas.getLayer(), local, Resources.getString(Resources.DESKTOP_MSG_WPT_OFF_LAYER));
         } else {
-            Desktop.showWarning("Selected waypoint is off current map", null, Desktop.this);
+            Desktop.showWarning(Resources.getString(Resources.DESKTOP_MSG_WPT_OFF_MAP), null, Desktop.this);
         }
         QualifiedCoordinates.releaseInstance(local);
     }
@@ -1259,19 +1319,16 @@ public final class Desktop extends GameCanvas
         }
     }
 
-    private void handleKey(int i, final boolean repeated) {
-        if (paused || !postInit) {
+    private void handleKey(final int i, final boolean repeated) {
+        if (!guiReady) {
             return;
         }
 
-        if (Canvas.KEY_STAR == i) {
-            if (repeated) {
-                keylock = !keylock;
-                showInfo(keylock ? "Keys locked." : "Keys unlocked.", null);
-            }
+        if (keylock) {
+            return;
         }
 
-        if (keylock) {
+        if (paused) {
             return;
         }
 
@@ -1440,28 +1497,31 @@ public final class Desktop extends GameCanvas
 
         // assertion - should never happen
         if (provider != null) {
-            throw new AssertionFailedException("Tracking already started");
+            throw new IllegalStateException("Tracking already started");
         }
 
         // by default
         tracklog = false;
 
         // start tracklog?
-        String on = Config.tracklog;
-        if (Config.TRACKLOG_NEVER.equals(on)) {
-            if (last) startTrackingLast(); else startTracking();
-        } else if (Config.TRACKLOG_ASK.equals(on)) {
-            (new YesNoDialog(display.getCurrent(), new YesNoDialog.AnswerListener() {
-                public void response(int answer) {
-                    if (YesNoDialog.YES == answer) {
-                        tracklog = true; // !
+        switch (Config.tracklog) {
+            case Config.TRACKLOG_NEVER: {
+                if (last) startTrackingLast(); else startTracking();
+            } break;
+            case Config.TRACKLOG_ASK: {
+                (new YesNoDialog(display.getCurrent(), new YesNoDialog.AnswerListener() {
+                    public void response(int answer) {
+                        if (YesNoDialog.YES == answer) {
+                            tracklog = true; // !
+                        }
+                        if (last) startTrackingLast(); else startTracking();
                     }
-                    if (last) startTrackingLast(); else startTracking();
-                }
-            })).show("Start tracklog?", null);
-        } else if (Config.TRACKLOG_ALWAYS.equals(on)) {
-            tracklog = true; // !
-            if (last) startTrackingLast(); else startTracking();
+                })).show(Resources.getString(Resources.DESKTOP_MSG_START_TRACKLOG), null);
+            } break;
+            case Config.TRACKLOG_ALWAYS: {
+                tracklog = true; // !
+                if (last) startTrackingLast(); else startTracking();
+            } break;
         }
     }
 
@@ -1471,28 +1531,32 @@ public final class Desktop extends GameCanvas
 //#endif
 
         // which provider?
-        String selectedProvider = Config.locationProvider;
         Class providerClass = null;
 
         // instantiate provider
         try {
-            if (Config.LOCATION_PROVIDER_JSR179.equals(selectedProvider)) {
-                providerClass = Class.forName("cz.kruch.track.location.Jsr179LocationProvider");
-            } else if (Config.LOCATION_PROVIDER_JSR82.equals(selectedProvider)) {
-                providerClass = Class.forName("cz.kruch.track.location.Jsr82LocationProvider");
-            } else if (Config.LOCATION_PROVIDER_SERIAL.equals(selectedProvider)) {
-                providerClass = Class.forName("cz.kruch.track.location.SerialLocationProvider");
-            } else if (Config.LOCATION_PROVIDER_SIMULATOR.equals(selectedProvider)) {
-                providerClass = Class.forName("cz.kruch.track.location.SimulatorLocationProvider");
-            } 
+            switch (Config.locationProvider) {
+                case Config.LOCATION_PROVIDER_JSR179:
+                    providerClass = Class.forName("cz.kruch.track.location.Jsr179LocationProvider");
+                break;
+                case Config.LOCATION_PROVIDER_JSR82:
+                    providerClass = Class.forName("cz.kruch.track.location.Jsr82LocationProvider");
+                break;
+                case Config.LOCATION_PROVIDER_SERIAL:
+                    providerClass = Class.forName("cz.kruch.track.location.SerialLocationProvider");
+                break;
+                case Config.LOCATION_PROVIDER_SIMULATOR:
+                    providerClass = Class.forName("cz.kruch.track.location.SimulatorLocationProvider");
+                break;
 //#ifdef __A1000__
-              else if (Config.LOCATION_PROVIDER_MOTOROLA.equals(selectedProvider)) {
-                providerClass = Class.forName("cz.kruch.track.location.MotorolaLocationProvider");
-            }
+                case Config.LOCATION_PROVIDER_MOTOROLA:
+                    providerClass = Class.forName("cz.kruch.track.location.MotorolaLocationProvider");
+                break;
 //#endif
+            }
             provider = (LocationProvider) providerClass.newInstance();
         } catch (Throwable t) {
-            showError("Could not create provider [" + selectedProvider + "] (" + providerClass + ")", t, this);
+            showError(Resources.getString(Resources.DESKTOP_MSG_CREATE_PROV_FAILED) + " [" + provider.getName() + "] (" + providerClass + ")", t, this);
 
             return false;
         }
@@ -1511,7 +1575,7 @@ public final class Desktop extends GameCanvas
             if (log.isEnabled()) log.debug("provider started; state " + state);
 //#endif
         } catch (Throwable t) {
-            showError("Failed to start provider [" + provider.getName() + "]", t, null);
+            showError(Resources.getString(Resources.DESKTOP_MSG_START_PROV_FAILED) + " [" + provider.getName() + "]", t, null);
 
             // clear member
             provider = null;
@@ -1548,7 +1612,7 @@ public final class Desktop extends GameCanvas
             Class providerClass = Class.forName("cz.kruch.track.location.Jsr82LocationProvider");
             provider = (LocationProvider) providerClass.newInstance();
         } catch (Throwable t) {
-            showError("Could not create provider [Bluetooth]", t, this);
+            showError(Resources.getString(Resources.DESKTOP_MSG_CREATE_PROV_FAILED) + " [Bluetooth]", t, this);
             return false;
         }
 
@@ -1627,7 +1691,7 @@ public final class Desktop extends GameCanvas
             provider.setLocationListener(null, -1, -1, -1);
             provider.stop();
         } catch (Throwable t) {
-            showError("Failed to stop provider", t, null);
+            showError(Resources.getString(Resources.DESKTOP_MSG_STOP_PROV_FAILED), t, null);
         } finally {
             provider = null;
         }
@@ -1678,7 +1742,7 @@ public final class Desktop extends GameCanvas
 
                 // assertion
                 if (gpxTracklog == null) {
-                    throw new AssertionFailedException("GPX tracklog not started");
+                    throw new IllegalStateException("GPX tracklog not started");
                 }
 
                 // break trkseg
@@ -1688,7 +1752,7 @@ public final class Desktop extends GameCanvas
 
                 // assertion
                 if (gpxTracklog != null) {
-                    throw new AssertionFailedException("GPX tracklog already started");
+                    throw new IllegalStateException("GPX tracklog already started");
                 }
 
                 // start new tracklog
@@ -1719,7 +1783,8 @@ public final class Desktop extends GameCanvas
 
     private void drawPause(Graphics g) {
         Font f = Font.getDefaultFont();
-        final int sw = f.stringWidth(MSG_PAUSED);
+        String s = Resources.getString(Resources.DESKTOP_MSG_PAUSED);
+        final int sw = f.stringWidth(s);
         final int sh = f.getHeight();
         final int w = getWidth() * 7 / 8;
         final int h = sh << 1;
@@ -1730,7 +1795,7 @@ public final class Desktop extends GameCanvas
         g.setColor(0x0);
         g.drawRoundRect(x, y, w - 1, h - 1, 5, 5);
         g.setFont(f);
-        g.drawString(MSG_PAUSED, x + (w - sw) / 2, y + (h - sh) / 2, Graphics.TOP | Graphics.LEFT);
+        g.drawString(s, x + (w - sw) / 2, y + (h - sh) / 2, Graphics.TOP | Graphics.LEFT);
         flushGraphics();
     }
 
@@ -1891,101 +1956,13 @@ public final class Desktop extends GameCanvas
                 // release task
                 releaseRenderTask(this);
             }
+/*
 
             if (!postInit && guiReady) {
                 postInit = true;
                 postInit();
             }
-        }
-    }
-
-    private final class Renderer extends Thread {
-//#ifdef __LOG__
-        private /*static*/ final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("Renderer");
-//#endif
-
-        private boolean go;
-        private int mask;
-
-        public Renderer() {
-            this.go = true;
-            this.mask = 0;
-        }
-
-        public void enqueue(int m) {
-//#ifdef __LOG__
-            if (log.isEnabled()) log.debug("merging " + Integer.toBinaryString(this.mask) + " with " + Integer.toBinaryString(m));
-//#endif
-            synchronized (this) {
-                mask |= m;
-                notify();
-            }
-        }
-
-        public void run() {
-            // pop mask
-            for (; go ;) {
-                int m;
-                synchronized (this) {
-                    while (go && mask == 0) {
-                        try {
-                            wait();
-                        } catch (InterruptedException e) {
-                        }
-                    }
-                    m = mask;
-                    mask = 0;
-                }
-
-                if (!go) break;
-
-//#ifdef __LOG__
-                if (log.isEnabled()) log.error("render mask = " + Integer.toBinaryString(m));
-//#endif
-
-                // render
-                try {
-                    // get graphics
-                    Graphics g = graphics;
-//#ifdef __S65__
-                    if (cz.kruch.track.TrackingMIDlet.s65) {
-                        g = getGraphics();
-                    }
-//#endif
-
-                    // render current view
-                    views[mode].render(g, font, m);
-
-                    // paused?
-                    if (paused) {
-                        drawPause(g);
-                    }
-
-                } catch (Throwable t) {
-//#ifdef __LOG__
-                    t.printStackTrace();
-                    if (log.isEnabled()) log.error("render failure", t);
-//#endif
-                    Desktop.showError("_RENDER FAILURE_", t, null);
-                }
-
-                if (!postInit && guiReady) {
-                    postInit = true;
-                    postInit();
-                }
-            }
-        }
-
-        public void destroy() {
-            synchronized (this) {
-                go = false;
-                notify();
-            }
-            try {
-                join();
-            } catch (InterruptedException e) {
-                // ignore
-            }
+*/
         }
     }
 
@@ -2116,7 +2093,7 @@ public final class Desktop extends GameCanvas
 
                 // notify user
                 if (isVisible) {
-                    Desktop.showConfirmation("Navigation stopped", Desktop.this);
+                    Desktop.showConfirmation(Resources.getString(Resources.DESKTOP_MSG_NAV_STOPPED), Desktop.this);
                 }
             }
 
@@ -2174,14 +2151,14 @@ public final class Desktop extends GameCanvas
 
                 // notify user
                 if (isVisible && !silent) {
-                    Desktop.showInfo("Waypoint set on map", Desktop.this);
+                    Desktop.showInfo(Resources.getString(Resources.DESKTOP_MSG_WPT_SET), Desktop.this);
                 }
 
             } else { // no, warn
 
                 // warn user
                 if (isVisible && !silent) {
-                    Desktop.showWarning("Selected waypoint is off current map", null, Desktop.this);
+                    Desktop.showWarning(Resources.getString(Resources.DESKTOP_MSG_WPT_OFF_MAP), null, Desktop.this);
                 }
             }
 
@@ -2331,10 +2308,10 @@ public final class Desktop extends GameCanvas
                     if (isAtlas()) {
                         Enumeration e = atlas.getLayers();
                         if (e.hasMoreElements()) {
-                            (new ItemSelection(Desktop.this, "LayerSelection",
+                            (new ItemSelection(Desktop.this, Resources.getString(Resources.DESKTOP_MSG_SELECT_LAYER),
                                                new Event(Event.EVENT_LAYER_SELECTION_FINISHED, "switch"))).show(e);
                         } else {
-                            showInfo("No layers in current atlas.", Desktop.this);
+                            showInfo(Resources.getString(Resources.DESKTOP_MSG_NO_LAYERS), Desktop.this);
                         }
                     }
                 } break;
@@ -2343,10 +2320,10 @@ public final class Desktop extends GameCanvas
                     if (isAtlas()) {
                         Enumeration e = atlas.getMapNames();
                         if (e.hasMoreElements()) {
-                            (new ItemSelection(Desktop.this, "MapSelection",
+                            (new ItemSelection(Desktop.this, Resources.getString(Resources.DESKTOP_MSG_SELECT_MAP),
                                                new Event(Event.EVENT_MAP_SELECTION_FINISHED, "switch"))).show(e);
                         } else {
-                            showInfo("No maps in current layer.", Desktop.this);
+                            showInfo(Resources.getString(Resources.DESKTOP_MSG_NO_MAPS), Desktop.this);
                         }
                     }
                 } break;
@@ -2701,7 +2678,7 @@ public final class Desktop extends GameCanvas
         _setInitializingMap(true);
 
         // message for the screen
-        _updateLoadingResult("Loading map", url);
+        _updateLoadingResult(Resources.getString(Resources.DESKTOP_MSG_LOADING_MAP), url);
 
         // hide map viewer and OSD // TODO hackish
         ((MapView) views[VIEW_MAP]).setMap(null);
@@ -2742,7 +2719,7 @@ public final class Desktop extends GameCanvas
         _setInitializingMap(true);
 
         // message for the screen
-        _updateLoadingResult("Loading atlas", url);
+        _updateLoadingResult(Resources.getString(Resources.DESKTOP_MSG_LOADING_ATLAS), url);
 
         // hide map viewer and OSD // TODO hackish
         ((MapView) views[VIEW_MAP]).setMap(null);
@@ -2873,12 +2850,12 @@ public final class Desktop extends GameCanvas
                     Config.update(Config.CONFIG_090);
 
                     // let the user know
-                    showConfirmation("Configuration updated.", Desktop.screen);
+                    showConfirmation(Resources.getString(Resources.DESKTOP_MSG_CFG_UPDATED), Desktop.screen);
 
                 } catch (ConfigurationException e) {
 
                     // show user the error
-                    showError("Failed to update configuration.", e, Desktop.screen);
+                    showError(Resources.getString(Resources.DESKTOP_MSG_CFG_UPDATED), e, Desktop.screen);
                 }
             }
         }
@@ -2999,7 +2976,7 @@ public final class Desktop extends GameCanvas
                         }
                     } else {
                         // display warning
-                        showWarning(result == null ? "Tracklog problem." : result.toString(),
+                        showWarning(result == null ? Resources.getString(Resources.DESKTOP_MSG_TRACKLOG_ERROR) : result.toString(),
                                     throwable, Desktop.screen);
 
                         // no more recording
@@ -3021,7 +2998,7 @@ public final class Desktop extends GameCanvas
                         _atlas = null;
 
                         // force user to select layer
-                        (new ItemSelection(Desktop.screen, "LayerSelection", new Event(Event.EVENT_LAYER_SELECTION_FINISHED))).show(atlas.getLayers());
+                        (new ItemSelection(Desktop.screen, Resources.getString(Resources.DESKTOP_MSG_SELECT_LAYER), new Event(Event.EVENT_LAYER_SELECTION_FINISHED))).show(atlas.getLayers());
 
                     } else {
 
@@ -3055,7 +3032,7 @@ public final class Desktop extends GameCanvas
                                 atlas.setLayer(layerName);
 
                                 // force user to select default map
-                                (new ItemSelection(Desktop.screen, "MapSelection", new Event(Event.EVENT_MAP_SELECTION_FINISHED))).show(atlas.getMapNames());
+                                (new ItemSelection(Desktop.screen, Resources.getString(Resources.DESKTOP_MSG_SELECT_MAP), new Event(Event.EVENT_MAP_SELECTION_FINISHED))).show(atlas.getMapNames());
 
                             } else { // layer switch
 
@@ -3063,7 +3040,7 @@ public final class Desktop extends GameCanvas
                                 QualifiedCoordinates qc = map.transform(((MapView) views[VIEW_MAP]).getPosition());
 
                                 // switch match
-                                startAlternateMap(layerName, qc, "No map for current position in layer '" + layerName + "'.");
+                                startAlternateMap(layerName, qc, Resources.getString(Resources.DESKTOP_MSG_NO_MAP_FOR_POS) + " '" + layerName + "'.");
                             }
                         }
                     } else { // cancelled
@@ -3171,9 +3148,9 @@ public final class Desktop extends GameCanvas
                             // offer use as default?
                             if (!_switch) {
                                 if ("atlas".equals(_target)) {
-                                    (new YesNoDialog(Desktop.screen, this)).show("Use as default atlas?", atlas.getURL());
+                                    (new YesNoDialog(Desktop.screen, this)).show(Resources.getString(Resources.DESKTOP_MSG_USE_AS_DEFAULT_ATLAS), atlas.getURL());
                                 } else {
-                                    (new YesNoDialog(Desktop.screen, this)).show("Use as default map?", map.getPath());
+                                    (new YesNoDialog(Desktop.screen, this)).show(Resources.getString(Resources.DESKTOP_MSG_USE_AS_DEFAULT_ATLAS), map.getPath());
                                 }
                             }
                         } catch (Throwable t) {
@@ -3182,7 +3159,7 @@ public final class Desktop extends GameCanvas
 //#endif
 
                             // show user the error
-                            showError("Failed to use map.", t, Desktop.screen);
+                            showError(Resources.getString(Resources.DESKTOP_MSG_USE_MAP_FAILED), t, Desktop.screen);
 
                             // cleanup
                             cleanup(t);
@@ -3191,7 +3168,7 @@ public final class Desktop extends GameCanvas
                     } else {
 
                         // update loading result
-                        _updateLoadingResult("Map loading failed", throwable);
+                        _updateLoadingResult(Resources.getString(Resources.DESKTOP_MSG_LOAD_MAP_FAILED), throwable);
 
                         // show user the error
                         showError("[6] " + result, throwable, Desktop.screen);
@@ -3206,7 +3183,7 @@ public final class Desktop extends GameCanvas
                 case EVENT_SLICES_LOADED: {
 
                     // update loading result
-                    _updateLoadingResult("Slices loaded", throwable);
+                    _updateLoadingResult(Resources.getString(Resources.DESKTOP_MSG_SLICES_LOADED), throwable);
 
                     // if loading was ok
                     if (throwable == null) {
@@ -3228,7 +3205,7 @@ public final class Desktop extends GameCanvas
                 case EVENT_LOADING_STATUS_CHANGED: {
 
                     // update loading result
-                    _updateLoadingResult("Loading status", throwable);
+                    _updateLoadingResult(Resources.getString(Resources.DESKTOP_MSG_LOADING_STATUS), throwable);
 
                     // loading ok?
                     if (throwable == null) {
@@ -3319,8 +3296,12 @@ public final class Desktop extends GameCanvas
                                 AlertType.WARNING.playSound(display);
                             }
 
-                            // no time/speed/alt/etc
-                            osd.resetExtendedInfo();
+                            // stop provider - if it is restartable, it will be restarted (see above case)
+                            try {
+                                provider.stop();
+                            } catch (LocationException e) {
+                                // ignore - never happens?
+                            }
 
                         } break;
 
@@ -3347,7 +3328,7 @@ public final class Desktop extends GameCanvas
                     // grab event data
                     Location l = (Location) result;
                     if (l == null) {
-                        throw new AssertionFailedException("Location is null");
+                        throw new IllegalStateException("Location is null");
                     }
 
                     // update tracklog
@@ -3400,7 +3381,7 @@ public final class Desktop extends GameCanvas
             if (log.isEnabled()) log.debug("cleanup");
 //#endif
             // update loading result
-            _updateLoadingResult("Event cleanup", t);
+            _updateLoadingResult("__EVENT CLEANUP__", t);
 
             // clear temporary vars
             if (_atlas != null) {

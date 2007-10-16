@@ -1,9 +1,0 @@
-menu.start=Start
-menu.stop=Stop
-menu.pause=Pause
-menu.continue=Continue
-menu.loadmap=Load Map
-menu.loadatlas=Load Atlas
-menu.settings=Settings
-menu.info=Info
-menu.exit=Exit

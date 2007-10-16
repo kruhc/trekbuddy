@@ -29,7 +29,7 @@ public final class SimpleCalendar {
     private Date date;
     private long last;
 
-    public int hour, minute, second;
+    public volatile int hour, minute, second;
 
     public SimpleCalendar(Calendar calendar) {
         this.calendar = calendar;

@@ -33,6 +33,7 @@ import javax.microedition.io.Connector;
 import cz.kruch.track.configuration.Config;
 import cz.kruch.track.event.Callback;
 import cz.kruch.track.ui.NavigationScreens;
+import cz.kruch.track.Resources;
 
 /**
  * GPX tracklog.
@@ -274,7 +275,7 @@ public final class GpxTracklog extends Thread {
             }
         } else {
             // signal failure
-            callback.invoke("Failed to create tracklog " + path, throwable, this);
+            callback.invoke(Resources.getString(Resources.DESKTOP_MSG_START_TRACKLOG_FAILED) + ": " + path, throwable, this);
         }
 
         // close file
@@ -543,6 +544,10 @@ public final class GpxTracklog extends Thread {
         if (fix > 0) {
             if (++count == 3) {
                 bLog = true; // log start point (3rd valid position)
+            }
+        } else {
+            if (Config.gpxOnlyValid) {
+                return null;
             }
         }
 

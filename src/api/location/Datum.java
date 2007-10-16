@@ -22,28 +22,22 @@ package api.location;
  * @author Ales Pour <kruhc@seznam.cz>
  */
 public final class Datum {
-    private final String name;
-    private final Ellipsoid ellipsoid;
+    public final String name;
+    public final Ellipsoid ellipsoid;
     public final double dx, dy, dz;
 
+    public static Datum contextDatum;
+    
     public Datum(String name, Ellipsoid ellipsoid, double dx, double dy, double dz) {
         this.name = name;
         this.ellipsoid = ellipsoid;
-        this.dx = -1 * dx;
-        this.dy = -1 * dy;
-        this.dz = -1 * dz;
-    }
-
-    public String getName() {
-        return name;
-    }
-
-    public Ellipsoid getEllipsoid() {
-        return ellipsoid;
+        this.dx = -dx;
+        this.dy = -dy;
+        this.dz = -dz;
     }
 
     public String toString() {
-        return (new StringBuffer(32)).append(name).append('{').append(ellipsoid).append(',').append(dx).append(',').append(dy).append(',').append(dz).append('}').toString();
+        return (new StringBuffer(32)).append(name).append('{').append(ellipsoid).append(',').append(-dx).append(',').append(-dy).append(',').append(-dz).append('}').toString();
     }
 
     public static final Ellipsoid[] ELLIPSOIDS = {
@@ -54,6 +48,7 @@ public final class Datum {
         new Ellipsoid("Bessel 1841", 6377397.155, 299.1528153513206),
         new Ellipsoid("Clarke 1866", 6378206.4, 294.9786982),
         new Ellipsoid("Clarke 1880", 6378249.145, 293.465),
+        new Ellipsoid("Clarke 1880 IGN", 6378249.2, 293.466021),
         new Ellipsoid("Everest (1830)", 6377276.345, 300.8017),
         new Ellipsoid("Everest (Sarawak)", 6377298.556, 300.8017),
         new Ellipsoid("Everest (1956)", 6377301.243, 300.8017),

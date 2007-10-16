@@ -32,18 +32,20 @@ public class ProjectionSetup {
     public static final String PROJ_SG          = "(SG) Swedish Grid";
     public static final String PROJ_IG          = "(IG) Irish Grid";
     public static final String PROJ_SUI         = "(SUI) Swiss Grid";
+    public static final String PROJ_FRANCE_I    = "(I) France Zone I";
+    public static final String PROJ_FRANCE_II   = "(II) France Zone II";
+    public static final String PROJ_FRANCE_III  = "(III) France Zone III";
+    public static final String PROJ_FRANCE_IV   = "(IV) France Zone IV";
 
-    protected String name;
+    public static ProjectionSetup contextProjection;
+
+    public final String name;
 
     public ProjectionSetup(String name) {
         this.name = name;
     }
 
-    public String getName() {
-        return name;
-    }
-
     public String toString() {
-        return (new StringBuffer(32)).append(getName()).append('{').append('}').toString();
+        return (new StringBuffer(32)).append(name).append('{').append('}').toString();
     }
 }

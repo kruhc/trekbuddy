@@ -47,16 +47,16 @@ public final class Config {
 //#endif
 
     /* known providers */
-    public static final String LOCATION_PROVIDER_JSR82      = "Bluetooth";
-    public static final String LOCATION_PROVIDER_JSR179     = "Internal";
-    public static final String LOCATION_PROVIDER_SERIAL     = "Serial";
-    public static final String LOCATION_PROVIDER_SIMULATOR  = "Simulator";
-    public static final String LOCATION_PROVIDER_MOTOROLA   = "Motorola";
+    public static final int LOCATION_PROVIDER_JSR82      = 0;
+    public static final int LOCATION_PROVIDER_JSR179     = 1;
+    public static final int LOCATION_PROVIDER_SERIAL     = 2;
+    public static final int LOCATION_PROVIDER_SIMULATOR  = 3;
+    public static final int LOCATION_PROVIDER_MOTOROLA   = 4;
 
     /* tracklog options */
-    public static final String TRACKLOG_NEVER  = "never";
-    public static final String TRACKLOG_ASK    = "ask";
-    public static final String TRACKLOG_ALWAYS = "always";
+    public static final int TRACKLOG_NEVER          = 0;
+    public static final int TRACKLOG_ASK            = 1;
+    public static final int TRACKLOG_ALWAYS         = 2;
 
     /* tracklog format */
     public static final String TRACKLOG_FORMAT_NMEA = "NMEA 0183";
@@ -69,24 +69,24 @@ public final class Config {
     public static final String COORDS_GC_LATLON     = "Geocaching Lat/Lon";
 
     /* units */
-    public static final String UNITS_METRIC        = "metric";
-    public static final String UNITS_IMPERIAL      = "imperial";
-    public static final String UNITS_NAUTICAL      = "nautical";
+    public static final int UNITS_METRIC            = 0;
+    public static final int UNITS_IMPERIAL          = 1;
+    public static final int UNITS_NAUTICAL          = 2;
 
     /* datadir folders */
-    public static final String FOLDER_MAPS      = "maps/";
-    public static final String FOLDER_NMEA      = "tracks-nmea/";
-    public static final String FOLDER_TRACKS    = "tracks-gpx/";
-    public static final String FOLDER_WPTS      = "wpts/";
-    public static final String FOLDER_PROFILES  = "ui-profiles/";
-    public static final String FOLDER_RESOURCES = "resources/";
-    public static final String FOLDER_SOUNDS    = "sounds/";
+    public static final String FOLDER_MAPS          = "maps/";
+    public static final String FOLDER_NMEA          = "tracks-nmea/";
+    public static final String FOLDER_TRACKS        = "tracks-gpx/";
+    public static final String FOLDER_WPTS          = "wpts/";
+    public static final String FOLDER_PROFILES      = "ui-profiles/";
+    public static final String FOLDER_RESOURCES     = "resources/";
+    public static final String FOLDER_SOUNDS        = "sounds/";
 
     /* rms stores */
-    public static final String VARS_090         = "vars_090";
-    public static final String CONFIG_090       = "config_090";
+    public static final String VARS_090             = "vars_090";
+    public static final String CONFIG_090           = "config_090";
 
-    private static final String EMPTY_STRING    = "";
+    private static final String EMPTY_STRING        = "";
 
     /*
      * Configuration params, initialized to default values.
@@ -101,16 +101,16 @@ public final class Config {
 */
 
     // group [Map datum]
-    public static String geoDatum           = Datum.DATUM_WGS_84.getName();
+    public static String geoDatum           = Datum.DATUM_WGS_84.name;
 
     // group [Provider]
-    public static String locationProvider   = EMPTY_STRING;
+    public static int locationProvider      = -1;
 
     // group [DataDir]
     private static String dataDir           = "file:///E:/TrekBuddy/";
 
     // group [common provider options]
-    public static String tracklog           = TRACKLOG_NEVER;
+    public static int tracklog              = TRACKLOG_NEVER;
     public static String tracklogFormat     = TRACKLOG_FORMAT_GPX;
     public static String captureLocator     = "capture://video";
     public static String captureFormat      = EMPTY_STRING;
@@ -161,6 +161,7 @@ public final class Config {
     // group [GPX options]
     public static int gpxDt = 60; // 1 min
     public static int gpxDs = -1;
+    public static boolean gpxOnlyValid = true;
 
     // group [Trajectory]
     public static boolean trajectoryOn;
@@ -184,6 +185,9 @@ public final class Config {
     public static int x = -1;
     public static int y = -1;
     public static int dayNight;
+
+    // cached
+    private static short[] providers;
 
     public static Throwable initialize() {
 
@@ -214,7 +218,7 @@ public final class Config {
         System.gc();
 
         // correct initial values
-        if (locationProvider == null || locationProvider.length() == 0) {
+        if (locationProvider == -1) {
             if (cz.kruch.track.TrackingMIDlet.jsr179) {
                 locationProvider = Config.LOCATION_PROVIDER_JSR179;
             } else if (cz.kruch.track.TrackingMIDlet.jsr82) {
@@ -231,7 +235,7 @@ public final class Config {
 
     private static void readMain(DataInputStream din) throws IOException {
         mapPath = din.readUTF();
-        locationProvider = din.readUTF();
+        String _locationProvider = din.readUTF();
         /*timeZone = */din.readUTF();
         geoDatum = din.readUTF();
         /*tracklogsOn = */din.readBoolean(); // bc
@@ -253,9 +257,10 @@ public final class Config {
         osdBoldFont = din.readBoolean();
         osdBlackColor = din.readBoolean();
 
-        // 0.9.1 extension
+        // 0.9.1 extension - obsolete since 0.9.65
+        String _tracklog = "never";
         try {
-            tracklog = din.readUTF();
+            _tracklog = din.readUTF();
         } catch (Exception e) {
         }
 
@@ -310,6 +315,30 @@ public final class Config {
         } catch (Exception e) {
         }
 
+        // 0.9.65 extensions
+        try {
+            locationProvider = din.readInt();
+            tracklog = din.readInt();
+            gpxOnlyValid = din.readBoolean();
+        } catch (Exception e) {
+            if ("Bluetooth".equals(_locationProvider)) {
+                locationProvider = Config.LOCATION_PROVIDER_JSR82;
+            } else if ("Internal".equals(_locationProvider)) {
+                locationProvider = Config.LOCATION_PROVIDER_JSR179;
+            } else if ("Serial".equals(_locationProvider)) {
+                locationProvider = Config.LOCATION_PROVIDER_SERIAL;
+            } else if ("Simulator".equals(_locationProvider)) {
+                locationProvider = Config.LOCATION_PROVIDER_SIMULATOR;
+            }
+            if ("never".equals(_tracklog)) {
+                tracklog = TRACKLOG_NEVER;
+            } else if ("ask".equals(_tracklog)) {
+                tracklog = TRACKLOG_ASK;
+            } else if ("always".equals(_tracklog)) {
+                tracklog = TRACKLOG_ALWAYS;
+            }
+        }
+
 //#ifdef __LOG__
         if (log.isEnabled()) log.info("configuration read");
 //#endif
@@ -317,7 +346,7 @@ public final class Config {
 
     private static void writeMain(DataOutputStream dout) throws IOException {
         dout.writeUTF(mapPath);
-        dout.writeUTF(locationProvider);
+        dout.writeUTF(""/*locationProvider*/);
         dout.writeUTF(""/*timeZone*/);
         dout.writeUTF(geoDatum);
         dout.writeBoolean(false/*tracklogsOn*/);
@@ -338,7 +367,7 @@ public final class Config {
         dout.writeBoolean(osdMediumFont);
         dout.writeBoolean(osdBoldFont);
         dout.writeBoolean(osdBlackColor);
-        dout.writeUTF(tracklog);
+        dout.writeUTF(""/*tracklog*/);
         dout.writeBoolean(useGeocachingFormat);
         dout.writeBoolean(optimisticIo);
         dout.writeBoolean(S60renderer);
@@ -357,7 +386,7 @@ public final class Config {
         dout.writeBoolean(unitsImperial);
         dout.writeInt(wptProximity);
         dout.writeInt(poiProximity);
-        dout.writeUTF(""/*language*/); // bc
+        dout.writeUTF(""/*language*/);
         dout.writeInt(routeLineColor);
         dout.writeBoolean(routeLineStyle);
         dout.writeBoolean(routePoiMarks);
@@ -365,6 +394,9 @@ public final class Config {
         dout.writeInt(gpxDt);
         dout.writeInt(gpxDs);
         dout.writeBoolean(osdScale);
+        dout.writeInt(locationProvider);
+        dout.writeInt(tracklog);
+        dout.writeBoolean(gpxOnlyValid);
 
 //#ifdef __LOG__
         if (log.isEnabled()) log.info("configuration updated");
@@ -603,7 +635,7 @@ public final class Config {
     public static String useDatum(String id) {
         Datum[] datums = DATUMS;
         for (int i = datums.length; --i >= 0; ) {
-            if (id.equals(datums[i].getName())) {
+            if (id.equals(datums[i].name)) {
                 currentDatum = datums[i];
                 break;
             }
@@ -612,33 +644,48 @@ public final class Config {
         return id;
     }
 
+    public static Datum getDatum(String id) {
+        Datum[] datums = DATUMS;
+        for (int i = datums.length; --i >= 0; ) {
+            if (id.equals(datums[i].name)) {
+                return datums[i];
+            }
+        }
+
+        return null;
+    }
+
     /*
      * properties getters/setters
      */
 
-    public static String[] getLocationProviders() {
-        Vector list = new Vector();
-        if (cz.kruch.track.TrackingMIDlet.jsr82) {
-            list.addElement(LOCATION_PROVIDER_JSR82);
-        }
-        if (cz.kruch.track.TrackingMIDlet.jsr179) {
-            list.addElement(LOCATION_PROVIDER_JSR179);
-        }
-        if (cz.kruch.track.TrackingMIDlet.hasPorts()) {
-            list.addElement(LOCATION_PROVIDER_SERIAL);
-        }
-        if (cz.kruch.track.TrackingMIDlet.isFs()) {
-            list.addElement(LOCATION_PROVIDER_SIMULATOR);
-        }
+    public static short[] getLocationProviders() {
+        if (providers == null) {
+            Vector list = new Vector();
+            if (cz.kruch.track.TrackingMIDlet.jsr82) {
+                list.addElement(new Integer(LOCATION_PROVIDER_JSR82));
+            }
+            if (cz.kruch.track.TrackingMIDlet.jsr179) {
+                list.addElement(new Integer(LOCATION_PROVIDER_JSR179));
+            }
+            if (cz.kruch.track.TrackingMIDlet.hasPorts()) {
+                list.addElement(new Integer(LOCATION_PROVIDER_SERIAL));
+            }
+            if (cz.kruch.track.TrackingMIDlet.isFs()) {
+                list.addElement(new Integer(LOCATION_PROVIDER_SIMULATOR));
+            }
 //#ifdef __A1000__
-        if (cz.kruch.track.TrackingMIDlet.motorola179) {
-            list.addElement(LOCATION_PROVIDER_MOTOROLA);
-        }
+            if (cz.kruch.track.TrackingMIDlet.motorola179) {
+                list.addElement(new Integer(LOCATION_PROVIDER_MOTOROLA));
+            }
 //#endif
-        String[] result = new String[list.size()];
-        list.copyInto(result);
+            providers = new short[list.size()];
+            for (int i = 0; i < list.size(); i++) {
+                providers[i] = ((Integer) list.elementAt(i)).shortValue();
+            }
+        }
 
-        return result;
+        return providers;
     }
 
     public static String getDataDir() {
@@ -684,7 +731,7 @@ public final class Config {
             } else
 //#endif
 //#ifdef __A1000__
-            if (LOCATION_PROVIDER_MOTOROLA.equals(locationProvider)) {
+            if (LOCATION_PROVIDER_MOTOROLA == locationProvider) {
                 locationTimings = "9999,1,2000";
             } else
 //#endif            

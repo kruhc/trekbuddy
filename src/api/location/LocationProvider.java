@@ -88,7 +88,7 @@ public abstract class LocationProvider {
             try {
                listener.locationUpdated(this, location);
             } catch (Throwable t) {
-                setThrowable(new IllegalStateException(t.toString()));
+                setThrowable(t);
             }
         }
     }
@@ -98,7 +98,7 @@ public abstract class LocationProvider {
             try {
                 listener.tracklogStateChanged(this, isRecording);
             } catch (Throwable t) {
-                setThrowable(new IllegalStateException(t.toString()));
+                setThrowable(t);
             }
         }
     }
@@ -108,7 +108,7 @@ public abstract class LocationProvider {
             try {
                 listener.providerStateChanged(this, newState);
             } catch (Throwable t) {
-                setThrowable(new IllegalStateException(t.toString()));
+                setThrowable(t);
             }
         }
     }

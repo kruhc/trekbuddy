@@ -23,6 +23,7 @@ import api.location.Location;
 import api.file.File;
 import cz.kruch.track.configuration.Config;
 import cz.kruch.track.ui.Desktop;
+import cz.kruch.track.Resources;
 import cz.kruch.j2se.io.BufferedOutputStream;
 import cz.kruch.j2se.io.BufferedInputStream;
 
@@ -47,13 +48,14 @@ public class SerialLocationProvider extends StreamReadingLocationProvider implem
     private volatile long last;
     private volatile Thread thread;
     private volatile InputStream stream;
+    private volatile StreamConnection connection;
 
     private TimerTask watcher;
     private File nmeaFile;
     private OutputStream nmeaObserver;
 
     public SerialLocationProvider() throws LocationException {
-        this(Config.LOCATION_PROVIDER_SERIAL);
+        this("Serial");
     }
 
     /* package access */
@@ -70,19 +72,17 @@ public class SerialLocationProvider extends StreamReadingLocationProvider implem
         return Config.commUrl;
     }
 
+    protected void refresh() {
+    }
+
     public void run() {
         // diagnostics
         restarts++;
 
-        // give hardware a while
+        // be gentle and safe
         if (restarts > 1) {
-            try {
-                Thread.sleep(1000);
-            } catch (InterruptedException e) {
-                // ignore
-            }
 
-            // old thread running?
+            // wait for previous thread to die
             if (thread != null) {
                 if (thread.isAlive()) {
                     setThrowable(new IllegalStateException("Previous connection still active"));
@@ -93,6 +93,11 @@ public class SerialLocationProvider extends StreamReadingLocationProvider implem
                     }
                 }
                 thread = null; // gc hint
+            }
+
+            // give hardware a while
+            if (lastState == LocationProvider._STALLED) {
+                refresh();
             }
         }
 
@@ -112,7 +117,7 @@ public class SerialLocationProvider extends StreamReadingLocationProvider implem
             // start NMEA log
             startNmeaLog();
 
-            // GPS
+            // main loop
             gps();
 
         } catch (Throwable t) {
@@ -148,17 +153,26 @@ public class SerialLocationProvider extends StreamReadingLocationProvider implem
             go = false;
         }
 
-        // interrupt the thead
+        // another attempt to wake-up the thread
         if (thread != null) {
             thread.interrupt();
         }
 
-        // this forces a thread blocked in read() to receive IOException
-        if (stream != null) {
-            try {
-                stream.close();
-            } catch (IOException e) {
-                // ignore
+        // close connection
+        synchronized (this) {
+            if (stream != null) {
+                try {
+                    stream.close(); // hopefully forces a thread blocked in read() to receive IOException
+                } catch (IOException e) {
+                    // ignore
+                }
+            }
+            if (connection != null) {
+                try {
+                    connection.close(); // seems to help too
+                } catch (IOException e) {
+                    // ignore
+                }
             }
         }
     }
@@ -206,11 +220,10 @@ public class SerialLocationProvider extends StreamReadingLocationProvider implem
 
             // not yet started
             if (nmeaFile == null) {
-                String path = Config.getFolderNmea() + GpxTracklog.dateToFileDate(System.currentTimeMillis()) + ".nmea";
 
                 try {
                     // create file
-                    nmeaFile = File.open(Connector.open(path, Connector.READ_WRITE));
+                    nmeaFile = File.open(Connector.open(Config.getFolderNmea() + GpxTracklog.dateToFileDate(System.currentTimeMillis()) + ".nmea", Connector.READ_WRITE));
                     if (!nmeaFile.exists()) {
                         nmeaFile.create();
                     }
@@ -228,7 +241,7 @@ public class SerialLocationProvider extends StreamReadingLocationProvider implem
                     notifyListener(true);
 
                 } catch (Throwable t) {
-                    Desktop.showError("Failed to start NMEA log.", t, null);
+                    Desktop.showError(Resources.getString(Resources.DESKTOP_MSG_START_TRACKLOG_FAILED), t, null);
                 }
             }
         }
@@ -267,8 +280,6 @@ public class SerialLocationProvider extends StreamReadingLocationProvider implem
     }
 
     private void gps() throws IOException {
-        StreamConnection connection = null;
-
         try {
             // open connection
             connection = (StreamConnection) Connector.open(url, Connector.READ, true);
@@ -355,23 +366,25 @@ public class SerialLocationProvider extends StreamReadingLocationProvider implem
             stopWatcher();
 
             // close anyway
-            if (stream != null) {
-                try {
-                    stream.close();
-                } catch (IOException e) {
-                    // ignore
-                } finally {
-                    stream = null;
+            synchronized (this) {
+                if (stream != null) {
+                    try {
+                        stream.close();
+                    } catch (IOException e) {
+                        // ignore
+                    } finally {
+                        stream = null;
+                    }
                 }
-            }
-
-            // close anyway
-            if (connection != null) {
-                try {
-                    connection.close();
-                } catch (IOException e) {
-                    // ignore
-                } 
+                if (connection != null) {
+                    try {
+                        connection.close();
+                    } catch (IOException e) {
+                        // ignore
+                    } finally {
+                        connection = null;
+                    }
+                }
             }
         }
     }

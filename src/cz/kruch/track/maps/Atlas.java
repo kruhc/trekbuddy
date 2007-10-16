@@ -17,7 +17,7 @@
 package cz.kruch.track.maps;
 
 import cz.kruch.track.util.CharArrayTokenizer;
-import cz.kruch.track.AssertionFailedException;
+import cz.kruch.track.Resources;
 import cz.kruch.track.ui.Desktop;
 import cz.kruch.track.maps.io.LoaderIO;
 import cz.kruch.track.maps.io.FileInput;
@@ -109,7 +109,7 @@ public final class Atlas implements Runnable {
     public String getMapURL(String layerName, QualifiedCoordinates qc) {
         Hashtable layer = (Hashtable) layers.get(layerName);
         if (layer == null) {
-            throw new AssertionFailedException("Nonexistent layer");
+            throw new IllegalArgumentException("Nonexistent layer");
         }
 
         for (Enumeration e = layer.elements(); e.hasMoreElements(); ) {
@@ -125,7 +125,7 @@ public final class Atlas implements Runnable {
     public String getMapName(String layerName, QualifiedCoordinates qc) {
         Hashtable layer = (Hashtable) layers.get(layerName);
         if (layer == null) {
-            throw new AssertionFailedException("Nonexistent layer");
+            throw new IllegalArgumentException("Nonexistent layer");
         }
 
         for (Enumeration e = layer.keys(); e.hasMoreElements(); ) {
@@ -186,7 +186,7 @@ public final class Atlas implements Runnable {
             // get basedir
             final int i = url.lastIndexOf(File.PATH_SEPCHAR);
             if (i == -1) {
-                throw new InvalidMapException("Invalid atlas URL");
+                throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_INVALID_ATLAS_URL));
             }
             String dir = url.substring(0, i + 1);
 

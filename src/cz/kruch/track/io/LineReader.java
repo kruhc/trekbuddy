@@ -17,7 +17,6 @@
 package cz.kruch.track.io;
 
 import cz.kruch.track.util.CharArrayTokenizer;
-import cz.kruch.track.AssertionFailedException;
 
 import java.io.InputStream;
 import java.io.IOException;
@@ -94,7 +93,7 @@ public final class LineReader extends InputStreamReader {
         }
 
         if (offset >= MAX_LEN) {
-            throw new AssertionFailedException("NMEA line longer than " + MAX_LEN);
+            throw new IllegalStateException("NMEA line longer than " + MAX_LEN);
         }
 
         if (chars != 0) {

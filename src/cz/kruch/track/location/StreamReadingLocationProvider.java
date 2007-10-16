@@ -42,7 +42,7 @@ public abstract class StreamReadingLocationProvider extends LocationProvider {
 
     private static final int LINE_SIZE = 128;
 
-    protected static final int BUFFER_SIZE = 2048;
+    protected static final int BUFFER_SIZE = 512; // as recommended at Nokia forum
 
     public static int syncs, mismatches, checksums, restarts;
 
@@ -123,10 +123,6 @@ public abstract class StreamReadingLocationProvider extends LocationProvider {
         }
         location.setCourse(rmc.angle);
         location.setSpeed(rmc.speed);
-
-        // gc hint
-        rmc = null;
-        gga = null;
 
         return location;
     }

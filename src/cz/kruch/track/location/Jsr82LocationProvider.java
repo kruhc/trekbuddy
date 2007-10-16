@@ -22,12 +22,17 @@ import api.location.LocationException;
 import cz.kruch.track.configuration.Config;
 import cz.kruch.track.configuration.ConfigurationException;
 import cz.kruch.track.ui.Desktop;
+import cz.kruch.track.Resources;
 
 import javax.microedition.lcdui.Displayable;
 import javax.microedition.lcdui.List;
 import javax.microedition.lcdui.CommandListener;
 import javax.microedition.lcdui.Command;
 import javax.microedition.lcdui.Ticker;
+import javax.bluetooth.RemoteDevice;
+import javax.bluetooth.DeviceClass;
+import javax.bluetooth.ServiceRecord;
+import javax.bluetooth.BluetoothStateException;
 import java.util.Vector;
 
 /**
@@ -38,18 +43,23 @@ import java.util.Vector;
 public final class Jsr82LocationProvider extends SerialLocationProvider {
 
     public Jsr82LocationProvider() throws LocationException {
-        super(Config.LOCATION_PROVIDER_JSR82);
+        super("Bluetooth");
 
         /* BT turned on check */
         try {
             javax.bluetooth.LocalDevice.getLocalDevice();
         } catch (javax.bluetooth.BluetoothStateException e) {
-            throw new LocationException("Bluetooth turned off?");
+            throw new LocationException(Resources.getString(Resources.DESKTOP_MSG_BT_OFF));
         }
     }
 
     protected String getKnownUrl() {
         return Config.btServiceUrl;
+    }
+
+    protected void refresh() {
+        restarts += 1000; // TODO only for debugging???
+        (new Refresher()).run();
     }
 
     public int start() throws LocationException {
@@ -59,16 +69,51 @@ public final class Jsr82LocationProvider extends SerialLocationProvider {
         return LocationProvider._STARTING;
     }
 
-    private final class Discoverer extends List
+    private static final class Refresher implements javax.bluetooth.DiscoveryListener {
+        private boolean done;
+
+        public void deviceDiscovered(RemoteDevice remoteDevice, DeviceClass deviceClass) {
+        }
+
+        public void servicesDiscovered(int i, ServiceRecord[] serviceRecords) {
+        }
+
+        public void serviceSearchCompleted(int i, int i1) {
+        }
+
+        public void inquiryCompleted(int i) {
+            synchronized (this) {
+                done = true;
+                notify();
+            }
+        }
+        
+        public void run() {
+            try {
+                javax.bluetooth.LocalDevice.getLocalDevice().getDiscoveryAgent().startInquiry(javax.bluetooth.DiscoveryAgent.GIAC, this);
+                synchronized (this) {
+                    while (!done) {
+                        try {
+                            wait();
+                        } catch (InterruptedException e) {
+                            // should not happen
+                        }
+                    }
+                }
+            } catch (BluetoothStateException e) {
+                // ignore
+            }
+        }
+    }
+
+    private final class Discoverer
+            extends List
             implements javax.bluetooth.DiscoveryListener, CommandListener, Runnable {
 
         private final javax.bluetooth.UUID[] uuidSet = {
-/*
-            new javax.bluetooth.UUID(0x1101),  // SPP
-            new javax.bluetooth.UUID(0x0003),  // RFCOMM
-            new javax.bluetooth.UUID(0x0100)   // L2CAP
-*/
-            new javax.bluetooth.UUID(0x0100)   // L2CAP
+//            new javax.bluetooth.UUID(0x1101)  // SPP
+//            new javax.bluetooth.UUID(0x0003)  // RFCOMM
+            new javax.bluetooth.UUID(0x0100)  // L2CAP - seems most interoperable
         };
 
         private javax.bluetooth.DiscoveryAgent agent;
@@ -81,12 +126,12 @@ public final class Jsr82LocationProvider extends SerialLocationProvider {
 
         private final Vector devices = new Vector();
         
-        private final Command cmdBack = new Command("Cancel", Command.BACK, 1);
-        private final Command cmdRefresh = new Command("Refresh", Command.SCREEN, 1);
-        private final Command cmdConnect = new Command("Connect", Command.ITEM, 1);
+        private final Command cmdBack = new Command(Resources.getString(Resources.CMD_CANCEL), Command.BACK, 1);
+        private final Command cmdRefresh = new Command(Resources.getString(Resources.DESKTOP_CMD_REFRESH), Command.SCREEN, 1);
+        private final Command cmdConnect = new Command(Resources.getString(Resources.DESKTOP_CMD_CONNECT), Command.ITEM, 1);
 
         public Discoverer() {
-            super("DeviceSelection", List.IMPLICIT);
+            super(Resources.getString(Resources.DESKTOP_MSG_SELECT_DEVICE), List.IMPLICIT);
             this.setCommandListener(this);
             this.removeCommand(List.SELECT_COMMAND);
         }
@@ -114,7 +159,7 @@ public final class Jsr82LocationProvider extends SerialLocationProvider {
                 try {
                     Config.update(Config.VARS_090);
                 } catch (ConfigurationException e) {
-                    Desktop.showError("Failed to update config", e, null);
+                    Desktop.showError(Resources.getString(Resources.DESKTOP_MSG_CFG_UPDATE_FAILED), e, null);
                 }
 
                 // start
@@ -136,7 +181,7 @@ public final class Jsr82LocationProvider extends SerialLocationProvider {
             cancel = false;
 
             // update UI
-            setTicker(new Ticker("Looking for devices..."));
+            setTicker(new Ticker(Resources.getString(Resources.DESKTOP_MSG_SEARCHING_DEVICES)));
             setupCommands(false);
 
             // start inquiry
@@ -154,21 +199,21 @@ public final class Jsr82LocationProvider extends SerialLocationProvider {
 
             // update UI
             setTicker(null);
-            setTitle("DeviceSelection");
+            setTitle(Resources.getString(Resources.DESKTOP_MSG_SELECT_DEVICE));
             setupCommands(true);
         }
 
         private void goServices() {
             // update UI
-            setTitle("ServiceSearch");
-            setTicker(new Ticker("Searching service..."));
+            setTitle(Resources.getString(Resources.DESKTOP_MSG_SERVICE_SEARCH));
+            setTicker(new Ticker(Resources.getString(Resources.DESKTOP_MSG_SEARCHING_SERVICE)));
             setupCommands(false);
 
             // start search
             try {
                 transactionID = agent.searchServices(null, uuidSet, device, this);
             } catch (javax.bluetooth.BluetoothStateException e) {
-                Desktop.showError("Service search failed", e, null);
+                Desktop.showError(Resources.getString(Resources.DESKTOP_MSG_SERVICE_SEARCH_FAILED), e, null);
                 showDevices();
             }
         }
@@ -187,7 +232,7 @@ public final class Jsr82LocationProvider extends SerialLocationProvider {
         }
 
         public void run() {
-            setTicker(new Ticker("Resolving names"));
+            setTicker(new Ticker(Resources.getString(Resources.DESKTOP_MSG_RESOLVING_NAMES)));
             for (int N = devices.size(), i = 0; i < N; i++) {
                 String name;
                 javax.bluetooth.RemoteDevice remoteDevice = ((javax.bluetooth.RemoteDevice) devices.elementAt(i));
@@ -245,7 +290,7 @@ public final class Jsr82LocationProvider extends SerialLocationProvider {
                 }
 
                 if (respCode != SERVICE_SEARCH_TERMINATED) {
-                    Desktop.showWarning("Service not found (" + respMsg + ").",
+                    Desktop.showWarning(Resources.getString(Resources.DESKTOP_MSG_SERVICE_NOT_FOUND) + " (" + respMsg + ").",
                                         null, null);
                     // update UI
                     setTicker(null);
@@ -284,7 +329,7 @@ public final class Jsr82LocationProvider extends SerialLocationProvider {
                         default:
                             codeStr = "UNKNONW";
                     }
-                    Desktop.showError("No devices discovered (" + codeStr + ")", null, null);
+                    Desktop.showError(Resources.getString(Resources.DESKTOP_MSG_NO_DEVICES_DISCOVERED) + " (" + codeStr + ")", null, null);
                 }
             } else {
                 // resolve names in a thread
@@ -321,7 +366,7 @@ public final class Jsr82LocationProvider extends SerialLocationProvider {
                 try {
                     goDevices();
                 } catch (LocationException e) {
-                    Desktop.showError("Unable to restart discovery", e, null);
+                    Desktop.showError(Resources.getString(Resources.DESKTOP_MSG_DISC_RESTART_FAILED), e, null);
                 }
             }
         }

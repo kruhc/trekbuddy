@@ -16,6 +16,8 @@
 
 package cz.kruch.track.ui;
 
+import cz.kruch.track.Resources;
+
 import javax.microedition.lcdui.Displayable;
 import javax.microedition.lcdui.Command;
 import javax.microedition.lcdui.CommandListener;
@@ -45,17 +47,17 @@ public final class YesNoDialog implements CommandListener {
 
     public void show(String question, String item) {
         Alert dialog = new Alert(null, question, null, null);
-        dialog.addCommand(new Command("Yes", Command.OK, 1));
-        dialog.addCommand(new Command("No", Command.CANCEL, 1));
+        dialog.addCommand(new Command(Resources.getString(Resources.CMD_YES), Command.OK, 1));
+        dialog.addCommand(new Command(Resources.getString(Resources.CMD_NO), Command.CANCEL, 1));
         dialog.setCommandListener(this);
         Desktop.display.setCurrent(dialog);
     }
 
-    public void commandAction(final Command command, Displayable displayable) {
-        // 'close' the dialog window
+    public void commandAction(Command command, Displayable displayable) {
+        // close the dialog window
         Desktop.display.setCurrent(next);
 
-        // 'return' response code
-        callback.response("Yes".equals(command.getLabel()) ? YES : NO);
+        // return response code
+        callback.response(command.getCommandType() == Command.OK ? YES : NO);
     }
 }

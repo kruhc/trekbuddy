@@ -16,6 +16,8 @@
 
 package cz.kruch.track.ui.nokia;
 
+import cz.kruch.track.Resources;
+
 /**
  * Device control implementation for Nokia phones.
  *
@@ -33,7 +35,7 @@ class NokiaDeviceControl extends DeviceControl {
                 backlight = 0;
             }
             com.nokia.mid.ui.DeviceControl.setLights(0, backlight);
-            confirm("Backlight " + backlight + "%");
+            confirm(backlight == 0 ? Resources.getString(Resources.DESKTOP_MSG_BACKLIGHT_OFF) : Resources.getString(Resources.DESKTOP_MSG_BACKLIGHT_ON) + " (" + backlight + "%)");
         } catch (Throwable t) {
         }
     }

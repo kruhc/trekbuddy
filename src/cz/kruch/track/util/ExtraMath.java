@@ -104,7 +104,7 @@ public final class ExtraMath {
 
         final double[] N = ExtraMath.N;
         final double[] LN = ExtraMath.LN;
-        double result = LN10;
+        double result = ExtraMath.LN10;
         double inter = value;
 
         for (int n = N.length, i = 0; i < n; ) {

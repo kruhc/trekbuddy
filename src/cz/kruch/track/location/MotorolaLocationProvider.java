@@ -44,7 +44,7 @@ public final class MotorolaLocationProvider
     private int accuracy, age, timeout;
 
     public MotorolaLocationProvider() {
-        super(Config.LOCATION_PROVIDER_MOTOROLA);
+        super("Motorola");
 
         // parse initialization params
         CharArrayTokenizer tokenizer = new CharArrayTokenizer();

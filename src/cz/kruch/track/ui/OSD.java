@@ -16,13 +16,12 @@
 
 package cz.kruch.track.ui;
 
+import javax.microedition.lcdui.Graphics;
+
 import api.location.LocationProvider;
 import api.location.QualifiedCoordinates;
 
-import javax.microedition.lcdui.Graphics;
-
 import cz.kruch.track.configuration.Config;
-import cz.kruch.track.AssertionFailedException;
 
 /**
  * OSD bar.
@@ -35,7 +34,7 @@ final class OSD extends Bar {
     protected int providerStatus;
     private boolean recording;
     private boolean ok;
-    private int sat;
+    /*private */int sat;
 
     protected int semaforX, semaforY;
     private final StringBuffer sb;
@@ -151,11 +150,11 @@ final class OSD extends Bar {
 
     public void setExtendedInfo(StringBuffer sb) {
         if (sb != this.sb) {
-            throw new AssertionFailedException("Alien StringBuffer");
+            throw new IllegalStateException("Alien StringBuffer");
         }
         cExtInfoLength = sb.length();
         if (cExtInfoLength > cExtInfo.length) {
-            throw new AssertionFailedException("Extended info length = " + cExtInfoLength);
+            throw new IllegalStateException("Extended info length = " + cExtInfoLength);
         }
         sb.getChars(0, cExtInfoLength, cExtInfo, 0);
     }
@@ -166,7 +165,7 @@ final class OSD extends Bar {
         NavigationScreens.toStringBuffer(qc, sb);
         cInfoLength = sb.length();
         if (cInfoLength > cInfo.length) {
-            throw new AssertionFailedException("Info length = " + cInfoLength);
+            throw new IllegalStateException("Info length = " + cInfoLength);
         }
         sb.getChars(0, cInfoLength, cInfo, 0);
         this.ok = ok;

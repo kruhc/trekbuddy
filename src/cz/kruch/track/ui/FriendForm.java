@@ -26,6 +26,7 @@ import javax.microedition.lcdui.StringItem;
 import javax.microedition.lcdui.Command;
 
 import cz.kruch.track.event.Callback;
+import cz.kruch.track.Resources;
 
 /**
  * Form for SMS sending (I Am Here, Meet You There).
@@ -33,7 +34,11 @@ import cz.kruch.track.event.Callback;
  * @author Ales Pour <kruhc@seznam.cz>
  */
 public final class FriendForm extends Form implements CommandListener {
-    public static final String MENU_SEND = "Send";
+    public static String MENU_SEND;
+
+    static {
+        MENU_SEND = Resources.getString(Resources.NAV_CMD_SEND);
+    }
 
     private Displayable next;
     private Callback callback;
@@ -49,13 +54,15 @@ public final class FriendForm extends Form implements CommandListener {
         this.next = next;
         this.callback = callback;
         this.closure = closure;
-        this.fieldNumber = new TextField("Recipient", null, 16, TextField.PHONENUMBER);
-        this.fieldMessage = new TextField("Message", null, 64, TextField.ANY);
+        this.fieldNumber = new TextField(Resources.getString(Resources.NAV_FLD_RECIPIENT), null, 16, TextField.PHONENUMBER);
+        this.fieldMessage = new TextField(Resources.getString(Resources.NAV_FLD_MESSAGE), null, 64, TextField.ANY);
         append(this.fieldNumber);
         append(this.fieldMessage);
-        append(new StringItem("Location", coordinates.toString()));
-        addCommand(new Command(FriendForm.MENU_SEND, Command.OK, 1));
-        addCommand(new Command("Cancel", Command.BACK, 1));
+        StringBuffer sb = new StringBuffer(32);
+        NavigationScreens.toStringBuffer(coordinates, sb);
+        append(new StringItem(Resources.getString(Resources.NAV_FLD_LOC), sb.toString()));
+        addCommand(new Command(MENU_SEND, Command.OK, 1));
+        addCommand(new Command(Resources.getString(Resources.CMD_CANCEL), Command.BACK, 1));
     }
 
     public void show() {

@@ -18,6 +18,7 @@ package cz.kruch.track.ui;
 
 import cz.kruch.track.event.Callback;
 import cz.kruch.track.configuration.Config;
+import cz.kruch.track.Resources;
 
 import javax.microedition.io.Connector;
 import javax.microedition.lcdui.List;
@@ -55,9 +56,9 @@ public final class FileBrowser extends List implements CommandListener, Runnable
         super(title, List.IMPLICIT);
         this.callback = callback;
         this.next = next;
-        this.cmdCancel = new Command("Cancel", Command.CANCEL, 1);
-        this.cmdBack = new Command("Back", Command.BACK, 1);
-        this.cmdSelect = new Command("Select", Command.ITEM, 1);
+        this.cmdCancel = new Command(Resources.getString(Resources.CMD_CANCEL), Command.CANCEL, 1);
+        this.cmdBack = new Command(Resources.getString(Resources.CMD_BACK), Command.BACK, 1);
+        this.cmdSelect = new Command(Resources.getString(Resources.DESKTOP_CMD_SELECT), Command.ITEM, 1);
         setCommandListener(this);
         Desktop.display.setCurrent(this);
     }

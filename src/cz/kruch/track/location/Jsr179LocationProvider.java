@@ -19,6 +19,7 @@ package cz.kruch.track.location;
 import cz.kruch.track.configuration.Config;
 import cz.kruch.track.util.CharArrayTokenizer;
 import cz.kruch.track.ui.Desktop;
+import cz.kruch.track.Resources;
 import cz.kruch.j2se.io.BufferedOutputStream;
 import api.location.LocationException;
 import api.location.QualifiedCoordinates;
@@ -48,7 +49,7 @@ public final class Jsr179LocationProvider
     private OutputStream nmeaWriter;
     
     public Jsr179LocationProvider() {
-        super(Config.LOCATION_PROVIDER_JSR179);
+        super("Internal");
     }
 
     public Object getImpl() {
@@ -85,7 +86,7 @@ public final class Jsr179LocationProvider
                 setThrowable(new LocationException("Default criteria used"));
             }
             if (impl == null) {
-                throw new LocationException("No provider instance");
+                throw new LocationException(Resources.getString(Resources.DESKTOP_MSG_NO_PROVIDER_INSTANCE));
             }
 
             // set listener
@@ -196,7 +197,7 @@ public final class Jsr179LocationProvider
                     notifyListener(true);
 
                 } catch (Throwable t) {
-                    Desktop.showError("Failed to start NMEA log.", t, null);
+                    Desktop.showError(Resources.getString(Resources.DESKTOP_MSG_START_TRACKLOG_FAILED), t, null);
                 }
             }
         }

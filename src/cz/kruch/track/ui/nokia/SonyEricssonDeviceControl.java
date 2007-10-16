@@ -16,6 +16,8 @@
 
 package cz.kruch.track.ui.nokia;
 
+import cz.kruch.track.Resources;
+
 /**
  * Device control implementation for SonyEricsson phones.
  *
@@ -34,7 +36,7 @@ final class SonyEricssonDeviceControl extends DeviceControl {
             } else {
                 backlight = 0;
             }
-            confirm("Backlight " + (backlight == 0 ? "off" : "on"));
+            confirm(backlight == 0 ? Resources.getString(Resources.DESKTOP_MSG_BACKLIGHT_OFF) : Resources.getString(Resources.DESKTOP_MSG_BACKLIGHT_ON));
         } catch (Throwable t) {
         }
     }

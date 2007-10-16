@@ -20,12 +20,14 @@ import api.location.QualifiedCoordinates;
 import api.location.Datum;
 import api.location.ProjectionSetup;
 import api.location.GeodeticPosition;
+import api.location.CartesianCoordinates;
 
 import cz.kruch.track.util.CharArrayTokenizer;
 import cz.kruch.track.util.Mercator;
 import cz.kruch.track.ui.Position;
 import cz.kruch.track.io.LineReader;
 import cz.kruch.track.configuration.Config;
+import cz.kruch.track.Resources;
 
 import java.util.Vector;
 import java.io.IOException;
@@ -131,14 +133,14 @@ abstract class Calibration {
 
         QualifiedCoordinates qc;
 
-        if (calibrationGp instanceof Mercator.Coordinates) {
-            Mercator.Coordinates utm = (Mercator.Coordinates) toGp(position);
-            qc = Mercator.MercatortoLL(utm, getDatum().getEllipsoid(),
+        if (calibrationGp instanceof CartesianCoordinates) {
+            CartesianCoordinates utm = (CartesianCoordinates) toGp(position);
+            qc = Mercator.MercatortoLL(utm, getDatum().ellipsoid,
                                        (Mercator.ProjectionSetup) projectionSetup);
 /*
             qc.setDatum(datum == Datum.DATUM_WGS_84 ? null : datum);
 */
-            Mercator.Coordinates.releaseInstance(utm);
+            CartesianCoordinates.releaseInstance(utm);
         } else /*if (calibrationGp instanceof QualifiedCoordinates)*/ {
             qc = (QualifiedCoordinates) toGp(position);
         }
@@ -149,8 +151,8 @@ abstract class Calibration {
     Position transform(QualifiedCoordinates coordinates) {
         GeodeticPosition gp;
 
-        if (calibrationGp instanceof Mercator.Coordinates) {
-            gp = Mercator.LLtoMercator(coordinates, getDatum().getEllipsoid(),
+        if (calibrationGp instanceof CartesianCoordinates) {
+            gp = Mercator.LLtoMercator(coordinates, getDatum().ellipsoid,
                                        (Mercator.ProjectionSetup) projectionSetup);
         } else /*if (calibrationGp instanceof QualifiedCoordinates)*/ {
             gp = coordinates;
@@ -186,8 +188,8 @@ abstract class Calibration {
 
         proximite.setXy(x, y);
 
-        if (gp instanceof Mercator.Coordinates) {
-            Mercator.Coordinates.releaseInstance((Mercator.Coordinates) gp);
+        if (gp instanceof CartesianCoordinates) {
+            CartesianCoordinates.releaseInstance((CartesianCoordinates) gp);
         }
 
         return proximite;
@@ -197,7 +199,7 @@ abstract class Calibration {
                            Vector xy, Vector ll) throws InvalidMapException {
         // assertions
         if ((xy.size() < 2) || (ll.size() < 2)) {
-            throw new InvalidMapException("Too few calibration points");
+            throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_TOO_FEW_CALPOINTS));
         }
 
         // set datum
@@ -224,7 +226,7 @@ abstract class Calibration {
 
             // setup is for Mercator projection
             Mercator.ProjectionSetup msetup = (Mercator.ProjectionSetup) projectionSetup;
-            Datum.Ellipsoid ellipsoid = getDatum().getEllipsoid();
+            Datum.Ellipsoid ellipsoid = getDatum().ellipsoid;
 
             /*
              * performance optimization: reuse existing vector
@@ -234,7 +236,7 @@ abstract class Calibration {
 //            Vector tm = new Vector(ll.size());
             for (int N = ll.size(), i = 0; i < N; i++) {
                 QualifiedCoordinates local = (QualifiedCoordinates) ll.elementAt(i);
-                Mercator.Coordinates utm = Mercator.LLtoMercator(local, ellipsoid, msetup);
+                CartesianCoordinates utm = Mercator.LLtoMercator(local, ellipsoid, msetup);
 //                tm.addElement(utm);
                 ll.setElementAt(utm, i);
             }
@@ -333,8 +335,8 @@ abstract class Calibration {
         double h = calibrationGp.getH() + (ek0 * dy) + (dx * (gridTHscale + dy * hScale));
         double v = calibrationGp.getV() + (nk0 * dx) - (dy * (gridLVscale + dx * vScale));
 
-        if (calibrationGp instanceof Mercator.Coordinates) {
-            return Mercator.Coordinates.newInstance(((Mercator.ProjectionSetup) projectionSetup).zone, h, v);
+        if (calibrationGp instanceof CartesianCoordinates) {
+            return CartesianCoordinates.newInstance(((Mercator.ProjectionSetup) projectionSetup).zone, h, v);
         } else /*if (calibrationGp instanceof QualifiedCoordinates)*/ {
             return QualifiedCoordinates.newInstance(v, h);
         }
@@ -596,25 +598,53 @@ abstract class Calibration {
                     if (ProjectionSetup.PROJ_LATLON.equals(projectionType)) {
                         projectionSetup = LATLON_PROJ_SETUP;
                     } else if (ProjectionSetup.PROJ_BNG.equals(projectionType)) {
-                            projectionSetup = new Mercator.ProjectionSetup(projectionType,
-                                                                           -1, 'Z', -2D, 49D,
-                                                                           0.9996012717D,
-                                                                           400000, -100000);
+                        projectionSetup = new Mercator.ProjectionSetup(projectionType,
+                                                                       new char[]{ 'B', 'N', 'G' },
+                                                                       -2D, 49D,
+                                                                       0.9996012717D,
+                                                                       400000, -100000);
                     } else if (ProjectionSetup.PROJ_SG.equals(projectionType)) {
-                            projectionSetup = new Mercator.ProjectionSetup(projectionType,
-                                                                           -1, 'Z', 15.808277777778D, 0D,
-                                                                           1D,
-                                                                           1500000, 0);
+                        projectionSetup = new Mercator.ProjectionSetup(projectionType,
+                                                                       new char[]{ 'S', 'G' },
+                                                                       15.808277777778D, 0D,
+                                                                       1D,
+                                                                       1500000, 0);
                     } else if (ProjectionSetup.PROJ_IG.equals(projectionType)) {
-                            projectionSetup = new Mercator.ProjectionSetup(projectionType,
-                                                                           -1, 'Z', -8D, 53.5D,
-                                                                           1.000035D,
-                                                                           200000, 250000);
+                        projectionSetup = new Mercator.ProjectionSetup(projectionType,
+                                                                       new char[]{ 'I', 'G' },
+                                                                       -8D, 53.5D,
+                                                                       1.000035D,
+                                                                       200000, 250000);
                     } else if (ProjectionSetup.PROJ_SUI.equals(projectionType)) {
-                            projectionSetup = new Mercator.ProjectionSetup(projectionType,
-                                                                           -1, 'Z', 7.4395833333334D, 46.9524055555556D,
-                                                                           1.0D,
-                                                                           200000, 600000);
+                        projectionSetup = new Mercator.ProjectionSetup(projectionType,
+                                                                       new char[]{ 'S', 'U', 'I' },
+                                                                       7.4395833333334D, 46.9524055555556D,
+                                                                       1.0D,
+                                                                       200000, 600000);
+                    } else if (ProjectionSetup.PROJ_FRANCE_I.equals(projectionType)) {
+                        projectionSetup = new Mercator.ProjectionSetup(projectionType,
+                                                                       new char[]{ 'F', '-', 'I' },
+                                                                       2.3372083333D, 49.5D,
+                                                                       48.5985227778D, 50.3959116667D,
+                                                                       600000, 1200000);
+                    } else if (ProjectionSetup.PROJ_FRANCE_II.equals(projectionType)) {
+                        projectionSetup = new Mercator.ProjectionSetup(projectionType,
+                                                                       new char[]{ 'F', '-', 'I', 'I' },
+                                                                       2.3372083333D, 46.8D,
+                                                                       45.8989188889D, 47.6960144444D,
+                                                                       600000, 2200000);
+                    } else if (ProjectionSetup.PROJ_FRANCE_III.equals(projectionType)) {
+                        projectionSetup = new Mercator.ProjectionSetup(projectionType,
+                                                                       new char[]{ 'F', '-', 'I', 'I', 'I' },
+                                                                       2.3372083333D, 44.1D,
+                                                                       43.1992913889D, 44.9960938889D,
+                                                                       600000, 3200000);
+                    } else if (ProjectionSetup.PROJ_FRANCE_IV.equals(projectionType)) {
+                        projectionSetup = new Mercator.ProjectionSetup(projectionType,
+                                                                       new char[]{ 'F', '-', 'I', 'V' },
+                                                                       2.3372083333D, 42.165D,
+                                                                       41.5603877778D, 42.0000593542D,
+                                                                       234.358, 4185861.369);
                     }
 //#ifdef __LOG__
                     if (log.isEnabled()) log.debug("projection type: " + projectionType);
@@ -662,12 +692,12 @@ abstract class Calibration {
 
             // dimension check
             if (width == -1 || height == -1) {
-                throw new InvalidMapException("Invalid map dimension");
+                throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_INVALID_MAP_DIMENSION));
             }
 
             // paranoia
             if (xy.size() != ll.size()) {
-                throw new InvalidMapException("MMPXY:MMPLL size mismatch");
+                throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_MM_SIZE_MISMATCH));
             }
 
             // fix projection
@@ -750,7 +780,7 @@ abstract class Calibration {
                 ll.addElement(QualifiedCoordinates.newInstance(lat, lon));
 
             } catch (Exception e) {
-                throw new InvalidMapException("Invalid Point", e);
+                throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_INVALID_POINT), e);
             }
 
             return true;
@@ -761,7 +791,7 @@ abstract class Calibration {
                 tokenizer.next(); // Map Projection
                 return tokenizer.next().toString();
             } catch (Exception e) {
-                throw new InvalidMapException("Failed to parse projection type", e);
+                throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_PARSE_PROJ_FAILED), e);
             }
         }
 
@@ -769,7 +799,7 @@ abstract class Calibration {
             try {
                 return tokenizer.next().toString();
             } catch (Exception e) {
-                throw new InvalidMapException("Failed to parse map datum", e);
+                throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_PARSE_DATUM_FAILED), e);
             }
         }
 
@@ -810,10 +840,12 @@ abstract class Calibration {
                 }
 
                 return new Mercator.ProjectionSetup(ProjectionSetup.PROJ_TRANSVERSE_MERCATOR,
-                                                    -1, 'Z', lonOrigin, latOrigin,
-                                                    k, falseEasting, falseNorthing);
+                                                    null,
+                                                    lonOrigin, latOrigin,
+                                                    k,
+                                                    falseEasting, falseNorthing);
             } catch (Exception e) {
-                throw new InvalidMapException("Invalid Projection Setup", e);
+                throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_INVALID_PROJECTION), e);
             }
         }
 
@@ -825,7 +857,7 @@ abstract class Calibration {
                 int y = tokenizer.nextInt();
                 xy.addElement(Position.newInstance(x, y));
             } catch (Exception e) {
-                throw new InvalidMapException("Invalid MMPXY", e);
+                throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_INVALID_MMPXY), e);
             }
 
             return true;
@@ -839,7 +871,7 @@ abstract class Calibration {
                 double lat = tokenizer.nextDouble();
                 ll.addElement(QualifiedCoordinates.newInstance(lat, lon));
             } catch (Exception e) {
-                throw new InvalidMapException("Invalid MMPLL", e);
+                throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_INVALID_MMPLL), e);
             }
 
             return true;
@@ -854,13 +886,13 @@ abstract class Calibration {
             } catch (InvalidMapException e) {
                 throw  e;
             } catch (Exception e) {
-                throw new InvalidMapException("Invalid IWH");
+                throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_INVALID_IWH));
             }
         }
 
         private static short getDimension(int i) throws InvalidMapException {
             if (i > Short.MAX_VALUE) {
-                throw new InvalidMapException("Map too large");
+                throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_MAP_TOO_BIG));
             }
 
             return (short) i;

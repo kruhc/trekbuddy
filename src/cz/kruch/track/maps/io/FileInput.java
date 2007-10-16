@@ -22,6 +22,8 @@ import javax.microedition.io.Connector;
 import java.io.InputStream;
 import java.io.IOException;
 
+import cz.kruch.track.Resources;
+
 /**
  * File input helper.
  *
@@ -43,7 +45,7 @@ public final class FileInput {
     public InputStream _getInputStream() throws IOException {
         file = File.open(Connector.open(url, Connector.READ));
         if (!file.exists()) {
-            throw new IOException("File does not exist: " + url);
+            throw new IllegalStateException(Resources.getString(Resources.DESKTOP_MSG_FILE_NOT_FOUND) + ": " + url);
         }
         in = file.openInputStream();
 

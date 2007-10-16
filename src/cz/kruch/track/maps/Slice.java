@@ -16,7 +16,7 @@
 
 package cz.kruch.track.maps;
 
-import cz.kruch.track.AssertionFailedException;
+import cz.kruch.track.Resources;
 import cz.kruch.track.ui.NavigationScreens;
 
 import javax.microedition.lcdui.Image;
@@ -55,7 +55,7 @@ public class Slice {
     public synchronized void setImage(Image image) {
         // assertion
         if (this.image != null && image != null) {
-            throw new AssertionFailedException("Replacing image in slice " + this);
+            throw new IllegalStateException("Replacing image in slice " + this);
         }
 
         this.image = image;
@@ -103,7 +103,7 @@ public class Slice {
             }
         }
         if (p0 == -1 || p1 == -1) {
-            throw new InvalidMapException("Invalid slice filename: " + path);
+            throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_INVALID_SLICE_NAME) + ": " + path);
         }
 
         return path.substring(0, p0);
@@ -146,7 +146,7 @@ public class Slice {
             }
         }
         if (p0 == -1 || p1 == -1) {
-            throw new InvalidMapException("Invalid slice filename: " + path);
+            throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_INVALID_SLICE_NAME) + ": " + path);
         }
         xy = asShort(parseInt(path, p0 + 1, p1)) << 16 | asShort(parseInt(path, p1 + 1, i));
     }
@@ -170,7 +170,7 @@ public class Slice {
 
     private static int asShort(final int i) throws InvalidMapException {
         if (i > Short.MAX_VALUE) {
-            throw new InvalidMapException("Slice too big: " + i);
+            throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_SLICE_TOO_BIG) + ": " + i);
         }
 
         return i;

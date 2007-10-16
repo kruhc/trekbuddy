@@ -28,7 +28,7 @@ import cz.kruch.track.configuration.Config;
 import cz.kruch.track.ui.FileBrowser;
 import cz.kruch.track.ui.Desktop;
 import cz.kruch.track.event.Callback;
-import cz.kruch.track.AssertionFailedException;
+import cz.kruch.track.Resources;
 import cz.kruch.j2se.io.BufferedInputStream;
 
 public final class SimulatorLocationProvider
@@ -44,7 +44,7 @@ public final class SimulatorLocationProvider
     private int delay;
 
     public SimulatorLocationProvider() {
-        super(Config.LOCATION_PROVIDER_SIMULATOR);
+        super("Simulator");
         this.delay = Config.simulatorDelay;
         if (this.delay < 25) {
             this.delay = 25;
@@ -61,7 +61,7 @@ public final class SimulatorLocationProvider
     }
 
     public int start() throws LocationException {
-        (new FileBrowser("PlaybackSelection", this, Desktop.screen)).show();
+        (new FileBrowser(Resources.getString(Resources.DESKTOP_MSG_NMEA_PLAYBACK), this, Desktop.screen)).show();
 
         return LocationProvider.TEMPORARILY_UNAVAILABLE;
     }
@@ -121,7 +121,7 @@ public final class SimulatorLocationProvider
                 // get next location
                 try {
                     location = nextLocation(in);
-                } catch (AssertionFailedException e) {
+                } catch (IllegalStateException e) {
                     Desktop.showError(e.getMessage(), null, null);
                 } catch (Throwable t) {
 //#ifdef __LOG__

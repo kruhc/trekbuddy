@@ -33,8 +33,7 @@ import cz.kruch.track.ui.NavigationScreens;
 import cz.kruch.track.maps.io.LoaderIO;
 import cz.kruch.track.maps.io.FileInput;
 import cz.kruch.track.io.LineReader;
-import cz.kruch.track.AssertionFailedException;
-import cz.kruch.track.util.CharArrayTokenizer;
+import cz.kruch.track.Resources;
 
 import api.location.QualifiedCoordinates;
 import api.location.Datum;
@@ -86,7 +85,7 @@ public final class Map implements Runnable {
 
     public Map(String path, String name, /*StateListener*/Desktop listener) {
         if (path == null) {
-            throw new AssertionFailedException("Map without path: " + name);
+            throw new IllegalArgumentException("Map without path: " + name);
         }
         this.path = path;
         this.name = name;
@@ -276,7 +275,7 @@ public final class Map implements Runnable {
 
         // assertion
         if (loader.buffered == null) {
-            throw new AssertionFailedException("Loading images for disposed map: " + path);
+            throw new IllegalStateException("Loading images for disposed map: " + path);
         }
 
         // notify listener
@@ -311,10 +310,10 @@ public final class Map implements Runnable {
 
             // check map for consistency
             if (calibration == null) {
-                throw new InvalidMapException("Map calibration info missing");
+                throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_NO_CALIBRATION));
             }
             if (slices.length == 0) {
-                throw new InvalidMapException("Empty map - no slices");
+                throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_NO_SLICES));
             }
 
             // finalize map preparation
@@ -423,7 +422,7 @@ public final class Map implements Runnable {
         public Loader use(Vector list) {
             synchronized (this) {
                 if (this.list != null) {
-                    throw new AssertionFailedException("Loading in progress");
+                    throw new IllegalStateException("Loading in progress");
                 }
                 this.list = list;
             }
@@ -528,7 +527,7 @@ public final class Map implements Runnable {
 
             // assertions
             if (slices == null) {
-                throw new AssertionFailedException("Slice list is null");
+                throw new IllegalArgumentException("Slice list is null");
             }
 
             try {
@@ -546,12 +545,12 @@ public final class Map implements Runnable {
                                 // load image
                                 loadSlice(slice);
                             } catch (Throwable t) {
-                                throw new InvalidMapException("Slice loading failed: " + t.toString());
+                                throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_SLICE_LOAD_FAILED) + ": " + t.toString());
                             }
 
                             // got image?
                             if (slice.getImage() == null) {
-                                throw new InvalidMapException("No image for slice " + slice.toString());
+                                throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_NO_SLICE_IMAGE) + " " + slice.toString());
                             }
 
 //#ifdef __LOG__
@@ -841,7 +840,7 @@ public final class Map implements Runnable {
                     in = cz.kruch.track.TrackingMIDlet.class.getResourceAsStream(DEFAULT_GMI_MAP);
                     if (in == null) {
                         // neither MapCalibrator calibration
-                        throw new InvalidMapException("No default map calibration");
+                        throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_NO_CALIBRATION));
                     } else { // got MapCalibrator calibration
                         try {
                             Map.this.calibration = new Calibration.GMI(in, DEFAULT_GMI_MAP);
@@ -968,7 +967,7 @@ public final class Map implements Runnable {
 
             int i = url.lastIndexOf(File.PATH_SEPCHAR);
             if (i == -1 || i + 1 == url.length()) {
-                throw new InvalidMapException("Invalid map URL '" + url + "'");
+                throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_INVALID_MAP_URL) + " '" + url + "'");
             }
             dir = url.substring(0, i + 1);
 
@@ -1010,12 +1009,12 @@ public final class Map implements Runnable {
 
                         // check calibration
                         if (Map.this.calibration == null) {
-                            throw new InvalidMapException("Unknown calibration file: " + path);
+                            throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_UNKNOWN_CAL_FILE) + ": " + path);
                         }
                     } catch (InvalidMapException e) {
                         throw e;
                     } catch (IOException e) {
-                        throw new InvalidMapException("Failed to parse calibration file: " + path, e);
+                        throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_PARSE_CAL_FAILED) + ": " + path, e);
                     } finally {
                         // close helper loader
                         fileInput.close();
@@ -1054,7 +1053,7 @@ public final class Map implements Runnable {
                             } catch (InvalidMapException e) {
                                 throw e;
                             } catch (IOException e) {
-                                throw new InvalidMapException("Failed to parse listing file", e);
+                                throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_PARSE_SET_FAILED), e);
                             } finally {
                                 // close reader - also closes the file stream
                                 if (reader != null) {
@@ -1085,10 +1084,10 @@ public final class Map implements Runnable {
                                         addSlice((String) e.nextElement());
                                     }
                                 } catch (IOException e) {
-                                    throw new InvalidMapException("Could not list tiles in " + file.getURL(), e);
+                                    throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_SLICES_LIST_FAILED) + " " + file.getURL(), e);
                                 }
                             } else {
-                                throw new InvalidMapException("Slices directory not found");
+                                throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_SLICES_DIR_NOT_FOUND));
                             }
                         }
                     } finally {

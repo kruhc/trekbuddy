@@ -19,6 +19,7 @@ package cz.kruch.track.ui;
 import cz.kruch.track.configuration.Config;
 import cz.kruch.track.configuration.ConfigurationException;
 import cz.kruch.track.event.Callback;
+import cz.kruch.track.Resources;
 
 import javax.microedition.lcdui.Displayable;
 import javax.microedition.lcdui.Form;
@@ -30,6 +31,7 @@ import javax.microedition.lcdui.ItemStateListener;
 import javax.microedition.lcdui.Item;
 import javax.microedition.lcdui.Choice;
 import javax.microedition.lcdui.List;
+import java.util.Hashtable;
 
 /**
  * Settings form.
@@ -39,11 +41,11 @@ import javax.microedition.lcdui.List;
 final class SettingsForm extends List implements CommandListener, ItemStateListener {
     private static final int MAX_URL_LENGTH = 256;
 
-    private static final String MENU_BASIC      = "Basic";
-    private static final String MENU_DESKTOP    = "Desktop";
-    private static final String MENU_LOCATION   = "Location";
-    private static final String MENU_NAVIGATION = "Navigation";
-    private static final String MENU_MISC       = "Misc";
+    private static final String MENU_BASIC;
+    private static final String MENU_DESKTOP;
+    private static final String MENU_LOCATION;
+    private static final String MENU_NAVIGATION;
+    private static final String MENU_MISC;
 
     private Callback callback;
     private boolean changed;
@@ -60,7 +62,8 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
     private ChoiceGroup choiceTracklogFormat;
     private TextField fieldDataDir;
     private TextField fieldCaptureLocator;
-    private TextField fieldCaptureFormat;
+//    private TextField fieldCaptureFormat;
+    private ChoiceGroup choiceCaptureFormat;
     private TextField fieldSimulatorDelay;
     private TextField fieldLocationTimings;
     private TextField fieldCommUrl;
@@ -73,13 +76,22 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
 /*
     private Gauge gaugeScrollDelay;
 */
+    private ChoiceGroup choiceGpx;
     private TextField fieldGpxDt;
     private TextField fieldGpxDs;
 
     private Form submenu;
 
+    static {
+        MENU_BASIC = Resources.getString(Resources.CFG_ITEM_BASIC);
+        MENU_DESKTOP = Resources.getString(Resources.CFG_ITEM_DESKTOP);
+        MENU_LOCATION = Resources.getString(Resources.CFG_ITEM_LOCATION);
+        MENU_NAVIGATION = Resources.getString(Resources.CFG_ITEM_NAVIGATION);
+        MENU_MISC = Resources.getString(Resources.CFG_ITEM_MISC);
+    }
+
     public SettingsForm(Callback callback) {
-        super(cz.kruch.track.TrackingMIDlet.wm ? "Settings (TrekBuddy)" : "Settings", List.IMPLICIT);
+        super(cz.kruch.track.TrackingMIDlet.wm ? Resources.getString(Resources.DESKTOP_CMD_SETTINGS) + " (TrekBuddy)" : Resources.getString(Resources.DESKTOP_CMD_SETTINGS), List.IMPLICIT);
         this.callback = callback;
     }
 
@@ -92,9 +104,9 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
         append(MENU_MISC, null);
 
         // add command and handling
-        addCommand(new Command("Cancel", Command.BACK, 1));
-        addCommand(new Command("Apply", Command.ITEM, 1));
-        addCommand(new Command("Save", Command.ITEM, 2));
+        addCommand(new Command(Resources.getString(Resources.CMD_CANCEL), Command.BACK, 1));
+        addCommand(new Command(Resources.getString(Resources.CFG_CMD_APPLY), Command.ITEM, 1));
+        addCommand(new Command(Resources.getString(Resources.CFG_CMD_SAVE), Command.ITEM, 2));
         /* default SELECT command is of SCREEN type */
         setCommandListener(this);
 
@@ -111,7 +123,7 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
 
             // default map path field
             if (cz.kruch.track.TrackingMIDlet.isFs()) {
-                fieldMapPath = new TextField("Startup Map", Config.mapPath, MAX_URL_LENGTH, TextField.URL);
+                fieldMapPath = new TextField(Resources.getString(Resources.CFG_BASIC_FLD_START_MAP), Config.mapPath, MAX_URL_LENGTH, TextField.URL);
                 fieldMapPath.setLayout(Item.LAYOUT_2 | Item.LAYOUT_EXPAND | Item.LAYOUT_VEXPAND);
                 submenu.append(fieldMapPath);
             }
@@ -129,16 +141,16 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
 */
 
             // map datum
-            choiceMapDatum = new ChoiceGroup("Default Datum", ChoiceGroup.POPUP);
+            choiceMapDatum = new ChoiceGroup(Resources.getString(Resources.CFG_BASIC_GROUP_DEFAULT_DATUM), ChoiceGroup.POPUP);
             choiceMapDatum.setFitPolicy(Choice.TEXT_WRAP_ON);
             for (int N = Config.DATUMS.length, i = 0; i < N; i++) {
-                String id = Config.DATUMS[i].getName();
+                String id = Config.DATUMS[i].name;
                 choiceMapDatum.setSelectedIndex(choiceMapDatum.append(id, null), Config.geoDatum.equals(id));
             }
             submenu.append(choiceMapDatum);
 
             // coordinates format
-            choiceCoordinates = new ChoiceGroup("Coordinates", ChoiceGroup.POPUP);
+            choiceCoordinates = new ChoiceGroup(Resources.getString(Resources.CFG_BASIC_GROUP_COORDS_FMT), ChoiceGroup.POPUP);
             choiceCoordinates.setFitPolicy(Choice.TEXT_WRAP_ON);
             choiceCoordinates.append(Config.COORDS_MAP_LATLON, null);
             choiceCoordinates.append(Config.COORDS_MAP_GRID, null);
@@ -153,11 +165,11 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
             submenu.append(choiceCoordinates);
 
             // units format
-            choiceUnits = new ChoiceGroup("Units", ChoiceGroup.POPUP);
+            choiceUnits = new ChoiceGroup(Resources.getString(Resources.CFG_BASIC_GROUP_UNITS), ChoiceGroup.POPUP);
             choiceUnits.setFitPolicy(Choice.TEXT_WRAP_ON);
-            choiceUnits.append(Config.UNITS_METRIC, null);
-            choiceUnits.append(Config.UNITS_IMPERIAL, null);
-            choiceUnits.append(Config.UNITS_NAUTICAL, null);
+            choiceUnits.append(Resources.getString(Resources.CFG_BASIC_FLD_UNITS_METRIC), null);
+            choiceUnits.append(Resources.getString(Resources.CFG_BASIC_FLD_UNITS_IMPERIAL), null);
+            choiceUnits.append(Resources.getString(Resources.CFG_BASIC_FLD_UNITS_NAUTICAL), null);
             choiceUnits.setSelectedFlags(new boolean[]{
                 false,
                 Config.unitsImperial,
@@ -167,7 +179,7 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
 
             // datadir
             if (cz.kruch.track.TrackingMIDlet.isFs()) {
-                fieldDataDir = new TextField("Data Dir", Config.getDataDir(), MAX_URL_LENGTH, TextField.URL);
+                fieldDataDir = new TextField(Resources.getString(Resources.CFG_BASIC_FLD_DATA_DIR), Config.getDataDir(), MAX_URL_LENGTH, TextField.URL);
                 fieldDataDir.setLayout(Item.LAYOUT_2 | Item.LAYOUT_EXPAND | Item.LAYOUT_VEXPAND);
                 submenu.append(fieldDataDir);
             }
@@ -175,18 +187,18 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
         } else if (MENU_DESKTOP.equals(section)) {
 
             // desktop settings
-            choiceMisc = new ChoiceGroup("Desktop", ChoiceGroup.MULTIPLE);
-            choiceMisc.append("fullscreen", null);
-            choiceMisc.append("no sounds", null);
-            choiceMisc.append("decimal precision", null);
-            choiceMisc.append("HPS wpt true azimuth", null);
-            choiceMisc.append("OSD basic", null);
-            choiceMisc.append("OSD extended", null);
-            choiceMisc.append("OSD scale", null);
-            choiceMisc.append("OSD no background", null);
-            choiceMisc.append("OSD medium font", null);
-            choiceMisc.append("OSD bold font", null);
-            choiceMisc.append("OSD black color", null);
+            choiceMisc = new ChoiceGroup(Resources.getString(Resources.CFG_DESKTOP_GROUP), ChoiceGroup.MULTIPLE);
+            choiceMisc.append(Resources.getString(Resources.CFG_DESKTOP_FLD_FULLSCREEN), null);
+            choiceMisc.append(Resources.getString(Resources.CFG_DESKTOP_FLD_NO_SOUNDS), null);
+            choiceMisc.append(Resources.getString(Resources.CFG_DESKTOP_FLD_DEC_PRECISION), null);
+            choiceMisc.append(Resources.getString(Resources.CFG_DESKTOP_FLD_HPS_WPT_TRUE_AZI), null);
+            choiceMisc.append(Resources.getString(Resources.CFG_DESKTOP_FLD_OSD_BASIC), null);
+            choiceMisc.append(Resources.getString(Resources.CFG_DESKTOP_FLD_OSD_EXT), null);
+            choiceMisc.append(Resources.getString(Resources.CFG_DESKTOP_FLD_OSD_SCALE), null);
+            choiceMisc.append(Resources.getString(Resources.CFG_DESKTOP_FLD_OSD_NO_BG), null);
+            choiceMisc.append(Resources.getString(Resources.CFG_DESKTOP_FLD_OSD_MED_FONT), null);
+            choiceMisc.append(Resources.getString(Resources.CFG_DESKTOP_FLD_OSD_BOLD_FONT), null);
+            choiceMisc.append(Resources.getString(Resources.CFG_DESKTOP_FLD_OSD_BLACK), null);
             choiceMisc.setSelectedFlags(new boolean[] {
                 Config.fullscreen,
                 Config.noSounds,
@@ -213,12 +225,12 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
         } else if (MENU_NAVIGATION.equals(section)) {
 
             // navigation
-            submenu.append(fieldWptProximity = new TextField("Wpt Proximity", Integer.toString(Config.wptProximity), 5, TextField.NUMERIC));
-            /*append(*/fieldPoiProximity = new TextField("Poi Proximity", Integer.toString(Config.poiProximity), 5, TextField.NUMERIC)/*)*/;
-            choiceRouteLine = new ChoiceGroup("Route Line", ChoiceGroup.MULTIPLE);
-            choiceRouteLine.append("dotted", null);
-            choiceRouteLine.append("red color", null);
-            choiceRouteLine.append("POI icons", null);
+            submenu.append(fieldWptProximity = new TextField(Resources.getString(Resources.CFG_NAVIGATION_FLD_WPT_PROXIMITY), Integer.toString(Config.wptProximity), 5, TextField.NUMERIC));
+            /*append(*/fieldPoiProximity = new TextField(Resources.getString(Resources.CFG_NAVIGATION_FLD_POI_PROXIMITY), Integer.toString(Config.poiProximity), 5, TextField.NUMERIC)/*)*/;
+            choiceRouteLine = new ChoiceGroup(Resources.getString(Resources.CFG_NAVIGATION_GROUP_ROUTE_LINE), ChoiceGroup.MULTIPLE);
+            choiceRouteLine.append(Resources.getString(Resources.CFG_NAVIGATION_FLD_DOTTED), null);
+            choiceRouteLine.append(Resources.getString(Resources.CFG_NAVIGATION_FLD_RED), null);
+            choiceRouteLine.append(Resources.getString(Resources.CFG_NAVIGATION_FLD_POI_ICONS), null);
             choiceRouteLine.setSelectedFlags(new boolean[] {
                 Config.routeLineStyle,
                 Config.routeLineColor != 0,
@@ -228,8 +240,8 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
 
             // 'Friends'
             if (cz.kruch.track.TrackingMIDlet.jsr120) {
-                choiceFriends = new ChoiceGroup("Location SMS", ChoiceGroup.MULTIPLE);
-                choiceFriends.append("receive", null);
+                choiceFriends = new ChoiceGroup(Resources.getString(Resources.CFG_NAVIGATION_GROUP_SMS), ChoiceGroup.MULTIPLE);
+                choiceFriends.append(Resources.getString(Resources.CFG_NAVIGATION_FLD_RECEIVE), null);
                 choiceFriends.setSelectedFlags(new boolean[] {
                     Config.locationSharing
                 });
@@ -239,11 +251,11 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
         } else if (MENU_MISC.equals(section)) {
 
             // tweaks
-            choicePerformance = new ChoiceGroup("Tweaks", ChoiceGroup.MULTIPLE);
-            choicePerformance.append("optimistic I/O", null);
-            choicePerformance.append("safe renderer", null);
-            choicePerformance.append("forced GC", null);
-            choicePerformance.append("1-tile scroll", null);
+            choicePerformance = new ChoiceGroup(Resources.getString(Resources.CFG_TWEAKS_GROUP), ChoiceGroup.MULTIPLE);
+            choicePerformance.append(Resources.getString(Resources.CFG_TWEAKS_FLD_OPTIMISTIC_IO), null);
+            choicePerformance.append(Resources.getString(Resources.CFG_TWEAKS_FLD_SAFE_RENDERER), null);
+            choicePerformance.append(Resources.getString(Resources.CFG_TWEAKS_FLD_FORCED_GC), null);
+            choicePerformance.append(Resources.getString(Resources.CFG_TWEAKS_FLD_1TILE_SCROLL), null);
             choicePerformance.setSelectedFlags(new boolean[] {
                 Config.optimisticIo,
                 Config.S60renderer,
@@ -255,14 +267,10 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
         } else if (MENU_LOCATION.equals(section)) {
 
             // location provider choice
-            String[] providers = Config.getLocationProviders();
-            choiceProvider = new ChoiceGroup("Location Provider", ChoiceGroup.EXCLUSIVE);
+            short[] providers = Config.getLocationProviders();
+            choiceProvider = new ChoiceGroup(Resources.getString(Resources.CFG_LOCATION_GROUP_PROVIDER), ChoiceGroup.EXCLUSIVE);
             for (int N = providers.length, i = 0; i < N; i++) {
-                String provider = providers[i];
-                int idx = choiceProvider.append(provider, null);
-                if (provider.equals(Config.locationProvider)) {
-                    choiceProvider.setSelectedIndex(idx, true);
-                }
+                choiceProvider.setSelectedIndex(choiceProvider.append(Resources.getString((short) (Resources.CFG_LOCATION_FLD_PROV_BLUETOOTH + providers[i])), null), Config.locationProvider == providers[i]);
             }
             if (providers.length > 0) {
                 submenu.append(choiceProvider);
@@ -270,39 +278,59 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
 
             // tracklogs, waypoints
             if (cz.kruch.track.TrackingMIDlet.isFs()) {
-                choiceTracklog = new ChoiceGroup("Tracklog", ChoiceGroup.EXCLUSIVE);
-                String tracklog = Config.tracklog;
-                choiceTracklog.setSelectedIndex(choiceTracklog.append(Config.TRACKLOG_NEVER, null), Config.TRACKLOG_NEVER.equals(tracklog));
-                choiceTracklog.setSelectedIndex(choiceTracklog.append(Config.TRACKLOG_ASK, null), Config.TRACKLOG_ASK.equals(tracklog));
-                choiceTracklog.setSelectedIndex(choiceTracklog.append(Config.TRACKLOG_ALWAYS, null), Config.TRACKLOG_ALWAYS.equals(tracklog));
+                choiceTracklog = new ChoiceGroup(Resources.getString(Resources.CFG_LOCATION_GROUP_TRACKLOG), ChoiceGroup.EXCLUSIVE);
+                choiceTracklog.setSelectedIndex(choiceTracklog.append(Resources.getString(Resources.CFG_LOCATION_FLD_TRACKLOG_NEVER), null), Config.TRACKLOG_NEVER == Config.tracklog);
+                choiceTracklog.setSelectedIndex(choiceTracklog.append(Resources.getString(Resources.CFG_LOCATION_FLD_TRACKLOG_ASK), null), Config.TRACKLOG_ASK == Config.tracklog);
+                choiceTracklog.setSelectedIndex(choiceTracklog.append(Resources.getString(Resources.CFG_LOCATION_FLD_TRACKLOG_ALWAYS), null), Config.TRACKLOG_ALWAYS == Config.tracklog);
 
-                choiceTracklogFormat = new ChoiceGroup("Tracklog Format", ChoiceGroup.EXCLUSIVE);
+                choiceTracklogFormat = new ChoiceGroup(Resources.getString(Resources.CFG_LOCATION_GROUP_TRACKLOG_FMT), ChoiceGroup.EXCLUSIVE);
                 String tracklogFormat = Config.tracklogFormat;
                 choiceTracklogFormat.setSelectedIndex(choiceTracklogFormat.append(Config.TRACKLOG_FORMAT_GPX, null), Config.TRACKLOG_FORMAT_GPX.equals(tracklogFormat));
                 choiceTracklogFormat.setSelectedIndex(choiceTracklogFormat.append(Config.TRACKLOG_FORMAT_NMEA, null), Config.TRACKLOG_FORMAT_NMEA.equals(tracklogFormat));
+
+                choiceGpx = new ChoiceGroup(Resources.getString(Resources.CFG_LOCATION_GROUP_GPX_OPTS), ChoiceGroup.MULTIPLE);
+                choiceGpx.append(Resources.getString(Resources.CFG_LOCATION_FLD_GPX_LOG_VALID), null);
+                choiceGpx.setSelectedFlags(new boolean[] {
+                    Config.gpxOnlyValid
+                });
 
                 fieldGpxDt = new TextField("GPX dt", Integer.toString(Config.gpxDt), 5, TextField.NUMERIC);
                 fieldGpxDs = new TextField("GPX ds", Integer.toString(Config.gpxDs), 5, TextField.NUMERIC);
 
                 if (cz.kruch.track.TrackingMIDlet.supportsVideoCapture()) {
-                    fieldCaptureLocator = new TextField("Capture Locator", Config.captureLocator, 16, TextField.URL);
-                    fieldCaptureFormat = new TextField("Capture Format", Config.captureFormat, 64, TextField.ANY);
+                    fieldCaptureLocator = new TextField(Resources.getString(Resources.CFG_LOCATION_FLD_CAPTURE_LOCATOR), Config.captureLocator, 16, TextField.URL);
+//                    fieldCaptureFormat = new TextField(Resources.getString(Resources.CFG_LOCATION_FLD_CAPTURE_FMT), Config.captureFormat, 64, TextField.ANY);
+                    choiceCaptureFormat = new ChoiceGroup(Resources.getString(Resources.CFG_LOCATION_FLD_CAPTURE_FMT), ChoiceGroup.POPUP);
+                    choiceCaptureFormat.append("", null);
+                    String encodings = System.getProperty("video.snapshot.encodings");
+                    int start = encodings.indexOf("encoding=");
+                    while (start > -1) {
+                        int end = encodings.indexOf("encoding=", start + 9);
+                        String item = null;
+                        if (end > -1) {
+                            item = encodings.substring(start, end).trim();
+                        } else {
+                            item = encodings.substring(start).trim();
+                        }
+                        choiceCaptureFormat.setSelectedIndex(choiceCaptureFormat.append(item, null), Config.captureFormat.equals(item));
+                        start = end;
+                    }
                 }
             }
 
             // serial
             if (cz.kruch.track.TrackingMIDlet.hasPorts()) {
-                fieldCommUrl = new TextField("Connection URL", Config.commUrl, 64, TextField.ANY);
+                fieldCommUrl = new TextField(Resources.getString(Resources.CFG_LOCATION_FLD_CONN_URL), Config.commUrl, 64, TextField.ANY);
             }
 
             // simulator
             if (cz.kruch.track.TrackingMIDlet.isFs()) {
-                fieldSimulatorDelay = new TextField("Simulator Delay", Integer.toString(Config.simulatorDelay), 8, TextField.NUMERIC);
+                fieldSimulatorDelay = new TextField(Resources.getString(Resources.CFG_LOCATION_FLD_SIMULATOR_DELAY), Integer.toString(Config.simulatorDelay), 8, TextField.NUMERIC);
             }
 
             // internal
             if (cz.kruch.track.TrackingMIDlet.jsr179) {
-                fieldLocationTimings = new TextField("Location Timings", Config.getLocationTimings(), 12, TextField.ANY);
+                fieldLocationTimings = new TextField(Resources.getString(Resources.CFG_LOCATION_FLD_LOCATION_TIMINGS), Config.getLocationTimings(), 12, TextField.ANY);
             }
 
             // show current provider and tracklog specific options
@@ -312,8 +340,8 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
         }
 
         // add command and handling
-        submenu.addCommand(new Command("OK", Desktop.POSITIVE_CMD_TYPE, 1));
-        submenu.addCommand(new Command("Cancel", Command.BACK, 1));
+        submenu.addCommand(new Command(Resources.getString(Resources.CMD_OK), Desktop.POSITIVE_CMD_TYPE, 1));
+        submenu.addCommand(new Command(Resources.getString(Resources.CMD_CANCEL), Command.BACK, 1));
         submenu.setCommandListener(this);
 
         // show
@@ -350,61 +378,69 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
             i = submenu.size();
         }
 
-        String provider = choiceProvider.getString(choiceProvider.getSelectedIndex());
+        int provider = Config.getLocationProviders()[choiceProvider.getSelectedIndex()];
         boolean isFs = cz.kruch.track.TrackingMIDlet.isFs();
-        boolean isTracklog = isFs && !Config.TRACKLOG_NEVER.equals(choiceTracklog.getString(choiceTracklog.getSelectedIndex()));
+        boolean isTracklog = isFs && !Resources.getString(Resources.CFG_LOCATION_FLD_TRACKLOG_NEVER).equals(choiceTracklog.getString(choiceTracklog.getSelectedIndex()));
         boolean isTracklogGpx = isTracklog && Config.TRACKLOG_FORMAT_GPX.equals(choiceTracklogFormat.getString(choiceTracklogFormat.getSelectedIndex()));
 
         if (choiceProvider == affected) {
-            if (Config.LOCATION_PROVIDER_JSR179.equals(provider) || Config.LOCATION_PROVIDER_MOTOROLA.equals(provider)) {
-                submenu.append(fieldLocationTimings);
-            } else if (Config.LOCATION_PROVIDER_SIMULATOR.equals(provider)) {
-                submenu.append(fieldSimulatorDelay);
-            } else if (Config.LOCATION_PROVIDER_SERIAL.equals(provider)) {
-                submenu.append(fieldCommUrl);
+            switch (provider) {
+                case Config.LOCATION_PROVIDER_JSR179:
+                case Config.LOCATION_PROVIDER_MOTOROLA:
+                    submenu.append(fieldLocationTimings);
+                break;
+                case Config.LOCATION_PROVIDER_SIMULATOR:
+                    submenu.append(fieldSimulatorDelay);
+                break;
+                case Config.LOCATION_PROVIDER_SERIAL:
+                    submenu.append(fieldCommUrl);
+                break;
             }
             if (isFs) {
                 submenu.append(choiceTracklog);
                 if (isTracklog) {
-                    if (Config.LOCATION_PROVIDER_JSR82.equals(provider) || Config.LOCATION_PROVIDER_SERIAL.equals(provider) || Config.LOCATION_PROVIDER_JSR179.equals(provider)) {
+                    if (Config.LOCATION_PROVIDER_JSR82 == provider || Config.LOCATION_PROVIDER_SERIAL == provider || Config.LOCATION_PROVIDER_JSR179 == provider) {
                         submenu.append(choiceTracklogFormat);
                     }
                     if (isTracklogGpx) {
+                        submenu.append(choiceGpx);
                         appendWithNewlineAfter(submenu, fieldGpxDt);
                         appendWithNewlineAfter(submenu, fieldGpxDs);
-                        if (fieldCaptureLocator != null && fieldCaptureFormat != null) {
-                            submenu.append(fieldCaptureLocator);
-                            submenu.append(fieldCaptureFormat);
-                        }
                     }
+                }
+                if (fieldCaptureLocator != null && /*field*/choiceCaptureFormat != null) {
+                    submenu.append(fieldCaptureLocator);
+                    submenu.append(/*field*/choiceCaptureFormat);
                 }
             }
         }
 
         if (choiceTracklog == affected) {
             if (isTracklog) {
-                if (Config.LOCATION_PROVIDER_JSR82.equals(provider) || Config.LOCATION_PROVIDER_SERIAL.equals(provider) || Config.LOCATION_PROVIDER_JSR179.equals(provider)) {
+                if (Config.LOCATION_PROVIDER_JSR82 == provider || Config.LOCATION_PROVIDER_SERIAL == provider || Config.LOCATION_PROVIDER_JSR179 == provider) {
                     submenu.append(choiceTracklogFormat);
                 }
                 if (isTracklogGpx) {
+                    submenu.append(choiceGpx);
                     appendWithNewlineAfter(submenu, fieldGpxDt);
                     appendWithNewlineAfter(submenu, fieldGpxDs);
-                    if (fieldCaptureLocator != null && fieldCaptureFormat != null) {
-                        submenu.append(fieldCaptureLocator);
-                        submenu.append(fieldCaptureFormat);
-                    }
                 }
+            }
+            if (fieldCaptureLocator != null && /*field*/choiceCaptureFormat != null) {
+                submenu.append(fieldCaptureLocator);
+                submenu.append(/*field*/choiceCaptureFormat);
             }
         }
 
         if (choiceTracklogFormat == affected) {
             if (isTracklogGpx) {
+                submenu.append(choiceGpx);
                 appendWithNewlineAfter(submenu, fieldGpxDt);
                 appendWithNewlineAfter(submenu, fieldGpxDs);
-                if (fieldCaptureLocator != null && fieldCaptureFormat != null) {
-                    submenu.append(fieldCaptureLocator);
-                    submenu.append(fieldCaptureFormat);
-                }
+            }
+            if (fieldCaptureLocator != null && /*field*/choiceCaptureFormat != null) {
+                submenu.append(fieldCaptureLocator);
+                submenu.append(choiceCaptureFormat);
             }
         }
     }
@@ -457,9 +493,10 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
                 Config.useGeocachingFormat = Config.COORDS_GC_LATLON.equals(fmt);
 
                 // units format
-                fmt = choiceUnits.getString(choiceUnits.getSelectedIndex());
-                Config.unitsImperial = Config.UNITS_IMPERIAL.equals(fmt);
-                Config.unitsNautical = Config.UNITS_NAUTICAL.equals(fmt);
+                boolean units[] = new boolean[choiceUnits.size()];
+                choiceUnits.getSelectedFlags(units);
+                Config.unitsImperial = units[1];
+                Config.unitsNautical = units[2];
 
                 // datadir
                 if (cz.kruch.track.TrackingMIDlet.isFs()) {
@@ -470,7 +507,7 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
 
                 // provider
                 if (choiceProvider.size() > 0) {
-                    Config.locationProvider = choiceProvider.getString(choiceProvider.getSelectedIndex());
+                    Config.locationProvider = Config.getLocationProviders()[choiceProvider.getSelectedIndex()];
                 }
 
                 // provider-specific
@@ -486,13 +523,13 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
 
                 // tracklogs, waypoints
                 if (cz.kruch.track.TrackingMIDlet.isFs()) {
-                    Config.tracklog = choiceTracklog.getString(choiceTracklog.getSelectedIndex());
+                    Config.tracklog = choiceTracklog.getSelectedIndex();
                     Config.tracklogFormat = choiceTracklogFormat.getString(choiceTracklogFormat.getSelectedIndex());
                     Config.gpxDt = Integer.parseInt(fieldGpxDt.getString());
                     Config.gpxDs = Integer.parseInt(fieldGpxDs.getString());
                     if (cz.kruch.track.TrackingMIDlet.supportsVideoCapture()) {
                         Config.captureLocator = fieldCaptureLocator.getString();
-                        Config.captureFormat = fieldCaptureFormat.getString();
+                        Config.captureFormat = /*field*/choiceCaptureFormat.getString(choiceCaptureFormat.getSelectedIndex());
                     }
                 }
 
@@ -566,17 +603,17 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
             Config.useDatum(Config.geoDatum);
 
             // save?
-            if ("Save".equals(command.getLabel())) {
+            if (/* Save */2 == command.getPriority()) {
                 try {
                     // update config
                     Config.update(Config.CONFIG_090);
 
                     // show confirmation
-                    Desktop.showConfirmation("Configuration saved.", Desktop.screen);
+                    Desktop.showConfirmation(Resources.getString(Resources.DESKTOP_MSG_CFG_UPDATED), Desktop.screen);
 
                 } catch (ConfigurationException e) {
                     // show error
-                    Desktop.showError("Failed to save configuration.", e, Desktop.screen);
+                    Desktop.showError(Resources.getString(Resources.DESKTOP_MSG_CFG_UPDATE_FAILED), e, Desktop.screen);
                 }
             }
         }

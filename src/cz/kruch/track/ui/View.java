@@ -25,6 +25,8 @@ import api.location.QualifiedCoordinates;
 
 import java.util.Vector;
 
+import cz.kruch.track.Resources;
+
 /**
  * Base class for screens - {@link Desktop.MapView}, {@link ComputerView},
  * {@link LocatorView}.
@@ -32,7 +34,11 @@ import java.util.Vector;
  * @author Ales Pour <kruhc@seznam.cz>
  */
 abstract class View {
-    protected static final String MSG_NO_POSITION = "NO POSITION";
+    protected static String MSG_NO_POSITION;
+
+    static {
+        MSG_NO_POSITION = Resources.getString(Resources.DESKTOP_MSG_NO_POSITION);
+    }
 
     protected /*Navigator*/Desktop navigator;
     protected boolean isVisible;

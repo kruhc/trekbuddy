@@ -26,6 +26,7 @@ import java.util.TimeZone;
 
 import cz.kruch.track.configuration.Config;
 import cz.kruch.track.maps.Map;
+import cz.kruch.track.Resources;
 
 /**
  * Info form.
@@ -35,7 +36,7 @@ import cz.kruch.track.maps.Map;
 final class InfoForm extends Form implements CommandListener {
 
     public InfoForm() {
-        super(cz.kruch.track.TrackingMIDlet.wm ? "Info (TrekBuddy)" : "Info");
+        super(cz.kruch.track.TrackingMIDlet.wm ? Resources.getString(Resources.DESKTOP_CMD_INFO) + " (TrekBuddy)" : Resources.getString(Resources.DESKTOP_CMD_INFO));
     }
 
     public void show(Desktop desktop, Throwable le, Object ps, Map map) {
@@ -67,10 +68,10 @@ final class InfoForm extends Form implements CommandListener {
         }
         append(new StringItem("ProviderStatus", (ps == null ? "" : ps.toString()) + "; restarts=" + cz.kruch.track.location.StreamReadingLocationProvider.restarts + "; syncs=" + cz.kruch.track.location.StreamReadingLocationProvider.syncs + "; mismatches=" + cz.kruch.track.location.StreamReadingLocationProvider.mismatches + "; checksums=" + cz.kruch.track.location.StreamReadingLocationProvider.checksums));
         append(new StringItem("ProviderError", le == null ? "" : le.toString()));
+/*
         if (cz.kruch.track.TrackingMIDlet.supportsVideoCapture()) {
             append(new StringItem("SnapshotEncodings", System.getProperty("video.snapshot.encodings")));
         }
-/*
         StringBuffer sb = new StringBuffer(64);
         sb.append("amr=");
         appendEncodings("audio/amr", sb);
@@ -80,8 +81,10 @@ final class InfoForm extends Form implements CommandListener {
         appendEncodings("audio/mp3", sb);
         append(new StringItem("Audio", sb.toString()));
 */
+/*
         append(new StringItem("Diagnostics", Integer.toString(cz.kruch.track.TrackingMIDlet.pauses)));
-        addCommand(new Command("Close", Command.BACK, 1));
+*/
+        addCommand(new Command(Resources.getString(Resources.CMD_CLOSE), Command.BACK, 1));
         setCommandListener(this);
 
         // show

@@ -20,7 +20,6 @@ import cz.kruch.track.maps.Slice;
 import cz.kruch.track.maps.Map;
 import cz.kruch.track.util.Mercator;
 import cz.kruch.track.util.ExtraMath;
-import cz.kruch.track.AssertionFailedException;
 import cz.kruch.track.location.Waypoint;
 import cz.kruch.track.configuration.Config;
 import cz.kruch.track.configuration.ConfigurationException;
@@ -33,6 +32,8 @@ import java.util.Vector;
 
 import api.location.Location;
 import api.location.QualifiedCoordinates;
+import api.location.Datum;
+import api.location.ProjectionSetup;
 
 /**
  * Map viewer.
@@ -172,14 +173,9 @@ final class MapViewer {
         // use new map (if any)
         if (map != null) {
 
-            // update Mercator context // TODO ugly
-            if (map.getProjection() instanceof Mercator.ProjectionSetup) {
-                Mercator.contextDatum = map.getDatum();
-                Mercator.contextProjection = (Mercator.ProjectionSetup) map.getProjection();
-            } else {
-                Mercator.contextDatum = null;
-                Mercator.contextProjection = null;
-            }
+            // update context
+            Datum.contextDatum = map.getDatum();
+            ProjectionSetup.contextProjection = map.getProjection();
 
             // use new map
             this.mWidth = map.getWidth();
@@ -916,7 +912,7 @@ final class MapViewer {
 
             // assertion
             if (!_slices2.isEmpty()) {
-                throw new AssertionFailedException("Temporary slices collection not empty");
+                throw new IllegalStateException("Temporary slices collection not empty");
             }
 
             // find needed slices ("row by row")
@@ -929,7 +925,7 @@ final class MapViewer {
                 while (_x < xmax) {
                     Slice s = ensureSlice(_x, _y, _slices, _slices2);
                     if (s == null) {
-                        throw new AssertionFailedException("Out of map - no slice for " + _x + "-" + _y);
+                        throw new IllegalStateException("Out of map - no slice for " + _x + "-" + _y);
                     } else {
                         _x = s.getX() + s.getWidth();
                         _l = s.getY() + s.getHeight();
@@ -1025,7 +1021,7 @@ final class MapViewer {
         if (slice != null) {
             // assertion
             if (newSlices.contains(slice)) {
-                throw new AssertionFailedException("Slice " + slice + " already added for " + x + "-" + y);
+                throw new IllegalStateException("Slice " + slice + " already added for " + x + "-" + y);
             }
             // add slice from map
             newSlices.addElement(slice);
@@ -1060,7 +1056,7 @@ final class MapViewer {
                 sb.delete(0, sb.length());
                 sb.append(guess).append(units);
                 if (sb.length() > sInfo.length) {
-                    throw new AssertionFailedException("Scale length = " + sInfoLength);
+                    throw new IllegalStateException("Scale length = " + sInfoLength);
                 }
                 sInfoLength = sb.length();
                 sb.getChars(0, sInfoLength, sInfo, 0);

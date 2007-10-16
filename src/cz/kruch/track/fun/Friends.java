@@ -20,6 +20,7 @@ import cz.kruch.track.ui.Waypoints;
 import cz.kruch.track.ui.NavigationScreens;
 import cz.kruch.track.location.Waypoint;
 import cz.kruch.track.util.CharArrayTokenizer;
+import cz.kruch.track.Resources;
 
 import javax.wireless.messaging.MessageListener;
 import javax.wireless.messaging.MessageConnection;
@@ -133,7 +134,7 @@ public final class Friends implements MessageListener, Runnable {
                 }
                 if (type == null) {
                     // unknown message
-                    Desktop.showWarning("Unknown message '" + text + "'", null, null);
+                    Desktop.showWarning(Resources.getString(Resources.DESKTOP_MSG_UNKNOWN_SMS) + " '" + text + "'", null, null);
                 } else {
                     // get tokens
                     String times = tokenizer.next().toString();
@@ -173,7 +174,7 @@ public final class Friends implements MessageListener, Runnable {
                 }
             }
         } catch (Throwable t) {
-            Desktop.showError("Failed to receive SMS", t, null);
+            Desktop.showError(Resources.getString(Resources.DESKTOP_MSG_SMS_RECEIVE_FAILED), t, null);
         }
     }
 
@@ -184,9 +185,9 @@ public final class Friends implements MessageListener, Runnable {
             TextMessage sms = (TextMessage) connection.newMessage(MessageConnection.TEXT_MESSAGE);
             sms.setPayloadText(text);
             connection.send(sms);
-            Desktop.showConfirmation("Location sent", null);
+            Desktop.showConfirmation(Resources.getString(Resources.DESKTOP_MSG_SMS_SENT), null);
         } catch (Throwable t) {
-            Desktop.showError("Failed to send SMS [" + url + "]", t, null);
+            Desktop.showError(Resources.getString(Resources.DESKTOP_MSG_SMS_SEND_FAILED)+ " [" + url + "]", t, null);
         } finally {
             try {
                 if (connection != null) {
@@ -326,7 +327,7 @@ public final class Friends implements MessageListener, Runnable {
                                         null, chat, time);
 
         } else {
-            Desktop.showWarning("Unknown message '" + text + "'", null, null);
+            Desktop.showWarning(Resources.getString(Resources.DESKTOP_MSG_UNKNOWN_SMS) + " '" + text + "'", null, null);
         }
     }
 //#endif

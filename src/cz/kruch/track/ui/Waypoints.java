@@ -22,6 +22,7 @@ import cz.kruch.track.location.GpxTracklog;
 import cz.kruch.track.maps.io.LoaderIO;
 import cz.kruch.track.fun.Friends;
 import cz.kruch.track.configuration.Config;
+import cz.kruch.track.Resources;
 import cz.kruch.j2se.io.BufferedInputStream;
 
 import javax.microedition.lcdui.CommandListener;
@@ -59,12 +60,12 @@ public final class Waypoints extends List
     private static final short TYPE_GPX = 100;
     private static final short TYPE_LOC = 200;
 
-    private static final String ITEM_LIST_STORES    = "Waypoints";
-    private static final String ITEM_ADD_NEW        = "Record Current";
-    private static final String ITEM_ENTER_MANUALY  = "Enter Custom";
-    private static final String ITEM_FRIEND_HERE    = "SMS 'I Am Here'";
-    private static final String ITEM_FRIEND_THERE   = "SMS 'Meet You There'";
-    private static final String ITEM_STOP           = "Stop";
+    private static final String ITEM_LIST_STORES;
+    private static final String ITEM_ADD_NEW;
+    private static final String ITEM_ENTER_MANUALY;
+    private static final String ITEM_FRIEND_HERE;
+    private static final String ITEM_FRIEND_THERE;
+    private static final String ITEM_STOP;
 
     private static final int FRAME_XML  = 0;
     private static final int FRAME_XMLA = 1;
@@ -117,6 +118,15 @@ public final class Waypoints extends List
 
     private static Waypoints instance;
 
+    static {
+        ITEM_LIST_STORES = Resources.getString(Resources.NAV_ITEM_WAYPOINTS);
+        ITEM_ADD_NEW = Resources.getString(Resources.NAV_ITEM_RECORD);
+        ITEM_ENTER_MANUALY = Resources.getString(Resources.NAV_ITEM_ENTER);
+        ITEM_FRIEND_HERE = Resources.getString(Resources.NAV_ITEM_SMS_IAH);
+        ITEM_FRIEND_THERE = Resources.getString(Resources.NAV_ITEM_SMS_MYT);
+        ITEM_STOP = Resources.getString(Resources.NAV_ITEM_STOP);
+    }
+
     public static void initialize(/*Navigator*/Desktop navigator) {
         instance = new Waypoints(navigator);
     }
@@ -136,7 +146,7 @@ public final class Waypoints extends List
     }
 
     private Waypoints(/*Navigator*/Desktop navigator) {
-        super("Navigation", List.IMPLICIT);
+        super(Resources.getString(Resources.DESKTOP_CMD_NAVIGATION), List.IMPLICIT);
         this.navigator = navigator;
         this.initialize();
         this.setFitPolicy(Choice.TEXT_WRAP_OFF);
@@ -162,13 +172,13 @@ public final class Waypoints extends List
         idx = new int[3];
 
         // init commands
-        cmdBack = new Command("Back", Command.BACK, 1);
-        cmdClose = new Command("Close", Command.BACK, 1);
-        cmdNavigateTo = new Command(WaypointForm.MENU_NAVIGATE_TO, Command.ITEM, 2);
-        cmdNavigateAlong = new Command(WaypointForm.MENU_NAVIGATE_ALONG, Command.ITEM, 3);
-        cmdNavigateBack = new Command(WaypointForm.MENU_NAVIGATE_BACK, Command.ITEM, 4);
-        cmdSetAsCurrent = new Command(WaypointForm.MENU_SET_CURRENT, Command.ITEM, 2);
-        cmdGoTo = new Command(WaypointForm.MENU_GO_TO, Command.ITEM, 5);
+        cmdBack = new Command(Resources.getString(Resources.CMD_BACK), Command.BACK, 1);
+        cmdClose = new Command(Resources.getString(Resources.CMD_CLOSE), Command.BACK, 1);
+        cmdNavigateTo = new Command(WaypointForm.CMD_NAVIGATE_TO, Command.ITEM, 2);
+        cmdNavigateAlong = new Command(WaypointForm.CMD_NAVIGATE_ALONG, Command.ITEM, 3);
+        cmdNavigateBack = new Command(WaypointForm.CMD_NAVIGATE_BACK, Command.ITEM, 4);
+        cmdSetAsCurrent = new Command(WaypointForm.CMD_SET_CURRENT, Command.ITEM, 2);
+        cmdGoTo = new Command(WaypointForm.CMD_GO_TO, Command.ITEM, 5);
 
         // update commands
         addCommand(cmdClose);
@@ -196,7 +206,7 @@ public final class Waypoints extends List
             try {
                 stores.put(USER_INJAR_STORE, parseWaypoints(in, type));
             } catch (Throwable t) {
-                Desktop.showError("Failed to load in-jar waypoints", t, null);
+                Desktop.showError(Resources.getString(Resources.NAV_MSG_LOAD_INJAR_FAILED), t, null);
             } finally {
                 try {
                     in.close();
@@ -298,22 +308,22 @@ public final class Waypoints extends List
                                 (new WaypointForm(navigator.getLocation().clone(),
                                                   this)).show();
                             } else {
-                                Desktop.showInfo("No position yet", this);
+                                Desktop.showInfo(Resources.getString(Resources.NAV_MSG_NO_POS_YET), this);
                             }
                         } else {
-                            Desktop.showInfo("Not tracking", this);
+                            Desktop.showInfo(Resources.getString(Resources.NAV_MSG_NOT_TRACKING), this);
                         }
                     } else if (ITEM_ENTER_MANUALY.equals(item)) {
                         QualifiedCoordinates pointer = navigator.getPointer();
                         if (pointer == null) {
-                            Desktop.showInfo("No position", this);
+                            Desktop.showInfo(Resources.getString(Resources.NAV_MSG_NO_POS_YET), this);
                         } else {
                             (new WaypointForm(this, pointer)).show();
                         }
                     } else if (ITEM_FRIEND_HERE.equals(item)) {
                           // do we have position?
                           if (navigator.getLocation() == null) {
-                              Desktop.showInfo("No position yet", this);
+                              Desktop.showInfo(Resources.getString(Resources.NAV_MSG_NO_POS_YET), this);
                           } else {
                               (new FriendForm(this, ITEM_FRIEND_HERE, navigator.getLocation().getQualifiedCoordinates().clone(),
                                               this, ITEM_FRIEND_HERE)).show();
@@ -321,7 +331,7 @@ public final class Waypoints extends List
                     } else if (ITEM_FRIEND_THERE.equals(item)) {
                         QualifiedCoordinates pointer = navigator.getPointer();
                         if (pointer == null) {
-                            Desktop.showInfo("No position", this);
+                            Desktop.showInfo(Resources.getString(Resources.NAV_MSG_NO_POS_YET), this);
                         } else {
                             (new FriendForm(this, ITEM_FRIEND_THERE, pointer, this, ITEM_FRIEND_THERE)).show();
                         }
@@ -329,7 +339,7 @@ public final class Waypoints extends List
                         // restore navigator
                         Desktop.display.setCurrent(navigator);
                         // stop navigation
-                        actionStop();
+                        navigator.setNavigateTo(null, -1, -1);
                     }
                 } break;
                 case 1: { // store action
@@ -338,8 +348,8 @@ public final class Waypoints extends List
 //                        if (label.equals(cmdSelect.getLabel())) {
                         if (List.SELECT_COMMAND == command) {
                             onBackground(item);
-                        }/* else if (WaypointForm.MENU_NAVIGATE_ALONG.equals(label)) {
-                            invoke(new Object[]{ WaypointForm.MENU_NAVIGATE_ALONG, null }, null, this);
+                        }/* else if (WaypointForm.CMD_NAVIGATE_ALONG.equals(label)) {
+                            invoke(new Object[]{ WaypointForm.CMD_NAVIGATE_ALONG, null }, null, this);
                         }*/
 //                    }
                 } break;
@@ -349,16 +359,16 @@ public final class Waypoints extends List
 //                        if (label.equals(cmdSelect.getLabel())) {
                         if (List.SELECT_COMMAND == command) {
                             (new WaypointForm((Waypoint) currentWpts.elementAt(idx[depth]), this)).show();
-                        } else if (WaypointForm.MENU_NAVIGATE_TO.equals(label)) {
-                            invoke(new Object[]{ WaypointForm.MENU_NAVIGATE_TO, null }, null, this);
-                        } else if (WaypointForm.MENU_NAVIGATE_ALONG.equals(label)) {
-                            invoke(new Object[]{ WaypointForm.MENU_NAVIGATE_ALONG, null }, null, this);
-                        } else if (WaypointForm.MENU_NAVIGATE_BACK.equals(label)) {
-                            invoke(new Object[]{ WaypointForm.MENU_NAVIGATE_BACK, null }, null, this);
-                        } else if (WaypointForm.MENU_SET_CURRENT.equals(label)) {
-                            invoke(new Object[]{ WaypointForm.MENU_SET_CURRENT, null }, null, this);
-                        } else if (WaypointForm.MENU_GO_TO.equals(label)) {
-                            invoke(new Object[]{ WaypointForm.MENU_GO_TO, null }, null, this);
+                        } else if (WaypointForm.CMD_NAVIGATE_TO.equals(label)) {
+                            invoke(new Object[]{ WaypointForm.CMD_NAVIGATE_TO, null }, null, this);
+                        } else if (WaypointForm.CMD_NAVIGATE_ALONG.equals(label)) {
+                            invoke(new Object[]{ WaypointForm.CMD_NAVIGATE_ALONG, null }, null, this);
+                        } else if (WaypointForm.CMD_NAVIGATE_BACK.equals(label)) {
+                            invoke(new Object[]{ WaypointForm.CMD_NAVIGATE_BACK, null }, null, this);
+                        } else if (WaypointForm.CMD_SET_CURRENT.equals(label)) {
+                            invoke(new Object[]{ WaypointForm.CMD_SET_CURRENT, null }, null, this);
+                        } else if (WaypointForm.CMD_GO_TO.equals(label)) {
+                            invoke(new Object[]{ WaypointForm.CMD_GO_TO, null }, null, this);
                         }
 //                    }
                 } break;
@@ -385,7 +395,7 @@ public final class Waypoints extends List
                 // restore wtp list
                 Desktop.display.setCurrent(list);
 
-            } else if (WaypointForm.MENU_NAVIGATE_ALONG == action) {
+            } else if (WaypointForm.CMD_NAVIGATE_ALONG == action) {
 
                 // restore navigator
                 Desktop.display.setCurrent(navigator);
@@ -397,7 +407,7 @@ public final class Waypoints extends List
                 inUseName = currentName;
                 inUseWpts = currentWpts;
 
-            } else if (WaypointForm.MENU_NAVIGATE_BACK == action) {
+            } else if (WaypointForm.CMD_NAVIGATE_BACK == action) {
 
                 // restore navigator
                 Desktop.display.setCurrent(navigator);
@@ -409,7 +419,7 @@ public final class Waypoints extends List
                 inUseName = currentName;
                 inUseWpts = currentWpts;
 
-            } else if (WaypointForm.MENU_NAVIGATE_TO == action) { // start navigation
+            } else if (WaypointForm.CMD_NAVIGATE_TO == action) { // start navigation
 
                 // restore navigator
                 Desktop.display.setCurrent(navigator);
@@ -421,7 +431,7 @@ public final class Waypoints extends List
                 inUseName = currentName;
                 inUseWpts = currentWpts;
 
-            } else if (WaypointForm.MENU_SET_CURRENT == action) {
+            } else if (WaypointForm.CMD_SET_CURRENT == action) {
 
                 // restore navigator
                 Desktop.display.setCurrent(navigator);
@@ -433,7 +443,7 @@ public final class Waypoints extends List
                     navigator.setNavigateTo(currentWpts /* == Desktop.wpts */, -1, list.getSelectedIndex());
                 }
 
-            } else if (WaypointForm.MENU_GO_TO == action) {
+            } else if (WaypointForm.CMD_GO_TO == action) {
 
                 // restore navigator
                 Desktop.display.setCurrent(navigator);
@@ -441,7 +451,7 @@ public final class Waypoints extends List
                 // call navigator
                 navigator.goTo((Waypoint) currentWpts.elementAt(list.getSelectedIndex()));
 
-            } else if (WaypointForm.MENU_SAVE == action) { // record & enlist current location as waypoint
+            } else if (WaypointForm.CMD_SAVE == action) { // record & enlist current location as waypoint
 
                 // restore navigator
                 Desktop.display.setCurrent(navigator);
@@ -449,12 +459,12 @@ public final class Waypoints extends List
                 // add waypoint to memory store
                 addToStore(USER_RECORDED_STORE, (Waypoint) ret[1], true);
 
-            } else if (WaypointForm.MENU_USE == action) { // record & enlist manually entered
+            } else if (WaypointForm.CMD_USE == action) { // record & enlist manually entered
 
                 _wpt = (Waypoint) ret[1];
 
                 // add waypoint, possibly save
-                (new YesNoDialog(this, this)).show("Persist custom waypoint?", null);
+                (new YesNoDialog(this, this)).show(Resources.getString(Resources.NAV_MSG_PERSIST_WPT), null);
 
             } else if (Friends.TYPE_IAH == action || Friends.TYPE_MYT == action) { // record & enlist received via SMS
 
@@ -504,17 +514,17 @@ public final class Waypoints extends List
                                 // don't bother
                                 break;
                             case GpxTracklog.CODE_WAYPOINT_INSERTED:
-                                Desktop.showConfirmation("Waypoint recorded.", null);
+                                Desktop.showConfirmation(Resources.getString(Resources.NAV_MSG_WPT_RECORDED), null);
                                 break;
                         }
                     }
                 } else {
-                    Desktop.showWarning(result == null ? "Waypoint recording problem?" : (String) result,
+                    Desktop.showWarning(result == null ? Resources.getString(Resources.NAV_MSG_WPT_RECORD_ERROR) : (String) result,
                                         throwable, null);
                 }
             }
         } else {
-            throw new IllegalStateException("Unknown invocation; result = " + result + "; throwable = " + throwable);
+            throw new IllegalArgumentException("Unknown invocation; result = " + result + "; throwable = " + throwable);
         }
     }
 
@@ -528,7 +538,7 @@ public final class Waypoints extends List
         addToStore(USER_CUSTOM_STORE, _wpt, YesNoDialog.YES == answer);
         _wpt = null; // gc hint
         if (YesNoDialog.NO == answer) {
-            Desktop.showConfirmation("Waypoint enlisted.", this);
+            Desktop.showConfirmation(Resources.getString(Resources.NAV_MSG_WPT_ENLISTED), this);
         }
     }
 
@@ -561,7 +571,7 @@ public final class Waypoints extends List
      */
     private void actionListStores() {
         // stores list
-        List l = new List("Waypoints", List.IMPLICIT);
+        List l = new List(Resources.getString(Resources.NAV_STORES), List.IMPLICIT);
         l.addCommand(cmdBack);
         l.setCommandListener(this);
 
@@ -575,7 +585,7 @@ public final class Waypoints extends List
         if (cz.kruch.track.TrackingMIDlet.isFs()) {
 
             // may take some time - start ticker
-            list.setTicker(new Ticker("Listing..."));
+            list.setTicker(new Ticker(Resources.getString(Resources.NAV_MSG_TICKER_LISTING)));
 
             File dir = null;
             try {
@@ -598,7 +608,7 @@ public final class Waypoints extends List
                     }
                 }
             } catch (Throwable t) {
-                Desktop.showError("Failed to list landmark stores", t, this);
+                Desktop.showError(Resources.getString(Resources.NAV_MSG_LIST_STORES_FAILED), t, this);
             } finally {
                 // close dir
                 if (dir != null) {
@@ -617,7 +627,7 @@ public final class Waypoints extends List
         // got anything?
         if (l.size() == 0) {
             // notify user
-            Desktop.showInfo("No landmark stores", this);
+            Desktop.showInfo(Resources.getString(Resources.NAV_MSG_NO_STORES), this);
         } else {
             // list stores
             depth = 1;
@@ -643,7 +653,7 @@ public final class Waypoints extends List
                 file = File.open(Connector.open(Config.getFolderWaypoints() + _storeName, Connector.READ));
 
                 // start ticker
-                list.setTicker(new Ticker("Loading..."));
+                list.setTicker(new Ticker(Resources.getString(Resources.NAV_MSG_TICKER_LOADING)));
 
                 // parse new waypoints
                 int i = _storeName.lastIndexOf('.');
@@ -660,12 +670,12 @@ public final class Waypoints extends List
                 if (wpts == null || wpts.size() == 0) {
 
                     // warn user
-                    Desktop.showWarning("No waypoints found in " + _storeName, null, list);
+                    Desktop.showWarning(Resources.getString(Resources.NAV_MSG_NO_WPTS_FOUND_IN) + " " + _storeName, null, list);
 
                 } else {
 
                     // notify user
-                    Desktop.showInfo(wpts.size() + " waypoints loaded", this);
+                    Desktop.showInfo(wpts.size() + " " + Resources.getString(Resources.NAV_MSG_WPTS_LOADED), this);
 
                     // cache store
                     stores.put(_storeName, wpts);
@@ -676,7 +686,7 @@ public final class Waypoints extends List
 //#endif
 
                 // show error
-                Desktop.showError("Failed to list landmark store", t, this);
+                Desktop.showError(Resources.getString(Resources.NAV_MSG_LIST_STORE_FAILED), t, this);
 
             } finally {
 
@@ -706,14 +716,6 @@ public final class Waypoints extends List
             list = listWaypoints(wpts);
             menu();
         }
-    }
-
-    private void actionStop() {
-        // stop navigation
-        navigator.setNavigateTo(null, -1, -1);
-
-        // update menu
-        menu();
     }
 
     private void listKnown(List l, String storeKey) {
@@ -779,7 +781,7 @@ public final class Waypoints extends List
             Waypoint wpt = (Waypoint) wpts.elementAt(i);
             String name = wpt.getName();
             if (wpts == Desktop.wpts && i == Desktop.wptIdx) {
-                l.append("(*) " + name, null);
+                l.setSelectedIndex(l.append("(*) " + name, null), true);
             } else {
                 l.append(name, null);
             }

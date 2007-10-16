@@ -17,6 +17,7 @@
 package cz.kruch.track.ui;
 
 import cz.kruch.track.event.Callback;
+import cz.kruch.track.Resources;
 
 import javax.microedition.lcdui.List;
 import javax.microedition.lcdui.CommandListener;
@@ -34,14 +35,14 @@ final class ItemSelection extends List implements CommandListener {
     private Displayable next;
 
     public ItemSelection(Displayable next, String title, Callback callback) {
-        this(next, title, "Select", callback);
+        this(next, title, Resources.getString(Resources.DESKTOP_CMD_SELECT), callback);
     }
 
-    public ItemSelection(Displayable next, String title, String selectLabel, Callback callback) {
+    private ItemSelection(Displayable next, String title, String selectLabel, Callback callback) {
         super(cz.kruch.track.TrackingMIDlet.wm ? title + " (TrekBuddy)" : title, List.IMPLICIT);
         this.callback = callback;
         this.next = next;
-        addCommand(new Command("Cancel", Command.BACK, 1));
+        addCommand(new Command(Resources.getString(Resources.CMD_CANCEL), Command.BACK, 1));
         setSelectCommand(new Command(selectLabel, Command.ITEM, 1));
         setCommandListener(this);
     }

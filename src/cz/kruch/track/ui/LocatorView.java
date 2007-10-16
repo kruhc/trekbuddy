@@ -22,6 +22,7 @@ import api.location.Location;
 import cz.kruch.track.configuration.Config;
 import cz.kruch.track.location.Waypoint;
 import cz.kruch.track.util.ExtraMath;
+import cz.kruch.track.Resources;
 
 import javax.microedition.lcdui.Canvas;
 import javax.microedition.lcdui.Graphics;
@@ -33,7 +34,11 @@ import javax.microedition.lcdui.Font;
  * @author Ales Pour <kruhc@seznam.cz>
  */
 final class LocatorView extends View {
-    private static final String MSG_NO_WAYPOINT = "NO WPT";
+    private static String MSG_NO_WAYPOINT;
+
+    static {
+        MSG_NO_WAYPOINT = Resources.getString(Resources.DESKTOP_MSG_NO_WPT);
+    }
 
     public static final int[] RANGES = {
         1000, 500, 250, 100, 50, 25, 10, 5
@@ -578,12 +583,32 @@ final class LocatorView extends View {
     private void drawCompas(final int width2, final int height2, final int fh,
                             Graphics g, final float course, final boolean uptodate) {
         final int[][] triangle = this.triangle;
+        final int[] xy = this.vertex;
 
+/*
         triangle[0][0] = width2 - 7;
         triangle[0][1] = height2;
         triangle[1][0] = width2;
         triangle[1][1] = dy + lineLength - fh;
         triangle[2][0] = width2 + 7;
+        triangle[2][1] = height2;
+*/
+        /* nicer variant of the above */
+        triangle[0][0] = width2;
+        triangle[0][1] = height2;
+        triangle[1][0] = width2;
+        triangle[1][1] = dy + lineLength - fh;
+        triangle[2][0] = width2 + 7;
+        triangle[2][1] = height2;
+
+        g.setColor(0x00909090);
+        drawTriangle(g, course, triangle);
+
+        triangle[0][0] = width2 - 7;
+        triangle[0][1] = height2;
+        triangle[1][0] = width2;
+        triangle[1][1] = dy + lineLength - fh;
+        triangle[2][0] = width2;
         triangle[2][1] = height2;
 
         g.setColor(0x00707070);
@@ -591,23 +616,59 @@ final class LocatorView extends View {
 
         triangle[0][0] = dx + fh;
         triangle[0][1] = height2;
-        triangle[1][0] = triangle[0][0] + 7;
-        triangle[1][1] = height2 - 4;
+        triangle[1][0] = triangle[0][0] + 9;
+        triangle[1][1] = height2 - 3;
         triangle[2][0] = triangle[1][0];
-        triangle[2][1] = height2 + 4;
+        triangle[2][1] = height2 + 3;
 
         drawTriangle(g, course, triangle);
 
         triangle[0][0] = dx + lineLength - fh;
         triangle[0][1] = height2;
-        triangle[1][0] = triangle[0][0] - 7;
-        triangle[1][1] = height2 - 4;
+        triangle[1][0] = triangle[0][0] - 9;
+        triangle[1][1] = height2 - 3;
         triangle[2][0] = triangle[1][0];
-        triangle[2][1] = height2 + 4;
+        triangle[2][1] = height2 + 3;
 
         drawTriangle(g, course, triangle);
+/*
+        xy[0] = dx + fh;
+        xy[1] = height2;
+        if (course > 1F) {
+            transform(center, course, xy);
+        }
+        g.drawLine(center[0], center[1], xy[0], xy[1]);
 
+        xy[0] = dx + lineLength - fh;
+        xy[1] = height2;
+        if (course > 1F) {
+            transform(center, course, xy);
+        }
+        g.drawLine(center[0], center[1], xy[0], xy[1]);
+*/
+
+/*
         triangle[0][0] = width2 - 7;
+        triangle[0][1] = height2;
+        triangle[1][0] = width2;
+        triangle[1][1] = dy + fh;
+        triangle[2][0] = width2 + 7;
+        triangle[2][1] = triangle[0][1];
+*/
+        /* nicer variant of the above */
+        triangle[0][0] = width2 - 7;
+        triangle[0][1] = height2;
+        triangle[1][0] = width2;
+        triangle[1][1] = dy + fh;
+        triangle[2][0] = width2;
+        triangle[2][1] = triangle[0][1];
+
+        if (uptodate) {
+            g.setColor(0x00A00000);
+        }
+        drawTriangle(g, course, triangle);
+
+        triangle[0][0] = width2;
         triangle[0][1] = height2;
         triangle[1][0] = width2;
         triangle[1][1] = dy + fh;
@@ -615,7 +676,7 @@ final class LocatorView extends View {
         triangle[2][1] = triangle[0][1];
 
         if (uptodate) {
-            g.setColor(0x00A00000);
+            g.setColor(0x00D00000);
         }
         drawTriangle(g, course, triangle);
     }

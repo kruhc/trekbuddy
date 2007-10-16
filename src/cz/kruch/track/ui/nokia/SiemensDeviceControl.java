@@ -16,6 +16,8 @@
 
 package cz.kruch.track.ui.nokia;
 
+import cz.kruch.track.Resources;
+
 /**
  * Device control implementation for Siemens phones.
  *
@@ -35,7 +37,7 @@ final class SiemensDeviceControl extends DeviceControl {
                 backlight = 0;
                 com.siemens.mp.game.Light.setLightOff();
             }
-            confirm("Backlight " + (backlight == 0 ? "off" : "on"));
+            confirm(backlight == 0 ? Resources.getString(Resources.DESKTOP_MSG_BACKLIGHT_OFF) : Resources.getString(Resources.DESKTOP_MSG_BACKLIGHT_ON));
         } catch (Throwable t) {
         }
     }

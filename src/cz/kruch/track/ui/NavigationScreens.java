@@ -16,7 +16,6 @@
 
 package cz.kruch.track.ui;
 
-import cz.kruch.track.AssertionFailedException;
 import cz.kruch.track.util.Mercator;
 import cz.kruch.track.util.ExtraMath;
 import cz.kruch.track.util.SimpleCalendar;
@@ -29,6 +28,8 @@ import javax.microedition.io.Connector;
 
 import api.location.QualifiedCoordinates;
 import api.location.Location;
+import api.location.CartesianCoordinates;
+import api.location.ProjectionSetup;
 import api.file.File;
 
 import java.io.IOException;
@@ -198,7 +199,7 @@ public final class NavigationScreens {
     public static Image createImage(InputStream in) throws IOException {
         // assertion
         if (in == null) {
-            throw new AssertionFailedException("Image stream is null");
+            throw new IllegalArgumentException("Image stream is null");
         }
 
         Image image = Image.createImage(in);
@@ -270,7 +271,7 @@ public final class NavigationScreens {
                     break;
                 default:
                     // should never happen
-                    throw new AssertionFailedException("Course over 360?");
+                    throw new IllegalArgumentException("Course over 360?");
             }
             graphics.drawRegion(courses,
                                 ci * arrowSize, 0, arrowSize, arrowSize,
@@ -373,7 +374,7 @@ public final class NavigationScreens {
     }
 
     public static StringBuffer toStringBuffer(QualifiedCoordinates qc, StringBuffer sb) {
-        if (Config.useGridFormat && (Mercator.isGrid())) {
+        if (Config.useGridFormat && (isGrid())) {
             toGrid(qc, sb);
         } else if (Config.useUTM) {
             toUTM(qc, sb);
@@ -389,8 +390,12 @@ public final class NavigationScreens {
         return sb;
     }
 
+    private static boolean isGrid() {
+        return ProjectionSetup.contextProjection instanceof Mercator.ProjectionSetup && !api.location.ProjectionSetup.PROJ_MERCATOR.equals(ProjectionSetup.contextProjection.name);
+    }
+    
     private static StringBuffer toGrid(QualifiedCoordinates qc, StringBuffer sb) {
-        Mercator.Coordinates gridCoords = Mercator.LLtoGrid(qc);
+        CartesianCoordinates gridCoords = Mercator.LLtoGrid(qc);
         if (gridCoords.zone != null) {
             sb.append(gridCoords.zone).append(' ');
         }
@@ -399,20 +404,20 @@ public final class NavigationScreens {
         sb.append(' ');
         zeros(sb, gridCoords.northing, 10000);
         NavigationScreens.append(sb, ExtraMath.round(gridCoords.northing));
-        Mercator.Coordinates.releaseInstance(gridCoords);
+        CartesianCoordinates.releaseInstance(gridCoords);
 
         return sb;
     }
 
     private static StringBuffer toUTM(QualifiedCoordinates qc, StringBuffer sb) {
-        Mercator.Coordinates utmCoords = Mercator.LLtoUTM(qc);
+        CartesianCoordinates utmCoords = Mercator.LLtoUTM(qc);
         sb.append(utmCoords.zone).append(' ');
         sb.append('E').append(' ');
         NavigationScreens.append(sb, ExtraMath.round(utmCoords.easting));
         sb.append(' ');
         sb.append('N').append(' ');
         NavigationScreens.append(sb, ExtraMath.round(utmCoords.northing));
-        Mercator.Coordinates.releaseInstance(utmCoords);
+        CartesianCoordinates.releaseInstance(utmCoords);
 
         return sb;
     }

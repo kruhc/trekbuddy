@@ -19,6 +19,7 @@ package cz.kruch.track.fun;
 import cz.kruch.track.event.Callback;
 import cz.kruch.track.configuration.Config;
 import cz.kruch.track.ui.Desktop;
+import cz.kruch.track.Resources;
 
 import javax.microedition.lcdui.CommandListener;
 import javax.microedition.lcdui.Command;
@@ -94,9 +95,9 @@ public final class Camera implements CommandListener, PlayerListener/*, Runnable
             }
 
             // create form
-            Form form = new Form("Capture");
-            form.addCommand(new Command("Close", Command.BACK, 1));
-            form.addCommand(new Command("Capture", Command.SCREEN, 1));
+            Form form = new Form("Camera");
+            form.addCommand(new Command(Resources.getString(Resources.CMD_CANCEL), Command.BACK, 1));
+            form.addCommand(new Command(Resources.getString(Resources.NAV_CMD_TAKE), Command.SCREEN, 1));
             form.setCommandListener(this);
 
             // create view finder item

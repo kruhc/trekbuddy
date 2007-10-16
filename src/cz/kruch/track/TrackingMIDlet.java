@@ -16,15 +16,9 @@
 
 package cz.kruch.track;
 
-import cz.kruch.track.configuration.Config;
-
 import javax.microedition.midlet.MIDlet;
 import javax.microedition.midlet.MIDletStateChangeException;
 import javax.microedition.lcdui.Display;
-import javax.microedition.io.Connector;
-import java.util.Hashtable;
-import java.io.IOException;
-import java.io.InputStream;
 
 /**
  * Main MIDlet.
@@ -42,7 +36,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
     private static String flags;
 
     public static boolean jsr82, jsr120, jsr135, jsr179, motorola179, comm;
-    public static boolean sonyEricsson, nokia, siemens, wm, palm, rim;
+    public static boolean sonyEricsson, nokia, siemens, wm, palm, rim, symbian;
     public static boolean sxg75, a780, s65;
 
     // diagnostics
@@ -135,53 +129,24 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
 //#endif
         } catch (Throwable t) {
         }
-
-        // setup environment
-        if (hasFlag("fs_skip_bug")) {
+        try {
+            Class.forName("com.symbian.midp.runtime.MIDletScheduler");
+            TrackingMIDlet.symbian = true;
 //#ifdef __LOG__
-            System.out.println("* fs skip-bug feature on");
+            System.out.println("* Symbian");
 //#endif
-            com.ice.tar.TarInputStream.useSkipBug = true;
+        } catch (Throwable t) {
         }
-/*
-        if (hasFlag("fs_no_available_lie")) {
-//#ifdef __LOG__
-            System.out.println("* fs no-available-lie feature on");
-//#endif
-            cz.kruch.j2se.io.BufferedInputStream.useAvailableLie = false;
-        }
-*/
-        if (hasFlag("fs_no_reset") || sxg75) {
-//#ifdef __LOG__
-            System.out.println("* fs no-reset feature on");
-//#endif
-            cz.kruch.track.maps.Map.useReset = false;
-        }
-        if (hasFlag("ui_no_partial_flush") || sxg75 || a780 || siemens || wm || palm) {
-//#ifdef __LOG__
-            System.out.println("* ui no-partial-flush feature on");
-//#endif
-            cz.kruch.track.ui.Desktop.partialFlush = false;
-        }
-//#ifdef __S65__
-        if (s65) {
-/*
-            cz.kruch.j2se.io.BufferedInputStream.useAvailableLie = false;
-*/
-            com.ice.tar.TarInputStream.useSkipBug = true;
-        }
-//#endif
     }
 
     private boolean running;
     private cz.kruch.track.ui.Desktop desktop;
 
     protected void startApp() throws MIDletStateChangeException {
-        if (running) {
-            return;
+        if (!running) {
+            running = true;
+            (new Thread(this)).start();
         }
-        running = true;
-        (new Thread(this)).start();
     }
 
     protected void pauseApp() {
@@ -246,7 +211,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         // L10n
         int localized = 0;
         try {
-            localized = localization();
+            localized = Resources.initialize();
         } catch (Throwable t) {
 //#ifdef __LOG__
             t.printStackTrace();
@@ -262,6 +227,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         cz.kruch.track.configuration.Config.useDatum(cz.kruch.track.configuration.Config.geoDatum);
         cz.kruch.track.ui.nokia.DeviceControl.initialize();
         cz.kruch.track.ui.Waypoints.initialize(desktop);
+        cz.kruch.track.util.Mercator.initialize();
 
         // init environment from configuration
 /*
@@ -270,6 +236,25 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         System.out.println("* use available lie? " + cz.kruch.j2se.io.BufferedInputStream.useAvailableLie);
 //#endif
 */
+        // setup environment
+        if (hasFlag("fs_skip_bug") || s65) {
+//#ifdef __LOG__
+            System.out.println("* fs skip-bug feature on");
+//#endif
+            com.ice.tar.TarInputStream.useSkipBug = true;
+        }
+        if (hasFlag("fs_no_reset") || sxg75) {
+//#ifdef __LOG__
+            System.out.println("* fs no-reset feature on");
+//#endif
+            cz.kruch.track.maps.Map.useReset = false;
+        }
+        if (hasFlag("ui_no_partial_flush") || sxg75 || a780 || siemens || wm || palm) {
+//#ifdef __LOG__
+            System.out.println("* ui no-partial-flush feature on");
+//#endif
+            cz.kruch.track.ui.Desktop.partialFlush = false;
+        }
 
         // custom device handling
         if (getAppProperty(JAD_GPS_CONNECTION_URL) != null) {
@@ -327,150 +312,5 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
 
     public static boolean supportsVideoCapture() {
         return jsr135 && "true".equals(System.getProperty("supports.video.capture"));
-    }
-
-    /*
-     * L10n.
-     */
-
-    public static final String MENU_START       = "menu.start";
-    public static final String MENU_STOP        = "menu.stop";
-    public static final String MENU_PAUSE       = "menu.pause";
-    public static final String MENU_CONTINUE    = "menu.continue";
-    public static final String MENU_LOADMAP     = "menu.loadmap";
-    public static final String MENU_LOADATLAS   = "menu.loadatlas";
-    public static final String MENU_SETTINGS    = "menu.settings";
-    public static final String MENU_INFO        = "menu.info";
-    public static final String MENU_EXIT        = "menu.exit";
-
-    private static final Hashtable table = new Hashtable(16);
-
-    private static int localization() throws IOException {
-        int result = 0;
-
-        InputStream in = null;
-        api.file.File file = null;
-        try {
-            file = api.file.File.open(Connector.open(Config.getFolderResources() + "language.txt", Connector.READ));
-            if (file.exists()) {
-                in = file.openInputStream();
-                result++;
-            }
-        } catch (Throwable t) {
-            // ignore
-        } finally {
-            if (file != null) {
-                try {
-                    file.close();
-                } catch (IOException e) {
-                    // ignore
-                }
-                file = null;
-            }
-        }
-        if (in == null) {
-            in = TrackingMIDlet.class.getResourceAsStream("/resources/language.txt");
-        }
-
-        cz.kruch.track.io.LineReader reader = null;
-        StringBuffer sb = null;
-
-        try {
-            reader = new cz.kruch.track.io.LineReader(in);
-            String entry = reader.readLine(false);
-            while (entry != null) {
-                if (!entry.startsWith("#")) {
-                    final int i = entry.indexOf('=');
-                    if (i > -1) {
-                        String key = entry.substring(0, i);
-                        String value = entry.substring(i + 1);
-                        if (value.indexOf('\\') > -1) {
-                            if (sb == null) {
-                                sb = new StringBuffer(24);
-                            }
-                            try {
-                                value = convert(value, sb);
-                            } catch (Exception e) {
-                                // ignore
-                            }
-                        }
-                        table.put(key, value);
-                    }
-                }
-                entry = reader.readLine(false);
-            }
-        } finally {
-            // close reader (closes the file stream)
-            if (reader != null) {
-                try {
-                    reader.close();
-                } catch (IOException e) {
-                    // ignore
-                }
-            }
-        }
-
-        return result;
-    }
-
-    public static String resolve(String key) {
-        String value = (String) table.get(key);
-        if (value == null) {
-            return key;
-        }
-        return value;
-    }
-
-    private static String convert(String value, StringBuffer sb) {
-        sb.delete(0, sb.length());
-        for (int N = value.length(), i = 0; i < N; ) {
-            char c = value.charAt(i++);
-            if (c == '\\') {
-                c = value.charAt(i++);
-                if (c == 'u') {
-                    int unicode = 0;
-        		    for (int j = 4; --j >= 0; ) {
-		                c = value.charAt(i++);
-                        switch (c) {
-                            case '0':
-                            case '1':
-                            case '2':
-                            case '3':
-                            case '4':
-                            case '5':
-                            case '6':
-                            case '7':
-                            case '8':
-                            case '9':
-                                unicode = (unicode << 4) + c - '0';
-                            break;
-                            case 'a':
-                            case 'b':
-                            case 'c':
-                            case 'd':
-                            case 'e':
-                            case 'f':
-                                unicode = (unicode << 4) + 10 + c - 'a';
-                            break;
-                            case 'A':
-                            case 'B':
-                            case 'C':
-                            case 'D':
-                            case 'E':
-                            case 'F':
-                                unicode = (unicode << 4) + 10 + c - 'A';
-                            break;
-                            default:
-                                throw new IllegalArgumentException("Malformed \\uxxxx encoding.");
-                        }
-                    }
-                    sb.append((char) unicode);
-                } else {
-                    sb.append('\\').append(c);
-                }
-            } else
-                sb.append(c);
-        }
-        return sb.toString();
     }
 }

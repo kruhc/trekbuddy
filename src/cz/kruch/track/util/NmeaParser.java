@@ -65,20 +65,22 @@ public final class NmeaParser {
                         record.timestamp = parseTime(token);
                     } break;
                     case 2: {
+// taken from RMC
 //                        record.lat = parseDouble(token.array, token.begin /* + 0*/, 2) + parseDouble(token.array, token.begin + 2, token.length - 2) / 60D;
                     } break;
                     case 3: {
-/*
+/* taken from RMC
                         if (token.array[token.begin] == 'S') {
                             record.lat *= -1;
                         }
 */
                     } break;
                     case 4: {
+// taken from RMC
 //                        record.lon = parseDouble(token.array, token.begin /* + 0*/, 3) + parseDouble(token.array, token.begin + 3, token.length - 3) / 60D;
                     } break;
                     case 5: {
-/*
+/* taken from RMC
                         if (token.array[token.begin] == 'W') {
                             record.lon *= -1;
                         }
@@ -128,7 +130,6 @@ public final class NmeaParser {
                 }
             }
             index++;
-            token = null; // gc hint
         }
 
         return record;
@@ -167,7 +168,9 @@ public final class NmeaParser {
                         record.status = token.array[token.begin];
                     } break;
                     case 3: {
-                        record.lat = CharArrayTokenizer.parseDouble(token.array, token.begin /* + 0*/, 2) + CharArrayTokenizer.parseDouble(token.array, token.begin + 2, token.length - 2) / 60D;
+                        if (record.status == 'A') {
+                            record.lat = CharArrayTokenizer.parseDouble(token.array, token.begin /* + 0*/, 2) + CharArrayTokenizer.parseDouble(token.array, token.begin + 2, token.length - 2) / 60D;
+                        }
                     } break;
                     case 4: {
                         if (token.array[token.begin] == 'S') {
@@ -175,7 +178,9 @@ public final class NmeaParser {
                         }
                     } break;
                     case 5: {
-                        record.lon = CharArrayTokenizer.parseDouble(token.array, token.begin /* + 0*/, 3) + CharArrayTokenizer.parseDouble(token.array, token.begin + 3, token.length - 3) / 60D;
+                        if (record.status == 'A') {
+                            record.lon = CharArrayTokenizer.parseDouble(token.array, token.begin /* + 0*/, 3) + CharArrayTokenizer.parseDouble(token.array, token.begin + 3, token.length - 3) / 60D;
+                        }
                     } break;
                     case 6: {
                         if (token.array[token.begin] == 'W') {
@@ -212,7 +217,6 @@ public final class NmeaParser {
                 }
             }
             index++;
-            token = null; // gc hint
         }
 
         return record;
@@ -283,6 +287,7 @@ public final class NmeaParser {
 
         public void invalidate() {
             this.timestamp = -1;
+            this.lat = this.lon = Double.NaN;
             this.fix = this.sat = -1;
             this.hdop = this.speed = this.angle = -1F;
             this.altitude = Float.NaN;

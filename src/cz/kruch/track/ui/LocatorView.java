@@ -34,7 +34,7 @@ import javax.microedition.lcdui.Font;
  * @author Ales Pour <kruhc@seznam.cz>
  */
 final class LocatorView extends View {
-    private static String MSG_NO_WAYPOINT;
+    private static final String MSG_NO_WAYPOINT;
 
     static {
         MSG_NO_WAYPOINT = Resources.getString(Resources.DESKTOP_MSG_NO_WPT);
@@ -128,7 +128,7 @@ final class LocatorView extends View {
         return isVisible ? Desktop.MASK_ALL : Desktop.MASK_NONE;
     }
 
-    public int handleAction(int action, boolean repeated) {
+    public int handleAction(final int action, final boolean repeated) {
         if (repeated) {
             return 0;
         }
@@ -182,15 +182,17 @@ final class LocatorView extends View {
             Location l = array[i];
             if (l != null) {
                 QualifiedCoordinates qc = l.getQualifiedCoordinates();
-                final float accuracy = qc.getAccuracy();
-                final float w = 5F / accuracy;
-                accuracySum += accuracy;
-//                satSum += l.getSat();
-                latAvg += qc.getLat() * w;
-                lonAvg += qc.getLon() * w;
-//                altAvg += qc.getAlt();
-                wSum += w;
-                c++;
+                final float hAccuracy = qc.getHorizontalAccuracy();
+                if (hAccuracy != 0F && !Float.isNaN(hAccuracy)) {
+                    final float w = 5F / hAccuracy;
+                    accuracySum += hAccuracy;
+//                  satSum += l.getSat();
+                    latAvg += qc.getLat() * w;
+                    lonAvg += qc.getLon() * w;
+//                  altAvg += qc.getAlt();
+                    wSum += w;
+                    c++;
+                }
             }
         }
         if (c > 0) {
@@ -200,7 +202,7 @@ final class LocatorView extends View {
             QualifiedCoordinates.releaseInstance(coordinatesAvg[0]);
             coordinatesAvg[0] = null; // gc hint
             coordinatesAvg[0] = QualifiedCoordinates.newInstance(latAvg, lonAvg/*, altAvg*/);
-            coordinatesAvg[0].setAccuracy(accuracySum / c);
+            coordinatesAvg[0].setHorizontalAccuracy(accuracySum / c);
 //            satAvg[term] = satSum / c;
         }
 
@@ -297,11 +299,11 @@ final class LocatorView extends View {
         return true;
     }
 
-    public int changeDayNight(int dayNight) {
+    public int changeDayNight(final int dayNight) {
         return isVisible ? Desktop.MASK_ALL : Desktop.MASK_NONE; 
     }
 
-    public void render(Graphics graphics, Font font, int mask) {
+    public void render(final Graphics graphics, final Font font, final int mask) {
         // local references for faster access
         final int w = Desktop.width;
         final int h = Desktop.height;
@@ -382,7 +384,7 @@ final class LocatorView extends View {
             final int[] center = this.center;
 
             // get scales
-            final double v = ((double) RANGES[rangeIdx]) / 111319.490;
+            final double v = ((double) RANGES[rangeIdx]) / 111319.490D;
             final double yScale = ((double) (lineLength >> 1)) / (v);
             final double xScale = ((double) (lineLength >> 1)) / (v / Math.cos(Math.toRadians(latAvg)));
 
@@ -448,11 +450,11 @@ final class LocatorView extends View {
             // draw hdop
             sb.delete(0, sb.length());
             sb.append(NavigationScreens.PLUSMINUS);
-            float accuracy = coordsAvg.getAccuracy();
-            if (accuracy >= 10F) {
-                NavigationScreens.append(sb, (int) accuracy);
+            float hAccuracy = coordsAvg.getHorizontalAccuracy();
+            if (hAccuracy >= 10F) {
+                NavigationScreens.append(sb, (int) hAccuracy);
             } else {
-                NavigationScreens.append(sb, accuracy, 1);
+                NavigationScreens.append(sb, hAccuracy, 1);
             }
             sb.append(' ').append('m');
             l = sb.length();
@@ -506,23 +508,27 @@ final class LocatorView extends View {
                     NavigationScreens.drawWaypoint(graphics, xy[0], xy[1],
                                                    Graphics.LEFT | Graphics.TOP);
                 }
-                NavigationScreens.drawArrow(graphics, arrowa, wHalf, hHalf,
+                NavigationScreens.drawNaviw(graphics, arrowa, wHalf, hHalf,
                                             Graphics.LEFT | Graphics.TOP);
 
                 // construct distance string
                 sb.delete(0, sb.length());
-                if (Config.unitsNautical) {
-                    NavigationScreens.append(sb, distance / 1852F, 0).append(Desktop.DIST_STR_NMI);
-                } else if (Config.unitsImperial) {
-                    NavigationScreens.append(sb, distance / 1609F, 0).append(Desktop.DIST_STR_NMI);
-                } else {
-                    if (distance >= 10000F) { // dist > 10 km
-                        NavigationScreens.append(sb, distance / 1000F, 1).append(Desktop.DIST_STR_KM);
-                    } else if (distance < 5F) {
-                        NavigationScreens.append(sb, distance, 1).append(Desktop.DIST_STR_M);
-                    } else {
-                        NavigationScreens.append(sb, (int) distance).append(Desktop.DIST_STR_M);
-                    }
+                switch (Config.units) {
+                    case Config.UNITS_METRIC: {
+                        if (distance >= 10000F) { // dist > 10 km
+                            NavigationScreens.append(sb, distance / 1000F, 1).append(Desktop.DIST_STR_KM);
+                        } else if (distance < 5F) {
+                            NavigationScreens.append(sb, distance, 1).append(Desktop.DIST_STR_M);
+                        } else {
+                            NavigationScreens.append(sb, (int) distance).append(Desktop.DIST_STR_M);
+                        }
+                    } break;
+                    case Config.UNITS_IMPERIAL: {
+                        NavigationScreens.append(sb, distance / 1609F, 0).append(Desktop.DIST_STR_NMI);
+                    } break;
+                    case Config.UNITS_NAUTICAL: {
+                        NavigationScreens.append(sb, distance / 1852F, 0).append(Desktop.DIST_STR_NMI);
+                    } break;
                 }
                 l = sb.length();
                 sb.getChars(0, l, sbChars, 0);

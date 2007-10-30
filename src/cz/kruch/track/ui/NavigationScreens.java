@@ -77,7 +77,7 @@ public final class NavigationScreens {
      */
 
     public static Image crosshairs;
-    public static Image courses;
+    public static Image courses, navises;
     public static Image waypoint, pois;
     public static Image providers;
     public static Image[] stores;
@@ -87,9 +87,10 @@ public final class NavigationScreens {
 
     // private vars
     private static int arrowSize, arrowSize2;
+    private static int naviwSize, naviwSize2;
     private static int wptSize2;
     private static int poiSize, poiSize2;
-    private static boolean arrowsFull;
+    private static boolean arrowsFull, naviwsFull;
 
     // public (???) vars
     public static int bulletSize;
@@ -99,6 +100,7 @@ public final class NavigationScreens {
         try {
             crosshairs = createImage("/resources/crosshairs.png");
             courses = createImage("/resources/arrows.png");
+            navises = createImage("/resources/naviws.png");
             waypoint = createImage("/resources/wpt.png");
             pois = createImage("/resources/pois.png");
             providers = createImage("/resources/bullets.png");
@@ -115,11 +117,14 @@ public final class NavigationScreens {
         // setup vars
         arrowSize = courses.getHeight();
         arrowSize2 = arrowSize >> 1;
+        naviwSize = navises.getHeight();
+        naviwSize2 = naviwSize >> 1;
         wptSize2 = waypoint.getWidth() >> 1;
         bulletSize = providers.getHeight(); // = 10
         poiSize = pois.getHeight();
         poiSize2 = poiSize >> 1;
         arrowsFull = courses.getWidth() == courses.getHeight() * 36;
+        naviwsFull = navises.getWidth() == navises.getHeight() * 36;
     }
 
     public static int customize() throws IOException {
@@ -141,6 +146,16 @@ public final class NavigationScreens {
             arrowSize = courses.getHeight();
             arrowSize2 = arrowSize >> 1;
             arrowsFull = courses.getWidth() == courses.getHeight() * 36;
+        }
+        image = loadImage("naviws.png");
+        if (image != null) {
+            navises = null;
+            navises = image;
+            System.gc();
+            i++;
+            naviwSize = navises.getHeight();
+            naviwSize2 = naviwSize >> 1;
+            naviwsFull = navises.getWidth() == navises.getHeight() * 36;
         }
         image = loadImage("wpt.png");
         if (image != null) {
@@ -279,6 +294,65 @@ public final class NavigationScreens {
         }
     }
 
+    public static void drawNaviw(Graphics graphics, final float course,
+                                 final int x, final int y, final int anchor) {
+        final int courseInt = ((int) course) % 360;
+
+        if (naviwsFull) {
+            int ci = courseInt / 10;
+            int cr = courseInt % 10;
+            if (cr > 5) {
+                ci++;
+                if (ci == 36) {
+                    ci = 0;
+                }
+            }
+            graphics.setClip(x - naviwSize2, y - naviwSize2, naviwSize, naviwSize);
+            graphics.drawImage(navises,
+                               x - ci * naviwSize - naviwSize2, y - naviwSize2,
+                               anchor);
+            graphics.setClip(0, 0, Desktop.width, Desktop.height);
+        } else {
+            int cr = courseInt / 90;
+            int cwo = courseInt % 90;
+            int ci = (cwo + 5) / 10;
+            if (ci == 9) {
+                ci = 0;
+                cr++;
+            }
+
+            int ti;
+
+            switch (cr) {
+                case 0:
+                    ti = Sprite.TRANS_NONE;
+                    break;
+                case 1:
+//                ti = Sprite.TRANS_ROT90;
+                    ci = 9 /*- 1*/ - ci;
+                    ti = Sprite.TRANS_MIRROR_ROT180;
+                    break;
+                case 2:
+                    ti = Sprite.TRANS_ROT180;
+                    break;
+                case 3:
+//                ti = Sprite.TRANS_ROT270;
+                    ci = 9 /*- 1*/ - ci;
+                    ti = Sprite.TRANS_MIRROR;
+                    break;
+                case 4:
+                    ti = Sprite.TRANS_NONE;
+                    break;
+                default:
+                    // should never happen
+                    throw new IllegalArgumentException("Course over 360?");
+            }
+            graphics.drawRegion(navises,
+                                ci * naviwSize, 0, naviwSize, naviwSize,
+                                ti, x - naviwSize2, y - naviwSize2, anchor);
+        }
+    }
+
     public static void drawWaypoint(Graphics graphics, final int x, final int y,
                                     final int anchor) {
         graphics.drawImage(waypoint, x - wptSize2, y - wptSize2, anchor);
@@ -316,7 +390,6 @@ public final class NavigationScreens {
         }
     }
 
-    // TODO move to NavigationScreens
     public static StringBuffer toStringBuffer(Location l, StringBuffer sb) {
 /*
         DATE.setTime(timestamp);
@@ -325,9 +398,8 @@ public final class NavigationScreens {
         final int min = CALENDAR.get(Calendar.MINUTE);
 */
         CALENDAR.setTimeSafe(l.getTimestamp());
-
-        final int hour = CALENDAR.hour;
-        final int min = CALENDAR.minute;
+        final int hour = CALENDAR.get(Calendar.HOUR_OF_DAY);
+        final int min = CALENDAR.get(Calendar.MINUTE);
 
         if (hour < 10) {
             sb.append('0');
@@ -341,33 +413,32 @@ public final class NavigationScreens {
         if (l.getFix() > 0) {
             final float speed = l.getSpeed();
             final float alt = l.getQualifiedCoordinates().getAlt();
-            if (Config.unitsNautical) {
-                if (speed > -1F) {
-                    append(sb, speed * 3.6F / 1.852F, 1).append(STR_KN);
-                }
-                if (l.getCourse() > -1F) {
-                    append(sb, (int) l.getCourse()).append(SIGN);
-                }
-            } else if (Config.unitsImperial) {
-                if (speed > -1F) {
-                    append(sb, speed * 3.6F / 1.609F, 1).append(STR_MPH);
-                }
-                if (!Float.isNaN(alt)) {
-                    append(sb, alt, 1).append(STR_M);
-                }
-            } else {
-                if (speed > -1F) {
-                    NavigationScreens.append(sb, speed * 3.6F, 1).append(STR_KMH);
-                }
-                if (!Float.isNaN(alt)) {
-                    append(sb, alt, 1).append(STR_M);
-                }
+            switch (Config.units) {
+                case Config.UNITS_METRIC: {
+                    if (speed > -1F) {
+                        NavigationScreens.append(sb, speed * 3.6F, 1).append(STR_KMH);
+                    }
+                    if (!Float.isNaN(alt)) {
+                        append(sb, alt, 1).append(STR_M);
+                    }
+                } break;
+                case Config.UNITS_IMPERIAL: {
+                    if (speed > -1F) {
+                        append(sb, speed * 3.6F / 1.609F, 1).append(STR_MPH);
+                    }
+                    if (!Float.isNaN(alt)) {
+                        append(sb, alt, 1).append(STR_M);
+                    }
+                } break;
+                case Config.UNITS_NAUTICAL: {
+                    if (speed > -1F) {
+                        append(sb, speed * 3.6F / 1.852F, 1).append(STR_KN);
+                    }
+                    if (l.getCourse() > -1F) {
+                        append(sb, (int) l.getCourse()).append(SIGN);
+                    }
+                } break;
             }
-/* rendered by OSD directly
-            if (sat > -1) {
-                sb.append(sat).append('*');
-            }
-*/
         }
 
         return sb;
@@ -553,7 +624,7 @@ public final class NavigationScreens {
 
         return sb;
     }
-    
+
     public static StringBuffer append(StringBuffer sb, double value, int precision) {
         if (value < 0D) {
             sb.append('-');

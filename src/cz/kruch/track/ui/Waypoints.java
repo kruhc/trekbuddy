@@ -31,6 +31,7 @@ import javax.microedition.lcdui.Displayable;
 import javax.microedition.lcdui.List;
 import javax.microedition.lcdui.Ticker;
 import javax.microedition.lcdui.Choice;
+import javax.microedition.lcdui.Image;
 import javax.microedition.io.Connector;
 
 import api.location.QualifiedCoordinates;
@@ -80,7 +81,6 @@ public final class Waypoints extends List
     private static final String SUFFIX_GPX = ".gpx";
     private static final String SUFFIX_LOC = ".loc";
 
-    private static final String TAG_RTE     = "rte";
     private static final String TAG_RTEPT   = "rtept";
     private static final String TAG_WPT     = "wpt";
     private static final String TAG_TRKPT   = "trkpt";
@@ -109,9 +109,9 @@ public final class Waypoints extends List
 
     private /*Navigator*/Desktop navigator;
 
-    private short depth;
-    private List list;
+    private int depth;
     private int[] idx;
+    private List list;
 
     private Command cmdBack, cmdClose;
     private Command cmdNavigateTo, cmdNavigateAlong, cmdNavigateBack, cmdSetAsCurrent, cmdGoTo;
@@ -221,7 +221,7 @@ public final class Waypoints extends List
         // let's start with basic menu
         depth = 0;
         list = this;
-        menu();
+        menu(0);
     }
 
     public void showCurrent() {
@@ -231,12 +231,13 @@ public final class Waypoints extends List
             list = this;
         } else {
             depth = 2;
-            list = listWaypoints(currentWpts);
+            list = listWaypoints(currentName, currentWpts);
         }
-        menu();
+        menu(depth);
     }
 
-    private void menu() {
+    private void menu(final int depth) {
+        this.depth = depth;
         switch (depth) {
             case 0: {
                 // clear list
@@ -256,15 +257,12 @@ public final class Waypoints extends List
                     append(ITEM_STOP, null);
                 }
             } break;
-            case 1: {
-            } break;
-            case 2: {
-            } break;
-        }
-
-        // set last known choice
-        if (idx[depth] < size()) {
-            list.setSelectedIndex(idx[depth], true);
+            default: {
+                // set last known choice
+                if (idx[depth] < list.size()) {
+                    list.setSelectedIndex(idx[depth], true);
+                }
+            }
         }
 
         // show list
@@ -279,7 +277,7 @@ public final class Waypoints extends List
                 switch (--depth) {
                     case 0: {
                         list = this;
-                        menu();
+                        menu(depth);
                     } break;
                     case 1: {
                         onBackground(null);
@@ -538,7 +536,7 @@ public final class Waypoints extends List
         addToStore(USER_CUSTOM_STORE, _wpt, YesNoDialog.YES == answer);
         _wpt = null; // gc hint
         if (YesNoDialog.NO == answer) {
-            Desktop.showConfirmation(Resources.getString(Resources.NAV_MSG_WPT_ENLISTED), this);
+            Desktop.showConfirmation(Resources.getString(Resources.NAV_MSG_WPT_ENLISTED), list);
         }
     }
 
@@ -570,6 +568,59 @@ public final class Waypoints extends List
      * Lists landmark stores.
      */
     private void actionListStores() {
+        Vector vFile = new Vector(64, 64);
+        Vector vMem = new Vector(4);
+
+        // add memory stores
+        listKnown(vMem, USER_RECORDED_STORE);
+        listKnown(vMem, USER_CUSTOM_STORE);
+        listKnown(vMem, USER_FRIENDS_STORE);
+        listKnown(vMem, USER_INJAR_STORE);
+
+        // list persistent stores
+        if (cz.kruch.track.TrackingMIDlet.isFs()) {
+
+            // may take some time - start ticker
+            list.setTicker(new Ticker(Resources.getString(Resources.NAV_MSG_TICKER_LISTING)));
+
+            File dir = null;
+            try {
+                // open stores directory
+                dir = File.open(Connector.open(Config.getFolderWaypoints(), Connector.READ));
+
+                // list file stores
+                if (dir.exists()) {
+                    for (Enumeration e = dir.list(); e.hasMoreElements(); ) {
+                        String name = (String) e.nextElement();
+                        int i = name.lastIndexOf('.');
+                        if (i > -1) {
+                            String ext = name.substring(i).toLowerCase();
+                            if (ext.equals(SUFFIX_GPX) || ext.equals(SUFFIX_LOC)) {
+                                if (!logNames.contains(name)) {
+                                    vFile.addElement(name);
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch (Throwable t) {
+                Desktop.showError(Resources.getString(Resources.NAV_MSG_LIST_STORES_FAILED), t, null);
+            } finally {
+                // close dir
+                if (dir != null) {
+                    try {
+                        dir.close();
+                    } catch (IOException e) {
+                        // ignore
+                    }
+                }
+
+                // remove ticker
+                list.setTicker(null);
+            }
+        }
+
+/*
         // stores list
         List l = new List(Resources.getString(Resources.NAV_STORES), List.IMPLICIT);
         l.addCommand(cmdBack);
@@ -623,16 +674,47 @@ public final class Waypoints extends List
                 list.setTicker(null);
             }
         }
+*/
 
         // got anything?
-        if (l.size() == 0) {
+        if (vFile.size() == 0 && vMem.size() == 0) {
+
             // notify user
             Desktop.showInfo(Resources.getString(Resources.NAV_MSG_NO_STORES), this);
+
         } else {
+
+            // stores list
+            final int nFile = vFile.size();
+            final int nMem = vMem.size();
+            final int N = nFile + nMem;
+            Image[] imgs = new Image[N];
+            String[] strs = new String[N];
+            vFile.copyInto(strs);
+            vFile.removeAllElements();
+            vFile = null; // gc hint
+            for (int i = 0; i < nMem; i++) {
+                strs[nFile + i] = " "; // 'empty' filename will make space
+                                       // for memory stores at the beginning
+            }
+            FileBrowser.sort(strs);
+            vMem.copyInto(strs);
+            vMem.removeAllElements();
+            vMem = null; // gc hint
+            for (int i = strs.length; --i >= 0; ) {
+                String store = strs[i];
+                if (USER_CUSTOM_STORE.equals(store) || USER_FRIENDS_STORE.equals(store) || USER_RECORDED_STORE.equals(store) || USER_INJAR_STORE.equals(store)) {
+                    imgs[i] = store.equals(inUseName) ? NavigationScreens.stores[FRAME_MEMA] : NavigationScreens.stores[FRAME_MEM];
+                } else {
+                    imgs[i] = store.equals(inUseName) ? NavigationScreens.stores[FRAME_XMLA] : NavigationScreens.stores[FRAME_XML];
+                }
+            }
+            list = new List(Resources.getString(Resources.NAV_STORES), List.IMPLICIT, strs, imgs);
+            list.addCommand(cmdBack);
+            list.setCommandListener(this);
+
             // list stores
-            depth = 1;
-            list = l;
-            menu();
+            menu(1);
         }
     }
 
@@ -645,8 +727,8 @@ public final class Waypoints extends List
 //#endif
 
         // got store in cache?
-        Vector wpts = (Vector) stores.get(_storeName);
-        if (wpts == null) { // no, load from file
+        Vector wpts = null, wptsCached = (Vector) stores.get(_storeName);
+        if (wptsCached == null) { // no, load from file
             File file = null;
             try {
                 // open file
@@ -666,29 +748,23 @@ public final class Waypoints extends List
                     }
                 }
 
-                // process result
-                if (wpts == null || wpts.size() == 0) {
-
-                    // warn user
-                    Desktop.showWarning(Resources.getString(Resources.NAV_MSG_NO_WPTS_FOUND_IN) + " " + _storeName, null, list);
-
-                } else {
-
-                    // notify user
-                    Desktop.showInfo(wpts.size() + " " + Resources.getString(Resources.NAV_MSG_WPTS_LOADED), this);
-
+                if (wpts != null && wpts.size() > 0) {
                     // cache store
-                    stores.put(_storeName, wpts);
+                    stores.put(new String(_storeName), wpts);
                 }
-            } catch (Throwable t) {
+                
+             } catch (Throwable t) {
 //#ifdef __LOG__
                 t.printStackTrace();
 //#endif
 
                 // show error
-                Desktop.showError(Resources.getString(Resources.NAV_MSG_LIST_STORE_FAILED), t, this);
+                Desktop.showError(Resources.getString(Resources.NAV_MSG_LIST_STORE_FAILED), t, null);
 
             } finally {
+
+                // remove ticker
+                list.setTicker(null);
 
                 // close file
                 if (file != null) {
@@ -699,25 +775,46 @@ public final class Waypoints extends List
                     }
                     file = null; // gc hint
                 }
-
-                // remove ticker
-                list.setTicker(null);
             }
+        } else {
+
+            // used cached
+            wpts = wptsCached;
+
         }
 
-        // show result
-        if (wpts != null && wpts.size() > 0) {
-            // remember store
-            currentWpts = wpts;
-            currentName = _storeName;
+        // process result
+        if (wpts == null || wpts.size() == 0) {
 
-            // list waypoints
-            depth = 2;
-            list = listWaypoints(wpts);
-            menu();
+            // warn user
+            Desktop.showWarning(Resources.getString(Resources.NAV_MSG_NO_WPTS_FOUND_IN) + " " + _storeName, null, null);
+
+        } else {
+
+            try {
+
+                // create list
+                list = listWaypoints(_storeName, wpts);
+
+                // remember current store
+                currentWpts = wpts;
+                currentName = _storeName;
+
+                // notify user (if just loaded)
+                if (wptsCached == null) {
+                    Desktop.showInfo(wpts.size() + " " + Resources.getString(Resources.NAV_MSG_WPTS_LOADED), list);
+                }
+
+                // update menu
+                menu(2);
+
+            } catch (Throwable t) {
+                Desktop.showError(Resources.getString(Resources.NAV_MSG_LIST_STORE_FAILED), t, null);
+            }
         }
     }
 
+/*
     private void listKnown(List l, String storeKey) {
         if (stores.containsKey(storeKey)) {
             if (((Vector) stores.get(storeKey)).size() > 0) {
@@ -725,7 +822,16 @@ public final class Waypoints extends List
             }
         }
     }
-    
+*/
+
+    private void listKnown(Vector vStr, String storeKey) {
+        if (stores.containsKey(storeKey)) {
+            if (((Vector) stores.get(storeKey)).size() > 0) {
+                vStr.addElement(storeKey);
+            }
+        }
+    }
+
     private void addToStore(Object storeKey, Waypoint wpt, final boolean save) {
         // add to store
         ((Vector) stores.get(storeKey)).addElement(wpt);
@@ -762,9 +868,24 @@ public final class Waypoints extends List
         }
     }
 
-    private List listWaypoints(Vector wpts) {
+    private List listWaypoints(String store, Vector wpts) {
+        // prepare list
+        String[] items = new String[wpts.size()];
+        for (int N = wpts.size(), i = 0; i < N; i++) {
+            Waypoint wpt = (Waypoint) wpts.elementAt(i);
+            String name = wpt.getName();
+            if (i == Desktop.wptIdx && wpts == Desktop.wpts) {
+                items[i] = "(*) " + name;
+            } else {
+                items[i] = name;
+            }
+        }
+
         // waypoints list
-        List l = new List(currentName + " (" + currentWpts.size() + ")", List.IMPLICIT);
+        List l = new List(store + " (" + wpts.size() + ")", List.IMPLICIT, items, null);
+        if (wpts == Desktop.wpts) {
+            l.setSelectedIndex(Desktop.wptIdx, true);
+        }
         if (currentWpts == Desktop.wpts && 0 != Desktop.routeDir) {
             l.addCommand(cmdSetAsCurrent);
         } else {
@@ -775,17 +896,6 @@ public final class Waypoints extends List
         l.addCommand(cmdGoTo);
         l.addCommand(cmdBack);
         l.setCommandListener(this);
-
-        // list wpts
-        for (int N = wpts.size(), i = 0; i < N; i++) {
-            Waypoint wpt = (Waypoint) wpts.elementAt(i);
-            String name = wpt.getName();
-            if (wpts == Desktop.wpts && i == Desktop.wptIdx) {
-                l.setSelectedIndex(l.append("(*) " + name, null), true);
-            } else {
-                l.append(name, null);
-            }
-        }
 
         return l;
     }

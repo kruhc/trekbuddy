@@ -34,7 +34,7 @@ import cz.kruch.track.Resources;
  * @author Ales Pour <kruhc@seznam.cz>
  */
 abstract class View {
-    protected static String MSG_NO_POSITION;
+    protected static final String MSG_NO_POSITION;
 
     static {
         MSG_NO_POSITION = Resources.getString(Resources.DESKTOP_MSG_NO_POSITION);
@@ -47,7 +47,7 @@ abstract class View {
         this.navigator = navigator;
     }
 
-    void setVisible(boolean b) {
+    void setVisible(final boolean b) {
         isVisible = b;
     }
 
@@ -109,12 +109,12 @@ abstract class View {
     }
 
     /** @deprecated temporary solution until renderer is improved */
-    protected final void flushGraphics(int x, int y, int width, int height) {
+    protected final void flushGraphics(final int x, final int y, final int width, final int height) {
         gameCanvas.flushGraphics(x, y, width, height);
     }
 
     /** @deprecated temporary solution until renderer is improved */
-    protected final void flushGraphics(int[] clip) {
+    protected final void flushGraphics(final int[] clip) {
         gameCanvas.flushGraphics(clip[0], clip[1], clip[2], clip[3]);
     }
 }

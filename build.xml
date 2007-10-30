@@ -1,9 +1,11 @@
 <?xml version="1.0"?>
 <project name="TrekBuddy" default="generic" basedir=".">
 
-    <property name="version" value="0.9.65"/>
+    <property file="${include.properties}"/>
+
+    <property name="version" value="${product.version}"/>
     <property name="vendor" value="KrUcH"/>
-    <property name="description" value="J2ME GPS application"/>
+    <property name="description" value="GPS Tracking / Navigation"/>
 
     <property name="wtk.cldc.version" value="1.1"/>
     <property name="wtk.midp.version" value="2.0"/>
@@ -165,26 +167,27 @@
     <target name="clean">
         <delete dir="tmp"/>
         <delete includeemptydirs="true" verbose="true">
-          <fileset dir="dist/${dist.dir}" includes="**/*"/>
+          <fileset dir="dist${vendor.postfix}/${dist.dir}" includes="**/*"/>
         </delete>
 <!--
         <delete dir="r:\trekbuddy\tmp"/>
 -->
+        <echo>Prepared for bulding ${version} version in dist${vendor.postfix}/${dist.dir}</echo>
     </target>
 
     <target name="a.pre.generic">
         <mkdir dir="tmp/src"/>
-        <wtkpreprocess srcdir="src" destdir="tmp/src" symbols="__JSR75__,__S65__,__A780__,__A1000__"/>
+        <wtkpreprocess srcdir="src" destdir="tmp/src" symbols="__JSR75__,__S65__,__A780__,__A1000__,__NOKIA__,${pre.extra}"/>
     </target>
 
     <target name="a.pre.std">
         <mkdir dir="tmp/src"/>
-        <wtkpreprocess srcdir="src" destdir="tmp/src" symbols="__JSR75__"/>
+        <wtkpreprocess srcdir="src" destdir="tmp/src" symbols="__JSR75__,${pre.extra}"/>
     </target>
 
     <target name="a.pre.rim">
         <mkdir dir="tmp/src"/>
-        <wtkpreprocess srcdir="src" destdir="tmp/src" symbols="__JSR75__,__RIM__"/>
+        <wtkpreprocess srcdir="src" destdir="tmp/src" symbols="__JSR75__,__RIM__,${pre.extra}"/>
     </target>
 
     <target name="compile.generic" depends="rescompile">
@@ -237,6 +240,7 @@
         <delete file="tmp/src/api/file/Motorola1000File.java"/>
         <delete file="tmp/src/api/file/SiemensFile.java"/>
         <delete file="tmp/src/cz/kruch/track/ui/nokia/NokiaDeviceControl.java"/>
+        <delete file="tmp/src/cz/kruch/track/ui/nokia/S60DeviceControl.java"/>
         <delete file="tmp/src/cz/kruch/track/ui/nokia/SiemensDeviceControl.java"/>
         <delete file="tmp/src/cz/kruch/track/ui/nokia/SonyEricssonDeviceControl.java"/>
         <delete file="tmp/src/cz/kruch/track/location/MotorolaLocationProvider.java"/>
@@ -248,6 +252,7 @@
         <delete file="tmp/src/api/file/SiemensFile.java"/>
         <delete file="tmp/src/api/file/Jsr75File.java"/>
         <delete file="tmp/src/cz/kruch/track/ui/nokia/NokiaDeviceControl.java"/>
+        <delete file="tmp/src/cz/kruch/track/ui/nokia/S60DeviceControl.java"/>
         <delete file="tmp/src/cz/kruch/track/ui/nokia/SiemensDeviceControl.java"/>
         <delete file="tmp/src/cz/kruch/track/ui/nokia/SonyEricssonDeviceControl.java"/>
         <delete file="tmp/src/cz/kruch/track/location/MotorolaLocationProvider.java"/>
@@ -259,6 +264,7 @@
         <delete file="tmp/src/api/file/Motorola1000File.java"/>
         <delete file="tmp/src/api/file/SiemensFile.java"/>
         <delete file="tmp/src/cz/kruch/track/ui/nokia/NokiaDeviceControl.java"/>
+        <delete file="tmp/src/cz/kruch/track/ui/nokia/S60DeviceControl.java"/>
         <delete file="tmp/src/cz/kruch/track/ui/nokia/SiemensDeviceControl.java"/>
         <delete file="tmp/src/cz/kruch/track/ui/nokia/SonyEricssonDeviceControl.java"/>
         <delete file="tmp/src/cz/kruch/track/location/MotorolaLocationProvider.java"/>
@@ -316,20 +322,20 @@
     <target name="delegate">
         <copy file="tmp/trekbuddy${suffix}-obfuscated.jar" todir="r:\trekbuddy\tmp"/>
         <input>Do preverification on Linux....</input>
-        <copy file="r:\trekbuddy\dist\${dist.dir}\trekbuddy${suffix}.jar" todir="dist/${dist.dir}"/>
-        <copy file="r:\trekbuddy\dist\${dist.dir}\trekbuddy${suffix}.jad" todir="dist/${dist.dir}"/>
+        <copy file="r:\trekbuddy\dist${vendor.postfix}\${dist.dir}\trekbuddy${suffix}.jar" todir="dist${vendor.postfix}/${dist.dir}"/>
+        <copy file="r:\trekbuddy\dist${vendor.postfix}\${dist.dir}\trekbuddy${suffix}.jad" todir="dist${vendor.postfix}/${dist.dir}"/>
     </target>
 
     <target name="a.pack.obfuscated">
         <delete>
-          <fileset dir="dist/${dist.dir}" includes="**/*.jar"/>
+          <fileset dir="dist${vendor.postfix}/${dist.dir}" includes="**/*.jar"/>
         </delete>
-        <wtkjad jadfile="dist/${dist.dir}/trekbuddy${suffix}.jad"
-                jarfile="dist/${dist.dir}/trekbuddy${suffix}.jar"
+        <wtkjad jadfile="dist${vendor.postfix}/${dist.dir}/trekbuddy${suffix}.jad"
+                jarfile="dist${vendor.postfix}/${dist.dir}/trekbuddy${suffix}.jar"
                 name="TrekBuddy"
                 vendor="${vendor}"
                 version="${version}">
-            <midlet name="TrekBuddy" class="cz.kruch.track.TrackingMIDlet"/>
+            <midlet name="TrekBuddy" class="cz.kruch.track.TrackingMIDlet" icon="/resources/icon.png"/>
             <attribute name="MIDlet-Description" value="${description}"/>
             <attribute name="MIDlet-Info-URL" value="http://www.trekbuddy.net"/>
             <attribute name="MIDlet-Permissions-Opt" value="javax.microedition.io.Connector.file.read,javax.microedition.io.Connector.file.write,javax.microedition.io.Connector.bluetooth.client,javax.microedition.location.Location,javax.microedition.media.control.VideoControl.getSnapshot,javax.microedition.io.Connector.sms,javax.wireless.messaging.sms.receive,javax.wireless.messaging.sms.send,javax.microedition.io.Connector.comm"/>
@@ -337,8 +343,8 @@
             <attribute name="MicroEdition-Configuration" value="CLDC-1.1"/>
             <attribute name="Nokia-MIDlet-Category" value="Application"/>
         </wtkjad>
-        <wtkpackage jarfile="dist/${dist.dir}/trekbuddy${suffix}.jar"
-                    jadfile="dist/${dist.dir}/trekbuddy${suffix}.jad">
+        <wtkpackage jarfile="dist${vendor.postfix}/${dist.dir}/trekbuddy${suffix}.jar"
+                    jadfile="dist${vendor.postfix}/${dist.dir}/trekbuddy${suffix}.jad">
             <fileset dir="tmp/preverified"/>
             <fileset dir="res">
                 <exclude name="**/language*.txt"/>
@@ -348,22 +354,22 @@
 
     <target name="j9.pack.obfuscated">
         <delete>
-          <fileset dir="dist/${dist.dir}" includes="**/*.jar"/>
+          <fileset dir="dist${vendor.postfix}/${dist.dir}" includes="**/*.jar"/>
         </delete>
-        <wtkjad jadfile="dist/${dist.dir}/trekbuddy${suffix}.jad"
-                jarfile="dist/${dist.dir}/trekbuddy${suffix}.jar"
+        <wtkjad jadfile="dist${vendor.postfix}/${dist.dir}/trekbuddy${suffix}.jad"
+                jarfile="dist${vendor.postfix}/${dist.dir}/trekbuddy${suffix}.jar"
                 name="TrekBuddy"
                 vendor="${vendor}"
                 version="${version}">
-            <midlet name="TrekBuddy" class="cz.kruch.track.TrackingMIDlet"/>
+            <midlet name="TrekBuddy" class="cz.kruch.track.TrackingMIDlet" icon="/resources/icon.png"/>
 		    <attribute name="MIDlet-Description" value="${description}"/>
 		    <attribute name="MIDlet-Info-URL" value="http://www.trekbuddy.net"/>
             <attribute name="MIDlet-Permissions-Opt" value="javax.microedition.io.Connector.file.read,javax.microedition.io.Connector.file.write,javax.microedition.io.Connector.bluetooth.client,javax.microedition.location.Location,javax.microedition.media.control.VideoControl.getSnapshot,javax.microedition.io.Connector.sms,javax.wireless.messaging.sms.receive,javax.wireless.messaging.sms.send,javax.microedition.io.Connector.comm"/>
             <attribute name="MicroEdition-Profile" value="MIDP-2.0"/>
             <attribute name="MicroEdition-Configuration" value="CLDC-1.1"/>
         </wtkjad>
-        <wtkpackage jarfile="dist/${dist.dir}/trekbuddy${suffix}.jar"
-                    jadfile="dist/${dist.dir}/trekbuddy${suffix}.jad">
+        <wtkpackage jarfile="dist${vendor.postfix}/${dist.dir}/trekbuddy${suffix}.jar"
+                    jadfile="dist${vendor.postfix}/${dist.dir}/trekbuddy${suffix}.jad">
             <fileset dir="tmp/preverified"/>
             <fileset dir="res-J9"/>
             <fileset dir="res">
@@ -377,22 +383,22 @@
 
     <target name="rim.pack.obfuscated">
         <delete>
-          <fileset dir="dist/${dist.dir}" includes="**/*.jar"/>
+          <fileset dir="dist${vendor.postfix}/${dist.dir}" includes="**/*.jar"/>
         </delete>
-        <wtkjad jadfile="dist/${dist.dir}/trekbuddy${suffix}.jad"
-                jarfile="dist/${dist.dir}/trekbuddy${suffix}.jar"
+        <wtkjad jadfile="dist${vendor.postfix}/${dist.dir}/trekbuddy${suffix}.jad"
+                jarfile="dist${vendor.postfix}/${dist.dir}/trekbuddy${suffix}.jar"
                 name="TrekBuddy"
                 vendor="${vendor}"
                 version="${version}">
-            <midlet name="TrekBuddy" class="cz.kruch.track.TrackingMIDlet"/>
+            <midlet name="TrekBuddy" class="cz.kruch.track.TrackingMIDlet" icon="/resources/icon.png"/>
             <attribute name="MIDlet-Description" value="${description}"/>
             <attribute name="MIDlet-Info-URL" value="http://www.trekbuddy.net"/>
             <attribute name="MIDlet-Permissions-Opt" value="javax.microedition.io.Connector.file.read,javax.microedition.io.Connector.file.write,javax.microedition.io.Connector.bluetooth.client,javax.microedition.location.Location,javax.microedition.media.control.VideoControl.getSnapshot,javax.microedition.io.Connector.sms,javax.wireless.messaging.sms.receive,javax.wireless.messaging.sms.send,javax.microedition.io.Connector.comm"/>            <attribute name="MicroEdition-Profile" value="MIDP-2.0"/>
             <attribute name="MicroEdition-Profile" value="MIDP-2.0"/>
             <attribute name="MicroEdition-Configuration" value="CLDC-1.1"/>
         </wtkjad>
-        <wtkpackage jarfile="dist/${dist.dir}/trekbuddy${suffix}.jar"
-                    jadfile="dist/${dist.dir}/trekbuddy${suffix}.jad">
+        <wtkpackage jarfile="dist${vendor.postfix}/${dist.dir}/trekbuddy${suffix}.jar"
+                    jadfile="dist${vendor.postfix}/${dist.dir}/trekbuddy${suffix}.jad">
             <fileset dir="tmp/preverified"/>
             <fileset dir="res-RIM"/>
             <fileset dir="res">
@@ -428,23 +434,23 @@
 
     <target name="sign.and.update">
         <java jar="${wtk.home}\bin\JadTool.jar" fork="true">
-            <arg line="-addcert -certnum 1 -alias 'trekbuddy' -keystore trekbuddy.jks -inputjad dist/${dist.dir}/trekbuddy${suffix}.jad -outputjad dist/${dist.dir}/_trekbuddy${suffix}.jad"/>
+            <arg line="-addcert -certnum 1 -alias 'trekbuddy' -keystore trekbuddy.jks -inputjad dist${vendor.postfix}/${dist.dir}/trekbuddy${suffix}.jad -outputjad dist${vendor.postfix}/${dist.dir}/_trekbuddy${suffix}.jad"/>
         </java>
-        <move file="dist/${dist.dir}/_trekbuddy${suffix}.jad" tofile="dist/${dist.dir}/trekbuddy${suffix}.jad"/>
+        <move file="dist${vendor.postfix}/${dist.dir}/_trekbuddy${suffix}.jad" tofile="dist${vendor.postfix}/${dist.dir}/trekbuddy${suffix}.jad"/>
         <java jar="${wtk.home}\bin\JadTool.jar" fork="true">
-            <arg line="-addcert -certnum 2 -alias 'trekbuddy' -keystore trekbuddy.jks -inputjad dist/${dist.dir}/trekbuddy${suffix}.jad -outputjad dist/${dist.dir}/_trekbuddy${suffix}.jad"/>
+            <arg line="-addcert -certnum 2 -alias 'trekbuddy' -keystore trekbuddy.jks -inputjad dist${vendor.postfix}/${dist.dir}/trekbuddy${suffix}.jad -outputjad dist${vendor.postfix}/${dist.dir}/_trekbuddy${suffix}.jad"/>
         </java>
-        <move file="dist/${dist.dir}/_trekbuddy${suffix}.jad" tofile="dist/${dist.dir}/trekbuddy${suffix}.jad"/>
+        <move file="dist${vendor.postfix}/${dist.dir}/_trekbuddy${suffix}.jad" tofile="dist${vendor.postfix}/${dist.dir}/trekbuddy${suffix}.jad"/>
         <java jar="${wtk.home}\bin\JadTool.jar" fork="true">
-            <arg line="-addcert -certnum 3 -alias 'trekbuddy' -keystore trekbuddy.jks -inputjad dist/${dist.dir}/trekbuddy${suffix}.jad -outputjad dist/${dist.dir}/_trekbuddy${suffix}.jad"/>
+            <arg line="-addcert -certnum 3 -alias 'trekbuddy' -keystore trekbuddy.jks -inputjad dist${vendor.postfix}/${dist.dir}/trekbuddy${suffix}.jad -outputjad dist${vendor.postfix}/${dist.dir}/_trekbuddy${suffix}.jad"/>
         </java>
-        <move file="dist/${dist.dir}/_trekbuddy${suffix}.jad" tofile="dist/${dist.dir}/trekbuddy${suffix}.jad"/>
+        <move file="dist${vendor.postfix}/${dist.dir}/_trekbuddy${suffix}.jad" tofile="dist${vendor.postfix}/${dist.dir}/trekbuddy${suffix}.jad"/>
         <java jar="${wtk.home}\bin\JadTool.jar" fork="true">
-            <arg line="-addjarsig -alias 'trekbuddy' -keystore trekbuddy.jks -keypass changeit -jarfile dist/${dist.dir}/trekbuddy${suffix}.jar -inputjad dist/${dist.dir}/trekbuddy${suffix}.jad -outputjad dist/${dist.dir}/_trekbuddy${suffix}.jad"/>
+            <arg line="-addjarsig -alias 'trekbuddy' -keystore trekbuddy.jks -keypass changeit -jarfile dist${vendor.postfix}/${dist.dir}/trekbuddy${suffix}.jar -inputjad dist${vendor.postfix}/${dist.dir}/trekbuddy${suffix}.jad -outputjad dist${vendor.postfix}/${dist.dir}/_trekbuddy${suffix}.jad"/>
         </java>
-        <move file="dist/${dist.dir}/_trekbuddy${suffix}.jad" tofile="dist/${dist.dir}/trekbuddy${suffix}.jad"/>
+        <move file="dist${vendor.postfix}/${dist.dir}/_trekbuddy${suffix}.jad" tofile="dist${vendor.postfix}/${dist.dir}/trekbuddy${suffix}.jad"/>
 <!--
-        <wtkjad jadfile="dist/${dist.dir}/trekbuddy${suffix}.jad" update="true">
+        <wtkjad jadfile="dist${vendor.postfix}/${dist.dir}/trekbuddy${suffix}.jad" update="true">
             <attribute name="Datum-1" value="S-42 (Poland){Krassovsky 1940,24,-124,-82}=map:Pulkovo 1942 POL"/>
         </wtkjad>
 -->
@@ -493,7 +499,7 @@
             <arg value="-whyareyoukeeping class cz.kruch.track.util.NakedVector"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.util.Logger"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.location.MotorolaLocationProvider"/>
-            <arg value="-printmapping dist/${dist.dir}/trekbuddy${suffix}.map"/>
+            <arg value="-printmapping dist${vendor.postfix}/${dist.dir}/trekbuddy${suffix}.map"/>
             <arg value="-printseeds"/>
             <arg value="-verbose"/>
         </java>
@@ -524,7 +530,7 @@
             <arg value="-whyareyoukeeping class cz.kruch.track.util.NakedVector"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.util.Logger"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.location.MotorolaLocationProvider"/>
-            <arg value="-printmapping dist/${dist.dir}/trekbuddy${suffix}.map"/>
+            <arg value="-printmapping dist${vendor.postfix}/${dist.dir}/trekbuddy${suffix}.map"/>
             <arg value="-printseeds"/>
             <arg value="-verbose"/>
         </java>
@@ -558,27 +564,27 @@
         -->
         <!--
                   <wtkrapc quiet="true" midlet="true" codename="trekbuddy${suffix}"
-                        jadfile="dist/${dist.dir}/trekbuddy${suffix}.jad"
-                        source="dist/${dist.dir}/trekbuddy${suffix}.jar"
+                        jadfile="dist${vendor.postfix}/${dist.dir}/trekbuddy${suffix}.jad"
+                        source="dist${vendor.postfix}/${dist.dir}/trekbuddy${suffix}.jar"
                          import="${rim.home}/lib/net_rim_api.jar"
-                        destdir="dist/${dist.dir}/cod"/>
+                        destdir="dist${vendor.postfix}/${dist.dir}/cod"/>
         -->
         <!--
-                  <exec dir="${basedir}\dist\${dist.dir}" executable="${rim.home}\bin\rapc.exe">
-                    <arg line="import='${rim.home}\lib\net_rim_api.jar' codename=trekbuddy${suffix} -quiet ${basedir}\dist\${dist.dir}\trekbuddy${suffix}.jad ${basedir}\dist\${dist.dir}\trekbuddy${suffix}.jar"/>
+                  <exec dir="${basedir}\dist${vendor.postfix}\${dist.dir}" executable="${rim.home}\bin\rapc.exe">
+                    <arg line="import='${rim.home}\lib\net_rim_api.jar' codename=trekbuddy${suffix} -quiet ${basedir}\dist${vendor.postfix}\${dist.dir}\trekbuddy${suffix}.jad ${basedir}\dist${vendor.postfix}\${dist.dir}\trekbuddy${suffix}.jar"/>
                   </exec>
         -->
-        <exec dir="${basedir}\dist\${dist.dir}" executable="${rim.home}\bin\rapc.exe">
-            <arg line="import='${rim.home}\lib\net_rim_api.jar' codename=trekbuddy${suffix} -quiet -midlet ${basedir}\dist\${dist.dir}\trekbuddy${suffix}.jad ${basedir}\dist\${dist.dir}\trekbuddy${suffix}.jar"/>
+        <exec dir="${basedir}\dist${vendor.postfix}\${dist.dir}" executable="${rim.home}\bin\rapc.exe">
+            <arg line="import='${rim.home}\lib\net_rim_api.jar' codename=trekbuddy${suffix} -quiet -midlet ${basedir}\dist${vendor.postfix}\${dist.dir}\trekbuddy${suffix}.jad ${basedir}\dist${vendor.postfix}\${dist.dir}\trekbuddy${suffix}.jar"/>
         </exec>
-        <copy file="${basedir}\trekbuddy.alx" tofile="${basedir}\dist\${dist.dir}\trekbuddy${suffix}.alx"/>
-        <replace file="${basedir}\dist\${dist.dir}\trekbuddy${suffix}.alx" token="@SUFFIX@" value="${suffix}"/>
-        <replace file="${basedir}\dist\${dist.dir}\trekbuddy${suffix}.alx" token="@DESCRIPTION@"
+        <copy file="${basedir}\trekbuddy.alx" tofile="${basedir}\dist${vendor.postfix}\${dist.dir}\trekbuddy${suffix}.alx"/>
+        <replace file="${basedir}\dist${vendor.postfix}\${dist.dir}\trekbuddy${suffix}.alx" token="@SUFFIX@" value="${suffix}"/>
+        <replace file="${basedir}\dist${vendor.postfix}\${dist.dir}\trekbuddy${suffix}.alx" token="@DESCRIPTION@"
                  value="${description}"/>
-        <replace file="${basedir}\dist\${dist.dir}\trekbuddy${suffix}.alx" token="@VERSION@" value="${version}"/>
-        <replace file="${basedir}\dist\${dist.dir}\trekbuddy${suffix}.alx" token="@VENDOR@" value="${vendor}"/>
+        <replace file="${basedir}\dist${vendor.postfix}\${dist.dir}\trekbuddy${suffix}.alx" token="@VERSION@" value="${version}"/>
+        <replace file="${basedir}\dist${vendor.postfix}\${dist.dir}\trekbuddy${suffix}.alx" token="@VENDOR@" value="${vendor}"/>
         <delete>
-            <fileset dir="${basedir}\dist\${dist.dir}" excludes="*.cod,*.alx,*.map"/>
+            <fileset dir="${basedir}\dist${vendor.postfix}\${dist.dir}" excludes="*.cod,*.alx,*.map"/>
         </delete>
     </target>
 

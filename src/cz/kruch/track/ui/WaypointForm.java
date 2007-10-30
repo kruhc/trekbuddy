@@ -73,11 +73,9 @@ public final class WaypointForm extends Form
     private long timestamp;
     private Callback callback;
 
-    private TextField fieldName;
-    private TextField fieldComment;
+    private TextField fieldName, fieldComment;
 
-    private TextField fieldLat;
-    private TextField fieldLon;
+    private TextField fieldLat, fieldLon, fieldAlt;
 
     private byte[] imageBytes;
     private int imageNum = -1;
@@ -100,6 +98,15 @@ public final class WaypointForm extends Form
         StringBuffer sb = new StringBuffer(32);
         NavigationScreens.toStringBuffer(wpt.getQualifiedCoordinates(), sb);
         append(new StringItem(Resources.getString(Resources.NAV_FLD_LOC), sb.toString()));
+        sb.delete(0, sb.length());
+        final float alt = wpt.getQualifiedCoordinates().getAlt();
+        if (Float.isNaN(alt)) {
+            sb.append('?');
+        } else {
+            NavigationScreens.append(sb, (int) alt);
+        }
+        sb.append(' ').append('m');
+        append(new StringItem(Resources.getString(Resources.NAV_FLD_ALT), sb.toString()));
         addCommand(new Command(Resources.getString(Resources.CMD_CLOSE), Command.BACK, 1));
         addCommand(new Command(CMD_NAVIGATE_TO, Desktop.POSITIVE_CMD_TYPE, 1));
         addCommand(new Command(CMD_NAVIGATE_ALONG, Desktop.POSITIVE_CMD_TYPE, 2));
@@ -121,6 +128,15 @@ public final class WaypointForm extends Form
         StringBuffer sb = new StringBuffer(32);
         NavigationScreens.toStringBuffer(location.getQualifiedCoordinates(), sb);
         appendWithNewlineAfter(new StringItem(Resources.getString(Resources.NAV_FLD_LOC), sb.toString()));
+        sb.delete(0, sb.length());
+        final float alt = location.getQualifiedCoordinates().getAlt();
+        if (Float.isNaN(alt)) {
+            sb.append('?');
+        } else {
+            NavigationScreens.append(sb, (int) alt);
+        }
+        sb.append(' ').append('m');
+        appendWithNewlineAfter(new StringItem(Resources.getString(Resources.NAV_FLD_ALT), sb.toString()));
         if (cz.kruch.track.TrackingMIDlet.supportsVideoCapture()) {
             StringItem snapshot = new StringItem(Resources.getString(Resources.NAV_FLD_SNAPSHOT), CMD_TAKE, Item.BUTTON);
             snapshot.setDefaultCommand(new Command(CMD_TAKE, Command.ITEM, 1));
@@ -137,11 +153,11 @@ public final class WaypointForm extends Form
     public WaypointForm(Callback callback, QualifiedCoordinates pointer) {
         super(Resources.getString(Resources.NAV_TITLE_WPT));
         this.callback = callback;
-        int c = cnt + 1;
+        final int c = cnt + 1;
         String name = c < 10 ? "WPT00" + c : (c < 100 ? "WPT0" + c : "WPT" + Integer.toString(c));
         StringBuffer sb = new StringBuffer(12);
         appendWithNewlineAfter(this.fieldName = new TextField(Resources.getString(Resources.NAV_FLD_WPT_NAME), name, 16, TextField.ANY));
-        appendWithNewlineAfter(this.fieldComment = new TextField(Resources.getString(Resources.NAV_FLD_WPT_CMT), CALENDAR.getTime().toString(), 64, TextField.ANY));
+        appendWithNewlineAfter(this.fieldComment = new TextField(Resources.getString(Resources.NAV_FLD_WPT_CMT), dateToString(CALENDAR.getTime().getTime()), 64, TextField.ANY));
         sb.append(pointer.getLat() > 0D ? 'N' : 'S').append(' ');
         NavigationScreens.append(QualifiedCoordinates.LAT, pointer.getLat(), true, sb);
         appendWithNewlineAfter(this.fieldLat = new TextField(Resources.getString(Resources.NAV_FLD_WGS84LAT), sb.toString(), 13, TextField.ANY));
@@ -149,6 +165,7 @@ public final class WaypointForm extends Form
         sb.append(pointer.getLon() > 0D ? 'E' : 'W').append(' ');
         NavigationScreens.append(QualifiedCoordinates.LON, pointer.getLon(), true, sb);
         appendWithNewlineAfter(this.fieldLon = new TextField(Resources.getString(Resources.NAV_FLD_WGS84LON), sb.toString(), 14, TextField.ANY));
+        appendWithNewlineAfter(this.fieldAlt = new TextField(Resources.getString(Resources.NAV_FLD_ALT), "", 14, TextField.NUMERIC));
         addCommand(new Command(Resources.getString(Resources.CMD_CLOSE), Command.BACK, 1));
         addCommand(new Command(CMD_USE, Desktop.POSITIVE_CMD_TYPE, 1));
     }
@@ -243,10 +260,14 @@ public final class WaypointForm extends Form
     }
 
     private QualifiedCoordinates getCoordinates() {
-        double lat = stringToLatOrLon(fieldLat.getString());
-        double lon = stringToLatOrLon(fieldLon.getString());
-
-        return QualifiedCoordinates.newInstance(lat, lon);
+        final double lat = stringToLatOrLon(fieldLat.getString());
+        final double lon = stringToLatOrLon(fieldLon.getString());
+        String altStr = fieldAlt.getString();
+        float alt = Float.NaN;
+        if (altStr != null && altStr.length() > 0) {
+            alt = Float.parseFloat(altStr);
+        }
+        return QualifiedCoordinates.newInstance(lat, lon, alt);
     }
 
     private static double stringToLatOrLon(String value) {

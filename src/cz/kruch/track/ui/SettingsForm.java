@@ -31,7 +31,6 @@ import javax.microedition.lcdui.ItemStateListener;
 import javax.microedition.lcdui.Item;
 import javax.microedition.lcdui.Choice;
 import javax.microedition.lcdui.List;
-import java.util.Hashtable;
 
 /**
  * Settings form.
@@ -62,8 +61,8 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
     private ChoiceGroup choiceTracklogFormat;
     private TextField fieldDataDir;
     private TextField fieldCaptureLocator;
-//    private TextField fieldCaptureFormat;
-    private ChoiceGroup choiceCaptureFormat;
+    private TextField fieldSnapshotFormat;
+    private ChoiceGroup choiceSnapshotFormat;
     private TextField fieldSimulatorDelay;
     private TextField fieldLocationTimings;
     private TextField fieldCommUrl;
@@ -123,9 +122,7 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
 
             // default map path field
             if (cz.kruch.track.TrackingMIDlet.isFs()) {
-                fieldMapPath = new TextField(Resources.getString(Resources.CFG_BASIC_FLD_START_MAP), Config.mapPath, MAX_URL_LENGTH, TextField.URL);
-                fieldMapPath.setLayout(Item.LAYOUT_2 | Item.LAYOUT_EXPAND | Item.LAYOUT_VEXPAND);
-                submenu.append(fieldMapPath);
+                submenu.append(fieldMapPath = new TextField(Resources.getString(Resources.CFG_BASIC_FLD_START_MAP), Config.mapPath, MAX_URL_LENGTH, TextField.URL));
             }
 
             // language
@@ -152,10 +149,10 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
             // coordinates format
             choiceCoordinates = new ChoiceGroup(Resources.getString(Resources.CFG_BASIC_GROUP_COORDS_FMT), ChoiceGroup.POPUP);
             choiceCoordinates.setFitPolicy(Choice.TEXT_WRAP_ON);
-            choiceCoordinates.append(Config.COORDS_MAP_LATLON, null);
-            choiceCoordinates.append(Config.COORDS_MAP_GRID, null);
-            choiceCoordinates.append(Config.COORDS_UTM, null);
-            choiceCoordinates.append(Config.COORDS_GC_LATLON, null);
+            choiceCoordinates.append(Resources.getString(Resources.CFG_BASIC_FLD_COORDS_MAPLL), null);
+            choiceCoordinates.append(Resources.getString(Resources.CFG_BASIC_FLD_COORDS_MAPGRID), null);
+            choiceCoordinates.append("UTM", null);
+            choiceCoordinates.append(Resources.getString(Resources.CFG_BASIC_FLD_COORDS_GCLL), null);
             choiceCoordinates.setSelectedFlags(new boolean[]{
                 false,
                 Config.useGridFormat,
@@ -170,18 +167,12 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
             choiceUnits.append(Resources.getString(Resources.CFG_BASIC_FLD_UNITS_METRIC), null);
             choiceUnits.append(Resources.getString(Resources.CFG_BASIC_FLD_UNITS_IMPERIAL), null);
             choiceUnits.append(Resources.getString(Resources.CFG_BASIC_FLD_UNITS_NAUTICAL), null);
-            choiceUnits.setSelectedFlags(new boolean[]{
-                false,
-                Config.unitsImperial,
-                Config.unitsNautical
-            });
+            choiceUnits.setSelectedIndex(Config.units, true);
             submenu.append(choiceUnits);
 
             // datadir
             if (cz.kruch.track.TrackingMIDlet.isFs()) {
-                fieldDataDir = new TextField(Resources.getString(Resources.CFG_BASIC_FLD_DATA_DIR), Config.getDataDir(), MAX_URL_LENGTH, TextField.URL);
-                fieldDataDir.setLayout(Item.LAYOUT_2 | Item.LAYOUT_EXPAND | Item.LAYOUT_VEXPAND);
-                submenu.append(fieldDataDir);
+                submenu.append(fieldDataDir = new TextField(Resources.getString(Resources.CFG_BASIC_FLD_DATA_DIR), Config.getDataDir(), MAX_URL_LENGTH, TextField.URL));
             }
 
         } else if (MENU_DESKTOP.equals(section)) {
@@ -299,22 +290,22 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
 
                 if (cz.kruch.track.TrackingMIDlet.supportsVideoCapture()) {
                     fieldCaptureLocator = new TextField(Resources.getString(Resources.CFG_LOCATION_FLD_CAPTURE_LOCATOR), Config.captureLocator, 16, TextField.URL);
-//                    fieldCaptureFormat = new TextField(Resources.getString(Resources.CFG_LOCATION_FLD_CAPTURE_FMT), Config.captureFormat, 64, TextField.ANY);
-                    choiceCaptureFormat = new ChoiceGroup(Resources.getString(Resources.CFG_LOCATION_FLD_CAPTURE_FMT), ChoiceGroup.POPUP);
-                    choiceCaptureFormat.append("", null);
+                    choiceSnapshotFormat = new ChoiceGroup(Resources.getString(Resources.CFG_LOCATION_FLD_CAPTURE_FMT), ChoiceGroup.POPUP);
                     String encodings = System.getProperty("video.snapshot.encodings");
                     int start = encodings.indexOf("encoding=");
                     while (start > -1) {
                         int end = encodings.indexOf("encoding=", start + 9);
-                        String item = null;
+                        String item;
                         if (end > -1) {
                             item = encodings.substring(start, end).trim();
                         } else {
                             item = encodings.substring(start).trim();
                         }
-                        choiceCaptureFormat.setSelectedIndex(choiceCaptureFormat.append(item, null), Config.captureFormat.equals(item));
+                        choiceSnapshotFormat.setSelectedIndex(choiceSnapshotFormat.append(item, null), Config.snapshotFormat.equals(item));
                         start = end;
                     }
+                    fieldSnapshotFormat = new TextField(null, Config.snapshotFormat, 64, TextField.ANY);
+                    fieldSnapshotFormat.setString(Config.snapshotFormat);
                 }
             }
 
@@ -336,7 +327,6 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
             // show current provider and tracklog specific options
             itemStateChanged(choiceProvider);
             submenu.setItemStateListener(this);
-
         }
 
         // add command and handling
@@ -353,95 +343,92 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
             return;
         }
 
-        if (affected != choiceProvider && affected != choiceTracklog && affected != choiceTracklogFormat) {
-            return;
-        }
+        if (affected == choiceProvider || affected == choiceTracklog || affected == choiceTracklogFormat) {
 
-        for (int i = submenu.size(); --i >= 0; ) {
-            Item item = submenu.get(i);
+            for (int i = submenu.size(); --i >= 0; ) {
+                Item item = submenu.get(i);
 
-            if (choiceProvider == item)
-                continue;
-
-            if (choiceTracklogFormat == affected) {
-                if (fieldSimulatorDelay == item || fieldLocationTimings == item || fieldCommUrl == item || choiceTracklog == item || choiceTracklogFormat == item)
+                if (choiceProvider == item)
                     continue;
+
+                if (choiceTracklogFormat == affected) {
+                    if (fieldSimulatorDelay == item || fieldLocationTimings == item || fieldCommUrl == item || choiceTracklog == item || choiceTracklogFormat == item)
+                        continue;
+                }
+
+                if (choiceTracklog == affected) {
+                    if (fieldSimulatorDelay == item || fieldLocationTimings == item || fieldCommUrl == item || choiceTracklog == item)
+                        continue;
+                }
+
+                submenu.delete(i);
+                i = submenu.size();
+            }
+
+            int provider = Config.getLocationProviders()[choiceProvider.getSelectedIndex()];
+            boolean isFs = cz.kruch.track.TrackingMIDlet.isFs();
+            boolean isTracklog = isFs && choiceTracklog.getSelectedIndex() > Config.TRACKLOG_NEVER;
+            boolean isTracklogGpx = isTracklog && Config.TRACKLOG_FORMAT_GPX.equals(choiceTracklogFormat.getString(choiceTracklogFormat.getSelectedIndex()));
+
+            if (choiceProvider == affected) {
+                switch (provider) {
+                    case Config.LOCATION_PROVIDER_JSR179:
+                    case Config.LOCATION_PROVIDER_MOTOROLA:
+                        appendWithNewlineAfter(submenu, fieldLocationTimings);
+                    break;
+                    case Config.LOCATION_PROVIDER_SIMULATOR:
+                        appendWithNewlineAfter(submenu, fieldSimulatorDelay);
+                    break;
+                    case Config.LOCATION_PROVIDER_SERIAL:
+                        appendWithNewlineAfter(submenu, fieldCommUrl);
+                    break;
+                }
+                if (isFs) {
+                    appendWithNewlineAfter(submenu, choiceTracklog);
+                    if (isTracklog) {
+                        if (Config.LOCATION_PROVIDER_JSR82 == provider || Config.LOCATION_PROVIDER_SERIAL == provider || Config.LOCATION_PROVIDER_JSR179 == provider) {
+                            appendWithNewlineAfter(submenu, choiceTracklogFormat);
+                        }
+                        if (isTracklogGpx) {
+                            appendWithNewlineAfter(submenu, choiceGpx);
+                            appendShrinked(submenu, fieldGpxDt);
+                            appendWithNewlineAfter(submenu, fieldGpxDs);
+                        }
+                    }
+                }
             }
 
             if (choiceTracklog == affected) {
-                if (fieldSimulatorDelay == item || fieldLocationTimings == item || fieldCommUrl == item || choiceTracklog == item)
-                    continue;
-            }
-
-            submenu.delete(i);
-
-            i = submenu.size();
-        }
-
-        int provider = Config.getLocationProviders()[choiceProvider.getSelectedIndex()];
-        boolean isFs = cz.kruch.track.TrackingMIDlet.isFs();
-        boolean isTracklog = isFs && !Resources.getString(Resources.CFG_LOCATION_FLD_TRACKLOG_NEVER).equals(choiceTracklog.getString(choiceTracklog.getSelectedIndex()));
-        boolean isTracklogGpx = isTracklog && Config.TRACKLOG_FORMAT_GPX.equals(choiceTracklogFormat.getString(choiceTracklogFormat.getSelectedIndex()));
-
-        if (choiceProvider == affected) {
-            switch (provider) {
-                case Config.LOCATION_PROVIDER_JSR179:
-                case Config.LOCATION_PROVIDER_MOTOROLA:
-                    submenu.append(fieldLocationTimings);
-                break;
-                case Config.LOCATION_PROVIDER_SIMULATOR:
-                    submenu.append(fieldSimulatorDelay);
-                break;
-                case Config.LOCATION_PROVIDER_SERIAL:
-                    submenu.append(fieldCommUrl);
-                break;
-            }
-            if (isFs) {
-                submenu.append(choiceTracklog);
                 if (isTracklog) {
                     if (Config.LOCATION_PROVIDER_JSR82 == provider || Config.LOCATION_PROVIDER_SERIAL == provider || Config.LOCATION_PROVIDER_JSR179 == provider) {
-                        submenu.append(choiceTracklogFormat);
+                        appendWithNewlineAfter(submenu, choiceTracklogFormat);
                     }
                     if (isTracklogGpx) {
-                        submenu.append(choiceGpx);
-                        appendWithNewlineAfter(submenu, fieldGpxDt);
+                        appendWithNewlineAfter(submenu, choiceGpx);
+                        appendShrinked(submenu, fieldGpxDt);
                         appendWithNewlineAfter(submenu, fieldGpxDs);
                     }
                 }
-                if (fieldCaptureLocator != null && /*field*/choiceCaptureFormat != null) {
-                    submenu.append(fieldCaptureLocator);
-                    submenu.append(/*field*/choiceCaptureFormat);
-                }
             }
-        }
 
-        if (choiceTracklog == affected) {
-            if (isTracklog) {
-                if (Config.LOCATION_PROVIDER_JSR82 == provider || Config.LOCATION_PROVIDER_SERIAL == provider || Config.LOCATION_PROVIDER_JSR179 == provider) {
-                    submenu.append(choiceTracklogFormat);
-                }
+            if (choiceTracklogFormat == affected) {
                 if (isTracklogGpx) {
-                    submenu.append(choiceGpx);
-                    appendWithNewlineAfter(submenu, fieldGpxDt);
+                    appendWithNewlineAfter(submenu, choiceGpx);
+                    appendShrinked(submenu, fieldGpxDt);
                     appendWithNewlineAfter(submenu, fieldGpxDs);
                 }
             }
-            if (fieldCaptureLocator != null && /*field*/choiceCaptureFormat != null) {
-                submenu.append(fieldCaptureLocator);
-                submenu.append(/*field*/choiceCaptureFormat);
-            }
-        }
 
-        if (choiceTracklogFormat == affected) {
-            if (isTracklogGpx) {
-                submenu.append(choiceGpx);
-                appendWithNewlineAfter(submenu, fieldGpxDt);
-                appendWithNewlineAfter(submenu, fieldGpxDs);
+            if (fieldCaptureLocator != null) {
+                appendWithNewlineAfter(submenu, fieldCaptureLocator);
+                appendWithNewlineAfter(submenu, choiceSnapshotFormat);
+                appendWithNewlineAfter(submenu, fieldSnapshotFormat);
             }
-            if (fieldCaptureLocator != null && /*field*/choiceCaptureFormat != null) {
-                submenu.append(fieldCaptureLocator);
-                submenu.append(choiceCaptureFormat);
-            }
+
+        } else if (affected == choiceSnapshotFormat) {
+            int i0 = choiceSnapshotFormat.getSelectedIndex();
+            String s0 = choiceSnapshotFormat.getString(i0);
+            fieldSnapshotFormat.setString(s0);
         }
     }
 
@@ -471,7 +458,7 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
             // submenu
             String section = submenu.getTitle();
 
-            if (MENU_BASIC.equals(section)) {
+            if (section.startsWith(MENU_BASIC)) {
 
                 // map path
                 if (cz.kruch.track.TrackingMIDlet.isFs()) {
@@ -487,23 +474,21 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
                 Config.geoDatum = choiceMapDatum.getString(choiceMapDatum.getSelectedIndex());
 
                 // coordinates format
-                String fmt = choiceCoordinates.getString(choiceCoordinates.getSelectedIndex());
-                Config.useGridFormat = Config.COORDS_MAP_GRID.equals(fmt);
-                Config.useUTM = Config.COORDS_UTM.equals(fmt);
-                Config.useGeocachingFormat = Config.COORDS_GC_LATLON.equals(fmt);
+                boolean[] fmt = new boolean[choiceCoordinates.size()];
+                choiceCoordinates.getSelectedFlags(fmt);
+                Config.useGridFormat = fmt[1];
+                Config.useUTM = fmt[2];
+                Config.useGeocachingFormat = fmt[3];
 
                 // units format
-                boolean units[] = new boolean[choiceUnits.size()];
-                choiceUnits.getSelectedFlags(units);
-                Config.unitsImperial = units[1];
-                Config.unitsNautical = units[2];
+                Config.units = choiceUnits.getSelectedIndex();
 
                 // datadir
                 if (cz.kruch.track.TrackingMIDlet.isFs()) {
                     Config.setDataDir(fieldDataDir.getString());
                 }
 
-            } else if (MENU_LOCATION.equals(section)) {
+            } else if (section.startsWith(MENU_LOCATION)) {
 
                 // provider
                 if (choiceProvider.size() > 0) {
@@ -525,15 +510,18 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
                 if (cz.kruch.track.TrackingMIDlet.isFs()) {
                     Config.tracklog = choiceTracklog.getSelectedIndex();
                     Config.tracklogFormat = choiceTracklogFormat.getString(choiceTracklogFormat.getSelectedIndex());
+                    boolean[] opts = new boolean[choiceGpx.size()];
+                    choiceGpx.getSelectedFlags(opts);
+                    Config.gpxOnlyValid = opts[0];
                     Config.gpxDt = Integer.parseInt(fieldGpxDt.getString());
                     Config.gpxDs = Integer.parseInt(fieldGpxDs.getString());
                     if (cz.kruch.track.TrackingMIDlet.supportsVideoCapture()) {
                         Config.captureLocator = fieldCaptureLocator.getString();
-                        Config.captureFormat = /*field*/choiceCaptureFormat.getString(choiceCaptureFormat.getSelectedIndex());
+                        Config.snapshotFormat = fieldSnapshotFormat.getString();
                     }
                 }
 
-            } else if (MENU_NAVIGATION.equals(section)) {
+            } else if (section.startsWith(MENU_NAVIGATION)) {
 
                 // navigation
                 Config.wptProximity = Integer.parseInt(fieldWptProximity.getString());
@@ -551,7 +539,7 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
                     Config.locationSharing = friends[0];
                 }
 
-            } else if (MENU_DESKTOP.equals(section)) {
+            } else if (section.startsWith(MENU_DESKTOP)) {
 
                 // desktop
                 changed = true;
@@ -574,7 +562,7 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
             Config.scrollingDelay = gaugeScrollDelay.getValue();
 */
 
-            } else if (MENU_MISC.equals(section)) {
+            } else if (section.startsWith(MENU_MISC)) {
 
                 // performance
                 boolean[] perf = new boolean[choicePerformance.size()];
@@ -622,8 +610,13 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
         callback.invoke(changed ? Boolean.TRUE : Boolean.FALSE, null, this);
     }
 
-    private int appendWithNewlineAfter(Form form, Item item) {
-        item.setLayout(Item.LAYOUT_2 | Item.LAYOUT_NEWLINE_AFTER | Item.LAYOUT_SHRINK | Item.LAYOUT_VSHRINK);
+    private static int appendWithNewlineAfter(Form form, Item item) {
+//        item.setLayout(Item.LAYOUT_2 | Item.LAYOUT_NEWLINE_AFTER | Item.LAYOUT_SHRINK | Item.LAYOUT_VSHRINK);
+        return form.append(item);
+    }
+
+    private static int appendShrinked(Form form, Item item) {
+//        item.setLayout(Item.LAYOUT_2 | Item.LAYOUT_SHRINK | Item.LAYOUT_VSHRINK);
         return form.append(item);
     }
 }

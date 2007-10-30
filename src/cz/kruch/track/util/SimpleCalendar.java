@@ -27,12 +27,12 @@ import java.util.Date;
 public final class SimpleCalendar {
     private Calendar calendar;
     private Date date;
-    private long last;
-
-    public volatile int hour, minute, second;
+    private final int[] fields;
+    private volatile long last;
 
     public SimpleCalendar(Calendar calendar) {
         this.calendar = calendar;
+        this.fields = new int[3];
     }
 
     public void reset() {
@@ -50,14 +50,17 @@ public final class SimpleCalendar {
         if (date == null) {
             date = new Date(millis);
             calendar.setTime(date);
-            hour = calendar.get(Calendar.HOUR_OF_DAY);
-            minute = calendar.get(Calendar.MINUTE);
-            second = calendar.get(Calendar.SECOND);
+            fields[0] = calendar.get(Calendar.HOUR_OF_DAY);
+            fields[1] = calendar.get(Calendar.MINUTE);
+            fields[2] = calendar.get(Calendar.SECOND);
         } else {
             final int dt = (int) (millis - last) / 1000;
             final int h = dt / 3600;
             final int m = (dt % 3600) / 60;
             final int s = (dt % 3600) % 60;
+            int hour = fields[0];
+            int minute = fields[1];
+            int second = fields[2];
             if (dt < 0) {
                 second += s;
                 if (second < 0) {
@@ -89,7 +92,29 @@ public final class SimpleCalendar {
                     hour %= 24; // TODO what to do?
                 }
             }
+            fields[0] = hour;
+            fields[1] = minute;
+            fields[2] = second;
         }
         last = millis;
+    }
+
+    public int get(final int field) {
+        int value;
+        switch (field) {
+            case Calendar.HOUR_OF_DAY:
+                value = fields[0];
+            break;
+            case Calendar.MINUTE:
+                value = fields[1];
+            break;
+            case Calendar.SECOND:
+                value = fields[2];
+            break;
+            default:
+                throw new IllegalArgumentException("Unknown field");
+        }
+
+        return value;
     }
 }

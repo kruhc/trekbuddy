@@ -29,7 +29,9 @@ import java.util.Date;
  */
 public final class NmeaParser {
     private static final CharArrayTokenizer tokenizer = new CharArrayTokenizer();
+    private static final char[] delimiters = { ',', '*' };
     private static final Record gga = new Record();
+    private static final Record gsa = new Record();
     private static final Record rmc = new Record();
 
     private static int day, month, year;
@@ -47,11 +49,7 @@ public final class NmeaParser {
         // process
         while (tokenizer.hasMoreTokens() && (index < 10)) {
             CharArrayTokenizer.Token token = tokenizer.next();
-            if (token.isEmpty()) {
-                if (index == 0) {
-                    throw new LocationException("GPGGA expected");
-                }
-            } else {
+            if (!token.isEmpty()) {
                 switch (index) {
                     case 0: {
                         // TODO optimize (should never happen - remove?)
@@ -69,27 +67,25 @@ public final class NmeaParser {
 //                        record.lat = parseDouble(token.array, token.begin /* + 0*/, 2) + parseDouble(token.array, token.begin + 2, token.length - 2) / 60D;
                     } break;
                     case 3: {
-/* taken from RMC
-                        if (token.array[token.begin] == 'S') {
-                            record.lat *= -1;
-                        }
-*/
+// taken from RMC
+//                        if (token.array[token.begin] == 'S') {
+//                            record.lat *= -1;
+//                        }
                     } break;
                     case 4: {
 // taken from RMC
 //                        record.lon = parseDouble(token.array, token.begin /* + 0*/, 3) + parseDouble(token.array, token.begin + 3, token.length - 3) / 60D;
                     } break;
                     case 5: {
-/* taken from RMC
-                        if (token.array[token.begin] == 'W') {
-                            record.lon *= -1;
-                        }
-*/
+// taken from RMC
+//                        if (token.array[token.begin] == 'W') {
+//                            record.lon *= -1;
+//                        }
                     } break;
                     case 6: {
                         record.fix = CharArrayTokenizer.parseInt(token);
                         if (record.fix == 0) { // no fix
-                            index = 1000; // break cycle
+                            index = 666; // breaks 'while' cycle
                         }
                     } break;
                     case 7: {
@@ -122,12 +118,74 @@ public final class NmeaParser {
                         record.dgpsid = token.toString();
 */
                     } break;
-                    case 15: {
-/*
-                        record.checksum = token.toString();
-*/
-                    } break;
                 }
+            }
+            index++;
+        }
+
+        return record;
+    }
+
+    public static Record parseGSA(char[] nmea, int length) throws LocationException {
+        int index = 0;
+        CharArrayTokenizer tokenizer = NmeaParser.tokenizer;
+        Record record = gsa;
+
+        // init tokenizer and record
+        tokenizer.init(nmea, length, delimiters, false);
+        record.invalidate();
+
+        // process
+        while (tokenizer.hasMoreTokens() && (index < 18)) {
+            CharArrayTokenizer.Token token = tokenizer.next();
+            /* no token empty check here */
+            switch (index) {
+                case 0: {
+                    // TODO optimize (should never happen - remove?)
+/*
+                    if (!"$GPGSA".equals(token.toString())) {
+                        throw new LocationException("GPGGA expected");
+                    }
+*/
+                } break;
+                case 1: {
+                    // autoselection of 2d or 3d fix - ignored
+                } break;
+                case 2: {
+                    record.fix = CharArrayTokenizer.parseInt(token); // should not be empty
+                    if (record.fix == 1) { // no fix
+                        index = 666; // break cycle
+                    }
+                } break;
+                case 3:
+                case 4:
+                case 5:
+                case 6:
+                case 7:
+                case 8:
+                case 9:
+                case 10:
+                case 11:
+                case 12:
+                case 13:
+                case 14: {
+                    if (!token.isEmpty()) {
+                        record.sat++;
+                    }
+                } break;
+                case 15:
+                    // PDOP - ignored
+                break;
+                case 16: {
+                    if (!token.isEmpty()) {
+                        record.hdop = CharArrayTokenizer.parseFloat(token);
+                    }
+                } break;
+                case 17: {
+                    if (!token.isEmpty()) {
+                        record.vdop = CharArrayTokenizer.parseFloat(token);
+                    }
+                } break;
             }
             index++;
         }
@@ -147,11 +205,7 @@ public final class NmeaParser {
         // process
         while (tokenizer.hasMoreTokens() && (index < 10)) {
             CharArrayTokenizer.Token token = tokenizer.next();
-            if (token.isEmpty()) {
-                if (index == 0) {
-                    throw new LocationException("GPRMC expected");
-                }
-            } else {
+            if (!token.isEmpty()) {
                 switch (index) {
                     case 0: {
                         // TODO optimize (should never happen - remove?)
@@ -166,11 +220,12 @@ public final class NmeaParser {
                     } break;
                     case 2: {
                         record.status = token.array[token.begin];
+                        if (record.status != 'A') {
+                            index = 666; // breaks 'while'
+                        }
                     } break;
                     case 3: {
-                        if (record.status == 'A') {
-                            record.lat = CharArrayTokenizer.parseDouble(token.array, token.begin /* + 0*/, 2) + CharArrayTokenizer.parseDouble(token.array, token.begin + 2, token.length - 2) / 60D;
-                        }
+                        record.lat = CharArrayTokenizer.parseDouble(token.array, token.begin /* + 0*/, 2) + CharArrayTokenizer.parseDouble(token.array, token.begin + 2, token.length - 2) / 60D;
                     } break;
                     case 4: {
                         if (token.array[token.begin] == 'S') {
@@ -178,9 +233,7 @@ public final class NmeaParser {
                         }
                     } break;
                     case 5: {
-                        if (record.status == 'A') {
-                            record.lon = CharArrayTokenizer.parseDouble(token.array, token.begin /* + 0*/, 3) + CharArrayTokenizer.parseDouble(token.array, token.begin + 3, token.length - 3) / 60D;
-                        }
+                        record.lon = CharArrayTokenizer.parseDouble(token.array, token.begin /* + 0*/, 3) + CharArrayTokenizer.parseDouble(token.array, token.begin + 3, token.length - 3) / 60D;
                     } break;
                     case 6: {
                         if (token.array[token.begin] == 'W') {
@@ -188,31 +241,19 @@ public final class NmeaParser {
                         }
                     } break;
                     case 7: {
-                        if (record.status == 'A') {
-                            record.speed = CharArrayTokenizer.parseFloat(token);
-                            if (record.speed > 0F) {
-                                record.speed *= 1.852F / 3.6F;
-                            }
+                        record.speed = CharArrayTokenizer.parseFloat(token);
+                        if (record.speed > 0F) {
+                            record.speed *= 1.852F / 3.6F;
                         }
                     } break;
                     case 8: {
-                        if (record.status == 'A') {
-                            record.angle = CharArrayTokenizer.parseFloat(token);
-                        }
+                        record.angle = CharArrayTokenizer.parseFloat(token);
                     } break;
                     case 9: {
                         record.date = parseDate(token);
                     } break;
                     case 10: {
-                        // variation
-                    } break;
-                    case 11: {
-                        // variation W?
-                    } break;
-                    case 12: {
-/*
-                        record.checksum = token.toString();
-*/
+                        // variation - unused
                     } break;
                 }
             }
@@ -265,10 +306,10 @@ public final class NmeaParser {
 /* unused
         public String checksum;
 */
-        // GGA
+        // GGA/GSA
         public int fix;
         public int sat;
-        public float hdop;
+        public float hdop, vdop;
         public float altitude;
 /* unused
         public float geoidh;
@@ -289,8 +330,25 @@ public final class NmeaParser {
             this.timestamp = -1;
             this.lat = this.lon = Double.NaN;
             this.fix = this.sat = -1;
-            this.hdop = this.speed = this.angle = -1F;
+            this.hdop = this.vdop = this.speed = this.angle = -1F;
             this.altitude = Float.NaN;
+        }
+
+        public static Record copyGsaIntoGga(Record gsa) {
+            gga.invalidate();
+            gga.sat = gsa.sat;
+            switch (gsa.fix) {
+                case 1:
+                    gga.fix = 0;
+                break;
+                case 2:
+                case 3:
+                    gga.fix = 1;
+                break;
+            }
+            gga.hdop = gsa.hdop;
+            gga.vdop = gsa.vdop;
+            return gga;
         }
     }
 }

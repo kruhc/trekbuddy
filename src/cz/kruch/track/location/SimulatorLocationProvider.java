@@ -126,6 +126,7 @@ public final class SimulatorLocationProvider
                 } catch (Throwable t) {
 //#ifdef __LOG__
                     if (log.isEnabled()) log.warn("Failed to get location.", t);
+                    t.printStackTrace();
 //#endif
 
                     // record exception

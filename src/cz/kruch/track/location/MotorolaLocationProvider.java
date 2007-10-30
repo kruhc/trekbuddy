@@ -118,7 +118,7 @@ public final class MotorolaLocationProvider
 
                     // create up-to-date location
                     QualifiedCoordinates qc = QualifiedCoordinates.newInstance(lat / 60 * 0.00001, lon / 60 * 0.00001, alt);
-                    qc.setAccuracy(aggregatePosition.getLatLonAccuracy());
+                    qc.setHorizontalAccuracy(aggregatePosition.getLatLonAccuracy());
                     Location location = Location.newInstance(qc, aggregatePosition.getTimeStamp(), 1);
                     if (aggregatePosition.hasTravelDirection()) {
                         location.setCourse(aggregatePosition.getTravelDirection());

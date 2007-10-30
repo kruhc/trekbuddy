@@ -28,6 +28,7 @@ public final class Location {
     private short sat;
     private float speed;
     private float course;
+    private boolean fix3d;
 
     /*
      * POOL
@@ -122,5 +123,13 @@ public final class Location {
 
     public void setCourse(float course) {
         this.course = course;
+    }
+
+    public boolean isFix3d() {
+        return fix3d;
+    }
+
+    public void setFix3d(boolean fix3d) {
+        this.fix3d = fix3d;
     }
 }

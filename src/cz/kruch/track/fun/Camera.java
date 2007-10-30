@@ -121,12 +121,13 @@ public final class Camera implements CommandListener, PlayerListener/*, Runnable
         }
     }
 
-    public static boolean play(String file) {
+    public static boolean play(String name) {
         Player p = null;
         InputStream in = null;
         try {
-            p = Manager.createPlayer(in = Connector.openInputStream(Config.getFolderSounds() + file), "audio/amr");
+            p = Manager.createPlayer(in = Connector.openInputStream(Config.getFolderSounds() + name), "audio/amr");
             p.realize();
+            p.prefetch();
             p.addPlayerListener(new Camera(in, (VolumeControl) p.getControl("VolumeControl")));
             p.start();
         } catch (Throwable t) {
@@ -193,7 +194,7 @@ public final class Camera implements CommandListener, PlayerListener/*, Runnable
 
         try {
             // fix the format
-            String format = Config.captureFormat;
+            String format = Config.snapshotFormat;
             if ("".equals(format)) {
                 format = null;
             }

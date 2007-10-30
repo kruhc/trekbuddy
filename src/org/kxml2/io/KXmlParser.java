@@ -1047,7 +1047,7 @@ public final class KXmlParser implements XmlPullParser {
                             srcBuf[1] = '?';
                             srcCount = 2;
                             break;
-                        case 0x03c3f786d: // plain text
+                        case 0x03c3f786d: // 8-bit encoding
                             while (true) {
                                 final int i = is.read();
                                 if (i == -1) {
@@ -1061,12 +1061,17 @@ public final class KXmlParser implements XmlPullParser {
                                         while (s.charAt(i0) != '"' && s.charAt(i0) != '\'') {
                                             i0++;
                                         }
-                                        char deli = s.charAt(i0++);
-                                        int i1 = s.indexOf(deli, i0);
+                                        final char deli = s.charAt(i0++);
+                                        final int i1 = s.indexOf(deli, i0);
                                         enc = s.substring(i0, i1);
+/* does not work well
+                                        if ("UTF-8".equals(enc.toUpperCase())) { // this is UTF-8 not saved as UTF-8
+                                            enc = null;
+                                        }
+*/
                                     }
                                     break;
-                                } else if (srcCount == 1024) {
+                                } else if (srcCount == srcBuf.length) {
                                     throw new IllegalArgumentException("Malformed XML");
                                 }
                             }

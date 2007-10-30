@@ -63,10 +63,10 @@ public final class Config {
     public static final String TRACKLOG_FORMAT_GPX  = "GPX 1.1";
 
     /* coordinate format */
-    public static final String COORDS_MAP_LATLON    = "<Map Lat/Lon>";
-    public static final String COORDS_MAP_GRID      = "<Map Grid>";
-    public static final String COORDS_UTM           = "UTM";
-    public static final String COORDS_GC_LATLON     = "Geocaching Lat/Lon";
+    public static final int COORDS_MAP_LATLON    = 0;
+    public static final int COORDS_MAP_GRID      = 1;
+    public static final int COORDS_UTM           = 2;
+    public static final int COORDS_GC_LATLON     = 3;
 
     /* units */
     public static final int UNITS_METRIC            = 0;
@@ -113,7 +113,7 @@ public final class Config {
     public static int tracklog              = TRACKLOG_NEVER;
     public static String tracklogFormat     = TRACKLOG_FORMAT_GPX;
     public static String captureLocator     = "capture://video";
-    public static String captureFormat      = EMPTY_STRING;
+    public static String snapshotFormat     = EMPTY_STRING;
 
     // group [Simulator provider options]
     public static int simulatorDelay        = 1000;
@@ -141,8 +141,7 @@ public final class Config {
     public static boolean hpsWptTrueAzimuth     = true;
 
     // [Units]
-    public static boolean unitsNautical;
-    public static boolean unitsImperial;
+    public static int units;
 
     // [Coordinates]
     public static boolean useGridFormat;
@@ -185,6 +184,7 @@ public final class Config {
     public static int x = -1;
     public static int y = -1;
     public static int dayNight;
+    public static String cmsProfile     = EMPTY_STRING;
 
     // cached
     private static short[] providers;
@@ -242,7 +242,7 @@ public final class Config {
         tracklogFormat = din.readUTF();
         dataDir = din.readUTF();
         captureLocator = din.readUTF();
-        captureFormat = din.readUTF();
+        snapshotFormat = din.readUTF();
         btDeviceName = din.readUTF();
         btServiceUrl = din.readUTF();
         simulatorDelay = din.readInt();
@@ -288,15 +288,16 @@ public final class Config {
         }
 
         // 0.9.5x extensions
+        boolean _unitsNautical = false, _unitsImperial = false;
         try {
             locationTimings = din.readUTF();
             trajectoryOn = din.readBoolean();
             forcedGc = din.readBoolean();
             oneTileScroll = din.readBoolean();
             /*gpxRaw = */din.readBoolean();
-            unitsNautical = din.readBoolean();
+            _unitsNautical = din.readBoolean();
             commUrl = din.readUTF();
-            unitsImperial = din.readBoolean();
+            _unitsImperial = din.readBoolean();
             wptProximity = din.readInt();
             poiProximity = din.readInt();
             /*language = */din.readUTF();
@@ -339,6 +340,17 @@ public final class Config {
             }
         }
 
+        // 0.9.66 extensions
+        try {
+            units = din.readInt();
+        } catch (Exception e) {
+            if (_unitsImperial) {
+                units = Config.UNITS_IMPERIAL;
+            } else if (_unitsNautical) {
+                units = Config.UNITS_NAUTICAL;
+            }
+        }
+
 //#ifdef __LOG__
         if (log.isEnabled()) log.info("configuration read");
 //#endif
@@ -353,7 +365,7 @@ public final class Config {
         dout.writeUTF(tracklogFormat);
         dout.writeUTF(dataDir);
         dout.writeUTF(captureLocator);
-        dout.writeUTF(captureFormat);
+        dout.writeUTF(snapshotFormat);
         dout.writeUTF(btDeviceName);
         dout.writeUTF(btServiceUrl);
         dout.writeInt(simulatorDelay);
@@ -381,9 +393,9 @@ public final class Config {
         dout.writeBoolean(forcedGc);
         dout.writeBoolean(oneTileScroll);
         dout.writeBoolean(false/*gpxRaw*/);
-        dout.writeBoolean(unitsNautical);
+        dout.writeBoolean(false/*unitsNautical*/);
         dout.writeUTF(commUrl);
-        dout.writeBoolean(unitsImperial);
+        dout.writeBoolean(false/*unitsImperial*/);
         dout.writeInt(wptProximity);
         dout.writeInt(poiProximity);
         dout.writeUTF(""/*language*/);
@@ -397,6 +409,7 @@ public final class Config {
         dout.writeInt(locationProvider);
         dout.writeInt(tracklog);
         dout.writeBoolean(gpxOnlyValid);
+        dout.writeInt(units);
 
 //#ifdef __LOG__
         if (log.isEnabled()) log.info("configuration updated");
@@ -496,6 +509,7 @@ public final class Config {
         x = din.readInt();
         y = din.readInt();
         dayNight = din.readInt();
+        cmsProfile = din.readUTF();
 
 //#ifdef __LOG__
         if (log.isEnabled()) log.info("vars read");
@@ -509,6 +523,7 @@ public final class Config {
         dout.writeInt(x);
         dout.writeInt(y);
         dout.writeInt(dayNight);
+        dout.writeUTF(cmsProfile);
 
 //#ifdef __LOG__
         if (log.isEnabled()) log.info("vars updated");

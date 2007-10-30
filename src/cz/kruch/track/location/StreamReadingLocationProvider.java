@@ -37,8 +37,9 @@ public abstract class StreamReadingLocationProvider extends LocationProvider {
 //#endif
 
     private static final char[] HEADER_GGA = { '$', 'G', 'P', 'G', 'G', 'A' };
+    private static final char[] HEADER_GSA = { '$', 'G', 'P', 'G', 'S', 'A' };
     private static final char[] HEADER_RMC = { '$', 'G', 'P', 'R', 'M', 'C' };
-    private static final char[] HEADER_SKIP = { '$', 'G', 'P', 'G', 'S' };
+    private static final char[] HEADER_SKIP = { '$', 'G', 'P', 'G', 'S', 'V' };
 
     private static final int LINE_SIZE = 128;
 
@@ -48,9 +49,10 @@ public abstract class StreamReadingLocationProvider extends LocationProvider {
 
     private OutputStream observer;
     private char[] line;
-/*
-    private int order = 0;
-*/
+    private NmeaParser.Record gsa;
+
+    /* for minimalistic NMEA stream */
+    private int hack_rmc_count;
 
     protected StreamReadingLocationProvider(String name) {
         super(name);
@@ -82,6 +84,7 @@ public abstract class StreamReadingLocationProvider extends LocationProvider {
                     continue;
                 }
                 gga = NmeaParser.parseGGA(line, l);
+                hack_rmc_count = 0;
             } else if (isType(line, l, HEADER_RMC)) {
                 if (!validate(line, l)) {
 //#ifdef __LOG__
@@ -91,8 +94,32 @@ public abstract class StreamReadingLocationProvider extends LocationProvider {
                     continue;
                 }
                 rmc = NmeaParser.parseRMC(line, l);
+                hack_rmc_count++;
+            } else if (isType(line, l, HEADER_GSA)) {
+                if (!validate(line, l)) {
+//#ifdef __LOG__
+                    if (log.isEnabled()) log.warn("Invalid NMEA!");
+//#endif
+                    checksums++;
+                    continue;
+                }
+                gsa = NmeaParser.parseGSA(line, l);
             } else {
                 continue;
+            }
+            // hack
+            if (gsa != null) {
+                if (hack_rmc_count >= 3) { // use GSA as GGA (alt missing, though)
+                    gga = NmeaParser.Record.copyGsaIntoGga(gsa);
+                    if (rmc != null) {
+                        gga.timestamp = rmc.timestamp;
+                    }
+                } else if (gga != null) {
+                    if (gsa.fix != 3) { // not 3D fix - altitude is invalid
+                        gga.altitude = Float.NaN;
+                    }
+                    gga.vdop = gsa.vdop;
+                }
             }
             // sync
             if (rmc != null && gga != null) {
@@ -114,8 +141,12 @@ public abstract class StreamReadingLocationProvider extends LocationProvider {
         final long datetime = rmc.date + rmc.timestamp;
         if (rmc.timestamp == gga.timestamp) {
             QualifiedCoordinates qc = QualifiedCoordinates.newInstance(rmc.lat, rmc.lon, gga.altitude);
-            qc.setAccuracy(gga.hdop * 5);
+            qc.setHorizontalAccuracy(gga.hdop * 5);
+            qc.setVerticalAccuracy(gga.vdop * 5);
             location = Location.newInstance(qc, datetime, gga.fix, gga.sat);
+            if (gsa != null) {
+                location.setFix3d(gsa.fix == 3);
+            }
         } else {
             location = Location.newInstance(QualifiedCoordinates.newInstance(rmc.lat, rmc.lon),
                                             datetime, rmc.status == 'A' ? 1 : 0);
@@ -169,9 +200,9 @@ public abstract class StreamReadingLocationProvider extends LocationProvider {
                     match = false;
                 }
 
-                // skip sentence we do not want - GSA/GSV are spam
-                if (pos == 5) { // '$GPGS...'
-                    int i = 5;
+                // skip sentence we do not want - GSV are spam
+                if (pos == HEADER_SKIP.length) { // '$GPGSV...'
+                    int i = pos;
                     for ( ; --i >= 0; ) {
                         if (line[i] != HEADER_SKIP[i]) {
                             break;

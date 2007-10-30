@@ -28,7 +28,7 @@ public final class QualifiedCoordinates implements GeodeticPosition {
 
     private double lat, lon;
     private float alt;
-    private float accuracy;
+    private float hAccuracy, vAccuracy;
 
     /*
      * POOL
@@ -38,29 +38,22 @@ public final class QualifiedCoordinates implements GeodeticPosition {
     private static int countFree;
 
     public static QualifiedCoordinates newInstance(final double lat, final double lon) {
-        return newInstance(lat, lon, Float.NaN, -1F);
-    }
-
-    public static QualifiedCoordinates newInstance(final double lat, final double lon,
-                                                   final float alt) {
-        return newInstance(lat, lon, alt, -1F);
+        return newInstance(lat, lon, Float.NaN);
     }
 
     public synchronized static QualifiedCoordinates newInstance(final double lat,
                                                                 final double lon,
-                                                                final float alt,
-                                                                final float accuracy) {
+                                                                final float alt) {
         QualifiedCoordinates result;
 
         if (countFree == 0) {
-            result = new QualifiedCoordinates(lat, lon, alt, -1F);
+            result = new QualifiedCoordinates(lat, lon, alt);
         } else {
             result = pool[--countFree];
             pool[countFree] = null;
             result.lat = lat;
             result.lon = lon;
             result.alt = alt;
-            result.accuracy = accuracy;
         }
 
         return result;
@@ -77,22 +70,25 @@ public final class QualifiedCoordinates implements GeodeticPosition {
      */
 
     public QualifiedCoordinates clone() {
-        return newInstance(lat, lon, alt, accuracy);
+        QualifiedCoordinates clone = newInstance(lat, lon, alt);
+        clone.hAccuracy = this.hAccuracy;
+        clone.vAccuracy = this.vAccuracy;
+        return clone;
     }
 
     private QualifiedCoordinates(final double lat, final double lon,
-                                 final float alt, final float accuracy) {
+                                 final float alt) {
         this.lat = lat;
         this.lon = lon;
         this.alt = alt;
-        this.accuracy = accuracy;
     }
 
     protected QualifiedCoordinates(QualifiedCoordinates qc) {
         this.lat = qc.lat;
         this.lon = qc.lon;
         this.alt = qc.alt;
-        this.accuracy = qc.accuracy;
+        this.hAccuracy = qc.hAccuracy;
+        this.vAccuracy = qc.vAccuracy;
     }
 
     public double getH() {
@@ -115,12 +111,20 @@ public final class QualifiedCoordinates implements GeodeticPosition {
         return alt;
     }
 
-    public float getAccuracy() {
-        return accuracy;
+    public float getHorizontalAccuracy() {
+        return hAccuracy;
     }
 
-    public void setAccuracy(float accuracy) {
-        this.accuracy = accuracy;
+    public void setHorizontalAccuracy(float accuracy) {
+        this.hAccuracy = accuracy;
+    }
+
+    public float getVerticalAccuracy() {
+        return vAccuracy;
+    }
+
+    public void setVerticalAccuracy(float accuracy) {
+        this.vAccuracy = accuracy;
     }
 
     public float distance(QualifiedCoordinates neighbour) {

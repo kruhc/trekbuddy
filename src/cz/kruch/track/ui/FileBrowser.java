@@ -264,7 +264,7 @@ public final class FileBrowser extends List implements CommandListener, Runnable
      * String array sorting. From JDK.
      */
 
-    private static void sort(final String[] a) {
+    public static void sort(final String[] a) {
         String aux[] = new String[a.length];
         System.arraycopy(a, 0, aux, 0, a.length);
         mergeSort(aux, a, 0, a.length);

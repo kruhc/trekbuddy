@@ -334,10 +334,10 @@ public final class GpxTracklog extends Thread {
                     serializer.text(FIX_NONE);
                 } break;
                 case 1:
-                    if (alt > -1F) {
-                        serializer.text(FIX_3D);
-                    } else {
+                    if (Float.isNaN(alt) || !l.isFix3d()) {
                         serializer.text(FIX_2D);
+                    } else {
+                        serializer.text(FIX_3D);
                     }
                     break;
                 case 2: {

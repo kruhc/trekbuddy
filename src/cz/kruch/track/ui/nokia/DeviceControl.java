@@ -36,7 +36,11 @@ public abstract class DeviceControl extends TimerTask {
         try {
             Class.forName("com.nokia.mid.ui.DirectUtils");
             if (System.getProperty("com.sonyericsson.imei") == null) {
-                instance = (DeviceControl) Class.forName("cz.kruch.track.ui.nokia.NokiaDeviceControl").newInstance();
+                if (cz.kruch.track.TrackingMIDlet.symbian) {
+                    instance = (DeviceControl) Class.forName("cz.kruch.track.ui.nokia.S60DeviceControl").newInstance();
+                } else {
+                    instance = (DeviceControl) Class.forName("cz.kruch.track.ui.nokia.NokiaDeviceControl").newInstance();
+                }
             } else {
                 instance = (DeviceControl) Class.forName("cz.kruch.track.ui.nokia.SonyEricssonDeviceControl").newInstance();
             }

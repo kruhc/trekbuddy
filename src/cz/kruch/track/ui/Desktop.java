@@ -155,7 +155,7 @@ public final class Desktop extends GameCanvas
     private View[] views;
 
     // screen modes
-    private int mode;
+    /*private */int mode;
 
     // desktop renderer
     private Graphics graphics;
@@ -190,10 +190,11 @@ public final class Desktop extends GameCanvas
     // other status vars
     private volatile boolean navigating;
     private volatile boolean keylock;
+    private volatile int keyRepeatedCount;
 
     // loading states and last-op message
-    private /*volatile*/ boolean initializingMap = true;
-    private /*volatile*/ boolean loadingSlices;
+    private /*volatile*/ boolean initializingMap = true; // using synchronized access helper
+    private /*volatile*/ boolean loadingSlices;          // using synchronized access helper
     private final Object[] loadingResult = {
         Resources.getString(Resources.DESKTOP_MSG_NO_DEFAULT_MAP), null 
     };
@@ -214,7 +215,7 @@ public final class Desktop extends GameCanvas
 
     // navigation // TODO move to Waypoints
     /*public*/ static volatile Vector wpts;
-    /*public*/ static volatile int wptIdx, wptEndIdx;
+    /*public*/ static volatile int wptIdx, wptEndIdx, reachedIdx;
     /*public*/ static volatile int routeDir;
 
     // current waypoint info
@@ -224,7 +225,7 @@ public final class Desktop extends GameCanvas
 
     // repeated event simulation for dumb devices
     private volatile TimerTask repeatedKeyCheck;
-    private /*volatile*/ int inKey, keyRepeatedCount;
+    private /*volatile*/ int inKey; // using synchronized access helper
 
     // start/initialization
     private volatile boolean guiReady;
@@ -257,20 +258,20 @@ public final class Desktop extends GameCanvas
         this.eventing = SmartRunnable.getInstance();
 
         // TODO move to Waypoints???
-        Desktop.wptIdx = Desktop.wptEndIdx = -1;
+        Desktop.wptIdx = Desktop.wptEndIdx = Desktop.reachedIdx = -1;
         this.wptAzimuth = -1;
         this.wptDistance = -1F;
         this.wptHeightDiff = Float.NaN;
     }
 
-    public void boot(boolean imagesLoaded, boolean configLoaded,
-                     int customized, int localized) {
+    public void boot(final boolean imagesLoaded, final boolean configLoaded,
+                     final int customized, final int localized) {
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("boot");
 //#endif
 
         // get graphics
-        Graphics g = graphics = getGraphics();
+        final Graphics g = graphics = getGraphics();
         g.setFont(Font.getFont(Font.FACE_MONOSPACE, Font.STYLE_PLAIN, Font.SIZE_SMALL));
 
         // prepare console
@@ -1065,6 +1066,23 @@ public final class Desktop extends GameCanvas
                     ((MapView)views[VIEW_MAP]).mapViewer.setPoiStatus(wptIdx, MapViewer.WPT_STATUS_REACHED);
                 }
 
+                // wpt reached - fanfar!
+                if (reachedIdx != wptIdx) {
+
+                    // remember
+                    reachedIdx = wptIdx;
+
+                    // flash screen
+                    cz.kruch.track.ui.nokia.DeviceControl.flash();
+
+                    // play sound and vibrate
+                    if (Camera.play("wpt.amr")) {
+                        display.vibrate(1000);
+                    } else { // fallback to system alarm
+                        AlertType.ALARM.playSound(display);
+                    }
+                }
+
                 // find next wpt
                 boolean changed = false;
                 switch (routeDir) {
@@ -1084,16 +1102,6 @@ public final class Desktop extends GameCanvas
 
                 // notify views
                 if (changed) {
-
-                    // flash screen
-                    cz.kruch.track.ui.nokia.DeviceControl.flash();
-
-                    // play sound and vibrate
-                    if (Camera.play("wpt.amr")) {
-                        display.vibrate(1000);
-                    } else { // fallback to system alarm
-                        AlertType.ALARM.playSound(display);
-                    } 
 
                     // update navinfo
                     updateNavigation(from);
@@ -1146,14 +1154,22 @@ public final class Desktop extends GameCanvas
     public void goTo(Waypoint wpt) {
         QualifiedCoordinates local = map.getDatum().toLocal(wpt.getQualifiedCoordinates());
         if (map.isWithin(local)) {
+
+            // set browsing mode
+            browsing = true;
+
             // scroll to position and sync OSD
             ((MapView) views[VIEW_MAP]).setPosition(map.transform(local));
             ((MapView) views[VIEW_MAP]).syncOSD();
+
             // update screen
             update(MASK_ALL);
+
         } else if (atlas != null) {
+
             // try to find alternate map
             startAlternateMap(atlas.getLayer(), local, Resources.getString(Resources.DESKTOP_MSG_WPT_OFF_LAYER));
+
         } else {
             Desktop.showWarning(Resources.getString(Resources.DESKTOP_MSG_WPT_OFF_MAP), null, Desktop.this);
         }
@@ -1241,6 +1257,13 @@ public final class Desktop extends GameCanvas
         return wptDistance;
     }
 
+    public float getWptAlt() {
+        if (wpts == null) {
+            return Float.NaN;
+        }
+        return ((Waypoint) wpts.elementAt(wptIdx)).getQualifiedCoordinates().getAlt();
+    }
+
     public Map getMap() {
         return map;
     }
@@ -1283,6 +1306,11 @@ public final class Desktop extends GameCanvas
         }
     }
 
+    /*
+     * synchronization of vars of primitive type
+     * why? callback access mixed with event access?
+     */
+
     private int _getInKey() {
         synchronized (this) {
             return inKey;
@@ -1318,6 +1346,10 @@ public final class Desktop extends GameCanvas
             initializingMap = b;
         }
     }
+
+    /*
+     * ~end
+     */
 
     private void handleKey(final int i, final boolean repeated) {
         if (!guiReady) {
@@ -2087,8 +2119,8 @@ public final class Desktop extends GameCanvas
 
                 // also hide arrow and delta info when browsing
                 if (browsing) {
-                    mapViewer.setCourse(-1F);
-                    osd.resetExtendedInfo();
+                    mapViewer.setNavigationCourse(-1F);
+                    osd.resetNavigationInfo();
                 }
 
                 // notify user
@@ -2166,7 +2198,7 @@ public final class Desktop extends GameCanvas
             QualifiedCoordinates.releaseInstance(localQc);
         }
 
-        public int handleAction(int action, boolean repeated) {
+        public int handleAction(final int action, final boolean repeated) {
             int mask = MASK_NONE;
 
             // only if map viewer is usable
@@ -2195,13 +2227,7 @@ public final class Desktop extends GameCanvas
                     if (_getLoadingSlices() || _getInitializingMap()) {
                         steps = 0;
                     } else if (repeated) {
-//                        long t = System.currentTimeMillis();
-//                        if (t < lastRepeat/* + 5 * Config.scrollingDelay*/) {
-//                            steps = 0;
-//                        } else {
-                            steps = getScrolls();
-//                            lastRepeat = t;
-//                        }
+                        steps = getScrolls();
                     }
 
 //#ifdef __LOG__
@@ -2273,7 +2299,7 @@ public final class Desktop extends GameCanvas
             return mask;
         }
 
-        public int handleKey(int keycode, boolean repeated) {
+        public int handleKey(final int keycode, final boolean repeated) {
             int mask = 0;
 
             switch (keycode) {
@@ -2387,23 +2413,25 @@ public final class Desktop extends GameCanvas
                     }
                     osd.setSat(l.getSat());
 
+                    // arrows
+                    if (l.getCourse() > -1F) {
+                        mapViewer.setCourse(l.getCourse());
+                    }
+                    if (wpts != null) {
+                        mapViewer.setNavigationCourse(wptAzimuth);
+                    }
+
                     // OSD extended and course arrow - navigating?
                     if (navigating && wpts != null) {
 
                         // get navigation info
                         StringBuffer extInfo = osd._getSb();
-                        float azimuth = getNavigationInfo(extInfo);
+                        getNavigationInfo(extInfo);
 
-                        // set course & navigation info
-                        mapViewer.setCourse(azimuth);
-                        osd.setExtendedInfo(extInfo);
+                        // set navigation info
+                        osd.setNavigationInfo(extInfo);
 
                     } else { // no, tracking info
-
-                        // set course
-                        if (l.getCourse() > -1F) {
-                            mapViewer.setCourse(l.getCourse());
-                        }
 
                         // in extended info
                         osd.setExtendedInfo(NavigationScreens.toStringBuffer(l, osd._getSb()));
@@ -2452,7 +2480,7 @@ public final class Desktop extends GameCanvas
             return map.getDatum().toWgs84(map.transform(mapViewer.getPosition()));
         }
 
-        public void render(Graphics g, Font f, int mask) {
+        public void render(final Graphics g, final Font f, final int mask) {
 //#ifdef __LOG__
             if (log.isEnabled()) log.debug("render");
 //#endif
@@ -2534,29 +2562,31 @@ public final class Desktop extends GameCanvas
             }
         }
 
-        private float getNavigationInfo(StringBuffer extInfo) {
+        private void getNavigationInfo(StringBuffer extInfo) {
             final float distance = wptDistance;
             final int azimuth = wptAzimuth;
 
             extInfo.append(NavigationScreens.DELTA_D).append('=');
-            if (Config.unitsNautical) {
-                NavigationScreens.append(extInfo, distance / 1852F, 0).append(DIST_STR_NMI);
-            } else if (Config.unitsImperial) {
-                NavigationScreens.append(extInfo, distance / 1609F, 0).append(DIST_STR_NMI);
-            } else {
-                if (distance >= 10000F) { // dist > 10 km
-                    NavigationScreens.append(extInfo, distance / 1000F, 1).append(DIST_STR_KM);
-                } else {
-                    NavigationScreens.append(extInfo, (int) distance).append(DIST_STR_M);
-                }
+            switch (Config.units) {
+                case Config.UNITS_METRIC: {
+                    if (distance >= 10000F) { // dist > 10 km
+                        NavigationScreens.append(extInfo, distance / 1000F, 1).append(DIST_STR_KM);
+                    } else {
+                        NavigationScreens.append(extInfo, (int) distance).append(DIST_STR_M);
+                    }
+                } break;
+                case Config.UNITS_IMPERIAL: {
+                    NavigationScreens.append(extInfo, distance / 1609F, 0).append(DIST_STR_NMI);
+                } break;
+                case Config.UNITS_NAUTICAL: {
+                    NavigationScreens.append(extInfo, distance / 1852F, 0).append(DIST_STR_NMI);
+                } break;
             }
             NavigationScreens.append(extInfo, azimuth).append(NavigationScreens.SIGN);
             if (!Float.isNaN(wptHeightDiff)) {
                 extInfo.append(' ').append(NavigationScreens.DELTA_d).append('=');
                 NavigationScreens.append(extInfo, (int) wptHeightDiff);
             }
-
-            return azimuth;
         }
 
         private void syncOSD() {
@@ -2574,7 +2604,7 @@ public final class Desktop extends GameCanvas
 
             // update extended OSD (and navigation, if any)
             if (!updateNavigationInfo()) {
-                osd.resetExtendedInfo();
+                osd.resetNavigationInfo();
             }
         }
 
@@ -2613,11 +2643,11 @@ public final class Desktop extends GameCanvas
 
                 // get navigation info
                 StringBuffer extInfo = osd._getSb();
-                float azimuth = getNavigationInfo(extInfo);
+                getNavigationInfo(extInfo);
 
                 // set course and delta
-                mapViewer.setCourse(azimuth);
-                osd.setExtendedInfo(extInfo);
+                mapViewer.setNavigationCourse(wptAzimuth);
+                osd.setNavigationInfo(extInfo);
 
                 return true;
             }
@@ -3150,7 +3180,7 @@ public final class Desktop extends GameCanvas
                                 if ("atlas".equals(_target)) {
                                     (new YesNoDialog(Desktop.screen, this)).show(Resources.getString(Resources.DESKTOP_MSG_USE_AS_DEFAULT_ATLAS), atlas.getURL());
                                 } else {
-                                    (new YesNoDialog(Desktop.screen, this)).show(Resources.getString(Resources.DESKTOP_MSG_USE_AS_DEFAULT_ATLAS), map.getPath());
+                                    (new YesNoDialog(Desktop.screen, this)).show(Resources.getString(Resources.DESKTOP_MSG_USE_AS_DEFAULT_MAP), map.getPath());
                                 }
                             }
                         } catch (Throwable t) {

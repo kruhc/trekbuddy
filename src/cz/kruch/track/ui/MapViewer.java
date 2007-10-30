@@ -72,7 +72,7 @@ final class MapViewer {
     private Vector slices;
     private Vector slices2; // for reuse during switch
 
-    private float course;
+    private float course, course2;
 
     private Position wptPosition;
     private Position[] routePositions;
@@ -99,7 +99,7 @@ final class MapViewer {
         this.slices2 = new Vector(4);
         this.sb = new StringBuffer(8);
         this.sInfo = new char[16];
-        this.course = -1F;
+        this.course = this.course2 = -1F;
 /*
         this.trajectory = new QualifiedCoordinates[TRAJECTORY_LENGTH];
         this.trajectoryX = new short[TRAJECTORY_LENGTH];
@@ -225,6 +225,10 @@ final class MapViewer {
 
     public void setCourse(float course) {
         this.course = course;
+    }
+
+    public void setNavigationCourse(float course) {
+        this.course2 = course;
     }
 
     /**
@@ -694,6 +698,14 @@ final class MapViewer {
                                         Graphics.TOP | Graphics.LEFT);
         }
 
+        // paint navigation course
+        if (course2 > -1F) {
+            NavigationScreens.drawNaviw(graphics, course2,
+                                        chx + crosshairSize2,
+                                        chy + crosshairSize2,
+                                        Graphics.TOP | Graphics.LEFT);
+        }
+
         // paint scale
         if (Config.osdScale && sInfoLength > 0) {
             drawScale(graphics);
@@ -866,7 +878,7 @@ final class MapViewer {
 */
 
     public int nextCrosshair() {
-        int mask = 0;
+        int mask;
 
         if (star % 2 == 0) {
             ci++;

@@ -32,9 +32,9 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
 
     // system info
 
-    private static String platform;
-    private static String flags;
+    private static String platform, flags;
 
+    public static String version;
     public static boolean jsr82, jsr120, jsr135, jsr179, motorola179, comm;
     public static boolean sonyEricsson, nokia, siemens, wm, palm, rim, symbian;
     public static boolean sxg75, a780, s65;
@@ -57,6 +57,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         // detect environment
         platform = System.getProperty("microedition.platform");
         flags = getAppProperty(JAD_APP_FLAGS);
+        version = getAppProperty("MIDlet-Version");
 //#ifdef __LOG__
         logEnabled = hasFlag("log_enable");
 //#endif
@@ -129,14 +130,16 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
 //#endif
         } catch (Throwable t) {
         }
+//#ifdef __NOKIA__
         try {
-            Class.forName("com.symbian.midp.runtime.MIDletScheduler");
+            Class.forName("com.symbian.midp.io.protocol.http.Protocol");
             TrackingMIDlet.symbian = true;
 //#ifdef __LOG__
             System.out.println("* Symbian");
 //#endif
         } catch (Throwable t) {
         }
+//#endif
     }
 
     private boolean running;

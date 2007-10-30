@@ -34,7 +34,7 @@ final class OSD extends Bar {
     protected int providerStatus;
     private boolean recording;
     private boolean ok;
-    /*private */int sat;
+    private int sat;
 
     protected int semaforX, semaforY;
     private final StringBuffer sb;
@@ -144,8 +144,16 @@ final class OSD extends Bar {
         this.sat = sat;
     }
 
+    public void resetNavigationInfo() {
+        this.cExtInfoLength = 0;
+    }
+
     public void resetExtendedInfo() {
         this.cExtInfoLength = 0;
+    }
+
+    public void setNavigationInfo(StringBuffer sb) {
+        setExtendedInfo(sb);
     }
 
     public void setExtendedInfo(StringBuffer sb) {

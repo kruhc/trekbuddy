@@ -255,7 +255,7 @@ public final class Jsr179LocationProvider
                 spd = -1F;
             }
             if (Float.isNaN(alt)) {
-                alt = -1F;
+                alt = Float.NaN;
             } else if (cz.kruch.track.TrackingMIDlet.sxg75) {
                 alt -= 540;
             }
@@ -270,7 +270,7 @@ public final class Jsr179LocationProvider
             QualifiedCoordinates qc = QualifiedCoordinates.newInstance(xc.getLatitude(),
                                                                        xc.getLongitude(),
                                                                        alt);
-            qc.setAccuracy(accuracy);
+            qc.setHorizontalAccuracy(accuracy);
             Location location = Location.newInstance(qc, l.getTimestamp(), 1);
             location.setCourse(course);
             location.setSpeed(spd);

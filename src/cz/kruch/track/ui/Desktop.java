@@ -53,43 +53,6 @@ import api.location.LocationProvider;
 import api.location.LocationListener;
 import api.location.Location;
 import api.location.QualifiedCoordinates;
-import cz.kruch.track.TrackingMIDlet;
-import cz.kruch.track.Resources;
-import cz.kruch.track.event.Callback;
-import cz.kruch.track.fun.Friends;
-import cz.kruch.track.fun.Camera;
-import cz.kruch.track.maps.Map;
-import cz.kruch.track.maps.Atlas;
-import cz.kruch.track.maps.io.LoaderIO;
-import cz.kruch.track.configuration.Config;
-import cz.kruch.track.configuration.ConfigurationException;
-import cz.kruch.track.location.GpxTracklog;
-import cz.kruch.track.location.Waypoint;
-import cz.kruch.track.util.CharArrayTokenizer;
-
-import javax.microedition.lcdui.Canvas;
-import javax.microedition.lcdui.Display;
-import javax.microedition.lcdui.CommandListener;
-import javax.microedition.lcdui.Command;
-import javax.microedition.lcdui.Displayable;
-import javax.microedition.lcdui.Alert;
-import javax.microedition.lcdui.AlertType;
-import javax.microedition.lcdui.Graphics;
-import javax.microedition.lcdui.Font;
-import javax.microedition.lcdui.Image;
-import javax.microedition.lcdui.game.GameCanvas;
-import javax.microedition.midlet.MIDlet;
-import java.io.IOException;
-import java.util.Date;
-import java.util.Enumeration;
-import java.util.Timer;
-import java.util.TimerTask;
-import java.util.Vector;
-
-import api.location.LocationProvider;
-import api.location.LocationListener;
-import api.location.Location;
-import api.location.QualifiedCoordinates;
 import api.location.LocationException;
 
 /**
@@ -100,9 +63,6 @@ import api.location.LocationException;
  */
 public final class Desktop extends GameCanvas
         implements Runnable, CommandListener, LocationListener,
-//#ifdef __RIM__
-                   net.rim.device.api.system.TrackwheelListener,
-//#endif
                    /* Map.StateListener, Atlas.StateListener, */
                    YesNoDialog.AnswerListener/*, Navigator*/ {
 //#ifdef __LOG__
@@ -145,8 +105,8 @@ public final class Desktop extends GameCanvas
 
     // common desktop components
     static Image bar, barWpt, barScale;
-    static OSD osd;
-    private Status status; // TODO map viewer specific?
+    static OSD osd; // TODO should move to MapView
+    private Status status; // TODO should move to MapView 
 
     // desktop dimensions
     public static int width, height;
@@ -386,20 +346,8 @@ public final class Desktop extends GameCanvas
         // handle commands
         this.setCommandListener(this);
         
-//#ifdef __RIM__
-        if (TrackingMIDlet.rim) {
-            _rimDesktopScreen = net.rim.device.api.ui.UiApplication.getUiApplication().getActiveScreen();
-            net.rim.device.api.ui.UiApplication.getUiApplication().addTrackwheelListener(this);
-        }
-//#endif
-        
         // start I/O loader
         LoaderIO.getInstance();
-
-        // start renderer
-//        this.renderer = new Renderer();
-//        this.renderer.setPriority(Thread.MAX_PRIORITY);
-//        this.renderer.start();
     }
 
     public int getHeight() {
@@ -780,6 +728,20 @@ public final class Desktop extends GameCanvas
         if (log.isEnabled()) log.info("keyPressed");
 //#endif
 
+//#ifdef __RIM__
+        /* trackball rolling? */
+        if (i == Canvas.UP || i == Canvas.DOWN || i == Canvas.LEFT || i == Canvas.RIGHT) {
+            final int now = _getInKey();
+            _setInKey(i);
+            if (now == 0 || now == i) {
+                eventing.callSerially(this);
+            } else {
+                _setInKey(0);
+            }
+            return;
+        }
+//#endif
+
         // counter
         keyRepeatedCount = 0;
 
@@ -818,6 +780,13 @@ public final class Desktop extends GameCanvas
         if (log.isEnabled()) log.info("keyReleased");
 //#endif
 
+//#ifdef __RIM__
+        /* trackball rolling stopped? */
+        if (i == Canvas.UP || i == Canvas.DOWN || i == Canvas.LEFT || i == Canvas.RIGHT) {
+            return;
+        }
+//#endif
+
         if (i == Canvas.KEY_NUM1) { // hack
             handleKey(i, false);
         }
@@ -843,46 +812,6 @@ public final class Desktop extends GameCanvas
         // update
         update(MASK_ALL);
     }
-
-//#ifdef __RIM__
-
-    private net.rim.device.api.ui.Screen _rimDesktopScreen;
-
-    public boolean trackwheelClick(int status, int time) {
-        return false;
-    }
-
-    public boolean trackwheelUnclick(int status, int time) {
-        return false;
-    }
-
-    public boolean trackwheelRoll(int amount, int status, int time) {
-        if (net.rim.device.api.ui.UiApplication.getUiApplication().getActiveScreen() == _rimDesktopScreen) {
-            int key = 0;
-            boolean alt = (status & net.rim.device.api.system.KeypadListener.STATUS_ALT) != 0;
-            if (amount < 0) {
-                key = alt ? Canvas.KEY_NUM4 : Canvas.KEY_NUM2;
-            } else if (amount > 0) {
-                key = alt ? Canvas.KEY_NUM6 : Canvas.KEY_NUM8;
-            }
-            int now = _getInKey();
-            _setInKey(key);
-            if (now == 0 || now == key) {
-/*
-                keyPressed(key);
-*/
-                eventing.callSerially(this);
-            } else {
-                _setInKey(0);
-            }
-
-            return true;
-        }
-
-        return false;
-    }
-
-//#endif
 
     public void commandAction(Command command, Displayable displayable) {
         if (command == cmdInfo) {
@@ -1157,6 +1086,7 @@ public final class Desktop extends GameCanvas
 
             // set browsing mode
             browsing = true;
+            ((MapView) views[VIEW_MAP]).browsingOn();
 
             // scroll to position and sync OSD
             ((MapView) views[VIEW_MAP]).setPosition(map.transform(local));
@@ -1274,8 +1204,10 @@ public final class Desktop extends GameCanvas
 
     /** Used for key repetition emulation */
     public void run() {
-        int keyState = getKeyStates();
         int key = 0;
+
+//#ifndef __RIM__
+        int keyState = getKeyStates();
 
         if ((keyState & LEFT_PRESSED) != 0) {
             key = Canvas.KEY_NUM4;
@@ -1286,6 +1218,7 @@ public final class Desktop extends GameCanvas
         } else if ((keyState & DOWN_PRESSED) != 0) {
             key = Canvas.KEY_NUM8;
         }
+//#endif        
 
         // dumb device without getKeyStates() support?
         if (key == 0) {
@@ -1747,7 +1680,8 @@ public final class Desktop extends GameCanvas
         osd.setProviderStatus(LocationProvider.OUT_OF_SERVICE);
         osd.resetExtendedInfo();
         osd.setRecording(false);
-        update(MASK_OSD);
+        ((MapView) views[VIEW_MAP]).browsingOn();
+        update(MASK_OSD | MASK_CROSSHAIR);
 
         // update menu
         removeCommand(cmdStop);
@@ -2117,11 +2051,9 @@ public final class Desktop extends GameCanvas
 
             } else { // no, navigation stopped
 
-                // also hide arrow and delta info when browsing
-                if (browsing) {
-                    mapViewer.setNavigationCourse(-1F);
-                    osd.resetNavigationInfo();
-                }
+                // hide navigation arrow and info
+                mapViewer.setNavigationCourse(-1F);
+                osd.resetNavigationInfo();
 
                 // notify user
                 if (isVisible) {
@@ -2133,6 +2065,10 @@ public final class Desktop extends GameCanvas
             mapViewer.setWaypoint(waypoint);
 
             return super.navigationChanged(wpts, idx, silent);
+        }
+
+        private void browsingOn() {
+            mapViewer.setCourse(-1F);
         }
 
         private void clearRoute() {
@@ -2221,6 +2157,7 @@ public final class Desktop extends GameCanvas
 
                     // cursor movement breaks real-time tracking
                     browsing = true;
+                    browsingOn();
 
                     // calculate number of scrolls
                     int steps = 1;

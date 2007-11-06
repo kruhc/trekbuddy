@@ -34,9 +34,7 @@ import javax.microedition.media.control.VideoControl;
 import javax.microedition.media.control.VolumeControl;
 import javax.microedition.io.Connector;
 import java.io.InputStream;
-import java.io.ByteArrayInputStream;
 import java.io.IOException;
-import java.io.ByteArrayOutputStream;
 
 /**
  * Helper for MMAPI. Used to capture snapshots, play sounds etc.
@@ -50,7 +48,6 @@ public final class Camera implements CommandListener, PlayerListener/*, Runnable
 //#endif
 
     private static final byte BYTE_FF = (byte) 0xFF;
-    private static final String MSG_UNEXPECTED_END_OF_STREAM = "Unexpected end of stream";
 
     // video capture members
     private Displayable next;
@@ -95,7 +92,7 @@ public final class Camera implements CommandListener, PlayerListener/*, Runnable
             }
 
             // create form
-            Form form = new Form("Camera");
+            Form form = new Form(Resources.getString(Resources.NAV_TITLE_CAMERA));
             form.addCommand(new Command(Resources.getString(Resources.CMD_CANCEL), Command.BACK, 1));
             form.addCommand(new Command(Resources.getString(Resources.NAV_CMD_TAKE), Command.SCREEN, 1));
             form.setCommandListener(this);
@@ -220,114 +217,74 @@ public final class Camera implements CommandListener, PlayerListener/*, Runnable
         callback.invoke(result, throwable, this);
     }
 
-    public static byte[] getThumbnail(byte[] image) throws Exception {
-        // stream
-        InputStream in = new ByteArrayInputStream(image);
+    public static int[] getThumbnail(byte[] jpg) {
+        int offset = 0;
 
         // JPEG check
-        if (!isJpeg(in)) {
-            return null;
-        }
+        final byte header0 = (byte) (jpg[offset++] & 0xFF);
+        final byte header1 = (byte) (jpg[offset++] & 0xFF);
+        if ((header0 & 0xFF) == 0xFF && (header1 & 0xFF) == 0xD8) {
+            do { // look for APP1
 
-        // find EXIF
-        do {
-            // segment identifier
-            int identifier = in.read();
-            if (identifier == -1) {
-                break;
-            }
-            if (((byte)(identifier & 0xFF)) != BYTE_FF) {
-                throw new IOException("Segment start not found");
-            }
+                // marker
+                final byte marker0 = (byte)(jpg[offset++] & 0xFF);
+                final byte marker1 = (byte)(jpg[offset++] & 0xFF);
 
-            // segment marker
-            byte marker = readByte(in);
+                // segment size [high-byte] [low-byte], includes size bytes
+                final int length = (((byte)(jpg[offset++] & 0xFF) << 8) & 0xFF00) | ((byte)(jpg[offset++] & 0xFF) & 0xFF) - 2;
 
-            // segment size [high-byte] [low-byte]
-            byte[] lengthBytes = new byte[2];
-            lengthBytes[0] = readByte(in);
-            lengthBytes[1] = readByte(in);
-            int length = ((lengthBytes[0] << 8) & 0xFF00) | (lengthBytes[1] & 0xFF);
+                // APP1?
+                if ((marker0 & 0xFF) == 0xFF && (marker1 & 0xFF) == 0xE1) {
 
-            // segment length includes size bytes
-            length -= 2;
-            if (length < 0) {
-                throw new IOException("Negative segment size");
-            }
+                    // find SOI
+                    int skipped = goTo(jpg, offset, (byte)0xD8);
+                    if (skipped == -1) {
+                        return null;
+                    }
+                    final int start = offset + skipped - 2;
+                    offset += skipped;
 
-            if (marker == (byte)0xDA) {
-                goTo(in, (byte)0xD9, null);
-            } else if (marker == (byte)0xE1) { // thumbnail segment
-                int l = length;
-                ByteArrayOutputStream out = new ByteArrayOutputStream(length);
-                l -= goTo(in, (byte)0xD8, null);
-                out.write(BYTE_FF);
-                out.write((byte)0xD8);
-                l -= goTo(in, (byte)0xD9, out);
-                out.write(BYTE_FF);
-                out.write((byte)0xD9);
-                out.flush();
-                if (l != 0) {
-                    throw new IllegalStateException("Wrong thumbnail position");
+                    // find EOI
+                    skipped = goTo(jpg, offset, (byte)0xD9);
+                    if (skipped == -1) {
+                        return null;
+                    }
+                    final int end = offset + skipped;
+
+                    // result
+                    return new int[]{ start, end };
+
+                } else {
+
+                    // skip segment
+                    offset += length;
+
                 }
-                return out.toByteArray();
-            } else {
-                skipSegment(in, length);
-            }
-        } while (true);
+
+            } while (offset < jpg.length);
+        }
 
         return null;
     }
 
-    private static boolean isJpeg(InputStream in) throws IOException {
-        final byte header0 = readByte(in);
-        final byte header1 = readByte(in);
-
-        return (header0 & 0xFF) == 0xFF && (header1 & 0xFF) == 0xD8;
-    }
-
-    private static void skipSegment(InputStream in, long length) throws IOException {
-        while (length > 0) {
-            long l = in.skip(length);
-            if (l == -1) {
-                throw new IOException(MSG_UNEXPECTED_END_OF_STREAM);
-            }
-            length -= l;
-        }
-    }
-
-    private static byte readByte(InputStream in) throws IOException {
-        final int b = in.read();
-        if (b == -1) {
-            throw new IOException(MSG_UNEXPECTED_END_OF_STREAM);
-        }
-
-        return (byte)(b & 0xFF);
-    }
-
-    private static int goTo(InputStream in, byte marker, ByteArrayOutputStream out) throws IOException {
-        int count = 0;
-        while (true) {
-            int b = readByte(in);
-            count++;
+    private static int goTo(byte[] jpg, final int offset, final byte marker) {
+        final int length = jpg.length;
+        int position = offset;
+        
+        for ( ; position < length; ) {
+            int b = jpg[position++] & 0xFF;
             if ((byte)(b & 0xFF) == BYTE_FF) {
-                b = readByte(in);
-                count++;
+                b = jpg[position++] & 0xFF;
                 if (marker == (byte)(b & 0xFF)) {
                     break;
-                } else {
-                    if (out != null) {
-                        out.write(BYTE_FF);
-                        out.write(b);
-                    }
-                }
-            } else {
-                if (out != null) {
-                    out.write(b);
                 }
             }
         }
 
-        return count;
+        if (position >= length) {
+            return -1;
+        }
+
+        return position - offset;
     }
 }

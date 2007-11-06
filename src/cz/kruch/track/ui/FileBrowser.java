@@ -68,7 +68,7 @@ public final class FileBrowser extends List implements CommandListener, Runnable
         browse();
     }
 
-    public void browse() {
+    private void browse() {
         // on background
         (new Thread(this)).start();
     }

@@ -35,7 +35,6 @@ import cz.kruch.track.Resources;
  */
 final class InfoForm extends Form implements CommandListener {
 
-    private Desktop desktop;
     private Throwable le;
     private Object ps;
     private Map map;
@@ -46,7 +45,6 @@ final class InfoForm extends Form implements CommandListener {
 
     public void show(Desktop desktop, Throwable le, Object ps, Map map) {
         // members
-        this.desktop = desktop;
         this.le = le;
         this.ps = ps;
         this.map = map;
@@ -54,7 +52,8 @@ final class InfoForm extends Form implements CommandListener {
         // items
         append(newItem(Resources.getString(Resources.INFO_ITEM_VENDOR), Resources.getString(Resources.INFO_ITEM_VENDOR_VALUE)));
         append(newItem(Resources.getString(Resources.INFO_ITEM_VERSION), cz.kruch.track.TrackingMIDlet.version));
-        append(newItem(Resources.getString(Resources.INFO_ITEM_KEYS), Resources.getString((short) (Resources.INFO_ITEM_KEYS_MS + desktop.mode))));
+        append(newItem(Resources.getString(Resources.INFO_ITEM_KEYS), ""));
+        append(Resources.getString((short) (Resources.INFO_ITEM_KEYS_MS + desktop.mode)));
         addCommand(new Command(Resources.getString(Resources.INFO_CMD_DETAILS), Desktop.POSITIVE_CMD_TYPE, 1));
         addCommand(new Command(Resources.getString(Resources.CMD_CLOSE), Command.BACK, 1));
         setCommandListener(this);
@@ -63,7 +62,7 @@ final class InfoForm extends Form implements CommandListener {
         Desktop.display.setCurrent(this);
     }
 
-    public void details(Desktop desktop, Throwable le, Object ps, Map map) {
+    private void details(Throwable le, Object ps, Map map) {
         // gc (for memory info to be correct)
         System.gc();
         long totalMemory = Runtime.getRuntime().totalMemory();
@@ -90,23 +89,13 @@ final class InfoForm extends Form implements CommandListener {
         } else {
             append(newItem("Map", "datum: " + map.getDatum() + " projection: " + map.getProjection()));
         }
-        append(new StringItem("ProviderStatus", (ps == null ? "" : ps.toString()) + "; restarts=" + cz.kruch.track.location.StreamReadingLocationProvider.restarts + "; syncs=" + cz.kruch.track.location.StreamReadingLocationProvider.syncs + "; mismatches=" + cz.kruch.track.location.StreamReadingLocationProvider.mismatches + "; checksums=" + cz.kruch.track.location.StreamReadingLocationProvider.checksums));
+        append(new StringItem("ProviderStatus", (ps == null ? "" : ps.toString()) + "; stalls=" + cz.kruch.track.location.StreamReadingLocationProvider.stalls + "; restarts=" + cz.kruch.track.location.StreamReadingLocationProvider.restarts + "; syncs=" + cz.kruch.track.location.StreamReadingLocationProvider.syncs + "; mismatches=" + cz.kruch.track.location.StreamReadingLocationProvider.mismatches + "; checksums=" + cz.kruch.track.location.StreamReadingLocationProvider.checksums));
         append(new StringItem("ProviderError", le == null ? "" : le.toString()));
-/*
-        addCommand(new Command(Resources.getString(Resources.CMD_CLOSE), Command.BACK, 1));
-        setCommandListener(this);
-*/
-
-/*
-        // show
-        Desktop.display.setCurrent(this);
-*/
     }
 
     public void commandAction(Command command, Displayable displayable) {
         if (command.getCommandType() == Command.BACK) {
             // gc hint
-            this.desktop = null;
             this.le = null;
             this.ps = null;
             this.map = null;
@@ -118,13 +107,13 @@ final class InfoForm extends Form implements CommandListener {
             // remove 'Details' command
             removeCommand(command);
             // show technical details
-            details(desktop, le, ps, map);
+            details(le, ps, map);
         }
     }
 
     private static StringItem newItem(String label, String text) {
         StringItem item = new StringItem(label, text);
-        item.setLayout(Item.LAYOUT_NEWLINE_AFTER);
+        item.setLayout(Item.LAYOUT_2 | Item.LAYOUT_NEWLINE_AFTER);
         return item;
     }
 }

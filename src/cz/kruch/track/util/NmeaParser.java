@@ -51,37 +51,16 @@ public final class NmeaParser {
             CharArrayTokenizer.Token token = tokenizer.next();
             if (!token.isEmpty()) {
                 switch (index) {
-                    case 0: {
-                        // TODO optimize (should never happen - remove?)
-/*
-                        if (!"$GPGGA".equals(token.toString())) {
-                            throw new LocationException("GPGGA expected");
-                        }
-*/
-                    } break;
+                    case 0: // $GPGGA
+                        break;
                     case 1: {
                         record.timestamp = parseTime(token);
                     } break;
-                    case 2: {
-// taken from RMC
-//                        record.lat = parseDouble(token.array, token.begin /* + 0*/, 2) + parseDouble(token.array, token.begin + 2, token.length - 2) / 60D;
-                    } break;
-                    case 3: {
-// taken from RMC
-//                        if (token.array[token.begin] == 'S') {
-//                            record.lat *= -1;
-//                        }
-                    } break;
-                    case 4: {
-// taken from RMC
-//                        record.lon = parseDouble(token.array, token.begin /* + 0*/, 3) + parseDouble(token.array, token.begin + 3, token.length - 3) / 60D;
-                    } break;
-                    case 5: {
-// taken from RMC
-//                        if (token.array[token.begin] == 'W') {
-//                            record.lon *= -1;
-//                        }
-                    } break;
+                    case 2: // lat - use RMC
+                    case 3: // lat sign - use RMC
+                    case 4: // lon - use RMC
+                    case 5: // lon sign - use RMC
+                        break;
                     case 6: {
                         record.fix = CharArrayTokenizer.parseInt(token);
                         if (record.fix == 0) { // no fix
@@ -97,17 +76,15 @@ public final class NmeaParser {
                     case 9: {
                         record.altitude = CharArrayTokenizer.parseFloat(token);
                     } break;
-                    case 10: {
-                        // 'm'
-                    } break;
+                    case 10: // 'm'
+                        break;
                     case 11: {
 /* unused
                         record.geoidh = parseFloat(token);
 */
                     } break;
-                    case 12: {
-                        // 'm'
-                    } break;
+                    case 12: // 'm'
+                        break;
                     case 13: {
 /* unused
                         record.dgpst = parseInt(token);
@@ -140,17 +117,10 @@ public final class NmeaParser {
             CharArrayTokenizer.Token token = tokenizer.next();
             /* no token empty check here */
             switch (index) {
-                case 0: {
-                    // TODO optimize (should never happen - remove?)
-/*
-                    if (!"$GPGSA".equals(token.toString())) {
-                        throw new LocationException("GPGGA expected");
-                    }
-*/
-                } break;
-                case 1: {
-                    // autoselection of 2d or 3d fix - ignored
-                } break;
+                case 0: // $GPGSA
+                    break;
+                case 1: // autoselection of 2d or 3d fix - ignored
+                    break;
                 case 2: {
                     record.fix = CharArrayTokenizer.parseInt(token); // should not be empty
                     if (record.fix == 1) { // no fix
@@ -175,7 +145,7 @@ public final class NmeaParser {
                 } break;
                 case 15:
                     // PDOP - ignored
-                break;
+                    break;
                 case 16: {
                     if (!token.isEmpty()) {
                         record.hdop = CharArrayTokenizer.parseFloat(token);
@@ -207,22 +177,13 @@ public final class NmeaParser {
             CharArrayTokenizer.Token token = tokenizer.next();
             if (!token.isEmpty()) {
                 switch (index) {
-                    case 0: {
-                        // TODO optimize (should never happen - remove?)
-/*
-                        if (!"$GPRMC".equals(token.toString())) {
-                            throw new LocationException("GPRMC expected");
-                        }
-*/
-                    } break;
+                    case 0: // $GPRMC
+                        break;
                     case 1: {
                         record.timestamp = parseTime(token);
                     } break;
                     case 2: {
                         record.status = token.array[token.begin];
-                        if (record.status != 'A') {
-                            index = 666; // breaks 'while'
-                        }
                     } break;
                     case 3: {
                         record.lat = CharArrayTokenizer.parseDouble(token.array, token.begin /* + 0*/, 2) + CharArrayTokenizer.parseDouble(token.array, token.begin + 2, token.length - 2) / 60D;

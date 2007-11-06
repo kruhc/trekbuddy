@@ -30,6 +30,7 @@ import javax.microedition.lcdui.StringItem;
 import javax.microedition.lcdui.Item;
 import javax.microedition.lcdui.ItemCommandListener;
 import javax.microedition.lcdui.Image;
+import javax.microedition.lcdui.ImageItem;
 
 import api.location.Location;
 import api.location.QualifiedCoordinates;
@@ -195,21 +196,27 @@ public final class WaypointForm extends Form
 
     public void invoke(Object result, Throwable throwable, Object source) {
         if (result instanceof byte[]) {
+            imageBytes = null; // gc hint
             imageBytes = (byte[]) result;
             try {
                 // release previous preview
                 if (imageNum > -1) {
+                    /* is this really necessary??? */
+                    Item old = get(imageNum);
+                    if (old instanceof ImageItem) {
+                        ((ImageItem) old).setImage(null);
+                    }
+                    // remove item
                     delete(imageNum);
                 }
 
                 // create preview
-                byte[] thumbnail = Camera.getThumbnail(imageBytes);
+                int[] thumbnail = Camera.getThumbnail(imageBytes);
                 if (thumbnail == null) {
                     imageNum = append(Resources.getString(Resources.NAV_MSG_NO_PREVIEW));
+                    Desktop.showInfo(Resources.getString(Resources.NAV_MSG_DO_NOT_WORRY), this);
                 } else {
-                    imageNum = append(Image.createImage(thumbnail, 0, thumbnail.length));
-                    thumbnail = null; // gc hint
-                    System.gc();
+                    imageNum = append(Image.createImage(imageBytes, thumbnail[0], thumbnail[1] - thumbnail[0]));
                 }
             } catch (Throwable t) {
                 Desktop.showError(Resources.getString(Resources.NAV_MSG_DO_NOT_WORRY), t, this);

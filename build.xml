@@ -4,7 +4,7 @@
     <property file="${include.properties}"/>
 
     <property name="version" value="${product.version}"/>
-    <property name="vendor" value="KrUcH"/>
+    <property name="vendor" value="${product.vendor}"/>
     <property name="description" value="GPS Tracking / Navigation"/>
 
     <property name="wtk.cldc.version" value="1.1"/>
@@ -12,6 +12,7 @@
 
     <property name="wtk.home" value="c:\J2ME\WTK2.5.1"/>
     <property name="motorola.home" value="c:\J2ME\Motorola\SDKv6.2\EmulatorM.3"/>
+    <property name="garnet.home" value="c:\J2ME\Garnet\PalmOS JVM 5.7.2\Tools"/>
     <property name="rim41.home" value="c:\J2ME\RIM\JDE 4.1.0"/>
     <property name="rim42.home" value="c:\J2ME\RIM\JDE"/>
     <property name="proguard.home" value="z:\apps\proguard3.10"/>
@@ -109,6 +110,8 @@
         <antcall target="delegate" inheritall="true"/>
 -->
         <antcall target="sign.and.update" inheritall="true"/>
+        <!-- make PRC right away -->
+        <antcall target="jad2prc"/>
     </target>
 
     <target name="rim41">
@@ -167,12 +170,23 @@
     <target name="clean">
         <delete dir="tmp"/>
         <delete includeemptydirs="true" verbose="true">
-          <fileset dir="dist${vendor.postfix}/${dist.dir}" includes="**/*"/>
+          <fileset dir="dist/${vendor.dir}/${dist.dir}" includes="**/*"/>
         </delete>
 <!--
         <delete dir="r:\trekbuddy\tmp"/>
 -->
-        <echo>Prepared for bulding ${version} version in dist${vendor.postfix}/${dist.dir}</echo>
+        <echo/>
+        <echo>Prepared for bulding ${version} version in dist/${vendor.dir}/${dist.dir}</echo>
+        <echo/>
+        <echo>************************************************************</echo>
+        <echo>*** Vendor:       ${vendor}</echo>
+        <echo>*** Version:      ${version}</echo>
+        <echo>*** Distribution: ${dist.dir}</echo>
+        <echo>*** Suffix:       ${suffix}</echo>
+        <echo>*** Properties:   ${include.properties}</echo>
+        <echo>************************************************************</echo>
+        <echo/>
+        <sleep seconds="5"/>
     </target>
 
     <target name="a.pre.generic">
@@ -190,7 +204,7 @@
         <wtkpreprocess srcdir="src" destdir="tmp/src" symbols="__JSR75__,__RIM__,${pre.extra}"/>
     </target>
 
-    <target name="compile.generic" depends="rescompile">
+    <target name="compile.generic">
         <mkdir dir="tmp/build/classes"/>
         <javac srcdir="tmp/src"
                destdir="tmp/build/classes"
@@ -199,7 +213,7 @@
                bootclasspathref="bootclasspath.generic"/>
     </target>
 
-    <target name="compile.std" depends="remove.nonstd.src,rescompile">
+    <target name="compile.std" depends="remove.nonstd.src">
         <mkdir dir="tmp/build/classes"/>
         <javac srcdir="tmp/src"
                destdir="tmp/build/classes"
@@ -208,7 +222,7 @@
                bootclasspathref="bootclasspath.std"/>
     </target>
 
-    <target name="compile.rim41" depends="remove.nonrim41.src,rescompile">
+    <target name="compile.rim41" depends="remove.nonrim41.src">
         <mkdir dir="tmp/build/classes"/>
         <javac srcdir="tmp/src"
                destdir="tmp/build/classes"
@@ -217,7 +231,7 @@
                bootclasspathref="bootclasspath.rim41"/>
     </target>
 
-    <target name="compile.rim42" depends="remove.nonrim42.src,rescompile">
+    <target name="compile.rim42" depends="remove.nonrim42.src">
         <mkdir dir="tmp/build/classes"/>
         <javac srcdir="tmp/src"
                destdir="tmp/build/classes"
@@ -322,16 +336,16 @@
     <target name="delegate">
         <copy file="tmp/trekbuddy${suffix}-obfuscated.jar" todir="r:\trekbuddy\tmp"/>
         <input>Do preverification on Linux....</input>
-        <copy file="r:\trekbuddy\dist${vendor.postfix}\${dist.dir}\trekbuddy${suffix}.jar" todir="dist${vendor.postfix}/${dist.dir}"/>
-        <copy file="r:\trekbuddy\dist${vendor.postfix}\${dist.dir}\trekbuddy${suffix}.jad" todir="dist${vendor.postfix}/${dist.dir}"/>
+        <copy file="r:\trekbuddy\dist/${vendor.dir}\${dist.dir}\trekbuddy${suffix}.jar" todir="dist/${vendor.dir}/${dist.dir}"/>
+        <copy file="r:\trekbuddy\dist/${vendor.dir}\${dist.dir}\trekbuddy${suffix}.jad" todir="dist/${vendor.dir}/${dist.dir}"/>
     </target>
 
     <target name="a.pack.obfuscated">
         <delete>
-          <fileset dir="dist${vendor.postfix}/${dist.dir}" includes="**/*.jar"/>
+          <fileset dir="dist/${vendor.dir}/${dist.dir}" includes="**/*.jar"/>
         </delete>
-        <wtkjad jadfile="dist${vendor.postfix}/${dist.dir}/trekbuddy${suffix}.jad"
-                jarfile="dist${vendor.postfix}/${dist.dir}/trekbuddy${suffix}.jar"
+        <wtkjad jadfile="dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad"
+                jarfile="dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jar"
                 name="TrekBuddy"
                 vendor="${vendor}"
                 version="${version}">
@@ -343,8 +357,8 @@
             <attribute name="MicroEdition-Configuration" value="CLDC-1.1"/>
             <attribute name="Nokia-MIDlet-Category" value="Application"/>
         </wtkjad>
-        <wtkpackage jarfile="dist${vendor.postfix}/${dist.dir}/trekbuddy${suffix}.jar"
-                    jadfile="dist${vendor.postfix}/${dist.dir}/trekbuddy${suffix}.jad">
+        <wtkpackage jarfile="dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jar"
+                    jadfile="dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad">
             <fileset dir="tmp/preverified"/>
             <fileset dir="res">
                 <exclude name="**/language*.txt"/>
@@ -354,10 +368,10 @@
 
     <target name="j9.pack.obfuscated">
         <delete>
-          <fileset dir="dist${vendor.postfix}/${dist.dir}" includes="**/*.jar"/>
+          <fileset dir="dist/${vendor.dir}/${dist.dir}" includes="**/*.jar"/>
         </delete>
-        <wtkjad jadfile="dist${vendor.postfix}/${dist.dir}/trekbuddy${suffix}.jad"
-                jarfile="dist${vendor.postfix}/${dist.dir}/trekbuddy${suffix}.jar"
+        <wtkjad jadfile="dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad"
+                jarfile="dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jar"
                 name="TrekBuddy"
                 vendor="${vendor}"
                 version="${version}">
@@ -368,8 +382,8 @@
             <attribute name="MicroEdition-Profile" value="MIDP-2.0"/>
             <attribute name="MicroEdition-Configuration" value="CLDC-1.1"/>
         </wtkjad>
-        <wtkpackage jarfile="dist${vendor.postfix}/${dist.dir}/trekbuddy${suffix}.jar"
-                    jadfile="dist${vendor.postfix}/${dist.dir}/trekbuddy${suffix}.jad">
+        <wtkpackage jarfile="dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jar"
+                    jadfile="dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad">
             <fileset dir="tmp/preverified"/>
             <fileset dir="res-J9"/>
             <fileset dir="res">
@@ -383,10 +397,10 @@
 
     <target name="rim.pack.obfuscated">
         <delete>
-          <fileset dir="dist${vendor.postfix}/${dist.dir}" includes="**/*.jar"/>
+          <fileset dir="dist/${vendor.dir}/${dist.dir}" includes="**/*.jar"/>
         </delete>
-        <wtkjad jadfile="dist${vendor.postfix}/${dist.dir}/trekbuddy${suffix}.jad"
-                jarfile="dist${vendor.postfix}/${dist.dir}/trekbuddy${suffix}.jar"
+        <wtkjad jadfile="dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad"
+                jarfile="dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jar"
                 name="TrekBuddy"
                 vendor="${vendor}"
                 version="${version}">
@@ -397,8 +411,8 @@
             <attribute name="MicroEdition-Profile" value="MIDP-2.0"/>
             <attribute name="MicroEdition-Configuration" value="CLDC-1.1"/>
         </wtkjad>
-        <wtkpackage jarfile="dist${vendor.postfix}/${dist.dir}/trekbuddy${suffix}.jar"
-                    jadfile="dist${vendor.postfix}/${dist.dir}/trekbuddy${suffix}.jad">
+        <wtkpackage jarfile="dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jar"
+                    jadfile="dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad">
             <fileset dir="tmp/preverified"/>
             <fileset dir="res-RIM"/>
             <fileset dir="res">
@@ -434,23 +448,23 @@
 
     <target name="sign.and.update">
         <java jar="${wtk.home}\bin\JadTool.jar" fork="true">
-            <arg line="-addcert -certnum 1 -alias 'trekbuddy' -keystore trekbuddy.jks -inputjad dist${vendor.postfix}/${dist.dir}/trekbuddy${suffix}.jad -outputjad dist${vendor.postfix}/${dist.dir}/_trekbuddy${suffix}.jad"/>
+            <arg line="-addcert -certnum 1 -alias 'trekbuddy' -keystore trekbuddy.jks -inputjad dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad -outputjad dist/${vendor.dir}/${dist.dir}/_trekbuddy${suffix}.jad"/>
         </java>
-        <move file="dist${vendor.postfix}/${dist.dir}/_trekbuddy${suffix}.jad" tofile="dist${vendor.postfix}/${dist.dir}/trekbuddy${suffix}.jad"/>
+        <move file="dist/${vendor.dir}/${dist.dir}/_trekbuddy${suffix}.jad" tofile="dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad"/>
         <java jar="${wtk.home}\bin\JadTool.jar" fork="true">
-            <arg line="-addcert -certnum 2 -alias 'trekbuddy' -keystore trekbuddy.jks -inputjad dist${vendor.postfix}/${dist.dir}/trekbuddy${suffix}.jad -outputjad dist${vendor.postfix}/${dist.dir}/_trekbuddy${suffix}.jad"/>
+            <arg line="-addcert -certnum 2 -alias 'trekbuddy' -keystore trekbuddy.jks -inputjad dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad -outputjad dist/${vendor.dir}/${dist.dir}/_trekbuddy${suffix}.jad"/>
         </java>
-        <move file="dist${vendor.postfix}/${dist.dir}/_trekbuddy${suffix}.jad" tofile="dist${vendor.postfix}/${dist.dir}/trekbuddy${suffix}.jad"/>
+        <move file="dist/${vendor.dir}/${dist.dir}/_trekbuddy${suffix}.jad" tofile="dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad"/>
         <java jar="${wtk.home}\bin\JadTool.jar" fork="true">
-            <arg line="-addcert -certnum 3 -alias 'trekbuddy' -keystore trekbuddy.jks -inputjad dist${vendor.postfix}/${dist.dir}/trekbuddy${suffix}.jad -outputjad dist${vendor.postfix}/${dist.dir}/_trekbuddy${suffix}.jad"/>
+            <arg line="-addcert -certnum 3 -alias 'trekbuddy' -keystore trekbuddy.jks -inputjad dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad -outputjad dist/${vendor.dir}/${dist.dir}/_trekbuddy${suffix}.jad"/>
         </java>
-        <move file="dist${vendor.postfix}/${dist.dir}/_trekbuddy${suffix}.jad" tofile="dist${vendor.postfix}/${dist.dir}/trekbuddy${suffix}.jad"/>
+        <move file="dist/${vendor.dir}/${dist.dir}/_trekbuddy${suffix}.jad" tofile="dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad"/>
         <java jar="${wtk.home}\bin\JadTool.jar" fork="true">
-            <arg line="-addjarsig -alias 'trekbuddy' -keystore trekbuddy.jks -keypass changeit -jarfile dist${vendor.postfix}/${dist.dir}/trekbuddy${suffix}.jar -inputjad dist${vendor.postfix}/${dist.dir}/trekbuddy${suffix}.jad -outputjad dist${vendor.postfix}/${dist.dir}/_trekbuddy${suffix}.jad"/>
+            <arg line="-addjarsig -alias 'trekbuddy' -keystore trekbuddy.jks -keypass changeit -jarfile dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jar -inputjad dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad -outputjad dist/${vendor.dir}/${dist.dir}/_trekbuddy${suffix}.jad"/>
         </java>
-        <move file="dist${vendor.postfix}/${dist.dir}/_trekbuddy${suffix}.jad" tofile="dist${vendor.postfix}/${dist.dir}/trekbuddy${suffix}.jad"/>
+        <move file="dist/${vendor.dir}/${dist.dir}/_trekbuddy${suffix}.jad" tofile="dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad"/>
 <!--
-        <wtkjad jadfile="dist${vendor.postfix}/${dist.dir}/trekbuddy${suffix}.jad" update="true">
+        <wtkjad jadfile="dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad" update="true">
             <attribute name="Datum-1" value="S-42 (Poland){Krassovsky 1940,24,-124,-82}=map:Pulkovo 1942 POL"/>
         </wtkjad>
 -->
@@ -499,7 +513,7 @@
             <arg value="-whyareyoukeeping class cz.kruch.track.util.NakedVector"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.util.Logger"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.location.MotorolaLocationProvider"/>
-            <arg value="-printmapping dist${vendor.postfix}/${dist.dir}/trekbuddy${suffix}.map"/>
+            <arg value="-printmapping dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.map"/>
             <arg value="-printseeds"/>
             <arg value="-verbose"/>
         </java>
@@ -530,7 +544,7 @@
             <arg value="-whyareyoukeeping class cz.kruch.track.util.NakedVector"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.util.Logger"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.location.MotorolaLocationProvider"/>
-            <arg value="-printmapping dist${vendor.postfix}/${dist.dir}/trekbuddy${suffix}.map"/>
+            <arg value="-printmapping dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.map"/>
             <arg value="-printseeds"/>
             <arg value="-verbose"/>
         </java>
@@ -564,28 +578,36 @@
         -->
         <!--
                   <wtkrapc quiet="true" midlet="true" codename="trekbuddy${suffix}"
-                        jadfile="dist${vendor.postfix}/${dist.dir}/trekbuddy${suffix}.jad"
-                        source="dist${vendor.postfix}/${dist.dir}/trekbuddy${suffix}.jar"
+                        jadfile="dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad"
+                        source="dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jar"
                          import="${rim.home}/lib/net_rim_api.jar"
-                        destdir="dist${vendor.postfix}/${dist.dir}/cod"/>
+                        destdir="dist/${vendor.dir}/${dist.dir}/cod"/>
         -->
         <!--
-                  <exec dir="${basedir}\dist${vendor.postfix}\${dist.dir}" executable="${rim.home}\bin\rapc.exe">
-                    <arg line="import='${rim.home}\lib\net_rim_api.jar' codename=trekbuddy${suffix} -quiet ${basedir}\dist${vendor.postfix}\${dist.dir}\trekbuddy${suffix}.jad ${basedir}\dist${vendor.postfix}\${dist.dir}\trekbuddy${suffix}.jar"/>
+                  <exec dir="${basedir}\dist/${vendor.dir}\${dist.dir}" executable="${rim.home}\bin\rapc.exe">
+                    <arg line="import='${rim.home}\lib\net_rim_api.jar' codename=trekbuddy${suffix} -quiet ${basedir}\dist/${vendor.dir}\${dist.dir}\trekbuddy${suffix}.jad ${basedir}\dist/${vendor.dir}\${dist.dir}\trekbuddy${suffix}.jar"/>
                   </exec>
         -->
-        <exec dir="${basedir}\dist${vendor.postfix}\${dist.dir}" executable="${rim.home}\bin\rapc.exe">
-            <arg line="import='${rim.home}\lib\net_rim_api.jar' codename=trekbuddy${suffix} -quiet -midlet ${basedir}\dist${vendor.postfix}\${dist.dir}\trekbuddy${suffix}.jad ${basedir}\dist${vendor.postfix}\${dist.dir}\trekbuddy${suffix}.jar"/>
+        <exec dir="${basedir}\dist/${vendor.dir}\${dist.dir}" executable="${rim.home}\bin\rapc.exe">
+            <arg line="import='${rim.home}\lib\net_rim_api.jar' codename=trekbuddy${suffix} -quiet -midlet ${basedir}\dist/${vendor.dir}\${dist.dir}\trekbuddy${suffix}.jad ${basedir}\dist/${vendor.dir}\${dist.dir}\trekbuddy${suffix}.jar"/>
         </exec>
-        <copy file="${basedir}\trekbuddy.alx" tofile="${basedir}\dist${vendor.postfix}\${dist.dir}\trekbuddy${suffix}.alx"/>
-        <replace file="${basedir}\dist${vendor.postfix}\${dist.dir}\trekbuddy${suffix}.alx" token="@SUFFIX@" value="${suffix}"/>
-        <replace file="${basedir}\dist${vendor.postfix}\${dist.dir}\trekbuddy${suffix}.alx" token="@DESCRIPTION@"
+        <copy file="${basedir}\trekbuddy.alx" tofile="${basedir}\dist/${vendor.dir}\${dist.dir}\trekbuddy${suffix}.alx"/>
+        <replace file="${basedir}\dist/${vendor.dir}\${dist.dir}\trekbuddy${suffix}.alx" token="@SUFFIX@" value="${suffix}"/>
+        <replace file="${basedir}\dist/${vendor.dir}\${dist.dir}\trekbuddy${suffix}.alx" token="@DESCRIPTION@"
                  value="${description}"/>
-        <replace file="${basedir}\dist${vendor.postfix}\${dist.dir}\trekbuddy${suffix}.alx" token="@VERSION@" value="${version}"/>
-        <replace file="${basedir}\dist${vendor.postfix}\${dist.dir}\trekbuddy${suffix}.alx" token="@VENDOR@" value="${vendor}"/>
+        <replace file="${basedir}\dist/${vendor.dir}\${dist.dir}\trekbuddy${suffix}.alx" token="@VERSION@" value="${version}"/>
+        <replace file="${basedir}\dist/${vendor.dir}\${dist.dir}\trekbuddy${suffix}.alx" token="@VENDOR@" value="${vendor}"/>
         <delete>
-            <fileset dir="${basedir}\dist${vendor.postfix}\${dist.dir}" excludes="*.cod,*.alx,*.map"/>
+            <fileset dir="${basedir}\dist/${vendor.dir}\${dist.dir}" excludes="*.cod,*.alx,*.map"/>
         </delete>
+    </target>
+
+    <target name="jad2prc">
+        <echo>Using garnet.home=${garnet.home}</echo>
+        <exec dir="${basedir}" newenvironment="true" executable="${garnet.home}\bin\jad2prc.exe">
+            <env key="JAVA_HOME" value="${garnet.home}"/>
+            <arg line="-keystore j2me.keystore -vmOption -Xmx4M -o ${basedir}\dist/${vendor.dir}\palm\trekbuddy.prc ${basedir}\dist/${vendor.dir}\${dist.dir}\trekbuddy${suffix}.jad"/>
+        </exec>
     </target>
 
     <target name="rescompile">

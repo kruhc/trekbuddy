@@ -122,18 +122,22 @@ public class SerialLocationProvider extends StreamReadingLocationProvider implem
 
         } catch (Throwable t) {
 
+//#ifdef __LOG__
+            t.printStackTrace();
+//#endif
+
             // record
             setThrowable(t);
 
         } finally {
 
+            // stop NMEA log
+            stopNmeaLog();
+
             // be ready for restart
             go = false;
             url = null;
             thread = null;
-
-            // stop NMEA log
-            stopNmeaLog();
 
             // update status TODO useless - listener has already been cleared
             notifyListener(LocationProvider.OUT_OF_SERVICE);
@@ -148,10 +152,8 @@ public class SerialLocationProvider extends StreamReadingLocationProvider implem
     }
 
     public void stop() throws LocationException {
-        // if running, stop
-        if (go) {
-            go = false;
-        }
+        // stop
+        go = false;
 
         // another attempt to wake-up the thread
         if (thread != null) {
@@ -305,6 +307,10 @@ public class SerialLocationProvider extends StreamReadingLocationProvider implem
 
                 } catch (IOException e) {
 
+//#ifdef __LOG__
+                    e.printStackTrace();
+//#endif
+
                     // record
                     setThrowable(e);
 
@@ -313,6 +319,10 @@ public class SerialLocationProvider extends StreamReadingLocationProvider implem
                      */
 
                 } catch (Throwable t) {
+
+//#ifdef __LOG__
+                    t.printStackTrace();
+//#endif
 
                     // record
                     if (t instanceof InterruptedException) {

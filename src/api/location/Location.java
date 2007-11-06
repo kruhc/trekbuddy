@@ -76,7 +76,11 @@ public final class Location {
      */
 
     public Location clone() {
-        return newInstance(coordinates.clone(), timestamp, fix, sat);
+        Location l = newInstance(coordinates.clone(), timestamp, fix, sat);
+        l.setCourse(course);
+        l.setSpeed(speed);
+        l.setFix3d(fix3d);
+        return l;
     }
 
     private Location(QualifiedCoordinates coordinates,

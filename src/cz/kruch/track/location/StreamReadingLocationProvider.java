@@ -45,7 +45,7 @@ public abstract class StreamReadingLocationProvider extends LocationProvider {
 
     protected static final int BUFFER_SIZE = 512; // as recommended at Nokia forum
 
-    public static int syncs, mismatches, checksums, restarts;
+    public static int syncs, mismatches, checksums, restarts, stalls;
 
     private OutputStream observer;
     private char[] line;
@@ -57,7 +57,7 @@ public abstract class StreamReadingLocationProvider extends LocationProvider {
     protected StreamReadingLocationProvider(String name) {
         super(name);
         this.line = new char[LINE_SIZE];
-        syncs = mismatches = checksums = restarts = 0;
+        syncs = mismatches = checksums = restarts = stalls = 0;
     }
 
     protected void setObserver(OutputStream observer) {
@@ -143,15 +143,13 @@ public abstract class StreamReadingLocationProvider extends LocationProvider {
             QualifiedCoordinates qc = QualifiedCoordinates.newInstance(rmc.lat, rmc.lon, gga.altitude);
             qc.setHorizontalAccuracy(gga.hdop * 5);
             qc.setVerticalAccuracy(gga.vdop * 5);
-            location = Location.newInstance(qc, datetime, gga.fix, gga.sat);
-            if (gsa != null) {
-                location.setFix3d(gsa.fix == 3);
-            }
+            location = Location.newInstance(qc, datetime, rmc.status == 'A' ? gga.fix : 0, gga.sat);
         } else {
             location = Location.newInstance(QualifiedCoordinates.newInstance(rmc.lat, rmc.lon),
                                             datetime, rmc.status == 'A' ? 1 : 0);
             mismatches++;
         }
+        location.setFix3d(gsa != null && gsa.fix == 3);
         location.setCourse(rmc.angle);
         location.setSpeed(rmc.speed);
 

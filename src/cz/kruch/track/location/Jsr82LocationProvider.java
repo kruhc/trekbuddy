@@ -58,7 +58,7 @@ public final class Jsr82LocationProvider extends SerialLocationProvider {
     }
 
     protected void refresh() {
-        restarts += 1000; // TODO only for debugging???
+        stalls++;
         (new Refresher()).run();
     }
 

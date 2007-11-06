@@ -95,36 +95,38 @@ public final class NavigationScreens {
     // public (???) vars
     public static int bulletSize;
 
-    public static void initialize() {
+    public static void initialize() throws IOException {
         // init image cache
-        try {
-            crosshairs = createImage("/resources/crosshairs.png");
-            courses = createImage("/resources/arrows.png");
-            navises = createImage("/resources/naviws.png");
-            waypoint = createImage("/resources/wpt.png");
-            pois = createImage("/resources/pois.png");
-            providers = createImage("/resources/bullets.png");
-            stores = new Image[] {
-                createImage("/resources/icon.store.xml.png"),
-                createImage("/resources/icon.store.xmla.png"),
-                createImage("/resources/icon.store.mem.png"),
-                createImage("/resources/icon.store.mema.png")
-            };
-        } catch (IOException e) {
-            throw new IllegalStateException("Image resources could not be loaded");
-        }
+        crosshairs = createImage("/resources/crosshairs.png");
+        courses = createImage("/resources/arrows.png");
+        navises = createImage("/resources/naviws.png");
+        waypoint = createImage("/resources/wpt.png");
+        pois = createImage("/resources/pois.png");
+        providers = createImage("/resources/bullets.png");
+        stores = new Image[] {
+            createImage("/resources/icon.store.xml.png"),
+            createImage("/resources/icon.store.xmla.png"),
+            createImage("/resources/icon.store.mem.png"),
+            createImage("/resources/icon.store.mema.png")
+        };
 
         // setup vars
         arrowSize = courses.getHeight();
+        arrowsFull = courses.getWidth() == (courses.getHeight() / 4) * 9;
+        if (arrowsFull) {
+            arrowSize /= 4;
+        }
         arrowSize2 = arrowSize >> 1;
         naviwSize = navises.getHeight();
+        naviwsFull = navises.getWidth() == (navises.getHeight() / 4) * 9;
+        if (naviwsFull) {
+            naviwSize /= 4;
+        }
         naviwSize2 = naviwSize >> 1;
-        wptSize2 = waypoint.getWidth() >> 1;
-        bulletSize = providers.getHeight(); // = 10
+        wptSize2 = waypoint.getHeight() >> 1;
+        bulletSize = providers.getHeight();
         poiSize = pois.getHeight();
         poiSize2 = poiSize >> 1;
-        arrowsFull = courses.getWidth() == courses.getHeight() * 36;
-        naviwsFull = navises.getWidth() == navises.getHeight() * 36;
     }
 
     public static int customize() throws IOException {
@@ -144,8 +146,11 @@ public final class NavigationScreens {
             System.gc();
             i++;
             arrowSize = courses.getHeight();
+            arrowsFull = courses.getWidth() == (courses.getHeight() / 4) * 9;
+            if (arrowsFull) {
+                arrowSize /= 4;
+            }
             arrowSize2 = arrowSize >> 1;
-            arrowsFull = courses.getWidth() == courses.getHeight() * 36;
         }
         image = loadImage("naviws.png");
         if (image != null) {
@@ -154,8 +159,11 @@ public final class NavigationScreens {
             System.gc();
             i++;
             naviwSize = navises.getHeight();
+            naviwsFull = navises.getWidth() == (navises.getHeight() / 4) * 9;
+            if (naviwsFull) {
+                naviwSize /= 4;
+            }
             naviwSize2 = naviwSize >> 1;
-            naviwsFull = navises.getWidth() == navises.getHeight() * 36;
         }
         image = loadImage("wpt.png");
         if (image != null) {
@@ -250,7 +258,7 @@ public final class NavigationScreens {
             }
             graphics.setClip(x - arrowSize2, y - arrowSize2, arrowSize, arrowSize);
             graphics.drawImage(courses,
-                               x - ci * arrowSize - arrowSize2, y - arrowSize2,
+                               x - (ci % 9) * arrowSize - arrowSize2, y - (ci / 9) * arrowSize  - arrowSize2,
                                anchor);
             graphics.setClip(0, 0, Desktop.width, Desktop.height);
         } else {
@@ -309,7 +317,7 @@ public final class NavigationScreens {
             }
             graphics.setClip(x - naviwSize2, y - naviwSize2, naviwSize, naviwSize);
             graphics.drawImage(navises,
-                               x - ci * naviwSize - naviwSize2, y - naviwSize2,
+                               x - (ci % 9) * naviwSize - naviwSize2, y - (ci / 9) * naviwSize - naviwSize2,
                                anchor);
             graphics.setClip(0, 0, Desktop.width, Desktop.height);
         } else {
@@ -445,8 +453,12 @@ public final class NavigationScreens {
     }
 
     public static StringBuffer toStringBuffer(QualifiedCoordinates qc, StringBuffer sb) {
-        if (Config.useGridFormat && (isGrid())) {
-            toGrid(qc, sb);
+        if (Config.useGridFormat && isGrid()) {
+            if (isUTM()) {
+                toUTM(qc, sb);
+            } else {
+                toGrid(qc, sb);
+            }
         } else if (Config.useUTM) {
             toUTM(qc, sb);
         } else {
@@ -464,7 +476,11 @@ public final class NavigationScreens {
     private static boolean isGrid() {
         return ProjectionSetup.contextProjection instanceof Mercator.ProjectionSetup && !api.location.ProjectionSetup.PROJ_MERCATOR.equals(ProjectionSetup.contextProjection.name);
     }
-    
+
+    private static boolean isUTM() {
+        return ProjectionSetup.contextProjection instanceof Mercator.ProjectionSetup && "UTM".equals(ProjectionSetup.contextProjection.name);
+    }
+
     private static StringBuffer toGrid(QualifiedCoordinates qc, StringBuffer sb) {
         CartesianCoordinates gridCoords = Mercator.LLtoGrid(qc);
         if (gridCoords.zone != null) {

@@ -174,7 +174,7 @@ final class ComputerView extends View
 
     private static final String CMS_SIMPLE_XML  = "cms.simple.xml";
     private static final String SIGN_HEXA       = "0x1E";
-    private static final String NO_TIME         = "??:??:??";
+    private static final String NO_TIME         = "--:--:--";
 
     private static final float AUTO_MIN         = 2.4F;
 

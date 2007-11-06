@@ -164,8 +164,8 @@
 2312=Listing...
 2313=Loading...
 2400=Camera failed
-2401=<no preview>
-2402=Could not create preview but do not worry - image has been saved
+2401=\n<no preview>
+2402=No preview :-(
 2403=Snapshot failed
 2404=No snapshot
 2405=Malformed coordinate:
@@ -249,10 +249,10 @@
 4000=Technical
 
 # info items
-4200=Vendor
+4200=Home
 4201=www.trekbuddy.net
 4202=Version
 4203=Keys
-4204=0 - crosshairs, 1 - navigation (hold for quick active wpts list access), 3 - backlight, 5/FIRE - tracking/navigation OSD info, 2-4-6-8/JOY - map scroll, 7 - maps (atlas), 9 - layers (atlas), # - screens, * - keylock (hold; press shortly then 0 for wpts names display)
-4205=0 - day/night, 1 - navigation (hold for quick active wpts list access), 3 - backlight, 2-8/JOY UP-DOWN - location averaging, 4-6/JOY LEFT-RIGHT - scale, # - screens, * - keylock (hold)
-4206=0 - day/night, 1 - navigation (hold for quick active wpts list access), 3 - backlight, 8/JOY DOWN - profiles, # - screens, * - keylock (hold)
+4204=\n0 - crosshairs, 1 - navigation (hold for quick active wpts list access), 3 - backlight, 5/FIRE - tracking/navigation OSD info, 2-4-6-8/JOY - map scroll, 7 - maps (atlas), 9 - layers (atlas), # - screens, * - keylock (hold; press shortly then 0 for wpts names display)
+4205=\n0 - day/night, 1 - navigation (hold for quick active wpts list access), 3 - backlight, 2-8/JOY UP-DOWN - location averaging, 4-6/JOY LEFT-RIGHT - scale, # - screens, * - keylock (hold)
+4206=\n0 - day/night, 1 - navigation (hold for quick active wpts list access), 3 - backlight, 8/JOY DOWN - profiles, # - screens, * - keylock (hold)

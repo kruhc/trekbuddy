@@ -5,10 +5,10 @@ set PATH=%JAVA_HOME%\bin;%PATH%
 
 if "%1"=="" goto help
 if "%2"=="" goto help
-if not exist build-%1.properties goto vendor
+if not exist properties\build-%1.properties goto vendor
 
-cmd /c ant rescompile
-cmd /c ant -Dinclude.properties=build-%1.properties %2
+cmd /c ant -f res.xml
+cmd /c ant -Dinclude.properties=properties\build-%1.properties -f build.xml %2
 goto end
 
 :vendor

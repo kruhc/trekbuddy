@@ -122,7 +122,7 @@ public final class Config {
     private static String locationTimings   = EMPTY_STRING;
 
     // group [Serial provider options]
-    public static String commUrl            = "comm:COM0;baudrate=9600";
+    public static String commUrl            = "comm:COM5;baudrate=9600";
 
     // group [Location sharing]
     public static boolean locationSharing;

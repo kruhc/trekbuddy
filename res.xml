@@ -1,0 +1,47 @@
+<?xml version="1.0"?>
+<project name="TrekBuddy - resources" default="unknown" basedir=".">
+
+<!--
+  public targets
+-->
+
+    <target name="unknown">
+        <echo message="Invalid vendor specified"/>
+    </target>
+
+    <target name="public" depends="rescompile"/>
+
+    <target name="jurek">
+        <copy overwrite="true"
+            file="res-pl_PL\resources\language.res" 
+            tofile="res\resources\language.res"/>
+    </target>
+
+    <target name="jurek-testing" depends="jurek"/>
+
+<!--
+  private targets
+-->
+
+    <target name="rescompile">
+        <exec dir="${basedir}" executable="${java.home}/../bin/native2ascii.exe">
+            <arg line="res/resources/language.en_US.txt res/resources/language.txt"/>
+        </exec>
+        <javac 
+            destdir="tools/classes" 
+            srcdir="tools/src" 
+            includes="ResourceCompiler.java"/>
+        <jar 
+            destfile="tools/dist/rc.jar"
+            basedir="tools/classes"
+            includes="ResourceCompiler.class">
+          <manifest>
+            <attribute name="Main-Class" value="ResourceCompiler"/>
+          </manifest>
+        </jar> 
+        <java fork="true" jar="tools/dist/rc.jar">
+            <arg line="en_US res/resources/language.txt res/resources/language.res"/>
+        </java>
+    </target>
+
+</project>

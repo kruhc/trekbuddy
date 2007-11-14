@@ -463,7 +463,7 @@ public final class NavigationScreens {
             toUTM(qc, sb);
         } else {
             // condensed for SXG75
-            if (cz.kruch.track.TrackingMIDlet.sxg75 && Config.decimalPrecision) {
+            if (Config.decimalPrecision && cz.kruch.track.TrackingMIDlet.sxg75) {
                 toCondensedLL(qc, sb);
             } else { // decent devices
                 toLL(qc, sb);

@@ -261,7 +261,25 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
             short[] providers = Config.getLocationProviders();
             choiceProvider = new ChoiceGroup(Resources.getString(Resources.CFG_LOCATION_GROUP_PROVIDER), ChoiceGroup.EXCLUSIVE);
             for (int N = providers.length, i = 0; i < N; i++) {
-                choiceProvider.setSelectedIndex(choiceProvider.append(Resources.getString((short) (Resources.CFG_LOCATION_FLD_PROV_BLUETOOTH + providers[i])), null), Config.locationProvider == providers[i]);
+                short resourceId = Resources.CFG_LOCATION_FLD_PROV_BLUETOOTH;
+                switch (providers[i]) {
+                    case Config.LOCATION_PROVIDER_JSR179:
+                        resourceId = Resources.CFG_LOCATION_FLD_PROV_INTERNAL;
+                    break;
+                    case Config.LOCATION_PROVIDER_SERIAL:
+                        resourceId = Resources.CFG_LOCATION_FLD_PROV_SERIAL;
+                    break;
+                    case Config.LOCATION_PROVIDER_SIMULATOR:
+                        resourceId = Resources.CFG_LOCATION_FLD_PROV_SIMULATOR;
+                    break;
+                    case Config.LOCATION_PROVIDER_MOTOROLA:
+                        resourceId = Resources.CFG_LOCATION_FLD_PROV_MOTOROLA;
+                    break;
+                    case Config.LOCATION_PROVIDER_O2GERMANY:
+                        resourceId = Resources.CFG_LOCATION_FLD_PROV_O2GERMANY;
+                    break;
+                }
+                choiceProvider.setSelectedIndex(choiceProvider.append(Resources.getString(resourceId), null), Config.locationProvider == providers[i]);
             }
             if (providers.length > 0) {
                 submenu.append(choiceProvider);

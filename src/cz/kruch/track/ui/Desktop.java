@@ -1497,31 +1497,41 @@ public final class Desktop extends GameCanvas
 
         // which provider?
         Class providerClass = null;
+        String providerName = null;
 
         // instantiate provider
         try {
             switch (Config.locationProvider) {
                 case Config.LOCATION_PROVIDER_JSR179:
                     providerClass = Class.forName("cz.kruch.track.location.Jsr179LocationProvider");
+                    providerName = "Internal";
                 break;
                 case Config.LOCATION_PROVIDER_JSR82:
                     providerClass = Class.forName("cz.kruch.track.location.Jsr82LocationProvider");
+                    providerName = "Bluetooth";
                 break;
                 case Config.LOCATION_PROVIDER_SERIAL:
                     providerClass = Class.forName("cz.kruch.track.location.SerialLocationProvider");
+                    providerName = "Serial";
                 break;
                 case Config.LOCATION_PROVIDER_SIMULATOR:
                     providerClass = Class.forName("cz.kruch.track.location.SimulatorLocationProvider");
+                    providerName = "Simulator";
                 break;
 //#ifdef __A1000__
                 case Config.LOCATION_PROVIDER_MOTOROLA:
                     providerClass = Class.forName("cz.kruch.track.location.MotorolaLocationProvider");
+                    providerName = "Motorola";
                 break;
 //#endif
+                case Config.LOCATION_PROVIDER_O2GERMANY:
+                    providerClass = Class.forName("cz.kruch.track.location.O2GermanyLocationProvider");
+                    providerName = "O2 Germany";
+                break;
             }
             provider = (LocationProvider) providerClass.newInstance();
         } catch (Throwable t) {
-            showError(Resources.getString(Resources.DESKTOP_MSG_CREATE_PROV_FAILED) + " [" + provider.getName() + "] (" + providerClass + ")", t, this);
+            showError(Resources.getString(Resources.DESKTOP_MSG_CREATE_PROV_FAILED) + " [" + providerName + "]", t, this);
 
             return false;
         }
@@ -3348,7 +3358,15 @@ public final class Desktop extends GameCanvas
             if (log.isEnabled()) log.debug("cleanup");
 //#endif
             // update loading result
-            _updateLoadingResult("__EVENT CLEANUP__", t);
+            {
+                String msg = Resources.getString(Resources.DESKTOP_MSG_EVENT_CLENAUP);
+                int i = msg.indexOf('\n');
+                if (i > /* -1 */ 0) {
+                    _updateLoadingResult(msg.substring(0, i), msg.substring(i + 1));
+                } else {
+                    _updateLoadingResult(msg, (String) null);
+                }
+            }
 
             // clear temporary vars
             if (_atlas != null) {
@@ -3359,6 +3377,9 @@ public final class Desktop extends GameCanvas
                 _map.close();
                 _map = null;
             }
+
+            // show hint
+            update(MASK_SCREEN);
         }
 
         // debug

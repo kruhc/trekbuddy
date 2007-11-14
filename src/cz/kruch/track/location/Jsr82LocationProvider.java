@@ -44,7 +44,7 @@ public final class Jsr82LocationProvider extends SerialLocationProvider {
 
     public Jsr82LocationProvider() throws LocationException {
         super("Bluetooth");
-
+        
         /* BT turned on check */
         try {
             javax.bluetooth.LocalDevice.getLocalDevice();

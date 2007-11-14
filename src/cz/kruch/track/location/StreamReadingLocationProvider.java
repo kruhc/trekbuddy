@@ -107,6 +107,7 @@ public abstract class StreamReadingLocationProvider extends LocationProvider {
             } else {
                 continue;
             }
+
             // hack
             if (gsa != null) {
                 if (hack_rmc_count >= 3) { // use GSA as GGA (alt missing, though)
@@ -121,6 +122,7 @@ public abstract class StreamReadingLocationProvider extends LocationProvider {
                     gga.vdop = gsa.vdop;
                 }
             }
+
             // sync
             if (rmc != null && gga != null) {
                 int i = rmc.timestamp - gga.timestamp;

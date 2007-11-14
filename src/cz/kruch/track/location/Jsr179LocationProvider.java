@@ -24,7 +24,6 @@ import cz.kruch.j2se.io.BufferedOutputStream;
 import api.location.LocationException;
 import api.location.QualifiedCoordinates;
 import api.location.Location;
-import api.location.LocationProvider;
 import api.file.File;
 
 import javax.microedition.io.Connector;
@@ -101,8 +100,8 @@ public final class Jsr179LocationProvider
         // start service thread
         (new Thread(this)).start();
 
-        lastState = _STARTING;
-        notifyListener(_STARTING); // trick to start GPX tracklog
+        // notify
+        notifyListener(lastState = _STARTING); // trick to start GPX tracklog
 
         return lastState;
     }
@@ -239,9 +238,8 @@ public final class Jsr179LocationProvider
         if (l.isValid()) {
 
             // signal state change
-            if (lastState != LocationProvider.AVAILABLE) {
-                lastState = LocationProvider.AVAILABLE;
-                notifyListener(lastState);
+            if (lastState != AVAILABLE) {
+                notifyListener(lastState = AVAILABLE);
             }
 
             // vars
@@ -281,9 +279,8 @@ public final class Jsr179LocationProvider
         } else {
 
             // signal state change
-            if (lastState != LocationProvider.TEMPORARILY_UNAVAILABLE) {
-                lastState = LocationProvider.TEMPORARILY_UNAVAILABLE;
-                notifyListener(lastState);
+            if (lastState != TEMPORARILY_UNAVAILABLE) {
+                notifyListener(lastState = TEMPORARILY_UNAVAILABLE);
             }
         }
 

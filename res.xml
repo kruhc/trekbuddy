@@ -6,7 +6,7 @@
 -->
 
     <target name="unknown">
-        <echo message="Invalid vendor specified"/>
+        <fail message="Invalid vendor specified" status="-1"/>
     </target>
 
     <target name="public" depends="rescompile"/>

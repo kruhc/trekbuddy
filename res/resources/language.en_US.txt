@@ -73,7 +73,7 @@
 1340=Paused
 1341=No profile(s) found
 1342=Profiles
-#1343
+1343=Incorrect file selected.\nTry again.
 1344=Failed to parse map projection
 1345=Failed to parse map datum
 1346=Failed to parse calibration file
@@ -227,6 +227,7 @@
 3615=Motorola
 3616=GPX Options
 3617=log only valid
+3618=O2 Germany
 
 # settings forms/fields/values (Navigation)
 3700=Wpt Proximity

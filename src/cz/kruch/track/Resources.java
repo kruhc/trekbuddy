@@ -103,9 +103,7 @@ public final class Resources {
     public static final short DESKTOP_MSG_PAUSED                = 1340;
     public static final short DESKTOP_MSG_NO_CMS_PROFILES       = 1341;
     public static final short DESKTOP_MSG_PROFILES              = 1342;
-/*
-    public static final short DESKTOP_MSG_???                   = 1343;
-*/
+    public static final short DESKTOP_MSG_EVENT_CLENAUP         = 1343;
     public static final short DESKTOP_MSG_PARSE_PROJ_FAILED     = 1344;
     public static final short DESKTOP_MSG_PARSE_DATUM_FAILED    = 1345;
     public static final short DESKTOP_MSG_PARSE_CAL_FAILED      = 1346;
@@ -250,6 +248,7 @@ public final class Resources {
     public static final short CFG_LOCATION_FLD_PROV_MOTOROLA    = 3615;
     public static final short CFG_LOCATION_GROUP_GPX_OPTS       = 3616;
     public static final short CFG_LOCATION_FLD_GPX_LOG_VALID    = 3617;
+    public static final short CFG_LOCATION_FLD_PROV_O2GERMANY   = 3618;
     /* settings - navigation */
     public static final short CFG_NAVIGATION_FLD_WPT_PROXIMITY  = 3700;
     public static final short CFG_NAVIGATION_FLD_POI_PROXIMITY  = 3701;

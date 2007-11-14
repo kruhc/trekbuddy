@@ -52,6 +52,7 @@ public final class Config {
     public static final int LOCATION_PROVIDER_SERIAL     = 2;
     public static final int LOCATION_PROVIDER_SIMULATOR  = 3;
     public static final int LOCATION_PROVIDER_MOTOROLA   = 4;
+    public static final int LOCATION_PROVIDER_O2GERMANY  = 5;
 
     /* tracklog options */
     public static final int TRACKLOG_NEVER          = 0;
@@ -694,6 +695,9 @@ public final class Config {
                 list.addElement(new Integer(LOCATION_PROVIDER_MOTOROLA));
             }
 //#endif
+            if (cz.kruch.track.TrackingMIDlet.hasFlag("provider_o2_germany")) {
+                list.addElement(new Integer(LOCATION_PROVIDER_O2GERMANY));
+            }
             providers = new short[list.size()];
             for (int i = 0; i < list.size(); i++) {
                 providers[i] = ((Integer) list.elementAt(i)).shortValue();

@@ -7,7 +7,7 @@ if "%1"=="" goto help
 if "%2"=="" goto help
 if not exist properties\build-%1.properties goto vendor
 
-cmd /c ant -f res.xml
+cmd /c ant -f res.xml %1
 cmd /c ant -Dinclude.properties=properties\build-%1.properties -f build.xml %2
 goto end
 

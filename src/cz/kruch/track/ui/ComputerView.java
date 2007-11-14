@@ -175,6 +175,7 @@ final class ComputerView extends View
     private static final String CMS_SIMPLE_XML  = "cms.simple.xml";
     private static final String SIGN_HEXA       = "0x1E";
     private static final String NO_TIME         = "--:--:--";
+    private static final String INF_TIME        = "99:99:99";
 
     private static final float AUTO_MIN         = 2.4F;
 
@@ -225,6 +226,10 @@ final class ComputerView extends View
     private volatile boolean fix3d;
     private float[] valuesFloat;
 
+    private float[] spdavgFloat;
+    private volatile int spdavgIndex;
+    private volatile float spdavgShort;
+
     public ComputerView(/*Navigator*/Desktop navigator) {
         super(navigator);
     }
@@ -258,6 +263,7 @@ final class ComputerView extends View
 
         // trip values
         this.valuesFloat = new float[TOKENS_float.length];
+        this.spdavgFloat = new float[8];
 
         // reset trip values
         reset();
@@ -282,6 +288,11 @@ final class ComputerView extends View
         for (int i = valuesFloat.length; --i >= 0; ) {
             valuesFloat[i] = 0F;
         }
+        for (int i = spdavgFloat.length; --i >= 0; ) {
+            spdavgFloat[i] = -1F;
+        }
+        spdavgIndex = 0;
+        spdavgShort = 0F;
     }
 
     public int locationUpdated(Location l) {
@@ -296,8 +307,9 @@ final class ComputerView extends View
 
         // update times
         timestamp = t;
-        if (starttime == 0) {
+        if (starttime == 0) { // first record
             starttime = t;
+            ETA_CALENDAR.setTimeSafe(t);
         }
 
         // time since start
@@ -398,6 +410,25 @@ final class ComputerView extends View
                 // spd-max
                 if (f > valuesFloat[VALUE_SPD_MAX]) {
                     valuesFloat[VALUE_SPD_MAX] = f;
+                }
+
+                // spd-avg short
+                {
+                    final float[] spdavgFloat = this.spdavgFloat;
+                    spdavgFloat[spdavgIndex++] = f;
+                    if (spdavgIndex >= spdavgFloat.length) {
+                        spdavgIndex = 0;
+                    }
+                    int c = 0;
+                    spdavgShort = 0F;
+                    for (int i = spdavgFloat.length; i-- > 0; ) {
+                        float v = spdavgFloat[i];
+                        if (v > -1F) {
+                            spdavgShort += v;
+                            c++;
+                        }
+                    }
+                    spdavgShort /= c;
                 }
             }
 
@@ -802,14 +833,7 @@ final class ComputerView extends View
                                     if (timestamp == 0) {
                                         sb.append(NO_TIME);
                                     } else {
-/*
-                                        DATE.setTime(timestamp);
-                                        CALENDAR.setTime(DATE);
-                                        int hour = CALENDAR.get(Calendar.HOUR_OF_DAY);
-                                        int min = CALENDAR.get(Calendar.MINUTE);
-                                        int sec = CALENDAR.get(Calendar.SECOND);
-*/
-                                        TIME_CALENDAR.setTime(timestamp);
+                                        TIME_CALENDAR.setTimeSafe(timestamp);
                                         printTime(sb, TIME_CALENDAR.get(Calendar.HOUR_OF_DAY),
                                                       TIME_CALENDAR.get(Calendar.MINUTE),
                                                       TIME_CALENDAR.get(Calendar.SECOND));
@@ -867,30 +891,24 @@ final class ComputerView extends View
                                     if (azi < 0F || dist < 0F || timestamp == 0) {
                                         sb.append(NO_TIME);
                                     } else {
-                                        if (dist > 50F) {
-                                            double vmg = valuesFloat[VALUE_SPD] * (Math.cos(Math.toRadians(valuesFloat[VALUE_COURSE] - azi)));
-                                            long dt = (long) (1000 * (dist / (vmg / 3.6F)));
-                                            long eta = timestamp + (dt < 0F ? 2 * -dt : dt);
-/*
-                                            DATE.setTime(eta);
-*/
-                                            ETA_CALENDAR.setTime(eta);
+                                        if (dist > Config.wptProximity) {
+                                            final double vmg = spdavgShort/*valuesFloat[VALUE_SPD]*/ * (Math.cos(Math.toRadians(valuesFloat[VALUE_COURSE] - azi)));
+                                            if (vmg > 0F) {
+                                                final long dt = (long) (1000 * (dist / (vmg / 3.6F)));
+                                                long eta = timestamp + (dt < 0F ? 2 * -dt : dt);
+                                                ETA_CALENDAR.setTime(eta);
+                                                printTime(sb, ETA_CALENDAR.get(Calendar.HOUR_OF_DAY),
+                                                              ETA_CALENDAR.get(Calendar.MINUTE),
+                                                              ETA_CALENDAR.get(Calendar.SECOND));
+                                            } else {
+                                                sb.append(INF_TIME);
+                                            }
                                         } else {
-/*
-                                            DATE.setTime(timestamp);
-*/
-                                            ETA_CALENDAR.setTime(timestamp);
+                                            ETA_CALENDAR.setTimeSafe(timestamp);
+                                            printTime(sb, ETA_CALENDAR.get(Calendar.HOUR_OF_DAY),
+                                                          ETA_CALENDAR.get(Calendar.MINUTE),
+                                                          ETA_CALENDAR.get(Calendar.SECOND));
                                         }
-/*
-                                        CALENDAR.setTime(DATE);
-                                        int hour = CALENDAR.get(Calendar.HOUR_OF_DAY);
-                                        int min = CALENDAR.get(Calendar.MINUTE);
-                                        int sec = CALENDAR.get(Calendar.SECOND);
-                                        printTime(sb, hour, min, sec);
-*/
-                                        printTime(sb, ETA_CALENDAR.get(Calendar.HOUR_OF_DAY),
-                                                      ETA_CALENDAR.get(Calendar.MINUTE),
-                                                      ETA_CALENDAR.get(Calendar.SECOND));
                                     }
                                     narrowChars += 2;
                                 } break;
@@ -899,7 +917,7 @@ final class ComputerView extends View
                                     if (azi < 0F) {
                                         sb.append('?');
                                     } else {
-                                        double vmg = valuesFloat[VALUE_SPD] * (Math.cos(Math.toRadians(valuesFloat[VALUE_COURSE] - azi)));
+                                        double vmg = spdavgShort/*valuesFloat[VALUE_SPD]*/ * (Math.cos(Math.toRadians(valuesFloat[VALUE_COURSE] - azi)));
                                         switch (units.intValue()) {
                                             case Config.UNITS_IMPERIAL:
                                                 vmg /= 1.609F;

@@ -26,13 +26,12 @@ import java.util.Date;
  */
 public final class SimpleCalendar {
     private Calendar calendar;
-    private Date date;
-    private final int[] fields;
+    private volatile Date date;
+    private volatile int fieldHour, fieldMin, fieldSec;
     private volatile long last;
 
     public SimpleCalendar(Calendar calendar) {
         this.calendar = calendar;
-        this.fields = new int[3];
     }
 
     public void reset() {
@@ -50,17 +49,17 @@ public final class SimpleCalendar {
         if (date == null) {
             date = new Date(millis);
             calendar.setTime(date);
-            fields[0] = calendar.get(Calendar.HOUR_OF_DAY);
-            fields[1] = calendar.get(Calendar.MINUTE);
-            fields[2] = calendar.get(Calendar.SECOND);
+            fieldHour = calendar.get(Calendar.HOUR_OF_DAY);
+            fieldMin = calendar.get(Calendar.MINUTE);
+            fieldSec = calendar.get(Calendar.SECOND);
         } else {
             final int dt = (int) (millis - last) / 1000;
             final int h = dt / 3600;
             final int m = (dt % 3600) / 60;
             final int s = (dt % 3600) % 60;
-            int hour = fields[0];
-            int minute = fields[1];
-            int second = fields[2];
+            int hour = fieldHour;
+            int minute = fieldMin;
+            int second = fieldSec;
             if (dt < 0) {
                 second += s;
                 if (second < 0) {
@@ -92,9 +91,9 @@ public final class SimpleCalendar {
                     hour %= 24; // TODO what to do?
                 }
             }
-            fields[0] = hour;
-            fields[1] = minute;
-            fields[2] = second;
+            fieldHour = hour;
+            fieldMin = minute;
+            fieldSec = second;
         }
         last = millis;
     }
@@ -103,13 +102,13 @@ public final class SimpleCalendar {
         int value;
         switch (field) {
             case Calendar.HOUR_OF_DAY:
-                value = fields[0];
+                value = fieldHour;
             break;
             case Calendar.MINUTE:
-                value = fields[1];
+                value = fieldMin;
             break;
             case Calendar.SECOND:
-                value = fields[2];
+                value = fieldSec;
             break;
             default:
                 throw new IllegalArgumentException("Unknown field");

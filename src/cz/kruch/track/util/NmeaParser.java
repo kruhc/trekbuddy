@@ -287,12 +287,14 @@ public final class NmeaParser {
             this.invalidate();
         }
 
-        public void invalidate() {
+        private void invalidate() {
             this.timestamp = -1;
             this.lat = this.lon = Double.NaN;
             this.fix = this.sat = -1;
-            this.hdop = this.vdop = this.speed = this.angle = -1F;
+            this.hdop = this.vdop = -1F;
             this.altitude = Float.NaN;
+            this.status = '?';
+            this.speed = this.angle = -1F;
         }
 
         public static Record copyGsaIntoGga(Record gsa) {

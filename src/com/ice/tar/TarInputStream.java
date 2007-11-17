@@ -113,7 +113,7 @@ public final class TarInputStream extends InputStream {
         long num = numToSkip;
 
         for (; num > 0;) {
-            long numRead = -1;
+            long numRead;
 
             if (readSkipBuffer == null) {
                 numRead = this.in.skip(num);

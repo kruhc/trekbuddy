@@ -282,9 +282,18 @@ public class SerialLocationProvider extends StreamReadingLocationProvider implem
     }
 
     private void gps() throws IOException {
+        final boolean isHge100 = cz.kruch.track.TrackingMIDlet.sonyEricsson && url.indexOf("AT5") > -1;
+
         try {
             // open connection
-            connection = (StreamConnection) Connector.open(url, Connector.READ, true);
+            connection = (StreamConnection) Connector.open(url, isHge100 ? Connector.READ_WRITE : Connector.READ, true);
+
+            // HGE-100 hack
+            if (isHge100) {
+                OutputStream os = connection.openOutputStream();
+                os.write("$STA\r\n".getBytes());
+                os.close();
+            }
 
             // open stream for reading
             stream = new BufferedInputStream(connection.openInputStream(), BUFFER_SIZE);
@@ -306,7 +315,6 @@ public class SerialLocationProvider extends StreamReadingLocationProvider implem
                     location = nextLocation(stream);
 
                 } catch (IOException e) {
-
 //#ifdef __LOG__
                     e.printStackTrace();
 //#endif
@@ -315,25 +323,23 @@ public class SerialLocationProvider extends StreamReadingLocationProvider implem
                     setThrowable(e);
 
                     /*
-                     * location is null, therefore the loop quits
+                     * location is null - loop ends
                      */
 
                 } catch (Throwable t) {
-
 //#ifdef __LOG__
                     t.printStackTrace();
 //#endif
 
-                    // record
+                    // stop request?
                     if (t instanceof InterruptedException) {
-                        // probably stop request
                         break;
-                    } else {
-                        // record
-                        setThrowable(t);
                     }
 
-                    // ignore
+                    // record
+                    setThrowable(t);
+
+                    // ignore - let's go on
                     continue;
                 }
 

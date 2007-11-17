@@ -70,7 +70,6 @@ public final class Map implements Runnable {
 */
 
     private static final int LARGE_BUFFER_SIZE = 4096; // for map image files - 4 kB
-
     private static final String SET_DIR_PREFIX = "set/";
 
     // interaction with outside world

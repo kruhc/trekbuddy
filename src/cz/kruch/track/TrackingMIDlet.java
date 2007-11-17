@@ -65,7 +65,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         // detect brand/device
         nokia = platform.startsWith("Nokia");
         sonyEricsson = System.getProperty("com.sonyericsson.imei") != null;
-        siemens = System.getProperty("com.siemens.IMEI") != null;
+        siemens = System.getProperty("com.siemens.IMEI") != null || System.getProperty("com.siemens.mp.imei") != null;
         wm = platform.startsWith("Windows CE");
         palm = platform.startsWith("Palm OS");
         sxg75 = "SXG75".equals(platform);
@@ -232,15 +232,8 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         cz.kruch.track.ui.Waypoints.initialize(desktop);
         cz.kruch.track.util.Mercator.initialize();
 
-        // init environment from configuration
-/*
-        cz.kruch.j2se.io.BufferedInputStream.useAvailableLie = cz.kruch.track.configuration.Config.optimisticIo;
-//#ifdef __LOG__
-        System.out.println("* use available lie? " + cz.kruch.j2se.io.BufferedInputStream.useAvailableLie);
-//#endif
-*/
         // setup environment
-        if (hasFlag("fs_skip_bug") || s65) {
+        if (hasFlag("fs_skip_bug") || siemens) {
 //#ifdef __LOG__
             System.out.println("* fs skip-bug feature on");
 //#endif

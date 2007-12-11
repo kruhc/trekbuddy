@@ -27,7 +27,7 @@ import javax.microedition.lcdui.Display;
  */
 public class TrackingMIDlet extends MIDlet implements Runnable {
 
-    /** application title */
+    /** application title/name */
     public static final String APP_TITLE = "TrekBuddy";
 
     // system info
@@ -38,6 +38,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
     public static boolean jsr82, jsr120, jsr135, jsr179, motorola179, comm;
     public static boolean sonyEricsson, nokia, siemens, wm, palm, rim, symbian;
     public static boolean sxg75, a780, s65;
+    public static boolean useSkipBug;
 
     // diagnostics
 
@@ -57,6 +58,9 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         // detect environment
         platform = System.getProperty("microedition.platform");
         flags = getAppProperty(JAD_APP_FLAGS);
+        if (flags == null) {
+            flags = System.getProperty("trekbuddy.app-flags");
+        }
         version = getAppProperty("MIDlet-Version");
 //#ifdef __LOG__
         logEnabled = hasFlag("log_enable");
@@ -162,7 +166,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
     protected void destroyApp(boolean b) throws MIDletStateChangeException {
         if (b) {
             // same as answering "Yes" in "Do you want to quit?"
-            desktop.response(cz.kruch.track.ui.YesNoDialog.YES);
+            desktop.response(cz.kruch.track.ui.YesNoDialog.YES, desktop);
         } else {
             // refuse
             throw new MIDletStateChangeException();
@@ -171,28 +175,28 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
 
     public void run() {
         // fit static images into video memory
-        boolean imagesLoaded;
+        int imgcached;
         try {
             System.gc();
             cz.kruch.track.ui.NavigationScreens.initialize();
-            imagesLoaded = true;
+            imgcached = 1;
         } catch (Throwable t) {
 //#ifdef __LOG__
             t.printStackTrace();
 //#endif
-            imagesLoaded = false;
+            imgcached = -1;
         }
 
         // load configuration
-        boolean configLoaded;
+        int configured;
         try {
             cz.kruch.track.configuration.Config.initialize();
-            configLoaded = true;
+            configured = 1;
         } catch (Throwable t) {
 //#ifdef __LOG__
             t.printStackTrace();
 //#endif
-            configLoaded = false;
+            configured = -1;
         }
 
         // initialize file API
@@ -200,7 +204,9 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
 
         // customize UI
         int customized = 0;
-        if (isFs()) {
+        if (api.file.File.isFs()) {
+            // gc - loading of images ahead...
+            System.gc();
             try {
                 customized = cz.kruch.track.ui.NavigationScreens.customize();
             } catch (Throwable t) {
@@ -212,7 +218,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         }
 
         // L10n
-        int localized = 0;
+        int localized;
         try {
             localized = Resources.initialize();
         } catch (Throwable t) {
@@ -222,22 +228,32 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
             localized = -1;
         }
 
+        // key map
+        int keysmapped;
+        try {
+            keysmapped = Resources.keymap();
+        } catch (Throwable t) {
+//#ifdef __LOG__
+            t.printStackTrace();
+//#endif
+            keysmapped = -1;
+        }
+
         // create desktop canvas
         desktop = new cz.kruch.track.ui.Desktop(this);
 
         // init helpers and 'singletons'
         cz.kruch.track.configuration.Config.initDatums(this);
-        cz.kruch.track.configuration.Config.useDatum(cz.kruch.track.configuration.Config.geoDatum);
         cz.kruch.track.ui.nokia.DeviceControl.initialize();
         cz.kruch.track.ui.Waypoints.initialize(desktop);
         cz.kruch.track.util.Mercator.initialize();
 
         // setup environment
-        if (hasFlag("fs_skip_bug") || siemens) {
+        if (hasFlag("fs_skip_bug")) {
 //#ifdef __LOG__
             System.out.println("* fs skip-bug feature on");
 //#endif
-            com.ice.tar.TarInputStream.useSkipBug = true;
+            useSkipBug = true;
         }
         if (hasFlag("fs_no_reset") || sxg75) {
 //#ifdef __LOG__
@@ -250,6 +266,9 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
             System.out.println("* ui no-partial-flush feature on");
 //#endif
             cz.kruch.track.ui.Desktop.partialFlush = false;
+        }
+        if (sxg75) {
+            cz.kruch.track.ui.NavigationScreens.useCondensed = 1;
         }
 
         // custom device handling
@@ -271,9 +290,9 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
 
         // setup & start desktop
         desktop.setFullScreenMode(cz.kruch.track.configuration.Config.fullscreen);
-        desktop.setTitle(APP_TITLE);
+        desktop.setTitle(null);
         Display.getDisplay(this).setCurrent(desktop);
-        desktop.boot(imagesLoaded, configLoaded, customized, localized);
+        desktop.boot(imgcached, configured, customized, localized, keysmapped);
     }
 
     /*
@@ -296,10 +315,6 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
 
     public static boolean hasFlag(String flag) {
         return flags == null ? false : flags.indexOf(flag) > -1;
-    }
-
-    public static boolean isFs() {
-        return api.file.File.fsType > api.file.File.FS_UNKNOWN;
     }
 
     public static boolean hasPorts() {

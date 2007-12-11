@@ -25,7 +25,7 @@ import java.util.Date;
  * output.
  */
 public final class SimpleCalendar {
-    private Calendar calendar;
+    private final Calendar calendar;
     private volatile Date date;
     private volatile int fieldHour, fieldMin, fieldSec;
     private volatile long last;

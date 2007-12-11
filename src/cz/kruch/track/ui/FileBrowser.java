@@ -17,8 +17,8 @@
 package cz.kruch.track.ui;
 
 import cz.kruch.track.event.Callback;
-import cz.kruch.track.configuration.Config;
 import cz.kruch.track.Resources;
+import cz.kruch.track.configuration.Config;
 
 import javax.microedition.io.Connector;
 import javax.microedition.lcdui.List;
@@ -36,31 +36,29 @@ import api.file.File;
  *
  * @author Ales Pour <kruhc@seznam.cz>
  */
-public final class FileBrowser extends List implements CommandListener, Runnable {
+public final class FileBrowser implements CommandListener, Runnable {
 //#ifdef __LOG__
     private static final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("FileBrowser");
 //#endif
 
-    private Callback callback;
-    private Displayable next;
+    private final String title;
+    private final Callback callback;
+    private final Displayable next;
 
-    private Command cmdCancel;
-    private Command cmdBack;
-    private Command cmdSelect;
+    private final Command cmdCancel, cmdBack, cmdSelect;
 
+    private volatile List list;
     private volatile File file;
     private volatile String path;
     private volatile int depth;
 
     public FileBrowser(String title, Callback callback, Displayable next) {
-        super(title, List.IMPLICIT);
+        this.title = Resources.prefixed(title);
         this.callback = callback;
         this.next = next;
         this.cmdCancel = new Command(Resources.getString(Resources.CMD_CANCEL), Command.CANCEL, 1);
         this.cmdBack = new Command(Resources.getString(Resources.CMD_BACK), Command.BACK, 1);
         this.cmdSelect = new Command(Resources.getString(Resources.DESKTOP_CMD_SELECT), Command.ITEM, 1);
-        setCommandListener(this);
-        Desktop.display.setCurrent(this);
     }
 
     public void show() {
@@ -76,9 +74,37 @@ public final class FileBrowser extends List implements CommandListener, Runnable
     public void run() {
         try {
             if (depth == 0) {
+//#ifdef __LOG__
+                if (log.isEnabled()) log.debug("fresh start");
+//#endif
 
-                // close existing fc
-                if (file != null) {
+                // fresh start?
+                if (file == null) {
+
+                    // start in %DataDir%
+                    final String dataDir = Config.getDataDir();
+                    file = File.open(Connector.open(dataDir, Connector.READ));
+                    if (file.exists()) {
+
+                        // calculate and fix depth
+                        for (int i = dataDir.length(); --i >= 0; ) {
+                            if (dataDir.charAt(i) == File.PATH_SEPCHAR) {
+                                depth++;
+                            }
+                        }
+                        depth -= 3;
+
+                        // list directory
+                        show(file.list());
+
+                    } else {
+
+                        // as selected
+                        run();
+
+                    }
+
+                } else {
 //#ifdef __LOG__
                     if (log.isEnabled()) log.debug("close existing fc");
 //#endif
@@ -90,15 +116,14 @@ public final class FileBrowser extends List implements CommandListener, Runnable
 
                     // gc hint
                     file = null;
+
+                    // list fs roots
+                    show(File.listRoots());
+
                 }
-
-                // list fs roots
-                show(File.listRoots());
-
 //#ifdef __LOG__
                 if (log.isEnabled()) log.debug("scanner thread exits");
 //#endif
-
             } else {
 
                 // hack (J9 only?)
@@ -161,31 +186,35 @@ public final class FileBrowser extends List implements CommandListener, Runnable
         if (log.isEnabled()) log.debug("show; depth = " + depth);
 //#endif
 
-        // menu options
-        deleteAll();
-        removeCommand(cmdCancel);
-        removeCommand(cmdBack);
-        setSelectCommand(null);
-        if (depth > 0) {
-            append(File.PARENT_DIR, null);
+        // release current list
+        if (list != null) {
+            list.deleteAll();
+            list = null;
         }
 
         // append items
-        sort2list(this, entries);
-
+        list = sort2list(title, entries, depth > 0 ? File.PARENT_DIR : null);
+        list.setCommandListener(this);
 //#ifdef __LOG__
-        if (log.isEnabled()) log.debug(size() + " entries");
+        if (log.isEnabled()) log.debug(list.size() + " entries");
 //#endif
-        if (size() > 0) {
-            setSelectCommand(cmdSelect);
+
+        // add commands
+        if (list.size() > 0) {
+            list.setSelectCommand(cmdSelect);
+        } else {
+            list.setSelectCommand(null);
         }
-        addCommand(depth == 0 ? cmdCancel : cmdBack);
+        list.addCommand(depth == 0 ? cmdCancel : cmdBack);
+
+        // show
+        Desktop.display.setCurrent(list);
     }
 
     public void commandAction(Command command, Displayable displayable) {
         if (Command.ITEM == command.getCommandType()) {
             path = null; // gc hint
-            path = getString(getSelectedIndex());
+            path = list.getString(list.getSelectedIndex());
             if (File.PARENT_DIR.equals(path)) {
                 depth--;
             } else {
@@ -208,7 +237,10 @@ public final class FileBrowser extends List implements CommandListener, Runnable
 
     private void quit(Throwable throwable) {
         // gc hint
-        deleteAll();
+        if (list != null) {
+            list.deleteAll();
+            list = null;
+        }
         
         // show parent
         Desktop.display.setCurrent(next);
@@ -220,20 +252,20 @@ public final class FileBrowser extends List implements CommandListener, Runnable
         file = null;
     }
 
-    /*
-     * Helper method for filesystem-friendly sorting.
-     * 2006-09-04 made public
-     */
-
-    // TODO optimize
     /**
-     * Sorts enumeration of strings and populates instance of List directly(!).
-     * @param list list
+     * Sorts enumeration of strings and creates list.
+     * TODO optimize - how to find out size of enumeration???
+     * @param title list title
      * @param items enumeration of strings
+     * @param head first entry; can be <tt>null</tt>
+     * @return list
      */
-    public static void sort2list(List list, Enumeration items) {
+    public static List sort2list(String title, Enumeration items, String head) {
         // enum to list
         Vector v = new Vector(8, 8);
+        if (head != null) {
+            v.addElement(head);
+        }
         while (items.hasMoreElements()) {
             v.addElement((String) items.nextElement());
         }
@@ -247,79 +279,58 @@ public final class FileBrowser extends List implements CommandListener, Runnable
         v = null;
 
         // sort array
-        sort(array);
+        quicksort(array, 0, array.length - 1);
 
-        // add items sorted
-        for (int N = array.length, i = 0; i < N; i++) {
-            list.append(array[i], null);
-        }
-
-        // gc hint
-        for (int i = array.length; --i >= 0; ) {
-            array[i] = null;
-        }
+        // return list
+        return new List(title, List.IMPLICIT, array, null);
     }
 
-    /*
-     * String array sorting. From JDK.
+    /**
+     * String array sorting - in-place quicksort. See http://en.wikipedia.org/wiki/Quicksort.
+     * @param array array of strings
+     * @param left left boundary
+     * @param right right boundary
      */
-
-    public static void sort(final String[] a) {
-        String aux[] = new String[a.length];
-        System.arraycopy(a, 0, aux, 0, a.length);
-        mergeSort(aux, a, 0, a.length);
+    public static void quicksort(String[] array, final int left, final int right) {
+        if (right > left) {
+            final int pivotIndex = left;
+            final int pivotNewIndex = partition(array, left, right, pivotIndex);
+            quicksort(array, left, pivotNewIndex - 1);
+            quicksort(array, pivotNewIndex + 1, right);
+        }
     }
 
-    private static void mergeSort(final String src[], final String dest[],
-                                  final int low, final int high) {
-        int length = high - low;
-
-        // small arrays sorting
-        if (length < 7) {
-            for (int i = low; i < high; i++) {
-                for (int j = i; j > low && compareAsFiles(dest[j - 1], dest[j]) > 0; j--) {
-                    swap(dest, j, j - 1);
-                }
-            }
-            return;
-        }
-
-        // half
-        final int mid = (low + high) >> 1;
-        mergeSort(dest, src, low, mid);
-        mergeSort(dest, src, mid, high);
-
-        /*
-         * If list is already sorted, just copy from src to dest.  This is an
-         * optimization that results in faster sorts for nearly ordered lists.
-         */
-        if (compareAsFiles(src[mid - 1], src[mid]) <= 0) {
-            System.arraycopy(src, low, dest, low, length);
-            return;
-        }
-
-        // merge sorted halves (now in src) into dest
-        for (int i = low, p = low, q = mid; i < high; i++) {
-            if (q >= high || p < mid && compareAsFiles(src[p], src[q]) <= 0) {
-                dest[i] = src[p++];
-            } else {
-                dest[i] = src[q++];
+    private static int partition(String[] array, final int left, final int right, final int pivotIndex) {
+        String pivotValue = array[pivotIndex];
+        // swap
+        String _o = array[pivotIndex];
+        array[pivotIndex] = array[right];
+        array[right] = _o;
+        // ~swap
+        int storeIndex = left;
+        for (int i = left; i < right; i++) { // left ? i < right
+            if (compareAsFiles(array[i], pivotValue) < 0) {
+                // swap
+                _o = array[i];
+                array[i] = array[storeIndex];
+                array[storeIndex] = _o;
+                // ~swap
+                storeIndex++;
             }
         }
+        // swap
+        _o = array[storeIndex];
+        array[storeIndex] = array[right];
+        array[right] = _o;
+        // ~swap
+        return storeIndex;
     }
 
-    private static void swap(final String x[], final int a, final int b) {
-        String t = x[a];
-        x[a] = x[b];
-        x[b] = t;
-    }
-
-    /*
-     * ~
-     */
-
-    /*
+    /**
      * Compares objects as filenames, with directories first.
+     * @param s1 first string
+     * @param s2 second string
+     * @return {@link String#compareTo(String)}
      */
     private static int compareAsFiles(String s1, String s2) {
         boolean isDir1 = File.isDir(s1);

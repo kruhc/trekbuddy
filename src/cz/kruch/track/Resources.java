@@ -17,6 +17,8 @@
 package cz.kruch.track;
 
 import cz.kruch.track.configuration.Config;
+import cz.kruch.track.io.LineReader;
+import cz.kruch.track.util.CharArrayTokenizer;
 
 import javax.microedition.io.Connector;
 /*
@@ -26,6 +28,8 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.DataInputStream;
 import java.io.EOFException;
+import java.util.Hashtable;
+import java.util.Vector;
 
 /**
  * Resource helper (L10n).
@@ -44,6 +48,7 @@ public final class Resources {
     public static final short BOOT_CUSTOMIZING                  = 302;
     public static final short BOOT_CREATING_UI                  = 303;
     public static final short BOOT_LOADING_MAP                  = 304;
+    public static final short BOOT_KEYMAP                       = 305;
     public static final short BOOT_LOCAL_COPY                   = 399;
     /* desktop - commands */
     public static final short DESKTOP_CMD_START                 = 1000;
@@ -143,6 +148,7 @@ public final class Resources {
     public static final short DESKTOP_MSG_NO_POSITION           = 1381;
     public static final short DESKTOP_MSG_NO_WPT                = 1382;
     public static final short DESKTOP_MSG_NMEA_PLAYBACK         = 1383;
+    public static final short DESKTOP_MSG_SMS_RECEIVED          = 1384;
     /* navigation - commands */
     public static final short NAV_CMD_ROUTE_ALONG               = 2000;
     public static final short NAV_CMD_ROUTE_BACK                = 2001;
@@ -249,6 +255,7 @@ public final class Resources {
     public static final short CFG_LOCATION_GROUP_GPX_OPTS       = 3616;
     public static final short CFG_LOCATION_FLD_GPX_LOG_VALID    = 3617;
     public static final short CFG_LOCATION_FLD_PROV_O2GERMANY   = 3618;
+    public static final short CFG_LOCATION_FLD_FILTER_DEPTH     = 3619;
     /* settings - navigation */
     public static final short CFG_NAVIGATION_FLD_WPT_PROXIMITY  = 3700;
     public static final short CFG_NAVIGATION_FLD_POI_PROXIMITY  = 3701;
@@ -260,7 +267,7 @@ public final class Resources {
     public static final short CFG_NAVIGATION_FLD_RECEIVE        = 3707;
     /* settings - tweaks */
     public static final short CFG_TWEAKS_GROUP                  = 3800;
-    public static final short CFG_TWEAKS_FLD_OPTIMISTIC_IO      = 3801;
+    public static final short CFG_TWEAKS_FLD_SIEMENS_IO         = 3801;
     public static final short CFG_TWEAKS_FLD_SAFE_RENDERER      = 3802;
     public static final short CFG_TWEAKS_FLD_FORCED_GC          = 3803;
     public static final short CFG_TWEAKS_FLD_1TILE_SCROLL       = 3804;
@@ -273,8 +280,12 @@ public final class Resources {
     public static final short INFO_ITEM_KEYS                    = 4203;
     public static final short INFO_ITEM_KEYS_MS                 = 4204;
 
-    private static short[] keys;
+//    private static short[] keys;
+    private static int[] ids;
     private static String[] values;
+    private static String value;
+    private static int keymapSize;
+    private static int[] keymap0, keymap1;
 
     static int initialize() throws IOException {
         int result = 0;
@@ -302,23 +313,34 @@ public final class Resources {
         }
 //#endif
         if (in == null) {
-            in = TrackingMIDlet.class.getResourceAsStream("/resources/language.res");
+            in = Resources.class.getResourceAsStream("/resources/language.res");
         }
 
-        DataInputStream resin = new DataInputStream(in);
-        try {
-            resin.readInt(); // signature: 0xEA4D4910; // JSR-238: 0xEE4D4910
-            int count = resin.readInt(); // number of entries
-            keys = new short[count];
-            values = new String[count];
-            for (int i = 0; i < count; i++) {
-                keys[i] = resin.readShort();
-                values[i] = resin.readUTF();
-            }
-        } catch (EOFException e) {
-            // end of stream
-        } finally {
-            if (resin != null) {
+        if (in != null) {
+            DataInputStream resin = new DataInputStream(in);
+            try {
+/*
+                resin.readInt(); // signature: 0xEA4D4910; // JSR-238: 0xEE4D4910
+                final int count = resin.readInt(); // number of entries
+                keys = new short[count];
+                values = new String[count];
+                for (int i = 0; i < count; i++) {
+                    keys[i] = resin.readShort();
+                    values[i] = resin.readUTF();
+                }
+*/
+                resin.readInt(); // signature
+                final int hl = resin.readInt(); // header length
+                final int count = hl / 8;
+                ids = new int[count];
+                values = new String[count];
+                for (int i = 0; i < count; i++) {
+                    ids[i] = resin.readInt() - hl;
+                }
+                value = resin.readUTF();
+            } catch (EOFException e) {
+                // end of stream
+            } finally {
                 try {
                     resin.close();
                 } catch (IOException e) {
@@ -330,7 +352,54 @@ public final class Resources {
         return result;
     }
 
-    public static String getString(short id) {
+    static int keymap() throws IOException {
+        int result = 0;
+
+        api.file.File file = null;
+        try {
+            file = api.file.File.open(Connector.open(Config.getFolderResources() + "keymap.txt", Connector.READ));
+            if (file.exists()) {
+                LineReader reader = null;
+                try {
+                    reader = new LineReader(file.openInputStream());
+                    keymap0 = new int[32];
+                    keymap1 = new int[32];
+                    char[] delims = new char[]{ '=' };
+                    CharArrayTokenizer tokenizer = new CharArrayTokenizer();
+                    CharArrayTokenizer.Token token = reader.readToken(false);
+                    while (token != null && keymapSize < 32) {
+                        tokenizer.init(token, delims, false);
+                        keymap0[keymapSize] = tokenizer.nextInt();
+                        keymap1[keymapSize] = tokenizer.nextInt();
+                        keymapSize++;
+                        result++;
+                        token = reader.readToken(false);
+                    }
+                } finally {
+                    if (reader != null) {
+                        try {
+                            reader.close();
+                        } catch (IOException e) {
+                            // ignore
+                        }
+                    }
+                }
+            }
+        } finally {
+            if (file != null) {
+                try {
+                    file.close();
+                } catch (IOException e) {
+                    // ignore
+                }
+            }
+        }
+
+        return result;
+    }
+
+    public static String getString(final short id) {
+/*
         String result = null;
         for (int i = keys.length; --i >= 0; ) {
             if (id == keys[i]) {
@@ -341,5 +410,46 @@ public final class Resources {
             result = Integer.toString(id);
         }
         return result;
+*/
+        String result = null;
+        for (int i = ids.length; --i >= 0; ) {
+            if (id == ((ids[i] >> 16) & 0x0000ffff)) {
+                result = values[i];
+                if (result == null) {
+                    final int start = ids[i] & 0x0000ffff;
+                    if (i < ids.length - 1) {
+                        final int end = ids[i + 1] & 0x0000ffff;
+                        result = value.substring(start, end);
+                    } else {
+                        result = value.substring(start);
+                    }
+                    values[i] = result;
+                }
+                break;
+            }
+        }
+        if (result == null) {
+            result = Integer.toString(id);
+        }
+        return result;
+    }
+
+    public static int remap(final int keycode) {
+        if (keymapSize > 0) {
+            for (int i = keymapSize; --i >= 0; ) {
+                if (keymap0[i] == keycode) {
+                    return keymap1[i];
+                }
+            }
+        }
+
+        return keycode;
+    }
+
+    public static String prefixed(final String title) {
+        if (!cz.kruch.track.TrackingMIDlet.wm) {
+            return title;
+        }
+        return "TrekBuddy - " + title;
     }
 }

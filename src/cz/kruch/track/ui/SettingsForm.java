@@ -31,6 +31,9 @@ import javax.microedition.lcdui.ItemStateListener;
 import javax.microedition.lcdui.Item;
 import javax.microedition.lcdui.Choice;
 import javax.microedition.lcdui.List;
+import javax.microedition.lcdui.Gauge;
+
+import api.file.File;
 
 /**
  * Settings form.
@@ -46,13 +49,9 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
     private static final String MENU_NAVIGATION;
     private static final String MENU_MISC;
 
-    private Callback callback;
-    private boolean changed;
+    private final Callback callback;
 
     private TextField fieldMapPath;
-/*
-    private ChoiceGroup choiceLanguage;
-*/
     private ChoiceGroup choiceMapDatum;
     private ChoiceGroup choiceCoordinates;
     private ChoiceGroup choiceUnits;
@@ -66,20 +65,20 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
     private TextField fieldSimulatorDelay;
     private TextField fieldLocationTimings;
     private TextField fieldCommUrl;
+    private TextField fieldO2Depth;
     private ChoiceGroup choiceFriends;
     private ChoiceGroup choiceMisc;
     private ChoiceGroup choicePerformance;
     private TextField fieldWptProximity;
     private TextField fieldPoiProximity;
     private ChoiceGroup choiceRouteLine;
-/*
-    private Gauge gaugeScrollDelay;
-*/
     private ChoiceGroup choiceGpx;
     private TextField fieldGpxDt;
     private TextField fieldGpxDs;
 
     private Form submenu;
+
+    private boolean changed;
 
     static {
         MENU_BASIC = Resources.getString(Resources.CFG_ITEM_BASIC);
@@ -90,7 +89,7 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
     }
 
     public SettingsForm(Callback callback) {
-        super(cz.kruch.track.TrackingMIDlet.wm ? Resources.getString(Resources.DESKTOP_CMD_SETTINGS) + " (TrekBuddy)" : Resources.getString(Resources.DESKTOP_CMD_SETTINGS), List.IMPLICIT);
+        super(Resources.prefixed(Resources.getString(Resources.DESKTOP_CMD_SETTINGS)), List.IMPLICIT);
         this.callback = callback;
     }
 
@@ -116,12 +115,12 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
     private void show(String section) {
         // submenu form
         submenu = null; // gc hint
-        submenu = new Form(cz.kruch.track.TrackingMIDlet.wm ? section + " (TrekBuddy)" : section);
+        submenu = new Form(Resources.prefixed(section));
 
         if (MENU_BASIC.equals(section)) {
 
             // default map path field
-            if (cz.kruch.track.TrackingMIDlet.isFs()) {
+            if (File.isFs()) {
                 submenu.append(fieldMapPath = new TextField(Resources.getString(Resources.CFG_BASIC_FLD_START_MAP), Config.mapPath, MAX_URL_LENGTH, TextField.URL));
             }
 
@@ -171,7 +170,7 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
             submenu.append(choiceUnits);
 
             // datadir
-            if (cz.kruch.track.TrackingMIDlet.isFs()) {
+            if (File.isFs()) {
                 submenu.append(fieldDataDir = new TextField(Resources.getString(Resources.CFG_BASIC_FLD_DATA_DIR), Config.getDataDir(), MAX_URL_LENGTH, TextField.URL));
             }
 
@@ -203,15 +202,9 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
                 Config.osdBoldFont,
                 Config.osdBlackColor
             });
-//        if (choiceProvider.size() == 0) { // ignore for dumb phones
+//            if (choiceProvider.size() == 0) { // ignore for dumb phones
                 submenu.append(choiceMisc);
-//        }
-
-/*
-        // scrolling speed
-        gaugeScrollDelay = new Gauge("Scroll Delay", true, 10, Config.scrollingDelay);
-        append(gaugeScrollDelay);
-*/
+//            }
 
         } else if (MENU_NAVIGATION.equals(section)) {
 
@@ -243,12 +236,12 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
 
             // tweaks
             choicePerformance = new ChoiceGroup(Resources.getString(Resources.CFG_TWEAKS_GROUP), ChoiceGroup.MULTIPLE);
-            choicePerformance.append(Resources.getString(Resources.CFG_TWEAKS_FLD_OPTIMISTIC_IO), null);
+            choicePerformance.append(Resources.getString(Resources.CFG_TWEAKS_FLD_SIEMENS_IO), null);
             choicePerformance.append(Resources.getString(Resources.CFG_TWEAKS_FLD_SAFE_RENDERER), null);
             choicePerformance.append(Resources.getString(Resources.CFG_TWEAKS_FLD_FORCED_GC), null);
             choicePerformance.append(Resources.getString(Resources.CFG_TWEAKS_FLD_1TILE_SCROLL), null);
             choicePerformance.setSelectedFlags(new boolean[] {
-                Config.optimisticIo,
+                Config.siemensIo,
                 Config.S60renderer,
                 Config.forcedGc,
                 Config.oneTileScroll
@@ -286,7 +279,7 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
             }
 
             // tracklogs, waypoints
-            if (cz.kruch.track.TrackingMIDlet.isFs()) {
+            if (File.isFs()) {
                 choiceTracklog = new ChoiceGroup(Resources.getString(Resources.CFG_LOCATION_GROUP_TRACKLOG), ChoiceGroup.EXCLUSIVE);
                 choiceTracklog.setSelectedIndex(choiceTracklog.append(Resources.getString(Resources.CFG_LOCATION_FLD_TRACKLOG_NEVER), null), Config.TRACKLOG_NEVER == Config.tracklog);
                 choiceTracklog.setSelectedIndex(choiceTracklog.append(Resources.getString(Resources.CFG_LOCATION_FLD_TRACKLOG_ASK), null), Config.TRACKLOG_ASK == Config.tracklog);
@@ -333,13 +326,18 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
             }
 
             // simulator
-            if (cz.kruch.track.TrackingMIDlet.isFs()) {
+            if (File.isFs()) {
                 fieldSimulatorDelay = new TextField(Resources.getString(Resources.CFG_LOCATION_FLD_SIMULATOR_DELAY), Integer.toString(Config.simulatorDelay), 8, TextField.NUMERIC);
             }
 
             // internal
             if (cz.kruch.track.TrackingMIDlet.jsr179) {
                 fieldLocationTimings = new TextField(Resources.getString(Resources.CFG_LOCATION_FLD_LOCATION_TIMINGS), Config.getLocationTimings(), 12, TextField.ANY);
+            }
+
+            // O2 Germany
+            if (cz.kruch.track.TrackingMIDlet.hasFlag("provider_o2_germany")) {
+                fieldO2Depth = new TextField(Resources.getString(Resources.CFG_LOCATION_FLD_FILTER_DEPTH), Integer.toString(Config.o2Depth), 2, TextField.NUMERIC);
             }
 
             // show current provider and tracklog specific options
@@ -370,12 +368,12 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
                     continue;
 
                 if (choiceTracklogFormat == affected) {
-                    if (fieldSimulatorDelay == item || fieldLocationTimings == item || fieldCommUrl == item || choiceTracklog == item || choiceTracklogFormat == item)
+                    if (fieldSimulatorDelay == item || fieldLocationTimings == item || fieldCommUrl == item || fieldO2Depth == item || choiceTracklog == item || choiceTracklogFormat == item)
                         continue;
                 }
 
                 if (choiceTracklog == affected) {
-                    if (fieldSimulatorDelay == item || fieldLocationTimings == item || fieldCommUrl == item || choiceTracklog == item)
+                    if (fieldSimulatorDelay == item || fieldLocationTimings == item || fieldCommUrl == item || fieldO2Depth == item || choiceTracklog == item)
                         continue;
                 }
 
@@ -383,10 +381,10 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
                 i = submenu.size();
             }
 
-            int provider = Config.getLocationProviders()[choiceProvider.getSelectedIndex()];
-            boolean isFs = cz.kruch.track.TrackingMIDlet.isFs();
-            boolean isTracklog = isFs && choiceTracklog.getSelectedIndex() > Config.TRACKLOG_NEVER;
-            boolean isTracklogGpx = isTracklog && Config.TRACKLOG_FORMAT_GPX.equals(choiceTracklogFormat.getString(choiceTracklogFormat.getSelectedIndex()));
+            final int provider = Config.getLocationProviders()[choiceProvider.getSelectedIndex()];
+            final boolean isFs = File.isFs();
+            final boolean isTracklog = isFs && choiceTracklog.getSelectedIndex() > Config.TRACKLOG_NEVER;
+            final boolean isTracklogGpx = isTracklog && Config.TRACKLOG_FORMAT_GPX.equals(choiceTracklogFormat.getString(choiceTracklogFormat.getSelectedIndex()));
 
             if (choiceProvider == affected) {
                 switch (provider) {
@@ -399,6 +397,9 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
                     break;
                     case Config.LOCATION_PROVIDER_SERIAL:
                         appendWithNewlineAfter(submenu, fieldCommUrl);
+                    break;
+                    case Config.LOCATION_PROVIDER_O2GERMANY:
+                        appendWithNewlineAfter(submenu, fieldO2Depth);
                     break;
                 }
                 if (isFs) {
@@ -479,20 +480,15 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
             if (section.startsWith(MENU_BASIC)) {
 
                 // map path
-                if (cz.kruch.track.TrackingMIDlet.isFs()) {
+                if (File.isFs()) {
                     Config.mapPath = fieldMapPath.getString();
                 }
-
-/*
-            // language
-            Config.language = choiceLanguage.getString(choiceLanguage.getSelectedIndex());
-*/
 
                 // datum
                 Config.geoDatum = choiceMapDatum.getString(choiceMapDatum.getSelectedIndex());
 
                 // coordinates format
-                boolean[] fmt = new boolean[choiceCoordinates.size()];
+                final boolean[] fmt = new boolean[choiceCoordinates.size()];
                 choiceCoordinates.getSelectedFlags(fmt);
                 Config.useGridFormat = fmt[1];
                 Config.useUTM = fmt[2];
@@ -502,7 +498,7 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
                 Config.units = choiceUnits.getSelectedIndex();
 
                 // datadir
-                if (cz.kruch.track.TrackingMIDlet.isFs()) {
+                if (File.isFs()) {
                     Config.setDataDir(fieldDataDir.getString());
                 }
 
@@ -514,7 +510,7 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
                 }
 
                 // provider-specific
-                if (cz.kruch.track.TrackingMIDlet.isFs()) {
+                if (File.isFs()) {
                     Config.simulatorDelay = Integer.parseInt(fieldSimulatorDelay.getString());
                 }
                 if (cz.kruch.track.TrackingMIDlet.jsr179) {
@@ -523,12 +519,15 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
                 if (cz.kruch.track.TrackingMIDlet.hasPorts()) {
                     Config.commUrl = fieldCommUrl.getString();
                 }
+                if (cz.kruch.track.TrackingMIDlet.hasFlag("provider_o2_germany")) {
+                    Config.o2Depth = Integer.parseInt(fieldO2Depth.getString());
+                }
 
                 // tracklogs, waypoints
-                if (cz.kruch.track.TrackingMIDlet.isFs()) {
+                if (File.isFs()) {
                     Config.tracklog = choiceTracklog.getSelectedIndex();
                     Config.tracklogFormat = choiceTracklogFormat.getString(choiceTracklogFormat.getSelectedIndex());
-                    boolean[] opts = new boolean[choiceGpx.size()];
+                    final boolean[] opts = new boolean[choiceGpx.size()];
                     choiceGpx.getSelectedFlags(opts);
                     Config.gpxOnlyValid = opts[0];
                     Config.gpxDt = Integer.parseInt(fieldGpxDt.getString());
@@ -544,7 +543,7 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
                 // navigation
                 Config.wptProximity = Integer.parseInt(fieldWptProximity.getString());
                 Config.poiProximity = Integer.parseInt(fieldPoiProximity.getString());
-                boolean[] rl = new boolean[choiceRouteLine.size()];
+                final boolean[] rl = new boolean[choiceRouteLine.size()];
                 choiceRouteLine.getSelectedFlags(rl);
                 Config.routeLineStyle = rl[0];
                 Config.routeLineColor = rl[1] ? 0x00FF0000 : 0x0;
@@ -552,7 +551,7 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
 
                 // location sharing
                 if (cz.kruch.track.TrackingMIDlet.jsr120) {
-                    boolean[] friends = new boolean[choiceFriends.size()];
+                    final boolean[] friends = new boolean[choiceFriends.size()];
                     choiceFriends.getSelectedFlags(friends);
                     Config.locationSharing = friends[0];
                 }
@@ -560,8 +559,7 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
             } else if (section.startsWith(MENU_DESKTOP)) {
 
                 // desktop
-                changed = true;
-                boolean[] misc = new boolean[choiceMisc.size()];
+                final boolean[] misc = new boolean[choiceMisc.size()];
                 choiceMisc.getSelectedFlags(misc);
                 Config.fullscreen = misc[0];
                 Config.noSounds = misc[1];
@@ -574,18 +572,14 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
                 Config.osdMediumFont = misc[8];
                 Config.osdBoldFont = misc[9];
                 Config.osdBlackColor = misc[10];
-
-/*
-            // scrolling
-            Config.scrollingDelay = gaugeScrollDelay.getValue();
-*/
+                changed = true;
 
             } else if (section.startsWith(MENU_MISC)) {
 
                 // performance
-                boolean[] perf = new boolean[choicePerformance.size()];
+                final boolean[] perf = new boolean[choicePerformance.size()];
                 choicePerformance.getSelectedFlags(perf);
-                Config.optimisticIo = perf[0];
+                Config.siemensIo = perf[0];
                 Config.S60renderer = perf[1];
                 Config.forcedGc = perf[2];
                 Config.oneTileScroll = perf[3];
@@ -603,10 +597,6 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
         Desktop.display.setCurrent(Desktop.screen);
 
         if (command.getCommandType() != Command.BACK) { // "Apply", "Save"
-
-            // force changes
-            Desktop.resetFont();
-            Config.useDatum(Config.geoDatum);
 
             // save?
             if (/* Save */2 == command.getPriority()) {

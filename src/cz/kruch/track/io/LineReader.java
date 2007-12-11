@@ -143,9 +143,9 @@ public final class LineReader extends InputStreamReader {
         int chars = 0;
 
         for ( ; offset < maxlen; ) {
-            int c;
+            final int c;
             if (offset == count) {
-                int _count = read(_buffer, offset, maxlen - offset);
+                final int _count = read(_buffer, offset, maxlen - offset);
                 if (_count == -1) {
                     count = c = -1;
                 } else {

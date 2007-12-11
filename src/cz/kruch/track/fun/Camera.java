@@ -185,7 +185,7 @@ public final class Camera implements CommandListener, PlayerListener/*, Runnable
         }
     }
 
-    public void capture() {
+    private void capture() {
         byte[] result = null;
         Throwable throwable = null;
 

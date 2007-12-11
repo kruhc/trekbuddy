@@ -45,14 +45,6 @@ public final class MotorolaLocationProvider
 
     public MotorolaLocationProvider() {
         super("Motorola");
-
-        // parse initialization params
-        CharArrayTokenizer tokenizer = new CharArrayTokenizer();
-        tokenizer.init(Config.getLocationTimings(), false);
-        accuracy = tokenizer.nextInt();
-        age = tokenizer.nextInt();
-        timeout = tokenizer.nextInt();
-        tokenizer.dispose();
     }
 
     public Object getImpl() {
@@ -61,15 +53,25 @@ public final class MotorolaLocationProvider
 
     public int start() throws LocationException {
         try {
+            // parse initialization params
+            CharArrayTokenizer tokenizer = new CharArrayTokenizer();
+            tokenizer.init(Config.getLocationTimings(), false);
+            this.accuracy = tokenizer.nextInt();
+            this.age = tokenizer.nextInt();
+            this.timeout = tokenizer.nextInt();
+            tokenizer.dispose();
+
+            // init provider
             impl = (com.motorola.location.PositionSource) Connector.open("location://");
-            impl.addPositionListener(/*adapter*/this);
+            impl.addPositionListener(this);
             impl.generatePosition(accuracy, age, timeout);
+
         } catch (IOException e) {
             throw new LocationException(e);
         }
 
-        lastState = _STARTING;
-        notifyListener(_STARTING); // trick to start GPX tracklog
+        // notify
+        notifyListener(lastState = _STARTING); // trick to start GPX tracklog
 
         return lastState;
     }
@@ -80,69 +82,55 @@ public final class MotorolaLocationProvider
 
     public void setLocationListener(api.location.LocationListener listener, int interval, int timeout, int maxAge) {
         if (listener == null) {
-            impl.removePositionListener(/*adapter*/this);
+            impl.removePositionListener(this);
         } else {
-/*
-            adapter = new LocationListenerAdapter(listener);
-*/
             setListener(listener);
         }
     }
 
-/*
-    private final class LocationListenerAdapter implements com.motorola.location.PositionListener {
-
-        public LocationListenerAdapter(api.location.LocationListener listener) {
-            setListener(listener);
-        }
-*/
-
-        public void newPosition(com.motorola.location.AggregatePosition aggregatePosition) {
-            try {
-                if (aggregatePosition == null || aggregatePosition.hasLatLon() == false) {
-                    // signal state change
-                    if (lastState != LocationProvider.TEMPORARILY_UNAVAILABLE) {
-                        lastState = LocationProvider.TEMPORARILY_UNAVAILABLE;
-                        notifyListener(lastState);
-                    }
-                } else {
-                    // signal state change
-                    if (lastState != LocationProvider.AVAILABLE) {
-                        lastState = LocationProvider.AVAILABLE;
-                        notifyListener(lastState);
-                    }
-
-                    double lat = aggregatePosition.getLatitude() ;
-                    double lon = aggregatePosition.getLongitude();
-                    float alt = aggregatePosition.hasAltitude() ? aggregatePosition.getAltitude() : -1F;
-
-                    // create up-to-date location
-                    QualifiedCoordinates qc = QualifiedCoordinates.newInstance(lat / 60 * 0.00001, lon / 60 * 0.00001, alt);
-                    qc.setHorizontalAccuracy(aggregatePosition.getLatLonAccuracy());
-                    Location location = Location.newInstance(qc, aggregatePosition.getTimeStamp(), 1);
-                    if (aggregatePosition.hasTravelDirection()) {
-                        location.setCourse(aggregatePosition.getTravelDirection());
-                    }
-                    if (aggregatePosition.hasSpeed()) {
-                        location.setSpeed((float) aggregatePosition.getSpeed() / 1000);
-                    }
-
-                    // notify
-                    notifyListener(location);
+    public void newPosition(com.motorola.location.AggregatePosition aggregatePosition) {
+        try {
+            if (aggregatePosition == null || aggregatePosition.hasLatLon() == false) {
+                // signal state change
+                if (lastState != LocationProvider.TEMPORARILY_UNAVAILABLE) {
+                    lastState = LocationProvider.TEMPORARILY_UNAVAILABLE;
+                    notifyListener(lastState);
                 }
-            } catch (Throwable t) {
+            } else {
+                // signal state change
+                if (lastState != LocationProvider.AVAILABLE) {
+                    lastState = LocationProvider.AVAILABLE;
+                    notifyListener(lastState);
+                }
 
-                // record problem
-                setStatus(t.toString());
+                double lat = aggregatePosition.getLatitude() ;
+                double lon = aggregatePosition.getLongitude();
+                float alt = aggregatePosition.hasAltitude() ? aggregatePosition.getAltitude() : -1F;
 
-            } finally {
+                // create up-to-date location
+                QualifiedCoordinates qc = QualifiedCoordinates.newInstance(lat / 60 * 0.00001, lon / 60 * 0.00001, alt);
+                qc.setHorizontalAccuracy(aggregatePosition.getLatLonAccuracy());
+                Location location = Location.newInstance(qc, aggregatePosition.getTimeStamp(), 1);
+                if (aggregatePosition.hasTravelDirection()) {
+                    location.setCourse(aggregatePosition.getTravelDirection());
+                }
+                if (aggregatePosition.hasSpeed()) {
+                    location.setSpeed((float) aggregatePosition.getSpeed() / 1000);
+                }
 
-                // generate another fix
-                impl.generatePosition(accuracy, age, timeout);
-
+                // notify
+                notifyListener(location);
             }
+        } catch (Throwable t) {
+
+            // record problem
+            setStatus(t.toString());
+
+        } finally {
+
+            // generate another fix
+            impl.generatePosition(accuracy, age, timeout);
+
         }
-/*
     }
-*/
 }

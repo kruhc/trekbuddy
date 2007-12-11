@@ -18,8 +18,8 @@ package cz.kruch.track.util;
 
 import api.location.QualifiedCoordinates;
 import api.location.Datum;
-import api.location.GeodeticPosition;
 import api.location.CartesianCoordinates;
+import api.location.Ellipsoid;
 
 import java.util.Vector;
 
@@ -170,7 +170,7 @@ public final class Mercator {
         double lmax = Double.MIN_VALUE;
 
         for (int i = ll.size(); --i >= 0; ) {
-            double lon = ((QualifiedCoordinates) ll.elementAt(i)).getLon();
+            final double lon = ((QualifiedCoordinates) ll.elementAt(i)).getLon();
             if (lon < lmin) {
                 lmin = lon;
             }
@@ -220,7 +220,7 @@ public final class Mercator {
      * Conversions.
      */
 
-    public static Datum ntf;
+    private static Datum ntf;
 
     public static CartesianCoordinates LLtoUTM(QualifiedCoordinates qc) {
         return LLtoMercator(qc, Datum.DATUM_WGS_84.ellipsoid, getUTMSetup(qc));
@@ -303,7 +303,7 @@ public final class Mercator {
     }
 
     public static CartesianCoordinates LLtoMercator(QualifiedCoordinates qc,
-                                                    Datum.Ellipsoid ellipsoid,
+                                                    Ellipsoid ellipsoid,
                                                     ProjectionSetup setup) {
         String projectionName = setup.name;
         CartesianCoordinates coords;
@@ -432,7 +432,7 @@ public final class Mercator {
     }
 
     public static QualifiedCoordinates MercatortoLL(CartesianCoordinates utm,
-                                                    Datum.Ellipsoid ellipsoid,
+                                                    Ellipsoid ellipsoid,
                                                     ProjectionSetup setup) {
         String projectionName = setup.name;
         QualifiedCoordinates qc;

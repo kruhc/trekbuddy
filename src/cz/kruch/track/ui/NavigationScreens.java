@@ -94,6 +94,7 @@ public final class NavigationScreens {
 
     // public (???) vars
     public static int bulletSize;
+    public static int useCondensed;
 
     public static void initialize() throws IOException {
         // init image cache
@@ -462,8 +463,8 @@ public final class NavigationScreens {
         } else if (Config.useUTM) {
             toUTM(qc, sb);
         } else {
-            // condensed for SXG75
-            if (Config.decimalPrecision && cz.kruch.track.TrackingMIDlet.sxg75) {
+            // condensed for SXG75 and narrowscreen devices
+            if (useCondensed != 0 && Config.decimalPrecision) {
                 toCondensedLL(qc, sb);
             } else { // decent devices
                 toLL(qc, sb);
@@ -510,11 +511,15 @@ public final class NavigationScreens {
     }
 
     private static StringBuffer toCondensedLL(QualifiedCoordinates qc, StringBuffer sb) {
-        sb.append(qc.getLat() > 0D ? 'N' : 'S');
+        if (useCondensed == 1) {
+            sb.append(qc.getLat() > 0D ? 'N' : 'S');
+        }
         append(QualifiedCoordinates.LAT, qc.getLat(), true, sb);
         sb.deleteCharAt(sb.length() - 1);
         sb.append(' ');
-        sb.append(qc.getLon() > 0D ? 'E' : 'W');
+        if (useCondensed == 1) {
+            sb.append(qc.getLon() > 0D ? 'E' : 'W');
+        }
         append(QualifiedCoordinates.LON, qc.getLon(), true, sb);
         sb.deleteCharAt(sb.length() - 1);
 

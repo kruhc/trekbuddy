@@ -32,19 +32,18 @@ import java.io.OutputStream;
 public abstract class File {
 
     public static final String FILE_PROTOCOL    = "file://";
-
     public static final String PARENT_DIR       = "..";
     public static final String PATH_SEPARATOR   = "/";
     public static final char PATH_SEPCHAR       = '/';
 
-    public static final int FS_UNKNOWN      = 0;
-    public static final int FS_JSR75        = 1;
-    public static final int FS_SIEMENS      = 2;
-    public static final int FS_SXG75        = 3;
-    public static final int FS_MOTOROLA     = 4;
-    public static final int FS_MOTOROLA1000 = 5;
+    public static final int FS_UNKNOWN          = 0;
+    public static final int FS_JSR75            = 1;
+    public static final int FS_SIEMENS          = 2;
+    public static final int FS_SXG75            = 3;
+    public static final int FS_MOTOROLA         = 4;
+    public static final int FS_MOTOROLA1000     = 5;
 
-    public static int fsType = FS_UNKNOWN;
+    public static int fsType; // 0 (= FS_UNKNOWN)
 
     private static Class factory;
     private static File registry;
@@ -55,51 +54,55 @@ public abstract class File {
 //#ifdef __JSR75__
         try {
             Class.forName("javax.microedition.io.file.FileConnection");
-            fsType = traverseBug ? FS_SXG75 : FS_JSR75;
             factory = Class.forName("api.file.Jsr75File");
+            fsType = traverseBug ? FS_SXG75 : FS_JSR75;
         } catch (Throwable t) {
         }
 //#endif
 //#ifdef __RIM__
-        if (fsType == FS_UNKNOWN) { /* repeat for Blackberry */
+        if (factory == null) { /* repeat for Blackberry */
             try {
                 Class.forName("javax.microedition.io.file.FileConnection");
-                fsType = traverseBug ? FS_SXG75 : FS_JSR75;
                 factory = Class.forName("api.file.Jsr75File");
+                fsType = traverseBug ? FS_SXG75 : FS_JSR75;
             } catch (Throwable t) {
             }
         }
 //#endif
 //#ifdef __S65__
-        if (fsType == FS_UNKNOWN) {
+        if (factory == null) {
             try {
                 Class.forName("com.siemens.mp.io.file.FileConnection");
-                fsType = FS_SIEMENS;
                 factory = Class.forName("api.file.SiemensFile");
+                fsType = FS_SIEMENS;
             } catch (Throwable t) {
             }
         }
 //#endif
 //#ifdef __A780__
-        if (fsType == FS_UNKNOWN) {
+        if (factory == null) {
             try {
                 Class.forName("com.motorola.io.FileConnection");
-                fsType = FS_MOTOROLA;
                 factory = Class.forName("api.file.MotorolaFile");
+                fsType = FS_MOTOROLA;
             } catch (Throwable t) {
             }
         }
 //#endif
 //#ifdef __A1000__
-        if (fsType == FS_UNKNOWN) {
+        if (factory == null) {
             try {
                 Class.forName("com.motorola.io.file.FileConnection");
-                fsType = FS_MOTOROLA1000;
                 factory = Class.forName("api.file.Motorola1000File");
+                fsType = FS_MOTOROLA1000;
             } catch (Throwable t) {
             }
         }
 //#endif
+    }
+
+    public static boolean isFs() {
+        return factory != null;
     }
 
     public static Enumeration listRoots() {
@@ -188,6 +191,6 @@ public abstract class File {
     }
 
     public static boolean isDir(String path) {
-        return File.PATH_SEPCHAR == path.charAt(path.length() - 1);
+        return File.PATH_SEPCHAR == path.charAt(path.length() - 1) || File.PARENT_DIR.equals(path);
     }
 }

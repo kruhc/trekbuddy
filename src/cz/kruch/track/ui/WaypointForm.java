@@ -70,18 +70,17 @@ public final class WaypointForm extends Form
 
     private static final Calendar CALENDAR = Calendar.getInstance(TimeZone.getDefault());
 
+    private final Callback callback;
     private QualifiedCoordinates coordinates;
     private long timestamp;
-    private Callback callback;
 
     private TextField fieldName, fieldComment;
-
     private TextField fieldLat, fieldLon, fieldAlt;
 
     private byte[] imageBytes;
     private int imageNum = -1;
 
-    static int cnt = 0;
+    private static int cnt = 0;
 
     /**
      * Info view constructor.

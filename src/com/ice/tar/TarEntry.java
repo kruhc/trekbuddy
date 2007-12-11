@@ -15,6 +15,8 @@
 
 package com.ice.tar;
 
+import cz.kruch.track.util.CharArrayTokenizer;
+
 import java.io.UnsupportedEncodingException;
 
 /**
@@ -125,69 +127,69 @@ public final class TarEntry {
     /**
      * The length of the name field in a header buffer.
      */
-    public static final int NAMELEN = 100;
+    private static final int NAMELEN = 100;
     /**
      * The offset of the name field in a header buffer.
      */
-    public static final int NAMEOFFSET = 0;
+    private static final int NAMEOFFSET = 0;
     /**
      * The length of the name prefix field in a header buffer.
      */
-    public static final int PREFIXLEN = 155;
+    private static final int PREFIXLEN = 155;
     /**
      * The offset of the name prefix field in a header buffer.
      */
-    public static final int PREFIXOFFSET = 345;
+    private static final int PREFIXOFFSET = 345;
     /**
      * The length of the mode field in a header buffer.
      */
-    public static final int MODELEN = 8;
+    private static final int MODELEN = 8;
     /**
      * The length of the user id field in a header buffer.
      */
-    public static final int UIDLEN = 8;
+    private static final int UIDLEN = 8;
     /**
      * The length of the group id field in a header buffer.
      */
-    public static final int GIDLEN = 8;
+    private static final int GIDLEN = 8;
     /**
      * The length of the checksum field in a header buffer.
      */
-    public static final int CHKSUMLEN = 8;
+    private static final int CHKSUMLEN = 8;
     /**
      * The length of the size field in a header buffer.
      */
-    public static final int SIZELEN = 12;
+    private static final int SIZELEN = 12;
     /**
      * The length of the magic field in a header buffer.
      */
-    public static final int MAGICLEN = 8;
+    private static final int MAGICLEN = 8;
     /**
      * The length of the modification time field in a header buffer.
      */
-    public static final int MODTIMELEN = 12;
+    private static final int MODTIMELEN = 12;
     /**
      * The length of the user name field in a header buffer.
      */
-    public static final int UNAMELEN = 32;
+    private static final int UNAMELEN = 32;
     /**
      * The length of the group name field in a header buffer.
      */
-    public static final int GNAMELEN = 32;
+    private static final int GNAMELEN = 32;
     /**
      * The length of the devices field in a header buffer.
      */
-    public static final int DEVLEN = 8;
+    private static final int DEVLEN = 8;
 
     /**
      * Directory file type.
      */
-    public static final byte LF_DIR = (byte) '5';
+    private static final byte LF_DIR = (byte) '5';
 
     /**
      * The entry's name.
      */
-    public String name;
+    private CharArrayTokenizer.Token name;
 
     /**
      * Entry's absolute position in archive.
@@ -197,30 +199,28 @@ public final class TarEntry {
     /**
      * The entry's size.
      */
-    public long size;
+    private long size;
 
     /**
      * The entry's link flag.
      */
-    public byte linkFlag;
+    private byte linkFlag;
 
     /**
-     * Construct an entry from an archive's header bytes. File is set
-     * to null.
-     *
-     * @param headerBuf The header bytes from a tar archive entry.
+     * Construct an entry.
      */
-    public TarEntry(byte[] headerBuf, final long position) throws InvalidHeaderException {
-        this.parseHeader(headerBuf);
-        this.position = position;
+    public TarEntry() {
+        this.name = new CharArrayTokenizer.Token();
+        this.name.init(new char[100], 0, 100);
     }
 
     /**
      * Injects new initial data.
      *
-     * @param headerBuf The header bytes from a tar archive entry.
+     * @param headerBuf header bytes from a tar archive entry
+     * @param position
      */
-    public void update(byte[] headerBuf, final long position) throws InvalidHeaderException {
+    public void init(byte[] headerBuf, long position) throws InvalidHeaderException {
         this.parseHeader(headerBuf);
         this.position = position;
     }
@@ -230,7 +230,7 @@ public final class TarEntry {
      *
      * @return This entry's name.
      */
-    public String getName() {
+    public CharArrayTokenizer.Token getName() {
         return this.name;
     }
 
@@ -293,19 +293,20 @@ public final class TarEntry {
             StringBuffer sb = new StringBuffer(64);
 
             sb.append("Invalid header: '");
-            sb.append((char) headerBuf[257]).append(' ');
-            sb.append((char) headerBuf[258]).append(' ');
-            sb.append((char) headerBuf[259]).append(' ');
-            sb.append((char) headerBuf[260]).append(' ');
-            sb.append((char) headerBuf[261]).append(' ');
-            sb.append((char) headerBuf[262]).append(' ');
-            sb.append((char) headerBuf[263]);
-            sb.append("'");
+            sb.append(Integer.toHexString(headerBuf[257])).append(' ');
+            sb.append(Integer.toHexString(headerBuf[258])).append(' ');
+            sb.append(Integer.toHexString(headerBuf[259])).append(' ');
+            sb.append(Integer.toHexString(headerBuf[260])).append(' ');
+            sb.append(Integer.toHexString(headerBuf[261])).append(' ');
+            sb.append(Integer.toHexString(headerBuf[262])).append(' ');
+            sb.append(Integer.toHexString(headerBuf[263]));
+            sb.append('\'');
 
             throw new InvalidHeaderException(sb.toString());
         }
 
-        name = parseFileName(headerBuf);
+//        name = parseFileName(headerBuf);
+        name = parseEntryName(headerBuf);
 
         int offset = NAMELEN + MODELEN + UIDLEN + GIDLEN;
 
@@ -354,6 +355,30 @@ public final class TarEntry {
     }
 
     /**
+     * Parse a file name from a header buffer. This is simplified variant
+     * of {@link #parseFileName(byte[])}.
+     * @param header header
+     * @return token
+     */
+    private CharArrayTokenizer.Token parseEntryName(byte[] header) {
+        final char[] array = this.name.array;
+        
+        int i = 0;
+        for (; i < 100; i++) {
+            final byte b = header[i];
+            if (b == 0) {
+                break;
+            }
+            array[i] = (char) b;
+        }
+
+        name.begin = 0;
+        name.length = i;
+
+        return name;
+    }
+
+    /**
      * Parse a file name from a header buffer. This is different from
      * parseName() in that is recognizes 'ustar' names and will handle
      * adding on the "prefix" field to the name.
@@ -385,14 +410,15 @@ public final class TarEntry {
 
         int i = 0;
         for (; i < 100; i++) {
-            byte b = header[i];
+            final byte b = header[i];
             if (b == 0) {
                 break;
             }
         }
 
+        return new String(header, 0, i);
+
 //        try {
-            return new String(header, 0, i);
 //            return new String(header, 0, i, "US-ASCII");
 //            String name = new String(header, 0, i, "US-ASCII");
 //            if (prefix == null) {

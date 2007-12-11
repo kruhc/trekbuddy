@@ -11,13 +11,13 @@
 
     <target name="public" depends="rescompile"/>
 
-    <target name="jurek">
-        <copy overwrite="true"
+    <target name="interpuls">
+        <copy overwrite="true" verbose="true"
             file="res-pl_PL\resources\language.res" 
             tofile="res\resources\language.res"/>
     </target>
 
-    <target name="jurek-testing" depends="jurek"/>
+    <target name="jurek-testing" depends="interpuls"/>
 
 <!--
   private targets
@@ -30,16 +30,16 @@
         <javac 
             destdir="tools/classes" 
             srcdir="tools/src" 
-            includes="ResourceCompiler.java"/>
+            includes="ResourceCompilerNG.java"/>
         <jar 
-            destfile="tools/dist/rc.jar"
+            destfile="tools/dist/rc-ng.jar"
             basedir="tools/classes"
-            includes="ResourceCompiler.class">
+            includes="ResourceCompilerNG.class">
           <manifest>
-            <attribute name="Main-Class" value="ResourceCompiler"/>
+            <attribute name="Main-Class" value="ResourceCompilerNG"/>
           </manifest>
         </jar> 
-        <java fork="true" jar="tools/dist/rc.jar">
+        <java fork="true" jar="tools/dist/rc-ng.jar">
             <arg line="en_US res/resources/language.txt res/resources/language.res"/>
         </java>
     </target>

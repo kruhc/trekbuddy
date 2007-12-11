@@ -33,19 +33,19 @@ import cz.kruch.track.Resources;
  *
  * @author Ales Pour <kruhc@seznam.cz>
  */
-public final class FriendForm extends Form implements CommandListener {
+final class FriendForm extends Form implements CommandListener {
     public static final String MENU_SEND;
 
     static {
         MENU_SEND = Resources.getString(Resources.NAV_CMD_SEND);
     }
 
-    private Displayable next;
-    private Callback callback;
-    private Object closure;
+    private final Displayable next;
+    private final Callback callback;
+    private final Object closure;
 
-    private TextField fieldNumber;
-    private TextField fieldMessage;
+    private final TextField fieldNumber;
+    private final TextField fieldMessage;
 
     public FriendForm(Displayable next, String title,
                       QualifiedCoordinates coordinates,

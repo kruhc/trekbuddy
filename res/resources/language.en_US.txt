@@ -12,6 +12,7 @@
 0302=customizing ui...
 0303=creating screens...
 0304=loading map...
+0305=keys mapping...
 0399=
 
 # desktop commands
@@ -113,6 +114,8 @@
 1381=NO POSITION
 1382=NO WPT
 1383=NMEA Playback
+1383=NMEA Playback
+1384=Received location info from:
 
 # navigation commands
 2000=RouteAlong
@@ -192,7 +195,7 @@
 3408=nautical
 3409=<Map Lat/Lon>
 3410=<Map Grid>
-3411=<Gecaching Lat/Lon>
+3411=<Geocaching Lat/Lon>
 
 # settings forms/fields/values (Desktop)
 3500=Desktop
@@ -228,6 +231,7 @@
 3616=GPX Options
 3617=log only valid
 3618=O2 Germany
+3619=Filter Depth
 
 # settings forms/fields/values (Navigation)
 3700=Wpt Proximity
@@ -241,7 +245,7 @@
 
 # settings forms/fields/values (Tweaks)
 3800=Tweaks
-3801=optimistic I/O
+3801=Siemens I/O
 3802=safe renderer
 3803=forced GC
 3804=1-tile scroll

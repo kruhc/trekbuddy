@@ -57,13 +57,12 @@ import org.xmlpull.v1.XmlPullParserException;
  *
  * @author Ales Pour <kruhc@seznam.cz>
  */
-final class ComputerView extends View
-        implements Runnable, CommandListener {
+final class ComputerView extends View implements Runnable, CommandListener {
 //#ifdef __LOG__
     private static final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("LocatorView");
 //#endif
 
-    // xml tags
+    // xml tags and attrs
     private static final String TAG_UNITS       = "units";
     private static final String TAG_FONT        = "font";
     private static final String TAG_COLORS      = "colors";
@@ -479,6 +478,7 @@ final class ComputerView extends View
         return super.handleAction(action, repeated);
     }
 
+    /* synchronized to avoid race-cond when rendering */
     public synchronized void run() {
 
         // regular run?
@@ -510,7 +510,7 @@ final class ComputerView extends View
             profiles = new Hashtable(4);
 
             // try to load profiles
-            if (cz.kruch.track.TrackingMIDlet.isFs()) {
+            if (File.isFs()) {
                 try {
                     // find profiles
                     fillProfiles(profiles);
@@ -562,7 +562,8 @@ final class ComputerView extends View
         }
     }
 
-    public int changeDayNight(final int dayNight) {
+    /* synchronized to avoid race-cond when switching profile or rendering */
+    public synchronized int changeDayNight(final int dayNight) {
         if (!isUsable()) {
             return isVisible ? Desktop.MASK_SCREEN : Desktop.MASK_NONE;
         }
@@ -619,6 +620,7 @@ final class ComputerView extends View
         return isVisible ? Desktop.MASK_SCREEN : Desktop.MASK_NONE;
     }
 
+    /* synchronized to avoid race-cond when switching profile */
     public synchronized void render(final Graphics graphics, final Font font, final int mask) {
         // local copies for faster access
         final int w = Desktop.width;

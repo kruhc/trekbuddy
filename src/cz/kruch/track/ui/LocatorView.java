@@ -40,10 +40,10 @@ final class LocatorView extends View {
         MSG_NO_WAYPOINT = Resources.getString(Resources.DESKTOP_MSG_NO_WPT);
     }
 
-    public static final int[] RANGES = {
+    private static final int[] RANGES = {
         1000, 500, 250, 100, 50, 25, 10, 5
     };
-    public static final String[] RANGES_STR = {
+    private static final String[] RANGES_STR = {
         "1000 m", "500 m", "250 m", "100 m", "50 m", "25 m", "10 m", "5 m"
     };
 

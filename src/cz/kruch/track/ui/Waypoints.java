@@ -107,7 +107,7 @@ public final class Waypoints extends List
     private String currentName, inUseName;
     private Vector currentWpts, inUseWpts;
 
-    private /*Navigator*/Desktop navigator;
+    private final /*Navigator*/Desktop navigator;
 
     private int depth;
     private int[] idx;
@@ -195,10 +195,10 @@ public final class Waypoints extends List
 
         // do we have in-jar waypoint(s) resource?
         int type = TYPE_GPX;
-        InputStream in = cz.kruch.track.TrackingMIDlet.class.getResourceAsStream("/resources/waypoints.gpx");
+        InputStream in = Waypoints.class.getResourceAsStream("/resources/waypoints.gpx");
         if (in == null) {
             type = TYPE_LOC;
-            in = cz.kruch.track.TrackingMIDlet.class.getResourceAsStream("/resources/waypoint.loc");
+            in = Waypoints.class.getResourceAsStream("/resources/waypoint.loc");
         }
 
         // if yes, load it
@@ -462,7 +462,7 @@ public final class Waypoints extends List
                 _wpt = (Waypoint) ret[1];
 
                 // add waypoint, possibly save
-                (new YesNoDialog(this, this)).show(Resources.getString(Resources.NAV_MSG_PERSIST_WPT), null);
+                (new YesNoDialog(this, this, null)).show(Resources.getString(Resources.NAV_MSG_PERSIST_WPT), null);
 
             } else if (Friends.TYPE_IAH == action || Friends.TYPE_MYT == action) { // record & enlist received via SMS
 
@@ -531,7 +531,7 @@ public final class Waypoints extends List
      * "Do you want to persist custom waypoint?"
      * @param answer answer
      */
-    public void response(int answer) {
+    public void response(int answer, Object closure) {
         // add waypoint to memory store
         addToStore(USER_CUSTOM_STORE, _wpt, YesNoDialog.YES == answer);
         _wpt = null; // gc hint
@@ -578,7 +578,7 @@ public final class Waypoints extends List
         listKnown(vMem, USER_INJAR_STORE);
 
         // list persistent stores
-        if (cz.kruch.track.TrackingMIDlet.isFs()) {
+        if (File.isFs()) {
 
             // may take some time - start ticker
             list.setTicker(new Ticker(Resources.getString(Resources.NAV_MSG_TICKER_LISTING)));
@@ -697,7 +697,7 @@ public final class Waypoints extends List
                 strs[nFile + i] = " "; // 'empty' filename will make space
                                        // for memory stores at the beginning
             }
-            FileBrowser.sort(strs);
+            FileBrowser.quicksort(strs, 0, strs.length - 1);
             vMem.copyInto(strs);
             vMem.removeAllElements();
             vMem = null; // gc hint
@@ -750,7 +750,7 @@ public final class Waypoints extends List
 
                 if (wpts != null && wpts.size() > 0) {
                     // cache store
-                    stores.put(new String(_storeName), wpts);
+                    stores.put(_storeName, wpts);
                 }
                 
              } catch (Throwable t) {

@@ -30,29 +30,31 @@ import java.util.Enumeration;
  *
  * @author Ales Pour <kruhc@seznam.cz>
  */
-final class ItemSelection extends List implements CommandListener {
-    private Callback callback;
-    private Displayable next;
+final class ItemSelection implements CommandListener {
+    private final Callback callback;
+    private final Displayable next;
+    private final String title, selectLabel;
 
     public ItemSelection(Displayable next, String title, Callback callback) {
         this(next, title, Resources.getString(Resources.DESKTOP_CMD_SELECT), callback);
     }
 
     private ItemSelection(Displayable next, String title, String selectLabel, Callback callback) {
-        super(cz.kruch.track.TrackingMIDlet.wm ? title + " (TrekBuddy)" : title, List.IMPLICIT);
         this.callback = callback;
         this.next = next;
-        addCommand(new Command(Resources.getString(Resources.CMD_CANCEL), Command.BACK, 1));
-        setSelectCommand(new Command(selectLabel, Command.ITEM, 1));
-        setCommandListener(this);
+        this.title = Resources.prefixed(title);
+        this.selectLabel = selectLabel;
     }
 
     public void show(Enumeration items) {
-        // add items
-        FileBrowser.sort2list(this, items);
+        // add items and commands
+        List list = FileBrowser.sort2list(title, items, null);
+        list.addCommand(new Command(Resources.getString(Resources.CMD_CANCEL), Command.BACK, 1));
+        list.setSelectCommand(new Command(selectLabel, Command.ITEM, 1));
+        list.setCommandListener(this);
 
         // show selection
-        Desktop.display.setCurrent(this);
+        Desktop.display.setCurrent(list);
     }
 
     public void commandAction(Command command, Displayable displayable) {
@@ -61,7 +63,8 @@ final class ItemSelection extends List implements CommandListener {
 
         // invoke callback
         if (command.getCommandType() == Command.ITEM) {
-            callback.invoke(getString(getSelectedIndex()), null, this);
+            List list = (List) displayable;
+            callback.invoke(list.getString(list.getSelectedIndex()), null, this);
         } else {
             callback.invoke(null, null, this);
         }

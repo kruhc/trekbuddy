@@ -41,6 +41,12 @@ public final class KXmlParser implements XmlPullParser {
     private static final String CONSTANT_XMLNS  = "xmlns";
     private static final String CONSTANT_EMPTY  = "";
 
+    private static final String ENC_UTF_32BE    = "UTF-32BE";
+    private static final String ENC_UTF_32LE    = "UTF-32LE";
+    private static final String ENC_UTF_16BE    = "UTF-16BE";
+    private static final String ENC_UTF_16LE    = "UTF-16LE";
+    private static final String ENC_UTF_8       = "UTF-8";
+
     private static final int LEGACY     = 999;
     private static final int XML_DECL   = 998;
 
@@ -1018,31 +1024,31 @@ public final class KXmlParser implements XmlPullParser {
                 if (srcCount == 4) {
                     switch (bom) {
                         case 0x00000FEFF:
-                            enc = "UTF-32BE";
+                            enc = ENC_UTF_32BE;
                             srcCount = 0;
                             break;
                         case 0x0FFFE0000:
-                            enc = "UTF-32LE";
+                            enc = ENC_UTF_32LE;
                             srcCount = 0;
                             break;
                         case 0x03c:
-                            enc = "UTF-32BE";
+                            enc = ENC_UTF_32BE;
                             srcBuf[0] = '<';
                             srcCount = 1;
                             break;
                         case 0x03c000000:
-                            enc = "UTF-32LE";
+                            enc = ENC_UTF_32LE;
                             srcBuf[0] = '<';
                             srcCount = 1;
                             break;
                         case 0x0003c003f:
-                            enc = "UTF-16BE";
+                            enc = ENC_UTF_16BE;
                             srcBuf[0] = '<';
                             srcBuf[1] = '?';
                             srcCount = 2;
                             break;
                         case 0x03c003f00:
-                            enc = "UTF-16LE";
+                            enc = ENC_UTF_16LE;
                             srcBuf[0] = '<';
                             srcBuf[1] = '?';
                             srcCount = 2;
@@ -1078,15 +1084,15 @@ public final class KXmlParser implements XmlPullParser {
                             break;
                         default: {
                             if ((bom & 0x0ffff0000) == 0x0FEFF0000) {
-                                enc = "UTF-16BE";
+                                enc = ENC_UTF_16BE;
                                 srcBuf[0] = (char) ((srcBuf[2] << 8) | srcBuf[3]);
                                 srcCount = 1;
                             } else if ((bom & 0x0ffff0000) == 0x0fffe0000) {
-                                enc = "UTF-16LE";
+                                enc = ENC_UTF_16LE;
                                 srcBuf[0] = (char) ((srcBuf[3] << 8) | srcBuf[2]);
                                 srcCount = 1;
                             } else if ((bom & 0x0ffffff00) == 0x0EFBBBF00) {
-                                enc = "UTF-8";
+                                enc = ENC_UTF_8;
                                 srcBuf[0] = srcBuf[3];
                                 srcCount = 1;
                             }
@@ -1216,7 +1222,7 @@ public final class KXmlParser implements XmlPullParser {
                 if (attributes[i + 1] != null) {
                     buf.append('{').append(attributes[i]).append('}').append(attributes[i + 1]).append(':');
                 }
-                buf.append(attributes[i + 2]).append("='").append(attributes[i + 3]).append("'");
+                buf.append(attributes[i + 2]).append('=').append('\'').append(attributes[i + 3]).append('\'');
             }
 
             buf.append('>');

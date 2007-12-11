@@ -33,13 +33,17 @@ import java.util.Date;
 import api.location.QualifiedCoordinates;
 
 public final class Friends implements MessageListener, Runnable {
-    public static final String TYPE_IAH = "IAH";
-    public static final String TYPE_MYT = "MYT";
+    public static final String TYPE_IAH         = "IAH";
+    public static final String TYPE_MYT         = "MYT";
 
-    private static final String TBSMS_HEADER  = "$TB";
-    private static final String TBSMS_IAH  = TBSMS_HEADER + TYPE_IAH;
-    private static final String TBSMS_MYT  = TBSMS_HEADER + TYPE_MYT;
-    private static final String PORT = ":16007";
+    private static final String SMS_PROTOCOL    = "sms://";
+    private static final String TBSMS_HEADER    = "$TB";
+    private static final String TBSMS_IAH       = "$TBIAH";
+    private static final String TBSMS_MYT       = "$TBMYT";
+    private static final String PORT            = ":16007";
+    private static final String CHAT_IAH        = "(I am here) ";
+    private static final String CHAT_MYT        = "(Meet you there) ";
+
     private static final char SEPARATOR_CHAR = ',';
 
     private MessageConnection connection;
@@ -48,7 +52,7 @@ public final class Friends implements MessageListener, Runnable {
     private String text;
 
     public Friends() throws IOException {
-        this.connection = (MessageConnection) Connector.open("sms://" + PORT, Connector.READ);
+        this.connection = (MessageConnection) Connector.open(SMS_PROTOCOL + PORT, Connector.READ);
         this.connection.setMessageListener(this);
     }
 
@@ -89,10 +93,10 @@ public final class Friends implements MessageListener, Runnable {
         sb.append(toSentence(QualifiedCoordinates.LON, coordinates.getLon()));
         sb.append(SEPARATOR_CHAR);
         sb.append(message.replace(',', ' ').replace('*', ' '));
-        sb.append("*00");
+        sb.append('*').append('0').append('0');
 
         String text = sb.toString();
-        String url = "sms://" + phone + PORT;
+        String url = SMS_PROTOCOL + phone + PORT;
 
 //#ifdef __LOG__
         debug(text);
@@ -127,10 +131,10 @@ public final class Friends implements MessageListener, Runnable {
                 String chat = null;
                 if (TBSMS_IAH.equals(header)) {
                     type = TYPE_IAH;
-                    chat = "(I am here) ";
+                    chat = CHAT_IAH;
                 } else if (TBSMS_MYT.equals(header)) {
                     type = TYPE_MYT;
-                    chat = "(Meet you there) ";
+                    chat = CHAT_MYT;
                 }
                 if (type == null) {
                     // unknown message
@@ -154,7 +158,7 @@ public final class Friends implements MessageListener, Runnable {
                     double lat = parseSentence(latv, lats);
                     double lon = parseSentence(lonv, lons);
                     String address = message.getAddress();
-                    if (address.startsWith("sms://")) {
+                    if (address.startsWith(SMS_PROTOCOL)) {
                         address = address.substring(6);
                     }
                     int i = address.indexOf(':');
@@ -170,7 +174,7 @@ public final class Friends implements MessageListener, Runnable {
                     Waypoints.getInstance().invoke(new Object[]{ type, wpt }, null, this);
 
                     // UI notification
-                    Desktop.showAlarm("Received location info from " + wpt.getName(), null);
+                    Desktop.showAlarm(Resources.getString(Resources.DESKTOP_MSG_SMS_RECEIVE_FAILED) + wpt.getName(), null);
                 }
             }
         } catch (Throwable t) {
@@ -300,10 +304,10 @@ public final class Friends implements MessageListener, Runnable {
         String chat = null;
         if (TBSMS_IAH.equals(header)) {
             type = TYPE_IAH;
-            chat = "(I am here) ";
+            chat = CHAT_IAH;
         } else if (TBSMS_MYT.equals(header)) {
             type = TYPE_MYT;
-            chat = "(Meet you there) ";
+            chat = CHAT_MYT;
         }
         if (type != null) {
             // get tokens

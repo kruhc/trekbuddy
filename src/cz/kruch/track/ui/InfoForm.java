@@ -40,7 +40,7 @@ final class InfoForm extends Form implements CommandListener {
     private Map map;
 
     public InfoForm() {
-        super(cz.kruch.track.TrackingMIDlet.wm ? Resources.getString(Resources.DESKTOP_CMD_INFO) + " (TrekBuddy)" : Resources.getString(Resources.DESKTOP_CMD_INFO));
+        super(Resources.prefixed(Resources.getString(Resources.DESKTOP_CMD_INFO)));
     }
 
     public void show(Desktop desktop, Throwable le, Object ps, Map map) {
@@ -63,10 +63,10 @@ final class InfoForm extends Form implements CommandListener {
     }
 
     private void details(Throwable le, Object ps, Map map) {
-        // gc (for memory info to be correct)
+        // gc - for memory info to be correct...
         System.gc();
-        long totalMemory = Runtime.getRuntime().totalMemory();
-        long freeMemory = Runtime.getRuntime().freeMemory();
+        final long totalMemory = Runtime.getRuntime().totalMemory();
+        final long freeMemory = Runtime.getRuntime().freeMemory();
 
         // items
         append(newItem("Platform", cz.kruch.track.TrackingMIDlet.getPlatform()));
@@ -80,10 +80,13 @@ final class InfoForm extends Form implements CommandListener {
             append(newItem("AppFlags", cz.kruch.track.TrackingMIDlet.getFlags()));
         }
         append(newItem("I18n", System.getProperty("microedition.locale") + " " + System.getProperty("microedition.encoding")));
-        append(newItem("Fs", "type? " + Integer.toString(api.file.File.fsType) + "; resetable? " + Integer.toString(cz.kruch.track.maps.Map.fileInputStreamResetable)));
+        append(newItem("Fs", "type? " + Integer.toString(api.file.File.fsType)
+                             + "; resetable? " + Integer.toString(cz.kruch.track.maps.Map.fileInputStreamResetable)));
         append(newItem("Ports", cz.kruch.track.TrackingMIDlet.hasPorts() + "; " + System.getProperty("microedition.commports")));
         append(newItem("TimeZone", TimeZone.getDefault().getID() + "; " + TimeZone.getDefault().useDaylightTime() + "; " + TimeZone.getDefault().getRawOffset()));
-        append(newItem("Desktop", "S60 renderer? " + Config.S60renderer + "; hasRepeatEvents? " + Desktop.hasRepeatEvents + "; " + Desktop.screen.getWidth() + "x" + Desktop.screen.getHeight()));
+        append(newItem("Desktop", "S60 renderer? " + Config.S60renderer
+                                  + "; hasRepeatEvents? " + Desktop.hasRepeatEvents
+                                  + "; " + Desktop.screen.getWidth() + "x" + Desktop.screen.getHeight()));
         if (map == null) {
             append(newItem("Map", ""));
         } else {

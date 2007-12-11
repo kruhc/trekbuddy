@@ -17,6 +17,7 @@
 package cz.kruch.track.maps;
 
 import cz.kruch.track.Resources;
+import cz.kruch.track.util.CharArrayTokenizer;
 import cz.kruch.track.ui.NavigationScreens;
 
 import javax.microedition.lcdui.Image;
@@ -33,26 +34,26 @@ public class Slice {
     private Image image;
 
     /** Constructor for TB, J2N map slice. */
+/*
     Slice(String path) throws InvalidMapException {
         parseXy(path);
     }
+*/
 
     /** Constructor for TB, J2N map slice. */
-/*
-    public Slice(CharArrayTokenizer.Token token) throws InvalidMapException {
+    Slice(CharArrayTokenizer.Token token) throws InvalidMapException {
         parseXy(token);
     }
-*/
 
     /** Constructor for GPSka map slice. */
     Slice() {
     }
 
-    public synchronized Image getImage() {
+    public final synchronized Image getImage() {
         return image;
     }
 
-    public synchronized void setImage(Image image) {
+    public final synchronized void setImage(Image image) {
         // assertion
         if (this.image != null && image != null) {
             throw new IllegalStateException("Replacing image in slice " + this);
@@ -61,23 +62,23 @@ public class Slice {
         this.image = image;
     }
 
-    public int getX() {
+    public final int getX() {
         return (xy >> 16) & 0x0000ffff;
     }
 
-    public int getY() {
+    public final int getY() {
         return xy & 0x0000ffff;
     }
 
-    public int getWidth() {
+    public final int getWidth() {
         return (wh >> 16) & 0x0000ffff;
     }
 
-    public int getHeight() {
+    public final int getHeight() {
         return wh & 0x0000ffff;
     }
 
-    public boolean isWithin(final int x, final int y) {
+    public final boolean isWithin(final int x, final int y) {
         final int dx = x - getX();
         if (x >= getX() && dx < getWidth()) {
             final int dy = y - getY();
@@ -115,7 +116,7 @@ public class Slice {
     }
 //#endif
 
-    public StringBuffer appendPath(StringBuffer sb) {
+    public final StringBuffer appendPath(StringBuffer sb) {
         sb.append('_');
         NavigationScreens.append(sb, getX());
         sb.append('_');
@@ -124,7 +125,7 @@ public class Slice {
         return sb.append(PNG_EXT);
     }
 
-    void doFinal(int xmax, int ymax, int xi, int yi) throws InvalidMapException {
+    final void doFinal(int xmax, int ymax, int xi, int yi) throws InvalidMapException {
         final int x = getX();
         final int y = getY();
         if (x + xi > xmax) {
@@ -136,6 +137,7 @@ public class Slice {
         wh = asShort(xi) << 16 | asShort(yi);
     }
     
+/*
     private void parseXy(String path) throws InvalidMapException {
         int p0 = -1, p1 = -1;
         int i = 0;
@@ -150,8 +152,8 @@ public class Slice {
         }
         xy = asShort(parseInt(path, p0 + 1, p1)) << 16 | asShort(parseInt(path, p1 + 1, i));
     }
+*/
 
-/*
     private void parseXy(CharArrayTokenizer.Token token) throws InvalidMapException {
         int p0 = -1, p1 = -1;
         int i = token.begin;
@@ -166,7 +168,6 @@ public class Slice {
         }
         xy = asShort(parseInt(token.array, p0 + 1, p1)) << 16 | asShort(parseInt(token.array, p1 + 1, i));
     }
-*/
 
     private static int asShort(final int i) throws InvalidMapException {
         if (i > Short.MAX_VALUE) {
@@ -176,6 +177,7 @@ public class Slice {
         return i;
     }
 
+/*
     private static int parseInt(String value, int offset, final int end) {
         if (offset == end || value == null) {
             throw new NumberFormatException("No input");
@@ -195,8 +197,8 @@ public class Slice {
 
         return result;
     }
+*/
 
-/*
     private static int parseInt(char[] value, int offset, final int end) {
         if (offset == end || value == null) {
             throw new NumberFormatException("No input");
@@ -216,6 +218,5 @@ public class Slice {
 
         return result;
     }
-*/
 }
 

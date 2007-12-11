@@ -82,11 +82,11 @@ public final class GpxTracklog extends Thread {
     private static final String ATTRIBUTE_LAT       = "lat";
     private static final String ATTRIBUTE_LON       = "lon";
 
-    private static final String FIX_NONE    = "none";
-    private static final String FIX_3D      = "3d";
-    private static final String FIX_2D      = "2d";
-    private static final String FIX_DGPS    = "dgps";
-    private static final String FIX_PPS     = "pps";
+    private static final String FIX_NONE            = "none";
+    private static final String FIX_3D              = "3d";
+    private static final String FIX_2D              = "2d";
+    private static final String FIX_DGPS            = "dgps";
+    private static final String FIX_PPS             = "pps";
 
     private final Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone("GMT"));
     private final Date date = new Date();
@@ -624,7 +624,7 @@ public final class GpxTracklog extends Thread {
         return null;
     }
 
-    public int dateToXsdDate(long timestamp) {
+    private int dateToXsdDate(long timestamp) {
         date.setTime(timestamp);
         calendar.setTime(date);
 
@@ -645,7 +645,7 @@ public final class GpxTracklog extends Thread {
         return sb.length();
     }
 
-    public int doubleToChars(final double value, final int precision) {
+    private int doubleToChars(final double value, final int precision) {
         StringBuffer sb = this.sb;
         sb.delete(0, sb.length());
 

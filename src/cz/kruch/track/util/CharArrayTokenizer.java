@@ -34,7 +34,7 @@ public final class CharArrayTokenizer {
     private int end;
     private int dl;
 
-    private Token token;
+    private final Token token;
 
     public CharArrayTokenizer() {
         this.token = new Token();
@@ -308,6 +308,10 @@ public final class CharArrayTokenizer {
         public int length;
         public boolean isDelimiter;
 
+        public void init(char[] array) {
+            init(array, 0, array.length);
+        }
+
         public void init(char[] array, int begin, int length) {
             this.array = array;
             this.begin = begin;
@@ -315,10 +319,14 @@ public final class CharArrayTokenizer {
             this.isDelimiter = false;
         }
 
-        public boolean startsWith(char c) {
+        public boolean startsWith(final char c) {
+            final char[] array = this.array;
+            final int begin = this.begin;
+            final int length = this.length;
             int offset = 0;
+
             while (offset < length) {
-                char b = array[begin + offset];
+                final char b = array[begin + offset];
                 if (b != ' ') {
                     return b == c;
                 }
@@ -334,12 +342,12 @@ public final class CharArrayTokenizer {
                 return false;
             }
 
-            char[] array = this.array;
+            final char[] array = this.array;
             final int begin = this.begin;
             int offset = 0;
 
             while (offset < sl) {
-                char b = array[begin + offset];
+                final char b = array[begin + offset];
                 if (b != s.charAt(offset)) {
                     return false;
                 }
@@ -355,12 +363,12 @@ public final class CharArrayTokenizer {
                 return false;
             }
 
-            char[] array = this.array;
-            final int begin = this.begin;
-            int offset = array.length - sl;
+            final char[] array = this.array;
+            final int start = this.length - sl;
+            int offset = 0;
 
             while (offset < sl) {
-                char b = array[begin + offset];
+                final char b = array[start + offset];
                 if (b != s.charAt(offset)) {
                     return false;
                 }
@@ -379,7 +387,10 @@ public final class CharArrayTokenizer {
         }
 
         public boolean isEmpty() {
+            final int length = this.length;
             if (length > 0) {
+                final char[] array = this.array;
+                final int begin = this.begin;
                 int offset = 0;
                 while (offset < length) {
                     if (array[begin + offset++] != ' ') {
@@ -389,6 +400,40 @@ public final class CharArrayTokenizer {
             }
 
             return true;
+        }
+
+        public int indexOf(final char c) {
+            final char[] array = this.array;
+            final int begin = this.begin;
+            final int length = this.length;
+            int offset = 0;
+
+            while (offset < length) {
+                final char b = array[begin + offset];
+                if (b == c) {
+                    return offset;
+                }
+                offset++;
+            }
+
+            return -1;
+        }
+
+        public int lastIndexOf(final char c) {
+            final char[] array = this.array;
+            final int begin = this.begin;
+            final int length = this.length;
+            int offset = length - 1;
+
+            while (offset > begin) {
+                char b = array[begin + offset];
+                if (b == c) {
+                    return offset;
+                }
+                offset--;
+            }
+
+            return -1;
         }
 
         public String toString() {

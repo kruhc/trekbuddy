@@ -17,7 +17,6 @@
 package cz.kruch.track.configuration;
 
 import cz.kruch.track.util.CharArrayTokenizer;
-import cz.kruch.track.TrackingMIDlet;
 import cz.kruch.track.io.LineReader;
 
 import javax.microedition.rms.RecordStore;
@@ -34,6 +33,7 @@ import java.util.Vector;
 import java.util.Hashtable;
 
 import api.location.Datum;
+import api.location.Ellipsoid;
 import api.file.File;
 
 /**
@@ -64,10 +64,10 @@ public final class Config {
     public static final String TRACKLOG_FORMAT_GPX  = "GPX 1.1";
 
     /* coordinate format */
-    public static final int COORDS_MAP_LATLON    = 0;
-    public static final int COORDS_MAP_GRID      = 1;
-    public static final int COORDS_UTM           = 2;
-    public static final int COORDS_GC_LATLON     = 3;
+    public static final int COORDS_MAP_LATLON       = 0;
+    public static final int COORDS_MAP_GRID         = 1;
+    public static final int COORDS_UTM              = 2;
+    public static final int COORDS_GC_LATLON        = 3;
 
     /* units */
     public static final int UNITS_METRIC            = 0;
@@ -75,19 +75,19 @@ public final class Config {
     public static final int UNITS_NAUTICAL          = 2;
 
     /* datadir folders */
-    public static final String FOLDER_MAPS          = "maps/";
-    public static final String FOLDER_NMEA          = "tracks-nmea/";
-    public static final String FOLDER_TRACKS        = "tracks-gpx/";
-    public static final String FOLDER_WPTS          = "wpts/";
-    public static final String FOLDER_PROFILES      = "ui-profiles/";
-    public static final String FOLDER_RESOURCES     = "resources/";
-    public static final String FOLDER_SOUNDS        = "sounds/";
+    private static final String FOLDER_MAPS         = "maps/";
+    private static final String FOLDER_NMEA         = "tracks-nmea/";
+    private static final String FOLDER_TRACKS       = "tracks-gpx/";
+    private static final String FOLDER_WPTS         = "wpts/";
+    private static final String FOLDER_PROFILES     = "ui-profiles/";
+    private static final String FOLDER_RESOURCES    = "resources/";
+    private static final String FOLDER_SOUNDS       = "sounds/";
 
     /* rms stores */
     public static final String VARS_090             = "vars_090";
     public static final String CONFIG_090           = "config_090";
 
-    private static final String EMPTY_STRING        = "";
+    public static final String EMPTY_STRING        = "";
 
     /*
      * Configuration params, initialized to default values.
@@ -95,11 +95,6 @@ public final class Config {
 
     // group [Map]
     public static String mapPath            = EMPTY_STRING; // file:///E:/trekbuddy/maps/GPSBasti/pasing.tar";
-
-/*
-    // group [Language]
-    public static String language           = L10n.ENGLISH;
-*/
 
     // group [Map datum]
     public static String geoDatum           = Datum.DATUM_WGS_84.name;
@@ -128,6 +123,9 @@ public final class Config {
     // group [Location sharing]
     public static boolean locationSharing;
 
+    // group [O2Germany provider options]
+    public static int o2Depth                   = 8;
+
     // group [Desktop]
     public static boolean fullscreen            = true;
     public static boolean noSounds;
@@ -150,11 +148,8 @@ public final class Config {
     public static boolean useGeocachingFormat;
 
     // group [Tweaks]
-    public static boolean optimisticIo;
+    public static boolean siemensIo;
     public static boolean S60renderer           = true;
-/* obsolete
-    public static boolean cacheOffline;
-*/
     public static boolean forcedGc              = true;
     public static boolean oneTileScroll;
 
@@ -172,11 +167,6 @@ public final class Config {
     public static int routeLineColor = 0x0;
     public static boolean routeLineStyle;
     public static boolean routePoiMarks = true;
-
-/*
-    // group [ScrollDelay]
-    public static int scrollingDelay = 0;
-*/
 
     // hidden
     public static String btDeviceName   = EMPTY_STRING;
@@ -196,7 +186,6 @@ public final class Config {
         /* default for Blackberry */
         dataDir = "file:///SDCard/TrekBuddy/";
         commUrl = "btspp://000276fd79da:1";
-        S60renderer = true;
         forcedGc = false;
 //#endif
 
@@ -215,16 +204,13 @@ public final class Config {
         // trick to recognize map loaded upon start as default
         defaultMapPath = mapPath;
 
-        // gc
-        System.gc();
-
         // correct initial values
         if (locationProvider == -1) {
             if (cz.kruch.track.TrackingMIDlet.jsr179) {
                 locationProvider = Config.LOCATION_PROVIDER_JSR179;
             } else if (cz.kruch.track.TrackingMIDlet.jsr82) {
                 locationProvider = Config.LOCATION_PROVIDER_JSR82;
-            } else if (cz.kruch.track.TrackingMIDlet.isFs()) {
+            } else if (api.file.File.isFs()) {
                 locationProvider = Config.LOCATION_PROVIDER_SIMULATOR;
             } else if (cz.kruch.track.TrackingMIDlet.hasPorts()) {
                 locationProvider = Config.LOCATION_PROVIDER_SERIAL;
@@ -273,7 +259,7 @@ public final class Config {
 
         // pre 0.9.4 extension
         try {
-            optimisticIo = din.readBoolean();
+            /*optimisticIo = */din.readBoolean();
             S60renderer = din.readBoolean();
             /*cacheOffline = */din.readBoolean();
         } catch (Exception e) {
@@ -352,6 +338,14 @@ public final class Config {
             }
         }
 
+        // 0.9.69 extensions
+        try {
+            o2Depth = din.readInt();
+            siemensIo = din.readBoolean();
+        } catch (Exception e) {
+            siemensIo = cz.kruch.track.TrackingMIDlet.siemens;
+        }
+
 //#ifdef __LOG__
         if (log.isEnabled()) log.info("configuration read");
 //#endif
@@ -359,8 +353,8 @@ public final class Config {
 
     private static void writeMain(DataOutputStream dout) throws IOException {
         dout.writeUTF(mapPath);
-        dout.writeUTF(""/*locationProvider*/);
-        dout.writeUTF(""/*timeZone*/);
+        dout.writeUTF(EMPTY_STRING/*locationProvider*/);
+        dout.writeUTF(EMPTY_STRING/*timeZone*/);
         dout.writeUTF(geoDatum);
         dout.writeBoolean(false/*tracklogsOn*/);
         dout.writeUTF(tracklogFormat);
@@ -380,9 +374,9 @@ public final class Config {
         dout.writeBoolean(osdMediumFont);
         dout.writeBoolean(osdBoldFont);
         dout.writeBoolean(osdBlackColor);
-        dout.writeUTF(""/*tracklog*/);
+        dout.writeUTF(EMPTY_STRING/*tracklog*/);
         dout.writeBoolean(useGeocachingFormat);
-        dout.writeBoolean(optimisticIo);
+        dout.writeBoolean(false/*optimisticIo*/);
         dout.writeBoolean(S60renderer);
         dout.writeBoolean(false/*cacheOffline*/);
         dout.writeBoolean(decimalPrecision);
@@ -399,7 +393,7 @@ public final class Config {
         dout.writeBoolean(false/*unitsImperial*/);
         dout.writeInt(wptProximity);
         dout.writeInt(poiProximity);
-        dout.writeUTF(""/*language*/);
+        dout.writeUTF(EMPTY_STRING/*language*/);
         dout.writeInt(routeLineColor);
         dout.writeBoolean(routeLineStyle);
         dout.writeBoolean(routePoiMarks);
@@ -411,6 +405,9 @@ public final class Config {
         dout.writeInt(tracklog);
         dout.writeBoolean(gpxOnlyValid);
         dout.writeInt(units);
+        /* since 0.9.69 */
+        dout.writeInt(o2Depth);
+        dout.writeBoolean(siemensIo);
 
 //#ifdef __LOG__
         if (log.isEnabled()) log.info("configuration updated");
@@ -536,8 +533,7 @@ public final class Config {
     public static final Hashtable datumMappings = new Hashtable();
 
     public static void initDatums(MIDlet midlet) {
-        int idx = 1;
-        char[] delims = { '{', '}', ',', '=' };
+        final char[] delims = { '{', '}', ',', '=' };
         Vector datums = new Vector();
         CharArrayTokenizer tokenizer = new CharArrayTokenizer();
 
@@ -547,7 +543,7 @@ public final class Config {
 
         // first try built-in
         try {
-            initDatums(tokenizer, delims, datums, TrackingMIDlet.class.getResourceAsStream("/resources/datums.txt"));
+            initDatums(tokenizer, delims, datums, Config.class.getResourceAsStream("/resources/datums.txt"));
         } catch (Throwable t) {
             // ignore
         }
@@ -573,11 +569,12 @@ public final class Config {
         }
 
         // lastly try JAD
-        CharArrayTokenizer.Token t = new CharArrayTokenizer.Token();
+        int idx = 1;
+        CharArrayTokenizer.Token token = new CharArrayTokenizer.Token();
         String s = midlet.getAppProperty("Datum-" + Integer.toString(idx++));
         while (s != null) {
-            t.init(s.toCharArray(), 0, s.length());
-            initDatum(tokenizer, delims, datums, t);
+            token.init(s.toCharArray(), 0, s.length());
+            initDatum(tokenizer, delims, datums, token);
             s = midlet.getAppProperty("Datum-" + Integer.toString(idx++));
         }
 
@@ -587,6 +584,9 @@ public final class Config {
         // finalize datum array
         DATUMS = new Datum[datums.size()];
         datums.copyInto(DATUMS);
+
+        // setup default
+        useDatum(geoDatum);
     }
 
     private static void initDatums(CharArrayTokenizer tokenizer, char[] delims,
@@ -623,8 +623,8 @@ public final class Config {
             tokenizer.init(token, delims, false);
             String datumName = tokenizer.next().toString();
             String ellipsoidName = tokenizer.next().toString();
-            Datum.Ellipsoid ellipsoid = null;
-            Datum.Ellipsoid[] ellipsoids = Datum.ELLIPSOIDS;
+            Ellipsoid ellipsoid = null;
+            Ellipsoid[] ellipsoids = Ellipsoid.ELLIPSOIDS;
             for (int i = ellipsoids.length; --i >= 0; ) {
                 if (ellipsoidName.equals(ellipsoids[i].getName())) {
                     ellipsoid = ellipsoids[i];
@@ -635,7 +635,7 @@ public final class Config {
                 final double dx = tokenizer.nextDouble();
                 final double dy = tokenizer.nextDouble();
                 final double dz = tokenizer.nextDouble();
-                Datum datum = new Datum(datumName, ellipsoid, dx, dy, dz);
+                final Datum datum = new Datum(datumName, ellipsoid, dx, dy, dz);
                 datums.addElement(datum);
 
                 while (tokenizer.hasMoreTokens()) {
@@ -649,7 +649,7 @@ public final class Config {
     }
 
     public static String useDatum(String id) {
-        Datum[] datums = DATUMS;
+        final Datum[] datums = DATUMS;
         for (int i = datums.length; --i >= 0; ) {
             if (id.equals(datums[i].name)) {
                 currentDatum = datums[i];
@@ -661,7 +661,7 @@ public final class Config {
     }
 
     public static Datum getDatum(String id) {
-        Datum[] datums = DATUMS;
+        final Datum[] datums = DATUMS;
         for (int i = datums.length; --i >= 0; ) {
             if (id.equals(datums[i].name)) {
                 return datums[i];
@@ -687,7 +687,7 @@ public final class Config {
             if (cz.kruch.track.TrackingMIDlet.hasPorts()) {
                 list.addElement(new Integer(LOCATION_PROVIDER_SERIAL));
             }
-            if (cz.kruch.track.TrackingMIDlet.isFs()) {
+            if (api.file.File.isFs()) {
                 list.addElement(new Integer(LOCATION_PROVIDER_SIMULATOR));
             }
 //#ifdef __A1000__

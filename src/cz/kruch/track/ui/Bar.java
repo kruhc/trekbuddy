@@ -26,9 +26,9 @@ import javax.microedition.lcdui.Graphics;
 abstract class Bar {
     protected static final int BORDER = 2;
     
-    protected int gx, gy;
+    protected final int gx, gy;
     protected int width, height;
-    protected int bh;
+    protected final int bh;
 
     protected int[] clip;
 

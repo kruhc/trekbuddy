@@ -16,29 +16,31 @@
 
 package cz.kruch.track.maps;
 
+import cz.kruch.track.util.CharArrayTokenizer;
+
 /**
  * Represents map tile in a tar.
  *
  * @author Ales Pour <kruhc@seznam.cz>
  */
-public class TarSlice extends Slice {
+final class TarSlice extends Slice {
     private int blockOffset;
 
-    TarSlice(String path) throws InvalidMapException {
-        super(path);
-    }
-
 /*
-    public TarSlice(CharArrayTokenizer.Token token) throws InvalidMapException {
-        super(token);
+    public TarSlice(String path) throws InvalidMapException {
+        super(path);
     }
 */
 
-    int getBlockOffset() {
+    TarSlice(CharArrayTokenizer.Token token) throws InvalidMapException {
+        super(token);
+    }
+
+    public int getBlockOffset() {
         return blockOffset;
     }
 
-    void setBlockOffset(int blockOffset) {
+    public void setBlockOffset(int blockOffset) {
         this.blockOffset = blockOffset;
     }
 }

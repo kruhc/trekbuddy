@@ -42,6 +42,7 @@ import javax.microedition.lcdui.Font;
 import javax.microedition.lcdui.Image;
 import javax.microedition.lcdui.game.GameCanvas;
 import javax.microedition.midlet.MIDlet;
+import javax.microedition.io.Connector;
 import java.io.IOException;
 import java.util.Date;
 import java.util.Enumeration;
@@ -54,6 +55,7 @@ import api.location.LocationListener;
 import api.location.Location;
 import api.location.QualifiedCoordinates;
 import api.location.LocationException;
+import api.file.File;
 
 /**
  * Application desktop.
@@ -224,8 +226,9 @@ public final class Desktop extends GameCanvas
         this.wptHeightDiff = Float.NaN;
     }
 
-    public void boot(final boolean imagesLoaded, final boolean configLoaded,
-                     final int customized, final int localized) {
+    public void boot(final int imgcached, final int configured,
+                     final int customized, final int localized,
+                     final int keysmapped) {
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("boot");
 //#endif
@@ -234,77 +237,65 @@ public final class Desktop extends GameCanvas
         final Graphics g = graphics = getGraphics();
         g.setFont(Font.getFont(Font.FACE_MONOSPACE, Font.STYLE_PLAIN, Font.SIZE_SMALL));
 
+        // console text position
+        short lineY = 0;
+        short lineHeight = (short) g.getFont().getHeight();
+
         // prepare console
         consoleInit(g);
 
         // boot sequence
-        consoleShow(g, "TrekBuddy \u00a9 2007 KrUcH");
+        consoleShow(g, lineY, "TrekBuddy \u00a9 2007 KrUcH");
+        lineY += lineHeight;
         String lc = Resources.getString(Resources.BOOT_LOCAL_COPY);
         if (lc.length() > 0) {
-            consoleShow(g, lc);
+            consoleShow(g, lineY, lc);
+            lineY += lineHeight;
         }
-        consoleShow(g, "");
-        consoleShow(g, Resources.getString(Resources.BOOT_CACHING_IMAGES));
-        if (imagesLoaded) {
-            consoleResult(g, 0);
-        } else {
-            consoleResult(g, -1);
+        consoleShow(g, lineY, "");
+        lineY += lineHeight;
+        consoleShow(g, lineY, Resources.getString(Resources.BOOT_CACHING_IMAGES));
+        consoleResult(g, lineY, imgcached);
+        lineY += lineHeight;
+        consoleShow(g, lineY, Resources.getString(Resources.BOOT_LOADING_CFG));
+        consoleResult(g, lineY, configured);
+        lineY += lineHeight;
+        if (customized != 0) {
+            consoleShow(g, lineY, Resources.getString(Resources.BOOT_CUSTOMIZING));
+            consoleResult(g, lineY, customized);
+            lineY += lineHeight;
         }
-        consoleShow(g, Resources.getString(Resources.BOOT_LOADING_CFG));
-        if (configLoaded) {
-            consoleResult(g, 0);
-        } else {
-            consoleResult(g, -1);
+        if (keysmapped != 0) {
+            consoleShow(g, lineY, Resources.getString(Resources.BOOT_KEYMAP));
+            consoleResult(g, lineY, keysmapped);
+            lineY += lineHeight;
         }
-        consoleShow(g, Resources.getString(Resources.BOOT_CUSTOMIZING));
-        switch (customized) {
-            case -1:
-                consoleResult(g, -1);
-            break;
-            case 0:
-                consoleResult(g, 1);
-            break;
-            default:
-                consoleResult(g, 0);
-        }
-/*
-        consoleShow(g, "localizing...");
-        switch (localized) {
-            case -1:
-                consoleResult(g, -1);
-            break;
-            case 0:
-                consoleResult(g, 1);
-            break;
-            default:
-                consoleResult(g, 0);
-        }
-*/
-        consoleShow(g, Resources.getString(Resources.BOOT_CREATING_UI));
+        consoleShow(g, lineY, Resources.getString(Resources.BOOT_CREATING_UI));
         try {
             configure();
-            consoleResult(g, 0);
+            consoleResult(g, lineY, 1);
         } catch (Throwable t) {
 //#ifdef __LOG__
             t.printStackTrace();
 //#endif
-            consoleResult(g, -1);
+            consoleResult(g, lineY, -1);
         }
-        consoleShow(g, Resources.getString(Resources.BOOT_LOADING_MAP));
+        lineY += lineHeight;
+        consoleShow(g, lineY, Resources.getString(Resources.BOOT_LOADING_MAP));
         try {
-            if ("".equals(Config.mapPath)) {
+            if (Config.EMPTY_STRING.equals(Config.mapPath)) {
                 initDefaultMap();
-                consoleResult(g, 1);
+                consoleResult(g, lineY, 0);
             } else {
                 initMap();
-                consoleResult(g, 0);
+                consoleResult(g, lineY, 1);
             }
         } catch (Throwable t) {
 //#ifdef __LOG__
             t.printStackTrace();
 //#endif
             _updateLoadingResult(Resources.getString(Resources.DESKTOP_MSG_INIT_MAP), t);
-            consoleResult(g, -1);
+            consoleResult(g, lineY, -1);
         }
         consoleDelay();
 
@@ -332,7 +323,7 @@ public final class Desktop extends GameCanvas
         if (cz.kruch.track.TrackingMIDlet.getPlatform().startsWith("NokiaE61")) {
             this.addCommand(this.cmdWaypoints = new Command(Resources.getString(Resources.DESKTOP_CMD_NAVIGATION), POSITIVE_CMD_TYPE, 3));
         }
-        if (cz.kruch.track.TrackingMIDlet.isFs()) {
+        if (File.isFs()) {
             this.addCommand(this.cmdLoadMap = new Command(Resources.getString(Resources.DESKTOP_CMD_LOAD_MAP), POSITIVE_CMD_TYPE, 4));
             this.addCommand(this.cmdLoadAtlas = new Command(Resources.getString(Resources.DESKTOP_CMD_LOAD_ATLAS), POSITIVE_CMD_TYPE, 5));
         }
@@ -358,7 +349,7 @@ public final class Desktop extends GameCanvas
         return super.getHeight();
     }
 
-    public static void resetFont() {
+    private static void resetFont() {
         font = null; // gc hint
         font = Font.getFont(Font.FACE_MONOSPACE,
                             Config.osdBoldFont ? Font.STYLE_BOLD : Font.STYLE_PLAIN,
@@ -369,9 +360,12 @@ public final class Desktop extends GameCanvas
                                Font.SIZE_SMALL);
     }
 
-    public static void resetBar() {
+    private static void resetBar() {
+        // alpha
+        final int alpha = display.numAlphaLevels() > 2 ? 0x80 : 0xff;
+
         // OSD/status bar
-        int color = display.numAlphaLevels() > 2 ? (cz.kruch.track.TrackingMIDlet.sonyEricsson ? 0xA03f3f3f : 0x807f7f7f) : 0xff7f7f7f;
+        int color = alpha << 24 | 0x007f7f7f;
         int h = font.getHeight();
         int w = screen.getWidth();
         int[] shadow = new int[w * h];
@@ -386,7 +380,7 @@ public final class Desktop extends GameCanvas
         }
 
         // wpt label bar
-        color = display.numAlphaLevels() > 2 ? (cz.kruch.track.TrackingMIDlet.sonyEricsson ? 0xA0ffff00 : 0x80ffff00) : 0xffffff00;
+        color = alpha << 24 | 0x00ffff00;
         h = cz.kruch.track.TrackingMIDlet.getPlatform().startsWith("Nokia/6230i") ? font.getBaselinePosition() + 2 : font.getHeight();
         shadow = new int[w * h];
         for (int i = shadow.length; --i >= 0; ) {
@@ -400,7 +394,7 @@ public final class Desktop extends GameCanvas
         }
 
         // scale bar
-        color = cz.kruch.track.TrackingMIDlet.sonyEricsson ? 0x80ffffff : 0x80ffffff;
+        color = alpha << 24 | 0x00ffffff;
         h = font.getHeight();
         w = font.stringWidth("99999 km") + 4;
         shadow = new int[w * h];
@@ -425,14 +419,19 @@ public final class Desktop extends GameCanvas
         if (log.isEnabled()) log.debug("GUI reset");
 //#endif
 
-        int w = getWidth();
-        int h = getHeight();
+        final int w = getWidth();
+        final int h = getHeight();
         boolean sizeChanged = w != width || h != height;
 
         if (!sizeChanged) {
             return; // no change, just quit
         }
 
+        // update env setup
+        if (w < 176) { // narrow screen
+            NavigationScreens.useCondensed = 2;
+        }
+        
         // remember new size
         width = w;
         height = h;
@@ -521,7 +520,7 @@ public final class Desktop extends GameCanvas
         update(MASK_ALL);
     }
 
-    public void initDefaultMap() throws Throwable {
+    private void initDefaultMap() throws Throwable {
 //#ifdef __LOG__
         if (log.isEnabled()) log.info("init default map");
 //#endif
@@ -538,7 +537,7 @@ public final class Desktop extends GameCanvas
     }
 
     /* hack - call blocking method to show result in boot console */
-    public void initMap() throws Throwable {
+    private void initMap() throws Throwable {
 //#ifdef __LOG__
         if (log.isEnabled()) log.info("init map");
 //#endif
@@ -745,8 +744,11 @@ public final class Desktop extends GameCanvas
         // counter
         keyRepeatedCount = 0;
 
+        // keymap
+        i = Resources.remap(i);
+
         // only repeated handled for '1'
-        if (i == Canvas.KEY_NUM1) {
+        if (Canvas.KEY_NUM1 == i) {
             return;
         }
 
@@ -762,7 +764,10 @@ public final class Desktop extends GameCanvas
         // counter
         keyRepeatedCount++;
 
-        // handle keylock 
+        // keymap
+        i = Resources.remap(i);
+
+        // handle keylock
         if (Canvas.KEY_STAR == i) {
             if (keyRepeatedCount == 1) {
                 keylock = !keylock;
@@ -787,7 +792,11 @@ public final class Desktop extends GameCanvas
         }
 //#endif
 
-        if (i == Canvas.KEY_NUM1) { // hack
+        // keymap
+        i = Resources.remap(i);
+
+        // hack
+        if (Canvas.KEY_NUM1 == i) {
             handleKey(i, false);
         }
 
@@ -844,7 +853,7 @@ public final class Desktop extends GameCanvas
             // update OSD
             update(MASK_OSD);
         } else if (command == cmdExit) {
-            (new YesNoDialog(this, this)).show(Resources.getString(Resources.DESKTOP_MSG_WANT_QUIT), null);
+            (new YesNoDialog(this, this, this)).show(Resources.getString(Resources.DESKTOP_MSG_WANT_QUIT), null);
         } else if (command == cmdPause) {
             // update flag
             paused = true;
@@ -864,63 +873,67 @@ public final class Desktop extends GameCanvas
         }
     }
 
-    public void response(int answer) {
-        if (answer == YesNoDialog.YES) {
+    public void response(int answer, Object closure) {
+        if (closure == this) { // EXIT
+            if (answer == YesNoDialog.YES) {
 //#ifdef __LOG__
-            if (log.isEnabled()) log.debug("exit command");
+                if (log.isEnabled()) log.debug("exit command");
 //#endif
 
-            // stop eventing
-            eventing.destroy();
+                // stop eventing
+                eventing.destroy();
 
-            // stop tracking (closes GPS connection, closes tracklog)
-            try {
-                stopTracking(true);
-            } catch (Throwable t) {
-                // ignore
+                // stop tracking (closes GPS connection, closes tracklog)
+                try {
+                    stopTracking(true);
+                } catch (Throwable t) {
+                    // ignore
+                }
+
+                // stop waypoints
+                try {
+                    Waypoints.shutdown();
+                } catch (Throwable t) {
+                    // ignore
+                }
+
+                // stop device control
+                cz.kruch.track.ui.nokia.DeviceControl.destroy();
+
+                // stop timer
+                if (timer != null) {
+                    timer.cancel();
+                }
+
+                // close atlas/map
+                if (atlas != null) {
+                    atlas.close();
+                }
+                if (map != null) {
+                    map.close();
+                }
+
+                // close views
+                for (int i = views.length; --i >= 0; ) {
+                    views[i].close();
+                }
+
+                // stop I/O loader
+                LoaderIO.getInstance().destroy();
+
+                // stop Friends
+                if (friends != null) {
+                    friends.destroy();
+                }
+
+                // bail out
+                midlet.notifyDestroyed();
             }
-
-            // stop waypoints
-            try {
-                Waypoints.shutdown();
-            } catch (Throwable t) {
-                // ignore
+        } else if (closure instanceof Boolean) { // START TRACKING
+            if (YesNoDialog.YES == answer) {
+                tracklog = true; // !
             }
-
-            // stop renderer
-//            renderer.destroy();
-
-            // stop device control
-            cz.kruch.track.ui.nokia.DeviceControl.destroy();
-
-            // stop timer
-            if (timer != null) {
-                timer.cancel();
-            }
-
-            // close atlas/map
-            if (atlas != null) {
-                atlas.close();
-            }
-            if (map != null) {
-                map.close();
-            }
-
-            // close views
-            for (int i = views.length; --i >= 0; ) {
-                views[i].close();
-            }
-
-            // stop I/O loader
-            LoaderIO.getInstance().destroy();
-
-            // stop Friends
-            if (friends != null) {
-                friends.destroy();
-            }
-
-            // bail out
-            midlet.notifyDestroyed();
+            if (((Boolean) closure).booleanValue()) startTrackingLast(); else startTracking();
         }
     }
     
@@ -1285,20 +1298,18 @@ public final class Desktop extends GameCanvas
      */
 
     private void handleKey(final int i, final boolean repeated) {
-        if (!guiReady) {
-            return;
-        }
-
-        if (keylock) {
-            return;
-        }
-
-        if (paused) {
+        if (!guiReady || keylock || paused) {
             return;
         }
 
         int mask = MASK_NONE;
-        int action = getGameAction(i);
+        int action = 0;
+
+        try {
+            action = getGameAction(i);
+        } catch (IllegalArgumentException e) {
+            // ignore
+        }
 
         switch (action) {
             
@@ -1408,7 +1419,6 @@ public final class Desktop extends GameCanvas
         }
 
         // enqueu render request
-//        renderer.enqueue(mask);
         eventing.callSerially(newRenderTask(mask));
     }
 
@@ -1474,14 +1484,7 @@ public final class Desktop extends GameCanvas
                 if (last) startTrackingLast(); else startTracking();
             } break;
             case Config.TRACKLOG_ASK: {
-                (new YesNoDialog(display.getCurrent(), new YesNoDialog.AnswerListener() {
-                    public void response(int answer) {
-                        if (YesNoDialog.YES == answer) {
-                            tracklog = true; // !
-                        }
-                        if (last) startTrackingLast(); else startTracking();
-                    }
-                })).show(Resources.getString(Resources.DESKTOP_MSG_START_TRACKLOG), null);
+                (new YesNoDialog(display.getCurrent(), this, new Boolean(last))).show(Resources.getString(Resources.DESKTOP_MSG_START_TRACKLOG), null);
             } break;
             case Config.TRACKLOG_ALWAYS: {
                 tracklog = true; // !
@@ -1846,7 +1849,7 @@ public final class Desktop extends GameCanvas
     private static final RenderTask[] rtPool = new RenderTask[32];
     private static int rtCountFree;
 
-    public synchronized RenderTask newRenderTask(final int m) {
+    private synchronized RenderTask newRenderTask(final int m) {
         RenderTask result;
 
         synchronized (rtPool) {
@@ -1862,7 +1865,7 @@ public final class Desktop extends GameCanvas
         return result;
     }
 
-    public void releaseRenderTask(RenderTask task) {
+    private void releaseRenderTask(RenderTask task) {
         synchronized (rtPool) {
             if (rtCountFree < rtPool.length) {
                 rtPool[rtCountFree++] = task;
@@ -2723,8 +2726,8 @@ public final class Desktop extends GameCanvas
     private static final Event[] pool = new Event[8];
     private static int countFree;
 
-    public Event newEvent(int code, Object result,
-                          Throwable throwable, Object closure) {
+    private Event newEvent(int code, Object result,
+                           Throwable throwable, Object closure) {
         Event event;
 
         synchronized (pool) {
@@ -2743,7 +2746,7 @@ public final class Desktop extends GameCanvas
         return event;
     }
 
-    public void releaseEvent(Event event) {
+    private void releaseEvent(Event event) {
         synchronized (pool) {
             if (countFree < pool.length) {
                 pool[countFree++] = event;
@@ -2779,16 +2782,16 @@ public final class Desktop extends GameCanvas
 
         private boolean release = true;
 
-        private Event(int code) {
+        public Event(int code) {
             this.code = code;
         }
 
-        private Event(int code, Object closure) {
+        public Event(int code, Object closure) {
             this.code = code;
             this.closure = closure;
         }
 
-        private Event(int code, Object result, Throwable throwable, Object closure) {
+        public Event(int code, Object result, Throwable throwable, Object closure) {
             this.code = code;
             this.result = result;
             this.throwable = throwable;
@@ -2810,7 +2813,7 @@ public final class Desktop extends GameCanvas
         /**
          * Confirm using loaded atlas/map as default?
          */
-        public void response(int answer) {
+        public void response(int answer, Object closure) {
 //#ifdef __LOG__
             if (log.isEnabled()) log.debug("yes-no? " + answer);
 //#endif
@@ -2883,6 +2886,11 @@ public final class Desktop extends GameCanvas
 
                 case EVENT_CONFIGURATION_CHANGED: {
 
+                    // force changes
+                    Config.useDatum(Config.geoDatum);
+                    resetFont();
+                    resetBar();
+                    
                     // update screen
                     update(MASK_ALL);
 
@@ -3125,9 +3133,9 @@ public final class Desktop extends GameCanvas
                             // offer use as default?
                             if (!_switch) {
                                 if ("atlas".equals(_target)) {
-                                    (new YesNoDialog(Desktop.screen, this)).show(Resources.getString(Resources.DESKTOP_MSG_USE_AS_DEFAULT_ATLAS), atlas.getURL());
+                                    (new YesNoDialog(Desktop.screen, this, null)).show(Resources.getString(Resources.DESKTOP_MSG_USE_AS_DEFAULT_ATLAS), atlas.getURL());
                                 } else {
-                                    (new YesNoDialog(Desktop.screen, this)).show(Resources.getString(Resources.DESKTOP_MSG_USE_AS_DEFAULT_MAP), map.getPath());
+                                    (new YesNoDialog(Desktop.screen, this, null)).show(Resources.getString(Resources.DESKTOP_MSG_USE_AS_DEFAULT_MAP), map.getPath());
                                 }
                             }
                         } catch (Throwable t) {
@@ -3394,20 +3402,15 @@ public final class Desktop extends GameCanvas
      */
 
     // vars
-    private short consoleY, consoleH;
-    private short consoleErrors;
-    private short consoleSkips;
+    private short consoleErrors, consoleSkips;
 
     private void consoleInit(Graphics g) {
-        consoleY = -1;
-        consoleErrors = consoleSkips = 0;
-        consoleH = (short) g.getFont().getHeight();
         g.setColor(0x0);
         g.fillRect(0, 0, getWidth(), getHeight());
         flushGraphics();
     }
 
-    private void consoleShow(Graphics g, String text) {
+    private void consoleShow(Graphics g, final int y, String text) {
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("console show - " + text);
 //#endif
@@ -3415,24 +3418,26 @@ public final class Desktop extends GameCanvas
         if (text == null) {
             return;
         }
-        consoleY++;
         g.setColor(0x00FFFFFF);
-        g.drawString(text, 2, consoleY * consoleH, Graphics.TOP | Graphics.LEFT);
+        g.drawString(text, 2, y, Graphics.TOP | Graphics.LEFT);
         flushGraphics();
     }
 
-    private void consoleResult(Graphics g, int code) {
+    private void consoleResult(Graphics g, final int y, final int code) {
         int x = getWidth() - 2 - g.getFont().charWidth('*');
-        if (code == 0) {
-            g.setColor(0x0000FF00);
-        } else if (code == -1) {
-            g.setColor(0x00FF0000);
-            consoleErrors++;
-        } else {
-            g.setColor(0x00FFB900);
-            consoleSkips++;
+        switch (code) {
+            case -1:
+                g.setColor(0x00FF0000);
+                consoleErrors++;
+            break;
+            case 0:
+                g.setColor(0x00FFB900);
+                consoleSkips++;
+            break;
+            default:
+                g.setColor(0x0000FF00);
         }
-        g.drawChar('*', x, consoleY * consoleH, Graphics.TOP | Graphics.LEFT);
+        g.drawChar('*', x, y, Graphics.TOP | Graphics.LEFT);
         flushGraphics();
     }
 
@@ -3457,6 +3462,11 @@ public final class Desktop extends GameCanvas
      */
     
     private final class KeyCheckTimerTask extends TimerTask {
+
+        /** to avoid generation of $1 class */
+        public KeyCheckTimerTask() {
+        }
+      
         public void run() {
             getKeyStates(); // trick
             eventing.callSerially(Desktop.this);

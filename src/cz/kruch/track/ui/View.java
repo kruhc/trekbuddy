@@ -40,7 +40,7 @@ abstract class View {
         MSG_NO_POSITION = Resources.getString(Resources.DESKTOP_MSG_NO_POSITION);
     }
 
-    protected /*Navigator*/Desktop navigator;
+    protected final /*Navigator*/Desktop navigator;
     protected boolean isVisible;
 
     protected View(/*Navigator*/Desktop navigator) {

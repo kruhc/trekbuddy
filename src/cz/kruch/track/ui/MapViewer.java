@@ -203,26 +203,6 @@ final class MapViewer {
         }
     }
 
-    public static boolean isDefaultMap(Map map) {
-        if (map == null) {
-            return false;
-        }
-
-        String mapPath = Config.mapPath;
-        if (mapPath.equals(Config.defaultMapPath)) {
-            String mapName = map.getName();
-            if (mapName == null) {
-                return mapPath.equals(map.getPath());
-            } else if (mapPath.length() == 0) {
-                return "Default".equals(mapName);
-            } else {
-                return mapPath.endsWith(mapName);
-            }
-        }
-
-        return false;
-    }
-
     public void setCourse(float course) {
         this.course = course;
     }
@@ -710,6 +690,26 @@ final class MapViewer {
         if (Config.osdScale && sInfoLength > 0) {
             drawScale(graphics);
         }
+    }
+
+    private static boolean isDefaultMap(Map map) {
+        if (map == null) {
+            return false;
+        }
+
+        String mapPath = Config.mapPath;
+        if (mapPath.equals(Config.defaultMapPath)) {
+            String mapName = map.getName();
+            if (mapName == null) {
+                return mapPath.equals(map.getPath());
+            } else if (mapPath.length() == 0) {
+                return "Default".equals(mapName);
+            } else {
+                return mapPath.endsWith(mapName);
+            }
+        }
+
+        return false;
     }
 
     private void drawScale(Graphics graphics) {

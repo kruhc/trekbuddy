@@ -189,22 +189,7 @@ public class SerialLocationProvider extends StreamReadingLocationProvider implem
 
     private void startWatcher() {
         if (watcher == null) {
-            watcher = new TimerTask() {
-                public void run() {
-                    boolean notify = false;
-                    synchronized (SerialLocationProvider.this) {
-                        if (System.currentTimeMillis() > (last + WATCHER_PERIOD)) {
-                            if (lastState != LocationProvider._STALLED) {
-                                lastState = LocationProvider._STALLED;
-                                notify = true;
-                            }
-                        }
-                    }
-                    if (notify) {
-                        notifyListener(lastState);
-                    }
-                }
-            };
+            watcher = new AvailabilityWatcher();
             Desktop.timer.schedule(watcher, WATCHER_PERIOD, WATCHER_PERIOD); // delay = period = 15 sec
         }
     }
@@ -244,6 +229,25 @@ public class SerialLocationProvider extends StreamReadingLocationProvider implem
 
                 } catch (Throwable t) {
                     Desktop.showError(Resources.getString(Resources.DESKTOP_MSG_START_TRACKLOG_FAILED), t, null);
+                } finally {
+
+                    // cleanup
+                    if (nmeaObserver != null) {
+                        try {
+                            nmeaObserver.close();
+                        } catch (IOException e) {
+                            // ignore
+                        }
+                        nmeaObserver = null;
+                    }
+                    if (nmeaFile != null) {
+                        try {
+                            nmeaFile.close();
+                        } catch (IOException e) {
+                            // ignore
+                        }
+                        nmeaFile = null;
+                    }
                 }
             }
         }
@@ -401,6 +405,28 @@ public class SerialLocationProvider extends StreamReadingLocationProvider implem
                         connection = null;
                     }
                 }
+            }
+        }
+    }
+
+    private final class AvailabilityWatcher extends TimerTask {
+
+        /** to avoid generation of $1 class */
+        public AvailabilityWatcher() {
+        }
+
+        public void run() {
+            boolean notify = false;
+            synchronized (SerialLocationProvider.this) {
+                if (System.currentTimeMillis() > (last + WATCHER_PERIOD)) {
+                    if (lastState != LocationProvider._STALLED) {
+                        lastState = LocationProvider._STALLED;
+                        notify = true;
+                    }
+                }
+            }
+            if (notify) {
+                notifyListener(lastState);
             }
         }
     }

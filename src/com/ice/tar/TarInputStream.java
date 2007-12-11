@@ -35,50 +35,63 @@ import java.io.IOException;
  * @modified by Ales Pour <kruhc@seznam.cz> 
  */
 public final class TarInputStream extends InputStream {
-
+    // default block size
     public static final int DEFAULT_RCDSIZE = 512;
 
     // underlying stream
     private InputStream in;
 
     // stream state
-    private int recordSize;
     private boolean hasHitEOF;
     private long entrySize;
     private long entryOffset;
-    private byte[] oneBuffer;
     private byte[] headerBuffer;
     private TarEntry currEntry;
 
     /* rewind support */
     private long streamOffset;
 
-    /* for skip bug workaround */
-    private static final int READ_SKIP_BUFFER_LENGTH = 4096;
-    public static boolean useSkipBug;
-    private byte[] readSkipBuffer;
+    /* for skip bug workarounds */
+    private static boolean skipAsRead;
+    private static boolean siemensIo;
+
+    /* broken skip */
+    public static void setSafeSkip(final boolean flag) {
+        skipAsRead = flag;
+    }
+
+    /* siemens skip */
+    public static void setSiemensIo(final boolean flag) {
+        siemensIo = flag;
+    }
 
     /**
      * Creates tar input stream.
+     *
      * @param in native input stream
      */
     public TarInputStream(InputStream in) {
         this.in = in;
-        this.recordSize = DEFAULT_RCDSIZE;
-        this.oneBuffer = new byte[1];
-        this.headerBuffer = new byte[this.recordSize/*blockSize*/];
-        this.hasHitEOF = false;
-        this.entryOffset = this.entrySize = 0;
-        this.streamOffset = 0;
-
-        /* broken skip */
-        if (useSkipBug) {
-            readSkipBuffer = new byte[READ_SKIP_BUFFER_LENGTH];
-        }
+        this.headerBuffer = new byte[DEFAULT_RCDSIZE];
+        this.currEntry = new TarEntry();
     }
 
     /**
-     * Closes this stream.
+     * Reuses this with new stream.
+     *
+     * @param in new input stream
+     */
+    public void setInputStream(InputStream in) {
+        this.in = null; // gc hint
+        this.in = in;
+        this.hasHitEOF = false;
+        this.entryOffset = this.entrySize = 0;
+    }
+
+    /**
+     * Closes this stream. Closing udnerlying stream had to be commented out,
+     * because Image.createImage() closes the stream, which is something we do not
+     * want to happen if we want to happen.
      */
     public void close() throws IOException {
 /* underlying stream is closed elsewhere
@@ -105,69 +118,89 @@ public final class TarInputStream extends InputStream {
     /**
      * Skips bytes using underlying stream skip(long bytes) method.
      *
-     * @param numToSkip
+     * @param n number of bytes to skip
      * @return number of bytes actually skipped
      * @throws IOException
      */
-    public long skip(long numToSkip) throws IOException {
-        long num = numToSkip;
+    public long skip(long n) throws IOException {
+        if (n > 0) {
+            /*
+             * Siemens bug workaround. It appears as if Siemens uses seek() but with
+             * wrong origin (START, not CURRENT).
+             */
+            if (siemensIo) {
+                n += this.streamOffset;
+                this.streamOffset = 0;
+            }
 
-        for (; num > 0;) {
-            long numRead;
+            long num = n;
+    
+            for (; num > 0;) {
+                final long numRead;
 
-            if (readSkipBuffer == null) {
-                numRead = this.in.skip(num);
-                /*
-                 * Check for vendor bug - stream position returned by skip
-                 */
-                if (numRead == streamOffset + numToSkip) {
-                    num = numRead; // trick - 'for' cycle will quit
+                // use skip() method
+                if (!skipAsRead) {
+                    numRead = this.in.skip(num);
+                    /*
+                     * Check for SE bug - skip() returns stream position (ie. return
+                     * value of seek() :-) ).
+                     */
+                    if (numRead == this.streamOffset + n) {
+                        num = numRead; // trick - 'for' cycle will quit
+                    }
+                } else { // skip via read() - misuse header buffer ;-)
+                    numRead = this.in.read(headerBuffer, 0, num > DEFAULT_RCDSIZE ? DEFAULT_RCDSIZE : (int) num);
                 }
-            } else {
-                numRead = this.in.read(readSkipBuffer, 0, num > READ_SKIP_BUFFER_LENGTH ? READ_SKIP_BUFFER_LENGTH : (int) num);
+
+                if (numRead < 0) {
+                    break;
+                }
+
+                num -= numRead;
             }
 
-            if (numRead < 0) {
-                break;
+            if (num > 0) {
+                throw new IOException(num + " bytes left to be skipped");
             }
 
-            num -= numRead;
+            this.streamOffset += (n - num);
+
+            return (n - num);
         }
 
-        if (num > 0) {
-            throw new IOException(num + " bytes left to be skipped");
-        }
-
-        this.streamOffset += numToSkip - num;
-
-        return (numToSkip - num);
+        return 0;
     }
 
     /**
      * Gets stream offset.
+     *
+     * @return stream offset
      */
     public long getStreamOffset() {
-        return streamOffset;
+        return this.streamOffset;
     }
 
     /**
      * Sets stream offset.
+     *
+     * @param streamOffset stream offset
      */
     public void setStreamOffset(long streamOffset) {
         this.streamOffset = streamOffset;
     }
 
     /**
-     * Sets stream offset to given value.
+     * Rewinds the stream to given offset.
+     *
      * @param position stream position
-     * @throws IOException
+     * @throws IOException if something goes wrong
      */
     public void rewind(long position) throws IOException {
-        if (position < streamOffset) {
+        if (position < this.streamOffset) {
             throw new IllegalStateException("Stream is dirty");
         }
 
-        this.skip(position - streamOffset);
+        this.skip(position - this.streamOffset);
     }
 
     /**
@@ -181,57 +214,48 @@ public final class TarInputStream extends InputStream {
      * been reached.
      *
      * @return The next TarEntry in the archive, or null.
+     * @throws IOException if something goes wrong
      */
-    public TarEntry getNextEntry()
-            throws IOException {
+    public TarEntry getNextEntry() throws IOException {
         if (this.hasHitEOF)
             return null;
 
         if (this.currEntry != null) {
             long numToSkip = 0;
 
-            long liveBytes = this.entrySize - this.entryOffset;
+            final long liveBytes = this.entrySize - this.entryOffset;
             if (liveBytes > 0) {
                 numToSkip += liveBytes;
             }
-            long padding = (this.entryOffset + liveBytes) % recordSize;
+            final long padding = (this.entryOffset + liveBytes) % DEFAULT_RCDSIZE;
             if (padding > 0) {
-                numToSkip += (recordSize - padding);
+                numToSkip += (DEFAULT_RCDSIZE - padding);
             }
 
             this.skip(numToSkip);
         }
 
-        long entryPosition = streamOffset;
+        final long entryPosition = this.streamOffset;
+        final byte[] headerBuf = this.readHeader();
 
-        byte[] headerBuf = this.readHeader();
-
-        if (headerBuf == null) {
-            this.hasHitEOF = true;
-        } else if (this.isEOFBlock(headerBuf)) {
+        if (isEOFBlock(headerBuf)) {
             this.hasHitEOF = true;
         }
 
-        if (this.hasHitEOF) {
-            this.currEntry = null;
-        } else {
+        if (!this.hasHitEOF) {
             try {
-                if (this.currEntry == null) {
-                    this.currEntry = new TarEntry(headerBuf, entryPosition);
-                } else {
-                    this.currEntry.update(headerBuf, entryPosition);
-                }
+                this.currEntry.init(headerBuf, entryPosition);
                 this.entryOffset = 0;
                 this.entrySize = this.currEntry.getSize();
+                return this.currEntry;
             } catch (InvalidHeaderException e) {
-                this.currEntry = null;
                 this.entryOffset = 0;
                 this.entrySize = 0;
                 throw e;
             }
         }
 
-        return this.currEntry;
+        return null;
     }
 
     /**
@@ -242,11 +266,11 @@ public final class TarInputStream extends InputStream {
      * @return The byte read, or -1 at EOF.
      */
     public int read() throws IOException {
-        int num = this.read(this.oneBuffer, 0, 1);
-        if (num == -1)
+        final int num = this.read(this.headerBuffer, 0, 1);
+        if (num == -1) {
             return num;
-        else
-            return (int) this.oneBuffer[0];
+        }
+        return (int) this.headerBuffer[0];
     }
 
     /**
@@ -280,7 +304,7 @@ public final class TarInputStream extends InputStream {
             numToRead = (int) (this.entrySize - this.entryOffset);
         }
 
-        int c = this.in.read(buffer, offset, numToRead);
+        final int c = this.in.read(buffer, offset, numToRead);
         if (c > -1) {
             this.entryOffset += c;
             this.streamOffset += c;
@@ -290,13 +314,16 @@ public final class TarInputStream extends InputStream {
     }
 
     /**
-     * @return null if End-Of-File, else block buffer
+     * Reads entry header.
+     *
+     * @return header byte
+     * @throws IOException if something goes wrong
      */
     private byte[] readHeader() throws IOException {
         int offset = 0;
-        int bytesNeeded = this.recordSize;
+        int bytesNeeded = DEFAULT_RCDSIZE;
         for (; bytesNeeded > 0;) {
-            long numBytes = this.in.read(headerBuffer, offset, bytesNeeded);
+            final long numBytes = this.in.read(this.headerBuffer, offset, bytesNeeded);
 
             if (numBytes == -1) {
                 throw new IOException("Broken archive - EOF block not found");
@@ -308,46 +335,27 @@ public final class TarInputStream extends InputStream {
             this.streamOffset += numBytes;
         }
 
-        if (offset != this.recordSize) {
-            throw new IOException("Incomplete header: " + offset + " of " + this.recordSize + " bytes read.");
+        if (offset != DEFAULT_RCDSIZE) {
+            throw new IOException("Incomplete header: " + offset + " of " + DEFAULT_RCDSIZE + " bytes read.");
         }
 
-        return headerBuffer;
+        return this.headerBuffer;
     }
 
     /**
      * Determine if an archive record indicate End of Archive. End of
      * archive is indicated by a record that consists entirely of null bytes.
      *
-     * @param block block data to check.
+     * @param block block data to check
+     * @return <code>true</code> if block is end of archive; <code>false</code> otherwise
      */
-    private boolean isEOFBlock(byte[] block) {
-        for (int i = this.recordSize; --i >= 0; ) {
-            if (block[i] != 0)
+    private static boolean isEOFBlock(byte[] block) {
+        for (int i = DEFAULT_RCDSIZE; --i >= 0; ) {
+            if (block[i] != 0) {
                 return false;
+            }
         }
 
         return true;
-    }
-
-    /**
-     * Reuse this with new stream.
-     * @param in new input stream
-     */
-    public void reuse(InputStream in) {
-        this.in = null; // gc hint
-        this.in = in;
-        this.hasHitEOF = false;
-        this.currEntry = null;
-        this.entryOffset = this.entrySize = 0;
-    }
-
-    /**
-     * Disposes resources.
-     */
-    public void dispose() {
-        this.oneBuffer = null;
-        this.headerBuffer = null;
-        this.readSkipBuffer = null;
     }
 }

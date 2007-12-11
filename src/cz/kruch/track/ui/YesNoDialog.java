@@ -31,18 +31,20 @@ import javax.microedition.lcdui.Alert;
 public final class YesNoDialog implements CommandListener {
 
     public interface AnswerListener {
-        public void response(int answer);
+        public void response(int answer, Object closure);
     }
 
     public static final int YES = 0;
     public static final int NO  = 1;
 
-    private Displayable next;
-    private AnswerListener callback;
+    private final Displayable next;
+    private final AnswerListener callback;
+    private final Object closure;
 
-    public YesNoDialog(Displayable next, AnswerListener callback) {
+    public YesNoDialog(Displayable next, AnswerListener callback, Object closure) {
         this.next = next;
         this.callback = callback;
+        this.closure = closure;
     }
 
     public void show(String question, String item) {
@@ -58,6 +60,6 @@ public final class YesNoDialog implements CommandListener {
         Desktop.display.setCurrent(next);
 
         // return response code
-        callback.response(command.getCommandType() == Command.OK ? YES : NO);
+        callback.response(command.getCommandType() == Command.OK ? YES : NO, closure);
     }
 }

@@ -48,8 +48,8 @@ public abstract class StreamReadingLocationProvider extends LocationProvider {
     public static int syncs, mismatches, checksums, restarts, stalls;
 
     private OutputStream observer;
-    private char[] line;
     private NmeaParser.Record gsa;
+    private char[] line;
 
     /* for minimalistic NMEA stream */
     private int hack_rmc_count;

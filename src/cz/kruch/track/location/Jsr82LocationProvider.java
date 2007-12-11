@@ -72,6 +72,10 @@ public final class Jsr82LocationProvider extends SerialLocationProvider {
     private static final class Refresher implements javax.bluetooth.DiscoveryListener {
         private boolean done;
 
+        /** to avoid generation of $1 class */
+        public Refresher() {
+        }
+
         public void deviceDiscovered(RemoteDevice remoteDevice, DeviceClass deviceClass) {
         }
 

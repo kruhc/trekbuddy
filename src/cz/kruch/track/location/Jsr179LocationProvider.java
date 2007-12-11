@@ -197,6 +197,25 @@ public final class Jsr179LocationProvider
 
                 } catch (Throwable t) {
                     Desktop.showError(Resources.getString(Resources.DESKTOP_MSG_START_TRACKLOG_FAILED), t, null);
+                } finally {
+
+                    // cleanup
+                    if (nmeaWriter != null) {
+                        try {
+                            nmeaWriter.close();
+                        } catch (IOException e) {
+                            // ignore
+                        }
+                        nmeaWriter = null;
+                    }
+                    if (nmeaFile != null) {
+                        try {
+                            nmeaFile.close();
+                        } catch (IOException e) {
+                            // ignore
+                        }
+                        nmeaFile = null;
+                    }
                 }
             }
         }

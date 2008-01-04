@@ -150,12 +150,14 @@ public abstract class File {
     public abstract Enumeration list() throws IOException;
     public abstract Enumeration list(String pattern, boolean hidden) throws IOException;
     public abstract void create() throws IOException;
+    public abstract void delete() throws IOException;
     public abstract void mkdir() throws IOException;
     public abstract long fileSize() throws java.io.IOException;
     public abstract boolean exists();
     public abstract boolean isDirectory();
     public abstract String getURL();
     public abstract void setFileConnection(String path) throws IOException;
+    public abstract void setWritable(boolean writable) throws IOException;
 
     protected final void traverse(String path) throws IOException {
         // get current path

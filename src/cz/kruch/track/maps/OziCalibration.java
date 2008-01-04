@@ -52,10 +52,11 @@ final class OziCalibration extends Calibration {
 
         int lines = 0;
 
-        String projectionType = ProjectionSetup.PROJ_TRANSVERSE_MERCATOR;
-        Vector xy = new Vector(4), ll = new Vector(4);
+        Vector xy = new Vector(4);
+        Vector ll = new Vector(4);
         Datum datum = null;
         ProjectionSetup projectionSetup = null;
+        String projectionType = ProjectionSetup.PROJ_TRANSVERSE_MERCATOR;
         CharArrayTokenizer tokenizer = new CharArrayTokenizer();
 
         // read content
@@ -161,10 +162,9 @@ final class OziCalibration extends Calibration {
 
         // close reader
         reader.close();
-        reader = null; // gc hint
 
-        // dispose tokenizer
-        tokenizer.dispose();
+        // gc hints
+        reader = null;
         tokenizer = null;
 
         // dimension check

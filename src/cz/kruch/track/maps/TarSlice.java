@@ -24,7 +24,7 @@ import cz.kruch.track.util.CharArrayTokenizer;
  * @author Ales Pour <kruhc@seznam.cz>
  */
 final class TarSlice extends Slice {
-    private int blockOffset;
+    private int streamOffset;
 
 /*
     public TarSlice(String path) throws InvalidMapException {
@@ -36,11 +36,11 @@ final class TarSlice extends Slice {
         super(token);
     }
 
-    public int getBlockOffset() {
-        return blockOffset;
+    public int getStreamOffset() {
+        return streamOffset;
     }
 
-    public void setBlockOffset(int blockOffset) {
-        this.blockOffset = blockOffset;
+    public void setStreamOffset(int streamOffset) {
+        this.streamOffset = streamOffset;
     }
 }

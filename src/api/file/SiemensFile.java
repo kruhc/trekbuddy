@@ -45,6 +45,10 @@ final class SiemensFile extends File {
         ((com.siemens.mp.io.file.FileConnection) fc).create();
     }
 
+    public void delete() throws IOException {
+        ((com.siemens.mp.io.file.FileConnection) fc).delete();
+    }
+
     public void mkdir() throws IOException {
         ((com.siemens.mp.io.file.FileConnection) fc).mkdir();
     }
@@ -67,5 +71,9 @@ final class SiemensFile extends File {
 
     public void setFileConnection(String path) throws IOException {
         ((com.siemens.mp.io.file.FileConnection) fc).setFileConnection(path);
+    }
+
+    public void setWritable(boolean writable) throws IOException {
+        ((com.siemens.mp.io.file.FileConnection) fc).setWritable(writable);
     }
 }

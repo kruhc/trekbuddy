@@ -118,8 +118,6 @@ import java.io.UnsupportedEncodingException;
  * Bert Becker <becker@informatik.hu-berlin.de>
  *
  * @author Timothy Gerard Endres, <time@gjt.org>
- * @see TarHeader
- *
  * @modified by Ales Pour <kruhc@seznam.cz>
  */
 
@@ -215,10 +213,11 @@ public final class TarEntry {
     }
 
     /**
-     * Injects new initial data.
+     * Injects new entry data.
      *
      * @param headerBuf header bytes from a tar archive entry
-     * @param position
+     * @param position stream position (offset)
+     * @throws InvalidHeaderException when something goes wrong
      */
     public void init(byte[] headerBuf, long position) throws InvalidHeaderException {
         this.parseHeader(headerBuf);
@@ -258,17 +257,14 @@ public final class TarEntry {
      * @return True if this entry is a directory.
      */
     public boolean isDirectory() {
-        if (this.linkFlag == LF_DIR)
-            return true;
-
-        if (this.name.endsWith("/"))
-            return true;
-
-        return false;
+        return this.linkFlag == LF_DIR || this.name.endsWith("/");
     }
 
     /**
      * Parses header.
+     *
+     * @param headerBuf header bytes
+     * @throws InvalidHeaderException when something goes wrong
      */
     private void parseHeader(byte[] headerBuf) throws InvalidHeaderException {
         if (headerBuf[257] == 'u'
@@ -291,15 +287,14 @@ public final class TarEntry {
                 && headerBuf[261] == 0) {
         } else {
             StringBuffer sb = new StringBuffer(64);
-
             sb.append("Invalid header: '");
-            sb.append(Integer.toHexString(headerBuf[257])).append(' ');
-            sb.append(Integer.toHexString(headerBuf[258])).append(' ');
-            sb.append(Integer.toHexString(headerBuf[259])).append(' ');
-            sb.append(Integer.toHexString(headerBuf[260])).append(' ');
-            sb.append(Integer.toHexString(headerBuf[261])).append(' ');
-            sb.append(Integer.toHexString(headerBuf[262])).append(' ');
-            sb.append(Integer.toHexString(headerBuf[263]));
+            sb.append(Integer.toHexString(headerBuf[257] & 0xff)).append(' ');
+            sb.append(Integer.toHexString(headerBuf[258] & 0xff)).append(' ');
+            sb.append(Integer.toHexString(headerBuf[259] & 0xff)).append(' ');
+            sb.append(Integer.toHexString(headerBuf[260] & 0xff)).append(' ');
+            sb.append(Integer.toHexString(headerBuf[261] & 0xff)).append(' ');
+            sb.append(Integer.toHexString(headerBuf[262] & 0xff)).append(' ');
+            sb.append(Integer.toHexString(headerBuf[263] & 0xff));
             sb.append('\'');
 
             throw new InvalidHeaderException(sb.toString());
@@ -357,12 +352,12 @@ public final class TarEntry {
     /**
      * Parse a file name from a header buffer. This is simplified variant
      * of {@link #parseFileName(byte[])}.
+     *
      * @param header header
      * @return token
      */
-    private CharArrayTokenizer.Token parseEntryName(byte[] header) {
+    private CharArrayTokenizer.Token parseEntryName(final byte[] header) {
         final char[] array = this.name.array;
-        
         int i = 0;
         for (; i < 100; i++) {
             final byte b = header[i];

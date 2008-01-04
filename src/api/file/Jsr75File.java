@@ -47,6 +47,10 @@ final class Jsr75File extends File {
         ((FileConnection) fc).create();
     }
 
+    public void delete() throws IOException {
+        ((FileConnection) fc).delete();
+    }
+
     public void mkdir() throws IOException {
         ((FileConnection) fc).mkdir();
     }
@@ -73,5 +77,9 @@ final class Jsr75File extends File {
         } else {
             ((FileConnection) fc).setFileConnection(path);
         }
+    }
+
+    public void setWritable(boolean writable) throws IOException {
+        ((FileConnection) fc).setWritable(writable);
     }
 }

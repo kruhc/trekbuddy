@@ -94,7 +94,7 @@ public final class Config {
      */
 
     // group [Map]
-    public static String mapPath            = EMPTY_STRING; // file:///E:/trekbuddy/maps/GPSBasti/pasing.tar";
+    public static String mapPath            = EMPTY_STRING; // "file:///SDCard/trekbuddy/maps/yearling/cr.tar?layer=3&map=A04";
 
     // group [Map datum]
     public static String geoDatum           = Datum.DATUM_WGS_84.name;
@@ -103,7 +103,7 @@ public final class Config {
     public static int locationProvider      = -1;
 
     // group [DataDir]
-    private static String dataDir           = "file:///E:/TrekBuddy/";
+    private static String dataDir;
 
     // group [common provider options]
     public static int tracklog              = TRACKLOG_NEVER;
@@ -152,11 +152,13 @@ public final class Config {
     public static boolean S60renderer           = true;
     public static boolean forcedGc              = true;
     public static boolean oneTileScroll;
+    public static boolean largeAtlases;
 
     // group [GPX options]
     public static int gpxDt = 60; // 1 min
     public static int gpxDs = -1;
-    public static boolean gpxOnlyValid = true;
+    public static boolean gpxOnlyValid  = true;
+    public static boolean gpxGsmInfo;
 
     // group [Trajectory]
     public static boolean trajectoryOn;
@@ -176,9 +178,7 @@ public final class Config {
     public static int y = -1;
     public static int dayNight;
     public static String cmsProfile     = EMPTY_STRING;
-
-    // cached
-    private static short[] providers;
+    public static boolean o2provider;
 
     public static Throwable initialize() {
 
@@ -187,6 +187,16 @@ public final class Config {
         dataDir = "file:///SDCard/TrekBuddy/";
         commUrl = "btspp://000276fd79da:1";
         forcedGc = false;
+//#else        
+        if (cz.kruch.track.TrackingMIDlet.sxg75) {
+            dataDir = "file:///fs/tb/";
+        } else if (cz.kruch.track.TrackingMIDlet.siemens) {
+            dataDir = "file:///4:/TrekBuddy/";
+        } else if (cz.kruch.track.TrackingMIDlet.wm) {
+            dataDir = "file:///Storage%20Card/TrekBuddy/";
+        } else { // Nokia, SonyEricsson, ...
+            dataDir = "file:///E:/TrekBuddy/";
+        }
 //#endif
 
         Throwable result = null;
@@ -343,7 +353,14 @@ public final class Config {
             o2Depth = din.readInt();
             siemensIo = din.readBoolean();
         } catch (Exception e) {
-            siemensIo = cz.kruch.track.TrackingMIDlet.siemens;
+            siemensIo = cz.kruch.track.TrackingMIDlet.siemens && !cz.kruch.track.TrackingMIDlet.sxg75;
+        }
+
+        // 0.9.70 extensions
+        try {
+            largeAtlases = din.readBoolean();
+            gpxGsmInfo = din.readBoolean();
+        } catch (Exception e) {
         }
 
 //#ifdef __LOG__
@@ -408,6 +425,9 @@ public final class Config {
         /* since 0.9.69 */
         dout.writeInt(o2Depth);
         dout.writeBoolean(siemensIo);
+        /* since 0.9.70 */
+        dout.writeBoolean(largeAtlases);
+        dout.writeBoolean(gpxGsmInfo);
 
 //#ifdef __LOG__
         if (log.isEnabled()) log.info("configuration updated");
@@ -425,7 +445,7 @@ public final class Config {
                                              false);
 
             // new store? existing store? corrupted store?
-            int numRecords = rs.getNumRecords();
+            final int numRecords = rs.getNumRecords();
             if (numRecords == 0) {
 //#ifdef __LOG__
                 if (log.isEnabled()) log.info("new configuration (" + rms + ")");
@@ -508,6 +528,7 @@ public final class Config {
         y = din.readInt();
         dayNight = din.readInt();
         cmsProfile = din.readUTF();
+        o2provider = din.readBoolean();
 
 //#ifdef __LOG__
         if (log.isEnabled()) log.info("vars read");
@@ -522,20 +543,21 @@ public final class Config {
         dout.writeInt(y);
         dout.writeInt(dayNight);
         dout.writeUTF(cmsProfile);
+        dout.writeBoolean(o2provider);
 
 //#ifdef __LOG__
         if (log.isEnabled()) log.info("vars updated");
 //#endif
     }
 
-    public static Datum[] DATUMS;
     public static Datum currentDatum = Datum.DATUM_WGS_84;
-    public static final Hashtable datumMappings = new Hashtable();
+    public static final Vector datums = new Vector(16);
+    public static final Hashtable datumMappings = new Hashtable(16);
 
     public static void initDatums(MIDlet midlet) {
+        // vars
         final char[] delims = { '{', '}', ',', '=' };
-        Vector datums = new Vector();
-        CharArrayTokenizer tokenizer = new CharArrayTokenizer();
+        final CharArrayTokenizer tokenizer = new CharArrayTokenizer();
 
         // WGS-84 is hardcoded
         datums.addElement(Datum.DATUM_WGS_84);
@@ -543,7 +565,7 @@ public final class Config {
 
         // first try built-in
         try {
-            initDatums(tokenizer, delims, datums, Config.class.getResourceAsStream("/resources/datums.txt"));
+            initDatums(Config.class.getResourceAsStream("/resources/datums.txt"), tokenizer, delims);
         } catch (Throwable t) {
             // ignore
         }
@@ -553,7 +575,7 @@ public final class Config {
         try {
             file = File.open(Connector.open(Config.getFolderResources() + "datums.txt", Connector.READ));
             if (file.exists()) {
-                initDatums(tokenizer, delims, datums, file.openInputStream());
+                initDatums(file.openInputStream(), tokenizer, delims);
             }
         } catch (Throwable t) {
             // ignore
@@ -564,7 +586,7 @@ public final class Config {
                 } catch (IOException e) {
                     // ignore
                 }
-                file = null;
+                file = null; // gc hint
             }
         }
 
@@ -574,33 +596,28 @@ public final class Config {
         String s = midlet.getAppProperty("Datum-" + Integer.toString(idx++));
         while (s != null) {
             token.init(s.toCharArray(), 0, s.length());
-            initDatum(tokenizer, delims, datums, token);
+            initDatum(tokenizer, token, delims);
             s = midlet.getAppProperty("Datum-" + Integer.toString(idx++));
         }
-
-        // release resources
-        tokenizer.dispose();
-
-        // finalize datum array
-        DATUMS = new Datum[datums.size()];
-        datums.copyInto(DATUMS);
 
         // setup default
         useDatum(geoDatum);
     }
 
-    private static void initDatums(CharArrayTokenizer tokenizer, char[] delims,
-                                   Vector datums, InputStream in) {
+    private static void initDatums(InputStream in, CharArrayTokenizer tokenizer,
+                                   final char[] delims) {
         if (in == null) {
             return;
         }
 
         LineReader reader = null;
+        CharArrayTokenizer.Token line;
         try {
             reader = new cz.kruch.track.io.LineReader(in);
-            CharArrayTokenizer.Token line = reader.readToken(false);
+            line = reader.readToken(false);
             while (line != null) {
-                initDatum(tokenizer, delims, datums, line);
+                initDatum(tokenizer, line, delims);
+                line = null; // gc hint
                 line = reader.readToken(false);
             }
         } catch (Throwable t) {
@@ -617,30 +634,27 @@ public final class Config {
         }
     }
 
-    private static void initDatum(CharArrayTokenizer tokenizer, char[] delims,
-                                  Vector datums, CharArrayTokenizer.Token token) {
+    private static void initDatum(CharArrayTokenizer tokenizer,
+                                  CharArrayTokenizer.Token token,
+                                  final char[] delims) {
         try {
             tokenizer.init(token, delims, false);
             String datumName = tokenizer.next().toString();
             String ellipsoidName = tokenizer.next().toString();
-            Ellipsoid ellipsoid = null;
-            Ellipsoid[] ellipsoids = Ellipsoid.ELLIPSOIDS;
+            final Ellipsoid[] ellipsoids = Ellipsoid.ELLIPSOIDS;
             for (int i = ellipsoids.length; --i >= 0; ) {
                 if (ellipsoidName.equals(ellipsoids[i].getName())) {
-                    ellipsoid = ellipsoids[i];
+                    final Ellipsoid ellipsoid = ellipsoids[i];
+                    final double dx = tokenizer.nextDouble();
+                    final double dy = tokenizer.nextDouble();
+                    final double dz = tokenizer.nextDouble();
+                    final Datum datum = new Datum(datumName, ellipsoid, dx, dy, dz);
+                    datums.addElement(datum);
+                    while (tokenizer.hasMoreTokens()) {
+                        String nm = tokenizer.next().toString();
+                        datumMappings.put(nm, datum);
+                    }
                     break;
-                }
-            }
-            if (ellipsoid != null) {
-                final double dx = tokenizer.nextDouble();
-                final double dy = tokenizer.nextDouble();
-                final double dz = tokenizer.nextDouble();
-                final Datum datum = new Datum(datumName, ellipsoid, dx, dy, dz);
-                datums.addElement(datum);
-
-                while (tokenizer.hasMoreTokens()) {
-                    String nm = tokenizer.next().toString();
-                    datumMappings.put(nm, datum);
                 }
             }
         } catch (Throwable t) {
@@ -649,10 +663,10 @@ public final class Config {
     }
 
     public static String useDatum(String id) {
-        final Datum[] datums = DATUMS;
-        for (int i = datums.length; --i >= 0; ) {
-            if (id.equals(datums[i].name)) {
-                currentDatum = datums[i];
+        for (int i = datums.size(); --i >= 0; ) {
+            final Datum datum = (Datum) datums.elementAt(i);
+            if (id.equals(datum.name)) {
+                currentDatum = datum;
                 break;
             }
         }
@@ -661,50 +675,14 @@ public final class Config {
     }
 
     public static Datum getDatum(String id) {
-        final Datum[] datums = DATUMS;
-        for (int i = datums.length; --i >= 0; ) {
-            if (id.equals(datums[i].name)) {
-                return datums[i];
+        for (int i = datums.size(); --i >= 0; ) {
+            final Datum datum = (Datum) datums.elementAt(i);
+            if (id.equals(datum.name)) {
+                return datum;
             }
         }
 
         return null;
-    }
-
-    /*
-     * properties getters/setters
-     */
-
-    public static short[] getLocationProviders() {
-        if (providers == null) {
-            Vector list = new Vector();
-            if (cz.kruch.track.TrackingMIDlet.jsr82) {
-                list.addElement(new Integer(LOCATION_PROVIDER_JSR82));
-            }
-            if (cz.kruch.track.TrackingMIDlet.jsr179) {
-                list.addElement(new Integer(LOCATION_PROVIDER_JSR179));
-            }
-            if (cz.kruch.track.TrackingMIDlet.hasPorts()) {
-                list.addElement(new Integer(LOCATION_PROVIDER_SERIAL));
-            }
-            if (api.file.File.isFs()) {
-                list.addElement(new Integer(LOCATION_PROVIDER_SIMULATOR));
-            }
-//#ifdef __A1000__
-            if (cz.kruch.track.TrackingMIDlet.motorola179) {
-                list.addElement(new Integer(LOCATION_PROVIDER_MOTOROLA));
-            }
-//#endif
-            if (cz.kruch.track.TrackingMIDlet.hasFlag("provider_o2_germany")) {
-                list.addElement(new Integer(LOCATION_PROVIDER_O2GERMANY));
-            }
-            providers = new short[list.size()];
-            for (int i = 0; i < list.size(); i++) {
-                providers[i] = ((Integer) list.elementAt(i)).shortValue();
-            }
-        }
-
-        return providers;
     }
 
     public static String getDataDir() {

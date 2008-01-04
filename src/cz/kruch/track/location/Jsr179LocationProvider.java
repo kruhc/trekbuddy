@@ -44,8 +44,7 @@ public final class Jsr179LocationProvider
     private volatile Thread thread;
     private volatile boolean go;
     
-    private File nmeaFile;
-    private OutputStream nmeaWriter;
+    private volatile OutputStream nmealog;
     
     public Jsr179LocationProvider() {
         super("Internal");
@@ -63,7 +62,7 @@ public final class Jsr179LocationProvider
             final int interval = tokenizer.nextInt();
             final int timeout = tokenizer.nextInt();
             final int maxage = tokenizer.nextInt();
-            tokenizer.dispose();
+            tokenizer = null; // gc hint
             javax.microedition.location.Criteria criteria = new javax.microedition.location.Criteria();
 
             // common criteria
@@ -176,18 +175,20 @@ public final class Jsr179LocationProvider
         if (isTracklog() && Config.TRACKLOG_FORMAT_NMEA.equals(Config.tracklogFormat)) {
 
             // not yet started
-            if (nmeaFile == null) {
+            if (nmealog == null) {
+
                 String path = Config.getFolderNmea() + GpxTracklog.dateToFileDate(System.currentTimeMillis()) + ".nmea";
+                File file = null;
 
                 try {
                     // create file
-                    nmeaFile = File.open(Connector.open(path, Connector.READ_WRITE));
-                    if (!nmeaFile.exists()) {
-                        nmeaFile.create();
+                    file = File.open(Connector.open(path, Connector.READ_WRITE));
+                    if (!file.exists()) {
+                        file.create();
                     }
 
                     // create writer
-                    nmeaWriter = new BufferedOutputStream(nmeaFile.openOutputStream(), 1024);
+                    nmealog = new BufferedOutputStream(file.openOutputStream(), 512); // see StreamLocationProvider#BUFFER_SIZE
 
 /* fix
                     // signal recording has started
@@ -199,22 +200,13 @@ public final class Jsr179LocationProvider
                     Desktop.showError(Resources.getString(Resources.DESKTOP_MSG_START_TRACKLOG_FAILED), t, null);
                 } finally {
 
-                    // cleanup
-                    if (nmeaWriter != null) {
+                    // close the file
+                    if (file != null) {
                         try {
-                            nmeaWriter.close();
+                            file.close();
                         } catch (IOException e) {
                             // ignore
                         }
-                        nmeaWriter = null;
-                    }
-                    if (nmeaFile != null) {
-                        try {
-                            nmeaFile.close();
-                        } catch (IOException e) {
-                            // ignore
-                        }
-                        nmeaFile = null;
                     }
                 }
             }
@@ -229,23 +221,13 @@ public final class Jsr179LocationProvider
         notifyListener(false);
 
         // close writer
-        if (nmeaWriter != null) {
+        if (nmealog != null) {
             try {
-                nmeaWriter.close();
+                nmealog.close();
             } catch (IOException e) {
                 // ignore
             }
-            nmeaWriter = null;
-        }
-
-        // close file
-        if (nmeaFile != null) {
-            try {
-                nmeaFile.close();
-            } catch (IOException e) {
-                // ignore
-            }
-            nmeaFile = null;
+            nmealog = null;
         }
     }
 
@@ -304,24 +286,24 @@ public final class Jsr179LocationProvider
         }
 
         // NMEA logging
-        if (nmeaWriter != null) {
+        if (nmealog != null) {
             String extra = l.getExtraInfo(APPLICATION_X_JSR179_LOCATION_NMEA);
             if (extra != null) {
                 try {
+                    final byte[] bytes = extra.getBytes();
                     if (extra.indexOf("\n$GP") > -1) {
-                        nmeaWriter.write(extra.getBytes());
+                        nmealog.write(bytes);
                     } else {
-                        byte[] bytes = extra.getBytes();
                         for (int N = bytes.length, i = 0; i < N; i++) {
                             final byte b = bytes[i];
                             if (b == '$' && i != 0) {
-                                nmeaWriter.write('\r');
-                                nmeaWriter.write('\n');
+                                nmealog.write('\r');
+                                nmealog.write('\n');
                             }
-                            nmeaWriter.write(b);
+                            nmealog.write(b);
                         }
-                        nmeaWriter.write('\r');
-                        nmeaWriter.write('\n');
+                        nmealog.write('\r');
+                        nmealog.write('\n');
                     }
                 } catch (Throwable t) {
                     setThrowable(t);

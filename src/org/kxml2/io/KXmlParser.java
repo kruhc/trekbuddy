@@ -111,10 +111,7 @@ public final class KXmlParser implements XmlPullParser {
     /* perf hack */
     private String[] nameCache;
 
-    public KXmlParser() {
-    }
-
-    public void setNameCache(String[] nameCache) {
+    public KXmlParser(String[] nameCache) {
         this.nameCache = nameCache;
     }
 
@@ -228,7 +225,7 @@ public final class KXmlParser implements XmlPullParser {
         return any;
     }
 
-    private String[] ensureCapacity(String[] arr, int required) {
+    private static String[] ensureCapacity(String[] arr, int required) {
         if (arr.length >= required) {
             return arr;
         }
@@ -1273,10 +1270,12 @@ public final class KXmlParser implements XmlPullParser {
             if (type == ENTITY_REF) {
                 poslen[0] = 0;
                 poslen[1] = name.length();
+                
                 return name.toCharArray();
             }
             poslen[0] = 0;
             poslen[1] = txtPos;
+
             return txtBuf;
         }
 

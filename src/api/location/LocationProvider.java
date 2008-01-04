@@ -30,10 +30,10 @@ public abstract class LocationProvider {
     public static final int _CANCELLED              = 0x83; // non-JSR_179
 
     private String name;
-    private boolean tracklog;
     private LocationListener listener;
     private Throwable throwable;
     private Object status;
+    private boolean tracklog;
 
     protected volatile int lastState;
 

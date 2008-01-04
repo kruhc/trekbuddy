@@ -44,15 +44,15 @@ public class SerialLocationProvider extends StreamReadingLocationProvider implem
 
     protected volatile String url;
 
-    private volatile boolean go;
-    private volatile long last;
     private volatile Thread thread;
     private volatile InputStream stream;
     private volatile StreamConnection connection;
 
-    private TimerTask watcher;
-    private File nmeaFile;
-    private OutputStream nmeaObserver;
+    private volatile boolean go;
+    private volatile long last;
+    
+    private volatile TimerTask watcher;
+    private volatile OutputStream nmealog;
 
     public SerialLocationProvider() throws LocationException {
         this("Serial");
@@ -206,20 +206,20 @@ public class SerialLocationProvider extends StreamReadingLocationProvider implem
         if (isTracklog() && Config.TRACKLOG_FORMAT_NMEA.equals(Config.tracklogFormat)) {
 
             // not yet started
-            if (nmeaFile == null) {
+            if (nmealog == null) {
+
+                // output file
+                File file = null;
 
                 try {
                     // create file
-                    nmeaFile = File.open(Connector.open(Config.getFolderNmea() + GpxTracklog.dateToFileDate(System.currentTimeMillis()) + ".nmea", Connector.READ_WRITE));
-                    if (!nmeaFile.exists()) {
-                        nmeaFile.create();
+                    file = File.open(Connector.open(Config.getFolderNmea() + GpxTracklog.dateToFileDate(System.currentTimeMillis()) + ".nmea", Connector.READ_WRITE));
+                    if (!file.exists()) {
+                        file.create();
                     }
 
-                    // create writer
-                    nmeaObserver = new BufferedOutputStream(nmeaFile.openOutputStream(), 1024);
-
-                    // set stream 'observer'
-                    setObserver(nmeaObserver);
+                    // create output
+                    nmealog = new BufferedOutputStream(file.openOutputStream(), BUFFER_SIZE);
 
 /* fix
                     // signal recording has started
@@ -228,25 +228,19 @@ public class SerialLocationProvider extends StreamReadingLocationProvider implem
                     notifyListener(true);
 
                 } catch (Throwable t) {
+
+                    // show error
                     Desktop.showError(Resources.getString(Resources.DESKTOP_MSG_START_TRACKLOG_FAILED), t, null);
+
                 } finally {
 
-                    // cleanup
-                    if (nmeaObserver != null) {
+                    // close file
+                    if (file != null) {
                         try {
-                            nmeaObserver.close();
+                            file.close();
                         } catch (IOException e) {
                             // ignore
                         }
-                        nmeaObserver = null;
-                    }
-                    if (nmeaFile != null) {
-                        try {
-                            nmeaFile.close();
-                        } catch (IOException e) {
-                            // ignore
-                        }
-                        nmeaFile = null;
                     }
                 }
             }
@@ -261,27 +255,14 @@ public class SerialLocationProvider extends StreamReadingLocationProvider implem
         // TODO useless - listener has already been cleared in Desktop.stopTracking()
         notifyListener(false);
 
-        // clear stream 'observer'
-        setObserver(null);
-
-        // close writer
-        if (nmeaObserver != null) {
+        // close nmea log
+        if (nmealog != null) {
             try {
-                nmeaObserver.close();
+                nmealog.close();
             } catch (IOException e) {
                 // ignore
             }
-            nmeaObserver = null;
-        }
-
-        // close file
-        if (nmeaFile != null) {
-            try {
-                nmeaFile.close();
-            } catch (IOException e) {
-                // ignore
-            }
-            nmeaFile = null;
+            nmealog = null;
         }
     }
 
@@ -316,7 +297,7 @@ public class SerialLocationProvider extends StreamReadingLocationProvider implem
                 try {
 
                     // get next location
-                    location = nextLocation(stream);
+                    location = nextLocation(stream, nmealog);
 
                 } catch (IOException e) {
 //#ifdef __LOG__
@@ -352,25 +333,16 @@ public class SerialLocationProvider extends StreamReadingLocationProvider implem
                     break;
                 }
 
+                // state change?
                 boolean stateChange = false;
-
-                // is position valid?
                 synchronized (this) {
-                    if (location.getFix() > 0) {
-                        if (lastState != LocationProvider.AVAILABLE) {
-                            lastState = LocationProvider.AVAILABLE;
-                            stateChange = true;
-                        }
-                    } else {
-                        if (lastState != LocationProvider.TEMPORARILY_UNAVAILABLE) {
-                            lastState = LocationProvider.TEMPORARILY_UNAVAILABLE;
-                            stateChange = true;
-                        }
+                    final int newState = location.getFix() > 0 ? LocationProvider.AVAILABLE : LocationProvider.TEMPORARILY_UNAVAILABLE;
+                    if (lastState != newState) {
+                        lastState = newState;
+                        stateChange = true;
                     }
                     last = System.currentTimeMillis();
                 }
-
-                // stateChange about state, if necessary
                 if (stateChange) {
                     notifyListener(lastState);
                 }
@@ -385,8 +357,10 @@ public class SerialLocationProvider extends StreamReadingLocationProvider implem
             // stop watcher
             stopWatcher();
 
-            // close anyway
+            // cleanup
             synchronized (this) {
+
+                // close input stream
                 if (stream != null) {
                     try {
                         stream.close();
@@ -396,6 +370,8 @@ public class SerialLocationProvider extends StreamReadingLocationProvider implem
                         stream = null;
                     }
                 }
+
+                // close serial/bt connection
                 if (connection != null) {
                     try {
                         connection.close();

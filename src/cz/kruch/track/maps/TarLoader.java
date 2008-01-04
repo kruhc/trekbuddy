@@ -29,6 +29,8 @@ import javax.microedition.io.Connector;
 import cz.kruch.track.ui.NavigationScreens;
 import cz.kruch.track.util.CharArrayTokenizer;
 import cz.kruch.track.configuration.Config;
+import cz.kruch.track.io.LineReader;
+import cz.kruch.track.Resources;
 
 final class TarLoader extends Map.Loader implements Atlas.Loader {
 
@@ -39,12 +41,6 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
     private File file;
     private InputStream nativeIn;
     private TarInputStream tarIn;
-
-    static {
-        // hacks
-        TarInputStream.setSafeSkip(cz.kruch.track.TrackingMIDlet.useSkipBug);
-        TarInputStream.setSiemensIo(Config.siemensIo);
-    }
 
     TarLoader() {
         super();
@@ -99,7 +95,7 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
 //#ifdef __LOG__
                         if (log.isEnabled()) log.debug("input stream may be resetable");
 //#endif
-                    } catch (IOException e) {
+                    } catch (Throwable t) {
                         Map.fileInputStreamResetable = -1;
 //#ifdef __LOG__
                         if (log.isEnabled()) log.debug("input stream definitely not resetable");
@@ -112,9 +108,75 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
             * ~
             */
 
-            // do not have calibration or slices
-            if (map.getCalibration() == null || map.getSlices() == null) {
+/*
+            // try tar-listing file first
+            File file = null;
+            try {
+                // check for .ser file
+                String setFile = map.getPath().substring(0, map.getPath().lastIndexOf('.')) + ".ser";
+                file = File.open(Connector.open(setFile, Connector.READ));
+                if (file.exists()) {
+                    // each line is a slice filename
+                    LineReader reader = null;
+                    CharArrayTokenizer.Token token;
+                    final CharArrayTokenizer tokenizer = new CharArrayTokenizer();
+                    final char[] delims = { ' ', ':' };
+                    try {
+                        reader = new LineReader(buffered.setInputStream(file.openInputStream()));
+                        token = reader.readToken(false);
+                        while (token != null) {
+                            // is it slice?
+                            final int sepi = token.indexOf('/');
+                            if ((sepi > -1) && (token.endsWith(".png") || token.endsWith(".jpg"))) { // ...set/...png
+                                // init tokenizer
+                                tokenizer.init(token, delims, false);
+                                // skip leading 'block', if any...
+                                if (token.startsWith("block")) {
+                                    tokenizer.next();
+                                }
+                                // get block offset
+                                final int block = tokenizer.nextInt();
+                                // move to slice name // HACK
+                                token.begin += sepi - 3;
+                                token.length -= sepi - 3;
+                                // add slice
+                                ((TarSlice) addSlice(token)).setStreamOffset(block * TarInputStream.DEFAULT_RCDSIZE);
+                            }
+                            // next line
+                            token = null; // gc hint
+                            token = reader.readToken(false);
+                        }
+                    } catch (InvalidMapException e) {
+                        throw e;
+                    } catch (IOException e) {
+                        throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_PARSE_SET_FAILED), e);
+                    } finally {
+                        // close reader - closes the file stream (via buffered)
+                        if (reader != null) {
+                            try {
+                                reader.close();
+                            } catch (IOException e) {
+                                // ignore
+                            }
+                        }
+                        // detach buffered stream
+                        buffered.setInputStream(null);
+                    }
+                }
+            } finally {
+                // close file
+                if (file != null) {
+                    file.close();
+                }
+            }
+*/
 
+            // do not have calibration or slices yet
+            if (getMapCalibration() == null || getMapSlices() == null) {
+
+                // changes during loading - we need to remember initial state
+                final boolean mapHasSlices = getMapSlices() != null;
+                
                 // iterate over tar
                 TarEntry entry = tarIn.getNextEntry();
                 while (entry != null) {
@@ -122,31 +184,38 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
                     // get entry name
                     CharArrayTokenizer.Token entryName = entry.getName();
 
-                    // is it tile (in basedir only)
-                    if (entryName.startsWith(SET_DIR_PREFIX) && entryName.endsWith(Slice.PNG_EXT)) { // slice
-
-                        // no slices yet
-                        if (map.getSlices() == null) {
-                            ((TarSlice) addSlice(entryName)).setBlockOffset((int) (entry.getPosition() / TarInputStream.DEFAULT_RCDSIZE));
-                        }
-
-                    } else { // no, maybe calibration file
-
-                        // no calibration yet
-                        if (map.getCalibration() == null && entryName.indexOf(File.PATH_SEPCHAR) == -1) {
+                    if (!mapHasSlices && entryName.startsWith(SET_DIR_PREFIX)
+                        && (entryName.endsWith(".png") || entryName.endsWith(".jpg"))) { // slice
 //#ifdef __LOG__
-                            if (log.isEnabled()) log.debug("do not have calibration yet");
+                        if (log.isEnabled()) log.debug("new slice");
 //#endif
-                            // load calibration
-                            map.setCalibration(Calibration.newInstance(tarIn, entryName.toString()));
+                        // add slice
+                        ((TarSlice) addSlice(entryName)).setStreamOffset((int) (entry.getPosition()));
+
+                    } else if (entryName.indexOf(File.PATH_SEPCHAR) == -1
+                        && getMapCalibration() == null) { // no calibration file yet
+//#ifdef __LOG__
+                        if (log.isEnabled()) log.debug("do not have calibration yet");
+//#endif
+                        // try this root entry as a calibration
+                        map.setCalibration(Calibration.newInstance(tarIn, entryName.toString()));
+
+/*
+                        // skip the rest if we already have them
+                        if (mapHasSlices && getMapCalibration() != null) {
+//#ifdef __LOG__
+                            if (log.isEnabled()) log.debug("calibration is all we need");
+//#endif
+                            break;
                         }
+*/
                     }
-                    entry = null; // gc hint
+
+                    // next
                     entry = tarIn.getNextEntry();
                 }
             }
-        } catch (Throwable t) {
-            throwable = t;
+            
         } finally {
 
             // close native stream when not reusable
@@ -213,13 +282,12 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
         // input stream
         InputStream in = null;
 
-        try {
-            // slice entry stream offset
-            final long streamOffset = ((TarSlice) slice).getBlockOffset() * TarInputStream.DEFAULT_RCDSIZE;
+        // slice entry stream offset
+        final int streamOffset = ((TarSlice) slice).getStreamOffset();
 
-            // prepare buffered stream
+        try {
             if (nativeIn != null) { // resetable stream
-                if (streamOffset < tarIn.getStreamOffset()) {
+                if (streamOffset < tarIn.getStreamOffset() || Config.siemensIo) {
                     nativeIn.reset();
                     buffered.setInputStream(nativeIn);
                     tarIn.setStreamOffset(0);
@@ -231,9 +299,7 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
 
             // prepare tar stream
             tarIn.setInputStream(buffered);
-            tarIn.rewind(streamOffset);
-
-            // go to selected entry
+            tarIn.skip(streamOffset - tarIn.getStreamOffset());
             tarIn.getNextEntry();
 
             // read image
@@ -242,21 +308,18 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
         } finally {
 
             // close native stream when not reusable
-            if (nativeIn == null) {
+            if (in != null) {
 //#ifdef __LOG__
                 if (log.isEnabled()) log.debug("input stream not reusable -> close it");
 //#endif
-                if (in != null) {
+                // clean buffered
+                buffered.setInputStream(null);
 
-                    // clean buffered
-                    buffered.setInputStream(null);
-
-                    // close native non-reusable stream
-                    try {
-                        in.close();
-                    } catch (IOException e) {
-                        // ignore
-                    }
+                // close native non-reusable stream
+                try {
+                    in.close();
+                } catch (IOException e) {
+                    // ignore
                 }
             }
         }
@@ -278,9 +341,9 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
             tar = new TarInputStream(in = file.openInputStream());
 
             // shared vars
-            final char[] delims = new char[]{ File.PATH_SEPCHAR };
+            final char[] delims = { File.PATH_SEPCHAR };
             final CharArrayTokenizer tokenizer = new CharArrayTokenizer();
-            final StringBuffer sb = new StringBuffer(128);
+            final StringBuffer sb = cz.kruch.track.TrackingMIDlet.newInstance(32);
 
             // iterate over archive
             TarEntry entry = tar.getNextEntry();
@@ -291,7 +354,7 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
 
                     // tokenize
                     CharArrayTokenizer.Token entryName = entry.getName();
-                    int indexOf = entryName.lastIndexOf('.');
+                    final int indexOf = entryName.lastIndexOf('.');
                     if (indexOf > -1) {
 
                         // get layer and map name
@@ -329,12 +392,11 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
                         }
                     }
                 }
-                entry = null; // gc hint
                 entry = tar.getNextEntry();
             }
 
-            // dispose vars
-            tokenizer.dispose();
+            // dispose sb
+            cz.kruch.track.TrackingMIDlet.releaseInstance(sb);
 
         } finally {
 

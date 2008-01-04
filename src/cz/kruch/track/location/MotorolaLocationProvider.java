@@ -59,7 +59,7 @@ public final class MotorolaLocationProvider
             this.accuracy = tokenizer.nextInt();
             this.age = tokenizer.nextInt();
             this.timeout = tokenizer.nextInt();
-            tokenizer.dispose();
+            tokenizer = null; // gc hint
 
             // init provider
             impl = (com.motorola.location.PositionSource) Connector.open("location://");

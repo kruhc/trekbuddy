@@ -149,6 +149,7 @@ public final class Resources {
     public static final short DESKTOP_MSG_NO_WPT                = 1382;
     public static final short DESKTOP_MSG_NMEA_PLAYBACK         = 1383;
     public static final short DESKTOP_MSG_SMS_RECEIVED          = 1384;
+    public static final short DESKTOP_MSG_NO_SET_FILE           = 1385;
     /* navigation - commands */
     public static final short NAV_CMD_ROUTE_ALONG               = 2000;
     public static final short NAV_CMD_ROUTE_BACK                = 2001;
@@ -256,6 +257,7 @@ public final class Resources {
     public static final short CFG_LOCATION_FLD_GPX_LOG_VALID    = 3617;
     public static final short CFG_LOCATION_FLD_PROV_O2GERMANY   = 3618;
     public static final short CFG_LOCATION_FLD_FILTER_DEPTH     = 3619;
+    public static final short CFG_LOCATION_FLD_GPX_LOG_GSM      = 3620;
     /* settings - navigation */
     public static final short CFG_NAVIGATION_FLD_WPT_PROXIMITY  = 3700;
     public static final short CFG_NAVIGATION_FLD_POI_PROXIMITY  = 3701;
@@ -271,6 +273,7 @@ public final class Resources {
     public static final short CFG_TWEAKS_FLD_SAFE_RENDERER      = 3802;
     public static final short CFG_TWEAKS_FLD_FORCED_GC          = 3803;
     public static final short CFG_TWEAKS_FLD_1TILE_SCROLL       = 3804;
+    public static final short CFG_TWEAKS_FLD_LARGE_ATLASES      = 3805;
     /* info - commands */
     public static final short INFO_CMD_DETAILS                  = 4000;
     /* info - items */
@@ -364,8 +367,8 @@ public final class Resources {
                     reader = new LineReader(file.openInputStream());
                     keymap0 = new int[32];
                     keymap1 = new int[32];
-                    char[] delims = new char[]{ '=' };
-                    CharArrayTokenizer tokenizer = new CharArrayTokenizer();
+                    final char[] delims = { '=' };
+                    final CharArrayTokenizer tokenizer = new CharArrayTokenizer();
                     CharArrayTokenizer.Token token = reader.readToken(false);
                     while (token != null && keymapSize < 32) {
                         tokenizer.init(token, delims, false);
@@ -373,6 +376,7 @@ public final class Resources {
                         keymap1[keymapSize] = tokenizer.nextInt();
                         keymapSize++;
                         result++;
+                        token = null; // gc hint
                         token = reader.readToken(false);
                     }
                 } finally {

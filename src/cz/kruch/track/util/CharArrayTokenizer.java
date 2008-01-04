@@ -98,11 +98,6 @@ public final class CharArrayTokenizer {
         this.dl = delimiters.length;
     }
 
-    public void dispose() {
-        array = null;
-        delimiters = null;
-    }
-
     public boolean hasMoreTokens() {
         return position < end;
     }
@@ -121,8 +116,8 @@ public final class CharArrayTokenizer {
 
         if (position < end) {  /* == hasMoreTokens() */
             // local refs
-            char[] array = this.array;
-            Token token = this.token;
+            final char[] array = this.array;
+            final Token token = this.token;
 
             // clear flag
             token.isDelimiter = false;
@@ -130,7 +125,7 @@ public final class CharArrayTokenizer {
             // token beginning
             int begin = position;
 
-            if (isDelim(array[position])) {
+            while (isDelim(array[position])) {
                 // step fwd
                 position++;
                 // delims wanted?
@@ -139,14 +134,18 @@ public final class CharArrayTokenizer {
                     token.isDelimiter = true;
                     // return
                     return token;
-                } else {
-                    begin++;
+                }
+                // move data start
+                begin++;
+                // check boundary
+                if (position == end) {
+                    throw new NoSuchElementException();
                 }
             }
 
             int offset = position;
             while (offset < end) {
-                char ch = array[offset];
+                final char ch = array[offset];
                 if (isDelim(ch)) {
                     /*if (offset == position) return next();*/
                     break;
@@ -181,7 +180,7 @@ public final class CharArrayTokenizer {
         return parseInt(token.array, token.begin, token.length);
     }
 
-    public static int parseInt(char[] value, int offset, int length) {
+    public static int parseInt(final char[] value, int offset, int length) {
         if (length == 0) {
             throw new NumberFormatException("No input");
         }
@@ -191,7 +190,7 @@ public final class CharArrayTokenizer {
         int sign = 1;
 
         while (offset < end) {
-            char ch = value[offset++];
+            final char ch = value[offset++];
 /* too slow
             int digit = Character.digit(ch, 10);
 */
@@ -218,18 +217,18 @@ public final class CharArrayTokenizer {
         return parseFloat(token.array, token.begin, token.length);
     }
 
-    public static float parseFloat(char[] value, int offset, int length) {
+    public static float parseFloat(final char[] value, int offset, int length) {
         if (length == 0) {
             throw new NumberFormatException("No input");
         }
 
         final int end = offset + length;
         long decSeen = 0;
-        float result = 0F; // TODO is this correct initial value
+        float result = 0F; // TODO is this correct initial value???
         int sign = 1;
 
         while (offset < end) {
-            char ch = value[offset++];
+            final char ch = value[offset++];
             if (ch == '.') {
                 decSeen = 10;
             } else {
@@ -237,7 +236,7 @@ public final class CharArrayTokenizer {
                 int idigit = Character.digit(ch, 10);
 */
                 if (ch >= '0' && ch <= '9') {
-                    float fdigit = ch - '0';
+                    final float fdigit = ch - '0';
                     if (decSeen > 0) {
                         result += (fdigit / decSeen);
                         decSeen *= 10;
@@ -262,18 +261,18 @@ public final class CharArrayTokenizer {
         return parseDouble(token.array, token.begin, token.length);
     }
 
-    public static double parseDouble(char[] value, int offset, int length) {
+    public static double parseDouble(final char[] value, int offset, int length) {
         if (length == 0) {
             throw new NumberFormatException("No input");
         }
 
         final int end = offset + length;
         long decSeen = 0;
-        double result = 0D; // TODO is this correct initial value?
+        double result = 0D; // TODO is this correct initial value???
         int sign = 1;
 
         while (offset < end) {
-            char ch = value[offset++];
+            final char ch = value[offset++];
             if (ch == '.') {
                 decSeen = 10;
             } else {
@@ -281,7 +280,7 @@ public final class CharArrayTokenizer {
                 int idigit = Character.digit(ch, 10);
 */
                 if (ch >= '0' && ch <= '9') {
-                    double fdigit = ch - '0';
+                    final double fdigit = ch - '0';
                     if (decSeen > 0) {
                         result += (fdigit / decSeen);
                         decSeen *= 10;
@@ -308,11 +307,11 @@ public final class CharArrayTokenizer {
         public int length;
         public boolean isDelimiter;
 
-        public void init(char[] array) {
-            init(array, 0, array.length);
+        public Token() {
         }
 
         public void init(char[] array, int begin, int length) {
+            this.array = null; // gc hint
             this.array = array;
             this.begin = begin;
             this.length = length;
@@ -364,7 +363,7 @@ public final class CharArrayTokenizer {
             }
 
             final char[] array = this.array;
-            final int start = this.length - sl;
+            final int start = this.begin + this.length - sl;
             int offset = 0;
 
             while (offset < sl) {
@@ -379,11 +378,7 @@ public final class CharArrayTokenizer {
         }
 
         public boolean equals(String s) {
-            if (s.length() != length) {
-                return false;
-            }
-
-            return startsWith(s);
+            return s.length() == length && startsWith(s);
         }
 
         public boolean isEmpty() {

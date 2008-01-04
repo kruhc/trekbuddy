@@ -41,6 +41,7 @@ final class DirLoader extends Map.Loader implements Atlas.Loader {
 
     DirLoader() {
         super();
+        this.input = new FileInput(null);
     }
 
     public void init(Map map, String url) throws IOException {
@@ -61,149 +62,121 @@ final class DirLoader extends Map.Loader implements Atlas.Loader {
         if (log.isEnabled()) log.debug("slices are in " + dir);
 //#endif
 
-        try {
-            // read calibration
-            if (map.getCalibration() == null) {
+        // read calibration
+        if (getMapCalibration() == null) {
 //#ifdef __LOG__
-                if (log.isEnabled()) log.debug("do not have calibration yet");
+            if (log.isEnabled()) log.debug("do not have calibration yet");
 //#endif
 
-                // helper loader
-                FileInput fileInput = new FileInput(map.getPath());
+            // helper loader
+            FileInput fileInput = new FileInput(map.getPath());
 
-                // parse known calibration
-                try {
-                    i = map.getPath().lastIndexOf('.');
-                    if (i > -1) {
+            // parse known calibration
+            try {
+                i = map.getPath().lastIndexOf('.');
+                if (i > -1) {
 
-                        // path points to calibration file
-                        map.setCalibration(Calibration.newInstance(buffered.setInputStream(fileInput._getInputStream()), map.getPath()));
+                    // path points to calibration file
+                    map.setCalibration(Calibration.newInstance(buffered.setInputStream(fileInput._getInputStream()), map.getPath()));
 
-                        // clear buffered
+                    // clear buffered
+                    buffered.setInputStream(null);
+                }
+
+                // check calibration
+                if (getMapCalibration() == null) {
+                    throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_UNKNOWN_CAL_FILE) + ": " + map.getPath());
+                }
+
+                // GPSka hack
+                if (isGPSka) {
+                    basename = getMapCalibration().getImgname();
+                    extension = ".png";
+                    addSlice(null);
+                }
+
+            } catch (InvalidMapException e) {
+                throw e;
+            } catch (IOException e) {
+                throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_PARSE_CAL_FAILED) + ": " + map.getPath(), e);
+            } finally {
+                // close helper loader
+                fileInput.close();
+            }
+        }
+
+        // prepare slices
+        if (getMapSlices() == null) {
+//#ifdef __LOG__
+            if (log.isEnabled()) log.debug("do not have slices yet");
+//#endif
+            // try listing file first
+            File file = null;
+            try {
+                // check for .set file
+                String setFile = map.getPath().substring(0, map.getPath().lastIndexOf('.')) + ".set";
+                file = File.open(Connector.open(setFile, Connector.READ));
+                if (file.exists()) {
+                    // each line is a slice filename
+                    LineReader reader = null;
+                    CharArrayTokenizer.Token token;
+                    try {
+                        reader = new LineReader(buffered.setInputStream(file.openInputStream()));
+                        token = reader.readToken(false);
+                        while (token != null) {
+                            addSlice(token);
+                            token = null; // gc hint
+                            token = reader.readToken(false);
+                        }
+                    } catch (InvalidMapException e) {
+                        throw e;
+                    } catch (IOException e) {
+                        throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_PARSE_SET_FAILED), e);
+                    } finally {
+                        // close reader - closes the file stream (via buffered)
+                        if (reader != null) {
+                            try {
+                                reader.close();
+                            } catch (IOException e) {
+                                // ignore
+                            }
+                        }
+                        // detach buffered stream
                         buffered.setInputStream(null);
                     }
-
-                    // check calibration
-                    if (map.getCalibration() == null) {
-                        throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_UNKNOWN_CAL_FILE) + ": " + map.getPath());
-                    }
-
-                } catch (InvalidMapException e) {
-                    throw e;
-                } catch (IOException e) {
-                    throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_PARSE_CAL_FAILED) + ": " + map.getPath(), e);
-                } finally {
-                    // close helper loader
-                    fileInput.close();
+                } else {
+                    throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_NO_SET_FILE) + setFile);
+                }
+            } finally {
+                // close file
+                if (file != null) {
+                    file.close();
                 }
             }
-
-            // prepare slices
-            if (map.getSlices() == null) {
-//#ifdef __LOG__
-                if (log.isEnabled()) log.debug("do not have slices yet");
-//#endif
-
-                // try listing file first
-                File file = null;
-                try {
-                    String setFile = map.getPath().substring(0, map.getPath().lastIndexOf('.')) + ".set";
-                    file = File.open(Connector.open(setFile, Connector.READ));
-                    if (file.exists()) {
-                        LineReader reader = null;
-                        try {
-                            // each line is a slice filename
-                            reader = new LineReader(buffered.setInputStream(file.openInputStream()));
-/*
-                            String entry = reader.readLine(false);
-                            while (entry != null) {
-                                addSlice(entry);
-                                entry = reader.readLine(false);
-                            }
-*/
-                            CharArrayTokenizer.Token token = reader.readToken(false);
-                            while (token != null) {
-                                addSlice(token);
-                                token = reader.readToken(false);
-                            }
-                        } catch (InvalidMapException e) {
-                            throw e;
-                        } catch (IOException e) {
-                            throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_PARSE_SET_FAILED), e);
-                        } finally {
-                            // close reader - also closes the file stream
-                            if (reader != null) {
-                                try {
-                                    reader.close();
-                                } catch (IOException e) {
-                                    // ignore
-                                }
-                            }
-
-                            // detach buffered stream
-                            buffered.setInputStream(null);
-                        }
-                    } else {
-                        // close file
-                        try {
-                            file.close();
-                        } catch (IOException e) {
-                            // ignore
-                        }
-                        file = null; // gc hint
-
-                        // iterate over set directory
-                        file = File.open(Connector.open(dir + SET_DIR_PREFIX, Connector.READ));
-                        if (file.exists()) {
-                            CharArrayTokenizer.Token token = new CharArrayTokenizer.Token();
-                            try {
-                                for (Enumeration e = file.list("*.png", false); e.hasMoreElements();) {
-                                    token.init(((String) e.nextElement()).toCharArray());
-                                    addSlice(token);
-                                }
-                            } catch (IOException e) {
-                                throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_SLICES_LIST_FAILED) + " " + file.getURL(), e);
-                            }
-                        } else {
-                            throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_SLICES_DIR_NOT_FOUND));
-                        }
-                    }
-                } finally {
-                    // close file
-                    if (file != null) {
-                        file.close();
-                    }
-                }
-            }
-        } catch (Throwable t) {
-            throwable = t;
         }
     }
 
     public void loadSlice(Slice slice) throws IOException {
-        // reuse sb
-        StringBuffer pathSb = this.pathSb;
-        pathSb.delete(0, pathSb.length());
+        // path sb
+        final StringBuffer sb = cz.kruch.track.TrackingMIDlet.newInstance(32);
 
         // construct slice path
-        pathSb.append(dir).append(SET_DIR_PREFIX).append(basename);
+        sb.append(dir).append(SET_DIR_PREFIX).append(basename);
         if (!isGPSka) {
-            slice.appendPath(pathSb);
+            slice.appendPath(sb);
         }
+        sb.append(extension);
 
         // prepare path
-        String slicePath = pathSb.toString();
+        String slicePath = sb.toString();
+        cz.kruch.track.TrackingMIDlet.releaseInstance(sb);
 
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("load slice image from " + slicePath);
 //#endif
 
         // file input
-        if (input == null) {
-            input = new FileInput(slicePath);
-        } else {
-            input.setUrl(slicePath);
-        }
+        input.setUrl(slicePath);
 
         // read image
         try {
@@ -231,14 +204,14 @@ final class DirLoader extends Map.Loader implements Atlas.Loader {
 
     public void loadIndex(Atlas atlas, String url, String baseUrl) throws IOException {
         // file
-        api.file.File file = null;
+        File file = null;
 
         try {
             // open atlas dir
             file = File.open(Connector.open(baseUrl, Connector.READ));
 
-            // path holder
-            final StringBuffer sb = new StringBuffer(128);
+            // pooled path holder
+            final StringBuffer sb = cz.kruch.track.TrackingMIDlet.newInstance(32);
 
             // iterate over layers
             for (Enumeration le = file.list(); le.hasMoreElements();) {
@@ -273,7 +246,7 @@ final class DirLoader extends Map.Loader implements Atlas.Loader {
                                     continue;
 
                                 // has ext
-                                int indexOf = fileEntry.lastIndexOf('.');
+                                final int indexOf = fileEntry.lastIndexOf('.');
                                 if (indexOf == -1) {
                                     continue;
                                 }
@@ -288,6 +261,7 @@ final class DirLoader extends Map.Loader implements Atlas.Loader {
 
                                 // close file input
                                 fileInput.close();
+                                fileInput = null; // gc hint
 
                                 // found calibration
                                 if (calibration != null) {
@@ -312,6 +286,10 @@ final class DirLoader extends Map.Loader implements Atlas.Loader {
                     file.setFileConnection(File.PARENT_DIR);
                 }
             }
+
+            // release pooled object
+            cz.kruch.track.TrackingMIDlet.releaseInstance(sb);
+
         } finally {
             // close file
             if (file != null) {

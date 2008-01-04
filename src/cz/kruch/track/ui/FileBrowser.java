@@ -262,7 +262,7 @@ public final class FileBrowser implements CommandListener, Runnable {
      */
     public static List sort2list(String title, Enumeration items, String head) {
         // enum to list
-        Vector v = new Vector(8, 8);
+        Vector v = new Vector(16, 16);
         if (head != null) {
             v.addElement(head);
         }

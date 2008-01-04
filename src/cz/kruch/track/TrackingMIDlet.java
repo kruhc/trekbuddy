@@ -38,7 +38,6 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
     public static boolean jsr82, jsr120, jsr135, jsr179, motorola179, comm;
     public static boolean sonyEricsson, nokia, siemens, wm, palm, rim, symbian;
     public static boolean sxg75, a780, s65;
-    public static boolean useSkipBug;
 
     // diagnostics
 
@@ -249,11 +248,11 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         cz.kruch.track.util.Mercator.initialize();
 
         // setup environment
-        if (hasFlag("fs_skip_bug")) {
+        if (hasFlag("fs_skip_bug") || siemens) {
 //#ifdef __LOG__
             System.out.println("* fs skip-bug feature on");
 //#endif
-            useSkipBug = true;
+            cz.kruch.track.maps.Map.useSkip = false;
         }
         if (hasFlag("fs_no_reset") || sxg75) {
 //#ifdef __LOG__
@@ -314,7 +313,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
     }
 
     public static boolean hasFlag(String flag) {
-        return flags == null ? false : flags.indexOf(flag) > -1;
+        return flags != null && flags.indexOf(flag) > -1;
     }
 
     public static boolean hasPorts() {
@@ -324,4 +323,37 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
     public static boolean supportsVideoCapture() {
         return jsr135 && "true".equals(System.getProperty("supports.video.capture"));
     }
+
+    /*
+     * Pools for common objects;
+     */
+
+    private static final StringBuffer[] sbPool = new StringBuffer[4];
+    private static int sbCountFree;
+
+    public synchronized static StringBuffer newInstance(int initialSize) {
+        StringBuffer result;
+
+        if (sbCountFree == 0) {
+            result = new StringBuffer(initialSize);
+        } else {
+            result = sbPool[--sbCountFree];
+            sbPool[sbCountFree] = null;
+            result.delete(0, result.length());
+            result.ensureCapacity(initialSize);
+        }
+
+        return result;
+    }
+
+    public synchronized static void releaseInstance(StringBuffer sb) {
+        if (sbCountFree < sbPool.length) {
+            sbPool[sbCountFree++] = sb;
+        }
+    }
+
+    /*
+     * ~POOL
+     */
+
 }

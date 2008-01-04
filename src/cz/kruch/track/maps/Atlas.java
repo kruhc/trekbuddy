@@ -133,7 +133,12 @@ public final class Atlas implements Runnable {
     }
 
     public String getURL(String name) {
-        return url + "?layer=" + current + "&map=" + name;
+        final StringBuffer sb = cz.kruch.track.TrackingMIDlet.newInstance(32);
+        sb.append(url).append("?layer=").append(current).append("&map=").append(name);
+        String result = sb.toString();
+        cz.kruch.track.TrackingMIDlet.releaseInstance(sb);
+
+        return result;
     }
 
     public Hashtable getMaps() {

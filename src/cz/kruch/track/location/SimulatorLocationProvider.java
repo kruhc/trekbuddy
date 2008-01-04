@@ -120,7 +120,7 @@ public final class SimulatorLocationProvider
 
                 // get next location
                 try {
-                    location = nextLocation(in);
+                    location = nextLocation(in, null);
                 } catch (IllegalStateException e) {
                     Desktop.showError(e.getMessage(), null, null);
                 } catch (Throwable t) {
@@ -146,22 +146,15 @@ public final class SimulatorLocationProvider
                     break;
                 }
 
+                // state change?
                 boolean stateChange = false;
-
-                // is position valid?
-                if (location.getFix() > 0) {
-                    if (lastState != LocationProvider.AVAILABLE) {
-                        lastState = LocationProvider.AVAILABLE;
-                        stateChange = true;
-                    }
-                } else {
-                    if (lastState != LocationProvider.TEMPORARILY_UNAVAILABLE) {
-                        lastState = LocationProvider.TEMPORARILY_UNAVAILABLE;
+                synchronized (this) {
+                    final int newState = location.getFix() > 0 ? LocationProvider.AVAILABLE : LocationProvider.TEMPORARILY_UNAVAILABLE;
+                    if (lastState != newState) {
+                        lastState = newState;
                         stateChange = true;
                     }
                 }
-
-                // stateChange about state, if necessary
                 if (stateChange) {
                     notifyListener(lastState);
                 }
@@ -176,7 +169,6 @@ public final class SimulatorLocationProvider
                     // ignore
                 }
             }
-
         } catch (Throwable t) {
             if (t instanceof InterruptedException) {
                 // stop request
@@ -193,7 +185,6 @@ public final class SimulatorLocationProvider
                     // ignore
                 }
             }
-
             // close file connection
             try {
                 file.close();

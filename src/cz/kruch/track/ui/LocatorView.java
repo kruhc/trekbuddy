@@ -75,7 +75,6 @@ final class LocatorView extends View {
     private final int[] center, vertex;
     private final int[][] triangle;
 
-    private final StringBuffer sb;
     private final char[] sbChars;
 
     public LocatorView(/*Navigator*/Desktop navigator) {
@@ -86,7 +85,6 @@ final class LocatorView extends View {
         this.rangeIdx = new int[]{ 2, 2 };
         this.navigationStrWidth = Math.max(Desktop.font.stringWidth(MSG_NO_WAYPOINT),
                                            Desktop.font.stringWidth("9.999 M"));
-        this.sb = new StringBuffer(32);
         this.sbChars = new char[32];
         this.center = new int[2];
         this.vertex = new int[2];
@@ -312,7 +310,6 @@ final class LocatorView extends View {
         final int term = this.term;
         final int rangeIdx = this.rangeIdx[term];
         final char[] sbChars = this.sbChars;
-        final StringBuffer sb = this.sb;
         final OSD osd = Desktop.osd;
         final int fh = osd.bh;
 
@@ -440,6 +437,9 @@ final class LocatorView extends View {
             // set color
             graphics.setColor(fgColor);
 
+            // get pooled StringBuffer
+            final StringBuffer sb = cz.kruch.track.TrackingMIDlet.newInstance(32);
+
             // draw lat/lon
             sb.delete(0, sb.length());
             NavigationScreens.toStringBuffer(coordsAvg, sb);
@@ -450,7 +450,7 @@ final class LocatorView extends View {
             // draw hdop
             sb.delete(0, sb.length());
             sb.append(NavigationScreens.PLUSMINUS);
-            float hAccuracy = coordsAvg.getHorizontalAccuracy();
+            final float hAccuracy = coordsAvg.getHorizontalAccuracy();
             if (hAccuracy >= 10F) {
                 NavigationScreens.append(sb, (int) hAccuracy);
             } else {
@@ -492,7 +492,7 @@ final class LocatorView extends View {
                 }
 
                 // calculate distance
-                float distance = coordsAvg.distance(qc);
+                final float distance = coordsAvg.distance(qc);
 
                 // calculate bearing
                 float bearing = coordsAvg.azimuthTo(qc, distance);
@@ -551,6 +551,10 @@ final class LocatorView extends View {
                 graphics.drawChars(sbChars, 0, l,
                                    w - navigationStrWidth, h - fh,
                                    Graphics.LEFT | Graphics.TOP);
+
+                // free pooled StringBuffer
+                cz.kruch.track.TrackingMIDlet.releaseInstance(sb);
+
             } else {
                 graphics.drawString(MSG_NO_WAYPOINT,
                                    w - navigationStrWidth, h - fh,

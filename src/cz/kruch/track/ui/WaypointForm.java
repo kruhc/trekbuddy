@@ -95,7 +95,7 @@ public final class WaypointForm extends Form
         if (timestamp > 0) {
             appendWithNewlineAfter(new StringItem(Resources.getString(Resources.NAV_FLD_TIME), dateToString(timestamp)));
         }
-        StringBuffer sb = new StringBuffer(32);
+        final StringBuffer sb = cz.kruch.track.TrackingMIDlet.newInstance(32);
         NavigationScreens.toStringBuffer(wpt.getQualifiedCoordinates(), sb);
         append(new StringItem(Resources.getString(Resources.NAV_FLD_LOC), sb.toString()));
         sb.delete(0, sb.length());
@@ -107,6 +107,7 @@ public final class WaypointForm extends Form
         }
         sb.append(' ').append('m');
         append(new StringItem(Resources.getString(Resources.NAV_FLD_ALT), sb.toString()));
+        cz.kruch.track.TrackingMIDlet.releaseInstance(sb);
         addCommand(new Command(Resources.getString(Resources.CMD_CLOSE), Command.BACK, 1));
         addCommand(new Command(CMD_NAVIGATE_TO, Desktop.POSITIVE_CMD_TYPE, 1));
         addCommand(new Command(CMD_NAVIGATE_ALONG, Desktop.POSITIVE_CMD_TYPE, 2));
@@ -125,7 +126,7 @@ public final class WaypointForm extends Form
         appendWithNewlineAfter(this.fieldName = new TextField(Resources.getString(Resources.NAV_FLD_WPT_NAME), null, 16, TextField.ANY));
         appendWithNewlineAfter(this.fieldComment = new TextField(Resources.getString(Resources.NAV_FLD_WPT_CMT), null, 256, TextField.ANY));
         appendWithNewlineAfter(new StringItem(Resources.getString(Resources.NAV_FLD_TIME), dateToString(location.getTimestamp())));
-        StringBuffer sb = new StringBuffer(32);
+        final StringBuffer sb = cz.kruch.track.TrackingMIDlet.newInstance(32);
         NavigationScreens.toStringBuffer(location.getQualifiedCoordinates(), sb);
         appendWithNewlineAfter(new StringItem(Resources.getString(Resources.NAV_FLD_LOC), sb.toString()));
         sb.delete(0, sb.length());
@@ -137,6 +138,7 @@ public final class WaypointForm extends Form
         }
         sb.append(' ').append('m');
         appendWithNewlineAfter(new StringItem(Resources.getString(Resources.NAV_FLD_ALT), sb.toString()));
+        cz.kruch.track.TrackingMIDlet.releaseInstance(sb);
         if (cz.kruch.track.TrackingMIDlet.supportsVideoCapture()) {
             StringItem snapshot = new StringItem(Resources.getString(Resources.NAV_FLD_SNAPSHOT), CMD_TAKE, Item.BUTTON);
             snapshot.setDefaultCommand(new Command(CMD_TAKE, Command.ITEM, 1));
@@ -155,7 +157,7 @@ public final class WaypointForm extends Form
         this.callback = callback;
         final int c = cnt + 1;
         String name = c < 10 ? "WPT00" + c : (c < 100 ? "WPT0" + c : "WPT" + Integer.toString(c));
-        StringBuffer sb = new StringBuffer(12);
+        final StringBuffer sb = cz.kruch.track.TrackingMIDlet.newInstance(32);
         appendWithNewlineAfter(this.fieldName = new TextField(Resources.getString(Resources.NAV_FLD_WPT_NAME), name, 16, TextField.ANY));
         appendWithNewlineAfter(this.fieldComment = new TextField(Resources.getString(Resources.NAV_FLD_WPT_CMT), dateToString(CALENDAR.getTime().getTime()), 64, TextField.ANY));
         sb.append(pointer.getLat() > 0D ? 'N' : 'S').append(' ');
@@ -166,6 +168,7 @@ public final class WaypointForm extends Form
         NavigationScreens.append(QualifiedCoordinates.LON, pointer.getLon(), true, sb);
         appendWithNewlineAfter(this.fieldLon = new TextField(Resources.getString(Resources.NAV_FLD_WGS84LON), sb.toString(), 14, TextField.ANY));
         appendWithNewlineAfter(this.fieldAlt = new TextField(Resources.getString(Resources.NAV_FLD_ALT), "", 14, TextField.NUMERIC));
+        cz.kruch.track.TrackingMIDlet.releaseInstance(sb);
         addCommand(new Command(Resources.getString(Resources.CMD_CLOSE), Command.BACK, 1));
         addCommand(new Command(CMD_USE, Desktop.POSITIVE_CMD_TYPE, 1));
     }
@@ -322,15 +325,17 @@ public final class WaypointForm extends Form
 
     private static String dateToString(final long time) {
         CALENDAR.setTime(new Date(time));
-        StringBuffer sb = new StringBuffer();
+        final StringBuffer sb = cz.kruch.track.TrackingMIDlet.newInstance(32);
         NavigationScreens.append(sb, CALENDAR.get(Calendar.YEAR)).append('-');
         appendTwoDigitStr(sb, CALENDAR.get(Calendar.MONTH) + 1).append('-');
         appendTwoDigitStr(sb, CALENDAR.get(Calendar.DAY_OF_MONTH)).append(' ');
         appendTwoDigitStr(sb, CALENDAR.get(Calendar.HOUR_OF_DAY)).append(':');
         appendTwoDigitStr(sb, CALENDAR.get(Calendar.MINUTE)).append(':');
         appendTwoDigitStr(sb, CALENDAR.get(Calendar.SECOND));
-
-        return sb.toString();
+        String result = sb.toString();
+        cz.kruch.track.TrackingMIDlet.releaseInstance(sb);
+        
+        return result;
     }
 
     private static StringBuffer appendTwoDigitStr(StringBuffer sb, final int i) {

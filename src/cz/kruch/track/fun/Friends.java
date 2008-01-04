@@ -78,14 +78,14 @@ public final class Friends implements MessageListener, Runnable {
     }
 
     public static void send(String phone, String type, String message,
-                            QualifiedCoordinates coordinates, long time) {
+                            QualifiedCoordinates coordinates, final long time) {
         // check address
         if (phone == null || phone.length() == 0) {
             throw new IllegalArgumentException("Null recipient");
         }
 
         // create SMS text
-        StringBuffer sb = new StringBuffer();
+        final StringBuffer sb = cz.kruch.track.TrackingMIDlet.newInstance(32);
         sb.append(TBSMS_HEADER).append(type).append(SEPARATOR_CHAR);
         sb.append(time / 1000).append(SEPARATOR_CHAR);
         sb.append(toSentence(QualifiedCoordinates.LAT, coordinates.getLat()));
@@ -94,9 +94,11 @@ public final class Friends implements MessageListener, Runnable {
         sb.append(SEPARATOR_CHAR);
         sb.append(message.replace(',', ' ').replace('*', ' '));
         sb.append('*').append('0').append('0');
-
         String text = sb.toString();
-        String url = SMS_PROTOCOL + phone + PORT;
+        sb.delete(0, sb.length());
+        sb.append(SMS_PROTOCOL).append(phone).append(PORT);
+        String url = sb.toString();
+        cz.kruch.track.TrackingMIDlet.releaseInstance(sb);
 
 //#ifdef __LOG__
         debug(text);
@@ -154,14 +156,14 @@ public final class Friends implements MessageListener, Runnable {
                     }
 
                     // parse tokens
-                    long time = Long.parseLong(times) * 1000;
-                    double lat = parseSentence(latv, lats);
-                    double lon = parseSentence(lonv, lons);
+                    final long time = Long.parseLong(times) * 1000;
+                    final double lat = parseSentence(latv, lats);
+                    final double lon = parseSentence(lonv, lons);
                     String address = message.getAddress();
                     if (address.startsWith(SMS_PROTOCOL)) {
                         address = address.substring(6);
                     }
-                    int i = address.indexOf(':');
+                    final int i = address.indexOf(':');
                     if (i > -1) {
                         address = address.substring(0, i);
                     }
@@ -264,7 +266,7 @@ public final class Friends implements MessageListener, Runnable {
             }
         }
 
-        StringBuffer sb = new StringBuffer(32);
+        final StringBuffer sb = cz.kruch.track.TrackingMIDlet.newInstance(32);
         if (type == QualifiedCoordinates.LON && d < 100) {
             sb.append('0');
         }
@@ -290,8 +292,10 @@ public final class Friends implements MessageListener, Runnable {
         }
         NavigationScreens.append(sb, s);
         sb.append(',').append(type == QualifiedCoordinates.LAT ? (sign == -1 ? "S" : "N") : (sign == -1 ? "W" : "E"));
+        String result = sb.toString();
+        cz.kruch.track.TrackingMIDlet.releaseInstance(sb);
 
-        return sb.toString();
+        return result;
     }
 
 //#ifdef __LOG__

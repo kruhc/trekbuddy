@@ -47,9 +47,8 @@ public abstract class StreamReadingLocationProvider extends LocationProvider {
 
     public static int syncs, mismatches, checksums, restarts, stalls;
 
-    private OutputStream observer;
     private NmeaParser.Record gsa;
-    private char[] line;
+    private final char[] line;
 
     /* for minimalistic NMEA stream */
     private int hack_rmc_count;
@@ -60,18 +59,14 @@ public abstract class StreamReadingLocationProvider extends LocationProvider {
         syncs = mismatches = checksums = restarts = stalls = 0;
     }
 
-    protected void setObserver(OutputStream observer) {
-        this.observer = observer;
-    }
-
-    protected final Location nextLocation(InputStream in) throws IOException, LocationException {
+    protected final Location nextLocation(InputStream in, OutputStream observer) throws IOException, LocationException {
         // records
         NmeaParser.Record gga = null;
         NmeaParser.Record rmc = null;
 
         // get pair
         while (gga == null || rmc == null) {
-            final int l = nextSentence(in);
+            final int l = nextSentence(in, observer);
             if (l == -1) {
                 return null;
             }
@@ -158,21 +153,20 @@ public abstract class StreamReadingLocationProvider extends LocationProvider {
         return location;
     }
 
-    private int nextSentence(InputStream in) throws IOException {
+    private int nextSentence(InputStream in, OutputStream observer) throws IOException {
         int pos = 0;
 
         boolean nl = false;
         boolean match = false;
 
-        OutputStream observer = this.observer;
-        char[] line = this.line;
+        final char[] line = this.line;
 
         int c = in.read();
         while (c > -1) {
             if (observer != null) {
                 try {
                     observer.write(c);
-                } catch (Exception e) {
+                } catch (Throwable t) {
                     // ignore
                 }
             }

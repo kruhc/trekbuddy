@@ -248,21 +248,7 @@ public final class NavigationScreens {
                                  final int x, final int y, final int anchor) {
         final int courseInt = ((int) course) % 360;
 
-        if (arrowsFull) {
-            int ci = courseInt / 10;
-            int cr = courseInt % 10;
-            if (cr > 5) {
-                ci++;
-                if (ci == 36) {
-                    ci = 0;
-                }
-            }
-            graphics.setClip(x - arrowSize2, y - arrowSize2, arrowSize, arrowSize);
-            graphics.drawImage(courses,
-                               x - (ci % 9) * arrowSize - arrowSize2, y - (ci / 9) * arrowSize  - arrowSize2,
-                               anchor);
-            graphics.setClip(0, 0, Desktop.width, Desktop.height);
-        } else {
+        if (!arrowsFull) {
             int cr = courseInt / 90;
             int cwo = courseInt % 90;
             int ci = (cwo + 5) / 10;
@@ -300,14 +286,7 @@ public final class NavigationScreens {
             graphics.drawRegion(courses,
                                 ci * arrowSize, 0, arrowSize, arrowSize,
                                 ti, x - arrowSize2, y - arrowSize2, anchor);
-        }
-    }
-
-    public static void drawNaviw(Graphics graphics, final float course,
-                                 final int x, final int y, final int anchor) {
-        final int courseInt = ((int) course) % 360;
-
-        if (naviwsFull) {
+        } else {
             int ci = courseInt / 10;
             int cr = courseInt % 10;
             if (cr > 5) {
@@ -316,12 +295,19 @@ public final class NavigationScreens {
                     ci = 0;
                 }
             }
-            graphics.setClip(x - naviwSize2, y - naviwSize2, naviwSize, naviwSize);
-            graphics.drawImage(navises,
-                               x - (ci % 9) * naviwSize - naviwSize2, y - (ci / 9) * naviwSize - naviwSize2,
+            graphics.setClip(x - arrowSize2, y - arrowSize2, arrowSize, arrowSize);
+            graphics.drawImage(courses,
+                               x - (ci % 9) * arrowSize - arrowSize2, y - (ci / 9) * arrowSize  - arrowSize2,
                                anchor);
             graphics.setClip(0, 0, Desktop.width, Desktop.height);
-        } else {
+        }
+    }
+
+    public static void drawNaviw(Graphics graphics, final float course,
+                                 final int x, final int y, final int anchor) {
+        final int courseInt = ((int) course) % 360;
+
+        if (!naviwsFull) {
             int cr = courseInt / 90;
             int cwo = courseInt % 90;
             int ci = (cwo + 5) / 10;
@@ -359,6 +345,20 @@ public final class NavigationScreens {
             graphics.drawRegion(navises,
                                 ci * naviwSize, 0, naviwSize, naviwSize,
                                 ti, x - naviwSize2, y - naviwSize2, anchor);
+        } else {
+            int ci = courseInt / 10;
+            int cr = courseInt % 10;
+            if (cr > 5) {
+                ci++;
+                if (ci == 36) {
+                    ci = 0;
+                }
+            }
+            graphics.setClip(x - naviwSize2, y - naviwSize2, naviwSize, naviwSize);
+            graphics.drawImage(navises,
+                               x - (ci % 9) * naviwSize - naviwSize2, y - (ci / 9) * naviwSize - naviwSize2,
+                               anchor);
+            graphics.setClip(0, 0, Desktop.width, Desktop.height);
         }
     }
 

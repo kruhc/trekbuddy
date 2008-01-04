@@ -76,11 +76,10 @@ final class GmiCalibration extends Calibration {
 
         // close reader
         reader.close();
-        reader = null; // gc hint
 
-        // dispose tokenizer
-        tokenizer.dispose();
-        tokenizer = null; // gc hint
+        // gc hints
+        reader = null;
+        tokenizer = null;
 
         doFinal(null, LATLON_PROJ_SETUP, xy, ll);
 

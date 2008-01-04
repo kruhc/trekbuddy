@@ -45,6 +45,8 @@ public final class GpxTracklog extends Thread {
     private static final String DEFAULT_NAMESPACE   = null;
     private static final String EXT_NAMESPACE       = "urn:net:trekbuddy:1.0:nmea:rmc";
     private static final String EXT_PREFIX          = "rmc";
+    private static final String GSM_NAMESPACE       = "urn:net:trekbuddy:1.0:gsm";
+    private static final String GSM_PREFIX          = "gsm";
 
     private static final float  MIN_SPEED_WALK = 1F;        // 1 m/s ~ 3.6 km/h
     private static final float  MIN_SPEED_BIKE = 5F;        // 5 m/s ~ 18 km/h
@@ -74,6 +76,8 @@ public final class GpxTracklog extends Thread {
     private static final String ELEMENT_EXTENSIONS  = "extensions";
     private static final String ELEMENT_COURSE      = "course";
     private static final String ELEMENT_SPEED       = "speed";
+    private static final String ELEMENT_CELLID      = "cellid";
+    private static final String ELEMENT_LAC         = "lac";
 
     private static final String ATTRIBUTE_UTF_8     = "UTF-8";
     private static final String ATTRIBUTE_VERSION   = "version";
@@ -91,8 +95,7 @@ public final class GpxTracklog extends Thread {
     private final Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone("GMT"));
     private final Date date = new Date();
 
-    private final StringBuffer sb = new StringBuffer(24);
-    private final char[] sbChars = new char[24];
+    private final char[] sbChars = new char[32];
     
     private int type;
     private Callback callback;
@@ -170,12 +173,8 @@ public final class GpxTracklog extends Thread {
             KXmlSerializer serializer = null;
 
             try {
-/* buffering is in serializer by default in OutputStreamWriter */                
-//                if (type == LOG_TRK) {
-//                    output = new cz.kruch.j2se.io.BufferedOutputStream(file.openOutputStream(), 4096);
-//                } else {
-                    output = file.openOutputStream();
-//                }
+                /* buffering is in serializer by default in OutputStreamWriter */                
+                output = file.openOutputStream();
 
                 // signal recording start
                 callback.invoke(new Integer(CODE_RECORDING_START), null, this);
@@ -187,6 +186,9 @@ public final class GpxTracklog extends Thread {
                 serializer.startDocument(ATTRIBUTE_UTF_8, null);
                 serializer.setPrefix(null, GPX_1_1_NAMESPACE);
                 serializer.setPrefix(EXT_PREFIX, EXT_NAMESPACE);
+                if (Config.gpxGsmInfo) {
+                    serializer.setPrefix(GSM_PREFIX, GSM_NAMESPACE);
+                }
                 serializer.startTag(DEFAULT_NAMESPACE, ELEMENT_GPX);
                 serializer.attribute(DEFAULT_NAMESPACE, ATTRIBUTE_VERSION, "1.1");
                 serializer.attribute(DEFAULT_NAMESPACE, ATTRIBUTE_CREATOR, creator);
@@ -397,9 +399,18 @@ public final class GpxTracklog extends Thread {
                 serializer.endTag(DEFAULT_NAMESPACE, "hdop");
             }
 */
+            /*
+             * extensions - nmea:rmc and gsm
+             */
             final float course = l.getCourse();
             final float speed = l.getSpeed();
-            if (course > -1F || speed > -1F) {
+            String cellid = null;
+            String lac = null;
+            if (Config.gpxGsmInfo) {
+                cellid = System.getProperty("com.sonyericsson.net.cellid");
+                lac = System.getProperty("com.sonyericsson.net.lac");
+            }
+            if (course > -1F || speed > -1F || cellid != null || lac != null) {
                 serializer.startTag(DEFAULT_NAMESPACE, ELEMENT_EXTENSIONS);
                 if (course > -1F) {
                     serializer.startTag(EXT_NAMESPACE, ELEMENT_COURSE);
@@ -412,6 +423,16 @@ public final class GpxTracklog extends Thread {
                     i = doubleToChars(speed, 1);
                     serializer.text(sbChars, 0, i);
                     serializer.endTag(EXT_NAMESPACE, ELEMENT_SPEED);
+                }
+                if (cellid != null) {
+                    serializer.startTag(GSM_NAMESPACE, ELEMENT_CELLID);
+                    serializer.text(cellid);
+                    serializer.endTag(GSM_NAMESPACE, ELEMENT_CELLID);
+                }
+                if (lac != null) {
+                    serializer.startTag(GSM_NAMESPACE, ELEMENT_LAC);
+                    serializer.text(lac);
+                    serializer.endTag(GSM_NAMESPACE, ELEMENT_LAC);
                 }
                 serializer.endTag(DEFAULT_NAMESPACE, ELEMENT_EXTENSIONS);
             }
@@ -628,10 +649,9 @@ public final class GpxTracklog extends Thread {
         date.setTime(timestamp);
         calendar.setTime(date);
 
-        StringBuffer sb = this.sb;
-        sb.delete(0, sb.length());
+        final StringBuffer sb = cz.kruch.track.TrackingMIDlet.newInstance(32);
+        final Calendar calendar = this.calendar;
 
-        Calendar calendar = this.calendar;
         NavigationScreens.append(sb, calendar.get(Calendar.YEAR)).append('-');
         appendTwoDigitStr(sb, calendar.get(Calendar.MONTH) + 1).append('-');
         appendTwoDigitStr(sb, calendar.get(Calendar.DAY_OF_MONTH)).append('T');
@@ -640,26 +660,33 @@ public final class GpxTracklog extends Thread {
         appendTwoDigitStr(sb, calendar.get(Calendar.SECOND));
         sb.append('Z'/*CALENDAR.getTimeZone().getID()*/);
 
-        sb.getChars(0, sb.length(), sbChars, 0);
+        final int result = sb.length();
+        sb.getChars(0, result, sbChars, 0);
 
-        return sb.length();
+        cz.kruch.track.TrackingMIDlet.releaseInstance(sb);
+
+        return result;
     }
 
     private int doubleToChars(final double value, final int precision) {
-        StringBuffer sb = this.sb;
-        sb.delete(0, sb.length());
+        final StringBuffer sb = cz.kruch.track.TrackingMIDlet.newInstance(32);
 
         NavigationScreens.append(sb, value, precision);
 
-        sb.getChars(0, sb.length(), sbChars, 0);
+        final int result = sb.length();
+        sb.getChars(0, result, sbChars, 0);
 
-        return sb.length();
+        cz.kruch.track.TrackingMIDlet.releaseInstance(sb);
+
+        return result;
     }
 
     public static String dateToFileDate(long time) {
         Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone("GMT"));
         calendar.setTime(new Date(time));
-        StringBuffer sb = new StringBuffer(24);
+
+        final StringBuffer sb = cz.kruch.track.TrackingMIDlet.newInstance(32);
+
         NavigationScreens.append(sb, calendar.get(Calendar.YEAR)).append('-');
         appendTwoDigitStr(sb, calendar.get(Calendar.MONTH) + 1).append('-');
         appendTwoDigitStr(sb, calendar.get(Calendar.DAY_OF_MONTH)).append('-');
@@ -667,7 +694,10 @@ public final class GpxTracklog extends Thread {
         appendTwoDigitStr(sb, calendar.get(Calendar.MINUTE)).append('-');
         appendTwoDigitStr(sb, calendar.get(Calendar.SECOND));
 
-        return sb.toString();
+        String result = sb.toString();
+        cz.kruch.track.TrackingMIDlet.releaseInstance(sb);
+
+        return result;
     }
 
     private static StringBuffer appendTwoDigitStr(StringBuffer sb, int i) {

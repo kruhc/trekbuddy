@@ -49,8 +49,9 @@ abstract class Calibration {
 
     protected static final ProjectionSetup LATLON_PROJ_SETUP = new ProjectionSetup(ProjectionSetup.PROJ_LATLON);
 
-    // map path
+    // map path and filename
     private String path;
+    protected String imgname;
 
     // map dimensions
     protected int width = -1;
@@ -73,13 +74,17 @@ abstract class Calibration {
     protected Calibration() {
     }
 
-    protected void init(String path) {
+    protected final void init(String path) {
         this.path = path;
         this.proximite = new Position(0, 0);
     }
 
     public String getPath() {
         return path;
+    }
+
+    public String getImgname() {
+        return imgname;
     }
 
     public int getWidth() {
@@ -102,7 +107,11 @@ abstract class Calibration {
         return datum;
     }
 
-    boolean isWithin(QualifiedCoordinates coordinates) {
+    QualifiedCoordinates[] getRange() {
+        return range;
+    }
+
+    final boolean isWithin(QualifiedCoordinates coordinates) {
 /* too rough
         final double lat = coordinates.getLat();
         final double lon = coordinates.getLon();
@@ -121,11 +130,7 @@ abstract class Calibration {
         return false;
     }
 
-    QualifiedCoordinates[] getRange() {
-        return range;
-    }
-
-    QualifiedCoordinates transform(Position position) {
+    final QualifiedCoordinates transform(Position position) {
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("transform " + position);
 //#endif
@@ -147,7 +152,7 @@ abstract class Calibration {
         return qc;
     }
 
-    Position transform(QualifiedCoordinates coordinates) {
+    final Position transform(QualifiedCoordinates coordinates) {
         GeodeticPosition gp;
 
         if (calibrationGp instanceof CartesianCoordinates) {
@@ -194,8 +199,8 @@ abstract class Calibration {
         return proximite;
     }
 
-    protected void doFinal(Datum datum, ProjectionSetup setup,
-                           Vector xy, Vector ll) throws InvalidMapException {
+    protected final void doFinal(Datum datum, ProjectionSetup setup,
+                                 Vector xy, Vector ll) throws InvalidMapException {
         // assertions
         if ((xy.size() < 2) || (ll.size() < 2)) {
             throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_TOO_FEW_CALPOINTS));

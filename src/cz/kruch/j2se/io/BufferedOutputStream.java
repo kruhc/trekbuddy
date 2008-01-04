@@ -14,8 +14,11 @@ import java.io.IOException;
  * Buffered output stream.
  */
 public final class BufferedOutputStream extends OutputStream {
+    /** underyling stream */
     private OutputStream out;
-    private byte buf[];
+    /** write buffer */
+    private byte buffer[];
+    /** number of bytes in the buffer */
     private int count;
 
     /**
@@ -23,14 +26,14 @@ public final class BufferedOutputStream extends OutputStream {
      *
      * @param out underlying output stream
      * @param size buffer size
-     * @throws IllegalArgumentException if size &lt;= 0.
+     * @throws IllegalArgumentException if size <= 0.
      */
     public BufferedOutputStream(OutputStream out, int size) {
         if (size <= 0) {
             throw new IllegalArgumentException("Buffer size <= 0");
         }
         this.out = out;
-        this.buf = new byte[size];
+        this.buffer = new byte[size];
     }
 
     /*
@@ -38,14 +41,14 @@ public final class BufferedOutputStream extends OutputStream {
      */
 
     public void write(int b) throws IOException {
-        if (count >= buf.length) {
+        if (count >= buffer.length) {
             flushBuffer();
         }
-        buf[count++] = (byte) b;
+        buffer[count++] = (byte) b;
     }
 
     public void write(byte b[], int off, int len) throws IOException {
-        if (len >= buf.length) {
+        if (len >= buffer.length) {
             /* If the request length exceeds the size of the output buffer,
                flush the output buffer and then write the data directly.
                In this way buffered streams will cascade harmlessly. */
@@ -53,10 +56,10 @@ public final class BufferedOutputStream extends OutputStream {
             out.write(b, off, len);
             return;
         }
-        if (len > buf.length - count) {
+        if (len > buffer.length - count) {
             flushBuffer();
         }
-        System.arraycopy(b, off, buf, count, len);
+        System.arraycopy(b, off, buffer, count, len);
         count += len;
     }
 
@@ -71,8 +74,8 @@ public final class BufferedOutputStream extends OutputStream {
         } catch (IOException e) {
             // ignored
         }
-        buf = null; // gc hint
         out.close();
+        out = null; // gc hint
     }
 
     /*
@@ -81,7 +84,7 @@ public final class BufferedOutputStream extends OutputStream {
 
     private void flushBuffer() throws IOException {
         if (count > 0) {
-            out.write(buf, 0, count);
+            out.write(buffer, 0, count);
             count = 0;
         }
     }

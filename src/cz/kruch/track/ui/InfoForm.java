@@ -27,6 +27,7 @@ import java.util.TimeZone;
 import cz.kruch.track.configuration.Config;
 import cz.kruch.track.maps.Map;
 import cz.kruch.track.Resources;
+import api.file.File;
 
 /**
  * Info form.
@@ -69,31 +70,45 @@ final class InfoForm extends Form implements CommandListener {
         final long freeMemory = Runtime.getRuntime().freeMemory();
 
         // items
+        final StringBuffer sb = cz.kruch.track.TrackingMIDlet.newInstance(64);
         append(newItem("Platform", cz.kruch.track.TrackingMIDlet.getPlatform()));
-        append(newItem("Memory", Long.toString(totalMemory) + "/" + Long.toString(freeMemory)));
-        append(newItem("ExtraJsr", (api.file.File.fsType == api.file.File.FS_JSR75 || api.file.File.fsType == api.file.File.FS_SXG75 ? "75 " : "")
-                                   + (cz.kruch.track.TrackingMIDlet.jsr82 ? "82 " : "")
-                                   + (cz.kruch.track.TrackingMIDlet.jsr120 ? "120 " : "")
-                                   + (cz.kruch.track.TrackingMIDlet.jsr135 ? "135 " : "")
-                                   + (cz.kruch.track.TrackingMIDlet.jsr179 ? "179" : "")));
+        sb.delete(0, sb.length()).append(totalMemory).append('/').append(freeMemory);
+        append(newItem("Memory", sb.toString()));
+        sb.delete(0, sb.length());
+        if (File.fsType == File.FS_JSR75 || File.fsType == File.FS_SXG75)
+            sb.append("75 ");
+        if (cz.kruch.track.TrackingMIDlet.jsr82)
+            sb.append("82 ");
+        if (cz.kruch.track.TrackingMIDlet.jsr120)
+            sb.append("120 ");
+        if (cz.kruch.track.TrackingMIDlet.jsr120)
+            sb.append("135 ");
+        if (cz.kruch.track.TrackingMIDlet.jsr179)
+            sb.append("179 ");
+        append(newItem("ExtraJsr", sb.toString()));
         if (cz.kruch.track.TrackingMIDlet.getFlags() != null) {
             append(newItem("AppFlags", cz.kruch.track.TrackingMIDlet.getFlags()));
         }
-        append(newItem("I18n", System.getProperty("microedition.locale") + " " + System.getProperty("microedition.encoding")));
-        append(newItem("Fs", "type? " + Integer.toString(api.file.File.fsType)
-                             + "; resetable? " + Integer.toString(cz.kruch.track.maps.Map.fileInputStreamResetable)));
-        append(newItem("Ports", cz.kruch.track.TrackingMIDlet.hasPorts() + "; " + System.getProperty("microedition.commports")));
-        append(newItem("TimeZone", TimeZone.getDefault().getID() + "; " + TimeZone.getDefault().useDaylightTime() + "; " + TimeZone.getDefault().getRawOffset()));
-        append(newItem("Desktop", "S60 renderer? " + Config.S60renderer
-                                  + "; hasRepeatEvents? " + Desktop.hasRepeatEvents
-                                  + "; " + Desktop.screen.getWidth() + "x" + Desktop.screen.getHeight()));
+        sb.delete(0, sb.length()).append(System.getProperty("microedition.locale")).append(' ').append(System.getProperty("microedition.encoding"));
+        append(newItem("I18n", sb.toString()));
+        sb.delete(0, sb.length()).append(File.fsType).append("; resetable? ").append(cz.kruch.track.maps.Map.fileInputStreamResetable);
+        append(newItem("Fs", sb.toString()));
+        sb.delete(0, sb.length()).append(cz.kruch.track.TrackingMIDlet.hasPorts()).append("; ").append(System.getProperty("microedition.commports"));
+        append(newItem("Ports", sb.toString()));
+        sb.delete(0, sb.length()).append(TimeZone.getDefault().getID()).append("; ").append(TimeZone.getDefault().useDaylightTime()).append("; ").append(TimeZone.getDefault().getRawOffset());
+        append(newItem("TimeZone", sb.toString()));
+        sb.delete(0, sb.length()).append("safe renderer? ").append(Config.S60renderer).append("; hasRepeatEvents? ").append(Desktop.hasRepeatEvents).append("; ").append(Desktop.screen.getWidth()).append('x').append(Desktop.screen.getHeight());
+        append(newItem("Desktop", sb.toString()));
         if (map == null) {
             append(newItem("Map", ""));
         } else {
-            append(newItem("Map", "datum: " + map.getDatum() + " projection: " + map.getProjection()));
+            sb.delete(0, sb.length()).append("datum: ").append(map.getDatum()).append("; projection: ").append(map.getProjection());
+            append(newItem("Map", sb.toString()));
         }
-        append(new StringItem("ProviderStatus", (ps == null ? "" : ps.toString()) + "; stalls=" + cz.kruch.track.location.StreamReadingLocationProvider.stalls + "; restarts=" + cz.kruch.track.location.StreamReadingLocationProvider.restarts + "; syncs=" + cz.kruch.track.location.StreamReadingLocationProvider.syncs + "; mismatches=" + cz.kruch.track.location.StreamReadingLocationProvider.mismatches + "; checksums=" + cz.kruch.track.location.StreamReadingLocationProvider.checksums));
+        sb.delete(0, sb.length()).append((ps == null ? "" : ps.toString())).append("; stalls=").append(cz.kruch.track.location.StreamReadingLocationProvider.stalls).append("; restarts=").append(cz.kruch.track.location.StreamReadingLocationProvider.restarts).append("; syncs=").append(cz.kruch.track.location.StreamReadingLocationProvider.syncs).append("; mismatches=").append(cz.kruch.track.location.StreamReadingLocationProvider.mismatches).append("; checksums=").append(cz.kruch.track.location.StreamReadingLocationProvider.checksums);
+        append(new StringItem("ProviderStatus", sb.toString()));
         append(new StringItem("ProviderError", le == null ? "" : le.toString()));
+        cz.kruch.track.TrackingMIDlet.releaseInstance(sb);
     }
 
     public void commandAction(Command command, Displayable displayable) {

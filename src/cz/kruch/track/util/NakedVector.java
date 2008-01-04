@@ -20,14 +20,13 @@ import java.util.Vector;
 
 public final class NakedVector extends Vector {
 
-    public NakedVector() {
-    }
-
     public NakedVector(int initialCapacity, int capacityIncrement) {
         super(initialCapacity, capacityIncrement);
     }
 
-    public Object[] getData() {
-        return super.elementData;
+    public Object[] stealData() {
+        Object[] result = super.elementData;
+        super.elementData = null;
+        return result;
     }
 }

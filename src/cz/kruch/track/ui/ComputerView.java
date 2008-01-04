@@ -202,7 +202,6 @@ final class ComputerView extends View implements Runnable, CommandListener {
 
     private SimpleCalendar TIME_CALENDAR, ETA_CALENDAR;
     private CharArrayTokenizer tokenizer;
-    private StringBuffer sb;
     private char[] text;
 
     /* profile vars */
@@ -252,8 +251,7 @@ final class ComputerView extends View implements Runnable, CommandListener {
         }
 
         // init vars
-        this.sb = new StringBuffer(64);
-        this.text = new char[64];
+        this.text = new char[128];
         this.tokenizer = new CharArrayTokenizer();
 
         // init shared
@@ -640,18 +638,20 @@ final class ComputerView extends View implements Runnable, CommandListener {
             }
         } else {
             final CharArrayTokenizer tokenizer = this.tokenizer;
-            final StringBuffer sb = this.sb;
             final char[] text = this.text;
             final int[] colors = this.colors;
             final Vector areas = this.areas;
             final int mode = Config.dayNight;
             final float[] valuesFloat = this.valuesFloat;
+
             int state = 0;
 
             graphics.setColor(colors[mode * 4]);
             graphics.fillRect(0,0, w, h);
             graphics.setColor(colors[mode * 4 + 1]);
 
+            final StringBuffer sb = cz.kruch.track.TrackingMIDlet.newInstance(32);
+            
             for (int N = areas.size(), i = 0; i < N; i++) {
                 Area area = (Area) areas.elementAt(i);
 
@@ -955,7 +955,7 @@ final class ComputerView extends View implements Runnable, CommandListener {
                     }
                 }
 
-                int l = sb.length();
+                final int l = sb.length();
                 if (l > 0) {
                     sb.getChars(0, sb.length(), text, 0);
                     graphics.setClip(area.x, area.y, area.w, area.h);
@@ -970,6 +970,8 @@ final class ComputerView extends View implements Runnable, CommandListener {
                     }
                     graphics.setClip(0, 0, w, h);
                 }
+
+                cz.kruch.track.TrackingMIDlet.releaseInstance(sb);
             }
         }
 
@@ -1150,8 +1152,7 @@ final class ComputerView extends View implements Runnable, CommandListener {
 
     private String loadProfile(String filename, InputStream in) throws IOException, XmlPullParserException {
         // instantiate parser
-        KXmlParser parser = new KXmlParser();
-        parser.setNameCache(NAME_CACHE);
+        KXmlParser parser = new KXmlParser(NAME_CACHE);
 
         try {
             // set input
@@ -1213,10 +1214,12 @@ final class ComputerView extends View implements Runnable, CommandListener {
                                     }
                                 } else {
                                     source = parser.getAttributeValue(null, ATTR_SYSTEM);
-                                    final int code = Integer.parseInt(source, 16);
-                                    fonts.put(name, Font.getFont((code & 0xFF0000) >> 16,
-                                                                 (code & 0x00FF00) >> 8,
-                                                                 (code & 0x0000FF)));
+                                    if (source != null) {
+                                        final int code = Integer.parseInt(source, 16);
+                                        fonts.put(name, Font.getFont((code >> 16) & 0x000000FF,
+                                                                     (code >> 8) & 0x000000FF,
+                                                                     (code) & 0x0000FF));
+                                    }
                                 }
                             }
                         } else if (TAG_COLORS.equals(tag)) {

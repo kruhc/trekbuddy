@@ -245,7 +245,7 @@ public final class Desktop extends GameCanvas
         consoleInit(g);
 
         // boot sequence
-        consoleShow(g, lineY, "TrekBuddy \u00a9 2007 KrUcH");
+        consoleShow(g, lineY, "TrekBuddy \u00a9 2008 KrUcH");
         lineY += lineHeight;
         String lc = Resources.getString(Resources.BOOT_LOCAL_COPY);
         if (lc.length() > 0) {
@@ -554,7 +554,7 @@ public final class Desktop extends GameCanvas
         if (mapPath.indexOf('?') > -1) {
 
             // get atlas index path
-            CharArrayTokenizer tokenizer = new CharArrayTokenizer();
+            final CharArrayTokenizer tokenizer = new CharArrayTokenizer();
             tokenizer.init(mapPath, new char[]{ '?', '&','=' }, false);
             String token = tokenizer.next().toString();
 
@@ -572,9 +572,6 @@ public final class Desktop extends GameCanvas
             tokenizer.next(); // map
             mapName = tokenizer.next().toString();
             mapPath = _atlas.getMapURL(mapName);
-
-            // cleanup
-            tokenizer.dispose();
         }
 
         // load map now
@@ -823,6 +820,11 @@ public final class Desktop extends GameCanvas
     }
 
     public void commandAction(Command command, Displayable displayable) {
+        if (keylock) {
+            showWarning(Resources.getString(Resources.DESKTOP_MSG_KEYS_LOCKED), null, null);
+            return;
+        }
+        
         if (command == cmdInfo) {
             (new InfoForm()).show(this, isTracking() ? provider.getThrowable() : providerError,
                                   isTracking() ? provider.getStatus() : providerStatus, map);
@@ -1459,7 +1461,7 @@ public final class Desktop extends GameCanvas
     private static void showAlert(AlertType type, String message, int timeout,
                                   Displayable nextDisplayable) {
         Alert alert = new Alert(cz.kruch.track.TrackingMIDlet.APP_TITLE,
-                                message, null, type);
+                                message, null, Config.noSounds ? null : type);
         alert.setTimeout(timeout);
         if (nextDisplayable == null) {
             display.setCurrent(alert);

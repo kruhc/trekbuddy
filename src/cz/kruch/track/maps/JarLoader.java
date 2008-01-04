@@ -37,11 +37,13 @@ final class JarLoader extends Map.Loader /*implements Atlas.Loader*/ {
     public void init(Map map, String url) throws IOException {
         super.init(map, url);
 
+        // input
         InputStream in = null;
         LineReader reader = null;
 
         try {
-            String path = null;
+            // embedded map path
+            String path;
 
             // look for Ozi calibration first
             in = JarLoader.class.getResourceAsStream(path = DEFAULT_OZI_MAP);
@@ -78,13 +80,12 @@ final class JarLoader extends Map.Loader /*implements Atlas.Loader*/ {
             CharArrayTokenizer.Token token = reader.readToken(false);
             while (token != null) {
                 addSlice(token);
+                token = null; // gc hint
                 token = reader.readToken(false);
             }
 //#ifdef __LOG__
             if (log.isEnabled()) log.debug("in-jar .set processed");
 //#endif
-        } catch (Throwable t) {
-            throwable = t;
         } finally {
 
             // close stream
@@ -114,18 +115,19 @@ final class JarLoader extends Map.Loader /*implements Atlas.Loader*/ {
     }
 
     public void loadSlice(Slice slice) throws IOException {
-        // reuse sb
-        StringBuffer pathSb = this.pathSb;
-        pathSb.delete(0, pathSb.length());
+        // path sb
+        final StringBuffer sb = cz.kruch.track.TrackingMIDlet.newInstance(32);
 
         // construct slice path
-        pathSb.append(RESOURCES_SET_DIR).append(basename);
+        sb.append(RESOURCES_SET_DIR).append(basename);
         if (!isGPSka) {
-            slice.appendPath(pathSb);
+            slice.appendPath(sb);
         }
+        sb.append(extension);
 
         // get slice path
-        String slicePath = pathSb.toString();
+        String slicePath = sb.toString();
+        cz.kruch.track.TrackingMIDlet.releaseInstance(sb);
 
         // input stream
         InputStream in = null;

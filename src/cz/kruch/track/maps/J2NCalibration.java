@@ -43,7 +43,7 @@ class J2NCalibration extends Calibration {
 
         Vector xy = new Vector();
         Vector ll = new Vector();
-        KXmlParser parser = new KXmlParser();
+        KXmlParser parser = new KXmlParser(null);
 
         try {
             parser.setInput(in, null); // null is for encoding autodetection
@@ -76,7 +76,7 @@ class J2NCalibration extends Calibration {
                         if (currentTag != null) {
                             String text = parser.getText().trim();
                             if (TAG_NAME.equals(currentTag)) {
-//                                    this.path = text + ".png";
+                                imgname = text;
                             } else if (TAG_LATITUDE.equals(currentTag)) {
                                 lat0 = Double.parseDouble(text);
                             } else if (TAG_LONGITUDE.equals(currentTag)) {
@@ -106,6 +106,7 @@ class J2NCalibration extends Calibration {
             }
         }
 
+        // finalize
         doFinal(null, LATLON_PROJ_SETUP, xy, ll);
 
         // gc hints

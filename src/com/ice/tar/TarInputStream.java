@@ -29,12 +29,10 @@ import java.io.IOException;
  *
  * @author Timothy Gerard Endres, <time@gjt.org>
  * @version $Revision$
- * @see TarHeader
- * @see TarEntry
- *
- * @modified by Ales Pour <kruhc@seznam.cz> 
+ * @modified by Ales Pour <kruhc@seznam.cz>
  */
 public final class TarInputStream extends InputStream {
+
     // default block size
     public static final int DEFAULT_RCDSIZE = 512;
 
@@ -48,22 +46,8 @@ public final class TarInputStream extends InputStream {
     private byte[] headerBuffer;
     private TarEntry currEntry;
 
-    /* rewind support */
+    /* rewind/skip support */
     private long streamOffset;
-
-    /* for skip bug workarounds */
-    private static boolean skipAsRead;
-    private static boolean siemensIo;
-
-    /* broken skip */
-    public static void setSafeSkip(final boolean flag) {
-        skipAsRead = flag;
-    }
-
-    /* siemens skip */
-    public static void setSiemensIo(final boolean flag) {
-        siemensIo = flag;
-    }
 
     /**
      * Creates tar input stream.
@@ -89,9 +73,9 @@ public final class TarInputStream extends InputStream {
     }
 
     /**
-     * Closes this stream. Closing udnerlying stream had to be commented out,
-     * because Image.createImage() closes the stream, which is something we do not
-     * want to happen if we want to happen.
+     * Closes this stream. Closing underlying stream had to be commented out,
+     * because Image.createImage() on SE phones closes the stream,
+     * which is something we do not want to happen if we want to happen.
      */
     public void close() throws IOException {
 /* underlying stream is closed elsewhere
@@ -116,59 +100,54 @@ public final class TarInputStream extends InputStream {
     }
 
     /**
-     * Skips bytes using underlying stream skip(long bytes) method.
+     * Skips bytes using underlying stream skip(long n) method.
      *
      * @param n number of bytes to skip
      * @return number of bytes actually skipped
      * @throws IOException
      */
     public long skip(long n) throws IOException {
-        if (n > 0) {
-            /*
-             * Siemens bug workaround. It appears as if Siemens uses seek() but with
-             * wrong origin (START, not CURRENT).
-             */
-            if (siemensIo) {
-                n += this.streamOffset;
-                this.streamOffset = 0;
-            }
 
-            long num = n;
-    
-            for (; num > 0;) {
-                final long numRead;
-
-                // use skip() method
-                if (!skipAsRead) {
-                    numRead = this.in.skip(num);
-                    /*
-                     * Check for SE bug - skip() returns stream position (ie. return
-                     * value of seek() :-) ).
-                     */
-                    if (numRead == this.streamOffset + n) {
-                        num = numRead; // trick - 'for' cycle will quit
-                    }
-                } else { // skip via read() - misuse header buffer ;-)
-                    numRead = this.in.read(headerBuffer, 0, num > DEFAULT_RCDSIZE ? DEFAULT_RCDSIZE : (int) num);
-                }
-
-                if (numRead < 0) {
-                    break;
-                }
-
-                num -= numRead;
-            }
-
-            if (num > 0) {
-                throw new IOException(num + " bytes left to be skipped");
-            }
-
-            this.streamOffset += (n - num);
-
-            return (n - num);
+        if (cz.kruch.track.configuration.Config.siemensIo && n > 0) {
+            n += this.streamOffset;
+            this.streamOffset = 0;
         }
 
-        return 0;
+        long num = n;
+
+        for (; num > 0;) {
+
+            final long numRead;
+
+            // use skip method
+            if (cz.kruch.track.maps.Map.useSkip || cz.kruch.track.configuration.Config.siemensIo) {
+                numRead = this.in.skip(num);
+                /*
+                 * Check for SE bug, where skip() returns stream position,
+                 * ie. return value of seek() :-)
+                 * Fortunately this is also compatible with broken Siemens skip() :-)
+                 */
+                if (numRead == this.streamOffset + n) {
+                    num = numRead; // trick - 'for' cycle will quit
+                }
+            } else { // use read to 'skip' - misuse header buffer here ;-)
+                numRead = this.in.read(headerBuffer, 0, num > DEFAULT_RCDSIZE ? DEFAULT_RCDSIZE : (int) num);
+            }
+
+            if (numRead < 0) {
+                break;
+            }
+
+            num -= numRead;
+        }
+
+        if (num > 0) {
+            throw new IOException(num + " bytes left to be skipped");
+        }
+
+        this.streamOffset += (n - num);
+
+        return (n - num);
     }
 
     /**
@@ -187,20 +166,6 @@ public final class TarInputStream extends InputStream {
      */
     public void setStreamOffset(long streamOffset) {
         this.streamOffset = streamOffset;
-    }
-
-    /**
-     * Rewinds the stream to given offset.
-     *
-     * @param position stream position
-     * @throws IOException if something goes wrong
-     */
-    public void rewind(long position) throws IOException {
-        if (position < this.streamOffset) {
-            throw new IllegalStateException("Stream is dirty");
-        }
-
-        this.skip(position - this.streamOffset);
     }
 
     /**
@@ -240,9 +205,7 @@ public final class TarInputStream extends InputStream {
 
         if (isEOFBlock(headerBuf)) {
             this.hasHitEOF = true;
-        }
-
-        if (!this.hasHitEOF) {
+        } else {
             try {
                 this.currEntry.init(headerBuf, entryPosition);
                 this.entryOffset = 0;
@@ -323,7 +286,7 @@ public final class TarInputStream extends InputStream {
         int offset = 0;
         int bytesNeeded = DEFAULT_RCDSIZE;
         for (; bytesNeeded > 0;) {
-            final long numBytes = this.in.read(this.headerBuffer, offset, bytesNeeded);
+            final int numBytes = this.in.read(this.headerBuffer, offset, bytesNeeded);
 
             if (numBytes == -1) {
                 throw new IOException("Broken archive - EOF block not found");
@@ -349,7 +312,7 @@ public final class TarInputStream extends InputStream {
      * @param block block data to check
      * @return <code>true</code> if block is end of archive; <code>false</code> otherwise
      */
-    private static boolean isEOFBlock(byte[] block) {
+    private static boolean isEOFBlock(final byte[] block) {
         for (int i = DEFAULT_RCDSIZE; --i >= 0; ) {
             if (block[i] != 0) {
                 return false;

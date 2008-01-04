@@ -45,6 +45,10 @@ final class Motorola1000File extends File {
         ((com.motorola.io.file.FileConnection) fc).create();
     }
 
+    public void delete() throws IOException {
+        ((com.motorola.io.file.FileConnection) fc).delete();
+    }
+
     public void mkdir() throws IOException {
         ((com.motorola.io.file.FileConnection) fc).mkdir();
     }
@@ -67,5 +71,9 @@ final class Motorola1000File extends File {
 
     public void setFileConnection(String path) throws IOException {
         traverse(path);
+    }
+
+    public void setWritable(boolean writable) throws IOException {
+        ((com.motorola.io.file.FileConnection) fc).setWriteable(writable);
     }
 }

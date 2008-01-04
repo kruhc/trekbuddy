@@ -81,7 +81,7 @@
 1347=Failed to parse SET file
 1348=Invalid atlas URL
 1349=Invalid map URL
-1350=Invalid slice filename
+1350=Invalid slice filename:
 1351=Invalid map dimension
 1352=Invalid point
 1353=Invalid projection setup
@@ -116,6 +116,7 @@
 1383=NMEA Playback
 1383=NMEA Playback
 1384=Received location info from:
+1385=Tileset file not found:
 
 # navigation commands
 2000=RouteAlong
@@ -232,6 +233,7 @@
 3617=log only valid
 3618=O2 Germany
 3619=Filter Depth
+3620=log gsm info
 
 # settings forms/fields/values (Navigation)
 3700=Wpt Proximity
@@ -249,6 +251,7 @@
 3802=safe renderer
 3803=forced GC
 3804=1-tile scroll
+3805=large atlases
 
 # info commands
 4000=Technical

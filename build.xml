@@ -7,7 +7,7 @@
     <property name="vendor" value="${external.product.vendor}"/>
     <property name="vendor.dir" value="${external.vendor.dir}"/>
     <property name="pre.extra" value="${external.pre.extra}"/>
-    <property name="description" value="GPS Tracking / Navigation"/>
+    <property name="description" value="GPS Tracking and Navigation"/>
 
     <property name="wtk.cldc.version" value="1.1"/>
     <property name="wtk.midp.version" value="2.0"/>
@@ -255,6 +255,9 @@
                 vendor="${vendor}"
                 version="${version}">
             <midlet name="TrekBuddy" class="cz.kruch.track.TrackingMIDlet" icon="/resources/icon.png"/>
+<!--
+            <midlet name="TrekBuddy-Cfg" class="cz.kruch.track.ConfiguratorMIDlet"/>
+-->
             <attribute name="MIDlet-Description" value="${description}"/>
             <attribute name="MIDlet-Info-URL" value="http://www.trekbuddy.net"/>
             <attribute name="MIDlet-Permissions-Opt" value="javax.microedition.io.Connector.file.read,javax.microedition.io.Connector.file.write,javax.microedition.io.Connector.bluetooth.client,javax.microedition.location.Location,javax.microedition.media.control.VideoControl.getSnapshot,javax.microedition.io.Connector.sms,javax.wireless.messaging.sms.receive,javax.wireless.messaging.sms.send,javax.microedition.io.Connector.comm,javax.microedition.io.Connector.cbs,javax.wireless.messaging.cbs.receive"/>
@@ -321,6 +324,7 @@
 -->
             <arg value="-keepnames class cz.** extends java.lang.Exception"/>
             <arg value="-keepnames class api.** extends java.lang.Exception"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.ConfiguratorMIDlet"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.util.NakedVector"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.util.Logger"/>
             <arg value="-whyareyoukeeping class com.symbian.gcf.NativeHelper"/>
@@ -353,6 +357,7 @@
 -->
             <arg value="-keepnames class cz.** extends java.lang.Exception"/>
             <arg value="-keepnames class api.** extends java.lang.Exception"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.ConfiguratorMIDlet"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.util.NakedVector"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.util.Logger"/>
             <arg value="-whyareyoukeeping class com.symbian.gcf.NativeHelper"/>
@@ -389,6 +394,9 @@
                 vendor="${vendor}"
                 version="${version}">
             <midlet name="TrekBuddy" class="cz.kruch.track.TrackingMIDlet" icon="/resources/icon.png"/>
+<!--
+            <midlet name="TrekBuddy-Cfg" class="cz.kruch.track.ConfiguratorMIDlet"/>
+-->
             <attribute name="MIDlet-Description" value="${description}"/>
             <attribute name="MIDlet-Info-URL" value="http://www.trekbuddy.net"/>
             <attribute name="MIDlet-Permissions-Opt" value="javax.microedition.io.Connector.file.read,javax.microedition.io.Connector.file.write,javax.microedition.io.Connector.bluetooth.client,javax.microedition.location.Location,javax.microedition.media.control.VideoControl.getSnapshot,javax.microedition.io.Connector.sms,javax.wireless.messaging.sms.receive,javax.wireless.messaging.sms.send,javax.microedition.io.Connector.comm,javax.microedition.io.Connector.cbs,javax.wireless.messaging.cbs.receive"/>
@@ -400,19 +408,19 @@
 
     <target name="sign.and.update">
         <java jar="${wtk.home}\bin\JadTool.jar" fork="true">
-            <arg line="-addcert -certnum 1 -alias 'trekbuddy' -keystore keystores\trekbuddy.jks -inputjad dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad -outputjad dist/${vendor.dir}/${dist.dir}/_trekbuddy${suffix}.jad"/>
+            <arg line="-addcert -certnum 1 -alias 'trekbuddy2008' -keystore keystores\trekbuddy2008.jks -inputjad dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad -outputjad dist/${vendor.dir}/${dist.dir}/_trekbuddy${suffix}.jad"/>
         </java>
         <move file="dist/${vendor.dir}/${dist.dir}/_trekbuddy${suffix}.jad" tofile="dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad"/>
         <java jar="${wtk.home}\bin\JadTool.jar" fork="true">
-            <arg line="-addcert -certnum 2 -alias 'trekbuddy' -keystore keystores\trekbuddy.jks -inputjad dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad -outputjad dist/${vendor.dir}/${dist.dir}/_trekbuddy${suffix}.jad"/>
+            <arg line="-addcert -certnum 2 -alias 'trekbuddy2008' -keystore keystores\trekbuddy2008.jks -inputjad dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad -outputjad dist/${vendor.dir}/${dist.dir}/_trekbuddy${suffix}.jad"/>
         </java>
         <move file="dist/${vendor.dir}/${dist.dir}/_trekbuddy${suffix}.jad" tofile="dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad"/>
         <java jar="${wtk.home}\bin\JadTool.jar" fork="true">
-            <arg line="-addcert -certnum 3 -alias 'trekbuddy' -keystore keystores\trekbuddy.jks -inputjad dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad -outputjad dist/${vendor.dir}/${dist.dir}/_trekbuddy${suffix}.jad"/>
+            <arg line="-addcert -certnum 3 -alias 'trekbuddy2008' -keystore keystores\trekbuddy2008.jks -inputjad dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad -outputjad dist/${vendor.dir}/${dist.dir}/_trekbuddy${suffix}.jad"/>
         </java>
         <move file="dist/${vendor.dir}/${dist.dir}/_trekbuddy${suffix}.jad" tofile="dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad"/>
         <java jar="${wtk.home}\bin\JadTool.jar" fork="true">
-            <arg line="-addjarsig -alias 'trekbuddy' -keystore keystores\trekbuddy.jks -keypass changeit -jarfile dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jar -inputjad dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad -outputjad dist/${vendor.dir}/${dist.dir}/_trekbuddy${suffix}.jad"/>
+            <arg line="-addjarsig -alias 'trekbuddy2008' -keystore keystores\trekbuddy2008.jks -keypass changeit -jarfile dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jar -inputjad dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad -outputjad dist/${vendor.dir}/${dist.dir}/_trekbuddy${suffix}.jad"/>
         </java>
         <move file="dist/${vendor.dir}/${dist.dir}/_trekbuddy${suffix}.jad" tofile="dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad"/>
     </target>
@@ -453,7 +461,7 @@
         <echo>Using garnet.home=${garnet.home}</echo>
         <exec dir="${basedir}" newenvironment="true" executable="${garnet.home}\bin\jad2prc.exe">
             <env key="JAVA_HOME" value="${garnet.home}"/>
-            <arg line="-keystore keystores\j2me-manufacturer.keystore -vmOption -Xmx4M -o ${basedir}\dist/${vendor.dir}\palm\trekbuddy.prc ${basedir}\dist/${vendor.dir}\${dist.dir}\trekbuddy${suffix}.jad"/>
+            <arg line="-keystore keystores\j2me-manufacturer2008.keystore -vmOption -Xmx4M -o ${basedir}\dist/${vendor.dir}\palm\trekbuddy.prc ${basedir}\dist/${vendor.dir}\${dist.dir}\trekbuddy${suffix}.jad"/>
         </exec>
     </target>
 

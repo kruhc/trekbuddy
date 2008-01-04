@@ -64,7 +64,6 @@ final class MapViewer {
 
     private int scaleDx/*, dy*/;
     private int scaleLength;
-    private final StringBuffer sb;
     private final char[] sInfo;
     private int sInfoLength;
 
@@ -97,8 +96,7 @@ final class MapViewer {
         this.position = new Position(0, 0);
         this.slices = new Vector(4);
         this.slices2 = new Vector(4);
-        this.sb = new StringBuffer(8);
-        this.sInfo = new char[16];
+        this.sInfo = new char[32];
         this.course = this.course2 = -1F;
 /*
         this.trajectory = new QualifiedCoordinates[TRAJECTORY_LENGTH];
@@ -340,7 +338,7 @@ final class MapViewer {
             
             // first look in current set
             if (slice == null) {
-                Vector slices = this.slices;
+                final Vector slices = this.slices;
                 for (int i = slices.size(); --i >= 0; ) {
                     Slice s = (Slice) slices.elementAt(i);
                     if (s.isWithin(px, py)) {
@@ -556,11 +554,11 @@ final class MapViewer {
         synchronized (this) {
 
             // local ref for faster access
-            Vector _slices = slices;
+            final Vector slices = this.slices;
 
             // project slices to window
-            for (int N = _slices.size(), i = 0; i < N; i++) {
-                drawSlice(graphics, /*clip, */(Slice) _slices.elementAt(i));
+            for (int N = slices.size(), i = 0; i < N; i++) {
+                drawSlice(graphics, /*clip, */(Slice) slices.elementAt(i));
             }
 
         } // ~synchronized
@@ -585,8 +583,8 @@ final class MapViewer {
             }
 
             // local ref for faster access
-            Position[] positions = routePositions;
-            byte[] statuses = wptStatuses;
+            final Position[] positions = routePositions;
+            final byte[] statuses = wptStatuses;
 
             // draw route as line
             final int x = this.x;
@@ -733,8 +731,8 @@ final class MapViewer {
 
     private void drawPoi(Graphics graphics, Position position,
                          final byte status, final int idx) {
-        int x = position.getX() - this.x;
-        int y = position.getY() - this.y;
+        final int x = position.getX() - this.x;
+        final int y = position.getY() - this.y;
 
         // on screen?
         if (x > 0 && x < Desktop.width && y > 0 && y < Desktop.height) {
@@ -787,10 +785,10 @@ final class MapViewer {
             return;
         }
 
-        int m_x0 = slice.getX();
-        int m_y0 = slice.getY();
-        int slice_w = slice.getWidth();
-        int slice_h = slice.getHeight();
+        final int m_x0 = slice.getX();
+        final int m_y0 = slice.getY();
+        final int slice_w = slice.getWidth();
+        final int slice_h = slice.getHeight();
 
         int x_src;
         int w;
@@ -991,8 +989,8 @@ final class MapViewer {
 
         } // ~synchronized
 
-        // forced gc (loading ahead or after release)
-        if (releasing && Config.forcedGc) {
+        // forced gc - after release or loading ahead
+        if (Config.forcedGc && (releasing || !gotAll)) {
             System.gc();
         }
 
@@ -1058,20 +1056,20 @@ final class MapViewer {
                     }
                     scale /= 1000F;
                 }
-                int grade = ExtraMath.grade(half);
+                final int grade = ExtraMath.grade(half);
                 long guess = (half / grade) * grade;
                 if (half - guess > grade / 2) {
                     guess += grade;
                 }
                 scaleLength = (int) (guess / scale);
-                StringBuffer sb = this.sb;
-                sb.delete(0, sb.length());
+                final StringBuffer sb = cz.kruch.track.TrackingMIDlet.newInstance(32);
                 sb.append(guess).append(units);
                 if (sb.length() > sInfo.length) {
                     throw new IllegalStateException("Scale length = " + sInfoLength);
                 }
                 sInfoLength = sb.length();
                 sb.getChars(0, sInfoLength, sInfo, 0);
+                cz.kruch.track.TrackingMIDlet.releaseInstance(sb);
             } else {
                 sInfoLength = 0;
             }

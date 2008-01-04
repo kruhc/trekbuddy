@@ -41,7 +41,7 @@ public final class Mercator {
         public final char zoneLetter;
         public final char[] zone;
 
-        /**
+        /*
          * UTM constructor.
          */
         public ProjectionSetup(String name,
@@ -52,7 +52,9 @@ public final class Mercator {
             super(name);
             this.zoneNumber = (short) zoneNumber;
             this.zoneLetter = zoneLetter;
-            this.zone = (new StringBuffer().append(zoneNumber).append(zoneLetter)).toString().toCharArray();
+            final StringBuffer sb = cz.kruch.track.TrackingMIDlet.newInstance(32);
+            this.zone = sb.append(zoneNumber).append(zoneLetter).toString().toCharArray();
+            cz.kruch.track.TrackingMIDlet.releaseInstance(sb);
             this.lonOrigin = lonOrigin;
             this.latOrigin = latOrigin;
             this.parallel1 = this.parallel2 = Double.NaN;
@@ -61,7 +63,7 @@ public final class Mercator {
             this.falseNorthing = falseNorthing;
         }
 
-        /**
+        /*
          * Mercator and Transverse Mercator constructor.
          */
         public ProjectionSetup(String name, char[] zone,
@@ -80,7 +82,7 @@ public final class Mercator {
             this.falseNorthing = falseNorthing;
         }
 
-        /**
+        /*
          * Lambert constructor.
          */
         public ProjectionSetup(String name, char[] zone,
@@ -106,7 +108,7 @@ public final class Mercator {
                 return super.toString();
             }
 
-            StringBuffer sb = new StringBuffer(32);
+            final StringBuffer sb = cz.kruch.track.TrackingMIDlet.newInstance(32);
             sb.append(name).append('{');
             if (zone != null) {
                 sb.append(zone).append(',');
@@ -115,7 +117,10 @@ public final class Mercator {
             sb.append(k0);sb.append(',');
             sb.append(falseEasting).append(',').append(falseNorthing).append('}');
 
-            return sb.toString();
+            String result = sb.toString();
+            cz.kruch.track.TrackingMIDlet.releaseInstance(sb);
+
+            return result;
         }
     }
 

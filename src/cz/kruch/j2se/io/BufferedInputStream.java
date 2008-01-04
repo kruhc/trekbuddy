@@ -14,9 +14,13 @@ import java.io.InputStream;
  * Buffered input stream. 
  */
 public final class BufferedInputStream extends InputStream {
+    /** underlying stream */
     private InputStream in;
+    /** read buffer */
     private byte buffer[];
+    /** number of bytes in the buffer */
     private int count;
+    /** current position in the buffer */
     private int pos;
 
     /**
@@ -116,7 +120,7 @@ public final class BufferedInputStream extends InputStream {
     }
 
     public void close() throws IOException {
-        if (in == null) {
+        if (in == null) { // beware it may be null
             return;
         }
         in.close();

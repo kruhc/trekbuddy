@@ -71,11 +71,6 @@ public final class Desktop extends GameCanvas
     private static final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("Desktop");
 //#endif
 
-    // delta units
-    public static final char[] DIST_STR_M      = { ' ', 'm', ' ' };
-    public static final char[] DIST_STR_KM     = { ' ', 'k', 'm', ' ' };
-    public static final char[] DIST_STR_NMI    = { ' ', 'M', ' ' };
-
     // dialog timeouts
     private static final int INFO_DIALOG_TIMEOUT    = 1000;
     private static final int ALARM_DIALOG_TIMEOUT   = 3000;
@@ -186,6 +181,7 @@ public final class Desktop extends GameCanvas
     private volatile int wptsId;
 
     // repeated event simulation for dumb devices
+    private Class repeatedKeyCheckFactory;
     private volatile TimerTask repeatedKeyCheck;
     private /*volatile*/ int inKey; // using synchronized access helper
 
@@ -603,6 +599,15 @@ public final class Desktop extends GameCanvas
 //#ifdef __LOG__
         if (log.isEnabled()) log.info("post init");
 //#endif
+
+        // misc
+        if (!hasRepeatEvents) {
+            try {
+                repeatedKeyCheckFactory = Class.forName("cz.kruch.track.ui.KeyCheckTimerTask");
+            } catch (ClassNotFoundException e) {
+                // should not happen
+            }
+        }
 
         // start Friends
         if (cz.kruch.track.TrackingMIDlet.jsr120 && Config.locationSharing) {
@@ -1334,7 +1339,11 @@ public final class Desktop extends GameCanvas
 
                     // schedule delayed check to emulate key repeated event
                     if (repeatedKeyCheck == null) {
-                        repeatedKeyCheck = new KeyCheckTimerTask();
+                        try {
+                            repeatedKeyCheck = (TimerTask) repeatedKeyCheckFactory.newInstance();
+                        } catch (Exception e) {
+                            // should not happen
+                        }
                         timer.schedule(repeatedKeyCheck, 1500L);
                     }
                 }
@@ -2519,21 +2528,7 @@ public final class Desktop extends GameCanvas
             final int azimuth = wptAzimuth;
 
             extInfo.append(NavigationScreens.DELTA_D).append('=');
-            switch (Config.units) {
-                case Config.UNITS_METRIC: {
-                    if (distance >= 10000F) { // dist > 10 km
-                        NavigationScreens.append(extInfo, distance / 1000F, 1).append(DIST_STR_KM);
-                    } else {
-                        NavigationScreens.append(extInfo, (int) distance).append(DIST_STR_M);
-                    }
-                } break;
-                case Config.UNITS_IMPERIAL: {
-                    NavigationScreens.append(extInfo, distance / 1609F, 0).append(DIST_STR_NMI);
-                } break;
-                case Config.UNITS_NAUTICAL: {
-                    NavigationScreens.append(extInfo, distance / 1852F, 0).append(DIST_STR_NMI);
-                } break;
-            }
+            NavigationScreens.printDistance(extInfo, distance);
             NavigationScreens.append(extInfo, azimuth).append(NavigationScreens.SIGN);
             if (!Float.isNaN(wptHeightDiff)) {
                 extInfo.append(' ').append(NavigationScreens.DELTA_d).append('=');
@@ -3455,23 +3450,4 @@ public final class Desktop extends GameCanvas
 
     /// ~ CONSOLE
 
-    /*
-     * "A key's bit will be 1 if the key is currently down or has
-     * been pressed at least once since the last time this method
-     * was called."
-     *
-     * Therefore the dummy getKeyStates() call before invoking run().
-     */
-    
-    private final class KeyCheckTimerTask extends TimerTask {
-
-        /** to avoid generation of $1 class */
-        public KeyCheckTimerTask() {
-        }
-      
-        public void run() {
-            getKeyStates(); // trick
-            eventing.callSerially(Desktop.this);
-        }
-    }
 }

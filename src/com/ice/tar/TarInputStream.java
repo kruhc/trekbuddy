@@ -230,10 +230,10 @@ public final class TarInputStream extends InputStream {
      */
     public int read() throws IOException {
         final int num = this.read(this.headerBuffer, 0, 1);
-        if (num == -1) {
-            return num;
+        if (num != -1) {
+            return (int) this.headerBuffer[0];
         }
-        return (int) this.headerBuffer[0];
+        return -1;
     }
 
     /**

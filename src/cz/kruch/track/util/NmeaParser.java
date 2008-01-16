@@ -38,17 +38,18 @@ public final class NmeaParser {
     private static long date;
 
     public static Record parseGGA(char[] nmea, int length) throws LocationException {
-        int index = 0;
-        CharArrayTokenizer tokenizer = NmeaParser.tokenizer;
-        Record record = gga;
+        // local refs for faster access
+        final CharArrayTokenizer tokenizer = NmeaParser.tokenizer;
+        final Record record = gga;
 
         // init tokenizer and record
         tokenizer.init(nmea, length, false);
         record.invalidate();
 
         // process
+        int index = 0;
         while (tokenizer.hasMoreTokens() && (index < 10)) {
-            CharArrayTokenizer.Token token = tokenizer.next();
+            final CharArrayTokenizer.Token token = tokenizer.next();
             if (!token.isEmpty()) {
                 switch (index) {
                     case 0: // $GPGGA
@@ -104,17 +105,18 @@ public final class NmeaParser {
     }
 
     public static Record parseGSA(char[] nmea, int length) throws LocationException {
-        int index = 0;
-        CharArrayTokenizer tokenizer = NmeaParser.tokenizer;
-        Record record = gsa;
+        // local refs for faster access
+        final CharArrayTokenizer tokenizer = NmeaParser.tokenizer;
+        final Record record = gsa;
 
         // init tokenizer and record
         tokenizer.init(nmea, length, delimiters, false);
         record.invalidate();
 
         // process
+        int index = 0;
         while (tokenizer.hasMoreTokens() && (index < 18)) {
-            CharArrayTokenizer.Token token = tokenizer.next();
+            final CharArrayTokenizer.Token token = tokenizer.next();
             /* no token empty check here */
             switch (index) {
                 case 0: // $GPGSA
@@ -164,7 +166,7 @@ public final class NmeaParser {
     }
 
     public static Record parseRMC(char[] nmea, int length) throws LocationException {
-        int index = 0;
+        // local refs for faster access
         CharArrayTokenizer tokenizer = NmeaParser.tokenizer;
         Record record = rmc;
 
@@ -173,8 +175,9 @@ public final class NmeaParser {
         record.invalidate();
 
         // process
+        int index = 0;
         while (tokenizer.hasMoreTokens() && (index < 10)) {
-            CharArrayTokenizer.Token token = tokenizer.next();
+            final CharArrayTokenizer.Token token = tokenizer.next();
             if (!token.isEmpty()) {
                 switch (index) {
                     case 0: // $GPRMC

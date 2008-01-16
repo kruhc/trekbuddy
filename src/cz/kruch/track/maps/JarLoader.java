@@ -34,9 +34,7 @@ final class JarLoader extends Map.Loader /*implements Atlas.Loader*/ {
         super();
     }
 
-    public void init(Map map, String url) throws IOException {
-        super.init(map, url);
-
+    void loadMeta(Map map) throws IOException {
         // input
         InputStream in = null;
         LineReader reader = null;
@@ -80,7 +78,6 @@ final class JarLoader extends Map.Loader /*implements Atlas.Loader*/ {
             CharArrayTokenizer.Token token = reader.readToken(false);
             while (token != null) {
                 addSlice(token);
-                token = null; // gc hint
                 token = reader.readToken(false);
             }
 //#ifdef __LOG__
@@ -114,7 +111,7 @@ final class JarLoader extends Map.Loader /*implements Atlas.Loader*/ {
         }
     }
 
-    public void loadSlice(Slice slice) throws IOException {
+    void loadSlice(Slice slice) throws IOException {
         // path sb
         final StringBuffer sb = cz.kruch.track.TrackingMIDlet.newInstance(32);
 

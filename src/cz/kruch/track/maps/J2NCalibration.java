@@ -108,9 +108,5 @@ class J2NCalibration extends Calibration {
 
         // finalize
         doFinal(null, LATLON_PROJ_SETUP, xy, ll);
-
-        // gc hints
-        xy.removeAllElements();
-        ll.removeAllElements();
     }
 }

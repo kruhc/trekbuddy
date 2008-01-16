@@ -50,23 +50,28 @@ final class OziCalibration extends Calibration {
     void init(InputStream in, String path) throws IOException {
         super.init(path);
 
+        // line counter
         int lines = 0;
 
+        // "keep parsing Points" flag
+        boolean parsePoints = true;
+
+        // vars
         Vector xy = new Vector(4);
         Vector ll = new Vector(4);
         Datum datum = null;
         ProjectionSetup projectionSetup = null;
-        String projectionType = ProjectionSetup.PROJ_TRANSVERSE_MERCATOR;
-        CharArrayTokenizer tokenizer = new CharArrayTokenizer();
+        String projectionType = null;
 
         // read content
         LineReader reader = new LineReader(in/*, true*/);
+        CharArrayTokenizer tokenizer = new CharArrayTokenizer();
         CharArrayTokenizer.Token line = reader.readToken(false);
         while (line != null) {
             lines++;
-            if (line.startsWith(LINE_POINT)) {
+            if (line.startsWith(LINE_POINT) && parsePoints) {
                 tokenizer.init(line, true);
-                parsePoint(tokenizer, xy, ll);
+                parsePoints = parsePoint(tokenizer, xy, ll);
             } else if (line.startsWith(LINE_MAP_PROJECTION)) {
                 tokenizer.init(line, false);
                 projectionType = parseProjectionType(tokenizer);
@@ -156,26 +161,15 @@ final class OziCalibration extends Calibration {
                     datum = (Datum) Config.datumMappings.get("map:" + parseDatum(tokenizer));
                 }
             }
-            line = null; // gc hint
             line = reader.readToken(false);
         }
 
-        // close reader
-        reader.close();
-
-        // gc hints
-        reader = null;
+        // gc hint
         tokenizer = null;
 
-        // dimension check
-        if (width == -1 || height == -1) {
-            throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_INVALID_MAP_DIMENSION));
-        }
-
-        // paranoia
-        if (xy.size() != ll.size()) {
-            throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_MM_SIZE_MISMATCH));
-        }
+        // close reader
+        reader.close();
+        reader = null; // gc hint
 
         // fix projection
         if (ProjectionSetup.PROJ_UTM.equals(projectionType)) {
@@ -184,11 +178,8 @@ final class OziCalibration extends Calibration {
             projectionSetup = Mercator.getMercatorSetup(ll);
         }
 
+        // finalize map
         doFinal(datum, projectionSetup, xy, ll);
-
-        // gc hints
-        xy.removeAllElements();
-        ll.removeAllElements();
     }
 
     private static boolean parsePoint(CharArrayTokenizer tokenizer,
@@ -196,52 +187,53 @@ final class OziCalibration extends Calibration {
         int index = 0;
         int x = -1;
         int y = -1;
-//            String easting, northing, zone = "N";
         double lat = 0D;
         double lon = 0D;
 
         try {
-            while (tokenizer.hasMoreTokens()) {
-                CharArrayTokenizer.Token token = tokenizer.next();
+            while (index <= 11 && tokenizer.hasMoreTokens()) {
+                final CharArrayTokenizer.Token token = tokenizer.next();
                 if (token.isDelimiter) {
                     index++;
-                } else if (index == 2) {
-                    if (token.isEmpty()) {
-                        index = Integer.MAX_VALUE;
-                    } else {
-                        x = CharArrayTokenizer.parseInt(token);
+                } else {
+                    switch (index) {
+                        case 2: {
+                            if (!token.isEmpty()) {
+                                x = CharArrayTokenizer.parseInt(token);
+                            } else {
+                                index = Integer.MAX_VALUE;
+                            }
+                        } break;
+                        case 3: {
+                            if (!token.isEmpty()) {
+                                y = CharArrayTokenizer.parseInt(token);
+                            } else {
+                                index = Integer.MAX_VALUE;
+                            }
+                        } break;
+                        case 6: {
+                            lat += CharArrayTokenizer.parseInt(token);
+                        } break;
+                        case 7: {
+                            lat += CharArrayTokenizer.parseDouble(token) / 60D;
+                        } break;
+                        case 8: {
+                            if (token.startsWith('S')) {
+                                lat *= -1D;
+                            }
+                        } break;
+                        case 9: {
+                            lon += CharArrayTokenizer.parseInt(token);
+                        } break;
+                        case 10: {
+                            lon += CharArrayTokenizer.parseDouble(token) / 60D;
+                        } break;
+                        case 11: {
+                            if (token.startsWith('W')) {
+                                lon *= -1D;
+                            }
+                        } break;
                     }
-                } else if (index == 3) {
-                    if (token.isEmpty()) {
-                        index = Integer.MAX_VALUE;
-                    } else {
-                        y = CharArrayTokenizer.parseInt(token);
-                    }
-                } else if (index == 6) {
-                    lat += CharArrayTokenizer.parseInt(token);
-                } else if (index == 7) {
-                    lat += CharArrayTokenizer.parseDouble(token) / 60D;
-                } else if (index == 8) {
-                    if (token.startsWith('S')) {
-                        lat *= -1D;
-                    }
-                } else if (index == 9) {
-                    lon += CharArrayTokenizer.parseInt(token);
-                } else if (index == 10) {
-                    lon += CharArrayTokenizer.parseDouble(token) / 60D;
-                } else if (index == 11) {
-                    if (token.startsWith('W')) {
-                        lon *= -1D;
-                    }
-                } else if (index == 14) {
-                    //                    easting = token;
-                } else if (index == 15) {
-                    //                    northing = token;
-                } else if (index == 16) {
-                    //                    zone = token;
-                }
-                if (index > 11/*16*/) {
-                    break;
                 }
             }
 
@@ -253,6 +245,7 @@ final class OziCalibration extends Calibration {
                 return false;
             }
 
+            // save position and coords
             xy.addElement(Position.newInstance(x, y));
             ll.addElement(QualifiedCoordinates.newInstance(lat, lon));
 
@@ -291,22 +284,28 @@ final class OziCalibration extends Calibration {
         latOrigin = lonOrigin = k = falseEasting = falseNorthing = Double.NaN;
 
         try {
-            while (tokenizer.hasMoreTokens()) {
-                CharArrayTokenizer.Token token = tokenizer.next();
+            while (index <= 5 && tokenizer.hasMoreTokens()) {
+                final CharArrayTokenizer.Token token = tokenizer.next();
                 if (token.isDelimiter) {
                     index++;
-                } else if (index == 1) {
-                    latOrigin = CharArrayTokenizer.parseDouble(token);
-                } else if (index == 2) {
-                    lonOrigin = CharArrayTokenizer.parseDouble(token);
-                } else if (index == 3) {
-                    k = CharArrayTokenizer.parseDouble(token);
-                } else if (index == 4) {
-                    falseEasting = CharArrayTokenizer.parseDouble(token);
-                } else if (index == 5) {
-                    falseNorthing = CharArrayTokenizer.parseDouble(token);
-                } else if (index > 5) {
-                    break;
+                } else {
+                    switch (index) {
+                        case 1: {
+                            latOrigin = CharArrayTokenizer.parseDouble(token);
+                        } break;
+                        case 2: {
+                            lonOrigin = CharArrayTokenizer.parseDouble(token);
+                        } break;
+                        case 3: {
+                            k = CharArrayTokenizer.parseDouble(token);
+                        } break;
+                        case 4: {
+                            falseEasting = CharArrayTokenizer.parseDouble(token);
+                        } break;
+                        case 5: {
+                            falseNorthing = CharArrayTokenizer.parseDouble(token);
+                        } break;
+                    }
                 }
             }
 
@@ -344,8 +343,8 @@ final class OziCalibration extends Calibration {
         try {
             tokenizer.next(); // MMPLL
             tokenizer.next(); // index [1-4]
-            double lon = tokenizer.nextDouble();
-            double lat = tokenizer.nextDouble();
+            final double lon = tokenizer.nextDouble();
+            final double lat = tokenizer.nextDouble();
             ll.addElement(QualifiedCoordinates.newInstance(lat, lon));
         } catch (Exception e) {
             throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_INVALID_MMPLL), e);
@@ -368,10 +367,9 @@ final class OziCalibration extends Calibration {
     }
 
     private static short getDimension(int i) throws InvalidMapException {
-        if (i > Short.MAX_VALUE) {
-            throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_MAP_TOO_BIG));
+        if (i <= Short.MAX_VALUE) {
+            return (short) i;
         }
-
-        return (short) i;
+        throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_MAP_TOO_BIG));
     }
 }

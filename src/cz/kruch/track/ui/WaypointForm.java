@@ -161,11 +161,11 @@ public final class WaypointForm extends Form
         appendWithNewlineAfter(this.fieldName = new TextField(Resources.getString(Resources.NAV_FLD_WPT_NAME), name, 16, TextField.ANY));
         appendWithNewlineAfter(this.fieldComment = new TextField(Resources.getString(Resources.NAV_FLD_WPT_CMT), dateToString(CALENDAR.getTime().getTime()), 64, TextField.ANY));
         sb.append(pointer.getLat() > 0D ? 'N' : 'S').append(' ');
-        NavigationScreens.append(QualifiedCoordinates.LAT, pointer.getLat(), true, sb);
+        NavigationScreens.append(sb, QualifiedCoordinates.LAT, pointer.getLat(), true);
         appendWithNewlineAfter(this.fieldLat = new TextField(Resources.getString(Resources.NAV_FLD_WGS84LAT), sb.toString(), 13, TextField.ANY));
         sb.delete(0, sb.length());
         sb.append(pointer.getLon() > 0D ? 'E' : 'W').append(' ');
-        NavigationScreens.append(QualifiedCoordinates.LON, pointer.getLon(), true, sb);
+        NavigationScreens.append(sb, QualifiedCoordinates.LON, pointer.getLon(), true);
         appendWithNewlineAfter(this.fieldLon = new TextField(Resources.getString(Resources.NAV_FLD_WGS84LON), sb.toString(), 14, TextField.ANY));
         appendWithNewlineAfter(this.fieldAlt = new TextField(Resources.getString(Resources.NAV_FLD_ALT), "", 14, TextField.NUMERIC));
         cz.kruch.track.TrackingMIDlet.releaseInstance(sb);

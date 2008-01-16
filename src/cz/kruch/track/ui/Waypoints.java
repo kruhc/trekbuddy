@@ -959,12 +959,11 @@ public final class Waypoints extends List
             throws IOException, XmlPullParserException {
 
         int depth = 0;
-        
-        String name = null;
-        String comment = null;
         double lat = -1D;
         double lon = -1D;
         float alt = -1F;
+        String name = null;
+        String comment = null;
 
         for (int eventType = parser.next(); eventType != XmlPullParser.END_DOCUMENT; eventType = parser.next()) {
             switch (eventType) {
@@ -1014,7 +1013,7 @@ public final class Waypoints extends List
                             if (name == null || name.length() == 0) {
                                 final StringBuffer sb = cz.kruch.track.TrackingMIDlet.newInstance(32);
                                 sb.append('#');
-                                NavigationScreens.append(v.size(), 1000, sb);
+                                NavigationScreens.append(sb, v.size(), 1000);
                                 name = sb.toString();
                                 cz.kruch.track.TrackingMIDlet.releaseInstance(sb);
                             }
@@ -1041,11 +1040,10 @@ public final class Waypoints extends List
             throws IOException, XmlPullParserException {
 
         int depth = 0;
-
-        String name = null;
-        String comment = null;
         double lat = -1D;
         double lon = -1D;
+        String name = null;
+        String comment = null;
 
         for (int eventType = parser.next(); eventType != XmlPullParser.END_DOCUMENT; eventType = parser.next()) {
             switch (eventType) {

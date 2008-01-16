@@ -670,7 +670,8 @@ final class MapViewer {
 
         // paint course
         if (course > -1F) {
-            NavigationScreens.drawArrow(graphics, course,
+            NavigationScreens.drawArrow(NavigationScreens.ARROW_COURSE,
+                                        graphics, course,
                                         chx + crosshairSize2,
                                         chy + crosshairSize2,
                                         Graphics.TOP | Graphics.LEFT);
@@ -678,7 +679,8 @@ final class MapViewer {
 
         // paint navigation course
         if (course2 > -1F) {
-            NavigationScreens.drawNaviw(graphics, course2,
+            NavigationScreens.drawArrow(NavigationScreens.ARROW_NAVI,
+                                        graphics, course2,
                                         chx + crosshairSize2,
                                         chy + crosshairSize2,
                                         Graphics.TOP | Graphics.LEFT);
@@ -1045,10 +1047,10 @@ final class MapViewer {
             QualifiedCoordinates[] range = map.getRange();
             double scale = range[0].distance(range[1]) / map.getWidth();
             if (scale > 1F) {
-                char[] units = Desktop.DIST_STR_M;
+                char[] units = NavigationScreens.DIST_STR_M;
                 long half = (long) (scale * ((Desktop.width >> 1) - scaleDx));
                 if (half >= 10000) {
-                    units = Desktop.DIST_STR_KM;
+                    units = NavigationScreens.DIST_STR_KM;
                     long m = half % 1000;
                     half /= 1000;
                     if (m > 500) {

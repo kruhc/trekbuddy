@@ -376,7 +376,6 @@ public final class Resources {
                         keymap1[keymapSize] = tokenizer.nextInt();
                         keymapSize++;
                         result++;
-                        token = null; // gc hint
                         token = reader.readToken(false);
                     }
                 } finally {

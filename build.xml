@@ -150,8 +150,11 @@
         <antcall target="a.pre.generic"/>
         <antcall target="compile.generic"/>
         <antcall target="a.pack" inheritall="true"/>
+        <antcall target="emulator.obfuscate" inheritall="true"/>
+<!--
         <move file="tmp/trekbuddy${suffix}.jar"
               tofile="tmp/trekbuddy${suffix}-obfuscated.jar"/>
+-->
         <antcall target="preverify" inheritall="true"/>
         <antcall target="dist" inheritall="true"/>
     </target>
@@ -340,7 +343,7 @@
 	    <java jar="${proguard.home}\lib\proguard.jar" fork="true">
             <arg value="-injars tmp/trekbuddy${suffix}.jar"/>
             <arg value="-outjars tmp/trekbuddy${suffix}-obfuscated.jar"/>
-            <arg value="-libraryjars '${libraryjars}'"/>
+            <arg value="-libraryjars ${libraryjars}"/>
 <!-- 4.x
             <arg value="-dontpreverify"/>
 -->
@@ -357,6 +360,27 @@
 -->
             <arg value="-keepnames class cz.** extends java.lang.Exception"/>
             <arg value="-keepnames class api.** extends java.lang.Exception"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.ConfiguratorMIDlet"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.util.NakedVector"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.util.Logger"/>
+            <arg value="-whyareyoukeeping class com.symbian.gcf.NativeHelper"/>
+            <arg value="-whyareyoukeeping class cz.kruch.symbian.io.FastSkippingInputStream"/>
+            <arg value="-printmapping dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.map"/>
+            <arg value="-printseeds"/>
+            <arg value="-verbose"/>
+        </java>
+    </target> 
+
+    <target name="emulator.obfuscate">
+	    <java jar="${proguard.home}\lib\proguard.jar" fork="true">
+            <arg value="-injars tmp/trekbuddy${suffix}.jar"/>
+            <arg value="-outjars tmp/trekbuddy${suffix}-obfuscated.jar"/>
+            <arg value="-libraryjars ${libraryjars}"/>
+<!-- 4.x
+            <arg value="-dontpreverify"/>
+-->
+            <arg value="-dontobfuscate"/>
+            <arg value="-keep class * implements javax.microedition.midlet.MIDlet"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.ConfiguratorMIDlet"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.util.NakedVector"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.util.Logger"/>

@@ -30,7 +30,8 @@ import java.io.InputStreamReader;
 public final class LineReader extends InputStreamReader {
     public static final String EMPTY_LINE = "";
 
-    private static final int MAX_LEN = 512;
+    private static final int BUFF_SIZE  = 512;
+    private static final int MAX_LINE   = 128;
 
     private char[] buffer;
     private int count;
@@ -40,7 +41,7 @@ public final class LineReader extends InputStreamReader {
 
     public LineReader(InputStream in) {
         super(in);
-        this.buffer = new char[MAX_LEN];
+        this.buffer = new char[BUFF_SIZE];
 /*
     }
 
@@ -52,72 +53,14 @@ public final class LineReader extends InputStreamReader {
     }
 
     public String readLine(final boolean ignoreLF) throws IOException {
-/*
-        if (count < 0) {
-            return null;
-        }
-
-        final char[] _buffer = buffer;
-        int offset = this.position;
-        int chars = 0;
-        String result = null;
-
-        for ( ; offset < MAX_LEN; ) {
-            int c;
-            if (offset == count) {
-                int _count = read(_buffer, offset, MAX_LEN - offset);
-                if (_count == -1) {
-                    count = c = -1;
-                } else {
-                    count += _count;
-                    c = _buffer[offset++];
-                }
-            } else {
-                c = _buffer[offset++];
-            }
-
-            if (c == -1) {
-                break;
-            }
-
-            if (c == '\r') {
-                // '\n' should follow
-            } else if (c == '\n') {
-                if (chars == 0) {
-                    result = EMPTY_LINE;
-                }
-                break;
-            } else {
-                chars++;
-            }
-        }
-
-        if (offset >= MAX_LEN) {
-            throw new IllegalStateException("NMEA line longer than " + MAX_LEN);
-        }
-
-        if (chars != 0) {
-            result = new String(_buffer, position, chars);
-        }
-
-        position = offset;
-
-        if (position > MAX_LEN >> 1 && count > -1) {
-            System.arraycopy(_buffer, position, _buffer, 0, count - position);
-            count -= position;
-            position = 0;
-        }
-
-        return result;
-*/
         CharArrayTokenizer.Token result = readToken(ignoreLF);
-        if (result == null) {
-            return null;
-        }
-        if (result.isEmpty()) {
+        if (result != null) {
+            if (!result.isEmpty()) {
+                return result.toString();
+            }
             return EMPTY_LINE;
         }
-        return result.toString();
+        return null;
     }
 
     public CharArrayTokenizer.Token readToken(final boolean ignoreLF) throws IOException {
@@ -130,22 +73,20 @@ public final class LineReader extends InputStreamReader {
             return null;
         }
 
-        final char[] _buffer = buffer;
-        final int maxlen = _buffer.length;
-
-        if (position > (maxlen >> 1)) {
-            System.arraycopy(_buffer, position, _buffer, 0, count - position);
+        if (position > BUFF_SIZE - MAX_LINE) { // reaching end of buffer
+            System.arraycopy(buffer, position, buffer, 0, count - position);
             count -= position;
             position = 0;
         }
 
+        final char[] _buffer = buffer;
         int offset = position;
         int chars = 0;
 
-        for ( ; offset < maxlen; ) {
+        for ( ; offset < BUFF_SIZE; ) {
             final int c;
             if (offset == count) {
-                final int _count = read(_buffer, offset, maxlen - offset);
+                final int _count = read(_buffer, offset, BUFF_SIZE - offset);
                 if (_count == -1) {
                     count = c = -1;
                 } else {
@@ -173,25 +114,14 @@ public final class LineReader extends InputStreamReader {
             }
         }
 
-        if (offset >= maxlen) {
-            throw new IllegalStateException("Line length > " + maxlen);
+        if (offset >= BUFF_SIZE) {
+            throw new IllegalStateException("Line length > " + MAX_LINE);
         }
 
-//        if (chars != 0) {
-            token.begin = position;
-            token.length = chars;
-//            result = token;
-//        }
-
+        token.begin = position;
+        token.length = chars;
         position = offset;
 
-//        return result;
         return token;
-    }
-
-    public void close() throws IOException {
-        super.close();
-        buffer = null; // gc hint
-        token = null; // gc hint
     }
 }

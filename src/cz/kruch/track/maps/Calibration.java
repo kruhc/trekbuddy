@@ -29,6 +29,7 @@ import cz.kruch.track.configuration.Config;
 import cz.kruch.track.Resources;
 
 import java.util.Vector;
+import java.util.Hashtable;
 import java.io.IOException;
 import java.io.InputStream;
 
@@ -111,7 +112,7 @@ abstract class Calibration {
         return range;
     }
 
-    final boolean isWithin(QualifiedCoordinates coordinates) {
+    final boolean isWithin(final QualifiedCoordinates coordinates) {
 /* too rough
         final double lat = coordinates.getLat();
         final double lon = coordinates.getLon();
@@ -119,7 +120,7 @@ abstract class Calibration {
         return (lat <= _range[0].getLat() && lat >= _range[3].getLat())
                 && (lon >= _range[0].getLon() && lon <= _range[3].getLon());
 */
-        Position p = transform(coordinates);
+        final Position p = transform(coordinates);
         final int x = p.getX();
         if (x >= 0 && x < width) {
             final int y = p.getY();
@@ -130,7 +131,7 @@ abstract class Calibration {
         return false;
     }
 
-    final QualifiedCoordinates transform(Position position) {
+    final QualifiedCoordinates transform(final Position position) {
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("transform " + position);
 //#endif
@@ -152,7 +153,7 @@ abstract class Calibration {
         return qc;
     }
 
-    final Position transform(QualifiedCoordinates coordinates) {
+    final Position transform(final QualifiedCoordinates coordinates) {
         GeodeticPosition gp;
 
         if (calibrationGp instanceof CartesianCoordinates) {
@@ -199,11 +200,21 @@ abstract class Calibration {
         return proximite;
     }
 
-    protected final void doFinal(Datum datum, ProjectionSetup setup,
-                                 Vector xy, Vector ll) throws InvalidMapException {
+    protected final void doFinal(final Datum datum, final ProjectionSetup setup,
+                                 final Vector xy, final Vector ll) throws InvalidMapException {
         // assertions
         if ((xy.size() < 2) || (ll.size() < 2)) {
             throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_TOO_FEW_CALPOINTS));
+        }
+
+        // dimension check
+        if (width == -1 || height == -1) {
+            throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_INVALID_MAP_DIMENSION));
+        }
+
+        // paranoia
+        if (xy.size() != ll.size()) {
+            throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_MM_SIZE_MISMATCH));
         }
 
         // set datum
@@ -237,20 +248,16 @@ abstract class Calibration {
              */
 
             // lat,lon -> easting,northing
-//            Vector tm = new Vector(ll.size());
             for (int N = ll.size(), i = 0; i < N; i++) {
                 QualifiedCoordinates local = (QualifiedCoordinates) ll.elementAt(i);
                 CartesianCoordinates utm = Mercator.LLtoMercator(local, ellipsoid, msetup);
-//                tm.addElement(utm);
                 ll.setElementAt(utm, i);
             }
 
             // remember main calibration point easting-northing and zone
-//            calibrationGp = (GeodeticPosition) tm.elementAt(0);
             calibrationGp = (GeodeticPosition) ll.elementAt(0);
 
             // compute pixel grid for TM
-//            computeGrid(xy, tm);
             computeGrid(xy, ll);
 
         } else {
@@ -272,7 +279,7 @@ abstract class Calibration {
     private double h2, v2;
     private double hScale, vScale;
 
-    private void computeGrid(Vector xy, Vector gp) {
+    private void computeGrid(final Vector xy, final Vector gp) {
         Position p;
 
         p = Position.newInstance(width, 0);
@@ -333,7 +340,7 @@ abstract class Calibration {
         range[3] = transform(p);
     }
 
-    private GeodeticPosition toGp(Position position) {
+    private GeodeticPosition toGp(final Position position) {
         int dy = position.getY() - calibrationXy.getY();
         int dx = position.getX() - calibrationXy.getX();
         double h = calibrationGp.getH() + (ek0 * dy) + (dx * (gridTHscale + dy * hScale));
@@ -346,7 +353,7 @@ abstract class Calibration {
         }
     }
 
-    private static int[] verticalAxisByX(Vector xy, Position position) {
+    private static int[] verticalAxisByX(final Vector xy, final Position position) {
         final int x = position.getX();
         int i0 = -1, i1 = -1;
         int d0 = Integer.MAX_VALUE, d1 = Integer.MAX_VALUE;
@@ -372,7 +379,7 @@ abstract class Calibration {
         }
     }
 
-    private static int[] horizontalAxisByY(Vector xy, Position position) {
+    private static int[] horizontalAxisByY(final Vector xy, final Position position) {
         final int y = position.getY();
         int i0 = -1, i1 = -1;
         int d0 = Integer.MAX_VALUE, d1 = Integer.MAX_VALUE;
@@ -403,18 +410,20 @@ abstract class Calibration {
     }
 
     public static Calibration newInstance(InputStream in, String path, String url) throws IOException {
-        Calibration c = null;
+        Calibration c;
 
         try {
+            Class factory;
             if (url.endsWith(Calibration.OZI_EXT)) {
-                c = (Calibration) Class.forName("cz.kruch.track.maps.OziCalibration").newInstance();
+                factory = Class.forName("cz.kruch.track.maps.OziCalibration");
             } else if (url.endsWith(Calibration.GMI_EXT)) {
-                c = (Calibration) Class.forName("cz.kruch.track.maps.GmiCalibration").newInstance();
-            } else if (url.endsWith(Calibration.XML_EXT)) {
-                c = (Calibration) Class.forName("cz.kruch.track.maps.J2NCalibration").newInstance();
-            } else if (url.endsWith(Calibration.J2N_EXT)) {
-                c = (Calibration) Class.forName("cz.kruch.track.maps.J2NCalibration").newInstance();
+                factory = Class.forName("cz.kruch.track.maps.GmiCalibration");
+            } else if (url.endsWith(Calibration.XML_EXT) || url.endsWith(Calibration.J2N_EXT)) {
+                factory = Class.forName("cz.kruch.track.maps.J2NCalibration");
+            } else {
+                return null;
             }
+            c = (Calibration) factory.newInstance();
         } catch (Exception e) {
             // TODO this is wrong
             throw new IOException(e.toString());

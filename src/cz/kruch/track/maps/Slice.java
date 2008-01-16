@@ -28,20 +28,8 @@ import javax.microedition.lcdui.Image;
  * @author Ales Pour <kruhc@seznam.cz>
  */
 public class Slice {
-    private int wh, xy;
     private Image image;
-
-    /**
-     * Constructor for TB, J2N map slice.
-     *
-     * @param path slice path
-     * @throws InvalidMapException when anything goes wrong
-     */
-/*
-    Slice(String path) throws InvalidMapException {
-        parseXy(path);
-    }
-*/
+    private int wh, xy;
 
     /**
      * Constructor for TB, J2N map slice.
@@ -50,7 +38,7 @@ public class Slice {
      * @throws InvalidMapException when anything goes wrong
      */
     Slice(CharArrayTokenizer.Token token) throws InvalidMapException {
-        parseXy(token);
+        this.parseXy(token);
     }
 
     /**
@@ -117,7 +105,7 @@ public class Slice {
         return result;
     }
 
-    public final StringBuffer appendPath(StringBuffer sb) {
+    public final StringBuffer appendPath(final StringBuffer sb) {
         sb.append('_');
         NavigationScreens.append(sb, getX());
         sb.append('_');
@@ -128,10 +116,10 @@ public class Slice {
 
     final void doFinal(final int xmax, final int ymax, int xi, int yi) throws InvalidMapException {
         final int x = getX();
-        final int y = getY();
         if (x + xi > xmax) {
             xi = xmax - x;
         }
+        final int y = getY();
         if (y + yi > ymax) {
             yi = ymax - y;
         }

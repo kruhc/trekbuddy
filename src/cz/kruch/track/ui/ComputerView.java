@@ -574,7 +574,7 @@ final class ComputerView extends View implements Runnable, CommandListener {
 
             // release refs for Image fonts
             for (int N = areas.size(), i = 0; i < N; i++) {
-                Area area = (Area) areas.elementAt(i);
+                final Area area = (Area) areas.elementAt(i);
                 if (fontsPng.containsKey(area.fontName)) {
                     area.fontImpl = null;
                 }
@@ -586,17 +586,18 @@ final class ComputerView extends View implements Runnable, CommandListener {
 
             // create image fonts
             for (int N = areas.size(), i = 0; i < N; i++) {
-                Area area = (Area) areas.elementAt(i);
+                final Area area = (Area) areas.elementAt(i);
                 if (area.fontImpl == null) {
                     try {
-                        // get raw data and create a copy
-                        byte[] data = (byte[]) fonts.get(area.fontName);
+                        // get raw data
+                        final byte[] data = (byte[]) fonts.get(area.fontName);
                         // colorify
                         colorifyPng(data, colors[dayNight * 4 + 1]);
                         // create image
                         ByteArrayInputStream bais = new ByteArrayInputStream(data);
                         Image image = NavigationScreens.createImage(bais);
                         bais.close();
+                        bais = null; // gc hint
                         // store image
                         fontsPng.put(area.fontName, image);
                         // use it is area
@@ -637,12 +638,12 @@ final class ComputerView extends View implements Runnable, CommandListener {
                 graphics.drawString(status, 0, Desktop.font.getHeight(), Graphics.TOP | Graphics.LEFT);
             }
         } else {
-            final CharArrayTokenizer tokenizer = this.tokenizer;
-            final char[] text = this.text;
-            final int[] colors = this.colors;
-            final Vector areas = this.areas;
             final int mode = Config.dayNight;
+            final int[] colors = this.colors;
+            final char[] text = this.text;
             final float[] valuesFloat = this.valuesFloat;
+            final Vector areas = this.areas;
+            final CharArrayTokenizer tokenizer = this.tokenizer;
 
             int state = 0;
 
@@ -653,14 +654,14 @@ final class ComputerView extends View implements Runnable, CommandListener {
             final StringBuffer sb = cz.kruch.track.TrackingMIDlet.newInstance(32);
             
             for (int N = areas.size(), i = 0; i < N; i++) {
-                Area area = (Area) areas.elementAt(i);
+                final Area area = (Area) areas.elementAt(i);
 
                 sb.delete(0, sb.length());
                 tokenizer.init(area.value, area.value.length, DELIMITERS, true);
                 int narrowChars = 0;
 
                 while (tokenizer.hasMoreTokens()) {
-                    CharArrayTokenizer.Token token = tokenizer.next();
+                    final CharArrayTokenizer.Token token = tokenizer.next();
                     if (token.isDelimiter) {
                         state++;
                     } else {
@@ -668,7 +669,7 @@ final class ComputerView extends View implements Runnable, CommandListener {
                         if (state % 2 == 1) {
                             int idx = area.index;
                             if (idx == -1) {
-                                String[] keys = TOKENS_float;
+                                final String[] keys = TOKENS_float;
                                 for (int j = keys.length; --j >= 0; ) {
                                     if (token.equals(keys[j])) {
                                         idx = area.index = (short) j;
@@ -960,7 +961,7 @@ final class ComputerView extends View implements Runnable, CommandListener {
                     sb.getChars(0, sb.length(), text, 0);
                     graphics.setClip(area.x, area.y, area.w, area.h);
                     if (area.fontImpl instanceof Font) {
-                        Font f = (Font) area.fontImpl;
+                        final Font f = (Font) area.fontImpl;
                         final int xoffset = area.ralign ? area.w - f.charsWidth(text, 0, l) : 0;
                         graphics.setFont(f);
                         graphics.drawChars(text, 0, l, area.x + xoffset, area.y, 0);
@@ -999,7 +1000,7 @@ final class ComputerView extends View implements Runnable, CommandListener {
 
     private void drawChars(Graphics graphics, char[] value, final int length,
                            int x, int y, Area area) {
-        Image image = (Image) area.fontImpl;
+        final Image image = (Image) area.fontImpl;
         final float cw = area.cw;
         final int scw = (int) (cw - cw / 5);
         final int icw = (int) cw;
@@ -1270,103 +1271,100 @@ final class ComputerView extends View implements Runnable, CommandListener {
         return data;
     }
 
-    private static byte[] colorifyPng(byte[] data, int color) {
-        int length = data.length;
-        int chunkStart = 8;
-        int chunkDataLength = 0;
-        int plte = 0;
-        int plteStart = 0;
-        int plteDataOffset = 0;
-        long plteCrc = 0;
-        int tRnsStart = find_tRns(data, length);
+    private static void colorifyPng(final byte[] data, final int color) {
+        final int length = data.length;
+        final int tRnsStart = find_tRns(data, length);
 
-        if (tRnsStart < 0) {
-            return data;
-        }
+        if (tRnsStart > 0) {
+            int chunkStart = 8;
+            int chunkDataLength = 0;
+            int plte = 0;
+            int plteStart = 0;
+            int plteDataOffset = 0;
+            long plteCrc = 0;
 
-        for (int offset = 8; offset < length; offset++) {
-            int i = data[offset];
-            char c = (char) i;
+            for (int offset = 8; offset < length; offset++) {
+                final int i = data[offset];
+                final char c = (char) i;
 
-            switch (plte) {
-                case 0:
-                    if (c == 'P') {
-                        plte++;
-                    }
-                break;
-                case 1:
-                    if (c == 'L') {
-                        plte++;
-                    } else {
-                        plte = 0;
-                    }
-                break;
-                case 2:
-                    if (c == 'T') {
-                        plte++;
-                    } else {
-                        plte = 0;
-                    }
-                break;
-                case 3:
-                    if (c == 'E') {
-                        plte++;
-                    } else {
-                        plte = 0;
-                    }
-                break;
-            }
-
-            if (plte == -1) {
-                // PLTE already processed
-                break;
-            } else {
-                if (offset == chunkStart) {
-                    chunkDataLength = 0;
+                switch (plte) {
+                    case 0:
+                        if (c == 'P') {
+                            plte++;
+                        }
+                    break;
+                    case 1:
+                        if (c == 'L') {
+                            plte++;
+                        } else {
+                            plte = 0;
+                        }
+                    break;
+                    case 2:
+                        if (c == 'T') {
+                            plte++;
+                        } else {
+                            plte = 0;
+                        }
+                    break;
+                    case 3:
+                        if (c == 'E') {
+                            plte++;
+                        } else {
+                            plte = 0;
+                        }
+                    break;
                 }
-                if (offset >= chunkStart) {
-                    if (offset <= chunkStart + 3) {
-                        chunkDataLength |= i << 8 * (3 - (offset - chunkStart));
-//                        if (offset == chunkStart + 3) {
-//                            System.out.println("chunk data length = " + chunkDataLength);
-//                        }
-                    } else if (plte == 4) {
-                        if (plteStart == 0) {
-                            plteStart = chunkStart + 4;
-                            plteDataOffset = 0;
-                        } else if (offset < chunkStart + 4 + 4 + chunkDataLength) {
-//                            System.out.println("palette byte at " + offset + " is " + (byte) i);
-                            data[offset] = (byte) i;
-                            if (plteDataOffset % 3 == 0) {
-//                                if (data[offset] != (byte) 0xff || data[offset + 1] != (byte) 0xff || data[offset + 2] != (byte) 0xff) {
-                                if (data[tRnsStart + plteDataOffset / 3] != 0) {
-                                    data[offset] = (byte) ((color >>> 16) & 0xff);
-                                    data[offset + 1] = (byte) ((color >>> 8) & 0xff);
-                                    data[offset + 2] = (byte) (color & 0xff);
+
+                if (plte == -1) {
+                    // PLTE already processed
+                    break;
+                } else {
+                    if (offset == chunkStart) {
+                        chunkDataLength = 0;
+                    }
+                    if (offset >= chunkStart) {
+                        if (offset <= chunkStart + 3) {
+                            chunkDataLength |= i << 8 * (3 - (offset - chunkStart));
+    //                        if (offset == chunkStart + 3) {
+    //                            System.out.println("chunk data length = " + chunkDataLength);
+    //                        }
+                        } else if (plte == 4) {
+                            if (plteStart == 0) {
+                                plteStart = chunkStart + 4;
+                                plteDataOffset = 0;
+                            } else if (offset < chunkStart + 4 + 4 + chunkDataLength) {
+    //                            System.out.println("palette byte at " + offset + " is " + (byte) i);
+                                data[offset] = (byte) i;
+                                if (plteDataOffset % 3 == 0) {
+    //                                if (data[offset] != (byte) 0xff || data[offset + 1] != (byte) 0xff || data[offset + 2] != (byte) 0xff) {
+                                    if (data[tRnsStart + plteDataOffset / 3] != 0) {
+                                        data[offset] = (byte) ((color >>> 16) & 0xff);
+                                        data[offset + 1] = (byte) ((color >>> 8) & 0xff);
+                                        data[offset + 2] = (byte) (color & 0xff);
+                                    }
+                                }
+                                plteDataOffset++;
+                            } else {
+                                if (offset == chunkStart + 4 + 4 + chunkDataLength) {
+                                    plteCrc = calcCrc(data, plteStart, 4 + chunkDataLength);
+                                }
+                                data[offset] = (byte) ((plteCrc >>> (8 * (3 - (offset - (chunkStart + 4 + 4 + chunkDataLength))))) & 0x000000FF);
+                                if (offset == chunkStart + 4 + 4 + chunkDataLength + 4) {
+                                    plte = -1;
                                 }
                             }
-                            plteDataOffset++;
-                        } else {
-                            if (offset == chunkStart + 4 + 4 + chunkDataLength) {
-                                plteCrc = calcCrc(data, plteStart, 4 + chunkDataLength);
-                            }
-                            data[offset] = (byte) ((plteCrc >>> (8 * (3 - (offset - (chunkStart + 4 + 4 + chunkDataLength))))) & 0x000000FF);
-                            if (offset == chunkStart + 4 + 4 + chunkDataLength + 4) {
-                                plte = -1;
-                            }
+                        } else if (offset == chunkStart + 4 + 4 + chunkDataLength) {
+                            chunkStart += 4 + 4 + chunkDataLength + 4;
+    //                        System.out.println("next chunk at = " + chunkStart);
                         }
-                    } else if (offset == chunkStart + 4 + 4 + chunkDataLength) {
-                        chunkStart += 4 + 4 + chunkDataLength + 4;
-//                        System.out.println("next chunk at = " + chunkStart);
                     }
                 }
             }
         }
-
-        return data;
     }
 
-    private static long calcCrc(byte[] buf, int off, int len) {
+    private static long calcCrc(final byte[] buf, int off, int len) {
         int[] crc_table = CRC_TABLE;
         int c = ~0;
         while (--len >= 0)
@@ -1374,11 +1372,11 @@ final class ComputerView extends View implements Runnable, CommandListener {
         return (long) ~c & 0xffffffffL;
     }
 
-    private static int find_tRns(byte[] data, int length) {
+    private static int find_tRns(final byte[] data, final int length) {
         int trns = 0;
         for (int offset = 8; offset < length; offset++) {
-            int i = data[offset];
-            char c = (char) i;
+            final int i = data[offset];
+            final char c = (char) i;
 
             switch (trns) {
                 case 0:

@@ -38,9 +38,6 @@ import api.location.ProjectionSetup;
  * @author Ales Pour <kruhc@seznam.cz>
  */
 public final class Map implements Runnable {
-    public static final String JAR_EXT = ".jar";
-    public static final String TAR_EXT = ".tar";
-
 /*
     public interface StateListener {
         public void mapOpened(Object result, Throwable throwable);
@@ -168,7 +165,7 @@ public final class Map implements Runnable {
         }
 
         /*
-         * slices and calibration are kept, unless instructed not to
+         * meta info is kept unless instructed not to
          */
         if (Config.largeAtlases) {
             slices = null;
@@ -191,8 +188,8 @@ public final class Map implements Runnable {
 
         // gc hints
         loader = null;
-        slices = null;
         calibration = null;
+        slices = null;
     }
 
     /**
@@ -259,11 +256,6 @@ public final class Map implements Runnable {
         if (log.isEnabled()) log.debug("about to load new slices");
 //#endif
 
-        // assertion
-        if (loader.buffered == null) {
-            throw new IllegalStateException("Loading images for disposed map: " + path);
-        }
-
         // notify listener
         listener.slicesLoading(null, null);
 
@@ -276,23 +268,37 @@ public final class Map implements Runnable {
     /* (non-javadoc) public only for loading upon startup */
     public Throwable loadMap() {
         try {
+            // finalize flag
+            final boolean finalize = slices == null;
+
             // create loader
             if (loader == null) {
-                if (path.endsWith(JAR_EXT)) {
-                    loader = (Loader) Class.forName("cz.kruch.track.maps.JarLoader").newInstance();
-                } else if (path.toLowerCase().endsWith(TAR_EXT)) {
-                    loader = (Loader) Class.forName("cz.kruch.track.maps.TarLoader").newInstance();
+                if (slices != null) {
+                    throw new IllegalStateException("Slices exist for new loader");
+                }
+                Class factory;
+                if (path.endsWith(".tar") || path.endsWith(".TAR")) {
+                    factory = Class.forName("cz.kruch.track.maps.TarLoader");
+                } else if (path.endsWith(".jar")) {
+                    factory = Class.forName("cz.kruch.track.maps.JarLoader");
                 } else {
-                    loader = (Loader) Class.forName("cz.kruch.track.maps.DirLoader").newInstance();
+                    factory = Class.forName("cz.kruch.track.maps.DirLoader");
+                }
+                loader = (Loader) factory.newInstance();
+                loader.init(this, path);
+            } else {
+                if (slices == null) {
+                    throw new IllegalStateException("Slices gc-ed for loader");
                 }
             }
-            loader.init(this, path);
-            final boolean finalize = loader.doFinal();
+
+            // loads whatever is needed
+            loader.loadMeta(this);
 
 //#ifdef __LOG__
             if (log.isEnabled()) log.debug("map opened");
 //#endif
-
+            
             // check map for consistency
             if (calibration == null) {
                 throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_NO_CALIBRATION));
@@ -301,9 +307,9 @@ public final class Map implements Runnable {
                 throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_NO_SLICES));
             }
 
-            // finalize map preparation
-            if (finalize) doFinal();
-
+            // finalize
+            if (finalize) loader.doFinal();
+            
         } catch (Throwable t) {
             return t;
         }
@@ -329,46 +335,6 @@ public final class Map implements Runnable {
     }
 
     /**
-     * Finalizes map initialization.
-     *
-     * @throws InvalidMapException if anything goes wrong
-     */
-    private void doFinal() throws InvalidMapException {
-        // local ref for faster access
-        final int mapWidth = calibration.width;
-        final int mapHeight = calibration.height;
-        final Slice[] slices = this.slices;
-                                          
-        // vars
-        int xi = getWidth(), yi = getHeight();
-
-        // finds nearest neighbour to 0-0 slice to figure map slice dimensions
-        for (int i = numberOfSlices; --i >= 0; ) {
-            final Slice slice = slices[i];
-            final int x = slice.getX();
-            if (x > 0 && x <= xi) {
-                xi = x;
-                final int y = slice.getY();
-                if (y > 0 && y < yi) {
-                    yi = y;
-                }
-            }
-        }
-
-//#ifdef __LOG__
-        if (log.isEnabled()) log.debug("!0-!0 slice is " + xi + "-" + yi);
-//#endif
-
-        // finalize slices creation
-        for (int i = numberOfSlices; --i >= 0; ) {
-            slices[i].doFinal(mapWidth, mapHeight, xi, yi);
-//#ifdef __LOG__
-            if (log.isEnabled()) log.debug("ready slice " + slices[i]);
-//#endif
-        }
-    }
-
-    /**
      * Map loader.
      */
     static abstract class Loader implements Runnable {
@@ -376,36 +342,62 @@ public final class Map implements Runnable {
         protected static final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("Map.Loader");
 //#endif
         protected static final String SET_DIR_PREFIX = "set/";
+        protected static final BufferedInputStream buffered = new BufferedInputStream(null, 4096);
 
         protected String basename;
         protected String extension;
-        protected BufferedInputStream buffered;
-
-        protected boolean isGPSka, isTar;
 
         private Map map;
         private Vector _list;
-
         private int increment;
 
-        abstract void loadSlice(Slice slice) throws IOException;
+        protected boolean isGPSka, isTar;
 
-        protected Loader() {
+        abstract void loadSlice(Slice slice) throws IOException;
+        abstract void loadMeta(Map map) throws IOException;
+
+        Loader() {
         }
 
-        protected void init(Map map, String url) throws IOException {
-            if (this.map != null || this.buffered != null) {
-                throw new IllegalStateException("Already initialized");
-            }
+        void init(Map map, String url) throws IOException {
             this.map = map;
-            this.buffered = new BufferedInputStream(null, 4096);
         }
 
         void dispose() throws IOException {
-            map = null;
-            if (buffered != null) {
-                buffered.close();
-                buffered = null;
+        }
+
+        void doFinal() throws InvalidMapException {
+            // local ref for faster access
+            final int mapWidth = map.calibration.width;
+            final int mapHeight = map.calibration.height;
+            final Slice[] slices = map.slices;
+
+            // vars
+            int xi = mapWidth, yi = mapHeight;
+
+            // finds nearest neighbour to 0-0 slice to figure map slice dimensions
+            for (int i = map.numberOfSlices; --i >= 0; ) {
+                final Slice slice = slices[i];
+                final int x = slice.getX();
+                if (x > 0 && x <= xi) {
+                    xi = x;
+                    final int y = slice.getY();
+                    if (y > 0 && y < yi) {
+                        yi = y;
+                    }
+                }
+            }
+
+//#ifdef __LOG__
+            if (log.isEnabled()) log.debug("!0-!0 slice is " + xi + "-" + yi);
+//#endif
+
+            // set slices dimensions
+            for (int i = map.numberOfSlices; --i >= 0; ) {
+                slices[i].doFinal(mapWidth, mapHeight, xi, yi);
+//#ifdef __LOG__
+                if (log.isEnabled()) log.debug("ready slice " + slices[i]);
+//#endif
             }
         }
 
@@ -441,10 +433,6 @@ public final class Map implements Runnable {
             map.listener.slicesLoaded(null, throwable);
         }
 
-        final boolean doFinal() {
-            return map.numberOfSlices > 0;
-        }
-
 /*
         protected final Slice addSlice(String filename) throws InvalidMapException {
             if (basename == null) {
@@ -470,39 +458,54 @@ public final class Map implements Runnable {
         }
 */
 
-        protected final Slice[] getMapSlices() {
+        final Slice[] getMapSlices() {
             return map.slices;
         }
 
-        protected final Calibration getMapCalibration() {
+        final Calibration getMapCalibration() {
             return map.calibration;
         }
 
-        protected final Slice addSlice(CharArrayTokenizer.Token token) throws InvalidMapException {
+        final Slice addSlice(CharArrayTokenizer.Token token) throws InvalidMapException {
+            // already got some slices?
             if (map.slices != null) {
+
                 // ensure array capacity
                 if (map.numberOfSlices == map.slices.length) {
-                    Slice[] newArray = new Slice[map.numberOfSlices + increment];
+
+                    // allocate new array
+                    final Slice[] newArray = new Slice[map.numberOfSlices + increment];
+
+                    // copy existing slices
                     System.arraycopy(map.slices, 0, newArray, 0, map.numberOfSlices);
+
+                    // use new array
                     map.slices = null; // gc hint
                     map.slices = newArray;
                 }
-            } else { // first slice being added
-                // alloc array
+
+            } else { // no, first slice being added
+
+                // alloc initial array
                 map.slices = initArray();
+                map.numberOfSlices = 0;
+
                 // detect slice basenema
                 basename = getBasename(token);
+
                 // detect extension
                 extension = getExtension(token);
+
             }
 
+            // create and add new slice
             final Slice slice = newSlice(token);
             map.slices[map.numberOfSlices++] = slice;
 
             return slice;
         }
 
-        protected Slice newSlice(CharArrayTokenizer.Token token) throws InvalidMapException {
+        Slice newSlice(CharArrayTokenizer.Token token) throws InvalidMapException {
             return !isGPSka ? new Slice(token) : new Slice();
         }
 
@@ -544,13 +547,17 @@ public final class Map implements Runnable {
             if (map.calibration != null) {
                 if (!isGPSka) {
                     initialCapacity = ((((map.calibration.getWidth() * map.calibration.getHeight()) / (300 * 400)) / 16) + 1) * 16;
+                    if (initialCapacity < 4) {
+                        initialCapacity = 16;
+                    }
+                    increment = initialCapacity / 4;
                 } else {
                     initialCapacity = 1;
                 }
             } else {
                 initialCapacity = 64;
+                increment = 64;
             }
-            increment = initialCapacity / 4;
 
             return new Slice[initialCapacity];
         }

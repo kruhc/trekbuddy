@@ -44,7 +44,7 @@ final class DirLoader extends Map.Loader implements Atlas.Loader {
         this.input = new FileInput(null);
     }
 
-    public void init(Map map, String url) throws IOException {
+    void init(Map map, String url) throws IOException {
         super.init(map, url);
         this.isGPSka = url.endsWith(Calibration.XML_EXT);
 
@@ -52,6 +52,7 @@ final class DirLoader extends Map.Loader implements Atlas.Loader {
         if (log.isEnabled()) log.debug("init map " + url);
 //#endif
 
+        // detect base dir
         int i = url.lastIndexOf(File.PATH_SEPCHAR);
         if (i == -1 || i + 1 == url.length()) {
             throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_INVALID_MAP_URL) + " '" + url + "'");
@@ -61,7 +62,9 @@ final class DirLoader extends Map.Loader implements Atlas.Loader {
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("slices are in " + dir);
 //#endif
+    }
 
+    void loadMeta(Map map) throws IOException {
         // read calibration
         if (getMapCalibration() == null) {
 //#ifdef __LOG__
@@ -73,14 +76,10 @@ final class DirLoader extends Map.Loader implements Atlas.Loader {
 
             // parse known calibration
             try {
-                i = map.getPath().lastIndexOf('.');
+                final int i = map.getPath().lastIndexOf('.');
                 if (i > -1) {
-
                     // path points to calibration file
                     map.setCalibration(Calibration.newInstance(buffered.setInputStream(fileInput._getInputStream()), map.getPath()));
-
-                    // clear buffered
-                    buffered.setInputStream(null);
                 }
 
                 // check calibration
@@ -100,6 +99,8 @@ final class DirLoader extends Map.Loader implements Atlas.Loader {
             } catch (IOException e) {
                 throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_PARSE_CAL_FAILED) + ": " + map.getPath(), e);
             } finally {
+                // clear buffered
+                buffered.setInputStream(null);
                 // close helper loader
                 fileInput.close();
             }
@@ -117,15 +118,13 @@ final class DirLoader extends Map.Loader implements Atlas.Loader {
                 String setFile = map.getPath().substring(0, map.getPath().lastIndexOf('.')) + ".set";
                 file = File.open(Connector.open(setFile, Connector.READ));
                 if (file.exists()) {
-                    // each line is a slice filename
                     LineReader reader = null;
-                    CharArrayTokenizer.Token token;
                     try {
+                        // each line is a slice filename
                         reader = new LineReader(buffered.setInputStream(file.openInputStream()));
-                        token = reader.readToken(false);
+                        CharArrayTokenizer.Token token = reader.readToken(false);
                         while (token != null) {
                             addSlice(token);
-                            token = null; // gc hint
                             token = reader.readToken(false);
                         }
                     } catch (InvalidMapException e) {
@@ -156,7 +155,7 @@ final class DirLoader extends Map.Loader implements Atlas.Loader {
         }
     }
 
-    public void loadSlice(Slice slice) throws IOException {
+    void loadSlice(Slice slice) throws IOException {
         // path sb
         final StringBuffer sb = cz.kruch.track.TrackingMIDlet.newInstance(32);
 
@@ -205,6 +204,7 @@ final class DirLoader extends Map.Loader implements Atlas.Loader {
     public void loadIndex(Atlas atlas, String url, String baseUrl) throws IOException {
         // file
         File file = null;
+        FileInput fileInput = new FileInput(null);
 
         try {
             // open atlas dir
@@ -215,7 +215,7 @@ final class DirLoader extends Map.Loader implements Atlas.Loader {
 
             // iterate over layers
             for (Enumeration le = file.list(); le.hasMoreElements();) {
-                String layerEntry = (String) le.nextElement();
+                final String layerEntry = (String) le.nextElement();
                 if (File.isDir(layerEntry)) {
 //#ifdef __LOG__
                     if (log.isEnabled()) log.debug("new layer: " + layerEntry);
@@ -229,7 +229,7 @@ final class DirLoader extends Map.Loader implements Atlas.Loader {
 
                     // iterate over layer
                     for (Enumeration me = file.list(); me.hasMoreElements();) {
-                        String mapEntry = (String) me.nextElement();
+                        final String mapEntry = (String) me.nextElement();
                         if (File.isDir(mapEntry)) {
 //#ifdef __LOG__
                             if (log.isEnabled()) log.debug("new map? " + mapEntry);
@@ -239,7 +239,7 @@ final class DirLoader extends Map.Loader implements Atlas.Loader {
 
                             // iterate over map dir
                             for (Enumeration ie = file.list(); ie.hasMoreElements();) {
-                                String fileEntry = (String) ie.nextElement();
+                                final String fileEntry = (String) ie.nextElement();
 
                                 // is dir
                                 if (File.isDir(fileEntry))
@@ -254,20 +254,18 @@ final class DirLoader extends Map.Loader implements Atlas.Loader {
                                 // calibration
                                 sb.delete(0, sb.length());
                                 String path = sb.append(file.getURL()).append(fileEntry).toString();
-                                FileInput fileInput = new FileInput(path);
+                                fileInput.setUrl(path);
 
                                 // load map calibration file
                                 Calibration calibration = Calibration.newInstance(fileInput._getInputStream(), path);
 
                                 // close file input
                                 fileInput.close();
-                                fileInput = null; // gc hint
 
                                 // found calibration
                                 if (calibration != null) {
 //#ifdef __LOG__
-                                    if (log.isEnabled())
-                                        log.debug("calibration loaded: " + calibration + "; layer = " + layerEntry + "; mName = " + mapEntry);
+                                    if (log.isEnabled()) log.debug("calibration loaded: " + calibration + "; layer = " + layerEntry + "; mName = " + mapEntry);
 //#endif
                                     // save calibration for given map
                                     layerCollection.put(mapEntry.substring(0, mapEntry.length() - 1), calibration);

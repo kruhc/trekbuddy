@@ -36,9 +36,9 @@ final class GmiCalibration extends Calibration {
     void init(InputStream in, String path) throws IOException {
         super.init(path);
 
-        Vector xy = new Vector();
-        Vector ll = new Vector();
-        CharArrayTokenizer tokenizer = new CharArrayTokenizer();
+        // vars
+        Vector xy = new Vector(4);
+        Vector ll = new Vector(4);
 
         // text reader
         LineReader reader = new LineReader(in);
@@ -50,6 +50,7 @@ final class GmiCalibration extends Calibration {
         height = Integer.parseInt(reader.readLine(false)); // image width
 
         // additional data
+        CharArrayTokenizer tokenizer = new CharArrayTokenizer();
         String line = reader.readLine(false);
         while (line != null) {
             if (line.startsWith("Additional Calibration Data"))
@@ -74,25 +75,22 @@ final class GmiCalibration extends Calibration {
             line = reader.readLine(false);
         }
 
-        // close reader
-        reader.close();
-
-        // gc hints
-        reader = null;
+        // gc hint
         tokenizer = null;
 
-        doFinal(null, LATLON_PROJ_SETUP, xy, ll);
+        // close reader
+        reader.close();
+        reader = null; // gc hint
 
-        // gc hints
-        xy.removeAllElements();
-        ll.removeAllElements();
+        // finalize
+        doFinal(null, LATLON_PROJ_SETUP, xy, ll);
     }
 
     private static void parsePoint(CharArrayTokenizer tokenizer, Vector xy, Vector ll) {
-        int x = tokenizer.nextInt();
-        int y = tokenizer.nextInt();
-        double lon = tokenizer.nextDouble();
-        double lat = tokenizer.nextDouble();
+        final int x = tokenizer.nextInt();
+        final int y = tokenizer.nextInt();
+        final double lon = tokenizer.nextDouble();
+        final double lat = tokenizer.nextDouble();
         xy.addElement(Position.newInstance(x, y));
         ll.addElement(QualifiedCoordinates.newInstance(lat, lon));
     }

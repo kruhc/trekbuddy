@@ -68,8 +68,9 @@ public final class CharArrayTokenizer {
     }
 
     private void init(char[] array, char[] delimiters, boolean returnDelim) {
-        this.array = null; // gc hint
-        this.delimiters = null; // gc hint
+        /* gc hint */
+        this.array = null;
+        this.delimiters = null;
         /* init */
         this.array = array;
         this.delimiters = delimiters;
@@ -125,7 +126,7 @@ public final class CharArrayTokenizer {
             // token beginning
             int begin = position;
 
-            while (isDelim(array[position])) {
+            if (isDelim(array[position])) { // TODO should be 'while'
                 // step fwd
                 position++;
                 // delims wanted?
@@ -333,6 +334,41 @@ public final class CharArrayTokenizer {
             }
 
             return false;
+        }
+
+        public void skipNonDigits() {
+            final char[] array = this.array;
+            final int end = begin + length;
+            int offset = begin;
+            while (offset < end) {
+                final char c = array[offset];
+                if (c >= '0' && c <= '9') {
+                    break;
+                }
+                offset++;
+            }
+            length = end - offset;
+            begin = offset;
+        }
+
+        public void trim() {
+            final char[] array = this.array;
+            int end = begin + length;
+            while (end > begin) {
+                if (array[end] != ' ') {
+                    break;
+                }
+                end--;
+            }
+            int offset = begin;
+            while (offset < end) {
+                if (array[offset] != ' ') {
+                    break;
+                }
+                offset++;
+            }
+            begin = offset;
+            length = end - offset;
         }
 
         public boolean startsWith(String s) {

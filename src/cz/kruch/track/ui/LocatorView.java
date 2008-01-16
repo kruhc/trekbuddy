@@ -508,28 +508,13 @@ final class LocatorView extends View {
                     NavigationScreens.drawWaypoint(graphics, xy[0], xy[1],
                                                    Graphics.LEFT | Graphics.TOP);
                 }
-                NavigationScreens.drawNaviw(graphics, arrowa, wHalf, hHalf,
+                NavigationScreens.drawArrow(NavigationScreens.ARROW_NAVI,
+                                            graphics, arrowa, wHalf, hHalf,
                                             Graphics.LEFT | Graphics.TOP);
 
                 // construct distance string
                 sb.delete(0, sb.length());
-                switch (Config.units) {
-                    case Config.UNITS_METRIC: {
-                        if (distance >= 10000F) { // dist > 10 km
-                            NavigationScreens.append(sb, distance / 1000F, 1).append(Desktop.DIST_STR_KM);
-                        } else if (distance < 5F) {
-                            NavigationScreens.append(sb, distance, 1).append(Desktop.DIST_STR_M);
-                        } else {
-                            NavigationScreens.append(sb, (int) distance).append(Desktop.DIST_STR_M);
-                        }
-                    } break;
-                    case Config.UNITS_IMPERIAL: {
-                        NavigationScreens.append(sb, distance / 1609F, 0).append(Desktop.DIST_STR_NMI);
-                    } break;
-                    case Config.UNITS_NAUTICAL: {
-                        NavigationScreens.append(sb, distance / 1852F, 0).append(Desktop.DIST_STR_NMI);
-                    } break;
-                }
+                NavigationScreens.printDistance(sb, distance);
                 l = sb.length();
                 sb.getChars(0, l, sbChars, 0);
 

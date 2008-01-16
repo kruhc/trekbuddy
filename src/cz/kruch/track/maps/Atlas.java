@@ -49,7 +49,6 @@ public final class Atlas implements Runnable {
     private static final int EVENT_ATLAS_OPENED     = 0;
     private static final int EVENT_LOADING_CHANGED  = 1;
 */
-    private static final String TBA_EXT = ".tba";
 
     // interaction with outside world
     private String url;
@@ -59,9 +58,6 @@ public final class Atlas implements Runnable {
     private Hashtable layers;
     private String current;
     private Hashtable maps;
-
-    // loaders factory
-    private Class dlFactory, tlFactory;
 
     public Atlas(String url, /*StateListener*/Desktop listener) {
         this.url = url;
@@ -192,12 +188,16 @@ public final class Atlas implements Runnable {
 //#endif
 
             // run loader
+            Class factory;
             Loader loader;
-            if (url.toLowerCase().endsWith(TBA_EXT)) {
-                loader = (Loader) Class.forName("cz.kruch.track.maps.DirLoader").newInstance();
+            if (url.endsWith(".tba") || url.endsWith(".TBA")) {
+                factory = Class.forName("cz.kruch.track.maps.DirLoader");
+            } else if (url.endsWith(".tar") || url.endsWith(".TAR")) {
+                factory = Class.forName("cz.kruch.track.maps.TarLoader");
             } else {
-                loader = (Loader) Class.forName("cz.kruch.track.maps.TarLoader").newInstance();
+                throw new InvalidMapException("Unsupported format");
             }
+            loader = (Loader) factory.newInstance();
             loader.loadIndex(this, url, baseUrl);
 
 //#ifdef __LOG__

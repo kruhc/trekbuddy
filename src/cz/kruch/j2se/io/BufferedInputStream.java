@@ -45,9 +45,6 @@ public final class BufferedInputStream extends InputStream {
      * @return this stream
      */
     public InputStream setInputStream(InputStream in) {
-        if (buffer == null) {
-            throw new IllegalStateException("Stream is not reusable");
-        }
         this.in = null; // gc hint
         this.in = in;
         this.pos = this.count = 0;
@@ -120,11 +117,11 @@ public final class BufferedInputStream extends InputStream {
     }
 
     public void close() throws IOException {
-        if (in == null) { // beware it may be null
-            return;
+        if (in != null) { // beware it may be null
+            in.close();
+            in = null; // gc hint
         }
-        in.close();
-        in = null; // gc hint
+        pos = count = 0; // prepare for reuse
     }
 
     /*

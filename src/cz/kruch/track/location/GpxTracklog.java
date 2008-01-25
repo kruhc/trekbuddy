@@ -649,7 +649,7 @@ public final class GpxTracklog extends Thread {
         date.setTime(timestamp);
         calendar.setTime(date);
 
-        final StringBuffer sb = cz.kruch.track.TrackingMIDlet.newInstance(32);
+        StringBuffer sb = new StringBuffer(32);
         final Calendar calendar = this.calendar;
 
         NavigationScreens.append(sb, calendar.get(Calendar.YEAR)).append('-');
@@ -663,20 +663,15 @@ public final class GpxTracklog extends Thread {
         final int result = sb.length();
         sb.getChars(0, result, sbChars, 0);
 
-        cz.kruch.track.TrackingMIDlet.releaseInstance(sb);
-
         return result;
     }
 
     private int doubleToChars(final double value, final int precision) {
-        final StringBuffer sb = cz.kruch.track.TrackingMIDlet.newInstance(32);
-
+        StringBuffer sb = new StringBuffer(32);
         NavigationScreens.append(sb, value, precision);
 
         final int result = sb.length();
         sb.getChars(0, result, sbChars, 0);
-
-        cz.kruch.track.TrackingMIDlet.releaseInstance(sb);
 
         return result;
     }
@@ -684,9 +679,7 @@ public final class GpxTracklog extends Thread {
     public static String dateToFileDate(long time) {
         Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone("GMT"));
         calendar.setTime(new Date(time));
-
-        final StringBuffer sb = cz.kruch.track.TrackingMIDlet.newInstance(32);
-
+        StringBuffer sb = new StringBuffer(32);
         NavigationScreens.append(sb, calendar.get(Calendar.YEAR)).append('-');
         appendTwoDigitStr(sb, calendar.get(Calendar.MONTH) + 1).append('-');
         appendTwoDigitStr(sb, calendar.get(Calendar.DAY_OF_MONTH)).append('-');
@@ -694,10 +687,7 @@ public final class GpxTracklog extends Thread {
         appendTwoDigitStr(sb, calendar.get(Calendar.MINUTE)).append('-');
         appendTwoDigitStr(sb, calendar.get(Calendar.SECOND));
 
-        String result = sb.toString();
-        cz.kruch.track.TrackingMIDlet.releaseInstance(sb);
-
-        return result;
+        return sb.toString();
     }
 
     private static StringBuffer appendTwoDigitStr(StringBuffer sb, int i) {

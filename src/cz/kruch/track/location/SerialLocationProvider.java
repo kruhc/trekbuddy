@@ -131,8 +131,10 @@ public class SerialLocationProvider extends StreamReadingLocationProvider implem
 
         } finally {
 
-            // stop NMEA log
-            stopNmeaLog();
+            // stop NMEA log on stop request
+            if (!go) {
+                stopNmeaLog();
+            }
 
             // be ready for restart
             go = false;

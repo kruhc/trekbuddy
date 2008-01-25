@@ -94,7 +94,7 @@ public final class Config {
      */
 
     // group [Map]
-    public static String mapPath            = EMPTY_STRING; // "file:///SDCard/trekbuddy/maps/yearling/cr.tar?layer=3&map=A04";
+    public static String mapPath            = EMPTY_STRING; // "file:///SDCard/trekbuddy/maps/yearling/cr.tar?layer=3&map=A04"; "file:///SDCard/trekbuddy/maps/jakob/Augsburg_Umland/Augsburg_Umland.map";
 
     // group [Map datum]
     public static String geoDatum           = Datum.DATUM_WGS_84.name;
@@ -192,8 +192,12 @@ public final class Config {
             dataDir = "file:///fs/tb/";
         } else if (cz.kruch.track.TrackingMIDlet.siemens) {
             dataDir = "file:///4:/TrekBuddy/";
+        } else if (cz.kruch.track.TrackingMIDlet.lg) {
+            dataDir = "file:///Card/TrekBuddy/";
         } else if (cz.kruch.track.TrackingMIDlet.wm) {
             dataDir = "file:///Storage%20Card/TrekBuddy/";
+        } else if (cz.kruch.track.TrackingMIDlet.motorola) {
+            dataDir = "file:///b/trekbuddy/";
         } else { // Nokia, SonyEricsson, ...
             dataDir = "file:///E:/TrekBuddy/";
         }
@@ -722,13 +726,10 @@ public final class Config {
 
     public static String getLocationTimings() {
         if (locationTimings == null || locationTimings.length() == 0) {
-//#ifdef __A780__
+//#ifdef __ALL__
             if (cz.kruch.track.TrackingMIDlet.a780) {
                 locationTimings = "2,2,-1"; /* from http://www.kiu.weite-welt.com/de.schoar.blog/?p=186 */
-            } else
-//#endif
-//#ifdef __A1000__
-            if (LOCATION_PROVIDER_MOTOROLA == locationProvider) {
+            } else if (LOCATION_PROVIDER_MOTOROLA == locationProvider) {
                 locationTimings = "9999,1,2000";
             } else
 //#endif            

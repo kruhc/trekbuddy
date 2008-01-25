@@ -16,7 +16,7 @@
     <property name="motorola.home" value="c:\J2ME\Motorola\SDKv6.2\EmulatorM.3"/>
     <property name="garnet.home" value="c:\J2ME\Garnet\PalmOS JVM 5.7.2\Tools"/>
     <property name="rim41.home" value="c:\J2ME\RIM\JDE 4.1.0"/>
-    <property name="rim42.home" value="c:\J2ME\RIM\JDE"/>
+    <property name="rim42.home" value="c:\J2ME\RIM\JDE 4.2.1"/>
     <property name="proguard.home" value="z:\apps\proguard3.10"/>
     <property name="symbian.home" value="c:\J2ME\Symbian\UIQ3.1SDK\epoc32\tools\java"/>
     <!--property name="proguard.home" value="z:\apps\proguard4.0.1"/-->
@@ -123,6 +123,7 @@
         <antcall target="rim.preverify" inheritall="true"/>
         <antcall target="dist" inheritall="true"/>
         <antcall target="rapc" inheritall="true"/>
+        <antcall target="rim.sign" inheritall="true"/>
     </target>
 
     <target name="rim42">
@@ -139,6 +140,7 @@
         <antcall target="rim.preverify" inheritall="true"/>
         <antcall target="dist" inheritall="true"/>
         <antcall target="rapc" inheritall="true"/>
+        <antcall target="rim.sign" inheritall="true"/>
     </target>
 
     <target name="emulator">
@@ -182,20 +184,20 @@
 
     <target name="a.pre.generic">
         <mkdir dir="tmp/src"/>
-        <wtkpreprocess srcdir="src" destdir="tmp/src" symbols="__JSR75__,__S65__,__A780__,__A1000__,__NOKIA__,${pre.extra}"/>
+        <wtkpreprocess srcdir="src" destdir="tmp/src" symbols="__ALL__,${pre.extra}"/>
     </target>
 
     <target name="a.pre.std">
         <mkdir dir="tmp/src"/>
-        <wtkpreprocess srcdir="src" destdir="tmp/src" symbols="__JSR75__,${pre.extra}"/>
+        <wtkpreprocess srcdir="src" destdir="tmp/src" symbols="${pre.extra}"/>
     </target>
 
     <target name="a.pre.rim">
         <mkdir dir="tmp/src"/>
-        <wtkpreprocess srcdir="src" destdir="tmp/src" symbols="__JSR75__,__RIM__,${pre.extra}"/>
+        <wtkpreprocess srcdir="src" destdir="tmp/src" symbols="__RIM__,${pre.extra}"/>
     </target>
 
-    <target name="compile.generic">
+    <target name="compile.generic" depends="remove.rim.src">
         <mkdir dir="tmp/build/classes"/>
         <javac srcdir="tmp/src"
                destdir="tmp/build/classes"
@@ -204,7 +206,7 @@
                bootclasspathref="bootclasspath.generic"/>
     </target>
 
-    <target name="compile.std" depends="remove.nonstd.src">
+    <target name="compile.std" depends="remove.nonstd.src,remove.rim.src">
         <mkdir dir="tmp/build/classes"/>
         <javac srcdir="tmp/src"
                destdir="tmp/build/classes"
@@ -244,12 +246,18 @@
         <delete file="tmp/src/cz/kruch/track/location/MotorolaLocationProvider.java"/>
     </target>
 
+    <target name="remove.rim.src">
+        <delete file="tmp/src/cz/kruch/track/ui/nokia/BlackberryDeviceControl.java"/>
+    </target>
+
     <target name="remove.nonrim41.src" depends="remove.nonstd.src">
         <delete file="tmp/src/api/file/Jsr75File.java"/>
         <delete file="tmp/src/cz/kruch/track/location/Jsr82LocationProvider.java"/>
+        <delete file="tmp/src/cz/kruch/track/ui/nokia/Midp2DeviceControl.java"/>
     </target>
 
     <target name="remove.nonrim42.src" depends="remove.nonstd.src">
+        <delete file="tmp/src/cz/kruch/track/ui/nokia/Midp2DeviceControl.java"/>
     </target>
 
     <target name="create.tmp.jad">
@@ -328,6 +336,7 @@
             <arg value="-keepnames class cz.** extends java.lang.Exception"/>
             <arg value="-keepnames class api.** extends java.lang.Exception"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.ConfiguratorMIDlet"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.maps.io.FileInput"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.util.NakedVector"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.util.Logger"/>
             <arg value="-whyareyoukeeping class com.symbian.gcf.NativeHelper"/>
@@ -343,7 +352,7 @@
 	    <java jar="${proguard.home}\lib\proguard.jar" fork="true">
             <arg value="-injars tmp/trekbuddy${suffix}.jar"/>
             <arg value="-outjars tmp/trekbuddy${suffix}-obfuscated.jar"/>
-            <arg value="-libraryjars ${libraryjars}"/>
+            <arg value="-libraryjars '${libraryjars}'"/>
 <!-- 4.x
             <arg value="-dontpreverify"/>
 -->
@@ -361,6 +370,7 @@
             <arg value="-keepnames class cz.** extends java.lang.Exception"/>
             <arg value="-keepnames class api.** extends java.lang.Exception"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.ConfiguratorMIDlet"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.maps.io.FileInput"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.util.NakedVector"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.util.Logger"/>
             <arg value="-whyareyoukeeping class com.symbian.gcf.NativeHelper"/>
@@ -383,6 +393,7 @@
             <arg value="-keep class * implements javax.microedition.midlet.MIDlet"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.ConfiguratorMIDlet"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.util.NakedVector"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.maps.io.FileInput"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.util.Logger"/>
             <arg value="-whyareyoukeeping class com.symbian.gcf.NativeHelper"/>
             <arg value="-whyareyoukeeping class cz.kruch.symbian.io.FastSkippingInputStream"/>
@@ -467,7 +478,7 @@
                   </exec>
         -->
         <exec dir="${basedir}\dist\${vendor.dir}\${dist.dir}" executable="${rim.home}\bin\rapc.exe">
-            <arg line="import='${rim.home}\lib\net_rim_api.jar' codename=trekbuddy${suffix} -quiet -midlet ${basedir}\dist/${vendor.dir}\${dist.dir}\trekbuddy${suffix}.jad ${basedir}\dist/${vendor.dir}\${dist.dir}\trekbuddy${suffix}.jar"/>
+            <arg line="import='${rim.home}\lib\net_rim_api.jar' codename=trekbuddy${suffix} -quiet -midlet ${basedir}\dist\${vendor.dir}\${dist.dir}\trekbuddy${suffix}.jad ${basedir}\dist\${vendor.dir}\${dist.dir}\trekbuddy${suffix}.jar"/>
         </exec>
         <copy file="${basedir}\trekbuddy.alx"
               tofile="${basedir}\dist/${vendor.dir}\${dist.dir}\trekbuddy${suffix}.alx"/>
@@ -476,9 +487,18 @@
                  value="${description}"/>
         <replace file="${basedir}\dist/${vendor.dir}\${dist.dir}\trekbuddy${suffix}.alx" token="@VERSION@" value="${version}"/>
         <replace file="${basedir}\dist/${vendor.dir}\${dist.dir}\trekbuddy${suffix}.alx" token="@VENDOR@" value="${vendor}"/>
+<!-- commented out because .csl and .cso are required for signing
         <delete>
             <fileset dir="${basedir}\dist/${vendor.dir}\${dist.dir}" excludes="*.cod,*.alx,*.map"/>
         </delete>
+-->
+    </target>
+
+    <target name="rim.sign">
+        <echo>Signing rim.home=${rim.home}</echo>
+        <java fork="yes" jar="${rim.home}/bin/SignatureTool.jar">
+           <arg line="-s -p changeit ${basedir}\dist\${vendor.dir}\${dist.dir}\trekbuddy${suffix}.cod"/>
+        </java>
     </target>
 
     <target name="jad2prc">

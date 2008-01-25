@@ -232,6 +232,7 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
                         }
 
                         // next line
+                        token = null; // gc hint
                         token = reader.readToken(false);
                     }
                 } catch (InvalidMapException e) {
@@ -258,7 +259,6 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
             // close file
             if (file != null) {
                 file.close();
-                file = null; // gc hint
             }
         }
     }
@@ -338,15 +338,16 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
 //#ifdef __LOG__
                 if (log.isEnabled()) log.debug("input stream not reusable -> close it");
 //#endif
-                // clean buffered
-                buffered.setInputStream(null);
-
                 // close native non-reusable stream
                 try {
                     in.close();
                 } catch (IOException e) {
                     // ignore
                 }
+
+                // clean buffered
+                buffered.setInputStream(null);
+
             }
         }
     }
@@ -369,7 +370,7 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
             // shared vars
             final char[] delims = { File.PATH_SEPCHAR };
             final CharArrayTokenizer tokenizer = new CharArrayTokenizer();
-            final StringBuffer sb = cz.kruch.track.TrackingMIDlet.newInstance(32);
+            final StringBuffer sb = new StringBuffer(32);
 
             // iterate over archive
             TarEntry entry = tar.getNextEntry();
@@ -398,8 +399,7 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
                         if (lName != null && mName != null) {
 
                             // construct url
-                            sb.delete(0, sb.length());
-                            String realUrl = sb.append(baseUrl).append(entryName).toString();
+                            String realUrl = sb.delete(0, sb.length()).append(baseUrl).append(entryName).toString();
                             String fakeUrl = url.endsWith(".idx") ? realUrl : sb.delete(0, sb.length()).append(baseUrl).append(lName).append(File.PATH_SEPCHAR).append(mName).append(File.PATH_SEPCHAR).append(mName).append(".tar").toString();
 
                             // load map calibration file
@@ -418,11 +418,11 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
                         }
                     }
                 }
+
+                // next entry
+                entry = null; // gc hint
                 entry = tar.getNextEntry();
             }
-
-            // dispose sb
-            cz.kruch.track.TrackingMIDlet.releaseInstance(sb);
 
         } finally {
 

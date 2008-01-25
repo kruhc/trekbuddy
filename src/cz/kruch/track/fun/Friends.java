@@ -85,7 +85,7 @@ public final class Friends implements MessageListener, Runnable {
         }
 
         // create SMS text
-        final StringBuffer sb = cz.kruch.track.TrackingMIDlet.newInstance(32);
+        StringBuffer sb = new StringBuffer(32);
         sb.append(TBSMS_HEADER).append(type).append(SEPARATOR_CHAR);
         sb.append(time / 1000).append(SEPARATOR_CHAR);
         sb.append(toSentence(QualifiedCoordinates.LAT, coordinates.getLat()));
@@ -98,7 +98,7 @@ public final class Friends implements MessageListener, Runnable {
         sb.delete(0, sb.length());
         sb.append(SMS_PROTOCOL).append(phone).append(PORT);
         String url = sb.toString();
-        cz.kruch.track.TrackingMIDlet.releaseInstance(sb);
+        sb = null; // gc hint
 
 //#ifdef __LOG__
         debug(text);
@@ -172,11 +172,11 @@ public final class Friends implements MessageListener, Runnable {
                     Waypoint wpt = new Waypoint(QualifiedCoordinates.newInstance(lat, lon),
                                                 address, chat, time);
 
-                    // notify
-                    Waypoints.getInstance().invoke(new Object[]{ type, wpt }, null, this);
+                    // notify user
+                    Desktop.showAlarm(Resources.getString(Resources.DESKTOP_MSG_SMS_RECEIVED) + wpt.getName(), null);
 
-                    // UI notification
-                    Desktop.showAlarm(Resources.getString(Resources.DESKTOP_MSG_SMS_RECEIVE_FAILED) + wpt.getName(), null);
+                    // notify
+                    Waypoints.getInstance().invoke(wpt, null, this);
                 }
             }
         } catch (Throwable t) {
@@ -266,7 +266,7 @@ public final class Friends implements MessageListener, Runnable {
             }
         }
 
-        final StringBuffer sb = cz.kruch.track.TrackingMIDlet.newInstance(32);
+        StringBuffer sb = new StringBuffer(32);
         if (type == QualifiedCoordinates.LON && d < 100) {
             sb.append('0');
         }
@@ -292,10 +292,8 @@ public final class Friends implements MessageListener, Runnable {
         }
         NavigationScreens.append(sb, s);
         sb.append(',').append(type == QualifiedCoordinates.LAT ? (sign == -1 ? "S" : "N") : (sign == -1 ? "W" : "E"));
-        String result = sb.toString();
-        cz.kruch.track.TrackingMIDlet.releaseInstance(sb);
 
-        return result;
+        return sb.toString();
     }
 
 //#ifdef __LOG__

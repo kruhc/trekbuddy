@@ -70,9 +70,9 @@ final class InfoForm extends Form implements CommandListener {
         final long freeMemory = Runtime.getRuntime().freeMemory();
 
         // items
-        final StringBuffer sb = cz.kruch.track.TrackingMIDlet.newInstance(64);
         append(newItem("Platform", cz.kruch.track.TrackingMIDlet.getPlatform()));
-        sb.delete(0, sb.length()).append(totalMemory).append('/').append(freeMemory);
+        StringBuffer sb = new StringBuffer(32);
+        sb.append(totalMemory).append('/').append(freeMemory);
         append(newItem("Memory", sb.toString()));
         sb.delete(0, sb.length());
         if (File.fsType == File.FS_JSR75 || File.fsType == File.FS_SXG75)
@@ -108,7 +108,6 @@ final class InfoForm extends Form implements CommandListener {
         sb.delete(0, sb.length()).append((ps == null ? "" : ps.toString())).append("; stalls=").append(cz.kruch.track.location.StreamReadingLocationProvider.stalls).append("; restarts=").append(cz.kruch.track.location.StreamReadingLocationProvider.restarts).append("; syncs=").append(cz.kruch.track.location.StreamReadingLocationProvider.syncs).append("; mismatches=").append(cz.kruch.track.location.StreamReadingLocationProvider.mismatches).append("; checksums=").append(cz.kruch.track.location.StreamReadingLocationProvider.checksums);
         append(new StringItem("ProviderStatus", sb.toString()));
         append(new StringItem("ProviderError", le == null ? "" : le.toString()));
-        cz.kruch.track.TrackingMIDlet.releaseInstance(sb);
     }
 
     public void commandAction(Command command, Displayable displayable) {

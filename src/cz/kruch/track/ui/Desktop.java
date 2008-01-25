@@ -42,7 +42,6 @@ import javax.microedition.lcdui.Font;
 import javax.microedition.lcdui.Image;
 import javax.microedition.lcdui.game.GameCanvas;
 import javax.microedition.midlet.MIDlet;
-import javax.microedition.io.Connector;
 import java.io.IOException;
 import java.util.Date;
 import java.util.Enumeration;
@@ -58,8 +57,7 @@ import api.location.LocationException;
 import api.file.File;
 
 /**
- * Application desktop.
- * TODO rip {@link MapView} out.
+ * Application desktop. Navigator. :-)
  *
  * @author Ales Pour <kruhc@seznam.cz>
  */
@@ -103,10 +101,10 @@ public final class Desktop extends GameCanvas
     // common desktop components
     static Image bar, barWpt, barScale;
     static OSD osd; // TODO should move to MapView
-    private Status status; // TODO should move to MapView 
+    static Status status; // TODO should move to MapView 
 
     // desktop dimensions
-    public static int width, height;
+    static int width, height;
 
     // desktop views
     private View[] views;
@@ -120,9 +118,6 @@ public final class Desktop extends GameCanvas
     // data components
     private Map map;
     private Atlas atlas;
-
-    // navigator components
-    private Location location;
 
     // groupware components
     private Friends friends;
@@ -138,14 +133,15 @@ public final class Desktop extends GameCanvas
     private Command cmdPause, cmdContinue;
 
     // for faster movement
-    static volatile int scrolls;
+    static volatile int scrolls; // TODO should move to MapView
 
     // browsing or tracking
     static volatile boolean browsing = true;
     static volatile boolean paused;
+    static volatile boolean navigating;
+    static volatile boolean showall;
 
-    // other status vars
-    private volatile boolean navigating;
+    // key repeating simulation support
     private volatile boolean keylock;
     private volatile int keyRepeatedCount;
 
@@ -176,23 +172,19 @@ public final class Desktop extends GameCanvas
     /*public*/ static volatile int routeDir;
 
     // current waypoint info
-    private volatile float wptDistance, wptHeightDiff;
-    private volatile int wptAzimuth;
-    private volatile int wptsId;
+    /*private */volatile float wptDistance, wptHeightDiff;
+    /*private */volatile int wptAzimuth;
+    /*private */volatile int wptsId;
 
     // repeated event simulation for dumb devices
-    private Class repeatedKeyCheckFactory;
     private volatile TimerTask repeatedKeyCheck;
     private /*volatile*/ int inKey; // using synchronized access helper
 
     // start/initialization
     private volatile boolean guiReady;
-/*
-    private volatile boolean postInit;
-*/
 
     // eventing
-    private final SmartRunnable eventing;
+    /*private */final SmartRunnable eventing; // TODO fix visibility
 
     /**
      * Desktop constructor.
@@ -358,7 +350,7 @@ public final class Desktop extends GameCanvas
 
     private static void resetBar() {
         // alpha
-        final int alpha = display.numAlphaLevels() > 2 ? 0x80 : 0xff;
+        final int alpha = display.numAlphaLevels() > 2 ? (cz.kruch.track.TrackingMIDlet.sonyEricsson ? 0x90 : 0x80) : 0xff;
 
         // OSD/status bar
         int color = alpha << 24 | 0x007f7f7f;
@@ -434,7 +426,7 @@ public final class Desktop extends GameCanvas
 
         // clear main area with black
         Graphics g = graphics;
-//#ifdef __S65__
+//#ifdef __ALL__
         if (cz.kruch.track.TrackingMIDlet.s65) {
             g = getGraphics();
         }
@@ -599,15 +591,6 @@ public final class Desktop extends GameCanvas
 //#ifdef __LOG__
         if (log.isEnabled()) log.info("post init");
 //#endif
-
-        // misc
-        if (!hasRepeatEvents) {
-            try {
-                repeatedKeyCheckFactory = Class.forName("cz.kruch.track.ui.KeyCheckTimerTask");
-            } catch (ClassNotFoundException e) {
-                // should not happen
-            }
-        }
 
         // start Friends
         if (cz.kruch.track.TrackingMIDlet.jsr120 && Config.locationSharing) {
@@ -820,8 +803,10 @@ public final class Desktop extends GameCanvas
         // notify device control
         cz.kruch.track.ui.nokia.DeviceControl.keyReleased();
 
+/* why????
         // update
         update(MASK_ALL);
+*/
     }
 
     public void commandAction(Command command, Displayable displayable) {
@@ -860,7 +845,7 @@ public final class Desktop extends GameCanvas
             // update OSD
             update(MASK_OSD);
         } else if (command == cmdExit) {
-            (new YesNoDialog(this, this, this)).show(Resources.getString(Resources.DESKTOP_MSG_WANT_QUIT), null);
+            (new YesNoDialog(this, this, this, Resources.getString(Resources.DESKTOP_MSG_WANT_QUIT), null)).show();
         } else if (command == cmdPause) {
             // update flag
             paused = true;
@@ -925,6 +910,13 @@ public final class Desktop extends GameCanvas
                     views[i].close();
                 }
 
+                // backup runtime vars
+                try {
+                    Config.update(Config.VARS_090);
+                } catch (ConfigurationException e) {
+                    // ignore
+                }
+
                 // stop I/O loader
                 LoaderIO.getInstance().destroy();
 
@@ -977,20 +969,28 @@ public final class Desktop extends GameCanvas
     //
 
     public boolean isTracking() {
-        return provider != null;
+        return this.provider != null;
     }
 
     public boolean isLocation() {
-        return location != null;
+        return ((MapView)views[VIEW_MAP]).isLocation();
+    }
+
+    public Atlas getAtlas() {
+        return this.atlas;
+    }
+
+    public Map getMap() {
+        return this.map;
     }
 
     public void updateNavigation(QualifiedCoordinates from) {
         // got active wpt?
-        if (wpts != null) {
+        if (wpts != null && wptIdx > -1) {
 
             // wpt location
-            Waypoint wpt = ((Waypoint) wpts.elementAt(wptIdx));
-            QualifiedCoordinates qc = wpt.getQualifiedCoordinates();
+            final Waypoint wpt = ((Waypoint) wpts.elementAt(wptIdx));
+            final QualifiedCoordinates qc = wpt.getQualifiedCoordinates();
 
             // calculate distance, azimuth and height diff
             wptDistance = from.distance(qc);
@@ -1005,15 +1005,13 @@ public final class Desktop extends GameCanvas
 
     public void updateRouting(QualifiedCoordinates from) {
         // route navigation?
-        if (wpts != null) {
+        if (wpts != null && wptIdx > -1) {
 
             // current wpt reached?
             if (wptDistance > -1F && wptDistance <= Config.wptProximity) {
 
-                // mark wpt as 'reached' when routing // TODO ugly code
-                if (((MapView)views[VIEW_MAP]).route != null) {
-                    ((MapView)views[VIEW_MAP]).mapViewer.setPoiStatus(wptIdx, MapViewer.WPT_STATUS_REACHED);
-                }
+                // notify // TODO ugly!!!
+                ((MapView) views[VIEW_MAP]).mapViewer.setPoiStatus(wptIdx, MapViewer.WPT_STATUS_REACHED);
 
                 // wpt reached - fanfar!
                 if (reachedIdx != wptIdx) {
@@ -1082,6 +1080,9 @@ public final class Desktop extends GameCanvas
         return views[VIEW_MAP].getPointer();
     }
 
+    /**
+     * @deprecated redesign
+     */
     public void saveLocation(Location l) {
         if (gpxTracklog != null) {
             gpxTracklog.insert(l);
@@ -1121,66 +1122,102 @@ public final class Desktop extends GameCanvas
             startAlternateMap(atlas.getLayer(), local, Resources.getString(Resources.DESKTOP_MSG_WPT_OFF_LAYER));
 
         } else {
+
+            // warn user
             Desktop.showWarning(Resources.getString(Resources.DESKTOP_MSG_WPT_OFF_MAP), null, Desktop.this);
+
         }
         QualifiedCoordinates.releaseInstance(local);
     }
 
+    /*
+     * Should be called only if
+     * - not navigating yet; or
+     * - navigating to single wpt
+     */
+    public void setVisible(Vector wpts, boolean visible) {
+        // set flag
+        Desktop.showall = visible;
+
+        // not navigating yet
+        if (Desktop.wpts == null) {
+
+            // use wpts
+            Desktop.wpts = wpts;
+            wptsId = wpts.hashCode();
+
+            // notify map view // TODO this is ugly
+            views[VIEW_MAP].routeChanged(wpts);
+            ((MapView) views[VIEW_MAP]).mapViewer.starTick();
+            ((MapView) views[VIEW_MAP]).mapViewer.nextCrosshair();
+            ((MapView) views[VIEW_MAP]).mapViewer.starTick();
+        }
+
+        // update screen
+        update(MASK_ALL);
+    }
+
     /**
      * @deprecated should be?
-     * @return current waypoint
      */
     public Waypoint getNavigateTo() {
-        return wpts == null ? null : ((Waypoint) wpts.elementAt(wptIdx));
+        return wpts == null || wptIdx < 0 ? null : ((Waypoint) wpts.elementAt(wptIdx));
     }
 
     public void setNavigateTo(Vector wpts, int fromIndex, int toIndex) {
         // gc hint
-        /*this.*/Desktop.wpts = null;
+        Desktop.wpts = null;
 
         // 'route changed' flag
         boolean rchange = false;
 
         // start navigation?
         if (wpts != null) {
+
             // update state vars
-            navigating = true;
-            /*this.*/Desktop.wpts = wpts;
+            Desktop.navigating = true;
+            Desktop.wpts = wpts;
             if (toIndex < 0) { // forward routing
-                /*this.*/Desktop.wptIdx = fromIndex;
-                /*this.*/Desktop.wptEndIdx = toIndex;
-                /*this.*/Desktop.routeDir = 1;
+                Desktop.wptIdx = fromIndex;
+                Desktop.wptEndIdx = toIndex;
+                Desktop.routeDir = 1;
             } else if (fromIndex < 0) { // backward routing
-                /*this.*/Desktop.wptIdx = toIndex;
-                /*this.*/Desktop.wptEndIdx = fromIndex;
-                /*this.*/Desktop.routeDir = -1;
+                Desktop.wptIdx = toIndex;
+                Desktop.wptEndIdx = fromIndex;
+                Desktop.routeDir = -1;
             } else { // single wpt navigation
-                /*this.*/Desktop.wptIdx = toIndex;
-                /*this.*/Desktop.wptEndIdx = fromIndex;
-                /*this.*/Desktop.routeDir = 0;
+                Desktop.wptIdx = toIndex;
+                Desktop.wptEndIdx = fromIndex;
+                Desktop.routeDir = 0;
             }
+
             // update navinfo
             if (isTracking() && isLocation()) {
                 updateNavigation(getLocation().getQualifiedCoordinates());
             } else {
                 updateNavigation(getPointer());
             }
-            // is this route navigation
-            if (routeDir != 0) {
-                if (wpts.hashCode() != wptsId) {
-                    // remember new route hash
-                    wptsId = wpts.hashCode();
-                    // set flag
-                    rchange = true;
-                }
+
+            // detect route change
+            if (wpts.hashCode() != wptsId) {
+                // remember new route hash
+                wptsId = wpts.hashCode();
+                // set flag
+                rchange = true;
             }
         } else { /* no, navigation stoppped */
-            // clear navigation info
-            navigating = false;
+
+            // reset global navigation info
+            Desktop.navigating = false;
+            Desktop.routeDir = 0;
+            Desktop.wptIdx = -1;
+            
+            // reset local navigation info
             wptsId = 0;
             wptAzimuth = -1;
             wptDistance = -1F;
             wptHeightDiff = Float.NaN;
+
             // set 'route changed' flag
             rchange = true;
         }
@@ -1212,10 +1249,6 @@ public final class Desktop extends GameCanvas
             return Float.NaN;
         }
         return ((Waypoint) wpts.elementAt(wptIdx)).getQualifiedCoordinates().getAlt();
-    }
-
-    public Map getMap() {
-        return map;
     }
 
     //
@@ -1276,19 +1309,19 @@ public final class Desktop extends GameCanvas
         }
     }
 
-    private boolean _getLoadingSlices() {
+    boolean _getLoadingSlices() {
         synchronized (this) {
             return loadingSlices;
         }
     }
 
-    private void _setLoadingSlices(final boolean b) {
+    void _setLoadingSlices(final boolean b) {
         synchronized (this) {
             loadingSlices = b;
         }
     }
 
-    private boolean _getInitializingMap() {
+    boolean _getInitializingMap() {
         synchronized (this) {
             return initializingMap;
         }
@@ -1339,12 +1372,7 @@ public final class Desktop extends GameCanvas
 
                     // schedule delayed check to emulate key repeated event
                     if (repeatedKeyCheck == null) {
-                        try {
-                            repeatedKeyCheck = (TimerTask) repeatedKeyCheckFactory.newInstance();
-                        } catch (Exception e) {
-                            // should not happen
-                        }
-                        timer.schedule(repeatedKeyCheck, 1500L);
+                        timer.schedule(repeatedKeyCheck = new KeyCheckTimerTask(this), 1500L);
                     }
                 }
 
@@ -1438,6 +1466,9 @@ public final class Desktop extends GameCanvas
     }
 
     public static void showAlarm(String message, Displayable nextDisplayable) {
+        if (Config.noSounds) {
+            Desktop.display.vibrate(1000);
+        }
         showAlert(AlertType.ALARM, message, ALARM_DIALOG_TIMEOUT, nextDisplayable);
     }
 
@@ -1495,7 +1526,7 @@ public final class Desktop extends GameCanvas
                 if (last) startTrackingLast(); else startTracking();
             } break;
             case Config.TRACKLOG_ASK: {
-                (new YesNoDialog(display.getCurrent(), this, new Boolean(last))).show(Resources.getString(Resources.DESKTOP_MSG_START_TRACKLOG), null);
+                (new YesNoDialog(display.getCurrent(), this, new Boolean(last), Resources.getString(Resources.DESKTOP_MSG_START_TRACKLOG), null)).show();
             } break;
             case Config.TRACKLOG_ALWAYS: {
                 tracklog = true; // !
@@ -1532,7 +1563,7 @@ public final class Desktop extends GameCanvas
                     providerClass = Class.forName("cz.kruch.track.location.SimulatorLocationProvider");
                     providerName = "Simulator";
                 break;
-//#ifdef __A1000__
+//#ifdef __ALL__
                 case Config.LOCATION_PROVIDER_MOTOROLA:
                     providerClass = Class.forName("cz.kruch.track.location.MotorolaLocationProvider");
                     providerName = "Motorola";
@@ -1841,11 +1872,11 @@ public final class Desktop extends GameCanvas
         loadingResult[1] = value;
     }
 
-    private Object[] _getLoadingResult() {
+    Object[] _getLoadingResult() {
         return loadingResult;
     }
 
-    private String _getLoadingResultText() {
+    String _getLoadingResultText() {
         return loadingResult[0] + " " + loadingResult[1];
     }
 
@@ -1860,7 +1891,7 @@ public final class Desktop extends GameCanvas
     private static final RenderTask[] rtPool = new RenderTask[32];
     private static int rtCountFree;
 
-    private synchronized RenderTask newRenderTask(final int m) {
+    private RenderTask newRenderTask(final int m) {
         RenderTask result;
 
         synchronized (rtPool) {
@@ -1920,7 +1951,7 @@ public final class Desktop extends GameCanvas
             try {
                 // get graphics
                 Graphics g = graphics;
-//#ifdef __S65__
+//#ifdef __ALL__
                 if (cz.kruch.track.TrackingMIDlet.s65) {
                     g = getGraphics();
                 }
@@ -1956,664 +1987,6 @@ public final class Desktop extends GameCanvas
         }
     }
 
-    /**
-     * TODO make this top-level class like LocatorView
-     */
-    private final class MapView extends View {
-//#ifdef __LOG__
-        private /*static*/ final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("MapView");
-//#endif
-
-        private final MapViewer mapViewer;
-
-        private Position[] route;
-        private Position waypoint;
-
-//        private volatile long lastRepeat;
-        
-        public MapView(/*Navigator*/Desktop navigator) {
-            super(navigator);
-
-            // create map viewer
-            this.mapViewer = new MapViewer(/*0, 0, */);
-        }
-
-        /** @deprecated hack */
-        public void ensureSlices() {
-            if (!_getInitializingMap() && mapViewer.hasMap()) {
-                synchronized (Desktop.this/*loadingSlicesLock*/) {
-                    if (!loadingSlices) {
-                        loadingSlices = mapViewer.ensureSlices();
-                    }
-                }
-            }
-        }
-
-        /** @deprecated hack */
-        public void setMap(Map map) {
-            mapViewer.setMap(map);
-            clearRoute();
-            clearWaypoint();
-            if (map != null && wpts != null) {
-                if (route != null) {
-                    prepareRoute(wpts);
-                    mapViewer.setRoute(route, true);
-                }
-                prepareWaypoint(wpts, wptIdx, true);
-                mapViewer.setWaypoint(waypoint);
-            }
-        }
-
-        /** @deprecated hack */
-        public Position getPosition() {
-            return mapViewer.getPosition();
-        }
-
-        /** @deprecated hack */
-        public void setPosition(Position position) {
-            mapViewer.setPosition(position);
-        }
-
-        /** @deprecated remove */
-        private boolean isAtlas() {
-            return atlas != null;
-        }
-
-        /** @deprecated remove */
-        private boolean isMap() {
-            return map != null;
-        }
-
-        public void close() {
-            mapViewer.setMap(null); // saves crosshair position
-        }
-
-        void setVisible(boolean b) {
-            super.setVisible(b);
-            if (b) { /* trick */
-                if (location != null) {
-                    locationUpdated(location);
-                }
-            }
-        }
-
-        public int routeChanged(Vector wpts) {
-            // release old
-            clearRoute();
-            this.route = null; // gc hint
-
-            // routing starts
-            if (wpts != null) {
-
-                // allocate new array
-                route = new Position[wpts.size()];
-                
-                // prepare route
-                prepareRoute(wpts);
-
-            }
-
-            // set route on map
-            mapViewer.setRoute(route, false);
-
-            return super.routeChanged(wpts);
-        }
-
-        public int navigationChanged(Vector wpts, int idx, boolean silent) {
-            // release old
-            clearWaypoint();
-            waypoint = null; // gc hint
-
-            // navigation started?
-            if (wpts != null) {
-
-                // prepare waypoint
-                prepareWaypoint(wpts, idx, silent);
-
-                // update UI
-                updateNavigationInfo();
-
-            } else { // no, navigation stopped
-
-                // hide navigation arrow and info
-                mapViewer.setNavigationCourse(-1F);
-                osd.resetNavigationInfo();
-
-                // notify user
-                if (isVisible) {
-                    Desktop.showConfirmation(Resources.getString(Resources.DESKTOP_MSG_NAV_STOPPED), Desktop.this);
-                }
-            }
-
-            // set wpt on map
-            mapViewer.setWaypoint(waypoint);
-
-            return super.navigationChanged(wpts, idx, silent);
-        }
-
-        private void browsingOn() {
-            mapViewer.setCourse(-1F);
-        }
-
-        private void clearRoute() {
-            if (this.route != null) {
-                Position[] route = this.route;
-                for (int i = route.length; --i >= 0; ) {
-                    Position.releaseInstance(route[i]);
-                    route[i] = null;
-                }
-            }
-        }
-
-        private void prepareRoute(Vector wpts) {
-            // create
-            for (int N = wpts.size(), c = 0, i = 0; i < N; i++) {
-
-                // get coordinates local to map
-                Waypoint wpt = (Waypoint) wpts.elementAt(i);
-                QualifiedCoordinates localQc = map.getDatum().toLocal(wpt.getQualifiedCoordinates());
-                Position position = map.transform(localQc);
-
-                // add to route or release
-//                if (map.isWithin(position)) {
-                    route[c++] = position.clone();
-//                } else {
-//                    c++;
-//                }
-
-                // release
-                QualifiedCoordinates.releaseInstance(localQc);
-            }
-        }
-
-        private void clearWaypoint() {
-            Position.releaseInstance(this.waypoint);
-        }
-
-        private void prepareWaypoint(Vector wpts, final int idx, final boolean silent) {
-            // get coordinates local to map
-            Waypoint wpt = (Waypoint) wpts.elementAt(idx);
-            QualifiedCoordinates localQc = map.getDatum().toLocal(wpt.getQualifiedCoordinates());
-
-            // is wpt on current map
-            if (map.isWithin(localQc)) {
-
-                // get marker position on current map
-                waypoint = map.transform(localQc).clone();
-
-                // notify user
-                if (isVisible && !silent) {
-                    Desktop.showInfo(Resources.getString(Resources.DESKTOP_MSG_WPT_SET), Desktop.this);
-                }
-
-            } else { // no, warn
-
-                // warn user
-                if (isVisible && !silent) {
-                    Desktop.showWarning(Resources.getString(Resources.DESKTOP_MSG_WPT_OFF_MAP), null, Desktop.this);
-                }
-            }
-
-            // release
-            QualifiedCoordinates.releaseInstance(localQc);
-        }
-
-        public int handleAction(final int action, final boolean repeated) {
-            int mask = MASK_NONE;
-
-            // only if map viewer is usable
-            if (mapViewer.hasMap()) {
-
-                // sync or navigate
-                if (action == Canvas.FIRE) {
-
-                    // mode flags
-                    browsing = false;
-                    navigating = !navigating;
-
-                    // trick
-                    if (isTracking() && isLocation()) {
-                        if (location != null) {
-                            mask |= locationUpdated(location);
-                        }
-                    }
-                } else { // move left-right-up-down
-
-                    // cursor movement breaks real-time tracking
-                    browsing = true;
-                    browsingOn();
-
-                    // calculate number of scrolls
-                    int steps = 1;
-                    if (_getLoadingSlices() || _getInitializingMap()) {
-                        steps = 0;
-                    } else if (repeated) {
-                        steps = getScrolls();
-                    }
-
-//#ifdef __LOG__
-                    if (log.isEnabled()) log.debug("handleAction - steps to scroll = " + steps);
-//#endif
-
-                    // scroll the maps
-                    boolean scrolled = false;
-//                    for (int i = steps; i-- > 0; ) {
-//                        scrolled = mapViewer.scroll(action) || scrolled;
-//                    }
-                    scrolled = mapViewer.scroll(action, steps);
-
-                    // has map been scrolled?
-                    if (scrolled) {
-
-                        // sync OSD
-                        syncOSD();
-
-                        // update mask
-                        mask = MASK_MAP | MASK_OSD;
-
-                    } else if (steps > 0) { // no scroll? out of current map? find sibling map
-
-                        // find sibling in atlas
-                        if (isAtlas() && !_getInitializingMap() && !_getLoadingSlices()) {
-
-                            // bounds hit?
-                            char neighbour = mapViewer.boundsHit();
-//#ifdef __LOG__
-                            if (log.isEnabled()) log.debug("bounds hit? sibling is " + neighbour);
-//#endif
-                            // got sibling?
-                            if (neighbour != ' ') {
-                                QualifiedCoordinates newQc = null;
-                                QualifiedCoordinates qc = map.transform(mapViewer.getPosition());
-                                double lat = qc.getLat();
-                                double lon = qc.getLon();
-
-                                // calculate coords that lies in the sibling map
-                                switch (neighbour) {
-                                    case 'N':
-                                        newQc = QualifiedCoordinates.newInstance(lat + 5 * map.getStep(neighbour), lon);
-                                        break;
-                                    case 'S':
-                                        newQc = QualifiedCoordinates.newInstance(lat + 5 * map.getStep(neighbour), lon);
-                                        break;
-                                    case 'E':
-                                        newQc = QualifiedCoordinates.newInstance(lat, lon + 5 * map.getStep(neighbour));
-                                        break;
-                                    case 'W':
-                                        newQc = QualifiedCoordinates.newInstance(lat, lon + 5 * map.getStep(neighbour));
-                                        break;
-                                }
-
-                                // switch alternate map
-                                startAlternateMap(atlas.getLayer(), newQc, null);
-                            }
-                        }
-                    }
-
-                    // fast check again
-                    if (repeated) {
-                        eventing.callSerially(Desktop.this);
-                    }
-                }
-            }
-
-            return mask;
-        }
-
-        public int handleKey(final int keycode, final boolean repeated) {
-            int mask = 0;
-
-            switch (keycode) {
-                case KEY_NUM0: {
-                    if (mapViewer.hasMap()) {
-
-                        // cycle crosshair
-                        mask = mapViewer.nextCrosshair();
-                    }
-                } break;
-
-                case KEY_NUM5: {
-                    if (mapViewer.hasMap()) {
-
-                        // mode flags
-                        browsing = false;
-                        navigating = !navigating;
-
-                        // trick
-                        if (isTracking() && isLocation()) {
-                            if (location != null) {
-                                mask |= locationUpdated(location);
-                            }
-                        }
-
-                    } else if (isTracking()) {
-                        showWarning(_getLoadingResultText(), null, Desktop.this);
-                    }
-                } break;
-
-                case KEY_NUM7: { // atlas switch
-                    if (isAtlas()) {
-                        Enumeration e = atlas.getLayers();
-                        if (e.hasMoreElements()) {
-                            (new ItemSelection(Desktop.this, Resources.getString(Resources.DESKTOP_MSG_SELECT_LAYER),
-                                               new Event(Event.EVENT_LAYER_SELECTION_FINISHED, "switch"))).show(e);
-                        } else {
-                            showInfo(Resources.getString(Resources.DESKTOP_MSG_NO_LAYERS), Desktop.this);
-                        }
-                    }
-                } break;
-
-                case KEY_NUM9: { // map switch
-                    if (isAtlas()) {
-                        Enumeration e = atlas.getMapNames();
-                        if (e.hasMoreElements()) {
-                            (new ItemSelection(Desktop.this, Resources.getString(Resources.DESKTOP_MSG_SELECT_MAP),
-                                               new Event(Event.EVENT_MAP_SELECTION_FINISHED, "switch"))).show(e);
-                        } else {
-                            showInfo(Resources.getString(Resources.DESKTOP_MSG_NO_MAPS), Desktop.this);
-                        }
-                    }
-                } break;
-
-                case KEY_STAR: {
-                    mapViewer.starTick();
-                } break;
-            }
-
-            return mask;
-        }
-
-        public void sizeChanged(int w, int h) {
-            // map ready but not set yet (situation after start)
-            if (isMap() && !mapViewer.hasMap()) {
-
-                // set map
-                mapViewer.setMap(map);
-
-                // update basic OSD
-                QualifiedCoordinates qc = map.transform(mapViewer.getPosition());
-                osd.setInfo(qc, true);
-                QualifiedCoordinates.releaseInstance(qc);
-            }
-
-            // propagate further
-            mapViewer.sizeChanged(w, h);
-        }
-
-        public int locationUpdated(Location l) {
-            if (!isVisible) {
-                return MASK_NONE;
-            }
-
-            int mask = MASK_NONE;
-
-            // tracking?
-            if (!browsing && !_getInitializingMap()) {
-
-                // minimum UI update
-                mask = MASK_OSD;
-
-                // move on map if we get fix
-                if (l.getFix() > 0) {
-
-                    // more UI updates
-                    mask |= MASK_CROSSHAIR;
-
-                    // get wgs84 and local coordinates
-                    QualifiedCoordinates qc = l.getQualifiedCoordinates();
-                    QualifiedCoordinates localQc = map.getDatum().toLocal(qc);
-
-                    // on map detection
-                    boolean onMap = map.isWithin(localQc);
-
-                    // OSD basic
-                    if (Config.useGeocachingFormat || Config.useUTM) {
-                        osd.setInfo(qc, onMap);
-                    } else {
-                        osd.setInfo(localQc, onMap);
-                    }
-                    osd.setSat(l.getSat());
-
-                    // arrows
-                    if (l.getCourse() > -1F) {
-                        mapViewer.setCourse(l.getCourse());
-                    }
-                    if (wpts != null) {
-                        mapViewer.setNavigationCourse(wptAzimuth);
-                    }
-
-                    // OSD extended and course arrow - navigating?
-                    if (navigating && wpts != null) {
-
-                        // get navigation info
-                        StringBuffer extInfo = osd._getSb();
-                        getNavigationInfo(extInfo);
-
-                        // set navigation info
-                        osd.setNavigationInfo(extInfo);
-
-                    } else { // no, tracking info
-
-                        // in extended info
-                        osd.setExtendedInfo(NavigationScreens.toStringBuffer(l, osd._getSb()));
-                    }
-
-                    // are we on map?
-                    if (onMap) {
-
-                        // sync position
-                        if (syncPosition()) {
-                            mask |= MASK_MAP;
-                        }
-
-                    } else { // off current map
-
-                        // load sibling map, if exists
-                        if (isAtlas() && !_getInitializingMap() && !_getLoadingSlices()) {
-
-                            // switch alternate map
-                            startAlternateMap(atlas.getLayer(), localQc, null);
-                        }
-                    }
-
-                    // release local coordinates
-                    QualifiedCoordinates.releaseInstance(localQc);
-
-                } else {
-
-                    // if not navigating, display extended tracking info (ie. time :-) )
-                    if (!navigating || wpts == null) {
-                        osd.setSat(0);
-                        osd.setExtendedInfo(NavigationScreens.toStringBuffer(l, osd._getSb()));
-                    }
-
-                }
-            }
-
-            return mask;
-        }
-
-        public Location getLocation() {
-            return location;
-        }
-
-        public QualifiedCoordinates getPointer() {
-            return map.getDatum().toWgs84(map.transform(mapViewer.getPosition()));
-        }
-
-        public void render(final Graphics g, final Font f, final int mask) {
-//#ifdef __LOG__
-            if (log.isEnabled()) log.debug("render");
-//#endif
-
-            // common screen params
-            g.setFont(f);
-
-            // is map(viewer) ready?
-            if (!mapViewer.hasMap()) {
-
-                // clear window
-                g.setColor(0x0);
-                g.fillRect(0, 0, width, height);
-                g.setColor(0x00FFFFFF);
-
-                // draw loaded target
-                Object[] result = _getLoadingResult();
-                if (result[0] != null) {
-                    g.drawString(result[0].toString(), 0, 0, Graphics.TOP | Graphics.LEFT);
-                }
-                if (result[1] != null) {
-                    if (result[1] instanceof Throwable) {
-                        Throwable t = (Throwable) result[1];
-                        g.drawString(t.getClass().toString().substring(6) + ":", 0, font.getHeight(), Graphics.TOP | Graphics.LEFT);
-                        if (t.getMessage() != null) {
-                            g.drawString(t.getMessage(), 0, 2 * font.getHeight(), Graphics.TOP | Graphics.LEFT);
-                        }
-                    } else {
-                        g.drawString(result[1].toString(), 0, font.getHeight(), Graphics.TOP | Graphics.LEFT);
-                    }
-                }
-
-            } else {
-
-                // draw map
-/* always redraw 'background'
-                if ((mask & MASK_MAP) != 0) {
-*/
-                    // whole map redraw requested
-                    mapViewer.render(g);
-/*
-                }
-*/
-
-                // draw OSD
-                if ((mask & MASK_OSD) != 0) {
-
-                    // set text color
-                    g.setColor(Config.osdBlackColor ? 0x00000000 : 0x00FFFFFF);
-
-                    // render
-                    osd.render(g);
-                }
-            }
-
-            // draw status
-            if ((mask & MASK_STATUS) != 0) {
-
-                // set text color
-                g.setColor(Config.osdBlackColor ? 0x00000000 : 0x00FFFFFF);
-
-                // render
-                status.render(g);
-            }
-
-            // flush
-            if ((mask & MASK_MAP) != 0 || (mask & MASK_SCREEN) != 0 || !partialFlush) {
-                flushGraphics();
-            } else {
-                if ((mask & MASK_OSD) != 0) {
-                    flushGraphics(osd.getClip());
-                }
-                if ((mask & MASK_STATUS) != 0) {
-                    flushGraphics(status.getClip());
-                }
-                if ((mask & MASK_CROSSHAIR) != 0) {
-                    flushGraphics(mapViewer.getClip());
-                }
-            }
-        }
-
-        private void getNavigationInfo(StringBuffer extInfo) {
-            final float distance = wptDistance;
-            final int azimuth = wptAzimuth;
-
-            extInfo.append(NavigationScreens.DELTA_D).append('=');
-            NavigationScreens.printDistance(extInfo, distance);
-            NavigationScreens.append(extInfo, azimuth).append(NavigationScreens.SIGN);
-            if (!Float.isNaN(wptHeightDiff)) {
-                extInfo.append(' ').append(NavigationScreens.DELTA_d).append('=');
-                NavigationScreens.append(extInfo, (int) wptHeightDiff);
-            }
-        }
-
-        private void syncOSD() {
-            // update basic OSD
-            QualifiedCoordinates qc = map.transform(mapViewer.getPosition());
-            osd.setInfo(qc, true);
-
-            // update navigation info
-            QualifiedCoordinates from = map.getDatum().toWgs84(qc);
-            updateNavigation(from);
-
-            // release to pool
-            QualifiedCoordinates.releaseInstance(from);
-            QualifiedCoordinates.releaseInstance(qc);
-
-            // update extended OSD (and navigation, if any)
-            if (!updateNavigationInfo()) {
-                osd.resetNavigationInfo();
-            }
-        }
-
-        private boolean syncPosition() {
-            boolean moved = false;
-
-            if (location != null) {
-                QualifiedCoordinates localQc = map.getDatum().toLocal(location.getQualifiedCoordinates());
-                if (map.isWithin(localQc)) {
-                    moved = mapViewer.setPosition(map.transform(localQc));
-                }
-                QualifiedCoordinates.releaseInstance(localQc);
-            }
-
-            return moved;
-        }
-
-        private int getScrolls() {
-            int steps = 1;
-            if (scrolls++ >= 15) {
-                steps = 2;
-                if (scrolls >= 30) {
-                    steps = 3;
-                }
-                if (scrolls >= 40) {
-                    steps = 4;
-                }
-            }
-
-            return steps;
-        }
-
-        private boolean updateNavigationInfo() {
-            // navigating?
-            if (wpts != null) {
-
-                // get navigation info
-                StringBuffer extInfo = osd._getSb();
-                getNavigationInfo(extInfo);
-
-                // set course and delta
-                mapViewer.setNavigationCourse(wptAzimuth);
-                osd.setNavigationInfo(extInfo);
-
-                return true;
-            }
-
-            return false;
-        }
-
-/*
-        private void flushClip(int[] clip) {
-            if (clip != null) {
-//#ifdef __LOG__
-                if (log.isEnabled()) log.debug("flush clip " + clip[0] + "-" + clip[1] + "x" + clip[2] + "-" + clip[3]);
-//#endif
-                flushGraphics(clip[0], clip[1], clip[2], clip[3]);
-            }
-        }
-*/
-    }
-
     // temps for atlas/map loading
     private volatile String _target;
     private volatile Map _map;
@@ -2622,11 +1995,35 @@ public final class Desktop extends GameCanvas
     private volatile boolean _switch;
     private volatile boolean _osd;
 
-    private void startAlternateMap(String layerName, QualifiedCoordinates qc,
-                                   String notFoundMsg) {
+    void changeLayer() {
+        if (atlas != null) {
+            Enumeration e = atlas.getLayers();
+            if (e.hasMoreElements()) {
+                (new ItemSelection(this, Resources.getString(Resources.DESKTOP_MSG_SELECT_LAYER),
+                                   new Event(Event.EVENT_LAYER_SELECTION_FINISHED, "switch"))).show(e);
+            } else {
+                showInfo(Resources.getString(Resources.DESKTOP_MSG_NO_LAYERS), this);
+            }
+        }
+    }
+
+    void changeMap() {
+        if (atlas != null) {
+            Enumeration e = atlas.getMapNames();
+            if (e.hasMoreElements()) {
+                (new ItemSelection(this, Resources.getString(Resources.DESKTOP_MSG_SELECT_MAP),
+                                   new Event(Event.EVENT_MAP_SELECTION_FINISHED, "switch"))).show(e);
+            } else {
+                showInfo(Resources.getString(Resources.DESKTOP_MSG_NO_MAPS), this);
+            }
+        }
+    }
+
+    void startAlternateMap(String layerName, QualifiedCoordinates localQc,
+                           String notFoundMsg) {
         // find map for given coords
-        String mapUrl = atlas.getMapURL(layerName, qc);
-        String mapName = atlas.getMapName(layerName, qc);
+        String mapUrl = atlas.getMapURL(layerName, localQc);
+        String mapName = atlas.getMapName(layerName, localQc);
 
         // got map for given coordinates?
         if (mapUrl != null) {
@@ -2637,7 +2034,7 @@ public final class Desktop extends GameCanvas
             _switch = true;
 
             // focus on these coords once the new map is loaded
-            _qc = map.getDatum().toWgs84(qc);
+            _qc = map.getDatum().toWgs84(localQc);
 
             // change atlas layer
             atlas.setLayer(layerName);
@@ -3019,10 +2416,10 @@ public final class Desktop extends GameCanvas
                             } else { // layer switch
 
                                 // get current lat/lon
-                                QualifiedCoordinates qc = map.transform(((MapView) views[VIEW_MAP]).getPosition());
+                                QualifiedCoordinates localQc = map.transform(((MapView) views[VIEW_MAP]).getPosition());
 
                                 // switch match
-                                startAlternateMap(layerName, qc, Resources.getString(Resources.DESKTOP_MSG_NO_MAP_FOR_POS) + " '" + layerName + "'.");
+                                startAlternateMap(layerName, localQc, Resources.getString(Resources.DESKTOP_MSG_NO_MAP_FOR_POS) + " '" + layerName + "'.");
                             }
                         }
                     } else { // cancelled
@@ -3097,18 +2494,26 @@ public final class Desktop extends GameCanvas
                                 try {
                                     // handle fake qc when browsing across map boundary
                                     if (_qc.getLat() == 90D) {
+                                        _qc = null; // gc hint
                                         _qc = QualifiedCoordinates.newInstance(map.getRange()[3].getLat(), _qc.getLon());
                                     } else if (_qc.getLat() == -90D) {
+                                        _qc = null; // gc hint
                                         _qc = QualifiedCoordinates.newInstance(map.getRange()[0].getLat(), _qc.getLon());
                                     } else if (_qc.getLon() == 180D) {
+                                        _qc = null; // gc hint
                                         _qc = QualifiedCoordinates.newInstance(_qc.getLat(), map.getRange()[0].getLon());
                                     } else if (_qc.getLon() == -180D) {
+                                        _qc = null; // gc hint
                                         _qc = QualifiedCoordinates.newInstance(_qc.getLat(), map.getRange()[3].getLon());
                                     }
+                                    // wgs84 to local
+                                    QualifiedCoordinates localQc = map.getDatum().toLocal(_qc);
                                     // transform qc (already local datum) to position, and move to it
-                                    if (map.isWithin(_qc)) {
-                                        ((MapView) views[VIEW_MAP]).setPosition(map.transform(_qc));
+                                    if (map.isWithin(localQc)) {
+                                        ((MapView) views[VIEW_MAP]).setPosition(map.transform(localQc));
                                     }
+                                    // release
+                                    QualifiedCoordinates.releaseInstance(localQc);
                                 } finally {
                                     _qc = null;
                                 }
@@ -3117,12 +2522,15 @@ public final class Desktop extends GameCanvas
                             // map is ready
                             _setInitializingMap(false);
 
-                            // update OSD & navigation UI
-                            QualifiedCoordinates qc = map.transform(((MapView) views[VIEW_MAP]).getPosition());
-                            osd.setInfo(qc, true);  // TODO listener
+                            // update OSD & navigation UI // TODO ugly code begins ---
+                            QualifiedCoordinates localQc = map.transform(((MapView) views[VIEW_MAP]).getPosition());
+                            QualifiedCoordinates qc = map.getDatum().toWgs84(localQc);
+                            MapView.setBasicOSD(qc, localQc, true);
                             updateNavigation(qc);
-                            ((MapView) views[VIEW_MAP]).updateNavigationInfo(); // TODO ugly
                             QualifiedCoordinates.releaseInstance(qc);
+                            QualifiedCoordinates.releaseInstance(localQc);
+                            ((MapView) views[VIEW_MAP]).updateNavigationInfo(); // TODO ugly
+                            // TODO -- ugly code ends
 
                             // render screen - it will force slices loading
                             update(MASK_MAP | MASK_OSD);
@@ -3130,9 +2538,9 @@ public final class Desktop extends GameCanvas
                             // offer use as default?
                             if (!_switch) {
                                 if ("atlas".equals(_target)) {
-                                    (new YesNoDialog(Desktop.screen, this, null)).show(Resources.getString(Resources.DESKTOP_MSG_USE_AS_DEFAULT_ATLAS), atlas.getURL());
+                                    (new YesNoDialog(Desktop.screen, this, null, Resources.getString(Resources.DESKTOP_MSG_USE_AS_DEFAULT_ATLAS), atlas.getURL())).show();
                                 } else {
-                                    (new YesNoDialog(Desktop.screen, this, null)).show(Resources.getString(Resources.DESKTOP_MSG_USE_AS_DEFAULT_MAP), map.getPath());
+                                    (new YesNoDialog(Desktop.screen, this, null, Resources.getString(Resources.DESKTOP_MSG_USE_AS_DEFAULT_MAP), map.getPath())).show();
                                 }
                             }
                         } catch (Throwable t) {
@@ -3320,11 +2728,6 @@ public final class Desktop extends GameCanvas
 
                     // if valid position do updates
                     if (l.getFix() > 0) {
-
-                        // update last know valid location (WGS-84)
-                        Location.releaseInstance(location);
-                        location = null;
-                        location = l;
 
                         // update wpt navigation
                         try {

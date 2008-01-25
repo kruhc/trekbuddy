@@ -94,15 +94,13 @@ public class Slice {
 /*
         return (new StringBuffer(32)).append(getX()).append('-').append(getY()).append(' ').append(getWidth()).append('x').append(getHeight()).toString();
 */
-        final StringBuffer sb = cz.kruch.track.TrackingMIDlet.newInstance(32);
+        StringBuffer sb = new StringBuffer(32);
         NavigationScreens.append(sb, getX()).append('-');
         NavigationScreens.append(sb, getY()).append(' ');
         NavigationScreens.append(sb, getWidth()).append('x');
         NavigationScreens.append(sb, getHeight());
-        String result = sb.toString();
-        cz.kruch.track.TrackingMIDlet.releaseInstance(sb);
 
-        return result;
+        return sb.toString();
     }
 
     public final StringBuffer appendPath(final StringBuffer sb) {

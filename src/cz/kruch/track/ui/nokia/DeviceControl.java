@@ -32,7 +32,7 @@ public abstract class DeviceControl extends TimerTask {
 
     /** @deprecated make instance member of Desktop... ??? */
     public static void initialize() {
-//#ifndef __RIM__
+//#ifdef __ALL__
         try {
             Class.forName("com.nokia.mid.ui.DirectUtils");
             if (System.getProperty("com.sonyericsson.imei") == null) {
@@ -50,6 +50,15 @@ public abstract class DeviceControl extends TimerTask {
             try {
                 Class.forName("com.siemens.mp.game.Light");
                 instance = (DeviceControl) Class.forName("cz.kruch.track.ui.nokia.SiemensDeviceControl").newInstance();
+            } catch (Throwable t) {
+            }
+        }
+//#endif
+//#ifdef __RIM__
+        if (instance == null) {
+            try {
+                Class.forName("net.rim.device.api.system.Backlight");
+                instance = (DeviceControl) Class.forName("cz.kruch.track.ui.nokia.BlackberryDeviceControl").newInstance();
             } catch (Throwable t) {
             }
         }

@@ -75,6 +75,7 @@ final class LocatorView extends View {
     private final int[] center, vertex;
     private final int[][] triangle;
 
+    private final StringBuffer sb;
     private final char[] sbChars;
 
     public LocatorView(/*Navigator*/Desktop navigator) {
@@ -85,10 +86,11 @@ final class LocatorView extends View {
         this.rangeIdx = new int[]{ 2, 2 };
         this.navigationStrWidth = Math.max(Desktop.font.stringWidth(MSG_NO_WAYPOINT),
                                            Desktop.font.stringWidth("9.999 M"));
-        this.sbChars = new char[32];
         this.center = new int[2];
         this.vertex = new int[2];
         this.triangle = new int[3][2];
+        this.sb = new StringBuffer(32);
+        this.sbChars = new char[32];
         reset();
     }
 
@@ -309,7 +311,6 @@ final class LocatorView extends View {
         final int hHalf = h >> 1;
         final int term = this.term;
         final int rangeIdx = this.rangeIdx[term];
-        final char[] sbChars = this.sbChars;
         final OSD osd = Desktop.osd;
         final int fh = osd.bh;
 
@@ -379,6 +380,8 @@ final class LocatorView extends View {
             final double lonAvg = coordsAvg.getLon();
             final int[] xy = this.vertex;
             final int[] center = this.center;
+            final StringBuffer sb = this.sb;
+            final char[] sbChars = this.sbChars;
 
             // get scales
             final double v = ((double) RANGES[rangeIdx]) / 111319.490D;
@@ -436,9 +439,6 @@ final class LocatorView extends View {
 
             // set color
             graphics.setColor(fgColor);
-
-            // get pooled StringBuffer
-            final StringBuffer sb = cz.kruch.track.TrackingMIDlet.newInstance(32);
 
             // draw lat/lon
             sb.delete(0, sb.length());
@@ -536,10 +536,6 @@ final class LocatorView extends View {
                 graphics.drawChars(sbChars, 0, l,
                                    w - navigationStrWidth, h - fh,
                                    Graphics.LEFT | Graphics.TOP);
-
-                // free pooled StringBuffer
-                cz.kruch.track.TrackingMIDlet.releaseInstance(sb);
-
             } else {
                 graphics.drawString(MSG_NO_WAYPOINT,
                                    w - navigationStrWidth, h - fh,

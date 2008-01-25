@@ -83,11 +83,11 @@ public final class NavigationScreens {
      * image cache
      */
 
-    public static Image crosshairs;
-    public static Image waypoint, pois;
-    public static Image providers;
-    public static Image[] arrows;
-    public static Image[] stores;
+    public static Image crosshairs; // TODO fix visibility
+    public static Image[] stores;   // TODO fix visibility
+    private static Image waypoint, pois;
+    private static Image providers;
+    private static Image[] arrows;
 
     // number formatter buffer
     private static final char[] print = new char[64];
@@ -110,9 +110,9 @@ public final class NavigationScreens {
             createImage("/resources/arrows.png"),
             createImage("/resources/naviws.png")
         };
-        providers = createImage("/resources/bullets.png");
         pois = createImage("/resources/pois.png");
         waypoint = createImage("/resources/wpt.png");
+        providers = createImage("/resources/bullets.png");
         stores = new Image[] {
             createImage("/resources/icon.store.xml.png"),
             createImage("/resources/icon.store.xmla.png"),
@@ -186,14 +186,13 @@ public final class NavigationScreens {
     private static Image loadImage(String name) throws IOException {
         Image image = null;
         File file = null;
+
         try {
             file = File.open(Connector.open(Config.getFolderResources() + name, Connector.READ));
             if (file.exists()) {
                 InputStream in = null;
                 try {
-                    in = file.openInputStream();
-                    image = Image.createImage(in);
-                    System.gc();
+                    image = Image.createImage(in = file.openInputStream());
                 } finally {
                     if (in != null) {
                         try {
@@ -214,6 +213,10 @@ public final class NavigationScreens {
             }
         }
 
+        if (Config.forcedGc) {
+            System.gc();
+        }
+        
         return image;
     }
 
@@ -232,7 +235,20 @@ public final class NavigationScreens {
     }
 
     private static Image createImage(String res) throws IOException {
-        Image image = Image.createImage(res);
+        InputStream in = null;
+        Image image = null;
+
+        try {
+            image = Image.createImage(in = NavigationScreens.class.getResourceAsStream(res));
+        } finally {
+            if (in != null) {
+                try {
+                    in.close();
+                } catch (IOException e) {
+                    // ignore
+                }
+            }
+        }
 
         if (Config.forcedGc) {
             System.gc();

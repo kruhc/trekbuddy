@@ -36,7 +36,8 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
 
     public static String version;
     public static boolean jsr82, jsr120, jsr135, jsr179, motorola179, comm;
-    public static boolean sonyEricsson, nokia, siemens, wm, palm, rim, symbian;
+    public static boolean sonyEricsson, nokia, siemens, lg, motorola;
+    public static boolean wm, palm, rim, symbian;
     public static boolean sxg75, a780, s65;
 
     // diagnostics
@@ -66,19 +67,18 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
 //#endif
 
         // detect brand/device
+//#ifdef __RIM__
+        rim = platform.startsWith("RIM");
+//#else
         nokia = platform.startsWith("Nokia");
         sonyEricsson = System.getProperty("com.sonyericsson.imei") != null;
         siemens = System.getProperty("com.siemens.IMEI") != null || System.getProperty("com.siemens.mp.imei") != null;
+        motorola = System.getProperty("com.motorola.IMEI") != null;
+        lg = platform.startsWith("LG");
         wm = platform.startsWith("Windows CE");
         palm = platform.startsWith("Palm OS");
         sxg75 = "SXG75".equals(platform);
-//#ifdef __RIM__
-        rim = platform.startsWith("RIM");
-//#endif
-//#ifdef __A780__
         a780 = "j2me".equals(platform);
-//#endif
-//#ifdef __S65__
         s65 = "S65".equals(platform);
 //#endif
 
@@ -91,7 +91,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
 //#endif
         } catch (Throwable t) {
         }
-//#ifdef __A1000__
+//#ifdef __ALL__
         try {
             Class.forName("com.motorola.location.PositionSource");
             TrackingMIDlet.motorola179 = true;
@@ -133,7 +133,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
 //#endif
         } catch (Throwable t) {
         }
-//#ifdef __NOKIA__
+//#ifdef __ALL__
         try {
             Class.forName("com.symbian.midp.io.protocol.http.Protocol");
             TrackingMIDlet.symbian = true;
@@ -266,6 +266,9 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
 //#endif
             cz.kruch.track.ui.Desktop.partialFlush = false;
         }
+        if (hasFlag("provider_o2_germany")) {
+            cz.kruch.track.configuration.Config.o2provider = true;
+        }
         if (sxg75) {
             cz.kruch.track.ui.NavigationScreens.useCondensed = 1;
         }
@@ -323,37 +326,5 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
     public static boolean supportsVideoCapture() {
         return jsr135 && "true".equals(System.getProperty("supports.video.capture"));
     }
-
-    /*
-     * Pools for common objects;
-     */
-
-    private static final StringBuffer[] sbPool = new StringBuffer[4];
-    private static int sbCountFree;
-
-    public synchronized static StringBuffer newInstance(int initialSize) {
-        StringBuffer result;
-
-        if (sbCountFree == 0) {
-            result = new StringBuffer(initialSize);
-        } else {
-            result = sbPool[--sbCountFree];
-            sbPool[sbCountFree] = null;
-            result.delete(0, result.length());
-            result.ensureCapacity(initialSize);
-        }
-
-        return result;
-    }
-
-    public synchronized static void releaseInstance(StringBuffer sb) {
-        if (sbCountFree < sbPool.length) {
-            sbPool[sbCountFree++] = sb;
-        }
-    }
-
-    /*
-     * ~POOL
-     */
 
 }

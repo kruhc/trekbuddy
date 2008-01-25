@@ -70,7 +70,7 @@ public final class Jsr179LocationProvider
             criteria.setSpeedAndCourseRequired(true);
 
             // adjust criteria for current device
-//#ifdef __A780__
+//#ifdef __ALL__
             if (cz.kruch.track.TrackingMIDlet.a780) {
                 /* from bikeator */
                 criteria.setPreferredPowerConsumption(javax.microedition.location.Criteria.POWER_USAGE_HIGH);

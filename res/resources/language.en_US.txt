@@ -128,6 +128,8 @@
 2006=Save
 2007=Take
 2008=Send
+2009=ShowAll
+2010=HideAll
 
 # navigation menu
 2100=Waypoints
@@ -154,9 +156,9 @@
 
 # navigation messages
 2300=Failed to load in-jar waypoints
-2301=Failed to list landmark stores
+2301=Failed to list collections
 2302=No landmark stores
-2303=Failed to list landmark store
+2303=Failed to list collection
 2304=No waypoints found in
 2305=waypoints loaded
 2306=No position yet

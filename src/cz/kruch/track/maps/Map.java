@@ -166,8 +166,10 @@ public final class Map implements Runnable {
 
         /*
          * meta info is kept unless instructed not to
+         * - keep calibration
          */
         if (Config.largeAtlases) {
+            loader = null;
             slices = null;
         }
 
@@ -562,7 +564,7 @@ public final class Map implements Runnable {
             return new Slice[initialCapacity];
         }
 
-        private Throwable loadImages(Vector slices) {
+        private Throwable loadImages(final Vector slices) {
             // assertions
             if (slices == null) {
                 throw new IllegalArgumentException("Slice list is null");
@@ -571,7 +573,7 @@ public final class Map implements Runnable {
             // load images for given slices
             try {
                 for (int N = slices.size(), i = 0; i < N; i++) {
-                    Slice slice = (Slice) slices.elementAt(i);
+                    final Slice slice = (Slice) slices.elementAt(i);
                     if (slice.getImage() == null) {
 
                         // notify
@@ -585,10 +587,16 @@ public final class Map implements Runnable {
                                 throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_SLICE_LOAD_FAILED) + ": " + t.toString());
                             }
 
-                            // got image?
+                            // assertion
                             if (slice.getImage() == null) {
                                 throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_NO_SLICE_IMAGE) + " " + slice.toString());
                             }
+
+                            // gc
+                            if (Config.forcedGc) {
+                                System.gc();
+                            }
+
 //#ifdef __LOG__
                             if (log.isEnabled()) log.debug("image loaded for slice " + slice.toString());
 //#endif

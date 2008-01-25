@@ -51,25 +51,13 @@ public abstract class File {
     protected StreamConnection fc;
 
     public static void initialize(final boolean traverseBug) {
-//#ifdef __JSR75__
         try {
             Class.forName("javax.microedition.io.file.FileConnection");
             factory = Class.forName("api.file.Jsr75File");
             fsType = traverseBug ? FS_SXG75 : FS_JSR75;
         } catch (Throwable t) {
         }
-//#endif
-//#ifdef __RIM__
-        if (factory == null) { /* repeat for Blackberry */
-            try {
-                Class.forName("javax.microedition.io.file.FileConnection");
-                factory = Class.forName("api.file.Jsr75File");
-                fsType = traverseBug ? FS_SXG75 : FS_JSR75;
-            } catch (Throwable t) {
-            }
-        }
-//#endif
-//#ifdef __S65__
+//#ifdef __ALL__
         if (factory == null) {
             try {
                 Class.forName("com.siemens.mp.io.file.FileConnection");
@@ -78,8 +66,6 @@ public abstract class File {
             } catch (Throwable t) {
             }
         }
-//#endif
-//#ifdef __A780__
         if (factory == null) {
             try {
                 Class.forName("com.motorola.io.FileConnection");
@@ -88,8 +74,6 @@ public abstract class File {
             } catch (Throwable t) {
             }
         }
-//#endif
-//#ifdef __A1000__
         if (factory == null) {
             try {
                 Class.forName("com.motorola.io.file.FileConnection");
@@ -169,7 +153,7 @@ public abstract class File {
             url = url.substring(0, url.length() - 1);
             url = url.substring(0, url.lastIndexOf(PATH_SEPCHAR) + 1);
         }
-//#ifdef __A780__
+//#ifdef __ALL__
           else if (fsType == FS_MOTOROLA || fsType == FS_MOTOROLA1000) {
             if (url.endsWith(PATH_SEPARATOR) && path.startsWith(PATH_SEPARATOR)) {
                 url = url.substring(0, url.length() - 1);

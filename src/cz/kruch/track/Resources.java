@@ -160,6 +160,8 @@ public final class Resources {
     public static final short NAV_CMD_SAVE                      = 2006;
     public static final short NAV_CMD_TAKE                      = 2007;
     public static final short NAV_CMD_SEND                      = 2008;
+    public static final short NAV_CMD_SHOW_ALL                  = 2009;
+    public static final short NAV_CMD_HIDE_ALL                  = 2010;
     /* navigation - menu */
     public static final short NAV_ITEM_WAYPOINTS                = 2100;
     public static final short NAV_ITEM_RECORD                   = 2101;
@@ -283,7 +285,6 @@ public final class Resources {
     public static final short INFO_ITEM_KEYS                    = 4203;
     public static final short INFO_ITEM_KEYS_MS                 = 4204;
 
-//    private static short[] keys;
     private static int[] ids;
     private static String[] values;
     private static String value;
@@ -376,6 +377,7 @@ public final class Resources {
                         keymap1[keymapSize] = tokenizer.nextInt();
                         keymapSize++;
                         result++;
+                        token = null; // gc hint
                         token = reader.readToken(false);
                     }
                 } finally {

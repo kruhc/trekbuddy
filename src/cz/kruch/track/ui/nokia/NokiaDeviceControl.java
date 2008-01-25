@@ -23,15 +23,15 @@ import cz.kruch.track.Resources;
  *
  * @author Ales Pour <kruhc@seznam.cz>
  */
-class NokiaDeviceControl extends DeviceControl {
+final class NokiaDeviceControl extends DeviceControl {
 
     NokiaDeviceControl() {
     }
 
     void nextLevel() {
         try {
-            backlight += 50;
-            if (backlight == 150) {
+            backlight += 25;
+            if (backlight > 100) {
                 backlight = 0;
             }
             com.nokia.mid.ui.DeviceControl.setLights(0, backlight);

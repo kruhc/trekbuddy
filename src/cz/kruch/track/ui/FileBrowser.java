@@ -51,6 +51,7 @@ public final class FileBrowser implements CommandListener, Runnable {
     private volatile File file;
     private volatile String path;
     private volatile int depth;
+    private volatile int history = -1;
 
     public FileBrowser(String title, Callback callback, Displayable next) {
         this.title = Resources.prefixed(title);
@@ -72,50 +73,56 @@ public final class FileBrowser implements CommandListener, Runnable {
     }
 
     public void run() {
+        history++;
         try {
             if (depth == 0) {
 //#ifdef __LOG__
                 if (log.isEnabled()) log.debug("fresh start");
 //#endif
 
-                // fresh start?
-                if (file == null) {
+                // fresh start
+                if (history == 0) {
 
-                    // start in %DataDir%
-                    final String dataDir = Config.getDataDir();
-                    file = File.open(Connector.open(dataDir, Connector.READ));
-                    if (file.exists()) {
-
-                        // calculate and fix depth
-                        for (int i = dataDir.length(); --i >= 0; ) {
-                            if (dataDir.charAt(i) == File.PATH_SEPCHAR) {
-                                depth++;
-                            }
-                        }
-                        depth -= 3;
-
-                        // list directory
-                        show(file.list());
-
-                    } else {
-
-                        // as selected
-                        run();
-
-                    }
-
-                } else {
-//#ifdef __LOG__
-                    if (log.isEnabled()) log.debug("close existing fc");
-//#endif
+                    // maximum robustness here needed
                     try {
-                        file.close();
-                    } catch (IOException e) {
+                        // try DataDir first
+                        final String dataDir = Config.getDataDir();
+                        file = File.open(Connector.open(dataDir, Connector.READ));
+                        if (file.exists()) {
+
+                            // calculate and fix depth
+                            for (int i = dataDir.length(); --i >= 0; ) {
+                                if (dataDir.charAt(i) == File.PATH_SEPCHAR) {
+                                    depth++;
+                                }
+                            }
+
+                            // discount sepchars from file protocol
+                            depth -= 3;
+
+                            // list directory
+                            show(file.list());
+
+                            return;
+                        }
+                    } catch (Throwable t) {
                         // ignore
                     }
 
-                    // gc hint
-                    file = null;
+                    // as selected
+                    run();
+
+                } else {
+
+                    // close existing fc
+                    if (file != null) {
+                        try {
+                            file.close();
+                        } catch (IOException e) {
+                            // ignore
+                        }
+                        file = null; // gc hint
+                    }
 
                     // list fs roots
                     show(File.listRoots());

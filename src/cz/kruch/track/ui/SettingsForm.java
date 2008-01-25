@@ -518,7 +518,6 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
                 }
                 if (cz.kruch.track.TrackingMIDlet.hasFlag("provider_o2_germany")) {
                     Config.o2Depth = Integer.parseInt(fieldO2Depth.getString());
-                    Config.o2provider = true;
                 }
 
                 // tracklogs, waypoints
@@ -647,7 +646,7 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
             if (api.file.File.isFs()) {
                 providers.addElement(new Integer(Config.LOCATION_PROVIDER_SIMULATOR));
             }
-//#ifdef __A1000__
+//#ifdef __ALL__
             if (cz.kruch.track.TrackingMIDlet.motorola179) {
                 providers.addElement(new Integer(Config.LOCATION_PROVIDER_MOTOROLA));
             }

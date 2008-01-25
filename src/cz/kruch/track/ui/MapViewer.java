@@ -18,7 +18,6 @@ package cz.kruch.track.ui;
 
 import cz.kruch.track.maps.Slice;
 import cz.kruch.track.maps.Map;
-import cz.kruch.track.util.Mercator;
 import cz.kruch.track.util.ExtraMath;
 import cz.kruch.track.location.Waypoint;
 import cz.kruch.track.configuration.Config;
@@ -73,8 +72,7 @@ final class MapViewer {
 
     private float course, course2;
 
-    private Position wptPosition;
-    private Position[] routePositions;
+    private Position[] wptPositions;
     private byte[] wptStatuses;
 
     private short star;
@@ -454,25 +452,23 @@ final class MapViewer {
     }
 
     public void starTick() {
-        if (routePositions != null || wptPosition != null) {
+        if (wptPositions != null) {
             star++;
         }
     }
 
-    public void setRoute(Position[] positions, final boolean soft) {
-        this.routePositions = null;
-        this.routePositions = positions;
-        if (!soft) {
-            wptStatuses = null;
-            if (positions != null) {
-                wptStatuses = new byte[positions.length];
-            }
+    public void initRoute(Position[] positions) {
+        this.wptPositions = null;
+        this.wptStatuses = null;
+        if (positions != null) {
+            this.wptPositions = positions;
+            this.wptStatuses = new byte[positions.length];
         }
     }
 
-    public void setWaypoint(Position position) {
-        wptPosition = null;
-        wptPosition = position;
+    public void setRoute(Position[] positions) {
+        this.wptPositions = null;
+        this.wptPositions = positions;
     }
 
     public void setPoiStatus(int idx, byte status) {
@@ -545,7 +541,7 @@ final class MapViewer {
     public void render(Graphics graphics, int[] clip) {
 */
 
-    public void render(Graphics graphics) {
+    public void render(final Graphics graphics) {
         if (!visible) {
             return;
         }
@@ -569,90 +565,9 @@ final class MapViewer {
             drawTrajectory(graphics);
         }
 */
-        // hack! setup graphics for waypoints
-        final int color = graphics.getColor();
-        graphics.setFont(Desktop.fontWpt);
 
-        // paint route with navigation or single navigation point
-        if (routePositions != null) {
-
-            // line color and style
-            graphics.setColor(Config.routeLineColor);
-            if (Config.routeLineStyle) {
-                graphics.setStrokeStyle(Graphics.DOTTED);
-            }
-
-            // local ref for faster access
-            final Position[] positions = routePositions;
-            final byte[] statuses = wptStatuses;
-
-            // draw route as line
-            final int x = this.x;
-            final int y = this.y;
-            Position p0 = null;
-            for (int i = positions.length; --i >= 0; ) {
-                if (positions[i] != null) {
-                    Position p1 = positions[i];
-                    if (p0 != null) {
-                        graphics.drawLine(p0.getX() - x, p0.getY() - y,
-                                          p1.getX() - x, p1.getY() - y);
-                    }
-                    p0 = p1;
-                }
-            }
-
-            // restore line style
-            if (Config.routeLineStyle) {
-                graphics.setStrokeStyle(Graphics.SOLID);
-            }
-            graphics.setColor(0x00404040);
-
-            // active wpt index
-            final int wptIdx = Desktop.wptIdx;
-
-            // draw POIs
-            for (int i = positions.length; --i >= 0; ) {
-                if (positions[i] != null) {
-                    byte status = statuses[i];
-                    if (status == WPT_STATUS_VOID) {
-                        if (i < wptIdx) {
-                            status = WPT_STATUS_MISSED;
-                        } else if (i == wptIdx) {
-                            continue; // skip for now
-                        }
-                    }
-                    drawPoi(graphics, positions[i], status, i);
-                }
-            }
-
-            // setup color
-            graphics.setColor(0);
-
-            // draw current wpt last
-            drawPoi(graphics, positions[wptIdx], WPT_STATUS_CURRENT, wptIdx);
-
-        } else if (wptPosition != null) { // single navigation point
-
-            // setup color
-            graphics.setColor(0);
-
-            // draw POI
-            drawPoi(graphics, wptPosition, WPT_STATUS_CURRENT, Desktop.wptIdx);
-
-        }
-
-        // hack! restore graphics
-        graphics.setColor(color);
-        graphics.setFont(Desktop.font);
-
-/*
-    }
-
-    public void render2(Graphics graphics) {
-        if (!visible) {
-            return;
-        }
-*/
+        // paint route/pois/wpt
+        drawNavigation(graphics);
 
         // paint crosshair
         if (Config.S60renderer) { // S60 renderer
@@ -712,7 +627,89 @@ final class MapViewer {
         return false;
     }
 
-    private void drawScale(Graphics graphics) {
+    private void drawNavigation(Graphics graphics) {
+        // hack! setup graphics for waypoints
+        final int color = graphics.getColor();
+        graphics.setFont(Desktop.fontWpt);
+
+        // paint route with navigation or single navigation point
+        if (wptPositions != null) {
+
+            // local ref for faster access
+            final Position[] positions = this.wptPositions;
+            final byte[] statuses = this.wptStatuses;
+
+            // draw polyline
+            if (Desktop.routeDir != 0) {
+
+                // line color and style
+                graphics.setColor(Config.routeLineColor);
+                if (Config.routeLineStyle) {
+                    graphics.setStrokeStyle(Graphics.DOTTED);
+                }
+
+                // draw route as line
+                final int x = this.x;
+                final int y = this.y;
+                Position p0 = null;
+                for (int i = positions.length; --i >= 0; ) {
+                    if (positions[i] != null) {
+                        Position p1 = positions[i];
+                        if (p0 != null) {
+                            graphics.drawLine(p0.getX() - x, p0.getY() - y,
+                                              p1.getX() - x, p1.getY() - y);
+                        }
+                        p0 = p1;
+                    }
+                }
+
+                // restore line style
+                if (Config.routeLineStyle) {
+                    graphics.setStrokeStyle(Graphics.SOLID);
+                }
+            }
+
+            // POI name/desc color
+            graphics.setColor(0x00404040);
+
+            // active wpt index
+            final int wptIdx = Desktop.wptIdx;
+
+            // draw POIs
+            if (Desktop.routeDir != 0 || Desktop.showall) {
+                for (int i = positions.length; --i >= 0; ) {
+                    if (positions[i] != null) {
+                        byte status = statuses[i];
+                        if (status == WPT_STATUS_VOID) {
+                            if (i < wptIdx) {
+                                status = WPT_STATUS_MISSED;
+                            } else if (i == wptIdx) {
+                                continue; // skip for now
+                            }
+                        }
+                        drawPoi(graphics, positions[i], status, i);
+                    }
+                }
+            }
+
+            // draw current POI/WPT
+            if (wptIdx > -1) {
+
+                // setup color
+                graphics.setColor(0);
+
+                // draw current wpt last
+                drawPoi(graphics, positions[wptIdx], WPT_STATUS_CURRENT, wptIdx);
+            }
+
+        }
+
+        // hack! restore graphics
+        graphics.setColor(color);
+        graphics.setFont(Desktop.font);
+    }
+
+    private void drawScale(final Graphics graphics) {
         // local references for faster access
         final int h = Desktop.height;
         final int x0 = scaleDx;
@@ -731,7 +728,7 @@ final class MapViewer {
                            Graphics.LEFT | Graphics.TOP);
     }
 
-    private void drawPoi(Graphics graphics, Position position,
+    private void drawPoi(final Graphics graphics, final Position position,
                          final byte status, final int idx) {
         final int x = position.getX() - this.x;
         final int y = position.getY() - this.y;
@@ -753,14 +750,14 @@ final class MapViewer {
 
             // draw text (either label or comment/description)
             if (showtext) {
-                Waypoint waypoint = (Waypoint) Desktop.wpts.elementAt(idx);
+                final Waypoint wpt = (Waypoint) Desktop.wpts.elementAt(idx);
                 String text;
                 if (li % 4 < 2) {
-                    text = waypoint.getName();
+                    text = wpt.getName();
                 } else {
-                    text = waypoint.getComment();
+                    text = wpt.getComment();
                     if (text == null) {
-                        text = waypoint.getName();
+                        text = wpt.getName();
                     }
                 }
                 if (text != null) {
@@ -781,8 +778,8 @@ final class MapViewer {
         }
     }
 
-    private void drawSlice(Graphics graphics, /*, int[] clip, */Slice slice) {
-        Image img = slice.getImage();
+    private void drawSlice(final Graphics graphics, final Slice slice) {
+        final Image img = slice.getImage();
         if (img == null) {
             return;
         }
@@ -919,11 +916,11 @@ final class MapViewer {
         synchronized (this) {
 
             // local ref to temp collection
-            Vector _slices = slices;
-            Vector _slices2 = slices2;
+            final Vector oldSlices = slices;
+            final Vector newSlices = slices2;
 
             // assertion
-            if (!_slices2.isEmpty()) {
+            if (!newSlices.isEmpty()) {
                 throw new IllegalStateException("Temporary slices collection not empty");
             }
 
@@ -935,12 +932,18 @@ final class MapViewer {
             while (_y < ymax) {
                 int _l = ymax; // bottom for current "line"
                 while (_x < xmax) {
-                    Slice s = ensureSlice(_x, _y, _slices, _slices2);
-                    if (s == null) {
-                        throw new IllegalStateException("Out of map - no slice for " + _x + "-" + _y);
-                    } else {
+                    Slice s = ensureSlice(_x, _y, oldSlices, newSlices);
+                    if (s != null) {
                         _x = s.getX() + s.getWidth();
                         _l = s.getY() + s.getHeight();
+                        if (s.getImage() == null) {
+//#ifdef __LOG__
+                            if (log.isEnabled()) log.debug("image missing for slice " + s);
+//#endif
+                            gotAll = false;
+                        }
+                    } else {
+                        throw new IllegalStateException("Out of map - no slice for " + _x + "-" + _y);
                     }
                 }
                 _y = _l; // next "line" of slices
@@ -948,39 +951,24 @@ final class MapViewer {
             }
 
             /*
-             * detect missing images for slices for current view
-             */
-
-            // create list of slices whose images are to be loaded
-            for (int i = _slices2.size(); gotAll && --i >= 0; ) {
-                Slice slice = (Slice) _slices2.elementAt(i);
-                if (slice.getImage() == null) {
-    //#ifdef __LOG__
-                    if (log.isEnabled()) log.debug("image missing for slice " + slice);
-    //#endif
-                    gotAll = false;
-                }
-            }
-
-            /*
              * free images for slices no longer used in current view
              */
 
             // release slices images we will no longer use
-            for (int i = _slices.size(); --i >= 0; ) {
-                Slice slice = (Slice) _slices.elementAt(i);
-                if (_slices2.contains(slice)) {
-    //#ifdef __LOG__
-                    if (log.isEnabled()) log.debug("reuse slice in current set; " + slice);
-    //#endif
-                    continue;
+            for (int i = oldSlices.size(); --i >= 0; ) {
+                final Slice slice = (Slice) oldSlices.elementAt(i);
+                if (!newSlices.contains(slice)) {
+//#ifdef __LOG__
+                    if (log.isEnabled()) log.debug("release image in " + slice);
+//#endif
+                    slice.setImage(null);
+                    releasing = true;
                 }
-
-    //#ifdef __LOG__
-                if (log.isEnabled()) log.debug("release image in " + slice);
-    //#endif
-                slice.setImage(null);
-                releasing = true;
+//#ifdef __LOG__
+                  else {
+                    if (log.isEnabled()) log.debug("reuse slice in current set; " + slice);
+                }
+//#endif
             }
 
             // exchange vectors and do cleanup
@@ -1008,7 +996,9 @@ final class MapViewer {
         return loading;
     }
 
-    private Slice ensureSlice(int x, int y, Vector oldSlices, Vector newSlices) {
+    private Slice ensureSlice(final int x, final int y,
+                              final Vector oldSlices,
+                              final Vector newSlices) {
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("ensure slice for " + x + "-" + y);
 //#endif
@@ -1017,7 +1007,7 @@ final class MapViewer {
 
         // look for suitable slice in current set
         for (int i = oldSlices.size(); --i >= 0; ) {
-            Slice s = (Slice) oldSlices.elementAt(i);
+            final Slice s = (Slice) oldSlices.elementAt(i);
             if (s.isWithin(x, y)) {
                 slice = s;
                 break;
@@ -1032,17 +1022,18 @@ final class MapViewer {
         // found it?
         if (slice != null) {
             // assertion
-            if (newSlices.contains(slice)) {
+            if (!newSlices.contains(slice)) {
+                newSlices.addElement(slice);
+            } else {
                 throw new IllegalStateException("Slice " + slice + " already added for " + x + "-" + y);
             }
-            // add slice from map
-            newSlices.addElement(slice);
         }
 
         return slice;
     }
 
     private void calculateScale() {
+        sInfoLength = 0;
         if (map != null) {
             QualifiedCoordinates[] range = map.getRange();
             double scale = range[0].distance(range[1]) / map.getWidth();
@@ -1064,19 +1055,14 @@ final class MapViewer {
                     guess += grade;
                 }
                 scaleLength = (int) (guess / scale);
-                final StringBuffer sb = cz.kruch.track.TrackingMIDlet.newInstance(32);
+                StringBuffer sb = new StringBuffer(32);
                 sb.append(guess).append(units);
                 if (sb.length() > sInfo.length) {
                     throw new IllegalStateException("Scale length = " + sInfoLength);
                 }
                 sInfoLength = sb.length();
                 sb.getChars(0, sInfoLength, sInfo, 0);
-                cz.kruch.track.TrackingMIDlet.releaseInstance(sb);
-            } else {
-                sInfoLength = 0;
             }
-        } else {
-            sInfoLength = 0;
         }
     }
 }

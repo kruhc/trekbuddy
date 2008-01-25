@@ -54,14 +54,12 @@ final class FriendForm extends Form implements CommandListener {
         this.next = next;
         this.callback = callback;
         this.closure = closure;
-        this.fieldNumber = new TextField(Resources.getString(Resources.NAV_FLD_RECIPIENT), null, 16, TextField.PHONENUMBER);
-        this.fieldMessage = new TextField(Resources.getString(Resources.NAV_FLD_MESSAGE), null, 64, TextField.ANY);
-        append(this.fieldNumber);
-        append(this.fieldMessage);
-        final StringBuffer sb = cz.kruch.track.TrackingMIDlet.newInstance(32);
+        append(this.fieldNumber = new TextField(Resources.getString(Resources.NAV_FLD_RECIPIENT), null, 16, TextField.PHONENUMBER));
+        append(this.fieldMessage = new TextField(Resources.getString(Resources.NAV_FLD_MESSAGE), null, 64, TextField.ANY));
+        StringBuffer sb = new StringBuffer(32);
         NavigationScreens.toStringBuffer(coordinates, sb);
         append(new StringItem(Resources.getString(Resources.NAV_FLD_LOC), sb.toString()));
-        cz.kruch.track.TrackingMIDlet.releaseInstance(sb);
+        sb = null; // gc hint
         addCommand(new Command(MENU_SEND, Command.OK, 1));
         addCommand(new Command(Resources.getString(Resources.CMD_CANCEL), Command.BACK, 1));
     }

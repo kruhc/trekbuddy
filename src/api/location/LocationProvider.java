@@ -83,7 +83,7 @@ public abstract class LocationProvider {
     public abstract void setLocationListener(LocationListener listener,
                                              int interval, int timeout, int maxAge);
 
-    protected synchronized void notifyListener(Location location) {
+    protected final synchronized void notifyListener(Location location) {
         if (listener != null) {
             try {
                listener.locationUpdated(this, location);
@@ -93,7 +93,7 @@ public abstract class LocationProvider {
         }
     }
 
-    protected synchronized void notifyListener(boolean isRecording) {
+    protected final synchronized void notifyListener(boolean isRecording) {
         if (listener != null) {
             try {
                 listener.tracklogStateChanged(this, isRecording);
@@ -103,7 +103,7 @@ public abstract class LocationProvider {
         }
     }
 
-    protected synchronized void notifyListener(int newState) {
+    protected final synchronized void notifyListener(int newState) {
         if (listener != null) {
             try {
                 listener.providerStateChanged(this, newState);

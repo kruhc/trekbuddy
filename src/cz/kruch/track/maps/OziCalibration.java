@@ -161,6 +161,7 @@ final class OziCalibration extends Calibration {
                     datum = (Datum) Config.datumMappings.get("map:" + parseDatum(tokenizer));
                 }
             }
+            line = null; // gc hint
             line = reader.readToken(false);
         }
 
@@ -258,8 +259,8 @@ final class OziCalibration extends Calibration {
 
     private static String parseProjectionType(CharArrayTokenizer tokenizer) throws InvalidMapException {
         try {
-            tokenizer.next(); // Map Projection
-            return tokenizer.next().toString();
+            tokenizer.next(); // skip "Map Projection"
+            return tokenizer.next().toString().trim();
         } catch (Exception e) {
             throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_PARSE_PROJ_FAILED), e);
         }
@@ -267,7 +268,7 @@ final class OziCalibration extends Calibration {
 
     private static String parseDatum(CharArrayTokenizer tokenizer) throws InvalidMapException {
         try {
-            return tokenizer.next().toString();
+            return tokenizer.next().toString().trim();
         } catch (Exception e) {
             throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_PARSE_DATUM_FAILED), e);
         }

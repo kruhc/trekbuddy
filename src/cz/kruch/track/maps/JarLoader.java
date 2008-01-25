@@ -78,6 +78,7 @@ final class JarLoader extends Map.Loader /*implements Atlas.Loader*/ {
             CharArrayTokenizer.Token token = reader.readToken(false);
             while (token != null) {
                 addSlice(token);
+                token = null; // gc hint
                 token = reader.readToken(false);
             }
 //#ifdef __LOG__
@@ -113,7 +114,7 @@ final class JarLoader extends Map.Loader /*implements Atlas.Loader*/ {
 
     void loadSlice(Slice slice) throws IOException {
         // path sb
-        final StringBuffer sb = cz.kruch.track.TrackingMIDlet.newInstance(32);
+        StringBuffer sb = new StringBuffer(32);
 
         // construct slice path
         sb.append(RESOURCES_SET_DIR).append(basename);
@@ -122,38 +123,26 @@ final class JarLoader extends Map.Loader /*implements Atlas.Loader*/ {
         }
         sb.append(extension);
 
-        // get slice path
-        String slicePath = sb.toString();
-        cz.kruch.track.TrackingMIDlet.releaseInstance(sb);
-
-        // input stream
-        InputStream in = null;
+        // get full url
+        String url = sb.toString();
+        sb = null; // gc hint
 
 //#ifdef __LOG__
-        if (log.isEnabled()) log.debug("load slice image from " + slicePath);
+        if (log.isEnabled()) log.debug("load slice image from " + url);
 //#endif
 
         // read image
         try {
-
             // read image
-            slice.setImage(NavigationScreens.createImage(buffered.setInputStream(in = JarLoader.class.getResourceAsStream(slicePath))));
-
+            slice.setImage(NavigationScreens.createImage(buffered.setInputStream(JarLoader.class.getResourceAsStream(url))));
         } finally {
-
-            // close stream
-            if (in != null) {
-                // check for Palm - it resets it :-(
-                if (!cz.kruch.track.TrackingMIDlet.palm) {
-                    try {
-                        in.close();
-                    } catch (IOException e) {
-                        // ignore
-                    }
+            // check for Palm - it resets :-(
+            if (!cz.kruch.track.TrackingMIDlet.palm) {
+                try {
+                    buffered.close();
+                } catch (IOException e) {
+                    // ignore
                 }
-
-                // clean buffered
-                buffered.setInputStream(null);
             }
         }
     }

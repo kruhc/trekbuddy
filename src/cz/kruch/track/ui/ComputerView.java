@@ -203,6 +203,7 @@ final class ComputerView extends View implements Runnable, CommandListener {
     private SimpleCalendar TIME_CALENDAR, ETA_CALENDAR;
     private CharArrayTokenizer tokenizer;
     private char[] text;
+    private StringBuffer sb;
 
     /* profile vars */
     private Integer units;
@@ -251,8 +252,9 @@ final class ComputerView extends View implements Runnable, CommandListener {
         }
 
         // init vars
-        this.text = new char[128];
         this.tokenizer = new CharArrayTokenizer();
+        this.text = new char[128];
+        this.sb = new StringBuffer(128);
 
         // init shared
         this.fonts = new Hashtable(4);
@@ -640,10 +642,11 @@ final class ComputerView extends View implements Runnable, CommandListener {
         } else {
             final int mode = Config.dayNight;
             final int[] colors = this.colors;
-            final char[] text = this.text;
             final float[] valuesFloat = this.valuesFloat;
             final Vector areas = this.areas;
             final CharArrayTokenizer tokenizer = this.tokenizer;
+            final StringBuffer sb = this.sb;
+            final char[] text = this.text;
 
             int state = 0;
 
@@ -651,8 +654,6 @@ final class ComputerView extends View implements Runnable, CommandListener {
             graphics.fillRect(0,0, w, h);
             graphics.setColor(colors[mode * 4 + 1]);
 
-            final StringBuffer sb = cz.kruch.track.TrackingMIDlet.newInstance(32);
-            
             for (int N = areas.size(), i = 0; i < N; i++) {
                 final Area area = (Area) areas.elementAt(i);
 
@@ -971,8 +972,6 @@ final class ComputerView extends View implements Runnable, CommandListener {
                     }
                     graphics.setClip(0, 0, w, h);
                 }
-
-                cz.kruch.track.TrackingMIDlet.releaseInstance(sb);
             }
         }
 

@@ -129,12 +129,7 @@ public final class Atlas implements Runnable {
     }
 
     public String getURL(String name) {
-        final StringBuffer sb = cz.kruch.track.TrackingMIDlet.newInstance(32);
-        sb.append(url).append("?layer=").append(current).append("&map=").append(name);
-        String result = sb.toString();
-        cz.kruch.track.TrackingMIDlet.releaseInstance(sb);
-
-        return result;
+        return (new StringBuffer(32)).append(url).append("?layer=").append(current).append("&map=").append(name).toString();
     }
 
     public Hashtable getMaps() {
@@ -192,7 +187,8 @@ public final class Atlas implements Runnable {
             Loader loader;
             if (url.endsWith(".tba") || url.endsWith(".TBA")) {
                 factory = Class.forName("cz.kruch.track.maps.DirLoader");
-            } else if (url.endsWith(".tar") || url.endsWith(".TAR")) {
+            } else if (url.endsWith(".tar") || url.endsWith(".TAR")
+                    || url.endsWith(".idx") || url.endsWith(".IDX")) {
                 factory = Class.forName("cz.kruch.track.maps.TarLoader");
             } else {
                 throw new InvalidMapException("Unsupported format");

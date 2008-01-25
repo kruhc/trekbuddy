@@ -28,8 +28,7 @@ import java.util.Vector;
 import cz.kruch.track.Resources;
 
 /**
- * Base class for screens - {@link Desktop.MapView}, {@link ComputerView},
- * {@link LocatorView}.
+ * Base class for screens
  *
  * @author Ales Pour <kruhc@seznam.cz>
  */

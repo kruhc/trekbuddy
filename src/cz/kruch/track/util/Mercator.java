@@ -52,9 +52,7 @@ public final class Mercator {
             super(name);
             this.zoneNumber = (short) zoneNumber;
             this.zoneLetter = zoneLetter;
-            final StringBuffer sb = cz.kruch.track.TrackingMIDlet.newInstance(32);
-            this.zone = sb.append(zoneNumber).append(zoneLetter).toString().toCharArray();
-            cz.kruch.track.TrackingMIDlet.releaseInstance(sb);
+            this.zone = (new StringBuffer(32)).append(zoneNumber).append(zoneLetter).toString().toCharArray();
             this.lonOrigin = lonOrigin;
             this.latOrigin = latOrigin;
             this.parallel1 = this.parallel2 = Double.NaN;
@@ -108,7 +106,7 @@ public final class Mercator {
                 return super.toString();
             }
 
-            final StringBuffer sb = cz.kruch.track.TrackingMIDlet.newInstance(32);
+            StringBuffer sb = new StringBuffer(32);
             sb.append(name).append('{');
             if (zone != null) {
                 sb.append(zone).append(',');
@@ -117,10 +115,7 @@ public final class Mercator {
             sb.append(k0);sb.append(',');
             sb.append(falseEasting).append(',').append(falseNorthing).append('}');
 
-            String result = sb.toString();
-            cz.kruch.track.TrackingMIDlet.releaseInstance(sb);
-
-            return result;
+            return sb.toString();
         }
     }
 

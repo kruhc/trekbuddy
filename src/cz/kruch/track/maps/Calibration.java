@@ -405,6 +405,14 @@ abstract class Calibration {
         }
     }
 
+    public static boolean isCalibration(String url) {
+        url = url.toLowerCase();
+        return url.endsWith(Calibration.OZI_EXT)
+                || url.endsWith(Calibration.GMI_EXT)
+                || url.endsWith(Calibration.XML_EXT)
+                || url.endsWith(Calibration.J2N_EXT);
+    }
+
     public static Calibration newInstance(InputStream in, String url) throws IOException {
         return newInstance(in, url, url);
     }
@@ -414,6 +422,7 @@ abstract class Calibration {
 
         try {
             Class factory;
+            url = url.toLowerCase();
             if (url.endsWith(Calibration.OZI_EXT)) {
                 factory = Class.forName("cz.kruch.track.maps.OziCalibration");
             } else if (url.endsWith(Calibration.GMI_EXT)) {

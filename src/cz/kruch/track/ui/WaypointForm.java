@@ -52,6 +52,8 @@ public final class WaypointForm extends Form
     /*private */static final String CMD_NAVIGATE_TO;
     /*private */static final String CMD_SET_CURRENT;
     /*private */static final String CMD_GO_TO;
+    /*private */static final String CMD_SHOW_ALL;
+    /*private */static final String CMD_HIDE_ALL;
     /*private */static final String CMD_USE;
     /*private */static final String CMD_SAVE;
 
@@ -61,6 +63,8 @@ public final class WaypointForm extends Form
         CMD_NAVIGATE_TO = Resources.getString(Resources.NAV_CMD_NAVIGATE_TO);
         CMD_SET_CURRENT = Resources.getString(Resources.NAV_CMD_SET_AS_ACTIVE);
         CMD_GO_TO = Resources.getString(Resources.NAV_CMD_GO_TO);
+        CMD_SHOW_ALL = Resources.getString(Resources.NAV_CMD_SHOW_ALL);
+        CMD_HIDE_ALL = Resources.getString(Resources.NAV_CMD_HIDE_ALL);
         CMD_USE = Resources.getString(Resources.NAV_CMD_ADD);
         CMD_SAVE = Resources.getString(Resources.NAV_CMD_SAVE);
         CMD_TAKE = Resources.getString(Resources.NAV_CMD_TAKE);
@@ -89,15 +93,19 @@ public final class WaypointForm extends Form
         super(Resources.getString(Resources.NAV_TITLE_WPT));
         this.coordinates = wpt.getQualifiedCoordinates();
         this.callback = callback;
+        // name
         appendWithNewlineAfter(new StringItem(Resources.getString(Resources.NAV_FLD_WPT_NAME), wpt.getName()));
+        // comment
         appendWithNewlineAfter(new StringItem(Resources.getString(Resources.NAV_FLD_WPT_CMT), wpt.getComment()));
-        long timestamp = wpt.getTimestamp();
-        if (timestamp > 0) {
-            appendWithNewlineAfter(new StringItem(Resources.getString(Resources.NAV_FLD_TIME), dateToString(timestamp)));
+        // timestamp
+        if (wpt.getTimestamp() > 0) {
+            appendWithNewlineAfter(new StringItem(Resources.getString(Resources.NAV_FLD_TIME), dateToString(wpt.getTimestamp())));
         }
-        final StringBuffer sb = cz.kruch.track.TrackingMIDlet.newInstance(32);
+        // lat+lon
+        StringBuffer sb = new StringBuffer(32);
         NavigationScreens.toStringBuffer(wpt.getQualifiedCoordinates(), sb);
         append(new StringItem(Resources.getString(Resources.NAV_FLD_LOC), sb.toString()));
+        // altitude
         sb.delete(0, sb.length());
         final float alt = wpt.getQualifiedCoordinates().getAlt();
         if (Float.isNaN(alt)) {
@@ -107,7 +115,8 @@ public final class WaypointForm extends Form
         }
         sb.append(' ').append('m');
         append(new StringItem(Resources.getString(Resources.NAV_FLD_ALT), sb.toString()));
-        cz.kruch.track.TrackingMIDlet.releaseInstance(sb);
+        sb = null; // gc hint
+        // form command
         addCommand(new Command(Resources.getString(Resources.CMD_CLOSE), Command.BACK, 1));
         addCommand(new Command(CMD_NAVIGATE_TO, Desktop.POSITIVE_CMD_TYPE, 1));
         addCommand(new Command(CMD_NAVIGATE_ALONG, Desktop.POSITIVE_CMD_TYPE, 2));
@@ -120,15 +129,20 @@ public final class WaypointForm extends Form
      */
     public WaypointForm(Location location, Callback callback) {
         super(Resources.getString(Resources.NAV_TITLE_WPT));
-        this.coordinates = location.getQualifiedCoordinates();
+        this.coordinates = location.getQualifiedCoordinates().clone(); // copy
         this.timestamp = location.getTimestamp();
         this.callback = callback;
+        // name
         appendWithNewlineAfter(this.fieldName = new TextField(Resources.getString(Resources.NAV_FLD_WPT_NAME), null, 16, TextField.ANY));
+        // comment
         appendWithNewlineAfter(this.fieldComment = new TextField(Resources.getString(Resources.NAV_FLD_WPT_CMT), null, 256, TextField.ANY));
+        // timestamp
         appendWithNewlineAfter(new StringItem(Resources.getString(Resources.NAV_FLD_TIME), dateToString(location.getTimestamp())));
-        final StringBuffer sb = cz.kruch.track.TrackingMIDlet.newInstance(32);
+        // coords
+        StringBuffer sb = new StringBuffer(32);
         NavigationScreens.toStringBuffer(location.getQualifiedCoordinates(), sb);
         appendWithNewlineAfter(new StringItem(Resources.getString(Resources.NAV_FLD_LOC), sb.toString()));
+        // altitude
         sb.delete(0, sb.length());
         final float alt = location.getQualifiedCoordinates().getAlt();
         if (Float.isNaN(alt)) {
@@ -138,7 +152,8 @@ public final class WaypointForm extends Form
         }
         sb.append(' ').append('m');
         appendWithNewlineAfter(new StringItem(Resources.getString(Resources.NAV_FLD_ALT), sb.toString()));
-        cz.kruch.track.TrackingMIDlet.releaseInstance(sb);
+        sb = null; // gc hint
+        // form commands
         if (cz.kruch.track.TrackingMIDlet.supportsVideoCapture()) {
             StringItem snapshot = new StringItem(Resources.getString(Resources.NAV_FLD_SNAPSHOT), CMD_TAKE, Item.BUTTON);
             snapshot.setDefaultCommand(new Command(CMD_TAKE, Command.ITEM, 1));
@@ -155,20 +170,26 @@ public final class WaypointForm extends Form
     public WaypointForm(Callback callback, QualifiedCoordinates pointer) {
         super(Resources.getString(Resources.NAV_TITLE_WPT));
         this.callback = callback;
-        final int c = cnt + 1;
-        String name = c < 10 ? "WPT00" + c : (c < 100 ? "WPT0" + c : "WPT" + Integer.toString(c));
-        final StringBuffer sb = cz.kruch.track.TrackingMIDlet.newInstance(32);
-        appendWithNewlineAfter(this.fieldName = new TextField(Resources.getString(Resources.NAV_FLD_WPT_NAME), name, 16, TextField.ANY));
+        // generated name
+        StringBuffer sb = new StringBuffer(32);
+        sb.append("WPT");
+        NavigationScreens.append(sb, cnt + 1, 3);
+        appendWithNewlineAfter(this.fieldName = new TextField(Resources.getString(Resources.NAV_FLD_WPT_NAME), sb.toString(), 16, TextField.ANY));
+        // comment
         appendWithNewlineAfter(this.fieldComment = new TextField(Resources.getString(Resources.NAV_FLD_WPT_CMT), dateToString(CALENDAR.getTime().getTime()), 64, TextField.ANY));
+        // lat
+        sb.delete(0, sb.length());
         sb.append(pointer.getLat() > 0D ? 'N' : 'S').append(' ');
         NavigationScreens.append(sb, QualifiedCoordinates.LAT, pointer.getLat(), true);
         appendWithNewlineAfter(this.fieldLat = new TextField(Resources.getString(Resources.NAV_FLD_WGS84LAT), sb.toString(), 13, TextField.ANY));
+        // lon
         sb.delete(0, sb.length());
         sb.append(pointer.getLon() > 0D ? 'E' : 'W').append(' ');
         NavigationScreens.append(sb, QualifiedCoordinates.LON, pointer.getLon(), true);
         appendWithNewlineAfter(this.fieldLon = new TextField(Resources.getString(Resources.NAV_FLD_WGS84LON), sb.toString(), 14, TextField.ANY));
         appendWithNewlineAfter(this.fieldAlt = new TextField(Resources.getString(Resources.NAV_FLD_ALT), "", 14, TextField.NUMERIC));
-        cz.kruch.track.TrackingMIDlet.releaseInstance(sb);
+        sb = null; // gc hint
+        // commands
         addCommand(new Command(Resources.getString(Resources.CMD_CLOSE), Command.BACK, 1));
         addCommand(new Command(CMD_USE, Desktop.POSITIVE_CMD_TYPE, 1));
     }
@@ -325,17 +346,15 @@ public final class WaypointForm extends Form
 
     private static String dateToString(final long time) {
         CALENDAR.setTime(new Date(time));
-        final StringBuffer sb = cz.kruch.track.TrackingMIDlet.newInstance(32);
+        StringBuffer sb = new StringBuffer(32);
         NavigationScreens.append(sb, CALENDAR.get(Calendar.YEAR)).append('-');
         appendTwoDigitStr(sb, CALENDAR.get(Calendar.MONTH) + 1).append('-');
         appendTwoDigitStr(sb, CALENDAR.get(Calendar.DAY_OF_MONTH)).append(' ');
         appendTwoDigitStr(sb, CALENDAR.get(Calendar.HOUR_OF_DAY)).append(':');
         appendTwoDigitStr(sb, CALENDAR.get(Calendar.MINUTE)).append(':');
         appendTwoDigitStr(sb, CALENDAR.get(Calendar.SECOND));
-        String result = sb.toString();
-        cz.kruch.track.TrackingMIDlet.releaseInstance(sb);
-        
-        return result;
+
+        return sb.toString();
     }
 
     private static StringBuffer appendTwoDigitStr(StringBuffer sb, final int i) {

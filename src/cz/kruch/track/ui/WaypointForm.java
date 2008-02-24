@@ -301,14 +301,20 @@ public final class WaypointForm extends Form
     }
 
     private static double stringToLatOrLon(String value) {
+        // trim whitespaces
         value = value.trim();
-        if (value.length() < 5) {
+
+        // valid coord is at least 4 chars: <letter><space><degree><sign>
+        if (value.length() < 4) {
             throw new IllegalArgumentException(Resources.getString(Resources.NAV_MSG_MALFORMED_COORD) + " " + value);
         }
-        if (value.endsWith("\"")) {
+
+        // cut last non-digit off
+        if (!Character.isDigit(value.charAt(value.length() - 1))) {
             value = value.substring(0, value.length() - 1);
         }
 
+        // sign
         final int sign;
         switch (value.charAt(0)) {
             case 'N': {
@@ -328,17 +334,19 @@ public final class WaypointForm extends Form
         }
 
         final int idxSign = value.indexOf(NavigationScreens.SIGN);
-        if (idxSign < 3) {
-            throw new IllegalArgumentException(Resources.getString(Resources.NAV_MSG_MALFORMED_COORD) + " " + value);
-        }
         final int idxApo = value.indexOf("\'", idxSign);
 
-        double result = Integer.parseInt(value.substring(1, idxSign).trim());
-        if (idxApo == -1) {
-            result += Double.parseDouble(value.substring(idxSign + 1).trim()) / 60D;
-        } else {
-            result += Integer.parseInt(value.substring(idxSign + 1, idxApo).trim()) / 60D;
-            result += Double.parseDouble(value.substring(idxApo + 1).trim()) / 3600D;
+        double result;
+        if (idxSign == -1) { // N 3°
+            result = Double.parseDouble(value.substring(1).trim());
+        } else { // N 3°xxx
+            result = Integer.parseInt(value.substring(1, idxSign).trim());
+            if (idxApo == -1) { // N 3°6'
+                result += Double.parseDouble(value.substring(idxSign + 1).trim()) / 60D;
+            } else { // N 3°6'12.4"
+                result += Integer.parseInt(value.substring(idxSign + 1, idxApo).trim()) / 60D;
+                result += Double.parseDouble(value.substring(idxApo + 1).trim()) / 3600D;
+            }
         }
 
         return result * sign;

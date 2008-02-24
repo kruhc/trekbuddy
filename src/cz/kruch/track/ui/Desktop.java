@@ -164,7 +164,7 @@ public final class Desktop extends GameCanvas
 
     // logs
     private boolean tracklog;
-    private GpxTracklog gpxTracklog;
+    private GpxTracklog gpx;
 
     // navigation // TODO move to Waypoints
     /*public*/ static volatile Vector wpts;
@@ -350,7 +350,7 @@ public final class Desktop extends GameCanvas
 
     private static void resetBar() {
         // alpha
-        final int alpha = display.numAlphaLevels() > 2 ? (cz.kruch.track.TrackingMIDlet.sonyEricsson ? 0x90 : 0x80) : 0xff;
+        int alpha = Config.osdAlpha;
 
         // OSD/status bar
         int color = alpha << 24 | 0x007f7f7f;
@@ -872,15 +872,11 @@ public final class Desktop extends GameCanvas
                 if (log.isEnabled()) log.debug("exit command");
 //#endif
 
-                // stop eventing
-                eventing.destroy();
+                // stop timer
+                timer.cancel();
 
-                // stop tracking (closes GPS connection, closes tracklog)
-                try {
-                    stopTracking(true);
-                } catch (Throwable t) {
-                    // ignore
-                }
+                // stop device control
+                cz.kruch.track.ui.nokia.DeviceControl.destroy();
 
                 // stop waypoints
                 try {
@@ -889,12 +885,11 @@ public final class Desktop extends GameCanvas
                     // ignore
                 }
 
-                // stop device control
-                cz.kruch.track.ui.nokia.DeviceControl.destroy();
-
-                // stop timer
-                if (timer != null) {
-                    timer.cancel();
+                // stop tracking (closes GPS connection, closes tracklog)
+                try {
+                    stopTracking(true);
+                } catch (Throwable t) {
+                    // ignore
                 }
 
                 // close atlas/map
@@ -909,6 +904,9 @@ public final class Desktop extends GameCanvas
                 for (int i = views.length; --i >= 0; ) {
                     views[i].close();
                 }
+
+                // stop eventing
+                eventing.destroy();
 
                 // backup runtime vars
                 try {
@@ -1084,17 +1082,17 @@ public final class Desktop extends GameCanvas
      * @deprecated redesign
      */
     public void saveLocation(Location l) {
-        if (gpxTracklog != null) {
-            gpxTracklog.insert(l);
+        if (gpx != null) {
+            gpx.insert(l);
         }
     }
 
     public long getTracklogTime() {
-        if (gpxTracklog == null) {
+        if (gpx == null) {
             return System.currentTimeMillis();
         }
 
-        return gpxTracklog.getTime();
+        return gpx.getTime();
     }
 
     public String getTracklogCreator() {
@@ -1119,7 +1117,8 @@ public final class Desktop extends GameCanvas
         } else if (atlas != null) {
 
             // try to find alternate map
-            startAlternateMap(atlas.getLayer(), local, Resources.getString(Resources.DESKTOP_MSG_WPT_OFF_LAYER));
+            startAlternateMap(atlas.getLayer(), wpt.getQualifiedCoordinates(),
+                              Resources.getString(Resources.DESKTOP_MSG_WPT_OFF_LAYER));
 
         } else {
 
@@ -1249,6 +1248,13 @@ public final class Desktop extends GameCanvas
             return Float.NaN;
         }
         return ((Waypoint) wpts.elementAt(wptIdx)).getQualifiedCoordinates().getAlt();
+    }
+
+    public QualifiedCoordinates getWptCoords() {
+        if (wpts == null) {
+            return null;
+        }
+        return ((Waypoint) wpts.elementAt(wptIdx)).getQualifiedCoordinates();
     }
 
     //
@@ -1555,6 +1561,9 @@ public final class Desktop extends GameCanvas
                     providerClass = Class.forName("cz.kruch.track.location.Jsr82LocationProvider");
                     providerName = "Bluetooth";
                 break;
+//#ifdef __ALL__
+                case Config.LOCATION_PROVIDER_HGE100:
+//#endif
                 case Config.LOCATION_PROVIDER_SERIAL:
                     providerClass = Class.forName("cz.kruch.track.location.SerialLocationProvider");
                     providerName = "Serial";
@@ -1762,42 +1771,42 @@ public final class Desktop extends GameCanvas
             if (providerRestart) {
 
                 // assertion
-                if (gpxTracklog == null) {
+                if (gpx == null) {
                     throw new IllegalStateException("GPX tracklog not started");
                 }
 
                 // break trkseg
-                gpxTracklog.insert(Boolean.TRUE);
+                gpx.insert(Boolean.TRUE);
 
             } else {
 
                 // assertion
-                if (gpxTracklog != null) {
+                if (gpx != null) {
                     throw new IllegalStateException("GPX tracklog already started");
                 }
 
                 // start new tracklog
-                gpxTracklog = new GpxTracklog(GpxTracklog.LOG_TRK,
-                                              new Event(Event.EVENT_TRACKLOG),
-                                              getTracklogCreator(),
-                                              System.currentTimeMillis());
-                gpxTracklog.setFilePrefix(null);
-                gpxTracklog.start();
+                gpx = new GpxTracklog(GpxTracklog.LOG_TRK,
+                                      new Event(Event.EVENT_TRACKLOG),
+                                      getTracklogCreator(),
+                                      System.currentTimeMillis());
+                gpx.setFilePrefix(null);
+                gpx.start();
             }
         }
     }
 
     private void stopGpxTracklog() {
-        if (gpxTracklog != null) {
+        if (gpx != null) {
             try {
-                if (gpxTracklog.isAlive()) {
-                    gpxTracklog.destroy();
+                if (gpx.isAlive()) {
+                    gpx.shutdown();
                 }
-                gpxTracklog.join();
+                gpx.join();
             } catch (InterruptedException e) {
                 // ignore - should not happen
             } finally {
-                gpxTracklog = null; // GC hint
+                gpx = null; // GC hint
             }
         }
     }
@@ -2000,7 +2009,7 @@ public final class Desktop extends GameCanvas
             Enumeration e = atlas.getLayers();
             if (e.hasMoreElements()) {
                 (new ItemSelection(this, Resources.getString(Resources.DESKTOP_MSG_SELECT_LAYER),
-                                   new Event(Event.EVENT_LAYER_SELECTION_FINISHED, "switch"))).show(e);
+                                   new Event(Event.EVENT_LAYER_SELECTION_FINISHED, "switch"))).show(e, atlas.getLayer());
             } else {
                 showInfo(Resources.getString(Resources.DESKTOP_MSG_NO_LAYERS), this);
             }
@@ -2012,15 +2021,15 @@ public final class Desktop extends GameCanvas
             Enumeration e = atlas.getMapNames();
             if (e.hasMoreElements()) {
                 (new ItemSelection(this, Resources.getString(Resources.DESKTOP_MSG_SELECT_MAP),
-                                   new Event(Event.EVENT_MAP_SELECTION_FINISHED, "switch"))).show(e);
+                                   new Event(Event.EVENT_MAP_SELECTION_FINISHED, "switch"))).show(e, map.getName());
             } else {
                 showInfo(Resources.getString(Resources.DESKTOP_MSG_NO_MAPS), this);
             }
         }
     }
 
-    void startAlternateMap(String layerName, QualifiedCoordinates localQc,
-                           String notFoundMsg) {
+    boolean startAlternateMap(String layerName, QualifiedCoordinates localQc,
+                              String notFoundMsg) {
         // find map for given coords
         String mapUrl = atlas.getMapURL(layerName, localQc);
         String mapName = atlas.getMapName(layerName, localQc);
@@ -2045,6 +2054,8 @@ public final class Desktop extends GameCanvas
         } else if (notFoundMsg != null) {
             showWarning(notFoundMsg, null, Desktop.screen);
         }
+
+        return mapUrl != null;
     }
 
     private void startOpenMap(String url, String name) {
@@ -2377,7 +2388,7 @@ public final class Desktop extends GameCanvas
                         _atlas = null;
 
                         // force user to select layer
-                        (new ItemSelection(Desktop.screen, Resources.getString(Resources.DESKTOP_MSG_SELECT_LAYER), new Event(Event.EVENT_LAYER_SELECTION_FINISHED))).show(atlas.getLayers());
+                        (new ItemSelection(Desktop.screen, Resources.getString(Resources.DESKTOP_MSG_SELECT_LAYER), new Event(Event.EVENT_LAYER_SELECTION_FINISHED))).show(atlas.getLayers(), null);
 
                     } else {
 
@@ -2411,15 +2422,18 @@ public final class Desktop extends GameCanvas
                                 atlas.setLayer(layerName);
 
                                 // force user to select default map
-                                (new ItemSelection(Desktop.screen, Resources.getString(Resources.DESKTOP_MSG_SELECT_MAP), new Event(Event.EVENT_MAP_SELECTION_FINISHED))).show(atlas.getMapNames());
+                                (new ItemSelection(Desktop.screen, Resources.getString(Resources.DESKTOP_MSG_SELECT_MAP),
+                                                   new Event(Event.EVENT_MAP_SELECTION_FINISHED))).show(atlas.getMapNames(), null);
 
                             } else { // layer switch
 
-                                // get current lat/lon
-                                QualifiedCoordinates localQc = map.transform(((MapView) views[VIEW_MAP]).getPosition());
-
                                 // switch match
-                                startAlternateMap(layerName, localQc, Resources.getString(Resources.DESKTOP_MSG_NO_MAP_FOR_POS) + " '" + layerName + "'.");
+                                if (!startAlternateMap(layerName, getPointer(),
+                                                       Resources.getString(Resources.DESKTOP_MSG_NO_MAP_FOR_POS) + " '" + layerName + "'.")) {
+                                    // let user to select any map
+                                    (new ItemSelection(Desktop.screen, Resources.getString(Resources.DESKTOP_MSG_SELECT_MAP),
+                                                       new Event(Event.EVENT_MAP_SELECTION_FINISHED, layerName))).show(atlas.getMapNames(layerName), null);
+                                }
                             }
                         }
                     } else { // cancelled
@@ -2442,9 +2456,20 @@ public final class Desktop extends GameCanvas
                     // had user selected anything?
                     if (result != null) {
 
+                        // trick - focus on these coords once the new map is loaded
+                        if (map != null) {
+                            _qc = getPointer();
+                        }
+
                         // map name
                         String name = (String) result;
 
+                        // phantom layer
+                        if (!_switch && closure != null && atlas != null) {
+                            atlas.setLayer((String) closure);
+                            _switch = true;
+                        }
+                        
                         // background task
                         startOpenMap(atlas.getMapURL(name), name);
 
@@ -2492,6 +2517,7 @@ public final class Desktop extends GameCanvas
                             // move viewer to known position, if any
                             if (_qc != null) {
                                 try {
+
                                     // handle fake qc when browsing across map boundary
                                     if (_qc.getLat() == 90D) {
                                         _qc = null; // gc hint
@@ -2506,14 +2532,18 @@ public final class Desktop extends GameCanvas
                                         _qc = null; // gc hint
                                         _qc = QualifiedCoordinates.newInstance(_qc.getLat(), map.getRange()[3].getLon());
                                     }
+
                                     // wgs84 to local
                                     QualifiedCoordinates localQc = map.getDatum().toLocal(_qc);
-                                    // transform qc (already local datum) to position, and move to it
+
+                                    // transform local qc to position, and move to it
                                     if (map.isWithin(localQc)) {
                                         ((MapView) views[VIEW_MAP]).setPosition(map.transform(localQc));
                                     }
+
                                     // release
                                     QualifiedCoordinates.releaseInstance(localQc);
+
                                 } finally {
                                     _qc = null;
                                 }
@@ -2722,8 +2752,8 @@ public final class Desktop extends GameCanvas
                     }
 
                     // update tracklog
-                    if (gpxTracklog != null) {
-                        gpxTracklog.locationUpdated(l);
+                    if (gpx != null) {
+                        gpx.locationUpdated(l);
                     }
 
                     // if valid position do updates

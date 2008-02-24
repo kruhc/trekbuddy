@@ -238,6 +238,7 @@ public final class Resources {
     public static final short CFG_DESKTOP_FLD_OSD_MED_FONT      = 3509;
     public static final short CFG_DESKTOP_FLD_OSD_BOLD_FONT     = 3510;
     public static final short CFG_DESKTOP_FLD_OSD_BLACK         = 3511;
+    public static final short CFG_DESKTOP_TRANSPARENCY          = 3512;
     /* settings - Location */
     public static final short CFG_LOCATION_GROUP_PROVIDER       = 3600;
     public static final short CFG_LOCATION_GROUP_TRACKLOG       = 3601;
@@ -260,6 +261,7 @@ public final class Resources {
     public static final short CFG_LOCATION_FLD_PROV_O2GERMANY   = 3618;
     public static final short CFG_LOCATION_FLD_FILTER_DEPTH     = 3619;
     public static final short CFG_LOCATION_FLD_GPX_LOG_GSM      = 3620;
+    public static final short CFG_LOCATION_FLD_PROV_HGE100      = 3621;
     /* settings - navigation */
     public static final short CFG_NAVIGATION_FLD_WPT_PROXIMITY  = 3700;
     public static final short CFG_NAVIGATION_FLD_POI_PROXIMITY  = 3701;

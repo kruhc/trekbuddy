@@ -53,6 +53,7 @@ public final class Config {
     public static final int LOCATION_PROVIDER_SIMULATOR  = 3;
     public static final int LOCATION_PROVIDER_MOTOROLA   = 4;
     public static final int LOCATION_PROVIDER_O2GERMANY  = 5;
+    public static final int LOCATION_PROVIDER_HGE100     = 6;
 
     /* tracklog options */
     public static final int TRACKLOG_NEVER          = 0;
@@ -138,6 +139,7 @@ public final class Config {
     public static boolean osdBoldFont;
     public static boolean osdBlackColor;
     public static boolean hpsWptTrueAzimuth     = true;
+    public static int osdAlpha                  = 0x80;
 
     // [Units]
     public static int units;
@@ -367,6 +369,12 @@ public final class Config {
         } catch (Exception e) {
         }
 
+        // 0.9.74 extensions
+        try {
+            osdAlpha = din.readInt();
+        } catch (Exception e) {
+        }
+
 //#ifdef __LOG__
         if (log.isEnabled()) log.info("configuration read");
 //#endif
@@ -432,6 +440,8 @@ public final class Config {
         /* since 0.9.70 */
         dout.writeBoolean(largeAtlases);
         dout.writeBoolean(gpxGsmInfo);
+        /* since 0.9.74 */
+        dout.writeInt(osdAlpha);
 
 //#ifdef __LOG__
         if (log.isEnabled()) log.info("configuration updated");

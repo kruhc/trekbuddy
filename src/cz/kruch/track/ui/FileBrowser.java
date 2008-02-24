@@ -188,7 +188,7 @@ public final class FileBrowser implements CommandListener, Runnable {
         }
     }
 
-    private void show(Enumeration entries) {
+    private void show(final Enumeration entries) {
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("show; depth = " + depth);
 //#endif

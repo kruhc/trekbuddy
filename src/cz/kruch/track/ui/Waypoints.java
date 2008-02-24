@@ -152,9 +152,9 @@ public final class Waypoints extends List
         this.cmdNavigateAlong = new Command(WaypointForm.CMD_NAVIGATE_ALONG, Command.ITEM, 3);
         this.cmdNavigateBack = new Command(WaypointForm.CMD_NAVIGATE_BACK, Command.ITEM, 4);
         this.cmdSetAsCurrent = new Command(WaypointForm.CMD_SET_CURRENT, Command.ITEM, 2);
-        this.cmdGoTo = new Command(WaypointForm.CMD_GO_TO, Command.ITEM, 5);
-        this.cmdShowAll = new Command(WaypointForm.CMD_SHOW_ALL, Command.ITEM, 6);
-        this.cmdHideAll = new Command(WaypointForm.CMD_HIDE_ALL, Command.ITEM, 7);
+        this.cmdShowAll = new Command(WaypointForm.CMD_SHOW_ALL, Command.ITEM, 5);
+        this.cmdHideAll = new Command(WaypointForm.CMD_HIDE_ALL, Command.ITEM, 5);
+        this.cmdGoTo = new Command(WaypointForm.CMD_GO_TO, Command.ITEM, 6);
         this.setFitPolicy(Choice.TEXT_WRAP_OFF);
         this.setCommandListener(this);
         this.addCommand(new Command(Resources.getString(Resources.CMD_CLOSE), Command.BACK, 1));
@@ -162,11 +162,11 @@ public final class Waypoints extends List
     }
 
     private void stopLogs() {
-        for (Enumeration e = logs.elements(); e.hasMoreElements(); ) {
-            GpxTracklog gpx = (GpxTracklog) e.nextElement();
+        for (final Enumeration e = logs.elements(); e.hasMoreElements(); ) {
+            final GpxTracklog gpx = (GpxTracklog) e.nextElement();
             try {
                 if (gpx.isAlive()) {
-                    gpx.destroy();
+                    gpx.shutdown();
                 }
                 gpx.join();
             } catch (InterruptedException exc) {
@@ -617,11 +617,11 @@ public final class Waypoints extends List
 
                 // list file stores
                 if (dir.exists()) {
-                    for (Enumeration e = dir.list(); e.hasMoreElements(); ) {
-                        String name = (String) e.nextElement();
-                        int i = name.lastIndexOf('.');
+                    for (final Enumeration e = dir.list(); e.hasMoreElements(); ) {
+                        final String name = (String) e.nextElement();
+                        final int i = name.lastIndexOf('.');
                         if (i > -1) {
-                            String ext = name.substring(i).toLowerCase();
+                            final String ext = name.substring(i).toLowerCase();
                             if (ext.equals(SUFFIX_GPX) || ext.equals(SUFFIX_LOC)) {
                                 if (!logNames.contains(name)) {
                                     vFile.addElement(name);
@@ -735,8 +735,8 @@ public final class Waypoints extends List
 
             // copy memory stores into array
             vMem.copyInto(strs);
-            vMem.removeAllElements();   // gc hint
-            vMem = null;                // gc hint
+            vMem.removeAllElements(); // gc hint
+            vMem = null; // gc hint
 
             // setup icons for stores
             for (int i = strs.length; --i >= 0; ) {
@@ -767,7 +767,8 @@ public final class Waypoints extends List
 //#endif
 
         // got store in cache?
-        Vector wpts = null, wptsCached = (Vector) stores.get(_storeName);
+        Vector wpts = null;
+        Vector wptsCached = (Vector) stores.get(_storeName);
         if (wptsCached == null) { // no, load from file
             File file = null;
             try {
@@ -778,7 +779,7 @@ public final class Waypoints extends List
                 list.setTicker(new Ticker(Resources.getString(Resources.NAV_MSG_TICKER_LOADING)));
 
                 // parse new waypoints
-                int i = _storeName.lastIndexOf('.');
+                final int i = _storeName.lastIndexOf('.');
                 if (i > -1) {
                     String ext = _storeName.substring(i).toLowerCase();
                     if (ext.equals(SUFFIX_GPX)) {
@@ -943,19 +944,19 @@ public final class Waypoints extends List
             l.addCommand(cmdNavigateAlong);
             l.addCommand(cmdNavigateBack);
         }
-        l.addCommand(cmdGoTo);
         if (Desktop.wpts == wpts && Desktop.showall) {
             l.addCommand(cmdHideAll);
         } else if (Desktop.wpts == null || (Desktop.wpts == wpts && Desktop.routeDir == 0)) {
             l.addCommand(cmdShowAll);
         }
+        l.addCommand(cmdGoTo);
         l.addCommand(cmdBack);
         l.setCommandListener(this);
 
         return l;
     }
 
-    private static Vector parseWaypoints(File file, final int fileType)
+    private static Vector parseWaypoints(final File file, final int fileType)
             throws IOException, XmlPullParserException {
         InputStream in = null;
 
@@ -973,7 +974,7 @@ public final class Waypoints extends List
         }
     }
 
-    private static Vector parseWaypoints(InputStream in, final int fileType)
+    private static Vector parseWaypoints(final InputStream in, final int fileType)
             throws IOException, XmlPullParserException {
 
         // result
@@ -999,7 +1000,7 @@ public final class Waypoints extends List
         return result;
     }
 
-    private static void parseGpx(KXmlParser parser, Vector v)
+    private static void parseGpx(final KXmlParser parser, final Vector v)
             throws IOException, XmlPullParserException {
 
         int depth = 0;
@@ -1080,7 +1081,7 @@ public final class Waypoints extends List
         }
     }
 
-    private static void parseLoc(KXmlParser parser, Vector v)
+    private static void parseLoc(final KXmlParser parser, final Vector v)
             throws IOException, XmlPullParserException {
 
         int depth = 0;

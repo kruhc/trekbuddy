@@ -25,6 +25,7 @@ import java.io.OutputStream;
 import java.util.Date;
 import java.util.Calendar;
 import java.util.TimeZone;
+import java.util.TimerTask;
 
 import org.kxml2.io.KXmlSerializer;
 
@@ -97,21 +98,21 @@ public final class GpxTracklog extends Thread {
 
     private final char[] sbChars = new char[32];
     
-    private int type;
     private Callback callback;
     private String creator;
-    private long time;
     private String fileDate;
     private String fileName;
+    private int type;
+    private long time;
 
-    private boolean go = true;
+    private boolean go;
     private Object queue;
 
     private Location refLocation;
-    private float refCourse, courseDeviation; // private Location lastLocation;
+    private float refCourse, courseDeviation;
     private boolean reconnected;
     private int count;
-    private int imgNum = 1;
+    private int imgNum;
 
     public GpxTracklog(int type, Callback callback, String creator, long time) {
         this.type = type;
@@ -119,6 +120,8 @@ public final class GpxTracklog extends Thread {
         this.creator = creator;
         this.time = time;
         this.fileDate = dateToFileDate(time);
+        this.imgNum = 1;
+        this.go = true;
     }
 
     public long getTime() {
@@ -137,7 +140,7 @@ public final class GpxTracklog extends Thread {
         this.fileName = (filePrefix == null ? "" : filePrefix) + fileDate + ".gpx";
     }
 
-    public void destroy() {
+    public void shutdown() {
         synchronized (this) {
             go = false;
             notify();
@@ -164,11 +167,6 @@ public final class GpxTracklog extends Thread {
 
         // file created?
         if (throwable == null) {
-
-/* EXPERIMENTAL: delayed until first "good" position
-            // signal recording start
-            callback.invoke(new Integer(CODE_RECORDING_START), null, this);
-*/
 
             KXmlSerializer serializer = null;
 
@@ -215,26 +213,26 @@ public final class GpxTracklog extends Thread {
                     if (!go) break;
 
                     if (item instanceof Location) {
-                        Location l = (Location) item;
+                        final Location l = (Location) item;
                         if (check(l) != null) {
                             serializeTrkpt(serializer, l);
-                            /* performance hit */
-                            // serializer.flush();
                         }
                         Location.releaseInstance(l);
+                    } else if (item instanceof Boolean) {
+                        if (Boolean.TRUE.equals(item)) {
+                            serializer.endTag(DEFAULT_NAMESPACE, ELEMENT_TRKSEG);
+                            serializer.startTag(DEFAULT_NAMESPACE, ELEMENT_TRKSEG);
+                        }
+                        serializer.flush();
                     } else if (item instanceof Waypoint) {
-                        Waypoint w = (Waypoint) item;
+                        final Waypoint w = (Waypoint) item;
                         if (w.getUserObject() != null) {
                             w.setLinkPath(saveImage((byte[]) w.getUserObject()));
-                            w.setUserObject(null);
+                            w.setUserObject(null); // gc hint
                         }
                         serializeWpt(serializer, w);
                         serializer.flush();
                         callback.invoke(new Integer(CODE_WAYPOINT_INSERTED), null, this);
-                    } else if (item instanceof Boolean) {
-                        serializer.endTag(DEFAULT_NAMESPACE, ELEMENT_TRKSEG);
-                        serializer.flush();
-                        serializer.startTag(DEFAULT_NAMESPACE, ELEMENT_TRKSEG);
                     }
 
                     // gc hint
@@ -290,8 +288,9 @@ public final class GpxTracklog extends Thread {
         }
     }
 
-    private void serializePt(KXmlSerializer serializer, QualifiedCoordinates qc,
-                             Object pt) throws IOException {
+    private void serializePt(final KXmlSerializer serializer,
+                             final QualifiedCoordinates qc,
+                             final Object pt) throws IOException {
         int i = doubleToChars(qc.getLat(), 9);
         serializer.attribute(DEFAULT_NAMESPACE, ATTRIBUTE_LAT, sbChars, i);
         i = doubleToChars(qc.getLon(), 9);
@@ -304,7 +303,7 @@ public final class GpxTracklog extends Thread {
             serializer.endTag(DEFAULT_NAMESPACE, ELEMENT_ELEVATION);
         }
         if (pt instanceof Waypoint) {
-            Waypoint wpt = (Waypoint) pt;
+            final Waypoint wpt = (Waypoint) pt;
             serializer.startTag(DEFAULT_NAMESPACE, ELEMENT_TIME);
             i = dateToXsdDate(wpt.getTimestamp());
             serializer.text(sbChars, 0, i);
@@ -325,7 +324,7 @@ public final class GpxTracklog extends Thread {
                 serializer.endTag(DEFAULT_NAMESPACE, ELEMENT_LINK);
             }
         } else if (pt instanceof Location) {
-            Location l = (Location) pt;
+            final Location l = (Location) pt;
             serializer.startTag(DEFAULT_NAMESPACE, ELEMENT_TIME);
             i = dateToXsdDate(l.getTimestamp());
             serializer.text(sbChars, 0, i);
@@ -439,19 +438,21 @@ public final class GpxTracklog extends Thread {
         }
     }
 
-    private void serializeTrkpt(KXmlSerializer serializer, Location l) throws IOException {
+    private void serializeTrkpt(final KXmlSerializer serializer,
+                                final Location l) throws IOException {
         serializer.startTag(DEFAULT_NAMESPACE, ELEMENT_TRKPT);
         serializePt(serializer, l.getQualifiedCoordinates(), l);
         serializer.endTag(DEFAULT_NAMESPACE, ELEMENT_TRKPT);
     }
 
-    private void serializeWpt(KXmlSerializer serializer, Waypoint wpt) throws IOException {
+    private void serializeWpt(final KXmlSerializer serializer,
+                              final Waypoint wpt) throws IOException {
         serializer.startTag(DEFAULT_NAMESPACE, ELEMENT_WPT);
         serializePt(serializer, wpt.getQualifiedCoordinates(), wpt);
         serializer.endTag(DEFAULT_NAMESPACE, ELEMENT_WPT);
     }
 
-    private String saveImage(byte[] raw) throws IOException {
+    private String saveImage(final byte[] raw) throws IOException {
         File file = null;
         OutputStream output = null;
 
@@ -520,7 +521,7 @@ public final class GpxTracklog extends Thread {
     public void insert(Boolean b) {
         synchronized (this) {
             freeLocationInQueue();
-            reconnected = true;
+            reconnected = b.booleanValue();
             queue = b;
             notify();
         }

@@ -460,6 +460,10 @@ public final class Map implements Runnable {
         }
 */
 
+        final String getMapPath() {
+            return map.getPath();
+        }
+
         final Slice[] getMapSlices() {
             return map.slices;
         }

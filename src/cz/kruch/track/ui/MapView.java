@@ -287,7 +287,8 @@ final class MapView extends View {
                             }
 
                             // switch alternate map
-                            navigator.startAlternateMap(navigator.getAtlas().getLayer(), newQc, null);
+                            navigator.startAlternateMap(navigator.getAtlas().getLayer(),
+                                                        newQc, null);
                         }
                     }
                 }
@@ -454,7 +455,7 @@ final class MapView extends View {
                     if (isAtlas() && !navigator._getInitializingMap() && !navigator._getLoadingSlices()) {
 
                         // switch alternate map
-                        navigator.startAlternateMap(navigator.getAtlas().getLayer(), localQc, null);
+                        navigator.startAlternateMap(navigator.getAtlas().getLayer(), qc, null);
                     }
                 }
 

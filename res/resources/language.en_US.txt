@@ -54,7 +54,7 @@
 1320=Tracklog error
 1321=Failed to use map
 1322=Map loading failed
-1323=Slices loaded
+1323=Tiles loaded
 1324=Loading status
 1325=Select Map
 1326=Select Atlas
@@ -81,7 +81,7 @@
 1347=Failed to parse SET file
 1348=Invalid atlas URL
 1349=Invalid map URL
-1350=Invalid slice filename:
+1350=Invalid tile filename:
 1351=Invalid map dimension
 1352=Invalid point
 1353=Invalid projection setup
@@ -92,13 +92,13 @@
 1358=Map too large
 1359=Too few calibration points
 1360=No calibration
-1361=Empty map - no slices
-1362=Failed to load slice
-1363=No image for slice
+1361=Empty map - no tiles
+1362=Failed to load tile
+1363=No image for tile
 1364=Unknown calibration file
-1365=Slices dir not found
+1365=Tiles dir not found
 1366=Failed to list tiles in
-1367=Slice too large
+1367=Tile too large
 1368=File not found
 1369=Use as default atlas?
 1370=Use as default map?
@@ -213,6 +213,7 @@
 3509=OSD medium font
 3510=OSD bold font
 3511=OSD black color
+3512=Transparency
 
 # settings forms/fields/values (Location)
 3600=Provider
@@ -236,6 +237,7 @@
 3618=O2 Germany
 3619=Filter Depth
 3620=log gsm info
+3621=HGE-100
 
 # settings forms/fields/values (Navigation)
 3700=Wpt Proximity

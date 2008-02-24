@@ -29,7 +29,6 @@ import cz.kruch.track.ui.FileBrowser;
 import cz.kruch.track.ui.Desktop;
 import cz.kruch.track.event.Callback;
 import cz.kruch.track.Resources;
-import cz.kruch.j2se.io.BufferedInputStream;
 
 public final class SimulatorLocationProvider
         extends StreamReadingLocationProvider
@@ -109,7 +108,7 @@ public final class SimulatorLocationProvider
             notifyListener(LocationProvider._STARTING);
 
             // open input
-            in = new BufferedInputStream(file.openInputStream(), BUFFER_SIZE);
+            in = file.openInputStream();
 
             // notify
             notifyListener(LocationProvider.TEMPORARILY_UNAVAILABLE);

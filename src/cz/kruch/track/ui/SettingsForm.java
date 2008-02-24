@@ -31,6 +31,7 @@ import javax.microedition.lcdui.ItemStateListener;
 import javax.microedition.lcdui.Item;
 import javax.microedition.lcdui.Choice;
 import javax.microedition.lcdui.List;
+import javax.microedition.lcdui.Gauge;
 
 import api.file.File;
 import api.location.Datum;
@@ -77,11 +78,13 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
     private ChoiceGroup choiceGpx;
     private TextField fieldGpxDt;
     private TextField fieldGpxDs;
+    private Gauge gaugeAlpha;
 
     private Form submenu;
     private String section;
     private Vector providers;
     private boolean changed;
+    private int gaugeAlphaScale;
 
     public SettingsForm(Callback callback) {
         super(Resources.prefixed(Resources.getString(Resources.DESKTOP_CMD_SETTINGS)), List.IMPLICIT);
@@ -201,9 +204,13 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
                 Config.osdBoldFont,
                 Config.osdBlackColor
             });
-//            if (choiceProvider.size() == 0) { // ignore for dumb phones
-                submenu.append(choiceMisc);
-//            }
+            submenu.append(choiceMisc);
+            int alphaSteps = Desktop.display.numAlphaLevels();
+            if (alphaSteps > 16) {
+                alphaSteps = 16;
+            }
+            gaugeAlphaScale = 0x100 / alphaSteps;
+            submenu.append(gaugeAlpha = new Gauge(Resources.getString(Resources.CFG_DESKTOP_TRANSPARENCY), true, alphaSteps - 1, Config.osdAlpha / gaugeAlphaScale));
 
         } else if (menuNavigation.equals(section)) {
 
@@ -275,6 +282,9 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
                     break;
                     case Config.LOCATION_PROVIDER_O2GERMANY:
                         resourceId = Resources.CFG_LOCATION_FLD_PROV_O2GERMANY;
+                    break;
+                    case Config.LOCATION_PROVIDER_HGE100:
+                        resourceId = Resources.CFG_LOCATION_FLD_PROV_HGE100;
                     break;
                 }
                 choiceProvider.setSelectedIndex(choiceProvider.append(Resources.getString(resourceId), null),
@@ -570,6 +580,7 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
                 Config.osdMediumFont = misc[8];
                 Config.osdBoldFont = misc[9];
                 Config.osdBlackColor = misc[10];
+                Config.osdAlpha = gaugeAlpha.getValue() * gaugeAlphaScale;
                 changed = true;
 
             } else if (menuMisc.equals(section)) {
@@ -631,7 +642,7 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
         return form.append(item);
     }
 
-    public Vector getLocationProviders() {
+    private Vector getLocationProviders() {
         if (providers == null) {
             providers = new Vector(8);
             if (cz.kruch.track.TrackingMIDlet.jsr82) {
@@ -640,6 +651,11 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
             if (cz.kruch.track.TrackingMIDlet.jsr179) {
                 providers.addElement(new Integer(Config.LOCATION_PROVIDER_JSR179));
             }
+//#ifdef __ALL__
+            if (cz.kruch.track.TrackingMIDlet.sonyEricsson) {
+                providers.addElement(new Integer(Config.LOCATION_PROVIDER_HGE100));
+            }
+//#endif
             if (cz.kruch.track.TrackingMIDlet.hasPorts()) {
                 providers.addElement(new Integer(Config.LOCATION_PROVIDER_SERIAL));
             }

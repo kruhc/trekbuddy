@@ -24,8 +24,6 @@ import api.file.File;
 import cz.kruch.track.configuration.Config;
 import cz.kruch.track.ui.Desktop;
 import cz.kruch.track.Resources;
-import cz.kruch.j2se.io.BufferedOutputStream;
-import cz.kruch.j2se.io.BufferedInputStream;
 
 import javax.microedition.io.Connector;
 import javax.microedition.io.StreamConnection;
@@ -69,6 +67,9 @@ public class SerialLocationProvider extends StreamReadingLocationProvider implem
     }
 
     protected String getKnownUrl() {
+        if (Config.locationProvider == Config.LOCATION_PROVIDER_HGE100) {
+            return "comm:AT5;baudrate=9600";
+        }
         return Config.commUrl;
     }
 
@@ -221,7 +222,7 @@ public class SerialLocationProvider extends StreamReadingLocationProvider implem
                     }
 
                     // create output
-                    nmealog = new BufferedOutputStream(file.openOutputStream(), BUFFER_SIZE);
+                    nmealog = file.openOutputStream();
 
 /* fix
                     // signal recording has started
@@ -283,7 +284,7 @@ public class SerialLocationProvider extends StreamReadingLocationProvider implem
             }
 
             // open stream for reading
-            stream = new BufferedInputStream(connection.openInputStream(), BUFFER_SIZE);
+            stream = connection.openInputStream();
 
             // clear error
             setThrowable(null);

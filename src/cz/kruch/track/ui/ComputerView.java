@@ -97,6 +97,7 @@ final class ComputerView extends View implements Runnable, CommandListener {
     private static final String TOKEN_WPT_VMG       = "wpt-vmg";
     private static final String TOKEN_WPT_ETA       = "wpt-eta";
     private static final String TOKEN_WPT_ALT       = "wpt-alt";
+    private static final String TOKEN_WPT_COORDS    = "wpt-coords";
 
     // float values
     private static final String[] TOKENS_float = {
@@ -161,6 +162,7 @@ final class ComputerView extends View implements Runnable, CommandListener {
     private static final int VALUE_WPT_ETA      = 1007;
     private static final int VALUE_WPT_VMG      = 1008;
     private static final int VALUE_WPT_ALT      = 1009;
+    private static final int VALUE_WPT_COORDS   = 1010;
     private static final int VALUE_SIGN         = 2000;
 
     // charset
@@ -463,8 +465,8 @@ final class ComputerView extends View implements Runnable, CommandListener {
         if (action == Canvas.DOWN) {
             if (profiles != null && profiles.size() > 1) {
                 List list = new List(Resources.getString(Resources.DESKTOP_MSG_PROFILES), List.IMPLICIT);
-                for (Enumeration e = profiles.keys(); e.hasMoreElements(); ) {
-                    String name = (String) e.nextElement();
+                for (final Enumeration e = profiles.keys(); e.hasMoreElements(); ) {
+                    final String name = (String) e.nextElement();
                     if (!name.equals(Config.cmsProfile)) {
                         list.append(name, null);
                     }
@@ -609,10 +611,10 @@ final class ComputerView extends View implements Runnable, CommandListener {
                     } catch (Throwable t) {
                         // fallback
                         area.fontImpl = Desktop.font;
-    //#ifdef __LOG__
+//#ifdef __LOG__
                         if (log.isEnabled()) log.error("failure", t);
                         t.printStackTrace();
-    //#endif
+//#endif
                     }
                 }
             }
@@ -622,7 +624,8 @@ final class ComputerView extends View implements Runnable, CommandListener {
     }
 
     /* synchronized to avoid race-cond when switching profile */
-    public synchronized void render(final Graphics graphics, final Font font, final int mask) {
+    public synchronized void render(final Graphics graphics, final Font font,
+                                    final int mask) {
         // local copies for faster access
         final int w = Desktop.width;
         final int h = Desktop.height;
@@ -700,6 +703,8 @@ final class ComputerView extends View implements Runnable, CommandListener {
                                         area.index = VALUE_WPT_ETA;
                                     } else if (token.equals(TOKEN_WPT_ALT)) {
                                         area.index = VALUE_WPT_ALT;
+                                    } else if (token.equals(TOKEN_WPT_COORDS)) {
+                                        area.index = VALUE_WPT_COORDS;
                                     } else {
                                         area.index = -666;
                                     }
@@ -942,6 +947,14 @@ final class ComputerView extends View implements Runnable, CommandListener {
                                         NavigationScreens.append(sb, (int) alt);
                                     }
                                 } break;
+                                case VALUE_WPT_COORDS: {
+                                    final QualifiedCoordinates qc = navigator.getWptCoords();
+                                    if (qc == null) {
+                                        sb.append(MSG_NO_POSITION);
+                                    } else {
+                                        NavigationScreens.toStringBuffer(qc, sb);
+                                    }
+                                } break;
                                 case VALUE_SIGN: {
                                     sb.append(NavigationScreens.SIGN);
                                 } break;
@@ -983,7 +996,8 @@ final class ComputerView extends View implements Runnable, CommandListener {
         return valuesFloat != null && profiles != null && profiles.size() != 0 && Config.cmsProfile != null && Config.cmsProfile.length() != 0;
     }
 
-    private StringBuffer printTime(StringBuffer sb, final int hour, final int min, final int sec) {
+    private StringBuffer printTime(final StringBuffer sb,
+                                   final int hour, final int min, final int sec) {
         if (hour < 10)
             sb.append('0');
         NavigationScreens.append(sb, hour).append(':');
@@ -997,8 +1011,9 @@ final class ComputerView extends View implements Runnable, CommandListener {
         return sb;
     }
 
-    private void drawChars(Graphics graphics, char[] value, final int length,
-                           int x, int y, Area area) {
+    private void drawChars(final Graphics graphics, final char[] value,
+                           final int length, int x, int y,
+                           final Area area) {
         final Image image = (Image) area.fontImpl;
         final float cw = area.cw;
         final int scw = (int) (cw - cw / 5);
@@ -1046,7 +1061,7 @@ final class ComputerView extends View implements Runnable, CommandListener {
         }
     }
 
-    private String loadViaCache(String filename) {
+    private String loadViaCache(final String filename) {
         Object o = profiles.get(filename);
         if (o == this) {
 //#ifdef __LOG__
@@ -1079,7 +1094,7 @@ final class ComputerView extends View implements Runnable, CommandListener {
         return filename;
     }
 
-    private Object load(String filename) {
+    private Object load(final String filename) {
         Object result = null;
         File file = null;
         try {
@@ -1122,7 +1137,7 @@ final class ComputerView extends View implements Runnable, CommandListener {
         return result;
     }
 
-    private void fillProfiles(Hashtable profiles) throws IOException {
+    private void fillProfiles(final Hashtable profiles) throws IOException {
         File dir = null;
 
         try {
@@ -1131,8 +1146,8 @@ final class ComputerView extends View implements Runnable, CommandListener {
 
             // list file stores
             if (dir.exists()) {
-                for (Enumeration e = dir.list(); e.hasMoreElements(); ) {
-                    String name = ((String) e.nextElement()).toLowerCase();
+                for (final Enumeration e = dir.list(); e.hasMoreElements(); ) {
+                    final String name = ((String) e.nextElement()).toLowerCase();
                     if (name.startsWith("cms.") && name.endsWith(".xml")) {
                         profiles.put(name, this/* null not allowed */);
                     }
@@ -1150,7 +1165,7 @@ final class ComputerView extends View implements Runnable, CommandListener {
         }
     }
 
-    private String loadProfile(String filename, InputStream in) throws IOException, XmlPullParserException {
+    private String loadProfile(final String filename, final InputStream in) throws IOException, XmlPullParserException {
         // instantiate parser
         KXmlParser parser = new KXmlParser(NAME_CACHE);
 
@@ -1165,7 +1180,7 @@ final class ComputerView extends View implements Runnable, CommandListener {
             for (int eventType = parser.next(); eventType != XmlPullParser.END_DOCUMENT; eventType = parser.next()) {
                 switch (eventType) {
                     case XmlPullParser.START_TAG: {
-                        String tag = parser.getName();
+                        final String tag = parser.getName();
                         if (TAG_AREA.equals(tag)) {
                             area = new Area();
                             area.x = Short.parseShort(parser.getAttributeValue(null, ATTR_X));
@@ -1195,7 +1210,7 @@ final class ComputerView extends View implements Runnable, CommandListener {
                         } else if (TAG_VALUE.equals(tag)) {
                             area.value = parser.nextText().toCharArray();
                         } else if (TAG_UNITS.equals(tag)) {
-                            String system = parser.getAttributeValue(null, ATTR_SYSTEM);
+                            final String system = parser.getAttributeValue(null, ATTR_SYSTEM);
                             if ("metric".equals(system)) {
                                 units = new Integer(Config.UNITS_METRIC);
                             } else if ("imperial".equals(system)) {
@@ -1204,7 +1219,7 @@ final class ComputerView extends View implements Runnable, CommandListener {
                                 units = new Integer(Config.UNITS_NAUTICAL);
                             }
                         } else if (TAG_FONT.equals(tag)) {
-                            String name = parser.getAttributeValue(null, ATTR_NAME);
+                            final String name = parser.getAttributeValue(null, ATTR_NAME);
                             if (!fonts.containsKey(name)) {
                                 String source = parser.getAttributeValue(null, ATTR_FILE);
                                 if (source != null) {
@@ -1234,7 +1249,7 @@ final class ComputerView extends View implements Runnable, CommandListener {
                         }
                     } break;
                     case XmlPullParser.END_TAG: {
-                        String tag = parser.getName();
+                        final String tag = parser.getName();
                         if (TAG_AREA.equals(tag)){
                             areas.addElement(area);
                         }
@@ -1252,9 +1267,9 @@ final class ComputerView extends View implements Runnable, CommandListener {
         return filename;
     }
 
-    private static byte[] loadFont(InputStream in, long size) throws IOException {
-        int length = (int) size;
-        byte[] data = new byte[length];
+    private static byte[] loadFont(final InputStream in, final long size) throws IOException {
+        final int length = (int) size;
+        final byte[] data = new byte[length];
         int offset = 0;
 
         int count = in.read(data, 0, length);

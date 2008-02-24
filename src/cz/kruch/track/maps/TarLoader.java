@@ -66,7 +66,6 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
             nativeFile = File.open(Connector.open(map.getPath(), Connector.READ));
             in = nativeFile.openInputStream();
 
-
             /*
             * test quality of File API
             */
@@ -158,8 +157,15 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
             
         } finally {
 
-            // not reusable
-            if (nativeIn == null) {
+            // reusable
+            if (nativeIn != null) {
+
+                // get ready for reuse
+                nativeIn.reset();
+                buffered.setInputStream(nativeIn);
+                tarIn.setStreamOffset(0);
+
+            } else {
 //#ifdef __LOG__
                 if (log.isEnabled()) log.debug("input stream not reusable -> close it");
 //#endif
@@ -171,18 +177,10 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
                         // ignore
                     }
                 }
-
-                // release streams
-                buffered.setInputStream(null);
-                tarIn.setInputStream(null);
-
-            } else {
-
-                // prepare for reuse
-                nativeIn.reset();
-                buffered.setInputStream(nativeIn);
-                tarIn.setStreamOffset(0);
             }
+
+            // detach tar stream
+            tarIn.setInputStream(null);
         }
     }
 
@@ -240,7 +238,8 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
                 } catch (IOException e) {
                     throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_PARSE_SET_FAILED), e);
                 } finally {
-                    // close reader - closes input stream (via buffered)
+
+                    // close reader
                     if (reader != null) {
                         try {
                             reader.close();
@@ -248,33 +247,24 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
                             // ignore
                         }
                     }
-                    // detach buffered stream
-                    buffered.setInputStream(null);
+                    
 //#ifdef __LOG__
                     if (log.isEnabled()) log.debug("tmi utilized: " + tmiPath);
 //#endif
                 }
             }
+
         } finally {
+
             // close file
             if (file != null) {
                 file.close();
             }
+
         }
     }
 
     public void dispose() throws IOException {
-        // dispose tar stream
-        if (tarIn != null) {
-            tarIn.setInputStream(null);
-            tarIn = null; // gc hint
-        }
-
-        // dispose buffered stream
-        if (buffered != null) {
-            buffered.setInputStream(null);
-        }
-
         // close native stream
         if (nativeIn != null) {
 //#ifdef __LOG__
@@ -298,6 +288,17 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
             } finally {
                 nativeFile = null; // gc hint
             }
+        }
+
+        // dispose tar stream
+        if (tarIn != null) {
+            tarIn.setInputStream(null);
+            tarIn = null; // gc hint
+        }
+
+        // dispose buffered stream
+        if (buffered != null) {
+            buffered.setInputStream(null);
         }
 
         // parent
@@ -338,16 +339,12 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
 //#ifdef __LOG__
                 if (log.isEnabled()) log.debug("input stream not reusable -> close it");
 //#endif
-                // close native non-reusable stream
+                // close buffered
                 try {
-                    in.close();
+                    buffered.close();
                 } catch (IOException e) {
                     // ignore
                 }
-
-                // clean buffered
-                buffered.setInputStream(null);
-
             }
         }
     }
@@ -426,11 +423,6 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
 
         } finally {
 
-            // dispose tar stream
-            if (tar != null) {
-                tar.setInputStream(null);
-            }
-
             // close input stream
             if (in != null) {
                 try {
@@ -440,13 +432,18 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
                 }
             }
 
-            // close nativeFile
+            // close native file
             if (file != null) {
                 try {
                     file.close();
                 } catch (IOException e) {
                     // ignore
                 }
+            }
+
+            // dispose tar stream
+            if (tar != null) {
+                tar.setInputStream(null);
             }
         }
     }

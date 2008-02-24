@@ -86,6 +86,10 @@ public final class Atlas implements Runnable {
         return ((Hashtable) layers.get(current)).keys();
     }
 
+    public Enumeration getMapNames(String layer) {
+        return ((Hashtable) layers.get(layer)).keys();
+    }
+
     public String getMapURL(String name) {
         return ((Calibration) (((Hashtable) layers.get(current)).get(name))).getPath();
     }
@@ -94,15 +98,15 @@ public final class Atlas implements Runnable {
         return (Calibration) (((Hashtable) layers.get(current)).get(name));
     }
 
-    // TODO qc are current map local!!!
+    // TODO qc are NOT map local!!!
     public String getMapURL(String layerName, QualifiedCoordinates qc) {
-        Hashtable layer = (Hashtable) layers.get(layerName);
+        final Hashtable layer = (Hashtable) layers.get(layerName);
         if (layer == null) {
             throw new IllegalArgumentException("Nonexistent layer");
         }
 
-        for (Enumeration e = layer.elements(); e.hasMoreElements(); ) {
-            Calibration calibration = (Calibration) e.nextElement();
+        for (final Enumeration e = layer.elements(); e.hasMoreElements(); ) {
+            final Calibration calibration = (Calibration) e.nextElement();
             if (calibration.isWithin(qc)) {
                 return calibration.getPath();
             }
@@ -112,14 +116,14 @@ public final class Atlas implements Runnable {
     }
 
     public String getMapName(String layerName, QualifiedCoordinates qc) {
-        Hashtable layer = (Hashtable) layers.get(layerName);
+        final Hashtable layer = (Hashtable) layers.get(layerName);
         if (layer == null) {
             throw new IllegalArgumentException("Nonexistent layer");
         }
 
-        for (Enumeration e = layer.keys(); e.hasMoreElements(); ) {
-            String mapName = (String) e.nextElement();
-            Calibration calibration = (Calibration) layer.get(mapName);
+        for (final Enumeration e = layer.keys(); e.hasMoreElements(); ) {
+            final String mapName = (String) e.nextElement();
+            final Calibration calibration = (Calibration) layer.get(mapName);
             if (calibration.isWithin(qc)) {
                 return mapName;
             }

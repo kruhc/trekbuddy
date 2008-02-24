@@ -51,7 +51,7 @@ final class DirLoader extends Map.Loader implements Atlas.Loader {
 //#endif
 
         // detect base dir
-        int i = url.lastIndexOf(File.PATH_SEPCHAR);
+        final int i = url.lastIndexOf(File.PATH_SEPCHAR);
         if (i == -1 || i + 1 == url.length()) {
             throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_INVALID_MAP_URL) + " '" + url + "'");
         }
@@ -91,8 +91,10 @@ final class DirLoader extends Map.Loader implements Atlas.Loader {
             } catch (IOException e) {
                 throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_PARSE_CAL_FAILED) + ": " + map.getPath(), e);
             } finally {
-                // close stream(s)
+
+                // close stream
                 buffered.close();
+
             }
         }
 
@@ -131,18 +133,17 @@ final class DirLoader extends Map.Loader implements Atlas.Loader {
                                 // ignore
                             }
                         }
-                        // detach buffered stream (should be done by reader.close() because
-                        // it call buffered.close()...)
-                        buffered.setInputStream(null);
                     }
                 } else {
                     throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_NO_SET_FILE) + setFile);
                 }
             } finally {
+
                 // close file
                 if (file != null) {
                     file.close();
                 }
+
             }
         }
     }
@@ -168,11 +169,15 @@ final class DirLoader extends Map.Loader implements Atlas.Loader {
 
         // read image
         try {
+
             // read image
             slice.setImage(NavigationScreens.createImage(buffered.setInputStream(Connector.openInputStream(url))));
+
         } finally {
+
             // close stream
             buffered.close();
+
         }
     }
 
@@ -192,8 +197,8 @@ final class DirLoader extends Map.Loader implements Atlas.Loader {
             final StringBuffer sb = new StringBuffer(32);
 
             // iterate over layers
-            for (Enumeration le = file.list(); le.hasMoreElements();) {
-                String layerEntry = (String) le.nextElement();
+            for (final Enumeration le = file.list(); le.hasMoreElements();) {
+                final String layerEntry = (String) le.nextElement();
                 if (File.isDir(layerEntry)) {
 //#ifdef __LOG__
                     if (log.isEnabled()) log.debug("new layer: " + layerEntry);
@@ -206,8 +211,8 @@ final class DirLoader extends Map.Loader implements Atlas.Loader {
                     file.setFileConnection(layerEntry);
 
                     // iterate over layer
-                    for (Enumeration me = file.list(); me.hasMoreElements();) {
-                        String mapEntry = (String) me.nextElement();
+                    for (final Enumeration me = file.list(); me.hasMoreElements();) {
+                        final String mapEntry = (String) me.nextElement();
                         if (File.isDir(mapEntry)) {
 //#ifdef __LOG__
                             if (log.isEnabled()) log.debug("new map? " + mapEntry);
@@ -216,8 +221,8 @@ final class DirLoader extends Map.Loader implements Atlas.Loader {
                             file.setFileConnection(mapEntry);
 
                             // iterate over map dir
-                            for (Enumeration ie = file.list(); ie.hasMoreElements();) {
-                                String fileEntry = (String) ie.nextElement();
+                            for (final Enumeration ie = file.list(); ie.hasMoreElements();) {
+                                final String fileEntry = (String) ie.nextElement();
                                 if (!File.isDir(fileEntry)) {
 
                                     // is calibration
@@ -245,9 +250,9 @@ final class DirLoader extends Map.Loader implements Atlas.Loader {
 
                                         // found calibration
                                         if (calibration != null) {
-    //#ifdef __LOG__
+//#ifdef __LOG__
                                             if (log.isEnabled()) log.debug("calibration loaded: " + calibration + "; layer = " + layerEntry + "; mName = " + mapEntry);
-    //#endif
+//#endif
                                             // save calibration for given map
                                             layerCollection.put(mapEntry.substring(0, mapEntry.length() - 1), calibration);
 
@@ -256,28 +261,20 @@ final class DirLoader extends Map.Loader implements Atlas.Loader {
                                         }
                                     }
                                 }
-
-                                // gc hint
-                                fileEntry = null;
                             }
 
                             // back to layer dir
                             file.setFileConnection(File.PARENT_DIR);
                         }
-
-                        // gc hint
-                        mapEntry = null;
                     }
 
                     // go back to atlas root
                     file.setFileConnection(File.PARENT_DIR);
                 }
-
-                // gc hint
-                layerEntry = null;
             }
 
         } finally {
+
             // close file
             if (file != null) {
                 try {
@@ -286,6 +283,7 @@ final class DirLoader extends Map.Loader implements Atlas.Loader {
                     // ignore
                 }
             }
+
         }
     }
 }

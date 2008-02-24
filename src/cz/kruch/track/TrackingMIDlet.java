@@ -90,17 +90,18 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
             System.out.println("* JSR-179");
 //#endif
         } catch (Throwable t) {
-        }
+            /* try Motorola-specific Location API */
 //#ifdef __ALL__
-        try {
-            Class.forName("com.motorola.location.PositionSource");
-            TrackingMIDlet.motorola179 = true;
+            try {
+                Class.forName("com.motorola.location.PositionSource");
+                TrackingMIDlet.motorola179 = true;
 //#ifdef __LOG__
-            System.out.println("* Motorola-179");
+                System.out.println("* Motorola-179");
 //#endif
-        } catch (Throwable t) {
+            } catch (Throwable throwable) {
+            }
+//#endif
         }
-//#endif
         try {
             Class.forName("javax.bluetooth.DiscoveryAgent");
             TrackingMIDlet.jsr82 = true;
@@ -200,6 +201,9 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
 
         // initialize file API
         api.file.File.initialize(sxg75 || hasFlag("fs_traverse_bug"));
+//#ifdef __LOG__
+        System.out.println("* FsType: " + api.file.File.fsType);
+//#endif
 
         // customize UI
         int customized = 0;
@@ -248,13 +252,13 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         cz.kruch.track.util.Mercator.initialize();
 
         // setup environment
-        if (hasFlag("fs_skip_bug") || siemens) {
+        if (hasFlag("fs_skip_bug") || siemens || symbian) {
 //#ifdef __LOG__
             System.out.println("* fs skip-bug feature on");
 //#endif
             cz.kruch.track.maps.Map.useSkip = false;
         }
-        if (hasFlag("fs_no_reset") || sxg75) {
+        if (hasFlag("fs_no_reset") || sxg75 || symbian) {
 //#ifdef __LOG__
             System.out.println("* fs no-reset feature on");
 //#endif

@@ -563,12 +563,14 @@ public final class KXmlSerializer implements XmlSerializer {
         }
         writer.flush();
     }
-    /*
-    	public void close() throws IOException {
-    		check();
-    		writer.close();
-    	}
-    */
+
+/*
+    public void close() throws IOException {
+        check();
+        writer.close();
+    }
+*/
+
     public XmlSerializer endTag(String namespace, String name) throws IOException {
         if (!pending) {
             depth--;

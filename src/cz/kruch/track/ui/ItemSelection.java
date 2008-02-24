@@ -46,9 +46,17 @@ final class ItemSelection implements CommandListener {
         this.selectLabel = selectLabel;
     }
 
-    public void show(Enumeration items) {
+    public void show(Enumeration items, String currentItem) {
         // add items and commands
         List list = FileBrowser.sort2list(title, items, null);
+        if (currentItem != null) {
+            for (int i = list.size(); --i >= 0; ) {
+                if (list.getString(i).equals(currentItem)) {
+                    list.setSelectedIndex(i, true);
+                    break;
+                }
+            }
+        }
         list.addCommand(new Command(Resources.getString(Resources.CMD_CANCEL), Command.BACK, 1));
         list.setSelectCommand(new Command(selectLabel, Command.ITEM, 1));
         list.setCommandListener(this);

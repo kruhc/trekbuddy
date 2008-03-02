@@ -17,8 +17,10 @@
     <property name="garnet.home" value="c:\J2ME\Garnet\PalmOS JVM 5.7.2\Tools"/>
     <property name="rim41.home" value="c:\J2ME\RIM\JDE 4.1.0"/>
     <property name="rim42.home" value="c:\J2ME\RIM\JDE 4.2.1"/>
-    <property name="proguard.home" value="z:\apps\proguard3.10"/>
+    <property name="proguard.home" value="z:\apps\proguard3.11"/>
+<!--
     <property name="symbian.home" value="c:\J2ME\Symbian\UIQ3.1SDK\epoc32\tools\java"/>
+-->
     <!--property name="proguard.home" value="z:\apps\proguard4.0.1"/-->
     <!--property name="proguard.home" value="z:\apps\proguard4.1beta1"/-->
     <!--property name="bb.buildjars.home" location="${rim41.home}/bin"/-->
@@ -98,7 +100,7 @@
         <property name="libraryjars" value="${wtk.home}\lib\cldcapi11.jar;${wtk.home}\lib\midpapi20.jar;${wtk.home}\lib\jsr75.jar;${wtk.home}\lib\jsr082.jar;${wtk.home}\lib\jsr179.jar;${wtk.home}\lib\wma11.jar"/>
         <property name="classpath.preverify" value="${libraryjars}"/>
         <antcall target="clean"/>
-        <antcall target="a.pre.std"/>
+        <antcall target="a.pre.j9"/>
         <antcall target="compile.std"/>
         <antcall target="j9.pack" inheritall="true"/>
         <antcall target="obfuscate" inheritall="true"/>
@@ -192,6 +194,11 @@
         <wtkpreprocess srcdir="src" destdir="tmp/src" symbols="${pre.extra}"/>
     </target>
 
+    <target name="a.pre.j9">
+        <mkdir dir="tmp/src"/>
+        <wtkpreprocess srcdir="src" destdir="tmp/src" symbols="__J9__,${pre.extra}"/>
+    </target>
+
     <target name="a.pre.rim">
         <mkdir dir="tmp/src"/>
         <wtkpreprocess srcdir="src" destdir="tmp/src" symbols="__RIM__,${pre.extra}"/>
@@ -237,8 +244,6 @@
         <delete file="tmp/src/api/file/MotorolaFile.java"/>
         <delete file="tmp/src/api/file/Motorola1000File.java"/>
         <delete file="tmp/src/api/file/SiemensFile.java"/>
-        <delete file="tmp/src/com/symbian/gcf/NativeHelper.java"/>
-        <delete file="tmp/src/cz/kruch/symbian/io/FastSkippingInputStream.java"/>
         <delete file="tmp/src/cz/kruch/track/ui/nokia/NokiaDeviceControl.java"/>
         <delete file="tmp/src/cz/kruch/track/ui/nokia/S60DeviceControl.java"/>
         <delete file="tmp/src/cz/kruch/track/ui/nokia/SiemensDeviceControl.java"/>
@@ -265,17 +270,18 @@
                 name="TrekBuddy"
                 vendor="${vendor}"
                 version="${version}">
+            <attribute name="MicroEdition-Configuration" value="CLDC-1.1"/>
+            <attribute name="MicroEdition-Profile" value="MIDP-2.0"/>
+            <attribute name="MIDlet-Description" value="${description}"/>
+            <attribute name="MIDlet-Info-URL" value="http://www.trekbuddy.net"/>
+            <attribute name="MIDlet-Permissions-Opt" value="javax.microedition.io.Connector.file.read,javax.microedition.io.Connector.file.write,javax.microedition.io.Connector.bluetooth.client,javax.microedition.location.Location,javax.microedition.media.control.VideoControl.getSnapshot,javax.microedition.io.Connector.sms,javax.wireless.messaging.sms.receive,javax.wireless.messaging.sms.send,javax.microedition.io.Connector.comm,javax.microedition.io.Connector.cbs,javax.wireless.messaging.cbs.receive"/>
+            <attribute name="Nokia-MIDlet-Category" value="Application"/>
             <midlet name="TrekBuddy" class="cz.kruch.track.TrackingMIDlet" icon="/resources/icon.png"/>
 <!--
             <midlet name="TrekBuddy-Cfg" class="cz.kruch.track.ConfiguratorMIDlet"/>
 -->
-            <attribute name="MIDlet-Description" value="${description}"/>
-            <attribute name="MIDlet-Info-URL" value="http://www.trekbuddy.net"/>
-            <attribute name="MIDlet-Permissions-Opt" value="javax.microedition.io.Connector.file.read,javax.microedition.io.Connector.file.write,javax.microedition.io.Connector.bluetooth.client,javax.microedition.location.Location,javax.microedition.media.control.VideoControl.getSnapshot,javax.microedition.io.Connector.sms,javax.wireless.messaging.sms.receive,javax.wireless.messaging.sms.send,javax.microedition.io.Connector.comm,javax.microedition.io.Connector.cbs,javax.wireless.messaging.cbs.receive"/>
-            <attribute name="MicroEdition-Profile" value="MIDP-2.0"/>
-            <attribute name="MicroEdition-Configuration" value="CLDC-1.1"/>
-            <attribute name="Nokia-MIDlet-Category" value="Application"/>
         </wtkjad>
+        <fixcrlf srcdir="tmp" eol="crlf" eof="remove" includes="trekbuddy${suffix}.jad"/>
     </target>
 
     <target name="a.pack" depends="create.tmp.jad">
@@ -335,12 +341,11 @@
 -->
             <arg value="-keepnames class cz.** extends java.lang.Exception"/>
             <arg value="-keepnames class api.** extends java.lang.Exception"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.fun.Friends"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.ConfiguratorMIDlet"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.maps.io.FileInput"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.util.NakedVector"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.util.Logger"/>
-            <arg value="-whyareyoukeeping class com.symbian.gcf.NativeHelper"/>
-            <arg value="-whyareyoukeeping class cz.kruch.symbian.io.FastSkippingInputStream"/>
             <arg value="-printmapping dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.map"/>
             <arg value="-printseeds"/>
             <arg value="-printusage dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.dco"/>
@@ -369,12 +374,11 @@
 -->
             <arg value="-keepnames class cz.** extends java.lang.Exception"/>
             <arg value="-keepnames class api.** extends java.lang.Exception"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.fun.Friends"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.ConfiguratorMIDlet"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.maps.io.FileInput"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.util.NakedVector"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.util.Logger"/>
-            <arg value="-whyareyoukeeping class com.symbian.gcf.NativeHelper"/>
-            <arg value="-whyareyoukeeping class cz.kruch.symbian.io.FastSkippingInputStream"/>
             <arg value="-printmapping dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.map"/>
             <arg value="-printseeds"/>
             <arg value="-verbose"/>
@@ -395,8 +399,6 @@
             <arg value="-whyareyoukeeping class cz.kruch.track.util.NakedVector"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.maps.io.FileInput"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.util.Logger"/>
-            <arg value="-whyareyoukeeping class com.symbian.gcf.NativeHelper"/>
-            <arg value="-whyareyoukeeping class cz.kruch.symbian.io.FastSkippingInputStream"/>
             <arg value="-printmapping dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.map"/>
             <arg value="-printseeds"/>
             <arg value="-verbose"/>
@@ -428,16 +430,13 @@
                 name="TrekBuddy"
                 vendor="${vendor}"
                 version="${version}">
-            <midlet name="TrekBuddy" class="cz.kruch.track.TrackingMIDlet" icon="/resources/icon.png"/>
-<!--
-            <midlet name="TrekBuddy-Cfg" class="cz.kruch.track.ConfiguratorMIDlet"/>
--->
+            <attribute name="MicroEdition-Configuration" value="CLDC-1.1"/>
+            <attribute name="MicroEdition-Profile" value="MIDP-2.0"/>
             <attribute name="MIDlet-Description" value="${description}"/>
             <attribute name="MIDlet-Info-URL" value="http://www.trekbuddy.net"/>
             <attribute name="MIDlet-Permissions-Opt" value="javax.microedition.io.Connector.file.read,javax.microedition.io.Connector.file.write,javax.microedition.io.Connector.bluetooth.client,javax.microedition.location.Location,javax.microedition.media.control.VideoControl.getSnapshot,javax.microedition.io.Connector.sms,javax.wireless.messaging.sms.receive,javax.wireless.messaging.sms.send,javax.microedition.io.Connector.comm,javax.microedition.io.Connector.cbs,javax.wireless.messaging.cbs.receive"/>
-            <attribute name="MicroEdition-Profile" value="MIDP-2.0"/>
-            <attribute name="MicroEdition-Configuration" value="CLDC-1.1"/>
             <attribute name="Nokia-MIDlet-Category" value="Application"/>
+            <midlet name="TrekBuddy" class="cz.kruch.track.TrackingMIDlet" icon="/resources/icon.png"/>
         </wtkjad>
     </target>
 
@@ -458,6 +457,9 @@
             <arg line="-addjarsig -alias 'trekbuddy2008' -keystore keystores\trekbuddy2008.jks -keypass changeit -jarfile dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jar -inputjad dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad -outputjad dist/${vendor.dir}/${dist.dir}/_trekbuddy${suffix}.jad"/>
         </java>
         <move file="dist/${vendor.dir}/${dist.dir}/_trekbuddy${suffix}.jad" tofile="dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad"/>
+        <fixcrlf srcdir="dist/${vendor.dir}/${dist.dir}"
+                 eol="crlf" eof="remove"
+                 includes="trekbuddy${suffix}.jad"/>
     </target>
 
     <target name="rapc">
@@ -478,7 +480,7 @@
                   </exec>
         -->
         <exec dir="${basedir}\dist\${vendor.dir}\${dist.dir}" executable="${rim.home}\bin\rapc.exe">
-            <arg line="import='${rim.home}\lib\net_rim_api.jar' codename=trekbuddy${suffix} -quiet -midlet ${basedir}\dist\${vendor.dir}\${dist.dir}\trekbuddy${suffix}.jad ${basedir}\dist\${vendor.dir}\${dist.dir}\trekbuddy${suffix}.jar"/>
+            <arg line="import='${rim.home}\lib\net_rim_api.jar' codename=trekbuddy${suffix} -midlet -quiet ${basedir}\dist\${vendor.dir}\${dist.dir}\trekbuddy${suffix}.jad ${basedir}\dist\${vendor.dir}\${dist.dir}\trekbuddy${suffix}.jar"/>
         </exec>
         <copy file="${basedir}\trekbuddy.alx"
               tofile="${basedir}\dist/${vendor.dir}\${dist.dir}\trekbuddy${suffix}.alx"/>
@@ -495,8 +497,8 @@
     </target>
 
     <target name="rim.sign">
-        <echo>Signing rim.home=${rim.home}</echo>
-        <java fork="yes" jar="${rim.home}/bin/SignatureTool.jar">
+        <echo>Signing rim.home=${rim42.home}</echo>
+        <java fork="yes" jar="${rim42.home}/bin/SignatureTool.jar">
            <arg line="-s -p changeit ${basedir}\dist\${vendor.dir}\${dist.dir}\trekbuddy${suffix}.cod"/>
         </java>
     </target>

@@ -37,9 +37,9 @@ public final class SimulatorLocationProvider
     private static final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("Simulator");
 //#endif
 
+    private File file;
     private Thread thread;
     private boolean go;
-    private File file;
     private int delay;
 
     public SimulatorLocationProvider() {

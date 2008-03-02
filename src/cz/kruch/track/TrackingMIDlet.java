@@ -330,5 +330,4 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
     public static boolean supportsVideoCapture() {
         return jsr135 && "true".equals(System.getProperty("supports.video.capture"));
     }
-
 }

@@ -227,14 +227,15 @@ public final class Mercator {
     }
 
     public static CartesianCoordinates LLtoGrid(QualifiedCoordinates qc) {
-        CartesianCoordinates utm = LLtoMercator(qc, Datum.contextDatum.ellipsoid, (Mercator.ProjectionSetup) ProjectionSetup.contextProjection);
-        String ctxProjectionName = ProjectionSetup.contextProjection.name;
+        final CartesianCoordinates utm = LLtoMercator(qc, Datum.contextDatum.ellipsoid, (Mercator.ProjectionSetup) ProjectionSetup.contextProjection);
+        final String ctxProjectionName = ProjectionSetup.contextProjection.name;
 
         /*
          * handle specific grids
          */
 
         if (api.location.ProjectionSetup.PROJ_BNG.equals(ctxProjectionName)) {
+
             if (utm.zone == null || utm.zone.length != 2) {
                 utm.zone = new char[2];
             }
@@ -266,7 +267,9 @@ public final class Mercator {
             utm.zone[1] = (char) ('A' + i);
             utm.easting -= (int) (utm.easting / ExtraMath.grade(utm.easting)) * ExtraMath.grade(utm.easting);
             utm.northing -= (int) (utm.northing / ExtraMath.grade(utm.northing)) * ExtraMath.grade(utm.northing);
+
         } else if (api.location.ProjectionSetup.PROJ_IG.equals(ctxProjectionName)) {
+
             if (utm.zone == null || utm.zone.length != 1) {
                 utm.zone = new char[1];
             }
@@ -293,10 +296,13 @@ public final class Mercator {
             }
             utm.easting -= ek * 100000;
             utm.northing -= nk * 100000;
+
         } else if (api.location.ProjectionSetup.PROJ_SUI.equals(ctxProjectionName)) {
+
             double temp = utm.easting;
             utm.easting = utm.northing;
             utm.northing = temp;
+
         }
 
         return utm;
@@ -305,7 +311,7 @@ public final class Mercator {
     public static CartesianCoordinates LLtoMercator(QualifiedCoordinates qc,
                                                     Ellipsoid ellipsoid,
                                                     ProjectionSetup setup) {
-        String projectionName = setup.name;
+        final String projectionName = setup.name;
         CartesianCoordinates coords;
 
         if (api.location.ProjectionSetup.PROJ_MERCATOR.equals(projectionName)) {  // Mercator (1SP)
@@ -434,7 +440,7 @@ public final class Mercator {
     public static QualifiedCoordinates MercatortoLL(CartesianCoordinates utm,
                                                     Ellipsoid ellipsoid,
                                                     ProjectionSetup setup) {
-        String projectionName = setup.name;
+        final String projectionName = setup.name;
         QualifiedCoordinates qc;
 
         if (api.location.ProjectionSetup.PROJ_MERCATOR.equals(projectionName)) {  // Mercator

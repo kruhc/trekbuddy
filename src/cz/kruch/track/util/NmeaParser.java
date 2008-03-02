@@ -21,6 +21,7 @@ import api.location.LocationException;
 import java.util.Calendar;
 import java.util.TimeZone;
 import java.util.Date;
+import java.util.Vector;
 
 /**
  * NMEA parser.
@@ -28,16 +29,20 @@ import java.util.Date;
  * @author Ales Pour <kruhc@seznam.cz>
  */
 public final class NmeaParser {
-    private static final CharArrayTokenizer tokenizer = new CharArrayTokenizer();
-    private static final char[] delimiters = { ',', '*' };
     private static final Record gga = new Record();
     private static final Record gsa = new Record();
     private static final Record rmc = new Record();
+    private static final CharArrayTokenizer tokenizer = new CharArrayTokenizer();
+    private static final char[] delimiters = { ',', '*' };
+    private static final byte[] prns = new byte[12];
 
-    private static int day, month, year;
     private static long date;
+    private static int day, month, year;
+    private static int prnc, prni;
 
-    public static Record parseGGA(char[] nmea, int length) throws LocationException {
+    public static final byte[] snr = new byte[12];
+
+    public static Record parseGGA(final char[] nmea, final int length) throws LocationException {
         // local refs for faster access
         final CharArrayTokenizer tokenizer = NmeaParser.tokenizer;
         final Record record = gga;
@@ -104,7 +109,7 @@ public final class NmeaParser {
         return record;
     }
 
-    public static Record parseGSA(char[] nmea, int length) throws LocationException {
+    public static Record parseGSA(final char[] nmea, final int length) throws LocationException {
         // local refs for faster access
         final CharArrayTokenizer tokenizer = NmeaParser.tokenizer;
         final Record record = gsa;
@@ -112,6 +117,9 @@ public final class NmeaParser {
         // init tokenizer and record
         tokenizer.init(nmea, length, delimiters, false);
         record.invalidate();
+
+        // prn indexes
+        prnc = prni = 0;
 
         // process
         int index = 0;
@@ -143,7 +151,8 @@ public final class NmeaParser {
                 case 14: {
                     if (!token.isEmpty()) {
                         record.sat++;
-                    }
+                        prns[prnc++] = (byte) CharArrayTokenizer.parseInt(token);
+                    } 
                 } break;
                 case 15:
                     // PDOP - ignored
@@ -162,13 +171,77 @@ public final class NmeaParser {
             index++;
         }
 
+        // clear remaining snr
+        for (int i = prnc; i < 12/*snr.length*/; i++) {
+            snr[i] = 0;
+        }
+
         return record;
     }
 
-    public static Record parseRMC(char[] nmea, int length) throws LocationException {
+    public static void parseGSV(final char[] nmea, final int length) throws LocationException {
         // local refs for faster access
-        CharArrayTokenizer tokenizer = NmeaParser.tokenizer;
-        Record record = rmc;
+        final CharArrayTokenizer tokenizer = NmeaParser.tokenizer;
+        final byte[] snr = NmeaParser.snr;
+
+        // init tokenizer and record
+        tokenizer.init(nmea, length, delimiters, false);
+
+        // local vars
+        int inview = 0, sentence = 0, maxi = 20;
+        boolean tracked = false;
+
+        // process
+        int index = 0;
+        while (tokenizer.hasMoreTokens() && (index < maxi)) {
+            final CharArrayTokenizer.Token token = tokenizer.next();
+            /* no token empty check here */
+            switch (index) {
+                case 0: // $GPGSV
+                    break;
+                case 1: // number of sentences
+                    break;
+                case 2: // current sentence
+                    sentence = CharArrayTokenizer.parseInt(token);
+                    break;
+                case 3: // number of sats in view
+                    inview = CharArrayTokenizer.parseInt(token);
+                    maxi = 4 /* start offset */ + (inview > sentence * 4 ? 16 : (inview - (sentence - 1) * 4) * 4);
+                    break;
+                default: {
+                    if (index % 4 == 0) {
+                        tracked = false;
+                        final int prn = CharArrayTokenizer.parseInt(token);
+                        for (int i = prnc; --i >= 0; ) {
+                            if (prn == prns[i]) {
+                                tracked = true; 
+                                break;
+                            }
+                        }
+                    }
+                    if (index % 4 == 3) {
+                        if (tracked) {
+                            if (!token.isEmpty()) {
+                                int value = (CharArrayTokenizer.parseInt(token) - 15) / 3;
+                                if (value < 1/*0*/) {
+                                    value = 1/*0*/;
+                                } else if (value > 9) {
+                                    value = 9;
+                                }
+                                snr[prni++] = (byte) value;
+                            }
+                        }
+                    } break;
+                }
+            }
+            index++;
+        }
+    }
+
+    public static Record parseRMC(final char[] nmea, final int length) throws LocationException {
+        // local refs for faster access
+        final CharArrayTokenizer tokenizer = NmeaParser.tokenizer;
+        final Record record = rmc;
 
         // init tokenizer and record
         tokenizer.init(nmea, length, false);

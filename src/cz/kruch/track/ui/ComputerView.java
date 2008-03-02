@@ -20,6 +20,7 @@ import cz.kruch.track.configuration.Config;
 import cz.kruch.track.configuration.ConfigurationException;
 import cz.kruch.track.util.CharArrayTokenizer;
 import cz.kruch.track.util.SimpleCalendar;
+import cz.kruch.track.util.NmeaParser;
 import cz.kruch.track.maps.io.LoaderIO;
 import cz.kruch.track.Resources;
 import cz.kruch.j2se.io.BufferedInputStream;
@@ -66,12 +67,14 @@ final class ComputerView extends View implements Runnable, CommandListener {
     private static final String TAG_UNITS       = "units";
     private static final String TAG_FONT        = "font";
     private static final String TAG_COLORS      = "colors";
+    private static final String TAG_SCREEN      = "screen";
     private static final String TAG_AREA        = "area";
     private static final String TAG_VALUE       = "value";
     private static final String ATTR_NAME       = "name";
     private static final String ATTR_FILE       = "file";
     private static final String ATTR_SYSTEM     = "system";
     private static final String ATTR_MODE       = "mode";
+    private static final String ATTR_BACKGROUND = "background";
     private static final String ATTR_BGCOLOR    = "bgcolor";
     private static final String ATTR_FGCOLOR    = "fgcolor";
     private static final String ATTR_NXCOLOR    = "nxcolor";
@@ -98,6 +101,7 @@ final class ComputerView extends View implements Runnable, CommandListener {
     private static final String TOKEN_WPT_ETA       = "wpt-eta";
     private static final String TOKEN_WPT_ALT       = "wpt-alt";
     private static final String TOKEN_WPT_COORDS    = "wpt-coords";
+    private static final String TOKEN_SNR           = "snr";
 
     // float values
     private static final String[] TOKENS_float = {
@@ -163,6 +167,7 @@ final class ComputerView extends View implements Runnable, CommandListener {
     private static final int VALUE_WPT_VMG      = 1008;
     private static final int VALUE_WPT_ALT      = 1009;
     private static final int VALUE_WPT_COORDS   = 1010;
+    private static final int VALUE_SNR0         = 1100;
     private static final int VALUE_SIGN         = 2000;
 
     // charset
@@ -211,9 +216,10 @@ final class ComputerView extends View implements Runnable, CommandListener {
     private Integer units;
     private Vector areas;
     private int[] colors;
+    private Image backgroundImage;
 
     /* shared among profiles */
-    private Hashtable fonts, fontsPng;
+    private Hashtable fonts, fontsPng, backgrounds;
 
     /* profiles and current profile */
     private String status;
@@ -261,6 +267,7 @@ final class ComputerView extends View implements Runnable, CommandListener {
         // init shared
         this.fonts = new Hashtable(4);
         this.fontsPng = new Hashtable(2);
+        this.backgrounds = new Hashtable(2);
 
         // trip values
         this.valuesFloat = new float[TOKENS_float.length];
@@ -462,19 +469,21 @@ final class ComputerView extends View implements Runnable, CommandListener {
     }
 
     public int handleAction(final int action, final boolean repeated) {
-        if (action == Canvas.DOWN) {
-            if (profiles != null && profiles.size() > 1) {
-                List list = new List(Resources.getString(Resources.DESKTOP_MSG_PROFILES), List.IMPLICIT);
-                for (final Enumeration e = profiles.keys(); e.hasMoreElements(); ) {
-                    final String name = (String) e.nextElement();
-                    if (!name.equals(Config.cmsProfile)) {
-                        list.append(name, null);
+        switch (action) {
+            case Canvas.DOWN: {
+                if (profiles.size() > 1) {
+                    final List list = new List(Resources.getString(Resources.DESKTOP_MSG_PROFILES), List.IMPLICIT);
+                    for (final Enumeration e = profiles.keys(); e.hasMoreElements(); ) {
+                        final String name = (String) e.nextElement();
+                        if (!name.equals(Config.cmsProfile)) {
+                            list.append(name, null);
+                        }
                     }
+                    list.addCommand(new Command(Resources.getString(Resources.CMD_CANCEL), Command.CANCEL, 0));
+                    list.setCommandListener(this);
+                    Desktop.display.setCurrent(list);
                 }
-                list.addCommand(new Command(Resources.getString(Resources.CMD_CANCEL), Command.CANCEL, 0));
-                list.setCommandListener(this);
-                Desktop.display.setCurrent(list);
-            }
+            } break;
         }
         
         return super.handleAction(action, repeated);
@@ -570,6 +579,30 @@ final class ComputerView extends View implements Runnable, CommandListener {
             return isVisible ? Desktop.MASK_SCREEN : Desktop.MASK_NONE;
         }
 
+        if (backgrounds != null) {
+            // colorify
+            for (Enumeration e = backgrounds.elements(); e.hasMoreElements(); ) {
+                // get raw data
+                final byte[] data = (byte[]) e.nextElement();
+                // colorify
+                colorifyPng(data, colors[dayNight * 4 + 1]);
+            }
+            // release current background
+            backgroundImage = null; // gc hint
+            // prepare current screen background
+            final byte[] data = (byte[]) backgrounds.get(Config.cmsProfile);
+            if (data != null) {
+                // create image
+                try {
+                    ByteArrayInputStream in = new ByteArrayInputStream(data);
+                    backgroundImage = NavigationScreens.createImage(in);
+                    in.close();
+                } catch (Throwable t) {
+                    // ignore
+                }
+            }
+        }
+
         if (areas != null) {
             // local refs for faster access
             final Vector areas = this.areas;
@@ -579,12 +612,12 @@ final class ComputerView extends View implements Runnable, CommandListener {
             // release refs for Image fonts
             for (int N = areas.size(), i = 0; i < N; i++) {
                 final Area area = (Area) areas.elementAt(i);
-                if (fontsPng.containsKey(area.fontName)) {
+                if (area.fontImpl instanceof Image) {
                     area.fontImpl = null;
                 }
             }
 
-            // release images
+            // clear bitmap fonts images cache
             fontsPng.clear();
             System.gc(); // GC
 
@@ -593,21 +626,29 @@ final class ComputerView extends View implements Runnable, CommandListener {
                 final Area area = (Area) areas.elementAt(i);
                 if (area.fontImpl == null) {
                     try {
-                        // get raw data
-                        final byte[] data = (byte[]) fonts.get(area.fontName);
-                        // colorify
-                        colorifyPng(data, colors[dayNight * 4 + 1]);
-                        // create image
-                        ByteArrayInputStream bais = new ByteArrayInputStream(data);
-                        Image image = NavigationScreens.createImage(bais);
-                        bais.close();
-                        bais = null; // gc hint
-                        // store image
-                        fontsPng.put(area.fontName, image);
-                        // use it is area
-                        area.fontImpl = image;
-                        area.cw = image.getWidth() / CHARSET.length;
-                        area.ch = (short) image.getHeight();
+                        // get cached bitmap font
+                        Image bitmap = (Image) fontsPng.get(area.fontName);
+                        if (bitmap == null) { // create fresh new
+                            // get raw data
+                            final byte[] data = (byte[]) fonts.get(area.fontName);
+                            // colorify
+                            colorifyPng(data, colors[dayNight * 4 + 1]);
+                            //  byte input
+                            ByteArrayInputStream in = new ByteArrayInputStream(data);
+                            try {
+                                // create image
+                                bitmap = NavigationScreens.createImage(in);
+                                // cache image
+                                fontsPng.put(area.fontName, bitmap);
+                            } finally {
+                                in.close();
+                                in = null; // gc hint
+                            }
+                        }
+                        // use it in the area
+                        area.fontImpl = bitmap;
+                        area.cw = bitmap.getWidth() / CHARSET.length;
+                        area.ch = (short) bitmap.getHeight();
                     } catch (Throwable t) {
                         // fallback
                         area.fontImpl = Desktop.font;
@@ -626,6 +667,10 @@ final class ComputerView extends View implements Runnable, CommandListener {
     /* synchronized to avoid race-cond when switching profile */
     public synchronized void render(final Graphics graphics, final Font font,
                                     final int mask) {
+//#ifdef __LOG__
+        if (log.isEnabled()) log.debug("render");
+//#endif
+
         // local copies for faster access
         final int w = Desktop.width;
         final int h = Desktop.height;
@@ -657,9 +702,16 @@ final class ComputerView extends View implements Runnable, CommandListener {
             graphics.fillRect(0,0, w, h);
             graphics.setColor(colors[mode * 4 + 1]);
 
+            if (backgroundImage != null) {
+                graphics.drawImage(backgroundImage, 0, 0, Graphics.TOP | Graphics.LEFT);
+            }
+
             for (int N = areas.size(), i = 0; i < N; i++) {
                 final Area area = (Area) areas.elementAt(i);
 
+//#ifdef __LOG__
+                if (log.isEnabled()) log.debug("area - font: " + area.fontName + "; value: " + new String(area.value));
+//#endif
                 sb.delete(0, sb.length());
                 tokenizer.init(area.value, area.value.length, DELIMITERS, true);
                 int narrowChars = 0;
@@ -705,6 +757,8 @@ final class ComputerView extends View implements Runnable, CommandListener {
                                         area.index = VALUE_WPT_ALT;
                                     } else if (token.equals(TOKEN_WPT_COORDS)) {
                                         area.index = VALUE_WPT_COORDS;
+                                    } else if (token.startsWith(TOKEN_SNR)) {
+                                        area.index = (short) (VALUE_SNR0 + Integer.parseInt(token.toString().substring(3)));
                                     } else {
                                         area.index = -666;
                                     }
@@ -954,6 +1008,20 @@ final class ComputerView extends View implements Runnable, CommandListener {
                                     } else {
                                         NavigationScreens.toStringBuffer(qc, sb);
                                     }
+                                } break;
+                                case VALUE_SNR0:
+                                case VALUE_SNR0 + 1:
+                                case VALUE_SNR0 + 2:
+                                case VALUE_SNR0 + 3:
+                                case VALUE_SNR0 + 4:
+                                case VALUE_SNR0 + 5:
+                                case VALUE_SNR0 + 6:
+                                case VALUE_SNR0 + 7:
+                                case VALUE_SNR0 + 8:
+                                case VALUE_SNR0 + 9:
+                                case VALUE_SNR0 + 10:
+                                case VALUE_SNR0 + 11: {
+                                    NavigationScreens.append(sb, NmeaParser.snr[idx - VALUE_SNR0]);
                                 } break;
                                 case VALUE_SIGN: {
                                     sb.append(NavigationScreens.SIGN);
@@ -1223,7 +1291,7 @@ final class ComputerView extends View implements Runnable, CommandListener {
                             if (!fonts.containsKey(name)) {
                                 String source = parser.getAttributeValue(null, ATTR_FILE);
                                 if (source != null) {
-                                    byte[] image = (byte[]) load(source);
+                                    final byte[] image = (byte[]) load(source);
                                     if (image != null) {
                                         fonts.put(name, image);
                                     }
@@ -1246,6 +1314,14 @@ final class ComputerView extends View implements Runnable, CommandListener {
                             colors[offset + 1] = Integer.parseInt(parser.getAttributeValue(null, ATTR_FGCOLOR), 16);
                             colors[offset + 2] = Integer.parseInt(parser.getAttributeValue(null, ATTR_NXCOLOR), 16);
                             colors[offset + 3] = Integer.parseInt(parser.getAttributeValue(null, ATTR_PXCOLOR), 16);
+                        } else if (TAG_SCREEN.equals(tag)) {
+                            String background = parser.getAttributeValue(null, ATTR_BACKGROUND);
+                            if (background != null) {
+                                final byte[] image = (byte[]) load(background);
+                                if (image != null) {
+                                    backgrounds.put(filename, image);
+                                }
+                            }
                         }
                     } break;
                     case XmlPullParser.END_TAG: {

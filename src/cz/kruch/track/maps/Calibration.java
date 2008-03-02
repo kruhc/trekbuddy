@@ -109,6 +109,9 @@ abstract class Calibration {
     }
 
     QualifiedCoordinates[] getRange() {
+        if (range == null) {
+            computeRange();
+        }
         return range;
     }
 
@@ -254,23 +257,13 @@ abstract class Calibration {
                 ll.setElementAt(utm, i);
             }
 
-            // remember main calibration point easting-northing and zone
-            calibrationGp = (GeodeticPosition) ll.elementAt(0);
-
-            // compute pixel grid for TM
-            computeGrid(xy, ll);
-
-        } else {
-
-            // remember main calibration point lat-lon
-            calibrationGp = (GeodeticPosition) ll.elementAt(0);
-
-            // compute pixel grid for LL
-            computeGrid(xy, ll);
         }
 
-        // precompute some values for faster decisions
-        computeRange();
+        // remember main calibration point
+        calibrationGp = (GeodeticPosition) ll.elementAt(0);
+
+        // compute pixel grid
+        computeGrid(xy, ll);
     }
 
     private double gridTHscale, gridLVscale;

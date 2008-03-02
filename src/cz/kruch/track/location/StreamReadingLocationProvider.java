@@ -38,9 +38,10 @@ public abstract class StreamReadingLocationProvider extends LocationProvider {
 
     private static final char[] HEADER_GGA = { '$', 'G', 'P', 'G', 'G', 'A' };
     private static final char[] HEADER_GSA = { '$', 'G', 'P', 'G', 'S', 'A' };
+    private static final char[] HEADER_GSV = { '$', 'G', 'P', 'G', 'S', 'V' };
     private static final char[] HEADER_RMC = { '$', 'G', 'P', 'R', 'M', 'C' };
-    private static final char[] HEADER_SKIP = { '$', 'G', 'P', 'G', 'S', 'V' };
 
+    private static final int HEADER_LENGTH = 6;
     private static final int BUFFER_SIZE = 512; // as recommended at Nokia forum
 
     public static int syncs, mismatches, checksums, restarts, stalls;
@@ -65,42 +66,36 @@ public abstract class StreamReadingLocationProvider extends LocationProvider {
         NmeaParser.Record gga = null;
         NmeaParser.Record rmc = null;
 
-        // get pair
+        // get sentence pair
         while (gga == null || rmc == null) {
+
+            // get sentence
             final int l = nextSentence(in, observer);
             if (l == -1) {
                 return null;
             }
-            if (isType(line, l, HEADER_GGA)) {
-                if (!validate(line, l)) {
-//#ifdef __LOG__
-                    if (log.isEnabled()) log.warn("Invalid NMEA!");
-//#endif
-                    checksums++;
+
+            // checksum check
+            if (validate(line, l)) {
+                // parse known sentences
+                if (isType(line, l, HEADER_GGA)) {
+                    gga = NmeaParser.parseGGA(line, l);
+                    hack_rmc_count = 0;
+                } else if (isType(line, l, HEADER_RMC)) {
+                    rmc = NmeaParser.parseRMC(line, l);
+                    hack_rmc_count++;
+                } else if (isType(line, l, HEADER_GSA)) {
+                    gsa = NmeaParser.parseGSA(line, l);
+                } else if (isType(line, l, HEADER_GSV)) {
+                    NmeaParser.parseGSV(line, l);
+                } else {
                     continue;
                 }
-                gga = NmeaParser.parseGGA(line, l);
-                hack_rmc_count = 0;
-            } else if (isType(line, l, HEADER_RMC)) {
-                if (!validate(line, l)) {
-//#ifdef __LOG__
-                    if (log.isEnabled()) log.warn("Invalid NMEA!");
-//#endif
-                    checksums++;
-                    continue;
-                }
-                rmc = NmeaParser.parseRMC(line, l);
-                hack_rmc_count++;
-            } else if (isType(line, l, HEADER_GSA)) {
-                if (!validate(line, l)) {
-//#ifdef __LOG__
-                    if (log.isEnabled()) log.warn("Invalid NMEA!");
-//#endif
-                    checksums++;
-                    continue;
-                }
-                gsa = NmeaParser.parseGSA(line, l);
             } else {
+//#ifdef __LOG__
+                if (log.isEnabled()) log.warn("Invalid NMEA!");
+//#endif
+                checksums++;
                 continue;
             }
 
@@ -215,21 +210,6 @@ public abstract class StreamReadingLocationProvider extends LocationProvider {
                     pos = 0;
                     match = false;
                 }
-
-                // skip sentence we do not want - GSV are spam
-                if (pos == HEADER_SKIP.length) { // '$GPGSV...'
-                    int i = pos;
-                    for ( ; --i >= 0; ) {
-                        if (line[i] != HEADER_SKIP[i]) {
-                            break;
-                        }
-                    }
-                    if (i < 0) {
-                        // reset
-                        pos = 0;
-                        match = false;
-                    }
-                }
             }
         }
 
@@ -244,7 +224,7 @@ public abstract class StreamReadingLocationProvider extends LocationProvider {
         return -1;
     }
 
-    private static boolean validate(char[] raw, final int length) {
+    private static boolean validate(final char[] raw, final int length) {
         int result = 0;
         for (int i = 1; i < length; i++) {
             final byte b = (byte) (raw[i] & 0x00ff);
@@ -273,12 +253,13 @@ public abstract class StreamReadingLocationProvider extends LocationProvider {
         return false;
     }
 
-    private static boolean isType(char[] sentence, final int length, char[] header) {
-        if (length < header.length) {
+    private static boolean isType(final char[] sentence, final int length,
+                                  final char[] header) {
+        if (length < HEADER_LENGTH) {
             return false;
         }
-
-        for (int i = header.length; --i >= 0; ) {
+        
+        for (int i = HEADER_LENGTH; --i >= 0; ) {
             if (sentence[i] != header[i]) {
                 return false;
             }

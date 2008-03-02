@@ -53,8 +53,9 @@ final class OziCalibration extends Calibration {
         // line counter
         int lines = 0;
 
-        // "keep parsing Points" flag
+        // optimization flags
         boolean parsePoints = true;
+        boolean almostDone = false;
 
         // vars
         Vector xy = new Vector(4);
@@ -69,15 +70,18 @@ final class OziCalibration extends Calibration {
         CharArrayTokenizer.Token line = reader.readToken(false);
         while (line != null) {
             lines++;
-            if (line.startsWith(LINE_POINT) && parsePoints) {
-                tokenizer.init(line, true);
-                parsePoints = parsePoint(tokenizer, xy, ll);
-            } else if (line.startsWith(LINE_MAP_PROJECTION)) {
+            if (!almostDone && line.startsWith(LINE_POINT)) {
+                if (parsePoints) {
+                    tokenizer.init(line, true);
+                    parsePoints = parsePoint(tokenizer, xy, ll);
+                }
+            } else if (!almostDone && line.startsWith(LINE_MAP_PROJECTION)) {
                 tokenizer.init(line, false);
                 projectionType = parseProjectionType(tokenizer);
+
                 /*
-                * projection setup for known grids
-                */
+                 * projection setup for known grids
+                 */
                 if (ProjectionSetup.PROJ_LATLON.equals(projectionType)) {
                     projectionSetup = LATLON_PROJ_SETUP;
                 } else if (ProjectionSetup.PROJ_BNG.equals(projectionType)) {
@@ -132,7 +136,11 @@ final class OziCalibration extends Calibration {
 //#ifdef __LOG__
                 if (log.isEnabled()) log.debug("projection type: " + projectionType);
 //#endif
-            } else if (line.startsWith(LINE_PROJECTION_SETUP)) {
+            } else if (!almostDone && line.startsWith(LINE_PROJECTION_SETUP)) {
+
+                // phase optimization
+                almostDone = true;
+
                 /*
                 * not-crippled Ozi calibration - use MMPXY/LL instead
                 */

@@ -20,7 +20,9 @@ import cz.kruch.track.event.Callback;
 import cz.kruch.track.location.Waypoint;
 import cz.kruch.track.location.GpxTracklog;
 import cz.kruch.track.maps.io.LoaderIO;
+//#ifndef __J9__
 import cz.kruch.track.fun.Friends;
+//#endif
 import cz.kruch.track.configuration.Config;
 import cz.kruch.track.Resources;
 import cz.kruch.j2se.io.BufferedInputStream;
@@ -164,6 +166,9 @@ public final class Waypoints extends List
     private void stopLogs() {
         for (final Enumeration e = logs.elements(); e.hasMoreElements(); ) {
             final GpxTracklog gpx = (GpxTracklog) e.nextElement();
+//#ifdef __LOG__
+            if (log.isEnabled()) log.debug("shutdown " + gpx.getFileName() + "; alive? " + gpx.isAlive());
+//#endif
             try {
                 if (gpx.isAlive()) {
                     gpx.shutdown();
@@ -489,6 +494,8 @@ public final class Waypoints extends List
                 // add waypoint, possibly save
                 (new YesNoDialog(this, this, null, Resources.getString(Resources.NAV_MSG_PERSIST_WPT), null)).show();
 
+//#ifndef __J9__
+
             } else if (FriendForm.MENU_SEND == action) { // send waypoint by SMS
 
                 // vars
@@ -514,12 +521,19 @@ public final class Waypoints extends List
 
                 // send the message
                 Friends.send((String) ret[1], type, (String) ret[2], qc, time);
+
+//#endif
+
             }
+
+//#ifndef __J9__
 
         } else if (source instanceof Friends) { // SMS received
 
             // add waypoint to store
             addToStore(USER_FRIENDS_STORE, (Waypoint) result, true);
+
+//#endif
 
         } else if (source instanceof GpxTracklog) { // waypoint recording notification
 

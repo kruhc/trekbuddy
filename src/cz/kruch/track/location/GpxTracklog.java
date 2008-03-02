@@ -42,6 +42,10 @@ import cz.kruch.track.Resources;
  * @author Ales Pour <kruhc@seznam.cz>
  */
 public final class GpxTracklog extends Thread {
+//#ifdef __LOG__
+    private static final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("Gpx");
+//#endif
+
     private static final String GPX_1_1_NAMESPACE   = "http://www.topografix.com/GPX/1/1";
     private static final String DEFAULT_NAMESPACE   = null;
     private static final String EXT_NAMESPACE       = "urn:net:trekbuddy:1.0:nmea:rmc";
@@ -251,6 +255,9 @@ public final class GpxTracklog extends Thread {
 
                 // close XML
                 if (serializer != null) {
+//#ifdef __LOG__
+                    if (log.isEnabled()) log.debug("closing document");
+//#endif
                     try {
                         if (type == LOG_TRK) { // '==' is ok
                             serializer.endTag(DEFAULT_NAMESPACE, ELEMENT_TRKSEG);
@@ -259,6 +266,9 @@ public final class GpxTracklog extends Thread {
                         serializer.endTag(null, ELEMENT_GPX);
                         serializer.endDocument();
                         serializer.flush();
+//#ifdef __LOG__
+                        if (log.isEnabled()) log.debug("~done");
+//#endif
                     } catch (IOException e) {
                         // ignore
                     }
@@ -266,8 +276,14 @@ public final class GpxTracklog extends Thread {
 
                 // close output
                 if (output != null) {
+//#ifdef __LOG__
+                    if (log.isEnabled()) log.debug("closing output");
+//#endif
                     try {
                         output.close();
+//#ifdef __LOG__
+                        if (log.isEnabled()) log.debug("~done");
+//#endif
                     } catch (IOException e) {
                         // ignore
                     }

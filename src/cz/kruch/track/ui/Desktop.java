@@ -19,7 +19,9 @@ package cz.kruch.track.ui;
 import cz.kruch.track.TrackingMIDlet;
 import cz.kruch.track.Resources;
 import cz.kruch.track.event.Callback;
+//#ifndef __J9__
 import cz.kruch.track.fun.Friends;
+//#endif
 import cz.kruch.track.fun.Camera;
 import cz.kruch.track.maps.Map;
 import cz.kruch.track.maps.Atlas;
@@ -119,8 +121,12 @@ public final class Desktop extends GameCanvas
     private Map map;
     private Atlas atlas;
 
+//#ifndef __J9__
+
     // groupware components
     private Friends friends;
+
+//#endif    
 
     // LSM/MSK commands
     private Command cmdRun, cmdRunLast, cmdStop;
@@ -592,6 +598,8 @@ public final class Desktop extends GameCanvas
         if (log.isEnabled()) log.info("post init");
 //#endif
 
+//#ifndef __J9__
+
         // start Friends
         if (cz.kruch.track.TrackingMIDlet.jsr120 && Config.locationSharing) {
 //#ifdef __LOG__
@@ -603,6 +611,9 @@ public final class Desktop extends GameCanvas
                 showError(Resources.getString(Resources.DESKTOP_MSG_FRIENDS_FAILED), t, this);
             }
         }
+
+//#endif        
+
     }
 
     protected void sizeChanged(int w, int h) {
@@ -872,13 +883,7 @@ public final class Desktop extends GameCanvas
                 if (log.isEnabled()) log.debug("exit command");
 //#endif
 
-                // stop timer
-                timer.cancel();
-
-                // stop device control
-                cz.kruch.track.ui.nokia.DeviceControl.destroy();
-
-                // stop waypoints
+                // flush waypoints
                 try {
                     Waypoints.shutdown();
                 } catch (Throwable t) {
@@ -892,6 +897,25 @@ public final class Desktop extends GameCanvas
                     // ignore
                 }
 
+                // stop timer
+                timer.cancel();
+
+                // stop eventing
+                eventing.destroy();
+
+                // stop device control
+                cz.kruch.track.ui.nokia.DeviceControl.destroy();
+
+//#ifndef __J9__
+
+                // stop Friends
+                if (friends != null) {
+                    friends.destroy();
+                }
+
+//#endif                
+
+/*
                 // close atlas/map
                 if (atlas != null) {
                     atlas.close();
@@ -899,14 +923,12 @@ public final class Desktop extends GameCanvas
                 if (map != null) {
                     map.close();
                 }
+*/
 
                 // close views
                 for (int i = views.length; --i >= 0; ) {
                     views[i].close();
                 }
-
-                // stop eventing
-                eventing.destroy();
 
                 // backup runtime vars
                 try {
@@ -915,13 +937,10 @@ public final class Desktop extends GameCanvas
                     // ignore
                 }
 
+/*
                 // stop I/O loader
                 LoaderIO.getInstance().destroy();
-
-                // stop Friends
-                if (friends != null) {
-                    friends.destroy();
-                }
+*/
 
                 // bail out
                 midlet.notifyDestroyed();
@@ -1021,7 +1040,9 @@ public final class Desktop extends GameCanvas
                     cz.kruch.track.ui.nokia.DeviceControl.flash();
 
                     // play sound and vibrate
-                    if (Camera.play("wpt.amr")) {
+                    if (Config.noSounds) {
+                        display.vibrate(1000);
+                    } else if (Camera.play("wpt.amr")) {
                         display.vibrate(1000);
                     } else { // fallback to system alarm
                         AlertType.ALARM.playSound(display);

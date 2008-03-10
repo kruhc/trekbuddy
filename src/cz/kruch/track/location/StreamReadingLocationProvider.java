@@ -36,15 +36,21 @@ public abstract class StreamReadingLocationProvider extends LocationProvider {
     private static final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("StreamReadingLocationProvider");
 //#endif
 
+/*
     private static final char[] HEADER_GGA = { '$', 'G', 'P', 'G', 'G', 'A' };
     private static final char[] HEADER_GSA = { '$', 'G', 'P', 'G', 'S', 'A' };
     private static final char[] HEADER_GSV = { '$', 'G', 'P', 'G', 'S', 'V' };
     private static final char[] HEADER_RMC = { '$', 'G', 'P', 'R', 'M', 'C' };
+*/
+    private static final int HEADER_GGA = 0x00474741;
+    private static final int HEADER_GSA = 0x00475341;
+    private static final int HEADER_GSV = 0x00475356;
+    private static final int HEADER_RMC = 0x00524d43;
 
     private static final int HEADER_LENGTH = 6;
     private static final int BUFFER_SIZE = 512; // as recommended at Nokia forum
 
-    public static int syncs, mismatches, checksums, restarts, stalls;
+    public static int syncs, mismatches, checksums, restarts, stalls, errors;
 
     private final char[] line;
     private final byte[] btline;
@@ -58,7 +64,7 @@ public abstract class StreamReadingLocationProvider extends LocationProvider {
         super(name);
         this.line = new char[BUFFER_SIZE];
         this.btline = new byte[BUFFER_SIZE];
-        syncs = mismatches = checksums = restarts = stalls = 0;
+        syncs = mismatches = checksums = restarts = stalls = errors = 0;
     }
 
     protected final Location nextLocation(InputStream in, OutputStream observer) throws IOException, LocationException {
@@ -78,18 +84,23 @@ public abstract class StreamReadingLocationProvider extends LocationProvider {
             // checksum check
             if (validate(line, l)) {
                 // parse known sentences
-                if (isType(line, l, HEADER_GGA)) {
-                    gga = NmeaParser.parseGGA(line, l);
-                    hack_rmc_count = 0;
-                } else if (isType(line, l, HEADER_RMC)) {
-                    rmc = NmeaParser.parseRMC(line, l);
-                    hack_rmc_count++;
-                } else if (isType(line, l, HEADER_GSA)) {
-                    gsa = NmeaParser.parseGSA(line, l);
-                } else if (isType(line, l, HEADER_GSV)) {
-                    NmeaParser.parseGSV(line, l);
-                } else {
-                    continue;
+                switch (getType(line, l)) {
+                    case HEADER_GGA: {
+                        gga = NmeaParser.parseGGA(line, l);
+                        hack_rmc_count = 0;
+                    } break;
+                    case HEADER_GSA: {
+                        gsa = NmeaParser.parseGSA(line, l);
+                    } break;
+                    case HEADER_GSV: {
+                        NmeaParser.parseGSV(line, l);
+                    } break;
+                    case HEADER_RMC: {
+                        rmc = NmeaParser.parseRMC(line, l);
+                        hack_rmc_count++;
+                    } break;
+                    default:
+                        continue;
                 }
             } else {
 //#ifdef __LOG__
@@ -253,18 +264,11 @@ public abstract class StreamReadingLocationProvider extends LocationProvider {
         return false;
     }
 
-    private static boolean isType(final char[] sentence, final int length,
-                                  final char[] header) {
-        if (length < HEADER_LENGTH) {
-            return false;
-        }
-        
-        for (int i = HEADER_LENGTH; --i >= 0; ) {
-            if (sentence[i] != header[i]) {
-                return false;
-            }
+    private static int getType(final char[] sentence, final int length) {
+        if (length < 6) {
+            return -1;
         }
 
-        return true;
+        return sentence[3] << 16 | sentence[4] << 8 | sentence[5];
     }
 }

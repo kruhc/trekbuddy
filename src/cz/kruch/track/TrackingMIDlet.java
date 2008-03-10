@@ -37,7 +37,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
     public static String version;
     public static boolean jsr82, jsr120, jsr135, jsr179, motorola179, comm;
     public static boolean sonyEricsson, nokia, siemens, lg, motorola;
-    public static boolean wm, palm, rim, symbian;
+    public static boolean wm, jbed, palm, rim, symbian;
     public static boolean sxg75, a780, s65;
 
     // diagnostics
@@ -76,6 +76,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         motorola = System.getProperty("com.motorola.IMEI") != null;
         lg = platform.startsWith("LG");
         wm = platform.startsWith("Windows CE");
+        jbed = platform.startsWith("Jbed");
         palm = platform.startsWith("Palm OS");
         sxg75 = "SXG75".equals(platform);
         a780 = "j2me".equals(platform);

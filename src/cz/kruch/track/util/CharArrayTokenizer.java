@@ -117,8 +117,9 @@ public final class CharArrayTokenizer {
 
         if (position < end) {  /* == hasMoreTokens() */
             // local refs
-            final char[] array = this.array;
             final Token token = this.token;
+            final char[] array = this.array;
+            final char[] delimiters = this.delimiters;
 
             // clear flag
             token.isDelimiter = false;
@@ -147,12 +148,24 @@ public final class CharArrayTokenizer {
             int offset = position;
             while (offset < end) {
                 final char ch = array[offset];
-                if (isDelim(ch)) {
-                    /*if (offset == position) return next();*/
-                    break;
-                } else {
-                    offset++;
+
+                /* isDelim(ch) inlined */
+                boolean isDelim = false;
+                for (int i = dl; --i >= 0; ) {
+                    if (delimiters[i] == ch) {
+                        isDelim = true;
+                        break;
+                    }
                 }
+                /* ~ */
+
+                if (!isDelim) { // hot code first
+                    offset++;
+                    continue;
+                }
+
+                /*if (offset == position) return next();*/
+                break;
             }
 
             // update position
@@ -168,6 +181,7 @@ public final class CharArrayTokenizer {
     }
 
     private boolean isDelim(final char c) {
+        final char[] delimiters = this.delimiters;
         for (int i = dl; --i >= 0; ) {
             if (delimiters[i] == c) {
                 return true;

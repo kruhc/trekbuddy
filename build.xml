@@ -27,7 +27,8 @@
 
     <taskdef resource="antenna.properties" classpath="lib/antenna-bin-0.9.14.jar"/>
     <!--taskdef name="wtkrapc" classname="de.pleumann.antenna.WtkRapc" classpath="lib/antenna-bin-0.9.14.jar"/-->
-
+    <taskdef name="otaJad" classname="RimOtaJadSha" classpath="${basedir}/tools/classes"/>
+    
     <property name="classpath.proguard" value="${proguard.home}\lib\proguard.jar"/>
 
     <path id="bootclasspath.generic">
@@ -117,6 +118,7 @@
         <property name="rim.home" value="${rim41.home}"/>
         <property name="libraryjars" value="${rim41.home}\lib\net_rim_api.jar"/>
         <property name="classpath.preverify" value="${libraryjars}"/>
+        <property name="rim.cod.dependencies" value="net_rim_cldc,net_rim_os,net_rim_locationapi"/>
         <antcall target="clean"/>
         <antcall target="a.pre.rim"/>
         <antcall target="compile.rim41"/>
@@ -124,8 +126,9 @@
         <antcall target="rim.obfuscate" inheritall="true"/>
         <antcall target="rim.preverify" inheritall="true"/>
         <antcall target="dist" inheritall="true"/>
-        <antcall target="rapc" inheritall="true"/>
+        <antcall target="rim.rapc" inheritall="true"/>
         <antcall target="rim.sign" inheritall="true"/>
+        <antcall target="rim.ota" inheritall="true"/>
     </target>
 
     <target name="rim42">
@@ -134,6 +137,7 @@
         <property name="rim.home" value="${rim42.home}"/>
         <property name="libraryjars" value="${rim42.home}\lib\net_rim_api.jar"/>
         <property name="classpath.preverify" value="${libraryjars}"/>
+        <property name="rim.cod.dependencies" value="net_rim_cldc,net_rim_locationapi,net_rim_bluetooth"/>
         <antcall target="clean"/>
         <antcall target="a.pre.rim"/>
         <antcall target="compile.rim42"/>
@@ -141,8 +145,9 @@
         <antcall target="rim.obfuscate" inheritall="true"/>
         <antcall target="rim.preverify" inheritall="true"/>
         <antcall target="dist" inheritall="true"/>
-        <antcall target="rapc" inheritall="true"/>
+        <antcall target="rim.rapc" inheritall="true"/>
         <antcall target="rim.sign" inheritall="true"/>
+        <antcall target="rim.ota" inheritall="true"/>
     </target>
 
     <target name="emulator">
@@ -155,10 +160,8 @@
         <antcall target="compile.generic"/>
         <antcall target="a.pack" inheritall="true"/>
         <antcall target="emulator.obfuscate" inheritall="true"/>
-<!--
         <move file="tmp/trekbuddy${suffix}.jar"
               tofile="tmp/trekbuddy${suffix}-obfuscated.jar"/>
--->
         <antcall target="preverify" inheritall="true"/>
         <antcall target="dist" inheritall="true"/>
     </target>
@@ -462,45 +465,71 @@
                  includes="trekbuddy${suffix}.jad"/>
     </target>
 
-    <target name="rapc">
+    <target name="rim.rapc">
         <echo>Using rim.home=${rim.home}</echo>
-        <!--
-                  <ant antfile="bb.xml"/>
-        -->
-        <!--
-                  <wtkrapc quiet="true" midlet="true" codename="trekbuddy${suffix}"
-                        jadfile="dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad"
-                        source="dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jar"
-                         import="${rim.home}/lib/net_rim_api.jar"
-                        destdir="dist/${vendor.dir}/${dist.dir}/cod"/>
-        -->
-        <!--
-                  <exec dir="${basedir}\dist/${vendor.dir}\${dist.dir}" executable="${rim.home}\bin\rapc.exe">
-                    <arg line="import='${rim.home}\lib\net_rim_api.jar' codename=trekbuddy${suffix} -quiet ${basedir}\dist/${vendor.dir}\${dist.dir}\trekbuddy${suffix}.jad ${basedir}\dist/${vendor.dir}\${dist.dir}\trekbuddy${suffix}.jar"/>
-                  </exec>
-        -->
         <exec dir="${basedir}\dist\${vendor.dir}\${dist.dir}" executable="${rim.home}\bin\rapc.exe">
-            <arg line="import='${rim.home}\lib\net_rim_api.jar' codename=trekbuddy${suffix} -midlet -quiet ${basedir}\dist\${vendor.dir}\${dist.dir}\trekbuddy${suffix}.jad ${basedir}\dist\${vendor.dir}\${dist.dir}\trekbuddy${suffix}.jar"/>
+            <arg line="import='${rim.home}\lib\net_rim_api.jar' codename=trekbuddy${suffix} -quiet -midlet ${basedir}\dist\${vendor.dir}\${dist.dir}\trekbuddy${suffix}.jad ${basedir}\dist\${vendor.dir}\${dist.dir}\trekbuddy${suffix}.jar"/>
         </exec>
         <copy file="${basedir}\trekbuddy.alx"
-              tofile="${basedir}\dist/${vendor.dir}\${dist.dir}\trekbuddy${suffix}.alx"/>
-        <replace file="${basedir}\dist/${vendor.dir}\${dist.dir}\trekbuddy${suffix}.alx" token="@SUFFIX@" value="${suffix}"/>
-        <replace file="${basedir}\dist/${vendor.dir}\${dist.dir}\trekbuddy${suffix}.alx" token="@DESCRIPTION@"
-                 value="${description}"/>
-        <replace file="${basedir}\dist/${vendor.dir}\${dist.dir}\trekbuddy${suffix}.alx" token="@VERSION@" value="${version}"/>
-        <replace file="${basedir}\dist/${vendor.dir}\${dist.dir}\trekbuddy${suffix}.alx" token="@VENDOR@" value="${vendor}"/>
-<!-- commented out because .csl and .cso are required for signing
-        <delete>
-            <fileset dir="${basedir}\dist/${vendor.dir}\${dist.dir}" excludes="*.cod,*.alx,*.map"/>
-        </delete>
--->
+              tofile="${basedir}\dist\${vendor.dir}\${dist.dir}\trekbuddy${suffix}.alx"/>
+        <replace file="${basedir}\dist\${vendor.dir}\${dist.dir}\trekbuddy${suffix}.alx" token="@SUFFIX@" value="${suffix}"/>
+        <replace file="${basedir}\dist\${vendor.dir}\${dist.dir}\trekbuddy${suffix}.alx" token="@DESCRIPTION@" value="${description}"/>
+        <replace file="${basedir}\dist\${vendor.dir}\${dist.dir}\trekbuddy${suffix}.alx" token="@VERSION@" value="${version}"/>
+        <replace file="${basedir}\dist\${vendor.dir}\${dist.dir}\trekbuddy${suffix}.alx" token="@VENDOR@" value="${vendor}"/>
+        <replace file="${basedir}\dist\${vendor.dir}\${dist.dir}\trekbuddy${suffix}.alx" token="@MODULES@" value="trekbuddy${suffix}.cod"/>
     </target>
 
     <target name="rim.sign">
         <echo>Signing rim.home=${rim42.home}</echo>
         <java fork="yes" jar="${rim42.home}/bin/SignatureTool.jar">
-           <arg line="-s -p changeit ${basedir}\dist\${vendor.dir}\${dist.dir}\trekbuddy${suffix}.cod"/>
+           <arg line="-a -c -s -p changeit ${basedir}\dist\${vendor.dir}\${dist.dir}\trekbuddy${suffix}.cod"/>
         </java>
+    </target>
+
+    <target name="rim.zip">
+        <zip destfile="dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.zip">
+            <fileset dir="dist/${vendor.dir}/${dist.dir}"
+                     includes="trekbuddy${suffix}.cod,trekbuddy${suffix}.alx"/>
+        </zip>
+    </target>
+
+    <target name="rim.ota">
+        <property name="rim.cod.file" value="dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.cod"/>
+        <property name="rim.ota.dir" value="dist/${vendor.dir}/${dist.dir}/ota"/>
+        <mkdir dir="${rim.ota.dir}"/>
+        <script language="javascript"><![CDATA[
+          self.getProject().setNewProperty("rim.cod.modified", (new java.io.File(self.getProject().getProperty("rim.cod.file")).lastModified()) / 1000);
+        ]]></script>
+        <wtkjad jadfile="${rim.ota.dir}/trekbuddy${suffix}.jad"
+                name="TrekBuddy"
+                vendor="${vendor}"
+                version="${version}">
+            <attribute name="MIDlet-Description" value="${description}"/>
+            <attribute name="MIDlet-Info-URL" value="http://www.trekbuddy.net"/>
+            <attribute name="MicroEdition-Configuration" value="CLDC-1.1"/>
+            <attribute name="MicroEdition-Profile" value="MIDP-2.0"/>
+            <attribute name="Content-Folder" value="Applications"/>
+            <attribute name="RIM-COD-Creation-Time" value="${rim.cod.modified}"/>
+            <attribute name="RIM-COD-Module-Name" value="trekbuddy${suffix}"/>
+            <attribute name="RIM-COD-Module-Dependencies" value="${rim.cod.dependencies}"/>
+        </wtkjad>
+        <fixcrlf srcdir="${rim.ota.dir}"
+                 eol="crlf" eof="remove"
+                 includes="trekbuddy${suffix}.jad"/>
+        <unzip src="${rim.cod.file}" dest="${rim.ota.dir}"/>
+        <otaJad moduleName="trekbuddy${suffix}" jad="${rim.ota.dir}/trekbuddy${suffix}.jad">
+            <fileset dir="${rim.ota.dir}" includes="**/*.cod"/>
+        </otaJad>
+        <fixcrlf srcdir="${rim.ota.dir}"
+                 eol="crlf" eof="remove"
+                 includes="trekbuddy${suffix}.jad"/>
+        <copy file="${basedir}\trekbuddy.alx"
+              tofile="${rim.ota.dir}\trekbuddy${suffix}.alx"/>
+        <replace file="${rim.ota.dir}\trekbuddy${suffix}.alx" token="@SUFFIX@" value="${suffix}"/>
+        <replace file="${rim.ota.dir}\trekbuddy${suffix}.alx" token="@DESCRIPTION@" value="${description}"/>
+        <replace file="${rim.ota.dir}\trekbuddy${suffix}.alx" token="@VERSION@" value="${version}"/>
+        <replace file="${rim.ota.dir}\trekbuddy${suffix}.alx" token="@VENDOR@" value="${vendor}"/>
+        <replace file="${rim.ota.dir}\trekbuddy${suffix}.alx" token="@MODULES@" value="${rim.cod.modules}"/>
     </target>
 
     <target name="jad2prc">

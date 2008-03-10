@@ -196,7 +196,7 @@ public final class Config {
             dataDir = "file:///4:/TrekBuddy/";
         } else if (cz.kruch.track.TrackingMIDlet.lg) {
             dataDir = "file:///Card/TrekBuddy/";
-        } else if (cz.kruch.track.TrackingMIDlet.wm) {
+        } else if (cz.kruch.track.TrackingMIDlet.wm || cz.kruch.track.TrackingMIDlet.jbed) {
             dataDir = "file:///Storage%20Card/TrekBuddy/";
         } else if (cz.kruch.track.TrackingMIDlet.motorola) {
             dataDir = "file:///b/trekbuddy/";

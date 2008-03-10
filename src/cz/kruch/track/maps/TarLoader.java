@@ -362,7 +362,7 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
         try {
             // create stream
             file = File.open(Connector.open(url, Connector.READ));
-            tar = new TarInputStream(buffered.setInputStream(in = file.openInputStream()));
+            tar = new TarInputStream(in = file.openInputStream());
 
             // shared vars
             final char[] delims = { File.PATH_SEPCHAR };
@@ -422,9 +422,6 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
             }
 
         } finally {
-
-            // free buffered
-            buffered.setInputStream(null);
 
             // close input stream
             if (in != null) {

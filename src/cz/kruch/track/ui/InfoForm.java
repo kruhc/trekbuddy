@@ -105,7 +105,7 @@ final class InfoForm extends Form implements CommandListener {
             sb.delete(0, sb.length()).append("datum: ").append(map.getDatum()).append("; projection: ").append(map.getProjection());
             append(newItem("Map", sb.toString()));
         }
-        sb.delete(0, sb.length()).append((ps == null ? "" : ps.toString())).append("; stalls=").append(cz.kruch.track.location.StreamReadingLocationProvider.stalls).append("; restarts=").append(cz.kruch.track.location.StreamReadingLocationProvider.restarts).append("; syncs=").append(cz.kruch.track.location.StreamReadingLocationProvider.syncs).append("; mismatches=").append(cz.kruch.track.location.StreamReadingLocationProvider.mismatches).append("; checksums=").append(cz.kruch.track.location.StreamReadingLocationProvider.checksums);
+        sb.delete(0, sb.length()).append((ps == null ? "" : ps.toString())).append("; stalls=").append(cz.kruch.track.location.StreamReadingLocationProvider.stalls).append("; restarts=").append(cz.kruch.track.location.StreamReadingLocationProvider.restarts).append("; syncs=").append(cz.kruch.track.location.StreamReadingLocationProvider.syncs).append("; mismatches=").append(cz.kruch.track.location.StreamReadingLocationProvider.mismatches).append("; checksums=").append(cz.kruch.track.location.StreamReadingLocationProvider.checksums).append("; errors=").append(cz.kruch.track.location.StreamReadingLocationProvider.errors);
         append(new StringItem("ProviderStatus", sb.toString()));
         append(new StringItem("ProviderError", le == null ? "" : le.toString()));
     }

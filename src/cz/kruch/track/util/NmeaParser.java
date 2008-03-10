@@ -53,7 +53,7 @@ public final class NmeaParser {
 
         // process
         int index = 0;
-        while (tokenizer.hasMoreTokens() && (index < 10)) {
+        while ((index < 10) && tokenizer.hasMoreTokens()) {
             final CharArrayTokenizer.Token token = tokenizer.next();
             if (!token.isEmpty()) {
                 switch (index) {
@@ -69,8 +69,12 @@ public final class NmeaParser {
                         break;
                     case 6: {
                         record.fix = CharArrayTokenizer.parseInt(token);
-                        if (record.fix == 0) { // no fix
-                            index = 666; // breaks 'while' cycle
+                        switch (record.fix) {
+                            case 0:
+                            case 6: // dead reckoning -> ignore
+                                record.fix = 0;
+                                index = 666; // breaks 'while' cycle
+                                break;
                         }
                     } break;
                     case 7: {
@@ -123,7 +127,7 @@ public final class NmeaParser {
 
         // process
         int index = 0;
-        while (tokenizer.hasMoreTokens() && (index < 18)) {
+        while ((index < 18) && tokenizer.hasMoreTokens()) {
             final CharArrayTokenizer.Token token = tokenizer.next();
             /* no token empty check here */
             switch (index) {
@@ -193,7 +197,7 @@ public final class NmeaParser {
 
         // process
         int index = 0;
-        while (tokenizer.hasMoreTokens() && (index < maxi)) {
+        while ((index < maxi) && tokenizer.hasMoreTokens()) {
             final CharArrayTokenizer.Token token = tokenizer.next();
             /* no token empty check here */
             switch (index) {
@@ -209,28 +213,31 @@ public final class NmeaParser {
                     maxi = 4 /* start offset */ + (inview > sentence * 4 ? 16 : (inview - (sentence - 1) * 4) * 4);
                     break;
                 default: {
-                    if (index % 4 == 0) {
-                        tracked = false;
-                        final int prn = CharArrayTokenizer.parseInt(token);
-                        for (int i = prnc; --i >= 0; ) {
-                            if (prn == prns[i]) {
-                                tracked = true; 
-                                break;
-                            }
-                        }
-                    }
-                    if (index % 4 == 3) {
-                        if (tracked) {
-                            if (!token.isEmpty()) {
-                                int value = (CharArrayTokenizer.parseInt(token) - 15) / 3;
-                                if (value < 1/*0*/) {
-                                    value = 1/*0*/;
-                                } else if (value > 9) {
-                                    value = 9;
+                    final int mod = index % 4;
+                    switch (mod) {
+                        case 0: {
+                            tracked = false;
+                            final int prn = CharArrayTokenizer.parseInt(token);
+                            for (int i = prnc; --i >= 0; ) {
+                                if (prn == prns[i]) {
+                                    tracked = true;
+                                    break;
                                 }
-                                snr[prni++] = (byte) value;
                             }
-                        }
+                        } break;
+                        case 3: {
+                            if (tracked && prni < 12/*snr.length*/) {
+                                if (!token.isEmpty()) {
+                                    int value = (CharArrayTokenizer.parseInt(token) - 15) / 3;
+                                    if (value < 1/*0*/) {
+                                        value = 1/*0*/;
+                                    } else if (value > 9) {
+                                        value = 9;
+                                    }
+                                    snr[prni++] = (byte) value;
+                                }
+                            }
+                        } break;
                     } break;
                 }
             }
@@ -249,7 +256,7 @@ public final class NmeaParser {
 
         // process
         int index = 0;
-        while (tokenizer.hasMoreTokens() && (index < 10)) {
+        while ((index < 10) && tokenizer.hasMoreTokens()) {
             final CharArrayTokenizer.Token token = tokenizer.next();
             if (!token.isEmpty()) {
                 switch (index) {

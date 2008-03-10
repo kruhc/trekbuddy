@@ -357,9 +357,12 @@ public final class Desktop extends GameCanvas
     private static void resetBar() {
         // alpha
         int alpha = Config.osdAlpha;
+        if (alpha > 0xff) {
+            alpha = 0xff;
+        }
 
         // OSD/status bar
-        int color = alpha << 24 | 0x007f7f7f;
+        int color = alpha << 24 | (Config.osdBlackColor ? 0x00dfdfdf : 0x007f7f7f);
         int h = font.getHeight();
         int w = screen.getWidth();
         int[] shadow = new int[w * h];

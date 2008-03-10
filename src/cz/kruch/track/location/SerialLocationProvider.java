@@ -327,6 +327,9 @@ public class SerialLocationProvider extends StreamReadingLocationProvider implem
                     // record
                     setThrowable(t);
 
+                    // counter
+                    errors++;
+
                     // ignore - let's go on
                     continue;
                 }

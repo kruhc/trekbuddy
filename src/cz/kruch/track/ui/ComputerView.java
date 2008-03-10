@@ -224,6 +224,7 @@ final class ComputerView extends View implements Runnable, CommandListener {
     /* profiles and current profile */
     private String status;
     private Hashtable profiles;
+    private int iProfile;
 
     /* trip vars */
     private volatile QualifiedCoordinates valueCoords, snrefCoords;

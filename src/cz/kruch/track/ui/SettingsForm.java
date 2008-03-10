@@ -210,7 +210,8 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
                 alphaSteps = 16;
             }
             gaugeAlphaScale = 0x100 / alphaSteps;
-            submenu.append(gaugeAlpha = new Gauge(Resources.getString(Resources.CFG_DESKTOP_TRANSPARENCY), true, alphaSteps - 1, Config.osdAlpha / gaugeAlphaScale));
+            final int value = Config.osdAlpha / gaugeAlphaScale;
+            submenu.append(gaugeAlpha = new Gauge(Resources.getString(Resources.CFG_DESKTOP_TRANSPARENCY), true, alphaSteps, value));
 
         } else if (menuNavigation.equals(section)) {
 
@@ -416,8 +417,13 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
                 if (isFs) {
                     appendWithNewlineAfter(submenu, choiceTracklog);
                     if (isTracklog) {
-                        if (Config.LOCATION_PROVIDER_JSR82 == provider || Config.LOCATION_PROVIDER_SERIAL == provider || Config.LOCATION_PROVIDER_JSR179 == provider) {
-                            appendWithNewlineAfter(submenu, choiceTracklogFormat);
+                        switch (provider) {
+                            case Config.LOCATION_PROVIDER_JSR82:
+                            case Config.LOCATION_PROVIDER_JSR179:
+                            case Config.LOCATION_PROVIDER_SERIAL:
+                            case Config.LOCATION_PROVIDER_HGE100:
+                                appendWithNewlineAfter(submenu, choiceTracklogFormat);
+                                break;
                         }
                         if (isTracklogGpx) {
                             appendWithNewlineAfter(submenu, choiceGpx);
@@ -430,8 +436,13 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
 
             if (choiceTracklog == affected) {
                 if (isTracklog) {
-                    if (Config.LOCATION_PROVIDER_JSR82 == provider || Config.LOCATION_PROVIDER_SERIAL == provider || Config.LOCATION_PROVIDER_JSR179 == provider) {
-                        appendWithNewlineAfter(submenu, choiceTracklogFormat);
+                    switch (provider) {
+                        case Config.LOCATION_PROVIDER_JSR82:
+                        case Config.LOCATION_PROVIDER_JSR179:
+                        case Config.LOCATION_PROVIDER_SERIAL:
+                        case Config.LOCATION_PROVIDER_HGE100:
+                            appendWithNewlineAfter(submenu, choiceTracklogFormat);
+                            break;
                     }
                     if (isTracklogGpx) {
                         appendWithNewlineAfter(submenu, choiceGpx);

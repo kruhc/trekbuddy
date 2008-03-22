@@ -357,7 +357,7 @@ final class MapView extends View {
         if (isMap() && !mapViewer.hasMap()) {
 
             // var
-            Map map = navigator.getMap();
+            final Map map = navigator.getMap();
 
             // set map
             mapViewer.setMap(map);
@@ -368,6 +368,7 @@ final class MapView extends View {
             setBasicOSD(qc, localQc,  true);
             QualifiedCoordinates.releaseInstance(qc);
             QualifiedCoordinates.releaseInstance(localQc);
+            
         }
 
         // propagate further
@@ -376,10 +377,10 @@ final class MapView extends View {
 
     public int locationUpdated(Location l) {
         // make a copy of last known WGS-84 position
-/* hazard
+/* hazard - location may be referenced elsewhere // TODO fix
         Location.releaseInstance(location);
 */
-        location = null;
+        location = null; // gc hint
         location = l.clone();
 
         // update
@@ -387,15 +388,15 @@ final class MapView extends View {
     }
 
     private int updatedTrick() {
-        // local rel
-        final Location l = this.location;
-
         // result update mask
         int mask = Desktop.MASK_NONE;
 
         // tracking?
         if (!Desktop.browsing && !navigator._getInitializingMap()) {
 
+            // local rel
+            final Location l = this.location;
+            
             // minimum UI update
             mask = Desktop.MASK_OSD;
 
@@ -406,16 +407,20 @@ final class MapView extends View {
                 mask |= Desktop.MASK_CROSSHAIR;
 
                 // get wgs84 and local coordinates
-                Map map = navigator.getMap();
+                final Map map = navigator.getMap();
                 QualifiedCoordinates qc = l.getQualifiedCoordinates();
                 QualifiedCoordinates localQc = map.getDatum().toLocal(qc);
 
                 // on map detection
-                boolean onMap = map.isWithin(localQc);
+                final boolean onMap = map.isWithin(localQc);
 
                 // OSD basic
                 setBasicOSD(qc, localQc, onMap);
                 Desktop.osd.setSat(l.getSat());
+
+                // release local coordinates
+                QualifiedCoordinates.releaseInstance(localQc);
+                localQc = null; // gc hint
 
                 // arrows
                 if (l.getCourse() > -1F) {
@@ -429,7 +434,7 @@ final class MapView extends View {
                 if (Desktop.navigating && Desktop.wpts != null) {
 
                     // get navigation info
-                    StringBuffer extInfo = Desktop.osd._getSb();
+                    final StringBuffer extInfo = Desktop.osd._getSb();
                     getNavigationInfo(extInfo);
 
                     // set navigation info
@@ -458,9 +463,6 @@ final class MapView extends View {
                         navigator.startAlternateMap(navigator.getAtlas().getLayer(), qc, null);
                     }
                 }
-
-                // release local coordinates
-                QualifiedCoordinates.releaseInstance(localQc);
 
             } else {
 

@@ -55,11 +55,11 @@ final class LocatorView extends View {
 
     private static final int HISTORY_DEPTH = 20;
 
-    private final Location[] locations;
-    private int count;
-    private int position;
+    private final Location[][] locations;
+    private int[] count;
+    private int[] position;
 
-    private final QualifiedCoordinates[] coordinatesAvg;
+//    private final QualifiedCoordinates[] coordinatesAvg;
 //    private final int[] satAvg;
     private final int[] rangeIdx;
 
@@ -80,9 +80,13 @@ final class LocatorView extends View {
 
     public LocatorView(/*Navigator*/Desktop navigator) {
         super(navigator);
-        this.locations = new Location[HISTORY_DEPTH];
-        this.coordinatesAvg = new QualifiedCoordinates[2];
+        this.locations = new Location[2][];
+        this.locations[0] = new Location[HISTORY_DEPTH];
+        this.locations[1] = new Location[HISTORY_DEPTH];
+//        this.coordinatesAvg = new QualifiedCoordinates[2];
 //        this.satAvg = new int[2];
+        this.count = new int[2];
+        this.position = new int[2];
         this.rangeIdx = new int[]{ 2, 2 };
         this.navigationStrWidth = Math.max(Desktop.font.stringWidth(MSG_NO_WAYPOINT),
                                            Desktop.font.stringWidth("9.999 M"));
@@ -103,14 +107,16 @@ final class LocatorView extends View {
     }
 
     public void reset() {
-        final Location[] array = locations;
-        for (int i = array.length; --i >= 0; ) {
-            if (array[i] != null) {
-                Location.releaseInstance(array[i]);
-                array[i] = null; // gc hint
+        for (int i = 2; --i >= 0; ) {
+            final Location[] array = locations[i];
+            for (int j = HISTORY_DEPTH; --j >= 0; ) {
+                if (array[j] != null) {
+                    Location.releaseInstance(array[j]);
+                    array[j] = null; // gc hint
+                }
             }
+            count[i] = position[i] = 0;
         }
-        count = position = 0;
         lastCourse = -1F;
     }
 
@@ -120,7 +126,7 @@ final class LocatorView extends View {
         }
         
         // update array
-        append(l);
+        append(0, l.clone());
 
         // recalc
         recalc();
@@ -153,35 +159,40 @@ final class LocatorView extends View {
         return Desktop.MASK_ALL;
     }
 
-    private void append(Location l) {
-        final Location[] array = locations;
-        int position = this.position;
+    private void append(final int term, final Location l) {
+        final Location[] array = this.locations[term];
+        final int[] count = this.count;
+        int position = this.position[term];
 
-        if (++position == array.length) {
+        if (++position == HISTORY_DEPTH) {
             position = 0;
         }
         if (array[position] != null) {
             Location.releaseInstance(array[position]);
             array[position] = null; // gc hint
         }
-        array[position] = l.clone();
-        this.position = position;
+        array[position] = l;
+        this.position[term] = position;
+        count[term]++;
+        if (count[term] > HISTORY_DEPTH) {
+            count[term] = HISTORY_DEPTH;
+        }
     }
 
     private void recalc() {
         // local ref for faster access
-        final Location[] array = locations;
+        final Location[] array = locations[0];
 
-        // calc avg-mode values
+        // calc avg values
         double latAvg = 0D, lonAvg = 0D;
         float accuracySum = 0F, wSum = 0F/*, altAvg = 0F*/;
         int c = 0/*, satSum = 0*/;
 
         // calculate avg qcoordinates
-        for (int i = array.length; --i >= 0; ) {
+        for (int i = HISTORY_DEPTH; --i >= 0; ) {
             Location l = array[i];
             if (l != null) {
-                QualifiedCoordinates qc = l.getQualifiedCoordinates();
+                final QualifiedCoordinates qc = l.getQualifiedCoordinates();
                 final float hAccuracy = qc.getHorizontalAccuracy();
                 if (hAccuracy != 0F && !Float.isNaN(hAccuracy)) {
                     final float w = 5F / hAccuracy;
@@ -199,13 +210,21 @@ final class LocatorView extends View {
             latAvg /= wSum;
             lonAvg /= wSum;
 //            altAvg /= c;
+/*
             QualifiedCoordinates.releaseInstance(coordinatesAvg[0]);
             coordinatesAvg[0] = null; // gc hint
-            coordinatesAvg[0] = QualifiedCoordinates.newInstance(latAvg, lonAvg/*, altAvg*/);
+            coordinatesAvg[0] = QualifiedCoordinates.newInstance(latAvg, lonAvg);
             coordinatesAvg[0].setHorizontalAccuracy(accuracySum / c);
+*/
 //            satAvg[term] = satSum / c;
+
+            QualifiedCoordinates qc = QualifiedCoordinates.newInstance(latAvg, lonAvg);
+            qc.setHorizontalAccuracy(accuracySum / c);
+            Location l = Location.newInstance(qc, -1, -1);
+            append(1, l);
         }
 
+/*
         // set non-avg qcoordinates - it is last position
         QualifiedCoordinates.releaseInstance(coordinatesAvg[1]);
         coordinatesAvg[1] = null; // gc hint
@@ -213,6 +232,7 @@ final class LocatorView extends View {
 
         // remember number of valid position in array
         count = c;
+*/
     }
 
     private boolean transform(final int[] center, final float course, final int[] result) {
@@ -368,14 +388,14 @@ final class LocatorView extends View {
                          0, 360);
 
         // wpt index
-        Waypoint wpt = navigator.getNavigateTo();
+        final Waypoint wpt = navigator.getNavigateTo();
 
         // draw points
-        if (count/*[term]*/ > 0) {
+        if (count[term] > 0) {
 
             // local refs
-            final Location[] locations = this.locations;
-            final QualifiedCoordinates coordsAvg = this.coordinatesAvg[term];
+            final Location[] locations = this.locations[term];
+            final QualifiedCoordinates coordsAvg = locations[this.position[term]].getQualifiedCoordinates();
             final double latAvg = coordsAvg.getLat();
             final double lonAvg = coordsAvg.getLon();
             final int[] xy = this.vertex;
@@ -389,18 +409,18 @@ final class LocatorView extends View {
             final double xScale = ((double) (lineLength >> 1)) / (v / Math.cos(Math.toRadians(latAvg)));
 
             // points color
-            final int inc = (192/* = 256 - 64*/) / locations.length;
+            final int inc = (192/* = 256 - 64*/) / HISTORY_DEPTH;
             int cstep = inc;
             cstep <<= 8;
             if (term > 0) cstep += inc;
-            int color = (term == 0 ? COLOR_AVGT : COLOR_NONAVGT) - count * cstep;
+            int color = (term == 0 ? COLOR_AVGT : COLOR_NONAVGT) - this.count[term] * cstep;
 
             // draw points
-            int offset = this.position + 1; // to start from the oldest
-            if (offset == locations.length) {
+            int offset = this.position[term] + 1; // to start from the oldest
+            if (offset == HISTORY_DEPTH) {
                 offset = 0;
             }
-            for (int N = locations.length, i = N; --i >= 0; ) {
+            for (int N = HISTORY_DEPTH, i = N; --i >= 0; ) {
                 Location l = locations[offset++];
                 if (offset == N) {
                     offset = 0;
@@ -574,17 +594,7 @@ final class LocatorView extends View {
     private void drawCompas(final int width2, final int height2, final int fh,
                             Graphics g, final float course, final boolean uptodate) {
         final int[][] triangle = this.triangle;
-        final int[] xy = this.vertex;
 
-/*
-        triangle[0][0] = width2 - 7;
-        triangle[0][1] = height2;
-        triangle[1][0] = width2;
-        triangle[1][1] = dy + lineLength - fh;
-        triangle[2][0] = width2 + 7;
-        triangle[2][1] = height2;
-*/
-        /* nicer variant of the above */
         triangle[0][0] = width2;
         triangle[0][1] = height2;
         triangle[1][0] = width2;
@@ -622,31 +632,6 @@ final class LocatorView extends View {
         triangle[2][1] = height2 + 3;
 
         drawTriangle(g, course, triangle);
-/*
-        xy[0] = dx + fh;
-        xy[1] = height2;
-        if (course > 1F) {
-            transform(center, course, xy);
-        }
-        g.drawLine(center[0], center[1], xy[0], xy[1]);
-
-        xy[0] = dx + lineLength - fh;
-        xy[1] = height2;
-        if (course > 1F) {
-            transform(center, course, xy);
-        }
-        g.drawLine(center[0], center[1], xy[0], xy[1]);
-*/
-
-/*
-        triangle[0][0] = width2 - 7;
-        triangle[0][1] = height2;
-        triangle[1][0] = width2;
-        triangle[1][1] = dy + fh;
-        triangle[2][0] = width2 + 7;
-        triangle[2][1] = triangle[0][1];
-*/
-        /* nicer variant of the above */
         triangle[0][0] = width2 - 7;
         triangle[0][1] = height2;
         triangle[1][0] = width2;

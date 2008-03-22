@@ -22,13 +22,13 @@ package api.location;
  * @author Ales Pour <kruhc@seznam.cz>
  */
 public final class Location {
+    private static final int FIX3D_MASK = 0x00800000;
+
     private QualifiedCoordinates coordinates;
     private long timestamp;
-    private short fix;
-    private short sat;
+    private int fixsat;
     private float speed;
     private float course;
-    private boolean fix3d;
 
     /*
      * POOL
@@ -54,8 +54,7 @@ public final class Location {
             pool[countFree] = null;
             result.coordinates = coordinates;
             result.timestamp = timestamp;
-            result.fix = (short) fix;
-            result.sat = (short) sat;
+            result.fixsat = (fix << 8) & 0x0000ff00 | sat & 0x000000ff;
         }
 
         return result;
@@ -66,7 +65,7 @@ public final class Location {
             if (countFree < pool.length) {
                 pool[countFree++] = location;
             }
-            QualifiedCoordinates.releaseInstance(location.getQualifiedCoordinates());
+            QualifiedCoordinates.releaseInstance(location.coordinates);
             location.coordinates = null;
         }
     }
@@ -76,10 +75,12 @@ public final class Location {
      */
 
     public Location clone() {
-        Location l = newInstance(coordinates.clone(), timestamp, fix, sat);
+        Location l = newInstance(coordinates.clone(), timestamp,
+                                 getFix(), getSat());
         l.setCourse(course);
         l.setSpeed(speed);
-        l.setFix3d(fix3d);
+        l.setFix3d(isFix3d());
+        
         return l;
     }
 
@@ -87,8 +88,7 @@ public final class Location {
                      final long timestamp, final int fix, final int sat) {
         this.coordinates = coordinates;
         this.timestamp = timestamp;
-        this.fix = (short) fix;
-        this.sat = (short) sat;
+        this.fixsat = (fix << 8) & 0x0000ff00 | sat & 0x000000ff;
         this.speed = this.course = -1F;
     }
 
@@ -106,11 +106,11 @@ public final class Location {
     }
 
     public int getFix() {
-        return fix;
+        return (byte) ((fixsat >> 8) & 0x000000ff);
     }
 
     public int getSat() {
-        return sat;
+        return (byte) (fixsat & 0x000000ff);
     }
 
     public float getSpeed() {
@@ -130,10 +130,13 @@ public final class Location {
     }
 
     public boolean isFix3d() {
-        return fix3d;
+        return (this.fixsat & FIX3D_MASK) != 0;
     }
 
     public void setFix3d(boolean fix3d) {
-        this.fix3d = fix3d;
+        if (fix3d)
+            this.fixsat |= FIX3D_MASK;
+        else
+            this.fixsat &= ~FIX3D_MASK;
     }
 }

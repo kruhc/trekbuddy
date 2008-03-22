@@ -21,7 +21,6 @@ import api.location.LocationException;
 import java.util.Calendar;
 import java.util.TimeZone;
 import java.util.Date;
-import java.util.Vector;
 
 /**
  * NMEA parser.
@@ -34,13 +33,18 @@ public final class NmeaParser {
     private static final Record rmc = new Record();
     private static final CharArrayTokenizer tokenizer = new CharArrayTokenizer();
     private static final char[] delimiters = { ',', '*' };
-    private static final byte[] prns = new byte[12];
 
     private static long date;
     private static int day, month, year;
-    private static int prnc, prni;
+    private static int prnc;
 
-    public static final byte[] snr = new byte[12];
+    private static final int MAX_SATS = 12;
+
+    public static final byte[] snrs  = new byte[MAX_SATS];
+    public static final byte[] prns = new byte[MAX_SATS];
+
+    public static float pdop = -1F, hdop = -1F, vdop = -1F;
+    public static int satv;
 
     public static Record parseGGA(final char[] nmea, final int length) throws LocationException {
         // local refs for faster access
@@ -81,7 +85,10 @@ public final class NmeaParser {
                         record.sat = CharArrayTokenizer.parseInt(token);
                     } break;
                     case 8: {
+/* global
                         record.hdop = CharArrayTokenizer.parseFloat(token);
+*/
+                        hdop = CharArrayTokenizer.parseFloat(token);
                     } break;
                     case 9: {
                         record.altitude = CharArrayTokenizer.parseFloat(token);
@@ -123,7 +130,7 @@ public final class NmeaParser {
         record.invalidate();
 
         // prn indexes
-        prnc = prni = 0;
+        prnc = 0;
 
         // process
         int index = 0;
@@ -159,25 +166,37 @@ public final class NmeaParser {
                     } 
                 } break;
                 case 15:
-                    // PDOP - ignored
+                    if (!token.isEmpty()) {
+/*
+                        record.pdop = CharArrayTokenizer.parseFloat(token);
+*/
+                        pdop = CharArrayTokenizer.parseFloat(token);
+                    }
                     break;
                 case 16: {
                     if (!token.isEmpty()) {
+/*
                         record.hdop = CharArrayTokenizer.parseFloat(token);
+*/
+                        hdop = CharArrayTokenizer.parseFloat(token);
                     }
                 } break;
                 case 17: {
                     if (!token.isEmpty()) {
+/*
                         record.vdop = CharArrayTokenizer.parseFloat(token);
+*/
+                        vdop = CharArrayTokenizer.parseFloat(token);
                     }
                 } break;
             }
             index++;
         }
 
-        // clear remaining snr
-        for (int i = prnc; i < 12/*snr.length*/; i++) {
-            snr[i] = 0;
+        // clear remaining prns & snrs
+        for (int i = prnc; i < MAX_SATS; i++) {
+            prns[i] = 0;
+            snrs[i] = 0;
         }
 
         return record;
@@ -186,14 +205,14 @@ public final class NmeaParser {
     public static void parseGSV(final char[] nmea, final int length) throws LocationException {
         // local refs for faster access
         final CharArrayTokenizer tokenizer = NmeaParser.tokenizer;
-        final byte[] snr = NmeaParser.snr;
+        final byte[] snrs = NmeaParser.snrs;
 
         // init tokenizer and record
         tokenizer.init(nmea, length, delimiters, false);
 
         // local vars
-        int inview = 0, sentence = 0, maxi = 20;
-        boolean tracked = false;
+        int sentence = 0, maxi = 20;
+        int tracked = -1;
 
         // process
         int index = 0;
@@ -209,32 +228,32 @@ public final class NmeaParser {
                     sentence = CharArrayTokenizer.parseInt(token);
                     break;
                 case 3: // number of sats in view
-                    inview = CharArrayTokenizer.parseInt(token);
-                    maxi = 4 /* start offset */ + (inview > sentence * 4 ? 16 : (inview - (sentence - 1) * 4) * 4);
+                    satv = CharArrayTokenizer.parseInt(token);
+                    maxi = 4 /* start offset */ + (satv > sentence * 4 ? 16 : (satv - (sentence - 1) * 4) * 4);
                     break;
                 default: {
                     final int mod = index % 4;
                     switch (mod) {
                         case 0: {
-                            tracked = false;
+                            tracked = -1;
                             final int prn = CharArrayTokenizer.parseInt(token);
                             for (int i = prnc; --i >= 0; ) {
                                 if (prn == prns[i]) {
-                                    tracked = true;
+                                    tracked = i;
                                     break;
                                 }
                             }
                         } break;
                         case 3: {
-                            if (tracked && prni < 12/*snr.length*/) {
+                            if (tracked != -1) {
                                 if (!token.isEmpty()) {
-                                    int value = (CharArrayTokenizer.parseInt(token) - 15) / 3;
-                                    if (value < 1/*0*/) {
-                                        value = 1/*0*/;
-                                    } else if (value > 9) {
-                                        value = 9;
+                                    int snr = (CharArrayTokenizer.parseInt(token) - 15) / 3;
+                                    if (snr < 1/*0*/) {
+                                        snr = 1/*0*/;
+                                    } else if (snr > 9) {
+                                        snr = 9;
                                     }
-                                    snr[prni++] = (byte) value;
+                                    snrs[tracked] = (byte) snr;
                                 }
                             }
                         } break;
@@ -353,7 +372,9 @@ public final class NmeaParser {
         // GGA/GSA
         public int fix;
         public int sat;
-        public float hdop, vdop;
+/* global
+        public float pdop, hdop, vdop;
+*/
         public float altitude;
 /* unused
         public float geoidh;
@@ -374,7 +395,9 @@ public final class NmeaParser {
             this.timestamp = -1;
             this.lat = this.lon = Double.NaN;
             this.fix = this.sat = -1;
-            this.hdop = this.vdop = -1F;
+/*
+            this.pdop = this.hdop = this.vdop = -1F;
+*/
             this.altitude = Float.NaN;
             this.status = '?';
             this.speed = this.angle = -1F;
@@ -392,8 +415,12 @@ public final class NmeaParser {
                     gga.fix = 1;
                 break;
             }
+/* global
+            gga.pdop = gsa.pdop;
             gga.hdop = gsa.hdop;
             gga.vdop = gsa.vdop;
+*/
+
             return gga;
         }
     }

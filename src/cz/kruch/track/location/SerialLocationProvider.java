@@ -96,9 +96,15 @@ public class SerialLocationProvider extends StreamReadingLocationProvider implem
                 thread = null; // gc hint
             }
 
-            // give hardware a while
-            if (lastState == LocationProvider._STALLED) {
+            // not so fast
+            if (lastState == LocationProvider._STALLED) { // give hardware a while
                 refresh();
+            } else { // take your time
+                try {
+                    Thread.sleep(2500);
+                } catch (InterruptedException e) {
+                    // ignore
+                }
             }
         }
 
@@ -128,6 +134,7 @@ public class SerialLocationProvider extends StreamReadingLocationProvider implem
 //#endif
 
             // record
+            setStatus("Top level error");
             setThrowable(t);
 
         } finally {
@@ -168,14 +175,14 @@ public class SerialLocationProvider extends StreamReadingLocationProvider implem
             if (stream != null) {
                 try {
                     stream.close(); // hopefully forces a thread blocked in read() to receive IOException
-                } catch (IOException e) {
+                } catch (Throwable t) {
                     // ignore
                 }
             }
             if (connection != null) {
                 try {
                     connection.close(); // seems to help too
-                } catch (IOException e) {
+                } catch (Throwable t) {
                     // ignore
                 }
             }
@@ -287,10 +294,14 @@ public class SerialLocationProvider extends StreamReadingLocationProvider implem
             stream = connection.openInputStream();
 
             // clear error
+            setStatus(null);
             setThrowable(null);
 
             // start watcher
             startWatcher();
+
+            // reset data
+            reset();
 
             // read NMEA until error or stop request
             for (; go ;) {
@@ -308,6 +319,7 @@ public class SerialLocationProvider extends StreamReadingLocationProvider implem
 //#endif
 
                     // record
+                    setStatus("I/O error");
                     setThrowable(e);
 
                     /*
@@ -370,7 +382,7 @@ public class SerialLocationProvider extends StreamReadingLocationProvider implem
                 if (stream != null) {
                     try {
                         stream.close();
-                    } catch (IOException e) {
+                    } catch (Throwable t) {
                         // ignore
                     } finally {
                         stream = null;
@@ -381,7 +393,7 @@ public class SerialLocationProvider extends StreamReadingLocationProvider implem
                 if (connection != null) {
                     try {
                         connection.close();
-                    } catch (IOException e) {
+                    } catch (Throwable t) {
                         // ignore
                     } finally {
                         connection = null;

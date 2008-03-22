@@ -260,14 +260,13 @@ public final class FileBrowser implements CommandListener, Runnable {
     }
 
     /**
-     * Sorts enumeration of strings and creates list.
+     * Sorts enumeration of strings and creates array.
      * TODO optimize - how to find out size of enumeration???
-     * @param title list title
      * @param items enumeration of strings
      * @param head first entry; can be <tt>null</tt>
      * @return list
      */
-    public static List sort2list(String title, Enumeration items, String head) {
+    public static String[] sort2array(Enumeration items, String head) {
         // enum to list
         Vector v = new Vector(16, 16);
         if (head != null) {
@@ -278,7 +277,7 @@ public final class FileBrowser implements CommandListener, Runnable {
         }
 
         // list to array
-        String[] array = new String[v.size()];
+        final String[] array = new String[v.size()];
         v.copyInto(array);
 
         // gc hint
@@ -288,8 +287,20 @@ public final class FileBrowser implements CommandListener, Runnable {
         // sort array
         quicksort(array, 0, array.length - 1);
 
-        // return list
-        return new List(title, List.IMPLICIT, array, null);
+        // result
+        return array;
+    }
+
+    /**
+     * Sorts enumeration of strings and creates list.
+     * TODO optimize - how to find out size of enumeration???
+     * @param title list title
+     * @param items enumeration of strings
+     * @param head first entry; can be <tt>null</tt>
+     * @return list
+     */
+    public static List sort2list(String title, Enumeration items, String head) {
+        return new List(title, List.IMPLICIT, sort2array(items, head), null);
     }
 
     /**

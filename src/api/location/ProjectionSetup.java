@@ -37,12 +37,32 @@ public class ProjectionSetup {
     public static final String PROJ_FRANCE_III  = "(III) France Zone III";
     public static final String PROJ_FRANCE_IV   = "(IV) France Zone IV";
 
+    public static final int PROJECTION_MERCATOR     = 0;
+    public static final int PROJECTION_SUI          = 1;
+    public static final int PROJECTION_FRANCE_n     = 2;
+    public static final int PROJECTION_BNG          = 3;
+    public static final int PROJECTION_IG           = 4;
+
     public static ProjectionSetup contextProjection;
 
     public final String name;
+    public final int code;
 
     public ProjectionSetup(String name) {
         this.name = name;
+        if (PROJ_MERCATOR.equals(name)) {
+            this.code = PROJECTION_MERCATOR;
+        } else if (PROJ_SUI.equals(name)) {
+            this.code = PROJECTION_SUI;
+        } else if (name.indexOf("France Zone") > -1) {
+            this.code = PROJECTION_FRANCE_n;
+        } else if (PROJ_BNG.equals(name)) {
+            this.code = PROJECTION_BNG;
+        } else if (PROJ_IG.equals(name)) {
+            this.code = PROJECTION_IG;
+        } else {
+            this.code = -1;
+        }
     }
 
     public String toString() {

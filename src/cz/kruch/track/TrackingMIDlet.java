@@ -37,7 +37,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
     public static String version;
     public static boolean jsr82, jsr120, jsr135, jsr179, motorola179, comm;
     public static boolean sonyEricsson, nokia, siemens, lg, motorola;
-    public static boolean wm, jbed, palm, rim, symbian;
+    public static boolean wm, jbed, palm, rim, symbian, uiq;
     public static boolean sxg75, a780, s65;
 
     // diagnostics
@@ -91,17 +91,6 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
             System.out.println("* JSR-179");
 //#endif
         } catch (Throwable t) {
-            /* try Motorola-specific Location API */
-//#ifdef __ALL__
-            try {
-                Class.forName("com.motorola.location.PositionSource");
-                TrackingMIDlet.motorola179 = true;
-//#ifdef __LOG__
-                System.out.println("* Motorola-179");
-//#endif
-            } catch (Throwable throwable) {
-            }
-//#endif
         }
         try {
             Class.forName("javax.bluetooth.DiscoveryAgent");
@@ -135,7 +124,18 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
 //#endif
         } catch (Throwable t) {
         }
+
 //#ifdef __ALL__
+        /* try Motorola-specific Location API */
+        try {
+            Class.forName("com.motorola.location.PositionSource");
+            TrackingMIDlet.motorola179 = true;
+//#ifdef __LOG__
+            System.out.println("* Motorola-179");
+//#endif
+        } catch (Throwable throwable) {
+        }
+        /* detect Symbian */
         try {
             Class.forName("com.symbian.midp.io.protocol.http.Protocol");
             TrackingMIDlet.symbian = true;
@@ -143,6 +143,13 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
             System.out.println("* Symbian");
 //#endif
         } catch (Throwable t) {
+        }
+        if (sonyEricsson) {
+            try {
+                Class.forName("java.lang.ref.Reference");
+                TrackingMIDlet.uiq = true;
+            } catch (Throwable t) {
+            }
         }
 //#endif
     }

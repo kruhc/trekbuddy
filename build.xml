@@ -280,11 +280,8 @@
             <attribute name="MIDlet-Permissions-Opt" value="javax.microedition.io.Connector.file.read,javax.microedition.io.Connector.file.write,javax.microedition.io.Connector.bluetooth.client,javax.microedition.location.Location,javax.microedition.media.control.VideoControl.getSnapshot,javax.microedition.io.Connector.sms,javax.wireless.messaging.sms.receive,javax.wireless.messaging.sms.send,javax.microedition.io.Connector.comm,javax.microedition.io.Connector.cbs,javax.wireless.messaging.cbs.receive"/>
             <attribute name="Nokia-MIDlet-Category" value="Application"/>
             <midlet name="TrekBuddy" class="cz.kruch.track.TrackingMIDlet" icon="/resources/icon.png"/>
-<!--
-            <midlet name="TrekBuddy-Cfg" class="cz.kruch.track.ConfiguratorMIDlet"/>
--->
         </wtkjad>
-        <fixcrlf srcdir="tmp" eol="crlf" eof="remove" includes="trekbuddy${suffix}.jad"/>
+        <fixcrlf srcdir="tmp" eol="crlf" eof="remove" encoding="UTF-8" includes="trekbuddy${suffix}.jad"/>
     </target>
 
     <target name="a.pack" depends="create.tmp.jad">
@@ -441,28 +438,30 @@
             <attribute name="Nokia-MIDlet-Category" value="Application"/>
             <midlet name="TrekBuddy" class="cz.kruch.track.TrackingMIDlet" icon="/resources/icon.png"/>
         </wtkjad>
+        <fixcrlf srcdir="dist/${vendor.dir}/${dist.dir}" 
+                 eol="crlf" eof="remove" encoding="UTF-8" 
+                 includes="trekbuddy${suffix}.jad"/>
     </target>
 
     <target name="sign.and.update">
         <java jar="${wtk.home}\bin\JadTool.jar" fork="true">
-            <arg line="-addcert -certnum 1 -alias 'trekbuddy2008' -keystore keystores\trekbuddy2008.jks -inputjad dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad -outputjad dist/${vendor.dir}/${dist.dir}/_trekbuddy${suffix}.jad"/>
+            <arg line="-addcert -certnum 1 -alias 'trekbuddy2008' -keystore keystores\trekbuddy2008.jks -inputjad dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad -outputjad dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad"/>
         </java>
-        <move file="dist/${vendor.dir}/${dist.dir}/_trekbuddy${suffix}.jad" tofile="dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad"/>
         <java jar="${wtk.home}\bin\JadTool.jar" fork="true">
-            <arg line="-addcert -certnum 2 -alias 'trekbuddy2008' -keystore keystores\trekbuddy2008.jks -inputjad dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad -outputjad dist/${vendor.dir}/${dist.dir}/_trekbuddy${suffix}.jad"/>
+            <arg line="-addcert -certnum 2 -alias 'trekbuddy2008' -keystore keystores\trekbuddy2008.jks -inputjad dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad -outputjad dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad"/>
         </java>
-        <move file="dist/${vendor.dir}/${dist.dir}/_trekbuddy${suffix}.jad" tofile="dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad"/>
         <java jar="${wtk.home}\bin\JadTool.jar" fork="true">
-            <arg line="-addcert -certnum 3 -alias 'trekbuddy2008' -keystore keystores\trekbuddy2008.jks -inputjad dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad -outputjad dist/${vendor.dir}/${dist.dir}/_trekbuddy${suffix}.jad"/>
+            <arg line="-addcert -certnum 3 -alias 'trekbuddy2008' -keystore keystores\trekbuddy2008.jks -inputjad dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad -outputjad dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad"/>
         </java>
-        <move file="dist/${vendor.dir}/${dist.dir}/_trekbuddy${suffix}.jad" tofile="dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad"/>
         <java jar="${wtk.home}\bin\JadTool.jar" fork="true">
-            <arg line="-addjarsig -alias 'trekbuddy2008' -keystore keystores\trekbuddy2008.jks -keypass changeit -jarfile dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jar -inputjad dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad -outputjad dist/${vendor.dir}/${dist.dir}/_trekbuddy${suffix}.jad"/>
+            <arg line="-addjarsig -alias 'trekbuddy2008' -keystore keystores\trekbuddy2008.jks -keypass changeit -jarfile dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jar -inputjad dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad -outputjad dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad"/>
         </java>
-        <move file="dist/${vendor.dir}/${dist.dir}/_trekbuddy${suffix}.jad" tofile="dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad"/>
         <fixcrlf srcdir="dist/${vendor.dir}/${dist.dir}"
-                 eol="crlf" eof="remove"
+                 eol="crlf" eof="remove" encoding="UTF-8"
                  includes="trekbuddy${suffix}.jad"/>
+        <java jar="${wtk.home}\bin\JadTool.jar" fork="true">
+            <arg line="-showcert -all -inputjad dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad"/>
+        </java>
     </target>
 
     <target name="rim.rapc">

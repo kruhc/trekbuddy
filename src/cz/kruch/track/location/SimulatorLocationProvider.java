@@ -62,7 +62,7 @@ public final class SimulatorLocationProvider
     public int start() throws LocationException {
         (new FileBrowser(Resources.getString(Resources.DESKTOP_MSG_NMEA_PLAYBACK), this, Desktop.screen)).show();
 
-        return LocationProvider.TEMPORARILY_UNAVAILABLE;
+        return LocationProvider._STARTING;
     }
 
     public void stop() throws LocationException {
@@ -110,9 +110,6 @@ public final class SimulatorLocationProvider
             // open input
             in = file.openInputStream();
 
-            // notify
-            notifyListener(LocationProvider.TEMPORARILY_UNAVAILABLE);
-
             for (; go ;) {
 
                 Location location = null;
@@ -121,7 +118,7 @@ public final class SimulatorLocationProvider
                 try {
                     location = nextLocation(in, null);
                 } catch (IllegalStateException e) {
-                    Desktop.showError(e.getMessage(), null, null);
+                    Desktop.showError(e.getMessage(), null, null); // WTF?!?
                 } catch (Throwable t) {
 //#ifdef __LOG__
                     if (log.isEnabled()) log.warn("Failed to get location.", t);

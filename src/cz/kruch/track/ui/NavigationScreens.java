@@ -234,7 +234,7 @@ public final class NavigationScreens {
         return image;
     }
 
-    private static Image createImage(String res) throws IOException {
+    private static Image createImage(final String res) throws IOException {
         InputStream in = null;
         Image image = null;
 
@@ -258,7 +258,7 @@ public final class NavigationScreens {
     }
 
     public static void drawArrow(final int type,
-                                 Graphics graphics, final float course,
+                                 final Graphics graphics, final float course,
                                  final int x, final int y, final int anchor) {
         final Image image = arrows[type];
         final int size = arrowSize[type];
@@ -300,9 +300,13 @@ public final class NavigationScreens {
                     // should never happen
                     throw new IllegalArgumentException("Course over 360?");
             }
-            graphics.drawRegion(image,
-                                ci * size, 0, size, size,
-                                ti, x - size2, y - size2, anchor);
+            try { // Siemens hack - occasionally throws exception
+                graphics.drawRegion(image,
+                                    ci * size, 0, size, size,
+                                    ti, x - size2, y - size2, anchor);
+            } catch (IllegalArgumentException e) {
+                // ignore
+            }
         } else {
             int ci = courseInt / 10;
             int cr = courseInt % 10;
@@ -320,7 +324,7 @@ public final class NavigationScreens {
         }
     }
 
-    public static void drawWaypoint(Graphics graphics, final int x, final int y,
+    public static void drawWaypoint(final Graphics graphics, final int x, final int y,
                                     final int anchor) {
         graphics.drawImage(waypoint, x - wptSize2, y - wptSize2, anchor);
     }
@@ -340,7 +344,7 @@ public final class NavigationScreens {
         }
     }
 
-    public static void drawProviderStatus(Graphics graphics, final int status,
+    public static void drawProviderStatus(final Graphics graphics, final int status,
                                           final int x, final int y, final int anchor) {
         final int ci = status & 0x0000000f;
 
@@ -357,7 +361,7 @@ public final class NavigationScreens {
         }
     }
 
-    public static StringBuffer toStringBuffer(Location l, StringBuffer sb) {
+    public static StringBuffer toStringBuffer(final Location l, final StringBuffer sb) {
 /*
         DATE.setTime(timestamp);
         CALENDAR.setTime(DATE);
@@ -411,7 +415,7 @@ public final class NavigationScreens {
         return sb;
     }
 
-    public static StringBuffer toStringBuffer(QualifiedCoordinates qc, StringBuffer sb) {
+    public static StringBuffer toStringBuffer(final QualifiedCoordinates qc, final StringBuffer sb) {
         if (Config.useGridFormat && isGrid()) {
             if (isUTM()) {
                 toUTM(qc, sb);
@@ -455,7 +459,8 @@ public final class NavigationScreens {
         return sb;
     }
 
-    private static StringBuffer toUTM(QualifiedCoordinates qc, StringBuffer sb) {
+    private static StringBuffer toUTM(final QualifiedCoordinates qc,
+                                      final StringBuffer sb) {
         CartesianCoordinates utmCoords = Mercator.LLtoUTM(qc);
         sb.append(utmCoords.zone).append(' ');
         sb.append('E').append(' ');
@@ -490,6 +495,19 @@ public final class NavigationScreens {
         sb.append(' ');
         sb.append(qc.getLon() > 0D ? 'E' : 'W').append(' ');
         append(sb, QualifiedCoordinates.LON, qc.getLon(), Config.decimalPrecision);
+
+        return sb;
+    }
+
+    public static StringBuffer append(final StringBuffer sb, final QualifiedCoordinates qc,
+                                      final int mask) {
+        if ((mask & 1) != 0) {
+            sb.append(qc.getLat() > 0D ? 'N' : 'S').append(' ');
+            append(sb, QualifiedCoordinates.LAT, qc.getLat(), Config.decimalPrecision);
+        } else if ((mask & 2) != 0) {
+            sb.append(qc.getLon() > 0D ? 'E' : 'W').append(' ');
+            append(sb, QualifiedCoordinates.LON, qc.getLon(), Config.decimalPrecision);
+        }
 
         return sb;
     }

@@ -67,6 +67,11 @@ public abstract class StreamReadingLocationProvider extends LocationProvider {
         syncs = mismatches = checksums = restarts = stalls = errors = 0;
     }
 
+    protected void reset() {
+        btlineOffset = btlineCount = hack_rmc_count = 0;
+        gsa = null;
+    }
+
     protected final Location nextLocation(InputStream in, OutputStream observer) throws IOException, LocationException {
         // records
         NmeaParser.Record gga = null;
@@ -80,7 +85,7 @@ public abstract class StreamReadingLocationProvider extends LocationProvider {
             if (l == -1) {
                 return null;
             }
-
+                           
             // checksum check
             if (validate(line, l)) {
                 // parse known sentences
@@ -121,7 +126,9 @@ public abstract class StreamReadingLocationProvider extends LocationProvider {
                     if (gsa.fix != 3) { // not 3D fix - altitude is invalid
                         gga.altitude = Float.NaN;
                     }
+/* global
                     gga.vdop = gsa.vdop;
+*/
                 }
             }
 
@@ -145,8 +152,8 @@ public abstract class StreamReadingLocationProvider extends LocationProvider {
         final long datetime = rmc.date + rmc.timestamp;
         if (rmc.timestamp == gga.timestamp) {
             QualifiedCoordinates qc = QualifiedCoordinates.newInstance(rmc.lat, rmc.lon, gga.altitude);
-            qc.setHorizontalAccuracy(gga.hdop * 5);
-            qc.setVerticalAccuracy(gga.vdop * 5);
+            qc.setHorizontalAccuracy(/*gga.hdop*/NmeaParser.hdop * 5);
+            qc.setVerticalAccuracy(/*gga.vdop*/NmeaParser.vdop * 5);
             location = Location.newInstance(qc, datetime, rmc.status == 'A' ? gga.fix : 0, gga.sat);
         } else {
             location = Location.newInstance(QualifiedCoordinates.newInstance(rmc.lat, rmc.lon),
@@ -168,6 +175,7 @@ public abstract class StreamReadingLocationProvider extends LocationProvider {
         boolean match = false;
 
         final char[] line = this.line;
+        final byte[] btline = this.btline;
 
         while (c > -1) {
 

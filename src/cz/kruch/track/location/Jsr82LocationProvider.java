@@ -29,11 +29,8 @@ import javax.microedition.lcdui.List;
 import javax.microedition.lcdui.CommandListener;
 import javax.microedition.lcdui.Command;
 import javax.microedition.lcdui.Ticker;
-import javax.bluetooth.RemoteDevice;
-import javax.bluetooth.DeviceClass;
-import javax.bluetooth.ServiceRecord;
-import javax.bluetooth.BluetoothStateException;
 import java.util.Vector;
+import java.io.IOException;
 
 /**
  * Bluetooth GPS provider implementation.
@@ -48,7 +45,7 @@ public final class Jsr82LocationProvider extends SerialLocationProvider {
         /* BT turned on check */
         try {
             javax.bluetooth.LocalDevice.getLocalDevice();
-        } catch (javax.bluetooth.BluetoothStateException e) {
+        } catch (IOException e) {
             throw new LocationException(Resources.getString(Resources.DESKTOP_MSG_BT_OFF));
         }
     }
@@ -76,10 +73,11 @@ public final class Jsr82LocationProvider extends SerialLocationProvider {
         public Refresher() {
         }
 
-        public void deviceDiscovered(RemoteDevice remoteDevice, DeviceClass deviceClass) {
+        public void deviceDiscovered(javax.bluetooth.RemoteDevice remoteDevice,
+                                     javax.bluetooth.DeviceClass deviceClass) {
         }
 
-        public void servicesDiscovered(int i, ServiceRecord[] serviceRecords) {
+        public void servicesDiscovered(int i, javax.bluetooth.ServiceRecord[] serviceRecords) {
         }
 
         public void serviceSearchCompleted(int i, int i1) {
@@ -104,7 +102,7 @@ public final class Jsr82LocationProvider extends SerialLocationProvider {
                         }
                     }
                 }
-            } catch (BluetoothStateException e) {
+            } catch (javax.bluetooth.BluetoothStateException e) {
                 // ignore
             }
         }

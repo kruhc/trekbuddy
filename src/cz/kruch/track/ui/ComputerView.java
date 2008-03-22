@@ -89,7 +89,7 @@ final class ComputerView extends View implements Runnable, CommandListener {
         TAG_FONT, TAG_AREA, TAG_VALUE, ATTR_X, ATTR_Y, ATTR_H, ATTR_W, ATTR_ALIGN
     };
 
-    // special value
+    // special values
     private static final String TOKEN_COORDS        = "coords";
     private static final String TOKEN_TIME          = "time";
     private static final String TOKEN_TIME_T        = "time-t";
@@ -102,8 +102,14 @@ final class ComputerView extends View implements Runnable, CommandListener {
     private static final String TOKEN_WPT_ALT       = "wpt-alt";
     private static final String TOKEN_WPT_COORDS    = "wpt-coords";
     private static final String TOKEN_SNR           = "snr";
+    private static final String TOKEN_PRN           = "prn";
+    private static final String TOKEN_TIMER         = "timer";
+    private static final String TOKEN_LAT           = "lat";
+    private static final String TOKEN_LON           = "lon";
+    private static final String TOKEN_WPT_LAT       = "wpt-lat";
+    private static final String TOKEN_WPT_LON       = "wpt-lon";
 
-    // float values
+    // numeric values
     private static final String[] TOKENS_float = {
         "alt",
         "course",
@@ -128,10 +134,14 @@ final class ComputerView extends View implements Runnable, CommandListener {
         "asc-t",
         "desc-t",
         "sat",
-        "fix"
+        "fix",
+        "pdop",
+        "hdop",
+        "vdop",
+        "satv"
     };
 
-    // float values indexes
+    // numeric values indexes
     private static final int VALUE_ALT          = 0;
     private static final int VALUE_COURSE       = 1;
     private static final int VALUE_SPD          = 2;
@@ -156,6 +166,12 @@ final class ComputerView extends View implements Runnable, CommandListener {
     private static final int VALUE_DESC_T       = 21;
     private static final int VALUE_SAT          = 22;
     private static final int VALUE_FIX          = 23;
+    private static final int VALUE_PDOP         = 24;
+    private static final int VALUE_HDOP         = 25;
+    private static final int VALUE_VDOP         = 26;
+    private static final int VALUE_SATV         = 27;
+
+    // special values indexes
     private static final int VALUE_COORDS       = 1000;
     private static final int VALUE_TIME         = 1001;
     private static final int VALUE_TIME_T       = 1002;
@@ -167,7 +183,17 @@ final class ComputerView extends View implements Runnable, CommandListener {
     private static final int VALUE_WPT_VMG      = 1008;
     private static final int VALUE_WPT_ALT      = 1009;
     private static final int VALUE_WPT_COORDS   = 1010;
-    private static final int VALUE_SNR0         = 1100;
+    private static final int VALUE_TIMER        = 1011;
+    private static final int VALUE_LAT          = 1012;
+    private static final int VALUE_LON          = 1013;
+    private static final int VALUE_WPT_LAT      = 1014;
+    private static final int VALUE_WPT_LON      = 1015;
+
+    // eve more special
+    private static final int VALUE_SNR0         = 1100; // 12 slots
+    private static final int VALUE_PRN0         = 1112; // 12 slots
+
+    // sign "index"
     private static final int VALUE_SIGN         = 2000;
 
     // charset
@@ -197,8 +223,7 @@ final class ComputerView extends View implements Runnable, CommandListener {
         public String fontName;
         public Object fontImpl;
         public char[] value;
-        public boolean ralign;
-        public float cw;
+        public boolean ralign;        public float cw;
         public short ch;
         public short index = -1;
 
@@ -209,14 +234,14 @@ final class ComputerView extends View implements Runnable, CommandListener {
 
     private SimpleCalendar TIME_CALENDAR, ETA_CALENDAR;
     private CharArrayTokenizer tokenizer;
-    private char[] text;
     private StringBuffer sb;
+    private char[] text;
 
     /* profile vars */
     private Integer units;
     private Vector areas;
-    private int[] colors;
     private Image backgroundImage;
+    private int[] colors;
 
     /* shared among profiles */
     private Hashtable fonts, fontsPng, backgrounds;
@@ -224,7 +249,8 @@ final class ComputerView extends View implements Runnable, CommandListener {
     /* profiles and current profile */
     private String status;
     private Hashtable profiles;
-    private int iProfile;
+    private String[] profilesNames;
+    private int profileIdx;
 
     /* trip vars */
     private volatile QualifiedCoordinates valueCoords, snrefCoords;
@@ -294,9 +320,11 @@ final class ComputerView extends View implements Runnable, CommandListener {
         altLast = Float.NaN;
         altDiff = 0F;
 */
+        final float[] valuesFloat = this.valuesFloat;
         for (int i = valuesFloat.length; --i >= 0; ) {
             valuesFloat[i] = 0F;
         }
+        final float[] spdavgFloat = this.spdavgFloat;
         for (int i = spdavgFloat.length; --i >= 0; ) {
             spdavgFloat[i] = -1F;
         }
@@ -308,7 +336,8 @@ final class ComputerView extends View implements Runnable, CommandListener {
         if (!isUsable()) {
             return isVisible ? Desktop.MASK_SCREEN : Desktop.MASK_NONE;
         }
-
+        
+        // timestamp
         final long t = l.getTimestamp();
 
         // calculate time diff
@@ -470,23 +499,35 @@ final class ComputerView extends View implements Runnable, CommandListener {
     }
 
     public int handleAction(final int action, final boolean repeated) {
-        switch (action) {
-            case Canvas.DOWN: {
-                if (profiles.size() > 1) {
-                    final List list = new List(Resources.getString(Resources.DESKTOP_MSG_PROFILES), List.IMPLICIT);
-                    for (final Enumeration e = profiles.keys(); e.hasMoreElements(); ) {
-                        final String name = (String) e.nextElement();
-                        if (!name.equals(Config.cmsProfile)) {
-                            list.append(name, null);
+        if (profilesNames.length > 1) {
+            switch (action) {
+                case Canvas.LEFT:
+                case Canvas.RIGHT: {
+                    if (action == Canvas.LEFT) {
+                        if (--profileIdx < 0) {
+                            profileIdx = profilesNames.length - 1;
                         }
+                    } else {
+                        if (++profileIdx == profilesNames.length) {
+                            profileIdx = 0;
+                        }
+                    }
+                    _profileName = profilesNames[profileIdx];
+                    LoaderIO.getInstance().enqueue(this);
+                } break;
+                case Canvas.DOWN: {
+                    final List list = new List(Resources.getString(Resources.DESKTOP_MSG_PROFILES), List.IMPLICIT);
+                    final String[] names = this.profilesNames;
+                    for (int N = names.length, i = 0; i < N; i++) {
+                        list.setSelectedIndex(list.append(names[i], null), names[i].equals(Config.cmsProfile));
                     }
                     list.addCommand(new Command(Resources.getString(Resources.CMD_CANCEL), Command.CANCEL, 0));
                     list.setCommandListener(this);
                     Desktop.display.setCurrent(list);
-                }
-            } break;
+                } break;
+            }
         }
-        
+
         return super.handleAction(action, repeated);
     }
 
@@ -506,8 +547,8 @@ final class ComputerView extends View implements Runnable, CommandListener {
                 // load new profile
                 loadViaCache(name);
 
-                // colorify
-                changeDayNight(Config.dayNight);
+                // prepare profile
+                prepare(Config.dayNight);
 
                 // update desktop
                 navigator.update(Desktop.MASK_SCREEN);
@@ -525,7 +566,7 @@ final class ComputerView extends View implements Runnable, CommandListener {
             if (File.isFs()) {
                 try {
                     // find profiles
-                    fillProfiles(profiles);
+                    fillProfiles();
 
                     // got something?
                     String s = null;
@@ -543,8 +584,8 @@ final class ComputerView extends View implements Runnable, CommandListener {
                         // load default profile
                         loadViaCache(s);
 
-                        // adjust mode
-                        changeDayNight(Config.dayNight);
+                        // prepare profile
+                        prepare(Config.dayNight);
                     }
                 } catch (Throwable t) {
                     status = t.toString();
@@ -553,6 +594,90 @@ final class ComputerView extends View implements Runnable, CommandListener {
 //#endif
                 }
             }
+        }
+    }
+
+    /* synchronized to avoid race-cond with rendering */
+    public synchronized void prepare(final int dayNight) {
+        // panel stuff
+        if (backgrounds != null) {
+
+            // get rid of existing panel
+            backgroundImage = null;
+
+            // prepare current screen background
+            final byte[] data = (byte[]) backgrounds.get(Config.cmsProfile);
+            if (data != null) {
+
+                // colorify
+                colorifyPng(data, colors[dayNight * 4 + 1]);
+
+                // create image
+                try {
+                    backgroundImage = Image.createImage(data, 0, data.length);
+                } catch (Throwable t) {
+                    // ignore
+                }
+
+            }
+        }
+
+        // areas stuff
+        final Vector areas = this.areas;
+        final Hashtable cache = this.fontsPng;
+        if (areas != null) {
+
+            // make sure image fonts are ready
+            for (int N = areas.size(), i = 0; i < N; i++) {
+                final Area area = (Area) areas.elementAt(i);
+                if (area.fontImpl == null) {
+                    try {
+
+                        // get cached bitmap font
+                        Image bitmap = (Image) cache.get(area.fontName);
+                        if (bitmap == null) { // create fresh new
+
+                            // get raw data
+                            final byte[] data = (byte[]) fonts.get(area.fontName);
+
+                            // colorify
+                            colorifyPng(data, colors[dayNight * 4 + 1]);
+
+                            // create and cache image
+                            try {
+
+                                // create image
+                                bitmap = Image.createImage(data, 0, data.length);
+
+                                // cache image
+                                cache.put(area.fontName, bitmap);
+
+                            } catch (Throwable t) {
+                                // ignore
+                            }
+                        }
+
+                        // use it in the area
+                        area.fontImpl = bitmap;
+                        area.cw = bitmap.getWidth() / CHARSET.length;
+                        area.ch = (short) bitmap.getHeight();
+
+                    } catch (Throwable t) {
+
+                        // fallback to ordinary font
+                        area.fontImpl = Desktop.font;
+//#ifdef __LOG__
+                        if (log.isEnabled()) log.error("failure", t);
+                        t.printStackTrace();
+//#endif
+                    }
+                }
+            }
+        }
+
+        // GC
+        if (Config.forcedGc) {
+            System.gc();
         }
     }
 
@@ -566,101 +691,41 @@ final class ComputerView extends View implements Runnable, CommandListener {
         if (Command.CANCEL != command.getCommandType()) {
 
             // get selection
-            List list = (List) displayable;
-            _profileName = list.getString(list.getSelectedIndex());
+            final List list = (List) displayable;
+            _profileName = list.getString(profileIdx = list.getSelectedIndex());
 
             // enqueue load task
             LoaderIO.getInstance().enqueue(this);
         }
     }
 
-    /* synchronized to avoid race-cond when switching profile or rendering */
+    /* synchronized to avoid race-cond with rendering */
     public synchronized int changeDayNight(final int dayNight) {
         if (!isUsable()) {
             return isVisible ? Desktop.MASK_SCREEN : Desktop.MASK_NONE;
         }
 
-        if (backgrounds != null) {
-            // colorify
-            for (Enumeration e = backgrounds.elements(); e.hasMoreElements(); ) {
-                // get raw data
-                final byte[] data = (byte[]) e.nextElement();
-                // colorify
-                colorifyPng(data, colors[dayNight * 4 + 1]);
-            }
-            // release current background
-            backgroundImage = null; // gc hint
-            // prepare current screen background
-            final byte[] data = (byte[]) backgrounds.get(Config.cmsProfile);
-            if (data != null) {
-                // create image
-                try {
-                    ByteArrayInputStream in = new ByteArrayInputStream(data);
-                    backgroundImage = NavigationScreens.createImage(in);
-                    in.close();
-                } catch (Throwable t) {
-                    // ignore
-                }
-            }
-        }
-
-        if (areas != null) {
-            // local refs for faster access
-            final Vector areas = this.areas;
-            final Hashtable fonts = this.fonts;
-            final Hashtable fontsPng = this.fontsPng;
-
-            // release refs for Image fonts
-            for (int N = areas.size(), i = 0; i < N; i++) {
-                final Area area = (Area) areas.elementAt(i);
-                if (area.fontImpl instanceof Image) {
-                    area.fontImpl = null;
-                }
-            }
-
-            // clear bitmap fonts images cache
-            fontsPng.clear();
-            System.gc(); // GC
-
-            // create image fonts
-            for (int N = areas.size(), i = 0; i < N; i++) {
-                final Area area = (Area) areas.elementAt(i);
-                if (area.fontImpl == null) {
-                    try {
-                        // get cached bitmap font
-                        Image bitmap = (Image) fontsPng.get(area.fontName);
-                        if (bitmap == null) { // create fresh new
-                            // get raw data
-                            final byte[] data = (byte[]) fonts.get(area.fontName);
-                            // colorify
-                            colorifyPng(data, colors[dayNight * 4 + 1]);
-                            //  byte input
-                            ByteArrayInputStream in = new ByteArrayInputStream(data);
-                            try {
-                                // create image
-                                bitmap = NavigationScreens.createImage(in);
-                                // cache image
-                                fontsPng.put(area.fontName, bitmap);
-                            } finally {
-                                in.close();
-                                in = null; // gc hint
-                            }
-                        }
-                        // use it in the area
-                        area.fontImpl = bitmap;
-                        area.cw = bitmap.getWidth() / CHARSET.length;
-                        area.ch = (short) bitmap.getHeight();
-                    } catch (Throwable t) {
-                        // fallback
-                        area.fontImpl = Desktop.font;
-//#ifdef __LOG__
-                        if (log.isEnabled()) log.error("failure", t);
-                        t.printStackTrace();
-//#endif
+        // get rid of bitmap fonts in all areas
+        final String[] names = this.profilesNames;
+        final Hashtable profiles = this.profiles;
+        for (int i = names.length; --i >= 0; ) {
+            Object o = profiles.get(names[i]);
+            if (o instanceof Object[]) {
+                Vector v = (Vector) ((Object[]) o)[0];
+                for (int N = v.size(), j = 0; j < N; j++) {
+                    final Area a = (Area) v.elementAt(j);
+                    if (a.fontImpl instanceof Image) {
+                        a.fontImpl = null;
                     }
                 }
             }
         }
+
+        // clear cache
+        fontsPng.clear();
+
+        // update current profile
+        prepare(dayNight);
 
         return isVisible ? Desktop.MASK_SCREEN : Desktop.MASK_NONE;
     }
@@ -760,6 +825,18 @@ final class ComputerView extends View implements Runnable, CommandListener {
                                         area.index = VALUE_WPT_COORDS;
                                     } else if (token.startsWith(TOKEN_SNR)) {
                                         area.index = (short) (VALUE_SNR0 + Integer.parseInt(token.toString().substring(3)));
+                                    } else if (token.startsWith(TOKEN_PRN)) {
+                                        area.index = (short) (VALUE_PRN0 + Integer.parseInt(token.toString().substring(3)));
+                                    } else if (token.equals(TOKEN_TIMER)) {
+                                        area.index = VALUE_TIMER;
+                                    } else if (token.equals(TOKEN_LAT)) {
+                                        area.index = VALUE_LAT;
+                                    } else if (token.equals(TOKEN_LON)) {
+                                        area.index = VALUE_LON;
+                                    } else if (token.equals(TOKEN_WPT_LAT)) {
+                                        area.index = VALUE_WPT_LAT;
+                                    } else if (token.equals(TOKEN_WPT_LON)) {
+                                        area.index = VALUE_WPT_LON;
                                     } else {
                                         area.index = -666;
                                     }
@@ -880,6 +957,18 @@ final class ComputerView extends View implements Runnable, CommandListener {
                                     }
                                     sb.append(c);
                                 } break;
+                                case VALUE_PDOP: {
+                                    NavigationScreens.append(sb, NmeaParser.pdop, 1);
+                                } break;
+                                case VALUE_HDOP: {
+                                    NavigationScreens.append(sb, NmeaParser.hdop, 1);
+                                } break;
+                                case VALUE_VDOP: {
+                                    NavigationScreens.append(sb, NmeaParser.vdop, 1);
+                                } break;
+                                case VALUE_SATV: {
+                                    NavigationScreens.append(sb, NmeaParser.satv);
+                                } break;
                                 case VALUE_COORDS: {
                                     if (valueCoords == null) {
                                         sb.append(MSG_NO_POSITION);
@@ -959,7 +1048,7 @@ final class ComputerView extends View implements Runnable, CommandListener {
                                             final double vmg = spdavgShort/*valuesFloat[VALUE_SPD]*/ * (Math.cos(Math.toRadians(valuesFloat[VALUE_COURSE] - azi)));
                                             if (vmg > 0F) {
                                                 final long dt = (long) (1000 * (dist / (vmg / 3.6F)));
-                                                long eta = timestamp + (dt < 0F ? 2 * -dt : dt);
+                                                final long eta = timestamp + (dt < 0F ? 2 * -dt : dt);
                                                 ETA_CALENDAR.setTime(eta);
                                                 printTime(sb, ETA_CALENDAR.get(Calendar.HOUR_OF_DAY),
                                                               ETA_CALENDAR.get(Calendar.MINUTE),
@@ -1010,6 +1099,34 @@ final class ComputerView extends View implements Runnable, CommandListener {
                                         NavigationScreens.toStringBuffer(qc, sb);
                                     }
                                 } break;
+                                case VALUE_TIMER: {
+                                    sb.append((timestamp / 1000) % 10);
+                                } break;
+                                case VALUE_LAT:
+                                case VALUE_LON: {
+                                    if (valueCoords == null) {
+                                        sb.append(MSG_NO_POSITION);
+                                    } else {
+                                        final int m = idx == VALUE_LAT ? 1 : 2;
+                                        if (Config.useGeocachingFormat || Config.useUTM) {
+                                            NavigationScreens.append(sb, valueCoords, m);
+                                        } else {
+                                            QualifiedCoordinates localQc = navigator.getMap().getDatum().toLocal(valueCoords);
+                                            NavigationScreens.append(sb, localQc, m);
+                                            QualifiedCoordinates.releaseInstance(localQc);
+                                        }
+                                    }
+                                } break;
+                                case VALUE_WPT_LAT:
+                                case VALUE_WPT_LON: {
+                                    final QualifiedCoordinates qc = navigator.getWptCoords();
+                                    if (qc == null) {
+                                        sb.append(MSG_NO_POSITION);
+                                    } else {
+                                        final int m = idx == VALUE_WPT_LAT ? 1 : 2;
+                                        NavigationScreens.append(sb, qc, m);
+                                    }
+                                } break;
                                 case VALUE_SNR0:
                                 case VALUE_SNR0 + 1:
                                 case VALUE_SNR0 + 2:
@@ -1022,7 +1139,21 @@ final class ComputerView extends View implements Runnable, CommandListener {
                                 case VALUE_SNR0 + 9:
                                 case VALUE_SNR0 + 10:
                                 case VALUE_SNR0 + 11: {
-                                    NavigationScreens.append(sb, NmeaParser.snr[idx - VALUE_SNR0]);
+                                    NavigationScreens.append(sb, NmeaParser.snrs[idx - VALUE_SNR0]);
+                                } break;
+                                case VALUE_PRN0:
+                                case VALUE_PRN0 + 1:
+                                case VALUE_PRN0 + 2:
+                                case VALUE_PRN0 + 3:
+                                case VALUE_PRN0 + 4:
+                                case VALUE_PRN0 + 5:
+                                case VALUE_PRN0 + 6:
+                                case VALUE_PRN0 + 7:
+                                case VALUE_PRN0 + 8:
+                                case VALUE_PRN0 + 9:
+                                case VALUE_PRN0 + 10:
+                                case VALUE_PRN0 + 11: {
+                                    NavigationScreens.append(sb, NmeaParser.prns[idx - VALUE_PRN0]);
                                 } break;
                                 case VALUE_SIGN: {
                                     sb.append(NavigationScreens.SIGN);
@@ -1062,7 +1193,9 @@ final class ComputerView extends View implements Runnable, CommandListener {
     }
 
     private boolean isUsable() {
-        return valuesFloat != null && profiles != null && profiles.size() != 0 && Config.cmsProfile != null && Config.cmsProfile.length() != 0;
+        return profiles != null && profiles.size() != 0 // got some profiles
+                && Config.cmsProfile != null && Config.cmsProfile.length() != 0 // got default profile
+                && valuesFloat != null; // and initialized
     }
 
     private StringBuffer printTime(final StringBuffer sb,
@@ -1131,34 +1264,54 @@ final class ComputerView extends View implements Runnable, CommandListener {
     }
 
     private String loadViaCache(final String filename) {
+        // gc hint
+        areas = null;
+        colors = null;
+        units = null;
+
+        // try cache
         Object o = profiles.get(filename);
-        if (o == this) {
-//#ifdef __LOG__
-            if (log.isEnabled()) log.debug("load profile: " + filename);
-//#endif
-            colors = new int[8];
-            areas = new Vector(4, 4);
-            load(filename);
-            if (units == null) {
-                units = new Integer(Config.units);
-            }
-            profiles.put(filename, new Object[]{ areas, colors, units });
-        } else {
+        if (o instanceof Object[]) {
+
 //#ifdef __LOG__
             if (log.isEnabled()) log.debug("found cached profile: " + filename);
 //#endif
+            // populate members
             Object[] cached = (Object[]) o;
             areas = (Vector) cached[0];
             colors = (int[]) cached[1];
             units = (Integer) cached[2];
+
+        } else { // found
+
+//#ifdef __LOG__
+            if (log.isEnabled()) log.debug("load profile: " + filename);
+//#endif
+            // new vars
+            colors = new int[8];
+            areas = new Vector(4, 4);
+
+            // load from file
+            load(filename);
+
+            // fix vars
+            if (units == null) {
+                units = new Integer(Config.units);
+            }
+
+            // cache
+            profiles.put(filename, new Object[]{ areas, colors, units });
         }
 
+        // remember last selection
         Config.cmsProfile = filename;
+/* back up during shutdown
         try {
             Config.update(Config.VARS_090);
         } catch (ConfigurationException e) {
             // ignore
         }
+*/
 
         return filename;
     }
@@ -1206,7 +1359,7 @@ final class ComputerView extends View implements Runnable, CommandListener {
         return result;
     }
 
-    private void fillProfiles(final Hashtable profiles) throws IOException {
+    private void fillProfiles() throws IOException {
         File dir = null;
 
         try {
@@ -1215,11 +1368,9 @@ final class ComputerView extends View implements Runnable, CommandListener {
 
             // list file stores
             if (dir.exists()) {
-                for (final Enumeration e = dir.list(); e.hasMoreElements(); ) {
-                    final String name = ((String) e.nextElement()).toLowerCase();
-                    if (name.startsWith("cms.") && name.endsWith(".xml")) {
-                        profiles.put(name, this/* null not allowed */);
-                    }
+                profilesNames = FileBrowser.sort2array(dir.list("cms.*.xml", false), null);
+                for (int N = profilesNames.length, i = 0; i < N; i++) {
+                    profiles.put(profilesNames[i], this/* hack: null not allowed */);
                 }
             }
         } finally {
@@ -1456,7 +1607,7 @@ final class ComputerView extends View implements Runnable, CommandListener {
     }
 
     private static long calcCrc(final byte[] buf, int off, int len) {
-        int[] crc_table = CRC_TABLE;
+        final int[] crc_table = CRC_TABLE;
         int c = ~0;
         while (--len >= 0)
             c = crc_table[(c ^ buf[off++]) & 0xff] ^ (c >>> 8);

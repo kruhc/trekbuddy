@@ -1381,6 +1381,15 @@ public final class Desktop extends GameCanvas
             // ignore
         }
 
+        // hacks
+        if (cz.kruch.track.TrackingMIDlet.uiq) {
+            switch (i) {
+                case KEY_NUM0:
+                    action = 0;
+                break;
+            }
+        }
+
         switch (action) {
             
             case Canvas.UP:
@@ -2807,6 +2816,9 @@ public final class Desktop extends GameCanvas
                             throw new IllegalStateException("NPE in view #" + i);
                         }
                     }
+
+                    // release instance
+                    Location.releaseInstance(l);
 
                     // update screen
                     update(mask);

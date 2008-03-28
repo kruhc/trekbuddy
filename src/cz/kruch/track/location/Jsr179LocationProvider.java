@@ -250,16 +250,10 @@ public final class Jsr179LocationProvider
             float course = l.getCourse();
             float accuracy = xc.getHorizontalAccuracy();
 
-            if (Float.isNaN(spd)) {
-                spd = -1F;
-            }
             if (Float.isNaN(alt)) {
                 alt = Float.NaN;
             } else if (cz.kruch.track.TrackingMIDlet.sxg75) {
                 alt -= 540;
-            }
-            if (Float.isNaN(course)) {
-                course = -1F;
             }
             if (Float.isNaN(accuracy)) {
                 accuracy = -1F;

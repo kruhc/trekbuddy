@@ -164,7 +164,7 @@ final class MapView extends View {
     }
 
     /*private */void browsingOn() { // TODO fix visibility
-        mapViewer.setCourse(-1F);
+        mapViewer.setCourse(Float.NaN);
     }
 
     private void disposeRoute() {
@@ -423,8 +423,9 @@ final class MapView extends View {
                 localQc = null; // gc hint
 
                 // arrows
-                if (l.getCourse() > -1F) {
-                    mapViewer.setCourse(l.getCourse());
+                final float course = l.getCourse();
+                if (!Float.isNaN(course)) {
+                    mapViewer.setCourse(course);
                 }
                 if (Desktop.wpts != null) {
                     mapViewer.setNavigationCourse(navigator.wptAzimuth);

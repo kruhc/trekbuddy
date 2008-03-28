@@ -1020,7 +1020,7 @@ public final class Waypoints extends List
         int depth = 0;
         double lat = -1D;
         double lon = -1D;
-        float alt = -1F;
+        float alt = Float.NaN;
         String name = null;
         String comment = null;
 
@@ -1079,7 +1079,7 @@ public final class Waypoints extends List
                             v.addElement(new Waypoint(QualifiedCoordinates.newInstance(lat, lon, alt), name, comment));
                             // reset temps
                             lat = lon = -1D;
-                            alt = -1F;
+                            alt = Float.NaN;
                             name = comment = null;
                             // reset depth
                             depth = 0;

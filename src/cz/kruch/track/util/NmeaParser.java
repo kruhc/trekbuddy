@@ -398,9 +398,8 @@ public final class NmeaParser {
 /*
             this.pdop = this.hdop = this.vdop = -1F;
 */
-            this.altitude = Float.NaN;
+            this.altitude = this.speed = this.angle = Float.NaN;
             this.status = '?';
-            this.speed = this.angle = -1F;
         }
 
         public static Record copyGsaIntoGga(Record gsa) {

@@ -414,7 +414,7 @@ final class ComputerView extends View implements Runnable, CommandListener {
 
             // course, course-d
             final float course = l.getCourse();
-            if (course > -1F) {
+            if (!Float.isNaN(course)) {
                 valuesFloat[VALUE_COURSE_D] = course - valuesFloat[VALUE_COURSE];
                 valuesFloat[VALUE_COURSE] = course;
             }
@@ -424,7 +424,7 @@ final class ComputerView extends View implements Runnable, CommandListener {
 
             // spd, spd-d
             float f = l.getSpeed();
-            if (f > -1F) {
+            if (!Float.isNaN(f)) {
                 // to km/h
                 f *= 3.6F;
 

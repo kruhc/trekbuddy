@@ -95,7 +95,7 @@ final class MapViewer {
         this.slices = new Vector(4);
         this.slices2 = new Vector(4);
         this.sInfo = new char[32];
-        this.course = this.course2 = -1F;
+        this.course = this.course2 = Float.NaN;
 /*
         this.trajectory = new QualifiedCoordinates[TRAJECTORY_LENGTH];
         this.trajectoryX = new short[TRAJECTORY_LENGTH];
@@ -584,7 +584,7 @@ final class MapViewer {
         }
 
         // paint course
-        if (course > -1F) {
+        if (!Float.isNaN(course)) {
             NavigationScreens.drawArrow(NavigationScreens.ARROW_COURSE,
                                         graphics, course,
                                         chx + crosshairSize2,
@@ -593,7 +593,7 @@ final class MapViewer {
         }
 
         // paint navigation course
-        if (course2 > -1F) {
+        if (!Float.isNaN(course2)) {
             NavigationScreens.drawArrow(NavigationScreens.ARROW_NAVI,
                                         graphics, course2,
                                         chx + crosshairSize2,

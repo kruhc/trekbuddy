@@ -386,7 +386,7 @@ public final class NavigationScreens {
             final float alt = l.getQualifiedCoordinates().getAlt();
             switch (Config.units) {
                 case Config.UNITS_METRIC: {
-                    if (speed > -1F) {
+                    if (!Float.isNaN(speed)) {
                         NavigationScreens.append(sb, speed * 3.6F, 1).append(STR_KMH);
                     }
                     if (!Float.isNaN(alt)) {
@@ -394,7 +394,7 @@ public final class NavigationScreens {
                     }
                 } break;
                 case Config.UNITS_IMPERIAL: {
-                    if (speed > -1F) {
+                    if (!Float.isNaN(speed)) {
                         append(sb, speed * 3.6F / 1.609F, 1).append(STR_MPH);
                     }
                     if (!Float.isNaN(alt)) {
@@ -402,10 +402,10 @@ public final class NavigationScreens {
                     }
                 } break;
                 case Config.UNITS_NAUTICAL: {
-                    if (speed > -1F) {
+                    if (!Float.isNaN(speed)) {
                         append(sb, speed * 3.6F / 1.852F, 1).append(STR_KN);
                     }
-                    if (l.getCourse() > -1F) {
+                    if (!Float.isNaN(l.getCourse())) {
                         append(sb, (int) l.getCourse()).append(SIGN);
                     }
                 } break;

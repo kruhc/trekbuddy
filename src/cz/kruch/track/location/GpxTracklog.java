@@ -425,15 +425,15 @@ public final class GpxTracklog extends Thread {
                 cellid = System.getProperty("com.sonyericsson.net.cellid");
                 lac = System.getProperty("com.sonyericsson.net.lac");
             }
-            if (course > -1F || speed > -1F || cellid != null || lac != null) {
+            if (!Float.isNaN(course) || !Float.isNaN(speed) || cellid != null || lac != null) {
                 serializer.startTag(DEFAULT_NAMESPACE, ELEMENT_EXTENSIONS);
-                if (course > -1F) {
+                if (!Float.isNaN(course)) {
                     serializer.startTag(EXT_NAMESPACE, ELEMENT_COURSE);
                     i = doubleToChars(course, 1);
                     serializer.text(sbChars, 0, i);
                     serializer.endTag(EXT_NAMESPACE, ELEMENT_COURSE);
                 }
-                if (speed > -1F) {
+                if (!Float.isNaN(speed)) {
                     serializer.startTag(EXT_NAMESPACE, ELEMENT_SPEED);
                     i = doubleToChars(speed, 1);
                     serializer.text(sbChars, 0, i);
@@ -603,7 +603,7 @@ public final class GpxTracklog extends Thread {
                     // calculate course deviation
                     final float speed = location.getSpeed();
                     final float course = location.getCourse();
-                    if (course > -1F && speed > MIN_SPEED_WALK) {
+                    if (!Float.isNaN(course) && speed > MIN_SPEED_WALK) {
                         float diff = course - refCourse;
                         if (diff > 180F) {
                             diff -= 360F;

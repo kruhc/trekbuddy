@@ -55,6 +55,7 @@ public final class Location {
             result.coordinates = coordinates;
             result.timestamp = timestamp;
             result.fixsat = (fix << 8) & 0x0000ff00 | sat & 0x000000ff;
+            result.speed = result.course = Float.NaN;
         }
 
         return result;
@@ -89,7 +90,7 @@ public final class Location {
         this.coordinates = coordinates;
         this.timestamp = timestamp;
         this.fixsat = (fix << 8) & 0x0000ff00 | sat & 0x000000ff;
-        this.speed = this.course = -1F;
+        this.speed = this.course = Float.NaN;
     }
 
     protected Location(QualifiedCoordinates coordinates,

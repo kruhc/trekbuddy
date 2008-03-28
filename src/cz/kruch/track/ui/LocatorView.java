@@ -68,7 +68,7 @@ final class LocatorView extends View {
     private int dx, dy;
     private int lineLength;
 
-    private float lastCourse = -1F;
+    private float lastCourse = Float.NaN;
 
     private final int navigationStrWidth;
 
@@ -117,7 +117,7 @@ final class LocatorView extends View {
             }
             count[i] = position[i] = 0;
         }
-        lastCourse = -1F;
+        lastCourse = Float.NaN;
     }
 
     public int locationUpdated(Location l) {
@@ -129,7 +129,7 @@ final class LocatorView extends View {
         append(0, l.clone());
 
         // recalc
-        recalc();
+        recalc(l.getTimestamp());
 
         return isVisible ? Desktop.MASK_ALL : Desktop.MASK_NONE;
     }
@@ -179,7 +179,7 @@ final class LocatorView extends View {
         }
     }
 
-    private void recalc() {
+    private void recalc(final long timestamp) {
         // local ref for faster access
         final Location[] array = locations[0];
 
@@ -194,6 +194,9 @@ final class LocatorView extends View {
             if (l != null) {
                 final QualifiedCoordinates qc = l.getQualifiedCoordinates();
                 final float hAccuracy = qc.getHorizontalAccuracy();
+/*
+                System.out.println("haccuracy = " + hAccuracy);
+*/
                 if (hAccuracy != 0F && !Float.isNaN(hAccuracy)) {
                     final float w = 5F / hAccuracy;
                     accuracySum += hAccuracy;
@@ -220,7 +223,7 @@ final class LocatorView extends View {
 
             QualifiedCoordinates qc = QualifiedCoordinates.newInstance(latAvg, lonAvg);
             qc.setHorizontalAccuracy(accuracySum / c);
-            Location l = Location.newInstance(qc, -1, -1);
+            Location l = Location.newInstance(qc, timestamp, -1);
             append(1, l);
         }
 
@@ -363,18 +366,18 @@ final class LocatorView extends View {
         /* block */ {
             Location current = navigator.getLocation();
             if (current == null) {
-                course = -1F;
+                course = Float.NaN;
             } else {
                 course = current.getCourse();
             }
             boolean uptodate;
-            if (course == -1F) {
+            if (Float.isNaN(course)) {
                 course = lastCourse;
                 uptodate = false;
             } else {
                 uptodate = true;
             }
-            if (course > -1F) {
+            if (!Float.isNaN(course)) {
                 drawCompas(wHalf, hHalf, fh, graphics, course, uptodate);
                 lastCourse = course;
             }

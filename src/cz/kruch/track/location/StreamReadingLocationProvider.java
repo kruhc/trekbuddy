@@ -42,6 +42,7 @@ public abstract class StreamReadingLocationProvider extends LocationProvider {
     private static final char[] HEADER_GSV = { '$', 'G', 'P', 'G', 'S', 'V' };
     private static final char[] HEADER_RMC = { '$', 'G', 'P', 'R', 'M', 'C' };
 */
+    private static final int HEADER_$GP = 0x00244750;
     private static final int HEADER_GGA = 0x00474741;
     private static final int HEADER_GSA = 0x00475341;
     private static final int HEADER_GSV = 0x00475356;
@@ -50,7 +51,7 @@ public abstract class StreamReadingLocationProvider extends LocationProvider {
     private static final int HEADER_LENGTH = 6;
     private static final int BUFFER_SIZE = 512; // as recommended at Nokia forum
 
-    public static int syncs, mismatches, checksums, restarts, stalls, errors;
+    public static int syncs, mismatches, checksums, restarts, stalls, errors, pings;
 
     private final char[] line;
     private final byte[] btline;
@@ -64,7 +65,7 @@ public abstract class StreamReadingLocationProvider extends LocationProvider {
         super(name);
         this.line = new char[BUFFER_SIZE];
         this.btline = new byte[BUFFER_SIZE];
-        syncs = mismatches = checksums = restarts = stalls = errors = 0;
+        syncs = mismatches = checksums = restarts = stalls = errors = pings = 0;
     }
 
     protected void reset() {
@@ -122,13 +123,6 @@ public abstract class StreamReadingLocationProvider extends LocationProvider {
                     if (rmc != null) {
                         gga.timestamp = rmc.timestamp;
                     }
-                } else if (gga != null) {
-                    if (gsa.fix != 3) { // not 3D fix - altitude is invalid
-                        gga.altitude = Float.NaN;
-                    }
-/* global
-                    gga.vdop = gsa.vdop;
-*/
                 }
             }
 
@@ -145,6 +139,16 @@ public abstract class StreamReadingLocationProvider extends LocationProvider {
             }
         }
 
+        // alt correction
+        if (gsa != null) {
+            if (gsa.fix != 3) { // not 3D fix - altitude is invalid
+                gga.altitude = Float.NaN;
+            }
+/* global
+            gga.vdop = gsa.vdop;
+*/
+        }
+
         // new location
         Location location;
 
@@ -156,6 +160,9 @@ public abstract class StreamReadingLocationProvider extends LocationProvider {
             qc.setVerticalAccuracy(/*gga.vdop*/NmeaParser.vdop * 5);
             location = Location.newInstance(qc, datetime, rmc.status == 'A' ? gga.fix : 0, gga.sat);
         } else {
+//#ifdef __LOG__
+            if (log.isEnabled()) log.warn("unpaired sentences");
+//#endif
             location = Location.newInstance(QualifiedCoordinates.newInstance(rmc.lat, rmc.lon),
                                             datetime, rmc.status == 'A' ? 1 : 0);
             mismatches++;
@@ -273,10 +280,13 @@ public abstract class StreamReadingLocationProvider extends LocationProvider {
     }
 
     private static int getType(final char[] sentence, final int length) {
-        if (length < 6) {
-            return -1;
+        if (length >= HEADER_LENGTH) {
+            final int $gp = sentence[0] << 16 | sentence[1] << 8 | sentence[2];
+            if ($gp == HEADER_$GP) {
+                return sentence[3] << 16 | sentence[4] << 8 | sentence[5];
+            }
         }
 
-        return sentence[3] << 16 | sentence[4] << 8 | sentence[5];
+        return -1;
     }
 }

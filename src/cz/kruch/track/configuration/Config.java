@@ -112,8 +112,11 @@ public final class Config {
     public static String captureLocator     = "capture://video";
     public static String snapshotFormat     = EMPTY_STRING;
 
+    // group [Bluetooth provider options]
+    public static int btKeepAlive;
+
     // group [Simulator provider options]
-    public static int simulatorDelay        = 1000;
+    public static int simulatorDelay        = 1000; // ms
 
     // group [Internal provider options]
     private static String locationTimings   = EMPTY_STRING;
@@ -196,7 +199,7 @@ public final class Config {
             dataDir = "file:///4:/TrekBuddy/";
         } else if (cz.kruch.track.TrackingMIDlet.lg) {
             dataDir = "file:///Card/TrekBuddy/";
-        } else if (cz.kruch.track.TrackingMIDlet.wm || cz.kruch.track.TrackingMIDlet.jbed) {
+        } else if (cz.kruch.track.TrackingMIDlet.wm || cz.kruch.track.TrackingMIDlet.jbed || cz.kruch.track.TrackingMIDlet.intent) {
             dataDir = "file:///Storage%20Card/TrekBuddy/";
         } else if (cz.kruch.track.TrackingMIDlet.motorola || cz.kruch.track.TrackingMIDlet.a780) {
             dataDir = "file:///b/trekbuddy/";
@@ -377,6 +380,12 @@ public final class Config {
         } catch (Exception e) {
         }
 
+        // 0.9.77 extensions
+        try {
+            btKeepAlive = din.readInt();
+        } catch (Exception e) {
+        }
+
 //#ifdef __LOG__
         if (log.isEnabled()) log.info("configuration read");
 //#endif
@@ -444,6 +453,8 @@ public final class Config {
         dout.writeBoolean(gpxGsmInfo);
         /* since 0.9.74 */
         dout.writeInt(osdAlpha);
+        /* since 0.9.77 */
+        dout.writeInt(btKeepAlive);
 
 //#ifdef __LOG__
         if (log.isEnabled()) log.info("configuration updated");
@@ -736,21 +747,27 @@ public final class Config {
         return getDataDir() + FOLDER_SOUNDS;
     }
 
-    public static String getLocationTimings() {
-        if (locationTimings == null || locationTimings.length() == 0) {
+    public static String getLocationTimings(final int provider) {
+        String timings = "1,-1,-1";
+
 //#ifdef __ALL__
-            if (cz.kruch.track.TrackingMIDlet.a780) {
-                locationTimings = "2,2,-1"; /* from http://www.kiu.weite-welt.com/de.schoar.blog/?p=186 */
-            } else if (LOCATION_PROVIDER_MOTOROLA == locationProvider) {
-                locationTimings = "9999,1,2000";
-            } else
-//#endif            
-            {
-                locationTimings = "1,-1,-1";
-            }
+        switch (provider) {
+            case LOCATION_PROVIDER_JSR179:
+                if (cz.kruch.track.TrackingMIDlet.a780) {
+                    timings = "2,2,-1"; /* from http://www.kiu.weite-welt.com/de.schoar.blog/?p=186 */
+                }
+            break;
+            case LOCATION_PROVIDER_MOTOROLA:
+                timings = "9999,1,2000";
+            break;
+        }
+//#endif
+
+        if (provider == locationProvider && locationTimings != null && locationTimings.length() != 0) {
+            return locationTimings;
         }
 
-        return locationTimings;
+        return timings;
     }
 
     public static void setLocationTimings(String timings) {

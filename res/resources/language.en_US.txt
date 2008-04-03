@@ -229,7 +229,7 @@
 3610=Location Timings
 3611=Bluetooth
 3612=Internal
-3613=Serial
+3613=Stream
 3614=Simulator
 3615=Motorola
 3616=GPX Options
@@ -238,6 +238,7 @@
 3619=Filter Depth
 3620=log gsm info
 3621=HGE-100
+3622=Keep-alive (ms)
 
 # settings forms/fields/values (Navigation)
 3700=Wpt Proximity

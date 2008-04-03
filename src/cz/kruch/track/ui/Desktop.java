@@ -162,6 +162,7 @@ public final class Desktop extends GameCanvas
     private volatile LocationProvider provider;
     private volatile Object providerStatus;
     private volatile Throwable providerError;
+    private volatile Throwable tracklogError;
     private volatile boolean stopRequest;
     private volatile boolean providerRestart;
 
@@ -180,7 +181,7 @@ public final class Desktop extends GameCanvas
     // current waypoint info
     /*private */volatile float wptDistance, wptHeightDiff;
     /*private */volatile int wptAzimuth;
-    /*private */volatile int wptsId;
+    /*private */volatile int wptsId, wptsSize;
 
     // repeated event simulation for dumb devices
     private volatile TimerTask repeatedKeyCheck;
@@ -830,8 +831,10 @@ public final class Desktop extends GameCanvas
         }
         
         if (command == cmdInfo) {
-            (new InfoForm()).show(this, isTracking() ? provider.getThrowable() : providerError,
-                                  isTracking() ? provider.getStatus() : providerStatus, map);
+            (new InfoForm()).show(this,
+                                  isTracking() ? provider.getThrowable() : providerError,
+                                  tracklogError, isTracking() ? provider.getStatus() : providerStatus,
+                                  map);
         } else if (command == cmdSettings) {
             (new SettingsForm(new Event(Event.EVENT_CONFIGURATION_CHANGED))).show();
         } else if (command == cmdWaypoints) {
@@ -1184,15 +1187,15 @@ public final class Desktop extends GameCanvas
      * @deprecated should be?
      */
     public Waypoint getNavigateTo() {
-        return wpts == null || wptIdx < 0 ? null : ((Waypoint) wpts.elementAt(wptIdx));
+        return wpts == null || wptIdx == -1 ? null : ((Waypoint) wpts.elementAt(wptIdx));
     }
 
     public void setNavigateTo(Vector wpts, int fromIndex, int toIndex) {
-        // gc hint
-        Desktop.wpts = null;
-
         // 'route changed' flag
         boolean rchange = false;
+
+        // gc hint
+        Desktop.wpts = null;
 
         // start navigation?
         if (wpts != null) {
@@ -1200,6 +1203,7 @@ public final class Desktop extends GameCanvas
             // update state vars
             Desktop.navigating = true;
             Desktop.wpts = wpts;
+
             if (toIndex < 0) { // forward routing
                 Desktop.wptIdx = fromIndex;
                 Desktop.wptEndIdx = toIndex;
@@ -1222,9 +1226,10 @@ public final class Desktop extends GameCanvas
             }
 
             // detect route change
-            if (wpts.hashCode() != wptsId) {
-                // remember new route hash
+            if (wpts.hashCode() != wptsId || wpts.size() != wptsSize) {
+                // remember new route params
                 wptsId = wpts.hashCode();
+                wptsSize = wpts.size();
                 // set flag
                 rchange = true;
             }
@@ -1268,14 +1273,14 @@ public final class Desktop extends GameCanvas
     }
 
     public float getWptAlt() {
-        if (wpts == null) {
+        if (wpts == null || wptIdx == -1) {
             return Float.NaN;
         }
         return ((Waypoint) wpts.elementAt(wptIdx)).getQualifiedCoordinates().getAlt();
     }
 
     public QualifiedCoordinates getWptCoords() {
-        if (wpts == null) {
+        if (wpts == null || wptIdx == -1) {
             return null;
         }
         return ((Waypoint) wpts.elementAt(wptIdx)).getQualifiedCoordinates();
@@ -1817,6 +1822,9 @@ public final class Desktop extends GameCanvas
                 if (gpx != null) {
                     throw new IllegalStateException("GPX tracklog already started");
                 }
+
+                // clear error
+                tracklogError = null;
 
                 // start new tracklog
                 gpx = new GpxTracklog(GpxTracklog.LOG_TRK,
@@ -2376,7 +2384,6 @@ public final class Desktop extends GameCanvas
                             _target = "map";
                             startOpenMap(url, null);
                         }
-
                     } else if (throwable != null) {
                         showError("[1]", throwable, Desktop.screen);
                     }
@@ -2385,9 +2392,10 @@ public final class Desktop extends GameCanvas
 
                 case EVENT_TRACKLOG: {
 
+                    // everything ok?
                     if (throwable == null) {
                         if (result instanceof Integer) {
-                            int c = ((Integer) result).intValue();
+                            final int c = ((Integer) result).intValue();
                             switch (c) {
                                 case GpxTracklog.CODE_RECORDING_START:
                                     osd.setRecording(true);
@@ -2397,7 +2405,12 @@ public final class Desktop extends GameCanvas
                                     break;
                             }
                         }
+
                     } else {
+
+                        // store error
+                        tracklogError = throwable;
+
                         // display warning
                         showWarning(result == null ? Resources.getString(Resources.DESKTOP_MSG_TRACKLOG_ERROR) : result.toString(),
                                     throwable, Desktop.screen);

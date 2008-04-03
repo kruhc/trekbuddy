@@ -37,7 +37,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
     public static String version;
     public static boolean jsr82, jsr120, jsr135, jsr179, motorola179, comm;
     public static boolean sonyEricsson, nokia, siemens, lg, motorola;
-    public static boolean wm, jbed, palm, rim, symbian, uiq;
+    public static boolean wm, jbed, intent, palm, rim, symbian, uiq;
     public static boolean sxg75, a780, s65;
 
     // diagnostics
@@ -77,6 +77,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         lg = platform.startsWith("LG");
         wm = platform.startsWith("Windows CE");
         jbed = platform.startsWith("Jbed");
+        intent = platform.startsWith("intent");
         palm = platform.startsWith("Palm OS");
         sxg75 = "SXG75".equals(platform);
         a780 = "j2me".equals(platform);
@@ -272,7 +273,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
 //#endif
             cz.kruch.track.maps.Map.useReset = false;
         }
-        if (hasFlag("ui_no_partial_flush") || sxg75 || a780 || siemens || wm || palm) {
+        if (hasFlag("ui_no_partial_flush") || sxg75 || a780 || siemens || wm || jbed || intent || palm) {
 //#ifdef __LOG__
             System.out.println("* ui no-partial-flush feature on");
 //#endif

@@ -262,6 +262,7 @@ public final class Resources {
     public static final short CFG_LOCATION_FLD_FILTER_DEPTH     = 3619;
     public static final short CFG_LOCATION_FLD_GPX_LOG_GSM      = 3620;
     public static final short CFG_LOCATION_FLD_PROV_HGE100      = 3621;
+    public static final short CFG_LOCATION_FLD_BT_KEEP_ALIVE    = 3622;
     /* settings - navigation */
     public static final short CFG_NAVIGATION_FLD_WPT_PROXIMITY  = 3700;
     public static final short CFG_NAVIGATION_FLD_POI_PROXIMITY  = 3701;

@@ -36,7 +36,7 @@ import api.file.File;
  */
 final class InfoForm extends Form implements CommandListener {
 
-    private Throwable le;
+    private Throwable le, te;
     private Object ps;
     private Map map;
 
@@ -44,9 +44,11 @@ final class InfoForm extends Form implements CommandListener {
         super(Resources.prefixed(Resources.getString(Resources.DESKTOP_CMD_INFO)));
     }
 
-    public void show(Desktop desktop, Throwable le, Object ps, Map map) {
+    public void show(Desktop desktop, Throwable le, Throwable te,
+                     Object ps, Map map) {
         // members
         this.le = le;
+        this.te = te;
         this.ps = ps;
         this.map = map;
 
@@ -63,7 +65,7 @@ final class InfoForm extends Form implements CommandListener {
         Desktop.display.setCurrent(this);
     }
 
-    private void details(Throwable le, Object ps, Map map) {
+    private void details(Throwable le, Throwable te, Object ps, Map map) {
         // gc - for memory info to be correct...
         System.gc();
         final long totalMemory = Runtime.getRuntime().totalMemory();
@@ -91,7 +93,7 @@ final class InfoForm extends Form implements CommandListener {
         }
         sb.delete(0, sb.length()).append(System.getProperty("microedition.locale")).append(' ').append(System.getProperty("microedition.encoding"));
         append(newItem("I18n", sb.toString()));
-        sb.delete(0, sb.length()).append(File.fsType).append("; resetable? ").append(cz.kruch.track.maps.Map.fileInputStreamResetable);
+        sb.delete(0, sb.length()).append(File.fsType).append("; resetable? ").append(cz.kruch.track.maps.Map.fileInputStreamResetable).append("; private: ").append(System.getProperty("fileconn.dir.private"));
         append(newItem("Fs", sb.toString()));
         sb.delete(0, sb.length()).append(cz.kruch.track.TrackingMIDlet.hasPorts()).append("; ").append(System.getProperty("microedition.commports"));
         append(newItem("Ports", sb.toString()));
@@ -105,15 +107,21 @@ final class InfoForm extends Form implements CommandListener {
             sb.delete(0, sb.length()).append("datum: ").append(map.getDatum()).append("; projection: ").append(map.getProjection());
             append(newItem("Map", sb.toString()));
         }
-        sb.delete(0, sb.length()).append((ps == null ? "" : ps.toString())).append("; stalls=").append(cz.kruch.track.location.StreamReadingLocationProvider.stalls).append("; restarts=").append(cz.kruch.track.location.StreamReadingLocationProvider.restarts).append("; syncs=").append(cz.kruch.track.location.StreamReadingLocationProvider.syncs).append("; mismatches=").append(cz.kruch.track.location.StreamReadingLocationProvider.mismatches).append("; checksums=").append(cz.kruch.track.location.StreamReadingLocationProvider.checksums).append("; errors=").append(cz.kruch.track.location.StreamReadingLocationProvider.errors);
+        sb.delete(0, sb.length()).append((ps == null ? "" : ps.toString())).append("; stalls=").append(cz.kruch.track.location.StreamReadingLocationProvider.stalls).append("; restarts=").append(cz.kruch.track.location.StreamReadingLocationProvider.restarts).append("; syncs=").append(cz.kruch.track.location.StreamReadingLocationProvider.syncs).append("; mismatches=").append(cz.kruch.track.location.StreamReadingLocationProvider.mismatches).append("; checksums=").append(cz.kruch.track.location.StreamReadingLocationProvider.checksums).append("; errors=").append(cz.kruch.track.location.StreamReadingLocationProvider.errors).append("; pings=").append(cz.kruch.track.location.StreamReadingLocationProvider.pings);
         append(new StringItem("ProviderStatus", sb.toString()));
-        append(new StringItem("ProviderError", le == null ? "" : le.toString()));
+        if (le != null) {
+            append(new StringItem("ProviderError", le.toString()));
+        }
+        if (te != null) {
+            append(new StringItem("TracklogError", te.toString()));
+        }
     }
 
     public void commandAction(Command command, Displayable displayable) {
         if (command.getCommandType() == Command.BACK) {
             // gc hint
             this.le = null;
+            this.te = null;
             this.ps = null;
             this.map = null;
             // restore desktop UI
@@ -124,7 +132,7 @@ final class InfoForm extends Form implements CommandListener {
             // remove 'Details' command
             removeCommand(command);
             // show technical details
-            details(le, ps, map);
+            details(le, te, ps, map);
         }
     }
 

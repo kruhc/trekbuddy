@@ -29,8 +29,11 @@ import javax.microedition.lcdui.List;
 import javax.microedition.lcdui.CommandListener;
 import javax.microedition.lcdui.Command;
 import javax.microedition.lcdui.Ticker;
+import javax.microedition.io.StreamConnection;
 import java.util.Vector;
+import java.util.TimerTask;
 import java.io.IOException;
+import java.io.OutputStream;
 
 /**
  * Bluetooth GPS provider implementation.
@@ -38,6 +41,8 @@ import java.io.IOException;
  * @author Ales Pour <kruhc@seznam.cz>
  */
 public final class Jsr82LocationProvider extends SerialLocationProvider {
+
+    private Refresher kar;
 
     public Jsr82LocationProvider() throws LocationException {
         super("Bluetooth");
@@ -59,6 +64,25 @@ public final class Jsr82LocationProvider extends SerialLocationProvider {
         (new Refresher()).run();
     }
 
+    protected void startKeepAlive(StreamConnection c) {
+        if (Config.btKeepAlive != 0) {
+            try {
+                Desktop.timer.schedule(kar = new Refresher(c.openOutputStream()),
+                                       Config.btKeepAlive, Config.btKeepAlive);
+            } catch (IOException e) {
+                // ignore
+            }
+        }
+    }
+
+    protected void stopKeepAlive(StreamConnection c) {
+        if (kar != null) {
+            kar.cancel();
+            kar.close();
+            kar = null; // gc hint
+        }
+    }
+
     public int start() throws LocationException {
         // start BT discovery
         (new Discoverer()).start();
@@ -66,11 +90,21 @@ public final class Jsr82LocationProvider extends SerialLocationProvider {
         return LocationProvider._STARTING;
     }
 
-    private static final class Refresher implements javax.bluetooth.DiscoveryListener {
+    private static final class Refresher extends TimerTask implements javax.bluetooth.DiscoveryListener {
+        private static final int MODE_REFRESH       = 0;
+        private static final int MODE_KEEP_ALIVE    = 1;
+
+        private OutputStream os;
+        private int mode;
         private boolean done;
 
-        /** to avoid generation of $1 class */
         public Refresher() {
+            this.mode = MODE_REFRESH;
+        }
+
+        public Refresher(OutputStream os) {
+            this.mode = MODE_KEEP_ALIVE;
+            this.os = os;
         }
 
         public void deviceDiscovered(javax.bluetooth.RemoteDevice remoteDevice,
@@ -91,19 +125,43 @@ public final class Jsr82LocationProvider extends SerialLocationProvider {
         }
         
         public void run() {
-            try {
-                javax.bluetooth.LocalDevice.getLocalDevice().getDiscoveryAgent().startInquiry(javax.bluetooth.DiscoveryAgent.GIAC, this);
-                synchronized (this) {
-                    while (!done) {
-                        try {
-                            wait();
-                        } catch (InterruptedException e) {
-                            // should not happen
+            if (mode == MODE_REFRESH) {
+                try {
+                    javax.bluetooth.LocalDevice.getLocalDevice().getDiscoveryAgent().startInquiry(javax.bluetooth.DiscoveryAgent.GIAC, this);
+                    synchronized (this) {
+                        while (!done) {
+                            try {
+                                wait();
+                            } catch (InterruptedException e) {
+                                // should not happen
+                            }
                         }
                     }
+                } catch (javax.bluetooth.BluetoothStateException e) {
+                    // ignore
                 }
-            } catch (javax.bluetooth.BluetoothStateException e) {
-                // ignore
+            } else {
+                if (os != null) {
+                    try {
+                        os.write(0);
+                        pings++;
+                    } catch (IOException e) {
+                        cancel();
+                        close();
+                    }
+                }
+            }
+        }
+
+        public void close() {
+            if (os != null) {
+                try {
+                    os.close();
+                } catch (IOException e) {
+                    // ignore
+                } finally {
+                    os = null; // gc hint
+                }
             }
         }
     }

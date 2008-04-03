@@ -76,6 +76,12 @@ public class SerialLocationProvider extends StreamReadingLocationProvider implem
     protected void refresh() {
     }
 
+    protected void startKeepAlive(StreamConnection c) {
+    }
+
+    protected void stopKeepAlive() {
+    }
+
     public void run() {
         // diagnostics
         restarts++;
@@ -121,9 +127,6 @@ public class SerialLocationProvider extends StreamReadingLocationProvider implem
             // notify
             notifyListener(this.lastState = LocationProvider._STARTING);
 
-            // start NMEA log
-            startNmeaLog();
-
             // main loop
             gps();
 
@@ -138,11 +141,6 @@ public class SerialLocationProvider extends StreamReadingLocationProvider implem
             setThrowable(t);
 
         } finally {
-
-            // stop NMEA log on stop request
-            if (!go) {
-                stopNmeaLog();
-            }
 
             // be ready for restart
             go = false;
@@ -271,17 +269,19 @@ public class SerialLocationProvider extends StreamReadingLocationProvider implem
                 nmealog.close();
             } catch (IOException e) {
                 // ignore
+            } finally {
+                nmealog = null;
             }
-            nmealog = null;
         }
     }
 
     private void gps() throws IOException {
         final boolean isHge100 = cz.kruch.track.TrackingMIDlet.sonyEricsson && url.indexOf("AT5") > -1;
+        final boolean rw = isHge100 || Config.btKeepAlive != 0;
 
         try {
             // open connection
-            connection = (StreamConnection) Connector.open(url, isHge100 ? Connector.READ_WRITE : Connector.READ, true);
+            connection = (StreamConnection) Connector.open(url, rw ? Connector.READ_WRITE : Connector.READ, true);
 
             // HGE-100 hack
             if (isHge100) {
@@ -289,6 +289,9 @@ public class SerialLocationProvider extends StreamReadingLocationProvider implem
                 os.write("$STA\r\n".getBytes());
                 os.close();
             }
+
+            // start keep-alive
+            startKeepAlive(connection);
 
             // open stream for reading
             stream = connection.openInputStream();
@@ -299,6 +302,9 @@ public class SerialLocationProvider extends StreamReadingLocationProvider implem
 
             // start watcher
             startWatcher();
+
+            // start NMEA log
+            startNmeaLog();
 
             // reset data
             reset();
@@ -372,8 +378,16 @@ public class SerialLocationProvider extends StreamReadingLocationProvider implem
 
         } finally {
 
+            // stop keep-alive
+            stopKeepAlive();
+
             // stop watcher
             stopWatcher();
+
+            // stop NMEA log on stop request
+            if (!go) {
+                stopNmeaLog();
+            }
 
             // cleanup
             synchronized (this) {

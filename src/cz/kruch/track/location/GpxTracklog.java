@@ -109,14 +109,14 @@ public final class GpxTracklog extends Thread {
     private int type;
     private long time;
 
-    private boolean go;
+    private boolean go = true;
     private Object queue;
+    private TimerTask flusher;
 
     private Location refLocation;
     private float refCourse, courseDeviation;
-    private boolean reconnected;
-    private int count;
-    private int imgNum;
+    private int imgNum = 1;
+    private boolean force;
 
     public GpxTracklog(int type, Callback callback, String creator, long time) {
         this.type = type;
@@ -124,8 +124,6 @@ public final class GpxTracklog extends Thread {
         this.creator = creator;
         this.time = time;
         this.fileDate = dateToFileDate(time);
-        this.imgNum = 1;
-        this.go = true;
     }
 
     public long getTime() {
@@ -152,6 +150,8 @@ public final class GpxTracklog extends Thread {
     }
 
     public void run() {
+
+        // local vars
         File file = null;
         OutputStream output = null;
         Throwable throwable = null;
@@ -175,11 +175,8 @@ public final class GpxTracklog extends Thread {
             KXmlSerializer serializer = null;
 
             try {
-                /* buffering is in serializer by default in OutputStreamWriter */                
+                /* buffering is in serializer by default in OutputStreamWriter */
                 output = file.openOutputStream();
-
-                // signal recording start
-                callback.invoke(new Integer(CODE_RECORDING_START), null, this);
 
                 // init serializer
                 serializer = new KXmlSerializer();
@@ -199,9 +196,22 @@ public final class GpxTracklog extends Thread {
                     serializer.startTag(DEFAULT_NAMESPACE, ELEMENT_TRKSEG);
                 }
 
+                // signal recording start
+                callback.invoke(new Integer(CODE_RECORDING_START), null, this);
+
+                // start periodic flush
+                cz.kruch.track.ui.Desktop.timer.schedule(flusher = new TimerTask() {
+                    public void run() {
+//#ifdef __LOG__
+                        if (log.isEnabled()) log.debug("trigger flush at " + new Date());
+//#endif
+                        insert(Boolean.FALSE);
+                    }
+                }, 60000L, 60000L);
+
                 // pop items until end
                 for (; go ;) {
-                    Object item;
+                    final Object item;
                     synchronized (this) {
                         while (go && queue == null) {
                             try {
@@ -211,7 +221,7 @@ public final class GpxTracklog extends Thread {
                             }
                         }
                         item = queue;
-                        queue = null;
+                        queue = null; // gc hint
                     }
 
                     if (!go) break;
@@ -227,6 +237,9 @@ public final class GpxTracklog extends Thread {
                             serializer.endTag(DEFAULT_NAMESPACE, ELEMENT_TRKSEG);
                             serializer.startTag(DEFAULT_NAMESPACE, ELEMENT_TRKSEG);
                         }
+//#ifdef __LOG__
+                        if (log.isEnabled()) log.debug("flush at " + new Date());
+//#endif
                         serializer.flush();
                     } else if (item instanceof Waypoint) {
                         final Waypoint w = (Waypoint) item;
@@ -236,11 +249,9 @@ public final class GpxTracklog extends Thread {
                         }
                         serializeWpt(serializer, w);
                         serializer.flush();
+                        // TODO ugly
                         callback.invoke(new Integer(CODE_WAYPOINT_INSERTED), null, this);
                     }
-
-                    // gc hint
-                    item = null;
                 }
 
                 // signal recording stop
@@ -252,6 +263,12 @@ public final class GpxTracklog extends Thread {
                 callback.invoke(null, t, this);
 
             } finally {
+
+                // stop periodic flush
+                if (flusher != null) {
+                    flusher.cancel();
+                    flusher = null; // gc hint
+                }
 
                 // close XML
                 if (serializer != null) {
@@ -351,10 +368,10 @@ public final class GpxTracklog extends Thread {
                     serializer.text(FIX_NONE);
                 } break;
                 case 1:
-                    if (Float.isNaN(alt) || !l.isFix3d()) {
-                        serializer.text(FIX_2D);
-                    } else {
+                    if (l.isFix3d()) {
                         serializer.text(FIX_3D);
+                    } else {
+                        serializer.text(FIX_2D);
                     }
                     break;
                 case 2: {
@@ -528,7 +545,7 @@ public final class GpxTracklog extends Thread {
     public void insert(Location location) {
         synchronized (this) {
             freeLocationInQueue();
-            reconnected = true;
+            force = true;
             queue = location.clone();
             notify();
         }
@@ -537,7 +554,7 @@ public final class GpxTracklog extends Thread {
     public void insert(Boolean b) {
         synchronized (this) {
             freeLocationInQueue();
-            reconnected = b.booleanValue();
+            force = b.booleanValue();
             queue = b;
             notify();
         }
@@ -565,33 +582,30 @@ public final class GpxTracklog extends Thread {
             return location;
         }
 
-        if (refLocation == null) {
-            refLocation = location.clone();
+        final int fix = location.getFix();
+
+        if (fix <= 0 && Config.gpxOnlyValid) {
+            return null;
         }
 
         boolean bLog = false;
-        boolean bTimeDiff = (location.getTimestamp() - refLocation.getTimestamp()) > (Config.gpxDt * 1000);
 
-        if (reconnected) {
-            reconnected = false;
+        if (refLocation == null) {
+            refLocation = location.clone();
+            bLog = true;
+        } else if (force) {
+            force = false;
             bLog = true;
         }
 
-        final int fix = location.getFix();
-
-        if (fix > 0) {
-            if (++count == 3) {
-                bLog = true; // log start point (3rd valid position)
-            }
-        } else {
-            if (Config.gpxOnlyValid) {
-                return null;
-            }
-        }
+        final boolean bTimeDiff = (location.getTimestamp() - refLocation.getTimestamp()) > (Config.gpxDt * 1000);
 
         if (bTimeDiff) {
             bLog = true;
-        } else {
+        }
+
+        if (!bLog) { // no condition met yet, try ds, dt, deviation
+            
             if (fix > 0) {
 
                 // check logging criteria
@@ -638,16 +652,6 @@ public final class GpxTracklog extends Thread {
 
         if (bLog) {
 
-            /*
-             * last chance - if this is not time periodic log, skip
-             * dancing positions
-             */
-/*
-            if (!bTimeDiff && dance) {
-                return null;
-            }
-*/
-
             // use location as new reference
             Location.releaseInstance(refLocation);
             refLocation = null;
@@ -662,7 +666,7 @@ public final class GpxTracklog extends Thread {
         return null;
     }
 
-    private int dateToXsdDate(long timestamp) {
+    private int dateToXsdDate(final long timestamp) {
         date.setTime(timestamp);
         calendar.setTime(date);
 
@@ -693,7 +697,7 @@ public final class GpxTracklog extends Thread {
         return result;
     }
 
-    public static String dateToFileDate(long time) {
+    public static String dateToFileDate(final long time) {
         Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone("GMT"));
         calendar.setTime(new Date(time));
         StringBuffer sb = new StringBuffer(32);
@@ -707,7 +711,7 @@ public final class GpxTracklog extends Thread {
         return sb.toString();
     }
 
-    private static StringBuffer appendTwoDigitStr(StringBuffer sb, int i) {
+    private static StringBuffer appendTwoDigitStr(final StringBuffer sb, final int i) {
         if (i < 10) {
             sb.append('0');
         }

@@ -58,7 +58,7 @@ public final class Jsr179LocationProvider
         try {
             // prepare criteria
             CharArrayTokenizer tokenizer = new CharArrayTokenizer();
-            tokenizer.init(Config.getLocationTimings(), false);
+            tokenizer.init(Config.getLocationTimings(Config.LOCATION_PROVIDER_JSR179), false);
             final int interval = tokenizer.nextInt();
             final int timeout = tokenizer.nextInt();
             final int maxage = tokenizer.nextInt();

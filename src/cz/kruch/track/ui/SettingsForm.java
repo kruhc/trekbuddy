@@ -68,6 +68,7 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
     private TextField fieldSimulatorDelay;
     private TextField fieldLocationTimings;
     private TextField fieldCommUrl;
+    private TextField fieldBtKeepalive;
     private TextField fieldO2Depth;
     private ChoiceGroup choiceFriends;
     private ChoiceGroup choiceMisc;
@@ -314,8 +315,8 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
                     Config.gpxGsmInfo
                 });
 
-                fieldGpxDt = new TextField("GPX dt", Integer.toString(Config.gpxDt), 5, TextField.NUMERIC);
-                fieldGpxDs = new TextField("GPX ds", Integer.toString(Config.gpxDs), 5, TextField.NUMERIC);
+                fieldGpxDt = new TextField("GPX dt (s)", Integer.toString(Config.gpxDt), 5, TextField.NUMERIC);
+                fieldGpxDs = new TextField("GPX ds (m)", Integer.toString(Config.gpxDs), 5, TextField.NUMERIC);
 
                 if (cz.kruch.track.TrackingMIDlet.supportsVideoCapture()) {
                     fieldCaptureLocator = new TextField(Resources.getString(Resources.CFG_LOCATION_FLD_CAPTURE_LOCATOR), Config.captureLocator, 16, TextField.URL);
@@ -345,8 +346,11 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
             if (File.isFs()) {
                 fieldSimulatorDelay = new TextField(Resources.getString(Resources.CFG_LOCATION_FLD_SIMULATOR_DELAY), Integer.toString(Config.simulatorDelay), 8, TextField.NUMERIC);
             }
-            if (cz.kruch.track.TrackingMIDlet.jsr179) {
-                fieldLocationTimings = new TextField(Resources.getString(Resources.CFG_LOCATION_FLD_LOCATION_TIMINGS), Config.getLocationTimings(), 12, TextField.ANY);
+            if (cz.kruch.track.TrackingMIDlet.jsr82) {
+                fieldBtKeepalive = new TextField(Resources.getString(Resources.CFG_LOCATION_FLD_BT_KEEP_ALIVE), Integer.toString(Config.btKeepAlive), 6, TextField.NUMERIC);
+            }
+            if (cz.kruch.track.TrackingMIDlet.jsr179 || cz.kruch.track.TrackingMIDlet.motorola179) {
+                fieldLocationTimings = new TextField(Resources.getString(Resources.CFG_LOCATION_FLD_LOCATION_TIMINGS), "", 12, TextField.ANY);
             }
             if (cz.kruch.track.TrackingMIDlet.hasFlag("provider_o2_germany")) {
                 fieldO2Depth = new TextField(Resources.getString(Resources.CFG_LOCATION_FLD_FILTER_DEPTH), Integer.toString(Config.o2Depth), 2, TextField.NUMERIC);
@@ -380,12 +384,12 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
                     continue;
 
                 if (choiceTracklogFormat == affected) {
-                    if (fieldSimulatorDelay == item || fieldLocationTimings == item || fieldCommUrl == item || fieldO2Depth == item || choiceTracklog == item || choiceTracklogFormat == item)
+                    if (fieldSimulatorDelay == item || fieldLocationTimings == item || fieldCommUrl == item || fieldBtKeepalive == item || fieldO2Depth == item || choiceTracklog == item || choiceTracklogFormat == item)
                         continue;
                 }
 
                 if (choiceTracklog == affected) {
-                    if (fieldSimulatorDelay == item || fieldLocationTimings == item || fieldCommUrl == item || fieldO2Depth == item || choiceTracklog == item)
+                    if (fieldSimulatorDelay == item || fieldLocationTimings == item || fieldCommUrl == item || fieldBtKeepalive == item || fieldO2Depth == item || choiceTracklog == item)
                         continue;
                 }
 
@@ -400,8 +404,12 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
 
             if (choiceProvider == affected) {
                 switch (provider) {
+                    case Config.LOCATION_PROVIDER_JSR82:
+                        appendWithNewlineAfter(submenu, fieldBtKeepalive);
+                    break;
                     case Config.LOCATION_PROVIDER_JSR179:
                     case Config.LOCATION_PROVIDER_MOTOROLA:
+                        fieldLocationTimings.setString(Config.getLocationTimings(provider));
                         appendWithNewlineAfter(submenu, fieldLocationTimings);
                     break;
                     case Config.LOCATION_PROVIDER_SERIAL:
@@ -533,6 +541,12 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
                 }
                 if (cz.kruch.track.TrackingMIDlet.jsr179) {
                     Config.setLocationTimings(fieldLocationTimings.getString());
+                }
+                if (cz.kruch.track.TrackingMIDlet.jsr82) {
+                    Config.btKeepAlive = Integer.parseInt(fieldBtKeepalive.getString());
+                    if (Config.btKeepAlive > 0 && Config.btKeepAlive < 250) {
+                        Config.btKeepAlive = 250;
+                    }
                 }
                 if (cz.kruch.track.TrackingMIDlet.hasPorts()) {
                     Config.commUrl = fieldCommUrl.getString();

@@ -44,7 +44,7 @@ public final class Mercator {
         /*
          * UTM constructor.
          */
-        public ProjectionSetup(String name,
+        public ProjectionSetup(final String name,
                                final int zoneNumber, final char zoneLetter,
                                final double lonOrigin, final double latOrigin,
                                final double k0,
@@ -64,7 +64,7 @@ public final class Mercator {
         /*
          * Mercator and Transverse Mercator constructor.
          */
-        public ProjectionSetup(String name, char[] zone,
+        public ProjectionSetup(final String name, final char[] zone,
                                final double lonOrigin, final double latOrigin,
                                final double k0,
                                final double falseEasting, final double falseNorthing) {
@@ -83,7 +83,7 @@ public final class Mercator {
         /*
          * Lambert constructor.
          */
-        public ProjectionSetup(String name, char[] zone,
+        public ProjectionSetup(final String name, final char[] zone,
                                final double lonOrigin, final double latOrigin,
                                final double parallel1, final double parallel2,
                                final double falseEasting, final double falseNorthing) {
@@ -95,7 +95,7 @@ public final class Mercator {
             this.latOrigin = latOrigin;
             this.parallel1 = parallel1;
             this.parallel2 = parallel2;
-            this.k0 = 1D;
+            this.k0 = Double.NaN;
             this.falseEasting = falseEasting;
             this.falseNorthing = falseNorthing;
         }
@@ -106,14 +106,22 @@ public final class Mercator {
                 return super.toString();
             }
 
-            StringBuffer sb = new StringBuffer(32);
+            final StringBuffer sb = new StringBuffer(32);
             sb.append(name).append('{');
             if (zone != null) {
                 sb.append(zone).append(',');
             }
             sb.append(lonOrigin).append(',').append(latOrigin).append(',');
-            sb.append(k0);sb.append(',');
-            sb.append(falseEasting).append(',').append(falseNorthing).append('}');
+            if (!Double.isNaN(k0)) sb.append(k0);
+            sb.append(',');
+            if (!Double.isNaN(falseEasting)) sb.append(falseEasting);
+            sb.append(',');
+            if (!Double.isNaN(falseNorthing)) sb.append(falseNorthing);
+            sb.append(',');
+            if (!Double.isNaN(parallel1)) sb.append(parallel1);
+            sb.append(',');
+            if (!Double.isNaN(parallel2)) sb.append(parallel2);
+            sb.append('}');
 
             return sb.toString();
         }
@@ -127,9 +135,9 @@ public final class Mercator {
      * Projection setup helpers.
      */
 
-    private static ProjectionSetup cachedUtmSetup = null;
+    private static ProjectionSetup cachedUtmSetup;
 
-    public static ProjectionSetup getUTMSetup(QualifiedCoordinates qc) {
+    public static ProjectionSetup getUTMSetup(final QualifiedCoordinates qc) {
         final double lon = qc.getLon();
         final double lat = qc.getLat();
 
@@ -143,9 +151,9 @@ public final class Mercator {
             else if (lon >= 21D && lon < 33D) zoneNumber = 35;
             else if (lon >= 33D && lon < 42D) zoneNumber = 37;
         }
-        char zoneLetter = UTMLetterDesignator(lat);
-        double lonOrigin = (zoneNumber - 1) * 6 - 180 + 3; // +3 puts origin in middle of zone
-        double falseNorthing = lat < 0D ? 10000000D : 0D;
+        final char zoneLetter = UTMLetterDesignator(lat);
+        final double lonOrigin = (zoneNumber - 1) * 6 - 180 + 3; // +3 puts origin in middle of zone
+        final double falseNorthing = lat < 0D ? 10000000D : 0D;
 
         if (cachedUtmSetup != null) {
             if (cachedUtmSetup.lonOrigin == lonOrigin
@@ -165,7 +173,7 @@ public final class Mercator {
         return cachedUtmSetup;
     }
 
-    public static ProjectionSetup getMercatorSetup(Vector ll) {
+    public static ProjectionSetup getMercatorSetup(final Vector ll) {
         double lmin = Double.MAX_VALUE;
         double lmax = Double.MIN_VALUE;
 
@@ -222,13 +230,12 @@ public final class Mercator {
 
     private static Datum ntf;
 
-    public static CartesianCoordinates LLtoUTM(QualifiedCoordinates qc) {
+    public static CartesianCoordinates LLtoUTM(final QualifiedCoordinates qc) {
         return LLtoMercator(qc, Datum.DATUM_WGS_84.ellipsoid, getUTMSetup(qc));
     }
 
-    public static CartesianCoordinates LLtoGrid(QualifiedCoordinates qc) {
+    public static CartesianCoordinates LLtoGrid(final QualifiedCoordinates qc) {
         final CartesianCoordinates utm = LLtoMercator(qc, Datum.contextDatum.ellipsoid, (Mercator.ProjectionSetup) ProjectionSetup.contextProjection);
-        final String ctxProjectionName = ProjectionSetup.contextProjection.name;
 
         /*
          * handle specific grids
@@ -315,10 +322,10 @@ public final class Mercator {
         return utm;
     }
 
-    public static CartesianCoordinates LLtoMercator(QualifiedCoordinates qc,
-                                                    Ellipsoid ellipsoid,
-                                                    ProjectionSetup setup) {
-        CartesianCoordinates coords;
+    public static CartesianCoordinates LLtoMercator(final QualifiedCoordinates qc,
+                                                    final Ellipsoid ellipsoid,
+                                                    final ProjectionSetup setup) {
+        final CartesianCoordinates coords;
 
         switch (setup.code) {
 
@@ -395,6 +402,7 @@ public final class Mercator {
                 sinfi = Math.sin(fi);
                 lambda = Math.toRadians(localQc.getLon());
                 QualifiedCoordinates.releaseInstance(localQc);
+                localQc = null; // gc hint
 
                 final double t = Math.tan(Math.PI / 4 - fi / 2) / ExtraMath.pow(((1 - e * sinfi) / (1 + e * sinfi)), e / 2);
                 final double F = m1 / (n * ExtraMath.pow(t1, n));
@@ -406,6 +414,38 @@ public final class Mercator {
                 final double Y = setup.falseNorthing + ro0 - ro * Math.cos(theta);
 
                 coords = CartesianCoordinates.newInstance(setup.zone, X, Y);
+
+            } break;
+
+            case api.location.ProjectionSetup.PROJECTION_LCC: {
+
+                final double ecc = Math.sqrt(ellipsoid.getEccentricitySquared());
+                final double eccSquared = ellipsoid.getEccentricitySquared();
+                final double a = ellipsoid.getEquatorialRadius();
+
+                final double fi1 = Math.toRadians(setup.parallel1);
+                final double fi2 = Math.toRadians(setup.parallel2);
+                final double fi0 = Math.toRadians(setup.latOrigin);
+                final double fi = Math.toRadians(qc.getLat());
+                final double lambda = Math.toRadians(qc.getLon());
+                final double lambda0 = Math.toRadians(setup.lonOrigin);
+
+                final double m1 = Math.cos(fi1) / Math.sqrt(1 - eccSquared * Math.sin(fi1) * Math.sin(fi1));
+                final double m2 = Math.cos(fi2) / Math.sqrt(1 - eccSquared * Math.sin(fi2) * Math.sin(fi2));
+                final double t1 = Math.tan(Math.PI / 4 - fi1 / 2) / ExtraMath.pow((1 - ecc * Math.sin(fi1)) / (1 + ecc * Math.sin(fi1)), ecc / 2);
+                final double t2 = Math.tan(Math.PI / 4 - fi2 / 2) / ExtraMath.pow((1 - ecc * Math.sin(fi2)) / (1 + ecc * Math.sin(fi2)), ecc / 2);
+                final double t0 = Math.tan(Math.PI / 4 - fi0 / 2) / ExtraMath.pow((1 - ecc * Math.sin(fi0)) / (1 + ecc * Math.sin(fi0)), ecc / 2);
+                final double n = (ExtraMath.ln(m1) - ExtraMath.ln(m2)) / (ExtraMath.ln(t1) - ExtraMath.ln(t2));
+                final double F = m1 / (n * ExtraMath.pow(t1, n));
+                final double ro0 = a * F * ExtraMath.pow(t0, n);
+                final double t = Math.tan(Math.PI / 4 - fi / 2) / ExtraMath.pow((1 - ecc * Math.sin(fi)) / (1 + ecc * Math.sin(fi)), ecc / 2);
+                final double ro = a * F * ExtraMath.pow(t, n);
+                final double theta = n * (lambda - lambda0);
+
+                final double x = ro * Math.sin(theta);
+                final double y = ro0 - ro * Math.cos(theta);
+
+                coords = CartesianCoordinates.newInstance(setup.zone, x, y);
 
             } break;
 
@@ -453,10 +493,10 @@ public final class Mercator {
         return coords;
     }
 
-    public static QualifiedCoordinates MercatortoLL(CartesianCoordinates utm,
-                                                    Ellipsoid ellipsoid,
-                                                    ProjectionSetup setup) {
-        QualifiedCoordinates qc;
+    public static QualifiedCoordinates MercatortoLL(final CartesianCoordinates utm,
+                                                    final Ellipsoid ellipsoid,
+                                                    final ProjectionSetup setup) {
+        final QualifiedCoordinates qc;
 
         switch (setup.code) {
 
@@ -568,6 +608,45 @@ public final class Mercator {
                 QualifiedCoordinates.releaseInstance(localQc);
 
             } break;
+
+            case api.location.ProjectionSetup.PROJECTION_LCC: {
+
+                final double ecc = Math.sqrt(ellipsoid.getEccentricitySquared());
+                final double eccSquared = ellipsoid.getEccentricitySquared();
+                final double eccSquared4 = eccSquared * eccSquared;
+                final double eccSquared6 = eccSquared * eccSquared * eccSquared;
+                final double eccSquared8 = eccSquared * eccSquared * eccSquared * eccSquared;
+                final double a = ellipsoid.getEquatorialRadius();
+
+                final double x = utm.easting;
+                final double y = utm.northing;
+
+                final double fi1 = Math.toRadians(setup.parallel1);
+                final double fi2 = Math.toRadians(setup.parallel2);
+                final double fi0 = Math.toRadians(setup.latOrigin);
+                final double lambda0 = Math.toRadians(setup.lonOrigin);
+
+                final double m1 = Math.cos(fi1) / Math.sqrt(1 - eccSquared * Math.sin(fi1) * Math.sin(fi1));
+                final double m2 = Math.cos(fi2) / Math.sqrt(1 - eccSquared * Math.sin(fi2) * Math.sin(fi2));
+                final double t1 = Math.tan(Math.PI / 4 - fi1 / 2) / ExtraMath.pow((1 - ecc * Math.sin(fi1)) / (1 + ecc * Math.sin(fi1)), ecc / 2);
+                final double t2 = Math.tan(Math.PI / 4 - fi2 / 2) / ExtraMath.pow((1 - ecc * Math.sin(fi2)) / (1 + ecc * Math.sin(fi2)), ecc / 2);
+                final double t0 = Math.tan(Math.PI / 4 - fi0 / 2) / ExtraMath.pow((1 - ecc * Math.sin(fi0)) / (1 + ecc * Math.sin(fi0)), ecc / 2);
+                final double n = (ExtraMath.ln(m1) - ExtraMath.ln(m2)) / (ExtraMath.ln(t1) - ExtraMath.ln(t2));
+                final double F = m1 / (n * ExtraMath.pow(t1, n));
+                final double ro0 = a * F * ExtraMath.pow(t0, n);
+                final double theta = ExtraMath.atan(x / (ro0 - y));
+                final double lambda = theta / n + lambda0;
+                final double ro = Math.sqrt((x * x) + (ro0 - y) * (ro0 - y)) * (n < 0D ? -1 : 1);
+                final double t = ExtraMath.pow(ro / (a * F), 1 / n);
+                final double w = Math.PI / 2 - 2 * ExtraMath.atan(t);
+                final double fi = w + (eccSquared / 2 + 5 * eccSquared4 / 24 + eccSquared6 / 12 + 13 * eccSquared8 / 360) * Math.sin(2 * w)
+                                  + (7 * eccSquared4 / 48 + 29 * eccSquared6 / 240 + 811 * eccSquared8 / 11520) * Math.sin(4 * w)
+                                  + (7 * eccSquared6 / 120 + 81 * eccSquared8 / 1120) * Math.sin(6 * w)
+                                  + (4279 * eccSquared8 / 161280) * Math.sin(8 * w);
+
+                qc = QualifiedCoordinates.newInstance(Math.toDegrees(fi), Math.toDegrees(lambda));
+
+            } break;
             
             default: { // the rest is Transverse Mercator
 
@@ -627,7 +706,7 @@ public final class Mercator {
     }
 
     private static char UTMLetterDesignator(final double lat) {
-        char letterDesignator;
+        final char letterDesignator;
 
         if ((84D >= lat) && (lat >= 72D)) letterDesignator = 'X';
         else if ((72D > lat) && (lat >= 64D)) letterDesignator = 'W';

@@ -16,7 +16,6 @@
 
 package api.file;
 
-import javax.microedition.io.Connection;
 import javax.microedition.io.Connector;
 import javax.microedition.io.StreamConnection;
 import java.util.Enumeration;
@@ -97,14 +96,18 @@ public abstract class File {
         return registry.getRoots();
     }
 
-    public static File open(final Connection c) {
+    public static File open(final String url) {
+        return open(url, Connector.READ);
+    }
+
+    public static File open(final String url, final int mode) {
         try {
             if (factory == null) {
                 throw new IllegalStateException("No file API");
             }
 
             final File instance = (File) factory.newInstance();
-            instance.fc = (StreamConnection) c;
+            instance.fc = (StreamConnection) Connector.open(url, mode);
 
             return instance;
 

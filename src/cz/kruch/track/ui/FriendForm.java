@@ -34,11 +34,7 @@ import cz.kruch.track.Resources;
  * @author Ales Pour <kruhc@seznam.cz>
  */
 final class FriendForm extends Form implements CommandListener {
-    public static final String MENU_SEND;
-
-    static {
-        MENU_SEND = Resources.getString(Resources.NAV_CMD_SEND);
-    }
+    public static final String MENU_SEND = Resources.getString(Resources.NAV_CMD_SEND);
 
     private final Displayable next;
     private final Callback callback;

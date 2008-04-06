@@ -301,7 +301,7 @@ public final class Resources {
 //#ifdef __USERL10N__
         api.file.File file = null;
         try {
-            file = api.file.File.open(Connector.open(Config.getFolderResources() + "language.res", Connector.READ));
+            file = api.file.File.open(Config.getFolderResources() + "language.res");
             if (file.exists()) {
                 in = file.openInputStream();
                 result++;
@@ -364,7 +364,7 @@ public final class Resources {
 
         api.file.File file = null;
         try {
-            file = api.file.File.open(Connector.open(Config.getFolderResources() + "keymap.txt", Connector.READ));
+            file = api.file.File.open(Config.getFolderResources() + "keymap.txt");
             if (file.exists()) {
                 LineReader reader = null;
                 try {

@@ -221,7 +221,7 @@ public class SerialLocationProvider extends StreamReadingLocationProvider implem
 
                 try {
                     // create file
-                    file = File.open(Connector.open(Config.getFolderNmea() + GpxTracklog.dateToFileDate(System.currentTimeMillis()) + ".nmea", Connector.READ_WRITE));
+                    file = File.open(Config.getFolderNmea() + GpxTracklog.dateToFileDate(System.currentTimeMillis()) + ".nmea", Connector.READ_WRITE);
                     if (!file.exists()) {
                         file.create();
                     }

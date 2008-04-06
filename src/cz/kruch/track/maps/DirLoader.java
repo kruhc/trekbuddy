@@ -108,7 +108,7 @@ final class DirLoader extends Map.Loader implements Atlas.Loader {
             try {
                 // check for .set file
                 final String setFile = map.getPath().substring(0, map.getPath().lastIndexOf('.')) + ".set";
-                file = File.open(Connector.open(setFile, Connector.READ));
+                file = File.open(setFile);
                 if (file.exists()) {
                     LineReader reader = null;
                     try {
@@ -191,7 +191,7 @@ final class DirLoader extends Map.Loader implements Atlas.Loader {
 
         try {
             // open atlas dir
-            file = File.open(Connector.open(baseUrl, Connector.READ));
+            file = File.open(baseUrl);
 
             // pooled path holder
             final StringBuffer sb = new StringBuffer(32);

@@ -600,7 +600,7 @@ public final class Config {
         // next try user's
         File file = null;
         try {
-            file = File.open(Connector.open(Config.getFolderResources() + "datums.txt", Connector.READ));
+            file = File.open(Config.getFolderResources() + "datums.txt");
             if (file.exists()) {
                 initDatums(file.openInputStream(), tokenizer, delims);
             }

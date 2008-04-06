@@ -63,7 +63,7 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
 
         try {
             // open native file and stream
-            nativeFile = File.open(Connector.open(map.getPath(), Connector.READ));
+            nativeFile = File.open(map.getPath());
             in = nativeFile.openInputStream();
 
             /*
@@ -191,7 +191,7 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
         try {
             // check for .ser nativeFile
             final String tmiPath = map.getPath().substring(0, map.getPath().lastIndexOf('.')) + ".tmi";
-            file = File.open(Connector.open(tmiPath, Connector.READ));
+            file = File.open(tmiPath);
             if (file.exists()) {
 //#ifdef __LOG__
                 if (log.isEnabled()) log.debug("gonna use " + tmiPath);
@@ -361,7 +361,7 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
 
         try {
             // create stream
-            file = File.open(Connector.open(url, Connector.READ));
+            file = File.open(url);
             tar = new TarInputStream(in = file.openInputStream());
 
             // shared vars

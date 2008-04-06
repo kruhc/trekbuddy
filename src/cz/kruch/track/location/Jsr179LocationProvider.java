@@ -182,7 +182,7 @@ public final class Jsr179LocationProvider
 
                 try {
                     // create file
-                    file = File.open(Connector.open(path, Connector.READ_WRITE));
+                    file = File.open(path, Connector.READ_WRITE);
                     if (!file.exists()) {
                         file.create();
                     }

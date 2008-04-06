@@ -87,7 +87,7 @@ public final class FileBrowser implements CommandListener, Runnable {
                     try {
                         // try DataDir first
                         final String dataDir = Config.getDataDir();
-                        file = File.open(Connector.open(dataDir, Connector.READ));
+                        file = File.open(dataDir);
                         if (file.exists()) {
 
                             // calculate and fix depth
@@ -145,7 +145,7 @@ public final class FileBrowser implements CommandListener, Runnable {
 //#endif
 
                     // open root dir
-                    file = File.open(Connector.open(File.FILE_PROTOCOL + (path.startsWith("/") ? "" : "/") + path, Connector.READ));
+                    file = File.open(File.FILE_PROTOCOL + (path.startsWith("/") ? "" : "/") + path);
 
                 } else { // traverse
 //#ifdef __LOG__

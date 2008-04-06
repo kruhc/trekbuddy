@@ -188,7 +188,7 @@ public final class NavigationScreens {
         File file = null;
 
         try {
-            file = File.open(Connector.open(Config.getFolderResources() + name, Connector.READ));
+            file = File.open(Config.getFolderResources() + name);
             if (file.exists()) {
                 InputStream in = null;
                 try {

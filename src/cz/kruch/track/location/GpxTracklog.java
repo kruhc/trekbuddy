@@ -161,7 +161,7 @@ public final class GpxTracklog extends Thread {
 
         // try to create file - isolated operation
         try {
-            file = File.open(Connector.open(path, Connector.READ_WRITE));
+            file = File.open(path, Connector.READ_WRITE);
             if (!file.exists()) {
                 file.create();
             }
@@ -495,7 +495,7 @@ public final class GpxTracklog extends Thread {
 
             // check for 'Images' subdir existence
             final String imgdir = Config.getFolderWaypoints() + relPath + "/";
-            file = File.open(Connector.open(imgdir, Connector.READ_WRITE));
+            file = File.open(imgdir, Connector.READ_WRITE);
             if (!file.exists()) {
                 file.mkdir();
             }
@@ -506,7 +506,7 @@ public final class GpxTracklog extends Thread {
             final String fileName = "pic-" + imgNum++ + ".jpg";
 
             // save picture
-            file = File.open(Connector.open(imgdir + fileName, Connector.READ_WRITE));
+            file = File.open(imgdir + fileName, Connector.READ_WRITE);
             if (!file.exists()) {
                 file.create();
             }

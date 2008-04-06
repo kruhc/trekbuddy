@@ -1320,7 +1320,7 @@ final class ComputerView extends View implements Runnable, CommandListener {
         Object result = null;
         File file = null;
         try {
-            file = File.open(Connector.open(Config.getFolderProfiles() + filename, Connector.READ));
+            file = File.open(Config.getFolderProfiles() + filename);
             if (file.exists()) {
                 InputStream in = null;
                 try {
@@ -1364,7 +1364,7 @@ final class ComputerView extends View implements Runnable, CommandListener {
 
         try {
             // open stores directory
-            dir = File.open(Connector.open(Config.getFolderProfiles(), Connector.READ));
+            dir = File.open(Config.getFolderProfiles());
 
             // list file stores
             if (dir.exists()) {

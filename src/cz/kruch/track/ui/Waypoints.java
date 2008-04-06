@@ -627,7 +627,7 @@ public final class Waypoints extends List
             File dir = null;
             try {
                 // open stores directory
-                dir = File.open(Connector.open(Config.getFolderWaypoints(), Connector.READ));
+                dir = File.open(Config.getFolderWaypoints());
 
                 // list file stores
                 if (dir.exists()) {
@@ -787,7 +787,7 @@ public final class Waypoints extends List
             File file = null;
             try {
                 // open file
-                file = File.open(Connector.open(Config.getFolderWaypoints() + _storeName, Connector.READ));
+                file = File.open(Config.getFolderWaypoints() + _storeName);
 
                 // start ticker
                 list.setTicker(new Ticker(Resources.getString(Resources.NAV_MSG_TICKER_LOADING)));

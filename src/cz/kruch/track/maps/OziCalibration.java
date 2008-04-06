@@ -47,7 +47,7 @@ final class OziCalibration extends Calibration {
         super();
     }
 
-    void init(InputStream in, String path) throws IOException {
+    void init(final InputStream in, final String path) throws IOException {
         super.init(path);
 
         // line counter
@@ -58,8 +58,8 @@ final class OziCalibration extends Calibration {
         boolean almostDone = false;
 
         // vars
-        Vector xy = new Vector(4);
-        Vector ll = new Vector(4);
+        final Vector xy = new Vector(4);
+        final Vector ll = new Vector(4);
         Datum datum = null;
         ProjectionSetup projectionSetup = null;
         String projectionType = null;
@@ -147,9 +147,9 @@ final class OziCalibration extends Calibration {
                 xy.removeAllElements();
                 ll.removeAllElements();
 
-                if (ProjectionSetup.PROJ_TRANSVERSE_MERCATOR.equals(projectionType)) {
+                if (ProjectionSetup.PROJ_TRANSVERSE_MERCATOR.equals(projectionType) || ProjectionSetup.PROJ_LCC.equals(projectionType)) {
                     tokenizer.init(line, true);
-                    projectionSetup = parseProjectionSetup(tokenizer);
+                    projectionSetup = parseProjectionSetup(projectionType, tokenizer);
 //#ifdef __LOG__
                     if (log.isEnabled()) log.debug("projection setup parsed");
 //#endif
@@ -191,8 +191,8 @@ final class OziCalibration extends Calibration {
         doFinal(datum, projectionSetup, xy, ll);
     }
 
-    private static boolean parsePoint(CharArrayTokenizer tokenizer,
-                                      Vector xy, Vector ll/*, Vector utm*/) throws InvalidMapException {
+    private static boolean parsePoint(final CharArrayTokenizer tokenizer,
+                                      final Vector xy, final Vector ll/*, Vector utm*/) throws InvalidMapException {
         int index = 0;
         int x = -1;
         int y = -1;
@@ -265,7 +265,7 @@ final class OziCalibration extends Calibration {
         return true;
     }
 
-    private static String parseProjectionType(CharArrayTokenizer tokenizer) throws InvalidMapException {
+    private static String parseProjectionType(final CharArrayTokenizer tokenizer) throws InvalidMapException {
         try {
             tokenizer.next(); // skip "Map Projection"
             return tokenizer.next().toString().trim();
@@ -274,7 +274,7 @@ final class OziCalibration extends Calibration {
         }
     }
 
-    private static String parseDatum(CharArrayTokenizer tokenizer) throws InvalidMapException {
+    private static String parseDatum(final CharArrayTokenizer tokenizer) throws InvalidMapException {
         try {
             return tokenizer.next().toString().trim();
         } catch (Exception e) {
@@ -282,64 +282,84 @@ final class OziCalibration extends Calibration {
         }
     }
 
-    private static Mercator.ProjectionSetup parseProjectionSetup(CharArrayTokenizer tokenizer)
+    private static Mercator.ProjectionSetup parseProjectionSetup(final String projectionName,
+                                                                 final CharArrayTokenizer tokenizer)
             throws InvalidMapException {
 
         int index = 0;
         double latOrigin, lonOrigin;
         double k;
         double falseEasting, falseNorthing;
+        double parallel1, parallel2;
 
-        latOrigin = lonOrigin = k = falseEasting = falseNorthing = Double.NaN;
+        latOrigin = lonOrigin = k = parallel1 = parallel2 = falseEasting = falseNorthing = Double.NaN;
 
         try {
-            while (index <= 5 && tokenizer.hasMoreTokens()) {
+            while (index <= 7 && tokenizer.hasMoreTokens()) {
                 final CharArrayTokenizer.Token token = tokenizer.next();
                 if (token.isDelimiter) {
                     index++;
                 } else {
-                    switch (index) {
-                        case 1: {
-                            latOrigin = CharArrayTokenizer.parseDouble(token);
-                        } break;
-                        case 2: {
-                            lonOrigin = CharArrayTokenizer.parseDouble(token);
-                        } break;
-                        case 3: {
-                            k = CharArrayTokenizer.parseDouble(token);
-                        } break;
-                        case 4: {
-                            falseEasting = CharArrayTokenizer.parseDouble(token);
-                        } break;
-                        case 5: {
-                            falseNorthing = CharArrayTokenizer.parseDouble(token);
-                        } break;
+                    if (!token.isEmpty()) {
+                        switch (index) {
+                            case 1: {
+                                latOrigin = CharArrayTokenizer.parseDouble(token);
+                            } break;
+                            case 2: {
+                                lonOrigin = CharArrayTokenizer.parseDouble(token);
+                            } break;
+                            case 3: {
+                                k = CharArrayTokenizer.parseDouble(token);
+                            } break;
+                            case 4: {
+                                falseEasting = CharArrayTokenizer.parseDouble(token);
+                            } break;
+                            case 5: {
+                                falseNorthing = CharArrayTokenizer.parseDouble(token);
+                            } break;
+                            case 6: {
+                                parallel1 = CharArrayTokenizer.parseDouble(token);
+                            } break;
+                            case 7: {
+                                parallel2 = CharArrayTokenizer.parseDouble(token);
+                            } break;
+                        }
                     }
                 }
             }
 
-            // got valid data?
-            if (Double.isNaN(latOrigin) || Double.isNaN(lonOrigin)
-                    || Double.isNaN(k) || Double.isNaN(falseEasting) || Double.isNaN(falseNorthing)) {
-                throw new NumberFormatException("?");
+            if (!Double.isNaN(k)) {
+                if (Double.isNaN(latOrigin) || Double.isNaN(lonOrigin) || Double.isNaN(falseEasting) || Double.isNaN(falseNorthing)) {
+                    throw new InvalidMapException("Invalid Projection Setup");
+                }
+                return new Mercator.ProjectionSetup(projectionName,
+                                                    null,
+                                                    lonOrigin, latOrigin,
+                                                    k,
+                                                    falseEasting, falseNorthing);
+            } else {
+                if (Double.isNaN(latOrigin) || Double.isNaN(lonOrigin) || Double.isNaN(parallel1) || Double.isNaN(parallel2)) {
+                    throw new InvalidMapException("Invalid Projection Setup");
+                }
+                return new Mercator.ProjectionSetup(projectionName,
+                                                    null,
+                                                    lonOrigin, latOrigin,
+                                                    parallel1, parallel2,
+                                                    falseEasting, falseNorthing);
             }
-
-            return new Mercator.ProjectionSetup(ProjectionSetup.PROJ_TRANSVERSE_MERCATOR,
-                                                null,
-                                                lonOrigin, latOrigin,
-                                                k,
-                                                falseEasting, falseNorthing);
+        } catch (InvalidMapException ime) {
+            throw ime;
         } catch (Exception e) {
             throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_INVALID_PROJECTION), e);
         }
     }
 
-    private static boolean parseXY(CharArrayTokenizer tokenizer, Vector xy) throws InvalidMapException {
+    private static boolean parseXY(final CharArrayTokenizer tokenizer, final Vector xy) throws InvalidMapException {
         try {
             tokenizer.next(); // MMPXY
             tokenizer.next(); // index [1-4]
-            int x = tokenizer.nextInt();
-            int y = tokenizer.nextInt();
+            final int x = tokenizer.nextInt();
+            final int y = tokenizer.nextInt();
             xy.addElement(Position.newInstance(x, y));
         } catch (Exception e) {
             throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_INVALID_MMPXY), e);
@@ -348,7 +368,7 @@ final class OziCalibration extends Calibration {
         return true;
     }
 
-    private static boolean parseLL(CharArrayTokenizer tokenizer, Vector ll) throws InvalidMapException {
+    private static boolean parseLL(final CharArrayTokenizer tokenizer, final Vector ll) throws InvalidMapException {
         try {
             tokenizer.next(); // MMPLL
             tokenizer.next(); // index [1-4]
@@ -362,7 +382,7 @@ final class OziCalibration extends Calibration {
         return true;
     }
 
-    private void parseIwh(CharArrayTokenizer tokenizer) throws InvalidMapException {
+    private void parseIwh(final CharArrayTokenizer tokenizer) throws InvalidMapException {
         try {
             tokenizer.next(); // IWH
             tokenizer.next(); // Map Image Width/Height
@@ -373,12 +393,5 @@ final class OziCalibration extends Calibration {
         } catch (Exception e) {
             throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_INVALID_IWH));
         }
-    }
-
-    private static short getDimension(int i) throws InvalidMapException {
-        if (i <= Short.MAX_VALUE) {
-            return (short) i;
-        }
-        throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_MAP_TOO_BIG));
     }
 }

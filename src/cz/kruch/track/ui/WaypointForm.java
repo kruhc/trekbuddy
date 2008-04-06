@@ -47,30 +47,16 @@ import java.util.TimeZone;
 public final class WaypointForm extends Form
         implements CommandListener, ItemCommandListener, Callback {
 
-    /*private */static final String CMD_NAVIGATE_ALONG;
-    /*private */static final String CMD_NAVIGATE_BACK;
-    /*private */static final String CMD_NAVIGATE_TO;
-    /*private */static final String CMD_SET_CURRENT;
-    /*private */static final String CMD_GO_TO;
-    /*private */static final String CMD_SHOW_ALL;
-    /*private */static final String CMD_HIDE_ALL;
-    /*private */static final String CMD_USE;
-    /*private */static final String CMD_SAVE;
-
-    static {
-        CMD_NAVIGATE_ALONG = Resources.getString(Resources.NAV_CMD_ROUTE_ALONG);
-        CMD_NAVIGATE_BACK = Resources.getString(Resources.NAV_CMD_ROUTE_BACK);
-        CMD_NAVIGATE_TO = Resources.getString(Resources.NAV_CMD_NAVIGATE_TO);
-        CMD_SET_CURRENT = Resources.getString(Resources.NAV_CMD_SET_AS_ACTIVE);
-        CMD_GO_TO = Resources.getString(Resources.NAV_CMD_GO_TO);
-        CMD_SHOW_ALL = Resources.getString(Resources.NAV_CMD_SHOW_ALL);
-        CMD_HIDE_ALL = Resources.getString(Resources.NAV_CMD_HIDE_ALL);
-        CMD_USE = Resources.getString(Resources.NAV_CMD_ADD);
-        CMD_SAVE = Resources.getString(Resources.NAV_CMD_SAVE);
-        CMD_TAKE = Resources.getString(Resources.NAV_CMD_TAKE);
-    }
-
-    private static final String CMD_TAKE;
+    /*private */static final String CMD_NAVIGATE_ALONG = Resources.getString(Resources.NAV_CMD_ROUTE_ALONG);
+    /*private */static final String CMD_NAVIGATE_BACK = Resources.getString(Resources.NAV_CMD_ROUTE_BACK);
+    /*private */static final String CMD_NAVIGATE_TO = Resources.getString(Resources.NAV_CMD_NAVIGATE_TO);
+    /*private */static final String CMD_SET_CURRENT = Resources.getString(Resources.NAV_CMD_SET_AS_ACTIVE);
+    /*private */static final String CMD_GO_TO = Resources.getString(Resources.NAV_CMD_GO_TO);
+    /*private */static final String CMD_SHOW_ALL = Resources.getString(Resources.NAV_CMD_SHOW_ALL);
+    /*private */static final String CMD_HIDE_ALL = Resources.getString(Resources.NAV_CMD_HIDE_ALL);
+    /*private */static final String CMD_USE = Resources.getString(Resources.NAV_CMD_ADD);
+    /*private */static final String CMD_SAVE = Resources.getString(Resources.NAV_CMD_SAVE);
+    private static final String CMD_TAKE = Resources.getString(Resources.NAV_CMD_TAKE);
 
     private static final Calendar CALENDAR = Calendar.getInstance(TimeZone.getDefault());
 

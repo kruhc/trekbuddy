@@ -33,11 +33,7 @@ import cz.kruch.track.Resources;
  * @author Ales Pour <kruhc@seznam.cz>
  */
 abstract class View {
-    protected static final String MSG_NO_POSITION;
-
-    static {
-        MSG_NO_POSITION = Resources.getString(Resources.DESKTOP_MSG_NO_POSITION);
-    }
+    protected static final String MSG_NO_POSITION = Resources.getString(Resources.DESKTOP_MSG_NO_POSITION);
 
     protected final /*Navigator*/Desktop navigator;
     protected boolean isVisible;

@@ -34,11 +34,7 @@ import javax.microedition.lcdui.Font;
  * @author Ales Pour <kruhc@seznam.cz>
  */
 final class LocatorView extends View {
-    private static final String MSG_NO_WAYPOINT;
-
-    static {
-        MSG_NO_WAYPOINT = Resources.getString(Resources.DESKTOP_MSG_NO_WPT);
-    }
+    private static final String MSG_NO_WAYPOINT = Resources.getString(Resources.DESKTOP_MSG_NO_WPT);
 
     private static final int[] RANGES = {
         1000, 500, 250, 100, 50, 25, 10, 5

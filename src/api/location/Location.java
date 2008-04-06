@@ -37,15 +37,15 @@ public final class Location {
     private static final Location[] pool = new Location[8];
     private static int countFree;
 
-    public static Location newInstance(QualifiedCoordinates coordinates,
+    public static Location newInstance(final QualifiedCoordinates coordinates,
                                        final long timestamp, final int fix) {
         return newInstance(coordinates, timestamp, fix, -1);
     }
 
-    public synchronized static Location newInstance(QualifiedCoordinates coordinates,
+    public static synchronized Location newInstance(final QualifiedCoordinates coordinates,
                                                     final long timestamp, final int fix,
                                                     final int sat) {
-        Location result;
+        final Location result;
 
         if (countFree == 0) {
             result = new Location(coordinates, timestamp, fix, sat);
@@ -54,14 +54,14 @@ public final class Location {
             pool[countFree] = null;
             result.coordinates = coordinates;
             result.timestamp = timestamp;
-            result.fixsat = (fix << 8) & 0x0000ff00 | sat & 0x000000ff;
+            result.fixsat = ((fix << 8) & 0x0000ff00) | (sat & 0x000000ff);
             result.speed = result.course = Float.NaN;
         }
 
         return result;
     }
 
-    public synchronized static void releaseInstance(Location location) {
+    public static synchronized void releaseInstance(final Location location) {
         if (location != null) {
             if (countFree < pool.length) {
                 pool[countFree++] = location;
@@ -76,8 +76,8 @@ public final class Location {
      */
 
     public Location clone() {
-        Location l = newInstance(coordinates.clone(), timestamp,
-                                 getFix(), getSat());
+        final Location l = newInstance(coordinates.clone(), timestamp,
+                                       getFix(), getSat());
         l.setCourse(course);
         l.setSpeed(speed);
         l.setFix3d(isFix3d());
@@ -89,13 +89,8 @@ public final class Location {
                      final long timestamp, final int fix, final int sat) {
         this.coordinates = coordinates;
         this.timestamp = timestamp;
-        this.fixsat = (fix << 8) & 0x0000ff00 | sat & 0x000000ff;
+        this.fixsat = ((fix << 8) & 0x0000ff00) | (sat & 0x000000ff);
         this.speed = this.course = Float.NaN;
-    }
-
-    protected Location(QualifiedCoordinates coordinates,
-                       final long timestamp, final int fix) {
-        this(coordinates, timestamp, fix, -1);
     }
 
     public QualifiedCoordinates getQualifiedCoordinates() {

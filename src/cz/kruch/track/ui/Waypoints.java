@@ -122,7 +122,7 @@ public final class Waypoints extends List
 
     private static Waypoints instance;
 
-    public static void initialize(/*Navigator*/Desktop navigator) {
+    public static void initialize(/*Navigator*/final Desktop navigator) {
         instance = new Waypoints(navigator);
     }
 
@@ -393,13 +393,13 @@ public final class Waypoints extends List
      * @param result array
      * @param throwable problem
      */
-    public void invoke(Object result, Throwable throwable, Object source) {
+    public void invoke(final Object result, final Throwable throwable, final Object source) {
         // handle action
         if (result instanceof Object[]) { // waypoint/friend form closed
 
             // action type
-            Object[] ret = (Object[]) result;
-            Object action = ret[0];
+            final Object[] ret = (Object[]) result;
+            final Object action = ret[0];
 
             // execute action
             if (null == action) {
@@ -499,9 +499,9 @@ public final class Waypoints extends List
             } else if (FriendForm.MENU_SEND == action) { // send waypoint by SMS
 
                 // vars
-                String type;
-                QualifiedCoordinates qc;
-                long time;
+                final String type;
+                final QualifiedCoordinates qc;
+                final long time;
 
                 // get message type and location
                 if (itemFriendHere == ret[3]) {
@@ -570,7 +570,7 @@ public final class Waypoints extends List
      * "Do you want to persist custom waypoint?"
      * @param answer answer
      */
-    public void response(int answer, Object closure) {
+    public void response(final int answer, final Object closure) {
         // add waypoint to store
         addToStore(USER_CUSTOM_STORE, _wpt, YesNoDialog.YES == answer);
         _wpt = null; // gc hint
@@ -599,7 +599,7 @@ public final class Waypoints extends List
     /**
      * Background task launcher.
      */
-    private void onBackground(String storeName) {
+    private void onBackground(final String storeName) {
         this._storeName = null; // gc hint
         this._storeName = storeName;
         LoaderIO.getInstance().enqueue(this);
@@ -782,7 +782,7 @@ public final class Waypoints extends List
 
         // got store in cache?
         Vector wpts = null;
-        Vector wptsCached = (Vector) stores.get(_storeName);
+        final Vector wptsCached = (Vector) stores.get(_storeName);
         if (wptsCached == null) { // no, load from file
             File file = null;
             try {
@@ -795,7 +795,7 @@ public final class Waypoints extends List
                 // parse new waypoints
                 final int i = _storeName.lastIndexOf('.');
                 if (i > -1) {
-                    String ext = _storeName.substring(i).toLowerCase();
+                    final String ext = _storeName.substring(i).toLowerCase();
                     if (ext.equals(SUFFIX_GPX)) {
                         wpts = parseWaypoints(file, TYPE_GPX);
                     } else if (ext.equals(SUFFIX_LOC)) {
@@ -992,10 +992,10 @@ public final class Waypoints extends List
             throws IOException, XmlPullParserException {
 
         // result
-        Vector result = new Vector(16, 64);
+        final Vector result = new Vector(16, 64);
 
         // parse XML
-        KXmlParser parser = new KXmlParser(NAME_CACHE);
+        final KXmlParser parser = new KXmlParser(NAME_CACHE);
         try {
             parser.setInput(in, null); // null is for encoding autodetection
             if (TYPE_GPX == fileType) {
@@ -1029,7 +1029,7 @@ public final class Waypoints extends List
                 case XmlPullParser.START_TAG: {
                     switch (depth) {
                         case 0: {
-                            String tag = parser.getName();
+                            final String tag = parser.getName();
                             if (TAG_WPT.equals(tag) || TAG_RTEPT.equals(tag) || TAG_TRKPT.equals(tag)){
                                 // start level
                                 depth = 1;
@@ -1039,7 +1039,7 @@ public final class Waypoints extends List
                             }
                         } break;
                         case 1: {
-                            String tag = parser.getName();
+                            final String tag = parser.getName();
                             if (TAG_NAME.equals(tag)) {
                                 // get name
                                 name = parser.nextText();
@@ -1066,11 +1066,11 @@ public final class Waypoints extends List
                 } break;
                 case XmlPullParser.END_TAG: {
                     if (depth == 1) {
-                        String tag = parser.getName();
+                        final String tag = parser.getName();
                         if (TAG_WPT.equals(tag) || TAG_RTEPT.equals(tag) || TAG_TRKPT.equals(tag)){
                             // got fantomas wpt?
                             if (name == null || name.length() == 0) {
-                                StringBuffer sb = new StringBuffer(32);
+                                final StringBuffer sb = new StringBuffer(32);
                                 sb.append('#');
                                 NavigationScreens.append(sb, v.size(), 1000);
                                 name = sb.toString();
@@ -1109,14 +1109,14 @@ public final class Waypoints extends List
                 case XmlPullParser.START_TAG: {
                     switch (depth) {
                         case 0: {
-                            String tag = parser.getName();
+                            final String tag = parser.getName();
                             if (TAG_WAYPOINT.equals(tag)) {
                                 // start level
                                 depth = 1;
                             }
                         } break;
                         case 1: {
-                            String tag = parser.getName();
+                            final String tag = parser.getName();
                             if (TAG_NAME.equals(tag)) {
                                 // get name and comment
                                 name = parser.getAttributeValue(null, "id");
@@ -1140,7 +1140,7 @@ public final class Waypoints extends List
                 } break;
                 case XmlPullParser.END_TAG: {
                     if (depth == 1) {
-                        String tag = parser.getName();
+                        final String tag = parser.getName();
                         if (TAG_WAYPOINT.equals(tag)) {
                             // got wpt
                             v.addElement(new Waypoint(QualifiedCoordinates.newInstance(lat, lon),

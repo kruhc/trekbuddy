@@ -218,6 +218,7 @@ public final class Camera implements CommandListener, PlayerListener/*, Runnable
     }
 
     public static int[] getThumbnail(byte[] jpg) {
+        final int N = jpg.length;
         int offset = 0;
 
         // JPEG check
@@ -261,7 +262,7 @@ public final class Camera implements CommandListener, PlayerListener/*, Runnable
 
                 }
 
-            } while (offset < jpg.length);
+            } while (offset < N);
         }
 
         return null;
@@ -270,12 +271,12 @@ public final class Camera implements CommandListener, PlayerListener/*, Runnable
     private static int goTo(byte[] jpg, final int offset, final byte marker) {
         final int length = jpg.length;
         int position = offset;
-        
-        for ( ; position < length; ) {
+
+        while (position < length) {
             int b = jpg[position++] & 0xFF;
-            if ((byte)(b & 0xFF) == BYTE_FF) {
+            if ((byte) (b & 0xFF) == BYTE_FF) {
                 b = jpg[position++] & 0xFF;
-                if (marker == (byte)(b & 0xFF)) {
+                if (marker == (byte) (b & 0xFF)) {
                     break;
                 }
             }

@@ -128,7 +128,7 @@ public abstract class StreamReadingLocationProvider extends LocationProvider {
 
             // sync
             if (rmc != null && gga != null) {
-                int i = rmc.timestamp - gga.timestamp;
+                final int i = rmc.timestamp - gga.timestamp;
                 if (i > 0) {
                     gga = null;
                     syncs++;
@@ -150,12 +150,12 @@ public abstract class StreamReadingLocationProvider extends LocationProvider {
         }
 
         // new location
-        Location location;
+        final Location location;
 
         // combine
         final long datetime = rmc.date + rmc.timestamp;
         if (rmc.timestamp == gga.timestamp) {
-            QualifiedCoordinates qc = QualifiedCoordinates.newInstance(rmc.lat, rmc.lon, gga.altitude);
+            final QualifiedCoordinates qc = QualifiedCoordinates.newInstance(rmc.lat, rmc.lon, gga.altitude);
             qc.setHorizontalAccuracy(/*gga.hdop*/NmeaParser.hdop * 5);
             qc.setVerticalAccuracy(/*gga.vdop*/NmeaParser.vdop * 5);
             location = Location.newInstance(qc, datetime, rmc.status == 'A' ? gga.fix : 0, gga.sat);

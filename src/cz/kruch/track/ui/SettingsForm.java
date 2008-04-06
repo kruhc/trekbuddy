@@ -87,7 +87,7 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
     private boolean changed;
     private int gaugeAlphaScale;
 
-    public SettingsForm(Callback callback) {
+    SettingsForm(Callback callback) {
         super(Resources.prefixed(Resources.getString(Resources.DESKTOP_CMD_SETTINGS)), List.IMPLICIT);
         this.callback = callback;
         this.menuBasic = Resources.getString(Resources.CFG_ITEM_BASIC);

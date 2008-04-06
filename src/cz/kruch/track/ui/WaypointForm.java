@@ -84,7 +84,7 @@ public final class WaypointForm extends Form
     private byte[] imageBytes;
     private int imageNum = -1;
 
-    private static int cnt = 0;
+    private static int cnt;
 
     /**
      * Info view constructor.

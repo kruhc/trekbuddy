@@ -324,7 +324,7 @@ public final class Resources {
         }
 
         if (in != null) {
-            DataInputStream resin = new DataInputStream(in);
+            final DataInputStream resin = new DataInputStream(in);
             try {
 /*
                 resin.readInt(); // signature: 0xEA4D4910; // JSR-238: 0xEE4D4910

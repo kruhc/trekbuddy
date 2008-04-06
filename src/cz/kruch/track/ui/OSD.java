@@ -31,19 +31,19 @@ import cz.kruch.track.configuration.Config;
 final class OSD extends Bar {
     private static final String MM = "<>";
 
-    protected int providerStatus;
+    int providerStatus;
     private boolean recording;
     private boolean ok;
     private int sat;
 
-    protected int semaforX, semaforY;
+    int semaforX, semaforY;
     private final StringBuffer sb;
     private final int rw, mmw, str1w, str2w;
 
     private final char[] cInfo, cExtInfo;
     private int cInfoLength, cExtInfoLength;
 
-    public OSD(int gx, int gy, int width, int height) {
+    OSD(int gx, int gy, int width, int height) {
         super(gx, gy, width, height);
         this.providerStatus = LocationProvider.OUT_OF_SERVICE;
         this.rw = Desktop.font.charWidth('R');

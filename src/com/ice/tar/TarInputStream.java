@@ -115,7 +115,7 @@ public final class TarInputStream extends InputStream {
 
         long num = n;
 
-        for (; num > 0;) {
+        while (num > 0) {
 
             final long numRead;
 
@@ -285,7 +285,7 @@ public final class TarInputStream extends InputStream {
     private byte[] readHeader() throws IOException {
         int offset = 0;
         int bytesNeeded = DEFAULT_RCDSIZE;
-        for (; bytesNeeded > 0;) {
+        while (bytesNeeded > 0) {
             final int numBytes = this.in.read(this.headerBuffer, offset, bytesNeeded);
 
             if (numBytes == -1) {

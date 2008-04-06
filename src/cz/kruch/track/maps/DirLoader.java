@@ -42,7 +42,7 @@ final class DirLoader extends Map.Loader implements Atlas.Loader {
         super();
     }
 
-    void init(Map map, String url) throws IOException {
+    void init(final Map map, final String url) throws IOException {
         super.init(map, url);
         this.isGPSka = url.toLowerCase().endsWith(Calibration.XML_EXT);
 
@@ -62,7 +62,7 @@ final class DirLoader extends Map.Loader implements Atlas.Loader {
 //#endif
     }
 
-    void loadMeta(Map map) throws IOException {
+    void loadMeta(final Map map) throws IOException {
         // read calibration
         if (getMapCalibration() == null) {
 //#ifdef __LOG__
@@ -107,7 +107,7 @@ final class DirLoader extends Map.Loader implements Atlas.Loader {
             File file = null;
             try {
                 // check for .set file
-                String setFile = map.getPath().substring(0, map.getPath().lastIndexOf('.')) + ".set";
+                final String setFile = map.getPath().substring(0, map.getPath().lastIndexOf('.')) + ".set";
                 file = File.open(Connector.open(setFile, Connector.READ));
                 if (file.exists()) {
                     LineReader reader = null;
@@ -148,7 +148,7 @@ final class DirLoader extends Map.Loader implements Atlas.Loader {
         }
     }
 
-    void loadSlice(Slice slice) throws IOException {
+    void loadSlice(final Slice slice) throws IOException {
         // path sb
         StringBuffer sb = new StringBuffer(32);
 
@@ -160,7 +160,7 @@ final class DirLoader extends Map.Loader implements Atlas.Loader {
         sb.append(extension);
 
         // get full url
-        String url = sb.toString();
+        final String url = sb.toString();
         sb = null; // gc hint
 
 //#ifdef __LOG__
@@ -185,7 +185,7 @@ final class DirLoader extends Map.Loader implements Atlas.Loader {
      * Atlas.Loader contract.
      */
 
-    public void loadIndex(Atlas atlas, String url, String baseUrl) throws IOException {
+    public void loadIndex(final Atlas atlas, final String url, final String baseUrl) throws IOException {
         // file
         File file = null;
 
@@ -205,7 +205,7 @@ final class DirLoader extends Map.Loader implements Atlas.Loader {
 //#endif
 
                     // get map collection for current layer
-                    Hashtable layerCollection = atlas.getLayerCollection(atlas, layerEntry.substring(0, layerEntry.length() - 1));
+                    final Hashtable layerCollection = atlas.getLayerCollection(atlas, layerEntry.substring(0, layerEntry.length() - 1));
 
                     // set file connection
                     file.setFileConnection(layerEntry);
@@ -229,7 +229,7 @@ final class DirLoader extends Map.Loader implements Atlas.Loader {
                                     if (Calibration.isCalibration(fileEntry)) {
 
                                         // create URL
-                                        String path = sb.delete(0, sb.length()).append(file.getURL()).append(fileEntry).toString();
+                                        final String path = sb.delete(0, sb.length()).append(file.getURL()).append(fileEntry).toString();
 
                                         // load map calibration file
                                         InputStream in = null;

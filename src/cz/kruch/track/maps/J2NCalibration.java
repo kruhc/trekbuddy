@@ -26,7 +26,7 @@ import java.util.Vector;
 import cz.kruch.track.ui.Position;
 import api.location.QualifiedCoordinates;
 
-class J2NCalibration extends Calibration {
+final class J2NCalibration extends Calibration {
     private static final String TAG_NAME        = "name";
     private static final String TAG_POSITION    = "position";
     private static final String TAG_LATITUDE    = "latitude";
@@ -38,11 +38,11 @@ class J2NCalibration extends Calibration {
         super();
     }
 
-    void init(InputStream in, String path) throws InvalidMapException {
+    void init(final InputStream in, final String path) throws InvalidMapException {
         super.init(path);
 
-        Vector xy = new Vector();
-        Vector ll = new Vector();
+        final Vector xy = new Vector();
+        final Vector ll = new Vector();
         KXmlParser parser = new KXmlParser(null);
 
         try {
@@ -82,9 +82,9 @@ class J2NCalibration extends Calibration {
                             } else if (TAG_LONGITUDE.equals(currentTag)) {
                                 lon0 = Double.parseDouble(text);
                             } else if (TAG_IMAGEWIDTH.equals(currentTag)) {
-                                width = Integer.parseInt(text);
+                                width = getDimension(Integer.parseInt(text));
                             } else if (TAG_IMAGEHEIGHT.equals(currentTag)) {
-                                height = Integer.parseInt(text);
+                                height = getDimension(Integer.parseInt(text));
                             }
                         }
                     }
@@ -105,6 +105,9 @@ class J2NCalibration extends Calibration {
                 // ignore
             }
         }
+
+        // gc hint
+        parser = null;
 
         // finalize
         doFinal(null, LATLON_PROJ_SETUP, xy, ll);

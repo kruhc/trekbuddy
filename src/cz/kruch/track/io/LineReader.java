@@ -83,7 +83,7 @@ public final class LineReader extends InputStreamReader {
         int offset = position;
         int chars = 0;
 
-        for ( ; offset < BUFF_SIZE; ) {
+        while (offset < BUFF_SIZE) {
             final int c;
             if (offset == count) {
                 final int _count = read(_buffer, offset, BUFF_SIZE - offset);

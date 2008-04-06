@@ -219,7 +219,7 @@ public final class TarEntry {
      * @param position stream position (offset)
      * @throws InvalidHeaderException when something goes wrong
      */
-    public void init(byte[] headerBuf, long position) throws InvalidHeaderException {
+    public void init(final byte[] headerBuf, final long position) throws InvalidHeaderException {
         this.parseHeader(headerBuf);
         this.position = position;
     }
@@ -266,7 +266,7 @@ public final class TarEntry {
      * @param headerBuf header bytes
      * @throws InvalidHeaderException when something goes wrong
      */
-    private void parseHeader(byte[] headerBuf) throws InvalidHeaderException {
+    private void parseHeader(final byte[] headerBuf) throws InvalidHeaderException {
         if (headerBuf[257] == 'u'
                 && headerBuf[258] == 's'
                 && headerBuf[259] == 't'
@@ -286,7 +286,7 @@ public final class TarEntry {
                 && headerBuf[260] == 0
                 && headerBuf[261] == 0) {
         } else {
-            StringBuffer sb = new StringBuffer(64);
+            final StringBuffer sb = new StringBuffer(64);
             sb.append("Invalid header: '");
             sb.append(Integer.toHexString(headerBuf[257] & 0xff)).append(' ');
             sb.append(Integer.toHexString(headerBuf[258] & 0xff)).append(' ');
@@ -323,13 +323,13 @@ public final class TarEntry {
      * @param length The number of header bytes to parse.
      * @return The long value of the octal string.
      */
-    private static long parseOctal(byte[] header, final int offset, final int length) {
+    private static long parseOctal(final byte[] header, final int offset, final int length) {
         long result = 0;
         boolean stillPadding = true;
         final int end = offset + length;
 
         for (int i = offset; i < end; ++i) {
-            byte b = header[i];
+            final byte b = header[i];
 
             if (b == 0)
                 break;
@@ -383,7 +383,7 @@ public final class TarEntry {
      * @param header The header buffer from which to parse.
      * @return The header's entry name.
      */
-    private static String parseFileName(byte[] header) /*throws InvalidHeaderException*/ {
+    private static String parseFileName(final byte[] header) /*throws InvalidHeaderException*/ {
 //        String prefix = null;
 
         /*

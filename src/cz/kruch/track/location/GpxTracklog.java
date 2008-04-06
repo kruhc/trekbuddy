@@ -210,7 +210,7 @@ public final class GpxTracklog extends Thread {
                 }, 60000L, 60000L);
 
                 // pop items until end
-                for (; go ;) {
+                while (go) {
                     final Object item;
                     synchronized (this) {
                         while (go && queue == null) {
@@ -491,10 +491,10 @@ public final class GpxTracklog extends Thread {
 
         try {
             // images path
-            String relPath = "images-" + fileDate;
+            final String relPath = "images-" + fileDate;
 
             // check for 'Images' subdir existence
-            String imgdir = Config.getFolderWaypoints() + relPath + "/";
+            final String imgdir = Config.getFolderWaypoints() + relPath + "/";
             file = File.open(Connector.open(imgdir, Connector.READ_WRITE));
             if (!file.exists()) {
                 file.mkdir();
@@ -503,7 +503,7 @@ public final class GpxTracklog extends Thread {
             file = null;
 
             // image filename
-            String fileName = "pic-" + imgNum++ + ".jpg";
+            final String fileName = "pic-" + imgNum++ + ".jpg";
 
             // save picture
             file = File.open(Connector.open(imgdir + fileName, Connector.READ_WRITE));
@@ -534,7 +534,7 @@ public final class GpxTracklog extends Thread {
         }
     }
 
-    public void insert(Waypoint waypoint) {
+    public void insert(final Waypoint waypoint) {
         synchronized (this) {
             freeLocationInQueue();
             queue = waypoint;
@@ -542,7 +542,7 @@ public final class GpxTracklog extends Thread {
         }
     }
 
-    public void insert(Location location) {
+    public void insert(final Location location) {
         synchronized (this) {
             freeLocationInQueue();
             force = true;
@@ -551,7 +551,7 @@ public final class GpxTracklog extends Thread {
         }
     }
 
-    public void insert(Boolean b) {
+    public void insert(final Boolean b) {
         synchronized (this) {
             freeLocationInQueue();
             force = b.booleanValue();
@@ -560,7 +560,7 @@ public final class GpxTracklog extends Thread {
         }
     }
 
-    public void locationUpdated(Location location) {
+    public void locationUpdated(final Location location) {
         synchronized (this) {
             freeLocationInQueue();
             queue = location.clone();
@@ -576,7 +576,7 @@ public final class GpxTracklog extends Thread {
         }
     }
 
-    public Location check(Location location) {
+    public Location check(final Location location) {
 
         if (Config.gpxDt == 0) { // 'raw'
             return location;
@@ -670,7 +670,7 @@ public final class GpxTracklog extends Thread {
         date.setTime(timestamp);
         calendar.setTime(date);
 
-        StringBuffer sb = new StringBuffer(32);
+        final StringBuffer sb = new StringBuffer(32);
         final Calendar calendar = this.calendar;
 
         NavigationScreens.append(sb, calendar.get(Calendar.YEAR)).append('-');
@@ -688,7 +688,7 @@ public final class GpxTracklog extends Thread {
     }
 
     private int doubleToChars(final double value, final int precision) {
-        StringBuffer sb = new StringBuffer(32);
+        final StringBuffer sb = new StringBuffer(32);
         NavigationScreens.append(sb, value, precision);
 
         final int result = sb.length();
@@ -698,9 +698,9 @@ public final class GpxTracklog extends Thread {
     }
 
     public static String dateToFileDate(final long time) {
-        Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone("GMT"));
+        final Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone("GMT"));
         calendar.setTime(new Date(time));
-        StringBuffer sb = new StringBuffer(32);
+        final StringBuffer sb = new StringBuffer(32);
         NavigationScreens.append(sb, calendar.get(Calendar.YEAR)).append('-');
         appendTwoDigitStr(sb, calendar.get(Calendar.MONTH) + 1).append('-');
         appendTwoDigitStr(sb, calendar.get(Calendar.DAY_OF_MONTH)).append('-');

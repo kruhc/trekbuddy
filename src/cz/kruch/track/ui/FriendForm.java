@@ -47,9 +47,8 @@ final class FriendForm extends Form implements CommandListener {
     private final TextField fieldNumber;
     private final TextField fieldMessage;
 
-    public FriendForm(Displayable next, String title,
-                      QualifiedCoordinates coordinates,
-                      Callback callback, Object closure) {
+    FriendForm(Displayable next, String title, QualifiedCoordinates coordinates,
+               Callback callback, Object closure) {
         super(title);
         this.next = next;
         this.callback = callback;

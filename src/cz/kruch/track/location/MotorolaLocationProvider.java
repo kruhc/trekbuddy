@@ -103,14 +103,14 @@ public final class MotorolaLocationProvider
                     notifyListener(lastState);
                 }
 
-                double lat = aggregatePosition.getLatitude() ;
-                double lon = aggregatePosition.getLongitude();
-                float alt = aggregatePosition.hasAltitude() ? aggregatePosition.getAltitude() : -1F;
+                final double lat = aggregatePosition.getLatitude() ;
+                final double lon = aggregatePosition.getLongitude();
+                final float alt = aggregatePosition.hasAltitude() ? aggregatePosition.getAltitude() : -1F;
 
                 // create up-to-date location
-                QualifiedCoordinates qc = QualifiedCoordinates.newInstance(lat / 60 * 0.00001, lon / 60 * 0.00001, alt);
+                final QualifiedCoordinates qc = QualifiedCoordinates.newInstance(lat / 60 * 0.00001, lon / 60 * 0.00001, alt);
                 qc.setHorizontalAccuracy(aggregatePosition.getLatLonAccuracy());
-                Location location = Location.newInstance(qc, aggregatePosition.getTimeStamp(), 1);
+                final Location location = Location.newInstance(qc, aggregatePosition.getTimeStamp(), 1);
                 if (aggregatePosition.hasTravelDirection()) {
                     location.setCourse(aggregatePosition.getTravelDirection());
                 }

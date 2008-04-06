@@ -35,7 +35,7 @@ import java.util.TimerTask;
 /**
  * Serial port (comm, btspp) location provider implemenation.
  *
- * @author Ales Pour <kruhc@seznam.cz> 
+ * @author Ales Pour <kruhc@seznam.cz>
  */
 public class SerialLocationProvider extends StreamReadingLocationProvider implements Runnable {
     private static final long WATCHER_PERIOD = 15 * 1000;
@@ -310,7 +310,7 @@ public class SerialLocationProvider extends StreamReadingLocationProvider implem
             reset();
 
             // read NMEA until error or stop request
-            for (; go ;) {
+            while (go) {
 
                 Location location = null;
 

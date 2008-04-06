@@ -97,13 +97,13 @@ public abstract class File {
         return registry.getRoots();
     }
 
-    public static File open(Connection c) {
+    public static File open(final Connection c) {
         try {
             if (factory == null) {
                 throw new IllegalStateException("No file API");
             }
 
-            File instance = (File) factory.newInstance();
+            final File instance = (File) factory.newInstance();
             instance.fc = (StreamConnection) c;
 
             return instance;
@@ -176,7 +176,7 @@ public abstract class File {
         }
     }
 
-    public static boolean isDir(String path) {
+    public static boolean isDir(final String path) {
         return File.PATH_SEPCHAR == path.charAt(path.length() - 1) || File.PARENT_DIR.equals(path);
     }
 }

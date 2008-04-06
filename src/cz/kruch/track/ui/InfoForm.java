@@ -40,7 +40,7 @@ final class InfoForm extends Form implements CommandListener {
     private Object ps;
     private Map map;
 
-    public InfoForm() {
+    InfoForm() {
         super(Resources.prefixed(Resources.getString(Resources.DESKTOP_CMD_INFO)));
     }
 
@@ -65,7 +65,7 @@ final class InfoForm extends Form implements CommandListener {
         Desktop.display.setCurrent(this);
     }
 
-    private void details(Throwable le, Throwable te, Object ps, Map map) {
+    private void details(final Throwable le, final Throwable te, final Object ps, final Map map) {
         // gc - for memory info to be correct...
         System.gc();
         final long totalMemory = Runtime.getRuntime().totalMemory();
@@ -73,7 +73,7 @@ final class InfoForm extends Form implements CommandListener {
 
         // items
         append(newItem("Platform", cz.kruch.track.TrackingMIDlet.getPlatform()));
-        StringBuffer sb = new StringBuffer(32);
+        final StringBuffer sb = new StringBuffer(32);
         sb.append(totalMemory).append('/').append(freeMemory);
         append(newItem("Memory", sb.toString()));
         sb.delete(0, sb.length());
@@ -136,8 +136,8 @@ final class InfoForm extends Form implements CommandListener {
         }
     }
 
-    private static StringItem newItem(String label, String text) {
-        StringItem item = new StringItem(label, text);
+    private static StringItem newItem(final String label, final String text) {
+        final StringItem item = new StringItem(label, text);
         item.setLayout(Item.LAYOUT_2 | Item.LAYOUT_NEWLINE_AFTER);
         return item;
     }

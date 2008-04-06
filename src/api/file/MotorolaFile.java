@@ -80,7 +80,7 @@ final class MotorolaFile extends File {
     /**
      * String enumeration.
      */
-    private static class StringEnumeration implements Enumeration {
+    private static final class StringEnumeration implements Enumeration {
         private String[] list;
         private int offset;
 

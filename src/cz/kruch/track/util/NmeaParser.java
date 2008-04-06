@@ -326,7 +326,7 @@ public final class NmeaParser {
         return record;
     }
 
-    private static int parseTime(CharArrayTokenizer.Token token) {
+    private static int parseTime(final CharArrayTokenizer.Token token) {
         int tl = CharArrayTokenizer.parseInt(token.array, token.begin, 6/*token.length*/);
         final int hours = /*(int)*/ tl / 10000;
         tl -= hours * 10000;
@@ -338,8 +338,8 @@ public final class NmeaParser {
         return (3600 * hours + 60 * mins + sec) * 1000/* + ms*/; // in millis
     }
 
-    private static long parseDate(CharArrayTokenizer.Token token) {
-        char[] _tarray = token.array;
+    private static long parseDate(final CharArrayTokenizer.Token token) {
+        final char[] _tarray = token.array;
         final int _tbegin = token.begin;
         final int day = 10 * (_tarray[_tbegin/* + 0*/] - '0') + _tarray[_tbegin + 1] - '0';
         final int month = 10 * (_tarray[_tbegin + 2] - '0') + _tarray[_tbegin + 3] - '0';
@@ -348,7 +348,7 @@ public final class NmeaParser {
             NmeaParser.day = day;
             NmeaParser.month = month;
             NmeaParser.year = year;
-            Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone("GMT"));
+            final Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone("GMT"));
             calendar.setTime(new Date(0));
             calendar.set(Calendar.DAY_OF_MONTH, day);
             calendar.set(Calendar.MONTH, month - 1); // zero-based
@@ -402,7 +402,7 @@ public final class NmeaParser {
             this.status = '?';
         }
 
-        public static Record copyGsaIntoGga(Record gsa) {
+        public static Record copyGsaIntoGga(final Record gsa) {
             gga.invalidate();
             gga.sat = gsa.sat;
             switch (gsa.fix) {

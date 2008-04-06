@@ -157,7 +157,7 @@ public final class FileBrowser implements CommandListener, Runnable {
                 }
 
                 // dir flag
-                boolean isDir;
+                final boolean isDir;
 
                 if (file.isBrokenTraversal()) {
                     // we know special traversal code is used underneath
@@ -242,7 +242,7 @@ public final class FileBrowser implements CommandListener, Runnable {
         }
     }
 
-    private void quit(Throwable throwable) {
+    private void quit(final Throwable throwable) {
         // gc hint
         if (list != null) {
             list.deleteAll();
@@ -266,7 +266,7 @@ public final class FileBrowser implements CommandListener, Runnable {
      * @param head first entry; can be <tt>null</tt>
      * @return list
      */
-    public static String[] sort2array(Enumeration items, String head) {
+    public static String[] sort2array(final Enumeration items, final String head) {
         // enum to list
         Vector v = new Vector(16, 16);
         if (head != null) {
@@ -299,7 +299,7 @@ public final class FileBrowser implements CommandListener, Runnable {
      * @param head first entry; can be <tt>null</tt>
      * @return list
      */
-    public static List sort2list(String title, Enumeration items, String head) {
+    public static List sort2list(final String title, final Enumeration items, final String head) {
         return new List(title, List.IMPLICIT, sort2array(items, head), null);
     }
 
@@ -309,7 +309,7 @@ public final class FileBrowser implements CommandListener, Runnable {
      * @param left left boundary
      * @param right right boundary
      */
-    public static void quicksort(String[] array, final int left, final int right) {
+    public static void quicksort(final String[] array, final int left, final int right) {
         if (right > left) {
             final int pivotIndex = left;
             final int pivotNewIndex = partition(array, left, right, pivotIndex);
@@ -318,8 +318,8 @@ public final class FileBrowser implements CommandListener, Runnable {
         }
     }
 
-    private static int partition(String[] array, final int left, final int right, final int pivotIndex) {
-        String pivotValue = array[pivotIndex];
+    private static int partition(final String[] array, final int left, final int right, final int pivotIndex) {
+        final String pivotValue = array[pivotIndex];
         // swap
         String _o = array[pivotIndex];
         array[pivotIndex] = array[right];
@@ -350,9 +350,9 @@ public final class FileBrowser implements CommandListener, Runnable {
      * @param s2 second string
      * @return {@link String#compareTo(String)}
      */
-    private static int compareAsFiles(String s1, String s2) {
-        boolean isDir1 = File.isDir(s1);
-        boolean isDir2 = File.isDir(s2);
+    private static int compareAsFiles(final String s1, final String s2) {
+        final boolean isDir1 = File.isDir(s1);
+        final boolean isDir2 = File.isDir(s2);
         if (isDir1) {
             if (isDir2) {
                 return s1.compareTo(s2);

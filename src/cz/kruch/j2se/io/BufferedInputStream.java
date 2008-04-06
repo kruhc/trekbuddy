@@ -11,13 +11,13 @@ import java.io.IOException;
 import java.io.InputStream;
 
 /**
- * Buffered input stream. 
+ * Buffered input stream.
  */
 public final class BufferedInputStream extends InputStream {
     /** underlying stream */
     private InputStream in;
     /** read buffer */
-    private byte buffer[];
+    private byte[] buffer;
     /** number of bytes in the buffer */
     private int count;
     /** current position in the buffer */
@@ -67,11 +67,11 @@ public final class BufferedInputStream extends InputStream {
         return buffer[pos++] & 0xff;
     }
 
-    public int read(byte b[]) throws IOException {
+    public int read(byte[] b) throws IOException {
         return read(b, 0, b.length);
     }
 
-    public int read(byte b[], int off, int len) throws IOException {
+    public int read(byte[] b, int off, int len) throws IOException {
         if ((off | len | (off + len) | (b.length - (off + len))) < 0) {
             throw new IndexOutOfBoundsException();
         } else if (len == 0) {

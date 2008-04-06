@@ -34,7 +34,7 @@ final class JarLoader extends Map.Loader /*implements Atlas.Loader*/ {
         super();
     }
 
-    void loadMeta(Map map) throws IOException {
+    void loadMeta(final Map map) throws IOException {
         // input
         InputStream in = null;
         LineReader reader = null;
@@ -112,7 +112,7 @@ final class JarLoader extends Map.Loader /*implements Atlas.Loader*/ {
         }
     }
 
-    void loadSlice(Slice slice) throws IOException {
+    void loadSlice(final Slice slice) throws IOException {
         // path sb
         StringBuffer sb = new StringBuffer(32);
 
@@ -124,7 +124,7 @@ final class JarLoader extends Map.Loader /*implements Atlas.Loader*/ {
         sb.append(extension);
 
         // get full url
-        String url = sb.toString();
+        final String url = sb.toString();
         sb = null; // gc hint
 
 //#ifdef __LOG__

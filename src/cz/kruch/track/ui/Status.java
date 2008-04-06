@@ -26,7 +26,7 @@ import javax.microedition.lcdui.Graphics;
 final class Status extends Bar {
     private String status;
 
-    public Status(int gx, int gy, int width, int height) {
+    Status(int gx, int gy, int width, int height) {
         super(gx, gy, width, height);
         this.clip = new int[]{ gx, -1, -1, -1 };
         resize(width, height);

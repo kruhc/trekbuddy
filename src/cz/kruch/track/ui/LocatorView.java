@@ -78,7 +78,7 @@ final class LocatorView extends View {
     private final StringBuffer sb;
     private final char[] sbChars;
 
-    public LocatorView(/*Navigator*/Desktop navigator) {
+    LocatorView(/*Navigator*/Desktop navigator) {
         super(navigator);
         this.locations = new Location[2][];
         this.locations[0] = new Location[HISTORY_DEPTH];
@@ -190,7 +190,7 @@ final class LocatorView extends View {
 
         // calculate avg qcoordinates
         for (int i = HISTORY_DEPTH; --i >= 0; ) {
-            Location l = array[i];
+            final Location l = array[i];
             if (l != null) {
                 final QualifiedCoordinates qc = l.getQualifiedCoordinates();
                 final float hAccuracy = qc.getHorizontalAccuracy();
@@ -221,9 +221,9 @@ final class LocatorView extends View {
 */
 //            satAvg[term] = satSum / c;
 
-            QualifiedCoordinates qc = QualifiedCoordinates.newInstance(latAvg, lonAvg);
+            final QualifiedCoordinates qc = QualifiedCoordinates.newInstance(latAvg, lonAvg);
             qc.setHorizontalAccuracy(accuracySum / c);
-            Location l = Location.newInstance(qc, timestamp, -1);
+            final Location l = Location.newInstance(qc, timestamp, -1);
             append(1, l);
         }
 
@@ -273,7 +273,7 @@ final class LocatorView extends View {
         } else {
             ys = -1;
         }
-        double alpha2Rad = Math.toRadians(alpha2);
+        final double alpha2Rad = Math.toRadians(alpha2);
 
 /*
             double alpha = Xedarius.asin(Math.abs((double) a) / c);
@@ -305,12 +305,12 @@ final class LocatorView extends View {
             double alpha2Rad = alpha2;
 */
 
-        double da = (c * Math.sin(alpha2Rad)) * xs;
+        final double da = (c * Math.sin(alpha2Rad)) * xs;
         a = (int) da;
         if ((da - a) > 0.5) {
             a++;
         }
-        double db = (c * Math.cos(alpha2Rad)) * ys;
+        final double db = (c * Math.cos(alpha2Rad)) * ys;
         b = (int) db;
         if ((db - b) > 0.5) {
             b++;
@@ -364,13 +364,13 @@ final class LocatorView extends View {
         float course;
 
         /* block */ {
-            Location current = navigator.getLocation();
+            final Location current = navigator.getLocation();
             if (current == null) {
                 course = Float.NaN;
             } else {
                 course = current.getCourse();
             }
-            boolean uptodate;
+            final boolean uptodate;
             if (Float.isNaN(course)) {
                 course = lastCourse;
                 uptodate = false;
@@ -430,7 +430,7 @@ final class LocatorView extends View {
                 }
                 if (l != null) {
                     // set vertex
-                    QualifiedCoordinates qc = l.getQualifiedCoordinates();
+                    final QualifiedCoordinates qc = l.getQualifiedCoordinates();
                     xy[0] = wHalf + (int) ((qc.getLon() - lonAvg) * xScale);
                     xy[1] = hHalf - (int) ((qc.getLat() - latAvg) * yScale);
 
@@ -504,7 +504,7 @@ final class LocatorView extends View {
 
             // draw waypoint
             if (wpt != null) {
-                QualifiedCoordinates qc = wpt.getQualifiedCoordinates();
+                final QualifiedCoordinates qc = wpt.getQualifiedCoordinates();
                 xy[0] = wHalf + (int) ((qc.getLon() - lonAvg) * xScale);
                 xy[1] = hHalf - (int) ((qc.getLat() - latAvg) * yScale);
 
@@ -595,7 +595,7 @@ final class LocatorView extends View {
     }
 
     private void drawCompas(final int width2, final int height2, final int fh,
-                            Graphics g, final float course, final boolean uptodate) {
+                            final Graphics g, final float course, final boolean uptodate) {
         final int[][] triangle = this.triangle;
 
         triangle[0][0] = width2;
@@ -660,7 +660,7 @@ final class LocatorView extends View {
         drawTriangle(g, course, triangle);
     }
 
-    private void drawTriangle(Graphics g, final float bearing, final int[][] triangle) {
+    private void drawTriangle(final Graphics g, final float bearing, final int[][] triangle) {
         if (bearing > 1F) {
             transform(center, bearing, triangle[0]);
             transform(center, bearing, triangle[1]);

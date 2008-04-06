@@ -86,20 +86,20 @@ public final class Atlas implements Runnable {
         return ((Hashtable) layers.get(current)).keys();
     }
 
-    public Enumeration getMapNames(String layer) {
+    public Enumeration getMapNames(final String layer) {
         return ((Hashtable) layers.get(layer)).keys();
     }
 
-    public String getMapURL(String name) {
+    public String getMapURL(final String name) {
         return ((Calibration) (((Hashtable) layers.get(current)).get(name))).getPath();
     }
 
-    public Calibration getMapCalibration(String name) {
+    public Calibration getMapCalibration(final String name) {
         return (Calibration) (((Hashtable) layers.get(current)).get(name));
     }
 
     // TODO qc are NOT map local!!!
-    public String getMapURL(String layerName, QualifiedCoordinates qc) {
+    public String getMapURL(final String layerName, final QualifiedCoordinates qc) {
         final Hashtable layer = (Hashtable) layers.get(layerName);
         if (layer == null) {
             throw new IllegalArgumentException("Nonexistent layer");
@@ -115,7 +115,7 @@ public final class Atlas implements Runnable {
         return null;
     }
 
-    public String getMapName(String layerName, QualifiedCoordinates qc) {
+    public String getMapName(final String layerName, final QualifiedCoordinates qc) {
         final Hashtable layer = (Hashtable) layers.get(layerName);
         if (layer == null) {
             throw new IllegalArgumentException("Nonexistent layer");
@@ -163,7 +163,7 @@ public final class Atlas implements Runnable {
 //#endif
 
         // open and init atlas
-        Throwable t = loadAtlas();
+        final Throwable t = loadAtlas();
 
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("atlas opened; " + t);
@@ -181,14 +181,14 @@ public final class Atlas implements Runnable {
             if (i == -1) {
                 throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_INVALID_ATLAS_URL));
             }
-            String baseUrl = url.substring(0, i + 1);
+            final String baseUrl = url.substring(0, i + 1);
 //#ifdef __LOG__
             if (log.isEnabled()) log.debug("layers are in " + baseUrl);
 //#endif
 
             // run loader
-            Class factory;
-            Loader loader;
+            final Class factory;
+            final Loader loader;
             if (url.endsWith(".tba") || url.endsWith(".TBA")) {
                 factory = Class.forName("cz.kruch.track.maps.DirLoader");
             } else if (url.endsWith(".tar") || url.endsWith(".TAR")
@@ -221,7 +221,7 @@ public final class Atlas implements Runnable {
 
         // destroy all cached maps
         for (Enumeration e = maps.elements(); e.hasMoreElements(); ) {
-            Map map = (Map) e.nextElement();
+            final Map map = (Map) e.nextElement();
 //#ifdef __LOG__
             if (log.isEnabled()) log.debug("closing map " + map.getPath());
 //#endif
@@ -244,7 +244,7 @@ public final class Atlas implements Runnable {
         abstract void loadIndex(Atlas atlas, String url, String baseUrl) throws IOException;
     }
 
-    Hashtable getLayerCollection(Atlas atlas, String cName) {
+    Hashtable getLayerCollection(final Atlas atlas, final String cName) {
         Hashtable collection = (Hashtable) atlas.layers.get(cName);
         if (collection == null) {
             collection = new Hashtable();

@@ -40,34 +40,34 @@ public final class CharArrayTokenizer {
         this.token = new Token();
     }
 
-    public void init(Token token, boolean returnDelim) {
+    public void init(final Token token, final boolean returnDelim) {
         this.init(token, DEFAULT_DELIMS, returnDelim);
     }
 
-    public void init(String s, boolean returnDelim) {
+    public void init(final String s, final boolean returnDelim) {
         this.init(s, DEFAULT_DELIMS, returnDelim);
     }
 
-    public void init(char[] array, int length, char[] delimiters, boolean returnDelim) {
+    public void init(final char[] array, final int length, final char[] delimiters, final boolean returnDelim) {
         this.init(array, delimiters, returnDelim);
         /* set end explicitly */
         this.end = length;
     }
 
-    public void init(char[] array, int length, boolean returnDelim) {
+    public void init(final char[] array, final int length, final boolean returnDelim) {
         this.init(array, DEFAULT_DELIMS, returnDelim);
         /* set end explicitly */
         this.end = length;
     }
 
-    public void init(Token token, char[] delimiters, boolean returnDelim) {
+    public void init(final Token token, final char[] delimiters, final boolean returnDelim) {
         this.init(token.array, delimiters, returnDelim);
         /* set start and end explicitly */
         this.position = token.begin;
         this.end = token.begin + token.length;
     }
 
-    private void init(char[] array, char[] delimiters, boolean returnDelim) {
+    private void init(final char[] array, final char[] delimiters, final boolean returnDelim) {
         /* gc hint */
         this.array = null;
         this.delimiters = null;
@@ -80,8 +80,8 @@ public final class CharArrayTokenizer {
         this.dl = delimiters.length;
     }
 
-    public void init(String s, char[] delimiters, boolean returnDelim) {
-        int sLength = s.length();
+    public void init(final String s, final char[] delimiters, final boolean returnDelim) {
+        final int sLength = s.length();
         /* if current array is not big enough, just release it */
         if (this.array != null && this.array.length < sLength) {
             this.array = null;
@@ -191,11 +191,11 @@ public final class CharArrayTokenizer {
         return false;
     }
 
-    public static int parseInt(CharArrayTokenizer.Token token) {
+    public static int parseInt(final CharArrayTokenizer.Token token) {
         return parseInt(token.array, token.begin, token.length);
     }
 
-    public static int parseInt(final char[] value, int offset, int length) {
+    public static int parseInt(final char[] value, int offset, final int length) {
         if (length == 0) {
             throw new NumberFormatException("No input");
         }
@@ -228,11 +228,11 @@ public final class CharArrayTokenizer {
         return result * sign;
     }
 
-    public static float parseFloat(CharArrayTokenizer.Token token) {
+    public static float parseFloat(final CharArrayTokenizer.Token token) {
         return parseFloat(token.array, token.begin, token.length);
     }
 
-    public static float parseFloat(final char[] value, int offset, int length) {
+    public static float parseFloat(final char[] value, int offset, final int length) {
         if (length == 0) {
             throw new NumberFormatException("No input");
         }
@@ -272,11 +272,11 @@ public final class CharArrayTokenizer {
         return result * sign;
     }
 
-    public static double parseDouble(CharArrayTokenizer.Token token) {
+    public static double parseDouble(final CharArrayTokenizer.Token token) {
         return parseDouble(token.array, token.begin, token.length);
     }
 
-    public static double parseDouble(final char[] value, int offset, int length) {
+    public static double parseDouble(final char[] value, int offset, final int length) {
         if (length == 0) {
             throw new NumberFormatException("No input");
         }
@@ -325,7 +325,7 @@ public final class CharArrayTokenizer {
         public Token() {
         }
 
-        public void init(char[] array, int begin, int length) {
+        public void init(final char[] array, final int begin, final int length) {
             this.array = null; // gc hint
             this.array = array;
             this.begin = begin;
@@ -385,7 +385,7 @@ public final class CharArrayTokenizer {
             length = end - offset;
         }
 
-        public boolean startsWith(String s) {
+        public boolean startsWith(final String s) {
             final int sl = s.length();
             if (sl > length) {
                 return false;
@@ -406,7 +406,7 @@ public final class CharArrayTokenizer {
             return true;
         }
 
-        public boolean endsWith(String s) {
+        public boolean endsWith(final String s) {
             final int sl = s.length();
             if (sl > length) {
                 return false;
@@ -427,7 +427,7 @@ public final class CharArrayTokenizer {
             return true;
         }
 
-        public boolean equals(String s) {
+        public boolean equals(final String s) {
             return s.length() == length && startsWith(s);
         }
 
@@ -471,7 +471,7 @@ public final class CharArrayTokenizer {
             int offset = length - 1;
 
             while (offset > begin) {
-                char b = array[begin + offset];
+                final char b = array[begin + offset];
                 if (b == c) {
                     return offset;
                 }

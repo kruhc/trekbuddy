@@ -106,8 +106,8 @@ public final class Map implements Runnable {
         return calibration.getDatum();
     }
 
-    public double getStep(char direction) {
-        QualifiedCoordinates[] range = calibration.getRange();
+    public double getStep(final char direction) {
+        final QualifiedCoordinates[] range = calibration.getRange();
         switch (direction) {
             case 'N':
                 return (range[0].getLat() - range[3].getLat()) / (calibration.getHeight());
@@ -122,11 +122,11 @@ public final class Map implements Runnable {
         return 0;
     }
 
-    public QualifiedCoordinates transform(Position p) {
+    public QualifiedCoordinates transform(final Position p) {
         return calibration.transform(p);
     }
 
-    public Position transform(QualifiedCoordinates qc) {
+    public Position transform(final QualifiedCoordinates qc) {
         return calibration.transform(qc);
     }
 
@@ -134,7 +134,7 @@ public final class Map implements Runnable {
         return calibration.getRange();
     }
 
-    public boolean isWithin(QualifiedCoordinates coordinates) {
+    public boolean isWithin(final QualifiedCoordinates coordinates) {
         return calibration.isWithin(coordinates);
     }
 
@@ -237,7 +237,7 @@ public final class Map implements Runnable {
 //#endif
 
         // open and init map
-        Throwable throwable = loadMap();
+        final Throwable throwable = loadMap();
 
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("map loading finished for " + getPath() + "; " + throwable);
@@ -253,7 +253,7 @@ public final class Map implements Runnable {
      * @param list of slice to be loaded
      * @return always <code>true</code>
      */
-    public boolean ensureImages(Vector list) {
+    public boolean ensureImages(final Vector list) {
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("about to load new slices");
 //#endif
@@ -278,7 +278,7 @@ public final class Map implements Runnable {
                 if (slices != null) {
                     throw new IllegalStateException("Slices exist for new loader");
                 }
-                Class factory;
+                final Class factory;
                 if (path.endsWith(".tar") || path.endsWith(".TAR")) {
                     factory = Class.forName("cz.kruch.track.maps.TarLoader");
                 } else if (path.endsWith(".jar")) {
@@ -326,9 +326,9 @@ public final class Map implements Runnable {
      * @return map
      * @throws Throwable if anything goes wrong
      */
-    public static Map defaultMap(/*StateListener*/Desktop listener) throws Throwable {
-        Map map = new Map("trekbuddy.jar", "Default", listener);
-        Throwable t = map.loadMap();
+    public static Map defaultMap(/*StateListener*/final Desktop listener) throws Throwable {
+        final Map map = new Map("trekbuddy.jar", "Default", listener);
+        final Throwable t = map.loadMap();
         if (t != null) {
             throw t;
         }
@@ -339,7 +339,7 @@ public final class Map implements Runnable {
     /**
      * Map loader.
      */
-    static abstract class Loader implements Runnable {
+    abstract static class Loader implements Runnable {
 //#ifdef __LOG__
         protected static final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("Map.Loader");
 //#endif
@@ -361,7 +361,7 @@ public final class Map implements Runnable {
         Loader() {
         }
 
-        void init(Map map, String url) throws IOException {
+        void init(final Map map, final String url) throws IOException {
             this.map = map;
         }
 
@@ -403,7 +403,7 @@ public final class Map implements Runnable {
             }
         }
 
-        final Loader use(Vector list) {
+        final Loader use(final Vector list) {
             synchronized (this) {
                 if (_list != null) {
                     throw new IllegalStateException("Loading in progress");
@@ -420,7 +420,7 @@ public final class Map implements Runnable {
 //#endif
 
             // load images
-            Throwable throwable = loadImages(_list);
+            final Throwable throwable = loadImages(_list);
 
             // end of job
             synchronized (this) {
@@ -472,7 +472,7 @@ public final class Map implements Runnable {
             return map.calibration;
         }
 
-        final Slice addSlice(CharArrayTokenizer.Token token) throws InvalidMapException {
+        final Slice addSlice(final CharArrayTokenizer.Token token) throws InvalidMapException {
             // already got some slices?
             if (map.slices != null) {
 
@@ -511,11 +511,11 @@ public final class Map implements Runnable {
             return slice;
         }
 
-        Slice newSlice(CharArrayTokenizer.Token token) throws InvalidMapException {
+        Slice newSlice(final CharArrayTokenizer.Token token) throws InvalidMapException {
             return !isGPSka ? new Slice(token) : new Slice();
         }
 
-        private String getBasename(CharArrayTokenizer.Token token) throws InvalidMapException {
+        private String getBasename(final CharArrayTokenizer.Token token) throws InvalidMapException {
             String name = token.toString();
             if (isTar) {
                 name = name.substring(4); // skips leading "set/..."
@@ -539,8 +539,8 @@ public final class Map implements Runnable {
             return name;
         }
 
-        private String getExtension(CharArrayTokenizer.Token token) throws InvalidMapException {
-            String name = token.toString();
+        private String getExtension(final CharArrayTokenizer.Token token) throws InvalidMapException {
+            final String name = token.toString();
             final int i = name.lastIndexOf('.');
             if (i > -1) {
                 return name.substring(i);

@@ -94,7 +94,7 @@ public class Slice {
 /*
         return (new StringBuffer(32)).append(getX()).append('-').append(getY()).append(' ').append(getWidth()).append('x').append(getHeight()).toString();
 */
-        StringBuffer sb = new StringBuffer(32);
+        final StringBuffer sb = new StringBuffer(32);
         NavigationScreens.append(sb, getX()).append('-');
         NavigationScreens.append(sb, getY()).append(' ');
         NavigationScreens.append(sb, getWidth()).append('x');

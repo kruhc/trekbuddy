@@ -75,7 +75,7 @@ abstract class Calibration {
     protected Calibration() {
     }
 
-    protected final void init(String path) {
+    protected final void init(final String path) {
         this.path = path;
         this.proximite = new Position(0, 0);
     }
@@ -139,10 +139,10 @@ abstract class Calibration {
         if (log.isEnabled()) log.debug("transform " + position);
 //#endif
 
-        QualifiedCoordinates qc;
+        final QualifiedCoordinates qc;
 
         if (calibrationGp instanceof CartesianCoordinates) {
-            CartesianCoordinates utm = (CartesianCoordinates) toGp(position);
+            final CartesianCoordinates utm = (CartesianCoordinates) toGp(position);
             qc = Mercator.MercatortoLL(utm, getDatum().ellipsoid,
                                        (Mercator.ProjectionSetup) projectionSetup);
 /*
@@ -157,7 +157,7 @@ abstract class Calibration {
     }
 
     final Position transform(final QualifiedCoordinates coordinates) {
-        GeodeticPosition gp;
+        final GeodeticPosition gp;
 
         if (calibrationGp instanceof CartesianCoordinates) {
             gp = Mercator.LLtoMercator(coordinates, getDatum().ellipsoid,
@@ -243,8 +243,8 @@ abstract class Calibration {
         if (projectionSetup instanceof Mercator.ProjectionSetup) {
 
             // setup is for Mercator projection
-            Mercator.ProjectionSetup msetup = (Mercator.ProjectionSetup) projectionSetup;
-            Ellipsoid ellipsoid = getDatum().ellipsoid;
+            final Mercator.ProjectionSetup msetup = (Mercator.ProjectionSetup) projectionSetup;
+            final Ellipsoid ellipsoid = getDatum().ellipsoid;
 
             /*
              * performance optimization: reuse existing vector
@@ -252,8 +252,8 @@ abstract class Calibration {
 
             // lat,lon -> easting,northing
             for (int N = ll.size(), i = 0; i < N; i++) {
-                QualifiedCoordinates local = (QualifiedCoordinates) ll.elementAt(i);
-                CartesianCoordinates utm = Mercator.LLtoMercator(local, ellipsoid, msetup);
+                final QualifiedCoordinates local = (QualifiedCoordinates) ll.elementAt(i);
+                final CartesianCoordinates utm = Mercator.LLtoMercator(local, ellipsoid, msetup);
                 ll.setElementAt(utm, i);
             }
 
@@ -279,34 +279,34 @@ abstract class Calibration {
         int[] index = verticalAxisByX(xy, p);
         Position.releaseInstance(p);
 
-        double gridRVscale = Math.abs((((GeodeticPosition) gp.elementAt(index[1])).getV() - ((GeodeticPosition) gp.elementAt(index[0])).getV()) / (((Position) xy.elementAt(index[1])).getY() - ((Position) xy.elementAt(index[0])).getY()));
-        int v1 = ((Position) xy.elementAt(index[0])).getX();
+        final double gridRVscale = Math.abs((((GeodeticPosition) gp.elementAt(index[1])).getV() - ((GeodeticPosition) gp.elementAt(index[0])).getV()) / (((Position) xy.elementAt(index[1])).getY() - ((Position) xy.elementAt(index[0])).getY()));
+        final int v1 = ((Position) xy.elementAt(index[0])).getX();
 
         p = Position.newInstance(0, 0);
         index = horizontalAxisByY(xy, p);
         Position.releaseInstance(p);
 
-        int dx = (((Position) xy.elementAt(index[1])).getX() - ((Position) xy.elementAt(index[0])).getX());
+        final int dx = (((Position) xy.elementAt(index[1])).getX() - ((Position) xy.elementAt(index[0])).getX());
         gridTHscale = Math.abs((((GeodeticPosition) gp.elementAt(index[1])).getH() - ((GeodeticPosition) gp.elementAt(index[0])).getH()) / dx);
-        int h0 = ((Position) xy.elementAt(index[0])).getY();
-        double nk0d = (((Position) xy.elementAt(index[1])).getY() - h0) * gridRVscale;
+        final int h0 = ((Position) xy.elementAt(index[0])).getY();
+        final double nk0d = (((Position) xy.elementAt(index[1])).getY() - h0) * gridRVscale;
         nk0 = (((GeodeticPosition) gp.elementAt(index[1])).getV() + nk0d - ((GeodeticPosition) gp.elementAt(index[0])).getV()) / dx;
 
         p = Position.newInstance(0, height);
         index = horizontalAxisByY(xy, p);
         Position.releaseInstance(p);
 
-        double gridBHscale = Math.abs((((GeodeticPosition) gp.elementAt(index[1])).getH() - ((GeodeticPosition) gp.elementAt(index[0])).getH()) / (((Position) xy.elementAt(index[1])).getX() - ((Position) xy.elementAt(index[0])).getX()));
-        int h1 = ((Position) xy.elementAt(index[0])).getY();
+        final double gridBHscale = Math.abs((((GeodeticPosition) gp.elementAt(index[1])).getH() - ((GeodeticPosition) gp.elementAt(index[0])).getH()) / (((Position) xy.elementAt(index[1])).getX() - ((Position) xy.elementAt(index[0])).getX()));
+        final int h1 = ((Position) xy.elementAt(index[0])).getY();
 
         p = Position.newInstance(0, 0);
         index = verticalAxisByX(xy, p);
         Position.releaseInstance(p);
 
-        int dy = (((Position) xy.elementAt(index[1])).getY() - ((Position) xy.elementAt(index[0])).getY());
+        final int dy = (((Position) xy.elementAt(index[1])).getY() - ((Position) xy.elementAt(index[0])).getY());
         gridLVscale = Math.abs((((GeodeticPosition) gp.elementAt(index[1])).getV() - ((GeodeticPosition) gp.elementAt(index[0])).getV()) / dy);
-        int v0 = ((Position) xy.elementAt(index[0])).getX();
-        double ek0d = (((Position) xy.elementAt(index[1])).getX() - v0) * gridBHscale;
+        final int v0 = ((Position) xy.elementAt(index[0])).getX();
+        final double ek0d = (((Position) xy.elementAt(index[1])).getX() - v0) * gridBHscale;
         ek0 = (((GeodeticPosition) gp.elementAt(index[1])).getH() - ek0d - ((GeodeticPosition) gp.elementAt(index[0])).getH()) / dy;
 
         h2 = (gridTHscale + gridBHscale) / 2D;
@@ -322,7 +322,7 @@ abstract class Calibration {
 
     private void computeRange() {
         range = new QualifiedCoordinates[4];
-        Position p = proximite;
+        final Position p = proximite;
         p.setXy(0, 0);
         range[0] = transform(p);
         p.setXy(width, 0);
@@ -334,10 +334,10 @@ abstract class Calibration {
     }
 
     private GeodeticPosition toGp(final Position position) {
-        int dy = position.getY() - calibrationXy.getY();
-        int dx = position.getX() - calibrationXy.getX();
-        double h = calibrationGp.getH() + (ek0 * dy) + (dx * (gridTHscale + dy * hScale));
-        double v = calibrationGp.getV() + (nk0 * dx) - (dy * (gridLVscale + dx * vScale));
+        final int dy = position.getY() - calibrationXy.getY();
+        final int dx = position.getX() - calibrationXy.getX();
+        final double h = calibrationGp.getH() + (ek0 * dy) + (dx * (gridTHscale + dy * hScale));
+        final double v = calibrationGp.getV() + (nk0 * dx) - (dy * (gridLVscale + dx * vScale));
 
         if (calibrationGp instanceof CartesianCoordinates) {
             return CartesianCoordinates.newInstance(((Mercator.ProjectionSetup) projectionSetup).zone, h, v);
@@ -351,7 +351,7 @@ abstract class Calibration {
         int i0 = -1, i1 = -1;
         int d0 = Integer.MAX_VALUE, d1 = Integer.MAX_VALUE;
         for (int N = xy.size(), i = 0; i < N; i++) {
-            int dx = Math.abs(x - ((Position) xy.elementAt(i)).getX());
+            final int dx = Math.abs(x - ((Position) xy.elementAt(i)).getX());
             if (dx < d0) {
                 if (i0 > -1) {
                     d1 = d0;
@@ -377,7 +377,7 @@ abstract class Calibration {
         int i0 = -1, i1 = -1;
         int d0 = Integer.MAX_VALUE, d1 = Integer.MAX_VALUE;
         for (int N = xy.size(), i = 0; i < N; i++) {
-            int dy = Math.abs(y - ((Position) xy.elementAt(i)).getY());
+            final int dy = Math.abs(y - ((Position) xy.elementAt(i)).getY());
             if (dy < d0) {
                 if (i0 > -1) {
                     d1 = d0;
@@ -406,21 +406,21 @@ abstract class Calibration {
                 || url.endsWith(Calibration.J2N_EXT);
     }
 
-    public static Calibration newInstance(InputStream in, String url) throws IOException {
+    public static Calibration newInstance(final InputStream in, final String url) throws IOException {
         return newInstance(in, url, url);
     }
 
-    public static Calibration newInstance(InputStream in, String path, String url) throws IOException {
-        Calibration c;
+    public static Calibration newInstance(final InputStream in, final String path, final String url) throws IOException {
+        final Calibration c;
 
         try {
-            Class factory;
-            url = url.toLowerCase();
-            if (url.endsWith(Calibration.OZI_EXT)) {
+            final Class factory;
+            final String lurl = url.toLowerCase();
+            if (lurl.endsWith(Calibration.OZI_EXT)) {
                 factory = Class.forName("cz.kruch.track.maps.OziCalibration");
-            } else if (url.endsWith(Calibration.GMI_EXT)) {
+            } else if (lurl.endsWith(Calibration.GMI_EXT)) {
                 factory = Class.forName("cz.kruch.track.maps.GmiCalibration");
-            } else if (url.endsWith(Calibration.XML_EXT) || url.endsWith(Calibration.J2N_EXT)) {
+            } else if (lurl.endsWith(Calibration.XML_EXT) || lurl.endsWith(Calibration.J2N_EXT)) {
                 factory = Class.forName("cz.kruch.track.maps.J2NCalibration");
             } else {
                 return null;
@@ -436,6 +436,13 @@ abstract class Calibration {
         }
 
         return c;
+    }
+
+    protected static short getDimension(final int i) throws InvalidMapException {
+        if (i <= Short.MAX_VALUE) {
+            return (short) i;
+        }
+        throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_MAP_TOO_BIG));
     }
 
     abstract void init(InputStream in, String path) throws IOException;

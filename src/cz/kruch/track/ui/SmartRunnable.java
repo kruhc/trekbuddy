@@ -43,7 +43,7 @@ final class SmartRunnable implements Runnable {
         }
     }
 
-    public void callSerially(Runnable r) {
+    public void callSerially(final Runnable r) {
         synchronized (this) {
             if (!go) { // probably shutdown, do not accept tasks anymore
                 return;

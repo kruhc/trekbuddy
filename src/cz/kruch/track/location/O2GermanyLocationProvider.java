@@ -127,7 +127,7 @@ public final class O2GermanyLocationProvider
         try {
 
             // pop messages until end
-            for (; go ;) {
+            while (go) {
                 synchronized (this) {
                     while (go && trigger == null) {
                         try {
@@ -154,9 +154,9 @@ public final class O2GermanyLocationProvider
                         final int y = Integer.parseInt(text.substring(6)) * 10;
                         final int[] avg = update(x, y);
                         final int idx = (avg[0] - 2500000) / 1000000;
-                        if (idx >=0 && idx <= 3) {
-                            CartesianCoordinates xy = CartesianCoordinates.newInstance(null, avg[0], avg[1]);
-                            QualifiedCoordinates localQc = Mercator.MercatortoLL(xy, potsdam.ellipsoid, zones[idx]);
+                        if (idx >= 0 && idx <= 3) {
+                            final CartesianCoordinates xy = CartesianCoordinates.newInstance(null, avg[0], avg[1]);
+                            final QualifiedCoordinates localQc = Mercator.MercatortoLL(xy, potsdam.ellipsoid, zones[idx]);
                             coords = potsdam.toWgs84(localQc);
                             QualifiedCoordinates.releaseInstance(localQc);
                             CartesianCoordinates.releaseInstance(xy);
@@ -171,7 +171,7 @@ public final class O2GermanyLocationProvider
                 }
 
                 // create location
-                Location location;
+                final Location location;
                 if (coords != null) {
                     location = Location.newInstance(coords, System.currentTimeMillis(), 1);
                 } else {

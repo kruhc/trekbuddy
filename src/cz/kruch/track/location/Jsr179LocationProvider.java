@@ -63,7 +63,7 @@ public final class Jsr179LocationProvider
             final int timeout = tokenizer.nextInt();
             final int maxage = tokenizer.nextInt();
             tokenizer = null; // gc hint
-            javax.microedition.location.Criteria criteria = new javax.microedition.location.Criteria();
+            final javax.microedition.location.Criteria criteria = new javax.microedition.location.Criteria();
 
             // common criteria
             criteria.setAltitudeRequired(true);
@@ -177,7 +177,7 @@ public final class Jsr179LocationProvider
             // not yet started
             if (nmealog == null) {
 
-                String path = Config.getFolderNmea() + GpxTracklog.dateToFileDate(System.currentTimeMillis()) + ".nmea";
+                final String path = Config.getFolderNmea() + GpxTracklog.dateToFileDate(System.currentTimeMillis()) + ".nmea";
                 File file = null;
 
                 try {

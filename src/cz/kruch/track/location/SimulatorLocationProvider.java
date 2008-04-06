@@ -110,7 +110,7 @@ public final class SimulatorLocationProvider
             // open input
             in = file.openInputStream();
 
-            for (; go ;) {
+            while (go) {
 
                 Location location = null;
 

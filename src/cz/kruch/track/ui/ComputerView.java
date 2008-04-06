@@ -264,7 +264,7 @@ final class ComputerView extends View implements Runnable, CommandListener {
     private volatile int spdavgIndex;
     private volatile float spdavgShort;
 
-    public ComputerView(/*Navigator*/Desktop navigator) {
+    ComputerView(/*Navigator*/Desktop navigator) {
         super(navigator);
     }
 
@@ -275,7 +275,7 @@ final class ComputerView extends View implements Runnable, CommandListener {
 
         // init CRC table
         int[] crc_table = CRC_TABLE = new int[256];
-        for (int n = 0; n < CRC_TABLE.length; n++) {
+        for (int n = 0; n < 256; n++) {
             int c = n;
             for (int k = 8; --k >= 0;) {
                 if ((c & 1) != 0)
@@ -709,9 +709,9 @@ final class ComputerView extends View implements Runnable, CommandListener {
         final String[] names = this.profilesNames;
         final Hashtable profiles = this.profiles;
         for (int i = names.length; --i >= 0; ) {
-            Object o = profiles.get(names[i]);
+            final Object o = profiles.get(names[i]);
             if (o instanceof Object[]) {
-                Vector v = (Vector) ((Object[]) o)[0];
+                final Vector v = (Vector) ((Object[]) o)[0];
                 for (int N = v.size(), j = 0; j < N; j++) {
                     final Area a = (Area) v.elementAt(j);
                     if (a.fontImpl instanceof Image) {
@@ -944,7 +944,7 @@ final class ComputerView extends View implements Runnable, CommandListener {
                                     NavigationScreens.append(sb, sat);
                                 } break;
                                 case VALUE_FIX: {
-                                    char c;
+                                    final char c;
                                     switch (fix) {
                                         case 1:
                                             c = fix3d ? '3' : '2';
@@ -1270,14 +1270,14 @@ final class ComputerView extends View implements Runnable, CommandListener {
         units = null;
 
         // try cache
-        Object o = profiles.get(filename);
+        final Object o = profiles.get(filename);
         if (o instanceof Object[]) {
 
 //#ifdef __LOG__
             if (log.isEnabled()) log.debug("found cached profile: " + filename);
 //#endif
             // populate members
-            Object[] cached = (Object[]) o;
+            final Object[] cached = (Object[]) o;
             areas = (Vector) cached[0];
             colors = (int[]) cached[1];
             units = (Integer) cached[2];
@@ -1387,7 +1387,7 @@ final class ComputerView extends View implements Runnable, CommandListener {
 
     private String loadProfile(final String filename, final InputStream in) throws IOException, XmlPullParserException {
         // instantiate parser
-        KXmlParser parser = new KXmlParser(NAME_CACHE);
+        final KXmlParser parser = new KXmlParser(NAME_CACHE);
 
         try {
             // set input
@@ -1408,7 +1408,7 @@ final class ComputerView extends View implements Runnable, CommandListener {
                             area.w = Short.parseShort(parser.getAttributeValue(null, ATTR_W));
                             area.h = Short.parseShort(parser.getAttributeValue(null, ATTR_H));
                             area.ralign = "right".equals(parser.getAttributeValue(null, ATTR_ALIGN));
-                            String font = parser.getAttributeValue(null, TAG_FONT);
+                            final String font = parser.getAttributeValue(null, TAG_FONT);
                             if (font != null) {
 /*
                                 if (fo instanceof byte[]) {
@@ -1419,7 +1419,7 @@ final class ComputerView extends View implements Runnable, CommandListener {
                                 area.font = fo;
 */
                                 area.fontName = font;
-                                Object fo = fonts.get(font);
+                                final Object fo = fonts.get(font);
                                 if (fo instanceof Font) {
                                     area.fontImpl = fo;
                                 }
@@ -1467,7 +1467,7 @@ final class ComputerView extends View implements Runnable, CommandListener {
                             colors[offset + 2] = Integer.parseInt(parser.getAttributeValue(null, ATTR_NXCOLOR), 16);
                             colors[offset + 3] = Integer.parseInt(parser.getAttributeValue(null, ATTR_PXCOLOR), 16);
                         } else if (TAG_SCREEN.equals(tag)) {
-                            String background = parser.getAttributeValue(null, ATTR_BACKGROUND);
+                            final String background = parser.getAttributeValue(null, ATTR_BACKGROUND);
                             if (background != null) {
                                 final byte[] image = (byte[]) load(background);
                                 if (image != null) {

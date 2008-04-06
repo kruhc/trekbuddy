@@ -35,7 +35,7 @@ final class ItemSelection implements CommandListener {
     private final Displayable next;
     private final String title, selectLabel;
 
-    public ItemSelection(Displayable next, String title, Callback callback) {
+    ItemSelection(Displayable next, String title, Callback callback) {
         this(next, title, Resources.getString(Resources.DESKTOP_CMD_SELECT), callback);
     }
 
@@ -46,9 +46,9 @@ final class ItemSelection implements CommandListener {
         this.selectLabel = selectLabel;
     }
 
-    public void show(Enumeration items, String currentItem) {
+    public void show(final Enumeration items, final String currentItem) {
         // add items and commands
-        List list = FileBrowser.sort2list(title, items, null);
+        final List list = FileBrowser.sort2list(title, items, null);
         if (currentItem != null) {
             for (int i = list.size(); --i >= 0; ) {
                 if (list.getString(i).equals(currentItem)) {

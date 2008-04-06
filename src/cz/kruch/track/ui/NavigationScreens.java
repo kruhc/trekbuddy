@@ -183,7 +183,7 @@ public final class NavigationScreens {
         arrowSize2[idx] = arrowSize[idx] >> 1;
     }
 
-    private static Image loadImage(String name) throws IOException {
+    private static Image loadImage(final String name) throws IOException {
         Image image = null;
         File file = null;
 
@@ -220,13 +220,13 @@ public final class NavigationScreens {
         return image;
     }
 
-    public static Image createImage(InputStream in) throws IOException {
+    public static Image createImage(final InputStream in) throws IOException {
         // assertion
         if (in == null) {
             throw new IllegalArgumentException("Image stream is null");
         }
 
-        Image image = Image.createImage(in);
+        final Image image = Image.createImage(in);
         if (Config.forcedGc) {
             System.gc();
         }
@@ -329,7 +329,7 @@ public final class NavigationScreens {
         graphics.drawImage(waypoint, x - wptSize2, y - wptSize2, anchor);
     }
 
-    public static void drawPOI(Graphics graphics, final int status,
+    public static void drawPOI(final Graphics graphics, final int status,
                                final int x, final int y, final int anchor) {
         if (Config.S60renderer) {
             graphics.setClip(x - poiSize2, y - poiSize2, poiSize, poiSize);
@@ -444,8 +444,8 @@ public final class NavigationScreens {
         return ProjectionSetup.contextProjection instanceof Mercator.ProjectionSetup && "UTM".equals(ProjectionSetup.contextProjection.name);
     }
 
-    private static StringBuffer toGrid(QualifiedCoordinates qc, StringBuffer sb) {
-        CartesianCoordinates gridCoords = Mercator.LLtoGrid(qc);
+    private static StringBuffer toGrid(final QualifiedCoordinates qc, final StringBuffer sb) {
+        final CartesianCoordinates gridCoords = Mercator.LLtoGrid(qc);
         if (gridCoords.zone != null) {
             sb.append(gridCoords.zone).append(' ');
         }
@@ -461,7 +461,7 @@ public final class NavigationScreens {
 
     private static StringBuffer toUTM(final QualifiedCoordinates qc,
                                       final StringBuffer sb) {
-        CartesianCoordinates utmCoords = Mercator.LLtoUTM(qc);
+        final CartesianCoordinates utmCoords = Mercator.LLtoUTM(qc);
         sb.append(utmCoords.zone).append(' ');
         sb.append('E').append(' ');
         NavigationScreens.append(sb, ExtraMath.round(utmCoords.easting));
@@ -473,7 +473,7 @@ public final class NavigationScreens {
         return sb;
     }
 
-    private static StringBuffer toCondensedLL(QualifiedCoordinates qc, StringBuffer sb) {
+    private static StringBuffer toCondensedLL(final QualifiedCoordinates qc, final StringBuffer sb) {
         if (useCondensed == 1) {
             sb.append(qc.getLat() > 0D ? 'N' : 'S');
         }
@@ -613,7 +613,7 @@ public final class NavigationScreens {
         return sb;
     }
 
-    private static StringBuffer zeros(StringBuffer sb, final double d,
+    private static StringBuffer zeros(final StringBuffer sb, final double d,
                                       final int c) {
         int i = ExtraMath.grade(d);
         while (i < c) {
@@ -624,7 +624,7 @@ public final class NavigationScreens {
         return sb;
     }
 
-    public static StringBuffer append(StringBuffer sb, double value, int precision) {
+    public static StringBuffer append(final StringBuffer sb, double value, int precision) {
         if (value < 0D) {
             sb.append('-');
             value = -value;
@@ -685,7 +685,7 @@ public final class NavigationScreens {
         return sb;
     }
 
-    public static StringBuffer printDistance(StringBuffer sb, float distance) {
+    public static StringBuffer printDistance(final StringBuffer sb, final float distance) {
         switch (Config.units) {
             case Config.UNITS_METRIC: {
                 if (distance >= 10000F) { // dist > 10 km
@@ -707,7 +707,7 @@ public final class NavigationScreens {
         return sb;
     }
 
-    private static int adjustPrecision(double value, int precision) {
+    private static int adjustPrecision(final double value, int precision) {
         if (precision == 0) {
             if (value < 10D) {
                 precision = 3;

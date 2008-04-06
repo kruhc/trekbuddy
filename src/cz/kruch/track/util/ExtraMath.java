@@ -108,7 +108,7 @@ public final class ExtraMath {
         double inter = value;
 
         for (int n = N.length, i = 0; i < n; ) {
-            double interi = inter * N[i];
+            final double interi = inter * N[i];
             if (interi > 10D) {
                 i++;
             } else {
@@ -130,13 +130,13 @@ public final class ExtraMath {
 
         final double[] N = ExtraMath.N;
         final double[] LN = ExtraMath.LN;
-        double lnresult = arg2 * ln(arg1);
+        final double lnresult = arg2 * ln(arg1);
         double result = 1D;
         double inter = lnresult;
 
         if (lnresult < 0D) {
             for (int n = N.length, i = 1; i < n; ) {
-                double interi = inter + LN[i];
+                final double interi = inter + LN[i];
                 if (interi > 0D) {
                     i++;
                 } else {
@@ -146,7 +146,7 @@ public final class ExtraMath {
             }
         } else {
             for (int n = N.length, i = 1; i < n; ) {
-                double interi = inter - LN[i];
+                final double interi = inter - LN[i];
                 if (interi < 0D) {
                     i++;
                 } else {

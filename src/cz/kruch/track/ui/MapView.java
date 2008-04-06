@@ -46,7 +46,7 @@ final class MapView extends View {
     // navigation
     private Position[] route;
 
-    public MapView(/*Navigator*/Desktop navigator) {
+    MapView(/*Navigator*/Desktop navigator) {
         super(navigator);
         this.mapViewer = new MapViewer(/*0, 0, */);
     }
@@ -133,7 +133,7 @@ final class MapView extends View {
         return super.routeChanged(wpts);
     }
 
-    public int navigationChanged(Vector wpts, int idx, boolean silent) {
+    public int navigationChanged(final Vector wpts, final int idx, final boolean silent) {
         // navigation started or changed
         if (wpts != null) {
 
@@ -258,7 +258,7 @@ final class MapView extends View {
                     if (isAtlas() && !navigator._getInitializingMap() && !navigator._getLoadingSlices()) {
 
                         // bounds hit?
-                        char neighbour = mapViewer.boundsHit();
+                        final char neighbour = mapViewer.boundsHit();
 //#ifdef __LOG__
                         if (log.isEnabled()) log.debug("bounds hit? sibling is " + neighbour);
 //#endif
@@ -504,13 +504,13 @@ final class MapView extends View {
             g.setColor(0x00FFFFFF);
 
             // draw loaded target
-            Object[] result = navigator._getLoadingResult();
+            final Object[] result = navigator._getLoadingResult();
             if (result[0] != null) {
                 g.drawString(result[0].toString(), 0, 0, Graphics.TOP | Graphics.LEFT);
             }
             if (result[1] != null) {
                 if (result[1] instanceof Throwable) {
-                    Throwable t = (Throwable) result[1];
+                    final Throwable t = (Throwable) result[1];
                     g.drawString(t.getClass().toString().substring(6) + ":", 0, Desktop.font.getHeight(), Graphics.TOP | Graphics.LEFT);
                     if (t.getMessage() != null) {
                         g.drawString(t.getMessage(), 0, 2 * Desktop.font.getHeight(), Graphics.TOP | Graphics.LEFT);
@@ -569,7 +569,7 @@ final class MapView extends View {
         }
     }
 
-    private void getNavigationInfo(StringBuffer extInfo) {
+    private void getNavigationInfo(final StringBuffer extInfo) {
         final float distance = navigator.wptDistance;
         final int azimuth = navigator.wptAzimuth;
 
@@ -593,7 +593,7 @@ final class MapView extends View {
 
     /*private */void syncOSD() { // TODO fix visibility
         // vars
-        Map map = navigator.getMap();
+        final Map map = navigator.getMap();
         QualifiedCoordinates localQc = map.transform(mapViewer.getPosition());
         QualifiedCoordinates from = map.getDatum().toWgs84(localQc);
 
@@ -606,6 +606,8 @@ final class MapView extends View {
         // release to pool
         QualifiedCoordinates.releaseInstance(from);
         QualifiedCoordinates.releaseInstance(localQc);
+        from = null; // gc hint
+        localQc = null; // gc hint
 
         // update extended OSD (and navigation, if any)
         if (!updateNavigationInfo()) {
@@ -617,7 +619,7 @@ final class MapView extends View {
         boolean moved = false;
 
         if (location != null) {
-            Map map = navigator.getMap();
+            final Map map = navigator.getMap();
             QualifiedCoordinates localQc = map.getDatum().toLocal(location.getQualifiedCoordinates());
             if (map.isWithin(localQc)) {
                 moved = mapViewer.setPosition(map.transform(localQc));
@@ -648,7 +650,7 @@ final class MapView extends View {
         if (Desktop.wpts != null && Desktop.wptIdx > -1) {
 
             // get navigation info
-            StringBuffer extInfo = Desktop.osd._getSb();
+            final StringBuffer extInfo = Desktop.osd._getSb();
             getNavigationInfo(extInfo);
 
             // set course and delta

@@ -169,9 +169,9 @@ public final class Config {
     public static boolean trajectoryOn;
 
     // group [Navigation]
-    public static int wptProximity = 50;
-    public static int poiProximity = 1000;
-    public static int routeLineColor = 0x0;
+    public static int wptProximity      = 50;
+    public static int poiProximity      = 1000;
+    public static int routeLineColor;
     public static boolean routeLineStyle;
     public static boolean routePoiMarks = true;
 
@@ -631,17 +631,17 @@ public final class Config {
         useDatum(geoDatum);
     }
 
-    private static void initDatums(InputStream in, CharArrayTokenizer tokenizer,
+    private static void initDatums(final InputStream in,
+                                   final CharArrayTokenizer tokenizer,
                                    final char[] delims) {
         if (in == null) {
             return;
         }
 
         LineReader reader = null;
-        CharArrayTokenizer.Token line;
         try {
             reader = new cz.kruch.track.io.LineReader(in);
-            line = reader.readToken(false);
+            CharArrayTokenizer.Token line = reader.readToken(false);
             while (line != null) {
                 initDatum(tokenizer, line, delims);
                 line = null; // gc hint
@@ -661,13 +661,13 @@ public final class Config {
         }
     }
 
-    private static void initDatum(CharArrayTokenizer tokenizer,
-                                  CharArrayTokenizer.Token token,
+    private static void initDatum(final CharArrayTokenizer tokenizer,
+                                  final CharArrayTokenizer.Token token,
                                   final char[] delims) {
         try {
             tokenizer.init(token, delims, false);
-            String datumName = tokenizer.next().toString();
-            String ellipsoidName = tokenizer.next().toString();
+            final String datumName = tokenizer.next().toString();
+            final String ellipsoidName = tokenizer.next().toString();
             final Ellipsoid[] ellipsoids = Ellipsoid.ELLIPSOIDS;
             for (int i = ellipsoids.length; --i >= 0; ) {
                 if (ellipsoidName.equals(ellipsoids[i].getName())) {
@@ -678,7 +678,7 @@ public final class Config {
                     final Datum datum = new Datum(datumName, ellipsoid, dx, dy, dz);
                     datums.addElement(datum);
                     while (tokenizer.hasMoreTokens()) {
-                        String nm = tokenizer.next().toString();
+                        final String nm = tokenizer.next().toString();
                         datumMappings.put(nm, datum);
                     }
                     break;
@@ -689,7 +689,7 @@ public final class Config {
         }
     }
 
-    public static String useDatum(String id) {
+    public static String useDatum(final String id) {
         for (int i = datums.size(); --i >= 0; ) {
             final Datum datum = (Datum) datums.elementAt(i);
             if (id.equals(datum.name)) {

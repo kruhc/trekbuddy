@@ -27,7 +27,7 @@ public final class Ellipsoid {
     final double flattening;
     final double eccentricitySquared, eccentricityPrimeSquared;
 
-    public Ellipsoid(String name, double radius, double invertedFlattening) {
+    public Ellipsoid(final String name, final double radius, final double invertedFlattening) {
         this.name = name;
         this.equatorialRadius = radius;
         this.flattening = 1D / invertedFlattening;

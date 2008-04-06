@@ -23,7 +23,7 @@ import javax.microedition.lcdui.Display;
 /**
  * Main MIDlet.
  *
- * @author Ales Pour <kruhc@seznam.cz> 
+ * @author Ales Pour <kruhc@seznam.cz>
  */
 public class TrackingMIDlet extends MIDlet implements Runnable {
 
@@ -328,7 +328,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         return flags;
     }
 
-    public static boolean hasFlag(String flag) {
+    public static boolean hasFlag(final String flag) {
         return flags != null && flags.indexOf(flag) > -1;
     }
 

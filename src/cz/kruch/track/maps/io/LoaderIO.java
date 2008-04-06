@@ -56,7 +56,7 @@ public final class LoaderIO extends Thread {
         }
     }
 
-    public void enqueue(Runnable r) {
+    public void enqueue(final Runnable r) {
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("enqueueing task " + r);
 //#endif
@@ -80,8 +80,8 @@ public final class LoaderIO extends Thread {
         if (log.isEnabled()) log.debug("I/O thread starting...");
 //#endif
 
-        for (; go ;) {
-            
+        while (go) {
+
             // wait for task
             synchronized (this) {
                 while (go && task == null) {

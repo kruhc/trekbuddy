@@ -41,7 +41,7 @@ public final class QualifiedCoordinates implements GeodeticPosition {
         return newInstance(lat, lon, Float.NaN);
     }
 
-    public synchronized static QualifiedCoordinates newInstance(final double lat,
+    public static synchronized QualifiedCoordinates newInstance(final double lat,
                                                                 final double lon,
                                                                 final float alt) {
         QualifiedCoordinates result;
@@ -59,7 +59,7 @@ public final class QualifiedCoordinates implements GeodeticPosition {
         return result;
     }
 
-    public synchronized static void releaseInstance(QualifiedCoordinates qc) {
+    public static synchronized void releaseInstance(final QualifiedCoordinates qc) {
         if (qc != null && countFree < pool.length) {
             pool[countFree++] = qc;
         }
@@ -81,14 +81,6 @@ public final class QualifiedCoordinates implements GeodeticPosition {
         this.lat = lat;
         this.lon = lon;
         this.alt = alt;
-    }
-
-    protected QualifiedCoordinates(QualifiedCoordinates qc) {
-        this.lat = qc.lat;
-        this.lon = qc.lon;
-        this.alt = qc.alt;
-        this.hAccuracy = qc.hAccuracy;
-        this.vAccuracy = qc.vAccuracy;
     }
 
     public double getH() {
@@ -204,13 +196,13 @@ public final class QualifiedCoordinates implements GeodeticPosition {
     }
 
     /* non-JSR179 signature TODO fix */
-    public float azimuthTo(QualifiedCoordinates neighbour, final double distance) {
+    public float azimuthTo(final QualifiedCoordinates neighbour, final double distance) {
         double result = 0D;
 
-        int ilat1 = (int)(0.50D + lat * 360000D);
-        int ilat2 = (int)(0.50D + neighbour.lat * 360000D);
-        int ilon1 = (int)(0.50D + lon * 360000D);
-        int ilon2 = (int)(0.50D + neighbour.lon * 360000D);
+        final int ilat1 = (int)(0.50D + lat * 360000D);
+        final int ilat2 = (int)(0.50D + neighbour.lat * 360000D);
+        final int ilon1 = (int)(0.50D + lon * 360000D);
+        final int ilon2 = (int)(0.50D + neighbour.lon * 360000D);
 
         final double lat1 = Math.toRadians(lat);
         final double lon1 = Math.toRadians(lon);

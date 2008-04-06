@@ -33,12 +33,12 @@ final class GmiCalibration extends Calibration {
         super();
     }
 
-    void init(InputStream in, String path) throws IOException {
+    void init(final InputStream in, final String path) throws IOException {
         super.init(path);
 
         // vars
-        Vector xy = new Vector(4);
-        Vector ll = new Vector(4);
+        final Vector xy = new Vector(4);
+        final Vector ll = new Vector(4);
 
         // text reader
         LineReader reader = new LineReader(in);
@@ -46,8 +46,8 @@ final class GmiCalibration extends Calibration {
         // base info
         reader.readLine(false); // ignore - intro line
         reader.readLine(false); // ignore - path to image file
-        width = Integer.parseInt(reader.readLine(false)); // image width
-        height = Integer.parseInt(reader.readLine(false)); // image width
+        width = getDimension(Integer.parseInt(reader.readLine(false))); // image width
+        height = getDimension(Integer.parseInt(reader.readLine(false))); // image width
 
         // additional data
         CharArrayTokenizer tokenizer = new CharArrayTokenizer();
@@ -86,7 +86,7 @@ final class GmiCalibration extends Calibration {
         doFinal(null, LATLON_PROJ_SETUP, xy, ll);
     }
 
-    private static void parsePoint(CharArrayTokenizer tokenizer, Vector xy, Vector ll) {
+    private static void parsePoint(final CharArrayTokenizer tokenizer, final Vector xy, final Vector ll) {
         final int x = tokenizer.nextInt();
         final int y = tokenizer.nextInt();
         final double lon = tokenizer.nextDouble();
@@ -95,7 +95,7 @@ final class GmiCalibration extends Calibration {
         ll.addElement(QualifiedCoordinates.newInstance(lat, lon));
     }
 
-    private void parseBorder(CharArrayTokenizer tokenizer, Vector xy, Vector ll) {
+    private void parseBorder(final CharArrayTokenizer tokenizer, final Vector xy, final Vector ll) {
         double lat = tokenizer.nextDouble();
         double lon = tokenizer.nextDouble();
         xy.addElement(Position.newInstance(0, 0));

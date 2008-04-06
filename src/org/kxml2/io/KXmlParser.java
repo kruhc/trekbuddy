@@ -589,7 +589,7 @@ public final class KXmlParser implements XmlPullParser {
                 if (length != item.length())
                     continue;
                 int j = length;
-                for ( ; --j>= 0; ) {
+                while (--j >= 0) {
                     if (buf[pos + j] != item.charAt(j))
                         break;
                 }

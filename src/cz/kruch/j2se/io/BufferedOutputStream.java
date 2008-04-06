@@ -17,7 +17,7 @@ public final class BufferedOutputStream extends OutputStream {
     /** underyling stream */
     private OutputStream out;
     /** write buffer */
-    private byte buffer[];
+    private byte[] buffer;
     /** number of bytes in the buffer */
     private int count;
 
@@ -47,7 +47,7 @@ public final class BufferedOutputStream extends OutputStream {
         buffer[count++] = (byte) b;
     }
 
-    public void write(byte b[], int off, int len) throws IOException {
+    public void write(byte[] b, int off, int len) throws IOException {
         if (len >= buffer.length) {
             /* If the request length exceeds the size of the output buffer,
                flush the output buffer and then write the data directly.

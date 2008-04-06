@@ -87,7 +87,7 @@ final class MapViewer {
     private boolean visible = true;
     private int ci, li;
 
-    public MapViewer() {
+    MapViewer() {
         this.crosshairSize = NavigationScreens.crosshairs.getHeight();
         this.crosshairSize2 = this.crosshairSize >> 1;
         this.clip = new int[] { -1, -1, crosshairSize, crosshairSize };
@@ -330,7 +330,7 @@ final class MapViewer {
 
             // locals
             Slice slice = null;
-            Position p = getPosition();
+            final Position p = getPosition();
             final int px = p.getX();
             final int py = p.getY();
             
@@ -338,7 +338,7 @@ final class MapViewer {
             if (slice == null) {
                 final Vector slices = this.slices;
                 for (int i = slices.size(); --i >= 0; ) {
-                    Slice s = (Slice) slices.elementAt(i);
+                    final Slice s = (Slice) slices.elementAt(i);
                     if (s.isWithin(px, py)) {
                         slice = s;
                         break;
@@ -607,14 +607,14 @@ final class MapViewer {
         }
     }
 
-    private static boolean isDefaultMap(Map map) {
+    private static boolean isDefaultMap(final Map map) {
         if (map == null) {
             return false;
         }
 
-        String mapPath = Config.mapPath;
+        final String mapPath = Config.mapPath;
         if (mapPath.equals(Config.defaultMapPath)) {
-            String mapName = map.getName();
+            final String mapName = map.getName();
             if (mapName == null) {
                 return mapPath.equals(map.getPath());
             } else if (mapPath.length() == 0) {
@@ -627,7 +627,7 @@ final class MapViewer {
         return false;
     }
 
-    private void drawNavigation(Graphics graphics) {
+    private void drawNavigation(final Graphics graphics) {
         // hack! setup graphics for waypoints
         final int color = graphics.getColor();
         graphics.setFont(Desktop.fontWpt);
@@ -654,7 +654,7 @@ final class MapViewer {
                 Position p0 = null;
                 for (int i = positions.length; --i >= 0; ) {
                     if (positions[i] != null) {
-                        Position p1 = positions[i];
+                        final Position p1 = positions[i];
                         if (p0 != null) {
                             graphics.drawLine(p0.getX() - x, p0.getY() - y,
                                               p1.getX() - x, p1.getY() - y);
@@ -789,9 +789,9 @@ final class MapViewer {
         final int slice_w = slice.getWidth();
         final int slice_h = slice.getHeight();
 
-        int x_src;
+        final int x_src;
         int w;
-        int x_dest;
+        final int x_dest;
         if (x > m_x0) {
             x_src = x - m_x0;
             w = slice_w - x_src;
@@ -804,9 +804,9 @@ final class MapViewer {
         if (w > (Desktop.width - x_dest)) w = Desktop.width - x_dest;
         if (w > slice_w) w = slice_w;
 
-        int y_src;
+        final int y_src;
         int h;
-        int y_dest;
+        final int y_dest;
         if (y > m_y0) {
             y_src = y - m_y0;
             h = slice_h - y_src;
@@ -875,7 +875,7 @@ final class MapViewer {
 */
 
     public int nextCrosshair() {
-        int mask;
+        final int mask;
 
         if (star % 2 == 0) {
             ci++;
@@ -927,12 +927,12 @@ final class MapViewer {
             // find needed slices ("row by row")
             int _x = x;
             int _y = y;
-            int xmax = x + Desktop.width > mWidth ? mWidth : x + Desktop.width;
-            int ymax = y + Desktop.height > mHeight ? mHeight : y + Desktop.height;
+            final int xmax = x + Desktop.width > mWidth ? mWidth : x + Desktop.width;
+            final int ymax = y + Desktop.height > mHeight ? mHeight : y + Desktop.height;
             while (_y < ymax) {
                 int _l = ymax; // bottom for current "line"
                 while (_x < xmax) {
-                    Slice s = ensureSlice(_x, _y, oldSlices, newSlices);
+                    final Slice s = ensureSlice(_x, _y, oldSlices, newSlices);
                     if (s != null) {
                         _x = s.getX() + s.getWidth();
                         _l = s.getY() + s.getHeight();
@@ -972,7 +972,7 @@ final class MapViewer {
             }
 
             // exchange vectors and do cleanup
-            Vector v = slices;
+            final Vector v = slices;
             slices = slices2;
             slices2 = v;
             slices2.removeAllElements();
@@ -1035,14 +1035,14 @@ final class MapViewer {
     private void calculateScale() {
         sInfoLength = 0;
         if (map != null) {
-            QualifiedCoordinates[] range = map.getRange();
+            final QualifiedCoordinates[] range = map.getRange();
             double scale = range[0].distance(range[1]) / map.getWidth();
             if (scale > 1F) {
                 char[] units = NavigationScreens.DIST_STR_M;
                 long half = (long) (scale * ((Desktop.width >> 1) - scaleDx));
                 if (half >= 10000) {
                     units = NavigationScreens.DIST_STR_KM;
-                    long m = half % 1000;
+                    final long m = half % 1000;
                     half /= 1000;
                     if (m > 500) {
                         half++;
@@ -1055,7 +1055,7 @@ final class MapViewer {
                     guess += grade;
                 }
                 scaleLength = (int) (guess / scale);
-                StringBuffer sb = new StringBuffer(32);
+                final StringBuffer sb = new StringBuffer(32);
                 sb.append(guess).append(units);
                 if (sb.length() > sInfo.length) {
                     throw new IllegalStateException("Scale length = " + sInfoLength);

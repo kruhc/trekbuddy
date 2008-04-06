@@ -53,11 +53,11 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
     }
 */
 
-    protected Slice newSlice(CharArrayTokenizer.Token token) throws InvalidMapException {
+    protected Slice newSlice(final CharArrayTokenizer.Token token) throws InvalidMapException {
         return new TarSlice(token);
     }
 
-    void loadMeta(Map map) throws IOException {
+    void loadMeta(final Map map) throws IOException {
         // input stream
         InputStream in = null;
 
@@ -125,7 +125,7 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
                 while (entry != null) {
 
                     // get entry name
-                    CharArrayTokenizer.Token entryName = entry.getName();
+                    final CharArrayTokenizer.Token entryName = entry.getName();
 
                     if (!gotSlices && entryName.startsWith(SET_DIR_PREFIX)
                         && (entryName.endsWith(".png") || entryName.endsWith(".jpg"))) { // slice
@@ -184,13 +184,13 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
         }
     }
 
-    private void loadTmi(Map map) throws IOException {
+    private void loadTmi(final Map map) throws IOException {
         // var
         File file = null;
 
         try {
             // check for .ser nativeFile
-            String tmiPath = map.getPath().substring(0, map.getPath().lastIndexOf('.')) + ".tmi";
+            final String tmiPath = map.getPath().substring(0, map.getPath().lastIndexOf('.')) + ".tmi";
             file = File.open(Connector.open(tmiPath, Connector.READ));
             if (file.exists()) {
 //#ifdef __LOG__
@@ -305,7 +305,7 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
         super.dispose();
     }
 
-    public void loadSlice(Slice slice) throws IOException {
+    public void loadSlice(final Slice slice) throws IOException {
         // input stream
         InputStream in = null;
 
@@ -353,7 +353,7 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
      * Atlas.Loader contract.
      */
 
-    public void loadIndex(Atlas atlas, String url, String baseUrl) throws IOException {
+    public void loadIndex(final Atlas atlas, final String url, final String baseUrl) throws IOException {
         // vars
         File file = null;
         InputStream in = null;
@@ -396,11 +396,11 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
                         if (lName != null && mName != null) {
 
                             // construct url
-                            String realUrl = sb.delete(0, sb.length()).append(baseUrl).append(entryName).toString();
-                            String fakeUrl = url.endsWith(".idx") ? realUrl : sb.delete(0, sb.length()).append(baseUrl).append(lName).append(File.PATH_SEPCHAR).append(mName).append(File.PATH_SEPCHAR).append(mName).append(".tar").toString();
+                            final String realUrl = sb.delete(0, sb.length()).append(baseUrl).append(entryName).toString();
+                            final String fakeUrl = url.endsWith(".idx") ? realUrl : sb.delete(0, sb.length()).append(baseUrl).append(lName).append(File.PATH_SEPCHAR).append(mName).append(File.PATH_SEPCHAR).append(mName).append(".tar").toString();
 
                             // load map calibration file
-                            Calibration calibration = Calibration.newInstance(tar, fakeUrl, realUrl);
+                            final Calibration calibration = Calibration.newInstance(tar, fakeUrl, realUrl);
 
                             // found calibration file?
                             if (calibration != null) {

@@ -18,7 +18,6 @@ package cz.kruch.track.ui;
 
 /**
  * Pixel position in map.
- * TODO compact x y to single int - we have map dim limit to short anyway
  *
  * @author Ales Pour <kruhc@seznam.cz>
  */
@@ -31,22 +30,21 @@ public final class Position {
     private static final Position[] pool = new Position[4];
     private static int countFree;
 
-    public synchronized static Position newInstance(int x, int y) {
-        Position result;
+    public static synchronized Position newInstance(final int x, final int y) {
+        final Position result;
 
         if (countFree == 0) {
             result = new Position(x, y);
         } else {
             result = pool[--countFree];
             pool[countFree] = null;
-            result.x = x;
-            result.y = y;
+            result.setXy(x, y);
         }
 
         return result;
     }
 
-    public synchronized static void releaseInstance(Position p) {
+    public static synchronized void releaseInstance(final Position p) {
         if (p != null && countFree < pool.length) {
             pool[countFree++] = p;
         }
@@ -56,34 +54,32 @@ public final class Position {
      * ~POOL
      */
 
-    private int x, y;
+    private int xy;
 
     public Position(int x, int y) {
-        this.x = x;
-        this.y = y;
+        this.setXy(x, y);
     }
 
     public void setXy(int x, int y) {
-        this.x = x;
-        this.y = y;
+        this.xy = ((x << 16) & 0xffff0000) | (y & 0x0000ffff);
     }
 
     public int getX() {
-        return x;
+        return (this.xy >> 16) & 0x0000ffff;
     }
 
     public int getY() {
-        return y;
+        return this.xy & 0x0000ffff;
     }
 
     public Position clone() {
-        return new Position(x, y);
+        return new Position(getX(), getY());
     }
 
     public boolean equals(Object obj) {
         if (obj instanceof Position) {
-            Position position = (Position) obj;
-            return x == position.x && y == position.y;
+            final Position position = (Position) obj;
+            return xy == position.xy;
         }
 
         return false;
@@ -91,7 +87,7 @@ public final class Position {
 
     // debug
     public String toString() {
-        return "X=" + x + " Y=" + y;
+        return "X=" + getX() + " Y=" + getY();
     }
     // ~debug
 }

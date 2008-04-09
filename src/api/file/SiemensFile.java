@@ -72,8 +72,4 @@ final class SiemensFile extends File {
     public void setFileConnection(String path) throws IOException {
         ((com.siemens.mp.io.file.FileConnection) fc).setFileConnection(path);
     }
-
-    public void setWritable(boolean writable) throws IOException {
-        ((com.siemens.mp.io.file.FileConnection) fc).setWritable(writable);
-    }
 }

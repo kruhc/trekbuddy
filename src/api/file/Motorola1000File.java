@@ -72,8 +72,4 @@ final class Motorola1000File extends File {
     public void setFileConnection(String path) throws IOException {
         traverse(path);
     }
-
-    public void setWritable(boolean writable) throws IOException {
-        ((com.motorola.io.file.FileConnection) fc).setWriteable(writable);
-    }
 }

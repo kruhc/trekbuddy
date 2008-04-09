@@ -73,12 +73,8 @@ final class MotorolaFile extends File {
         traverse(path);
     }
 
-    public void setWritable(boolean writable) throws IOException {
-        ((com.motorola.io.FileConnection) fc).setWriteable(writable);
-    }
-
     /**
-     * String enumeration.
+     * String enumeration. TODO replace with Vector?
      */
     private static final class StringEnumeration implements Enumeration {
         private String[] list;

@@ -78,8 +78,4 @@ final class Jsr75File extends File {
             ((FileConnection) fc).setFileConnection(path);
         }
     }
-
-    public void setWritable(boolean writable) throws IOException {
-        ((FileConnection) fc).setWritable(writable);
-    }
 }

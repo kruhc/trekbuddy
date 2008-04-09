@@ -88,7 +88,7 @@ public abstract class File {
         return factory != null;
     }
 
-    public static Enumeration listRoots() {
+    public static Enumeration listRoots() throws IOException {
         if (registry == null) {
             registry = open(null);
         }
@@ -96,35 +96,36 @@ public abstract class File {
         return registry.getRoots();
     }
 
-    public static File open(final String url) {
+    public static File open(final String url) throws IOException {
         return open(url, Connector.READ);
     }
 
-    public static File open(final String url, final int mode) {
+    public static File open(final String url, final int mode) throws IOException {
+        if (factory == null) {
+            throw new IllegalStateException("No file API");
+        }
         try {
-            if (factory == null) {
-                throw new IllegalStateException("No file API");
-            }
-
             final File instance = (File) factory.newInstance();
             instance.fc = (StreamConnection) Connector.open(url, mode);
 
             return instance;
 
-        } catch (Throwable t) {
-            throw new IllegalStateException("File API error: " + t.toString());
+        } catch (InstantiationException e) {
+            throw new IllegalStateException("File API error: " + e.toString());
+        } catch (IllegalAccessException e) {
+            throw new IllegalStateException("File API error: " + e.toString());
         }
     }
 
-    public final InputStream openInputStream() throws IOException {
+    public InputStream openInputStream() throws IOException {
         return fc.openInputStream();
     }
 
-    public final OutputStream openOutputStream() throws IOException {
+    public OutputStream openOutputStream() throws IOException {
         return fc.openOutputStream();
     }
 
-    public final void close() throws IOException {
+    public void close() throws IOException {
         fc.close();
         fc = null;
     }
@@ -144,7 +145,6 @@ public abstract class File {
     public abstract boolean isDirectory();
     public abstract String getURL();
     public abstract void setFileConnection(String path) throws IOException;
-    public abstract void setWritable(boolean writable) throws IOException;
 
     protected final void traverse(String path) throws IOException {
         // get current path

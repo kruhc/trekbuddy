@@ -54,22 +54,24 @@ public final class Position {
      * ~POOL
      */
 
-    private int xy;
+    private int x, y;
 
     public Position(int x, int y) {
-        this.setXy(x, y);
+        this.x = x;
+        this.y = y;
     }
 
     public void setXy(int x, int y) {
-        this.xy = ((x << 16) & 0xffff0000) | (y & 0x0000ffff);
+        this.x = x;
+        this.y = y;
     }
 
     public int getX() {
-        return (this.xy >> 16) & 0x0000ffff;
+        return this.x;
     }
 
     public int getY() {
-        return this.xy & 0x0000ffff;
+        return this.y;
     }
 
     public Position clone() {
@@ -79,7 +81,7 @@ public final class Position {
     public boolean equals(Object obj) {
         if (obj instanceof Position) {
             final Position position = (Position) obj;
-            return xy == position.xy;
+            return x == position.x && y == position.y;
         }
 
         return false;

@@ -82,9 +82,9 @@ final class J2NCalibration extends Calibration {
                             } else if (TAG_LONGITUDE.equals(currentTag)) {
                                 lon0 = Double.parseDouble(text);
                             } else if (TAG_IMAGEWIDTH.equals(currentTag)) {
-                                width = getDimension(Integer.parseInt(text));
+                                setWidth(getDimension(Integer.parseInt(text)));
                             } else if (TAG_IMAGEHEIGHT.equals(currentTag)) {
-                                height = getDimension(Integer.parseInt(text));
+                                setHeight(getDimension(Integer.parseInt(text)));
                             }
                         }
                     }

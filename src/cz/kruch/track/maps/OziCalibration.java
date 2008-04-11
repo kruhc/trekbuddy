@@ -386,8 +386,8 @@ final class OziCalibration extends Calibration {
         try {
             tokenizer.next(); // IWH
             tokenizer.next(); // Map Image Width/Height
-            width = getDimension(tokenizer.nextInt());
-            height = getDimension(tokenizer.nextInt());
+            setWidth(getDimension(tokenizer.nextInt()));
+            setHeight(getDimension(tokenizer.nextInt()));
         } catch (InvalidMapException e) {
             throw e;
         } catch (Exception e) {

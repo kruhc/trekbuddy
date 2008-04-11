@@ -46,8 +46,8 @@ final class GmiCalibration extends Calibration {
         // base info
         reader.readLine(false); // ignore - intro line
         reader.readLine(false); // ignore - path to image file
-        width = getDimension(Integer.parseInt(reader.readLine(false))); // image width
-        height = getDimension(Integer.parseInt(reader.readLine(false))); // image width
+        setWidth(getDimension(Integer.parseInt(reader.readLine(false)))); // image width
+        setHeight(getDimension(Integer.parseInt(reader.readLine(false)))); // image width
 
         // additional data
         CharArrayTokenizer tokenizer = new CharArrayTokenizer();
@@ -102,7 +102,7 @@ final class GmiCalibration extends Calibration {
         ll.addElement(QualifiedCoordinates.newInstance(lat, lon));
         lat = tokenizer.nextDouble();
         lon = tokenizer.nextDouble();
-        xy.addElement(Position.newInstance(width - 1, height - 1));
+        xy.addElement(Position.newInstance(getWidth() - 1, getHeight() - 1));
         ll.addElement(QualifiedCoordinates.newInstance(lat, lon));
     }
 }

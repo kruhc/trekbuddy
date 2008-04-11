@@ -24,6 +24,7 @@ import api.location.CartesianCoordinates;
 import api.location.Ellipsoid;
 
 import cz.kruch.track.util.Mercator;
+import cz.kruch.track.util.ExtraMath;
 import cz.kruch.track.ui.Position;
 import cz.kruch.track.configuration.Config;
 import cz.kruch.track.Resources;
@@ -55,17 +56,19 @@ abstract class Calibration {
     protected String imgname;
 
     // map dimensions
-    protected int width = -1;
-    protected int height = -1;
+    protected int wh;
 
     // map datum and projection params
     private Datum datum;
     private ProjectionSetup projectionSetup;
 
     // main (left-top) calibration point
-    private Position calibrationXy;
-    private GeodeticPosition calibrationGp;
+    private int cxyx, cxyy;
+    private double cgph, cgpv;
 
+    // calibration coordinate system flag
+    private boolean cartesian;
+    
     // reusable info
     private Position proximite;
 
@@ -89,11 +92,19 @@ abstract class Calibration {
     }
 
     public int getWidth() {
-        return width;
+        return (this.wh >> 16) & 0x0000ffff;
     }
 
     public int getHeight() {
-        return height;
+        return this.wh & 0x0000ffff;
+    }
+
+    public void setWidth(int width) {
+        this.wh |= (width << 16) & 0xffff0000;
+    }
+
+    public void setHeight(int height) {
+        this.wh |= height & 0x0000ffff;
     }
 
     public ProjectionSetup getProjection() {
@@ -125,9 +136,9 @@ abstract class Calibration {
 */
         final Position p = transform(coordinates);
         final int x = p.getX();
-        if (x >= 0 && x < width) {
+        if (x >= 0 && x < getWidth()) {
             final int y = p.getY();
-            if (y >= 0 && y < height) {
+            if (y >= 0 && y < getHeight()) {
                 return true;
             }
         }
@@ -141,7 +152,7 @@ abstract class Calibration {
 
         final QualifiedCoordinates qc;
 
-        if (calibrationGp instanceof CartesianCoordinates) {
+        if (cartesian) {
             final CartesianCoordinates utm = (CartesianCoordinates) toGp(position);
             qc = Mercator.MercatortoLL(utm, getDatum().ellipsoid,
                                        (Mercator.ProjectionSetup) projectionSetup);
@@ -149,7 +160,7 @@ abstract class Calibration {
             qc.setDatum(datum == Datum.DATUM_WGS_84 ? null : datum);
 */
             CartesianCoordinates.releaseInstance(utm);
-        } else /*if (calibrationGp instanceof QualifiedCoordinates)*/ {
+        } else {
             qc = (QualifiedCoordinates) toGp(position);
         }
 
@@ -159,20 +170,20 @@ abstract class Calibration {
     final Position transform(final QualifiedCoordinates coordinates) {
         final GeodeticPosition gp;
 
-        if (calibrationGp instanceof CartesianCoordinates) {
+        if (cartesian) {
             gp = Mercator.LLtoMercator(coordinates, getDatum().ellipsoid,
                                        (Mercator.ProjectionSetup) projectionSetup);
-        } else /*if (calibrationGp instanceof QualifiedCoordinates)*/ {
+        } else {
             gp = coordinates;
         }
 
         double _v = v2;
         double _h = h2;
 
-        final double cgph = calibrationGp.getH();
-        final double cgpv = calibrationGp.getV();
-        final int cxyx = calibrationXy.getX();
-        final int cxyy = calibrationXy.getY();
+        final double cgph = this.cgph;
+        final double cgpv = this.cgpv;
+        final int cxyx = this.cxyx;
+        final int cxyy = this.cxyy;
 
         double fx = (gp.getH() - cgph + (cxyx * _h) + (ek0 * cxyy) - (ek0 / _v) * (- gp.getV() + cgpv + (cxyy * _v) - (nk0 * cxyx))) / (_h + (nk0 * ek0) / _v);
         double fy = (- gp.getV() + cgpv + (cxyy * _v) + (nk0 * (fx - cxyx))) / _v;
@@ -185,20 +196,14 @@ abstract class Calibration {
         fx = (gp.getH() - cgph + (cxyx * _h) + (ek0 * cxyy) - (ek0 / _v) * (- gp.getV() + cgpv + (cxyy * _v) - (nk0 * cxyx))) / (_h + (nk0 * ek0) / _v);
         fy = (- gp.getV() + cgpv + (cxyy * _v) + (nk0 * (fx - cxyx))) / _v;
 
-        int x = (int) fx;
-        if ((fx - x) > 0.5) {
-            x++;
-        }
-        int y = (int) fy;
-        if ((fy - y) > 0.5) {
-            y++;
-        }
-
-        proximite.setXy(x, y);
-
-        if (gp instanceof CartesianCoordinates) {
+        if (cartesian) {
             CartesianCoordinates.releaseInstance((CartesianCoordinates) gp);
         }
+        
+        final int x = ExtraMath.round(fx);
+        final int y = ExtraMath.round(fy);
+
+        proximite.setXy(x, y);
 
         return proximite;
     }
@@ -211,7 +216,7 @@ abstract class Calibration {
         }
 
         // dimension check
-        if (width == -1 || height == -1) {
+        if (wh == 0) {
             throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_INVALID_MAP_DIMENSION));
         }
 
@@ -237,10 +242,15 @@ abstract class Calibration {
 //#endif
 
         // remember main calibration point x-y
-        calibrationXy = (Position) xy.elementAt(0);
+        final Position calibrationXy = (Position) xy.elementAt(0);
+        cxyx = calibrationXy.getX();
+        cxyy = calibrationXy.getY();
 
         // compute grid
         if (projectionSetup instanceof Mercator.ProjectionSetup) {
+
+            // use cartesian system
+            cartesian = true;
 
             // setup is for Mercator projection
             final Mercator.ProjectionSetup msetup = (Mercator.ProjectionSetup) projectionSetup;
@@ -260,7 +270,9 @@ abstract class Calibration {
         }
 
         // remember main calibration point
-        calibrationGp = (GeodeticPosition) ll.elementAt(0);
+        GeodeticPosition calibrationGp = (GeodeticPosition) ll.elementAt(0);
+        cgph = calibrationGp.getH();
+        cgpv = calibrationGp.getV();
 
         // compute pixel grid
         computeGrid(xy, ll);
@@ -275,7 +287,7 @@ abstract class Calibration {
     private void computeGrid(final Vector xy, final Vector gp) {
         Position p;
 
-        p = Position.newInstance(width, 0);
+        p = Position.newInstance(getWidth(), 0);
         int[] index = verticalAxisByX(xy, p);
         Position.releaseInstance(p);
 
@@ -292,7 +304,7 @@ abstract class Calibration {
         final double nk0d = (((Position) xy.elementAt(index[1])).getY() - h0) * gridRVscale;
         nk0 = (((GeodeticPosition) gp.elementAt(index[1])).getV() + nk0d - ((GeodeticPosition) gp.elementAt(index[0])).getV()) / dx;
 
-        p = Position.newInstance(0, height);
+        p = Position.newInstance(0, getHeight());
         index = horizontalAxisByY(xy, p);
         Position.releaseInstance(p);
 
@@ -325,23 +337,23 @@ abstract class Calibration {
         final Position p = proximite;
         p.setXy(0, 0);
         range[0] = transform(p);
-        p.setXy(width, 0);
+        p.setXy(getWidth(), 0);
         range[1] = transform(p);
-        p.setXy(0, height);
+        p.setXy(0, getHeight());
         range[2] = transform(p);
-        p.setXy(width, height);
+        p.setXy(getWidth(), getHeight());
         range[3] = transform(p);
     }
 
     private GeodeticPosition toGp(final Position position) {
-        final int dy = position.getY() - calibrationXy.getY();
-        final int dx = position.getX() - calibrationXy.getX();
-        final double h = calibrationGp.getH() + (ek0 * dy) + (dx * (gridTHscale + dy * hScale));
-        final double v = calibrationGp.getV() + (nk0 * dx) - (dy * (gridLVscale + dx * vScale));
+        final int dy = position.getY() - cxyy;
+        final int dx = position.getX() - cxyx;
+        final double h = cgph + (ek0 * dy) + (dx * (gridTHscale + dy * hScale));
+        final double v = cgpv + (nk0 * dx) - (dy * (gridLVscale + dx * vScale));
 
-        if (calibrationGp instanceof CartesianCoordinates) {
+        if (cartesian) {
             return CartesianCoordinates.newInstance(((Mercator.ProjectionSetup) projectionSetup).zone, h, v);
-        } else /*if (calibrationGp instanceof QualifiedCoordinates)*/ {
+        } else {
             return QualifiedCoordinates.newInstance(v, h);
         }
     }

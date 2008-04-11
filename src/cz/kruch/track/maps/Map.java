@@ -370,8 +370,8 @@ public final class Map implements Runnable {
 
         void doFinal() throws InvalidMapException {
             // local ref for faster access
-            final int mapWidth = map.calibration.width;
-            final int mapHeight = map.calibration.height;
+            final int mapWidth = map.calibration.getWidth();
+            final int mapHeight = map.calibration.getHeight();
             final Slice[] slices = map.slices;
 
             // vars

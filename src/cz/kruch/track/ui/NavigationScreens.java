@@ -138,12 +138,14 @@ public final class NavigationScreens {
         Image image = loadImage("crosshairs.png");
         if (image != null) {
             crosshairs = null;
+            System.gc(); // TODO validate
             crosshairs = image;
             i++;
         }
         image = loadImage("arrows.png");
         if (image != null) {
             arrows[ARROW_COURSE] = null;
+            System.gc(); // TODO validate
             arrows[ARROW_COURSE] = image;
             setupVars(ARROW_COURSE);
             i++;
@@ -151,6 +153,7 @@ public final class NavigationScreens {
         image = loadImage("naviws.png");
         if (image != null) {
             arrows[ARROW_NAVI] = null;
+            System.gc(); // TODO validate
             arrows[ARROW_NAVI] = image;
             setupVars(ARROW_NAVI);
             i++;
@@ -158,6 +161,7 @@ public final class NavigationScreens {
         image = loadImage("wpt.png");
         if (image != null) {
             waypoint = null;
+            System.gc(); // TODO validate
             waypoint = image;
             wptSize2 = waypoint.getHeight() >> 1;
             i++;
@@ -165,6 +169,7 @@ public final class NavigationScreens {
         image = loadImage("pois.png");
         if (image != null) {
             pois = null;
+            System.gc(); // TODO validate
             pois = image;
             poiSize = pois.getHeight();
             poiSize2 = poiSize >> 1;
@@ -221,22 +226,21 @@ public final class NavigationScreens {
     }
 
     public static Image createImage(final InputStream in) throws IOException {
-        // assertion
-        if (in == null) {
-            throw new IllegalArgumentException("Image stream is null");
+        if (in != null) {
+            final Image image = Image.createImage(in);
+            if (Config.forcedGc) {
+                System.gc();
+            }
+
+            return image;
         }
 
-        final Image image = Image.createImage(in);
-        if (Config.forcedGc) {
-            System.gc();
-        }
-
-        return image;
+        throw new IllegalArgumentException("Image stream is null");
     }
 
     private static Image createImage(final String res) throws IOException {
         InputStream in = null;
-        Image image = null;
+        final Image image;
 
         try {
             image = Image.createImage(in = NavigationScreens.class.getResourceAsStream(res));

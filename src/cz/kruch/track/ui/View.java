@@ -66,6 +66,10 @@ abstract class View {
         return isVisible ? Desktop.MASK_SCREEN : Desktop.MASK_NONE;
     }
 
+    public int configChanged() {
+        return isVisible ? Desktop.MASK_SCREEN : Desktop.MASK_NONE;
+    }
+
     public void close() {
     }
 

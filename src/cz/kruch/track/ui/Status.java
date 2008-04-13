@@ -24,6 +24,10 @@ import javax.microedition.lcdui.Graphics;
  * @author Ales Pour <kruhc@seznam.cz>
  */
 final class Status extends Bar {
+//#ifdef __LOG__
+    private static final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("Status");
+//#endif
+
     private String status;
 
     Status(int gx, int gy, int width, int height) {
@@ -33,6 +37,9 @@ final class Status extends Bar {
     }
 
     public void render(Graphics graphics) {
+//#ifdef __LOG__
+        if (log.isEnabled()) log.debug("render");
+//#endif
         if (!visible || status == null) {
             return;
         }

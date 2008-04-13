@@ -29,6 +29,10 @@ import cz.kruch.track.configuration.Config;
  * @author Ales Pour <kruhc@seznam.cz>
  */
 final class OSD extends Bar {
+//#ifdef __LOG__
+    private static final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("OSD");
+//#endif
+
     private static final String MM = "<>";
 
     int providerStatus;
@@ -64,6 +68,9 @@ final class OSD extends Bar {
     }
 
     public void render(Graphics graphics) {
+//#ifdef __LOG__
+        if (log.isEnabled()) log.debug("render");
+//#endif
         if (!visible) {
             return;
         }

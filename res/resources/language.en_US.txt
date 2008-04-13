@@ -214,6 +214,7 @@
 3510=OSD bold font
 3511=OSD black color
 3512=Transparency
+3513=CMS rotate (sec)
 
 # settings forms/fields/values (Location)
 3600=Provider

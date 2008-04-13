@@ -156,7 +156,7 @@
         <property name="libraryjars" value="${wtk.home}\lib\cldcapi11.jar;${wtk.home}\lib\midpapi20.jar;${wtk.home}\lib\jsr75.jar;${wtk.home}\lib\jsr082.jar;${wtk.home}\lib\jsr179.jar;${wtk.home}\lib\wma11.jar;lib\motorola-location.jar"/>
         <property name="classpath.preverify" value="${libraryjars}"/>
         <antcall target="clean"/>
-        <antcall target="a.pre.generic"/>
+        <antcall target="a.pre.emulator"/>
         <antcall target="compile.generic"/>
         <antcall target="a.pack" inheritall="true"/>
         <antcall target="emulator.obfuscate" inheritall="true"/>
@@ -205,6 +205,11 @@
     <target name="a.pre.rim">
         <mkdir dir="tmp/src"/>
         <wtkpreprocess srcdir="src" destdir="tmp/src" symbols="__RIM__,${pre.extra}"/>
+    </target>
+
+    <target name="a.pre.emulator">
+        <mkdir dir="tmp/src"/>
+        <wtkpreprocess srcdir="src" destdir="tmp/src" symbols="__ALL__,__LOG__,${pre.extra}"/>
     </target>
 
     <target name="compile.generic" depends="remove.rim.src">
@@ -529,6 +534,9 @@
         <replace file="${rim.ota.dir}\trekbuddy${suffix}.alx" token="@VERSION@" value="${version}"/>
         <replace file="${rim.ota.dir}\trekbuddy${suffix}.alx" token="@VENDOR@" value="${vendor}"/>
         <replace file="${rim.ota.dir}\trekbuddy${suffix}.alx" token="@MODULES@" value="${rim.cod.modules}"/>
+        <zip destfile="${rim.ota.dir}\trekbuddy${suffix}.zip"
+             basedir="${rim.ota.dir}"
+             includes="**.cod,**.alx"/>
     </target>
 
     <target name="jad2prc">

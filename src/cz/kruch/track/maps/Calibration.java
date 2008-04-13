@@ -264,6 +264,7 @@ abstract class Calibration {
             for (int N = ll.size(), i = 0; i < N; i++) {
                 final QualifiedCoordinates local = (QualifiedCoordinates) ll.elementAt(i);
                 final CartesianCoordinates utm = Mercator.LLtoMercator(local, ellipsoid, msetup);
+                QualifiedCoordinates.releaseInstance(local); // yes we can do it
                 ll.setElementAt(utm, i);
             }
 

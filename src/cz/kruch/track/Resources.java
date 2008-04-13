@@ -239,6 +239,7 @@ public final class Resources {
     public static final short CFG_DESKTOP_FLD_OSD_BOLD_FONT     = 3510;
     public static final short CFG_DESKTOP_FLD_OSD_BLACK         = 3511;
     public static final short CFG_DESKTOP_TRANSPARENCY          = 3512;
+    public static final short CFG_DESKTOP_CMS_CYCLE             = 3513;
     /* settings - Location */
     public static final short CFG_LOCATION_GROUP_PROVIDER       = 3600;
     public static final short CFG_LOCATION_GROUP_TRACKLOG       = 3601;

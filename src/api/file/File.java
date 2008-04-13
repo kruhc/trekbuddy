@@ -106,7 +106,9 @@ public abstract class File {
         }
         try {
             final File instance = (File) factory.newInstance();
-            instance.fc = (StreamConnection) Connector.open(url, mode);
+            if (url != null) {
+                instance.fc = (StreamConnection) Connector.open(url, mode);
+            }
 
             return instance;
 
@@ -126,8 +128,10 @@ public abstract class File {
     }
 
     public void close() throws IOException {
-        fc.close();
-        fc = null;
+        if (fc!= null) {
+            fc.close();
+            fc = null;
+        }
     }
 
     public final boolean isBrokenTraversal() {

@@ -42,11 +42,9 @@ public class SerialLocationProvider extends StreamReadingLocationProvider implem
 
     protected volatile String url;
 
-    private volatile Thread thread;
     private volatile InputStream stream;
     private volatile StreamConnection connection;
 
-    private volatile boolean go;
     private volatile long last;
     
     private volatile TimerTask watcher;
@@ -89,6 +87,7 @@ public class SerialLocationProvider extends StreamReadingLocationProvider implem
         // be gentle and safe
         if (restarts > 1) {
 
+/*
             // wait for previous thread to die
             if (thread != null) {
                 if (thread.isAlive()) {
@@ -101,6 +100,7 @@ public class SerialLocationProvider extends StreamReadingLocationProvider implem
                 }
                 thread = null; // gc hint
             }
+*/
 
             // not so fast
             if (lastState == LocationProvider._STALLED) { // give hardware a while
@@ -145,7 +145,9 @@ public class SerialLocationProvider extends StreamReadingLocationProvider implem
             // be ready for restart
             go = false;
             url = null;
+/* stop() does this
             thread = null;
+*/
 
             // update status TODO useless - listener has already been cleared
             notifyListener(LocationProvider.OUT_OF_SERVICE);
@@ -159,13 +161,15 @@ public class SerialLocationProvider extends StreamReadingLocationProvider implem
         return LocationProvider._STARTING;
     }
 
+    /*
+     * We do not use die() method here intentionally.
+     */
     public void stop() throws LocationException {
-        // stop
-        go = false;
 
-        // another attempt to wake-up the thread
-        if (thread != null) {
-            thread.interrupt();
+        // shutdown service thread (die part #1)
+        synchronized (this) {
+            go = false;
+            notify();
         }
 
         // close connection
@@ -184,6 +188,17 @@ public class SerialLocationProvider extends StreamReadingLocationProvider implem
                     // ignore
                 }
             }
+        }
+
+        // wait for finish (die part #2)
+        if (thread != null) {
+            try {
+                thread.interrupt();
+                thread.join();
+            } catch (InterruptedException e) {
+                // should never happen
+            }
+            thread = null;
         }
     }
 

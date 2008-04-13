@@ -84,7 +84,6 @@ final class MapViewer {
     private int tlast, txylast;
 */
 
-    private boolean visible = true;
     private int ci, li;
 
     MapViewer() {
@@ -542,9 +541,9 @@ final class MapViewer {
 */
 
     public void render(final Graphics graphics) {
-        if (!visible) {
-            return;
-        }
+//#ifdef __LOG__
+        if (log.isEnabled()) log.debug("render");
+//#endif
 
         /* synchronized to avoid race condition with ensureSlices() */
         synchronized (this) {
@@ -892,16 +891,13 @@ final class MapViewer {
     }
 
     public int[] getClip() {
-        if (!visible)
-            return null;
-
         clip[0] = chx;
         clip[1] = chy;
 
         return clip;
     }
 
-    public boolean ensureSlices() {
+    boolean ensureSlices() {
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("ensure slices from map " + map);
 //#endif
@@ -1035,8 +1031,24 @@ final class MapViewer {
     private void calculateScale() {
         sInfoLength = 0;
         if (map != null) {
+/*
+            // use full range - fails for globe maps :-)
             final QualifiedCoordinates[] range = map.getRange();
             double scale = range[0].distance(range[1]) / map.getWidth();
+*/
+            // use 10% of map width at current Y (lat) for calculation
+            final int cy = getPosition().getY();
+            Position p0 = Position.newInstance(0, cy);
+            Position p1 = Position.newInstance(map.getWidth() / 10, cy);
+            QualifiedCoordinates qc0 = map.transform(p0);
+            QualifiedCoordinates qc1 = map.transform(p1);
+            double scale = qc0.distance(qc1) / (map.getWidth() / 10);
+            Position.releaseInstance(p0);
+            Position.releaseInstance(p1);
+            QualifiedCoordinates.releaseInstance(qc0);
+            QualifiedCoordinates.releaseInstance(qc1);
+
+            // valid scale?
             if (scale > 1F) {
                 char[] units = NavigationScreens.DIST_STR_M;
                 long half = (long) (scale * ((Desktop.width >> 1) - scaleDx));

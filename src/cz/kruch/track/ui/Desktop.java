@@ -419,8 +419,8 @@ public final class Desktop extends GameCanvas
 
         final int w = getWidth();
         final int h = getHeight();
-        boolean sizeChanged = w != width || h != height;
 
+        boolean sizeChanged = w != width || h != height;
         if (!sizeChanged) {
             return; // no change, just quit
         }
@@ -429,7 +429,7 @@ public final class Desktop extends GameCanvas
         if (w < 176) { // narrow screen
             NavigationScreens.useCondensed = 2;
         }
-        
+
         // remember new size
         width = w;
         height = h;
@@ -1144,8 +1144,11 @@ public final class Desktop extends GameCanvas
         } else if (atlas != null) {
 
             // try to find alternate map
-            startAlternateMap(atlas.getLayer(), wpt.getQualifiedCoordinates(),
-                              Resources.getString(Resources.DESKTOP_MSG_WPT_OFF_LAYER));
+            if (startAlternateMap(atlas.getLayer(), wpt.getQualifiedCoordinates(),
+                                  Resources.getString(Resources.DESKTOP_MSG_WPT_OFF_LAYER))) {
+                // also set browsing mode
+                browsing = true;
+            }
 
         } else {
 
@@ -1496,13 +1499,17 @@ public final class Desktop extends GameCanvas
         if (log.isEnabled()) log.debug("update " + Integer.toBinaryString(mask));
 //#endif
 
-        // prepare slices
-        if ((mask & MASK_MAP) != 0) {
-            ((MapView) views[VIEW_MAP]).ensureSlices();
-        }
+        // anything to update?
+        if (mask != MASK_NONE) {
 
-        // enqueu render request
-        eventing.callSerially(newRenderTask(mask));
+            // prepare slices
+            if ((mask & MASK_MAP) != 0) {
+                ((MapView) views[VIEW_MAP]).ensureSlices();
+            }
+
+            // enqueu render request
+            eventing.callSerially(newRenderTask(mask));
+        }
     }
 
     public static void showConfirmation(String message, Displayable nextDisplayable) {
@@ -2367,6 +2374,15 @@ public final class Desktop extends GameCanvas
             Config.useDatum(Config.geoDatum);
             resetFont();
             resetBar();
+
+            // notify views
+            for (int i = views.length; --i >= 0; ) {
+                try {
+                    views[i].configChanged();
+                } catch (NullPointerException e) {
+                    throw new IllegalStateException("NPE in view #" + i);
+                }
+            }
 
             // update screen
             update(MASK_ALL);

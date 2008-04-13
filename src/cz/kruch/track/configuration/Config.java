@@ -143,6 +143,7 @@ public final class Config {
     public static boolean osdBlackColor;
     public static boolean hpsWptTrueAzimuth     = true;
     public static int osdAlpha                  = 0x80;
+    public static int cmsCycle;
 
     // [Units]
     public static int units;
@@ -210,7 +211,7 @@ public final class Config {
         } else if (cz.kruch.track.TrackingMIDlet.uiq) {
             dataDir = "file:///Ms/Other/TrekBuddy/";
         } else { // Nokia, SonyEricsson, ...
-            dataDir = "file:///E:/TrekBuddy/";
+            dataDir = "file:///E:/TrekBuddy/"; // pstros: "file:///SDCard/TrekBuddy/"
         }
 //#endif
 
@@ -390,6 +391,12 @@ public final class Config {
         } catch (Exception e) {
         }
 
+        // 0.9.78 extensions
+        try {
+            cmsCycle = din.readInt();
+        } catch (Exception e) {
+        }
+
 //#ifdef __LOG__
         if (log.isEnabled()) log.info("configuration read");
 //#endif
@@ -459,6 +466,8 @@ public final class Config {
         dout.writeInt(osdAlpha);
         /* since 0.9.77 */
         dout.writeInt(btKeepAlive);
+        /* since 0.9.78 */
+        dout.writeInt(cmsCycle);
 
 //#ifdef __LOG__
         if (log.isEnabled()) log.info("configuration updated");

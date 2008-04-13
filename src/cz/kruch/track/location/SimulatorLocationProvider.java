@@ -38,8 +38,6 @@ public final class SimulatorLocationProvider
 //#endif
 
     private File file;
-    private Thread thread;
-    private boolean go;
     private int delay;
 
     public SimulatorLocationProvider() {
@@ -70,15 +68,8 @@ public final class SimulatorLocationProvider
         if (log.isEnabled()) log.debug("stop request");
 //#endif
 
-        if (go) {
-            go = false;
-            try {
-                thread.interrupt();
-                thread.join();
-            } catch (InterruptedException e) {
-            }
-            thread = null;
-        }
+        // wait for thread to die
+        die();
     }
 
     public void invoke(Object result, Throwable throwable, Object source) {
@@ -89,8 +80,7 @@ public final class SimulatorLocationProvider
         if (result != null) {
             go = true;
             file = (File) result;
-            thread = new Thread(this);
-            thread.start();
+            (thread = new Thread(this)).start();
         } else {
             notifyListener(LocationProvider.OUT_OF_SERVICE);
         }

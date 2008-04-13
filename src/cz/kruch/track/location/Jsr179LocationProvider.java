@@ -41,9 +41,6 @@ public final class Jsr179LocationProvider
 
     private javax.microedition.location.LocationProvider impl;
 
-    private volatile Thread thread;
-    private volatile boolean go;
-    
     private volatile OutputStream nmealog;
     
     public Jsr179LocationProvider() {
@@ -110,21 +107,8 @@ public final class Jsr179LocationProvider
         impl.setLocationListener(null, -1, -1, -1);
         impl = null;
 
-        // shutdown service thread
-        synchronized (this) {
-            go = false;
-            notify();
-        }
-
-        // wait for finish
-        if (thread != null) {
-            try {
-                thread.interrupt();
-                thread.join();
-            } catch (InterruptedException e) {
-                // should never happen
-            }
-        }
+        // wait for thread to die
+        die();
     }
 
     public void run() {

@@ -43,8 +43,6 @@ public final class O2GermanyLocationProvider
     private int offset;
 
     private volatile Object trigger;
-    private volatile Thread thread;
-    private volatile boolean go;
 
     private static final Mercator.ProjectionSetup[] zones = {
         new Mercator.ProjectionSetup("GK 2", null, 6D, 0D, 1D, 2500000, 0),
@@ -92,21 +90,8 @@ public final class O2GermanyLocationProvider
         }
         impl = null;
 
-        // shutdown service thread
-        synchronized (this) {
-            go = false;
-            notify();
-        }
-
-        // wait for finish
-        if (thread != null) {
-            try {
-                thread.interrupt();
-                thread.join();
-            } catch (InterruptedException e) {
-                // should never happen
-            }
-        }
+        // wait for thread to die
+        die();
     }
 
     public void notifyIncomingMessage(javax.wireless.messaging.MessageConnection messageConnection) {
@@ -146,9 +131,9 @@ public final class O2GermanyLocationProvider
                 QualifiedCoordinates coords = null;
 
                 // get and parse message
-                javax.wireless.messaging.Message message = impl.receive();
+                final javax.wireless.messaging.Message message = impl.receive();
                 if (message instanceof javax.wireless.messaging.TextMessage) {
-                    String text = ((javax.wireless.messaging.TextMessage) message).getPayloadText();
+                    final String text = ((javax.wireless.messaging.TextMessage) message).getPayloadText();
                     if (text != null && text.length() == 12) {
                         final int x = Integer.parseInt(text.substring(0, 6)) * 10;
                         final int y = Integer.parseInt(text.substring(6)) * 10;

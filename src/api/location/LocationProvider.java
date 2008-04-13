@@ -35,6 +35,8 @@ public abstract class LocationProvider {
     private Object status;
     private boolean tracklog;
 
+    protected volatile Thread thread;
+    protected volatile boolean go;
     protected volatile int lastState;
 
     protected LocationProvider(String name) {
@@ -82,6 +84,25 @@ public abstract class LocationProvider {
     public abstract Object getImpl();
     public abstract void setLocationListener(LocationListener listener,
                                              int interval, int timeout, int maxAge);
+
+    protected final void die() {
+        // shutdown service thread
+        synchronized (this) {
+            go = false;
+            notify();
+        }
+
+        // wait for finish
+        if (thread != null) {
+            try {
+                thread.interrupt();
+                thread.join();
+            } catch (InterruptedException e) {
+                // should never happen
+            }
+            thread = null;
+        }
+    }
 
     protected final synchronized void notifyListener(final Location location) {
         if (listener != null) {

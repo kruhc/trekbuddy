@@ -388,11 +388,19 @@ final class MapView extends View {
     }
 
     private int updatedTrick() {
+//#ifdef __LOG__
+        if (log.isEnabled()) log.debug("updated trick");
+//#endif
+
         // result update mask
         int mask = Desktop.MASK_NONE;
 
         // tracking?
         if (!Desktop.browsing && !navigator._getInitializingMap()) {
+
+//#ifdef __LOG__
+            if (log.isEnabled()) log.debug("tracking...");
+//#endif
 
             // local rel
             final Location l = this.location;
@@ -402,6 +410,10 @@ final class MapView extends View {
 
             // move on map if we get fix
             if (l.getFix() > 0) {
+
+//#ifdef __LOG__
+                if (log.isEnabled()) log.debug("have fix");
+//#endif
 
                 // more UI updates
                 mask |= Desktop.MASK_CROSSHAIR;
@@ -467,6 +479,10 @@ final class MapView extends View {
 
             } else {
 
+//#ifdef __LOG__
+                if (log.isEnabled()) log.debug("no fix");
+//#endif
+
                 // if not navigating, display extended tracking info (ie. time :-) )
                 if (!Desktop.navigating || Desktop.wpts == null) {
                     Desktop.osd.setSat(0);
@@ -496,7 +512,39 @@ final class MapView extends View {
         g.setFont(f);
 
         // is map(viewer) ready?
-        if (!mapViewer.hasMap()) {
+        if (mapViewer.hasMap()) {
+
+            // draw map
+/* always redraw 'background'
+                if ((mask & MASK_MAP) != 0) {
+*/
+            // whole map redraw requested
+            mapViewer.render(g);
+/*
+                }
+*/
+
+            // draw OSD
+            if ((mask & Desktop.MASK_OSD) != 0) {
+
+                // set text color
+                g.setColor(Config.osdBlackColor ? 0x00000000 : 0x00FFFFFF);
+
+                // render
+                Desktop.osd.render(g);
+            }
+
+            // draw status
+            if ((mask & Desktop.MASK_STATUS) != 0) {
+
+                // set text color
+                g.setColor(Config.osdBlackColor ? 0x00000000 : 0x00FFFFFF);
+
+                // render
+                Desktop.status.render(g);
+            }
+
+        } else { // no map
 
             // clear window
             g.setColor(0x0);
@@ -520,50 +568,31 @@ final class MapView extends View {
                 }
             }
 
-        } else {
-
-            // draw map
-/* always redraw 'background'
-                if ((mask & MASK_MAP) != 0) {
-*/
-            // whole map redraw requested
-            mapViewer.render(g);
-/*
-                }
-*/
-
-            // draw OSD
-            if ((mask & Desktop.MASK_OSD) != 0) {
-
-                // set text color
-                g.setColor(Config.osdBlackColor ? 0x00000000 : 0x00FFFFFF);
-
-                // render
-                Desktop.osd.render(g);
-            }
-        }
-
-        // draw status
-        if ((mask & Desktop.MASK_STATUS) != 0) {
-
-            // set text color
-            g.setColor(Config.osdBlackColor ? 0x00000000 : 0x00FFFFFF);
-
-            // render
-            Desktop.status.render(g);
         }
 
         // flush
         if ((mask & Desktop.MASK_MAP) != 0 || (mask & Desktop.MASK_SCREEN) != 0 || !Desktop.partialFlush) {
+//#ifdef __LOG__
+            if (log.isEnabled()) log.debug("full flush");
+//#endif
             flushGraphics();
         } else {
             if ((mask & Desktop.MASK_OSD) != 0) {
+//#ifdef __LOG__
+                if (log.isEnabled()) log.debug("flush OSD clip " + Desktop.osd.getClip());
+//#endif
                 flushGraphics(Desktop.osd.getClip());
             }
             if ((mask & Desktop.MASK_STATUS) != 0) {
+//#ifdef __LOG__
+                if (log.isEnabled()) log.debug("flush Status clip " + Desktop.status.getClip());
+//#endif
                 flushGraphics(Desktop.status.getClip());
             }
             if ((mask & Desktop.MASK_CROSSHAIR) != 0) {
+//#ifdef __LOG__
+                if (log.isEnabled()) log.debug("flush crosshair clip " + mapViewer.getClip());
+//#endif
                 flushGraphics(mapViewer.getClip());
             }
         }

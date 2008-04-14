@@ -294,11 +294,17 @@ public final class Jsr82LocationProvider extends SerialLocationProvider {
         public void run() {
             setTicker(new Ticker(Resources.getString(Resources.DESKTOP_MSG_RESOLVING_NAMES)));
             for (int N = devices.size(), i = 0; i < N; i++) {
-                String name;
+                String name = null;
                 javax.bluetooth.RemoteDevice remoteDevice = ((javax.bluetooth.RemoteDevice) devices.elementAt(i));
                 try {
                     name = remoteDevice.getFriendlyName(false);
+                    if (name == null) {
+                        name = remoteDevice.getFriendlyName(true);
+                    }
                 } catch (Throwable t) {
+                    //ignore
+                }
+                if (name == null) {
                     name = "#" + remoteDevice.getBluetoothAddress();
                 }
                 append(name, null);

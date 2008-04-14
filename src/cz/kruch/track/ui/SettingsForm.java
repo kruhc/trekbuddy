@@ -80,6 +80,7 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
     private TextField fieldGpxDt;
     private TextField fieldGpxDs;
     private Gauge gaugeAlpha;
+    private TextField fieldCmsCycle;
 
     private Form submenu;
     private String section;
@@ -213,6 +214,7 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
             gaugeAlphaScale = 0x100 / alphaSteps;
             final int value = Config.osdAlpha / gaugeAlphaScale;
             submenu.append(gaugeAlpha = new Gauge(Resources.getString(Resources.CFG_DESKTOP_TRANSPARENCY), true, alphaSteps, value));
+            submenu.append(fieldCmsCycle = new TextField(Resources.getString(Resources.CFG_DESKTOP_CMS_CYCLE), Integer.toString(Config.cmsCycle), 4, TextField.NUMERIC));
 
         } else if (menuNavigation.equals(section)) {
 
@@ -257,6 +259,31 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
                 Config.largeAtlases
             });
             submenu.append(choicePerformance);
+
+            if (cz.kruch.track.TrackingMIDlet.supportsVideoCapture()) {
+                submenu.append(fieldCaptureLocator = new TextField(Resources.getString(Resources.CFG_LOCATION_FLD_CAPTURE_LOCATOR), Config.captureLocator, 16, TextField.URL));
+                submenu.append(choiceSnapshotFormat = new ChoiceGroup(Resources.getString(Resources.CFG_LOCATION_FLD_CAPTURE_FMT), ChoiceGroup.POPUP));
+                String encodings = System.getProperty("video.snapshot.encodings");
+                int start = encodings.indexOf("encoding=");
+                while (start > -1) {
+                    int end = encodings.indexOf("encoding=", start + 9);
+                    String item;
+                    if (end > -1) {
+                        item = encodings.substring(start, end).trim();
+                    } else {
+                        item = encodings.substring(start).trim();
+                    }
+                    choiceSnapshotFormat.setSelectedIndex(choiceSnapshotFormat.append(item, null), Config.snapshotFormat.equals(item));
+                    start = end;
+                }
+                submenu.append(fieldSnapshotFormat = new TextField(null, Config.snapshotFormat, 64, TextField.ANY));
+                if (Config.snapshotFormat == null || Config.snapshotFormat.length() == 0) {
+                    if (choiceSnapshotFormat.size() > 0) {
+                        fieldSnapshotFormat.setString(choiceSnapshotFormat.getString(choiceSnapshotFormat.getSelectedIndex()));
+                    }
+                }
+                submenu.setItemStateListener(this);
+            }
 
         } else if (menuLocation.equals(section)) {
 
@@ -317,26 +344,6 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
 
                 fieldGpxDt = new TextField("GPX dt (s)", Integer.toString(Config.gpxDt), 5, TextField.NUMERIC);
                 fieldGpxDs = new TextField("GPX ds (m)", Integer.toString(Config.gpxDs), 5, TextField.NUMERIC);
-
-                if (cz.kruch.track.TrackingMIDlet.supportsVideoCapture()) {
-                    fieldCaptureLocator = new TextField(Resources.getString(Resources.CFG_LOCATION_FLD_CAPTURE_LOCATOR), Config.captureLocator, 16, TextField.URL);
-                    choiceSnapshotFormat = new ChoiceGroup(Resources.getString(Resources.CFG_LOCATION_FLD_CAPTURE_FMT), ChoiceGroup.POPUP);
-                    String encodings = System.getProperty("video.snapshot.encodings");
-                    int start = encodings.indexOf("encoding=");
-                    while (start > -1) {
-                        int end = encodings.indexOf("encoding=", start + 9);
-                        String item;
-                        if (end > -1) {
-                            item = encodings.substring(start, end).trim();
-                        } else {
-                            item = encodings.substring(start).trim();
-                        }
-                        choiceSnapshotFormat.setSelectedIndex(choiceSnapshotFormat.append(item, null), Config.snapshotFormat.equals(item));
-                        start = end;
-                    }
-                    fieldSnapshotFormat = new TextField(null, Config.snapshotFormat, 64, TextField.ANY);
-                    fieldSnapshotFormat.setString(Config.snapshotFormat);
-                }
             }
 
             // provider specific
@@ -371,12 +378,9 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
     }
 
     public void itemStateChanged(Item affected) {
-        if (choiceProvider.size() == 0) { // dumb phone
-            return;
-        }
-
         if (affected == choiceProvider || affected == choiceTracklog || affected == choiceTracklogFormat) {
 
+            final Form submenu = this.submenu;
             for (int i = submenu.size(); --i >= 0; ) {
                 Item item = submenu.get(i);
 
@@ -468,15 +472,9 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
                 }
             }
 
-            if (fieldCaptureLocator != null) {
-                appendWithNewlineAfter(submenu, fieldCaptureLocator);
-                appendWithNewlineAfter(submenu, choiceSnapshotFormat);
-                appendWithNewlineAfter(submenu, fieldSnapshotFormat);
-            }
-
         } else if (affected == choiceSnapshotFormat) {
-            int i0 = choiceSnapshotFormat.getSelectedIndex();
-            String s0 = choiceSnapshotFormat.getString(i0);
+            final int i0 = choiceSnapshotFormat.getSelectedIndex();
+            final String s0 = choiceSnapshotFormat.getString(i0);
             fieldSnapshotFormat.setString(s0);
         }
     }
@@ -565,10 +563,6 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
                     Config.gpxGsmInfo = opts[1];
                     Config.gpxDt = Integer.parseInt(fieldGpxDt.getString());
                     Config.gpxDs = Integer.parseInt(fieldGpxDs.getString());
-                    if (cz.kruch.track.TrackingMIDlet.supportsVideoCapture()) {
-                        Config.captureLocator = fieldCaptureLocator.getString();
-                        Config.snapshotFormat = fieldSnapshotFormat.getString();
-                    }
                 }
 
             } else if (menuNavigation.equals(section)) {
@@ -606,6 +600,7 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
                 Config.osdBoldFont = misc[9];
                 Config.osdBlackColor = misc[10];
                 Config.osdAlpha = gaugeAlpha.getValue() * gaugeAlphaScale;
+                Config.cmsCycle = Integer.parseInt(fieldCmsCycle.getString());
                 changed = true;
 
             } else if (menuMisc.equals(section)) {
@@ -619,6 +614,11 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
                 Config.oneTileScroll = perf[3];
                 Config.largeAtlases = perf[4];
 
+                // multimedia
+                if (cz.kruch.track.TrackingMIDlet.supportsVideoCapture()) {
+                    Config.captureLocator = fieldCaptureLocator.getString();
+                    Config.snapshotFormat = fieldSnapshotFormat.getString();
+                }
             }
         }
 

@@ -143,7 +143,7 @@ final class MapView extends View {
         } else { // no, navigation stopped
 
             // hide navigation arrow and info
-            mapViewer.setNavigationCourse(-1F);
+            mapViewer.setNavigationCourse(Float.NaN);
             Desktop.osd.resetNavigationInfo();
 
             // notify user

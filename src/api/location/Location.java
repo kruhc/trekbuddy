@@ -135,4 +135,15 @@ public final class Location {
         else
             this.fixsat &= ~FIX3D_MASK;
     }
+
+    public boolean isMoving() {
+        final float accuracy = getQualifiedCoordinates().getHorizontalAccuracy();
+        final float speed = this.speed;
+        if (!Float.isNaN(accuracy) && !Float.isNaN(speed)) {
+            if (speed > (accuracy / 10)) {
+                return true;
+            }
+        }
+        return false;
+    }
 }

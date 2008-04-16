@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.util.Vector;
 
 import cz.kruch.track.ui.Position;
+import cz.kruch.track.util.Mercator;
 import api.location.QualifiedCoordinates;
 
 final class J2NCalibration extends Calibration {
@@ -110,6 +111,6 @@ final class J2NCalibration extends Calibration {
         parser = null;
 
         // finalize
-        doFinal(null, LATLON_PROJ_SETUP, xy, ll);
+        doFinal(null, Mercator.getUTMSetup((QualifiedCoordinates) ll.firstElement()), xy, ll);
     }
 }

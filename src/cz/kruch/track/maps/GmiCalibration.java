@@ -17,6 +17,7 @@
 package cz.kruch.track.maps;
 
 import cz.kruch.track.util.CharArrayTokenizer;
+import cz.kruch.track.util.Mercator;
 import cz.kruch.track.io.LineReader;
 import cz.kruch.track.ui.Position;
 
@@ -83,7 +84,7 @@ final class GmiCalibration extends Calibration {
         reader = null; // gc hint
 
         // finalize
-        doFinal(null, LATLON_PROJ_SETUP, xy, ll);
+        doFinal(null, Mercator.getUTMSetup((QualifiedCoordinates) ll.firstElement()), xy, ll);
     }
 
     private static void parsePoint(final CharArrayTokenizer tokenizer, final Vector xy, final Vector ll) {

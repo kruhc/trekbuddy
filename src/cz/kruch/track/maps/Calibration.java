@@ -49,8 +49,6 @@ abstract class Calibration {
     public static final String XML_EXT = ".xml";
     public static final String J2N_EXT = ".j2n";
 
-    protected static final ProjectionSetup LATLON_PROJ_SETUP = new ProjectionSetup(ProjectionSetup.PROJ_LATLON);
-
     // map path and filename
     private String path;
     protected String imgname;

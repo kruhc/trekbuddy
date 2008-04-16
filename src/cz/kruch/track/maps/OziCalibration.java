@@ -83,7 +83,7 @@ final class OziCalibration extends Calibration {
                  * projection setup for known grids
                  */
                 if (ProjectionSetup.PROJ_LATLON.equals(projectionType)) {
-                    projectionSetup = LATLON_PROJ_SETUP;
+                    projectionSetup = new ProjectionSetup(ProjectionSetup.PROJ_LATLON);
                 } else if (ProjectionSetup.PROJ_BNG.equals(projectionType)) {
                     projectionSetup = new Mercator.ProjectionSetup(projectionType,
                                                                    new char[]{'B', 'N', 'G'},

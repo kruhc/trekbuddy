@@ -54,6 +54,7 @@ public final class QualifiedCoordinates implements GeodeticPosition {
             result.lat = lat;
             result.lon = lon;
             result.alt = alt;
+            result.hAccuracy = result.vAccuracy = Float.NaN;
         }
 
         return result;
@@ -81,6 +82,7 @@ public final class QualifiedCoordinates implements GeodeticPosition {
         this.lat = lat;
         this.lon = lon;
         this.alt = alt;
+        this.hAccuracy = this.vAccuracy = Float.NaN;
     }
 
     public double getH() {

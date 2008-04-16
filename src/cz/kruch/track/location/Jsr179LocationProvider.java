@@ -239,9 +239,6 @@ public final class Jsr179LocationProvider
             } else if (cz.kruch.track.TrackingMIDlet.sxg75) {
                 alt -= 540;
             }
-            if (Float.isNaN(accuracy)) {
-                accuracy = -1F;
-            }
 
             // create up-to-date location
             QualifiedCoordinates qc = QualifiedCoordinates.newInstance(xc.getLatitude(),

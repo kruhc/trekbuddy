@@ -1510,6 +1510,11 @@ public final class Desktop extends GameCanvas
             // enqueu render request
             eventing.callSerially(newRenderTask(mask));
         }
+//#ifdef __LOG__
+          else {
+            if (log.isEnabled()) log.debug("update 0!");
+        }
+//#endif
     }
 
     public static void showConfirmation(String message, Displayable nextDisplayable) {

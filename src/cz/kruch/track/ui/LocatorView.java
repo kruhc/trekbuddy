@@ -193,7 +193,7 @@ final class LocatorView extends View {
 /*
                 System.out.println("haccuracy = " + hAccuracy);
 */
-                if (hAccuracy != 0F && !Float.isNaN(hAccuracy)) {
+                if (!Float.isNaN(hAccuracy)) {
                     final float w = 5F / hAccuracy;
                     accuracySum += hAccuracy;
 //                  satSum += l.getSat();
@@ -467,18 +467,20 @@ final class LocatorView extends View {
             graphics.drawChars(sbChars, 0, l, OSD.BORDER, 0, Graphics.LEFT | Graphics.TOP);
 
             // draw hdop
-            sb.delete(0, sb.length());
-            sb.append(NavigationScreens.PLUSMINUS);
             final float hAccuracy = coordsAvg.getHorizontalAccuracy();
-            if (hAccuracy >= 10F) {
-                NavigationScreens.append(sb, (int) hAccuracy);
-            } else {
-                NavigationScreens.append(sb, hAccuracy, 1);
+            if (!Float.isNaN(hAccuracy)) {
+                sb.delete(0, sb.length());
+                sb.append(NavigationScreens.PLUSMINUS);
+                if (hAccuracy >= 10F) {
+                    NavigationScreens.append(sb, (int) hAccuracy);
+                } else {
+                    NavigationScreens.append(sb, hAccuracy, 1);
+                }
+                sb.append(' ').append('m');
+                l = sb.length();
+                sb.getChars(0, l, sbChars, 0);
+                graphics.drawChars(sbChars, 0, l, OSD.BORDER, fh, 0);
             }
-            sb.append(' ').append('m');
-            l = sb.length();
-            sb.getChars(0, l, sbChars, 0);
-            graphics.drawChars(sbChars, 0, l, OSD.BORDER, fh, 0);
 
             // draw sat
 /* makes little sense

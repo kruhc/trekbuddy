@@ -43,7 +43,9 @@ public final class NmeaParser {
     public static final byte[] snrs  = new byte[MAX_SATS];
     public static final byte[] prns = new byte[MAX_SATS];
 
-    public static float pdop = -1F, hdop = -1F, vdop = -1F;
+    public static float pdop = Float.NaN;
+    public static float hdop = Float.NaN;
+    public static float vdop = Float.NaN;
     public static int satv;
 
     public static Record parseGGA(final char[] nmea, final int length) throws LocationException {

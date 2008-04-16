@@ -382,7 +382,7 @@ final class ComputerView extends View implements Runnable, CommandListener {
                 /*snreftime = timestamp;*/
             } else {
                 ds = snrefCoords.distance(l.getQualifiedCoordinates());
-                if (hAccuracy == 0F) {
+                if (Float.isNaN(hAccuracy)) {
                     if (ds < 50) {
                         ds = 0F;
                     }

@@ -105,7 +105,7 @@ public final class MotorolaLocationProvider
 
                 final double lat = aggregatePosition.getLatitude() ;
                 final double lon = aggregatePosition.getLongitude();
-                final float alt = aggregatePosition.hasAltitude() ? aggregatePosition.getAltitude() : -1F;
+                final float alt = aggregatePosition.hasAltitude() ? aggregatePosition.getAltitude() : Float.NaN;
 
                 // create up-to-date location
                 final QualifiedCoordinates qc = QualifiedCoordinates.newInstance(lat / 60 * 0.00001, lon / 60 * 0.00001, alt);

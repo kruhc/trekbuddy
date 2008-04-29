@@ -85,6 +85,20 @@ public abstract class LocationProvider {
     public abstract void setLocationListener(LocationListener listener,
                                              int interval, int timeout, int maxAge);
 
+    protected final void baby() {
+        // just about to start
+        go = true;
+        thread = Thread.currentThread();
+    }
+
+    protected final void zombie() {
+        // be ready for restart
+        go = false;
+
+        // signal state change
+        notifyListener(lastState = OUT_OF_SERVICE);
+    }
+
     protected final void die() {
         // shutdown service thread
         synchronized (this) {
@@ -94,8 +108,10 @@ public abstract class LocationProvider {
 
         // wait for finish
         if (thread != null) {
-            try {
+            if (thread.isAlive()) {
                 thread.interrupt();
+            }
+            try {
                 thread.join();
             } catch (InterruptedException e) {
                 // should never happen

@@ -87,20 +87,19 @@ public class SerialLocationProvider extends StreamReadingLocationProvider implem
         // be gentle and safe
         if (restarts > 1) {
 
-/*
-            // wait for previous thread to die
+            // wait for previous thread to die... oh yeah, shit happens sometimes
             if (thread != null) {
                 if (thread.isAlive()) {
                     setThrowable(new IllegalStateException("Previous connection still active"));
-                    try {
-                        thread.join();
-                    } catch (InterruptedException e) {
-                        // ignore
-                    }
+                    thread.interrupt();
+                }
+                try {
+                    thread.join();
+                } catch (InterruptedException e) {
+                    // ignore
                 }
                 thread = null; // gc hint
             }
-*/
 
             // not so fast
             if (lastState == LocationProvider._STALLED) { // give hardware a while
@@ -120,8 +119,7 @@ public class SerialLocationProvider extends StreamReadingLocationProvider implem
         }
 
         // let's roll
-        go = true;
-        thread = Thread.currentThread();
+        baby();
 
         try {
             // notify
@@ -142,15 +140,8 @@ public class SerialLocationProvider extends StreamReadingLocationProvider implem
 
         } finally {
 
-            // be ready for restart
-            go = false;
-            url = null;
-/* stop() does this
-            thread = null;
-*/
-
-            // update status TODO useless - listener has already been cleared
-            notifyListener(LocationProvider.OUT_OF_SERVICE);
+            // almost dead
+            zombie();
         }
     }
 
@@ -192,8 +183,10 @@ public class SerialLocationProvider extends StreamReadingLocationProvider implem
 
         // wait for finish (die part #2)
         if (thread != null) {
-            try {
+            if (thread.isAlive()) {
                 thread.interrupt();
+            }
+            try {
                 thread.join();
             } catch (InterruptedException e) {
                 // should never happen
@@ -284,9 +277,8 @@ public class SerialLocationProvider extends StreamReadingLocationProvider implem
                 nmealog.close();
             } catch (IOException e) {
                 // ignore
-            } finally {
-                nmealog = null;
             }
+            nmealog = null;
         }
     }
 

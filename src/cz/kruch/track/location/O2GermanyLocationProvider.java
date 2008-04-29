@@ -103,8 +103,7 @@ public final class O2GermanyLocationProvider
 
     public void run() {
         // let's roll
-        go = true;
-        thread = Thread.currentThread();
+        baby();
 
         // signal state change
         notifyListener(lastState = TEMPORARILY_UNAVAILABLE);
@@ -175,11 +174,8 @@ public final class O2GermanyLocationProvider
 
         } finally {
 
-            // be ready for restart
-            go = false;
-
-            // signal state change
-            notifyListener(lastState = OUT_OF_SERVICE);
+            // almost dead
+            zombie();
         }
     }
 

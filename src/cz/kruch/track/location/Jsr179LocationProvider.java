@@ -113,8 +113,7 @@ public final class Jsr179LocationProvider
 
     public void run() {
         // let's roll
-        go = true;
-        thread = Thread.currentThread();
+        baby();
 
         try {
             // start NMEA log
@@ -138,11 +137,11 @@ public final class Jsr179LocationProvider
 
         } finally {
 
-            // be ready for restart
-            go = false;
-
             // stop NMEA tracklog
             stopNmeaLog();
+
+            // almost dead
+            zombie();
         }
     }
 

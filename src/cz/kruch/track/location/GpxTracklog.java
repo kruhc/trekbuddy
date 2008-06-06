@@ -228,18 +228,13 @@ public final class GpxTracklog extends Thread {
 
                     if (item instanceof Location) {
                         final Location l = (Location) item;
-                        if (check(l) != null) {
-                            serializeTrkpt(serializer, l);
-                        }
+                        serializeTrkpt(serializer, l);
                         Location.releaseInstance(l);
                     } else if (item instanceof Boolean) {
                         if (Boolean.TRUE.equals(item)) {
                             serializer.endTag(DEFAULT_NAMESPACE, ELEMENT_TRKSEG);
                             serializer.startTag(DEFAULT_NAMESPACE, ELEMENT_TRKSEG);
                         }
-//#ifdef __LOG__
-                        if (log.isEnabled()) log.debug("flush at " + new Date());
-//#endif
                         serializer.flush();
                     } else if (item instanceof Waypoint) {
                         final Waypoint w = (Waypoint) item;
@@ -562,9 +557,12 @@ public final class GpxTracklog extends Thread {
 
     public void locationUpdated(final Location location) {
         synchronized (this) {
-            freeLocationInQueue();
-            queue = location.clone();
-            notify();
+            final Location l = check(location);
+            if (l != null) {
+                freeLocationInQueue();
+                queue = location.clone();
+                notify();
+            }
         }
     }
 
@@ -615,7 +613,7 @@ public final class GpxTracklog extends Thread {
                     final float r = location.getQualifiedCoordinates().distance(refLocation.getQualifiedCoordinates());
 
                     // calculate course deviation
-                    final float speed = location.getSpeed();
+                    final float speed = location.isSpeedValid() ? location.getSpeed() : 0F;
                     final float course = location.getCourse();
                     if (!Float.isNaN(course) && speed > MIN_SPEED_WALK) {
                         float diff = course - refCourse;

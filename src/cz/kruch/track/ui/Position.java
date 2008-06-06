@@ -87,9 +87,9 @@ public final class Position {
         return false;
     }
 
-    // debug
+//#ifdef __LOG__
     public String toString() {
-        return "X=" + getX() + " Y=" + getY();
+        return "Position@" + hashCode() + " {X=" + getX() + " Y=" + getY() + "}";
     }
-    // ~debug
+//#endif
 }

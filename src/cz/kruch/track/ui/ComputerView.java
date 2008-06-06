@@ -110,6 +110,10 @@ final class ComputerView extends View implements Runnable, CommandListener {
     private static final String TOKEN_LON           = "lon";
     private static final String TOKEN_WPT_LAT       = "wpt-lat";
     private static final String TOKEN_WPT_LON       = "wpt-lon";
+    private static final String TOKEN_WPT_NAME      = "wpt-name";
+    private static final String TOKEN_WPT_CMT       = "wpt-cmt";
+    private static final String TOKEN_WPT_SYM       = "wpt-sym";
+    private static final String TOKEN_WPT_ALT_DIFF  = "wpt-alt-diff";
 
     // numeric values
     private static final String[] TOKENS_float = {
@@ -190,8 +194,12 @@ final class ComputerView extends View implements Runnable, CommandListener {
     private static final int VALUE_LON          = 1013;
     private static final int VALUE_WPT_LAT      = 1014;
     private static final int VALUE_WPT_LON      = 1015;
+    private static final int VALUE_WPT_NAME     = 1016;
+    private static final int VALUE_WPT_CMT      = 1017;
+    private static final int VALUE_WPT_SYM      = 1018;
+    private static final int VALUE_WPT_ALT_DIFF = 1019;
 
-    // eve more special
+    // even more special
     private static final int VALUE_SNR0         = 1100; // 12 slots
     private static final int VALUE_PRN0         = 1112; // 12 slots
 
@@ -901,6 +909,14 @@ final class ComputerView extends View implements Runnable, CommandListener {
                                         area.index = VALUE_WPT_LAT;
                                     } else if (token.equals(TOKEN_WPT_LON)) {
                                         area.index = VALUE_WPT_LON;
+                                    } else if (token.equals(TOKEN_WPT_NAME)) {
+                                        area.index = VALUE_WPT_NAME;
+                                    } else if (token.equals(TOKEN_WPT_CMT)) {
+                                        area.index = VALUE_WPT_CMT;
+                                    } else if (token.equals(TOKEN_WPT_SYM)) {
+                                        area.index = VALUE_WPT_SYM;
+                                    } else if (token.equals(TOKEN_WPT_ALT_DIFF)) {
+                                        area.index = VALUE_WPT_ALT_DIFF;
                                     } else {
                                         area.index = -666;
                                     }
@@ -1189,6 +1205,33 @@ final class ComputerView extends View implements Runnable, CommandListener {
                                     } else {
                                         final int m = idx == VALUE_WPT_LAT ? 1 : 2;
                                         NavigationScreens.append(sb, qc, m);
+                                    }
+                                } break;
+                                case VALUE_WPT_NAME: {
+                                    final String s = navigator.getWptName();
+                                    if (s != null){
+                                        sb.append(s);
+                                    }
+                                } break;
+                                case VALUE_WPT_CMT: {
+                                    final String s = navigator.getWptCmt();
+                                    if (s != null){
+                                        sb.append(s);
+                                    }
+                                } break;
+                                case VALUE_WPT_SYM: {
+                                    final String s = navigator.getWptSym();
+                                    if (s != null){
+                                        sb.append(s);
+                                    }
+                                } break;
+                                case VALUE_WPT_ALT_DIFF: {
+                                    final float wptAlt = navigator.getWptAlt();
+                                    if (Float.isNaN(wptAlt)) {
+                                        sb.append('?');
+                                    } else {
+                                        final float diff = wptAlt - valuesFloat[VALUE_ALT];
+                                        NavigationScreens.append(sb, (int) diff);
                                     }
                                 } break;
                                 case VALUE_SNR0:

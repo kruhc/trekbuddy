@@ -42,8 +42,11 @@ public final class ExtraMath {
 
     public static int round(final double d) {
         int i = (int) d;
-        if ((d - i) > 0.5D) {
+        final double v = d - i;
+        if (v > 0.5D) {
             i++;
+        } else if (v < -0.5D) {
+            i--;
         }
 
         return i;

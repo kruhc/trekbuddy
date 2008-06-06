@@ -44,20 +44,19 @@ final class MapViewer {
     private static final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("MapViewer");
 //#endif
 
-/*
-    private static final int TRAJECTORY_LENGTH = 64;
-*/
+    private static final int MAX_TRAJECTORY_LENGTH = 2048;
 
     public static final byte WPT_STATUS_VOID    = 0;
     public static final byte WPT_STATUS_REACHED = 1;
     public static final byte WPT_STATUS_MISSED  = 2;
-    public static final byte WPT_STATUS_CURRENT = 10;
+    public static final byte WPT_STATUS_CURRENT = 3;
 
     private int x, y;
     private int chx, chy;
     private int chx0, chy0;
     private int crosshairSize, crosshairSize2;
     private int mWidth, mHeight;
+    
     private final int[] clip;
     private final Position position;
 
@@ -77,12 +76,11 @@ final class MapViewer {
 
     private short star;
 
-/*
-    private QualifiedCoordinates[] trajectory;
-    private short[] trajectoryX;
-    private short[] trajectoryY;
-    private int tlast, txylast;
-*/
+    private QualifiedCoordinates[] trailLL;
+    private Position[] trailXY;
+    private int[] trailPF;
+    private int tlast, tcount;
+    private float refCourse, courseDeviation;
 
     private int ci, li;
 
@@ -95,11 +93,9 @@ final class MapViewer {
         this.slices2 = new Vector(4);
         this.sInfo = new char[32];
         this.course = this.course2 = Float.NaN;
-/*
-        this.trajectory = new QualifiedCoordinates[TRAJECTORY_LENGTH];
-        this.trajectoryX = new short[TRAJECTORY_LENGTH];
-        this.trajectoryY = new short[TRAJECTORY_LENGTH];
-*/
+        this.trailLL = new QualifiedCoordinates[MAX_TRAJECTORY_LENGTH];
+        this.trailXY = new Position[MAX_TRAJECTORY_LENGTH];
+        this.trailPF = new int[MAX_TRAJECTORY_LENGTH];
     }
 
     public void sizeChanged(int w, int h) {
@@ -127,18 +123,18 @@ final class MapViewer {
         calculateScale();
     }
 
-    public boolean hasMap() {
+    boolean hasMap() {
         return map != null;
     }
 
-    public void setMap(Map map) {
+    void setMap(Map map) {
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("set map " + map);
 //#endif
 
         // store position on map
         if (isDefaultMap(this.map)) {
-            Position p = getPosition();
+            final Position p = getPosition();
             Config.x = p.getX();
             Config.y = p.getY();
             try {
@@ -159,11 +155,6 @@ final class MapViewer {
             this.slices.removeAllElements(); // slicesTemp is always empty
 
         } // ~synchronized
-
-/*
-        // forget calculated trajectory x-y
-        this.tlast = this.txylast = -1;
-*/
 
         // use new map (if any)
         if (map != null) {
@@ -195,21 +186,24 @@ final class MapViewer {
 
             // update scale
             calculateScale();
+
+            // update trail
+            calculateTrail();
         }
     }
 
-    public void setCourse(float course) {
+    void setCourse(float course) {
         this.course = course;
     }
 
-    public void setNavigationCourse(float course) {
+    void setNavigationCourse(float course) {
         this.course2 = course;
     }
 
     /**
      * Returns crosshair position.
      */
-    public Position getPosition() {
+    Position getPosition() {
         position.setXy(x + chx + crosshairSize2, y + chy + crosshairSize2);
 //        Position p = new Position(x + chx + crosshairSize2, y + chy + crosshairSize2);
 
@@ -268,11 +262,10 @@ final class MapViewer {
     }
 */
 
-    public boolean setPosition(Position p) {
+    boolean setPosition(Position p) {
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("move to " + p + ", current position is " + getPosition());
 //#endif
-//        System.out.println("move to " + p + ", current position is " + getPosition());
 
         final int x = p.getX();
         final int y = p.getY();
@@ -307,12 +300,11 @@ final class MapViewer {
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("move made, dirty? " + dirty + ";current position " + this.x + "," + this.y + "; dirty = " + dirty + "; crosshair requested at " + x + "-" + y + " -> screen position at " + chx + "-" + chy);
 //#endif
-//        System.out.println("move made, dirty? " + dirty + ";current position " + getPosition() + "; requested at " + p);
 
         return dirty;
     }
 
-    public boolean scroll(final int direction, final int steps) {
+    boolean scroll(final int direction, final int steps) {
         final int dWidth = Desktop.width;
         final int dHeight = Desktop.height;
         final int crosshairSize2 = this.crosshairSize2;
@@ -445,18 +437,16 @@ final class MapViewer {
                 throw new IllegalArgumentException("Weird direction");
         }
 
-//        System.out.println("scroll made, dirty? " + dirty + "; ots? " + ots + "; current position " + getPosition() + "; x=" + x + " y=" + y + " chx=" + chx + " chy=" + chy);
-
         return dirty;
     }
 
-    public void starTick() {
+    void starTick() {
         if (wptPositions != null) {
             star++;
         }
     }
 
-    public void initRoute(Position[] positions) {
+    void initRoute(Position[] positions) {
         this.wptPositions = null;
         this.wptStatuses = null;
         if (positions != null) {
@@ -465,16 +455,16 @@ final class MapViewer {
         }
     }
 
-    public void setRoute(Position[] positions) {
+    void setRoute(Position[] positions) {
         this.wptPositions = null;
         this.wptPositions = positions;
     }
 
-    public void setPoiStatus(int idx, byte status) {
+    void setPoiStatus(int idx, byte status) {
         wptStatuses[idx] = status;
     }
 
-    public char boundsHit() {
+    char boundsHit() {
         char result = ' ';
         if (chx + crosshairSize2 == 0) {
             result = 'W';
@@ -489,58 +479,126 @@ final class MapViewer {
         return result;
     }
 
-    public void locationUpdated(Location location) {
+    void reset() {
+        tlast = tcount = 0;
+    }
 
-/*
-        // showing trajectory?
-        if (Config.getSafeInstance().isTrajectoryOn()) {
+    void locationUpdated(Location location) {
 
+        // got fix?
+        if (location.getFix() > 0) {
 
-                // get coordinates
-                QualifiedCoordinates[] array = trajectory; // local ref for faster access
-                QualifiedCoordinates qc = location.getQualifiedCoordinates().clone();
+            /*
+             * taken from GpxTracklog
+             * TODO reuse
+             */
 
-                // if array is full, shift and append
-                if (tlast == TRAJECTORY_LENGTH - 1) {
-                    // shift left
-                    QualifiedCoordinates.releaseInstance(array[0]);
-                    array[0] = null;
-                    System.arraycopy(array, 1, array, 0, TRAJECTORY_LENGTH - 1);
+            boolean doLog;
+            float r;
 
-                    // append
-                    array[tlast] = qc;
+            if (tcount > 0) {
 
-                    // shift left
-                    System.arraycopy(trajectoryX, 1, trajectoryX, 0, TRAJECTORY_LENGTH - 1);
-                    System.arraycopy(trajectoryY, 1, trajectoryY, 0, TRAJECTORY_LENGTH - 1);
-
-                    // force calculation
-                    txylast = tlast - 1;
-
-                } else {
-
-                    // append
-                    array[++tlast] = qc;
-
+                // calc distance to reference position
+                int idx = tlast - 1;
+                if (idx < 0) {
+                    idx = tcount - 1;
                 }
+                r = location.getQualifiedCoordinates().distance(trailLL[idx]);
+
+                // course deviation-based decision
+                if (location.isSpeedValid() && location.getSpeed() > 1F) {
+                    final float course = location.getCourse();
+                    if (!Float.isNaN(course)) {
+                        float diff = course - refCourse;
+                        if (diff > 180F) {
+                            diff -= 360F;
+                        } else if (diff < -180F) {
+                            diff += 360F;
+                        }
+                        courseDeviation += diff;
+                        refCourse = course;
+//#ifdef __LOG__
+                        if (log.isEnabled()) log.debug("moving; course dev = " + courseDeviation);
+//#endif
+                        final float absCourseDev = Math.abs(courseDeviation);
+                        doLog = (absCourseDev >= 60F && r > 25F) || (absCourseDev >= 45F && r >= 75) || (absCourseDev >= 15F && r >= 250) || (absCourseDev >= 5 && r >= 750);
+                        if (doLog) {
+                            courseDeviation = 0F;
+                        } 
+                    } else {
+                        doLog = false;
+                    }
+
+                } else { // dist-based decision
+//#ifdef __LOG__
+                    if (log.isEnabled()) log.debug("not moving; dist = " + r);
+//#endif
+                    doLog = r >= 50;
+                }
+
+            } else {
+
+                // log first position
+                doLog = true;
+
+            }
+
+            // trail point?
+            if (doLog) {
+                appendToTrail(location);
             }
         }
-*/
     }
 
-/*
-    public void render(Graphics graphics) {
-        if (!visible) {
-            return;
+    void appendToTrail(Location location) {
+        // local ref for faster access
+        final QualifiedCoordinates[] arrayLL = trailLL;
+        final Position[] arrayXY = trailXY;
+        final int[] arrayPF = trailPF;
+        int tlast = this.tlast;
+
+        // properly append
+        if (arrayLL[tlast] != null) {
+            QualifiedCoordinates.releaseInstance(arrayLL[tlast]);
+            arrayLL[tlast] = null; // gc hint
+        }
+        if (arrayXY[tlast] != null) {
+            Position.releaseInstance(arrayXY[tlast]);
+            arrayXY[tlast] = null; // gc hint
         }
 
-        render(graphics, null);
+        final QualifiedCoordinates qc = location.getQualifiedCoordinates().clone();
+        final Position p;
+        final QualifiedCoordinates localQc;
+        synchronized (this) { // synchronized to avoid race condition with setMap()
+            final Map map = this.map;
+            localQc = map.getDatum().toLocal(qc);
+            p = map.transform(localQc).clone();
+        }
+        QualifiedCoordinates.releaseInstance(localQc);
+        arrayLL[tlast] = qc;
+        arrayXY[tlast] = p;
+
+        if (tcount > 0) {
+            int tlastprev = tlast - 1;
+            if (tlastprev < 0)
+                tlastprev = tcount - 1;
+            arrayPF[tlastprev] = updatePF(arrayXY[tlastprev], p);
+        }
+
+        if (++tlast == MAX_TRAJECTORY_LENGTH) {
+            tlast = 0;
+        }
+        this.tlast = tlast;
+        if (++tcount > MAX_TRAJECTORY_LENGTH) {
+            tcount = MAX_TRAJECTORY_LENGTH;
+        }
+//#ifdef __LOG__
+        if (log.isEnabled()) log.debug("appended at " + tlast + ";count = " + tcount);
+//#endif
     }
-
-    public void render(Graphics graphics, int[] clip) {
-*/
-
-    public void render(final Graphics graphics) {
+    
+    void render(final Graphics graphics) {
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("render");
 //#endif
@@ -558,12 +616,10 @@ final class MapViewer {
 
         } // ~synchronized
 
-/*
         // draw trajectory
-        if (tlast > 0) {
-            drawTrajectory(graphics);
+        if (Config.trailOn && tcount != 0) {
+            drawTrail(graphics);
         }
-*/
 
         // paint route/pois/wpt
         drawNavigation(graphics);
@@ -836,44 +892,86 @@ final class MapViewer {
         }
     }
 
-/*
-    private void drawTrajectory(Graphics graphics) {
-        QualifiedCoordinates[] array = trajectory;
-        short[] arrayX = trajectoryX;
-        short[] arrayY = trajectoryY;
-        int x = this.x;
-        int y = this.y;
-        int tlast = this.tlast;
+    private void drawTrail(final Graphics graphics) {
+        final Position[] arrayXY = trailXY;
+        final int[] arrayPF = trailPF;
+        final int count = this.tcount;
+        final int x = this.x;
+        final int y = this.y;
+        final int w = Desktop.width;
+        final int h = Desktop.height;
+        int idx0 = this.tlast;
+        if (idx0 >= count) {
+            idx0 = 0;
+        }
 
         // set color and style
-        int color = graphics.getColor();
-        graphics.setColor(0x00FF0000);
+        final int color = graphics.getColor();
+        graphics.setColor(Config.COLORS_16[Config.trailColor]);
 
         // draw polyline
-        for (int i = 0; i <= tlast; i++) {
-            if (txylast < i) { // calculated missing x-y
-                txylast++;
-                QualifiedCoordinates localQc = map.getDatum().toLocal(array[txylast]);
-                Position p = map.transform(localQc);
-                QualifiedCoordinates.releaseInstance(localQc);
-                arrayX[txylast] = (short) p.getX();
-                arrayY[txylast] = (short) p.getY();
+        for (int i = count - 1; --i >= 0; ) {
+            int idx1 = idx0 + 1;
+            if (idx1 >= count) {
+                idx1 = 0;
             }
-            if (i > 0) {
-                graphics.drawLine(arrayX[i - 1] - x, arrayY[i - 1] - y,
-                                  arrayX[i] - x, arrayY[i] - y);
+//#ifdef __LOG__
+            if (log.isEnabled()) log.debug("draw from " + idx0 + "(" + arrayXY[idx0] + ") to " + idx1 + " (" + arrayXY[idx1] + ")");
+//#endif
+            final Position p0 = arrayXY[idx0];
+            final Position p1 = arrayXY[idx1];
+            final int x0 = p0.getX() - x;
+            final int y0 = p0.getY() - y;
+            final int x1 = p1.getX() - x;
+            final int y1 = p1.getY() - y;
+            final boolean xIsOff = (x0 < 0 && x1 < 0) || (x0 > w && x1 > w);
+            final boolean yIsOff = (y0 < 0 && y1 < 0) || (y0 > h && y1 > h);
+            if (!xIsOff && !yIsOff) {
+//#ifdef __LOG__
+                if (log.isEnabled()) log.debug("xIsOff? " + xIsOff + " yIsOff? " + yIsOff);
+//#endif
+                drawTrailSegment(graphics, x0, y0, x1, y1, arrayPF[idx0]);
             }
-        }
-        // draw line from last "gpx" point to current position
-        graphics.drawLine(arrayX[txylast] - x, arrayY[txylast] - y,
-                          chx + crosshairSize2, chy + crosshairSize2);
 
+            idx0 = idx1;
+        }
+
+        // draw line from last "gpx" point to current position
+        if (!Desktop.browsing) {
+            final int x0 = arrayXY[idx0].getX() - x;
+            final int y0 = arrayXY[idx0].getY() - y;
+            final int x1 = chx + crosshairSize2;
+            final int y1 = chy + crosshairSize2;
+            drawTrailSegment(graphics, x0, y0, x1, y1, updatePF(x1 - x0, y1 - y0));
+        }
+        
         // restore color and style
         graphics.setColor(color);
     }
-*/
 
-    public int nextCrosshair() {
+    private static void drawTrailSegment(final Graphics graphics,
+                                         final int x0, final int y0,
+                                         final int x1, final int y1,
+                                         final int flags) {
+        graphics.drawLine(x0, y0, x1, y1);
+        int diff = 1;
+        for (int thick = flags >> 16; --thick > 0; ) {
+            if ((flags & 0x01) != 0) {
+                graphics.drawLine(x0 - diff, y0, x1 - diff, y1);
+                if (--thick > 0) {
+                    graphics.drawLine(x0 + diff, y0, x1 + diff, y1);
+                }
+            } else if ((flags & 0x02) != 0) {
+                graphics.drawLine(x0, y0 - diff, x1, y1 - diff);
+                if (--thick > 0) {
+                    graphics.drawLine(x0, y0 + diff, x1, y1 + diff);
+                }
+            }
+            diff++;
+        }
+    }
+
+    int nextCrosshair() {
         final int mask;
 
         if (star % 2 == 0) {
@@ -1029,7 +1127,10 @@ final class MapViewer {
     }
 
     private void calculateScale() {
+        // clear
         sInfoLength = 0;
+
+        // have map?
         if (map != null) {
 /*
             // use full range - fails for globe maps :-)
@@ -1076,5 +1177,83 @@ final class MapViewer {
                 sb.getChars(0, sInfoLength, sInfo, 0);
             }
         }
+    }
+
+    private void calculateTrail() {
+        // trail on?
+        if (Config.trailOn && tcount != 0) {
+
+            // local ref for faster access
+            final Map map = this.map;
+            final QualifiedCoordinates[] arrayLL = trailLL;
+            final Position[] arrayXY = trailXY;
+/*
+            final int[] arrayPF = trailPF;
+*/
+            int tlast = this.tlast - 1; // really 'last'
+
+            // recalc xy and fi
+            for (int i = 0; i < tcount; i++) {
+
+                if (++tlast == tcount)
+                    tlast = 0;
+
+                final QualifiedCoordinates localQc = map.getDatum().toLocal(arrayLL[tlast]);
+                final Position p = map.transform(localQc);
+                QualifiedCoordinates.releaseInstance(localQc);
+                arrayXY[tlast].setXy(p.getX(), p.getY());
+
+                if (i > 0) {
+                    int tlastprev = tlast;
+                    if (--tlastprev < 0) {
+                        tlastprev = tcount - 1;
+                    }
+/* not needed - angle did not change... ?
+                    arrayPF[tlastprev] = updatePF(arrayXY[tlastprev], p);
+*/
+                }
+            }
+        }
+    }
+
+    private static int updatePF(final Position p0, final Position p1) {
+        return updatePF(p1.getX() - p0.getX(), p1.getY() - p0.getY());
+    }
+    
+    private static int updatePF(final double dx, final double dy) {
+        final int thick = Config.trailThick * 2 + 1;
+        double aRad;
+        int flags = 0;
+        if (dx > 0) {
+            aRad = ExtraMath.atan(dy / Math.abs(dx));
+            if (Math.abs(aRad) > Math.PI / 4) {
+                flags |= 1;
+            } else {
+                flags |= 2;
+            }
+            aRad += Math.PI / 2;
+        } else if (dx < 0) {
+            aRad = ExtraMath.atan(dy / Math.abs(dx));
+            if (Math.abs(aRad) > Math.PI / 4) {
+                flags |= 1;
+            } else {
+                flags |= 2;
+            }
+            aRad = Math.PI * 3 / 2 - aRad;
+        } else {
+            if (dy > 0) {
+                aRad = Math.PI;
+            } else if (dy < 0) {
+                aRad = 0;
+            } else {
+                return 0;
+            }
+            flags |= 1;
+        }
+        
+        final double w = thick + ((Math.sqrt(2 * thick * thick) - thick) * Math.abs(Math.sin(2 * aRad)));
+        flags |= ExtraMath.round(w) << 16;
+
+        return flags;
     }
 }

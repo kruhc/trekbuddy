@@ -23,22 +23,10 @@ import cz.kruch.track.Resources;
  *
  * @author Ales Pour <kruhc@seznam.cz>
  */
-final class S60DeviceControl extends DeviceControl {
+final class S60DeviceControl extends NokiaDeviceControl {
 
     S60DeviceControl() {
         cz.kruch.track.ui.Desktop.timer.scheduleAtFixedRate(this, 0L, 15000L);
-    }
-
-    void nextLevel() {
-        try {
-            backlight += 25;
-            if (backlight > 100) {
-                backlight = 0;
-            }
-            com.nokia.mid.ui.DeviceControl.setLights(0, backlight);
-            confirm(backlight == 0 ? Resources.getString(Resources.DESKTOP_MSG_BACKLIGHT_OFF) : Resources.getString(Resources.DESKTOP_MSG_BACKLIGHT_ON) + " (" + backlight + "%)");
-        } catch (Throwable t) {
-        }
     }
 
     void close() {

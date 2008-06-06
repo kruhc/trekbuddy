@@ -81,7 +81,7 @@ public final class O2GermanyLocationProvider
     }
 
     public void stop() throws LocationException {
-        // remove listener and gc-free native provider
+        // remove listener, and close and gc-free native provider
         try {
             impl.setMessageListener(null);
             impl.close();
@@ -176,18 +176,6 @@ public final class O2GermanyLocationProvider
 
             // almost dead
             zombie();
-        }
-    }
-
-    public void setLocationListener(api.location.LocationListener listener, int interval, int timeout, int maxAge) {
-        if (listener == null) {
-            try {
-                impl.setMessageListener(null);
-            } catch (IOException e) {
-                // ignore - this is bad, this method should throw LocationException
-            }
-        } else {
-            setListener(listener);
         }
     }
 

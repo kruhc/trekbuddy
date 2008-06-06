@@ -260,6 +260,11 @@ public final class Desktop extends GameCanvas
             consoleResult(g, lineY, customized);
             lineY += lineHeight;
         }
+        if (localized != 0) {
+            consoleShow(g, lineY, Resources.getString(Resources.BOOT_L10N));
+            consoleResult(g, lineY, localized);
+            lineY += lineHeight;
+        }
         if (keysmapped != 0) {
             consoleShow(g, lineY, Resources.getString(Resources.BOOT_KEYMAP));
             consoleResult(g, lineY, keysmapped);
@@ -325,9 +330,9 @@ public final class Desktop extends GameCanvas
         this.addCommand(this.cmdSettings = new Command(Resources.getString(Resources.DESKTOP_CMD_SETTINGS), POSITIVE_CMD_TYPE, 6));
         this.addCommand(this.cmdInfo = new Command(Resources.getString(Resources.DESKTOP_CMD_INFO), POSITIVE_CMD_TYPE, 7));
         this.addCommand(this.cmdExit = new Command(Resources.getString(Resources.DESKTOP_CMD_EXIT), POSITIVE_CMD_TYPE/*EXIT*/, 8/*1*/));
-        this.cmdPause = new Command(Resources.getString(Resources.DESKTOP_CMD_PAUSE), Config.fullscreen || cz.kruch.track.TrackingMIDlet.sonyEricsson ? POSITIVE_CMD_TYPE : Command.STOP, 1);
-        this.cmdContinue = new Command(Resources.getString(Resources.DESKTOP_CMD_CONTINUE), Config.fullscreen || cz.kruch.track.TrackingMIDlet.sonyEricsson ? POSITIVE_CMD_TYPE : (Command.STOP), 1);
-        this.cmdStop = new Command(Resources.getString(Resources.DESKTOP_CMD_STOP), Config.fullscreen || cz.kruch.track.TrackingMIDlet.sonyEricsson ? POSITIVE_CMD_TYPE : (Command.STOP), 2);
+        this.cmdPause = new Command(Resources.getString(Resources.DESKTOP_CMD_PAUSE), Config.fullscreen || cz.kruch.track.TrackingMIDlet.sonyEricsson || cz.kruch.track.TrackingMIDlet.jbed ? POSITIVE_CMD_TYPE : Command.STOP, 1);
+        this.cmdContinue = new Command(Resources.getString(Resources.DESKTOP_CMD_CONTINUE), Config.fullscreen || cz.kruch.track.TrackingMIDlet.sonyEricsson || cz.kruch.track.TrackingMIDlet.jbed ? POSITIVE_CMD_TYPE : Command.STOP, 1);
+        this.cmdStop = new Command(Resources.getString(Resources.DESKTOP_CMD_STOP), Config.fullscreen || cz.kruch.track.TrackingMIDlet.sonyEricsson || cz.kruch.track.TrackingMIDlet.jbed ? POSITIVE_CMD_TYPE : (Command.STOP), 2);
 
         // handle commands
         this.setCommandListener(this);
@@ -741,6 +746,11 @@ public final class Desktop extends GameCanvas
         }
 //#endif
 
+        // keylock notification
+        if (keylock) {
+            return;
+        }
+
         // counter
         keyRepeatedCount = 0;
 
@@ -761,21 +771,23 @@ public final class Desktop extends GameCanvas
         if (log.isEnabled()) log.info("keyRepeated");
 //#endif
 
-        // counter
-        keyRepeatedCount++;
-
         // keymap
         i = Resources.remap(i);
 
         // handle keylock
         if (Canvas.KEY_STAR == i) {
-            if (keyRepeatedCount == 1) {
+            if (++keyRepeatedCount == 1) {
                 keylock = !keylock;
-                showConfirmation(keylock ? Resources.getString(Resources.DESKTOP_MSG_KEYS_LOCKED) : Resources.getString(Resources.DESKTOP_MSG_KEYS_UNLOCKED), null);
+                display.vibrate(1000);
             }
             return;
-        }
+        } 
 
+        // keylock check
+        if (keylock) {
+            return;
+        }
+        
         // handle event
         handleKey(i, true);
     }
@@ -792,21 +804,7 @@ public final class Desktop extends GameCanvas
         }
 //#endif
 
-        // keymap
-        i = Resources.remap(i);
-
-        // hack
-        if (Canvas.KEY_NUM1 == i) {
-            handleKey(i, false);
-        }
-
-        // no key pressed anymore
-        _setInKey(0);
-
-        // scrolling stops
-        scrolls = 0;
-
-        // prohibit key check upon key release
+        // stop key checker
         if (repeatedKeyCheck != null) {
             repeatedKeyCheck.cancel();
             repeatedKeyCheck = null;
@@ -815,8 +813,30 @@ public final class Desktop extends GameCanvas
 //#endif
         }
 
-        // notify device control
-        cz.kruch.track.ui.nokia.DeviceControl.keyReleased();
+        // keymap
+        i = Resources.remap(i);
+
+        // special keys
+        switch (i) {
+            case Canvas.KEY_STAR: { // keylock key
+                if (keyRepeatedCount != 0) {
+                    keyRepeatedCount = 0;
+                    showConfirmation(keylock ? Resources.getString(Resources.DESKTOP_MSG_KEYS_LOCKED) : Resources.getString(Resources.DESKTOP_MSG_KEYS_UNLOCKED), null);
+                }
+            } break;
+            case Canvas.KEY_NUM1: { // hack
+                handleKey(i, false);
+            } break;
+            case Canvas.KEY_NUM3: { // notify device control
+                cz.kruch.track.ui.nokia.DeviceControl.key3Released();
+            } break;
+        }
+
+        // no key pressed anymore
+        _setInKey(0);
+
+        // scrolling stops
+        scrolls = 0;
 
 /* why????
         // update
@@ -1048,21 +1068,32 @@ public final class Desktop extends GameCanvas
                     // play sound and vibrate
                     if (Config.noSounds) {
                         display.vibrate(1000);
-                    } else if (Camera.play("wpt.amr")) {
-                        display.vibrate(1000);
-                    } else { // fallback to system alarm
-                        AlertType.ALARM.playSound(display);
+                    } else {
+                        boolean notified = false;
+                        final String linkPath = ((Waypoint) wpts.elementAt(wptIdx)).getLinkPath();
+                        if (linkPath != null && linkPath.endsWith(".amr")) {
+                            notified = Camera.play(linkPath);
+                        }
+                        if (!notified) {
+                            notified = Camera.play("wpt.amr");
+                        }
+                        if (notified) {
+                            display.vibrate(1000);
+                        } else { // fallback to system alarm
+                            AlertType.ALARM.playSound(display);
+                        }
                     }
                 }
 
                 // find next wpt
                 boolean changed = false;
                 switch (routeDir) {
-                    case -1: {
+                    case-1: {
                         if (wptIdx > 0) {
                             wptIdx--;
                             changed = true;
-                        } break;
+                        }
+                        break;
                     }
                     case 1: {
                         if (wptIdx < wpts.size() - 1) {
@@ -1079,7 +1110,7 @@ public final class Desktop extends GameCanvas
                     updateNavigation(from);
 
                     // notify views
-                    for (int i = views.length; --i >= 0; ) {
+                    for (int i = views.length; --i >= 0;) {
                         views[i].navigationChanged(wpts, wptIdx, true);
                     }
                 }
@@ -1132,7 +1163,7 @@ public final class Desktop extends GameCanvas
 
             // set browsing mode
             browsing = true;
-            ((MapView) views[VIEW_MAP]).browsingOn();
+            ((MapView) views[VIEW_MAP]).browsingOn(false);
 
             // scroll to position and sync OSD
             ((MapView) views[VIEW_MAP]).setPosition(map.transform(local));
@@ -1289,6 +1320,27 @@ public final class Desktop extends GameCanvas
         return ((Waypoint) wpts.elementAt(wptIdx)).getQualifiedCoordinates();
     }
 
+    public String getWptName() {
+        if (wpts == null || wptIdx == -1) {
+            return null;
+        }
+        return ((Waypoint) wpts.elementAt(wptIdx)).getName();
+    }
+
+    public String getWptCmt() {
+        if (wpts == null || wptIdx == -1) {
+            return null;
+        }
+        return ((Waypoint) wpts.elementAt(wptIdx)).getComment();
+    }
+
+    public String getWptSym() {
+        if (wpts == null || wptIdx == -1) {
+            return null;
+        }
+        return ((Waypoint) wpts.elementAt(wptIdx)).getSym();
+    }
+
     //
     // ~Navigator
     //
@@ -1376,7 +1428,7 @@ public final class Desktop extends GameCanvas
      */
 
     private void handleKey(final int i, final boolean repeated) {
-        if (!guiReady || keylock || paused) {
+        if (!guiReady || paused) {
             return;
         }
 
@@ -1597,11 +1649,11 @@ public final class Desktop extends GameCanvas
 //#endif
 
         // which provider?
-        Class providerClass = null;
         String providerName = null;
 
         // instantiate provider
         try {
+            Class providerClass = null;
             switch (Config.locationProvider) {
                 case Config.LOCATION_PROVIDER_JSR179:
                     providerClass = Class.forName("cz.kruch.track.location.Jsr179LocationProvider");
@@ -1644,7 +1696,7 @@ public final class Desktop extends GameCanvas
         provider.setTracklog(tracklog);
 
         // register as listener
-        provider.setLocationListener(this, -1, -1, -1);
+        provider.setLocationListener(this);
 
         // start provider
         final int state;
@@ -1688,21 +1740,20 @@ public final class Desktop extends GameCanvas
 
         // instantiate BT provider
         try {
-            final Class providerClass = Class.forName("cz.kruch.track.location.Jsr82LocationProvider");
-            provider = (LocationProvider) providerClass.newInstance();
+            provider = (LocationProvider) Class.forName("cz.kruch.track.location.Jsr82LocationProvider").newInstance();
         } catch (Throwable t) {
             showError(Resources.getString(Resources.DESKTOP_MSG_CREATE_PROV_FAILED) + " [Bluetooth]", t, this);
             return false;
         }
 
+        // update OSD
+        osd.setProviderStatus(LocationProvider._STARTING);
+
         // set tracklog flag
         provider.setTracklog(tracklog);
 
         // register as listener
-        provider.setLocationListener(this, -1, -1, -1);
-
-        // update OSD
-        osd.setProviderStatus(LocationProvider._STARTING);
+        provider.setLocationListener(this);
 
         // (re)start BT provider
         (new Thread((Runnable) provider)).start();
@@ -1765,9 +1816,11 @@ public final class Desktop extends GameCanvas
         providerStatus = provider.getStatus();
         providerError = provider.getThrowable();
 
+        // unregister as listener
+        provider.setLocationListener(null);
+        
         // stop provider
         try {
-            provider.setLocationListener(null, -1, -1, -1);
             provider.stop();
         } catch (Throwable t) {
             showError(Resources.getString(Resources.DESKTOP_MSG_STOP_PROV_FAILED), t, null);
@@ -1794,7 +1847,7 @@ public final class Desktop extends GameCanvas
         osd.setProviderStatus(LocationProvider.OUT_OF_SERVICE);
         osd.resetExtendedInfo();
         osd.setRecording(false);
-        ((MapView) views[VIEW_MAP]).browsingOn();
+        ((MapView) views[VIEW_MAP]).browsingOn(true);
         update(MASK_OSD | MASK_CROSSHAIR);
 
         // update menu
@@ -2385,6 +2438,9 @@ public final class Desktop extends GameCanvas
                 try {
                     views[i].configChanged();
                 } catch (NullPointerException e) {
+//#ifdef __LOG__
+                    e.printStackTrace();
+//#endif
                     throw new IllegalStateException("NPE in view #" + i);
                 }
             }
@@ -2880,6 +2936,9 @@ public final class Desktop extends GameCanvas
                 try {
                     mask |= views[i].locationUpdated(l);
                 } catch (NullPointerException e) {
+//#ifdef __LOG__
+                    e.printStackTrace();
+//#endif
                     throw new IllegalStateException("NPE in view #" + i);
                 }
             }

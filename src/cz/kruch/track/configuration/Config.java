@@ -22,7 +22,6 @@ import cz.kruch.track.io.LineReader;
 import javax.microedition.rms.RecordStore;
 import javax.microedition.rms.RecordStoreException;
 import javax.microedition.midlet.MIDlet;
-import javax.microedition.io.Connector;
 import java.io.DataInputStream;
 import java.io.ByteArrayInputStream;
 import java.io.DataOutputStream;
@@ -83,6 +82,14 @@ public final class Config {
     private static final String FOLDER_PROFILES     = "ui-profiles/";
     private static final String FOLDER_RESOURCES    = "resources/";
     private static final String FOLDER_SOUNDS       = "sounds/";
+
+    /* 16 basic colors */
+    public static final int[] COLORS_16 = {
+        0x000000, 0x808080, 0xc0c0c0, 0xffffff,
+        0xffff00, 0xff0000, 0x800000, 0x800080,
+        0xff00ff, 0x00ffff, 0x0000ff, 0x000080,
+        0x008080, 0x008000, 0x00ff00, 0x808000,
+    };
 
     /* rms stores */
     public static final String VARS_090             = "vars_090";
@@ -161,20 +168,24 @@ public final class Config {
     public static boolean largeAtlases;
 
     // group [GPX options]
-    public static int gpxDt = 60; // 1 min
-    public static int gpxDs = -1;
-    public static boolean gpxOnlyValid  = true;
+    public static int gpxDt                     = 60; // 1 min
+    public static int gpxDs                     = -1;
+    public static boolean gpxOnlyValid          = true;
     public static boolean gpxGsmInfo;
 
     // group [Trajectory]
-    public static boolean trajectoryOn;
+    public static boolean trailOn;
+    public static int trailColor                = 9;
+    public static int trailThick;
 
     // group [Navigation]
-    public static int wptProximity      = 50;
-    public static int poiProximity      = 1000;
+    public static int wptProximity              = 50;
+    public static int poiProximity              = 1000;
     public static int routeLineColor;
     public static boolean routeLineStyle;
-    public static boolean routePoiMarks = true;
+    public static boolean routePoiMarks         = true;
+    public static int routeColor;
+    public static int routeThick;
 
     // hidden
     public static String btDeviceName   = EMPTY_STRING;
@@ -304,7 +315,7 @@ public final class Config {
         boolean _unitsNautical = false, _unitsImperial = false;
         try {
             locationTimings = din.readUTF();
-            trajectoryOn = din.readBoolean();
+            trailOn = din.readBoolean();
             forcedGc = din.readBoolean();
             oneTileScroll = din.readBoolean();
             /*gpxRaw = */din.readBoolean();
@@ -397,6 +408,15 @@ public final class Config {
         } catch (Exception e) {
         }
 
+        // 0.9.79 extensions
+        try {
+            trailColor = din.readInt();
+            trailThick = din.readInt();
+            routeColor = din.readInt();
+            routeThick = din.readInt();
+        } catch (Exception e) {
+        }
+
 //#ifdef __LOG__
         if (log.isEnabled()) log.info("configuration read");
 //#endif
@@ -435,7 +455,7 @@ public final class Config {
         dout.writeBoolean(hpsWptTrueAzimuth);
         dout.writeBoolean(osdBasic);
         dout.writeUTF(locationTimings);
-        dout.writeBoolean(trajectoryOn);
+        dout.writeBoolean(trailOn);
         dout.writeBoolean(forcedGc);
         dout.writeBoolean(oneTileScroll);
         dout.writeBoolean(false/*gpxRaw*/);
@@ -468,6 +488,11 @@ public final class Config {
         dout.writeInt(btKeepAlive);
         /* since 0.9.78 */
         dout.writeInt(cmsCycle);
+        /* since 0.9.79 */
+        dout.writeInt(trailColor);
+        dout.writeInt(trailThick);
+        dout.writeInt(routeColor);
+        dout.writeInt(routeThick);
 
 //#ifdef __LOG__
         if (log.isEnabled()) log.info("configuration updated");

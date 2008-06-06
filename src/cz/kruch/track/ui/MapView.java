@@ -163,8 +163,13 @@ final class MapView extends View {
         return navigator.getMap() != null;
     }
 
-    /*private */void browsingOn() { // TODO fix visibility
+    /*private */void browsingOn(boolean reason) { // TODO fix visibility
         mapViewer.setCourse(Float.NaN);
+        if (reason) {
+            if (location != null && location.getFix() > 0) {
+                mapViewer.appendToTrail(location);
+            }
+        }
     }
 
     private void disposeRoute() {
@@ -222,7 +227,7 @@ final class MapView extends View {
 
                 // cursor movement breaks real-time tracking
                 Desktop.browsing = true;
-                browsingOn();
+                browsingOn(false);
 
                 // calculate number of scrolls
                 int steps = 1;
@@ -375,6 +380,11 @@ final class MapView extends View {
         mapViewer.sizeChanged(w, h);
     }
 
+    public void reset() {
+        // pass event
+        mapViewer.reset();
+    }
+
     public int locationUpdated(Location l) {
         // make a copy of last known WGS-84 position
 /* hazard - location may be referenced elsewhere // TODO fix
@@ -382,6 +392,9 @@ final class MapView extends View {
 */
         location = null; // gc hint
         location = l.clone();
+
+        // pass event
+        mapViewer.locationUpdated(l);
 
         // update
         return updatedTrick();

@@ -33,7 +33,7 @@ import cz.kruch.track.util.NmeaParser;
  */
 public abstract class StreamReadingLocationProvider extends LocationProvider {
 //#ifdef __LOG__
-    private static final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("StreamReadingLocationProvider");
+    private static final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("Stream");
 //#endif
 
 /*
@@ -84,6 +84,9 @@ public abstract class StreamReadingLocationProvider extends LocationProvider {
             // get sentence
             final int l = nextSentence(in, observer);
             if (l == -1) {
+//#ifdef __LOG__
+                if (log.isEnabled()) log.warn("end of stream");
+//#endif
                 return null;
             }
                            
@@ -92,16 +95,28 @@ public abstract class StreamReadingLocationProvider extends LocationProvider {
                 // parse known sentences
                 switch (getType(line, l)) {
                     case HEADER_GGA: {
+//#ifdef __LOG__
+                        if (log.isEnabled()) log.warn("got GGA");
+//#endif
                         gga = NmeaParser.parseGGA(line, l);
                         hack_rmc_count = 0;
                     } break;
                     case HEADER_GSA: {
+//#ifdef __LOG__
+                        if (log.isEnabled()) log.warn("got GSA");
+//#endif
                         gsa = NmeaParser.parseGSA(line, l);
                     } break;
                     case HEADER_GSV: {
+//#ifdef __LOG__
+                        if (log.isEnabled()) log.warn("got GSV");
+//#endif
                         NmeaParser.parseGSV(line, l);
                     } break;
                     case HEADER_RMC: {
+//#ifdef __LOG__
+                        if (log.isEnabled()) log.warn("got RMC");
+//#endif
                         rmc = NmeaParser.parseRMC(line, l);
                         hack_rmc_count++;
                     } break;
@@ -132,9 +147,15 @@ public abstract class StreamReadingLocationProvider extends LocationProvider {
                 if (i > 0) {
                     gga = null;
                     syncs++;
+//#ifdef __LOG__
+                    if (log.isEnabled()) log.warn("sync error");
+//#endif
                 } else if (i < 0) {
                     rmc = null;
                     syncs++;
+//#ifdef __LOG__
+                    if (log.isEnabled()) log.warn("sync error");
+//#endif
                 }
             }
         }
@@ -184,7 +205,7 @@ public abstract class StreamReadingLocationProvider extends LocationProvider {
         final char[] line = this.line;
         final byte[] btline = this.btline;
 
-        while (c > -1) {
+        while (c != -1) {
 
             // need new data?
             if (btlineOffset == btlineCount) {

@@ -48,11 +48,6 @@ public final class SimulatorLocationProvider
         }
     }
 
-    public void setLocationListener(LocationListener locationListener,
-                                    int interval, int timeout, int maxAge) {
-        setListener(locationListener);
-    }
-
     public Object getImpl() {
         return null;
     }
@@ -108,6 +103,10 @@ public final class SimulatorLocationProvider
                 try {
                     location = nextLocation(in, null);
                 } catch (IllegalStateException e) {
+//#ifdef __LOG__
+                    if (log.isEnabled()) log.warn("Failed to get location.", e);
+                    e.printStackTrace();
+//#endif
                     Desktop.showError(e.getMessage(), null, null); // WTF?!?
                 } catch (Throwable t) {
 //#ifdef __LOG__
@@ -156,6 +155,10 @@ public final class SimulatorLocationProvider
                 }
             }
         } catch (Throwable t) {
+//#ifdef __LOG__
+            if (log.isEnabled()) log.warn("I/O error? ", t);
+            t.printStackTrace();
+//#endif
             if (t instanceof InterruptedException) {
                 // stop request
             }  else {

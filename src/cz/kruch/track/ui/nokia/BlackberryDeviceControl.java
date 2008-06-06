@@ -24,18 +24,14 @@ final class BlackberryDeviceControl extends DeviceControl {
     }
 
     void nextLevel() {
-        try {
-            if (backlight == 0) {
-                backlight = 1;
-                net.rim.device.api.system.Backlight.setTimeout(255);
-                net.rim.device.api.system.Backlight.enable(true);
-            } else {
-                backlight = 0;
-                net.rim.device.api.system.Backlight.setTimeout(defaultTimeout);
-                net.rim.device.api.system.Backlight.enable(false);
-            }
-            confirm(backlight == 0 ? Resources.getString(Resources.DESKTOP_MSG_BACKLIGHT_OFF) : Resources.getString(Resources.DESKTOP_MSG_BACKLIGHT_ON));
-        } catch (Throwable t) {
+        if (backlight == 0) {
+            backlight = 1;
+            net.rim.device.api.system.Backlight.setTimeout(255);
+            net.rim.device.api.system.Backlight.enable(true);
+        } else {
+            backlight = 0;
+            net.rim.device.api.system.Backlight.setTimeout(defaultTimeout);
+            net.rim.device.api.system.Backlight.enable(false);
         }
     }
 

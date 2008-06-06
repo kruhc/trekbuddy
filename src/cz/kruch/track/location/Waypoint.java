@@ -26,23 +26,25 @@ import api.location.QualifiedCoordinates;
  * @author Ales Pour <kruhc@seznam.cz>
  */
 public final class Waypoint {
+    private QualifiedCoordinates coordinates;
     private String name;
     private String comment;
-    private QualifiedCoordinates coordinates;
+    private String sym;
     private long timestamp;
 
     private Object userObject;
     private String linkPath;
 
-    public Waypoint(QualifiedCoordinates qc, String name, String comment) {
-        this(qc, name, comment, -1);
+    public Waypoint(QualifiedCoordinates qc, String name, String comment, String sym) {
+        this(qc, name, comment, sym, -1);
     }
 
-    public Waypoint(QualifiedCoordinates qc, String name, String comment, long timestamp) {
+    public Waypoint(QualifiedCoordinates qc, String name, String comment, String sym, long timestamp) {
+        this.coordinates = qc;
         this.name = name;
         this.comment = comment;
+        this.sym = sym;
         this.timestamp = timestamp;
-        this.coordinates = qc;
     }
 
     public QualifiedCoordinates getQualifiedCoordinates() {
@@ -59,6 +61,10 @@ public final class Waypoint {
 
     public String getComment() {
         return comment;
+    }
+
+    public String getSym() {
+        return sym;
     }
 
     public String getLinkPath() {

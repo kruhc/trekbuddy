@@ -49,6 +49,7 @@ public final class Resources {
     public static final short BOOT_CREATING_UI                  = 303;
     public static final short BOOT_LOADING_MAP                  = 304;
     public static final short BOOT_KEYMAP                       = 305;
+    public static final short BOOT_L10N                         = 306;
     public static final short BOOT_LOCAL_COPY                   = 399;
     /* desktop - commands */
     public static final short DESKTOP_CMD_START                 = 1000;
@@ -239,7 +240,9 @@ public final class Resources {
     public static final short CFG_DESKTOP_FLD_OSD_BOLD_FONT     = 3510;
     public static final short CFG_DESKTOP_FLD_OSD_BLACK         = 3511;
     public static final short CFG_DESKTOP_TRANSPARENCY          = 3512;
-    public static final short CFG_DESKTOP_CMS_CYCLE             = 3513;
+    public static final short CFG_DESKTOP_FLD_CMS_CYCLE         = 3513;
+    public static final short CFG_DESKTOP_FLD_TRAJECTORY        = 3514;
+    public static final short CFG_DESKTOP_FLD_TRAIL_PREVIEW     = 3515;
     /* settings - Location */
     public static final short CFG_LOCATION_GROUP_PROVIDER       = 3600;
     public static final short CFG_LOCATION_GROUP_TRACKLOG       = 3601;
@@ -327,17 +330,7 @@ public final class Resources {
         if (in != null) {
             final DataInputStream resin = new DataInputStream(in);
             try {
-/*
                 resin.readInt(); // signature: 0xEA4D4910; // JSR-238: 0xEE4D4910
-                final int count = resin.readInt(); // number of entries
-                keys = new short[count];
-                values = new String[count];
-                for (int i = 0; i < count; i++) {
-                    keys[i] = resin.readShort();
-                    values[i] = resin.readUTF();
-                }
-*/
-                resin.readInt(); // signature
                 final int hl = resin.readInt(); // header length
                 final int count = hl / 8;
                 ids = new int[count];

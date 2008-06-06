@@ -84,17 +84,20 @@ public final class Waypoints extends List
     private static final String TAG_CMT     = "cmt";
     private static final String TAG_DESC    = "desc";
     private static final String TAG_ELE     = "ele";
+    private static final String TAG_LINK    = "link";
     private static final String TAG_WAYPOINT = "waypoint";
     private static final String TAG_COORD   = "coord";
+    private static final String TAG_SYM     = "sym";
     private static final String ATTR_LAT    = "lat";
     private static final String ATTR_LON    = "lon";
+    private static final String ATTR_HREF   = "href";
 
     private static final String PREFIX_WMAP = "wmap-";
     private static final String PREFIX_WSMS = "wsms-";
     private static final String PREFIX_WGPS = "wgps-";
     
     private static final String[] NAME_CACHE = {
-        TAG_WPT, TAG_RTEPT, TAG_TRKPT, TAG_NAME, TAG_CMT, TAG_DESC, ATTR_LAT, ATTR_LON
+        TAG_WPT, TAG_RTEPT, TAG_TRKPT, TAG_NAME, TAG_CMT, TAG_DESC, TAG_SYM, ATTR_LAT, ATTR_LON
     };
     
     private final /*Navigator*/Desktop navigator;
@@ -975,8 +978,7 @@ public final class Waypoints extends List
         InputStream in = null;
 
         try {
-            in = new BufferedInputStream(file.openInputStream(), 512);
-            return parseWaypoints(in, fileType);
+            return parseWaypoints(in = file.openInputStream(), fileType);
         } finally {
             if (in != null) {
                 try {
@@ -1018,11 +1020,12 @@ public final class Waypoints extends List
             throws IOException, XmlPullParserException {
 
         int depth = 0;
-        double lat = -1D;
-        double lon = -1D;
         float alt = Float.NaN;
-        String name = null;
-        String comment = null;
+        double lat, lon;
+        String name, cmt, sym, link;
+
+        name = cmt = sym = link = null;
+        lat = lon = -1D;
 
         for (int eventType = parser.next(); eventType != XmlPullParser.END_DOCUMENT; eventType = parser.next()) {
             switch (eventType) {
@@ -1045,13 +1048,19 @@ public final class Waypoints extends List
                                 name = parser.nextText();
                             } else if (TAG_CMT.equals(tag)) {
                                 // get comment
-                                comment = parser.nextText();
-                            } else if (TAG_DESC.equals(tag)) {
+                                cmt = parser.nextText();
+                            } /*else if (TAG_DESC.equals(tag)) {
                                 // get description (replaces existing from <cmt>)
                                 comment = parser.nextText();
-                            } else if (TAG_ELE.equals(tag)) {
+                            } */else if (TAG_ELE.equals(tag)) {
                                 // get elevation
                                 alt = Float.parseFloat(parser.nextText());
+                            } else if (TAG_SYM.equals(tag)) {
+                                // get sym
+                                sym = parser.nextText();
+                            } else if (TAG_LINK.equals(tag)) {
+                                // get link
+                                link = parser.getAttributeValue(null, ATTR_HREF);
                             } else {
                                 // skip
                                 parser.skipSubTree();
@@ -1076,13 +1085,16 @@ public final class Waypoints extends List
                                 name = sb.toString();
                             }
                             // add to list
-                            v.addElement(new Waypoint(QualifiedCoordinates.newInstance(lat, lon, alt), name, comment));
-                            // reset temps
-                            lat = lon = -1D;
-                            alt = Float.NaN;
-                            name = comment = null;
+                            final Waypoint wpt = new Waypoint(QualifiedCoordinates.newInstance(lat, lon, alt), name, cmt, sym);
+                            wpt.setLinkPath(link);
+                            v.addElement(wpt);
+                            
                             // reset depth
                             depth = 0;
+                            // reset temps
+                            alt = Float.NaN;
+                            lat = lon = -1D;
+                            name = cmt = link = null;
                         }
                     } else {
                         // up one level
@@ -1099,10 +1111,11 @@ public final class Waypoints extends List
             throws IOException, XmlPullParserException {
 
         int depth = 0;
-        double lat = -1D;
-        double lon = -1D;
-        String name = null;
-        String comment = null;
+        double lat, lon;
+        String name, comment;
+
+        name = comment = null;
+        lat = lon = -1D;
 
         for (int eventType = parser.next(); eventType != XmlPullParser.END_DOCUMENT; eventType = parser.next()) {
             switch (eventType) {
@@ -1144,12 +1157,12 @@ public final class Waypoints extends List
                         if (TAG_WAYPOINT.equals(tag)) {
                             // got wpt
                             v.addElement(new Waypoint(QualifiedCoordinates.newInstance(lat, lon),
-                                                      name, comment));
+                                                      name, comment, null));
+                            // reset depth
+                            depth = 0;
                             // reset temps
                             lat = lon = -1D;
                             name = comment = null;
-                            // reset depth
-                            depth = 0;
                         }
                     } else {
                         // up one level

@@ -170,7 +170,7 @@ public final class Friends implements MessageListener, Runnable {
 
                     // create waypoint
                     Waypoint wpt = new Waypoint(QualifiedCoordinates.newInstance(lat, lon),
-                                                address, chat, time);
+                                                address, chat, null, time);
 
                     // notify user
                     Desktop.showAlarm(Resources.getString(Resources.DESKTOP_MSG_SMS_RECEIVED) + wpt.getName(), null);
@@ -330,7 +330,7 @@ public final class Friends implements MessageListener, Runnable {
             double lon = parseSentence(lonv, lons);
             String xxx = (new Date(time)).toString();
             Waypoint wpt = new Waypoint(QualifiedCoordinates.newInstance(lat, lon),
-                                        null, chat, time);
+                                        null, chat, null, time);
 
         } else {
             Desktop.showWarning(Resources.getString(Resources.DESKTOP_MSG_UNKNOWN_SMS) + " '" + text + "'", null, null);

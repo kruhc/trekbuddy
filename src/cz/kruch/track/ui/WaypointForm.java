@@ -245,6 +245,7 @@ public final class WaypointForm extends Form
                     Waypoint wpt = new Waypoint(getCoordinates(),
                                                 fieldName.getString(),
                                                 fieldComment.getString(),
+                                                null,
                                                 System.currentTimeMillis());
                     callback.invoke(new Object[]{CMD_USE, wpt }, null, this);
                     cnt++;
@@ -255,6 +256,7 @@ public final class WaypointForm extends Form
                 Waypoint wpt = new Waypoint(coordinates,
                                             fieldName.getString(),
                                             fieldComment.getString(),
+                                            null,
                                             timestamp);
                 wpt.setUserObject(imageBytes);
                 callback.invoke(new Object[]{CMD_SAVE, wpt }, null, this);

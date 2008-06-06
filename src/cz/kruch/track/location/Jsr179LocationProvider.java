@@ -145,14 +145,6 @@ public final class Jsr179LocationProvider
         }
     }
 
-    public void setLocationListener(api.location.LocationListener listener, int interval, int timeout, int maxAge) {
-        if (listener == null) {
-            impl.setLocationListener(null, interval, timeout, maxAge);
-        } else {
-            setListener(listener);
-        }
-    }
-
     private void startNmeaLog() {
         // use NMEA tracklog
         if (isTracklog() && Config.TRACKLOG_FORMAT_NMEA.equals(Config.tracklogFormat)) {

@@ -77,15 +77,10 @@ public final class MotorolaLocationProvider
     }
 
     public void stop() throws LocationException {
+        // remove listener and close and gc-free native provider
+        impl.removePositionListener(this);
         impl.close();
-    }
-
-    public void setLocationListener(api.location.LocationListener listener, int interval, int timeout, int maxAge) {
-        if (listener == null) {
-            impl.removePositionListener(this);
-        } else {
-            setListener(listener);
-        }
+        impl = null;
     }
 
     public void newPosition(com.motorola.location.AggregatePosition aggregatePosition) {

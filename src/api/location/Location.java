@@ -136,7 +136,7 @@ public final class Location {
             this.fixsat &= ~FIX3D_MASK;
     }
 
-    public boolean isMoving() {
+    public boolean isSpeedValid() {
         final float accuracy = getQualifiedCoordinates().getHorizontalAccuracy();
         final float speed = this.speed;
         if (!Float.isNaN(accuracy) && !Float.isNaN(speed)) {

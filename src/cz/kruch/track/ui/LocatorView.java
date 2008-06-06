@@ -234,90 +234,6 @@ final class LocatorView extends View {
 */
     }
 
-    private boolean transform(final int[] center, final float course, final int[] result) {
-        int a = result[0] - center[0];
-        int b = result[1] - center[1];
-        final double c = Math.sqrt(a * a + b * b);
-
-        if (Double.isNaN(c)) {
-            return false;
-        }
-
-        int alpha = (int) Math.toDegrees(ExtraMath.asin(Math.abs((double) a) / c));
-        if (b > 0) {
-            if (a > 0) {
-                alpha = 180 - alpha;
-            } else {
-                alpha = 180 + alpha;
-            }
-        } else {
-            if (a < 0) {
-                alpha = 360 - alpha;
-            }
-        }
-        int alpha2 = (alpha - (int) course) % 360;
-        int xs = 1;
-        int ys = 1;
-        if (alpha2 > 270) {
-            alpha2 = 360 - alpha2;
-            xs = ys = -1;
-        } else if (alpha2 > 180) {
-            alpha2 -= 180;
-            xs = -1;
-        } else if (alpha2 > 90) {
-            alpha2 = 180 - alpha2;
-        } else {
-            ys = -1;
-        }
-        final double alpha2Rad = Math.toRadians(alpha2);
-
-/*
-            double alpha = Xedarius.asin(Math.abs((double) a) / c);
-            if (b > 0) {
-                if (a > 0) {
-                    alpha = Math.PI - alpha;
-                } else {
-                    alpha = Math.PI + alpha;
-                }
-            } else {
-                if (a < 0) {
-                    alpha = 2 * Math.PI - alpha;
-                }
-            }
-            double alpha2 = (alpha - Math.toRadians(bearing)) % (2 * Math.PI);
-            int xs = 1;
-            int ys = 1;
-            if (alpha2 > (1.5 * Math.PI)) {
-                alpha2 = 2 * Math.PI - alpha2;
-                xs = ys = -1;
-            } else if (alpha2 > Math.PI) {
-                alpha2 -= Math.PI;
-                xs = -1;
-            } else if (alpha2 > (0.5 * Math.PI)) {
-                alpha2 = Math.PI - alpha2;
-            } else {
-                ys = -1;
-            }
-            double alpha2Rad = alpha2;
-*/
-
-        final double da = (c * Math.sin(alpha2Rad)) * xs;
-        a = (int) da;
-        if ((da - a) > 0.5) {
-            a++;
-        }
-        final double db = (c * Math.cos(alpha2Rad)) * ys;
-        b = (int) db;
-        if ((db - b) > 0.5) {
-            b++;
-        }
-
-        result[0] = center[0] + a;
-        result[1] = center[1] + b;
-
-        return true;
-    }
-
     public int changeDayNight(final int dayNight) {
         return isVisible ? Desktop.MASK_ALL : Desktop.MASK_NONE; 
     }
@@ -435,7 +351,7 @@ final class LocatorView extends View {
                         transform(center, course, xy);
                     }
 
-                    //
+                    // wtf is this... :-?
                     xy[0] -= 4;
                     xy[1] -= 4;
 
@@ -660,6 +576,7 @@ final class LocatorView extends View {
 
     private void drawTriangle(final Graphics g, final float bearing, final int[][] triangle) {
         if (bearing > 1F) {
+            final int[] center = this.center;
             transform(center, bearing, triangle[0]);
             transform(center, bearing, triangle[1]);
             transform(center, bearing, triangle[2]);
@@ -667,5 +584,91 @@ final class LocatorView extends View {
         g.fillTriangle(triangle[0][0], triangle[0][1],
                        triangle[1][0], triangle[1][1],
                        triangle[2][0], triangle[2][1]);
+    }
+
+    private static boolean transform(final int[] center,
+                                     final float course,
+                                     final int[] result) {
+        int a = result[0] - center[0];
+        int b = result[1] - center[1];
+        final double c = Math.sqrt(a * a + b * b);
+
+        if (Double.isNaN(c)) {
+            return false;
+        }
+
+        int alpha = (int) Math.toDegrees(ExtraMath.asin(Math.abs((double) a) / c));
+        if (b > 0) {
+            if (a > 0) {
+                alpha = 180 - alpha;
+            } else {
+                alpha = 180 + alpha;
+            }
+        } else {
+            if (a < 0) {
+                alpha = 360 - alpha;
+            }
+        }
+        int alpha2 = (alpha - (int) course) % 360;
+        int xs = 1;
+        int ys = 1;
+        if (alpha2 > 270) {
+            alpha2 = 360 - alpha2;
+            xs = ys = -1;
+        } else if (alpha2 > 180) {
+            alpha2 -= 180;
+            xs = -1;
+        } else if (alpha2 > 90) {
+            alpha2 = 180 - alpha2;
+        } else {
+            ys = -1;
+        }
+        final double alpha2Rad = Math.toRadians(alpha2);
+
+/*
+            double alpha = Xedarius.asin(Math.abs((double) a) / c);
+            if (b > 0) {
+                if (a > 0) {
+                    alpha = Math.PI - alpha;
+                } else {
+                    alpha = Math.PI + alpha;
+                }
+            } else {
+                if (a < 0) {
+                    alpha = 2 * Math.PI - alpha;
+                }
+            }
+            double alpha2 = (alpha - Math.toRadians(bearing)) % (2 * Math.PI);
+            int xs = 1;
+            int ys = 1;
+            if (alpha2 > (1.5 * Math.PI)) {
+                alpha2 = 2 * Math.PI - alpha2;
+                xs = ys = -1;
+            } else if (alpha2 > Math.PI) {
+                alpha2 -= Math.PI;
+                xs = -1;
+            } else if (alpha2 > (0.5 * Math.PI)) {
+                alpha2 = Math.PI - alpha2;
+            } else {
+                ys = -1;
+            }
+            double alpha2Rad = alpha2;
+*/
+
+        final double da = (c * Math.sin(alpha2Rad)) * xs;
+        a = (int) da;
+        if ((da - a) > 0.5) {
+            a++;
+        }
+        final double db = (c * Math.cos(alpha2Rad)) * ys;
+        b = (int) db;
+        if ((db - b) > 0.5) {
+            b++;
+        }
+
+        result[0] = center[0] + a;
+        result[1] = center[1] + b;
+
+        return true;
     }
 }

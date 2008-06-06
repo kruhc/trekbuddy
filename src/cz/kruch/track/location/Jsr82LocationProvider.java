@@ -75,7 +75,7 @@ public final class Jsr82LocationProvider extends SerialLocationProvider {
         }
     }
 
-    protected void stopKeepAlive(StreamConnection c) {
+    protected void stopKeepAlive() {
         if (kar != null) {
             kar.cancel();
             kar.close();
@@ -159,9 +159,8 @@ public final class Jsr82LocationProvider extends SerialLocationProvider {
                     os.close();
                 } catch (IOException e) {
                     // ignore
-                } finally {
-                    os = null; // gc hint
                 }
+                os = null; // gc hint
             }
         }
     }

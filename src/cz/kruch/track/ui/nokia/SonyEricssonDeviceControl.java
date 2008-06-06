@@ -30,14 +30,10 @@ final class SonyEricssonDeviceControl extends DeviceControl {
     }
 
     void nextLevel() {
-        try {
-            if (backlight == 0) {
-                backlight = 1;
-            } else {
-                backlight = 0;
-            }
-            confirm(backlight == 0 ? Resources.getString(Resources.DESKTOP_MSG_BACKLIGHT_OFF) : Resources.getString(Resources.DESKTOP_MSG_BACKLIGHT_ON));
-        } catch (Throwable t) {
+        if (backlight == 0) {
+            backlight = 1;
+        } else {
+            backlight = 0;
         }
     }
 

@@ -128,6 +128,9 @@ public final class Camera implements CommandListener, PlayerListener/*, Runnable
             p.addPlayerListener(new Camera(in, (VolumeControl) p.getControl("VolumeControl")));
             p.start();
         } catch (Throwable t) {
+//#ifdef __LOG__
+            System.out.println("play " + name + " failed: " + t);
+//#endif
             if (in != null) {
                 try {
                     in.close();

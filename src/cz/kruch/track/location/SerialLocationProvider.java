@@ -61,7 +61,7 @@ public class SerialLocationProvider extends StreamReadingLocationProvider implem
     }
 
     public boolean isRestartable() {
-        return true;
+        return !(getThrowable() instanceof SecurityException);
     }
 
     protected String getKnownUrl() {
@@ -81,11 +81,8 @@ public class SerialLocationProvider extends StreamReadingLocationProvider implem
     }
 
     public void run() {
-        // diagnostics
-        restarts++;
-
         // be gentle and safe
-        if (restarts > 1) {
+        if (restarts++ > 0) {
 
             // wait for previous thread to die... oh yeah, shit happens sometimes
             if (thread != null) {
@@ -157,46 +154,42 @@ public class SerialLocationProvider extends StreamReadingLocationProvider implem
      */
     public void stop() throws LocationException {
 
+/*
         // shutdown service thread (die part #1)
         synchronized (this) {
             go = false;
             notify();
         }
+*/
+        // shutdown flag
+        go = false;
 
-        // close connection
+        // forcibly close connection
         synchronized (this) {
             if (stream != null) {
                 try {
                     stream.close(); // hopefully forces a thread blocked in read() to receive IOException
-                } catch (Throwable t) {
+                } catch (IOException e) {
                     // ignore
                 }
             }
             if (connection != null) {
                 try {
                     connection.close(); // seems to help too
-                } catch (Throwable t) {
+                } catch (IOException e) {
                     // ignore
                 }
             }
         }
 
+/*
         // wait for finish (die part #2)
         if (thread != null) {
             if (thread.isAlive()) {
                 thread.interrupt();
             }
-            try {
-                thread.join();
-            } catch (InterruptedException e) {
-                // should never happen
-            }
-            thread = null;
         }
-    }
-
-    public void setLocationListener(LocationListener listener, int interval, int timeout, int maxAge) {
-        setListener(listener);
+*/
     }
 
     public Object getImpl() {
@@ -403,22 +396,20 @@ public class SerialLocationProvider extends StreamReadingLocationProvider implem
                 if (stream != null) {
                     try {
                         stream.close();
-                    } catch (Throwable t) {
+                    } catch (IOException e) {
                         // ignore
-                    } finally {
-                        stream = null;
                     }
+                    stream = null;
                 }
 
                 // close serial/bt connection
                 if (connection != null) {
                     try {
                         connection.close();
-                    } catch (Throwable t) {
+                    } catch (IOException e) {
                         // ignore
-                    } finally {
-                        connection = null;
                     }
+                    connection = null;
                 }
             }
         }

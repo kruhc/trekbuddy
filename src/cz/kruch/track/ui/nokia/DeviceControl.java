@@ -17,6 +17,7 @@
 package cz.kruch.track.ui.nokia;
 
 import cz.kruch.track.ui.Desktop;
+import cz.kruch.track.Resources;
 
 import java.util.TimerTask;
 
@@ -26,6 +27,7 @@ import java.util.TimerTask;
  * @author Ales Pour <kruhc@seznam.cz>
  */
 public abstract class DeviceControl extends TimerTask {
+    
     private static DeviceControl instance;
 
     protected volatile int backlight;
@@ -91,7 +93,7 @@ public abstract class DeviceControl extends TimerTask {
         }
     }
 
-    public static void keyReleased() {
+    public static void key3Released() {
         if (instance != null) {
             instance.sync();
         }
@@ -101,8 +103,11 @@ public abstract class DeviceControl extends TimerTask {
         Desktop.showConfirmation(message, null);
     }
 
+    void sync() {
+        confirm(backlight == 0 ? Resources.getString(Resources.DESKTOP_MSG_BACKLIGHT_OFF) : Resources.getString(Resources.DESKTOP_MSG_BACKLIGHT_ON));
+    }
+
+    public void run() {}
     abstract void nextLevel();
     void close() {}
-    void sync() {}
-    public void run() {}
 }

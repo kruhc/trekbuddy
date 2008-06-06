@@ -29,16 +29,12 @@ final class SiemensDeviceControl extends DeviceControl {
     }
 
     void nextLevel() {
-        try {
-            if (backlight == 0) {
-                backlight = 1;
-                com.siemens.mp.game.Light.setLightOn();
-            } else {
-                backlight = 0;
-                com.siemens.mp.game.Light.setLightOff();
-            }
-            confirm(backlight == 0 ? Resources.getString(Resources.DESKTOP_MSG_BACKLIGHT_OFF) : Resources.getString(Resources.DESKTOP_MSG_BACKLIGHT_ON));
-        } catch (Throwable t) {
+        if (backlight == 0) {
+            backlight = 1;
+            com.siemens.mp.game.Light.setLightOn();
+        } else {
+            backlight = 0;
+            com.siemens.mp.game.Light.setLightOff();
         }
     }
 }

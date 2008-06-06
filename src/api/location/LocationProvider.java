@@ -47,10 +47,6 @@ public abstract class LocationProvider {
         return name;
     }
 
-    protected synchronized void setListener(LocationListener listener) {
-        this.listener = listener;
-    }
-
     public synchronized Throwable getThrowable() {
         return throwable;
     }
@@ -82,9 +78,11 @@ public abstract class LocationProvider {
     public abstract int start() throws LocationException;
     public abstract void stop() throws LocationException;
     public abstract Object getImpl();
-    public abstract void setLocationListener(LocationListener listener,
-                                             int interval, int timeout, int maxAge);
 
+    public final synchronized void setLocationListener(LocationListener listener) {
+        this.listener = listener;
+    }
+    
     protected final void baby() {
         // just about to start
         go = true;

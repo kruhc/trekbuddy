@@ -23,7 +23,7 @@ import cz.kruch.track.Resources;
  *
  * @author Ales Pour <kruhc@seznam.cz>
  */
-final class NokiaDeviceControl extends DeviceControl {
+class NokiaDeviceControl extends DeviceControl {
 
     NokiaDeviceControl() {
     }
@@ -35,8 +35,11 @@ final class NokiaDeviceControl extends DeviceControl {
                 backlight = 0;
             }
             com.nokia.mid.ui.DeviceControl.setLights(0, backlight);
-            confirm(backlight == 0 ? Resources.getString(Resources.DESKTOP_MSG_BACKLIGHT_OFF) : Resources.getString(Resources.DESKTOP_MSG_BACKLIGHT_ON) + " (" + backlight + "%)");
         } catch (Throwable t) {
         }
+    }
+
+    void sync() {
+        confirm(backlight == 0 ? Resources.getString(Resources.DESKTOP_MSG_BACKLIGHT_OFF) : Resources.getString(Resources.DESKTOP_MSG_BACKLIGHT_ON) + " (" + backlight + "%)");
     }
 }

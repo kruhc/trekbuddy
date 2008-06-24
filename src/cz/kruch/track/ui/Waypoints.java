@@ -20,12 +20,9 @@ import cz.kruch.track.event.Callback;
 import cz.kruch.track.location.Waypoint;
 import cz.kruch.track.location.GpxTracklog;
 import cz.kruch.track.maps.io.LoaderIO;
-//#ifndef __J9__
 import cz.kruch.track.fun.Friends;
-//#endif
 import cz.kruch.track.configuration.Config;
 import cz.kruch.track.Resources;
-import cz.kruch.j2se.io.BufferedInputStream;
 
 import javax.microedition.lcdui.CommandListener;
 import javax.microedition.lcdui.Command;
@@ -34,7 +31,6 @@ import javax.microedition.lcdui.List;
 import javax.microedition.lcdui.Ticker;
 import javax.microedition.lcdui.Choice;
 import javax.microedition.lcdui.Image;
-import javax.microedition.io.Connector;
 
 import api.location.QualifiedCoordinates;
 import api.location.Location;
@@ -497,8 +493,6 @@ public final class Waypoints extends List
                 // add waypoint, possibly save
                 (new YesNoDialog(this, this, null, Resources.getString(Resources.NAV_MSG_PERSIST_WPT), null)).show();
 
-//#ifndef __J9__
-
             } else if (FriendForm.MENU_SEND == action) { // send waypoint by SMS
 
                 // vars
@@ -525,18 +519,12 @@ public final class Waypoints extends List
                 // send the message
                 Friends.send((String) ret[1], type, (String) ret[2], qc, time);
 
-//#endif
-
             }
-
-//#ifndef __J9__
 
         } else if (source instanceof Friends) { // SMS received
 
             // add waypoint to store
             addToStore(USER_FRIENDS_STORE, (Waypoint) result, true);
-
-//#endif
 
         } else if (source instanceof GpxTracklog) { // waypoint recording notification
 

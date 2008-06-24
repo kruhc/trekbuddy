@@ -19,9 +19,7 @@ package cz.kruch.track.ui;
 import cz.kruch.track.TrackingMIDlet;
 import cz.kruch.track.Resources;
 import cz.kruch.track.event.Callback;
-//#ifndef __J9__
 import cz.kruch.track.fun.Friends;
-//#endif
 import cz.kruch.track.fun.Camera;
 import cz.kruch.track.maps.Map;
 import cz.kruch.track.maps.Atlas;
@@ -91,7 +89,7 @@ public final class Desktop extends GameCanvas
 
     // behaviour flags
     public static int fullScreenHeight = -1;
-    public static boolean partialFlush = true;
+    public static boolean partialFlush;
     public static boolean hasRepeatEvents;
 
     // application
@@ -121,12 +119,8 @@ public final class Desktop extends GameCanvas
     private Map map;
     private Atlas atlas;
 
-//#ifndef __J9__
-
     // groupware components
     private Friends friends;
-
-//#endif    
 
     // LSM/MSK commands
     private Command cmdRun, cmdRunLast, cmdStop;
@@ -137,9 +131,6 @@ public final class Desktop extends GameCanvas
     private Command cmdExit;
     // RSK commands
     private Command cmdPause, cmdContinue;
-
-    // for faster movement
-    static volatile int scrolls; // TODO should move to MapView
 
     // browsing or tracking
     static volatile boolean browsing = true;
@@ -188,7 +179,7 @@ public final class Desktop extends GameCanvas
     private /*volatile*/ int inKey; // using synchronized access helper
 
     // start/initialization
-    private volatile boolean guiReady;
+    private volatile boolean guiReady, comingOn;
 
     // eventing
     /*private */final SmartRunnable eventing; // TODO fix visibility
@@ -311,7 +302,7 @@ public final class Desktop extends GameCanvas
 
     private void configure() {
         // create and add commands to the screen
-        if (Config.fullscreen && cz.kruch.track.TrackingMIDlet.sxg75) {
+        if (Config.fullscreen && cz.kruch.track.TrackingMIDlet.brew) {
             this.addCommand(new Command("", Command.SCREEN, 0));
         }
         if (Config.btDeviceName.length() > 0) {
@@ -332,7 +323,7 @@ public final class Desktop extends GameCanvas
         this.addCommand(this.cmdExit = new Command(Resources.getString(Resources.DESKTOP_CMD_EXIT), POSITIVE_CMD_TYPE/*EXIT*/, 8/*1*/));
         this.cmdPause = new Command(Resources.getString(Resources.DESKTOP_CMD_PAUSE), Config.fullscreen || cz.kruch.track.TrackingMIDlet.sonyEricsson || cz.kruch.track.TrackingMIDlet.jbed ? POSITIVE_CMD_TYPE : Command.STOP, 1);
         this.cmdContinue = new Command(Resources.getString(Resources.DESKTOP_CMD_CONTINUE), Config.fullscreen || cz.kruch.track.TrackingMIDlet.sonyEricsson || cz.kruch.track.TrackingMIDlet.jbed ? POSITIVE_CMD_TYPE : Command.STOP, 1);
-        this.cmdStop = new Command(Resources.getString(Resources.DESKTOP_CMD_STOP), Config.fullscreen || cz.kruch.track.TrackingMIDlet.sonyEricsson || cz.kruch.track.TrackingMIDlet.jbed ? POSITIVE_CMD_TYPE : (Command.STOP), 2);
+        this.cmdStop = new Command(Resources.getString(Resources.DESKTOP_CMD_STOP), Config.fullscreen || cz.kruch.track.TrackingMIDlet.sonyEricsson || cz.kruch.track.TrackingMIDlet.jbed ? POSITIVE_CMD_TYPE : Command.STOP, 2);
 
         // handle commands
         this.setCommandListener(this);
@@ -607,8 +598,6 @@ public final class Desktop extends GameCanvas
         if (log.isEnabled()) log.info("post init");
 //#endif
 
-//#ifndef __J9__
-
         // start Friends
         if (cz.kruch.track.TrackingMIDlet.jsr120 && Config.locationSharing) {
 //#ifdef __LOG__
@@ -620,9 +609,6 @@ public final class Desktop extends GameCanvas
                 showError(Resources.getString(Resources.DESKTOP_MSG_FRIENDS_FAILED), t, this);
             }
         }
-
-//#endif        
-
     }
 
     protected void sizeChanged(int w, int h) {
@@ -816,27 +802,31 @@ public final class Desktop extends GameCanvas
         // keymap
         i = Resources.remap(i);
 
+        // handle keylock
+        if (Canvas.KEY_STAR == i) {
+            if (keyRepeatedCount != 0) {
+                keyRepeatedCount = 0;
+                showConfirmation(keylock ? Resources.getString(Resources.DESKTOP_MSG_KEYS_LOCKED) : Resources.getString(Resources.DESKTOP_MSG_KEYS_UNLOCKED), null);
+            }
+        }
+
         // special keys
-        switch (i) {
-            case Canvas.KEY_STAR: { // keylock key
-                if (keyRepeatedCount != 0) {
-                    keyRepeatedCount = 0;
-                    showConfirmation(keylock ? Resources.getString(Resources.DESKTOP_MSG_KEYS_LOCKED) : Resources.getString(Resources.DESKTOP_MSG_KEYS_UNLOCKED), null);
-                }
-            } break;
-            case Canvas.KEY_NUM1: { // hack
-                handleKey(i, false);
-            } break;
-            case Canvas.KEY_NUM3: { // notify device control
-                cz.kruch.track.ui.nokia.DeviceControl.key3Released();
-            } break;
+        if (!keylock) {
+            switch (i) {
+                case Canvas.KEY_NUM1: { // hack
+                    handleKey(i, false);
+                } break;
+                case Canvas.KEY_NUM3: { // notify device control
+                    cz.kruch.track.ui.nokia.DeviceControl.setBacklight();
+                } break;
+            }
         }
 
         // no key pressed anymore
         _setInKey(0);
 
-        // scrolling stops
-        scrolls = 0;
+        // scrolling stops // TODO ugly direct access
+        MapView.scrolls = 0;
 
 /* why????
         // update
@@ -849,7 +839,6 @@ public final class Desktop extends GameCanvas
             showWarning(Resources.getString(Resources.DESKTOP_MSG_KEYS_LOCKED), null, null);
             return;
         }
-        
         if (command == cmdInfo) {
             (new InfoForm()).show(this,
                                   isTracking() ? provider.getThrowable() : providerError,
@@ -867,20 +856,14 @@ public final class Desktop extends GameCanvas
             // start tracking
             stopRequest = providerRestart = false;
             preTracking(false);
-            // update OSD
-            update(MASK_OSD);
         } else if (command == cmdStop) {
             // stop tracking
             stopRequest = true;
-            stopTracking(false);
-            // update OSD
-            update(MASK_OSD);
+            stopTracking();
         } else if (command == cmdRunLast) {
             // start tracking with known device
             stopRequest = providerRestart = false;
             preTracking(true);
-            // update OSD
-            update(MASK_OSD);
         } else if (command == cmdExit) {
             (new YesNoDialog(this, this, this, Resources.getString(Resources.DESKTOP_MSG_WANT_QUIT), null)).show();
         } else if (command == cmdPause) {
@@ -909,19 +892,12 @@ public final class Desktop extends GameCanvas
                 if (log.isEnabled()) log.debug("exit command");
 //#endif
 
-                // flush waypoints
-                try {
-                    Waypoints.shutdown();
-                } catch (Throwable t) {
-                    // ignore
-                }
+                // close wpts files
+                Waypoints.shutdown();
 
-                // stop tracking (closes GPS connection, closes tracklog)
-                try {
-                    stopTracking(true);
-                } catch (Throwable t) {
-                    // ignore
-                }
+                // stop tracklog and tracking
+                stopGpxTracklog();
+                stopTracking();
 
                 // stop timer
                 timer.cancel();
@@ -932,14 +908,10 @@ public final class Desktop extends GameCanvas
                 // stop device control
                 cz.kruch.track.ui.nokia.DeviceControl.destroy();
 
-//#ifndef __J9__
-
                 // stop Friends
                 if (friends != null) {
                     friends.destroy();
                 }
-
-//#endif                
 
 /*
                 // close atlas/map
@@ -971,11 +943,19 @@ public final class Desktop extends GameCanvas
                 // bail out
                 midlet.notifyDestroyed();
             }
+
         } else if (closure instanceof Boolean) { // START TRACKING
+
+            // set flag
             if (YesNoDialog.YES == answer) {
                 tracklog = true; // !
             }
+
+            // start tracking
             if (((Boolean) closure).booleanValue()) startTrackingLast(); else startTracking();
+
+            // update OSD
+            update(MASK_OSD);
         }
     }
     
@@ -983,7 +963,6 @@ public final class Desktop extends GameCanvas
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("location update: " + new Date(location.getTimestamp()) + ";" + location.getQualifiedCoordinates());
 //#endif
-
         eventing.callSerially(newEvent(Event.EVENT_TRACKING_POSITION_UPDATED,
                               location, null, provider));
     }
@@ -995,13 +974,61 @@ public final class Desktop extends GameCanvas
 
         eventing.callSerially(newEvent(Event.EVENT_TRACKING_STATUS_CHANGED,
                               new Integer(newState), null, provider));
+
+        /*
+         * hack is needed to ... "kick" the event pump??? (SonyEricsson JP-7, Blackberry)
+         * shortly displayed dialog helps, but not on S60 :-(
+         * 2008-06-10: stop() of SerialLocationProvider changed; only BB seems to
+         * have problems now
+         */
+
+/*
+        switch (newState) {
+            // on Blackberry after Permission prompt
+            case LocationProvider._STARTING:
+                if (api.location.LocationProvider.restarts == 1) { // only first time
+                    if (cz.kruch.track.TrackingMIDlet.symbian) {
+                        Thread.yield();
+                    } else {
+                        showAlert(null, Resources.getString(Resources.DESKTOP_MSG_PROV_STARTING), 25, this);
+                    }
+                }
+            break;
+            // on JP-7 after Stop command
+            // on Blackberry after Permission prompt
+            case LocationProvider.OUT_OF_SERVICE:
+                if (stopRequest) { // only on stop request
+                    if (cz.kruch.track.TrackingMIDlet.symbian) {
+                        Thread.yield();
+                    } else {
+                        showAlert(null, Resources.getString(Resources.DESKTOP_MSG_PROV_OUT_OF_SERVICE), 25, this);
+                    }
+                }
+            break;
+        }
+*/
+//#ifdef __RIM__
+        if (cz.kruch.track.TrackingMIDlet.rim) {
+            switch (newState) {
+                case LocationProvider._STARTING:
+                    if (api.location.LocationProvider.restarts == 1) { // only first time
+                        showAlert(null, Resources.getString(Resources.DESKTOP_MSG_PROV_STARTING), 25, this);
+                    }
+                break;
+                case LocationProvider.OUT_OF_SERVICE:
+                    if (stopRequest) { // only on stop request
+                        showAlert(null, Resources.getString(Resources.DESKTOP_MSG_PROV_OUT_OF_SERVICE), 25, this);
+                    }
+                break;
+            }
+        }
+//#endif
     }
 
     public void tracklogStateChanged(LocationProvider provider, boolean isRecording) {
 //#ifdef __LOG__
         if (log.isEnabled()) log.info("tracklog state changed; " + isRecording);
 //#endif
-
         eventing.callSerially(newEvent(Event.EVENT_TRACKLOG,
                               new Integer(isRecording ? GpxTracklog.CODE_RECORDING_START : GpxTracklog.CODE_RECORDING_STOP),
                               null, provider));
@@ -1525,12 +1552,6 @@ public final class Desktop extends GameCanvas
                         }
                     } break;
 
-                    case Canvas.KEY_NUM3: { // backlight control
-                        if (!repeated) {
-                            cz.kruch.track.ui.nokia.DeviceControl.setBacklight();
-                        }
-                    } break;
-
                     default: {
                         if (!repeated) {
                             mask = views[mode].handleKey(i, repeated);
@@ -1540,10 +1561,8 @@ public final class Desktop extends GameCanvas
             }
         }
 
-        // update necessary?
-        if (mask > 0) {
-            update(mask);
-        }
+        // update
+        update(mask);
     }
 
     public void update(int mask) {
@@ -1641,6 +1660,9 @@ public final class Desktop extends GameCanvas
                 if (last) startTrackingLast(); else startTracking();
             } break;
         }
+
+        // update OSD
+        update(MASK_OSD);
     }
 
     private boolean startTracking() {
@@ -1795,13 +1817,49 @@ public final class Desktop extends GameCanvas
         return true;
     }
 
-    private boolean stopTracking(final boolean exit) {
+    private void afterTracking() {
 //#ifdef __LOG__
-        if (log.isEnabled()) log.debug("stop tracking " + provider);
+        if (log.isEnabled()) log.debug("after tracking " + provider);
 //#endif
 
         // stop GPX logging
         stopGpxTracklog();
+
+//#ifdef __LOG__
+        if (log.isEnabled()) log.debug("restore UI");
+//#endif
+
+        // not tracking
+        browsing = true;
+        paused = false;
+
+        // update OSD & navigation UI
+        osd.setProviderStatus(LocationProvider.OUT_OF_SERVICE);
+        osd.resetExtendedInfo();
+        osd.setRecording(false);
+        // hack
+        ((MapView) views[VIEW_MAP]).browsingOn(true);
+        // update
+        update(MASK_OSD | MASK_CROSSHAIR);
+
+        // update menu
+        removeCommand(cmdStop);
+        removeCommand(cmdPause);
+        removeCommand(cmdContinue);
+        addCommand(cmdRun);
+        if (cmdRunLast != null) {
+            addCommand(cmdRunLast);
+        }
+
+//#ifdef __LOG__
+        if (log.isEnabled()) log.debug("~after tracking");
+//#endif
+    }
+
+    private boolean stopTracking() {
+//#ifdef __LOG__
+        if (log.isEnabled()) log.debug("stop tracking " + provider);
+//#endif
 
         // assertion - should never happen
         if (provider == null) {
@@ -1816,9 +1874,11 @@ public final class Desktop extends GameCanvas
         providerStatus = provider.getStatus();
         providerError = provider.getThrowable();
 
+/*
         // unregister as listener
         provider.setLocationListener(null);
-        
+*/
+
         // stop provider
         try {
             provider.stop();
@@ -1829,38 +1889,7 @@ public final class Desktop extends GameCanvas
         }
 
 //#ifdef __LOG__
-        if (log.isEnabled()) log.debug("provider stopped");
-//#endif
-
-        // when exiting, the bellow is not necessary - we can quit faster
-        if (exit) return true;
-
-//#ifdef __LOG__
-        if (log.isEnabled()) log.debug("restore UI");
-//#endif
-
-        // not tracking
-        browsing = true;
-        paused = false;
-
-        // update OSD & navigation UI
-        osd.setProviderStatus(LocationProvider.OUT_OF_SERVICE);
-        osd.resetExtendedInfo();
-        osd.setRecording(false);
-        ((MapView) views[VIEW_MAP]).browsingOn(true);
-        update(MASK_OSD | MASK_CROSSHAIR);
-
-        // update menu
-        removeCommand(cmdStop);
-        removeCommand(cmdPause);
-        removeCommand(cmdContinue);
-        addCommand(cmdRun);
-        if (cmdRunLast != null) {
-            addCommand(cmdRunLast);
-        }
-
-//#ifdef __LOG__
-        if (log.isEnabled()) log.debug("~stop tracking");
+        if (log.isEnabled()) log.debug("provider being stopped");
 //#endif
 
         return true;
@@ -1957,6 +1986,8 @@ public final class Desktop extends GameCanvas
     public void loadingChanged(final Object result, final Throwable throwable) {
         eventing.callSerially(new Event(Event.EVENT_LOADING_STATUS_CHANGED,
                                         result, throwable, null));
+        // hack for "UI smoothness"
+        Thread.yield();
     }
 
     /*
@@ -2022,7 +2053,7 @@ public final class Desktop extends GameCanvas
         return result;
     }
 
-    private void releaseRenderTask(final RenderTask task) {
+    private static void releaseRenderTask(final RenderTask task) {
         synchronized (rtPool) {
             if (rtCountFree < rtPool.length) {
                 rtPool[rtCountFree++] = task;
@@ -2053,12 +2084,8 @@ public final class Desktop extends GameCanvas
             this.mask = m;
         }
 
-        public int getMask() {
-            return mask;
-        }
-
-        public void merge(final int m) {
-            this.mask |= m;
+        public void merge(RenderTask r) {
+            this.mask |= r.mask;
         }
         
         public void run() {
@@ -2857,10 +2884,22 @@ public final class Desktop extends GameCanvas
                     }
 
                     // stop tracking completely or restart
-                    if (stopRequest || !provider.isRestartable()) {
-                        stopTracking(false);
-                    } else {
+                    if (stopRequest || provider == null) {
+//#ifdef __LOG__
+                        if (log.isEnabled()) log.debug("to do: after tracking");
+//#endif
+                        afterTracking();
+                    } else if (provider.isRestartable()) {
+//#ifdef __LOG__
+                        if (log.isEnabled()) log.debug("to do: restart tracking");
+//#endif
                         restartTracking();
+                    } else {
+//#ifdef __LOG__
+                        if (log.isEnabled()) log.debug("to do: stop tracking");
+//#endif
+                        stopTracking();
+                        afterTracking();
                     }
 
                 } break;
@@ -2883,8 +2922,9 @@ public final class Desktop extends GameCanvas
 
                 case LocationProvider._CANCELLED: {
 
-                    // stop
-                    stopTracking(false);
+                    // stop and resume
+                    stopTracking();
+                    afterTracking();
 
                 } break;
             }

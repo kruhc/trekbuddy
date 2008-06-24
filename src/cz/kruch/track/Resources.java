@@ -151,6 +151,8 @@ public final class Resources {
     public static final short DESKTOP_MSG_NMEA_PLAYBACK         = 1383;
     public static final short DESKTOP_MSG_SMS_RECEIVED          = 1384;
     public static final short DESKTOP_MSG_NO_SET_FILE           = 1385;
+    public static final short DESKTOP_MSG_PROV_OUT_OF_SERVICE   = 1386;
+    public static final short DESKTOP_MSG_PROV_STARTING         = 1387;
     /* navigation - commands */
     public static final short NAV_CMD_ROUTE_ALONG               = 2000;
     public static final short NAV_CMD_ROUTE_BACK                = 2001;
@@ -243,6 +245,7 @@ public final class Resources {
     public static final short CFG_DESKTOP_FLD_CMS_CYCLE         = 3513;
     public static final short CFG_DESKTOP_FLD_TRAJECTORY        = 3514;
     public static final short CFG_DESKTOP_FLD_TRAIL_PREVIEW     = 3515;
+    public static final short CFG_DESKTOP_CMD_TRAIL_MODE        = 3516;
     /* settings - Location */
     public static final short CFG_LOCATION_GROUP_PROVIDER       = 3600;
     public static final short CFG_LOCATION_GROUP_TRACKLOG       = 3601;

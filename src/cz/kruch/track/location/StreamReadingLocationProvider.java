@@ -27,16 +27,16 @@ import java.io.OutputStream;
 import cz.kruch.track.util.NmeaParser;
 
 /**
- * Base class for Serial and Simulator location provider.
+ * Base class for Serial/Bluetooth and Simulator providers.
  *
  * @author Ales Pour <kruhc@seznam.cz>
  */
-public abstract class StreamReadingLocationProvider extends LocationProvider {
+abstract class StreamReadingLocationProvider extends LocationProvider {
 //#ifdef __LOG__
     private static final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("Stream");
 //#endif
 
-/*
+/* replaced with "int-encoded" form bellow
     private static final char[] HEADER_GGA = { '$', 'G', 'P', 'G', 'G', 'A' };
     private static final char[] HEADER_GSA = { '$', 'G', 'P', 'G', 'S', 'A' };
     private static final char[] HEADER_GSV = { '$', 'G', 'P', 'G', 'S', 'V' };
@@ -48,28 +48,32 @@ public abstract class StreamReadingLocationProvider extends LocationProvider {
     private static final int HEADER_GSV = 0x00475356;
     private static final int HEADER_RMC = 0x00524d43;
 
-    private static final int HEADER_LENGTH = 6;
-    private static final int BUFFER_SIZE = 512; // as recommended at Nokia forum
-
-    public static int syncs, mismatches, checksums, restarts, stalls, errors, pings;
+    private static final int HEADER_LENGTH          = 6;   // sentence header length
+    private static final int MAX_SENTENCE_LENGTH    = 128; // 82(79) max according to NMEA 0183 v3.01
+    private static final int INPUT_BUFFER_SIZE      = 16;  // 512; // as recommended at Nokia forum
 
     private final char[] line;
     private final byte[] btline;
     private int btlineOffset, btlineCount;
 
+    protected volatile long lastIO;
+
     /* for minimalistic NMEA stream */
     private int hack_rmc_count;
     private NmeaParser.Record gsa;
 
+    /* for broken streams */
+    private boolean hack_repeat;
+
     protected StreamReadingLocationProvider(String name) {
         super(name);
-        this.line = new char[BUFFER_SIZE];
-        this.btline = new byte[BUFFER_SIZE];
-        syncs = mismatches = checksums = restarts = stalls = errors = pings = 0;
+        this.line = new char[MAX_SENTENCE_LENGTH];
+        this.btline = new byte[INPUT_BUFFER_SIZE];
     }
 
     protected void reset() {
         btlineOffset = btlineCount = hack_rmc_count = 0;
+        hack_repeat = false;
         gsa = null;
     }
 
@@ -96,26 +100,26 @@ public abstract class StreamReadingLocationProvider extends LocationProvider {
                 switch (getType(line, l)) {
                     case HEADER_GGA: {
 //#ifdef __LOG__
-                        if (log.isEnabled()) log.warn("got GGA");
+                        if (log.isEnabled()) log.info("got GGA");
 //#endif
                         gga = NmeaParser.parseGGA(line, l);
                         hack_rmc_count = 0;
                     } break;
                     case HEADER_GSA: {
 //#ifdef __LOG__
-                        if (log.isEnabled()) log.warn("got GSA");
+                        if (log.isEnabled()) log.info("got GSA");
 //#endif
                         gsa = NmeaParser.parseGSA(line, l);
                     } break;
                     case HEADER_GSV: {
 //#ifdef __LOG__
-                        if (log.isEnabled()) log.warn("got GSV");
+                        if (log.isEnabled()) log.info("got GSV");
 //#endif
                         NmeaParser.parseGSV(line, l);
                     } break;
                     case HEADER_RMC: {
 //#ifdef __LOG__
-                        if (log.isEnabled()) log.warn("got RMC");
+                        if (log.isEnabled()) log.info("got RMC");
 //#endif
                         rmc = NmeaParser.parseRMC(line, l);
                         hack_rmc_count++;
@@ -211,19 +215,34 @@ public abstract class StreamReadingLocationProvider extends LocationProvider {
             if (btlineOffset == btlineCount) {
 
                 // read from stream
-                btlineCount = in.read(btline);
-                if (btlineCount == -1) {
-                    c = -1;
-                    break;
+                final int n = in.read(btline);
+
+                // end of stream?
+                if (n == -1) {
+                    if (hack_repeat) { // already tried once
+                        c = -1;
+                        break;
+                    } else { // try read again
+                        hack_repeat = true;
+                        continue;
+                    }
                 }
+
+                // use count
+                btlineCount = n;
+
+                // starting at the beginning
                 btlineOffset = 0;
+
+                // update last I/O timestamp
+                lastIO = System.currentTimeMillis();
 
                 // NMEA log
                 if (observer != null) {
                     try {
-                        observer.write(btline, 0, btlineCount);
+                        observer.write(btline, 0, n);
                     } catch (Throwable t) {
-                        // ignore
+                        // TODO should notify
                     }
                 }
             }
@@ -240,7 +259,7 @@ public abstract class StreamReadingLocationProvider extends LocationProvider {
             // header already matched or not yet enough data for header check
             if (match) {
                 final char ch = (char) c;
-                nl = (ch == '\n' || ch == '\r');
+                nl = (ch == '\n' || ch == '\r') || (pos > 0 && ch == '$');
 
                 if (nl) break;
 
@@ -248,7 +267,7 @@ public abstract class StreamReadingLocationProvider extends LocationProvider {
                 line[pos++] = ch;
 
                 // weird content check
-                if (pos >= BUFFER_SIZE) {
+                if (pos >= MAX_SENTENCE_LENGTH) {
 
                     // record state
                     setThrowable(new LocationException("NMEA sentence too long"));

@@ -116,9 +116,8 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
         append(menuMisc, null);
 
         // add command and handling
-        addCommand(new Command(Resources.getString(Resources.CMD_CANCEL), Command.BACK, 1));
-        addCommand(new Command(Resources.getString(Resources.CFG_CMD_APPLY), Command.ITEM, 1));
-        addCommand(new Command(Resources.getString(Resources.CFG_CMD_SAVE), Command.ITEM, 2));
+        addCommand(new Command(Resources.getString(Resources.CMD_CLOSE), Command.BACK, 1));
+        addCommand(new Command(Resources.getString(Resources.CFG_CMD_SAVE), Command.SCREEN, 1));
         /* default SELECT command is of SCREEN type */
         setCommandListener(this);
 
@@ -190,8 +189,10 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
         } else if (menuDesktop.equals(section)) {
 
             // trail line setup
-            submenu.append(itemTrailView = new TrailItem(Resources.getString(Resources.CFG_DESKTOP_FLD_TRAIL_PREVIEW),
-                                                         Config.trailColor, Config.trailThick));
+            if (cz.kruch.track.TrackingMIDlet.sonyEricsson) {
+                submenu.append(itemTrailView = new TrailItem(Resources.getString(Resources.CFG_DESKTOP_FLD_TRAIL_PREVIEW),
+                                                             Config.trailColor, Config.trailThick));
+            }
 
             // desktop settings
             choiceMisc = new ChoiceGroup(Resources.getString(Resources.CFG_DESKTOP_GROUP), ChoiceGroup.MULTIPLE);
@@ -241,6 +242,12 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
             
             // CMS cycling
             submenu.append(fieldCmsCycle = new TextField(Resources.getString(Resources.CFG_DESKTOP_FLD_CMS_CYCLE), Integer.toString(Config.cmsCycle), 4, TextField.NUMERIC));
+
+            // trail line setup
+            if (!cz.kruch.track.TrackingMIDlet.sonyEricsson) {
+                submenu.append(itemTrailView = new TrailItem(Resources.getString(Resources.CFG_DESKTOP_FLD_TRAIL_PREVIEW),
+                                                             Config.trailColor, Config.trailThick));
+            }
 
         } else if (menuNavigation.equals(section)) {
 
@@ -511,7 +518,7 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
         // top-level menu action?
         if (displayable == this) {
             // open submenu?
-            if (Command.SCREEN == command.getCommandType()) {
+            if (SELECT_COMMAND == command) {
                 // submenu
                 show(section = getString(getSelectedIndex()));
             } else {
@@ -666,21 +673,20 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
         // restore desktop
         Desktop.display.setCurrent(Desktop.screen);
 
-        if (command.getCommandType() != Command.BACK) { // "Apply", "Save"
+        // save?
+        if (command.getCommandType() != Command.BACK) {
+            try {
+                // update config
+                Config.update(Config.CONFIG_090);
 
-            // save?
-            if (/* Save */2 == command.getPriority()) {
-                try {
-                    // update config
-                    Config.update(Config.CONFIG_090);
+                // show confirmation
+                Desktop.showConfirmation(Resources.getString(Resources.DESKTOP_MSG_CFG_UPDATED), Desktop.screen);
 
-                    // show confirmation
-                    Desktop.showConfirmation(Resources.getString(Resources.DESKTOP_MSG_CFG_UPDATED), Desktop.screen);
+            } catch (ConfigurationException e) {
 
-                } catch (ConfigurationException e) {
-                    // show error
-                    Desktop.showError(Resources.getString(Resources.DESKTOP_MSG_CFG_UPDATE_FAILED), e, Desktop.screen);
-                }
+                // show error
+                Desktop.showError(Resources.getString(Resources.DESKTOP_MSG_CFG_UPDATE_FAILED), e, Desktop.screen);
+
             }
         }
 
@@ -743,7 +749,7 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
             super(label);
             this.color = color;
             this.thick = thickness;
-            this.setDefaultCommand(new Command("Mode", Command.ITEM, 1));
+            this.setDefaultCommand(new Command(Resources.getString(Resources.CFG_DESKTOP_CMD_TRAIL_MODE), Command.ITEM, 1));
             this.setItemCommandListener(this);
         }
 
@@ -764,25 +770,31 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
                         if (mode % 2 == 0) {
                             if (--color < 0) {
                                 ++color;
+                            } else {
+                                notify = repaint = true;
                             }
                         } else {
                             if (--thick < 0) {
                                 ++thick;
+                            } else {
+                                notify = repaint = true;
                             }
                         }
-                        notify = repaint = true;
                     } break;
                     case javax.microedition.lcdui.Canvas.RIGHT: {
                         if (mode % 2 == 0) {
                             if (++color == Config.COLORS_16.length) {
                                 --color;
+                            } else {
+                                notify = repaint = true;
                             }
                         } else {
                             if (++thick == 4) {
                                 --thick;
+                            } else {
+                                notify = repaint = true;
                             }
                         }
-                        notify = repaint = true;
                     } break;
                     case javax.microedition.lcdui.Canvas.UP:
                     case javax.microedition.lcdui.Canvas.DOWN:
@@ -835,35 +847,50 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
                 default:
                     mode++;
             }
-            repaint();
         }
 
         protected void pointerPressed(int x, int y) {
+            boolean notify = false;
+            boolean repaint = false;
+
             if (x < getMinContentWidth() * 0.33D) {
                 if (mode % 2 == 0) {
                     if (--color < 0) {
                         ++color;
+                    } else {
+                        notify = repaint = true;
                     }
                 } else {
                     if (--thick < 0) {
                         ++thick;
+                    } else {
+                        notify = repaint = true;
                     }
                 }
             } else if (x > getMinContentWidth() * 0.66D) {
                 if (mode % 2 == 0) {
                     if (++color == Config.COLORS_16.length) {
                         --color;
+                    } else {
+                        notify = repaint = true;
                     }
                 } else {
                     if (++thick == 4) {
                         --thick;
+                    } else {
+                        notify = repaint = true;
                     }
                 }
             } else {
                 mode++;
             }
-            repaint();
-            notifyStateChanged();
+
+            if (repaint) {
+                repaint();
+            }
+            if (notify) {
+                notifyStateChanged();
+            }
         }
 
         protected void paint(Graphics graphics, int w, int h) {

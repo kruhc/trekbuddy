@@ -16,7 +16,6 @@
 package cz.kruch.track.location;
 
 import api.location.LocationProvider;
-import api.location.LocationListener;
 import api.location.LocationException;
 import api.location.Location;
 import api.file.File;
@@ -75,22 +74,36 @@ public final class SimulatorLocationProvider
         if (result != null) {
             go = true;
             file = (File) result;
-            (thread = new Thread(this)).start();
         } else {
-            notifyListener(LocationProvider.OUT_OF_SERVICE);
+            go = false;
+            file = null;
         }
+
+        (thread = new Thread(this)).start();
     }
 
     public void run() {
+        // yes, thread is always started
+        if (file == null) {
+//#ifdef __LOG__
+            if (log.isEnabled()) log.info("simulator task cancelled");
+//#endif
+            notifyListener(LocationProvider.OUT_OF_SERVICE);
+            return;
+        }
+
 //#ifdef __LOG__
         if (log.isEnabled()) log.info("simulator task starting; url " + file.getURL());
 //#endif
 
-        InputStream in = null;
+        // statistics
+        restarts++;
 
+        // for start gpx
+        notifyListener(LocationProvider._STARTING);
+
+        InputStream in = null;
         try {
-            // for start gpx
-            notifyListener(LocationProvider._STARTING);
 
             // open input
             in = file.openInputStream();
@@ -102,12 +115,6 @@ public final class SimulatorLocationProvider
                 // get next location
                 try {
                     location = nextLocation(in, null);
-                } catch (IllegalStateException e) {
-//#ifdef __LOG__
-                    if (log.isEnabled()) log.warn("Failed to get location.", e);
-                    e.printStackTrace();
-//#endif
-                    Desktop.showError(e.getMessage(), null, null); // WTF?!?
                 } catch (Throwable t) {
 //#ifdef __LOG__
                     if (log.isEnabled()) log.warn("Failed to get location.", t);
@@ -134,7 +141,7 @@ public final class SimulatorLocationProvider
                 // state change?
                 boolean stateChange = false;
                 synchronized (this) {
-                    final int newState = location.getFix() > 0 ? LocationProvider.AVAILABLE : LocationProvider.TEMPORARILY_UNAVAILABLE;
+                    final int newState = location.getFix() > 0 ? AVAILABLE : TEMPORARILY_UNAVAILABLE;
                     if (lastState != newState) {
                         lastState = newState;
                         stateChange = true;

@@ -20,11 +20,11 @@ import cz.kruch.track.event.Callback;
 import cz.kruch.track.Resources;
 import cz.kruch.track.configuration.Config;
 
-import javax.microedition.io.Connector;
 import javax.microedition.lcdui.List;
 import javax.microedition.lcdui.Command;
 import javax.microedition.lcdui.CommandListener;
 import javax.microedition.lcdui.Displayable;
+import javax.microedition.lcdui.Ticker;
 import java.util.Enumeration;
 import java.util.Vector;
 import java.io.IOException;
@@ -101,7 +101,7 @@ public final class FileBrowser implements CommandListener, Runnable {
                             depth -= 3;
 
                             // list directory
-                            show(file.list());
+                            show(file);
 
                             return;
                         }
@@ -125,7 +125,7 @@ public final class FileBrowser implements CommandListener, Runnable {
                     }
 
                     // list fs roots
-                    show(File.listRoots());
+                    show(null);
 
                 }
 //#ifdef __LOG__
@@ -173,7 +173,7 @@ public final class FileBrowser implements CommandListener, Runnable {
 
                 // list dir content
                 if (isDir) {
-                    show(file.list());
+                    show(file);
                 } else { // otherwise we got a file selected
                     quit(null);
                 }
@@ -188,34 +188,44 @@ public final class FileBrowser implements CommandListener, Runnable {
         }
     }
 
-    private void show(final Enumeration entries) {
+    private void show(File holder) {
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("show; depth = " + depth);
 //#endif
 
-        // release current list
+        // reuse current list to show what is going on
         if (list != null) {
+            list.removeCommand(cmdSelect);
+            list.removeCommand(cmdBack);
+            list.removeCommand(cmdCancel);
             list.deleteAll();
-            list = null;
+            list.setTicker(new Ticker(Resources.getString(Resources.NAV_MSG_TICKER_LISTING)));
+            Thread.yield();
         }
 
         // append items
-        list = sort2list(title, entries, depth > 0 ? File.PARENT_DIR : null);
-        list.setCommandListener(this);
+        list = null; // gc hint
+        try {
+            list = sort2list(title, holder == null ? File.listRoots() : file.list(), depth > 0 ? File.PARENT_DIR : null);
 //#ifdef __LOG__
-        if (log.isEnabled()) log.debug(list.size() + " entries");
+            if (log.isEnabled()) log.debug(list.size() + " entries");
 //#endif
 
-        // add commands
-        if (list.size() > 0) {
-            list.setSelectCommand(cmdSelect);
-        } else {
-            list.setSelectCommand(null);
-        }
-        list.addCommand(depth == 0 ? cmdCancel : cmdBack);
+            // add commands
+            if (list.size() > 0) {
+                list.setSelectCommand(cmdSelect);
+            } else {
+                list.setSelectCommand(null);
+            }
+            list.addCommand(depth == 0 ? cmdCancel : cmdBack);
+            list.setCommandListener(this);
 
-        // show
-        Desktop.display.setCurrent(list);
+            // show
+            Desktop.display.setCurrent(list);
+            
+        } catch (Throwable t) {
+            quit(t);
+        }
     }
 
     public void commandAction(Command command, Displayable displayable) {
@@ -233,10 +243,8 @@ public final class FileBrowser implements CommandListener, Runnable {
             if (depth > 0) {
                 path = null; // gc hint
                 path = File.PARENT_DIR;
-                browse();
-            } else {
-                browse();
             }
+            browse();
         } else {
             quit(null);
         }

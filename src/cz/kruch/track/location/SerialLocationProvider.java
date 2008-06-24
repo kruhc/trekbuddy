@@ -18,7 +18,6 @@ package cz.kruch.track.location;
 
 import api.location.LocationException;
 import api.location.LocationProvider;
-import api.location.LocationListener;
 import api.location.Location;
 import api.file.File;
 import cz.kruch.track.configuration.Config;
@@ -37,18 +36,21 @@ import java.util.TimerTask;
  *
  * @author Ales Pour <kruhc@seznam.cz>
  */
-public class SerialLocationProvider extends StreamReadingLocationProvider implements Runnable {
-    private static final long WATCHER_PERIOD = 15 * 1000;
+public class SerialLocationProvider
+        extends StreamReadingLocationProvider
+        implements Runnable {
+    
+    private static final long MAX_PARSE_PERIOD = 15 * 1000; // 15 sec
+    private static final long MAX_STALL_PERIOD = 60 * 1000; // 1 min
 
     protected volatile String url;
 
     private volatile InputStream stream;
     private volatile StreamConnection connection;
 
-    private volatile long last;
-    
     private volatile TimerTask watcher;
     private volatile OutputStream nmealog;
+    private volatile long last;
 
     public SerialLocationProvider() throws LocationException {
         this("Serial");
@@ -57,11 +59,10 @@ public class SerialLocationProvider extends StreamReadingLocationProvider implem
     /* package access */
     SerialLocationProvider(String name) throws LocationException {
         super(name);
-        this.lastState = LocationProvider._STARTING;
     }
 
     public boolean isRestartable() {
-        return !(getThrowable() instanceof SecurityException);
+        return !(getThrowable() instanceof RuntimeException);
     }
 
     protected String getKnownUrl() {
@@ -84,26 +85,12 @@ public class SerialLocationProvider extends StreamReadingLocationProvider implem
         // be gentle and safe
         if (restarts++ > 0) {
 
-            // wait for previous thread to die... oh yeah, shit happens sometimes
-            if (thread != null) {
-                if (thread.isAlive()) {
-                    setThrowable(new IllegalStateException("Previous connection still active"));
-                    thread.interrupt();
-                }
-                try {
-                    thread.join();
-                } catch (InterruptedException e) {
-                    // ignore
-                }
-                thread = null; // gc hint
-            }
-
             // not so fast
             if (lastState == LocationProvider._STALLED) { // give hardware a while
                 refresh();
-            } else { // take your time
+            } else { // take your time (5 sec)
                 try {
-                    Thread.sleep(2500);
+                    Thread.sleep(5000);
                 } catch (InterruptedException e) {
                     // ignore
                 }
@@ -115,12 +102,13 @@ public class SerialLocationProvider extends StreamReadingLocationProvider implem
             url = getKnownUrl();
         }
 
+        // reset last I/O stamp
+        lastIO = System.currentTimeMillis();
+
         // let's roll
         baby();
 
         try {
-            // notify
-            notifyListener(this.lastState = LocationProvider._STARTING);
 
             // main loop
             gps();
@@ -149,47 +137,14 @@ public class SerialLocationProvider extends StreamReadingLocationProvider implem
         return LocationProvider._STARTING;
     }
 
-    /*
-     * We do not use die() method here intentionally.
-     */
+    /* this provider has special shutdown sequence */
     public void stop() throws LocationException {
 
-/*
-        // shutdown service thread (die part #1)
-        synchronized (this) {
-            go = false;
-            notify();
-        }
-*/
-        // shutdown flag
-        go = false;
+        // die gracefully
+        die();
 
-        // forcibly close connection
-        synchronized (this) {
-            if (stream != null) {
-                try {
-                    stream.close(); // hopefully forces a thread blocked in read() to receive IOException
-                } catch (IOException e) {
-                    // ignore
-                }
-            }
-            if (connection != null) {
-                try {
-                    connection.close(); // seems to help too
-                } catch (IOException e) {
-                    // ignore
-                }
-            }
-        }
-
-/*
-        // wait for finish (die part #2)
-        if (thread != null) {
-            if (thread.isAlive()) {
-                thread.interrupt();
-            }
-        }
-*/
+        // non-blocking forcible kill
+        (new Thread(new UniversalSoldier(UniversalSoldier.MODE_KILLER))).start();
     }
 
     public Object getImpl() {
@@ -198,8 +153,8 @@ public class SerialLocationProvider extends StreamReadingLocationProvider implem
 
     private void startWatcher() {
         if (watcher == null) {
-            watcher = new AvailabilityWatcher();
-            Desktop.timer.schedule(watcher, WATCHER_PERIOD, WATCHER_PERIOD); // delay = period = 15 sec
+            watcher = new UniversalSoldier(UniversalSoldier.MODE_WATCHER);
+            Desktop.timer.schedule(watcher, 5000, 5000); // delay = period = 5 sec
         }
     }
 
@@ -261,14 +216,13 @@ public class SerialLocationProvider extends StreamReadingLocationProvider implem
         // signal recording is stopping
         recordingCallback.invoke(new Integer(GpxTracklog.CODE_RECORDING_STOP), null);
 */
-        // TODO useless - listener has already been cleared in Desktop.stopTracking()
         notifyListener(false);
 
         // close nmea log
         if (nmealog != null) {
             try {
                 nmealog.close();
-            } catch (IOException e) {
+            } catch (Exception e) {
                 // ignore
             }
             nmealog = null;
@@ -281,7 +235,7 @@ public class SerialLocationProvider extends StreamReadingLocationProvider implem
 
         try {
             // open connection
-            connection = (StreamConnection) Connector.open(url, rw ? Connector.READ_WRITE : Connector.READ, true);
+            connection = (StreamConnection) Connector.open(url, rw ? Connector.READ_WRITE : Connector.READ);
 
             // HGE-100 hack
             if (isHge100) {
@@ -290,24 +244,24 @@ public class SerialLocationProvider extends StreamReadingLocationProvider implem
                 os.close();
             }
 
-            // start keep-alive
-            startKeepAlive(connection);
-
             // open stream for reading
             stream = connection.openInputStream();
+
+            // start keep-alive
+            startKeepAlive(connection);
 
             // clear error
             setStatus(null);
             setThrowable(null);
 
-            // start watcher
-            startWatcher();
+            // reset data
+            reset();
 
             // start NMEA log
             startNmeaLog();
 
-            // reset data
-            reset();
+            // start watcher
+            startWatcher();
 
             // read NMEA until error or stop request
             while (go) {
@@ -357,37 +311,33 @@ public class SerialLocationProvider extends StreamReadingLocationProvider implem
                     break;
                 }
 
-                // state change?
-                boolean stateChange = false;
-                synchronized (this) {
-                    final int newState = location.getFix() > 0 ? LocationProvider.AVAILABLE : LocationProvider.TEMPORARILY_UNAVAILABLE;
-                    if (lastState != newState) {
-                        lastState = newState;
-                        stateChange = true;
-                    }
-                    last = System.currentTimeMillis();
-                }
-                if (stateChange) {
-                    notifyListener(lastState);
-                }
+                // new location timestamp
+                last = System.currentTimeMillis();
 
                 // send new location
                 notifyListener(location);
+
+                // state change?
+                final int newState = location.getFix() > 0 ? AVAILABLE : TEMPORARILY_UNAVAILABLE;
+                if (lastState != newState) {
+                    lastState = newState;
+                    notifyListener(lastState);
+                }
 
             } // for (; go ;)
 
         } finally {
 
-            // stop keep-alive
-            stopKeepAlive();
-
             // stop watcher
             stopWatcher();
 
-            // stop NMEA log on stop request
+            // stop NMEA log on Stop request only!
             if (!go) {
                 stopNmeaLog();
             }
+
+            // stop keep-alive
+            stopKeepAlive();
 
             // cleanup
             synchronized (this) {
@@ -396,7 +346,7 @@ public class SerialLocationProvider extends StreamReadingLocationProvider implem
                 if (stream != null) {
                     try {
                         stream.close();
-                    } catch (IOException e) {
+                    } catch (Exception e) {
                         // ignore
                     }
                     stream = null;
@@ -406,7 +356,7 @@ public class SerialLocationProvider extends StreamReadingLocationProvider implem
                 if (connection != null) {
                     try {
                         connection.close();
-                    } catch (IOException e) {
+                    } catch (Exception e) {
                         // ignore
                     }
                     connection = null;
@@ -415,24 +365,50 @@ public class SerialLocationProvider extends StreamReadingLocationProvider implem
         }
     }
 
-    private final class AvailabilityWatcher extends TimerTask {
+    private final class UniversalSoldier extends TimerTask {
+        private static final int MODE_WATCHER       = 0;
+        private static final int MODE_KILLER        = 1;
 
-        /** to avoid generation of $1 class */
-        public AvailabilityWatcher() {
+        private int mode;
+
+        public UniversalSoldier(int mode) {
+            this.mode = mode;
         }
 
         public void run() {
-            boolean notify = false;
-            synchronized (SerialLocationProvider.this) {
-                if (System.currentTimeMillis() > (last + WATCHER_PERIOD)) {
-                    if (lastState != LocationProvider._STALLED) {
-                        lastState = LocationProvider._STALLED;
-                        notify = true;
+            switch (mode) {
+                case MODE_WATCHER: {
+                    boolean notify = false;
+                    final long now = System.currentTimeMillis();
+
+                    if (now > (lastIO + MAX_STALL_PERIOD)) {
+                        if (lastState != LocationProvider._STALLED) {
+                            lastState = LocationProvider._STALLED;
+                            notify = true;
+                        }
+                    } else if (now > (last + MAX_PARSE_PERIOD)) {
+                        if (lastState != LocationProvider.TEMPORARILY_UNAVAILABLE) {
+                            lastState = LocationProvider.TEMPORARILY_UNAVAILABLE;
+                            notify = true;
+                        }
                     }
-                }
-            }
-            if (notify) {
-                notifyListener(lastState);
+
+                    if (notify) {
+                        notifyListener(lastState);
+                    }
+                } break;
+
+                case MODE_KILLER: { // kill current connection
+                    synchronized (SerialLocationProvider.this) {
+                        if (stream != null) {
+                            try {
+                                stream.close(); // hopefully forces a thread blocked in read() to receive IOException
+                            } catch (Exception e) {
+                                // ignore
+                            }
+                        }
+                    }
+                } break;
             }
         }
     }

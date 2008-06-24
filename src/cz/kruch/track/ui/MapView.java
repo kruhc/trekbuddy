@@ -37,6 +37,9 @@ final class MapView extends View {
     private static final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("MapView");
 //#endif
 
+    // for faster movement
+    static volatile int scrolls; // TODO fix visibility
+
     // current location
     private Location location;
 
@@ -167,7 +170,7 @@ final class MapView extends View {
         mapViewer.setCourse(Float.NaN);
         if (reason) {
             if (location != null && location.getFix() > 0) {
-                mapViewer.appendToTrail(location);
+                mapViewer.appendToTrail(location.getQualifiedCoordinates());
             }
         }
     }
@@ -674,12 +677,12 @@ final class MapView extends View {
 
     private int getScrolls() {
         int steps = 1;
-        if (Desktop.scrolls++ >= 15) {
+        if (scrolls++ >= 15) {
             steps = 2;
-            if (Desktop.scrolls >= 30) {
+            if (scrolls >= 30) {
                 steps = 3;
             }
-            if (Desktop.scrolls >= 40) {
+            if (scrolls >= 40) {
                 steps = 4;
             }
         }

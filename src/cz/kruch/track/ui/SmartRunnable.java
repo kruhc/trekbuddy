@@ -16,6 +16,8 @@
 
 package cz.kruch.track.ui;
 
+import javax.microedition.lcdui.Canvas;
+import javax.microedition.lcdui.Display;
 import java.util.Vector;
 
 /**
@@ -24,12 +26,13 @@ import java.util.Vector;
  * @author Ales Pour <kruhc@seznam.cz>
  */
 final class SmartRunnable implements Runnable {
-    private static final SmartRunnable instance = new SmartRunnable();
-    private final Vector runnables = new Vector(16);
-    private boolean running;
-    private boolean go;
+    private final static SmartRunnable instance = new SmartRunnable();
+
+    private final Vector runnables;
+    private boolean go, pending;
 
     private SmartRunnable() {
+        this.runnables = new Vector(16);
         this.go = true;
     }
 
@@ -44,42 +47,52 @@ final class SmartRunnable implements Runnable {
     }
 
     public void callSerially(final Runnable r) {
+        // local ref
+        final Vector runnables = this.runnables;
+
+        // fire flag
+        boolean fire = false;
+
         synchronized (this) {
-            if (!go) { // probably shutdown, do not accept tasks anymore
-                return;
-            }
+            if (go) {
 
-            // trick #1: avoid duplicates of key-hold checks
-            if (r instanceof Desktop) { //
-                if (runnables.size() > 0) {
-                    if (runnables.lastElement() instanceof Desktop) {
-                        return;
+                // trick #1: avoid duplicates of key-hold checks
+                if (r instanceof Desktop) { //
+                    if (runnables.size() > 0) {
+                        if (runnables.lastElement() instanceof Desktop) {
+                            return;
+                        }
+                    }
+
+                } // trick #2: merge render tasks
+                  else if (r instanceof Desktop.RenderTask) {
+                    if (runnables.size() > 0) {
+                        if (runnables.lastElement() instanceof Desktop.RenderTask) {
+                            ((Desktop.RenderTask) runnables.lastElement()).merge(((Desktop.RenderTask) r));
+                            return;
+                        }
                     }
                 }
-            }
-            // trick #2: merge render tasks
-            if (r instanceof Desktop.RenderTask) {
-                if (runnables.size() > 0) {
-                    if (runnables.lastElement() instanceof Desktop.RenderTask) {
-                        ((Desktop.RenderTask) runnables.lastElement()).merge(((Desktop.RenderTask) r).getMask());
-                        return;
-                    }
+
+                // enqueue task
+                runnables.addElement(r);
+
+                // "schedule" a task if no task is currently running
+                if (!pending) {
+                    fire = pending = true;
                 }
             }
+        }
 
-            // enqueue task
-            runnables.addElement(r);
-
-            // run a task if no task is currently running 
-            if (!running) {
-                running = true;
-                Desktop.display.callSerially(this);
-            }
+        if (fire) {
+            Desktop.display.callSerially(this);
         }
     }
 
     public void run() {
+        final Vector runnables = this.runnables;
         Runnable r = null;
+
         synchronized (this) {
             if (runnables.size() > 0) {
                 r = (Runnable) runnables.elementAt(0);
@@ -87,19 +100,31 @@ final class SmartRunnable implements Runnable {
                 runnables.removeElementAt(0);
             }
         }
+
         if (r != null) {
             try {
                 r.run();
             } catch (Throwable t) {
                 // ignore
+//#ifdef __LOG__
+                t.printStackTrace();
+//#endif
             }
         }
+
+        // fire flag
+        boolean fire = false;
+
         synchronized (this) {
             if (runnables.size() > 0) {
-                Desktop.display.callSerially(this);
+                fire = pending = true;
             } else {
-                running = false;
+                pending = false;
             }
+        }
+
+        if (fire) {
+            Desktop.display.callSerially(this);
         }
     }
 }

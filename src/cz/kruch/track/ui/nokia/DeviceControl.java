@@ -47,11 +47,33 @@ public abstract class DeviceControl extends TimerTask {
                 instance = (DeviceControl) Class.forName("cz.kruch.track.ui.nokia.SonyEricssonDeviceControl").newInstance();
             }
         } catch (Throwable t) {
+            // ignore
         }
         if (instance == null) {
             try {
                 Class.forName("com.siemens.mp.game.Light");
                 instance = (DeviceControl) Class.forName("cz.kruch.track.ui.nokia.SiemensDeviceControl").newInstance();
+            } catch (Throwable t) {
+            }
+        }
+        if (instance == null) {
+            try {
+                Class.forName("com.samsung.util.LCDLight");
+                instance = (DeviceControl) Class.forName("cz.kruch.track.ui.nokia.SamsungDeviceControl").newInstance();
+            } catch (Throwable t) {
+            }
+        }
+        if (instance == null) {
+            try {
+                Class.forName("com.motorola.multimedia.Lighting");
+                instance = (DeviceControl) Class.forName("cz.kruch.track.ui.nokia.MotorolaDeviceControl").newInstance();
+            } catch (Throwable t) {
+            }
+        }
+        if (instance == null) {
+            try {
+                Class.forName("mmpp.media.BackLight");
+                instance = (DeviceControl) Class.forName("cz.kruch.track.ui.nokia.LgDeviceControl").newInstance();
             } catch (Throwable t) {
             }
         }
@@ -62,6 +84,7 @@ public abstract class DeviceControl extends TimerTask {
                 Class.forName("net.rim.device.api.system.Backlight");
                 instance = (DeviceControl) Class.forName("cz.kruch.track.ui.nokia.BlackberryDeviceControl").newInstance();
             } catch (Throwable t) {
+                // ignore
             }
         }
 //#endif
@@ -69,6 +92,7 @@ public abstract class DeviceControl extends TimerTask {
             try {
                 instance = (DeviceControl) Class.forName("cz.kruch.track.ui.nokia.Midp2DeviceControl").newInstance();
             } catch (Throwable t) {
+                // ignore
             }
         }
     }
@@ -82,6 +106,7 @@ public abstract class DeviceControl extends TimerTask {
     public static void setBacklight() {
         if (instance != null) {
             instance.nextLevel();
+            instance.sync();
         }
     }
 
@@ -93,12 +118,6 @@ public abstract class DeviceControl extends TimerTask {
         }
     }
 
-    public static void key3Released() {
-        if (instance != null) {
-            instance.sync();
-        }
-    }
-
     protected final void confirm(String message) {
         Desktop.showConfirmation(message, null);
     }
@@ -107,7 +126,45 @@ public abstract class DeviceControl extends TimerTask {
         confirm(backlight == 0 ? Resources.getString(Resources.DESKTOP_MSG_BACKLIGHT_OFF) : Resources.getString(Resources.DESKTOP_MSG_BACKLIGHT_ON));
     }
 
-    public void run() {}
-    abstract void nextLevel();
-    void close() {}
+    void close() {
+    }
+
+    boolean forceOff() {
+        return false;
+    }
+
+    void nextLevel() {
+        if (backlight == 0) {
+            backlight = 1;
+            if (isSchedulable()) {
+                cz.kruch.track.ui.Desktop.timer.scheduleAtFixedRate(this, 7500L, 7500L);
+            }
+        } else {
+            backlight = 0;
+            if (isSchedulable()) {
+                cancel();
+            }
+        }
+        if (backlight == 0) {
+            if (isSchedulable()) {
+                if (forceOff()) {
+                    turnOff();
+                }
+            } else {
+                turnOff();
+            }
+        } else {
+            turnOn();
+        }
+    }
+
+    abstract boolean isSchedulable();
+    abstract void turnOn();
+    abstract void turnOff();
+
+    public void run() {
+        if (backlight != 0) {
+            turnOn();
+        }
+    }
 }

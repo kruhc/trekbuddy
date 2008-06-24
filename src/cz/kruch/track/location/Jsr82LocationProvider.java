@@ -64,12 +64,22 @@ public final class Jsr82LocationProvider extends SerialLocationProvider {
         (new Refresher()).run();
     }
 
+    protected void setThrowable(Throwable throwable) {
+        if (throwable instanceof javax.bluetooth.BluetoothConnectionException) {
+            javax.bluetooth.BluetoothConnectionException exception = (javax.bluetooth.BluetoothConnectionException) throwable;
+            if (exception.getMessage() == null || exception.getMessage().length() == 0) {
+                throwable = new javax.bluetooth.BluetoothConnectionException(exception.getStatus(), Integer.toString(exception.getStatus()));
+            }
+        }
+        super.setThrowable(throwable);
+    }
+
     protected void startKeepAlive(StreamConnection c) {
         if (Config.btKeepAlive != 0) {
             try {
                 Desktop.timer.schedule(kar = new Refresher(c.openOutputStream()),
                                        Config.btKeepAlive, Config.btKeepAlive);
-            } catch (IOException e) {
+            } catch (Exception e) {
                 // ignore
             }
         }
@@ -157,7 +167,7 @@ public final class Jsr82LocationProvider extends SerialLocationProvider {
             if (os != null) {
                 try {
                     os.close();
-                } catch (IOException e) {
+                } catch (Exception e) {
                     // ignore
                 }
                 os = null; // gc hint

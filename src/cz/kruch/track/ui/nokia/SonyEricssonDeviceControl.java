@@ -16,8 +16,6 @@
 
 package cz.kruch.track.ui.nokia;
 
-import cz.kruch.track.Resources;
-
 /**
  * Device control implementation for SonyEricsson phones.
  *
@@ -26,25 +24,23 @@ import cz.kruch.track.Resources;
 final class SonyEricssonDeviceControl extends DeviceControl {
 
     SonyEricssonDeviceControl() {
-        cz.kruch.track.ui.Desktop.timer.scheduleAtFixedRate(this, 0L, 5000L);
-    }
-
-    void nextLevel() {
-        if (backlight == 0) {
-            backlight = 1;
-        } else {
-            backlight = 0;
-        }
     }
 
     void close() {
         cancel();
     }
 
-    public void run() {
-        if (backlight != 0) {
-            cz.kruch.track.ui.Desktop.display.flashBacklight(1);
-            com.nokia.mid.ui.DeviceControl.setLights(0, 100);
-        }
+    boolean isSchedulable() {
+        return true;
+    }
+
+    void turnOn() {
+        cz.kruch.track.ui.Desktop.display.flashBacklight(1);
+        com.nokia.mid.ui.DeviceControl.setLights(0, 100);
+    }
+
+    void turnOff() {
+        cz.kruch.track.ui.Desktop.display.flashBacklight(0);
+//        com.nokia.mid.ui.DeviceControl.setLights(0, 0);
     }
 }

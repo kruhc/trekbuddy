@@ -26,9 +26,11 @@ public abstract class LocationProvider {
     public static final int AVAILABLE               = 0x01;
     public static final int TEMPORARILY_UNAVAILABLE = 0x02;
     public static final int OUT_OF_SERVICE          = 0x03;
-    public static final int _STALLED                = 0x82; // non-JSR_179
-    public static final int _CANCELLED              = 0x83; // non-JSR_179
+    public static final int _STALLED                = 0x04; // non-JSR_179
+    public static final int _CANCELLED              = 0x05; // non-JSR_179
 
+    public static int syncs, mismatches, checksums, restarts, stalls, errors, pings;
+    
     private String name;
     private LocationListener listener;
     private Throwable throwable;
@@ -41,17 +43,18 @@ public abstract class LocationProvider {
 
     protected LocationProvider(String name) {
         this.name = name;
+        syncs = mismatches = checksums = restarts = stalls = errors = pings = 0;
     }
 
     public String getName() {
         return name;
     }
 
-    public synchronized Throwable getThrowable() {
+    public Throwable getThrowable() {
         return throwable;
     }
 
-    protected synchronized void setThrowable(Throwable throwable) {
+    protected void setThrowable(Throwable throwable) {
         this.throwable = throwable;
     }
 
@@ -79,14 +82,35 @@ public abstract class LocationProvider {
     public abstract void stop() throws LocationException;
     public abstract Object getImpl();
 
-    public final synchronized void setLocationListener(LocationListener listener) {
+    public final void setLocationListener(LocationListener listener) {
         this.listener = listener;
     }
     
     protected final void baby() {
+
+        // wait for previous thread to die... oh yeah, shit happens sometimes
+        if (thread != null) {
+            if (thread.isAlive()) {
+                setThrowable(new IllegalStateException("Previous connection still active"));
+                thread.interrupt();
+            }
+            try {
+                thread.join();
+            } catch (InterruptedException e) {
+                // ignore
+            }
+            thread = null; // gc hint
+        }
+
         // just about to start
         go = true;
         thread = Thread.currentThread();
+
+        // try to catch up with UI
+        Thread.yield();
+
+        // signal state change
+        notifyListener(lastState = _STARTING); // trick to start GPX tracklog
     }
 
     protected final void zombie() {
@@ -103,22 +127,9 @@ public abstract class LocationProvider {
             go = false;
             notify();
         }
-
-        // wait for finish
-        if (thread != null) {
-            if (thread.isAlive()) {
-                thread.interrupt();
-            }
-            try {
-                thread.join();
-            } catch (InterruptedException e) {
-                // should never happen
-            }
-            thread = null;
-        }
     }
 
-    protected final synchronized void notifyListener(final Location location) {
+    protected final void notifyListener(final Location location) {
         if (listener != null) {
             try {
                listener.locationUpdated(this, location);
@@ -128,7 +139,7 @@ public abstract class LocationProvider {
         }
     }
 
-    protected final synchronized void notifyListener(final boolean isRecording) {
+    protected final void notifyListener(final boolean isRecording) {
         if (listener != null) {
             try {
                 listener.tracklogStateChanged(this, isRecording);
@@ -138,7 +149,7 @@ public abstract class LocationProvider {
         }
     }
 
-    protected final synchronized void notifyListener(final int newState) {
+    protected final void notifyListener(final int newState) {
         if (listener != null) {
             try {
                 listener.providerStateChanged(this, newState);

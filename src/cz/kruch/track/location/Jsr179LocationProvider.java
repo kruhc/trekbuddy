@@ -24,6 +24,7 @@ import cz.kruch.j2se.io.BufferedOutputStream;
 import api.location.LocationException;
 import api.location.QualifiedCoordinates;
 import api.location.Location;
+import api.location.LocationProvider;
 import api.file.File;
 
 import javax.microedition.io.Connector;
@@ -40,6 +41,7 @@ public final class Jsr179LocationProvider
         implements javax.microedition.location.LocationListener, Runnable {
 
     private javax.microedition.location.LocationProvider impl;
+    private int interval, timeout, maxage;
 
     private volatile OutputStream nmealog;
     
@@ -56,9 +58,9 @@ public final class Jsr179LocationProvider
             // prepare criteria
             CharArrayTokenizer tokenizer = new CharArrayTokenizer();
             tokenizer.init(Config.getLocationTimings(Config.LOCATION_PROVIDER_JSR179), false);
-            final int interval = tokenizer.nextInt();
-            final int timeout = tokenizer.nextInt();
-            final int maxage = tokenizer.nextInt();
+            interval = tokenizer.nextInt();
+            timeout = tokenizer.nextInt();
+            maxage = tokenizer.nextInt();
             tokenizer = null; // gc hint
             final javax.microedition.location.Criteria criteria = new javax.microedition.location.Criteria();
 
@@ -84,9 +86,6 @@ public final class Jsr179LocationProvider
                 throw new LocationException(Resources.getString(Resources.DESKTOP_MSG_NO_PROVIDER_INSTANCE));
             }
 
-            // set listener
-            impl.setLocationListener(this, interval, timeout, maxage);
-
         } catch (LocationException e) {
             throw e;
         } catch (Exception e) {
@@ -96,26 +95,25 @@ public final class Jsr179LocationProvider
         // start service thread
         (new Thread(this)).start();
 
-        // notify
-        notifyListener(lastState = _STARTING); // trick to start GPX tracklog
-
-        return lastState;
+        return LocationProvider._STARTING;
     }
 
     public void stop() throws LocationException {
-        // remove listener and gc-free native provider
-        impl.setLocationListener(null, -1, -1, -1);
-        impl = null;
-
         // wait for thread to die
         die();
     }
 
     public void run() {
+        // statistics
+        restarts++;
+
         // let's roll
         baby();
 
         try {
+            // set listener
+            impl.setLocationListener(this, interval, timeout, maxage);
+
             // start NMEA log
             startNmeaLog();
 
@@ -139,6 +137,10 @@ public final class Jsr179LocationProvider
 
             // stop NMEA tracklog
             stopNmeaLog();
+
+            // remove listener and gc-free native provider
+            impl.setLocationListener(null, -1, -1, -1);
+            impl = null;
 
             // almost dead
             zombie();
@@ -210,6 +212,7 @@ public final class Jsr179LocationProvider
 
     public void locationUpdated(javax.microedition.location.LocationProvider p,
                                 javax.microedition.location.Location l) {
+
         // valid location?
         if (l.isValid()) {
 

@@ -25,21 +25,34 @@ import cz.kruch.track.Resources;
  */
 class NokiaDeviceControl extends DeviceControl {
 
+    private static final int[] VALUES = { 0, 10, 25, 50, 100 };
+
     NokiaDeviceControl() {
     }
 
-    void nextLevel() {
-        try {
-            backlight += 25;
-            if (backlight > 100) {
-                backlight = 0;
-            }
-            com.nokia.mid.ui.DeviceControl.setLights(0, backlight);
-        } catch (Throwable t) {
-        }
+    boolean isSchedulable() {
+        return false;
     }
 
+    /** @overriden */
+    void nextLevel() {
+        backlight++;
+        if (backlight == VALUES.length) {
+            backlight = 0;
+        }
+        com.nokia.mid.ui.DeviceControl.setLights(0, VALUES[backlight]);
+    }
+
+    /** @overriden */
     void sync() {
-        confirm(backlight == 0 ? Resources.getString(Resources.DESKTOP_MSG_BACKLIGHT_OFF) : Resources.getString(Resources.DESKTOP_MSG_BACKLIGHT_ON) + " (" + backlight + "%)");
+        confirm(backlight == 0 ? Resources.getString(Resources.DESKTOP_MSG_BACKLIGHT_OFF) : Resources.getString(Resources.DESKTOP_MSG_BACKLIGHT_ON) + " (" + VALUES[backlight] + "%)");
+    }
+
+    void turnOn() {
+        throw new IllegalStateException();
+    }
+
+    void turnOff() {
+        throw new IllegalStateException();
     }
 }

@@ -79,8 +79,9 @@ final class MapViewer {
     private QualifiedCoordinates[] trailLL;
     private Position[] trailXY;
     private int[] trailPF;
-    private int tlast, tcount;
-    private float refCourse, courseDeviation;
+    private int lllast, xylast, pflast, llcount, xycount;
+    private QualifiedCoordinates refQc;
+    private float accDist, refCourse, courseDeviation;
 
     private int ci, li;
 
@@ -480,35 +481,38 @@ final class MapViewer {
     }
 
     void reset() {
-        tlast = tcount = 0;
+        lllast = xylast = pflast = llcount = xycount = 0;
+        accDist = courseDeviation = 0F;
     }
 
+    /*
+     * TODO reuse with GpxTracklog
+     */
     void locationUpdated(Location location) {
 
         // got fix?
         if (location.getFix() > 0) {
 
-            /*
-             * taken from GpxTracklog
-             * TODO reuse
-             */
+            final QualifiedCoordinates coords = location.getQualifiedCoordinates();
+            QualifiedCoordinates qc = null;
 
-            boolean doLog;
-            float r;
+            // in-trail?
+            if (llcount > 0) {
 
-            if (tcount > 0) {
+                // add distance increment
+                accDist += coords.distance(refQc);
+                final float r = accDist;
 
-                // calc distance to reference position
-                int idx = tlast - 1;
-                if (idx < 0) {
-                    idx = tcount - 1;
-                }
-                r = location.getQualifiedCoordinates().distance(trailLL[idx]);
-
-                // course deviation-based decision
+                // course deviation-based decision when moving faster than 3.6 km/h
                 if (location.isSpeedValid() && location.getSpeed() > 1F) {
+
+                    // get course
                     final float course = location.getCourse();
+
+                    // is course valid?
                     if (!Float.isNaN(course)) {
+
+                        // calc deviation
                         float diff = course - refCourse;
                         if (diff > 180F) {
                             diff -= 360F;
@@ -517,84 +521,128 @@ final class MapViewer {
                         }
                         courseDeviation += diff;
                         refCourse = course;
-//#ifdef __LOG__
-                        if (log.isEnabled()) log.debug("moving; course dev = " + courseDeviation);
-//#endif
+
+                        // make decision
                         final float absCourseDev = Math.abs(courseDeviation);
-                        doLog = (absCourseDev >= 60F && r > 25F) || (absCourseDev >= 45F && r >= 75) || (absCourseDev >= 15F && r >= 250) || (absCourseDev >= 5 && r >= 750);
+                        final boolean doLog = (absCourseDev >= 60F && r > 25F) || (absCourseDev >= 45F && r >= 50) || (absCourseDev >= 15F && r >= 250) || (absCourseDev >= 5 && r >= 750);
                         if (doLog) {
-                            courseDeviation = 0F;
-                        } 
-                    } else {
-                        doLog = false;
+//#ifdef __LOG__
+                            if (log.isEnabled()) log.debug("moving; dist = " + r + "; course dev = " + courseDeviation);
+//#endif
+                            qc = refQc;
+                        }
                     }
 
                 } else { // dist-based decision
 //#ifdef __LOG__
                     if (log.isEnabled()) log.debug("not moving; dist = " + r);
 //#endif
-                    doLog = r >= 50;
+                    qc = r >= 50 ? coords : null;
                 }
 
             } else {
 
+//#ifdef __LOG__
+                if (log.isEnabled()) log.debug("first position");
+//#endif
                 // log first position
-                doLog = true;
+                qc = coords;
 
             }
 
-            // trail point?
-            if (doLog) {
-                appendToTrail(location);
+            // got trail point?
+            if (qc != null) {
+                accDist = courseDeviation = 0F;
+                appendToTrail(qc);
             }
+
+            // ref (~ last)
+            QualifiedCoordinates.releaseInstance(refQc);
+            refQc = coords.clone();
         }
     }
 
-    void appendToTrail(Location location) {
-        // local ref for faster access
+    void appendToTrail(QualifiedCoordinates coords) {
+        // local refs for faster access
         final QualifiedCoordinates[] arrayLL = trailLL;
         final Position[] arrayXY = trailXY;
         final int[] arrayPF = trailPF;
-        int tlast = this.tlast;
+        int lllast = this.lllast;
+        int xylast = this.xylast;
+        int pflast = this.pflast;
 
         // properly append
-        if (arrayLL[tlast] != null) {
-            QualifiedCoordinates.releaseInstance(arrayLL[tlast]);
-            arrayLL[tlast] = null; // gc hint
+        if (arrayLL[lllast] != null) {
+            QualifiedCoordinates.releaseInstance(arrayLL[lllast]);
+            arrayLL[lllast] = null; // gc hint
         }
-        if (arrayXY[tlast] != null) {
-            Position.releaseInstance(arrayXY[tlast]);
-            arrayXY[tlast] = null; // gc hint
+        if (arrayXY[xylast] != null) {
+            Position.releaseInstance(arrayXY[xylast]);
+            arrayXY[xylast] = null; // gc hint
         }
 
-        final QualifiedCoordinates qc = location.getQualifiedCoordinates().clone();
-        final Position p;
-        final QualifiedCoordinates localQc;
-        synchronized (this) { // synchronized to avoid race condition with setMap()
+        // append to LL array
+        final QualifiedCoordinates cloned = coords.clone();
+        arrayLL[lllast] = cloned;
+        if (++lllast == MAX_TRAJECTORY_LENGTH) {
+            lllast = 0;
+        }
+
+        synchronized (this) { // synchronized to avoid race condition with setMap(...)
             final Map map = this.map;
-            localQc = map.getDatum().toLocal(qc);
-            p = map.transform(localQc).clone();
-        }
-        QualifiedCoordinates.releaseInstance(localQc);
-        arrayLL[tlast] = qc;
-        arrayXY[tlast] = p;
+            if (map != null) {
 
-        if (tcount > 0) {
-            int tlastprev = tlast - 1;
-            if (tlastprev < 0)
-                tlastprev = tcount - 1;
-            arrayPF[tlastprev] = updatePF(arrayXY[tlastprev], p);
+                // how many XY is missing
+                int N = lllast - xylast;
+                if (N < 0) {
+                    N = MAX_TRAJECTORY_LENGTH + N;
+                }
+
+                // calculate missing XYs
+                do {
+                    QualifiedCoordinates localQc = map.getDatum().toLocal(arrayLL[xylast]);
+                    arrayXY[xylast] = map.transform(localQc).clone();
+                    QualifiedCoordinates.releaseInstance(localQc);
+                    if (++xylast == MAX_TRAJECTORY_LENGTH) {
+                        xylast = 0;
+                    }
+                    if (++xycount > MAX_TRAJECTORY_LENGTH) {
+                        xycount = MAX_TRAJECTORY_LENGTH;
+                    }
+                } while (--N > 0);
+
+                // how many PF is missing
+                if (xycount > 1) {
+                    N = xylast - pflast - 1;
+                    if (N < 0) {
+                        N = MAX_TRAJECTORY_LENGTH + N;
+                    }
+
+                    // calculate missing PFs
+                    do {
+                        int pfnext = pflast + 1;
+                        if (pfnext == MAX_TRAJECTORY_LENGTH) {
+                            pfnext = 0;
+                        }
+                        arrayPF[pflast] = updatePF(arrayXY[pflast], arrayXY[pfnext]);
+                        if (++pflast == MAX_TRAJECTORY_LENGTH) {
+                            pflast = 0;
+                        }
+                    } while (--N > 0);
+                }
+            }
         }
 
-        if (++tlast == MAX_TRAJECTORY_LENGTH) {
-            tlast = 0;
+        // update members
+        this.lllast = lllast;
+        this.xylast = xylast;
+        this.pflast = pflast;
+        if (++llcount > MAX_TRAJECTORY_LENGTH) {
+            llcount = MAX_TRAJECTORY_LENGTH;
         }
-        this.tlast = tlast;
-        if (++tcount > MAX_TRAJECTORY_LENGTH) {
-            tcount = MAX_TRAJECTORY_LENGTH;
-        }
+
 //#ifdef __LOG__
-        if (log.isEnabled()) log.debug("appended at " + tlast + ";count = " + tcount);
+        if (log.isEnabled()) log.debug("count = " + llcount);
 //#endif
     }
     
@@ -617,7 +665,7 @@ final class MapViewer {
         } // ~synchronized
 
         // draw trajectory
-        if (Config.trailOn && tcount != 0) {
+        if (Config.trailOn && xycount != 0) {
             drawTrail(graphics);
         }
 
@@ -895,12 +943,12 @@ final class MapViewer {
     private void drawTrail(final Graphics graphics) {
         final Position[] arrayXY = trailXY;
         final int[] arrayPF = trailPF;
-        final int count = this.tcount;
+        final int count = this.xycount;
         final int x = this.x;
         final int y = this.y;
         final int w = Desktop.width;
         final int h = Desktop.height;
-        int idx0 = this.tlast;
+        int idx0 = this.xylast;
         if (idx0 >= count) {
             idx0 = 0;
         }
@@ -1181,36 +1229,27 @@ final class MapViewer {
 
     private void calculateTrail() {
         // trail on?
-        if (Config.trailOn && tcount != 0) {
+        if (Config.trailOn && llcount != 0) {
 
             // local ref for faster access
             final Map map = this.map;
             final QualifiedCoordinates[] arrayLL = trailLL;
             final Position[] arrayXY = trailXY;
-/*
-            final int[] arrayPF = trailPF;
-*/
-            int tlast = this.tlast - 1; // really 'last'
+            final int llcount = this.llcount;
+            int tlast = this.lllast - 1; // really 'last'
 
             // recalc xy and fi
-            for (int i = 0; i < tcount; i++) {
-
-                if (++tlast == tcount)
+            for (int i = 0; i < llcount; i++) {
+                if (++tlast == llcount) {
                     tlast = 0;
-
+                }
                 final QualifiedCoordinates localQc = map.getDatum().toLocal(arrayLL[tlast]);
                 final Position p = map.transform(localQc);
                 QualifiedCoordinates.releaseInstance(localQc);
-                arrayXY[tlast].setXy(p.getX(), p.getY());
-
-                if (i > 0) {
-                    int tlastprev = tlast;
-                    if (--tlastprev < 0) {
-                        tlastprev = tcount - 1;
-                    }
-/* not needed - angle did not change... ?
-                    arrayPF[tlastprev] = updatePF(arrayXY[tlastprev], p);
-*/
+                if (arrayXY[tlast] != null) {
+                    arrayXY[tlast].setXy(p.getX(), p.getY());
+                } else {
+                    arrayXY[tlast] = p.clone();
                 }
             }
         }

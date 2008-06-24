@@ -3,8 +3,6 @@
 
 package cz.kruch.track.ui.nokia;
 
-import cz.kruch.track.Resources;
-
 /**
  * Device control implementation for Blackberry phones.
  *
@@ -12,29 +10,26 @@ import cz.kruch.track.Resources;
  */
 final class BlackberryDeviceControl extends DeviceControl {
 
-    private int defaultTimeout;
-
     BlackberryDeviceControl() {
-        this.defaultTimeout = net.rim.device.api.system.Backlight.getTimeoutDefault();
-        cz.kruch.track.ui.Desktop.timer.scheduleAtFixedRate(this, 0L, 60000L);
     }
 
     void close() {
-        net.rim.device.api.system.Backlight.setTimeout(defaultTimeout);
+        cancel();
     }
 
-    void nextLevel() {
-        if (backlight == 0) {
-            backlight = 1;
-            net.rim.device.api.system.Backlight.setTimeout(255);
-            net.rim.device.api.system.Backlight.enable(true);
-        } else {
-            backlight = 0;
-            net.rim.device.api.system.Backlight.setTimeout(defaultTimeout);
-            net.rim.device.api.system.Backlight.enable(false);
-        }
+    boolean isSchedulable() {
+        return true;
     }
 
+    void turnOn() {
+        net.rim.device.api.system.Backlight.enable(true);
+    }
+
+    void turnOff() {
+        net.rim.device.api.system.Backlight.enable(false);
+    }
+
+    /** @overriden */
     public void run() {
         if (backlight != 0) {
             net.rim.device.api.system.Backlight.enable(false);

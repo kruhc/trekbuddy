@@ -21,6 +21,7 @@ import api.location.QualifiedCoordinates;
 import api.location.Location;
 import api.location.CartesianCoordinates;
 import api.location.Datum;
+import api.location.LocationProvider;
 
 import java.io.IOException;
 
@@ -74,10 +75,7 @@ public final class O2GermanyLocationProvider
         // start service thread
         (new Thread(this)).start();
 
-        // notify
-        notifyListener(lastState = _STARTING); // trick to start GPX tracklog
-
-        return lastState;
+        return LocationProvider._STARTING;
     }
 
     public void stop() throws LocationException {
@@ -102,11 +100,11 @@ public final class O2GermanyLocationProvider
     }
 
     public void run() {
+        // statistics
+        restarts++;
+        
         // let's roll
         baby();
-
-        // signal state change
-        notifyListener(lastState = TEMPORARILY_UNAVAILABLE);
 
         try {
 

@@ -37,7 +37,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
     public static String version;
     public static boolean jsr82, jsr120, jsr135, jsr179, motorola179, comm;
     public static boolean sonyEricsson, nokia, siemens, lg, motorola;
-    public static boolean wm, jbed, intent, palm, rim, symbian, uiq;
+    public static boolean wm, jbed, intent, palm, rim, symbian, uiq, brew;
     public static boolean sxg75, a780, s65;
 
     // diagnostics
@@ -68,7 +68,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
 
         // detect brand/device
 //#ifdef __RIM__
-        rim = platform.startsWith("RIM");
+        rim = true; // platform.startsWith("RIM");
 //#else
         nokia = platform.startsWith("Nokia");
         sonyEricsson = System.getProperty("com.sonyericsson.imei") != null;
@@ -80,6 +80,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         intent = platform.startsWith("intent");
         palm = platform.startsWith("Palm OS");
         sxg75 = "SXG75".equals(platform);
+        brew = sxg75 || "BENQ-M7".equals(platform);
         a780 = "j2me".equals(platform);
         s65 = "S65".equals(platform);
 //#endif
@@ -87,7 +88,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         // detect runtime capabilities
         try {
             Class.forName("javax.microedition.location.LocationProvider");
-            TrackingMIDlet.jsr179 = true;
+            jsr179 = true;
 //#ifdef __LOG__
             System.out.println("* JSR-179");
 //#endif
@@ -95,7 +96,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         }
         try {
             Class.forName("javax.bluetooth.DiscoveryAgent");
-            TrackingMIDlet.jsr82 = true;
+            jsr82 = true;
 //#ifdef __LOG__
             System.out.println("* JSR-82");
 //#endif
@@ -103,7 +104,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         }
         try {
             Class.forName("javax.wireless.messaging.TextMessage");
-            TrackingMIDlet.jsr120 = true;
+            jsr120 = true;
 //#ifdef __LOG__
             System.out.println("* JSR-120");
 //#endif
@@ -111,7 +112,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         }
         try {
             Class.forName("javax.microedition.media.control.VideoControl");
-            TrackingMIDlet.jsr135 = true;
+            jsr135 = true;
 //#ifdef __LOG__
             System.out.println("* JSR-135");
 //#endif
@@ -119,7 +120,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         }
         try {
             Class.forName("javax.microedition.io.CommConnection");
-            TrackingMIDlet.comm = true;
+            comm = true;
 //#ifdef __LOG__
             System.out.println("* CommConnection");
 //#endif
@@ -130,7 +131,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         /* try Motorola-specific Location API */
         try {
             Class.forName("com.motorola.location.PositionSource");
-            TrackingMIDlet.motorola179 = true;
+            motorola179 = true;
 //#ifdef __LOG__
             System.out.println("* Motorola-179");
 //#endif
@@ -139,16 +140,16 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         /* detect Symbian */
         try {
             Class.forName("com.symbian.midp.io.protocol.http.Protocol");
-            TrackingMIDlet.symbian = true;
+            symbian = true;
 //#ifdef __LOG__
             System.out.println("* Symbian");
 //#endif
         } catch (Throwable t) {
         }
-        if (sonyEricsson) {
+        if (sonyEricsson && symbian) {
             try {
                 Class.forName("java.lang.ref.Reference");
-                TrackingMIDlet.uiq = true;
+                uiq = true;
             } catch (Throwable t) {
             }
         }
@@ -273,11 +274,11 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
 //#endif
             cz.kruch.track.maps.Map.useReset = false;
         }
-        if (hasFlag("ui_no_partial_flush") || sxg75 || a780 || siemens || wm || jbed || intent || palm) {
+        if (!hasFlag("ui_no_partial_flush") && (nokia || sonyEricsson)) {
 //#ifdef __LOG__
-            System.out.println("* ui no-partial-flush feature on");
+            System.out.println("* ui partial-flush feature on");
 //#endif
-            cz.kruch.track.ui.Desktop.partialFlush = false;
+            cz.kruch.track.ui.Desktop.partialFlush = true;
         }
         if (hasFlag("provider_o2_germany")) {
             cz.kruch.track.configuration.Config.o2provider = true;

@@ -16,8 +16,6 @@
 
 package cz.kruch.track.ui.nokia;
 
-import cz.kruch.track.Resources;
-
 /**
  * Generic implementation. I doubt it works well...
  *
@@ -26,24 +24,21 @@ import cz.kruch.track.Resources;
 final class Midp2DeviceControl extends DeviceControl {
 
     Midp2DeviceControl() {
-        cz.kruch.track.ui.Desktop.timer.scheduleAtFixedRate(this, 0L, 5000L);
-    }
-
-    void nextLevel() {
-        if (backlight == 0) {
-            backlight = 1;
-        } else {
-            backlight = 0;
-        }
     }
 
     void close() {
         cancel();
     }
 
-    public void run() {
-        if (backlight != 0) {
-            cz.kruch.track.ui.Desktop.display.flashBacklight(1);
-        }
+    boolean isSchedulable() {
+        return true;
+    }
+
+    void turnOn() {
+        cz.kruch.track.ui.Desktop.display.flashBacklight(1);
+    }
+
+    void turnOff() {
+        cz.kruch.track.ui.Desktop.display.flashBacklight(0);
     }
 }

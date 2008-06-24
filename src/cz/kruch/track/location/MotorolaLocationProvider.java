@@ -34,12 +34,9 @@ import api.location.Location;
  */
 public final class MotorolaLocationProvider
         extends api.location.LocationProvider
-        implements com.motorola.location.PositionListener {
+        implements com.motorola.location.PositionListener, Runnable {
 
     private com.motorola.location.PositionSource impl;
-/*
-    private LocationListenerAdapter adapter;
-*/
 
     private int accuracy, age, timeout;
 
@@ -63,39 +60,73 @@ public final class MotorolaLocationProvider
 
             // init provider
             impl = (com.motorola.location.PositionSource) Connector.open("location://");
-            impl.addPositionListener(this);
-            impl.generatePosition(accuracy, age, timeout);
 
         } catch (IOException e) {
             throw new LocationException(e);
         }
 
-        // notify
-        notifyListener(lastState = _STARTING); // trick to start GPX tracklog
+        // start service thread
+        (new Thread(this)).start();
 
-        return lastState;
+        return LocationProvider._STARTING;
     }
 
     public void stop() throws LocationException {
-        // remove listener and close and gc-free native provider
-        impl.removePositionListener(this);
-        impl.close();
-        impl = null;
+        // wait for thread to die
+        die();
+    }
+
+    public void run() {
+        // statistics
+        restarts++;
+
+        // let's roll
+        baby();
+
+        try {
+            // set listener
+            impl.addPositionListener(this);
+            impl.generatePosition(accuracy, age, timeout);
+
+            // wait for end (kinda stupid variant of gps() from Serial provider ;-) )
+            synchronized (this) {
+                while (go) {
+                    try {
+                        wait();
+                    } catch (InterruptedException e) {
+                        // ignore
+                    }
+                }
+            }
+
+        } catch (Throwable t) {
+
+            // record
+            setThrowable(t);
+
+        } finally {
+
+            // remove listener and close and gc-free native provider
+            impl.removePositionListener(this);
+            impl.close();
+            impl = null;
+
+            // almost dead
+            zombie();
+        }
     }
 
     public void newPosition(com.motorola.location.AggregatePosition aggregatePosition) {
         try {
             if (aggregatePosition == null || aggregatePosition.hasLatLon() == false) {
                 // signal state change
-                if (lastState != LocationProvider.TEMPORARILY_UNAVAILABLE) {
-                    lastState = LocationProvider.TEMPORARILY_UNAVAILABLE;
-                    notifyListener(lastState);
+                if (lastState != TEMPORARILY_UNAVAILABLE) {
+                    notifyListener(lastState = TEMPORARILY_UNAVAILABLE);
                 }
             } else {
                 // signal state change
                 if (lastState != LocationProvider.AVAILABLE) {
-                    lastState = LocationProvider.AVAILABLE;
-                    notifyListener(lastState);
+                    notifyListener(lastState = AVAILABLE);
                 }
 
                 final double lat = aggregatePosition.getLatitude() ;
@@ -116,6 +147,7 @@ public final class MotorolaLocationProvider
                 // notify
                 notifyListener(location);
             }
+            
         } catch (Throwable t) {
 
             // record problem

@@ -13,6 +13,7 @@
 0303=creating screens...
 0304=loading map...
 0305=keys mapping...
+0306=localizing...
 0399=
 
 # desktop commands
@@ -117,6 +118,8 @@
 1383=NMEA Playback
 1384=Received location info from:
 1385=Tileset file not found:
+1386=Provider out of service
+1387=Provider starting
 
 # navigation commands
 2000=RouteAlong
@@ -213,8 +216,11 @@
 3509=OSD medium font
 3510=OSD bold font
 3511=OSD black color
-3512=Transparency
+3512=OSD Transparency
 3513=CMS rotate (sec)
+3514=show trail
+3515=Trail line
+3516=Mode
 
 # settings forms/fields/values (Location)
 3600=Provider
@@ -267,6 +273,6 @@
 4201=www.trekbuddy.net
 4202=Version
 4203=Keys
-4204=\n0 - crosshairs, 1 - navigation (hold for quick active wpts list access), 3 - backlight, 5/FIRE - tracking/navigation OSD info, 2-4-6-8/JOY - map scroll, 7 - maps (atlas), 9 - layers (atlas), # - screens, * - keylock (hold; press shortly then 0 for wpts names display)
+4204=\n0 - crosshairs, 1 - navigation (hold for quick active wpts list access), 3 - backlight, 5/FIRE - tracking/navigation OSD info, 2-4-6-8/JOY - map scroll, 7 - layers (atlas), 9 - maps (atlas), # - screens, * - keylock (hold; press shortly then 0 for wpts names display)
 4205=\n0 - day/night, 1 - navigation (hold for quick active wpts list access), 3 - backlight, 2-8/JOY UP-DOWN - location averaging, 4-6/JOY LEFT-RIGHT - scale, # - screens, * - keylock (hold)
 4206=\n0 - day/night, 1 - navigation (hold for quick active wpts list access), 3 - backlight, 8/JOY DOWN - profiles, # - screens, * - keylock (hold)

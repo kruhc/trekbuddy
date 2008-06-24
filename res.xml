@@ -1,31 +1,10 @@
 <?xml version="1.0"?>
-<project name="TrekBuddy - resources" default="unknown" basedir=".">
-
-<!--
-  public targets
--->
-
-    <target name="unknown">
-        <fail message="Invalid vendor specified" status="-1"/>
-    </target>
-
-    <target name="public" depends="rescompile"/>
-
-    <target name="interpuls">
-        <copy overwrite="true" verbose="true"
-            file="res-pl_PL\resources\language.res" 
-            tofile="res\resources\language.res"/>
-    </target>
-
-    <target name="jurek-testing" depends="interpuls"/>
-
-<!--
-  private targets
--->
+<project name="TrekBuddy - resources" default="rescompile" basedir=".">
 
     <target name="rescompile">
+        <echo>Compiling resources for locale: ${locale}</echo>
         <exec dir="${basedir}" executable="${java.home}/../bin/native2ascii.exe">
-            <arg line="res/resources/language.en_US.txt res/resources/language.txt"/>
+            <arg line="res/resources/language.${locale}.txt res/resources/language.txt"/>
         </exec>
         <javac 
             destdir="tools/classes" 
@@ -40,7 +19,7 @@
           </manifest>
         </jar> 
         <java fork="true" jar="tools/dist/rc-ng.jar">
-            <arg line="en_US res/resources/language.txt res/resources/language.res"/>
+            <arg line="${locale} res/resources/language.txt res/resources/language.res"/>
         </java>
     </target>
 

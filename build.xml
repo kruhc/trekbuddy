@@ -39,12 +39,15 @@
         <pathelement location="${wtk.home}\lib\jsr179.jar"/>
         <pathelement location="${wtk.home}\lib\wma11.jar"/>
         <pathelement location="${wtk.home}\lib\mmapi.jar"/>
+        <pathelement location="lib\lg-mmpp.jar"/>
         <pathelement location="lib\motorola-ext.jar"/>
         <pathelement location="lib\motorola-file.jar"/>
         <pathelement location="lib\motorola-location.jar"/>
+        <pathelement location="lib\motorola-javaextensions.jar"/>
         <pathelement location="lib\nokia-ui.jar"/>
         <pathelement location="lib\siemens-file.jar"/>
         <pathelement location="lib\siemens-game.jar"/>
+        <pathelement location="lib\samsung-apis.jar"/>
     </path>
 
     <path id="bootclasspath.std">
@@ -169,7 +172,7 @@
     <target name="clean">
         <delete dir="tmp"/>
         <delete includeemptydirs="true" verbose="true">
-          <fileset dir="dist/${vendor.dir}/${dist.dir}" includes="**/*"/>
+          <fileset dir="dist/${vendor.dir}/${dist.dir}" includes="**/trekbuddy*"/>
         </delete>
         <echo/>
         <echo>Prepared for bulding ${version} version in dist/${vendor.dir}/${dist.dir}</echo>
@@ -253,9 +256,12 @@
         <delete file="tmp/src/api/file/Motorola1000File.java"/>
         <delete file="tmp/src/api/file/SiemensFile.java"/>
         <delete file="tmp/src/cz/kruch/track/ui/nokia/NokiaDeviceControl.java"/>
+        <delete file="tmp/src/cz/kruch/track/ui/nokia/MotorolaDeviceControl.java"/>
         <delete file="tmp/src/cz/kruch/track/ui/nokia/S60DeviceControl.java"/>
         <delete file="tmp/src/cz/kruch/track/ui/nokia/SiemensDeviceControl.java"/>
         <delete file="tmp/src/cz/kruch/track/ui/nokia/SonyEricssonDeviceControl.java"/>
+        <delete file="tmp/src/cz/kruch/track/ui/nokia/SamsungDeviceControl.java"/>
+        <delete file="tmp/src/cz/kruch/track/ui/nokia/LgDeviceControl.java"/>
         <delete file="tmp/src/cz/kruch/track/location/MotorolaLocationProvider.java"/>
     </target>
 
@@ -512,6 +518,7 @@
             <attribute name="MIDlet-Info-URL" value="http://www.trekbuddy.net"/>
             <attribute name="MicroEdition-Configuration" value="CLDC-1.1"/>
             <attribute name="MicroEdition-Profile" value="MIDP-2.0"/>
+            <attribute name="MIDlet-Permissions-Opt" value="javax.microedition.io.Connector.file.read,javax.microedition.io.Connector.file.write,javax.microedition.io.Connector.bluetooth.client,javax.microedition.location.Location,javax.microedition.media.control.VideoControl.getSnapshot,javax.microedition.io.Connector.sms,javax.wireless.messaging.sms.receive,javax.wireless.messaging.sms.send,javax.microedition.io.Connector.comm,javax.microedition.io.Connector.cbs,javax.wireless.messaging.cbs.receive,javax.microedition.io.Connector.socket"/>
             <attribute name="Content-Folder" value="Applications"/>
             <attribute name="RIM-COD-Creation-Time" value="${rim.cod.modified}"/>
             <attribute name="RIM-COD-Module-Name" value="trekbuddy${suffix}"/>

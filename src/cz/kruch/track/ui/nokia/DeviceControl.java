@@ -26,11 +26,12 @@ import java.util.TimerTask;
  *
  * @author Ales Pour <kruhc@seznam.cz>
  */
-public abstract class DeviceControl extends TimerTask {
+public class DeviceControl extends TimerTask {
     
     private static DeviceControl instance;
+    private static TimerTask task;
 
-    protected volatile int backlight;
+    protected static int backlight;
 
     /** @deprecated make instance member of Desktop... ??? */
     public static void initialize() {
@@ -112,7 +113,7 @@ public abstract class DeviceControl extends TimerTask {
 
     public static void flash() {
         if (instance != null) {
-            if (instance.backlight == 0) {
+            if (backlight == 0) {
                 cz.kruch.track.ui.Desktop.display.flashBacklight(1);
             }
         }
@@ -137,12 +138,12 @@ public abstract class DeviceControl extends TimerTask {
         if (backlight == 0) {
             backlight = 1;
             if (isSchedulable()) {
-                cz.kruch.track.ui.Desktop.timer.scheduleAtFixedRate(this, 7500L, 7500L);
+                cz.kruch.track.ui.Desktop.timer.scheduleAtFixedRate(task = new DeviceControl(), 7500L, 7500L);
             }
         } else {
             backlight = 0;
             if (isSchedulable()) {
-                cancel();
+                task.cancel();
             }
         }
         if (backlight == 0) {
@@ -158,13 +159,21 @@ public abstract class DeviceControl extends TimerTask {
         }
     }
 
-    abstract boolean isSchedulable();
-    abstract void turnOn();
-    abstract void turnOff();
+    boolean isSchedulable() {
+        throw new IllegalStateException("override");
+    }
+    
+    void turnOn() {
+        throw new IllegalStateException("override");
+    }
+
+    void turnOff() {
+        throw new IllegalStateException("override");
+    }
 
     public void run() {
         if (backlight != 0) {
-            turnOn();
+            instance.turnOn();
         }
     }
 }

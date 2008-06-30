@@ -26,6 +26,7 @@ import java.util.Vector;
 import cz.kruch.track.ui.Position;
 import cz.kruch.track.util.Mercator;
 import api.location.QualifiedCoordinates;
+import api.location.ProjectionSetup;
 
 final class J2NCalibration extends Calibration {
     private static final String TAG_NAME        = "name";
@@ -111,6 +112,6 @@ final class J2NCalibration extends Calibration {
         parser = null;
 
         // finalize
-        doFinal(null, Mercator.getUTMSetup((QualifiedCoordinates) ll.firstElement()), xy, ll);
+        doFinal(null, new ProjectionSetup(ProjectionSetup.PROJ_LATLON), xy, ll);
     }
 }

@@ -26,6 +26,7 @@ import java.io.IOException;
 import java.util.Vector;
 
 import api.location.QualifiedCoordinates;
+import api.location.ProjectionSetup;
 
 final class GmiCalibration extends Calibration {
     private static final char[] DELIM = {';'};
@@ -84,7 +85,7 @@ final class GmiCalibration extends Calibration {
         reader = null; // gc hint
 
         // finalize
-        doFinal(null, Mercator.getUTMSetup((QualifiedCoordinates) ll.firstElement()), xy, ll);
+        doFinal(null, new ProjectionSetup(ProjectionSetup.PROJ_LATLON), xy, ll);
     }
 
     private static void parsePoint(final CharArrayTokenizer tokenizer, final Vector xy, final Vector ll) {

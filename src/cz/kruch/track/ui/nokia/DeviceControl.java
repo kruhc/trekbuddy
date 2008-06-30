@@ -31,7 +31,8 @@ public class DeviceControl extends TimerTask {
     private static DeviceControl instance;
     private static TimerTask task;
 
-    protected static int backlight;
+    protected int backlight;
+    private String name;
 
     /** @deprecated make instance member of Desktop... ??? */
     public static void initialize() {
@@ -41,11 +42,14 @@ public class DeviceControl extends TimerTask {
             if (System.getProperty("com.sonyericsson.imei") == null) {
                 if (cz.kruch.track.TrackingMIDlet.symbian) {
                     instance = (DeviceControl) Class.forName("cz.kruch.track.ui.nokia.S60DeviceControl").newInstance();
+                    instance.name = "S60";
                 } else {
                     instance = (DeviceControl) Class.forName("cz.kruch.track.ui.nokia.NokiaDeviceControl").newInstance();
+                    instance.name = "Nokia";
                 }
             } else {
                 instance = (DeviceControl) Class.forName("cz.kruch.track.ui.nokia.SonyEricssonDeviceControl").newInstance();
+                instance.name = "SonyEricsson";
             }
         } catch (Throwable t) {
             // ignore
@@ -54,6 +58,7 @@ public class DeviceControl extends TimerTask {
             try {
                 Class.forName("com.siemens.mp.game.Light");
                 instance = (DeviceControl) Class.forName("cz.kruch.track.ui.nokia.SiemensDeviceControl").newInstance();
+                instance.name = "Siemens";
             } catch (Throwable t) {
             }
         }
@@ -61,6 +66,7 @@ public class DeviceControl extends TimerTask {
             try {
                 Class.forName("com.samsung.util.LCDLight");
                 instance = (DeviceControl) Class.forName("cz.kruch.track.ui.nokia.SamsungDeviceControl").newInstance();
+                instance.name = "Samsung";
             } catch (Throwable t) {
             }
         }
@@ -68,6 +74,7 @@ public class DeviceControl extends TimerTask {
             try {
                 Class.forName("com.motorola.multimedia.Lighting");
                 instance = (DeviceControl) Class.forName("cz.kruch.track.ui.nokia.MotorolaDeviceControl").newInstance();
+                instance.name = "Motorola";
             } catch (Throwable t) {
             }
         }
@@ -75,6 +82,7 @@ public class DeviceControl extends TimerTask {
             try {
                 Class.forName("mmpp.media.BackLight");
                 instance = (DeviceControl) Class.forName("cz.kruch.track.ui.nokia.LgDeviceControl").newInstance();
+                instance.name = "LG";
             } catch (Throwable t) {
             }
         }
@@ -84,6 +92,7 @@ public class DeviceControl extends TimerTask {
             try {
                 Class.forName("net.rim.device.api.system.Backlight");
                 instance = (DeviceControl) Class.forName("cz.kruch.track.ui.nokia.BlackberryDeviceControl").newInstance();
+                instance.name = "Blackberry";
             } catch (Throwable t) {
                 // ignore
             }
@@ -92,10 +101,15 @@ public class DeviceControl extends TimerTask {
         if (instance == null) {
             try {
                 instance = (DeviceControl) Class.forName("cz.kruch.track.ui.nokia.Midp2DeviceControl").newInstance();
+                instance.name = "MIDP2";
             } catch (Throwable t) {
                 // ignore
             }
         }
+    }
+
+    public static String getName() {
+        return instance != null ? instance.name : "?";
     }
 
     public static void destroy() {
@@ -113,7 +127,7 @@ public class DeviceControl extends TimerTask {
 
     public static void flash() {
         if (instance != null) {
-            if (backlight == 0) {
+            if (instance.backlight == 0) {
                 cz.kruch.track.ui.Desktop.display.flashBacklight(1);
             }
         }
@@ -172,7 +186,7 @@ public class DeviceControl extends TimerTask {
     }
 
     public void run() {
-        if (backlight != 0) {
+        if (instance.backlight != 0) {
             instance.turnOn();
         }
     }

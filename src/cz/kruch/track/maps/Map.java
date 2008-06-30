@@ -276,7 +276,7 @@ public final class Map implements Runnable {
             // create loader
             if (loader == null) {
                 if (slices != null) {
-                    throw new IllegalStateException("Slices exist for new loader");
+                    throw new IllegalStateException("Tiles exist for new loader");
                 }
                 final Class factory;
                 if (path.endsWith(".tar") || path.endsWith(".TAR")) {
@@ -313,6 +313,16 @@ public final class Map implements Runnable {
             if (finalize) loader.doFinal();
             
         } catch (Throwable t) {
+
+            // cleanup
+            if (loader != null) {
+                try {
+                    loader.dispose();
+                } catch (IOException e) {
+                    // ignore
+                }
+            }
+
             return t;
         }
 

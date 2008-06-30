@@ -64,6 +64,9 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
         try {
             // open native file and stream
             nativeFile = File.open(map.getPath());
+            if (!nativeFile.exists()) {
+                throw new IOException("File " + map.getPath() + " not found");
+            }
             in = nativeFile.openInputStream();
 
             /*
@@ -180,7 +183,9 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
             }
 
             // detach tar stream
-            tarIn.setInputStream(null);
+            if (tarIn != null) {
+                tarIn.setInputStream(null);
+            }
         }
     }
 
@@ -274,9 +279,8 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
                 nativeIn.close();
             } catch (IOException e) {
                 // ignore
-            } finally {
-                nativeIn = null; // gc hint
             }
+            nativeIn = null; // gc hint
         }
 
         // close nativeFile
@@ -285,9 +289,8 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
                 nativeFile.close();
             } catch (IOException e) {
                 // ignore
-            } finally {
-                nativeFile = null; // gc hint
             }
+            nativeFile = null; // gc hint
         }
 
         // dispose tar stream

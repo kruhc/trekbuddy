@@ -28,9 +28,18 @@ import java.util.Date;
  * @author Ales Pour <kruhc@seznam.cz>
  */
 public final class NmeaParser {
+    public static final int MAX_SENTENCE_LENGTH = 128; // 82(79) max according to NMEA 0183 v3.01
+
+    public static final int HEADER_$GP = 0x00244750;
+    public static final int HEADER_GGA = 0x00474741;
+    public static final int HEADER_GSA = 0x00475341;
+    public static final int HEADER_GSV = 0x00475356;
+    public static final int HEADER_RMC = 0x00524d43;
+
     private static final Record gga = new Record();
     private static final Record gsa = new Record();
     private static final Record rmc = new Record();
+    private static final Record unknown = new Record();
     private static final CharArrayTokenizer tokenizer = new CharArrayTokenizer();
     private static final char[] delimiters = { ',', '*' };
 
@@ -38,7 +47,8 @@ public final class NmeaParser {
     private static int day, month, year;
     private static int prnc;
 
-    private static final int MAX_SATS = 12;
+    private static final int HEADER_LENGTH  = 6;   // sentence header length
+    private static final int MAX_SATS       = 12;
 
     public static final byte[] snrs  = new byte[MAX_SATS];
     public static final byte[] prns = new byte[MAX_SATS];
@@ -46,16 +56,82 @@ public final class NmeaParser {
     public static float pdop = Float.NaN;
     public static float hdop = Float.NaN;
     public static float vdop = Float.NaN;
-    public static int satv;
+    public static int satv, sata;
 
-    public static Record parseGGA(final char[] nmea, final int length) throws LocationException {
+    public static boolean validate(final char[] raw, final int length) {
+        int result = 0;
+        for (int i = 1; i < length; i++) {
+            final byte b = (byte) (raw[i] & 0x00ff);
+            if (b == '*') {
+                if (length - i >= 2) {
+                    byte hi = (byte) (raw[i + 1] & 0x00ff);
+                    byte lo = (byte) (raw[i + 2] & 0x00ff);
+                    if (hi >= '0' && hi <= '9') {
+                        hi -= '0';
+                    } else if (hi >= 'A' && hi <= 'F') {
+                        hi -= 'A' - 10;
+                    }
+                    if (lo >= '0' && lo <= '9') {
+                        lo -= '0';
+                    } else if (lo >= 'A' && lo <= 'F') {
+                        lo -= 'A' - 10;
+                    }
+                    return result == (hi << 4) + lo;
+                }
+                break;
+            } else {
+                result ^= b;
+            }
+        }
+
+        return false;
+    }
+
+    public static int getType(final char[] sentence, final int length) {
+        if (length >= HEADER_LENGTH) {
+            final int $gp = sentence[0] << 16 | sentence[1] << 8 | sentence[2];
+            if ($gp == HEADER_$GP) {
+                return sentence[3] << 16 | sentence[4] << 8 | sentence[5];
+            }
+        }
+
+        return -1;
+    }
+
+    public static Record parse(final char[] nmea, final int length) throws LocationException {
+        Record result = null;
+
+        switch (getType(nmea, length)) {
+            case NmeaParser.HEADER_GGA: {
+                result = parseGGA(nmea, length);
+            } break;
+            case NmeaParser.HEADER_GSA: {
+                result = parseGSA(nmea, length);
+            } break;
+            case NmeaParser.HEADER_GSV: {
+                parseGSV(nmea, length);
+            } break;
+            case NmeaParser.HEADER_RMC: {
+                result = parseRMC(nmea, length);
+            } break;
+        }
+
+        if (result == null) {
+            result = unknown;
+            result.invalidate(-1);
+        }
+
+        return result;
+    }
+
+    private static Record parseGGA(final char[] nmea, final int length) throws LocationException {
         // local refs for faster access
         final CharArrayTokenizer tokenizer = NmeaParser.tokenizer;
         final Record record = gga;
 
         // init tokenizer and record
         tokenizer.init(nmea, length, false);
-        record.invalidate();
+        record.invalidate(HEADER_GGA);
 
         // process
         int index = 0;
@@ -122,14 +198,16 @@ public final class NmeaParser {
         return record;
     }
 
-    public static Record parseGSA(final char[] nmea, final int length) throws LocationException {
+    private static Record parseGSA(final char[] nmea, final int length) throws LocationException {
         // local refs for faster access
         final CharArrayTokenizer tokenizer = NmeaParser.tokenizer;
         final Record record = gsa;
+        final byte[] snrs = NmeaParser.snrs;
+        final byte[] prns = NmeaParser.prns;
 
         // init tokenizer and record
         tokenizer.init(nmea, length, delimiters, false);
-        record.invalidate();
+        record.invalidate(HEADER_GSA);
 
         // prn indexes
         prnc = 0;
@@ -169,25 +247,16 @@ public final class NmeaParser {
                 } break;
                 case 15:
                     if (!token.isEmpty()) {
-/*
-                        record.pdop = CharArrayTokenizer.parseFloat(token);
-*/
                         pdop = CharArrayTokenizer.parseFloat(token);
                     }
                     break;
                 case 16: {
                     if (!token.isEmpty()) {
-/*
-                        record.hdop = CharArrayTokenizer.parseFloat(token);
-*/
                         hdop = CharArrayTokenizer.parseFloat(token);
                     }
                 } break;
                 case 17: {
                     if (!token.isEmpty()) {
-/*
-                        record.vdop = CharArrayTokenizer.parseFloat(token);
-*/
                         vdop = CharArrayTokenizer.parseFloat(token);
                     }
                 } break;
@@ -204,9 +273,10 @@ public final class NmeaParser {
         return record;
     }
 
-    public static void parseGSV(final char[] nmea, final int length) throws LocationException {
+    private static void parseGSV(final char[] nmea, final int length) throws LocationException {
         // local refs for faster access
         final CharArrayTokenizer tokenizer = NmeaParser.tokenizer;
+        final byte[] prns = NmeaParser.prns;
         final byte[] snrs = NmeaParser.snrs;
 
         // init tokenizer and record
@@ -214,7 +284,7 @@ public final class NmeaParser {
 
         // local vars
         int sentence = 0, maxi = 20;
-        int tracked = -1;
+        int tracked = -1, prn = -1;
 
         // process
         int index = 0;
@@ -228,6 +298,9 @@ public final class NmeaParser {
                     break;
                 case 2: // current sentence
                     sentence = CharArrayTokenizer.parseInt(token);
+                    if (sentence == 1) {
+                        sata = 0;
+                    }
                     break;
                 case 3: // number of sats in view
                     satv = CharArrayTokenizer.parseInt(token);
@@ -238,7 +311,7 @@ public final class NmeaParser {
                     switch (mod) {
                         case 0: {
                             tracked = -1;
-                            final int prn = CharArrayTokenizer.parseInt(token);
+                            prn = CharArrayTokenizer.parseInt(token);
                             for (int i = prnc; --i >= 0; ) {
                                 if (prn == prns[i]) {
                                     tracked = i;
@@ -247,15 +320,21 @@ public final class NmeaParser {
                             }
                         } break;
                         case 3: {
-                            if (tracked != -1) {
-                                if (!token.isEmpty()) {
-                                    int snr = (CharArrayTokenizer.parseInt(token) - 15) / 3;
-                                    if (snr < 1/*0*/) {
-                                        snr = 1/*0*/;
-                                    } else if (snr > 9) {
-                                        snr = 9;
-                                    }
+                            if (!token.isEmpty()) {
+                                int snr = (CharArrayTokenizer.parseInt(token) - 15) / 3;
+                                if (snr < 1/*0*/) {
+                                    snr = 1/*0*/;
+                                } else if (snr > 9) {
+                                    snr = 9;
+                                }
+                                if (tracked != -1) {
                                     snrs[tracked] = (byte) snr;
+                                } else if (prnc == 0) { // no GSA
+                                    if (sata < MAX_SATS) {
+                                        prns[sata] = (byte) prn;
+                                        snrs[sata] = (byte) snr;
+                                        sata++;
+                                    }
                                 }
                             }
                         } break;
@@ -266,14 +345,14 @@ public final class NmeaParser {
         }
     }
 
-    public static Record parseRMC(final char[] nmea, final int length) throws LocationException {
+    private static Record parseRMC(final char[] nmea, final int length) throws LocationException {
         // local refs for faster access
         final CharArrayTokenizer tokenizer = NmeaParser.tokenizer;
         final Record record = rmc;
 
         // init tokenizer and record
         tokenizer.init(nmea, length, false);
-        record.invalidate();
+        record.invalidate(HEADER_RMC);
 
         // process
         int index = 0;
@@ -365,6 +444,9 @@ public final class NmeaParser {
      * Holder for both GGA and/or RMC.
      */
     public static final class Record {
+        // TYPE
+        public int type;
+
         // NMEA COMMON
         public int timestamp;
         public double lat, lon;
@@ -390,22 +472,20 @@ public final class NmeaParser {
         public long date;
 
         public Record() {
-            this.invalidate();
+            this.invalidate(-1);
         }
 
-        private void invalidate() {
+        private void invalidate(final int type) {
+            this.type = type;
             this.timestamp = -1;
             this.lat = this.lon = Double.NaN;
             this.fix = this.sat = -1;
-/*
-            this.pdop = this.hdop = this.vdop = -1F;
-*/
             this.altitude = this.speed = this.angle = Float.NaN;
             this.status = '?';
         }
 
         public static Record copyGsaIntoGga(final Record gsa) {
-            gga.invalidate();
+            gga.invalidate(HEADER_GGA);
             gga.sat = gsa.sat;
             switch (gsa.fix) {
                 case 1:
@@ -416,11 +496,6 @@ public final class NmeaParser {
                     gga.fix = 1;
                 break;
             }
-/* global
-            gga.pdop = gsa.pdop;
-            gga.hdop = gsa.hdop;
-            gga.vdop = gsa.vdop;
-*/
 
             return gga;
         }

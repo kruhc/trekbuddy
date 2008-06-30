@@ -14,11 +14,11 @@ final class LgDeviceControl extends DeviceControl {
     }
 
     boolean isSchedulable() {
-        return false;
+        return true;
     }
 
     void turnOn() {
-        mmpp.media.BackLight.on(0); // "If timeout is 0, turns on permanently."
+        mmpp.media.BackLight.on(0); // SDK says: "If timeout is 0, turns on permanently."
     }
 
     void turnOff() {

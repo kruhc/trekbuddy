@@ -231,10 +231,11 @@ public final class Mercator {
     private static Datum ntf;
 
     public static CartesianCoordinates LLtoUTM(final QualifiedCoordinates qc) {
-        return LLtoMercator(qc, Datum.DATUM_WGS_84.ellipsoid, getUTMSetup(qc));
+        return LLtoMercator(qc, Datum.contextDatum.ellipsoid, getUTMSetup(qc));
     }
 
     public static CartesianCoordinates LLtoGrid(final QualifiedCoordinates qc) {
+
         final CartesianCoordinates utm = LLtoMercator(qc, Datum.contextDatum.ellipsoid, (Mercator.ProjectionSetup) ProjectionSetup.contextProjection);
 
         /*
@@ -274,8 +275,8 @@ public final class Mercator {
                     i++;
                 }
                 utm.zone[1] = (char) ('A' + i);
-                utm.easting -= (int) (utm.easting / ExtraMath.grade(utm.easting)) * ExtraMath.grade(utm.easting);
-                utm.northing -= (int) (utm.northing / ExtraMath.grade(utm.northing)) * ExtraMath.grade(utm.northing);
+                utm.easting = utm.easting % 100000;
+                utm.northing = utm.northing % 100000;
 
             } break;
 

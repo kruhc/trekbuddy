@@ -293,6 +293,7 @@
             <midlet name="TrekBuddy" class="cz.kruch.track.TrackingMIDlet" icon="/resources/icon.png"/>
         </wtkjad>
         <fixcrlf srcdir="tmp" eol="crlf" eof="remove" encoding="UTF-8" includes="trekbuddy${suffix}.jad"/>
+        <copy file="res/resources/language.${locale}.res" tofile="res/resources/language.res"/>
     </target>
 
     <target name="a.pack" depends="create.tmp.jad">
@@ -300,7 +301,11 @@
                     jadfile="tmp/trekbuddy${suffix}.jad">
             <fileset dir="tmp/build/classes"/>
             <fileset dir="res">
-                <exclude name="**/language*.txt"/>
+                <include name="**/*.png"/>
+                <include name="**/datums.txt"/>
+                <include name="**/language.res"/>
+                <include name="**/world.*"/>
+                <include name="**/set/**"/>
             </fileset>
         </wtkpackage>
     </target>

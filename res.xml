@@ -3,8 +3,8 @@
 
     <target name="rescompile">
         <echo>Compiling resources for locale: ${locale}</echo>
-        <exec dir="${basedir}" executable="${java.home}/../bin/native2ascii.exe">
-            <arg line="res/resources/language.${locale}.txt res/resources/language.txt"/>
+        <exec dir="${basedir}" executable="${java.home}/../bin/native2ascii.exe" failonerror="true">
+            <arg line="res/resources/language.${locale}.txt tmp/language.ASCII.txt"/>
         </exec>
         <javac 
             destdir="tools/classes" 
@@ -19,8 +19,14 @@
           </manifest>
         </jar> 
         <java fork="true" jar="tools/dist/rc-ng.jar">
-            <arg line="${locale} res/resources/language.txt res/resources/language.res"/>
+            <arg line="${locale} tmp/language.ASCII.txt res/resources/language.${locale}.res"/>
         </java>
+        <echo/>
+        <echo>************************************************************</echo>
+        <echo>*** Locale:   ${locale}</echo>
+        <echo>*** Output:   language.${locale}.res</echo>
+        <echo>************************************************************</echo>
+        <echo/>
     </target>
 
 </project>

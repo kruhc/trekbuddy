@@ -68,7 +68,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
 
         // detect brand/device
 //#ifdef __RIM__
-        rim = true; // platform.startsWith("RIM");
+        rim = platform.startsWith("RIM");
 //#else
         nokia = platform.startsWith("Nokia");
         sonyEricsson = System.getProperty("com.sonyericsson.imei") != null;

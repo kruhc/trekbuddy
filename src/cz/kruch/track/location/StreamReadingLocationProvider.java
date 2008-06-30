@@ -36,20 +36,6 @@ abstract class StreamReadingLocationProvider extends LocationProvider {
     private static final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("Stream");
 //#endif
 
-/* replaced with "int-encoded" form bellow
-    private static final char[] HEADER_GGA = { '$', 'G', 'P', 'G', 'G', 'A' };
-    private static final char[] HEADER_GSA = { '$', 'G', 'P', 'G', 'S', 'A' };
-    private static final char[] HEADER_GSV = { '$', 'G', 'P', 'G', 'S', 'V' };
-    private static final char[] HEADER_RMC = { '$', 'G', 'P', 'R', 'M', 'C' };
-*/
-    private static final int HEADER_$GP = 0x00244750;
-    private static final int HEADER_GGA = 0x00474741;
-    private static final int HEADER_GSA = 0x00475341;
-    private static final int HEADER_GSV = 0x00475356;
-    private static final int HEADER_RMC = 0x00524d43;
-
-    private static final int HEADER_LENGTH          = 6;   // sentence header length
-    private static final int MAX_SENTENCE_LENGTH    = 128; // 82(79) max according to NMEA 0183 v3.01
     private static final int INPUT_BUFFER_SIZE      = 16;  // 512; // as recommended at Nokia forum
 
     private final char[] line;
@@ -67,7 +53,7 @@ abstract class StreamReadingLocationProvider extends LocationProvider {
 
     protected StreamReadingLocationProvider(String name) {
         super(name);
-        this.line = new char[MAX_SENTENCE_LENGTH];
+        this.line = new char[NmeaParser.MAX_SENTENCE_LENGTH];
         this.btline = new byte[INPUT_BUFFER_SIZE];
     }
 
@@ -95,33 +81,29 @@ abstract class StreamReadingLocationProvider extends LocationProvider {
             }
                            
             // checksum check
-            if (validate(line, l)) {
+            if (NmeaParser.validate(line, l)) {
+
                 // parse known sentences
-                switch (getType(line, l)) {
-                    case HEADER_GGA: {
+                final NmeaParser.Record record = NmeaParser.parse(line, l);
+                switch (record.type) {
+                    case NmeaParser.HEADER_GGA: {
 //#ifdef __LOG__
                         if (log.isEnabled()) log.info("got GGA");
 //#endif
-                        gga = NmeaParser.parseGGA(line, l);
+                        gga = record;
                         hack_rmc_count = 0;
                     } break;
-                    case HEADER_GSA: {
+                    case NmeaParser.HEADER_GSA: {
 //#ifdef __LOG__
                         if (log.isEnabled()) log.info("got GSA");
 //#endif
-                        gsa = NmeaParser.parseGSA(line, l);
+                        gsa = record;
                     } break;
-                    case HEADER_GSV: {
-//#ifdef __LOG__
-                        if (log.isEnabled()) log.info("got GSV");
-//#endif
-                        NmeaParser.parseGSV(line, l);
-                    } break;
-                    case HEADER_RMC: {
+                    case NmeaParser.HEADER_RMC: {
 //#ifdef __LOG__
                         if (log.isEnabled()) log.info("got RMC");
 //#endif
-                        rmc = NmeaParser.parseRMC(line, l);
+                        rmc = record;
                         hack_rmc_count++;
                     } break;
                     default:
@@ -219,7 +201,7 @@ abstract class StreamReadingLocationProvider extends LocationProvider {
 
                 // end of stream?
                 if (n == -1) {
-                    if (hack_repeat) { // already tried once
+                    if (hack_repeat || !isGo()) { // already tried once or closing
                         c = -1;
                         break;
                     } else { // try read again
@@ -267,7 +249,7 @@ abstract class StreamReadingLocationProvider extends LocationProvider {
                 line[pos++] = ch;
 
                 // weird content check
-                if (pos >= MAX_SENTENCE_LENGTH) {
+                if (pos >= NmeaParser.MAX_SENTENCE_LENGTH) {
 
                     // record state
                     setThrowable(new LocationException("NMEA sentence too long"));
@@ -285,46 +267,6 @@ abstract class StreamReadingLocationProvider extends LocationProvider {
 
         if (c == -1) {
             setStatus("End of stream");
-        }
-
-        return -1;
-    }
-
-    private static boolean validate(final char[] raw, final int length) {
-        int result = 0;
-        for (int i = 1; i < length; i++) {
-            final byte b = (byte) (raw[i] & 0x00ff);
-            if (b == '*') {
-                if (length - i >= 2) {
-                    byte hi = (byte) (raw[i + 1] & 0x00ff);
-                    byte lo = (byte) (raw[i + 2] & 0x00ff);
-                    if (hi >= '0' && hi <= '9') {
-                        hi -= '0';
-                    } else if (hi >= 'A' && hi <= 'F') {
-                        hi -= 'A' - 10;
-                    }
-                    if (lo >= '0' && lo <= '9') {
-                        lo -= '0';
-                    } else if (lo >= 'A' && lo <= 'F') {
-                        lo -= 'A' - 10;
-                    }
-                    return result == (hi << 4) + lo;
-                }
-                break;
-            } else {
-                result ^= b;
-            }
-        }
-
-        return false;
-    }
-
-    private static int getType(final char[] sentence, final int length) {
-        if (length >= HEADER_LENGTH) {
-            final int $gp = sentence[0] << 16 | sentence[1] << 8 | sentence[2];
-            if ($gp == HEADER_$GP) {
-                return sentence[3] << 16 | sentence[4] << 8 | sentence[5];
-            }
         }
 
         return -1;

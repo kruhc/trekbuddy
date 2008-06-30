@@ -76,7 +76,7 @@ public final class GpxTracklog extends Thread {
     private static final String ELEMENT_SAT         = "sat";
     private static final String ELEMENT_WPT         = "wpt";
     private static final String ELEMENT_NAME        = "name";
-    private static final String ELEMENT_DESC        = "desc";
+    private static final String ELEMENT_CMT         = "cmt";
     private static final String ELEMENT_LINK        = "link";
     private static final String ELEMENT_EXTENSIONS  = "extensions";
     private static final String ELEMENT_COURSE      = "course";
@@ -342,9 +342,9 @@ public final class GpxTracklog extends Thread {
                 serializer.endTag(DEFAULT_NAMESPACE, ELEMENT_NAME);
             }
             if (wpt.getComment() != null && wpt.getComment().length() > 0) {
-                serializer.startTag(DEFAULT_NAMESPACE, ELEMENT_DESC);
+                serializer.startTag(DEFAULT_NAMESPACE, ELEMENT_CMT);
                 serializer.text(wpt.getComment());
-                serializer.endTag(DEFAULT_NAMESPACE, ELEMENT_DESC);
+                serializer.endTag(DEFAULT_NAMESPACE, ELEMENT_CMT);
             }
             if (wpt.getLinkPath() != null && wpt.getLinkPath().length() > 0) {
                 serializer.startTag(DEFAULT_NAMESPACE, ELEMENT_LINK);

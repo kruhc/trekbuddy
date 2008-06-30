@@ -18,6 +18,7 @@ package cz.kruch.track.location;
 
 import cz.kruch.track.configuration.Config;
 import cz.kruch.track.util.CharArrayTokenizer;
+import cz.kruch.track.util.NmeaParser;
 import cz.kruch.track.ui.Desktop;
 import cz.kruch.track.Resources;
 import cz.kruch.j2se.io.BufferedOutputStream;
@@ -40,17 +41,18 @@ public final class Jsr179LocationProvider
         extends api.location.LocationProvider
         implements javax.microedition.location.LocationListener, Runnable {
 
+    private static final byte[] CRLF = { '\r', '\n' };
+
     private javax.microedition.location.LocationProvider impl;
     private int interval, timeout, maxage;
 
-    private volatile OutputStream nmealog;
-    
+    private OutputStream nmealog;
+
+    private final char[] line;
+
     public Jsr179LocationProvider() {
         super("Internal");
-    }
-
-    public Object getImpl() {
-        return impl;
+        this.line = new char[NmeaParser.MAX_SENTENCE_LENGTH];
     }
 
     public int start() throws LocationException {
@@ -167,14 +169,13 @@ public final class Jsr179LocationProvider
                     // create writer
                     nmealog = new BufferedOutputStream(file.openOutputStream(), 512); // see StreamLocationProvider#BUFFER_SIZE
 
-/* fix
                     // signal recording has started
-                    recordingCallback.invoke(new Integer(GpxTracklog.CODE_RECORDING_START), null);
-*/
                     notifyListener(true);
 
                 } catch (Throwable t) {
+
                     Desktop.showError(Resources.getString(Resources.DESKTOP_MSG_START_TRACKLOG_FAILED), t, null);
+
                 } finally {
 
                     // close the file
@@ -191,17 +192,14 @@ public final class Jsr179LocationProvider
     }
 
     private void stopNmeaLog() {
-/*
         // signal recording is stopping
-        recordingCallback.invoke(new Integer(GpxTracklog.CODE_RECORDING_STOP), null);
-*/
         notifyListener(false);
 
         // close writer
         if (nmealog != null) {
             try {
                 nmealog.close();
-            } catch (IOException e) {
+            } catch (Exception e) {
                 // ignore
             }
             nmealog = null;
@@ -213,12 +211,25 @@ public final class Jsr179LocationProvider
     public void locationUpdated(javax.microedition.location.LocationProvider p,
                                 javax.microedition.location.Location l) {
 
+        // get extra info
+        final String extra = l.getExtraInfo(APPLICATION_X_JSR179_LOCATION_NMEA);
+
         // valid location?
         if (l.isValid()) {
 
-            // signal state change
-            if (lastState != AVAILABLE) {
-                notifyListener(lastState = AVAILABLE);
+            // enhance with raw NMEA
+            int sat = -1;
+            if (extra != null) {
+                try {
+                    final NmeaParser.Record gga = parseNmea(line, extra);
+                    if (gga != null) {
+                        sat = gga.sat;
+                    } else {
+                        sat = NmeaParser.sata;
+                    }
+                } catch (Exception e) {
+                    setThrowable(e);
+                }
             }
 
             // vars
@@ -239,9 +250,14 @@ public final class Jsr179LocationProvider
                                                                        xc.getLongitude(),
                                                                        alt);
             qc.setHorizontalAccuracy(accuracy);
-            Location location = Location.newInstance(qc, l.getTimestamp(), 1);
+            Location location = Location.newInstance(qc, l.getTimestamp(), 1, sat);
             location.setCourse(course);
             location.setSpeed(spd);
+
+            // signal state change
+            if (lastState != AVAILABLE) {
+                notifyListener(lastState = AVAILABLE);
+            }
 
             // notify
             notifyListener(location);
@@ -255,33 +271,82 @@ public final class Jsr179LocationProvider
         }
 
         // NMEA logging
-        if (nmealog != null) {
-            String extra = l.getExtraInfo(APPLICATION_X_JSR179_LOCATION_NMEA);
-            if (extra != null) {
-                try {
-                    final byte[] bytes = extra.getBytes();
-                    if (extra.indexOf("\n$GP") > -1) {
-                        nmealog.write(bytes);
-                    } else {
-                        for (int N = bytes.length, i = 0; i < N; i++) {
-                            final byte b = bytes[i];
-                            if (b == '$' && i != 0) {
-                                nmealog.write('\r');
-                                nmealog.write('\n');
-                            }
-                            nmealog.write(b);
-                        }
-                        nmealog.write('\r');
-                        nmealog.write('\n');
-                    }
-                } catch (Throwable t) {
-                    setThrowable(t);
-                }
+        if (extra != null && nmealog != null) {
+            try {
+                logNmea(nmealog, extra);
+            } catch (Exception e) {
+                setThrowable(e);
             }
         }
     }
 
     public void providerStateChanged(javax.microedition.location.LocationProvider locationProvider, int i) {
-        notifyListener(i);
+        if (isGo()) {
+            notifyListener(i);
+        }
+    }
+
+    private static NmeaParser.Record parseNmea(final char[] line,
+                                               final String extra) throws Exception {
+        final int length = extra.length();
+        int start = 0;
+        int idx = extra.indexOf("$GP");
+        while (idx > -1) {
+            if (idx != 0) {
+                if (idx - start < NmeaParser.MAX_SENTENCE_LENGTH) {
+                    extra.getChars(start, idx, line, 0);
+                    final NmeaParser.Record rec = NmeaParser.parse(line, idx - start);
+                    if (rec.type == NmeaParser.HEADER_GGA) {
+                        return rec;
+                    }
+                }
+            }
+            start = idx;
+            idx = extra.indexOf("$GP", start + 3);
+        }
+        if (start < length) { // always true
+            if (length - start < NmeaParser.MAX_SENTENCE_LENGTH) {
+                extra.getChars(start, length, line, 0);
+                final NmeaParser.Record rec = NmeaParser.parse(line, length - start);
+                if (rec.type == NmeaParser.HEADER_GGA) {
+                    return rec;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    private static void logNmea(final OutputStream out,
+                                final String extra) throws IOException {
+        final byte[] bytes = extra.getBytes();
+        int offset = 0;
+        boolean crlf = false;
+        for (int i = 0; i < bytes.length; i++) {
+            final byte b = bytes[i];
+            switch (b) {
+                case '$': {
+                    if (i != 0) {
+                        out.write(bytes, offset, i - offset);
+                        offset = i;
+                        if (!crlf) {
+                            out.write(CRLF);
+                        } else {
+                            crlf = false;
+                        }
+                    }
+                } break;
+                case '\r':
+                case '\n': {
+                    crlf = true;
+                } break;
+            }
+        }
+        if (offset < bytes.length) { // always true
+            out.write(bytes, offset, bytes.length - offset);
+            if (!crlf)  {
+                out.write(CRLF);
+            }
+        }
     }
 }

@@ -2914,7 +2914,7 @@ public final class Desktop extends GameCanvas
                     // stop provider - if it is restartable, it will be restarted (see above case)
                     try {
                         provider.stop();
-                    } catch (LocationException e) {
+                    } catch (Exception e) {
                         // ignore - never happens?
                     }
 

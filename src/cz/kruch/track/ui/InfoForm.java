@@ -95,6 +95,8 @@ final class InfoForm extends Form implements CommandListener {
         append(newItem("I18n", sb.toString()));
         sb.delete(0, sb.length()).append(File.fsType).append("; resetable? ").append(cz.kruch.track.maps.Map.fileInputStreamResetable).append("; private: ").append(System.getProperty("fileconn.dir.private"));
         append(newItem("Fs", sb.toString()));
+        sb.delete(0, sb.length()).append(cz.kruch.track.ui.nokia.DeviceControl.getName());
+        append(newItem("DeviceCtrl", sb.toString()));
         sb.delete(0, sb.length()).append(cz.kruch.track.TrackingMIDlet.hasPorts()).append("; ").append(System.getProperty("microedition.commports"));
         append(newItem("Ports", sb.toString()));
         sb.delete(0, sb.length()).append(TimeZone.getDefault().getID()).append("; ").append(TimeZone.getDefault().useDaylightTime()).append("; ").append(TimeZone.getDefault().getRawOffset());

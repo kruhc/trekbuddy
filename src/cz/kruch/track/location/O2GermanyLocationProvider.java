@@ -60,10 +60,6 @@ public final class O2GermanyLocationProvider
         this.avg = new int[2];
     }
 
-    public Object getImpl() {
-        return impl;
-    }
-
     public int start() throws LocationException {
         try {
             this.impl = (javax.wireless.messaging.MessageConnection) Connector.open("cbs://:221", Connector.READ);

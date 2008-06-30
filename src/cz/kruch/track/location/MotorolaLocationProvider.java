@@ -44,10 +44,6 @@ public final class MotorolaLocationProvider
         super("Motorola");
     }
 
-    public Object getImpl() {
-        return impl;
-    }
-
     public int start() throws LocationException {
         try {
             // parse initialization params
@@ -61,7 +57,7 @@ public final class MotorolaLocationProvider
             // init provider
             impl = (com.motorola.location.PositionSource) Connector.open("location://");
 
-        } catch (IOException e) {
+        } catch (Exception e) {
             throw new LocationException(e);
         }
 

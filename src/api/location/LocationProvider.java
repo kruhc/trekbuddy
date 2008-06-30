@@ -80,10 +80,15 @@ public abstract class LocationProvider {
 
     public abstract int start() throws LocationException;
     public abstract void stop() throws LocationException;
-    public abstract Object getImpl();
 
     public final void setLocationListener(LocationListener listener) {
         this.listener = listener;
+    }
+
+    protected final boolean isGo() {
+        synchronized (this) {
+            return go;
+        }
     }
     
     protected final void baby() {
@@ -106,23 +111,25 @@ public abstract class LocationProvider {
         go = true;
         thread = Thread.currentThread();
 
-        // try to catch up with UI
-        Thread.yield();
-
         // signal state change
         notifyListener(lastState = _STARTING); // trick to start GPX tracklog
+
+        // try to catch up with UI
+        Thread.yield();
     }
 
     protected final void zombie() {
         // be ready for restart
-        go = false;
+        synchronized (this) {
+            go = false;
+        }
 
         // signal state change
         notifyListener(lastState = OUT_OF_SERVICE);
     }
 
     protected final void die() {
-        // shutdown service thread
+        // shutdown provider thread
         synchronized (this) {
             go = false;
             notify();

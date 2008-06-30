@@ -63,6 +63,7 @@ final class DirLoader extends Map.Loader implements Atlas.Loader {
     }
 
     void loadMeta(final Map map) throws IOException {
+        
         // read calibration
         if (getMapCalibration() == null) {
 //#ifdef __LOG__

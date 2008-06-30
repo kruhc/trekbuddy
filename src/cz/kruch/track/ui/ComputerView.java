@@ -362,7 +362,7 @@ final class ComputerView extends View implements Runnable, CommandListener {
         if (starttime == 0) { // first record
             starttime = t;
             ETA_CALENDAR.setTimeSafe(t);
-        }
+        } 
 
         // time since start
         final long tt = t - starttime;

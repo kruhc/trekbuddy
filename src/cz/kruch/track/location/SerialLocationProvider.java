@@ -48,8 +48,9 @@ public class SerialLocationProvider
     private volatile InputStream stream;
     private volatile StreamConnection connection;
 
-    private volatile TimerTask watcher;
-    private volatile OutputStream nmealog;
+    private TimerTask watcher;
+    private OutputStream nmealog;
+
     private volatile long last;
 
     public SerialLocationProvider() throws LocationException {
@@ -147,10 +148,6 @@ public class SerialLocationProvider
         (new Thread(new UniversalSoldier(UniversalSoldier.MODE_KILLER))).start();
     }
 
-    public Object getImpl() {
-        return null;
-    }
-
     private void startWatcher() {
         if (watcher == null) {
             watcher = new UniversalSoldier(UniversalSoldier.MODE_WATCHER);
@@ -185,10 +182,7 @@ public class SerialLocationProvider
                     // create output
                     nmealog = file.openOutputStream();
 
-/* fix
                     // signal recording has started
-                    recordingCallback.invoke(new Integer(GpxTracklog.CODE_RECORDING_START), null);
-*/
                     notifyListener(true);
 
                 } catch (Throwable t) {
@@ -212,10 +206,7 @@ public class SerialLocationProvider
     }
 
     private void stopNmeaLog() {
-/*
         // signal recording is stopping
-        recordingCallback.invoke(new Integer(GpxTracklog.CODE_RECORDING_STOP), null);
-*/
         notifyListener(false);
 
         // close nmea log
@@ -235,7 +226,7 @@ public class SerialLocationProvider
 
         try {
             // open connection
-            connection = (StreamConnection) Connector.open(url, rw ? Connector.READ_WRITE : Connector.READ);
+            connection = (StreamConnection) Connector.open(url, rw ? Connector.READ_WRITE : Connector.READ, true);
 
             // HGE-100 hack
             if (isHge100) {
@@ -264,7 +255,7 @@ public class SerialLocationProvider
             startWatcher();
 
             // read NMEA until error or stop request
-            while (go) {
+            while (isGo()) {
 
                 Location location = null;
 
@@ -332,7 +323,7 @@ public class SerialLocationProvider
             stopWatcher();
 
             // stop NMEA log on Stop request only!
-            if (!go) {
+            if (!isGo()) {
                 stopNmeaLog();
             }
 
@@ -382,13 +373,13 @@ public class SerialLocationProvider
                     final long now = System.currentTimeMillis();
 
                     if (now > (lastIO + MAX_STALL_PERIOD)) {
-                        if (lastState != LocationProvider._STALLED) {
-                            lastState = LocationProvider._STALLED;
+                        if (lastState != _STALLED) {
+                            lastState = _STALLED;
                             notify = true;
                         }
                     } else if (now > (last + MAX_PARSE_PERIOD)) {
-                        if (lastState != LocationProvider.TEMPORARILY_UNAVAILABLE) {
-                            lastState = LocationProvider.TEMPORARILY_UNAVAILABLE;
+                        if (lastState != TEMPORARILY_UNAVAILABLE && lastState != _STARTING) {
+                            lastState = TEMPORARILY_UNAVAILABLE;
                             notify = true;
                         }
                     }

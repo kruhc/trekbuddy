@@ -47,10 +47,6 @@ public final class SimulatorLocationProvider
         }
     }
 
-    public Object getImpl() {
-        return null;
-    }
-
     public int start() throws LocationException {
         (new FileBrowser(Resources.getString(Resources.DESKTOP_MSG_NMEA_PLAYBACK), this, Desktop.screen)).show();
 
@@ -108,13 +104,15 @@ public final class SimulatorLocationProvider
             // open input
             in = file.openInputStream();
 
-            while (go) {
+            while (isGo()) {
 
                 Location location = null;
 
                 // get next location
                 try {
+
                     location = nextLocation(in, null);
+
                 } catch (Throwable t) {
 //#ifdef __LOG__
                     if (log.isEnabled()) log.warn("Failed to get location.", t);
@@ -161,7 +159,9 @@ public final class SimulatorLocationProvider
                     // ignore
                 }
             }
+
         } catch (Throwable t) {
+
 //#ifdef __LOG__
             if (log.isEnabled()) log.warn("I/O error? ", t);
             t.printStackTrace();
@@ -172,7 +172,9 @@ public final class SimulatorLocationProvider
                 // record
                 setThrowable(t);
             }
+
         } finally {
+
             // close the stream
             if (in != null) {
                 try {
@@ -181,16 +183,17 @@ public final class SimulatorLocationProvider
                     // ignore
                 }
             }
+            
             // close file connection
             try {
                 file.close();
-            } catch (IOException e) {
+            } catch (Exception e) {
                 // ignore
             }
             file = null; // gc hint
 
-            // notify
-            notifyListener(LocationProvider.OUT_OF_SERVICE);
+            // zombie
+            notifyListener(OUT_OF_SERVICE);
         }
 
 //#ifdef __LOG__

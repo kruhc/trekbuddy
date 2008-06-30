@@ -303,26 +303,27 @@ public final class Resources {
 
     static int initialize() throws IOException {
         int result = 0;
-
         InputStream in = null;
+
 //#ifdef __USERL10N__
-        api.file.File file = null;
-        try {
-            file = api.file.File.open(Config.getFolderResources() + "language.res");
-            if (file.exists()) {
-                in = file.openInputStream();
-                result++;
-            }
-        } catch (Throwable t) {
-            // ignore
-        } finally {
-            if (file != null) {
-                try {
-                    file.close();
-                } catch (IOException e) {
-                    // ignore
+        if (api.file.File.isFs()) {
+            api.file.File file = null;
+            try {
+                file = api.file.File.open(Config.getFolderResources() + "language.res");
+                if (file.exists()) {
+                    in = file.openInputStream();
+                    result++;
                 }
-                file = null;
+            } catch (Throwable t) {
+                // ignore
+            } finally {
+                if (file != null) {
+                    try {
+                        file.close();
+                    } catch (IOException e) {
+                        // ignore
+                    }
+                }
             }
         }
 //#endif
@@ -359,47 +360,49 @@ public final class Resources {
     static int keymap() throws IOException {
         int result = 0;
 
-        api.file.File file = null;
-        try {
-            file = api.file.File.open(Config.getFolderResources() + "keymap.txt");
-            if (file.exists()) {
-                LineReader reader = null;
-                try {
-                    reader = new LineReader(file.openInputStream());
-                    keymap0 = new int[32];
-                    keymap1 = new int[32];
-                    final char[] delims = { '=' };
-                    final CharArrayTokenizer tokenizer = new CharArrayTokenizer();
-                    CharArrayTokenizer.Token token = reader.readToken(false);
-                    while (token != null && keymapSize < 32) {
-                        tokenizer.init(token, delims, false);
-                        keymap0[keymapSize] = tokenizer.nextInt();
-                        keymap1[keymapSize] = tokenizer.nextInt();
-                        keymapSize++;
-                        result++;
-                        token = null; // gc hint
-                        token = reader.readToken(false);
-                    }
-                } finally {
-                    if (reader != null) {
-                        try {
-                            reader.close();
-                        } catch (IOException e) {
-                            // ignore
+        if (api.file.File.isFs()) {
+            api.file.File file = null;
+            try {
+                file = api.file.File.open(Config.getFolderResources() + "keymap.txt");
+                if (file.exists()) {
+                    LineReader reader = null;
+                    try {
+                        reader = new LineReader(file.openInputStream());
+                        keymap0 = new int[32];
+                        keymap1 = new int[32];
+                        final char[] delims = { '=' };
+                        final CharArrayTokenizer tokenizer = new CharArrayTokenizer();
+                        CharArrayTokenizer.Token token = reader.readToken(false);
+                        while (token != null && keymapSize < 32) {
+                            tokenizer.init(token, delims, false);
+                            keymap0[keymapSize] = tokenizer.nextInt();
+                            keymap1[keymapSize] = tokenizer.nextInt();
+                            keymapSize++;
+                            result++;
+                            token = null; // gc hint
+                            token = reader.readToken(false);
+                        }
+                    } finally {
+                        if (reader != null) {
+                            try {
+                                reader.close();
+                            } catch (IOException e) {
+                                // ignore
+                            }
                         }
                     }
                 }
-            }
-        } finally {
-            if (file != null) {
-                try {
-                    file.close();
-                } catch (IOException e) {
-                    // ignore
+            } finally {
+                if (file != null) {
+                    try {
+                        file.close();
+                    } catch (IOException e) {
+                        // ignore
+                    }
                 }
             }
         }
-
+        
         return result;
     }
 

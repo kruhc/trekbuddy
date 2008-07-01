@@ -506,11 +506,15 @@ public final class Map implements Runnable {
                 map.slices = initArray();
                 map.numberOfSlices = 0;
 
-                // detect slice basenema
-                basename = getBasename(token);
+                // detect slice basename
+                if (basename == null) {
+                    basename = getBasename(token);
+                }
 
                 // detect extension
-                extension = getExtension(token);
+                if (extension == null) {
+                    extension = getExtension(token);
+                }
 
             }
 

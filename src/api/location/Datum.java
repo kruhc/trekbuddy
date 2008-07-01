@@ -22,7 +22,7 @@ package api.location;
  * @author Ales Pour <kruhc@seznam.cz>
  */
 public final class Datum {
-    public static final Datum DATUM_WGS_84 = new Datum("WGS 84", Ellipsoid.ELLIPSOIDS[Ellipsoid.ELLIPSOIDS.length - 1], 0, 0, 0);
+    public static final Datum WGS_84 = new Datum("WGS 84", Ellipsoid.ELLIPSOIDS[Ellipsoid.ELLIPSOIDS.length - 1], 0, 0, 0);
     public static Datum contextDatum;
 
     public final String name;
@@ -44,19 +44,19 @@ public final class Datum {
     }
 
     public QualifiedCoordinates toLocal(final QualifiedCoordinates wgs84) {
-        if (this == DATUM_WGS_84) {
+        if (this == WGS_84) {
             return wgs84.clone();
         }
 
-        return transform(wgs84, DATUM_WGS_84.ellipsoid, ellipsoid, -1);
+        return transform(wgs84, WGS_84.ellipsoid, ellipsoid, -1);
     }
 
     public QualifiedCoordinates toWgs84(final QualifiedCoordinates local) {
-        if (this == DATUM_WGS_84) {
+        if (this == WGS_84) {
             return local.clone();
         }
 
-        return transform(local, ellipsoid, DATUM_WGS_84.ellipsoid, 1);
+        return transform(local, ellipsoid, WGS_84.ellipsoid, 1);
     }
 
     /**

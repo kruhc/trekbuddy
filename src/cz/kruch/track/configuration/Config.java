@@ -105,7 +105,7 @@ public final class Config {
     public static String mapPath            = EMPTY_STRING; // "file:///SDCard/trekbuddy/maps/yearling/cr.tar?layer=3&map=A04"; "file:///SDCard/trekbuddy/maps/jakob/Augsburg_Umland/Augsburg_Umland.map";
 
     // group [Map datum]
-    public static String geoDatum           = Datum.DATUM_WGS_84.name;
+    public static String geoDatum           = Datum.WGS_84.name;
 
     // group [Provider]
     public static int locationProvider      = -1;
@@ -615,7 +615,7 @@ public final class Config {
 //#endif
     }
 
-    public static Datum currentDatum = Datum.DATUM_WGS_84;
+    public static Datum currentDatum = Datum.WGS_84;
     public static final Vector datums = new Vector(16);
     public static final Hashtable datumMappings = new Hashtable(16);
 
@@ -625,8 +625,8 @@ public final class Config {
         final CharArrayTokenizer tokenizer = new CharArrayTokenizer();
 
         // WGS-84 is hardcoded
-        datums.addElement(Datum.DATUM_WGS_84);
-        datumMappings.put("map:WGS 84", Datum.DATUM_WGS_84);
+        datums.addElement(Datum.WGS_84);
+        datumMappings.put("map:WGS 84", Datum.WGS_84);
 
         // first try built-in
         try {

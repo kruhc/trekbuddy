@@ -421,15 +421,11 @@ public final class NavigationScreens {
 
     public static StringBuffer toStringBuffer(final QualifiedCoordinates qc, final StringBuffer sb) {
         if (Config.useGridFormat && isGrid()) {
-            if (isUTM()) {
-                toUTM(qc, sb);
-            } else {
-                toGrid(qc, sb);
-            }
+            toGrid(qc, sb);
         } else if (Config.useUTM) {
             toUTM(qc, sb);
         } else {
-            // condensed for SXG75 and narrowscreen devices
+            // condensed for SXG75 and narrow screen devices
             if (useCondensed != 0 && Config.decimalPrecision) {
                 toCondensedLL(qc, sb);
             } else { // decent devices
@@ -441,11 +437,7 @@ public final class NavigationScreens {
     }
 
     private static boolean isGrid() {
-        return ProjectionSetup.contextProjection instanceof Mercator.ProjectionSetup && !api.location.ProjectionSetup.PROJ_MERCATOR.equals(ProjectionSetup.contextProjection.name);
-    }
-
-    private static boolean isUTM() {
-        return ProjectionSetup.contextProjection instanceof Mercator.ProjectionSetup && "UTM".equals(ProjectionSetup.contextProjection.name);
+        return ProjectionSetup.contextProjection instanceof Mercator.ProjectionSetup && ProjectionSetup.contextProjection.code != api.location.ProjectionSetup.PROJECTION_MERCATOR;
     }
 
     private static StringBuffer toGrid(final QualifiedCoordinates qc, final StringBuffer sb) {
@@ -455,9 +447,10 @@ public final class NavigationScreens {
         }
         zeros(sb, gridCoords.easting, 10000);
         NavigationScreens.append(sb, ExtraMath.round(gridCoords.easting));
-        sb.append(' ');
+        sb.append('E').append(' ');
         zeros(sb, gridCoords.northing, 10000);
         NavigationScreens.append(sb, ExtraMath.round(gridCoords.northing));
+        sb.append('N');
         CartesianCoordinates.releaseInstance(gridCoords);
 
         return sb;
@@ -467,11 +460,10 @@ public final class NavigationScreens {
                                       final StringBuffer sb) {
         final CartesianCoordinates utmCoords = Mercator.LLtoUTM(qc);
         sb.append(utmCoords.zone).append(' ');
-        sb.append('E').append(' ');
         NavigationScreens.append(sb, ExtraMath.round(utmCoords.easting));
-        sb.append(' ');
-        sb.append('N').append(' ');
+        sb.append('E').append(' ');
         NavigationScreens.append(sb, ExtraMath.round(utmCoords.northing));
+        sb.append('N');
         CartesianCoordinates.releaseInstance(utmCoords);
 
         return sb;
@@ -505,12 +497,30 @@ public final class NavigationScreens {
 
     public static StringBuffer append(final StringBuffer sb, final QualifiedCoordinates qc,
                                       final int mask) {
-        if ((mask & 1) != 0) {
-            sb.append(qc.getLat() > 0D ? 'N' : 'S').append(' ');
-            append(sb, QualifiedCoordinates.LAT, qc.getLat(), Config.decimalPrecision);
-        } else if ((mask & 2) != 0) {
-            sb.append(qc.getLon() > 0D ? 'E' : 'W').append(' ');
-            append(sb, QualifiedCoordinates.LON, qc.getLon(), Config.decimalPrecision);
+        if (Config.useGridFormat && isGrid()) {
+            final CartesianCoordinates gridCoords = Mercator.LLtoGrid(qc);
+            if ((mask & 1) != 0) {
+                NavigationScreens.append(sb, ExtraMath.round(gridCoords.easting)).append('E');
+            } else if ((mask & 2) != 0) {
+                NavigationScreens.append(sb, ExtraMath.round(gridCoords.northing)).append('N');
+            }
+            CartesianCoordinates.releaseInstance(gridCoords);
+        } else if (Config.useUTM) {
+            final CartesianCoordinates utmCoords = Mercator.LLtoUTM(qc);
+            if ((mask & 1) != 0) {
+                NavigationScreens.append(sb, ExtraMath.round(utmCoords.easting)).append('E');
+            } else if ((mask & 2) != 0) {
+                NavigationScreens.append(sb, ExtraMath.round(utmCoords.northing)).append('N');
+            }
+            CartesianCoordinates.releaseInstance(utmCoords);
+        } else {
+            if ((mask & 1) != 0) {
+                sb.append(qc.getLat() > 0D ? 'N' : 'S').append(' ');
+                append(sb, QualifiedCoordinates.LAT, qc.getLat(), Config.decimalPrecision);
+            } else if ((mask & 2) != 0) {
+                sb.append(qc.getLon() > 0D ? 'E' : 'W').append(' ');
+                append(sb, QualifiedCoordinates.LON, qc.getLon(), Config.decimalPrecision);
+            }
         }
 
         return sb;

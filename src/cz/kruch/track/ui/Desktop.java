@@ -138,9 +138,8 @@ public final class Desktop extends GameCanvas
     static volatile boolean navigating;
     static volatile boolean showall;
 
-    // key repeating simulation support
+    // keylock status
     private volatile boolean keylock;
-    private volatile int keyRepeatedCount;
 
     // loading states and last-op message
     private /*volatile*/ boolean initializingMap = true; // using synchronized access helper
@@ -174,12 +173,12 @@ public final class Desktop extends GameCanvas
     /*private */volatile int wptAzimuth;
     /*private */volatile int wptsId, wptsSize;
 
+    // key repeating simulation support
+    private volatile int keyRepeatedCount;
+
     // repeated event simulation for dumb devices
     private volatile TimerTask repeatedKeyCheck;
     private /*volatile*/ int inKey; // using synchronized access helper
-
-    // start/initialization
-    private volatile boolean guiReady, comingOn;
 
     // eventing
     /*private */final SmartRunnable eventing; // TODO fix visibility
@@ -478,27 +477,28 @@ public final class Desktop extends GameCanvas
          */
 
         // screen views list
-        if (views == null) {
-            views = new View[3];
-            views[VIEW_MAP] = new MapView(this);
-            views[VIEW_MAP].setCanvas(this);
-            views[VIEW_HPS] = new LocatorView(this);
-            views[VIEW_HPS].setCanvas(this);
-            views[VIEW_CMS] = new ComputerView(this);
-            views[VIEW_CMS].setCanvas(this);
-            views[0].setVisible(true);
+        View[] v = views;
+        if (v == null) {
+            v = new View[3];
+            v[VIEW_MAP] = new MapView(this);
+            v[VIEW_MAP].setCanvas(this);
+            v[VIEW_HPS] = new LocatorView(this);
+            v[VIEW_HPS].setCanvas(this);
+            v[VIEW_CMS] = new ComputerView(this);
+            v[VIEW_CMS].setCanvas(this);
+            v[0].setVisible(true);
 /*
             sizeChanged = true; // enforce sizeChanged notification
 */
             // TODO hack
-            LoaderIO.getInstance().enqueue((Runnable) views[VIEW_CMS]);
+            LoaderIO.getInstance().enqueue((Runnable) v[VIEW_CMS]);
         }
 /*
         if (sizeChanged) {
 */
-            views[VIEW_MAP].sizeChanged(w, h);
-            views[VIEW_HPS].sizeChanged(w, h);
-            views[VIEW_CMS].sizeChanged(w, h);
+            v[VIEW_MAP].sizeChanged(w, h);
+            v[VIEW_HPS].sizeChanged(w, h);
+            v[VIEW_CMS].sizeChanged(w, h);
 /*
         }
 */
@@ -508,7 +508,7 @@ public final class Desktop extends GameCanvas
 //#endif
 
         // UI is ready now
-        guiReady = true;
+        views = v;
 
         // render screen
         update(MASK_ALL);
@@ -632,8 +632,8 @@ public final class Desktop extends GameCanvas
         int key = 0;
         boolean repeated = false;
 
-        final int j = x / (getWidth() / 3);
-        final int i = y / (getHeight() / 10);
+        final int j = x / (width / 3);
+        final int i = y / (height / 10);
 
         switch (i) {
             case 0:
@@ -700,8 +700,20 @@ public final class Desktop extends GameCanvas
             } break;
         }
 
+        boolean schedule = false;
+        if (repeated) {
+            schedule = true;
+            repeated = false;
+        }
+
         if (key != 0) {
-            handleKey(key, repeated);
+            handleKey(key, false);
+        }
+
+        if (schedule) {
+            if (repeatedKeyCheck == null) {
+                timer.schedule(repeatedKeyCheck = new KeyCheckTimerTask(this), 750L);
+            }
         }
     }
 
@@ -1455,7 +1467,7 @@ public final class Desktop extends GameCanvas
      */
 
     private void handleKey(final int i, final boolean repeated) {
-        if (!guiReady || paused) {
+        if (views == null || paused) {
             return;
         }
 

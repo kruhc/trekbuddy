@@ -201,7 +201,7 @@ abstract class StreamReadingLocationProvider extends LocationProvider {
 
                 // end of stream?
                 if (n == -1) {
-                    if (hack_repeat || !isGo()) { // already tried once or closing
+                    if (hack_repeat) { // already tried once
                         c = -1;
                         break;
                     } else { // try read again

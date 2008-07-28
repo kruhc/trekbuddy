@@ -36,7 +36,7 @@ abstract class StreamReadingLocationProvider extends LocationProvider {
     private static final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("Stream");
 //#endif
 
-    private static final int INPUT_BUFFER_SIZE      = 16;  // 512; // as recommended at Nokia forum
+    private static final int INPUT_BUFFER_SIZE = 16;  // 512; // as recommended at Nokia forum
 
     private final char[] line;
     private final byte[] btline;
@@ -175,7 +175,7 @@ abstract class StreamReadingLocationProvider extends LocationProvider {
             mismatches++;
         }
         location.setFix3d(gsa != null && gsa.fix == 3);
-        location.setCourse(rmc.angle);
+        location.setCourse(rmc.course);
         location.setSpeed(rmc.speed);
 
         return location;
@@ -201,7 +201,7 @@ abstract class StreamReadingLocationProvider extends LocationProvider {
 
                 // end of stream?
                 if (n == -1) {
-                    if (hack_repeat) { // already tried once
+                    if (hack_repeat || isGo() == false) { // already tried once or provider being stopped
                         c = -1;
                         break;
                     } else { // try read again

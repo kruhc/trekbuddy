@@ -391,7 +391,7 @@ public final class NmeaParser {
                         }
                     } break;
                     case 8: {
-                        record.angle = CharArrayTokenizer.parseFloat(token);
+                        record.course = CharArrayTokenizer.parseFloat(token);
                     } break;
                     case 9: {
                         record.date = parseDate(token);
@@ -468,7 +468,7 @@ public final class NmeaParser {
         // RMC
         public char status;
         public float speed;
-        public float angle;
+        public float course;
         public long date;
 
         public Record() {
@@ -480,7 +480,7 @@ public final class NmeaParser {
             this.timestamp = -1;
             this.lat = this.lon = Double.NaN;
             this.fix = this.sat = -1;
-            this.altitude = this.speed = this.angle = Float.NaN;
+            this.altitude = this.speed = this.course = Float.NaN;
             this.status = '?';
         }
 

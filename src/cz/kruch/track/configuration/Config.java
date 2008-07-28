@@ -102,7 +102,7 @@ public final class Config {
      */
 
     // group [Map]
-    public static String mapPath            = EMPTY_STRING; // "file:///SDCard/trekbuddy/maps/yearling/cr.tar?layer=3&map=A04"; "file:///SDCard/trekbuddy/maps/jakob/Augsburg_Umland/Augsburg_Umland.map";
+    public static String mapPath            = EMPTY_STRING;
 
     // group [Map datum]
     public static String geoDatum           = Datum.WGS_84.name;
@@ -163,7 +163,7 @@ public final class Config {
     // group [Tweaks]
     public static boolean siemensIo;
     public static boolean S60renderer           = true;
-    public static boolean forcedGc              = true;
+    public static boolean forcedGc;
     public static boolean oneTileScroll;
     public static boolean largeAtlases;
 
@@ -203,8 +203,7 @@ public final class Config {
         /* default for Blackberry */
         dataDir = "file:///SDCard/TrekBuddy/";
         commUrl = "btspp://000276fd79da:1";
-        forcedGc = false;
-//#else        
+//#else
         if (cz.kruch.track.TrackingMIDlet.sxg75) {
             dataDir = "file:///fs/tb/";
         } else if (cz.kruch.track.TrackingMIDlet.siemens) {
@@ -219,6 +218,7 @@ public final class Config {
             }
         } else if (cz.kruch.track.TrackingMIDlet.motorola || cz.kruch.track.TrackingMIDlet.a780) {
             dataDir = "file:///b/trekbuddy/";
+            forcedGc = true;
         } else if (cz.kruch.track.TrackingMIDlet.uiq) {
             dataDir = "file:///Ms/Other/TrekBuddy/";
         } else { // Nokia, SonyEricsson, ...

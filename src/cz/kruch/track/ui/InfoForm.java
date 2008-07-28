@@ -93,7 +93,7 @@ final class InfoForm extends Form implements CommandListener {
         }
         sb.delete(0, sb.length()).append(System.getProperty("microedition.locale")).append(' ').append(System.getProperty("microedition.encoding"));
         append(newItem("I18n", sb.toString()));
-        sb.delete(0, sb.length()).append(File.fsType).append("; resetable? ").append(cz.kruch.track.maps.Map.fileInputStreamResetable).append("; private: ").append(System.getProperty("fileconn.dir.private"));
+        sb.delete(0, sb.length()).append(File.fsType).append("; resetable? ").append(cz.kruch.track.maps.Map.fileInputStreamResetable);
         append(newItem("Fs", sb.toString()));
         sb.delete(0, sb.length()).append(cz.kruch.track.ui.nokia.DeviceControl.getName());
         append(newItem("DeviceCtrl", sb.toString()));

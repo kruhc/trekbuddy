@@ -27,7 +27,6 @@ import javax.microedition.lcdui.Canvas;
 import javax.microedition.lcdui.Graphics;
 import javax.microedition.lcdui.Font;
 import java.util.Vector;
-import java.util.Enumeration;
 
 /**
  * Map screen.
@@ -58,6 +57,7 @@ final class MapView extends View {
      * @deprecated hack
      */
     public void ensureSlices() {
+        final Desktop navigator = this.navigator;
         if (!navigator._getInitializingMap() && mapViewer.hasMap()) {
             synchronized (navigator/*loadingSlicesLock*/) { // same lock as used in _get/_setLoadingSlices!!!
                 if (!navigator._getLoadingSlices()) {
@@ -169,18 +169,20 @@ final class MapView extends View {
     /*private */void browsingOn(boolean reason) { // TODO fix visibility
         mapViewer.setCourse(Float.NaN);
         if (reason) {
-            if (location != null && location.getFix() > 0) {
-                mapViewer.appendToTrail(location.getQualifiedCoordinates());
+            synchronized (this) {
+                if (location != null && location.getFix() > 0) {
+                    mapViewer.appendToTrail(location.getQualifiedCoordinates());
+                }
             }
         }
     }
 
     private void disposeRoute() {
-        if (this.route != null) {
-            final Position[] route = this.route;
+        final Position[] route = this.route;
+        if (route != null) {
             for (int i = route.length; --i >= 0;) {
                 Position.releaseInstance(route[i]);
-                route[i] = null;
+                route[i] = null; // gc hint
             }
             this.route = null; // gc hint
         }
@@ -196,20 +198,21 @@ final class MapView extends View {
         // create
         for (int N = wpts.size(), c = 0, i = 0; i < N; i++) {
 
-            // get coordinates local to map
+            // get position on map
             final Waypoint wpt = (Waypoint) wpts.elementAt(i);
-            final QualifiedCoordinates localQc = map.getDatum().toLocal(wpt.getQualifiedCoordinates());
-            final Position position = map.transform(localQc);
+            final QualifiedCoordinates qc = wpt.getQualifiedCoordinates();
+            final Position position = map.transform(qc);
 
             // add to route
             route[c++] = position.clone();
-
-            // release
-            QualifiedCoordinates.releaseInstance(localQc);
         }
     }
 
     public int handleAction(final int action, final boolean repeated) {
+        // local refs
+        final Desktop navigator = this.navigator;
+        final MapViewer mapViewer = this.mapViewer;
+
         int mask = Desktop.MASK_NONE;
 
         // only if map viewer is usable
@@ -312,6 +315,10 @@ final class MapView extends View {
     }
 
     public int handleKey(final int keycode, final boolean repeated) {
+        // local refs
+        final Desktop navigator = this.navigator;
+        final MapViewer mapViewer = this.mapViewer;
+        
         int mask = Desktop.MASK_NONE;
 
         switch (keycode) {
@@ -371,12 +378,9 @@ final class MapView extends View {
             mapViewer.setMap(map);
 
             // update basic OSD
-            QualifiedCoordinates localQc = map.transform(mapViewer.getPosition());
-            QualifiedCoordinates qc = map.getDatum().toWgs84(localQc);
-            setBasicOSD(qc, localQc,  true);
+            final QualifiedCoordinates qc = map.transform(mapViewer.getPosition());
+            setBasicOSD(qc, true);
             QualifiedCoordinates.releaseInstance(qc);
-            QualifiedCoordinates.releaseInstance(localQc);
-            
         }
 
         // propagate further
@@ -390,11 +394,11 @@ final class MapView extends View {
 
     public int locationUpdated(Location l) {
         // make a copy of last known WGS-84 position
-/* hazard - location may be referenced elsewhere // TODO fix
-        Location.releaseInstance(location);
-*/
-        location = null; // gc hint
-        location = l.clone();
+        synchronized (this) {
+            Location.releaseInstance(location);
+            location = null; // gc hint
+            location = l.clone();
+        }
 
         // pass event
         mapViewer.locationUpdated(l);
@@ -407,6 +411,8 @@ final class MapView extends View {
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("updated trick");
 //#endif
+        // local refs
+        final Desktop navigator = this.navigator;
 
         // result update mask
         int mask = Desktop.MASK_NONE;
@@ -418,94 +424,91 @@ final class MapView extends View {
             if (log.isEnabled()) log.debug("tracking...");
 //#endif
 
-            // local rel
-            final Location l = this.location;
-            
-            // minimum UI update
-            mask = Desktop.MASK_OSD;
+            synchronized (this) {
+                // local rel
+                final Location l = this.location;
 
-            // move on map if we get fix
-            if (l.getFix() > 0) {
+                // minimum UI update
+                mask = Desktop.MASK_OSD;
 
-//#ifdef __LOG__
-                if (log.isEnabled()) log.debug("have fix");
-//#endif
-
-                // more UI updates
-                mask |= Desktop.MASK_CROSSHAIR;
-
-                // get wgs84 and local coordinates
-                final Map map = navigator.getMap();
-                QualifiedCoordinates qc = l.getQualifiedCoordinates();
-                QualifiedCoordinates localQc = map.getDatum().toLocal(qc);
-
-                // on map detection
-                final boolean onMap = map.isWithin(localQc);
-
-                // OSD basic
-                setBasicOSD(qc, localQc, onMap);
-                Desktop.osd.setSat(l.getSat());
-
-                // release local coordinates
-                QualifiedCoordinates.releaseInstance(localQc);
-                localQc = null; // gc hint
-
-                // arrows
-                final float course = l.getCourse();
-                if (!Float.isNaN(course)) {
-                    mapViewer.setCourse(course);
-                }
-                if (Desktop.wpts != null) {
-                    mapViewer.setNavigationCourse(navigator.wptAzimuth);
-                }
-
-                // OSD extended and course arrow - navigating?
-                if (Desktop.navigating && Desktop.wpts != null) {
-
-                    // get navigation info
-                    final StringBuffer extInfo = Desktop.osd._getSb();
-                    getNavigationInfo(extInfo);
-
-                    // set navigation info
-                    Desktop.osd.setNavigationInfo(extInfo);
-
-                } else { // no, tracking info
-
-                    // in extended info
-                    Desktop.osd.setExtendedInfo(NavigationScreens.toStringBuffer(l, Desktop.osd._getSb()));
-                }
-
-                // are we on map?
-                if (onMap) {
-
-                    // sync position
-                    if (syncPosition()) {
-                        mask |= Desktop.MASK_MAP;
-                    }
-
-                } else { // off current map
-
-                    // load sibling map, if exists
-                    if (isAtlas() && !navigator._getInitializingMap() && !navigator._getLoadingSlices()) {
-
-                        // switch alternate map
-                        navigator.startAlternateMap(navigator.getAtlas().getLayer(), qc, null);
-                    }
-                }
-
-            } else {
+                // move on map if we get fix
+                if (l.getFix() > 0) {
 
 //#ifdef __LOG__
-                if (log.isEnabled()) log.debug("no fix");
+                    if (log.isEnabled()) log.debug("have fix");
 //#endif
 
-                // if not navigating, display extended tracking info (ie. time :-) )
-                if (!Desktop.navigating || Desktop.wpts == null) {
-                    Desktop.osd.setSat(0);
-                    Desktop.osd.setExtendedInfo(NavigationScreens.toStringBuffer(l, Desktop.osd._getSb()));
-                }
+                    // more UI updates
+                    mask |= Desktop.MASK_CROSSHAIR;
 
-            }
+                    // get wgs84 and local coordinates
+                    final Map map = navigator.getMap();
+                    QualifiedCoordinates qc = l.getQualifiedCoordinates();
+
+                    // on map detection
+                    final boolean onMap = map.isWithin(qc);
+
+                    // OSD basic
+                    setBasicOSD(qc, onMap);
+                    Desktop.osd.setSat(l.getSat());
+
+                    // arrows
+                    final float course = l.getCourse();
+                    if (!Float.isNaN(course)) {
+                        mapViewer.setCourse(course);
+                    }
+                    if (Desktop.wpts != null) {
+                        mapViewer.setNavigationCourse(navigator.wptAzimuth);
+                    }
+
+                    // OSD extended and course arrow - navigating?
+                    if (Desktop.navigating && Desktop.wpts != null) {
+
+                        // get navigation info
+                        final StringBuffer extInfo = Desktop.osd._getSb();
+                        getNavigationInfo(extInfo);
+
+                        // set navigation info
+                        Desktop.osd.setNavigationInfo(extInfo);
+
+                    } else { // no, tracking info
+
+                        // in extended info
+                        Desktop.osd.setExtendedInfo(NavigationScreens.toStringBuffer(l, Desktop.osd._getSb()));
+                    }
+
+                    // are we on map?
+                    if (onMap) {
+
+                        // sync position
+                        if (syncPosition()) {
+                            mask |= Desktop.MASK_MAP;
+                        }
+
+                    } else { // off current map
+
+                        // load sibling map, if exists
+                        if (isAtlas() && !navigator._getInitializingMap() && !navigator._getLoadingSlices()) {
+
+                            // switch alternate map
+                            navigator.startAlternateMap(navigator.getAtlas().getLayer(), qc, null);
+                        }
+                    }
+
+                } else {
+
+//#ifdef __LOG__
+                    if (log.isEnabled()) log.debug("no fix");
+//#endif
+
+                    // if not navigating, display extended tracking info (ie. time :-) )
+                    if (!Desktop.navigating || Desktop.wpts == null) {
+                        Desktop.osd.setSat(0);
+                        Desktop.osd.setExtendedInfo(NavigationScreens.toStringBuffer(l, Desktop.osd._getSb()));
+                    }
+
+                }
+            } // ~synchronized
         }
 
         return isVisible ? mask : Desktop.MASK_NONE;
@@ -516,13 +519,15 @@ final class MapView extends View {
     }
 
     public QualifiedCoordinates getPointer() {
-        return navigator.getMap().getDatum().toWgs84(navigator.getMap().transform(mapViewer.getPosition()));
+        return navigator.getMap().transform(mapViewer.getPosition());
     }
 
     public void render(final Graphics g, final Font f, final int mask) {
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("render");
 //#endif
+        // local refs
+        final MapViewer mapViewer = this.mapViewer;
 
         // common screen params
         g.setFont(f);
@@ -579,6 +584,7 @@ final class MapView extends View {
                     if (t.getMessage() != null) {
                         g.drawString(t.getMessage(), 0, 2 * Desktop.font.getHeight(), Graphics.TOP | Graphics.LEFT);
                     }
+                    Desktop.showError("Init map", t, null);
                 } else {
                     g.drawString(result[1].toString(), 0, Desktop.font.getHeight(), Graphics.TOP | Graphics.LEFT);
                 }
@@ -615,12 +621,10 @@ final class MapView extends View {
     }
 
     private void getNavigationInfo(final StringBuffer extInfo) {
-        final float distance = navigator.wptDistance;
-        final int azimuth = navigator.wptAzimuth;
-
+        final Desktop navigator = this.navigator;
         extInfo.append(NavigationScreens.DELTA_D).append('=');
-        NavigationScreens.printDistance(extInfo, distance);
-        NavigationScreens.append(extInfo, azimuth).append(NavigationScreens.SIGN);
+        NavigationScreens.printDistance(extInfo, navigator.wptDistance);
+        NavigationScreens.append(extInfo, navigator.wptAzimuth).append(NavigationScreens.SIGN);
         if (!Float.isNaN(navigator.wptHeightDiff)) {
             extInfo.append(' ').append(NavigationScreens.DELTA_d).append('=');
             NavigationScreens.append(extInfo, (int) navigator.wptHeightDiff);
@@ -628,31 +632,22 @@ final class MapView extends View {
     }
 
     // TODO fix visibility
-    static void setBasicOSD(QualifiedCoordinates qc, QualifiedCoordinates localQc, boolean onMap) {
-        if (Config.useGeocachingFormat || Config.useUTM) {
-            Desktop.osd.setInfo(qc, onMap);
-        } else {
-            Desktop.osd.setInfo(localQc, onMap);
-        }
+    static void setBasicOSD(QualifiedCoordinates qc, boolean onMap) {
+        Desktop.osd.setInfo(qc, onMap);
     }
 
     /*private */void syncOSD() { // TODO fix visibility
         // vars
-        final Map map = navigator.getMap();
-        QualifiedCoordinates localQc = map.transform(mapViewer.getPosition());
-        QualifiedCoordinates from = map.getDatum().toWgs84(localQc);
+        QualifiedCoordinates qc = navigator.getMap().transform(mapViewer.getPosition());
 
         // OSD basic
-        setBasicOSD(from, localQc, true);
+        setBasicOSD(qc, true);
 
         // update navigation info
-        navigator.updateNavigation(from);
+        navigator.updateNavigation(qc);
 
         // release to pool
-        QualifiedCoordinates.releaseInstance(from);
-        QualifiedCoordinates.releaseInstance(localQc);
-        from = null; // gc hint
-        localQc = null; // gc hint
+        QualifiedCoordinates.releaseInstance(qc);
 
         // update extended OSD (and navigation, if any)
         if (!updateNavigationInfo()) {
@@ -663,13 +658,14 @@ final class MapView extends View {
     private boolean syncPosition() {
         boolean moved = false;
 
-        if (location != null) {
-            final Map map = navigator.getMap();
-            QualifiedCoordinates localQc = map.getDatum().toLocal(location.getQualifiedCoordinates());
-            if (map.isWithin(localQc)) {
-                moved = mapViewer.setPosition(map.transform(localQc));
+        synchronized (this) {
+            if (location != null && location.getFix() > 0) {
+                final QualifiedCoordinates qc = location.getQualifiedCoordinates();
+                final Map map = navigator.getMap();
+                if (map.isWithin(qc)) {
+                    moved = mapViewer.setPosition(map.transform(qc));
+                }
             }
-            QualifiedCoordinates.releaseInstance(localQc);
         }
 
         return moved;

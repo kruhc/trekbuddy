@@ -155,12 +155,13 @@ public final class Mercator {
         final double lonOrigin = (zoneNumber - 1) * 6 - 180 + 3; // +3 puts origin in middle of zone
         final double falseNorthing = lat < 0D ? 10000000D : 0D;
 
-        if (cachedUtmSetup != null) {
-            if (cachedUtmSetup.lonOrigin == lonOrigin
-                && cachedUtmSetup.falseNorthing == falseNorthing
-                && cachedUtmSetup.zoneNumber == zoneNumber
-                && cachedUtmSetup.zoneLetter == zoneLetter) {
-                return cachedUtmSetup;
+        final Mercator.ProjectionSetup cached = cachedUtmSetup;
+        if (cached != null) {
+            if (cached.lonOrigin == lonOrigin
+                && cached.falseNorthing == falseNorthing
+                && cached.zoneNumber == zoneNumber
+                && cached.zoneLetter == zoneLetter) {
+                return cached;
             } else {
                 cachedUtmSetup = null;
             }
@@ -192,37 +193,6 @@ public final class Mercator {
                                    1D,
                                    0D, 0D);
     }
-
-/*
-    public static Datum getGoogleDatum(Vector ll, int width) {
-        double lmin = Double.MAX_VALUE;
-        double lmax = Double.MIN_VALUE;
-
-        for (Enumeration e = ll.elements(); e.hasMoreElements(); ) {
-            double lon = ((QualifiedCoordinates) e.nextElement()).getLon();
-            if (lon < lmin) {
-                lmin = lon;
-            }
-            if (lmax < lon) {
-                lmax = lon;
-            }
-        }
-
-        // calculate zoom level
-        final double z0dpp = 0.0000107288360595703125;
-        final double ln2 = 0.69314718056;
-        double zNdpp = Math.abs(lmax - lmin) / width;
-        double N = zNdpp / z0dpp;
-        double Z = ExtraMath.ln(N) / ln2;
-        int iZ = (int) Z;
-        if (Z - iZ > 0.5) {
-            iZ++;
-        }
-
-        return new Datum("(G)", new Datum.Ellipsoid(Integer.toString(iZ), ExtraMath.pow(2, 17 - iZ) * 256 / (2 * Math.PI), 0D),
-                         0D, 0D, 0D);
-    }
-*/
 
     /*
      * Conversions.
@@ -491,6 +461,101 @@ public final class Mercator {
         }
 
         return coords;
+    }
+
+    public static QualifiedCoordinates UTMtoLL(final CartesianCoordinates utm) {
+        return MercatortoLL(utm, Datum.WGS_84.ellipsoid, cachedUtmSetup);
+    }
+
+    public static QualifiedCoordinates GridtoLL(final CartesianCoordinates utm) {
+        CartesianCoordinates clone = CartesianCoordinates.newInstance(utm.zone,
+                                                                      utm.easting,
+                                                                      utm.northing);
+
+        /*
+         * handle specific grids
+         */
+
+        switch (ProjectionSetup.contextProjection.code) {
+
+            case api.location.ProjectionSetup.PROJECTION_SUI: {
+
+                final double temp = clone.northing;
+                clone.northing = clone.easting;
+                clone.easting = temp;
+
+            } break;
+
+            case api.location.ProjectionSetup.PROJECTION_BNG: {
+
+                int ek = 0, nk = 0;
+                switch (clone.zone[0]) {
+                    case 'H':
+                        nk = 2;
+                        break;
+                    case 'N':
+                        nk = 1;
+                        break;
+                    case 'O':
+                        ek = nk = 1;
+                        break;
+                    case 'S':
+                        break;
+                    case 'T':
+                        ek = 1;
+                        break;
+                    default:
+                        throw new IllegalArgumentException("Invalid zone");
+                }
+
+                clone.easting += ek * 500000;
+                clone.northing += nk * 500000;
+
+                int i = clone.zone[1] - 'A';
+                if (i > ('H' - 'A')) { // skipped 'I'
+                    i--;
+                }
+                int row = 4 - i / 5;
+                int col = i % 5;
+
+                clone.easting += col * 100000;
+                clone.northing += row * 100000;
+
+            } break;
+
+            case api.location.ProjectionSetup.PROJECTION_IG: {
+
+                int nk, ek;
+                int i = utm.zone[0];
+                if (i >= 'A' && i <= 'D') {
+                    nk = 4;
+                    ek = i - 'A';
+                } else if (i >= 'F' && i <= 'J') {
+                    nk = 3;
+                    ek = i - 'F';
+                } else if (i >= 'L' && i <= 'O') {
+                    nk = 2;
+                    ek = i - 'L';
+                } else if (i >= 'Q' && i <= 'T') {
+                    nk = 1;
+                    ek = i - 'Q';
+                } else if (i >= 'V' && i <= 'Y') {
+                    nk = 0;
+                    ek = i - 'V';
+                } else {
+                    throw new IllegalArgumentException("Invalid zone");
+                }
+
+                clone.easting += ek * 100000;
+                clone.northing += nk * 100000;
+
+            } break;
+        }
+
+        final QualifiedCoordinates qc = MercatortoLL(clone, Datum.contextDatum.ellipsoid, (Mercator.ProjectionSetup) ProjectionSetup.contextProjection);
+        CartesianCoordinates.releaseInstance(clone);
+
+        return qc;
     }
 
     public static QualifiedCoordinates MercatortoLL(final CartesianCoordinates utm,

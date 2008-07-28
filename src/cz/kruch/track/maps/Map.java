@@ -57,7 +57,6 @@ public final class Map implements Runnable {
     private static final int EVENT_SLICES_LOADED    = 2;
     private static final int EVENT_LOADING_CHANGED  = 3;
 */
-
     // interaction with outside world
     private String path;
     private String name;
@@ -107,31 +106,78 @@ public final class Map implements Runnable {
     }
 
     public double getStep(final char direction) {
-        final QualifiedCoordinates[] range = calibration.getRange();
+        // local ref
+        final Calibration calibration = this.calibration;
+        final int w = calibration.getWidth();
+        final int h = calibration.getHeight();
+
+        // get top-left and right-bottom map coordinates
+        final QualifiedCoordinates qc0 = calibration.transform(0, 0);
+        final QualifiedCoordinates qc3 = calibration.transform(w, h);
+
+        double step = 0D;
+
         switch (direction) {
             case 'N':
-                return (range[0].getLat() - range[3].getLat()) / (calibration.getHeight());
+                step = (qc0.getLat() - qc3.getLat()) / h;
+                break;
             case 'S':
-                return (range[3].getLat() - range[0].getLat()) / (calibration.getHeight());
+                step = (qc3.getLat() - qc0.getLat()) / h;
+                break;
             case 'E':
-                return (range[3].getLon() - range[0].getLon()) / (calibration.getWidth());
+                step = (qc3.getLon() - qc0.getLon()) / w;
+                break;
             case 'W':
-                return (range[0].getLon() - range[3].getLon()) / (calibration.getWidth());
+                step = (qc0.getLon() - qc3.getLon()) / w;
+                break;
         }
 
-        return 0;
+        QualifiedCoordinates.releaseInstance(qc0);
+        QualifiedCoordinates.releaseInstance(qc3);
+
+        return step;
     }
 
     public QualifiedCoordinates transform(final Position p) {
-        return calibration.transform(p);
+        return calibration.transform(p.getX(), p.getY());
+    }
+
+    public QualifiedCoordinates transform(final int px, final int py) {
+        return calibration.transform(px, py);
     }
 
     public Position transform(final QualifiedCoordinates qc) {
         return calibration.transform(qc);
     }
 
-    public QualifiedCoordinates[] getRange() {
-        return calibration.getRange();
+    public double getRange(final int i) {
+        double range = 0D;
+
+        switch (i) {
+            case 0:
+            case 1: {
+                final QualifiedCoordinates qc0 = calibration.transform(0, 0);
+                if (i == 0) {
+                    range = qc0.getLat();
+                } else {
+                    range = qc0.getLon();
+                }
+                QualifiedCoordinates.releaseInstance(qc0);
+            } break;
+            case 2:
+            case 3: {
+                final QualifiedCoordinates qc3 = calibration.transform(calibration.getWidth(),
+                                                                       calibration.getHeight());
+                if (i == 2) {
+                    range = qc3.getLat();
+                } else {
+                    range = qc3.getLon();
+                }
+                QualifiedCoordinates.releaseInstance(qc3);
+            } break;
+        }
+
+        return range;
     }
 
     public boolean isWithin(final QualifiedCoordinates coordinates) {
@@ -483,6 +529,9 @@ public final class Map implements Runnable {
         }
 
         final Slice addSlice(final CharArrayTokenizer.Token token) throws InvalidMapException {
+            // local ref for faster access
+            final Map map = this.map;
+
             // already got some slices?
             if (map.slices != null) {
 

@@ -19,10 +19,8 @@ package cz.kruch.track.location;
 import api.location.LocationException;
 import api.location.LocationProvider;
 import api.location.Location;
-import api.file.File;
 import cz.kruch.track.configuration.Config;
 import cz.kruch.track.ui.Desktop;
-import cz.kruch.track.Resources;
 
 import javax.microedition.io.Connector;
 import javax.microedition.io.StreamConnection;
@@ -49,7 +47,6 @@ public class SerialLocationProvider
     private volatile StreamConnection connection;
 
     private TimerTask watcher;
-    private OutputStream nmealog;
 
     private volatile long last;
 
@@ -162,64 +159,6 @@ public class SerialLocationProvider
         }
     }
 
-    private void startNmeaLog() {
-        // use NMEA tracklog?
-        if (isTracklog() && Config.TRACKLOG_FORMAT_NMEA.equals(Config.tracklogFormat)) {
-
-            // not yet started
-            if (nmealog == null) {
-
-                // output file
-                File file = null;
-
-                try {
-                    // create file
-                    file = File.open(Config.getFolderNmea() + GpxTracklog.dateToFileDate(System.currentTimeMillis()) + ".nmea", Connector.READ_WRITE);
-                    if (!file.exists()) {
-                        file.create();
-                    }
-
-                    // create output
-                    nmealog = file.openOutputStream();
-
-                    // signal recording has started
-                    notifyListener(true);
-
-                } catch (Throwable t) {
-
-                    // show error
-                    Desktop.showError(Resources.getString(Resources.DESKTOP_MSG_START_TRACKLOG_FAILED), t, null);
-
-                } finally {
-
-                    // close file
-                    if (file != null) {
-                        try {
-                            file.close();
-                        } catch (IOException e) {
-                            // ignore
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    private void stopNmeaLog() {
-        // signal recording is stopping
-        notifyListener(false);
-
-        // close nmea log
-        if (nmealog != null) {
-            try {
-                nmealog.close();
-            } catch (Exception e) {
-                // ignore
-            }
-            nmealog = null;
-        }
-    }
-
     private void gps() throws IOException {
         final boolean isHge100 = cz.kruch.track.TrackingMIDlet.sonyEricsson && url.indexOf("AT5") > -1;
         final boolean rw = isHge100 || Config.btKeepAlive != 0;
@@ -228,6 +167,11 @@ public class SerialLocationProvider
             // open connection
             connection = (StreamConnection) Connector.open(url, rw ? Connector.READ_WRITE : Connector.READ, true);
 
+            // still good to go
+            if (!isGo()) {
+                throw new IOException("interrupted");
+            }
+
             // HGE-100 hack
             if (isHge100) {
                 OutputStream os = connection.openOutputStream();
@@ -235,11 +179,16 @@ public class SerialLocationProvider
                 os.close();
             }
 
-            // open stream for reading
-            stream = connection.openInputStream();
-
             // start keep-alive
             startKeepAlive(connection);
+
+            // still good to go
+            if (!isGo()) {
+                throw new IOException("interrupted");
+            }
+
+            // open stream for reading
+            stream = connection.openInputStream();
 
             // clear error
             setStatus(null);
@@ -247,9 +196,6 @@ public class SerialLocationProvider
 
             // reset data
             reset();
-
-            // start NMEA log
-            startNmeaLog();
 
             // start watcher
             startWatcher();
@@ -262,7 +208,7 @@ public class SerialLocationProvider
                 try {
 
                     // get next location
-                    location = nextLocation(stream, nmealog);
+                    location = nextLocation(stream, observer);
 
                 } catch (IOException e) {
 //#ifdef __LOG__
@@ -322,11 +268,6 @@ public class SerialLocationProvider
             // stop watcher
             stopWatcher();
 
-            // stop NMEA log on Stop request only!
-            if (!isGo()) {
-                stopNmeaLog();
-            }
-
             // stop keep-alive
             stopKeepAlive();
 
@@ -353,6 +294,9 @@ public class SerialLocationProvider
                     connection = null;
                 }
             }
+
+            // can GC help?!?
+            System.gc();
         }
     }
 

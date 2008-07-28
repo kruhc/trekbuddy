@@ -128,7 +128,7 @@ public abstract class File {
     }
 
     public void close() throws IOException {
-        if (fc!= null) {
+        if (fc != null) {
             fc.close();
             fc = null;
         }

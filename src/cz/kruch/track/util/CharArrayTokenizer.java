@@ -127,25 +127,25 @@ public final class CharArrayTokenizer {
             // token beginning
             int begin = position;
 
-            if (isDelim(array[position])) { // TODO should be 'while'
+            if (isDelim(array[begin])) { // TODO should be 'while'
                 // step fwd
-                position++;
+                begin++;
                 // delims wanted?
                 if (returnDelim) {
+                    // save position
+                    position = begin;
                     // set delimiter flag
                     token.isDelimiter = true;
                     // return
                     return token;
                 }
-                // move data start
-                begin++;
                 // check boundary
-                if (position == end) {
+                if (begin == end) {
                     throw new NoSuchElementException();
                 }
             }
 
-            int offset = position;
+            int offset = begin;
             while (offset < end) {
                 final char ch = array[offset];
 
@@ -159,12 +159,12 @@ public final class CharArrayTokenizer {
                 }
                 /* ~ */
 
-                if (!isDelim) { // hot code first
+                /* hot code first */
+                if (!isDelim) {
                     offset++;
                     continue;
                 }
 
-                /*if (offset == position) return next();*/
                 break;
             }
 
@@ -386,24 +386,25 @@ public final class CharArrayTokenizer {
         }
 
         public boolean startsWith(final String s) {
-            final int sl = s.length();
+            int sl = s.length();
             if (sl > length) {
                 return false;
             }
 
             final char[] array = this.array;
-            final int begin = this.begin;
+            int affset = this.begin;
             int offset = 0;
+            boolean cond = true;
 
-            while (offset < sl) {
-                final char b = array[begin + offset];
-                if (b != s.charAt(offset)) {
-                    return false;
+            while (--sl >= 0) {
+                if (array[affset] != s.charAt(offset)) {
+                    cond = false; break;
                 }
+                affset++;
                 offset++;
             }
 
-            return true;
+            return cond;
         }
 
         public boolean endsWith(final String s) {
@@ -479,6 +480,10 @@ public final class CharArrayTokenizer {
             }
 
             return -1;
+        }
+
+        public StringBuffer append(StringBuffer sb) {
+            return sb.append(array, begin, length);
         }
 
         public String toString() {

@@ -27,11 +27,15 @@ import java.io.InputStreamReader;
  *
  * @author Ales Pour <kruhc@seznam.cz>
  */
-public final class LineReader extends InputStreamReader {
+public final class LineReader {
+//#ifdef __LOG__
+    private static final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("LineReader");
+//#endif
+
     public static final String EMPTY_LINE = "";
 
-    private static final int BUFF_SIZE  = 512;
-    private static final int MAX_LINE   = 128;
+    private static final int DEFAULT_BUFF_SIZE  = 1024;
+    private static final int MAX_LINE           = 256;
 
     private char[] buffer;
     private int count;
@@ -39,17 +43,37 @@ public final class LineReader extends InputStreamReader {
 
     private CharArrayTokenizer.Token token;
 
-    public LineReader(InputStream in) {
-        super(in);
-        this.buffer = new char[BUFF_SIZE];
-/*
+    private static InfiniteInputStream iin;
+    private static InputStreamReader iir;
+
+    private static void ensureReader(InputStream in) {
+//#ifdef __LOG__
+        if (log.isEnabled()) log.debug("get reader for " + in);
+//#endif
+
+        if (iin == null) {
+            iin = new InfiniteInputStream(in);
+        } else {
+            iin.use(in);
+        }
+        if (iir == null) {
+            iir = new InputStreamReader(iin);
+        }
     }
 
-    public LineReader(InputStream in, final boolean tokenized) {
-        this(in);
-*/
+    public LineReader(InputStream in) {
+        this(in, DEFAULT_BUFF_SIZE);
+    }
+
+    public LineReader(InputStream in, int buffSize) {
+        ensureReader(in);
+        this.buffer = new char[buffSize];
         this.token = new CharArrayTokenizer.Token();
         this.token.array = buffer;
+    }
+
+    public void close() throws IOException {
+        iin.close();
     }
 
     public String readLine(final boolean ignoreLF) throws IOException {
@@ -73,35 +97,37 @@ public final class LineReader extends InputStreamReader {
             return null;
         }
 
+        final char[] buffer = this.buffer;
+        final int BUFF_SIZE = buffer.length;
+        final CharArrayTokenizer.Token token = this.token;
+
         if (position > BUFF_SIZE - MAX_LINE) { // reaching end of buffer
             System.arraycopy(buffer, position, buffer, 0, count - position);
             count -= position;
             position = 0;
         }
 
-        final char[] _buffer = buffer;
-        int offset = position;
+        int count = this.count;
+        int offset = this.position;
         int chars = 0;
 
         while (offset < BUFF_SIZE) {
             final int c;
-            if (offset == count) {
-                final int _count = read(_buffer, offset, BUFF_SIZE - offset);
-                if (_count == -1) {
-                    count = c = -1;
-                } else {
-                    count += _count;
-                    c = _buffer[offset++];
-                }
+            if (offset < count) {
+                c = buffer[offset++];
             } else {
-                c = _buffer[offset++];
-            }
-
-            if (c == -1) {
-                if (chars == 0) {
-                    return null;
+                final int _count = iir.read(buffer, offset, BUFF_SIZE - offset);
+                if (_count == -1) {
+                    this.count = -1;
+                    if (chars == 0) {
+                        return null;
+                    } else {
+                        break;
+                    }
                 } else {
-                    break;
+                    this.count += _count;
+                    count += _count;
+                    c = buffer[offset++];
                 }
             }
 
@@ -114,14 +140,18 @@ public final class LineReader extends InputStreamReader {
             }
         }
 
-        if (offset >= BUFF_SIZE) {
-            throw new IllegalStateException("Line length > " + MAX_LINE);
+        if (offset < BUFF_SIZE) {
+
+            // prepare token
+            token.begin = position;
+            token.length = chars;
+
+            // store input buffer position
+            this.position = offset;
+
+            return token;
         }
 
-        token.begin = position;
-        token.length = chars;
-        position = offset;
-
-        return token;
+        throw new IllegalStateException("Line length > " + MAX_LINE);
     }
 }

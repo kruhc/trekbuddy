@@ -160,15 +160,24 @@ final class LocatorView extends View {
         final int[] count = this.count;
         int position = this.position[term];
 
+        // rotate
         if (++position == HISTORY_DEPTH) {
             position = 0;
         }
+
+        // release previous
         if (array[position] != null) {
             Location.releaseInstance(array[position]);
             array[position] = null; // gc hint
         }
+
+        // save location
         array[position] = l;
+
+        // update term position
         this.position[term] = position;
+
+        // update term counter
         count[term]++;
         if (count[term] > HISTORY_DEPTH) {
             count[term] = HISTORY_DEPTH;
@@ -276,23 +285,21 @@ final class LocatorView extends View {
         float course;
 
         /* block */ {
-            final Location current = navigator.getLocation();
+            final Location current = this.locations[0][this.position[0]];
             if (current == null) {
                 course = Float.NaN;
             } else {
                 course = current.getCourse();
             }
-            final boolean uptodate;
+            final boolean fresh;
             if (Float.isNaN(course)) {
                 course = lastCourse;
-                uptodate = false;
+                fresh = false;
             } else {
-                uptodate = true;
-            }
-            if (!Float.isNaN(course)) {
-                drawCompas(wHalf, hHalf, fh, graphics, course, uptodate);
                 lastCourse = course;
+                fresh = true;
             }
+            drawCompas(wHalf, hHalf, fh, graphics, course, fresh);
         } /* ~ */
 
         // compas boundary
@@ -377,7 +384,7 @@ final class LocatorView extends View {
 
             // draw lat/lon
             sb.delete(0, sb.length());
-            NavigationScreens.toStringBuffer(coordsAvg, sb);
+            NavigationScreens.printTo(coordsAvg, sb);
             int l = sb.length();
             sb.getChars(0, l, sbChars, 0);
             graphics.drawChars(sbChars, 0, l, OSD.BORDER, 0, Graphics.LEFT | Graphics.TOP);

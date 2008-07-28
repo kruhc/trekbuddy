@@ -466,6 +466,7 @@ final class MapViewer {
     }
 
     char boundsHit() {
+        final int crosshairSize2 = this.crosshairSize2;
         char result = ' ';
         if (chx + crosshairSize2 == 0) {
             result = 'W';
@@ -600,9 +601,7 @@ final class MapViewer {
 
                 // calculate missing XYs
                 do {
-                    QualifiedCoordinates localQc = map.getDatum().toLocal(arrayLL[xylast]);
-                    arrayXY[xylast] = map.transform(localQc).clone();
-                    QualifiedCoordinates.releaseInstance(localQc);
+                    arrayXY[xylast] = map.transform(arrayLL[xylast]).clone();
                     if (++xylast == MAX_TRAJECTORY_LENGTH) {
                         xylast = 0;
                     }
@@ -650,6 +649,9 @@ final class MapViewer {
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("render");
 //#endif
+        // local refs
+        final int crosshairSize = this.crosshairSize;
+        final int crosshairSize2 = this.crosshairSize2;
 
         /* synchronized to avoid race condition with ensureSlices() */
         synchronized (this) {
@@ -1187,13 +1189,9 @@ final class MapViewer {
 */
             // use 10% of map width at current Y (lat) for calculation
             final int cy = getPosition().getY();
-            Position p0 = Position.newInstance(0, cy);
-            Position p1 = Position.newInstance(map.getWidth() / 10, cy);
-            QualifiedCoordinates qc0 = map.transform(p0);
-            QualifiedCoordinates qc1 = map.transform(p1);
+            QualifiedCoordinates qc0 = map.transform(0, cy);
+            QualifiedCoordinates qc1 = map.transform(map.getWidth() / 10, cy);
             double scale = qc0.distance(qc1) / (map.getWidth() / 10);
-            Position.releaseInstance(p0);
-            Position.releaseInstance(p1);
             QualifiedCoordinates.releaseInstance(qc0);
             QualifiedCoordinates.releaseInstance(qc1);
 
@@ -1243,9 +1241,7 @@ final class MapViewer {
                 if (++tlast == llcount) {
                     tlast = 0;
                 }
-                final QualifiedCoordinates localQc = map.getDatum().toLocal(arrayLL[tlast]);
-                final Position p = map.transform(localQc);
-                QualifiedCoordinates.releaseInstance(localQc);
+                final Position p = map.transform(arrayLL[tlast]);
                 if (arrayXY[tlast] != null) {
                     arrayXY[tlast].setXy(p.getX(), p.getY());
                 } else {

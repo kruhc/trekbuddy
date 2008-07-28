@@ -26,10 +26,6 @@ final class SiemensDeviceControl extends DeviceControl {
     SiemensDeviceControl() {
     }
 
-    boolean isSchedulable() {
-        return false;
-    }
-
     void turnOn() {
         com.siemens.mp.game.Light.setLightOn();
     }

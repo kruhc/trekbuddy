@@ -25,13 +25,9 @@ import cz.kruch.track.Resources;
  */
 class NokiaDeviceControl extends DeviceControl {
 
-    private static final int[] VALUES = { 0, 10, 25, 50, 100 };
+    protected static final int[] VALUES = { 0, 10, 25, 50, 100 };
 
     NokiaDeviceControl() {
-    }
-
-    boolean isSchedulable() {
-        return false;
     }
 
     /** @overriden */
@@ -40,19 +36,15 @@ class NokiaDeviceControl extends DeviceControl {
         if (backlight == VALUES.length) {
             backlight = 0;
         }
+        setLights();
+    }
+
+    protected void setLights() {
         com.nokia.mid.ui.DeviceControl.setLights(0, VALUES[backlight]);
     }
 
     /** @overriden */
     void sync() {
         confirm(backlight == 0 ? Resources.getString(Resources.DESKTOP_MSG_BACKLIGHT_OFF) : Resources.getString(Resources.DESKTOP_MSG_BACKLIGHT_ON) + " (" + VALUES[backlight] + "%)");
-    }
-
-    void turnOn() {
-        throw new IllegalStateException();
-    }
-
-    void turnOff() {
-        throw new IllegalStateException();
     }
 }

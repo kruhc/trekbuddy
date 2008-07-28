@@ -26,10 +26,6 @@ final class Midp2DeviceControl extends DeviceControl {
     Midp2DeviceControl() {
     }
 
-    void close() {
-        cancel();
-    }
-
     boolean isSchedulable() {
         return true;
     }

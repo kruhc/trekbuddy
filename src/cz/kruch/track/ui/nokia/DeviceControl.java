@@ -29,7 +29,7 @@ import java.util.TimerTask;
 public class DeviceControl extends TimerTask {
     
     private static DeviceControl instance;
-    private static TimerTask task;
+    protected static TimerTask task;
 
     protected int backlight;
     private String name;
@@ -142,6 +142,13 @@ public class DeviceControl extends TimerTask {
     }
 
     void close() {
+        // restore original setting?
+        // ...
+        // cancel running task?
+        if (task != null) {
+            task.cancel();
+            task = null;
+        }
     }
 
     boolean forceOff() {
@@ -156,8 +163,9 @@ public class DeviceControl extends TimerTask {
             }
         } else {
             backlight = 0;
-            if (isSchedulable()) {
+            if (/*isSchedulable()*/task != null) {
                 task.cancel();
+                task = null;
             }
         }
         if (backlight == 0) {
@@ -174,7 +182,7 @@ public class DeviceControl extends TimerTask {
     }
 
     boolean isSchedulable() {
-        throw new IllegalStateException("override");
+        return false;
     }
     
     void turnOn() {

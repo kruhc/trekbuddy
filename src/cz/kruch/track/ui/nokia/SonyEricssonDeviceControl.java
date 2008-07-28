@@ -26,10 +26,6 @@ final class SonyEricssonDeviceControl extends DeviceControl {
     SonyEricssonDeviceControl() {
     }
 
-    void close() {
-        cancel();
-    }
-
     boolean isSchedulable() {
         return true;
     }

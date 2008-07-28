@@ -13,10 +13,6 @@ final class MotorolaDeviceControl extends DeviceControl {
     MotorolaDeviceControl() {
     }
 
-    boolean isSchedulable() {
-        return false;
-    }
-
     void turnOn() {
         com.motorola.multimedia.Lighting.backlightOn();
     }

@@ -13,10 +13,6 @@ final class BlackberryDeviceControl extends DeviceControl {
     BlackberryDeviceControl() {
     }
 
-    void close() {
-        cancel();
-    }
-
     boolean isSchedulable() {
         return true;
     }

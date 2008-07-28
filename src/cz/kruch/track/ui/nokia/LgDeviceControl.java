@@ -4,7 +4,7 @@
 package cz.kruch.track.ui.nokia;
 
 /**
- * Device control implementation for Siemens phones.
+ * Device control implementation for LG phones.
  *
  * @author Ales Pour <kruhc@seznam.cz>
  */

@@ -16,21 +16,27 @@
 
 package cz.kruch.track.ui.nokia;
 
+import cz.kruch.track.device.SymbianService;
+
 /**
- * Device control implementation for SonyEricsson phones.
+ * Device control implementation for S60 phones.
  *
  * @author Ales Pour <kruhc@seznam.cz>
  */
 final class S60DeviceControl extends NokiaDeviceControl {
 
+    private SymbianService.Inactivity inactivity;
+
     S60DeviceControl() {
+        this.inactivity = SymbianService.openInactivity();
     }
 
-    boolean isSchedulable() {
-        return true;
+    protected void setLights() {
+        inactivity.setLights(VALUES[backlight]);
     }
 
     void close() {
-        cancel();
+        inactivity.close();
+        super.close();
     }
 }

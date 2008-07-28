@@ -188,7 +188,6 @@ public final class Atlas implements Runnable {
 
             // run loader
             final Class factory;
-            final Loader loader;
             if (url.endsWith(".tba") || url.endsWith(".TBA")) {
                 factory = Class.forName("cz.kruch.track.maps.DirLoader");
             } else if (url.endsWith(".tar") || url.endsWith(".TAR")
@@ -197,7 +196,7 @@ public final class Atlas implements Runnable {
             } else {
                 throw new InvalidMapException("Unsupported format");
             }
-            loader = (Loader) factory.newInstance();
+            final Loader loader = (Loader) factory.newInstance();
             loader.loadIndex(this, url, baseUrl);
 
 //#ifdef __LOG__

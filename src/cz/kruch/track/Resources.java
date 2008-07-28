@@ -207,6 +207,13 @@ public final class Resources {
     public static final short NAV_FLD_MESSAGE                   = 2209;
     public static final short NAV_TITLE_CAMERA                  = 2210;
     public static final short NAV_FLD_ALT                       = 2211;
+    public static final short NAV_FLD_ZONE                      = 2212;
+    public static final short NAV_FLD_LAT                       = 2213;
+    public static final short NAV_FLD_LON                       = 2214;
+    public static final short NAV_FLD_UTM_EASTING               = 2215;
+    public static final short NAV_FLD_UTM_NORTHING              = 2216;
+    public static final short NAV_FLD_EASTING                   = 2217;
+    public static final short NAV_FLD_NORTHING                  = 2218;
     /* settings - commands */
     public static final short CFG_CMD_APPLY                     = 3000;
     public static final short CFG_CMD_SAVE                      = 3001;
@@ -407,18 +414,8 @@ public final class Resources {
     }
 
     public static String getString(final short id) {
-/*
-        String result = null;
-        for (int i = keys.length; --i >= 0; ) {
-            if (id == keys[i]) {
-                result = values[i]; break;
-            }
-        }
-        if (result == null) {
-            result = Integer.toString(id);
-        }
-        return result;
-*/
+        final int[] ids = Resources.ids;
+        final String[] values = Resources.values;
         String result = null;
         for (int i = ids.length; --i >= 0; ) {
             if (id == ((ids[i] >> 16) & 0x0000ffff)) {

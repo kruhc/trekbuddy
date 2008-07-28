@@ -52,7 +52,7 @@ final class FriendForm extends Form implements CommandListener {
         append(this.fieldNumber = new TextField(Resources.getString(Resources.NAV_FLD_RECIPIENT), null, 16, TextField.PHONENUMBER));
         append(this.fieldMessage = new TextField(Resources.getString(Resources.NAV_FLD_MESSAGE), null, 64, TextField.ANY));
         StringBuffer sb = new StringBuffer(32);
-        NavigationScreens.toStringBuffer(coordinates, sb);
+        NavigationScreens.printTo(coordinates, sb);
         append(new StringItem(Resources.getString(Resources.NAV_FLD_LOC), sb.toString()));
         sb = null; // gc hint
         addCommand(new Command(MENU_SEND, Command.OK, 1));

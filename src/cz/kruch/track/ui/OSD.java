@@ -79,6 +79,7 @@ final class OSD extends Bar {
         final boolean isExtInfo = Config.osdExtended;
         final int gx = this.gx;
         final int gy = this.gy;
+        final boolean ok = this.ok;
 
         // draw info + extended info bg
         if (!Config.osdNoBackground) {
@@ -177,7 +178,7 @@ final class OSD extends Bar {
     public void setInfo(QualifiedCoordinates qc, boolean ok) {
         StringBuffer sb = this.sb;
         sb.delete(0, sb.length());
-        NavigationScreens.toStringBuffer(qc, sb);
+        NavigationScreens.printTo(qc, sb);
         cInfoLength = sb.length();
         if (cInfoLength > cInfo.length) {
             throw new IllegalStateException("Info length = " + cInfoLength);

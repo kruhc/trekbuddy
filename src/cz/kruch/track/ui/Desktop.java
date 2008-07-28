@@ -29,6 +29,7 @@ import cz.kruch.track.configuration.ConfigurationException;
 import cz.kruch.track.location.GpxTracklog;
 import cz.kruch.track.location.Waypoint;
 import cz.kruch.track.util.CharArrayTokenizer;
+import cz.kruch.j2se.io.BufferedOutputStream;
 
 import javax.microedition.lcdui.Canvas;
 import javax.microedition.lcdui.Display;
@@ -42,7 +43,9 @@ import javax.microedition.lcdui.Font;
 import javax.microedition.lcdui.Image;
 import javax.microedition.lcdui.game.GameCanvas;
 import javax.microedition.midlet.MIDlet;
+import javax.microedition.io.Connector;
 import java.io.IOException;
+import java.io.OutputStream;
 import java.util.Date;
 import java.util.Enumeration;
 import java.util.Timer;
@@ -161,7 +164,9 @@ public final class Desktop extends GameCanvas
 
     // logs
     private boolean tracklog;
-    private GpxTracklog gpx;
+    private long trackstart;
+    private GpxTracklog tracklogGpx;
+    private OutputStream trackLogNmea;
 
     // navigation // TODO move to Waypoints
     /*public*/ static volatile Vector wpts;
@@ -629,11 +634,36 @@ public final class Desktop extends GameCanvas
         if (log.isEnabled()) log.info("pointerPressed");
 //#endif
 
-        int key = 0;
-        boolean repeated = false;
+        final int key = pointerToKey(x, y);
 
+        if (key != 0) {
+            keyPressed(key);
+            switch (getGameAction(key)) {
+                case Canvas.UP:
+                case Canvas.LEFT:
+                case Canvas.RIGHT:
+                case Canvas.DOWN: {
+                    if (repeatedKeyCheck == null) {
+                        timer.schedule(repeatedKeyCheck = new KeyCheckTimerTask(this), 750L);
+                    }
+                } break;
+            }
+        }
+    }
+
+    protected void pointerReleased(int x, int y) {
+//#ifdef __LOG__
+        if (log.isEnabled()) log.info("pointerPressed");
+//#endif
+
+        keyReleased(pointerToKey(x, y));
+    }
+
+    private int pointerToKey(final int x, final int y) {
         final int j = x / (width / 3);
         final int i = y / (height / 10);
+
+        int key = 0;
 
         switch (i) {
             case 0:
@@ -644,8 +674,7 @@ public final class Desktop extends GameCanvas
                         key = Canvas.KEY_NUM1;
                     break;
                     case 1:
-                        _setInKey(key = getKeyCode(Canvas.UP));
-                        repeated = true;
+                        key = getKeyCode(Canvas.UP);
                     break;
                     case 2:
                         key = Canvas.KEY_NUM3;
@@ -657,15 +686,13 @@ public final class Desktop extends GameCanvas
             case 5: {
                 switch (j) {
                     case 0:
-                        _setInKey(key = getKeyCode(Canvas.LEFT));
-                        repeated = true;
+                        key = getKeyCode(Canvas.LEFT);
                     break;
                     case 1:
                         key = getKeyCode(Canvas.FIRE);
                     break;
                     case 2:
-                        _setInKey(key = getKeyCode(Canvas.RIGHT));
-                        repeated = true;
+                        key = getKeyCode(Canvas.RIGHT);
                     break;
                 }
             } break;
@@ -677,8 +704,7 @@ public final class Desktop extends GameCanvas
                         key = Canvas.KEY_NUM7;
                     break;
                     case 1:
-                        _setInKey(key = getKeyCode(Canvas.DOWN));
-                        repeated = true;
+                        key = getKeyCode(Canvas.DOWN);
                     break;
                     case 2:
                         key = Canvas.KEY_NUM9;
@@ -700,29 +726,7 @@ public final class Desktop extends GameCanvas
             } break;
         }
 
-        boolean schedule = false;
-        if (repeated) {
-            schedule = true;
-            repeated = false;
-        }
-
-        if (key != 0) {
-            handleKey(key, false);
-        }
-
-        if (schedule) {
-            if (repeatedKeyCheck == null) {
-                timer.schedule(repeatedKeyCheck = new KeyCheckTimerTask(this), 750L);
-            }
-        }
-    }
-
-    protected void pointerReleased(int x, int y) {
-//#ifdef __LOG__
-        if (log.isEnabled()) log.info("pointerPressed");
-//#endif
-
-        keyReleased(0); // TODO unknown key?
+        return key;
     }
 
     protected void keyPressed(int i) {
@@ -908,8 +912,8 @@ public final class Desktop extends GameCanvas
                 Waypoints.shutdown();
 
                 // stop tracklog and tracking
-                stopGpxTracklog();
                 stopTracking();
+                stopTracklog();
 
                 // stop timer
                 timer.cancel();
@@ -973,7 +977,7 @@ public final class Desktop extends GameCanvas
     
     public void locationUpdated(LocationProvider provider, Location location) {
 //#ifdef __LOG__
-        if (log.isEnabled()) log.debug("location update: " + new Date(location.getTimestamp()) + ";" + location.getQualifiedCoordinates());
+        if (log.isEnabled()) log.debug("location update: " + new Date(location.getTimestamp()) + ";" + location.getQualifiedCoordinates() + "; course = " + location.getCourse());
 //#endif
         eventing.callSerially(newEvent(Event.EVENT_TRACKING_POSITION_UPDATED,
                               location, null, provider));
@@ -1179,17 +1183,16 @@ public final class Desktop extends GameCanvas
      * @deprecated redesign
      */
     public void saveLocation(Location l) {
-        if (gpx != null) {
-            gpx.insert(l);
+        if (tracklogGpx != null) {
+            tracklogGpx.insert(l);
         }
     }
 
     public long getTracklogTime() {
-        if (gpx == null) {
+        if (trackstart == 0) {
             return System.currentTimeMillis();
         }
-
-        return gpx.getTime();
+        return trackstart;
     }
 
     public String getTracklogCreator() {
@@ -1197,15 +1200,16 @@ public final class Desktop extends GameCanvas
     }
 
     public void goTo(Waypoint wpt) {
-        QualifiedCoordinates local = map.getDatum().toLocal(wpt.getQualifiedCoordinates());
-        if (map.isWithin(local)) {
+        final QualifiedCoordinates qc = wpt.getQualifiedCoordinates();
+
+        if (map.isWithin(qc)) {
 
             // set browsing mode
             browsing = true;
             ((MapView) views[VIEW_MAP]).browsingOn(false);
 
             // scroll to position and sync OSD
-            ((MapView) views[VIEW_MAP]).setPosition(map.transform(local));
+            ((MapView) views[VIEW_MAP]).setPosition(map.transform(qc));
             ((MapView) views[VIEW_MAP]).syncOSD();
 
             // update screen
@@ -1214,7 +1218,7 @@ public final class Desktop extends GameCanvas
         } else if (atlas != null) {
 
             // try to find alternate map
-            if (startAlternateMap(atlas.getLayer(), wpt.getQualifiedCoordinates(),
+            if (startAlternateMap(atlas.getLayer(), qc,
                                   Resources.getString(Resources.DESKTOP_MSG_WPT_OFF_LAYER))) {
                 // also set browsing mode
                 browsing = true;
@@ -1226,7 +1230,6 @@ public final class Desktop extends GameCanvas
             Desktop.showWarning(Resources.getString(Resources.DESKTOP_MSG_WPT_OFF_MAP), null, Desktop.this);
 
         }
-        QualifiedCoordinates.releaseInstance(local);
     }
 
     /*
@@ -1467,6 +1470,8 @@ public final class Desktop extends GameCanvas
      */
 
     private void handleKey(final int i, final boolean repeated) {
+        final View[] views = this.views;
+
         if (views == null || paused) {
             return;
         }
@@ -1504,11 +1509,6 @@ public final class Desktop extends GameCanvas
 
                 // dumb phones check for repetition
                 if (!repeated && !hasRepeatEvents) {
-//#ifdef __LOG__
-                    if (log.isEnabled()) log.debug("does not have repeat events");
-//#endif
-
-                    // schedule delayed check to emulate key repeated event
                     if (repeatedKeyCheck == null) {
                         timer.schedule(repeatedKeyCheck = new KeyCheckTimerTask(this), 1500L);
                     }
@@ -1726,9 +1726,6 @@ public final class Desktop extends GameCanvas
             return false;
         }
 
-        // set tracklog flag
-        provider.setTracklog(tracklog);
-
         // register as listener
         provider.setLocationListener(this);
 
@@ -1747,6 +1744,9 @@ public final class Desktop extends GameCanvas
 
             return false;
         }
+
+        // remember track start
+        trackstart = System.currentTimeMillis();
 
         // not browsing
         browsing = false;
@@ -1783,14 +1783,14 @@ public final class Desktop extends GameCanvas
         // update OSD
         osd.setProviderStatus(LocationProvider._STARTING);
 
-        // set tracklog flag
-        provider.setTracklog(tracklog);
-
         // register as listener
         provider.setLocationListener(this);
 
         // (re)start BT provider
         (new Thread((Runnable) provider)).start();
+
+        // remember track start
+        trackstart = System.currentTimeMillis();
 
         // not browsing
         browsing = false;
@@ -1834,8 +1834,8 @@ public final class Desktop extends GameCanvas
         if (log.isEnabled()) log.debug("after tracking " + provider);
 //#endif
 
-        // stop GPX logging
-        stopGpxTracklog();
+        // stop tracklog
+        stopTracklog();
 
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("restore UI");
@@ -1873,6 +1873,9 @@ public final class Desktop extends GameCanvas
         if (log.isEnabled()) log.debug("stop tracking " + provider);
 //#endif
 
+        // no time
+        trackstart = 0;
+
         // assertion - should never happen
         if (provider == null) {
 //            throw new IllegalStateException("Tracking already stopped");
@@ -1907,54 +1910,128 @@ public final class Desktop extends GameCanvas
         return true;
     }
 
-    private void startGpxTracklog() {
-        // tracklog enabled & is GPX?
-        if (provider.isTracklog() && Config.TRACKLOG_FORMAT_GPX.equals(Config.tracklogFormat)) {
+    private void startTracklog() {
+//#ifdef __LOG__
+        if (log.isEnabled()) log.debug("start tracklog?");
+//#endif
+
+        // tracklog enabled
+        if (tracklog) {
+//#ifdef __LOG__
+            if (log.isEnabled()) log.debug("yes do start it");
+//#endif
+            // GPX tracklog?
+            final boolean isGpx = Config.TRACKLOG_FORMAT_GPX.equals(Config.tracklogFormat);
 
             // restart?
             if (providerRestart) {
+//#ifdef __LOG__
+                if (log.isEnabled()) log.debug("already running");
+//#endif
+                // break segment for GPX
+                if (isGpx) {
 
-                // assertion
-                if (gpx == null) {
-                    throw new IllegalStateException("GPX tracklog not started");
+                    // assertion
+                    if (tracklogGpx == null) {
+                        throw new IllegalStateException("GPX tracklog not started");
+                    }
+                    // break trkseg
+                    tracklogGpx.insert(Boolean.TRUE);
                 }
 
-                // break trkseg
-                gpx.insert(Boolean.TRUE);
-
-            } else {
-
-                // assertion
-                if (gpx != null) {
-                    throw new IllegalStateException("GPX tracklog already started");
-                }
+            } else { // fresh new start
 
                 // clear error
                 tracklogError = null;
 
-                // start new tracklog
-                gpx = new GpxTracklog(GpxTracklog.LOG_TRK,
-                                      new Event(Event.EVENT_TRACKLOG),
-                                      getTracklogCreator(),
-                                      System.currentTimeMillis());
-                gpx.setFilePrefix(null);
-                gpx.start();
+                // GPX
+                if (isGpx) {
+
+                    // assertion
+                    if (tracklogGpx != null) {
+                        throw new IllegalStateException("GPX tracklog already started");
+                    }
+
+                    // start new tracklog
+                    tracklogGpx = new GpxTracklog(GpxTracklog.LOG_TRK,
+                                          new Event(Event.EVENT_TRACKLOG),
+                                          getTracklogCreator(),
+                                          trackstart);
+                    tracklogGpx.setFilePrefix(null);
+                    tracklogGpx.start();
+//#ifdef __LOG__
+                    if (log.isEnabled()) log.debug("starting tracklog " + tracklogGpx.getFileName());
+//#endif
+
+                } else {
+
+                    // output file
+                    File file = null;
+
+                    try {
+                        // create file
+                        file = File.open(Config.getFolderNmea() + GpxTracklog.dateToFileDate(trackstart) + ".nmea", Connector.READ_WRITE);
+                        if (!file.exists()) {
+                            file.create();
+                        }
+
+                        // create output
+                        trackLogNmea = new BufferedOutputStream(file.openOutputStream(), 1024);
+
+                        // inject provider
+                        provider.setObserver(trackLogNmea);
+
+                        // notify itself ;-)
+                        (new Event(Event.EVENT_TRACKLOG)).invoke(new Integer(GpxTracklog.CODE_RECORDING_START), null, this);
+
+                    } catch (IOException e) {
+
+                        // notify itself ;-)
+                        (new Event(Event.EVENT_TRACKLOG)).invoke(null, e, this);
+
+                    } finally {
+
+                        // close file
+                        if (file != null) {
+                            try {
+                                file.close();
+                            } catch (IOException e) {
+                                // ignore
+                            }
+                        }
+                    }
+                }
             }
         }
     }
 
-    private void stopGpxTracklog() {
-        if (gpx != null) {
+    private void stopTracklog() {
+//#ifdef __LOG__
+        if (log.isEnabled()) log.debug("stop tracklog");
+//#endif
+        if (tracklogGpx != null) {
+//#ifdef __LOG__
+            if (log.isEnabled()) log.debug("stopping GPX tracklog");
+//#endif
             try {
-                if (gpx.isAlive()) {
-                    gpx.shutdown();
+                if (tracklogGpx.isAlive()) {
+                    tracklogGpx.shutdown();
                 }
-                gpx.join();
+                tracklogGpx.join();
             } catch (InterruptedException e) {
                 // ignore - should not happen
-            } finally {
-                gpx = null; // GC hint
             }
+            tracklogGpx = null; // GC hint
+        } else if (trackLogNmea != null) {
+//#ifdef __LOG__
+            if (log.isEnabled()) log.debug("stopping NMEA tracklog");
+//#endif
+            try {
+                trackLogNmea.close();
+            } catch (Exception e) {
+                // ignore
+            }
+            trackLogNmea = null;
         }
     }
 
@@ -2173,11 +2250,11 @@ public final class Desktop extends GameCanvas
         }
     }
 
-    boolean startAlternateMap(final String layerName, final QualifiedCoordinates localQc,
+    boolean startAlternateMap(final String layerName, final QualifiedCoordinates qc,
                               final String notFoundMsg) {
         // find map for given coords
-        final String mapUrl = atlas.getMapURL(layerName, localQc);
-        final String mapName = atlas.getMapName(layerName, localQc);
+        final String mapUrl = atlas.getMapURL(layerName, qc);
+        final String mapName = atlas.getMapName(layerName, qc);
 
         // got map for given coordinates?
         if (mapUrl != null) {
@@ -2188,7 +2265,7 @@ public final class Desktop extends GameCanvas
             _switch = true;
 
             // focus on these coords once the new map is loaded
-            _qc = map.getDatum().toWgs84(localQc);
+            _qc = qc;
 
             // change atlas layer
             atlas.setLayer(layerName);
@@ -2714,28 +2791,22 @@ public final class Desktop extends GameCanvas
                             // handle fake qc when browsing across map boundary
                             if (_qc.getLat() == 90D) {
                                 _qc = null; // gc hint
-                                _qc = QualifiedCoordinates.newInstance(map.getRange()[3].getLat(), _qc.getLon());
+                                _qc = QualifiedCoordinates.newInstance(map.getRange(2), _qc.getLon());
                             } else if (_qc.getLat() == -90D) {
                                 _qc = null; // gc hint
-                                _qc = QualifiedCoordinates.newInstance(map.getRange()[0].getLat(), _qc.getLon());
+                                _qc = QualifiedCoordinates.newInstance(map.getRange(0), _qc.getLon());
                             } else if (_qc.getLon() == 180D) {
                                 _qc = null; // gc hint
-                                _qc = QualifiedCoordinates.newInstance(_qc.getLat(), map.getRange()[0].getLon());
+                                _qc = QualifiedCoordinates.newInstance(_qc.getLat(), map.getRange(1));
                             } else if (_qc.getLon() == -180D) {
                                 _qc = null; // gc hint
-                                _qc = QualifiedCoordinates.newInstance(_qc.getLat(), map.getRange()[3].getLon());
+                                _qc = QualifiedCoordinates.newInstance(_qc.getLat(), map.getRange(3));
                             }
 
-                            // wgs84 to local
-                            QualifiedCoordinates localQc = map.getDatum().toLocal(_qc);
-
-                            // transform local qc to position, and move to it
-                            if (map.isWithin(localQc)) {
-                                ((MapView) views[VIEW_MAP]).setPosition(map.transform(localQc));
+                            // move to position
+                            if (map.isWithin(_qc)) {
+                                ((MapView) views[VIEW_MAP]).setPosition(map.transform(_qc));
                             }
-
-                            // release
-                            QualifiedCoordinates.releaseInstance(localQc);
 
                         } finally {
                             _qc = null;
@@ -2746,14 +2817,11 @@ public final class Desktop extends GameCanvas
                     _setInitializingMap(false);
 
                     // update OSD & navigation UI // TODO ugly code begins ---
-                    QualifiedCoordinates localQc = map.transform(((MapView) views[VIEW_MAP]).getPosition());
-                    QualifiedCoordinates qc = map.getDatum().toWgs84(localQc);
-                    MapView.setBasicOSD(qc, localQc, true);
+                    QualifiedCoordinates qc = map.transform(((MapView) views[VIEW_MAP]).getPosition());
+                    MapView.setBasicOSD(qc, true);
                     updateNavigation(qc);
                     QualifiedCoordinates.releaseInstance(qc);
-                    QualifiedCoordinates.releaseInstance(localQc);
                     qc = null; // gc hint
-                    localQc = null; // gc hint
                     ((MapView) views[VIEW_MAP]).updateNavigationInfo(); // TODO ugly
                     // TODO -- ugly code ends
 
@@ -2855,8 +2923,8 @@ public final class Desktop extends GameCanvas
 
                 case LocationProvider._STARTING: {
 
-                    // start gpx tracklog
-                    startGpxTracklog();
+                    // start tracklog
+                    startTracklog();
 
                     // reset views on fresh start
                     if (!providerRestart) {
@@ -2960,8 +3028,8 @@ public final class Desktop extends GameCanvas
             }
 
             // update tracklog
-            if (gpx != null) {
-                gpx.locationUpdated(l);
+            if (tracklogGpx != null) {
+                tracklogGpx.locationUpdated(l);
             }
 
             // if valid position do updates

@@ -63,11 +63,11 @@ public final class Location {
 
     public static synchronized void releaseInstance(final Location location) {
         if (location != null) {
+            QualifiedCoordinates.releaseInstance(location.coordinates);
+            location.coordinates = null;
             if (countFree < pool.length) {
                 pool[countFree++] = location;
             }
-            QualifiedCoordinates.releaseInstance(location.coordinates);
-            location.coordinates = null;
         }
     }
 

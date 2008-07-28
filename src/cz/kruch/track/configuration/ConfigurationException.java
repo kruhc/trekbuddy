@@ -22,6 +22,7 @@ package cz.kruch.track.configuration;
  * @author Ales Pour <kruhc@seznam.cz>
  */
 public class ConfigurationException extends Exception {
+
     public ConfigurationException(String string) {
         super(string);
     }

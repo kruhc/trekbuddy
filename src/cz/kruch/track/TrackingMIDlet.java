@@ -173,8 +173,8 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         // anything else to do?
     }
 
-    protected void destroyApp(boolean b) throws MIDletStateChangeException {
-        if (b) {
+    protected void destroyApp(boolean unconditional) throws MIDletStateChangeException {
+        if (unconditional) {
             // same as answering "Yes" in "Do you want to quit?"
             desktop.response(cz.kruch.track.ui.YesNoDialog.YES, desktop);
         } else {
@@ -261,14 +261,17 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         cz.kruch.track.ui.Waypoints.initialize(desktop);
         cz.kruch.track.util.Mercator.initialize();
 
+        // cleanup after initialization?
+        System.gc();
+
         // setup environment
-        if (hasFlag("fs_skip_bug") || siemens || symbian) {
+        if (hasFlag("fs_skip_bug") || siemens /*|| symbian*/) {
 //#ifdef __LOG__
             System.out.println("* fs skip-bug feature on");
 //#endif
             cz.kruch.track.maps.Map.useSkip = false;
         }
-        if (hasFlag("fs_no_reset") || sxg75 || symbian) {
+        if (hasFlag("fs_no_reset") || sxg75 /*|| symbian*/) {
 //#ifdef __LOG__
             System.out.println("* fs no-reset feature on");
 //#endif

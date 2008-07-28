@@ -24,6 +24,9 @@ import java.io.IOException;
  * @author Ales Pour <kruhc@seznam.cz>
  */
 public class InvalidMapException extends IOException {
+
+    private String name;
+
     public InvalidMapException(String string) {
         super(string);
     }
@@ -34,5 +37,13 @@ public class InvalidMapException extends IOException {
 
     public InvalidMapException(String message, Throwable throwable) {
         super(message + ": " + throwable.toString());
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String toString() {
+        return "InvalidMapException [" + name + "]: " + getMessage();
     }
 }

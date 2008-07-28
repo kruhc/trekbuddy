@@ -16,6 +16,8 @@
 
 package api.location;
 
+import java.io.OutputStream;
+
 /**
  * Location provider abstraction.
  * 
@@ -35,8 +37,8 @@ public abstract class LocationProvider {
     private LocationListener listener;
     private Throwable throwable;
     private Object status;
-    private boolean tracklog;
 
+    protected volatile OutputStream observer;
     protected volatile Thread thread;
     protected volatile boolean go;
     protected volatile int lastState;
@@ -58,14 +60,6 @@ public abstract class LocationProvider {
         this.throwable = throwable;
     }
 
-    public boolean isTracklog() {
-        return tracklog;
-    }
-
-    public void setTracklog(boolean tracklog) {
-        this.tracklog = tracklog;
-    }
-
     public Object getStatus() {
         return status;
     }
@@ -76,6 +70,10 @@ public abstract class LocationProvider {
 
     public boolean isRestartable() {
         return false;
+    }
+
+    public void setObserver(OutputStream observer) {
+        this.observer = observer;
     }
 
     public abstract int start() throws LocationException;
@@ -112,7 +110,7 @@ public abstract class LocationProvider {
         thread = Thread.currentThread();
 
         // signal state change
-        notifyListener(lastState = _STARTING); // trick to start GPX tracklog
+        notifyListener(lastState = _STARTING); // trick to start tracklog
 
         // try to catch up with UI
         Thread.yield();

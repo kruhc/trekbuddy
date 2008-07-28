@@ -14,7 +14,7 @@ import java.io.IOException;
  * Buffered output stream.
  */
 public final class BufferedOutputStream extends OutputStream {
-    /** underyling stream */
+    /** underlying stream */
     private OutputStream out;
     /** write buffer */
     private byte[] buffer;

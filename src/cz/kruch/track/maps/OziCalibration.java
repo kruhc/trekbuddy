@@ -65,94 +65,47 @@ final class OziCalibration extends Calibration {
         String projectionType = null;
 
         // read content
-        LineReader reader = new LineReader(in/*, true*/);
+        LineReader reader = new LineReader(in, 4096);
         CharArrayTokenizer tokenizer = new CharArrayTokenizer();
         CharArrayTokenizer.Token line = reader.readToken(false);
         while (line != null) {
             lines++;
-            if (!almostDone && line.startsWith(LINE_POINT)) {
-                if (parsePoints) {
-                    tokenizer.init(line, true);
-                    parsePoints = parsePoint(tokenizer, xy, ll);
-                }
-            } else if (!almostDone && line.startsWith(LINE_MAP_PROJECTION)) {
-                tokenizer.init(line, false);
-                projectionType = parseProjectionType(tokenizer);
+            if (!almostDone) {
+                if (line.startsWith(LINE_POINT)) {
+                    if (parsePoints) {
+                        tokenizer.init(line, true);
+                        parsePoints = parsePoint(tokenizer, xy, ll);
+                    }
+                } else if (line.startsWith(LINE_MAP_PROJECTION)) {
+                    tokenizer.init(line, false);
+                    projectionType = parseProjectionType(tokenizer);
+                    projectionSetup = prepareProjectionSetup(projectionType);
+                } else if (line.startsWith(LINE_PROJECTION_SETUP)) {
 
-                /*
-                 * projection setup for known grids
-                 */
-                if (ProjectionSetup.PROJ_LATLON.equals(projectionType)) {
-                    projectionSetup = new ProjectionSetup(ProjectionSetup.PROJ_LATLON);
-                } else if (ProjectionSetup.PROJ_BNG.equals(projectionType)) {
-                    projectionSetup = new Mercator.ProjectionSetup(projectionType,
-                                                                   new char[]{'B', 'N', 'G'},
-                                                                   -2D, 49D,
-                                                                   0.9996012717D,
-                                                                   400000, -100000);
-                } else if (ProjectionSetup.PROJ_SG.equals(projectionType)) {
-                    projectionSetup = new Mercator.ProjectionSetup(projectionType,
-                                                                   new char[]{'S', 'G'},
-                                                                   15.808277777778D, 0D,
-                                                                   1D,
-                                                                   1500000, 0);
-                } else if (ProjectionSetup.PROJ_IG.equals(projectionType)) {
-                    projectionSetup = new Mercator.ProjectionSetup(projectionType,
-                                                                   new char[]{'I', 'G'},
-                                                                   -8D, 53.5D,
-                                                                   1.000035D,
-                                                                   200000, 250000);
-                } else if (ProjectionSetup.PROJ_SUI.equals(projectionType)) {
-                    projectionSetup = new Mercator.ProjectionSetup(projectionType,
-                                                                   new char[]{'S', 'U', 'I'},
-                                                                   7.4395833333334D, 46.9524055555556D,
-                                                                   1.0D,
-                                                                   200000, 600000);
-                } else if (ProjectionSetup.PROJ_FRANCE_I.equals(projectionType)) {
-                    projectionSetup = new Mercator.ProjectionSetup(projectionType,
-                                                                   new char[]{'F', '-', 'I'},
-                                                                   2.3372083333D, 49.5D,
-                                                                   48.5985227778D, 50.3959116667D,
-                                                                   600000, 1200000);
-                } else if (ProjectionSetup.PROJ_FRANCE_II.equals(projectionType)) {
-                    projectionSetup = new Mercator.ProjectionSetup(projectionType,
-                                                                   new char[]{'F', '-', 'I', 'I'},
-                                                                   2.3372083333D, 46.8D,
-                                                                   45.8989188889D, 47.6960144444D,
-                                                                   600000, 2200000);
-                } else if (ProjectionSetup.PROJ_FRANCE_III.equals(projectionType)) {
-                    projectionSetup = new Mercator.ProjectionSetup(projectionType,
-                                                                   new char[]{'F', '-', 'I', 'I', 'I'},
-                                                                   2.3372083333D, 44.1D,
-                                                                   43.1992913889D, 44.9960938889D,
-                                                                   600000, 3200000);
-                } else if (ProjectionSetup.PROJ_FRANCE_IV.equals(projectionType)) {
-                    projectionSetup = new Mercator.ProjectionSetup(projectionType,
-                                                                   new char[]{'F', '-', 'I', 'V'},
-                                                                   2.3372083333D, 42.165D,
-                                                                   41.5603877778D, 42.0000593542D,
-                                                                   234.358, 4185861.369);
-                }
-//#ifdef __LOG__
-                if (log.isEnabled()) log.debug("projection type: " + projectionType);
-//#endif
-            } else if (!almostDone && line.startsWith(LINE_PROJECTION_SETUP)) {
+                    // parsing phase optimization
+                    almostDone = true;
 
-                // phase optimization
-                almostDone = true;
+                    /*
+                    * non-crippled Ozi calibration - use MMPXY/LL instead
+                    */
+                    xy.removeAllElements();
+                    ll.removeAllElements();
 
-                /*
-                * not-crippled Ozi calibration - use MMPXY/LL instead
-                */
-                xy.removeAllElements();
-                ll.removeAllElements();
-
-                if (ProjectionSetup.PROJ_TRANSVERSE_MERCATOR.equals(projectionType) || ProjectionSetup.PROJ_LCC.equals(projectionType)) {
-                    tokenizer.init(line, true);
-                    projectionSetup = parseProjectionSetup(projectionType, tokenizer);
-//#ifdef __LOG__
-                    if (log.isEnabled()) log.debug("projection setup parsed");
-//#endif
+                    if (ProjectionSetup.PROJ_TRANSVERSE_MERCATOR.equals(projectionType) || ProjectionSetup.PROJ_LCC.equals(projectionType)) {
+                        tokenizer.init(line, true);
+                        projectionSetup = parseProjectionSetup(projectionType, tokenizer);
+    //#ifdef __LOG__
+                        if (log.isEnabled()) log.debug("projection setup parsed");
+    //#endif
+                    }
+                } else if (line.startsWith(LINE_IWH)) { // for crippled .map files :-(
+                    tokenizer.init(line, false);
+                    parseIwh(tokenizer);
+                } else {
+                    if (lines == 5) {
+                        tokenizer.init(line, false);
+                        datum = (Datum) Config.datumMappings.get("map:" + parseDatum(tokenizer));
+                    }
                 }
             } else if (line.startsWith(LINE_MMPXY)) {
                 tokenizer.init(line, false);
@@ -163,11 +116,6 @@ final class OziCalibration extends Calibration {
             } else if (line.startsWith(LINE_IWH)) {
                 tokenizer.init(line, false);
                 parseIwh(tokenizer);
-            } else {
-                if (lines == 5) {
-                    tokenizer.init(line, false);
-                    datum = (Datum) Config.datumMappings.get("map:" + parseDatum(tokenizer));
-                }
             }
             line = null; // gc hint
             line = reader.readToken(false);
@@ -282,6 +230,71 @@ final class OziCalibration extends Calibration {
         }
     }
 
+    private static ProjectionSetup prepareProjectionSetup(final String projectionType) {
+        /*
+         * projection setup for known grids
+         */
+
+        ProjectionSetup projectionSetup = null;
+
+        if (ProjectionSetup.PROJ_LATLON.equals(projectionType)) {
+            projectionSetup = new ProjectionSetup(ProjectionSetup.PROJ_LATLON);
+        } else if (ProjectionSetup.PROJ_BNG.equals(projectionType)) {
+            projectionSetup = new Mercator.ProjectionSetup(projectionType,
+                                                           new char[]{'B', 'N', 'G'},
+                                                           -2D, 49D,
+                                                           0.9996012717D,
+                                                           400000, -100000);
+        } else if (ProjectionSetup.PROJ_SG.equals(projectionType)) {
+            projectionSetup = new Mercator.ProjectionSetup(projectionType,
+                                                           new char[]{'S', 'G'},
+                                                           15.808277777778D, 0D,
+                                                           1D,
+                                                           1500000, 0);
+        } else if (ProjectionSetup.PROJ_IG.equals(projectionType)) {
+            projectionSetup = new Mercator.ProjectionSetup(projectionType,
+                                                           new char[]{'I', 'G'},
+                                                           -8D, 53.5D,
+                                                           1.000035D,
+                                                           200000, 250000);
+        } else if (ProjectionSetup.PROJ_SUI.equals(projectionType)) {
+            projectionSetup = new Mercator.ProjectionSetup(projectionType,
+                                                           new char[]{'S', 'U', 'I'},
+                                                           7.4395833333334D, 46.9524055555556D,
+                                                           1.0D,
+                                                           200000, 600000);
+        } else if (ProjectionSetup.PROJ_FRANCE_I.equals(projectionType)) {
+            projectionSetup = new Mercator.ProjectionSetup(projectionType,
+                                                           new char[]{'F', '-', 'I'},
+                                                           2.3372083333D, 49.5D,
+                                                           48.5985227778D, 50.3959116667D,
+                                                           600000, 1200000);
+        } else if (ProjectionSetup.PROJ_FRANCE_II.equals(projectionType)) {
+            projectionSetup = new Mercator.ProjectionSetup(projectionType,
+                                                           new char[]{'F', '-', 'I', 'I'},
+                                                           2.3372083333D, 46.8D,
+                                                           45.8989188889D, 47.6960144444D,
+                                                           600000, 2200000);
+        } else if (ProjectionSetup.PROJ_FRANCE_III.equals(projectionType)) {
+            projectionSetup = new Mercator.ProjectionSetup(projectionType,
+                                                           new char[]{'F', '-', 'I', 'I', 'I'},
+                                                           2.3372083333D, 44.1D,
+                                                           43.1992913889D, 44.9960938889D,
+                                                           600000, 3200000);
+        } else if (ProjectionSetup.PROJ_FRANCE_IV.equals(projectionType)) {
+            projectionSetup = new Mercator.ProjectionSetup(projectionType,
+                                                           new char[]{'F', '-', 'I', 'V'},
+                                                           2.3372083333D, 42.165D,
+                                                           41.5603877778D, 42.0000593542D,
+                                                           234.358, 4185861.369);
+        }
+//#ifdef __LOG__
+        if (log.isEnabled()) log.debug("projection type: " + projectionType);
+//#endif
+
+        return projectionSetup;
+    }
+
     private static Mercator.ProjectionSetup parseProjectionSetup(final String projectionName,
                                                                  final CharArrayTokenizer tokenizer)
             throws InvalidMapException {
@@ -330,7 +343,7 @@ final class OziCalibration extends Calibration {
 
             if (!Double.isNaN(k)) {
                 if (Double.isNaN(latOrigin) || Double.isNaN(lonOrigin) || Double.isNaN(falseEasting) || Double.isNaN(falseNorthing)) {
-                    throw new InvalidMapException("Invalid Projection Setup");
+                    throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_INVALID_PROJECTION));
                 }
                 return new Mercator.ProjectionSetup(projectionName,
                                                     null,
@@ -339,7 +352,7 @@ final class OziCalibration extends Calibration {
                                                     falseEasting, falseNorthing);
             } else {
                 if (Double.isNaN(latOrigin) || Double.isNaN(lonOrigin) || Double.isNaN(parallel1) || Double.isNaN(parallel2)) {
-                    throw new InvalidMapException("Invalid Projection Setup");
+                    throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_INVALID_PROJECTION));
                 }
                 return new Mercator.ProjectionSetup(projectionName,
                                                     null,

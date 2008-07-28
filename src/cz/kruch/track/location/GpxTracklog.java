@@ -319,6 +319,7 @@ public final class GpxTracklog extends Thread {
     private void serializePt(final KXmlSerializer serializer,
                              final QualifiedCoordinates qc,
                              final Object pt) throws IOException {
+        final char[] sbChars = this.sbChars;
         int i = doubleToChars(qc.getLat(), 9);
         serializer.attribute(DEFAULT_NAMESPACE, ATTRIBUTE_LAT, sbChars, i);
         i = doubleToChars(qc.getLon(), 9);

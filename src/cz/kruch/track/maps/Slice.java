@@ -154,7 +154,7 @@ public class Slice {
         if (p0 > -1 && p1 > -1) {
             xy = asShort(parseInt(array, p0 + 1, p1)) << 16 | asShort(parseInt(array, p1 + 1, i));
         } else {
-            throw new InvalidMapException("Invalid slice filename: " + token.toString());
+            throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_INVALID_SLICE_NAME) + token.toString());
         }
     }
 

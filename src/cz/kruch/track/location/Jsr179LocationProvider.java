@@ -19,16 +19,12 @@ package cz.kruch.track.location;
 import cz.kruch.track.configuration.Config;
 import cz.kruch.track.util.CharArrayTokenizer;
 import cz.kruch.track.util.NmeaParser;
-import cz.kruch.track.ui.Desktop;
 import cz.kruch.track.Resources;
-import cz.kruch.j2se.io.BufferedOutputStream;
 import api.location.LocationException;
 import api.location.QualifiedCoordinates;
 import api.location.Location;
 import api.location.LocationProvider;
-import api.file.File;
 
-import javax.microedition.io.Connector;
 import java.io.OutputStream;
 import java.io.IOException;
 
@@ -45,8 +41,6 @@ public final class Jsr179LocationProvider
 
     private javax.microedition.location.LocationProvider impl;
     private int interval, timeout, maxage;
-
-    private OutputStream nmealog;
 
     private final char[] line;
 
@@ -116,9 +110,6 @@ public final class Jsr179LocationProvider
             // set listener
             impl.setLocationListener(this, interval, timeout, maxage);
 
-            // start NMEA log
-            startNmeaLog();
-
             // wait for end (kinda stupid variant of gps() from Serial provider ;-) )
             synchronized (this) {
                 while (go) {
@@ -137,72 +128,12 @@ public final class Jsr179LocationProvider
 
         } finally {
 
-            // stop NMEA tracklog
-            stopNmeaLog();
-
             // remove listener and gc-free native provider
             impl.setLocationListener(null, -1, -1, -1);
             impl = null;
 
             // almost dead
             zombie();
-        }
-    }
-
-    private void startNmeaLog() {
-        // use NMEA tracklog
-        if (isTracklog() && Config.TRACKLOG_FORMAT_NMEA.equals(Config.tracklogFormat)) {
-
-            // not yet started
-            if (nmealog == null) {
-
-                final String path = Config.getFolderNmea() + GpxTracklog.dateToFileDate(System.currentTimeMillis()) + ".nmea";
-                File file = null;
-
-                try {
-                    // create file
-                    file = File.open(path, Connector.READ_WRITE);
-                    if (!file.exists()) {
-                        file.create();
-                    }
-
-                    // create writer
-                    nmealog = new BufferedOutputStream(file.openOutputStream(), 512); // see StreamLocationProvider#BUFFER_SIZE
-
-                    // signal recording has started
-                    notifyListener(true);
-
-                } catch (Throwable t) {
-
-                    Desktop.showError(Resources.getString(Resources.DESKTOP_MSG_START_TRACKLOG_FAILED), t, null);
-
-                } finally {
-
-                    // close the file
-                    if (file != null) {
-                        try {
-                            file.close();
-                        } catch (IOException e) {
-                            // ignore
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    private void stopNmeaLog() {
-        // signal recording is stopping
-        notifyListener(false);
-
-        // close writer
-        if (nmealog != null) {
-            try {
-                nmealog.close();
-            } catch (Exception e) {
-                // ignore
-            }
-            nmealog = null;
         }
     }
 
@@ -271,9 +202,9 @@ public final class Jsr179LocationProvider
         }
 
         // NMEA logging
-        if (extra != null && nmealog != null) {
+        if (extra != null && observer != null) {
             try {
-                logNmea(nmealog, extra);
+                logNmea(observer, extra);
             } catch (Exception e) {
                 setThrowable(e);
             }
@@ -320,9 +251,10 @@ public final class Jsr179LocationProvider
     private static void logNmea(final OutputStream out,
                                 final String extra) throws IOException {
         final byte[] bytes = extra.getBytes();
+        final int N = bytes.length;
         int offset = 0;
         boolean crlf = false;
-        for (int i = 0; i < bytes.length; i++) {
+        for (int i = 0; i < N; i++) {
             final byte b = bytes[i];
             switch (b) {
                 case '$': {

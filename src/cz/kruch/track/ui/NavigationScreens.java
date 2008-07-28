@@ -30,6 +30,7 @@ import api.location.QualifiedCoordinates;
 import api.location.Location;
 import api.location.CartesianCoordinates;
 import api.location.ProjectionSetup;
+import api.location.Datum;
 import api.file.File;
 
 import java.io.IOException;
@@ -38,7 +39,7 @@ import java.util.Calendar;
 import java.util.TimeZone;
 
 /**
- * UI helper.
+ * All-stuff helper.
  *
  * @author Ales Pour <kruhc@seznam.cz>
  */
@@ -335,6 +336,9 @@ public final class NavigationScreens {
 
     public static void drawPOI(final Graphics graphics, final int status,
                                final int x, final int y, final int anchor) {
+        final int poiSize = NavigationScreens.poiSize;
+        final int poiSize2 = NavigationScreens.poiSize2;
+
         if (Config.S60renderer) {
             graphics.setClip(x - poiSize2, y - poiSize2, poiSize, poiSize);
             graphics.drawImage(pois,
@@ -350,6 +354,7 @@ public final class NavigationScreens {
 
     public static void drawProviderStatus(final Graphics graphics, final int status,
                                           final int x, final int y, final int anchor) {
+        final int bulletSize = NavigationScreens.bulletSize;
         final int ci = status & 0x0000000f;
 
         if (Config.S60renderer) {
@@ -372,9 +377,10 @@ public final class NavigationScreens {
         final int hour = CALENDAR.get(Calendar.HOUR_OF_DAY);
         final int min = CALENDAR.get(Calendar.MINUTE);
 */
-        CALENDAR.setTimeSafe(l.getTimestamp());
-        final int hour = CALENDAR.get(Calendar.HOUR_OF_DAY);
-        final int min = CALENDAR.get(Calendar.MINUTE);
+        final SimpleCalendar calendar = CALENDAR;
+        calendar.setTimeSafe(l.getTimestamp());
+        final int hour = calendar.get(Calendar.HOUR_OF_DAY);
+        final int min = calendar.get(Calendar.MINUTE);
 
         if (hour < 10) {
             sb.append('0');
@@ -391,7 +397,7 @@ public final class NavigationScreens {
             switch (Config.units) {
                 case Config.UNITS_METRIC: {
                     if (!Float.isNaN(speed)) {
-                        NavigationScreens.append(sb, speed * 3.6F, 1).append(STR_KMH);
+                        append(sb, speed * 3.6F, 1).append(STR_KMH);
                     }
                     if (!Float.isNaN(alt)) {
                         append(sb, alt, 1).append(STR_M);
@@ -419,25 +425,38 @@ public final class NavigationScreens {
         return sb;
     }
 
-    public static StringBuffer toStringBuffer(final QualifiedCoordinates qc, final StringBuffer sb) {
+    public static boolean isGrid() {
+        return ProjectionSetup.contextProjection instanceof Mercator.ProjectionSetup && ProjectionSetup.contextProjection.code != api.location.ProjectionSetup.PROJECTION_MERCATOR;
+    }
+
+    public static StringBuffer printTo(final QualifiedCoordinates qc, final StringBuffer sb) {
         if (Config.useGridFormat && isGrid()) {
-            toGrid(qc, sb);
+            final QualifiedCoordinates localQc = Datum.contextDatum.toLocal(qc);
+            toGrid(localQc, sb);
+            QualifiedCoordinates.releaseInstance(localQc);
         } else if (Config.useUTM) {
             toUTM(qc, sb);
         } else {
-            // condensed for SXG75 and narrow screen devices
-            if (useCondensed != 0 && Config.decimalPrecision) {
-                toCondensedLL(qc, sb);
-            } else { // decent devices
+            if (Config.useGeocachingFormat) {
                 toLL(qc, sb);
+            } else {
+                final QualifiedCoordinates localQc = Datum.contextDatum.toLocal(qc);
+                toLL(localQc, sb);
+                QualifiedCoordinates.releaseInstance(localQc);
             }
         }
 
         return sb;
     }
 
-    private static boolean isGrid() {
-        return ProjectionSetup.contextProjection instanceof Mercator.ProjectionSetup && ProjectionSetup.contextProjection.code != api.location.ProjectionSetup.PROJECTION_MERCATOR;
+    private static StringBuffer toLL(final QualifiedCoordinates qc, final StringBuffer sb) {
+        if (useCondensed != 0 && Config.decimalPrecision) { // narrow or SGX75
+            toCondensedLL(qc, sb);
+        } else { // decent devices
+            toFullLL(qc, sb);
+        }
+
+        return sb;
     }
 
     private static StringBuffer toGrid(final QualifiedCoordinates qc, final StringBuffer sb) {
@@ -446,10 +465,10 @@ public final class NavigationScreens {
             sb.append(gridCoords.zone).append(' ');
         }
         zeros(sb, gridCoords.easting, 10000);
-        NavigationScreens.append(sb, ExtraMath.round(gridCoords.easting));
+        append(sb, ExtraMath.round(gridCoords.easting));
         sb.append('E').append(' ');
         zeros(sb, gridCoords.northing, 10000);
-        NavigationScreens.append(sb, ExtraMath.round(gridCoords.northing));
+        append(sb, ExtraMath.round(gridCoords.northing));
         sb.append('N');
         CartesianCoordinates.releaseInstance(gridCoords);
 
@@ -460,9 +479,9 @@ public final class NavigationScreens {
                                       final StringBuffer sb) {
         final CartesianCoordinates utmCoords = Mercator.LLtoUTM(qc);
         sb.append(utmCoords.zone).append(' ');
-        NavigationScreens.append(sb, ExtraMath.round(utmCoords.easting));
+        append(sb, ExtraMath.round(utmCoords.easting));
         sb.append('E').append(' ');
-        NavigationScreens.append(sb, ExtraMath.round(utmCoords.northing));
+        append(sb, ExtraMath.round(utmCoords.northing));
         sb.append('N');
         CartesianCoordinates.releaseInstance(utmCoords);
 
@@ -485,7 +504,7 @@ public final class NavigationScreens {
         return sb;
     }
 
-    private static StringBuffer toLL(final QualifiedCoordinates qc, final StringBuffer sb) {
+    private static StringBuffer toFullLL(final QualifiedCoordinates qc, final StringBuffer sb) {
         sb.append(qc.getLat() > 0D ? 'N' : 'S').append(' ');
         append(sb, QualifiedCoordinates.LAT, qc.getLat(), Config.decimalPrecision);
         sb.append(' ');
@@ -495,113 +514,37 @@ public final class NavigationScreens {
         return sb;
     }
 
-    public static StringBuffer append(final StringBuffer sb, final QualifiedCoordinates qc,
-                                      final int mask) {
-        if (Config.useGridFormat && isGrid()) {
-            final CartesianCoordinates gridCoords = Mercator.LLtoGrid(qc);
-            if ((mask & 1) != 0) {
-                NavigationScreens.append(sb, ExtraMath.round(gridCoords.easting)).append('E');
-            } else if ((mask & 2) != 0) {
-                NavigationScreens.append(sb, ExtraMath.round(gridCoords.northing)).append('N');
-            }
-            CartesianCoordinates.releaseInstance(gridCoords);
-        } else if (Config.useUTM) {
-            final CartesianCoordinates utmCoords = Mercator.LLtoUTM(qc);
-            if ((mask & 1) != 0) {
-                NavigationScreens.append(sb, ExtraMath.round(utmCoords.easting)).append('E');
-            } else if ((mask & 2) != 0) {
-                NavigationScreens.append(sb, ExtraMath.round(utmCoords.northing)).append('N');
-            }
-            CartesianCoordinates.releaseInstance(utmCoords);
+    private static StringBuffer append(final StringBuffer sb, final int type,
+                                       final double value, final boolean hp) {
+        if (Config.useGeocachingFormat) {
+            appendAsDDMM(sb, type, value, hp);
         } else {
-            if ((mask & 1) != 0) {
-                sb.append(qc.getLat() > 0D ? 'N' : 'S').append(' ');
-                append(sb, QualifiedCoordinates.LAT, qc.getLat(), Config.decimalPrecision);
-            } else if ((mask & 2) != 0) {
-                sb.append(qc.getLon() > 0D ? 'E' : 'W').append(' ');
-                append(sb, QualifiedCoordinates.LON, qc.getLon(), Config.decimalPrecision);
-            }
+            appendAsDDMMSS(sb, type, value, hp);
         }
 
         return sb;
     }
 
-    public static StringBuffer append(final StringBuffer sb, final int index, final int grade) {
-        zeros(sb, index, grade);
-        append(sb, (long) index);
-
-        return sb;
-    }
-
-    public static StringBuffer append(final StringBuffer sb, final int type,
-                                      final double value, final boolean hp) {
+    private static StringBuffer appendAsDDMMSS(final StringBuffer sb, final int type,
+                                               final double value, final boolean hp) {
         double l = Math.abs(value);
-        if (Config.useGeocachingFormat) {
-            int h = (int) Math.floor(l);
-            l -= h;
-            l *= 60D;
-            int m = (int) Math.floor(l);
-            l -= m;
-            l *= 1000D;
-            int dec = (int) Math.floor(l);
-            if ((l - dec) > 0.5D) {
-                dec++;
-                if (dec == 1000) {
-                    dec = 0;
-                    m++;
-                    if (m == 60) {
-                        m = 0;
-                        h++;
-                    }
-                }
-            }
+        int h = (int) Math.floor(l);
+        l -= h;
+        l *= 60D;
+        int m = (int) Math.floor(l);
+        l -= m;
+        l *= 60D;
+        int s = (int) Math.floor(l);
+        int ss = 0;
 
-            if (type == QualifiedCoordinates.LON && h < 100) {
-                sb.append('0');
-            }
-            if (h < 10) {
-                sb.append('0');
-            }
-            NavigationScreens.append(sb, h).append(NavigationScreens.SIGN);
-            NavigationScreens.append(sb, m).append('.');
-            if (dec < 100) {
-                sb.append('0');
-            }
-            if (dec < 10) {
-                sb.append('0');
-            }
-            NavigationScreens.append(sb, dec);
-        } else {
-            int h = (int) Math.floor(l);
-            l -= h;
-            l *= 60D;
-            int m = (int) Math.floor(l);
-            l -= m;
-            l *= 60D;
-            int s = (int) Math.floor(l);
-            int ss = 0;
-
-            if (hp) { // round decimals
-                l -= s;
-                l *= 10;
-                ss = (int) Math.floor(l);
-                if ((l - ss) > 0.5D) {
-                    ss++;
-                    if (ss == 10) {
-                        ss = 0;
-                        s++;
-                        if (s == 60) {
-                            s = 0;
-                            m++;
-                            if (m == 60) {
-                                m = 0;
-                                h++;
-                            }
-                        }
-                    }
-                }
-            } else { // round secs
-                if ((l - s) > 0.5D) {
+        if (hp) { // round decimals
+            l -= s;
+            l *= 10;
+            ss = (int) Math.floor(l);
+            if ((l - ss) > 0.5D) {
+                ss++;
+                if (ss == 10) {
+                    ss = 0;
                     s++;
                     if (s == 60) {
                         s = 0;
@@ -613,16 +556,121 @@ public final class NavigationScreens {
                     }
                 }
             }
-
-            NavigationScreens.append(sb, h).append(NavigationScreens.SIGN);
-            NavigationScreens.append(sb, m).append('\'');
-            NavigationScreens.append(sb, s);
-            if (hp) {
-                sb.append('.');
-                NavigationScreens.append(sb, ss);
+        } else { // round secs
+            if ((l - s) > 0.5D) {
+                s++;
+                if (s == 60) {
+                    s = 0;
+                    m++;
+                    if (m == 60) {
+                        m = 0;
+                        h++;
+                    }
+                }
             }
-            sb.append('"');
         }
+
+        append(sb, h).append(SIGN);
+        append(sb, m).append('\'');
+        append(sb, s);
+        if (hp) {
+            sb.append('.');
+            append(sb, ss);
+        }
+        sb.append('"');
+
+        return sb;
+    }
+
+    private static StringBuffer appendAsDDMM(final StringBuffer sb, final int type,
+                                             final double value, final boolean hp) {
+        double l = Math.abs(value);
+        int h = (int) Math.floor(l);
+        l -= h;
+        l *= 60D;
+        int m = (int) Math.floor(l);
+        l -= m;
+        l *= 1000D;
+        int dec = (int) Math.floor(l);
+        if ((l - dec) > 0.5D) {
+            dec++;
+            if (dec == 1000) {
+                dec = 0;
+                m++;
+                if (m == 60) {
+                    m = 0;
+                    h++;
+                }
+            }
+        }
+
+        if (type == QualifiedCoordinates.LON && h < 100) {
+            sb.append('0');
+        }
+        if (h < 10) {
+            sb.append('0');
+        }
+        append(sb, h).append(SIGN);
+        append(sb, m).append('.');
+        if (dec < 100) {
+            sb.append('0');
+        }
+        if (dec < 10) {
+            sb.append('0');
+        }
+        append(sb, dec);
+
+        return sb;
+    }
+
+    public static StringBuffer printTo(final StringBuffer sb, final QualifiedCoordinates qc,
+                                       final int mask) {
+        final QualifiedCoordinates localQc = Datum.contextDatum.toLocal(qc);
+        if (Config.useGridFormat && isGrid()) {
+            final CartesianCoordinates gridCoords = Mercator.LLtoGrid(localQc);
+            if ((mask & 1) != 0) {
+                append(sb, ExtraMath.round(gridCoords.easting)).append('E');
+            } else if ((mask & 2) != 0) {
+                append(sb, ExtraMath.round(gridCoords.northing)).append('N');
+            }
+            CartesianCoordinates.releaseInstance(gridCoords);
+        } else if (Config.useUTM) {
+            final CartesianCoordinates utmCoords = Mercator.LLtoUTM(qc);
+            if ((mask & 1) != 0) {
+                append(sb, ExtraMath.round(utmCoords.easting)).append('E');
+            } else if ((mask & 2) != 0) {
+                append(sb, ExtraMath.round(utmCoords.northing)).append('N');
+            }
+            CartesianCoordinates.releaseInstance(utmCoords);
+        } else {
+            if ((mask & 1) != 0) {
+                final double lat;
+                if (Config.useGeocachingFormat) {
+                    lat = qc.getLat();
+                } else {
+                    lat = localQc.getLat();
+                }
+                sb.append(lat > 0D ? 'N' : 'S').append(' ');
+                append(sb, QualifiedCoordinates.LAT, lat, Config.decimalPrecision);
+            } else if ((mask & 2) != 0) {
+                final double lon;
+                if (Config.useGeocachingFormat) {
+                    lon = qc.getLon();
+                } else {
+                    lon = localQc.getLon();
+                }
+                sb.append(lon > 0D ? 'E' : 'W').append(' ');
+                append(sb, QualifiedCoordinates.LON, lon, Config.decimalPrecision);
+            }
+        }
+        QualifiedCoordinates.releaseInstance(localQc);
+
+        return sb;
+    }
+
+    public static StringBuffer append(final StringBuffer sb, final int index, final int grade) {
+        zeros(sb, index, grade);
+        append(sb, (long) index);
 
         return sb;
     }
@@ -674,6 +722,8 @@ public final class NavigationScreens {
             value = -value;
         }
 
+        final char[] digits = NavigationScreens.digits;
+
         if (value > -10) {
             sb.append(digits[(int)(-value)]);
         } else if (value > -100) {
@@ -682,7 +732,6 @@ public final class NavigationScreens {
         } else {
             synchronized (print) {
                 final char[] print = NavigationScreens.print;
-                final char[] digits = NavigationScreens.digits;
                 int c = 0;
                 long i = value;
                 while (i <= -10) {
@@ -703,18 +752,18 @@ public final class NavigationScreens {
         switch (Config.units) {
             case Config.UNITS_METRIC: {
                 if (distance >= 10000F) { // dist > 10 km
-                    NavigationScreens.append(sb, distance / 1000F, 1).append(DIST_STR_KM);
+                    append(sb, distance / 1000F, 1).append(DIST_STR_KM);
                 } else if (distance < 5F) {
-                    NavigationScreens.append(sb, distance, 1).append(DIST_STR_M);
+                    append(sb, distance, 1).append(DIST_STR_M);
                 } else {
-                    NavigationScreens.append(sb, (int) distance).append(DIST_STR_M);
+                    append(sb, (int) distance).append(DIST_STR_M);
                 }
             } break;
             case Config.UNITS_IMPERIAL: {
-                NavigationScreens.append(sb, distance / 1609F, 0).append(DIST_STR_NMI);
+                append(sb, distance / 1609F, 0).append(DIST_STR_NMI);
             } break;
             case Config.UNITS_NAUTICAL: {
-                NavigationScreens.append(sb, distance / 1852F, 0).append(DIST_STR_NMI);
+                append(sb, distance / 1852F, 0).append(DIST_STR_NMI);
             } break;
         }
 

@@ -826,12 +826,15 @@ final class ComputerView extends View implements Runnable, CommandListener {
                 graphics.drawString(status, 0, Desktop.font.getHeight(), Graphics.TOP | Graphics.LEFT);
             }
         } else {
-            final int mode = Config.dayNight;
-            final int[] colors = this.colors;
-            final float[] valuesFloat = this.valuesFloat;
             final Vector areas = this.areas;
             final CharArrayTokenizer tokenizer = this.tokenizer;
             final StringBuffer sb = this.sb;
+            final Desktop navigator = this.navigator;
+            final QualifiedCoordinates valueCoords = this.valueCoords;
+            final float[] valuesFloat = this.valuesFloat;
+            final int units = this.units.intValue();
+            final int mode = Config.dayNight;
+            final int[] colors = this.colors;
             final char[] text = this.text;
 
             int state = 0;
@@ -933,7 +936,7 @@ final class ComputerView extends View implements Runnable, CommandListener {
                                 case VALUE_SPD_AVG:
                                 case VALUE_SPD_AVG_AUTO: {
                                     float value = valuesFloat[idx];
-                                    switch (units.intValue()) {
+                                    switch (units) {
                                         case Config.UNITS_IMPERIAL:
                                             value /= 1.609F;
                                         break;
@@ -949,7 +952,7 @@ final class ComputerView extends View implements Runnable, CommandListener {
                                 case VALUE_SPDi_AVG:
                                 case VALUE_SPDi_AVG_AUTO: {
                                     float value = valuesFloat[idx - 4];
-                                    switch (units.intValue()) {
+                                    switch (units) {
                                         case Config.UNITS_IMPERIAL:
                                             value /= 1.609F;
                                         break;
@@ -964,7 +967,7 @@ final class ComputerView extends View implements Runnable, CommandListener {
                                 case VALUE_SPDd_AVG:
                                 case VALUE_SPDd_AVG_AUTO: {
                                     float value = valuesFloat[idx - 8];
-                                    switch (units.intValue()) {
+                                    switch (units) {
                                         case Config.UNITS_IMPERIAL:
                                             value /= 1.609F;
                                         break;
@@ -978,7 +981,7 @@ final class ComputerView extends View implements Runnable, CommandListener {
                                 } break;
                                 case VALUE_DIST_T: {
                                     float value = valuesFloat[idx];
-                                    switch (units.intValue()) {
+                                    switch (units) {
                                         case Config.UNITS_IMPERIAL:
                                             value /= 1.609F;
                                         break;
@@ -996,7 +999,7 @@ final class ComputerView extends View implements Runnable, CommandListener {
                                 case VALUE_SPD_DAVG: {
                                     float value = valuesFloat[idx];
                                     if (idx > VALUE_SPD_D) {
-                                        switch (units.intValue()) {
+                                        switch (units) {
                                             case Config.UNITS_IMPERIAL:
                                                 value /= 1.609F;
                                             break;
@@ -1053,13 +1056,7 @@ final class ComputerView extends View implements Runnable, CommandListener {
                                     if (valueCoords == null) {
                                         sb.append(MSG_NO_POSITION);
                                     } else {
-                                        if (Config.useGeocachingFormat || Config.useUTM) {
-                                            NavigationScreens.toStringBuffer(valueCoords, sb);
-                                        } else {
-                                            QualifiedCoordinates localQc = navigator.getMap().getDatum().toLocal(valueCoords);
-                                            NavigationScreens.toStringBuffer(localQc, sb);
-                                            QualifiedCoordinates.releaseInstance(localQc);
-                                        }
+                                        NavigationScreens.printTo(valueCoords, sb);
                                     }
                                 } break;
                                 case VALUE_TIME: {
@@ -1103,7 +1100,7 @@ final class ComputerView extends View implements Runnable, CommandListener {
                                     if (dist < 0F) {
                                         sb.append('?');
                                     } else {
-                                        switch (units.intValue()) {
+                                        switch (units) {
                                             case Config.UNITS_METRIC:
                                                 dist /= 1000F;
                                             break;
@@ -1151,7 +1148,7 @@ final class ComputerView extends View implements Runnable, CommandListener {
                                         sb.append('?');
                                     } else {
                                         double vmg = spdavgShort/*valuesFloat[VALUE_SPD]*/ * (Math.cos(Math.toRadians(valuesFloat[VALUE_COURSE] - azi)));
-                                        switch (units.intValue()) {
+                                        switch (units) {
                                             case Config.UNITS_IMPERIAL:
                                                 vmg /= 1.609F;
                                             break;
@@ -1176,7 +1173,7 @@ final class ComputerView extends View implements Runnable, CommandListener {
                                     if (qc == null) {
                                         sb.append(MSG_NO_POSITION);
                                     } else {
-                                        NavigationScreens.toStringBuffer(qc, sb);
+                                        NavigationScreens.printTo(qc, sb);
                                     }
                                 } break;
                                 case VALUE_TIMER: {
@@ -1188,13 +1185,7 @@ final class ComputerView extends View implements Runnable, CommandListener {
                                         sb.append(MSG_NO_POSITION);
                                     } else {
                                         final int m = idx == VALUE_LAT ? 1 : 2;
-                                        if (Config.useGeocachingFormat || Config.useUTM) {
-                                            NavigationScreens.append(sb, valueCoords, m);
-                                        } else {
-                                            QualifiedCoordinates localQc = navigator.getMap().getDatum().toLocal(valueCoords);
-                                            NavigationScreens.append(sb, localQc, m);
-                                            QualifiedCoordinates.releaseInstance(localQc);
-                                        }
+                                        NavigationScreens.printTo(sb, valueCoords, m);
                                     }
                                 } break;
                                 case VALUE_WPT_LAT:
@@ -1204,7 +1195,7 @@ final class ComputerView extends View implements Runnable, CommandListener {
                                         sb.append(MSG_NO_POSITION);
                                     } else {
                                         final int m = idx == VALUE_WPT_LAT ? 1 : 2;
-                                        NavigationScreens.append(sb, qc, m);
+                                        NavigationScreens.printTo(sb, qc, m);
                                     }
                                 } break;
                                 case VALUE_WPT_NAME: {
@@ -1443,7 +1434,7 @@ final class ComputerView extends View implements Runnable, CommandListener {
             if (file.exists()) {
                 InputStream in = null;
                 try {
-                    in = new BufferedInputStream(file.openInputStream(), 512);
+                    in = new BufferedInputStream(file.openInputStream(), 1024);
                     if (filename.endsWith(".xml")) {
                         result = loadProfile(filename, in);
                     } else if (filename.endsWith(".png")) {

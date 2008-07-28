@@ -61,8 +61,10 @@ public final class QualifiedCoordinates implements GeodeticPosition {
     }
 
     public static synchronized void releaseInstance(final QualifiedCoordinates qc) {
-        if (qc != null && countFree < pool.length) {
-            pool[countFree++] = qc;
+        if (qc != null) {
+            if (countFree < pool.length) {
+                pool[countFree++] = qc;
+            }
         }
     }
 
@@ -103,6 +105,10 @@ public final class QualifiedCoordinates implements GeodeticPosition {
 
     public float getAlt() {
         return alt;
+    }
+
+    public void setAlt(float alt) {
+        this.alt = alt;
     }
 
     public float getHorizontalAccuracy() {

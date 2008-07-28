@@ -23,6 +23,7 @@ package api.location;
  */
 public final class Datum {
     public static final Datum WGS_84 = new Datum("WGS 84", Ellipsoid.ELLIPSOIDS[Ellipsoid.ELLIPSOIDS.length - 1], 0, 0, 0);
+
     public static Datum contextDatum;
 
     public final String name;
@@ -43,20 +44,20 @@ public final class Datum {
         return (new StringBuffer(32)).append(name).append('{').append(ellipsoid).append(',').append(-dx).append(',').append(-dy).append(',').append(-dz).append('}').toString();
     }
 
-    public QualifiedCoordinates toLocal(final QualifiedCoordinates wgs84) {
+    public QualifiedCoordinates toLocal(final QualifiedCoordinates qc) {
         if (this == WGS_84) {
-            return wgs84.clone();
+            return qc.clone();
         }
 
-        return transform(wgs84, WGS_84.ellipsoid, ellipsoid, -1);
+        return transform(qc, WGS_84.ellipsoid, ellipsoid, -1);
     }
 
-    public QualifiedCoordinates toWgs84(final QualifiedCoordinates local) {
+    public QualifiedCoordinates toWgs84(final QualifiedCoordinates qc) {
         if (this == WGS_84) {
-            return local.clone();
+            return qc.clone();
         }
 
-        return transform(local, ellipsoid, WGS_84.ellipsoid, 1);
+        return transform(qc, ellipsoid, WGS_84.ellipsoid, 1);
     }
 
     /**
@@ -66,7 +67,10 @@ public final class Datum {
                                            final Ellipsoid fromEllipsoid,
                                            final Ellipsoid toEllipsoid,
                                            final int sign) {
-        final double da = toEllipsoid.equatorialRadius - fromEllipsoid.equatorialRadius;
+        final double feer = fromEllipsoid.equatorialRadius;
+        final double fees = fromEllipsoid.eccentricitySquared;
+        
+        final double da = toEllipsoid.equatorialRadius - feer;
         final double df = toEllipsoid.flattening - fromEllipsoid.flattening;
         final double lat = Math.toRadians(local.getLat());
         final double lon = Math.toRadians(local.getLon());
@@ -79,12 +83,12 @@ public final class Datum {
         final double bda = 1D - fromEllipsoid.flattening;
         double dlat, dlon /*, dh*/;
 
-        final double v = 1D - fromEllipsoid.eccentricitySquared * ssqlat;
-        final double rn = fromEllipsoid.equatorialRadius / Math.sqrt(v);
-        final double rm = fromEllipsoid.equatorialRadius * (1D - fromEllipsoid.eccentricitySquared) / Math.sqrt(v * v * v); // sqrt(v^3) = pow(v, 1.5)
+        final double v = 1D - fees * ssqlat;
+        final double rn = feer / Math.sqrt(v);
+        final double rm = feer * (1D - fees) / Math.sqrt(v * v * v); // sqrt(v^3) = pow(v, 1.5)
 
         dlat = ((((((sign * dx) * slat * clon + (sign * dy) * slat * slon) - (sign * dz) * clat)
-                + (da * ((rn * fromEllipsoid.eccentricitySquared * slat * clat) / fromEllipsoid.equatorialRadius)))
+                + (da * ((rn * fees * slat * clat) / feer)))
                 + (df * (rm * bda + rn / bda) * slat * clat)))
                 / (rm /* + from.h*/);
 

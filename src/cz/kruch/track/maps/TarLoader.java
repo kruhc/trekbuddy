@@ -24,13 +24,12 @@ import java.io.IOException;
 import com.ice.tar.TarInputStream;
 import com.ice.tar.TarEntry;
 
-import javax.microedition.io.Connector;
-
-import cz.kruch.track.ui.NavigationScreens;
-import cz.kruch.track.util.CharArrayTokenizer;
-import cz.kruch.track.configuration.Config;
-import cz.kruch.track.io.LineReader;
 import cz.kruch.track.Resources;
+import cz.kruch.track.configuration.Config;
+import cz.kruch.track.device.SymbianService;
+import cz.kruch.track.io.LineReader;
+import cz.kruch.track.util.CharArrayTokenizer;
+import cz.kruch.track.ui.NavigationScreens;
 
 final class TarLoader extends Map.Loader implements Atlas.Loader {
 
@@ -47,12 +46,6 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
         this.isTar = true;
     }
 
-/*
-    protected Slice newSlice(String filename) throws InvalidMapException {
-        return new TarSlice(filename);
-    }
-*/
-
     protected Slice newSlice(final CharArrayTokenizer.Token token) throws InvalidMapException {
         return new TarSlice(token);
     }
@@ -62,12 +55,22 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
         InputStream in = null;
 
         try {
-            // open native file and stream
+            // open native file
             nativeFile = File.open(map.getPath());
             if (!nativeFile.exists()) {
                 throw new IOException("File " + map.getPath() + " not found");
             }
-            in = nativeFile.openInputStream();
+
+            // open stream
+            if (cz.kruch.track.TrackingMIDlet.symbian) {
+                in = SymbianService.openInputStream(map.getPath());
+//#ifdef __LOG__
+                if (log.isEnabled()) log.debug("remote stream? " + in);
+//#endif
+            }
+            if (in == null) {
+                in = nativeFile.openInputStream();
+            }
 
             /*
             * test quality of File API
@@ -316,14 +319,36 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
         final int streamOffset = ((TarSlice) slice).getStreamOffset();
 
         try {
-            if (nativeIn != null) { // resetable stream
+            // local ref
+            final TarInputStream tarIn = this.tarIn;
+
+            // resetable stream
+            if (nativeIn != null) {
+//#ifdef __LOG__
+                if (log.isEnabled()) log.debug("reuse stream");
+//#endif
                 if (streamOffset < tarIn.getStreamOffset() || Config.siemensIo) {
+//#ifdef __LOG__
+                    if (log.isEnabled()) log.debug("but reset it first");
+//#endif
                     nativeIn.reset();
                     buffered.setInputStream(nativeIn);
                     tarIn.setStreamOffset(0);
                 }
             } else { // non-resetable stream
-                buffered.setInputStream(in = nativeFile.openInputStream());
+                if (cz.kruch.track.TrackingMIDlet.symbian) {
+                    in = SymbianService.openInputStream(nativeFile.getURL());
+//#ifdef __LOG__
+                    if (log.isEnabled()) log.debug("remote stream? " + in);
+//#endif
+                }
+                if (in == null) {
+//#ifdef __LOG__
+                    if (log.isEnabled()) log.debug("open new input stream");
+//#endif
+                    in = nativeFile.openInputStream();
+                }
+                buffered.setInputStream(in);
                 tarIn.setStreamOffset(0);
             }
 
@@ -398,9 +423,17 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
                         // got layer and map name?
                         if (lName != null && mName != null) {
 
-                            // construct url
-                            final String realUrl = sb.delete(0, sb.length()).append(baseUrl).append(entryName).toString();
-                            final String fakeUrl = url.endsWith(".idx") ? realUrl : sb.delete(0, sb.length()).append(baseUrl).append(lName).append(File.PATH_SEPCHAR).append(mName).append(File.PATH_SEPCHAR).append(mName).append(".tar").toString();
+                            // prepare sb
+                            sb.delete(0, sb.length()).append(baseUrl);
+
+                            // construct URLs
+                            final String realUrl = entryName.append(sb).toString();
+                            final String fakeUrl;
+                            if (url.endsWith(".idx")) {
+                                fakeUrl = realUrl;
+                            } else {
+                                fakeUrl = sb.delete(0, sb.length()).append(baseUrl).append(lName).append(File.PATH_SEPCHAR).append(mName).append(File.PATH_SEPCHAR).append(mName).append(".tar").toString();
+                            }
 
                             // load map calibration file
                             final Calibration calibration = Calibration.newInstance(tar, fakeUrl, realUrl);

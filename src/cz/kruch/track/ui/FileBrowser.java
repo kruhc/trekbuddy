@@ -317,7 +317,7 @@ public final class FileBrowser implements CommandListener, Runnable {
      * @param left left boundary
      * @param right right boundary
      */
-    public static void quicksort(final String[] array, final int left, final int right) {
+    public static void quicksort(final Object[] array, final int left, final int right) {
         if (right > left) {
             final int pivotIndex = left;
             final int pivotNewIndex = partition(array, left, right, pivotIndex);
@@ -326,16 +326,16 @@ public final class FileBrowser implements CommandListener, Runnable {
         }
     }
 
-    private static int partition(final String[] array, final int left, final int right, final int pivotIndex) {
-        final String pivotValue = array[pivotIndex];
+    private static int partition(final Object[] array, final int left, final int right, final int pivotIndex) {
+        final String pivotValue = (String) array[pivotIndex];
         // swap
-        String _o = array[pivotIndex];
+        Object _o = array[pivotIndex];
         array[pivotIndex] = array[right];
         array[right] = _o;
         // ~swap
         int storeIndex = left;
         for (int i = left; i < right; i++) { // left ? i < right
-            if (compareAsFiles(array[i], pivotValue) < 0) {
+            if (compareAsFiles((String) array[i], pivotValue) < 0) {
                 // swap
                 _o = array[i];
                 array[i] = array[storeIndex];

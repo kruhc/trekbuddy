@@ -50,7 +50,7 @@ public final class Jsr82LocationProvider extends SerialLocationProvider {
         /* BT turned on check */
         try {
             javax.bluetooth.LocalDevice.getLocalDevice();
-        } catch (IOException e) {
+        } catch (Exception e) {
             throw new LocationException(Resources.getString(Resources.DESKTOP_MSG_BT_OFF));
         }
     }

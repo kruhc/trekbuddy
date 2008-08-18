@@ -176,12 +176,10 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
                 if (log.isEnabled()) log.debug("input stream not reusable -> close it");
 //#endif
                 // close native stream
-                if (in != null) {
-                    try {
-                        in.close();
-                    } catch (IOException e) {
-                        // ignore
-                    }
+                try {
+                    in.close();
+                } catch (Exception e) { // NPE or IOE
+                    // ignore
                 }
             }
 
@@ -248,14 +246,11 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
                 } finally {
 
                     // close reader
-                    if (reader != null) {
-                        try {
-                            reader.close();
-                        } catch (IOException e) {
-                            // ignore
-                        }
+                    try {
+                        reader.close();
+                    } catch (Exception e) { // NPE or IOE
+                        // ignore
                     }
-                    
 //#ifdef __LOG__
                     if (log.isEnabled()) log.debug("tmi utilized: " + tmiPath);
 //#endif
@@ -265,10 +260,11 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
         } finally {
 
             // close file
-            if (file != null) {
+            try {
                 file.close();
+            } catch (Exception e) { // NPE or IOE
+                // ignore
             }
-
         }
     }
 
@@ -460,21 +456,17 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
         } finally {
 
             // close input stream
-            if (in != null) {
-                try {
-                    in.close();
-                } catch (IOException e) {
-                    // ignore
-                }
+            try {
+                in.close();
+            } catch (Exception e) { // NPE or IOE
+                // ignore
             }
 
             // close native file
-            if (file != null) {
-                try {
-                    file.close();
-                } catch (IOException e) {
-                    // ignore
-                }
+            try {
+                file.close();
+            } catch (Exception e) { // NPE or IOE
+                // ignore
             }
 
             // dispose tar stream

@@ -127,12 +127,10 @@ final class DirLoader extends Map.Loader implements Atlas.Loader {
                         throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_PARSE_SET_FAILED), e);
                     } finally {
                         // close reader
-                        if (reader != null) {
-                            try {
-                                reader.close();
-                            } catch (IOException e) {
-                                // ignore
-                            }
+                        try {
+                            reader.close();
+                        } catch (Exception e) { // NPE or IOE
+                            // ignore
                         }
                     }
                 } else {
@@ -141,10 +139,11 @@ final class DirLoader extends Map.Loader implements Atlas.Loader {
             } finally {
 
                 // close file
-                if (file != null) {
+                try {
                     file.close();
+                } catch (Exception e) { // NPE or IOE
+                    // ignore
                 }
-
             }
         }
     }
@@ -238,14 +237,10 @@ final class DirLoader extends Map.Loader implements Atlas.Loader {
                                         try {
                                             calibration = Calibration.newInstance(in = Connector.openInputStream(path), path);
                                         } finally {
-                                            if (in != null) {
-                                                try {
-                                                    in.close();
-                                                } catch (IOException e) {
-                                                    // ignore
-                                                } finally {
-                                                    in = null; // gc hint
-                                                }
+                                            try {
+                                                in.close();
+                                            } catch (Exception e) { // NPE or IOE
+                                                // ignore
                                             }
                                         }
 
@@ -277,14 +272,11 @@ final class DirLoader extends Map.Loader implements Atlas.Loader {
         } finally {
 
             // close file
-            if (file != null) {
-                try {
-                    file.close();
-                } catch (IOException e) {
-                    // ignore
-                }
+            try {
+                file.close();
+            } catch (Exception e) { // NPE or IOE
+                // ignore
             }
-
         }
     }
 }

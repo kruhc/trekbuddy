@@ -35,9 +35,10 @@ import cz.kruch.track.configuration.Config;
 import cz.kruch.track.event.Callback;
 import cz.kruch.track.ui.NavigationScreens;
 import cz.kruch.track.Resources;
+import cz.kruch.j2se.io.BufferedOutputStream;
 
 /**
- * GPX tracklog.
+ * GPX.
  *
  * @author Ales Pour <kruhc@seznam.cz>
  */
@@ -46,8 +47,10 @@ public final class GpxTracklog extends Thread {
     private static final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("Gpx");
 //#endif
 
-    private static final String GPX_1_1_NAMESPACE   = "http://www.topografix.com/GPX/1/1";
     private static final String DEFAULT_NAMESPACE   = null;
+    private static final String GPX_1_1_NAMESPACE   = "http://www.topografix.com/GPX/1/1";
+    private static final String GS_1_0_NAMESPACE    = "http://www.groundspeak.com/cache/1/0";
+    private static final String GS_1_0_PREFIX       = "groundspeak";
     private static final String EXT_NAMESPACE       = "urn:net:trekbuddy:1.0:nmea:rmc";
     private static final String EXT_PREFIX          = "rmc";
     private static final String GSM_NAMESPACE       = "urn:net:trekbuddy:1.0:gsm";
@@ -83,6 +86,15 @@ public final class GpxTracklog extends Thread {
     private static final String ELEMENT_SPEED       = "speed";
     private static final String ELEMENT_CELLID      = "cellid";
     private static final String ELEMENT_LAC         = "lac";
+    private static final String ELEMENT_GS_CACHE        = "cache";
+    private static final String ELEMENT_GS_TYPE         = "type";
+    private static final String ELEMENT_GS_CONTAINER    = "container";
+    private static final String ELEMENT_GS_DIFF         = "difficulty";
+    private static final String ELEMENT_GS_TERRAIN      = "terrain";
+    private static final String ELEMENT_GS_SHORTL       = "short_description";
+    private static final String ELEMENT_GS_LONGL        = "long_description";
+    private static final String ELEMENT_GS_COUNTRY      = "country";
+    private static final String ELEMENT_GS_HINTS        = "encoded_hints";
 
     private static final String ATTRIBUTE_UTF_8     = "UTF-8";
     private static final String ATTRIBUTE_VERSION   = "version";
@@ -90,6 +102,7 @@ public final class GpxTracklog extends Thread {
     private static final String ATTRIBUTE_HREF      = "href";
     private static final String ATTRIBUTE_LAT       = "lat";
     private static final String ATTRIBUTE_LON       = "lon";
+    private static final String ATTRIBUTE_GS_ID     = "id";
 
     private static final String FIX_NONE            = "none";
     private static final String FIX_3D              = "3d";
@@ -106,17 +119,22 @@ public final class GpxTracklog extends Thread {
     private String creator;
     private String fileDate;
     private String fileName;
+    private String path;
     private int type;
     private long time;
 
-    private boolean go = true;
     private Object queue;
     private TimerTask flusher;
+    private boolean go = true;
 
     private Location refLocation;
     private float refCourse, courseDeviation;
-    private int imgNum = 1;
+    private int imgNum = 1, ptCount;
     private boolean force;
+
+    private File file;
+    private OutputStream output;
+    private KXmlSerializer serializer;
 
     public GpxTracklog(int type, Callback callback, String creator, long time) {
         this.type = type;
@@ -142,6 +160,10 @@ public final class GpxTracklog extends Thread {
         this.fileName = (filePrefix == null ? "" : filePrefix) + fileDate + ".gpx";
     }
 
+    public void setFileName(String fileName) {
+        this.fileName = fileName;
+    }
+
     public void shutdown() {
         synchronized (this) {
             go = false;
@@ -149,41 +171,53 @@ public final class GpxTracklog extends Thread {
         }
     }
 
-    public void run() {
-
+    public Throwable open() {
+        
         // local vars
-        File file = null;
-        OutputStream output = null;
         Throwable throwable = null;
 
         // construct path
-        String path = (type == LOG_TRK ? Config.getFolderTracks() : Config.getFolderWaypoints()) + fileName;
+        path = Config.getFolderURL(type == LOG_TRK ? Config.FOLDER_TRACKS : Config.FOLDER_WPTS) + fileName;
 
-        // try to create file - isolated operation
+        // try to open and create a file - isolated operation
         try {
             file = File.open(path, Connector.READ_WRITE);
             if (!file.exists()) {
                 file.create();
             }
+//#ifdef __LOG__
+            if (log.isEnabled()) log.debug("file opened");
+//#endif
         } catch (Throwable t) {
             throwable = t;
+//#ifdef __LOG__
+            if (log.isEnabled()) log.error("failed to open file: " + t);
+//#endif
+            if (file != null) {
+                try {
+                    file.close();
+                } catch (IOException e) {
+                    // ignore
+                }
+                file = null; // gc hint
+            }
         }
 
-        // file created?
+        // file ready?
         if (throwable == null) {
-
-            KXmlSerializer serializer = null;
-
             try {
-                /* buffering is in serializer by default in OutputStreamWriter */
-                output = file.openOutputStream();
+                // output stream
+                output = new BufferedOutputStream(file.openOutputStream(), 4096);
 
                 // init serializer
-                serializer = new KXmlSerializer();
+                final KXmlSerializer serializer = this.serializer = new KXmlSerializer();
                 serializer.setFeature(KXmlSerializer.FEATURE_INDENT_OUTPUT, true);
                 serializer.setOutput(output, ATTRIBUTE_UTF_8);
                 serializer.startDocument(ATTRIBUTE_UTF_8, null);
                 serializer.setPrefix(null, GPX_1_1_NAMESPACE);
+                if (type == LOG_WPT) {
+                    serializer.setPrefix(GS_1_0_PREFIX, GS_1_0_NAMESPACE);
+                }
                 serializer.setPrefix(EXT_PREFIX, EXT_NAMESPACE);
                 if (Config.gpxGsmInfo) {
                     serializer.setPrefix(GSM_PREFIX, GSM_NAMESPACE);
@@ -195,115 +229,60 @@ public final class GpxTracklog extends Thread {
                     serializer.startTag(DEFAULT_NAMESPACE, ELEMENT_TRK);
                     serializer.startTag(DEFAULT_NAMESPACE, ELEMENT_TRKSEG);
                 }
-
-                // signal recording start
-                callback.invoke(new Integer(CODE_RECORDING_START), null, this);
-
-                // start periodic flush
-                cz.kruch.track.ui.Desktop.timer.schedule(flusher = new TimerTask() {
-                    public void run() {
 //#ifdef __LOG__
-                        if (log.isEnabled()) log.debug("trigger flush at " + new Date());
+                if (log.isEnabled()) log.debug("output ready...");
 //#endif
-                        insert(Boolean.FALSE);
-                    }
-                }, 60000L, 60000L);
-
-                // pop items until end
-                while (go) {
-                    final Object item;
-                    synchronized (this) {
-                        while (go && queue == null) {
-                            try {
-                                wait();
-                            } catch (InterruptedException e) {
-                                // ignore
-                            }
-                        }
-                        item = queue;
-                        queue = null; // gc hint
-                    }
-
-                    if (!go) break;
-
-                    if (item instanceof Location) {
-                        final Location l = (Location) item;
-                        serializeTrkpt(serializer, l);
-                        Location.releaseInstance(l);
-                    } else if (item instanceof Boolean) {
-                        if (Boolean.TRUE.equals(item)) {
-                            serializer.endTag(DEFAULT_NAMESPACE, ELEMENT_TRKSEG);
-                            serializer.startTag(DEFAULT_NAMESPACE, ELEMENT_TRKSEG);
-                        }
-                        serializer.flush();
-                    } else if (item instanceof Waypoint) {
-                        final Waypoint w = (Waypoint) item;
-                        if (w.getUserObject() != null) {
-                            w.setLinkPath(saveImage((byte[]) w.getUserObject()));
-                            w.setUserObject(null); // gc hint
-                        }
-                        serializeWpt(serializer, w);
-                        serializer.flush();
-                        // TODO ugly
-                        callback.invoke(new Integer(CODE_WAYPOINT_INSERTED), null, this);
-                    }
-                }
-
-                // signal recording stop
-                callback.invoke(new Integer(CODE_RECORDING_STOP), null, this);
-
             } catch (Throwable t) {
-
-                // signal fatal error
-                callback.invoke(null, t, this);
-
-            } finally {
-
-                // stop periodic flush
-                if (flusher != null) {
-                    flusher.cancel();
-                    flusher = null; // gc hint
-                }
-
-                // close XML
-                if (serializer != null) {
+                throwable = t;
 //#ifdef __LOG__
-                    if (log.isEnabled()) log.debug("closing document");
+                if (log.isEnabled()) log.debug("open failed: " + t);
 //#endif
-                    try {
-                        if (type == LOG_TRK) { // '==' is ok
-                            serializer.endTag(DEFAULT_NAMESPACE, ELEMENT_TRKSEG);
-                            serializer.endTag(DEFAULT_NAMESPACE, ELEMENT_TRK);
-                        }
-                        serializer.endTag(null, ELEMENT_GPX);
-                        serializer.endDocument();
-                        serializer.flush();
-//#ifdef __LOG__
-                        if (log.isEnabled()) log.debug("~done");
-//#endif
-                    } catch (IOException e) {
-                        // ignore
-                    }
-                }
-
-                // close output
-                if (output != null) {
-//#ifdef __LOG__
-                    if (log.isEnabled()) log.debug("closing output");
-//#endif
-                    try {
-                        output.close();
-//#ifdef __LOG__
-                        if (log.isEnabled()) log.debug("~done");
-//#endif
-                    } catch (IOException e) {
-                        // ignore
-                    }
-                }
+                // cleanup
+                close();
             }
-        } else {
-            // signal failure
-            callback.invoke(Resources.getString(Resources.DESKTOP_MSG_START_TRACKLOG_FAILED) + ": " + path, throwable, this);
+        }
+
+        return throwable;
+    }
+
+    public void close() {
+
+        // close XML
+        if (serializer != null) {
+//#ifdef __LOG__
+            if (log.isEnabled()) log.debug("closing document");
+//#endif
+            try {
+                if (type == LOG_TRK) { // '==' is ok
+                    serializer.endTag(DEFAULT_NAMESPACE, ELEMENT_TRKSEG);
+                    serializer.endTag(DEFAULT_NAMESPACE, ELEMENT_TRK);
+                }
+                serializer.endTag(null, ELEMENT_GPX);
+                serializer.endDocument();
+                serializer.flush();
+//#ifdef __LOG__
+                if (log.isEnabled()) log.debug("~done");
+//#endif
+            } catch (IOException e) {
+                // ignore
+            }
+            serializer = null; // gc hint
+        }
+
+        // close output
+        if (output != null) {
+//#ifdef __LOG__
+            if (log.isEnabled()) log.debug("closing output");
+//#endif
+            try {
+                output.close();
+//#ifdef __LOG__
+                if (log.isEnabled()) log.debug("~done");
+//#endif
+            } catch (IOException e) {
+                // ignore
+            }
+            output = null; // gc hint
         }
 
         // close file
@@ -313,12 +292,138 @@ public final class GpxTracklog extends Thread {
             } catch (IOException e) {
                 // ignore
             }
+            file = null; // gc hint
         }
     }
 
-    private void serializePt(final KXmlSerializer serializer,
-                             final QualifiedCoordinates qc,
-                             final Object pt) throws IOException {
+    public void run() {
+
+        // open
+        final Throwable status = open();
+        if (status == null) {
+
+            // start periodic flusher (for tracklog only)
+            if (type == LOG_TRK) {
+//#ifdef __LOG__
+                if (log.isEnabled()) log.debug("starting flusher");
+//#endif
+                cz.kruch.track.ui.Desktop.timer.schedule(flusher = new TimerTask() {
+                    public void run() {
+//#ifdef __LOG__
+                        if (log.isEnabled()) log.debug("trigger flush at " + new Date());
+//#endif
+                        insert(Boolean.FALSE);
+                    }
+                }, 60000L, 60000L);
+            }
+
+//#ifdef __LOG__
+            if (log.isEnabled()) log.debug("recording started");
+//#endif
+            // signal recording start
+            callback.invoke(new Integer(CODE_RECORDING_START), null, this);
+
+            // pop items until end
+            while (go) {
+                final Object item;
+                synchronized (this) {
+                    while (go && queue == null) {
+                        try {
+                            wait();
+                        } catch (InterruptedException e) {
+                            // ignore
+                        }
+                    }
+                    item = queue;
+                    queue = null; // gc hint
+                }
+
+                if (!go) break;
+
+                try {
+
+                    if (item instanceof Location) {
+
+                        // save <trktp>
+                        final Location l = (Location) item;
+                        serializeTrkpt(l);
+                        Location.releaseInstance(l);
+
+                        /*
+                         * no flush here for performance reasons - flusher should do it
+                         */
+
+                    } else if (item instanceof Boolean) {
+
+                        // break <trkseg>
+                        if (Boolean.TRUE.equals(item) && ptCount > 0) {
+                            serializer.endTag(DEFAULT_NAMESPACE, ELEMENT_TRKSEG);
+                            serializer.startTag(DEFAULT_NAMESPACE, ELEMENT_TRKSEG);
+                            ptCount = 0;
+                        }
+
+                        // flush
+                        serializer.flush();
+
+                    } else if (item instanceof Waypoint) {
+
+                        // save <wpt>
+                        final Waypoint w = (Waypoint) item;
+                        final Object uo = w.getUserObject();
+                        if (uo instanceof byte[]) {
+                            w.setLinkPath(saveImage((byte[]) uo));
+                            w.setUserObject(null); // gc hint
+                        }
+                        serializeWpt(w);
+
+                        // flush
+                        serializer.flush();
+
+                        // notify TODO ugly ... why ugly???
+                        callback.invoke(new Integer(CODE_WAYPOINT_INSERTED), null, this);
+
+                    }
+
+                } catch (Throwable t) {
+//#ifdef __LOG__
+                    if (log.isEnabled()) log.error("loop error: " + t);
+//#endif
+                    // quit loop
+                    go = false;
+                    // signal fatal error
+                    callback.invoke(null, t, this);
+                }
+            }
+
+            // stop periodic flush
+            if (flusher != null) {
+                flusher.cancel();
+                flusher = null; // gc hint
+            }
+
+            // close
+            close();
+
+//#ifdef __LOG__
+            if (log.isEnabled()) log.debug("signaling recording stopped");
+//#endif
+            // signal recording stop
+            callback.invoke(new Integer(CODE_RECORDING_STOP), null, this);
+
+        } else {
+
+            // signal failure
+            callback.invoke(Resources.getString(Resources.DESKTOP_MSG_START_TRACKLOG_FAILED)+ ": " + path, status, this);
+
+        }
+    }
+
+    public void writeWpt(final Waypoint wpt) throws IOException {
+        serializeWpt(wpt);
+    }
+
+    private void serializePt(final QualifiedCoordinates qc) throws IOException {
+        final KXmlSerializer serializer = this.serializer;
         final char[] sbChars = this.sbChars;
         int i = doubleToChars(qc.getLat(), 9);
         serializer.attribute(DEFAULT_NAMESPACE, ATTRIBUTE_LAT, sbChars, i);
@@ -331,153 +436,188 @@ public final class GpxTracklog extends Thread {
             serializer.text(sbChars, 0, i);
             serializer.endTag(DEFAULT_NAMESPACE, ELEMENT_ELEVATION);
         }
-        if (pt instanceof Waypoint) {
-            final Waypoint wpt = (Waypoint) pt;
-            serializer.startTag(DEFAULT_NAMESPACE, ELEMENT_TIME);
-            i = dateToXsdDate(wpt.getTimestamp());
-            serializer.text(sbChars, 0, i);
-            serializer.endTag(DEFAULT_NAMESPACE, ELEMENT_TIME);
-            if (wpt.getName() != null && wpt.getName().length() > 0) {
-                serializer.startTag(DEFAULT_NAMESPACE, ELEMENT_NAME);
-                serializer.text(wpt.getName());
-                serializer.endTag(DEFAULT_NAMESPACE, ELEMENT_NAME);
-            }
-            if (wpt.getComment() != null && wpt.getComment().length() > 0) {
-                serializer.startTag(DEFAULT_NAMESPACE, ELEMENT_CMT);
-                serializer.text(wpt.getComment());
-                serializer.endTag(DEFAULT_NAMESPACE, ELEMENT_CMT);
-            }
-            if (wpt.getLinkPath() != null && wpt.getLinkPath().length() > 0) {
-                serializer.startTag(DEFAULT_NAMESPACE, ELEMENT_LINK);
-                serializer.attribute(DEFAULT_NAMESPACE, ATTRIBUTE_HREF, wpt.getLinkPath());
-                serializer.endTag(DEFAULT_NAMESPACE, ELEMENT_LINK);
-            }
-        } else if (pt instanceof Location) {
-            final Location l = (Location) pt;
-            serializer.startTag(DEFAULT_NAMESPACE, ELEMENT_TIME);
-            i = dateToXsdDate(l.getTimestamp());
-            serializer.text(sbChars, 0, i);
-            serializer.endTag(DEFAULT_NAMESPACE, ELEMENT_TIME);
-            serializer.startTag(DEFAULT_NAMESPACE, ELEMENT_FIX);
-            switch (l.getFix()) {
-                case 0: {
-                    serializer.text(FIX_NONE);
-                } break;
-                case 1:
-                    if (l.isFix3d()) {
-                        serializer.text(FIX_3D);
-                    } else {
-                        serializer.text(FIX_2D);
-                    }
-                    break;
-                case 2: {
-                    serializer.text(FIX_DGPS);
-                } break;
-                case 3: {
-                    serializer.text(FIX_PPS);
-                } break;
-                default: {
-                    serializer.text(Integer.toString(l.getFix()));
-                }
-            }
-            serializer.endTag(DEFAULT_NAMESPACE, ELEMENT_FIX);
-            final int sat = l.getSat();
-            if (sat > 0) {
-                serializer.startTag(DEFAULT_NAMESPACE, ELEMENT_SAT);
-                switch (sat) {
-                    case 3: {
-                        serializer.text("3");
-                    } break;
-                    case 4: {
-                        serializer.text("4");
-                    } break;
-                    case 5: {
-                        serializer.text("5");
-                    } break;
-                    case 6: {
-                        serializer.text("6");
-                    } break;
-                    case 7: {
-                        serializer.text("7");
-                    } break;
-                    case 8: {
-                        serializer.text("8");
-                    } break;
-                    case 9: {
-                        serializer.text("9");
-                    } break;
-                    case 10: {
-                        serializer.text("10");
-                    } break;
-                    case 11: {
-                        serializer.text("11");
-                    } break;
-                    case 12: {
-                        serializer.text("12");
-                    } break;
-                    default:
-                        serializer.text(Integer.toString(sat));
-                }
-                serializer.endTag(DEFAULT_NAMESPACE, ELEMENT_SAT);
-            }
-/*
-            if (l.getHdop() > -1F) {
-                serializer.startTag(DEFAULT_NAMESPACE, "hdop");
-                serializer.text(Float.toString(l.getHdop()));
-                serializer.endTag(DEFAULT_NAMESPACE, "hdop");
-            }
-*/
-            /*
-             * extensions - nmea:rmc and gsm
-             */
-            final float course = l.getCourse();
-            final float speed = l.getSpeed();
-            String cellid = null;
-            String lac = null;
-            if (Config.gpxGsmInfo) {
-                cellid = System.getProperty("com.sonyericsson.net.cellid");
-                lac = System.getProperty("com.sonyericsson.net.lac");
-            }
-            if (!Float.isNaN(course) || !Float.isNaN(speed) || cellid != null || lac != null) {
-                serializer.startTag(DEFAULT_NAMESPACE, ELEMENT_EXTENSIONS);
-                if (!Float.isNaN(course)) {
-                    serializer.startTag(EXT_NAMESPACE, ELEMENT_COURSE);
-                    i = doubleToChars(course, 1);
-                    serializer.text(sbChars, 0, i);
-                    serializer.endTag(EXT_NAMESPACE, ELEMENT_COURSE);
-                }
-                if (!Float.isNaN(speed)) {
-                    serializer.startTag(EXT_NAMESPACE, ELEMENT_SPEED);
-                    i = doubleToChars(speed, 1);
-                    serializer.text(sbChars, 0, i);
-                    serializer.endTag(EXT_NAMESPACE, ELEMENT_SPEED);
-                }
-                if (cellid != null) {
-                    serializer.startTag(GSM_NAMESPACE, ELEMENT_CELLID);
-                    serializer.text(cellid);
-                    serializer.endTag(GSM_NAMESPACE, ELEMENT_CELLID);
-                }
-                if (lac != null) {
-                    serializer.startTag(GSM_NAMESPACE, ELEMENT_LAC);
-                    serializer.text(lac);
-                    serializer.endTag(GSM_NAMESPACE, ELEMENT_LAC);
-                }
-                serializer.endTag(DEFAULT_NAMESPACE, ELEMENT_EXTENSIONS);
-            }
-        }
+        ptCount++;
     }
 
-    private void serializeTrkpt(final KXmlSerializer serializer,
-                                final Location l) throws IOException {
+    private void serializeTrkpt(final Location l) throws IOException {
+        final KXmlSerializer serializer = this.serializer;
         serializer.startTag(DEFAULT_NAMESPACE, ELEMENT_TRKPT);
-        serializePt(serializer, l.getQualifiedCoordinates(), l);
+        serializePt(l.getQualifiedCoordinates());
+        serializer.startTag(DEFAULT_NAMESPACE, ELEMENT_TIME);
+        int i = dateToXsdDate(l.getTimestamp());
+        serializer.text(sbChars, 0, i);
+        serializer.endTag(DEFAULT_NAMESPACE, ELEMENT_TIME);
+        serializer.startTag(DEFAULT_NAMESPACE, ELEMENT_FIX);
+        switch (l.getFix()) {
+            case 0: {
+                serializer.text(FIX_NONE);
+            } break;
+            case 1:
+                if (l.isFix3d()) {
+                    serializer.text(FIX_3D);
+                } else {
+                    serializer.text(FIX_2D);
+                }
+                break;
+            case 2: {
+                serializer.text(FIX_DGPS);
+            } break;
+            case 3: {
+                serializer.text(FIX_PPS);
+            } break;
+            default: {
+                serializer.text(Integer.toString(l.getFix()));
+            }
+        }
+        serializer.endTag(DEFAULT_NAMESPACE, ELEMENT_FIX);
+        final int sat = l.getSat();
+        if (sat > 0) {
+            serializer.startTag(DEFAULT_NAMESPACE, ELEMENT_SAT);
+            switch (sat) {
+                case 3: {
+                    serializer.text("3");
+                } break;
+                case 4: {
+                    serializer.text("4");
+                } break;
+                case 5: {
+                    serializer.text("5");
+                } break;
+                case 6: {
+                    serializer.text("6");
+                } break;
+                case 7: {
+                    serializer.text("7");
+                } break;
+                case 8: {
+                    serializer.text("8");
+                } break;
+                case 9: {
+                    serializer.text("9");
+                } break;
+                case 10: {
+                    serializer.text("10");
+                } break;
+                case 11: {
+                    serializer.text("11");
+                } break;
+                case 12: {
+                    serializer.text("12");
+                } break;
+                default:
+                    serializer.text(Integer.toString(sat));
+            }
+            serializer.endTag(DEFAULT_NAMESPACE, ELEMENT_SAT);
+        }
+        /*
+         * extensions - nmea:rmc and gsm
+         */
+        final float course = l.getCourse();
+        final float speed = l.getSpeed();
+        String cellid = null;
+        String lac = null;
+        if (Config.gpxGsmInfo) {
+            cellid = System.getProperty("com.sonyericsson.net.cellid");
+            lac = System.getProperty("com.sonyericsson.net.lac");
+        }
+        if (!Float.isNaN(course) || !Float.isNaN(speed) || cellid != null || lac != null) {
+            serializer.startTag(DEFAULT_NAMESPACE, ELEMENT_EXTENSIONS);
+            if (!Float.isNaN(course)) {
+                serializer.startTag(EXT_NAMESPACE, ELEMENT_COURSE);
+                i = doubleToChars(course, 1);
+                serializer.text(sbChars, 0, i);
+                serializer.endTag(EXT_NAMESPACE, ELEMENT_COURSE);
+            }
+            if (!Float.isNaN(speed)) {
+                serializer.startTag(EXT_NAMESPACE, ELEMENT_SPEED);
+                i = doubleToChars(speed, 1);
+                serializer.text(sbChars, 0, i);
+                serializer.endTag(EXT_NAMESPACE, ELEMENT_SPEED);
+            }
+            if (cellid != null) {
+                serializer.startTag(GSM_NAMESPACE, ELEMENT_CELLID);
+                serializer.text(cellid);
+                serializer.endTag(GSM_NAMESPACE, ELEMENT_CELLID);
+            }
+            if (lac != null) {
+                serializer.startTag(GSM_NAMESPACE, ELEMENT_LAC);
+                serializer.text(lac);
+                serializer.endTag(GSM_NAMESPACE, ELEMENT_LAC);
+            }
+            serializer.endTag(DEFAULT_NAMESPACE, ELEMENT_EXTENSIONS);
+        }
         serializer.endTag(DEFAULT_NAMESPACE, ELEMENT_TRKPT);
     }
 
-    private void serializeWpt(final KXmlSerializer serializer,
-                              final Waypoint wpt) throws IOException {
+    private void serializeGs(final GroundspeakBean bean) throws IOException {
+        final KXmlSerializer serializer = this.serializer;
+        serializer.startTag(GS_1_0_NAMESPACE, ELEMENT_GS_CACHE);
+        serializer.attribute(DEFAULT_NAMESPACE, ATTRIBUTE_GS_ID, bean.id);
+        serializer.startTag(GS_1_0_NAMESPACE, ELEMENT_NAME);
+        serializer.text(bean.name);
+        serializer.endTag(GS_1_0_NAMESPACE, ELEMENT_NAME);
+        serializer.startTag(GS_1_0_NAMESPACE, ELEMENT_GS_TYPE);
+        serializer.text(bean.type);
+        serializer.endTag(GS_1_0_NAMESPACE, ELEMENT_GS_TYPE);
+        serializer.startTag(GS_1_0_NAMESPACE, ELEMENT_GS_CONTAINER);
+        serializer.text(bean.container);
+        serializer.endTag(GS_1_0_NAMESPACE, ELEMENT_GS_CONTAINER);
+        serializer.startTag(GS_1_0_NAMESPACE, ELEMENT_GS_DIFF);
+        serializer.text(bean.difficulty);
+        serializer.endTag(GS_1_0_NAMESPACE, ELEMENT_GS_DIFF);
+        serializer.startTag(GS_1_0_NAMESPACE, ELEMENT_GS_TERRAIN);
+        serializer.text(bean.terrain);
+        serializer.endTag(GS_1_0_NAMESPACE, ELEMENT_GS_TERRAIN);
+        serializer.startTag(GS_1_0_NAMESPACE, ELEMENT_GS_COUNTRY);
+        serializer.text(bean.country);
+        serializer.endTag(GS_1_0_NAMESPACE, ELEMENT_GS_COUNTRY);
+        if (bean.shortListing != null) {
+            serializer.startTag(GS_1_0_NAMESPACE, ELEMENT_GS_SHORTL);
+            serializer.text(bean.shortListing);
+            serializer.endTag(GS_1_0_NAMESPACE, ELEMENT_GS_SHORTL);
+        }
+        if (bean.longListing != null) {
+            serializer.startTag(GS_1_0_NAMESPACE, ELEMENT_GS_LONGL);
+            serializer.text(bean.longListing);
+            serializer.endTag(GS_1_0_NAMESPACE, ELEMENT_GS_LONGL);
+        }
+        if (bean.encodedHints != null) {
+            serializer.startTag(GS_1_0_NAMESPACE, ELEMENT_GS_HINTS);
+            serializer.text(bean.encodedHints);
+            serializer.endTag(GS_1_0_NAMESPACE, ELEMENT_GS_HINTS);
+        }
+        serializer.endTag(GS_1_0_NAMESPACE, ELEMENT_GS_CACHE);
+    }
+
+    private void serializeWpt(final Waypoint wpt) throws IOException {
+        final KXmlSerializer serializer = this.serializer;
         serializer.startTag(DEFAULT_NAMESPACE, ELEMENT_WPT);
-        serializePt(serializer, wpt.getQualifiedCoordinates(), wpt);
+        serializePt(wpt.getQualifiedCoordinates());
+        serializer.startTag(DEFAULT_NAMESPACE, ELEMENT_TIME);
+        final int i = dateToXsdDate(wpt.getTimestamp());
+        serializer.text(sbChars, 0, i);
+        serializer.endTag(DEFAULT_NAMESPACE, ELEMENT_TIME);
+        final String name = wpt.getName();
+        if (name != null && name.length() > 0) {
+            serializer.startTag(DEFAULT_NAMESPACE, ELEMENT_NAME);
+            serializer.text(name);
+            serializer.endTag(DEFAULT_NAMESPACE, ELEMENT_NAME);
+        }
+        final String cmt = wpt.getComment();
+        if (cmt != null && cmt.length() > 0) {
+            serializer.startTag(DEFAULT_NAMESPACE, ELEMENT_CMT);
+            serializer.text(cmt);
+            serializer.endTag(DEFAULT_NAMESPACE, ELEMENT_CMT);
+        }
+        final String link = wpt.getLinkPath();
+        if (link != null && link.length() > 0) {
+            serializer.startTag(DEFAULT_NAMESPACE, ELEMENT_LINK);
+            serializer.attribute(DEFAULT_NAMESPACE, ATTRIBUTE_HREF, link);
+            serializer.endTag(DEFAULT_NAMESPACE, ELEMENT_LINK);
+        }
+        if (wpt.getUserObject() instanceof GroundspeakBean) {
+            serializeGs((GroundspeakBean) wpt.getUserObject());
+        }
         serializer.endTag(DEFAULT_NAMESPACE, ELEMENT_WPT);
     }
 
@@ -490,7 +630,7 @@ public final class GpxTracklog extends Thread {
             final String relPath = "images-" + fileDate;
 
             // check for 'Images' subdir existence
-            final String imgdir = Config.getFolderWaypoints() + relPath + "/";
+            final String imgdir = Config.getFolderURL(Config.FOLDER_WPTS) + relPath + "/";
             file = File.open(imgdir, Connector.READ_WRITE);
             if (!file.exists()) {
                 file.mkdir();
@@ -700,11 +840,11 @@ public final class GpxTracklog extends Thread {
         final Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone("GMT"));
         calendar.setTime(new Date(time));
         final StringBuffer sb = new StringBuffer(32);
-        NavigationScreens.append(sb, calendar.get(Calendar.YEAR)).append('-');
-        appendTwoDigitStr(sb, calendar.get(Calendar.MONTH) + 1).append('-');
+        NavigationScreens.append(sb, calendar.get(Calendar.YEAR));
+        appendTwoDigitStr(sb, calendar.get(Calendar.MONTH) + 1);
         appendTwoDigitStr(sb, calendar.get(Calendar.DAY_OF_MONTH)).append('-');
-        appendTwoDigitStr(sb, calendar.get(Calendar.HOUR_OF_DAY)).append('-');
-        appendTwoDigitStr(sb, calendar.get(Calendar.MINUTE)).append('-');
+        appendTwoDigitStr(sb, calendar.get(Calendar.HOUR_OF_DAY));
+        appendTwoDigitStr(sb, calendar.get(Calendar.MINUTE));
         appendTwoDigitStr(sb, calendar.get(Calendar.SECOND));
 
         return sb.toString();

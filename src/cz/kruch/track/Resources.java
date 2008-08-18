@@ -19,6 +19,7 @@ package cz.kruch.track;
 import cz.kruch.track.configuration.Config;
 import cz.kruch.track.io.LineReader;
 import cz.kruch.track.util.CharArrayTokenizer;
+import cz.kruch.j2se.io.BufferedInputStream;
 
 import javax.microedition.io.Connector;
 /*
@@ -153,6 +154,7 @@ public final class Resources {
     public static final short DESKTOP_MSG_NO_SET_FILE           = 1385;
     public static final short DESKTOP_MSG_PROV_OUT_OF_SERVICE   = 1386;
     public static final short DESKTOP_MSG_PROV_STARTING         = 1387;
+    public static final short DESKTOP_MSG_IN_PROGRESS           = 1388;
     /* navigation - commands */
     public static final short NAV_CMD_ROUTE_ALONG               = 2000;
     public static final short NAV_CMD_ROUTE_BACK                = 2001;
@@ -165,6 +167,10 @@ public final class Resources {
     public static final short NAV_CMD_SEND                      = 2008;
     public static final short NAV_CMD_SHOW_ALL                  = 2009;
     public static final short NAV_CMD_HIDE_ALL                  = 2010;
+    public static final short NAV_CMD_EDIT                      = 2011;
+    public static final short NAV_CMD_UPDATE                    = 2012;
+    public static final short NAV_CMD_DELETE                    = 2013;
+    public static final short NAV_CMD_SHOW                      = 2014;
     /* navigation - menu */
     public static final short NAV_ITEM_WAYPOINTS                = 2100;
     public static final short NAV_ITEM_RECORD                   = 2101;
@@ -194,6 +200,8 @@ public final class Resources {
     public static final short NAV_MSG_SNAPSHOT_FAILED           = 2403;
     public static final short NAV_MSG_NO_SNAPSHOT               = 2404;
     public static final short NAV_MSG_MALFORMED_COORD           = 2405;
+    public static final short NAV_MSG_STORE_UPDATED             = 2406;
+    public static final short NAV_MSG_STORE_UPDATE_FAILED       = 2407;
     /* navigation - waypoint form */
     public static final short NAV_TITLE_WPT                     = 2200;
     public static final short NAV_FLD_WPT_NAME                  = 2201;
@@ -214,6 +222,11 @@ public final class Resources {
     public static final short NAV_FLD_UTM_NORTHING              = 2216;
     public static final short NAV_FLD_EASTING                   = 2217;
     public static final short NAV_FLD_NORTHING                  = 2218;
+    public static final short NAV_FLD_GS_ID                     = 2219;
+    public static final short NAV_FLD_GS_CLASS                  = 2220;
+    public static final short NAV_FLD_GS_LISTING_SHORT          = 2221;
+    public static final short NAV_FLD_GS_LISTING_LONG           = 2222;
+    public static final short NAV_FLD_GS_HINT                   = 2223;
     /* settings - commands */
     public static final short CFG_CMD_APPLY                     = 3000;
     public static final short CFG_CMD_SAVE                      = 3001;
@@ -253,6 +266,7 @@ public final class Resources {
     public static final short CFG_DESKTOP_FLD_TRAJECTORY        = 3514;
     public static final short CFG_DESKTOP_FLD_TRAIL_PREVIEW     = 3515;
     public static final short CFG_DESKTOP_CMD_TRAIL_MODE        = 3516;
+    public static final short CFG_DESKTOP_FLD_SAFE_COLORS       = 3517;
     /* settings - Location */
     public static final short CFG_LOCATION_GROUP_PROVIDER       = 3600;
     public static final short CFG_LOCATION_GROUP_TRACKLOG       = 3601;
@@ -286,6 +300,9 @@ public final class Resources {
     public static final short CFG_NAVIGATION_FLD_POI_ICONS      = 3705;
     public static final short CFG_NAVIGATION_GROUP_SMS          = 3706;
     public static final short CFG_NAVIGATION_FLD_RECEIVE        = 3707;
+    public static final short CFG_NAVIGATION_FLD_AUTOHIDE       = 3708;
+    public static final short CFG_NAVIGATION_FLD_REVISIONS      = 3709;
+    public static final short CFG_NAVIGATION_FLD_PREFER_GSNAME  = 3710;
     /* settings - tweaks */
     public static final short CFG_TWEAKS_GROUP                  = 3800;
     public static final short CFG_TWEAKS_FLD_SIEMENS_IO         = 3801;
@@ -316,7 +333,7 @@ public final class Resources {
         if (api.file.File.isFs()) {
             api.file.File file = null;
             try {
-                file = api.file.File.open(Config.getFolderResources() + "language.res");
+                file = api.file.File.open(Config.getFolderURL(Config.FOLDER_RESOURCES) + "language.res");
                 if (file.exists()) {
                     in = file.openInputStream();
                     result++;
@@ -339,10 +356,10 @@ public final class Resources {
         }
 
         if (in != null) {
-            final DataInputStream resin = new DataInputStream(in);
+            final DataInputStream resin = new DataInputStream(new BufferedInputStream(in, 4096));
             try {
-                resin.readInt(); // signature: 0xEA4D4910; // JSR-238: 0xEE4D4910
-                final int hl = resin.readInt(); // header length
+                final int signature = resin.readInt(); // signature: 0xEA4D4910; // JSR-238: 0xEE4D4910
+                final int hl = resin.readInt();        // header length
                 final int count = hl / 8;
                 ids = new int[count];
                 values = new String[count];
@@ -370,7 +387,7 @@ public final class Resources {
         if (api.file.File.isFs()) {
             api.file.File file = null;
             try {
-                file = api.file.File.open(Config.getFolderResources() + "keymap.txt");
+                file = api.file.File.open(Config.getFolderURL(Config.FOLDER_RESOURCES) + "keymap.txt");
                 if (file.exists()) {
                     LineReader reader = null;
                     try {
@@ -452,7 +469,7 @@ public final class Resources {
     }
 
     public static String prefixed(final String title) {
-        if (!cz.kruch.track.TrackingMIDlet.wm) {
+        if (!cz.kruch.track.TrackingMIDlet.j9) {
             return title;
         }
         return "TrekBuddy - " + title;

@@ -18,10 +18,11 @@ package cz.kruch.track.configuration;
 
 import cz.kruch.track.util.CharArrayTokenizer;
 import cz.kruch.track.io.LineReader;
+import cz.kruch.track.ui.YesNoDialog;
 
 import javax.microedition.rms.RecordStore;
-import javax.microedition.rms.RecordStoreException;
 import javax.microedition.midlet.MIDlet;
+import javax.microedition.io.Connector;
 import java.io.DataInputStream;
 import java.io.ByteArrayInputStream;
 import java.io.DataOutputStream;
@@ -40,7 +41,7 @@ import api.file.File;
  *
  * @author Ales Pour <kruhc@seznam.cz>
  */
-public final class Config {
+public final class Config implements Runnable, YesNoDialog.AnswerListener {
 //#ifdef __LOG__
     private static final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("Config");
 //#endif
@@ -75,13 +76,13 @@ public final class Config {
     public static final int UNITS_NAUTICAL          = 2;
 
     /* datadir folders */
-    private static final String FOLDER_MAPS         = "maps/";
-    private static final String FOLDER_NMEA         = "tracks-nmea/";
-    private static final String FOLDER_TRACKS       = "tracks-gpx/";
-    private static final String FOLDER_WPTS         = "wpts/";
-    private static final String FOLDER_PROFILES     = "ui-profiles/";
-    private static final String FOLDER_RESOURCES    = "resources/";
-    private static final String FOLDER_SOUNDS       = "sounds/";
+    public static final String FOLDER_MAPS         = "maps/";
+    public static final String FOLDER_NMEA         = "tracks-nmea/";
+    public static final String FOLDER_TRACKS       = "tracks-gpx/";
+    public static final String FOLDER_WPTS         = "wpts/";
+    public static final String FOLDER_PROFILES     = "ui-profiles/";
+    public static final String FOLDER_RESOURCES    = "resources/";
+    public static final String FOLDER_SOUNDS       = "sounds/";
 
     /* 16 basic colors */
     public static final int[] COLORS_16 = {
@@ -129,10 +130,11 @@ public final class Config {
     private static String locationTimings   = EMPTY_STRING;
 
     // group [Serial provider options]
-    public static String commUrl            = "comm:COM5;baudrate=9600";
+    public static String commUrl                = "comm:COM5;baudrate=9600";
 
     // group [Location sharing]
     public static boolean locationSharing;
+    public static boolean autohideNotification  = true;
 
     // group [O2Germany provider options]
     public static int o2Depth                   = 8;
@@ -149,6 +151,7 @@ public final class Config {
     public static boolean osdBoldFont;
     public static boolean osdBlackColor;
     public static boolean hpsWptTrueAzimuth     = true;
+    public static boolean safeColors;
     public static int osdAlpha                  = 0x80;
     public static int cmsCycle;
 
@@ -186,6 +189,8 @@ public final class Config {
     public static boolean routePoiMarks         = true;
     public static int routeColor;
     public static int routeThick;
+    public static boolean makeRevisions         = true;
+    public static boolean preferGsName          = true;
 
     // hidden
     public static String btDeviceName   = EMPTY_STRING;
@@ -197,20 +202,28 @@ public final class Config {
     public static String cmsProfile     = EMPTY_STRING;
     public static boolean o2provider;
 
+    private Config() {
+    }
+
     public static Throwable initialize() {
 
 //#ifdef __RIM__
         /* default for Blackberry */
         dataDir = "file:///SDCard/TrekBuddy/";
         commUrl = "btspp://000276fd79da:1";
+        fullscreen = true;
+        safeColors = true;
 //#else
         if (cz.kruch.track.TrackingMIDlet.sxg75) {
             dataDir = "file:///fs/tb/";
+            fullscreen = true;
         } else if (cz.kruch.track.TrackingMIDlet.siemens) {
             dataDir = "file:///4:/TrekBuddy/";
+            fullscreen = true;
         } else if (cz.kruch.track.TrackingMIDlet.lg) {
             dataDir = "file:///Card/TrekBuddy/";
-        } else if (cz.kruch.track.TrackingMIDlet.wm || cz.kruch.track.TrackingMIDlet.jbed || cz.kruch.track.TrackingMIDlet.intent) {
+            fullscreen = true;
+        } else if (cz.kruch.track.TrackingMIDlet.j9 || cz.kruch.track.TrackingMIDlet.jbed || cz.kruch.track.TrackingMIDlet.intent || cz.kruch.track.TrackingMIDlet.phoneme) {
             dataDir = "file:///Storage%20Card/TrekBuddy/";
             if (cz.kruch.track.TrackingMIDlet.jbed || cz.kruch.track.TrackingMIDlet.intent) {
                 commUrl = "socket://127.0.0.1:20175";
@@ -220,8 +233,12 @@ public final class Config {
             forcedGc = true;
         } else if (cz.kruch.track.TrackingMIDlet.uiq) {
             dataDir = "file:///Ms/Other/TrekBuddy/";
+            fullscreen = true;
         } else { // Nokia, SonyEricsson, ...
             dataDir = "file:///E:/TrekBuddy/"; // pstros: "file:///SDCard/TrekBuddy/"
+            if (cz.kruch.track.TrackingMIDlet.nokia || cz.kruch.track.TrackingMIDlet.sonyEricsson) {
+                fullscreen = true;
+            }
         }
 //#endif
 
@@ -416,6 +433,15 @@ public final class Config {
         } catch (Exception e) {
         }
 
+        // 0.9.81 extensions
+        try {
+            makeRevisions = din.readBoolean();
+            autohideNotification = din.readBoolean();
+            preferGsName = din.readBoolean();
+            safeColors = din.readBoolean();
+        } catch (Exception e) {
+        }
+
 //#ifdef __LOG__
         if (log.isEnabled()) log.info("configuration read");
 //#endif
@@ -492,6 +518,11 @@ public final class Config {
         dout.writeInt(trailThick);
         dout.writeInt(routeColor);
         dout.writeInt(routeThick);
+        /* since 0.9.81 */
+        dout.writeBoolean(makeRevisions);
+        dout.writeBoolean(autohideNotification);
+        dout.writeBoolean(preferGsName);
+        dout.writeBoolean(safeColors);
 
 //#ifdef __LOG__
         if (log.isEnabled()) log.info("configuration updated");
@@ -525,19 +556,15 @@ public final class Config {
         } catch (Exception e) {
             throw new ConfigurationException(e);
         } finally {
-            if (din != null) {
-                try {
-                    din.close();
-                } catch (IOException e) {
-                    // ignore
-                }
+            try {
+                din.close();
+            } catch (Exception e) { // NPE or IOE
+                // ignore
             }
-            if (rs != null) {
-                try {
-                    rs.closeRecordStore();
-                } catch (RecordStoreException e) {
-                    // ignore
-                }
+            try {
+                rs.closeRecordStore();
+            } catch (Exception e) { // NPE or IOE
+                // ignore
             }
         }
     }
@@ -567,18 +594,102 @@ public final class Config {
         } catch (Throwable t) {
             throw new ConfigurationException(t);
         } finally {
-            if (dout != null) {
+            try {
+                dout.close();
+            } catch (Exception e) { // NPE or IOE
+                // ignore
+            }
+            try {
+                rs.closeRecordStore();
+            } catch (Exception e) { // NPE or IOE
+                // ignore
+            }
+        }
+    }
+
+    public static void initDataDir() {
+        cz.kruch.track.maps.io.LoaderIO.getInstance().enqueue(new Config());
+    }
+
+    public void run() {
+//#ifdef __LOG__
+        if (log.isEnabled()) log.info("init datadir");
+//#endif
+
+        boolean create = false;
+        boolean error = false;
+        File dir = null;
+        try {
+            dir = File.open(getDataDir());
+            create = !dir.exists();
+        } catch (Exception e) {
+            cz.kruch.track.ui.Desktop.showError("'DataDir' not accessible - please fix it", e, null);
+            error = true;
+        } finally {
+            try {
+                dir.close();
+            } catch (Exception e) { // NPE or IOE
+                // ignore
+            }
+        }
+        if (!error) {
+            if (create) {
+                (new YesNoDialog(null, new Config(), Boolean.FALSE,
+                                 "DataDir '" + getDataDir().substring(8 /* "file:///".length() */) + "' does not exists. Create it?",
+                                 null)).show();
+            } else {
+                response(YesNoDialog.NO, Boolean.TRUE);
+            }
+        }
+    }
+
+    public void response(int answer, Object closure) {
+//#ifdef __LOG__
+        if (log.isEnabled()) log.info("response; answer: " + answer + "; closure " + closure);
+//#endif
+        if (answer == YesNoDialog.YES) {
+            File datadir = null;
+            try {
+                datadir = File.open(getDataDir(), Connector.WRITE);
+                datadir.mkdir();
+                closure = Boolean.TRUE;
+            } catch (Exception e) {
+                cz.kruch.track.ui.Desktop.showError("Failed to create DataDir " + getDataDir().substring(8 /* "file:///".length() */),
+                                                    e, null);
+            } finally {
                 try {
-                    dout.close();
-                } catch (IOException e) {
+                    datadir.close();
+                } catch (Exception e) { // NPE or IOE
                     // ignore
                 }
             }
-            if (rs != null) {
+        }
+        if (closure == Boolean.TRUE) {
+            final String[] folders = {
+                FOLDER_MAPS, FOLDER_NMEA, FOLDER_PROFILES, FOLDER_RESOURCES,
+                FOLDER_SOUNDS, FOLDER_TRACKS, FOLDER_WPTS
+            };
+            for (int i = folders.length; --i >= 0; ) {
+                File folder = null;
                 try {
-                    rs.closeRecordStore();
-                } catch (RecordStoreException e) {
-                    // ignore
+                    folder = File.open(getFolderURL(folders[i]), Connector.READ_WRITE);
+                    if (!folder.exists()) {
+//#ifdef __LOG__
+                        if (log.isEnabled()) log.info("creating subfolder " + folders[i]);
+//#endif
+                        folder.mkdir();
+                    }
+                } catch (Exception e) {
+                    // ignore // TODO really?!?
+//#ifdef __LOG__
+                    if (log.isEnabled()) log.error("failed to create subfolder " + folders[i], e);
+//#endif
+                } finally {
+                    try {
+                        folder.close();
+                    } catch (Exception e) { // NPE or IOE
+                        // ignore
+                    }
                 }
             }
         }
@@ -637,7 +748,7 @@ public final class Config {
         // next try user's
         File file = null;
         try {
-            file = File.open(Config.getFolderResources() + "datums.txt");
+            file = File.open(Config.getFolderURL(Config.FOLDER_RESOURCES) + "datums.txt");
             if (file.exists()) {
                 initDatums(file.openInputStream(), tokenizer, delims);
             }
@@ -688,12 +799,10 @@ public final class Config {
             // ignore
         } finally {
             // close reader - closes the stream as well
-            if (reader != null) {
-                try {
-                    reader.close();
-                } catch (IOException e) {
-                    // ignore
-                }
+            try {
+                reader.close();
+            } catch (Exception e) { // NPE or IOE
+                // ignore
             }
         }
     }
@@ -760,28 +869,8 @@ public final class Config {
         dataDir = dir;
     }
 
-    public static String getFolderTracks() {
-        return getDataDir() + FOLDER_TRACKS;
-    }
-
-    public static String getFolderNmea() {
-        return getDataDir() + FOLDER_NMEA;
-    }
-
-    public static String getFolderWaypoints() {
-        return getDataDir() + FOLDER_WPTS;
-    }
-
-    public static String getFolderProfiles() {
-        return getDataDir() + FOLDER_PROFILES;
-    }
-
-    public static String getFolderResources() {
-        return getDataDir() + FOLDER_RESOURCES;
-    }
-
-    public static String getFolderSounds() {
-        return getDataDir() + FOLDER_SOUNDS;
+    public static String getFolderURL(String folder) {
+        return getDataDir() + folder;
     }
 
     public static String getLocationTimings(final int provider) {

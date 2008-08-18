@@ -53,6 +53,10 @@ final class Motorola1000File extends File {
         ((com.motorola.io.file.FileConnection) fc).mkdir();
     }
 
+    public void rename(String newName) throws IOException {
+        ((com.motorola.io.file.FileConnection) fc).rename(newName);
+    }
+
     public long fileSize() throws IOException {
         return ((com.motorola.io.file.FileConnection) fc).fileSize();
     }

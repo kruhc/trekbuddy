@@ -55,6 +55,10 @@ final class Jsr75File extends File {
         ((FileConnection) fc).mkdir();
     }
 
+    public void rename(String newName) throws IOException {
+        ((FileConnection) fc).rename(newName);
+    }
+
     public long fileSize() throws IOException {
         return ((FileConnection) fc).fileSize();
     }

@@ -53,6 +53,10 @@ final class SiemensFile extends File {
         ((com.siemens.mp.io.file.FileConnection) fc).mkdir();
     }
 
+    public void rename(String newName) throws IOException {
+        ((com.siemens.mp.io.file.FileConnection) fc).rename(newName);
+    }
+
     public long fileSize() throws IOException {
         return ((com.siemens.mp.io.file.FileConnection) fc).fileSize();
     }

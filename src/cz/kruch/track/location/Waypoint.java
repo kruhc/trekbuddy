@@ -36,19 +36,26 @@ public final class Waypoint {
     private String linkPath;
 
     public Waypoint(QualifiedCoordinates qc, String name, String comment, String sym) {
-        this(qc, name, comment, sym, -1);
-    }
-
-    public Waypoint(QualifiedCoordinates qc, String name, String comment, String sym, long timestamp) {
         this.coordinates = qc;
         this.name = name;
         this.comment = comment;
         this.sym = sym;
+        this.timestamp = -1;
+    }
+
+    public Waypoint(QualifiedCoordinates qc, String name, String comment, long timestamp) {
+        this.coordinates = qc;
+        this.name = name;
+        this.comment = comment;
         this.timestamp = timestamp;
     }
 
     public QualifiedCoordinates getQualifiedCoordinates() {
         return coordinates;
+    }
+
+    public void setQualifiedCoordinates(QualifiedCoordinates coordinates) {
+        this.coordinates = coordinates;
     }
 
     public long getTimestamp() {
@@ -59,8 +66,16 @@ public final class Waypoint {
         return name;
     }
 
+    public void setName(String name) {
+        this.name = name;
+    }
+
     public String getComment() {
         return comment;
+    }
+
+    public void setComment(String comment) {
+        this.comment = comment;
     }
 
     public String getSym() {
@@ -81,5 +96,11 @@ public final class Waypoint {
 
     public void setUserObject(Object userObject) {
         this.userObject = userObject;
+    }
+
+    public String toString() {
+        if (userObject == null || !cz.kruch.track.configuration.Config.preferGsName)
+            return name;
+        return userObject.toString();
     }
 }

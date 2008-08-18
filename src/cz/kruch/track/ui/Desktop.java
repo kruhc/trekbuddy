@@ -1,18 +1,4 @@
-/*
- * Copyright 2006-2007 Ales Pour <kruhc@seznam.cz>.
- * All Rights Reserved.
- * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
- *
- * This code is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License version 2 only, as
- * published by the Free Software Foundation.
- *
- * This code is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
- * version 2 for more details (a copy is included in the LICENSE file that
- * accompanied this code).
- */
+// @LICENSE@
 
 package cz.kruch.track.ui;
 
@@ -41,6 +27,7 @@ import javax.microedition.lcdui.AlertType;
 import javax.microedition.lcdui.Graphics;
 import javax.microedition.lcdui.Font;
 import javax.microedition.lcdui.Image;
+import javax.microedition.lcdui.Form;
 import javax.microedition.lcdui.game.GameCanvas;
 import javax.microedition.midlet.MIDlet;
 import javax.microedition.io.Connector;
@@ -88,7 +75,7 @@ public final class Desktop extends GameCanvas
     // desktop screen and display
     public static Displayable screen;
     public static Display display;
-    public static Font font, fontWpt;
+    public static Font font, fontWpt, fontLists, fontStringItems;
 
     // behaviour flags
     public static int fullScreenHeight = -1;
@@ -197,7 +184,7 @@ public final class Desktop extends GameCanvas
         super(false);
 
         // UI
-        POSITIVE_CMD_TYPE = TrackingMIDlet.wm ? Command.ITEM : Command.SCREEN;
+        POSITIVE_CMD_TYPE = TrackingMIDlet.j9 ? Command.ITEM : Command.SCREEN;
 
         // init static members
         screen = this;
@@ -353,6 +340,10 @@ public final class Desktop extends GameCanvas
         fontWpt = Font.getFont(Font.FACE_SYSTEM,
                                Config.osdBoldFont ? Font.STYLE_BOLD : Font.STYLE_PLAIN,
                                Font.SIZE_SMALL);
+        fontLists = null; // gc hint
+        fontLists = Font.getFont(Font.getDefaultFont().getFace(),
+                                 Font.STYLE_BOLD/*Font.getDefaultFont().getStyle()*/,
+                                 Font.SIZE_SMALL);
     }
 
     private static void resetBar() {
@@ -613,6 +604,11 @@ public final class Desktop extends GameCanvas
             } catch (Throwable t) {
                 showError(Resources.getString(Resources.DESKTOP_MSG_FRIENDS_FAILED), t, this);
             }
+        }
+
+        // check DataDir structure
+        if (File.isFs()) {
+            Config.initDataDir();
         }
     }
 
@@ -1600,15 +1596,22 @@ public final class Desktop extends GameCanvas
 //#endif
     }
 
+    public static void showWaitScreen(String title, String message) {
+        final Form form = new Form(title);
+        form.append(message);
+        display.setCurrent(form);
+    }
+
     public static void showConfirmation(String message, Displayable nextDisplayable) {
         showAlert(AlertType.CONFIRMATION, message, INFO_DIALOG_TIMEOUT, nextDisplayable);
     }
 
-    public static void showAlarm(String message, Displayable nextDisplayable) {
+    public static void showAlarm(String message, Displayable nextDisplayable,
+                                 boolean forever) {
         if (Config.noSounds) {
             Desktop.display.vibrate(1000);
         }
-        showAlert(AlertType.ALARM, message, ALARM_DIALOG_TIMEOUT, nextDisplayable);
+        showAlert(AlertType.ALARM, message, forever ? Alert.FOREVER : ALARM_DIALOG_TIMEOUT, nextDisplayable);
     }
 
     public static void showInfo(String message, Displayable nextDisplayable) {
@@ -1970,13 +1973,13 @@ public final class Desktop extends GameCanvas
 
                     try {
                         // create file
-                        file = File.open(Config.getFolderNmea() + GpxTracklog.dateToFileDate(trackstart) + ".nmea", Connector.READ_WRITE);
+                        file = File.open(Config.getFolderURL(Config.FOLDER_NMEA) + GpxTracklog.dateToFileDate(trackstart) + ".nmea", Connector.READ_WRITE);
                         if (!file.exists()) {
                             file.create();
                         }
 
                         // create output
-                        trackLogNmea = new BufferedOutputStream(file.openOutputStream(), 1024);
+                        trackLogNmea = new BufferedOutputStream(file.openOutputStream(), 4096);
 
                         // inject provider
                         provider.setObserver(trackLogNmea);

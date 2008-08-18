@@ -85,6 +85,7 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
     private TextField fieldGpxDs;
     private Gauge gaugeAlpha;
     private TextField fieldCmsCycle;
+    private ChoiceGroup choiceWaypoints;
 /*
     private Gauge gaugeTrailColor;
     private Gauge gaugeTrailThick;
@@ -197,6 +198,7 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
             // desktop settings
             choiceMisc = new ChoiceGroup(Resources.getString(Resources.CFG_DESKTOP_GROUP), ChoiceGroup.MULTIPLE);
             choiceMisc.append(Resources.getString(Resources.CFG_DESKTOP_FLD_FULLSCREEN), null);
+            choiceMisc.append(Resources.getString(Resources.CFG_DESKTOP_FLD_SAFE_COLORS), null);
             choiceMisc.append(Resources.getString(Resources.CFG_DESKTOP_FLD_NO_SOUNDS), null);
             choiceMisc.append(Resources.getString(Resources.CFG_DESKTOP_FLD_TRAJECTORY), null);
             choiceMisc.append(Resources.getString(Resources.CFG_DESKTOP_FLD_DEC_PRECISION), null);
@@ -210,6 +212,7 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
             choiceMisc.append(Resources.getString(Resources.CFG_DESKTOP_FLD_OSD_BLACK), null);
             choiceMisc.setSelectedFlags(new boolean[] {
                 Config.fullscreen,
+                Config.safeColors,
                 Config.noSounds,
                 Config.trailOn,
                 Config.decimalPrecision,
@@ -251,9 +254,11 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
 
         } else if (menuNavigation.equals(section)) {
 
-            // navigation
+            // proximity
             submenu.append(fieldWptProximity = new TextField(Resources.getString(Resources.CFG_NAVIGATION_FLD_WPT_PROXIMITY), Integer.toString(Config.wptProximity), 5, TextField.NUMERIC));
             /*append(*/fieldPoiProximity = new TextField(Resources.getString(Resources.CFG_NAVIGATION_FLD_POI_PROXIMITY), Integer.toString(Config.poiProximity), 5, TextField.NUMERIC)/*)*/;
+
+            // route line
             choiceRouteLine = new ChoiceGroup(Resources.getString(Resources.CFG_NAVIGATION_GROUP_ROUTE_LINE), ChoiceGroup.MULTIPLE);
             choiceRouteLine.append(Resources.getString(Resources.CFG_NAVIGATION_FLD_DOTTED), null);
             choiceRouteLine.append(Resources.getString(Resources.CFG_NAVIGATION_FLD_RED), null);
@@ -265,12 +270,24 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
             });
             submenu.append(choiceRouteLine);
 
+            // waypoints
+            choiceWaypoints = new ChoiceGroup(Resources.getString(Resources.NAV_ITEM_WAYPOINTS), ChoiceGroup.MULTIPLE);
+            choiceWaypoints.append(Resources.getString(Resources.CFG_NAVIGATION_FLD_REVISIONS), null);
+            choiceWaypoints.append(Resources.getString(Resources.CFG_NAVIGATION_FLD_PREFER_GSNAME), null);
+            choiceWaypoints.setSelectedFlags(new boolean[] {
+                Config.makeRevisions,
+                Config.preferGsName
+            });
+            submenu.append(choiceWaypoints);
+
             // 'Friends'
             if (cz.kruch.track.TrackingMIDlet.jsr120) {
                 choiceFriends = new ChoiceGroup(Resources.getString(Resources.CFG_NAVIGATION_GROUP_SMS), ChoiceGroup.MULTIPLE);
                 choiceFriends.append(Resources.getString(Resources.CFG_NAVIGATION_FLD_RECEIVE), null);
+                choiceFriends.append(Resources.getString(Resources.CFG_NAVIGATION_FLD_AUTOHIDE), null);
                 choiceFriends.setSelectedFlags(new boolean[] {
-                    Config.locationSharing
+                    Config.locationSharing,
+                    Config.autohideNotification
                 });
                 submenu.append(choiceFriends);
             }
@@ -300,7 +317,7 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
                 int start = encodings.indexOf("encoding=");
                 while (start > -1) {
                     int end = encodings.indexOf("encoding=", start + 9);
-                    String item;
+                    final String item;
                     if (end > -1) {
                         item = encodings.substring(start, end).trim();
                     } else {
@@ -602,20 +619,29 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
 
             } else if (menuNavigation.equals(section)) {
 
-                // navigation
+                // proximity
                 Config.wptProximity = Integer.parseInt(fieldWptProximity.getString());
                 Config.poiProximity = Integer.parseInt(fieldPoiProximity.getString());
+
+                // route line
                 final boolean[] rl = new boolean[choiceRouteLine.size()];
                 choiceRouteLine.getSelectedFlags(rl);
                 Config.routeLineStyle = rl[0];
                 Config.routeLineColor = rl[1] ? 0x00FF0000 : 0x0;
                 Config.routePoiMarks = rl[2];
 
+                // waypoints
+                final boolean[] wpts = new boolean[choiceWaypoints.size()];
+                choiceWaypoints.getSelectedFlags(wpts);
+                Config.makeRevisions = wpts[0];
+                Config.preferGsName = wpts[1];
+
                 // location sharing
                 if (cz.kruch.track.TrackingMIDlet.jsr120) {
                     final boolean[] friends = new boolean[choiceFriends.size()];
                     choiceFriends.getSelectedFlags(friends);
                     Config.locationSharing = friends[0];
+                    Config.autohideNotification = friends[1];
                 }
 
             } else if (menuDesktop.equals(section)) {
@@ -624,17 +650,18 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
                 final boolean[] misc = new boolean[choiceMisc.size()];
                 choiceMisc.getSelectedFlags(misc);
                 Config.fullscreen = misc[0];
-                Config.noSounds = misc[1];
-                Config.trailOn = misc[2];
-                Config.decimalPrecision = misc[3];
-                Config.hpsWptTrueAzimuth = misc[4];
-                Config.osdBasic = misc[5];
-                Config.osdExtended = misc[6];
-                Config.osdScale = misc[7];
-                Config.osdNoBackground = misc[8];
-                Config.osdMediumFont = misc[9];
-                Config.osdBoldFont = misc[10];
-                Config.osdBlackColor = misc[11];
+                Config.safeColors = misc[1];
+                Config.noSounds = misc[2];
+                Config.trailOn = misc[3];
+                Config.decimalPrecision = misc[4];
+                Config.hpsWptTrueAzimuth = misc[5];
+                Config.osdBasic = misc[6];
+                Config.osdExtended = misc[7];
+                Config.osdScale = misc[8];
+                Config.osdNoBackground = misc[9];
+                Config.osdMediumFont = misc[10];
+                Config.osdBoldFont = misc[11];
+                Config.osdBlackColor = misc[12];
                 Config.osdAlpha = gaugeAlpha.getValue() * gaugeAlphaScale;
                 Config.cmsCycle = Integer.parseInt(fieldCmsCycle.getString());
                 Config.trailColor = itemTrailView.color/*gaugeTrailColor.getValue()*/;
@@ -837,7 +864,13 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
         }
 
         protected void keyPressed(int i) {
-            switch (getGameAction(i)) {
+            int a;
+            try {
+                a = getGameAction(i);
+            } catch (Exception e) {
+                a = NONE;
+            }
+            switch (a) {
                 case javax.microedition.lcdui.Canvas.UP:
                 case javax.microedition.lcdui.Canvas.LEFT:
                 case javax.microedition.lcdui.Canvas.RIGHT:

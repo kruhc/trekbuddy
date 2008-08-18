@@ -16,6 +16,8 @@
 
 package cz.kruch.track.util;
 
+import java.util.Date;
+
 /**
  * Logger for debugging - output goes to System.out.
  *
@@ -72,14 +74,14 @@ public final class Logger {
         log(t);
     }
 
-    private void log(String severity, String message) /*throws IOException*/ {
+    private void log(String severity, String message) {
         if (enabled) {
-            System.out.println("[" + severity + "] " + cname + " - " + message);
+            System.out.println("[" + (new Date()) + "] " + cname + " - " + message);
             System.out.flush();
         }
     }
 
-    private void log(Throwable t) /*throws IOException*/ {
+    private void log(Throwable t) {
         if (enabled) {
             t.printStackTrace();
             System.err.flush();

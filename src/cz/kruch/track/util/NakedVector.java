@@ -24,6 +24,10 @@ public final class NakedVector extends Vector {
         super(initialCapacity, capacityIncrement);
     }
 
+    public Object[] getData() {
+        return super.elementData;
+    }
+
     public Object[] stealData() {
         Object[] result = super.elementData;
         super.elementData = null;

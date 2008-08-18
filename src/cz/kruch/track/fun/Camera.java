@@ -122,7 +122,7 @@ public final class Camera implements CommandListener, PlayerListener/*, Runnable
         Player p = null;
         InputStream in = null;
         try {
-            p = Manager.createPlayer(in = Connector.openInputStream(Config.getFolderSounds() + name), "audio/amr");
+            p = Manager.createPlayer(in = Connector.openInputStream(Config.getFolderURL(Config.FOLDER_SOUNDS) + name), "audio/amr");
             p.realize();
             p.prefetch();
             p.addPlayerListener(new Camera(in, (VolumeControl) p.getControl("VolumeControl")));

@@ -85,7 +85,9 @@ public final class NavigationScreens {
      */
 
     public static Image crosshairs; // TODO fix visibility
+/*
     public static Image[] stores;   // TODO fix visibility
+*/
     private static Image waypoint, pois;
     private static Image providers;
     private static Image[] arrows;
@@ -114,12 +116,14 @@ public final class NavigationScreens {
         pois = createImage("/resources/pois.png");
         waypoint = createImage("/resources/wpt.png");
         providers = createImage("/resources/bullets.png");
+/*
         stores = new Image[] {
             createImage("/resources/icon.store.xml.png"),
             createImage("/resources/icon.store.xmla.png"),
             createImage("/resources/icon.store.mem.png"),
             createImage("/resources/icon.store.mema.png")
         };
+*/
         arrowSize = new int[2];
         arrowSize2 = new int[2];
         arrowsFull = new boolean[2];
@@ -194,7 +198,7 @@ public final class NavigationScreens {
         File file = null;
 
         try {
-            file = File.open(Config.getFolderResources() + name);
+            file = File.open(Config.getFolderURL(Config.FOLDER_RESOURCES) + name);
             if (file.exists()) {
                 InputStream in = null;
                 try {

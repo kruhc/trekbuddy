@@ -1430,11 +1430,11 @@ final class ComputerView extends View implements Runnable, CommandListener {
         Object result = null;
         File file = null;
         try {
-            file = File.open(Config.getFolderProfiles() + filename);
+            file = File.open(Config.getFolderURL(Config.FOLDER_PROFILES) + filename);
             if (file.exists()) {
                 InputStream in = null;
                 try {
-                    in = new BufferedInputStream(file.openInputStream(), 1024);
+                    in = new BufferedInputStream(file.openInputStream(), 4096);
                     if (filename.endsWith(".xml")) {
                         result = loadProfile(filename, in);
                     } else if (filename.endsWith(".png")) {
@@ -1474,7 +1474,7 @@ final class ComputerView extends View implements Runnable, CommandListener {
 
         try {
             // open stores directory
-            dir = File.open(Config.getFolderProfiles());
+            dir = File.open(Config.getFolderURL(Config.FOLDER_PROFILES));
 
             // list file stores
             if (dir.exists()) {

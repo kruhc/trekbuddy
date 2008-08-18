@@ -1,23 +1,9 @@
-/*
- * Copyright 2006-2007 Ales Pour <kruhc@seznam.cz>.
- * All Rights Reserved.
- * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
- *
- * This code is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License version 2 only, as
- * published by the Free Software Foundation.
- *
- * This code is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
- * version 2 for more details (a copy is included in the LICENSE file that
- * accompanied this code).
- */
+// @LICENSE@
 
 package cz.kruch.track.maps.io;
 
 /**
- * File loading helper.
+ * File loading helper. It is a task runner actually :-)
  *
  * @author Ales Pour <kruhc@seznam.cz>
  */
@@ -103,7 +89,13 @@ public final class LoaderIO extends Thread {
             try {
                 // run task
                 task.run();
+//#ifdef __LOG__
+                if (log.isEnabled()) log.debug("task finished successfully");
+//#endif
             } catch (Throwable t) {
+//#ifdef __LOG__
+                if (log.isEnabled()) log.debug("task failed: " + t);
+//#endif
                 // ignore
             } finally {
                 // signal readiness for next task

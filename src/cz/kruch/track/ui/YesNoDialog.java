@@ -44,7 +44,7 @@ public final class YesNoDialog extends Alert implements CommandListener {
     public YesNoDialog(Displayable next, AnswerListener callback, Object closure,
                        String question, String item) {
         super(null, question, null, null);
-        this.next = next;
+        this.next = next != null ? next : Desktop.display.getCurrent();
         this.callback = callback;
         this.closure = closure;
     }
@@ -53,7 +53,7 @@ public final class YesNoDialog extends Alert implements CommandListener {
         addCommand(new Command(Resources.getString(Resources.CMD_YES), Command.OK, 1));
         addCommand(new Command(Resources.getString(Resources.CMD_NO), Command.CANCEL, 1));
         setCommandListener(this);
-        Desktop.display.setCurrent(this, next); // have to advance manually anyway :-(
+        Desktop.display.setCurrent(this);
     }
 
     public void commandAction(Command command, Displayable displayable) {

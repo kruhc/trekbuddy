@@ -21,6 +21,7 @@ import cz.kruch.track.ui.NavigationScreens;
 import cz.kruch.track.location.Waypoint;
 import cz.kruch.track.util.CharArrayTokenizer;
 import cz.kruch.track.Resources;
+import cz.kruch.track.configuration.Config;
 
 import javax.wireless.messaging.MessageListener;
 import javax.wireless.messaging.MessageConnection;
@@ -169,11 +170,12 @@ public final class Friends implements MessageListener, Runnable {
                     }
 
                     // create waypoint
-                    Waypoint wpt = new Waypoint(QualifiedCoordinates.newInstance(lat, lon),
-                                                address, chat, null, time);
+                    final Waypoint wpt = new Waypoint(QualifiedCoordinates.newInstance(lat, lon),
+                                                      address, chat, time);
 
                     // notify user
-                    Desktop.showAlarm(Resources.getString(Resources.DESKTOP_MSG_SMS_RECEIVED) + wpt.getName(), null);
+                    Desktop.showAlarm(Resources.getString(Resources.DESKTOP_MSG_SMS_RECEIVED) + wpt.getName(),
+                                      null, !Config.autohideNotification);
 
                     // notify
                     Waypoints.getInstance().invoke(wpt, null, this);
@@ -330,7 +332,7 @@ public final class Friends implements MessageListener, Runnable {
             double lon = parseSentence(lonv, lons);
             String xxx = (new Date(time)).toString();
             Waypoint wpt = new Waypoint(QualifiedCoordinates.newInstance(lat, lon),
-                                        null, chat, null, time);
+                                        null, chat, time);
 
         } else {
             Desktop.showWarning(Resources.getString(Resources.DESKTOP_MSG_UNKNOWN_SMS) + " '" + text + "'", null, null);

@@ -1,18 +1,4 @@
-/*
- * Copyright 2006-2007 Ales Pour <kruhc@seznam.cz>.
- * All Rights Reserved.
- * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
- *
- * This code is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License version 2 only, as
- * published by the Free Software Foundation.
- *
- * This code is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
- * version 2 for more details (a copy is included in the LICENSE file that
- * accompanied this code).
- */
+// @LICENSE@
 
 package cz.kruch.track;
 
@@ -37,7 +23,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
     public static String version;
     public static boolean jsr82, jsr120, jsr135, jsr179, motorola179, comm;
     public static boolean sonyEricsson, nokia, siemens, lg, motorola;
-    public static boolean wm, jbed, intent, palm, rim, symbian, uiq, brew;
+    public static boolean j9, jbed, intent, palm, rim, symbian, uiq, brew/*, phoneme*/;
     public static boolean sxg75, a780, s65;
 
     // diagnostics
@@ -64,6 +50,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         version = getAppProperty("MIDlet-Version");
 //#ifdef __LOG__
         logEnabled = hasFlag("log_enable");
+        System.out.println("* platform is " + platform);
 //#endif
 
         // detect brand/device
@@ -75,7 +62,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         siemens = System.getProperty("com.siemens.IMEI") != null || System.getProperty("com.siemens.mp.imei") != null;
         motorola = System.getProperty("com.motorola.IMEI") != null;
         lg = platform.startsWith("LG");
-        wm = platform.startsWith("Windows CE");
+        j9 = platform.startsWith("Windows CE");
         jbed = platform.startsWith("Jbed");
         intent = platform.startsWith("intent");
         palm = platform.startsWith("Palm OS");
@@ -146,6 +133,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
 //#endif
         } catch (Throwable t) {
         }
+        /* detect UIQ */
         if (sonyEricsson && symbian) {
             try {
                 Class.forName("java.lang.ref.Reference");
@@ -153,6 +141,25 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
             } catch (Throwable t) {
             }
         }
+        /* detect Jbed */
+        try {
+            Class.forName("com.jbed.io.CharConvUTF8");
+            jbed = true;
+//#ifdef __LOG__
+            System.out.println("* Jbed/WM");
+//#endif
+        } catch (Throwable t) {
+        }
+        /* detect PhoneME
+        try {
+            Class.forName("gov.nist.core.GenericObject");
+            phoneme = true;
+//#ifdef __LOG__
+            System.out.println("* PhoneME/WM");
+//#endif
+        } catch (Throwable t) {
+            t.printStackTrace();
+        } */
 //#endif
     }
 
@@ -160,6 +167,9 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
     private cz.kruch.track.ui.Desktop desktop;
 
     protected void startApp() throws MIDletStateChangeException {
+//#ifdef __LOG__
+        System.out.println("* startApp *");
+//#endif
         if (!running) {
             running = true;
             (new Thread(this)).start();
@@ -184,6 +194,9 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
     }
 
     public void run() {
+//#ifdef __LOG__
+        System.out.println("* run *");
+//#endif
         // fit static images into video memory
         int imgcached;
         try {
@@ -229,6 +242,9 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
                 customized = -1;
             }
         }
+//#ifdef __LOG__
+        System.out.println("* customization: " + customized);
+//#endif
 
         // L10n
         int localized;

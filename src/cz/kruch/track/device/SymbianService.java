@@ -131,7 +131,6 @@ public final class SymbianService {
         private DataOutputStream output;
         private byte[] one;
         private byte[] header;
-        private int remains;
 
         public SymbianInputStream(String name) throws Exception {
             this.connection = (StreamConnection) Connector.open("socket://127.0.0.1:20175", Connector.READ_WRITE);
@@ -160,39 +159,34 @@ public final class SymbianService {
             final DataInputStream input = this.input;
             final byte[] header = this.header;
 
-            // all response bytes read out?
-            if (remains == 0) {
+            // send file read request
+            sendPacket(output, (byte) 0x03, len);
 
-                // send file read request
-                sendPacket(output, (byte) 0x03, len);
+            // read response header
+            input.readFully(header);
 
-                // read response header
-                input.readFully(header);
+            // check header
+            if (header[0] == (byte)0xFF && header[1] == (byte)0xEB && header[2] == (byte)0x01 && header[3] == (byte)0x03) {
 
-                // check header
-                if (header[0] == (byte)0xFF && header[1] == (byte)0xEB && header[2] == (byte)0x01 && header[3] == (byte)0x03) {
+                // read data response size
+                final int n = len = input.readInt();
 
-                    // read response size
-                    remains = input.readInt();
-
-                } else {
-
-                    // protocol error
-                    throw new IOException("Invalid service response");
-
+                // read data
+                while (len > 0) {
+                    final int c = input.read(b, off, len);
+                    if (c != -1) {
+                        len -= c;
+                        off += c;
+                    } else {
+                        throw new IOException("Unexpected end of stream");
+                    }
                 }
+
+                return n; 
             }
 
-            // read file stream data
-            final int c = input.read(b, off, len);
-            if (c == -1) {
-                throw new IOException("Unexpected end of stream");
-            }
-
-            // less to read
-            remains -= c;
-
-            return c;
+            // protocol error
+            throw new IOException("Invalid service response");
         }
 
         public long skip(long n) throws IOException {

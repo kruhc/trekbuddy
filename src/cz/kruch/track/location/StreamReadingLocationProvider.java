@@ -36,10 +36,10 @@ abstract class StreamReadingLocationProvider extends LocationProvider {
     private static final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("Stream");
 //#endif
 
-    private static final int INPUT_BUFFER_SIZE = 16;  // 512; // as recommended at Nokia forum
+//    private static final int INPUT_BUFFER_SIZE = 16;  // 512; // as recommended at Nokia forum
 
-    private final char[] line;
     private final byte[] btline;
+    private final char[] line;
     private int btlineOffset, btlineCount;
 
     protected volatile long lastIO;
@@ -53,8 +53,8 @@ abstract class StreamReadingLocationProvider extends LocationProvider {
 
     protected StreamReadingLocationProvider(String name) {
         super(name);
+        this.btline = new byte[/*INPUT_BUFFER_SIZE*/NmeaParser.MAX_SENTENCE_LENGTH];
         this.line = new char[NmeaParser.MAX_SENTENCE_LENGTH];
-        this.btline = new byte[INPUT_BUFFER_SIZE];
     }
 
     protected void reset() {

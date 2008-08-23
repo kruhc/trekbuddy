@@ -80,6 +80,7 @@ public final class GpxTracklog extends Thread {
     private static final String ELEMENT_WPT         = "wpt";
     private static final String ELEMENT_NAME        = "name";
     private static final String ELEMENT_CMT         = "cmt";
+    private static final String ELEMENT_SYM         = "sym";
     private static final String ELEMENT_LINK        = "link";
     private static final String ELEMENT_EXTENSIONS  = "extensions";
     private static final String ELEMENT_COURSE      = "course";
@@ -534,15 +535,9 @@ public final class GpxTracklog extends Thread {
                 serializer.text(sbChars, 0, i);
                 serializer.endTag(EXT_NAMESPACE, ELEMENT_SPEED);
             }
-            if (cellid != null) {
-                serializer.startTag(GSM_NAMESPACE, ELEMENT_CELLID);
-                serializer.text(cellid);
-                serializer.endTag(GSM_NAMESPACE, ELEMENT_CELLID);
-            }
-            if (lac != null) {
-                serializer.startTag(GSM_NAMESPACE, ELEMENT_LAC);
-                serializer.text(lac);
-                serializer.endTag(GSM_NAMESPACE, ELEMENT_LAC);
+            if (Config.gpxGsmInfo) {
+                serializeElement(serializer, cellid, GSM_NAMESPACE, ELEMENT_CELLID);
+                serializeElement(serializer, lac, GSM_NAMESPACE, ELEMENT_LAC);
             }
             serializer.endTag(DEFAULT_NAMESPACE, ELEMENT_EXTENSIONS);
         }
@@ -571,21 +566,9 @@ public final class GpxTracklog extends Thread {
         serializer.startTag(GS_1_0_NAMESPACE, ELEMENT_GS_COUNTRY);
         serializer.text(bean.country);
         serializer.endTag(GS_1_0_NAMESPACE, ELEMENT_GS_COUNTRY);
-        if (bean.shortListing != null) {
-            serializer.startTag(GS_1_0_NAMESPACE, ELEMENT_GS_SHORTL);
-            serializer.text(bean.shortListing);
-            serializer.endTag(GS_1_0_NAMESPACE, ELEMENT_GS_SHORTL);
-        }
-        if (bean.longListing != null) {
-            serializer.startTag(GS_1_0_NAMESPACE, ELEMENT_GS_LONGL);
-            serializer.text(bean.longListing);
-            serializer.endTag(GS_1_0_NAMESPACE, ELEMENT_GS_LONGL);
-        }
-        if (bean.encodedHints != null) {
-            serializer.startTag(GS_1_0_NAMESPACE, ELEMENT_GS_HINTS);
-            serializer.text(bean.encodedHints);
-            serializer.endTag(GS_1_0_NAMESPACE, ELEMENT_GS_HINTS);
-        }
+        serializeElement(serializer, bean.shortListing, GS_1_0_NAMESPACE, ELEMENT_GS_SHORTL);
+        serializeElement(serializer, bean.longListing, GS_1_0_NAMESPACE, ELEMENT_GS_LONGL);
+        serializeElement(serializer, bean.encodedHints, GS_1_0_NAMESPACE, ELEMENT_GS_HINTS);
         serializer.endTag(GS_1_0_NAMESPACE, ELEMENT_GS_CACHE);
     }
 
@@ -597,18 +580,9 @@ public final class GpxTracklog extends Thread {
         final int i = dateToXsdDate(wpt.getTimestamp());
         serializer.text(sbChars, 0, i);
         serializer.endTag(DEFAULT_NAMESPACE, ELEMENT_TIME);
-        final String name = wpt.getName();
-        if (name != null && name.length() > 0) {
-            serializer.startTag(DEFAULT_NAMESPACE, ELEMENT_NAME);
-            serializer.text(name);
-            serializer.endTag(DEFAULT_NAMESPACE, ELEMENT_NAME);
-        }
-        final String cmt = wpt.getComment();
-        if (cmt != null && cmt.length() > 0) {
-            serializer.startTag(DEFAULT_NAMESPACE, ELEMENT_CMT);
-            serializer.text(cmt);
-            serializer.endTag(DEFAULT_NAMESPACE, ELEMENT_CMT);
-        }
+        serializeElement(serializer, wpt.getName(), DEFAULT_NAMESPACE, ELEMENT_NAME);
+        serializeElement(serializer, wpt.getComment(), DEFAULT_NAMESPACE, ELEMENT_NAME);
+        serializeElement(serializer, wpt.getSym(), DEFAULT_NAMESPACE, ELEMENT_SYM);
         final String link = wpt.getLinkPath();
         if (link != null && link.length() > 0) {
             serializer.startTag(DEFAULT_NAMESPACE, ELEMENT_LINK);
@@ -619,6 +593,15 @@ public final class GpxTracklog extends Thread {
             serializeGs((GroundspeakBean) wpt.getUserObject());
         }
         serializer.endTag(DEFAULT_NAMESPACE, ELEMENT_WPT);
+    }
+
+    private void serializeElement(final KXmlSerializer serializer, final String value,
+                                  final String ns, final String tag) throws IOException {
+        if (value != null && value.length() > 0) {
+            serializer.startTag(ns, tag);
+            serializer.text(value);
+            serializer.endTag(ns, tag);
+        }
     }
 
     private String saveImage(final byte[] raw) throws IOException {

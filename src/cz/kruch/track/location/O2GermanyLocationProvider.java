@@ -131,7 +131,7 @@ public final class O2GermanyLocationProvider
                         final int x = Integer.parseInt(text.substring(0, 6)) * 10;
                         final int y = Integer.parseInt(text.substring(6)) * 10;
                         final int[] avg = update(x, y);
-                        final int idx = (avg[0] - 2500000) / 1000000;
+                        final int idx = avg[0] / 1000000 - 2;
                         if (idx >= 0 && idx <= 3) {
                             final CartesianCoordinates xy = CartesianCoordinates.newInstance(null, avg[0], avg[1]);
                             final QualifiedCoordinates localQc = Mercator.MercatortoLL(xy, potsdam.ellipsoid, zones[idx]);

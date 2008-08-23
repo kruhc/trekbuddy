@@ -50,6 +50,8 @@ public final class Waypoints extends List
     private static final int TYPE_GPX = 100;
     private static final int TYPE_LOC = 101;
 
+    private static final int SUFFIX_LENGTH = 4;
+
 /*
     private static final int FRAME_XML  = 0;
     private static final int FRAME_XMLA = 1;
@@ -650,27 +652,10 @@ public final class Waypoints extends List
             // may take some time - start ticker
             list.setTicker(new Ticker(Resources.getString(Resources.NAV_MSG_TICKER_LISTING)));
 
-            File dir = null;
             try {
-                // open stores directory
-                dir = File.open(Config.getFolderURL(Config.FOLDER_WPTS));
 
                 // list file stores
-                if (dir.exists()) {
-                    final Vector hidden = memoryFilenames;
-                    for (final Enumeration e = dir.list(); e.hasMoreElements(); ) {
-                        final String name = (String) e.nextElement();
-                        final int i = name.lastIndexOf('.');
-                        if (i > -1) {
-                            final String lcname = name.toLowerCase();
-                            if (lcname.endsWith(SUFFIX_GPX) || lcname.endsWith(SUFFIX_LOC)) {
-                                if (!hidden.contains(name)) {
-                                    v.addElement(name);
-                                }
-                            }
-                        }
-                    }
-                }
+                listWptFiles("", v, true);
 
             } catch (Throwable t) {
 
@@ -678,13 +663,6 @@ public final class Waypoints extends List
                 Desktop.showError(Resources.getString(Resources.NAV_MSG_LIST_STORES_FAILED), t, null);
 
             } finally {
-
-                // close dir
-                try {
-                    dir.close();
-                } catch (Exception e) { // NPE or IOE
-                    // ignore
-                }
 
                 // remove ticker
                 list.setTicker(null);
@@ -703,7 +681,7 @@ public final class Waypoints extends List
             FileBrowser.quicksort(v.getData(), left, v.size() - 1);
 
             // setup icons for stores
-/* // TODO support in SmartList
+/* // TODO support icons in SmartList
             for (int i = strs.length; --i >= 0; ) {
                 final String store = strs[i];
                 if (i >= left) {
@@ -835,11 +813,17 @@ public final class Waypoints extends List
         Desktop.showWaitScreen(Resources.getString(Resources.DESKTOP_CMD_NAVIGATION),
                                Resources.getString(Resources.DESKTOP_MSG_IN_PROGRESS));
 
+        // rename does not work for subfolders
+        int ipath = name.indexOf(File.PATH_SEPCHAR);
+        if (ipath == -1) {
+            ipath = 0;
+        }
+
         // construct new name
         final StringBuffer sb = new StringBuffer(32);
-        sb.append(name.substring(0, name.length() - 4/*suffix length*/));
+        sb.append(name.substring(ipath + 1, name.length() - SUFFIX_LENGTH));
         sb.append(".rev_").append(GpxTracklog.dateToFileDate(new Date().getTime()));
-        sb.append(name.substring(name.length() - 4));
+        sb.append(name.substring(name.length() - SUFFIX_LENGTH));
         final String newName = sb.toString();
 
         // execution status
@@ -985,6 +969,66 @@ public final class Waypoints extends List
 
             // restore mgmt UI
             Desktop.display.setCurrent(list);
+        }
+    }
+
+    private void listWptFiles(final String path, final Vector v, final boolean recursive) throws IOException {
+//#ifdef __LOG__
+        if (log.isEnabled()) log.debug("list " + path);
+//#endif
+
+        File dir = null;
+        try {
+            // open directory
+            dir = File.open(Config.getFolderURL(Config.FOLDER_WPTS) + path);
+
+            // list file stores in the directory
+            if (dir.exists()) {
+
+                // local ref
+                final Vector hidden = memoryFilenames;
+
+                // iterate over directory
+                for (final Enumeration e = dir.list(); e.hasMoreElements(); ) {
+
+                    // has suffix?
+                    final String name = (String) e.nextElement();
+                    final int i = name.lastIndexOf('.');
+                    if (i > -1) {
+                        final String lcname = name.toLowerCase();
+                        if (lcname.endsWith(SUFFIX_GPX) || lcname.endsWith(SUFFIX_LOC)) {
+                            if (recursive) {
+                                if (!hidden.contains(name)) { // filter memory stores 'backends'
+                                    v.addElement(name);
+                                }
+                            } else {
+                                v.addElement(path + name);
+                            }
+                        }
+                    } else if (recursive) { // is subfolder?
+                        if (/* isDir: */name.endsWith(File.PATH_SEPARATOR) && !name.startsWith("images-")) {
+                            listWptFiles(name, v, false);
+                        }
+                    }
+                }
+            }
+
+        } catch (Throwable t) {
+
+            // show error
+            Desktop.showError(Resources.getString(Resources.NAV_MSG_LIST_STORES_FAILED), t, null);
+
+        } finally {
+//#ifdef __LOG__
+            if (log.isEnabled()) log.debug("~list " + path);
+//#endif
+
+            // close dir
+            try {
+                dir.close();
+            } catch (Exception e) { // NPE or IOE
+                // ignore
+            }
         }
     }
 
@@ -1163,10 +1207,10 @@ public final class Waypoints extends List
                                 gsbean.country = parser.nextText();
                             } else if (TAG_GS_SHORTL.equals(tag)) {
                                 // get GS short listing
-                                gsbean.shortListing = parser.nextText().trim();
+                                gsbean.shortListing = parser.nextText();
                             } else if (TAG_GS_LONGL.equals(tag)) {
                                 // get GS long listing
-                                gsbean.longListing = parser.nextText().trim();
+                                gsbean.longListing = parser.nextText();
                             } else if (TAG_GS_HINTS.equals(tag)) {
                                 // get GS long listing
                                 gsbean.encodedHints = parser.nextText().trim();

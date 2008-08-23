@@ -359,8 +359,8 @@ public final class FileBrowser implements CommandListener, Runnable {
      * @return {@link String#compareTo(String)}
      */
     private static int compareAsFiles(final String s1, final String s2) {
-        final boolean isDir1 = File.isDir(s1);
-        final boolean isDir2 = File.isDir(s2);
+        final boolean isDir1 = File.isDir(s1) || s1.indexOf(File.PATH_SEPCHAR) > -1;
+        final boolean isDir2 = File.isDir(s2) || s2.indexOf(File.PATH_SEPCHAR) > -1;
         if (isDir1) {
             if (isDir2) {
                 return s1.compareTo(s2);

@@ -21,12 +21,8 @@
 <!--
     <property name="symbian.home" value="c:\J2ME\Symbian\UIQ3.1SDK\epoc32\tools\java"/>
 -->
-    <!--property name="proguard.home" value="z:\apps\proguard4.0.1"/-->
-    <!--property name="proguard.home" value="z:\apps\proguard4.1beta1"/-->
-    <!--property name="bb.buildjars.home" location="${rim41.home}/bin"/-->
 
     <taskdef resource="antenna.properties" classpath="lib/antenna-bin-0.9.14.jar"/>
-    <!--taskdef name="wtkrapc" classname="de.pleumann.antenna.WtkRapc" classpath="lib/antenna-bin-0.9.14.jar"/-->
     <taskdef name="otaJad" classname="RimOtaJadSha" classpath="${basedir}/tools/classes"/>
     
     <property name="classpath.proguard" value="${proguard.home}\lib\proguard.jar"/>
@@ -343,7 +339,7 @@
             <arg value="-injars tmp/trekbuddy${suffix}.jar"/>
             <arg value="-outjars tmp/trekbuddy${suffix}-obfuscated.jar"/>
             <arg value="-libraryjars ${libraryjars}"/>
-<!-- 4.x
+<!-- 4.x 
             <arg value="-dontpreverify"/>
 -->
             <arg value="-dontusemixedcaseclassnames"/>
@@ -362,6 +358,7 @@
             <arg value="-whyareyoukeeping class cz.kruch.track.maps.io.FileInput"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.util.NakedVector"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.util.Logger"/>
+            <arg value="-whyareyoukeeping class cz.kruch.j2se.io.BufferedOutputStream"/>
             <arg value="-printmapping dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.map"/>
             <arg value="-printseeds"/>
             <arg value="-printusage dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.dco"/>

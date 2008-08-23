@@ -29,7 +29,7 @@
 1009=Exit
 1010=Refresh
 1011=Connect
-1012=Select
+1012=Open
 
 # desktop messages
 1300=Failed to init location sharing
@@ -120,6 +120,7 @@
 1385=Tileset file not found:
 1386=Provider out of service
 1387=Provider starting
+1388=Operation in progress...
 
 # navigation commands
 2000=RouteAlong
@@ -133,11 +134,15 @@
 2008=Send
 2009=ShowAll
 2010=HideAll
+2011=Edit
+2012=Update
+2013=Delete
+2014=Show
 
 # navigation menu
 2100=Waypoints
 2101=Record Current
-2102=Enter Custom
+2102=Add Custom
 2103=SMS I'm here
 2104=SMS Meet you there
 2105=Stop
@@ -155,13 +160,25 @@
 2208=Recipient
 2209=Message
 2210=Camera
-2211=Altitude
+2211=Altitude (m)
+2212=Zone
+2213=Lat
+2214=Lon
+2215=UTM easting (m)
+2216=UTM northing (m)
+2217=Easting (m)
+2218=Northing (m)
+2219=GC Id
+2220=GC Class
+2221=GC ShortDesc
+2222=GC LongDesc
+2223=GC Hints
 
 # navigation messages
 2300=Failed to load in-jar waypoints
-2301=Failed to list collections
+2301=Failed to list stores
 2302=No landmark stores
-2303=Failed to list collection
+2303=Failed to list store
 2304=No waypoints found in
 2305=waypoints loaded
 2306=No position yet
@@ -178,6 +195,8 @@
 2403=Snapshot failed
 2404=No snapshot
 2405=Malformed coordinate:
+2406=Landmark store updated
+2407=Failed to update landmark store
 
 # settings commands
 3000=Apply
@@ -221,6 +240,7 @@
 3514=show trail
 3515=Trail line
 3516=Mode
+3517=safe colors
 
 # settings forms/fields/values (Location)
 3600=Provider
@@ -256,6 +276,9 @@
 3705=POI icons
 3706=Location SMS
 3707=receive
+3708=autohide notification
+3709=file revisions
+3710=prefer GC name
 
 # settings forms/fields/values (Tweaks)
 3800=Tweaks

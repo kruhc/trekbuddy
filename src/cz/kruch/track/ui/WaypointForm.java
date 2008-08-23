@@ -117,10 +117,12 @@ public final class WaypointForm extends Form
             appendStringItem(Resources.getString(Resources.NAV_FLD_GS_ID), bean.id);
             appendStringItem(Resources.getString(Resources.NAV_FLD_GS_CLASS), bean.classify());
             if (bean.shortListing != null && bean.shortListing.length() != 0) {
-                appendStringItem(Resources.getString(Resources.NAV_FLD_GS_LISTING_SHORT), bean.shortListing);
+                appendStringItem(Resources.getString(Resources.NAV_FLD_GS_LISTING_SHORT),
+                                 stripHtml(bean.shortListing));
             }
             if (bean.longListing != null && bean.longListing.length() != 0) {
-                appendStringItem(Resources.getString(Resources.NAV_FLD_GS_LISTING_LONG), bean.longListing);
+                appendStringItem(Resources.getString(Resources.NAV_FLD_GS_LISTING_LONG),
+                                 stripHtml(bean.longListing));
             }
             if (bean.encodedHints != null && bean.encodedHints.length() != 0) {
                 hintNum = appendStringItem(Resources.getString(Resources.NAV_FLD_GS_HINT), ":-)", Item.BUTTON);
@@ -595,5 +597,54 @@ public final class WaypointForm extends Form
         NavigationScreens.append(sb, i);
 
         return sb;
+    }
+
+    private static String stripHtml(final String value) {
+        try {
+            final char[] raw = value.toCharArray();
+            int end = raw.length;
+            int i = 0, i0 = -1, i1 = -1;
+            while (i < end) {
+                if (i0 == -1) {
+                    if (raw[i] == '<') {
+                        i0 = i;
+                    }
+                } else {
+                    if (raw[i] == '>') {
+                        final int tagLen = i - i0 + 1;
+                        int less = 0;
+                        if (i0 == i1 + 1) {
+                            less = 0;
+                        } else {
+                            int is = i0 + 1;
+                            while (is < i && is == ' ') is++;
+                            switch (raw[is]) {
+                                case 'b':
+                                case 'p': { /* probably <p> or <br> */
+                                    raw[i0] = '\n';
+                                    less = 1;
+                                } break;
+                                case '/': {
+                                } break;
+                                default: {
+                                    raw[i0] = 0xb7;
+                                    raw[i0 + 1] = ' ';
+                                    less = 2;
+                                }
+                            }
+                        }
+                        System.arraycopy(raw, i + 1, raw, i0 + less, end - i - 1);
+                        end -= tagLen - less;
+                        i = i0 + (less - 1);
+                        i1 = i;
+                        i0 = -1;
+                    }
+                }
+                i++;
+            }
+            return new String(raw, 0, end);
+        } catch (Exception e) {
+            return value;
+        }
     }
 }

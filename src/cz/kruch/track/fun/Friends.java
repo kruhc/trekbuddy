@@ -176,6 +176,7 @@ public final class Friends implements MessageListener, Runnable {
                     // notify user
                     Desktop.showAlarm(Resources.getString(Resources.DESKTOP_MSG_SMS_RECEIVED) + wpt.getName(),
                                       null, !Config.autohideNotification);
+                    Thread.yield();
 
                     // notify
                     Waypoints.getInstance().invoke(wpt, null, this);

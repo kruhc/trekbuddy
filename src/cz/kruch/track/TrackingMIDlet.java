@@ -142,24 +142,13 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
             }
         }
         /* detect Jbed */
-        try {
-            Class.forName("com.jbed.io.CharConvUTF8");
-            jbed = true;
-//#ifdef __LOG__
-            System.out.println("* Jbed/WM");
-//#endif
-        } catch (Throwable t) {
+        if (!sonyEricsson) {
+            try {
+                Class.forName("com.jbed.io.CharConvUTF8");
+                jbed = true;
+            } catch (Throwable t) {
+            }
         }
-        /* detect PhoneME
-        try {
-            Class.forName("gov.nist.core.GenericObject");
-            phoneme = true;
-//#ifdef __LOG__
-            System.out.println("* PhoneME/WM");
-//#endif
-        } catch (Throwable t) {
-            t.printStackTrace();
-        } */
 //#endif
     }
 

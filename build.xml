@@ -354,8 +354,8 @@
             <arg value="-keepnames class cz.** extends java.lang.Exception"/>
             <arg value="-keepnames class api.** extends java.lang.Exception"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.fun.Friends"/>
-            <arg value="-whyareyoukeeping class cz.kruch.track.ConfiguratorMIDlet"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.maps.io.FileInput"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.ui.WaypointForm"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.util.NakedVector"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.util.Logger"/>
             <arg value="-whyareyoukeeping class cz.kruch.j2se.io.BufferedOutputStream"/>
@@ -388,8 +388,8 @@
             <arg value="-keepnames class cz.** extends java.lang.Exception"/>
             <arg value="-keepnames class api.** extends java.lang.Exception"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.fun.Friends"/>
-            <arg value="-whyareyoukeeping class cz.kruch.track.ConfiguratorMIDlet"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.maps.io.FileInput"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.ui.WaypointForm"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.util.NakedVector"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.util.Logger"/>
             <arg value="-printmapping dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.map"/>
@@ -408,9 +408,10 @@
 -->
             <arg value="-dontobfuscate"/>
             <arg value="-keep class * implements javax.microedition.midlet.MIDlet"/>
-            <arg value="-whyareyoukeeping class cz.kruch.track.ConfiguratorMIDlet"/>
-            <arg value="-whyareyoukeeping class cz.kruch.track.util.NakedVector"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.fun.Friends"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.maps.io.FileInput"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.ui.WaypointForm"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.util.NakedVector"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.util.Logger"/>
             <arg value="-printmapping dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.map"/>
             <arg value="-printseeds"/>

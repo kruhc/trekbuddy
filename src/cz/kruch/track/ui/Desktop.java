@@ -776,7 +776,9 @@ public final class Desktop extends GameCanvas
         if (Canvas.KEY_STAR == i) {
             if (++keyRepeatedCount == 1) {
                 keylock = !keylock;
-                display.vibrate(1000);
+                if (!Config.powerSave) {
+                    display.vibrate(1000);
+                }
             }
             return;
         } 
@@ -1106,7 +1108,9 @@ public final class Desktop extends GameCanvas
 
                     // play sound and vibrate
                     if (Config.noSounds) {
-                        display.vibrate(1000);
+                        if (!Config.powerSave) {
+                            display.vibrate(1000);
+                        }
                     } else {
                         boolean notified = false;
                         final String linkPath = ((Waypoint) wpts.elementAt(wptIdx)).getLinkPath();
@@ -1117,7 +1121,9 @@ public final class Desktop extends GameCanvas
                             notified = Camera.play("wpt.amr");
                         }
                         if (notified) {
-                            display.vibrate(1000);
+                            if (!Config.powerSave) {
+                                display.vibrate(1000);
+                            }
                         } else { // fallback to system alarm
                             AlertType.ALARM.playSound(display);
                         }
@@ -1229,26 +1235,41 @@ public final class Desktop extends GameCanvas
     }
 
     /*
-     * Should be called only if
-     * - not navigating yet; or
-     * - navigating to single wpt
+     * Should be called only if not navigating yet; and
+     * - no set is shown, or
+     * - different set shown
      */
     public void setVisible(Vector wpts, boolean visible) {
         // set flag
         Desktop.showall = visible;
 
-        // not navigating yet
-        if (Desktop.wpts == null) {
+        // show?
+        if (visible) {
 
-            // use wpts
-            Desktop.wpts = wpts;
-            wptsId = wpts.hashCode();
+            // not navigating yet or different set
+            if (Desktop.wpts == null || Desktop.wptIdx == -1) {
+
+                // use wpts
+                Desktop.wpts = wpts;
+                wptsId = wpts.hashCode();
+
+                // notify map view // TODO this is ugly
+                views[VIEW_MAP].routeChanged(wpts);
+                ((MapView) views[VIEW_MAP]).mapViewer.starTick();
+                ((MapView) views[VIEW_MAP]).mapViewer.nextCrosshair();
+                ((MapView) views[VIEW_MAP]).mapViewer.starTick();
+
+            } else {
+
+                throw new IllegalStateException("Wrong navigation state");
+
+            }
+
+        } else {
 
             // notify map view // TODO this is ugly
-            views[VIEW_MAP].routeChanged(wpts);
-            ((MapView) views[VIEW_MAP]).mapViewer.starTick();
-            ((MapView) views[VIEW_MAP]).mapViewer.nextCrosshair();
-            ((MapView) views[VIEW_MAP]).mapViewer.starTick();
+            views[VIEW_MAP].routeChanged(null);
+
         }
 
         // update screen
@@ -1311,7 +1332,7 @@ public final class Desktop extends GameCanvas
             Desktop.navigating = false;
             Desktop.routeDir = 0;
             Desktop.wptIdx = -1;
-            
+
             // reset local navigation info
             wptsId = 0;
             wptAzimuth = -1;

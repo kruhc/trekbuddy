@@ -50,18 +50,9 @@ import java.util.TimeZone;
  *
  * @author Ales Pour <kruhc@seznam.cz>
  */
-public final class WaypointForm extends Form
+final class WaypointForm extends Form
         implements CommandListener, ItemCommandListener, Callback {
 
-    /*private */static final String CMD_NAVIGATE_ALONG = Resources.getString(Resources.NAV_CMD_ROUTE_ALONG);
-    /*private */static final String CMD_NAVIGATE_BACK = Resources.getString(Resources.NAV_CMD_ROUTE_BACK);
-    /*private */static final String CMD_NAVIGATE_TO = Resources.getString(Resources.NAV_CMD_NAVIGATE_TO);
-    /*private */static final String CMD_GO_TO = Resources.getString(Resources.NAV_CMD_GO_TO);
-    /*private */static final String CMD_EDIT = Resources.getString(Resources.NAV_CMD_EDIT);
-    /*private */static final String CMD_ENTER = Resources.getString(Resources.NAV_CMD_ADD);
-    /*private */static final String CMD_RECORD = Resources.getString(Resources.NAV_CMD_SAVE);
-    /*private */static final String CMD_UPDATE = Resources.getString(Resources.NAV_CMD_UPDATE);
-    /*private */static final String CMD_DELETE = Resources.getString(Resources.NAV_CMD_DELETE);
     private static final String CMD_TAKE = Resources.getString(Resources.NAV_CMD_TAKE);
     private static final String CMD_HINT = Resources.getString(Resources.NAV_CMD_SHOW);
 
@@ -74,6 +65,9 @@ public final class WaypointForm extends Form
 
     private TextField fieldName, fieldComment;
     private TextField fieldZone, fieldLat, fieldLon, fieldAlt;
+
+    private TextField fieldNumber, fieldMessage;
+    private Object closure;
 
     private byte[] imageBytes;
     private int imageNum = -1;
@@ -133,12 +127,12 @@ public final class WaypointForm extends Form
 
         // form command
         addCommand(new Command(Resources.getString(Resources.CMD_CLOSE), Command.BACK, 1));
-        addCommand(new Command(CMD_NAVIGATE_TO, Desktop.POSITIVE_CMD_TYPE, 1));
-        addCommand(new Command(CMD_NAVIGATE_ALONG, Desktop.POSITIVE_CMD_TYPE, 2));
-        addCommand(new Command(CMD_NAVIGATE_BACK, Desktop.POSITIVE_CMD_TYPE, 3));
-        addCommand(new Command(CMD_GO_TO, Desktop.POSITIVE_CMD_TYPE, 4));
-        addCommand(new Command(CMD_EDIT, Desktop.POSITIVE_CMD_TYPE, 5));
-        addCommand(new Command(CMD_DELETE, Desktop.POSITIVE_CMD_TYPE, 6));
+        addCommand(new ActionCommand(Resources.NAV_CMD_NAVIGATE_TO, Desktop.POSITIVE_CMD_TYPE, 1));
+        addCommand(new ActionCommand(Resources.NAV_CMD_ROUTE_ALONG, Desktop.POSITIVE_CMD_TYPE, 2));
+        addCommand(new ActionCommand(Resources.NAV_CMD_ROUTE_BACK, Desktop.POSITIVE_CMD_TYPE, 3));
+        addCommand(new ActionCommand(Resources.NAV_CMD_GO_TO, Desktop.POSITIVE_CMD_TYPE, 4));
+        addCommand(new ActionCommand(Resources.NAV_CMD_EDIT, Desktop.POSITIVE_CMD_TYPE, 5));
+        addCommand(new ActionCommand(Resources.NAV_CMD_DELETE, Desktop.POSITIVE_CMD_TYPE, 6));
     }
 
     /**
@@ -177,7 +171,7 @@ public final class WaypointForm extends Form
             appendWithNewlineAfter(snapshot);
         }
         addCommand(new Command(Resources.getString(Resources.CMD_CANCEL), Command.BACK, 1));
-        addCommand(new Command(CMD_RECORD, Desktop.POSITIVE_CMD_TYPE, 1));
+        addCommand(new ActionCommand(Resources.NAV_CMD_SAVE, Desktop.POSITIVE_CMD_TYPE, 1));
     }
 
     /**
@@ -252,7 +246,7 @@ public final class WaypointForm extends Form
 
         // commands
         addCommand(new Command(Resources.getString(Resources.CMD_CLOSE), Command.BACK, 1));
-        addCommand(new Command(CMD_ENTER, Desktop.POSITIVE_CMD_TYPE, 1));
+        addCommand(new ActionCommand(Resources.NAV_CMD_ADD, Desktop.POSITIVE_CMD_TYPE, 1));
     }
 
     /**
@@ -268,7 +262,29 @@ public final class WaypointForm extends Form
 
         // commands
         addCommand(new Command(Resources.getString(Resources.CMD_CLOSE), Command.BACK, 1));
-        addCommand(new Command(CMD_UPDATE, Desktop.POSITIVE_CMD_TYPE, 1));
+        addCommand(new ActionCommand(Resources.NAV_CMD_UPDATE, Desktop.POSITIVE_CMD_TYPE, 1));
+    }
+
+    /**
+     * Send SMS constructor.
+     */
+    public WaypointForm(Callback callback, String type, QualifiedCoordinates coordinates) {
+        super("SMS");
+        this.callback = callback;
+        this.closure = type;
+
+        // receiver number and message
+        append(this.fieldNumber = new TextField(Resources.getString(Resources.NAV_FLD_RECIPIENT), null, 16, TextField.PHONENUMBER));
+        append(this.fieldMessage = new TextField(Resources.getString(Resources.NAV_FLD_MESSAGE), null, 64, TextField.ANY));
+
+        // coordinates
+        final StringBuffer sb = new StringBuffer(32);
+        NavigationScreens.printTo(coordinates, sb);
+        append(new StringItem(Resources.getString(Resources.NAV_FLD_LOC), sb.toString()));
+
+        // commands
+        addCommand(new Command(Resources.getString(Resources.CMD_CANCEL), Command.BACK, 1));
+        addCommand(new ActionCommand(Resources.NAV_CMD_SEND, Desktop.POSITIVE_CMD_TYPE, 1));
     }
 
     private void populateEditableForm(final String name, final String comment,
@@ -354,7 +370,10 @@ public final class WaypointForm extends Form
     }
 
     private int appendStringItem(final String label, final String text) {
-        return appendStringItem(label, text, Item.PLAIN);
+        if (text != null) {
+            return appendStringItem(label, text, Item.PLAIN);
+        }
+        return -1;
     }
 
     private int appendStringItem(final String label, final String text, final int appearance) {
@@ -426,47 +445,62 @@ public final class WaypointForm extends Form
 
     public void commandAction(Command command, Displayable displayable) {
         if (Desktop.POSITIVE_CMD_TYPE == command.getCommandType()) {
-            final String label = command.getLabel();
-            if (CMD_ENTER.equals(label)) {
-                try {
-                    final Waypoint wpt = new Waypoint(parseCoordinates(),
+            final int action = ((ActionCommand) command).getAction();
+            final Integer actionObject = new Integer(action);
+            switch (action) {
+                case Resources.NAV_CMD_ROUTE_ALONG:
+                case Resources.NAV_CMD_ROUTE_BACK:
+                case Resources.NAV_CMD_NAVIGATE_TO:
+                case Resources.NAV_CMD_GO_TO: {
+                    callback.invoke(new Object[]{ actionObject, null }, null, this);
+                } break;
+                case Resources.NAV_CMD_ADD: {
+                    try {
+                        final Waypoint wpt = new Waypoint(parseCoordinates(),
+                                                          fieldName.getString(),
+                                                          fieldComment.getString(),
+                                                          System.currentTimeMillis());
+                        callback.invoke(new Object[]{ actionObject, wpt }, null, this);
+                        cnt++;
+                    } catch (IllegalArgumentException e) {
+                        Desktop.showWarning(null, e, null);
+                    }
+                } break;
+                case Resources.NAV_CMD_SAVE: {
+                    final Waypoint wpt = new Waypoint(coordinates,
                                                       fieldName.getString(),
                                                       fieldComment.getString(),
-                                                      System.currentTimeMillis());
-                    callback.invoke(new Object[]{ CMD_ENTER, wpt }, null, this);
-                    cnt++;
-                } catch (IllegalArgumentException e) {
-                    Desktop.showWarning(null, e, null);
-                }
-            } else if (CMD_RECORD.equals(label)) {
-                final Waypoint wpt = new Waypoint(coordinates,
-                                                  fieldName.getString(),
-                                                  fieldComment.getString(),
-                                                  timestamp);
-                wpt.setUserObject(imageBytes);
-                callback.invoke(new Object[]{ CMD_RECORD, wpt }, null, this);
-            } else if (CMD_UPDATE.equals(label)) {
-                final Waypoint wpt = waypoint;
-                try {
-                    wpt.setQualifiedCoordinates(parseCoordinates());
-                    wpt.setName(fieldName.getString());
-                    wpt.setComment(fieldComment.getString());
-                    callback.invoke(new Object[]{ CMD_UPDATE, wpt }, null, this);
-                } catch (IllegalArgumentException e) {
-                    Desktop.showWarning(null, e, null);
-                }
-            } else if (CMD_DELETE.equals(label)) {
-                callback.invoke(new Object[]{ CMD_DELETE, waypoint }, null, this);
-            } else if (CMD_NAVIGATE_TO.equals(label)) {
-                callback.invoke(new Object[]{ CMD_NAVIGATE_TO, null }, null, this);
-            } else if (CMD_NAVIGATE_ALONG.equals(label)) {
-                callback.invoke(new Object[]{ CMD_NAVIGATE_ALONG, null }, null, this);
-            } else if (CMD_NAVIGATE_BACK.equals(label)) {
-                callback.invoke(new Object[]{ CMD_NAVIGATE_BACK, null }, null, this);
-            } else if (CMD_GO_TO.equals(label)) {
-                callback.invoke(new Object[]{ CMD_GO_TO, null }, null, this);
-            } else if (CMD_EDIT.equals(label)) {
-                (new WaypointForm(callback, waypoint)).show();
+                                                      timestamp);
+                    wpt.setUserObject(imageBytes);
+                    callback.invoke(new Object[]{ actionObject, wpt }, null, this);
+                } break;
+                case Resources.NAV_CMD_SEND: {
+                    callback.invoke(new Object[]{ actionObject,
+                                                  fieldNumber.getString(),
+                                                  fieldMessage.getString(),
+                                                  closure
+                                                }, null, this);
+
+                } break;
+                case Resources.NAV_CMD_EDIT: {
+                    (new WaypointForm(callback, waypoint)).show();
+                } break;
+                case Resources.NAV_CMD_UPDATE: {
+                    final Waypoint wpt = waypoint;
+                    try {
+                        wpt.setQualifiedCoordinates(parseCoordinates());
+                        wpt.setName(fieldName.getString());
+                        wpt.setComment(fieldComment.getString());
+                        callback.invoke(new Object[]{ actionObject, wpt }, null, this);
+                    } catch (IllegalArgumentException e) {
+                        Desktop.showWarning(null, e, null);
+                    }
+                } break;
+                case Resources.NAV_CMD_DELETE: {
+                    callback.invoke(new Object[]{ actionObject, waypoint }, null, this);
+                } break;
+                default:
+                    Desktop.showWarning("Unknown wpt action: " + action, null, null);
             }
         } else {
             // dummy invocation

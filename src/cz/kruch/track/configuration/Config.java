@@ -169,6 +169,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
     public static boolean forcedGc;
     public static boolean oneTileScroll;
     public static boolean largeAtlases;
+    public static boolean powerSave;
 
     // group [GPX options]
     public static int gpxDt                     = 60; // 1 min
@@ -442,6 +443,12 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         } catch (Exception e) {
         }
 
+        // 0.9.82 extensions
+        try {
+            powerSave = din.readBoolean();
+        } catch (Exception e) {
+        }
+
 //#ifdef __LOG__
         if (log.isEnabled()) log.info("configuration read");
 //#endif
@@ -523,6 +530,8 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         dout.writeBoolean(autohideNotification);
         dout.writeBoolean(preferGsName);
         dout.writeBoolean(safeColors);
+        /* since 0.9.82 */
+        dout.writeBoolean(powerSave);
 
 //#ifdef __LOG__
         if (log.isEnabled()) log.info("configuration updated");

@@ -299,12 +299,14 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
             choicePerformance.append(Resources.getString(Resources.CFG_TWEAKS_FLD_SIEMENS_IO), null);
             choicePerformance.append(Resources.getString(Resources.CFG_TWEAKS_FLD_SAFE_RENDERER), null);
             choicePerformance.append(Resources.getString(Resources.CFG_TWEAKS_FLD_FORCED_GC), null);
+            choicePerformance.append(Resources.getString(Resources.CFG_TWEAKS_FLD_POWER_SAVE), null);
             choicePerformance.append(Resources.getString(Resources.CFG_TWEAKS_FLD_1TILE_SCROLL), null);
             choicePerformance.append(Resources.getString(Resources.CFG_TWEAKS_FLD_LARGE_ATLASES), null);
             choicePerformance.setSelectedFlags(new boolean[] {
                 Config.siemensIo,
                 Config.S60renderer,
                 Config.forcedGc,
+                Config.powerSave,
                 Config.oneTileScroll,
                 Config.largeAtlases
             });
@@ -676,8 +678,9 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
                 Config.siemensIo = perf[0];
                 Config.S60renderer = perf[1];
                 Config.forcedGc = perf[2];
-                Config.oneTileScroll = perf[3];
-                Config.largeAtlases = perf[4];
+                Config.powerSave = perf[3];
+                Config.oneTileScroll = perf[4];
+                Config.largeAtlases = perf[5];
 
                 // multimedia
                 if (cz.kruch.track.TrackingMIDlet.supportsVideoCapture()) {

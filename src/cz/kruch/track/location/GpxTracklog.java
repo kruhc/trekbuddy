@@ -47,7 +47,7 @@ public final class GpxTracklog extends Thread {
     private static final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("Gpx");
 //#endif
 
-    private static final String DEFAULT_NAMESPACE   = null;
+    private static final String DEFAULT_NAMESPACE   = null; // this is wrong but KXML handles it well :-)
     private static final String GPX_1_1_NAMESPACE   = "http://www.topografix.com/GPX/1/1";
     private static final String GS_1_0_NAMESPACE    = "http://www.groundspeak.com/cache/1/0";
     private static final String GS_1_0_PREFIX       = "groundspeak";
@@ -258,7 +258,7 @@ public final class GpxTracklog extends Thread {
                     serializer.endTag(DEFAULT_NAMESPACE, ELEMENT_TRKSEG);
                     serializer.endTag(DEFAULT_NAMESPACE, ELEMENT_TRK);
                 }
-                serializer.endTag(null, ELEMENT_GPX);
+                serializer.endTag(DEFAULT_NAMESPACE, ELEMENT_GPX);
                 serializer.endDocument();
                 serializer.flush();
 //#ifdef __LOG__
@@ -581,7 +581,7 @@ public final class GpxTracklog extends Thread {
         serializer.text(sbChars, 0, i);
         serializer.endTag(DEFAULT_NAMESPACE, ELEMENT_TIME);
         serializeElement(serializer, wpt.getName(), DEFAULT_NAMESPACE, ELEMENT_NAME);
-        serializeElement(serializer, wpt.getComment(), DEFAULT_NAMESPACE, ELEMENT_NAME);
+        serializeElement(serializer, wpt.getComment(), DEFAULT_NAMESPACE, ELEMENT_CMT);
         serializeElement(serializer, wpt.getSym(), DEFAULT_NAMESPACE, ELEMENT_SYM);
         final String link = wpt.getLinkPath();
         if (link != null && link.length() > 0) {

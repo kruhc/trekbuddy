@@ -145,7 +145,7 @@ public abstract class File {
     public abstract void delete() throws IOException;
     public abstract void mkdir() throws IOException;
     public abstract void rename(String newName) throws IOException;
-    public abstract long fileSize() throws java.io.IOException;
+    public abstract long fileSize() throws IOException;
     public abstract boolean exists();
     public abstract boolean isDirectory();
     public abstract String getURL();

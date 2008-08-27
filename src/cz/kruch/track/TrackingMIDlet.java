@@ -199,6 +199,12 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
             imgcached = -1;
         }
 
+        // initialize file API
+        api.file.File.initialize(sxg75 || hasFlag("fs_traverse_bug"));
+//#ifdef __LOG__
+        System.out.println("* FsType: " + api.file.File.fsType);
+//#endif
+
         // load configuration
         int configured;
         try {
@@ -211,15 +217,9 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
             configured = -1;
         }
 
-        // initialize file API
-        api.file.File.initialize(sxg75 || hasFlag("fs_traverse_bug"));
-//#ifdef __LOG__
-        System.out.println("* FsType: " + api.file.File.fsType);
-//#endif
-
         // customize UI
         int customized = 0;
-        if (api.file.File.isFs()) {
+        if (cz.kruch.track.configuration.Config.dataDirExists/* && api.file.File.isFs()*/) {
             // gc - loading of images ahead...
             System.gc();
             try {
@@ -231,9 +231,6 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
                 customized = -1;
             }
         }
-//#ifdef __LOG__
-        System.out.println("* customization: " + customized);
-//#endif
 
         // L10n
         int localized;

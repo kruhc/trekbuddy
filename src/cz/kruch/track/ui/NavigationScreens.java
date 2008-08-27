@@ -214,12 +214,10 @@ public final class NavigationScreens {
                 }
             }
         } finally {
-            if (file != null) {
-                try {
-                    file.close();
-                } catch (IOException e) {
-                    // ignore
-                }
+            try {
+                file.close();
+            } catch (Exception e) { // IOE or NPE
+                // ignore
             }
         }
 

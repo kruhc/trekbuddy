@@ -660,7 +660,7 @@ public final class Waypoints extends List
         final int left = v.size();
 
         // list persistent stores
-        if (File.isFs()) {
+        if (Config.dataDirExists/* && File.isFs()*/) {
 
             // may take some time - start ticker
             list.setTicker(new Ticker(Resources.getString(Resources.NAV_MSG_TICKER_LISTING)));
@@ -868,7 +868,7 @@ public final class Waypoints extends List
         // revision created? go on...
         if (status == null) {
 
-            // set temp filename
+            // set filename
             _storeUpdate.setFileName(name);
 
             // serialize store to GPX

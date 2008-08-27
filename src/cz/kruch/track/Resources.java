@@ -331,7 +331,7 @@ public final class Resources {
         InputStream in = null;
 
 //#ifdef __USERL10N__
-        if (api.file.File.isFs()) {
+        if (Config.dataDirExists/* && api.file.File.isFs()*/) {
             api.file.File file = null;
             try {
                 file = api.file.File.open(Config.getFolderURL(Config.FOLDER_RESOURCES) + "language.res");
@@ -342,12 +342,10 @@ public final class Resources {
             } catch (Throwable t) {
                 // ignore
             } finally {
-                if (file != null) {
-                    try {
-                        file.close();
-                    } catch (IOException e) {
-                        // ignore
-                    }
+                try {
+                    file.close();
+                } catch (Exception e) { // IOE or NPE
+                    // ignore
                 }
             }
         }
@@ -385,7 +383,7 @@ public final class Resources {
     static int keymap() throws IOException {
         int result = 0;
 
-        if (api.file.File.isFs()) {
+        if (Config.dataDirExists/* && api.file.File.isFs()*/) {
             api.file.File file = null;
             try {
                 file = api.file.File.open(Config.getFolderURL(Config.FOLDER_RESOURCES) + "keymap.txt");
@@ -418,12 +416,10 @@ public final class Resources {
                     }
                 }
             } finally {
-                if (file != null) {
-                    try {
-                        file.close();
-                    } catch (IOException e) {
-                        // ignore
-                    }
+                try {
+                    file.close();
+                } catch (Exception e) { // IOE or NPE
+                    // ignore
                 }
             }
         }

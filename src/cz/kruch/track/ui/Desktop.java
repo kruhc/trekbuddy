@@ -607,8 +607,10 @@ public final class Desktop extends GameCanvas
         }
 
         // check DataDir structure
-        if (File.isFs()) {
+        if (Config.dataDirAccess/*File.isFs()*/) {
             Config.initDataDir();
+        } else {
+            showError("'DataDir' not accessible - please fix it and restart", null, null);
         }
     }
 
@@ -2016,12 +2018,10 @@ public final class Desktop extends GameCanvas
                     } finally {
 
                         // close file
-                        if (file != null) {
-                            try {
-                                file.close();
-                            } catch (IOException e) {
-                                // ignore
-                            }
+                        try {
+                            file.close();
+                        } catch (Exception e) { // IOE or NPE
+                            // ignore
                         }
                     }
                 }

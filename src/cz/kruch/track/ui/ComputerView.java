@@ -601,7 +601,7 @@ final class ComputerView extends View implements Runnable, CommandListener {
             profiles = new Hashtable(4);
 
             // try to load profiles
-            if (File.isFs()) {
+            if (Config.dataDirExists/* && File.isFs()*/) {
                 try {
                     // find profiles
                     fillProfiles();
@@ -1457,12 +1457,10 @@ final class ComputerView extends View implements Runnable, CommandListener {
             t.printStackTrace();
 //#endif
         } finally {
-            if (file != null) {
-                try {
-                    file.close();
-                } catch (IOException e) {
-                    // ignore
-                }
+            try {
+                file.close();
+            } catch (Exception e) { // IOE or NPE
+                // ignore
             }
         }
 
@@ -1485,12 +1483,10 @@ final class ComputerView extends View implements Runnable, CommandListener {
             }
         } finally {
             // close dir
-            if (dir != null) {
-                try {
-                    dir.close();
-                } catch (IOException e) {
-                    // ignore
-                }
+            try {
+                dir.close();
+            } catch (Exception e) { // IOE or NPE
+                // ignore
             }
         }
     }

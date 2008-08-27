@@ -119,40 +119,44 @@ public final class Camera implements CommandListener, PlayerListener/*, Runnable
     }
 
     public static boolean play(String name) {
-        Player p = null;
-        InputStream in = null;
-        try {
-            p = Manager.createPlayer(in = Connector.openInputStream(Config.getFolderURL(Config.FOLDER_SOUNDS) + name), "audio/amr");
-            p.realize();
-            p.prefetch();
-            p.addPlayerListener(new Camera(in, (VolumeControl) p.getControl("VolumeControl")));
-            p.start();
-        } catch (Throwable t) {
+        if (Config.dataDirExists/* && api.file.File.isFs()*/) {
+            Player p = null;
+            InputStream in = null;
+            try {
+                p = Manager.createPlayer(in = Connector.openInputStream(Config.getFolderURL(Config.FOLDER_SOUNDS) + name), "audio/amr");
+                p.realize();
+                p.prefetch();
+                p.addPlayerListener(new Camera(in, (VolumeControl) p.getControl("VolumeControl")));
+                p.start();
+                return true;
+            } catch (Throwable t) {
 //#ifdef __LOG__
-            System.out.println("play " + name + " failed: " + t);
+                System.out.println("play " + name + " failed: " + t);
 //#endif
-            if (in != null) {
-                try {
-                    in.close();
-                } catch (IOException e) {
-                    // ignore
+                if (in != null) {
+                    try {
+                        in.close();
+                    } catch (IOException e) {
+                        // ignore
+                    }
+                }
+                if (p != null) {
+                    p.close();
                 }
             }
-            if (p != null) {
-                p.close();
-            }
-            return false;
         }
-        return true;
+
+        return false;
     }
 
     public void playerUpdate(Player player, String event, Object closure) {
         if (event.equals(PlayerListener.END_OF_MEDIA) || event.equals(PlayerListener.ERROR)) {
+            player.close();
+        } else if (event.equals(PlayerListener.CLOSED)) {
             if (volume != null) {
                 volume.setLevel(level);
                 volume = null; // gc hint
             }
-            player.close();
             if (in != null) {
                 try {
                     in.close();

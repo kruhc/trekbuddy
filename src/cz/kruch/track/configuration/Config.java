@@ -31,6 +31,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.util.Vector;
 import java.util.Hashtable;
+import java.util.Enumeration;
 
 import api.location.Datum;
 import api.location.Ellipsoid;
@@ -203,6 +204,9 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
     public static String cmsProfile     = EMPTY_STRING;
     public static boolean o2provider;
 
+    // runtime
+    public static boolean dataDirAccess, dataDirExists;
+
     private Config() {
     }
 
@@ -210,7 +214,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
 
 //#ifdef __RIM__
         /* default for Blackberry */
-        dataDir = "file:///SDCard/TrekBuddy/";
+        dataDir = getDefaultDataDir("SDCard/", "TrekBuddy/");
         commUrl = "btspp://000276fd79da:1";
         fullscreen = true;
         safeColors = true;
@@ -222,21 +226,21 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
             dataDir = "file:///4:/TrekBuddy/";
             fullscreen = true;
         } else if (cz.kruch.track.TrackingMIDlet.lg) {
-            dataDir = "file:///Card/TrekBuddy/";
+            dataDir = getDefaultDataDir("Card/", "TrekBuddy/");
             fullscreen = true;
-        } else if (cz.kruch.track.TrackingMIDlet.j9 || cz.kruch.track.TrackingMIDlet.jbed || cz.kruch.track.TrackingMIDlet.intent /*|| cz.kruch.track.TrackingMIDlet.phoneme*/) {
-            dataDir = "file:///Storage%20Card/TrekBuddy/";
-            if (cz.kruch.track.TrackingMIDlet.jbed || cz.kruch.track.TrackingMIDlet.intent) {
-                commUrl = "socket://127.0.0.1:20175";
-            }
         } else if (cz.kruch.track.TrackingMIDlet.motorola || cz.kruch.track.TrackingMIDlet.a780) {
             dataDir = "file:///b/trekbuddy/";
             forcedGc = true;
+        } else if (cz.kruch.track.TrackingMIDlet.j9 || cz.kruch.track.TrackingMIDlet.jbed || cz.kruch.track.TrackingMIDlet.intent /*|| cz.kruch.track.TrackingMIDlet.phoneme*/) {
+            dataDir = getDefaultDataDir("Storage%20Card/", "TrekBuddy/");
+            if (cz.kruch.track.TrackingMIDlet.jbed || cz.kruch.track.TrackingMIDlet.intent) {
+                commUrl = "socket://127.0.0.1:20175";
+            }
         } else if (cz.kruch.track.TrackingMIDlet.uiq) {
-            dataDir = "file:///Ms/Other/TrekBuddy/";
+            dataDir = getDefaultDataDir("Ms/", "Other/TrekBuddy/");
             fullscreen = true;
         } else { // Nokia, SonyEricsson, ...
-            dataDir = "file:///E:/TrekBuddy/"; // pstros: "file:///SDCard/TrekBuddy/"
+            dataDir = getDefaultDataDir("E:/", "TrekBuddy/"); // pstros: "file:///SDCard/TrekBuddy/"
             if (cz.kruch.track.TrackingMIDlet.nokia || cz.kruch.track.TrackingMIDlet.sonyEricsson) {
                 fullscreen = true;
             }
@@ -255,6 +259,11 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
             // ignore
         }
 
+        // check DataDir access
+        if (File.isFs()) {
+            checkDataDirAccess();
+        }
+
         // trick to recognize map loaded upon start as default
         defaultMapPath = mapPath;
 
@@ -264,14 +273,53 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
                 locationProvider = Config.LOCATION_PROVIDER_JSR179;
             } else if (cz.kruch.track.TrackingMIDlet.jsr82) {
                 locationProvider = Config.LOCATION_PROVIDER_JSR82;
-            } else if (api.file.File.isFs()) {
-                locationProvider = Config.LOCATION_PROVIDER_SIMULATOR;
             } else if (cz.kruch.track.TrackingMIDlet.hasPorts()) {
                 locationProvider = Config.LOCATION_PROVIDER_SERIAL;
+            } else if (File.isFs()) {
+                locationProvider = Config.LOCATION_PROVIDER_SIMULATOR;
             }
         }
 
         return result;
+    }
+
+    private static String getDefaultDataDir(final String defaultRoot,
+                                            final String appPath) {
+        String cardRoot = null;
+        if (File.isFs()) {
+            try {
+                for (Enumeration roots = File.listRoots(); roots.hasMoreElements(); ) {
+                    final String root = (String) roots.nextElement();
+                    if (root.indexOf("Card") > -1 || root.indexOf("Stick") > -1) {
+                        cardRoot = root; break;
+                    }
+                }
+            } catch (Exception e) { // IOE or SE
+                // ignore
+            }
+        }
+        if (cardRoot == null) {
+            cardRoot = defaultRoot;
+        }
+
+        return (new StringBuffer("file:///").append(cardRoot).append(appPath)).toString();
+    }
+
+    private static void checkDataDirAccess() {
+        File dir = null;
+        try {
+            dir = File.open(Config.dataDir);
+            dataDirAccess = true;
+            dataDirExists = dir.exists();
+        } catch (Exception e) { // IOE or SE
+            // ignore
+        } finally {
+            try {
+                dir.close();
+            } catch (Exception e) { // IOE or NPE
+                // ignore
+            }
+        }
     }
 
     private static void readMain(DataInputStream din) throws IOException {
@@ -625,30 +673,12 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         if (log.isEnabled()) log.info("init datadir");
 //#endif
 
-        boolean create = false;
-        boolean error = false;
-        File dir = null;
-        try {
-            dir = File.open(getDataDir());
-            create = !dir.exists();
-        } catch (Exception e) {
-            cz.kruch.track.ui.Desktop.showError("'DataDir' not accessible - please fix it", e, null);
-            error = true;
-        } finally {
-            try {
-                dir.close();
-            } catch (Exception e) { // NPE or IOE
-                // ignore
-            }
-        }
-        if (!error) {
-            if (create) {
-                (new YesNoDialog(null, new Config(), Boolean.FALSE,
-                                 "DataDir '" + getDataDir().substring(8 /* "file:///".length() */) + "' does not exists. Create it?",
-                                 null)).show();
-            } else {
-                response(YesNoDialog.NO, Boolean.TRUE);
-            }
+        if (dataDirExists) {
+            response(YesNoDialog.NO, null);
+        } else {
+            (new YesNoDialog(null, new Config(), null,
+                             "DataDir '" + getDataDir().substring(8 /* "file:///".length() */) + "' does not exists. Create it?",
+                             null)).show();
         }
     }
 
@@ -661,9 +691,9 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
             try {
                 datadir = File.open(getDataDir(), Connector.WRITE);
                 datadir.mkdir();
-                closure = Boolean.TRUE;
+                dataDirExists = true;
             } catch (Exception e) {
-                cz.kruch.track.ui.Desktop.showError("Failed to create DataDir " + getDataDir().substring(8 /* "file:///".length() */),
+                cz.kruch.track.ui.Desktop.showError("Failed to create " + getDataDir().substring(8 /* "file:///".length() */),
                                                     e, null);
             } finally {
                 try {
@@ -673,7 +703,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
                 }
             }
         }
-        if (closure == Boolean.TRUE) {
+        if (dataDirExists) {
             final String[] folders = {
                 FOLDER_MAPS, FOLDER_NMEA, FOLDER_PROFILES, FOLDER_RESOURCES,
                 FOLDER_SOUNDS, FOLDER_TRACKS, FOLDER_WPTS
@@ -755,22 +785,21 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         }
 
         // next try user's
-        File file = null;
-        try {
-            file = File.open(Config.getFolderURL(Config.FOLDER_RESOURCES) + "datums.txt");
-            if (file.exists()) {
-                initDatums(file.openInputStream(), tokenizer, delims);
-            }
-        } catch (Throwable t) {
-            // ignore
-        } finally {
-            if (file != null) {
+        if (Config.dataDirExists/* && File.isFs()*/) {
+            File file = null;
+            try {
+                file = File.open(Config.getFolderURL(Config.FOLDER_RESOURCES) + "datums.txt");
+                if (file.exists()) {
+                    initDatums(file.openInputStream(), tokenizer, delims);
+                }
+            } catch (Throwable t) {
+                // ignore
+            } finally {
                 try {
                     file.close();
-                } catch (IOException e) {
+                } catch (Exception e) { // IOE or NPE
                     // ignore
                 }
-                file = null; // gc hint
             }
         }
 

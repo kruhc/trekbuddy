@@ -183,11 +183,12 @@ public final class GpxTracklog extends Thread {
         // try to open and create a file - isolated operation
         try {
             file = File.open(path, Connector.READ_WRITE);
-            if (!file.exists()) {
-                file.create();
+            if (file.exists()) {
+                file.delete();
             }
+            file.create();
 //#ifdef __LOG__
-            if (log.isEnabled()) log.debug("file opened");
+            if (log.isEnabled()) log.debug("file created");
 //#endif
         } catch (Throwable t) {
             throwable = t;

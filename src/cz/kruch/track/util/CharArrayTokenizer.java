@@ -216,8 +216,8 @@ public final class CharArrayTokenizer {
             if (digit > -1) {
                 result *= 10;
                 result += digit;
-            } else if (ch == ' ') {
-                // ignore whitespace
+            } else if (ch == ' ' || ch == '+') {
+                // ignore whitespace and leading + sign
             } else if (ch == '-') {
                 sign = -1;
             } else {
@@ -229,47 +229,7 @@ public final class CharArrayTokenizer {
     }
 
     public static float parseFloat(final CharArrayTokenizer.Token token) {
-        return parseFloat(token.array, token.begin, token.length);
-    }
-
-    public static float parseFloat(final char[] value, int offset, final int length) {
-        if (length == 0) {
-            throw new NumberFormatException("No input");
-        }
-
-        final int end = offset + length;
-        long decSeen = 0;
-        float result = 0F; // TODO is this correct initial value???
-        int sign = 1;
-
-        while (offset < end) {
-            final char ch = value[offset++];
-            if (ch == '.') {
-                decSeen = 10;
-            } else {
-/* too slow
-                int idigit = Character.digit(ch, 10);
-*/
-                if (ch >= '0' && ch <= '9') {
-                    final float fdigit = ch - '0';
-                    if (decSeen > 0) {
-                        result += (fdigit / decSeen);
-                        decSeen *= 10;
-                    } else {
-                        result *= 10F;
-                        result += fdigit;
-                    }
-                } else if (ch == ' ') {
-                    // ignore whitespace
-                }  else if (ch == '-') {
-                    sign = -1;
-                } else {
-                    throw new NumberFormatException("Not a digit: " + ch);
-                }
-            }
-        }
-
-        return result * sign;
+        return (float) parseDouble(token.array, token.begin, token.length);
     }
 
     public static double parseDouble(final CharArrayTokenizer.Token token) {
@@ -303,8 +263,8 @@ public final class CharArrayTokenizer {
                         result *= 10D;
                         result += fdigit;
                     }
-                } else if (ch == ' ') {
-                    // ignore whitespace
+                } else if (ch == ' ' || ch == '+') {
+                    // ignore whitespace and leading + sign
                 } else if (ch == '-') {
                     sign = -1;
                 } else {
@@ -482,12 +442,16 @@ public final class CharArrayTokenizer {
             return -1;
         }
 
-        public StringBuffer append(StringBuffer sb) {
+        public StringBuffer append(final StringBuffer sb) {
             return sb.append(array, begin, length);
         }
 
         public String toString() {
             return new String(array, begin, length);
+        }
+
+        public String substring(final int offset) {
+            return new String(array, begin + offset, length - offset);
         }
     }
 }

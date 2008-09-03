@@ -117,17 +117,17 @@ final class LocatorView extends View {
     }
 
     public int locationUpdated(Location l) {
-        if (l.getFix() < 1) {
-            return Desktop.MASK_NONE;
+        // only fix is good enough
+        if (l.getFix() > 0) {
+
+            // update array
+            append(0, l.clone());
+
+            // recalc
+            recalc(l.getTimestamp());
         }
-        
-        // update array
-        append(0, l.clone());
 
-        // recalc
-        recalc(l.getTimestamp());
-
-        return isVisible ? Desktop.MASK_ALL : Desktop.MASK_NONE;
+        return Desktop.MASK_SCREEN;
     }
 
     public int handleAction(final int action, final boolean repeated) {
@@ -244,7 +244,7 @@ final class LocatorView extends View {
     }
 
     public int changeDayNight(final int dayNight) {
-        return isVisible ? Desktop.MASK_ALL : Desktop.MASK_NONE; 
+        return Desktop.MASK_SCREEN; 
     }
 
     public void render(final Graphics graphics, final Font font, final int mask) {
@@ -511,8 +511,10 @@ final class LocatorView extends View {
                             dx + 3, h - fh - 2,
                             Graphics.LEFT | Graphics.TOP);
 
+/*
         // flush
         flushGraphics();
+*/
     }
 
     private void drawCompas(final int width2, final int height2, final int fh,

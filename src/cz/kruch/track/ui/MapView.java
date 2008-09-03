@@ -511,7 +511,7 @@ final class MapView extends View {
             } // ~synchronized
         }
 
-        return isVisible ? mask : Desktop.MASK_NONE;
+        return mask;
     }
 
     public Location getLocation() {
@@ -591,7 +591,7 @@ final class MapView extends View {
             }
 
         }
-
+/*
         // flush
         if ((mask & Desktop.MASK_MAP) != 0 || (mask & Desktop.MASK_SCREEN) != 0 || !Desktop.partialFlush) {
 //#ifdef __LOG__
@@ -618,6 +618,7 @@ final class MapView extends View {
                 flushGraphics(mapViewer.getClip());
             }
         }
+*/
     }
 
     private void getNavigationInfo(final StringBuffer extInfo) {

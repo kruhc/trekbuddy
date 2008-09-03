@@ -79,7 +79,9 @@ public final class Desktop extends GameCanvas
 
     // behaviour flags
     public static int fullScreenHeight = -1;
+/*
     public static boolean partialFlush;
+*/
     public static boolean hasRepeatEvents;
 
     // application
@@ -477,11 +479,11 @@ public final class Desktop extends GameCanvas
         if (v == null) {
             v = new View[3];
             v[VIEW_MAP] = new MapView(this);
-            v[VIEW_MAP].setCanvas(this);
+//            v[VIEW_MAP].setCanvas(this);
             v[VIEW_HPS] = new LocatorView(this);
-            v[VIEW_HPS].setCanvas(this);
+//            v[VIEW_HPS].setCanvas(this);
             v[VIEW_CMS] = new ComputerView(this);
-            v[VIEW_CMS].setCanvas(this);
+//            v[VIEW_CMS].setCanvas(this);
             v[0].setVisible(true);
 /*
             sizeChanged = true; // enforce sizeChanged notification
@@ -843,11 +845,6 @@ public final class Desktop extends GameCanvas
 
         // scrolling stops // TODO ugly direct access
         MapView.scrolls = 0;
-
-/* why????
-        // update
-        update(MASK_ALL);
-*/
     }
 
     public void commandAction(Command command, Displayable displayable) {
@@ -1561,7 +1558,7 @@ public final class Desktop extends GameCanvas
 
                     case Canvas.KEY_NUM0: { // day/night switch
                         if (!repeated) {
-                            if (mode == VIEW_MAP) {
+                            if (mode == VIEW_MAP) { // TODO hack
                                 mask |= views[VIEW_MAP].handleKey(i, false);
                             } else {
                                 Config.dayNight++;
@@ -1569,7 +1566,10 @@ public final class Desktop extends GameCanvas
                                     Config.dayNight = 0;
                                 }
                                 for (int j = views.length; --j >= 0; ) {
-                                    mask |= views[j].changeDayNight(Config.dayNight);
+                                    final int m = views[j].changeDayNight(Config.dayNight);
+                                    if (j == mode) { // current view
+                                        mask |= m;
+                                    }
                                 }
                             }
                         }
@@ -1604,7 +1604,7 @@ public final class Desktop extends GameCanvas
         // anything to update?
         if (mask != MASK_NONE) {
 
-            // prepare slices
+            // prepare slices // TODO ugly - MapView specific
             if ((mask & MASK_MAP) != 0) {
                 ((MapView) views[VIEW_MAP]).ensureSlices();
             }
@@ -2074,7 +2074,9 @@ public final class Desktop extends GameCanvas
         g.drawRoundRect(x, y, w - 1, h - 1, 5, 5);
         g.setFont(f);
         g.drawString(s, x + (w - sw) / 2, y + (h - sh) / 2, Graphics.TOP | Graphics.LEFT);
+/*
         flushGraphics();
+*/
     }
 
     /*
@@ -2183,8 +2185,8 @@ public final class Desktop extends GameCanvas
     public static final int MASK_OSD        = 2;
     public static final int MASK_STATUS     = 4;
     public static final int MASK_CROSSHAIR  = 8;
-    public static final int MASK_SCREEN     = 256;
     public static final int MASK_ALL        = MASK_MAP | MASK_OSD | MASK_STATUS | MASK_CROSSHAIR;
+    public static final int MASK_SCREEN     = MASK_ALL;
 
     final class RenderTask implements Runnable {
 //#ifdef __LOG__
@@ -2219,6 +2221,9 @@ public final class Desktop extends GameCanvas
                 if (paused) {
                     drawPause(g);
                 }
+
+                // flush
+                flushGraphics();
 
             } catch (Throwable t) {
 //#ifdef __LOG__
@@ -2577,11 +2582,11 @@ public final class Desktop extends GameCanvas
             for (int i = views.length; --i >= 0; ) {
                 try {
                     views[i].configChanged();
-                } catch (NullPointerException e) {
+                } catch (Exception e) {
 //#ifdef __LOG__
                     e.printStackTrace();
 //#endif
-                    throw new IllegalStateException("NPE in view #" + i);
+                    throw new RuntimeException("Exception [config changed] in view #" + i + ": " + e.toString());
                 }
             }
 
@@ -2921,11 +2926,13 @@ public final class Desktop extends GameCanvas
                 status.setStatus((String) result);
 
                 // status update
-                if (result == null) {
-                    update(MASK_STATUS /* | MASK_MAP */);
-                } else {
-                    update(MASK_STATUS);
-                }
+//                if (result == null) {
+//                    update(MASK_STATUS /* | MASK_MAP */);
+//                } else {
+//                    update(MASK_STATUS);
+//                }
+                update(MASK_ALL);
+
             } else {
 
                 // show user the error
@@ -3062,28 +3069,32 @@ public final class Desktop extends GameCanvas
                 // update wpt navigation
                 try {
                     updateNavigation(l.getQualifiedCoordinates());
-                } catch (NullPointerException e) {
-                    throw new IllegalStateException("NPE in navigation update");
+                } catch (Exception e) {
+                    throw new RuntimeException("Exception [navigation update]" + ": " + e.toString());
                 }
 
                 // update route navigation
                 try {
                     updateRouting(l.getQualifiedCoordinates());
-                } catch (NullPointerException e) {
-                    throw new IllegalStateException("NPE in routing update");
+                } catch (Exception e) {
+                    throw new RuntimeException("Exception [routing update]" + ": " + e.toString());
                 }
             }
 
             // notify views
             int mask = MASK_NONE;
+            final View[] views = Desktop.this.views;
             for (int i = views.length; --i >= 0; ) {
                 try {
-                    mask |= views[i].locationUpdated(l);
-                } catch (NullPointerException e) {
+                    final int m = views[i].locationUpdated(l);
+                    if (i == mode) { // current view
+                        mask |= m;
+                    }
+                } catch (Exception e) {
 //#ifdef __LOG__
                     e.printStackTrace();
 //#endif
-                    throw new IllegalStateException("NPE in view #" + i);
+                    throw new RuntimeException("Exception [location updated] in view #" + i + ": " + e.toString());
                 }
             }
 

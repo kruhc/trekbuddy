@@ -57,7 +57,9 @@ final class MapViewer {
     private int crosshairSize, crosshairSize2;
     private int mWidth, mHeight;
     
+/*
     private final int[] clip;
+*/
     private final Position position;
 
     private int scaleDx/*, dy*/;
@@ -88,7 +90,9 @@ final class MapViewer {
     MapViewer() {
         this.crosshairSize = NavigationScreens.crosshairs.getHeight();
         this.crosshairSize2 = this.crosshairSize >> 1;
+/*
         this.clip = new int[] { -1, -1, crosshairSize, crosshairSize };
+*/
         this.position = new Position(0, 0);
         this.slices = new Vector(4);
         this.slices2 = new Vector(4);
@@ -1038,12 +1042,14 @@ final class MapViewer {
         return mask;
     }
 
+/*
     public int[] getClip() {
         clip[0] = chx;
         clip[1] = chy;
 
         return clip;
     }
+*/
 
     boolean ensureSlices() {
 //#ifdef __LOG__

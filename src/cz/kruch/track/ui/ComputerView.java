@@ -114,6 +114,7 @@ final class ComputerView extends View implements Runnable, CommandListener {
     private static final String TOKEN_WPT_CMT       = "wpt-cmt";
     private static final String TOKEN_WPT_SYM       = "wpt-sym";
     private static final String TOKEN_WPT_ALT_DIFF  = "wpt-alt-diff";
+    private static final String TOKEN_XDR           = "xdr.";
 
     // numeric values
     private static final String[] TOKENS_float = {
@@ -202,6 +203,7 @@ final class ComputerView extends View implements Runnable, CommandListener {
     // even more special
     private static final int VALUE_SNR0         = 1100; // 12 slots
     private static final int VALUE_PRN0         = 1112; // 12 slots
+    private static final int VALUE_XDR          = 1200;
 
     // sign "index"
     private static final int VALUE_SIGN         = 2000;
@@ -347,169 +349,169 @@ final class ComputerView extends View implements Runnable, CommandListener {
     }
 
     public int locationUpdated(Location l) {
-        if (!isUsable()) {
-            return isVisible ? Desktop.MASK_SCREEN : Desktop.MASK_NONE;
-        }
-        
-        // timestamp
-        final long t = l.getTimestamp();
+        // got any profile?
+        if (isUsable()) {
 
-        // calculate time diff
-        final long dt = timestamp == 0 ? 0 : (t - timestamp);
+            // timestamp
+            final long t = l.getTimestamp();
 
-        // update times
-        timestamp = t;
-        if (starttime == 0) { // first record
-            starttime = t;
-            ETA_CALENDAR.setTimeSafe(t);
-        } 
+            // calculate time diff
+            final long dt = timestamp == 0 ? 0 : (t - timestamp);
 
-        // time since start
-        final long tt = t - starttime;
+            // update times
+            timestamp = t;
+            if (starttime == 0) { // first record
+                starttime = t;
+                ETA_CALENDAR.setTimeSafe(t);
+            }
 
-        // everything else needs fix
-        fix = l.getFix();
-        if (fix > 0) {
+            // time since start
+            final long tt = t - starttime;
 
-            // fix3d
-            fix3d = l.isFix3d();
+            // everything else needs fix
+            fix = l.getFix();
+            if (fix > 0) {
 
-            // sat
-            sat = l.getSat();
+                // fix3d
+                fix3d = l.isFix3d();
 
-            // accuracy
-            final float hAccuracy = l.getQualifiedCoordinates().getHorizontalAccuracy();
+                // sat
+                sat = l.getSat();
+
+                // accuracy
+                final float hAccuracy = l.getQualifiedCoordinates().getHorizontalAccuracy();
 /*
-            final float vAccuracy = l.getQualifiedCoordinates().getVerticalAccuracy();
+                final float vAccuracy = l.getQualifiedCoordinates().getVerticalAccuracy();
 */
 
-            // calculate distance - emulate static navigation
-            float ds = 0F;
-            if (snrefCoords == null) {
-                snrefCoords = l.getQualifiedCoordinates().clone();
-                /*snreftime = timestamp;*/
-            } else {
-                ds = snrefCoords.distance(l.getQualifiedCoordinates());
-                if (Float.isNaN(hAccuracy)) {
-                    if (ds < 50) {
-                        ds = 0F;
-                    }
-                } else if (ds < (3 * hAccuracy + 5)) {
-                    ds = 0F;
-                } else {
-                    QualifiedCoordinates.releaseInstance(snrefCoords);
-                    snrefCoords = null;
+                // calculate distance - emulate static navigation
+                float ds = 0F;
+                if (snrefCoords == null) {
                     snrefCoords = l.getQualifiedCoordinates().clone();
                     /*snreftime = timestamp;*/
-                }
-            }
-
-            // update coords
-            QualifiedCoordinates.releaseInstance(valueCoords);
-            valueCoords = null;
-            valueCoords = l.getQualifiedCoordinates().clone();
-
-            // local ref for faster access
-            final float[] valuesFloat = this.valuesFloat;
-
-            // alt, alt-d
-            final float alt = valueCoords.getAlt();
-            if (!Float.isNaN(alt)) {
-
-                // vertical speed
-                final float da = alt - valuesFloat[VALUE_ALT];
-                if (dt > 0) {
-                    valuesFloat[VALUE_ALT_D] = da / (dt / 1000);
-                }
-
-                // alt
-                valuesFloat[VALUE_ALT] = alt;
-            }
-
-            // course, course-d
-            final float course = l.getCourse();
-            if (!Float.isNaN(course)) {
-                valuesFloat[VALUE_COURSE_D] = course - valuesFloat[VALUE_COURSE];
-                valuesFloat[VALUE_COURSE] = course;
-            }
-
-            // dist-t
-            valuesFloat[VALUE_DIST_T] += ds / 1000F;
-
-            // spd, spd-d
-            float f = l.getSpeed();
-            if (!Float.isNaN(f)) {
-                // to km/h
-                f *= 3.6F;
-
-                // time and spd-avg 'auto' - when speed over ~1.8 km/h
-                if (f > AUTO_MIN) {
-                    timetauto += dt;
-                    if (valuesFloat[VALUE_DIST_T] > 0.5F || tt > 30000) {
-                        valuesFloat[VALUE_SPD_AVG_AUTO] = valuesFloat[VALUE_DIST_T] / ((float) timetauto / (1000 * 3600));
+                } else {
+                    ds = snrefCoords.distance(l.getQualifiedCoordinates());
+                    if (Float.isNaN(hAccuracy)) {
+                        if (ds < 50) {
+                            ds = 0F;
+                        }
+                    } else if (ds < (3 * hAccuracy + 5)) {
+                        ds = 0F;
+                    } else {
+                        QualifiedCoordinates.releaseInstance(snrefCoords);
+                        snrefCoords = null;
+                        snrefCoords = l.getQualifiedCoordinates().clone();
+                        /*snreftime = timestamp;*/
                     }
                 }
+
+                // update coords
+                QualifiedCoordinates.releaseInstance(valueCoords);
+                valueCoords = null;
+                valueCoords = l.getQualifiedCoordinates().clone();
+
+                // local ref for faster access
+                final float[] valuesFloat = this.valuesFloat;
+
+                // alt, alt-d
+                final float alt = valueCoords.getAlt();
+                if (!Float.isNaN(alt)) {
+
+                    // vertical speed
+                    final float da = alt - valuesFloat[VALUE_ALT];
+                    if (dt > 0) {
+                        valuesFloat[VALUE_ALT_D] = da / (dt / 1000);
+                    }
+
+                    // alt
+                    valuesFloat[VALUE_ALT] = alt;
+                }
+
+                // course, course-d
+                final float course = l.getCourse();
+                if (!Float.isNaN(course)) {
+                    valuesFloat[VALUE_COURSE_D] = course - valuesFloat[VALUE_COURSE];
+                    valuesFloat[VALUE_COURSE] = course;
+                }
+
+                // dist-t
+                valuesFloat[VALUE_DIST_T] += ds / 1000F;
 
                 // spd, spd-d
-                if (dt > 0) {
-                    valuesFloat[VALUE_SPD_D] = ((f - valuesFloat[VALUE_SPD]) / 3.6F) / (dt / 1000);
-                }
-                valuesFloat[VALUE_SPD] = f;
+                float f = l.getSpeed();
+                if (!Float.isNaN(f)) {
+                    // to km/h
+                    f *= 3.6F;
 
-                // spd-avg
-                valuesFloat[VALUE_SPD_AVG] = (valuesFloat[VALUE_SPD_AVG] * counter + f) / ++counter;
-
-                // spd-max
-                if (f > valuesFloat[VALUE_SPD_MAX]) {
-                    valuesFloat[VALUE_SPD_MAX] = f;
-                }
-
-                // spd-avg short
-                {
-                    final float[] spdavgFloat = this.spdavgFloat;
-                    spdavgFloat[spdavgIndex++] = f;
-                    if (spdavgIndex >= spdavgFloat.length) {
-                        spdavgIndex = 0;
-                    }
-                    int c = 0;
-                    spdavgShort = 0F;
-                    for (int i = spdavgFloat.length; i-- > 0; ) {
-                        float v = spdavgFloat[i];
-                        if (v > -1F) {
-                            spdavgShort += v;
-                            c++;
+                    // time and spd-avg 'auto' - when speed over ~1.8 km/h
+                    if (f > AUTO_MIN) {
+                        timetauto += dt;
+                        if (valuesFloat[VALUE_DIST_T] > 0.5F || tt > 30000) {
+                            valuesFloat[VALUE_SPD_AVG_AUTO] = valuesFloat[VALUE_DIST_T] / ((float) timetauto / (1000 * 3600));
                         }
                     }
-                    spdavgShort /= c;
-                }
-            }
 
-/*
-            // spd-avg as dist / time
-            if (valuesFloat[VALUE_DIST_T] > 0.5F || tt > 30000) {
-                valuesFloat[VALUE_SPD_AVG] = valuesFloat[VALUE_DIST_T] / ((float) tt / (1000 * 3600));
-            }
-*/
+                    // spd, spd-d
+                    if (dt > 0) {
+                        valuesFloat[VALUE_SPD_D] = ((f - valuesFloat[VALUE_SPD]) / 3.6F) / (dt / 1000);
+                    }
+                    valuesFloat[VALUE_SPD] = f;
 
-/*
-            // asc/desc - decent accuracy, valid altitude
-            if (fix3d && vAccuracy < 15F && !Float.isNaN(alt)) {
-                if (!Float.isNaN(altLast)) {
-                    altDiff += (alt - altLast);
-                    if (altDiff > 25F) {
-                        valuesFloat[VALUE_ASC_T] += altDiff;
-                        altDiff = 0F;
-                    } else if (altDiff < -25F) {
-                        valuesFloat[VALUE_DESC_T] += altDiff;
-                        altDiff = 0F;
+                    // spd-avg
+                    valuesFloat[VALUE_SPD_AVG] = (valuesFloat[VALUE_SPD_AVG] * counter + f) / ++counter;
+
+                    // spd-max
+                    if (f > valuesFloat[VALUE_SPD_MAX]) {
+                        valuesFloat[VALUE_SPD_MAX] = f;
+                    }
+
+                    // spd-avg short
+                    {
+                        final float[] spdavgFloat = this.spdavgFloat;
+                        spdavgFloat[spdavgIndex++] = f;
+                        if (spdavgIndex >= spdavgFloat.length) {
+                            spdavgIndex = 0;
+                        }
+                        int c = 0;
+                        spdavgShort = 0F;
+                        for (int i = spdavgFloat.length; i-- > 0; ) {
+                            float v = spdavgFloat[i];
+                            if (v > -1F) {
+                                spdavgShort += v;
+                                c++;
+                            }
+                        }
+                        spdavgShort /= c;
                     }
                 }
-                altLast = alt;
-            }
+
+/*
+                // spd-avg as dist / time
+                if (valuesFloat[VALUE_DIST_T] > 0.5F || tt > 30000) {
+                    valuesFloat[VALUE_SPD_AVG] = valuesFloat[VALUE_DIST_T] / ((float) tt / (1000 * 3600));
+                }
 */
+
+/*
+                // asc/desc - decent accuracy, valid altitude
+                if (fix3d && vAccuracy < 15F && !Float.isNaN(alt)) {
+                    if (!Float.isNaN(altLast)) {
+                        altDiff += (alt - altLast);
+                        if (altDiff > 25F) {
+                            valuesFloat[VALUE_ASC_T] += altDiff;
+                            altDiff = 0F;
+                        } else if (altDiff < -25F) {
+                            valuesFloat[VALUE_DESC_T] += altDiff;
+                            altDiff = 0F;
+                        }
+                    }
+                    altLast = alt;
+                }
+*/
+            }
         }
 
-        return isVisible ? Desktop.MASK_SCREEN : Desktop.MASK_NONE;
+        return Desktop.MASK_SCREEN;
     }
 
     public int configChanged() {
@@ -776,30 +778,28 @@ final class ComputerView extends View implements Runnable, CommandListener {
 
     /* synchronized to avoid race-cond with rendering */
     public synchronized int changeDayNight(final int dayNight) {
-        if (!isUsable()) {
-            return isVisible ? Desktop.MASK_SCREEN : Desktop.MASK_NONE;
-        }
-
+        if (isUsable()) {
 /*
-        // get rid of bitmap fonts in all areas
-        for (Enumeration e = profiles.elements(); e.hasMoreElements(); ) {
-            final Object o = e.nextElement();
-            if (o instanceof Object[]) {
-                final Vector v = (Vector) ((Object[]) o)[0];
-                for (int N = v.size(), j = 0; j < N; j++) {
-                    final Area a = (Area) v.elementAt(j);
-                    if (a.fontImpl instanceof Image) {
-                        a.fontImpl = null;
+            // get rid of bitmap fonts in all areas
+            for (Enumeration e = profiles.elements(); e.hasMoreElements(); ) {
+                final Object o = e.nextElement();
+                if (o instanceof Object[]) {
+                    final Vector v = (Vector) ((Object[]) o)[0];
+                    for (int N = v.size(), j = 0; j < N; j++) {
+                        final Area a = (Area) v.elementAt(j);
+                        if (a.fontImpl instanceof Image) {
+                            a.fontImpl = null;
+                        }
                     }
                 }
             }
-        }
 */
 
-        // update current profile
-        prepare(dayNight);
+            // update current profile
+            prepare(dayNight);
+        }
 
-        return isVisible ? Desktop.MASK_SCREEN : Desktop.MASK_NONE;
+        return Desktop.MASK_SCREEN;
     }
 
     /* synchronized to avoid race-cond when switching profile */
@@ -817,15 +817,7 @@ final class ComputerView extends View implements Runnable, CommandListener {
         graphics.setFont(Desktop.font);
 
         // got profile?
-        if (!isUsable() || status != null) {
-            graphics.setColor(0x00FFFFFF);
-            graphics.fillRect(0, 0, w, h);
-            graphics.setColor(0x00000000);
-            graphics.drawString(Resources.getString(Resources.DESKTOP_MSG_NO_CMS_PROFILES), 0, 0, Graphics.TOP | Graphics.LEFT);
-            if (status != null) {
-                graphics.drawString(status, 0, Desktop.font.getHeight(), Graphics.TOP | Graphics.LEFT);
-            }
-        } else {
+        if (isUsable() && status == null) {
             final Vector areas = this.areas;
             final CharArrayTokenizer tokenizer = this.tokenizer;
             final StringBuffer sb = this.sb;
@@ -866,65 +858,7 @@ final class ComputerView extends View implements Runnable, CommandListener {
                         if (state % 2 == 1) {
                             int idx = area.index;
                             if (idx == -1) {
-                                final String[] keys = TOKENS_float;
-                                for (int j = keys.length; --j >= 0; ) {
-                                    if (token.equals(keys[j])) {
-                                        idx = area.index = (short) j;
-                                        break;
-                                    }
-                                }
-                                if (idx == -1) {
-                                    if (token.equals(TOKEN_COORDS)) {
-                                        area.index = VALUE_COORDS;
-                                    } else if (token.equals(TOKEN_TIME)) {
-                                        area.index = VALUE_TIME;
-                                    } else if (token.equals(TOKEN_TIME_T)) {
-                                        area.index = VALUE_TIME_T;
-                                    } else if (token.equals(TOKEN_TIME_T_AUTO)) {
-                                        area.index = VALUE_TIME_T_AUTO;
-                                    } else if (token.equals(TOKEN_STATUS)) {
-                                        area.index = VALUE_STATUS;
-                                    } else if (token.equals(SIGN_HEXA)) {
-                                        area.index = VALUE_SIGN;
-                                    } else if (token.equals(TOKEN_WPT_AZI)) {
-                                        area.index = VALUE_WPT_AZI;
-                                    } else if (token.equals(TOKEN_WPT_DIST)) {
-                                        area.index = VALUE_WPT_DIST;
-                                    } else if (token.equals(TOKEN_WPT_VMG)) {
-                                        area.index = VALUE_WPT_VMG;
-                                    } else if (token.equals(TOKEN_WPT_ETA)) {
-                                        area.index = VALUE_WPT_ETA;
-                                    } else if (token.equals(TOKEN_WPT_ALT)) {
-                                        area.index = VALUE_WPT_ALT;
-                                    } else if (token.equals(TOKEN_WPT_COORDS)) {
-                                        area.index = VALUE_WPT_COORDS;
-                                    } else if (token.startsWith(TOKEN_SNR)) {
-                                        area.index = (short) (VALUE_SNR0 + Integer.parseInt(token.toString().substring(3)));
-                                    } else if (token.startsWith(TOKEN_PRN)) {
-                                        area.index = (short) (VALUE_PRN0 + Integer.parseInt(token.toString().substring(3)));
-                                    } else if (token.equals(TOKEN_TIMER)) {
-                                        area.index = VALUE_TIMER;
-                                    } else if (token.equals(TOKEN_LAT)) {
-                                        area.index = VALUE_LAT;
-                                    } else if (token.equals(TOKEN_LON)) {
-                                        area.index = VALUE_LON;
-                                    } else if (token.equals(TOKEN_WPT_LAT)) {
-                                        area.index = VALUE_WPT_LAT;
-                                    } else if (token.equals(TOKEN_WPT_LON)) {
-                                        area.index = VALUE_WPT_LON;
-                                    } else if (token.equals(TOKEN_WPT_NAME)) {
-                                        area.index = VALUE_WPT_NAME;
-                                    } else if (token.equals(TOKEN_WPT_CMT)) {
-                                        area.index = VALUE_WPT_CMT;
-                                    } else if (token.equals(TOKEN_WPT_SYM)) {
-                                        area.index = VALUE_WPT_SYM;
-                                    } else if (token.equals(TOKEN_WPT_ALT_DIFF)) {
-                                        area.index = VALUE_WPT_ALT_DIFF;
-                                    } else {
-                                        area.index = -666;
-                                    }
-                                    idx = area.index;
-                                }
+                                idx = resolveTokenIndex(area, token);
                             }
                             switch (idx) {
                                 case VALUE_ALT:
@@ -1253,6 +1187,15 @@ final class ComputerView extends View implements Runnable, CommandListener {
                                 case VALUE_PRN0 + 11: {
                                     NavigationScreens.append(sb, NmeaParser.prns[idx - VALUE_PRN0]);
                                 } break;
+                                case VALUE_XDR: {
+                                    final String xdrId = token.substring(4/* TOKEN_XDR.length() */);
+                                    final Float value = (Float) NmeaParser.xdr.get(xdrId);
+                                    if (value != null && !value.isNaN()) {
+                                        NavigationScreens.append(sb, value.floatValue(), 1);
+                                    } else {
+                                        sb.append('?');
+                                    }
+                                } break;
                                 case VALUE_SIGN: {
                                     sb.append(NavigationScreens.SIGN);
                                 } break;
@@ -1284,10 +1227,88 @@ final class ComputerView extends View implements Runnable, CommandListener {
                     graphics.setClip(0, 0, w, h);
                 }
             }
+        } else {
+            graphics.setColor(0x00FFFFFF);
+            graphics.fillRect(0, 0, w, h);
+            graphics.setColor(0x00000000);
+            graphics.drawString(Resources.getString(Resources.DESKTOP_MSG_NO_CMS_PROFILES), 0, 0, Graphics.TOP | Graphics.LEFT);
+            if (status != null) {
+                graphics.drawString(status, 0, Desktop.font.getHeight(), Graphics.TOP | Graphics.LEFT);
+            }
         }
+/*
 
         // flush
         flushGraphics();
+*/
+    }
+
+    private int resolveTokenIndex(final Area area, final CharArrayTokenizer.Token token) {
+        int idx = -1;
+
+        final String[] keys = TOKENS_float;
+        for (int j = keys.length; --j >= 0; ) {
+            if (token.equals(keys[j])) {
+                idx = area.index = (short) j;
+                break;
+            }
+        }
+        if (idx == -1) {
+            if (token.equals(TOKEN_COORDS)) {
+                area.index = VALUE_COORDS;
+            } else if (token.equals(TOKEN_TIME)) {
+                area.index = VALUE_TIME;
+            } else if (token.equals(TOKEN_TIME_T)) {
+                area.index = VALUE_TIME_T;
+            } else if (token.equals(TOKEN_TIME_T_AUTO)) {
+                area.index = VALUE_TIME_T_AUTO;
+            } else if (token.equals(TOKEN_STATUS)) {
+                area.index = VALUE_STATUS;
+            } else if (token.equals(SIGN_HEXA)) {
+                area.index = VALUE_SIGN;
+            } else if (token.equals(TOKEN_WPT_AZI)) {
+                area.index = VALUE_WPT_AZI;
+            } else if (token.equals(TOKEN_WPT_DIST)) {
+                area.index = VALUE_WPT_DIST;
+            } else if (token.equals(TOKEN_WPT_VMG)) {
+                area.index = VALUE_WPT_VMG;
+            } else if (token.equals(TOKEN_WPT_ETA)) {
+                area.index = VALUE_WPT_ETA;
+            } else if (token.equals(TOKEN_WPT_ALT)) {
+                area.index = VALUE_WPT_ALT;
+            } else if (token.equals(TOKEN_WPT_COORDS)) {
+                area.index = VALUE_WPT_COORDS;
+            } else if (token.startsWith(TOKEN_SNR)) {
+                area.index = (short) (VALUE_SNR0 + Integer.parseInt(token.toString().substring(3)));
+            } else if (token.startsWith(TOKEN_PRN)) {
+                area.index = (short) (VALUE_PRN0 + Integer.parseInt(token.toString().substring(3)));
+            } else if (token.equals(TOKEN_TIMER)) {
+                area.index = VALUE_TIMER;
+            } else if (token.equals(TOKEN_LAT)) {
+                area.index = VALUE_LAT;
+            } else if (token.equals(TOKEN_LON)) {
+                area.index = VALUE_LON;
+            } else if (token.equals(TOKEN_WPT_LAT)) {
+                area.index = VALUE_WPT_LAT;
+            } else if (token.equals(TOKEN_WPT_LON)) {
+                area.index = VALUE_WPT_LON;
+            } else if (token.equals(TOKEN_WPT_NAME)) {
+                area.index = VALUE_WPT_NAME;
+            } else if (token.equals(TOKEN_WPT_CMT)) {
+                area.index = VALUE_WPT_CMT;
+            } else if (token.equals(TOKEN_WPT_SYM)) {
+                area.index = VALUE_WPT_SYM;
+            } else if (token.equals(TOKEN_WPT_ALT_DIFF)) {
+                area.index = VALUE_WPT_ALT_DIFF;
+            } else if (token.startsWith(TOKEN_XDR)) {
+                area.index = VALUE_XDR;
+            } else {
+                area.index = -666;
+            }
+            idx = area.index;
+        }
+
+        return idx;
     }
 
     private boolean isUsable() {

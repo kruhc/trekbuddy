@@ -829,7 +829,7 @@ public final class Waypoints extends List
         // rename does not work for subfolders
         final int ipath = name.indexOf(File.PATH_SEPCHAR);
 
-        // construct new name
+        // construct revision name
         final StringBuffer sb = new StringBuffer(32);
         sb.append(name.substring(ipath + 1, name.length() - SUFFIX_LENGTH));
         sb.append(".rev_").append(GpxTracklog.dateToFileDate(new Date().getTime()));
@@ -869,7 +869,11 @@ public final class Waypoints extends List
         if (status == null) {
 
             // set filename
-            _storeUpdate.setFileName(name);
+            if (name.endsWith(SUFFIX_LOC)) { // only GPX serialization is supported
+                _storeUpdate.setFileName(name.substring(0, name.length() - SUFFIX_LENGTH) + SUFFIX_GPX);
+            } else {
+                _storeUpdate.setFileName(name);
+            }
 
             // serialize store to GPX
             status = _storeUpdate.open();
@@ -892,7 +896,7 @@ public final class Waypoints extends List
 //#ifdef __LOG__
                     if (log.isEnabled()) log.error("error writting wpt: " + e);
 //#endif
-                // flash status
+                    // flash status
                     status = e;
                 } finally {
 //#ifdef __LOG__

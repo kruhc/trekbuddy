@@ -86,10 +86,6 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
     private Gauge gaugeAlpha;
     private TextField fieldCmsCycle;
     private ChoiceGroup choiceWaypoints;
-/*
-    private Gauge gaugeTrailColor;
-    private Gauge gaugeTrailThick;
-*/
     private TrailItem itemTrailView;
 
     private Form submenu;

@@ -30,7 +30,9 @@ abstract class Bar {
     protected int width, height;
     protected final int bh;
 
+/*
     protected int[] clip;
+*/
 
     protected boolean visible;
     protected boolean update;
@@ -58,6 +60,8 @@ abstract class Bar {
         this.update = true;
     }
 
+/*
     public abstract int[] getClip();
+*/
     public abstract void render(Graphics graphics);
 }

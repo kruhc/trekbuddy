@@ -144,8 +144,8 @@ public final class O2GermanyLocationProvider
                 }
 
                 // signal state change
-                if (lastState != state) {
-                    notifyListener(lastState = state);
+                if (updateLastState(state)) {
+                    notifyListener(state);
                 }
 
                 // create location

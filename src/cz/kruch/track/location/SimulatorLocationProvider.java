@@ -136,21 +136,14 @@ public final class SimulatorLocationProvider
                     break;
                 }
 
-                // state change?
-                boolean stateChange = false;
-                synchronized (this) {
-                    final int newState = location.getFix() > 0 ? AVAILABLE : TEMPORARILY_UNAVAILABLE;
-                    if (lastState != newState) {
-                        lastState = newState;
-                        stateChange = true;
-                    }
-                }
-                if (stateChange) {
-                    notifyListener(lastState);
-                }
-
                 // send the location
                 notifyListener(location);
+
+                // state change?
+                final int newState = location.getFix() > 0 ? AVAILABLE : TEMPORARILY_UNAVAILABLE;
+                if (updateLastState(newState)) {
+                    notifyListener(newState);
+                }
 
                 // interval elapse
                 try {
@@ -161,11 +154,11 @@ public final class SimulatorLocationProvider
             }
 
         } catch (Throwable t) {
-
 //#ifdef __LOG__
             if (log.isEnabled()) log.warn("I/O error? ", t);
             t.printStackTrace();
 //#endif
+
             if (t instanceof InterruptedException) {
                 // stop request
             }  else {

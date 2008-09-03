@@ -60,7 +60,6 @@ public final class Jsr82LocationProvider extends SerialLocationProvider {
     }
 
     protected void refresh() {
-        stalls++;
         (new Refresher()).run();
     }
 

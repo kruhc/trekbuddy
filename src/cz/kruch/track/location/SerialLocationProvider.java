@@ -83,8 +83,11 @@ public class SerialLocationProvider
         // be gentle and safe
         if (restarts++ > 0) {
 
+            // debug
+            setStatus("refresh");
+
             // not so fast
-            if (lastState == LocationProvider._STALLED) { // give hardware a while
+            if (getLastState() == LocationProvider._STALLED) { // give hardware a while
                 refresh();
             } else { // take your time (5 sec)
                 try {
@@ -101,7 +104,10 @@ public class SerialLocationProvider
         }
 
         // reset last I/O stamp
-        lastIO = System.currentTimeMillis();
+        setLastIO(System.currentTimeMillis());
+
+        // debug
+        setStatus("baby");
 
         // let's roll
         baby();
@@ -118,10 +124,13 @@ public class SerialLocationProvider
 //#endif
 
             // record
-            setStatus("Top level error");
+            setStatus("top level error");
             setThrowable(t);
 
         } finally {
+
+            // debug
+            setStatus("zombie");
 
             // almost dead
             zombie();
@@ -138,6 +147,9 @@ public class SerialLocationProvider
     /* this provider has special shutdown sequence */
     public void stop() throws LocationException {
 
+        // debug
+        setStatus("being stopped");
+
         // die gracefully
         die();
 
@@ -148,7 +160,7 @@ public class SerialLocationProvider
     private void startWatcher() {
         if (watcher == null) {
             watcher = new UniversalSoldier(UniversalSoldier.MODE_WATCHER);
-            Desktop.timer.schedule(watcher, 5000, 5000); // delay = period = 5 sec
+            Desktop.timer.schedule(watcher, 20000, 5000); // delay = 20 sec, period = 5 sec
         }
     }
 
@@ -164,6 +176,9 @@ public class SerialLocationProvider
         final boolean rw = isHge100 || Config.btKeepAlive != 0;
 
         try {
+            // debug
+            setStatus("opening connection");
+
             // open connection
             connection = (StreamConnection) Connector.open(url, rw ? Connector.READ_WRITE : Connector.READ, true);
 
@@ -207,6 +222,9 @@ public class SerialLocationProvider
 
                 try {
 
+                    // debug
+                    setStatus("reading location");
+
                     // get next location
                     location = nextLocation(stream, observer);
 
@@ -249,27 +267,35 @@ public class SerialLocationProvider
                 }
 
                 // new location timestamp
-                last = System.currentTimeMillis();
+                _setLast(System.currentTimeMillis());
+
+                // debug
+                setStatus("notifying listener");
 
                 // send new location
                 notifyListener(location);
 
                 // state change?
                 final int newState = location.getFix() > 0 ? AVAILABLE : TEMPORARILY_UNAVAILABLE;
-                if (lastState != newState) {
-                    lastState = newState;
-                    notifyListener(lastState);
+                if (updateLastState(newState)) {
+                    notifyListener(newState);
                 }
 
             } // for (; go ;)
 
         } finally {
 
+            // debug
+            setStatus("stopping");
+
             // stop watcher
             stopWatcher();
 
             // stop keep-alive
             stopKeepAlive();
+
+            // debug
+            setStatus("closing stream and connection");
 
             // cleanup
             synchronized (this) {
@@ -295,9 +321,20 @@ public class SerialLocationProvider
                 }
             }
 
+            // debug
+            setStatus("stream and connection closed");
+
             // can GC help?!?
             System.gc();
         }
+    }
+
+    private synchronized long _getLast() {
+        return last;
+    }
+
+    private synchronized void _setLast(long last) {
+        this.last = last;
     }
 
     private final class UniversalSoldier extends TimerTask {
@@ -316,24 +353,24 @@ public class SerialLocationProvider
                     boolean notify = false;
                     final long now = System.currentTimeMillis();
 
-                    if (now > (lastIO + MAX_STALL_PERIOD)) {
-                        if (lastState != _STALLED) {
-                            lastState = _STALLED;
-                            notify = true;
+                    if (now > (getLastIO() + MAX_STALL_PERIOD)) {
+                        notify = updateLastState(_STALLED);
+                        if (notify) {
+                            stalls++;
                         }
-                    } else if (now > (last + MAX_PARSE_PERIOD)) {
-                        if (lastState != TEMPORARILY_UNAVAILABLE && lastState != _STARTING) {
-                            lastState = TEMPORARILY_UNAVAILABLE;
-                            notify = true;
+                    } else if (now > (_getLast() + MAX_PARSE_PERIOD)) {
+                        if (getLastState() != _STARTING) {
+                            notify = updateLastState(TEMPORARILY_UNAVAILABLE);
                         }
                     }
 
                     if (notify) {
-                        notifyListener(lastState);
+                        notifyListener(getLastState());
                     }
                 } break;
 
-                case MODE_KILLER: { // kill current connection
+                case MODE_KILLER: {
+                    setStatus("force stream close"); // debug
                     synchronized (SerialLocationProvider.this) {
                         if (stream != null) {
                             try {
@@ -343,6 +380,7 @@ public class SerialLocationProvider
                             }
                         }
                     }
+                    setStatus("stream closed"); // debug
                 } break;
             }
         }

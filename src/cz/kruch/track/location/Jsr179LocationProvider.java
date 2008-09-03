@@ -186,8 +186,8 @@ public final class Jsr179LocationProvider
             location.setSpeed(spd);
 
             // signal state change
-            if (lastState != AVAILABLE) {
-                notifyListener(lastState = AVAILABLE);
+            if (updateLastState(AVAILABLE)) {
+                notifyListener(AVAILABLE);
             }
 
             // notify
@@ -196,8 +196,8 @@ public final class Jsr179LocationProvider
         } else {
 
             // signal state change
-            if (lastState != TEMPORARILY_UNAVAILABLE) {
-                notifyListener(lastState = TEMPORARILY_UNAVAILABLE);
+            if (updateLastState(TEMPORARILY_UNAVAILABLE)) {
+                notifyListener(TEMPORARILY_UNAVAILABLE);
             }
         }
 

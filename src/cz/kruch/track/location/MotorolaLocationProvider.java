@@ -116,13 +116,13 @@ public final class MotorolaLocationProvider
         try {
             if (aggregatePosition == null || aggregatePosition.hasLatLon() == false) {
                 // signal state change
-                if (lastState != TEMPORARILY_UNAVAILABLE) {
-                    notifyListener(lastState = TEMPORARILY_UNAVAILABLE);
+                if (updateLastState(TEMPORARILY_UNAVAILABLE)) {
+                    notifyListener(TEMPORARILY_UNAVAILABLE);
                 }
             } else {
                 // signal state change
-                if (lastState != LocationProvider.AVAILABLE) {
-                    notifyListener(lastState = AVAILABLE);
+                if (updateLastState(AVAILABLE)) {
+                    notifyListener(AVAILABLE);
                 }
 
                 final double lat = aggregatePosition.getLatitude() ;

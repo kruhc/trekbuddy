@@ -25,6 +25,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 
 import cz.kruch.track.util.NmeaParser;
+import cz.kruch.track.configuration.Config;
 
 /**
  * Base class for Serial/Bluetooth and Simulator providers.
@@ -42,14 +43,14 @@ abstract class StreamReadingLocationProvider extends LocationProvider {
     private final char[] line;
     private int btlineOffset, btlineCount;
 
-    protected volatile long lastIO;
-
     /* for minimalistic NMEA stream */
     private int hack_rmc_count;
     private NmeaParser.Record gsa;
 
     /* for broken streams */
-    private boolean hack_repeat;
+    private boolean readRetried;
+
+    private volatile long lastIO;
 
     protected StreamReadingLocationProvider(String name) {
         super(name);
@@ -59,14 +60,25 @@ abstract class StreamReadingLocationProvider extends LocationProvider {
 
     protected void reset() {
         btlineOffset = btlineCount = hack_rmc_count = 0;
-        hack_repeat = false;
+        readRetried = false;
         gsa = null;
+    }
+
+    protected synchronized long getLastIO() {
+        return lastIO;
+    }
+
+    protected synchronized void setLastIO(long lastIO) {
+        this.lastIO = lastIO;
     }
 
     protected final Location nextLocation(InputStream in, OutputStream observer) throws IOException, LocationException {
         // records
         NmeaParser.Record gga = null;
         NmeaParser.Record rmc = null;
+
+        // xdr flag
+        boolean xdr = false;
 
         // get sentence pair
         while (gga == null || rmc == null) {
@@ -105,6 +117,12 @@ abstract class StreamReadingLocationProvider extends LocationProvider {
 //#endif
                         rmc = record;
                         hack_rmc_count++;
+                    } break;
+                    case NmeaParser.HEADER_XDR: {
+//#ifdef __LOG__
+                        if (log.isEnabled()) log.info("got XDR");
+//#endif
+                        xdr = true;
                     } break;
                     default:
                         continue;
@@ -175,6 +193,7 @@ abstract class StreamReadingLocationProvider extends LocationProvider {
             mismatches++;
         }
         location.setFix3d(gsa != null && gsa.fix == 3);
+        location.setXdrBound(xdr);
         location.setCourse(rmc.course);
         location.setSpeed(rmc.speed);
 
@@ -201,11 +220,11 @@ abstract class StreamReadingLocationProvider extends LocationProvider {
 
                 // end of stream?
                 if (n == -1) {
-                    if (hack_repeat || isGo() == false) { // already tried once or provider being stopped
+                    if (readRetried || !isGo()) { // already tried once or provider being stopped
                         c = -1;
                         break;
                     } else { // try read again
-                        hack_repeat = true;
+                        readRetried = true;
                         continue;
                     }
                 }
@@ -266,7 +285,7 @@ abstract class StreamReadingLocationProvider extends LocationProvider {
         }
 
         if (c == -1) {
-            setStatus("End of stream");
+            setStatus("end of stream");
         }
 
         return -1;

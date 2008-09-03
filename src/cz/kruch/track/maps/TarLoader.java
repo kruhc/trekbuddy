@@ -86,7 +86,7 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
                         if (log.isEnabled()) log.debug("input stream support marking, very good");
 //#endif
                     } catch (Throwable t) {
-                        /* OutOfMemoryError on S60 3rd */
+                        /* OutOfMemoryError on S60 3rd without helper service */
                     }
                 } else {
                     try {

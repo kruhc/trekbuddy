@@ -279,12 +279,14 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
 //#endif
             cz.kruch.track.maps.Map.useReset = false;
         }
+/*
         if (!hasFlag("ui_no_partial_flush") && (nokia || sonyEricsson)) {
 //#ifdef __LOG__
             System.out.println("* ui partial-flush feature on");
 //#endif
             cz.kruch.track.ui.Desktop.partialFlush = true;
         }
+*/
         if (hasFlag("provider_o2_germany")) {
             cz.kruch.track.configuration.Config.o2provider = true;
         }

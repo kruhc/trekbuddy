@@ -23,6 +23,7 @@ package api.location;
  */
 public final class Location {
     private static final int FIX3D_MASK = 0x00800000;
+    private static final int XDR_MASK   = 0x00400000;
 
     private QualifiedCoordinates coordinates;
     private long timestamp;
@@ -78,9 +79,9 @@ public final class Location {
     public Location clone() {
         final Location l = newInstance(coordinates.clone(), timestamp,
                                        getFix(), getSat());
-        l.setCourse(course);
-        l.setSpeed(speed);
-        l.setFix3d(isFix3d());
+        l.course = course;
+        l.speed = speed;
+        l.fixsat = fixsat;
         
         return l;
     }
@@ -134,6 +135,17 @@ public final class Location {
             this.fixsat |= FIX3D_MASK;
         else
             this.fixsat &= ~FIX3D_MASK;
+    }
+
+    public boolean isXdrBound() {
+        return (this.fixsat & XDR_MASK) != 0;
+    }
+
+    public void setXdrBound(boolean bound) {
+        if (bound)
+            this.fixsat |= XDR_MASK;
+        else
+            this.fixsat &= ~XDR_MASK;
     }
 
     public boolean isSpeedValid() {

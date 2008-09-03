@@ -26,6 +26,8 @@ import java.util.Date;
 import java.util.Calendar;
 import java.util.TimeZone;
 import java.util.TimerTask;
+import java.util.Enumeration;
+import java.util.Hashtable;
 
 import org.kxml2.io.KXmlSerializer;
 
@@ -35,6 +37,7 @@ import cz.kruch.track.configuration.Config;
 import cz.kruch.track.event.Callback;
 import cz.kruch.track.ui.NavigationScreens;
 import cz.kruch.track.Resources;
+import cz.kruch.track.util.NmeaParser;
 import cz.kruch.j2se.io.BufferedOutputStream;
 
 /**
@@ -53,6 +56,8 @@ public final class GpxTracklog extends Thread {
     private static final String GS_1_0_PREFIX       = "groundspeak";
     private static final String EXT_NAMESPACE       = "urn:net:trekbuddy:1.0:nmea:rmc";
     private static final String EXT_PREFIX          = "rmc";
+    private static final String XDR_NAMESPACE       = "urn:net:trekbuddy:1.0:nmea:xdr";
+    private static final String XDR_PREFIX          = "xdr";
     private static final String GSM_NAMESPACE       = "urn:net:trekbuddy:1.0:gsm";
     private static final String GSM_PREFIX          = "gsm";
 
@@ -114,6 +119,7 @@ public final class GpxTracklog extends Thread {
     private final Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone("GMT"));
     private final Date date = new Date();
 
+    private final StringBuffer sb = new StringBuffer(32);
     private final char[] sbChars = new char[32];
     
     private Callback callback;
@@ -221,6 +227,7 @@ public final class GpxTracklog extends Thread {
                     serializer.setPrefix(GS_1_0_PREFIX, GS_1_0_NAMESPACE);
                 }
                 serializer.setPrefix(EXT_PREFIX, EXT_NAMESPACE);
+                serializer.setPrefix(XDR_PREFIX, XDR_NAMESPACE);
                 if (Config.gpxGsmInfo) {
                     serializer.setPrefix(GSM_PREFIX, GSM_NAMESPACE);
                 }
@@ -512,17 +519,11 @@ public final class GpxTracklog extends Thread {
             serializer.endTag(DEFAULT_NAMESPACE, ELEMENT_SAT);
         }
         /*
-         * extensions - nmea:rmc and gsm
+         * extensions - nmea:rmc, nmea:xdr and gsm
          */
         final float course = l.getCourse();
         final float speed = l.getSpeed();
-        String cellid = null;
-        String lac = null;
-        if (Config.gpxGsmInfo) {
-            cellid = System.getProperty("com.sonyericsson.net.cellid");
-            lac = System.getProperty("com.sonyericsson.net.lac");
-        }
-        if (!Float.isNaN(course) || !Float.isNaN(speed) || cellid != null || lac != null) {
+        if (!Float.isNaN(course) || !Float.isNaN(speed) || l.isXdrBound() || Config.gpxGsmInfo) {
             serializer.startTag(DEFAULT_NAMESPACE, ELEMENT_EXTENSIONS);
             if (!Float.isNaN(course)) {
                 serializer.startTag(EXT_NAMESPACE, ELEMENT_COURSE);
@@ -536,9 +537,12 @@ public final class GpxTracklog extends Thread {
                 serializer.text(sbChars, 0, i);
                 serializer.endTag(EXT_NAMESPACE, ELEMENT_SPEED);
             }
+            if (l.isXdrBound()) {
+                serializeXdr(serializer);
+            }
             if (Config.gpxGsmInfo) {
-                serializeElement(serializer, cellid, GSM_NAMESPACE, ELEMENT_CELLID);
-                serializeElement(serializer, lac, GSM_NAMESPACE, ELEMENT_LAC);
+                serializeElement(serializer, System.getProperty("com.sonyericsson.net.cellid"), GSM_NAMESPACE, ELEMENT_CELLID);
+                serializeElement(serializer, System.getProperty("com.sonyericsson.net.lac"), GSM_NAMESPACE, ELEMENT_LAC);
             }
             serializer.endTag(DEFAULT_NAMESPACE, ELEMENT_EXTENSIONS);
         }
@@ -596,12 +600,25 @@ public final class GpxTracklog extends Thread {
         serializer.endTag(DEFAULT_NAMESPACE, ELEMENT_WPT);
     }
 
-    private void serializeElement(final KXmlSerializer serializer, final String value,
-                                  final String ns, final String tag) throws IOException {
+    private static void serializeElement(final KXmlSerializer serializer, final String value,
+                                         final String ns, final String tag) throws IOException {
         if (value != null && value.length() > 0) {
             serializer.startTag(ns, tag);
             serializer.text(value);
             serializer.endTag(ns, tag);
+        }
+    }
+
+    private void serializeXdr(final KXmlSerializer serializer) throws IOException {
+        final Hashtable xdr = NmeaParser.xdr;
+        for (Enumeration keys = xdr.keys(); keys.hasMoreElements(); ) {
+            final Object key = keys.nextElement();
+            final Float value = (Float) xdr.get(key);
+            final String tag = key.toString();
+            serializer.startTag(XDR_NAMESPACE, tag);
+            final int i = doubleToChars(value.floatValue(), 1);
+            serializer.text(sbChars, 0, i);
+            serializer.endTag(XDR_NAMESPACE, tag);
         }
     }
 
@@ -793,7 +810,7 @@ public final class GpxTracklog extends Thread {
         date.setTime(timestamp);
         calendar.setTime(date);
 
-        final StringBuffer sb = new StringBuffer(32);
+        final StringBuffer sb = this.sb.delete(0, this.sb.length());
         final Calendar calendar = this.calendar;
 
         NavigationScreens.append(sb, calendar.get(Calendar.YEAR)).append('-');
@@ -811,7 +828,7 @@ public final class GpxTracklog extends Thread {
     }
 
     private int doubleToChars(final double value, final int precision) {
-        final StringBuffer sb = new StringBuffer(32);
+        final StringBuffer sb = this.sb.delete(0, this.sb.length());
         NavigationScreens.append(sb, value, precision);
 
         final int result = sb.length();

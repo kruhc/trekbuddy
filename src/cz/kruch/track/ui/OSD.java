@@ -54,7 +54,9 @@ final class OSD extends Bar {
         this.mmw = Desktop.font.stringWidth("<>");
         this.str1w = Desktop.font.stringWidth("4*");
         this.str2w = Desktop.font.stringWidth("44*");
+/*
         this.clip = new int[]{ gx, gy, -1, -1 };
+*/
         this.sb = new StringBuffer(64);
         this.cInfo = new char[64];
         this.cExtInfo = new char[64];
@@ -187,13 +189,15 @@ final class OSD extends Bar {
         this.ok = ok;
     }
 
+/*
     public int[] getClip() {
         if (!visible && !update)
             return null;
 
         clip[2] = width;
-        clip[3] = /*cExtInfoLength == 0 ? bh : */2 * bh;
+        clip[3] = / *cExtInfoLength == 0 ? bh : * /2 * bh;
 
         return clip;
     }
+*/
 }

@@ -32,7 +32,9 @@ final class Status extends Bar {
 
     Status(int gx, int gy, int width, int height) {
         super(gx, gy, width, height);
+/*
         this.clip = new int[]{ gx, -1, -1, -1 };
+*/
         resize(width, height);
     }
 
@@ -53,6 +55,7 @@ final class Status extends Bar {
         this.status = status;
     }
 
+/*
     public int[] getClip() {
         if (!visible && !update)
             return null;
@@ -63,4 +66,5 @@ final class Status extends Bar {
 
         return clip;
     }
+*/
 }

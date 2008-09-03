@@ -93,27 +93,23 @@ abstract class View {
     /*
      * Hack for rendering.
      */
-
-    /** @deprecated temporary solution until renderer is improved */
+/*
+    / ** @deprecated temporary solution until renderer is improved * /
     private GameCanvas gameCanvas;
 
-    /** @deprecated temporary solution until renderer is improved */
+    / ** @deprecated temporary solution until renderer is improved * /
     final void setCanvas(GameCanvas gameCanvas) {
         this.gameCanvas = gameCanvas;
     }
 
-    /** @deprecated temporary solution until renderer is improved */
+    / ** @deprecated temporary solution until renderer is improved * /
     protected final void flushGraphics() {
         gameCanvas.flushGraphics();
     }
 
-    /** @deprecated temporary solution until renderer is improved */
-    protected final void flushGraphics(final int x, final int y, final int width, final int height) {
-        gameCanvas.flushGraphics(x, y, width, height);
-    }
-
-    /** @deprecated temporary solution until renderer is improved */
+    / ** @deprecated temporary solution until renderer is improved * /
     protected final void flushGraphics(final int[] clip) {
         gameCanvas.flushGraphics(clip[0], clip[1], clip[2], clip[3]);
     }
+*/
 }

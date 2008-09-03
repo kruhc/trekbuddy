@@ -1,18 +1,4 @@
-/*
- * Copyright 2006-2007 Ales Pour <kruhc@seznam.cz>.
- * All Rights Reserved.
- * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
- *
- * This code is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License version 2 only, as
- * published by the Free Software Foundation.
- *
- * This code is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
- * version 2 for more details (a copy is included in the LICENSE file that
- * accompanied this code).
- */
+// @LICENSE@
 
 package cz.kruch.track.device;
 
@@ -46,12 +32,8 @@ public final class SymbianService {
      * @return instance of <code>InputStream</code>, or <code>null</code>
      *         if it cannot be opened - it does <b>not (!)</b> throw <code>IOException</code>
      */
-    public static InputStream openInputStream(String name) {
-        try {
-            return new SymbianInputStream(name);
-        } catch (Exception e) {
-            return null;
-        }
+    public static InputStream openInputStream(String name) throws IOException {
+        return new SymbianInputStream(name);
     }
 
     /**
@@ -61,11 +43,7 @@ public final class SymbianService {
      *         if it cannot be created - it does <b>not (!)</b> throw <code>IOException</code> 
      */
     public static Inactivity openInactivity() {
-        try {
-            return new Inactivity();
-        } catch (Exception e) {
-            return null;
-        }
+        return new Inactivity();
     }
 
     /**
@@ -125,23 +103,34 @@ public final class SymbianService {
     /**
      * Service helper for fast tar-ed maps.
      */
-    private static class SymbianInputStream extends InputStream {
+    public static class SymbianInputStream extends InputStream {
         private StreamConnection connection;
         private DataInputStream input;
         private DataOutputStream output;
-        private byte[] one;
-        private byte[] header;
+        private final byte[] one = new byte[1];
+        private final byte[] header = new byte[4];
 
-        public SymbianInputStream(String name) throws Exception {
-            this.connection = (StreamConnection) Connector.open("socket://127.0.0.1:20175", Connector.READ_WRITE);
-            this.one = new byte[1];
-            this.header = new byte[4];
+        public SymbianInputStream(String name) throws IOException {
+            // get UTF-8 file name
+            final byte[] utf8name = name.getBytes("UTF-8");
+            if (utf8name.length > 256) {
+                throw new IllegalArgumentException("Filename too long");
+            }
+
+            // init communication
             try {
+                // open I/O
+                this.connection = (StreamConnection) Connector.open("socket://127.0.0.1:20175", Connector.READ_WRITE);
                 this.input = new DataInputStream(connection.openInputStream());
                 this.output = new DataOutputStream(connection.openOutputStream());
-                doFileOpen(output, name);
-            } catch (Exception e) {
-                closeStreams();
+
+                // open remote file
+                sendPacket(output, (byte) 0x01, utf8name.length);
+                output.write(utf8name);
+                output.flush();
+
+            } catch (IOException e) {
+                destroy();
                 throw e; // rethrow
             }
         }
@@ -204,7 +193,7 @@ public final class SymbianService {
             } catch (Exception e) {
                 // ignore
             }
-            closeStreams();
+            destroy();
         }
 
         public synchronized void mark(int readlimit) {
@@ -219,7 +208,7 @@ public final class SymbianService {
             sendPacket(output, (byte) 0x04, 0);
         }
 
-        private void closeStreams() {
+        private void destroy() {
             if (output != null) {
                 try {
                     output.close();
@@ -244,17 +233,6 @@ public final class SymbianService {
                 }
                 connection = null;
             }
-        }
-
-        private static void doFileOpen(final DataOutputStream output,
-                                       final String name) throws IOException {
-            final byte[] encoded = name.getBytes("UTF-8");
-            if (encoded.length > 256) {
-                throw new IllegalArgumentException("Filename too long");
-            }
-            sendPacket(output, (byte) 0x01, encoded.length);
-            output.write(encoded);
-            output.flush();
         }
     }
 }

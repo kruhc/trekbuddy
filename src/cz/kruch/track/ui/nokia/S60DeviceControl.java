@@ -33,6 +33,7 @@ final class S60DeviceControl extends NokiaDeviceControl {
 
     protected void setLights() {
         inactivity.setLights(VALUES[backlight]);
+        super.setLights();
     }
 
     void close() {

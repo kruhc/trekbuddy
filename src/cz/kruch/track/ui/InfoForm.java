@@ -117,6 +117,8 @@ final class InfoForm extends Form implements CommandListener {
         if (te != null) {
             append(new StringItem("TracklogError", te.toString()));
         }
+        sb.delete(0, sb.length()).append("uncaught: ").append(SmartRunnable.uncaught);
+        append(newItem("Debug", sb.toString()));
     }
 
     public void commandAction(Command command, Displayable displayable) {

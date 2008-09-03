@@ -1,18 +1,4 @@
-/*
- * Copyright 2006-2007 Ales Pour <kruhc@seznam.cz>.
- * All Rights Reserved.
- * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
- *
- * This code is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License version 2 only, as
- * published by the Free Software Foundation.
- *
- * This code is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
- * version 2 for more details (a copy is included in the LICENSE file that
- * accompanied this code).
- */
+// @LICENSE@
 
 package cz.kruch.track.util;
 
@@ -21,6 +7,7 @@ import api.location.LocationException;
 import java.util.Calendar;
 import java.util.TimeZone;
 import java.util.Date;
+import java.util.Hashtable;
 
 /**
  * NMEA parser.
@@ -35,6 +22,7 @@ public final class NmeaParser {
     public static final int HEADER_GSA = 0x00475341;
     public static final int HEADER_GSV = 0x00475356;
     public static final int HEADER_RMC = 0x00524d43;
+    public static final int HEADER_XDR = 0x00584452;
 
     private static final Record gga = new Record();
     private static final Record gsa = new Record();
@@ -57,6 +45,8 @@ public final class NmeaParser {
     public static float hdop = Float.NaN;
     public static float vdop = Float.NaN;
     public static int satv, sata;
+    
+    public static final Hashtable xdr = new Hashtable(4);
 
     public static boolean validate(final char[] raw, final int length) {
         int result = 0;
@@ -113,6 +103,9 @@ public final class NmeaParser {
             } break;
             case NmeaParser.HEADER_RMC: {
                 result = parseRMC(nmea, length);
+            } break;
+            case NmeaParser.HEADER_XDR: {
+                result = parseXDR(nmea, length);
             } break;
         }
 
@@ -321,7 +314,7 @@ public final class NmeaParser {
                         } break;
                         case 3: {
                             if (!token.isEmpty()) {
-                                int snr = (CharArrayTokenizer.parseInt(token) - 15) / 3;
+                                int snr = (CharArrayTokenizer.parseInt(token) - 15) / 3; // 'normalization'
                                 if (snr < 1/*0*/) {
                                     snr = 1/*0*/;
                                 } else if (snr > 9) {
@@ -338,7 +331,7 @@ public final class NmeaParser {
                                 }
                             }
                         } break;
-                    } break;
+                    }
                 }
             }
             index++;
@@ -405,6 +398,49 @@ public final class NmeaParser {
         }
 
         return record;
+    }
+
+    private static Record parseXDR(final char[] nmea, final int length) throws LocationException {
+        // local refs for faster access
+        final CharArrayTokenizer tokenizer = NmeaParser.tokenizer;
+
+        // init tokenizer and record
+        tokenizer.init(nmea, length, delimiters, false);
+        unknown.invalidate(HEADER_XDR);
+
+        // local vars
+        float value = Float.NaN;
+
+        // process
+        int index = 0;
+        while ((index < 17 /* 4 measurements max */) && tokenizer.hasMoreTokens()) {
+            final CharArrayTokenizer.Token token = tokenizer.next();
+            /* no token empty check here */
+            switch (index) {
+                case 0: // $GPXDR
+                    break;
+                default: {
+                    final int mod = (index - 1) % 4;
+                    switch (mod) {
+                        case 0:
+                            // type - unused
+                            break;
+                        case 1: { // value
+                            value = CharArrayTokenizer.parseFloat(token);
+                        } break;
+                        case 2:
+                            // units - unused
+                            break;
+                        case 3: { // id
+                            xdr.put(token.toString(), new Float(value));
+                        } break;
+                    }
+                }
+            }
+            index++;
+        }
+
+        return unknown;
     }
 
     private static int parseTime(final CharArrayTokenizer.Token token) {

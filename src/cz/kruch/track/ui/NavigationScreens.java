@@ -1,18 +1,4 @@
-/*
- * Copyright 2006-2007 Ales Pour <kruhc@seznam.cz>.
- * All Rights Reserved.
- * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
- *
- * This code is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License version 2 only, as
- * published by the Free Software Foundation.
- *
- * This code is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
- * version 2 for more details (a copy is included in the LICENSE file that
- * accompanied this code).
- */
+// @LICENSE@
 
 package cz.kruch.track.ui;
 
@@ -24,7 +10,6 @@ import cz.kruch.track.configuration.Config;
 import javax.microedition.lcdui.game.Sprite;
 import javax.microedition.lcdui.Graphics;
 import javax.microedition.lcdui.Image;
-import javax.microedition.io.Connector;
 
 import api.location.QualifiedCoordinates;
 import api.location.Location;
@@ -140,14 +125,14 @@ public final class NavigationScreens {
     public static int customize() throws IOException {
         int i = 0;
 
-        Image image = loadImage("crosshairs.png");
+        Image image = loadImage(Config.FOLDER_RESOURCES, "crosshairs.png");
         if (image != null) {
             crosshairs = null;
             System.gc(); // TODO validate
             crosshairs = image;
             i++;
         }
-        image = loadImage("arrows.png");
+        image = loadImage(Config.FOLDER_RESOURCES, "arrows.png");
         if (image != null) {
             arrows[ARROW_COURSE] = null;
             System.gc(); // TODO validate
@@ -155,7 +140,7 @@ public final class NavigationScreens {
             setupVars(ARROW_COURSE);
             i++;
         }
-        image = loadImage("naviws.png");
+        image = loadImage(Config.FOLDER_RESOURCES, "naviws.png");
         if (image != null) {
             arrows[ARROW_NAVI] = null;
             System.gc(); // TODO validate
@@ -163,7 +148,7 @@ public final class NavigationScreens {
             setupVars(ARROW_NAVI);
             i++;
         }
-        image = loadImage("wpt.png");
+        image = loadImage(Config.FOLDER_RESOURCES, "wpt.png");
         if (image != null) {
             waypoint = null;
             System.gc(); // TODO validate
@@ -171,7 +156,7 @@ public final class NavigationScreens {
             wptSize2 = waypoint.getHeight() >> 1;
             i++;
         }
-        image = loadImage("pois.png");
+        image = loadImage(Config.FOLDER_RESOURCES, "pois.png");
         if (image != null) {
             pois = null;
             System.gc(); // TODO validate
@@ -193,12 +178,12 @@ public final class NavigationScreens {
         arrowSize2[idx] = arrowSize[idx] >> 1;
     }
 
-    private static Image loadImage(final String name) throws IOException {
+    public static Image loadImage(final String folder, final String name) throws IOException {
         Image image = null;
         File file = null;
 
         try {
-            file = File.open(Config.getFolderURL(Config.FOLDER_RESOURCES) + name);
+            file = File.open(Config.getFolderURL(folder) + name);
             if (file.exists()) {
                 InputStream in = null;
                 try {
@@ -751,22 +736,26 @@ public final class NavigationScreens {
     }
 
     public static StringBuffer printDistance(final StringBuffer sb, final float distance) {
-        switch (Config.units) {
-            case Config.UNITS_METRIC: {
-                if (distance >= 10000F) { // dist > 10 km
-                    append(sb, distance / 1000F, 1).append(DIST_STR_KM);
-                } else if (distance < 5F) {
-                    append(sb, distance, 1).append(DIST_STR_M);
-                } else {
-                    append(sb, (int) distance).append(DIST_STR_M);
-                }
-            } break;
-            case Config.UNITS_IMPERIAL: {
-                append(sb, distance / 1609F, 0).append(DIST_STR_NMI);
-            } break;
-            case Config.UNITS_NAUTICAL: {
-                append(sb, distance / 1852F, 0).append(DIST_STR_NMI);
-            } break;
+        if (!Float.isNaN(distance)) {
+            switch (Config.units) {
+                case Config.UNITS_METRIC: {
+                    if (distance >= 10000F) { // dist > 10 km
+                        append(sb, distance / 1000F, 1).append(DIST_STR_KM);
+                    } else if (distance < 5F) {
+                        append(sb, distance, 1).append(DIST_STR_M);
+                    } else {
+                        append(sb, (int) distance).append(DIST_STR_M);
+                    }
+                } break;
+                case Config.UNITS_IMPERIAL: {
+                    append(sb, distance / 1609F, 0).append(DIST_STR_NMI);
+                } break;
+                case Config.UNITS_NAUTICAL: {
+                    append(sb, distance / 1852F, 0).append(DIST_STR_NMI);
+                } break;
+            }
+        } else {
+            sb.append('?');
         }
 
         return sb;

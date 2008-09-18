@@ -1,18 +1,4 @@
-/*
- * Copyright 2006-2007 Ales Pour <kruhc@seznam.cz>.
- * All Rights Reserved.
- * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
- *
- * This code is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License version 2 only, as
- * published by the Free Software Foundation.
- *
- * This code is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
- * version 2 for more details (a copy is included in the LICENSE file that
- * accompanied this code).
- */
+// @LICENSE@
 
 package cz.kruch.track.location;
 
@@ -116,8 +102,9 @@ public final class GpxTracklog extends Thread {
     private static final String FIX_DGPS            = "dgps";
     private static final String FIX_PPS             = "pps";
 
-    private final Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone("GMT"));
+    private final Calendar calendar = Calendar.getInstance(TimeZone.getDefault());
     private final Date date = new Date();
+    private final String tzOffset;
 
     private final StringBuffer sb = new StringBuffer(32);
     private final char[] sbChars = new char[32];
@@ -149,6 +136,7 @@ public final class GpxTracklog extends Thread {
         this.creator = creator;
         this.time = time;
         this.fileDate = dateToFileDate(time);
+        this.tzOffset = tzOffset(calendar);
     }
 
     public long getTime() {
@@ -819,7 +807,8 @@ public final class GpxTracklog extends Thread {
         appendTwoDigitStr(sb, calendar.get(Calendar.HOUR_OF_DAY)).append(':');
         appendTwoDigitStr(sb, calendar.get(Calendar.MINUTE)).append(':');
         appendTwoDigitStr(sb, calendar.get(Calendar.SECOND));
-        sb.append('Z'/*CALENDAR.getTimeZone().getID()*/);
+//        sb.append('Z'/*CALENDAR.getTimeZone().getID()*/);
+        sb.append(tzOffset);
 
         final int result = sb.length();
         sb.getChars(0, result, sbChars, 0);
@@ -838,7 +827,7 @@ public final class GpxTracklog extends Thread {
     }
 
     public static String dateToFileDate(final long time) {
-        final Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone("GMT"));
+        final Calendar calendar = Calendar.getInstance(TimeZone.getDefault());
         calendar.setTime(new Date(time));
         final StringBuffer sb = new StringBuffer(32);
         NavigationScreens.append(sb, calendar.get(Calendar.YEAR));
@@ -847,6 +836,20 @@ public final class GpxTracklog extends Thread {
         appendTwoDigitStr(sb, calendar.get(Calendar.HOUR_OF_DAY));
         appendTwoDigitStr(sb, calendar.get(Calendar.MINUTE));
         appendTwoDigitStr(sb, calendar.get(Calendar.SECOND));
+
+        return sb.toString();
+    }
+
+    private static String tzOffset(final Calendar calendar) {
+        final int tOffset = calendar.getTimeZone().getRawOffset();
+        if (tOffset == 0) {
+            return "Z";
+        }
+        final StringBuffer sb = new StringBuffer(32);
+        sb.append(tOffset < 0 ? '-' : '+');
+        appendTwoDigitStr(sb, tOffset / 3600000);
+        sb.append(':');
+        appendTwoDigitStr(sb, (tOffset % 3600000) / 60000);
 
         return sb.toString();
     }

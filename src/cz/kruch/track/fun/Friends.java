@@ -1,17 +1,4 @@
-/*
- * Copyright 2006-2007 Ales Pour <kruhc@seznam.cz>. All Rights Reserved.
- * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
- *
- * This code is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License version 2 only, as
- * published by the Free Software Foundation.
- *
- * This code is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
- * version 2 for more details (a copy is included in the LICENSE file that
- * accompanied this code).
- */
+// @LICENSE@
 
 package cz.kruch.track.fun;
 
@@ -28,6 +15,8 @@ import javax.wireless.messaging.MessageConnection;
 import javax.wireless.messaging.Message;
 import javax.wireless.messaging.TextMessage;
 import javax.microedition.io.Connector;
+import javax.microedition.io.PushRegistry;
+import javax.microedition.lcdui.Displayable;
 import java.io.IOException;
 import java.util.Date;
 
@@ -36,12 +25,13 @@ import api.location.QualifiedCoordinates;
 public final class Friends implements MessageListener, Runnable {
     public static final String TYPE_IAH         = "IAH";
     public static final String TYPE_MYT         = "MYT";
+    public static final String SERVER_URL       = "sms://:16007";
 
-    private static final String SMS_PROTOCOL    = "sms://";
+    private static final String SMS_PROTOCOL     = "sms://";
+    private static final String PORT             = ":16007";
     private static final String TBSMS_HEADER    = "$TB";
     private static final String TBSMS_IAH       = "$TBIAH";
     private static final String TBSMS_MYT       = "$TBMYT";
-    private static final String PORT            = ":16007";
     private static final String CHAT_IAH        = "(I am here) ";
     private static final String CHAT_MYT        = "(Meet you there) ";
 
@@ -53,8 +43,9 @@ public final class Friends implements MessageListener, Runnable {
     private String text;
 
     public Friends() throws IOException {
-        this.connection = (MessageConnection) Connector.open(SMS_PROTOCOL + PORT, Connector.READ);
-        this.connection.setMessageListener(this);
+        if (Config.locationSharing) {
+            open();
+        }
     }
 
     private Friends(String url, String text) {
@@ -69,11 +60,36 @@ public final class Friends implements MessageListener, Runnable {
     public void destroy() {
         if (connection != null) {
             try {
+                connection.setMessageListener(null);
                 connection.close();
             } catch (IOException e) {
                 // ignore
             } finally {
                 connection = null;
+            }
+        }
+    }
+
+    public void reconfigure(Displayable next) {
+        if (Config.locationSharing) {
+            if (PushRegistry.getMIDlet(Friends.SERVER_URL) == null) {
+                destroy(); // avoid IOException in registerConnection
+                try {
+                    PushRegistry.registerConnection(Friends.SERVER_URL,
+                                                    "cz.kruch.track.TrackingMIDlet", "*");
+                } catch (Exception e) {
+                    Desktop.showError(Resources.getString(Resources.DESKTOP_MSG_PUSH_SMS_FAILED), e, next);
+                }
+            }
+            try {
+                open();
+            } catch (Throwable t) {
+                Desktop.showError(Resources.getString(Resources.DESKTOP_MSG_FRIENDS_FAILED), t, next);
+            }
+        } else {
+            destroy();
+            if (PushRegistry.getMIDlet(Friends.SERVER_URL) != null) {
+                PushRegistry.unregisterConnection(Friends.SERVER_URL);
             }
         }
     }
@@ -86,7 +102,7 @@ public final class Friends implements MessageListener, Runnable {
         }
 
         // create SMS text
-        StringBuffer sb = new StringBuffer(32);
+        final StringBuffer sb = new StringBuffer(32);
         sb.append(TBSMS_HEADER).append(type).append(SEPARATOR_CHAR);
         sb.append(time / 1000).append(SEPARATOR_CHAR);
         sb.append(toSentence(QualifiedCoordinates.LAT, coordinates.getLat()));
@@ -95,11 +111,10 @@ public final class Friends implements MessageListener, Runnable {
         sb.append(SEPARATOR_CHAR);
         sb.append(message.replace(',', ' ').replace('*', ' '));
         sb.append('*').append('0').append('0');
-        String text = sb.toString();
+        final String text = sb.toString();
         sb.delete(0, sb.length());
         sb.append(SMS_PROTOCOL).append(phone).append(PORT);
-        String url = sb.toString();
-        sb = null; // gc hint
+        final String url = sb.toString();
 
 //#ifdef __LOG__
         debug(text);
@@ -120,16 +135,16 @@ public final class Friends implements MessageListener, Runnable {
     private void execPop() {
         try {
             // pop message
-            Message message = connection.receive();
+            final Message message = connection.receive();
             if (message instanceof TextMessage) {
 
                 // get payload
-                String text = ((TextMessage) message).getPayloadText();
+                final String text = ((TextMessage) message).getPayloadText();
 
                 // decode message type
-                CharArrayTokenizer tokenizer = new CharArrayTokenizer();
+                final CharArrayTokenizer tokenizer = new CharArrayTokenizer();
                 tokenizer.init(text, new char[]{ ',', '*' }, false);
-                String header = tokenizer.next().toString();
+                final String header = tokenizer.next().toString();
                 String type = null;
                 String chat = null;
                 if (TBSMS_IAH.equals(header)) {
@@ -144,12 +159,12 @@ public final class Friends implements MessageListener, Runnable {
                     Desktop.showWarning(Resources.getString(Resources.DESKTOP_MSG_UNKNOWN_SMS) + " '" + text + "'", null, null);
                 } else {
                     // get tokens
-                    String times = tokenizer.next().toString();
-                    String latv = tokenizer.next().toString();
-                    String lats = tokenizer.next().toString();
-                    String lonv = tokenizer.next().toString();
-                    String lons = tokenizer.next().toString();
-                    String unknown = tokenizer.next().toString();
+                    final String times = tokenizer.next().toString();
+                    final String latv = tokenizer.next().toString();
+                    final String lats = tokenizer.next().toString();
+                    final String lonv = tokenizer.next().toString();
+                    final String lons = tokenizer.next().toString();
+                    final String unknown = tokenizer.next().toString();
                     if (tokenizer.hasMoreTokens()) {
                         chat += unknown;
                     } else {
@@ -191,7 +206,7 @@ public final class Friends implements MessageListener, Runnable {
         MessageConnection connection = null;
         try {
             connection = (MessageConnection) Connector.open(url, Connector.WRITE);
-            TextMessage sms = (TextMessage) connection.newMessage(MessageConnection.TEXT_MESSAGE);
+            final TextMessage sms = (TextMessage) connection.newMessage(MessageConnection.TEXT_MESSAGE);
             sms.setPayloadText(text);
             connection.send(sms);
             Desktop.showConfirmation(Resources.getString(Resources.DESKTOP_MSG_SMS_SENT), null);
@@ -199,16 +214,21 @@ public final class Friends implements MessageListener, Runnable {
             Desktop.showError(Resources.getString(Resources.DESKTOP_MSG_SMS_SEND_FAILED)+ " [" + url + "]", t, null);
         } finally {
             try {
-                if (connection != null) {
-                    connection.close();
-                }
-            } catch (IOException e) {
+                connection.close();
+            } catch (Exception e) { // IOE or NPE
                 // ignore
             }
         }
     }
 
-    private static double parseSentence(String value, String letter) {
+    private void open() throws IOException {
+        if (connection == null) {
+            connection = (MessageConnection) Connector.open(SERVER_URL, Connector.READ);
+            connection.setMessageListener(this);
+        }
+    }
+
+    private static double parseSentence(final String value, final String letter) {
         int degl, type, sign;
         switch (letter.charAt(0)) {
             case 'N': {

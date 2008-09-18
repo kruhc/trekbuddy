@@ -79,7 +79,8 @@ final class WaypointForm extends Form
     /**
      * Info view constructor.
      */
-    public WaypointForm(Waypoint wpt, Callback callback) {
+    public WaypointForm(final Waypoint wpt, final Callback callback,
+                        final float distance, final boolean isReal) {
         super(Resources.getString(Resources.NAV_TITLE_WPT));
         this.waypoint = wpt;
         this.callback = callback;
@@ -105,9 +106,14 @@ final class WaypointForm extends Form
         fillAltitudeInfo(wpt.getQualifiedCoordinates().getAlt(), sb);
         appendStringItem(Resources.getString(Resources.NAV_FLD_ALT), sb.toString());
 
+        // distance
+        sb.delete(0, sb.length());
+        NavigationScreens.printDistance(sb, distance);
+        appendStringItem(Resources.getString(Resources.NAV_FLD_DISTANCE), sb.toString());
+
         // Groundspeak
         if (wpt.getUserObject() instanceof GroundspeakBean) {
-            GroundspeakBean bean = (GroundspeakBean) wpt.getUserObject();
+            final GroundspeakBean bean = (GroundspeakBean) wpt.getUserObject();
             appendStringItem(Resources.getString(Resources.NAV_FLD_GS_ID), bean.id);
             appendStringItem(Resources.getString(Resources.NAV_FLD_GS_CLASS), bean.classify());
             if (bean.shortListing != null && bean.shortListing.length() != 0) {
@@ -131,14 +137,16 @@ final class WaypointForm extends Form
         addCommand(new ActionCommand(Resources.NAV_CMD_ROUTE_ALONG, Desktop.POSITIVE_CMD_TYPE, 2));
         addCommand(new ActionCommand(Resources.NAV_CMD_ROUTE_BACK, Desktop.POSITIVE_CMD_TYPE, 3));
         addCommand(new ActionCommand(Resources.NAV_CMD_GO_TO, Desktop.POSITIVE_CMD_TYPE, 4));
-        addCommand(new ActionCommand(Resources.NAV_CMD_EDIT, Desktop.POSITIVE_CMD_TYPE, 5));
-        addCommand(new ActionCommand(Resources.NAV_CMD_DELETE, Desktop.POSITIVE_CMD_TYPE, 6));
+        if (isReal) {
+            addCommand(new ActionCommand(Resources.NAV_CMD_EDIT, Desktop.POSITIVE_CMD_TYPE, 5));
+            addCommand(new ActionCommand(Resources.NAV_CMD_DELETE, Desktop.POSITIVE_CMD_TYPE, 6));
+        }
     }
 
     /**
      * "Record Current" constructor.
      */
-    public WaypointForm(Location location, Callback callback) {
+    public WaypointForm(final Location location, final Callback callback) {
         super(Resources.getString(Resources.NAV_TITLE_WPT));
         this.coordinates = location.getQualifiedCoordinates().clone(); // copy
         this.timestamp = location.getTimestamp();
@@ -177,7 +185,7 @@ final class WaypointForm extends Form
     /**
      * "Enter Custom" constructor.
      */
-    public WaypointForm(Callback callback, QualifiedCoordinates pointer) {
+    public WaypointForm(final Callback callback, final QualifiedCoordinates pointer) {
         super(Resources.getString(Resources.NAV_TITLE_WPT));
         this.callback = callback;
 
@@ -252,7 +260,7 @@ final class WaypointForm extends Form
     /**
      * Editing constructor.
      */
-    public WaypointForm(Callback callback, Waypoint wpt) {
+    public WaypointForm(final Callback callback, final Waypoint wpt) {
         super(Resources.getString(Resources.NAV_TITLE_WPT));
         this.callback = callback;
         this.waypoint = wpt;
@@ -268,7 +276,8 @@ final class WaypointForm extends Form
     /**
      * Send SMS constructor.
      */
-    public WaypointForm(Callback callback, String type, QualifiedCoordinates coordinates) {
+    public WaypointForm(final Callback callback, final String type,
+                        final QualifiedCoordinates coordinates) {
         super("SMS");
         this.callback = callback;
         this.closure = type;

@@ -39,25 +39,28 @@ final class SmartRunnable implements Runnable {
         // fire flag
         boolean fire = false;
 
+        // thread-safe
         synchronized (this) {
+
+            // accept task only if running
             if (go) {
 
-                // trick #1: avoid duplicates of key-hold checks
-                if (r instanceof Desktop) { //
-                    if (runnables.size() > 0) {
+                // try task merge
+                if (runnables.size() > 0) {
+
+                    // trick #1: avoid duplicates of key-hold checks
+                    if (r instanceof Desktop) { //
                         if (runnables.lastElement() instanceof Desktop) {
                             return;
                         }
-                    }
-
-                } // trick #2: merge render tasks
-                  else if (r instanceof Desktop.RenderTask) {
-                    if (runnables.size() > 0) {
+                    } // trick #2: merge render tasks
+                      else if (r instanceof Desktop.RenderTask) {
                         if (runnables.lastElement() instanceof Desktop.RenderTask) {
                             ((Desktop.RenderTask) runnables.lastElement()).merge(((Desktop.RenderTask) r));
                             return;
                         }
                     }
+
                 }
 
                 // enqueue task

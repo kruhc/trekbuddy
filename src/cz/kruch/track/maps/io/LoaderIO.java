@@ -2,6 +2,8 @@
 
 package cz.kruch.track.maps.io;
 
+import java.util.Vector;
+
 /**
  * File loading helper. It is a task runner actually :-)
  *
@@ -14,10 +16,11 @@ public final class LoaderIO extends Thread {
 
     private static LoaderIO instance;
 
-    private volatile Runnable task;
-    private volatile boolean go;
+    private final Vector tasks;
+    private boolean go;
 
     private LoaderIO() {
+        this.tasks = new Vector(16);
         this.go = true;
     }
 
@@ -47,17 +50,11 @@ public final class LoaderIO extends Thread {
         if (log.isEnabled()) log.debug("enqueueing task " + r);
 //#endif
 
-        // enqueu task (wait for previous task to finish)
         synchronized (this) {
-            while (go && task != null) {
-                try {
-                    wait();
-                } catch (InterruptedException e) {
-                    // ignore
-                }
+            if (go) {
+                tasks.addElement(r);
+                notify();
             }
-            task = r;
-            notify();
         }
     }
 
@@ -66,20 +63,23 @@ public final class LoaderIO extends Thread {
         if (log.isEnabled()) log.debug("I/O thread starting...");
 //#endif
 
-        while (go) {
-
-            // wait for task
+        while (true) {
+            Runnable task = null;
             synchronized (this) {
-                while (go && task == null) {
+                while (go && tasks.size() == 0) {
                     try {
                         wait();
                     } catch (InterruptedException e) {
                         // ignore
                     }
                 }
+                if (tasks.size() > 0) {
+                    task = (Runnable) tasks.elementAt(0);
+                    tasks.setElementAt(null, 0);
+                    tasks.removeElementAt(0);
+                }
             }
 
-            // good to go?
             if (!go) break;
 
 //#ifdef __LOG__
@@ -97,12 +97,6 @@ public final class LoaderIO extends Thread {
                 if (log.isEnabled()) log.debug("task failed: " + t);
 //#endif
                 // ignore
-            } finally {
-                // signal readiness for next task
-                synchronized (this) {
-                    task = null;
-                    notify();
-                }
             }
 
 //#ifdef __LOG__

@@ -1,28 +1,14 @@
-/*
- * Copyright 2006-2007 Ales Pour <kruhc@seznam.cz>.
- * All Rights Reserved.
- * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
- *
- * This code is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License version 2 only, as
- * published by the Free Software Foundation.
- *
- * This code is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
- * version 2 for more details (a copy is included in the LICENSE file that
- * accompanied this code).
- */
+// @LICENSE@
 
 package cz.kruch.track.ui;
 
 import cz.kruch.track.configuration.Config;
-import cz.kruch.track.configuration.ConfigurationException;
 import cz.kruch.track.util.CharArrayTokenizer;
 import cz.kruch.track.util.SimpleCalendar;
 import cz.kruch.track.util.NmeaParser;
 import cz.kruch.track.maps.io.LoaderIO;
 import cz.kruch.track.Resources;
+import cz.kruch.track.location.Waypoint;
 import cz.kruch.j2se.io.BufferedInputStream;
 
 import javax.microedition.lcdui.Graphics;
@@ -34,7 +20,6 @@ import javax.microedition.lcdui.Command;
 import javax.microedition.lcdui.Displayable;
 import javax.microedition.lcdui.Canvas;
 import javax.microedition.lcdui.game.Sprite;
-import javax.microedition.io.Connector;
 
 import api.location.Location;
 import api.location.QualifiedCoordinates;
@@ -42,13 +27,10 @@ import api.file.File;
 
 import java.io.InputStream;
 import java.io.IOException;
-import java.io.ByteArrayInputStream;
 import java.util.Vector;
 import java.util.Hashtable;
 import java.util.Calendar;
 import java.util.TimeZone;
-import java.util.Enumeration;
-import java.util.Timer;
 import java.util.TimerTask;
 
 import org.kxml2.io.KXmlParser;
@@ -87,9 +69,11 @@ final class ComputerView extends View implements Runnable, CommandListener {
     private static final String ATTR_H          = "h";
     private static final String ATTR_ALIGN      = "align";
 
+/*
     private static final String[] NAME_CACHE = {
         TAG_FONT, TAG_AREA, TAG_VALUE, ATTR_X, ATTR_Y, ATTR_H, ATTR_W, ATTR_ALIGN
     };
+*/
 
     // special values
     private static final String TOKEN_COORDS        = "coords";
@@ -113,8 +97,10 @@ final class ComputerView extends View implements Runnable, CommandListener {
     private static final String TOKEN_WPT_NAME      = "wpt-name";
     private static final String TOKEN_WPT_CMT       = "wpt-cmt";
     private static final String TOKEN_WPT_SYM       = "wpt-sym";
+    private static final String TOKEN_WPT_IMG       = "wpt-img";
     private static final String TOKEN_WPT_ALT_DIFF  = "wpt-alt-diff";
     private static final String TOKEN_XDR           = "xdr.";
+    private static final String TOKEN_PACE          = "pace";
 
     // numeric values
     private static final String[] TOKENS_float = {
@@ -198,7 +184,9 @@ final class ComputerView extends View implements Runnable, CommandListener {
     private static final int VALUE_WPT_NAME     = 1016;
     private static final int VALUE_WPT_CMT      = 1017;
     private static final int VALUE_WPT_SYM      = 1018;
-    private static final int VALUE_WPT_ALT_DIFF = 1019;
+    private static final int VALUE_WPT_IMG      = 1019;
+    private static final int VALUE_WPT_ALT_DIFF = 1020;
+    private static final int VALUE_PACE         = 1021;
 
     // even more special
     private static final int VALUE_SNR0         = 1100; // 12 slots
@@ -264,6 +252,10 @@ final class ComputerView extends View implements Runnable, CommandListener {
     private String[] profilesNames;
     private int profileIdx;
 
+    /* current wpt image */
+    private Image wptImg;
+    private int wptImgId;
+
     /* trip vars */
     private volatile QualifiedCoordinates valueCoords, snrefCoords;
     private volatile long timestamp, starttime, /*snreftime,*/ timetauto;
@@ -272,6 +264,7 @@ final class ComputerView extends View implements Runnable, CommandListener {
     private volatile boolean fix3d;
     private float[] valuesFloat;
 
+    /* short term avg speed */
     private float[] spdavgFloat;
     private volatile int spdavgIndex;
     private volatile float spdavgShort;
@@ -848,6 +841,7 @@ final class ComputerView extends View implements Runnable, CommandListener {
                 sb.delete(0, sb.length());
                 tokenizer.init(area.value, area.value.length, DELIMITERS, true);
                 int narrowChars = 0;
+                Image img = null;
 
                 while (tokenizer.hasMoreTokens()) {
                     final CharArrayTokenizer.Token token = tokenizer.next();
@@ -1095,7 +1089,11 @@ final class ComputerView extends View implements Runnable, CommandListener {
                                     }
                                 } break;
                                 case VALUE_WPT_ALT: {
-                                    final float alt = navigator.getWptAlt();
+                                    float alt = Float.NaN;
+                                    final Waypoint wpt = navigator.getWpt();
+                                    if (wpt != null) {
+                                        alt = wpt.getQualifiedCoordinates().getAlt();
+                                    }
                                     if (Float.isNaN(alt)) {
                                         sb.append('?');
                                     } else {
@@ -1103,7 +1101,11 @@ final class ComputerView extends View implements Runnable, CommandListener {
                                     }
                                 } break;
                                 case VALUE_WPT_COORDS: {
-                                    final QualifiedCoordinates qc = navigator.getWptCoords();
+                                    QualifiedCoordinates qc = null;
+                                    final Waypoint wpt = navigator.getWpt();
+                                    if (wpt != null) {
+                                        qc = wpt.getQualifiedCoordinates();
+                                    }
                                     if (qc == null) {
                                         sb.append(MSG_NO_POSITION);
                                     } else {
@@ -1124,7 +1126,11 @@ final class ComputerView extends View implements Runnable, CommandListener {
                                 } break;
                                 case VALUE_WPT_LAT:
                                 case VALUE_WPT_LON: {
-                                    final QualifiedCoordinates qc = navigator.getWptCoords();
+                                    QualifiedCoordinates qc = null;
+                                    final Waypoint wpt = navigator.getWpt();
+                                    if (wpt != null) {
+                                        qc = wpt.getQualifiedCoordinates();
+                                    }
                                     if (qc == null) {
                                         sb.append(MSG_NO_POSITION);
                                     } else {
@@ -1133,30 +1139,90 @@ final class ComputerView extends View implements Runnable, CommandListener {
                                     }
                                 } break;
                                 case VALUE_WPT_NAME: {
-                                    final String s = navigator.getWptName();
-                                    if (s != null){
-                                        sb.append(s);
+                                    final Waypoint wpt = navigator.getWpt();
+                                    if (wpt != null) {
+                                        final String s = wpt.getName();
+                                        if (s != null){
+                                            sb.append(s);
+                                        }
                                     }
                                 } break;
                                 case VALUE_WPT_CMT: {
-                                    final String s = navigator.getWptCmt();
-                                    if (s != null){
-                                        sb.append(s);
+                                    final Waypoint wpt = navigator.getWpt();
+                                    if (wpt != null) {
+                                        final String s = wpt.getComment();
+                                        if (s != null){
+                                            sb.append(s);
+                                        }
                                     }
                                 } break;
                                 case VALUE_WPT_SYM: {
-                                    final String s = navigator.getWptSym();
-                                    if (s != null){
-                                        sb.append(s);
+                                    final Waypoint wpt = navigator.getWpt();
+                                    if (wpt != null) {
+                                        final String s = wpt.getSym();
+                                        if (s != null){
+                                            sb.append(s);
+                                        }
                                     }
                                 } break;
+                                case VALUE_WPT_IMG: {
+                                    final Waypoint wpt = navigator.getWpt();
+                                    if (wpt != null) {
+                                        final String s = wpt.getLinkPath();
+                                        if (s != null) {
+                                            if (s.hashCode() != wptImgId && (s.endsWith(".png") || s.endsWith(".jpg"))) {
+                                                wptImgId = s.hashCode();
+                                                wptImg = null;
+                                                try {
+                                                    wptImg = NavigationScreens.loadImage(Config.FOLDER_WPTS, s);
+                                                } catch (Exception e) {
+                                                    sb.append('!');
+                                                }
+                                            } else {
+                                                sb.append(s);
+                                            }
+                                        } else {
+                                            wptImgId = 0;
+                                            wptImg = null; // gc hint
+                                        }
+                                    } else {
+                                        wptImgId = 0;
+                                        wptImg = null; // gc hint
+                                    }
+                                    img = wptImg;
+                                } break;
                                 case VALUE_WPT_ALT_DIFF: {
-                                    final float wptAlt = navigator.getWptAlt();
+                                    float wptAlt = Float.NaN;
+                                    final Waypoint wpt = navigator.getWpt();
+                                    if (wpt != null) {
+                                        wptAlt = wpt.getQualifiedCoordinates().getAlt();
+                                    }
                                     if (Float.isNaN(wptAlt)) {
                                         sb.append('?');
                                     } else {
                                         final float diff = wptAlt - valuesFloat[VALUE_ALT];
                                         NavigationScreens.append(sb, (int) diff);
+                                    }
+                                } break;
+                                case VALUE_PACE: {
+                                    float value = spdavgShort/*valuesFloat[VALUE_SPD]*/;
+                                    switch (units) {
+                                        case Config.UNITS_IMPERIAL:
+                                            value /= 1.609F;
+                                        break;
+                                        case Config.UNITS_NAUTICAL:
+                                            value /= 1.852F;
+                                        break;
+                                    }
+                                    value = 60 / value;
+                                    if (value < 100F) {
+                                        final int mins = (int) value;
+                                        final int secs = (int) (60 * (value - mins));
+                                        NavigationScreens.append(sb, mins, 2);
+                                        sb.append(':');
+                                        NavigationScreens.append(sb, secs, 2);
+                                    } else {
+                                        sb.append("99:99");
                                     }
                                 } break;
                                 case VALUE_SNR0:
@@ -1224,6 +1290,10 @@ final class ComputerView extends View implements Runnable, CommandListener {
                         final int xoffset = area.ralign ? area.w - (int)(area.cw * l) + (int)(narrowChars * (2D / 3D * area.cw)) : 0;
                         drawChars(graphics, text, l, area.x + xoffset, area.y, area);
                     }
+                    graphics.setClip(0, 0, w, h);
+                } else if (img != null) {
+                    graphics.setClip(area.x, area.y, area.w, area.h);
+                    graphics.drawImage(img, area.x, area.y, Graphics.LEFT | Graphics.TOP);
                     graphics.setClip(0, 0, w, h);
                 }
             }
@@ -1298,8 +1368,12 @@ final class ComputerView extends View implements Runnable, CommandListener {
                 area.index = VALUE_WPT_CMT;
             } else if (token.equals(TOKEN_WPT_SYM)) {
                 area.index = VALUE_WPT_SYM;
+            } else if (token.equals(TOKEN_WPT_IMG)) {
+                area.index = VALUE_WPT_IMG;
             } else if (token.equals(TOKEN_WPT_ALT_DIFF)) {
                 area.index = VALUE_WPT_ALT_DIFF;
+            } else if (token.equals(TOKEN_PACE)) {
+                area.index = VALUE_PACE;
             } else if (token.startsWith(TOKEN_XDR)) {
                 area.index = VALUE_XDR;
             } else {
@@ -1514,7 +1588,7 @@ final class ComputerView extends View implements Runnable, CommandListener {
 
     private String loadProfile(final String filename, final InputStream in) throws IOException, XmlPullParserException {
         // instantiate parser
-        final KXmlParser parser = new KXmlParser(NAME_CACHE);
+        final KXmlParser parser = new KXmlParser(/*NAME_CACHE*/);
 
         try {
             // set input

@@ -45,7 +45,7 @@ final class J2NCalibration extends Calibration {
 
         final Vector xy = new Vector();
         final Vector ll = new Vector();
-        KXmlParser parser = new KXmlParser(null);
+        KXmlParser parser = new KXmlParser(/*null*/);
 
         try {
             parser.setInput(in, null); // null is for encoding autodetection

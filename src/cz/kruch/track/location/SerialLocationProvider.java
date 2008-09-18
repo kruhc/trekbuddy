@@ -175,17 +175,22 @@ public class SerialLocationProvider
         final boolean isHge100 = cz.kruch.track.TrackingMIDlet.sonyEricsson && url.indexOf("AT5") > -1;
         final boolean rw = isHge100 || Config.btKeepAlive != 0;
 
+        // reset data
+        reset();
+
+        // clear status
+        setStatus(null);
+        setThrowable(null);
+
         try {
             // debug
             setStatus("opening connection");
 
             // open connection
-            connection = (StreamConnection) Connector.open(url, rw ? Connector.READ_WRITE : Connector.READ, true);
+            connection = (StreamConnection) Connector.open(url, rw ? Connector.READ_WRITE : Connector.READ);
 
-            // still good to go
-            if (!isGo()) {
-                throw new IOException("interrupted");
-            }
+            // open stream for reading
+            stream = connection.openInputStream();
 
             // HGE-100 hack
             if (isHge100) {
@@ -196,21 +201,6 @@ public class SerialLocationProvider
 
             // start keep-alive
             startKeepAlive(connection);
-
-            // still good to go
-            if (!isGo()) {
-                throw new IOException("interrupted");
-            }
-
-            // open stream for reading
-            stream = connection.openInputStream();
-
-            // clear error
-            setStatus(null);
-            setThrowable(null);
-
-            // reset data
-            reset();
 
             // start watcher
             startWatcher();
@@ -256,6 +246,11 @@ public class SerialLocationProvider
 
                     // counter
                     errors++;
+
+                    // blocked?
+                    if (t instanceof SecurityException) {
+                        break;
+                    }
 
                     // ignore - let's go on
                     continue;
@@ -323,9 +318,6 @@ public class SerialLocationProvider
 
             // debug
             setStatus("stream and connection closed");
-
-            // can GC help?!?
-            System.gc();
         }
     }
 

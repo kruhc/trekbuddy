@@ -47,10 +47,10 @@ public final class Waypoints extends List
     private static final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("Waypoints");
 //#endif
 
-    private static final int TYPE_GPX = 100;
-    private static final int TYPE_LOC = 101;
+    private static final int TYPE_GPX       = 100;
+    private static final int TYPE_LOC       = 101;
 
-    private static final int SUFFIX_LENGTH = 4;
+    private static final int SUFFIX_LENGTH  = 4;
 
 /*
     private static final int FRAME_XML  = 0;
@@ -69,6 +69,7 @@ public final class Waypoints extends List
     private static final String SUFFIX_GPX = ".gpx";
     private static final String SUFFIX_LOC = ".loc";
 
+/*
     private static final String TAG_RTEPT   = "rtept";
     private static final String TAG_WPT     = "wpt";
     private static final String TAG_TRKPT   = "trkpt";
@@ -80,10 +81,24 @@ public final class Waypoints extends List
     private static final String TAG_WAYPOINT = "waypoint";
     private static final String TAG_COORD   = "coord";
     private static final String TAG_SYM     = "sym";
+*/
+    private static final int TAG_RTEPT   = 0x067cbba7;
+    private static final int TAG_WPT     = 0x0001ccbb;
+    private static final int TAG_TRKPT   = 0x06981871;
+    private static final int TAG_NAME    = 0x00337a8b;
+    private static final int TAG_CMT     = 0x0001814a;
+    private static final int TAG_DESC    = 0x002efe91;
+    private static final int TAG_ELE     = 0x0001889e;
+    private static final int TAG_LINK    = 0x0032affa;
+    private static final int TAG_WAYPOINT= 0x29c10801;
+    private static final int TAG_COORD   = 0x05a73af5;
+    private static final int TAG_SYM     = 0x0001bec7;
+
     private static final String ATTR_LAT    = "lat";
     private static final String ATTR_LON    = "lon";
     private static final String ATTR_HREF   = "href";
 
+/*
     private static final String TAG_GS_CACHE        = "cache";
     private static final String TAG_GS_TYPE         = "type";
     private static final String TAG_GS_CONTAINER    = "container";
@@ -93,18 +108,30 @@ public final class Waypoints extends List
     private static final String TAG_GS_LONGL        = "long_description";
     private static final String TAG_GS_COUNTRY      = "country";
     private static final String TAG_GS_HINTS        = "encoded_hints";
+*/
+    private static final int TAG_GS_CACHE        = 0x05a0af82;
+    private static final int TAG_GS_TYPE         = 0x00368f3a;
+    private static final int TAG_GS_CONTAINER    = 0xe7814c81;
+    private static final int TAG_GS_DIFF         = 0x6d0bf7bb;
+    private static final int TAG_GS_TERRAIN      = 0xab281335;
+    private static final int TAG_GS_SHORTL       = 0xf1f88cb9;
+    private static final int TAG_GS_LONGL        = 0x97d2ceb9;
+    private static final int TAG_GS_COUNTRY      = 0x39175796;
+    private static final int TAG_GS_HINTS        = 0x20d8585b;
+
     private static final String ATTR_GS_ID          = "id";
 
     private static final String PREFIX_WMAP = "wmap-";
     private static final String PREFIX_WSMS = "wsms-";
     private static final String PREFIX_WGPS = "wgps-";
     
-    private static final String itemListStores  = Resources.getString(Resources.NAV_ITEM_WAYPOINTS);
-    private static final String itemAddNew      = Resources.getString(Resources.NAV_ITEM_RECORD);
-    private static final String itemEnterCustom = Resources.getString(Resources.NAV_ITEM_ENTER);
-    private static final String itemFriendHere  = Resources.getString(Resources.NAV_ITEM_SMS_IAH);
-    private static final String itemFriendThere = Resources.getString(Resources.NAV_ITEM_SMS_MYT);
-    private static final String itemStop        = Resources.getString(Resources.NAV_ITEM_STOP);
+    private static final String itemWptsStores   = Resources.getString(Resources.NAV_ITEM_WAYPOINTS);
+    private static final String itemTracksStores = Resources.getString(Resources.NAV_ITEM_TRACKS);
+    private static final String itemAddNew       = Resources.getString(Resources.NAV_ITEM_RECORD);
+    private static final String itemEnterCustom  = Resources.getString(Resources.NAV_ITEM_ENTER);
+    private static final String itemFriendHere   = Resources.getString(Resources.NAV_ITEM_SMS_IAH);
+    private static final String itemFriendThere  = Resources.getString(Resources.NAV_ITEM_SMS_MYT);
+    private static final String itemStop         = Resources.getString(Resources.NAV_ITEM_STOP);
 
 //    /*private */static final String CMD_SET_CURRENT = Resources.getString(Resources.NAV_CMD_SET_AS_ACTIVE);
 //    /*private */static final String CMD_SHOW_ALL = Resources.getString(Resources.NAV_CMD_SHOW_ALL);
@@ -128,6 +155,7 @@ public final class Waypoints extends List
     private Vector currentWpts, inUseWpts;
 
     private Displayable list;
+    private String folder;
     private final int[] idx;
     private int depth;
 
@@ -256,7 +284,8 @@ public final class Waypoints extends List
                 // clear list
                 deleteAll();
                 // create menu
-                append(itemListStores, null);
+                append(itemWptsStores, null);
+                append(itemTracksStores, null);
                 append(itemAddNew, null);
                 append(itemEnterCustom, null);
                 if (cz.kruch.track.TrackingMIDlet.jsr120) {
@@ -330,8 +359,17 @@ public final class Waypoints extends List
                         if (currentName.equals(inUseName)) {
                             idx[depth] = i;
                         }
+                        // get wpt
+                        final Waypoint wpt = (Waypoint) currentWpts.elementAt(i);
+                        // calculate distance
+                        QualifiedCoordinates qc = navigator.getPointer();
+                        float distance = Float.NaN;
+                        if (qc != null) {
+                            distance = qc.distance(wpt.getQualifiedCoordinates());
+                        }
                         // open waypoint form
-                        (new WaypointForm((Waypoint) currentWpts.elementAt(i), this)).show();
+                        (new WaypointForm(wpt, this, distance,
+                                          folder == Config.FOLDER_WPTS)).show();
                     } else if (cmdNavigateTo == command) {
                         // remember idx
                         idx[depth] = i;
@@ -373,7 +411,15 @@ public final class Waypoints extends List
 
     private void mainMenuCommandAction(final String item) {
         // menu action
-        if (itemListStores.equals(item)) {
+        if (itemWptsStores.equals(item)) {
+            // use "wpts/" folder
+            folder = Config.FOLDER_WPTS;
+            // list in thread
+            onBackground(null);
+        } else if (itemTracksStores.equals(item)) {
+            // use "tracks-gpx/" folder
+            folder = Config.FOLDER_TRACKS;
+            // list in thread
             onBackground(null);
         } else if (itemAddNew.equals(item)) {
             // only when tracking
@@ -648,15 +694,29 @@ public final class Waypoints extends List
      * Lists landmark stores.
      */
     private void actionListStores() {
-        NakedVector v = new NakedVector(64, 64);
+        final NakedVector v = new NakedVector(64, 64);
+        final boolean recursive;
 
-        // add memory stores
-        listKnown(v, USER_RECORDED_STORE);
-        listKnown(v, USER_CUSTOM_STORE);
-        listKnown(v, USER_FRIENDS_STORE);
+        // list special stores only when listing "wpts/" folder
+        if (folder == Config.FOLDER_WPTS) {
+
+            // add memory stores
+            listKnown(v, USER_RECORDED_STORE);
+            listKnown(v, USER_CUSTOM_STORE);
+            listKnown(v, USER_FRIENDS_STORE);
 /*
-        listKnown(v, USER_INJAR_STORE);
+            listKnown(v, USER_INJAR_STORE);
 */
+
+            // list "wpts/" recursively
+            recursive = true;
+
+        } else {
+
+            // no recursion
+            recursive = false;
+        }
+
         final int left = v.size();
 
         // list persistent stores
@@ -664,11 +724,12 @@ public final class Waypoints extends List
 
             // may take some time - start ticker
             list.setTicker(new Ticker(Resources.getString(Resources.NAV_MSG_TICKER_LISTING)));
+            Thread.yield();
 
             try {
 
                 // list file stores
-                listWptFiles("", v, true);
+                listWptFiles("", v, recursive);
 
             } catch (Throwable t) {
 
@@ -738,7 +799,7 @@ public final class Waypoints extends List
             try {
 
                 // open file
-                file = File.open(Config.getFolderURL(Config.FOLDER_WPTS) + _storeName);
+                file = File.open(Config.getFolderURL(folder) + _storeName);
 
                 // parse new waypoints
                 final int i = _storeName.lastIndexOf('.');
@@ -986,7 +1047,8 @@ public final class Waypoints extends List
         }
     }
 
-    private void listWptFiles(final String path, final Vector v, final boolean recursive) throws IOException {
+    private void listWptFiles(final String path, final Vector v,
+                              final boolean recursive) throws IOException {
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("list " + path);
 //#endif
@@ -994,7 +1056,7 @@ public final class Waypoints extends List
         File dir = null;
         try {
             // open directory
-            dir = File.open(Config.getFolderURL(Config.FOLDER_WPTS) + path);
+            dir = File.open(Config.getFolderURL(folder) + path);
 
             // list file stores in the directory
             if (dir.exists()) {
@@ -1048,7 +1110,7 @@ public final class Waypoints extends List
 
     private Displayable listStores(final Vector stores) {
         // create UI list
-        final SmartList l = new SmartList(Resources.getString(Resources.NAV_STORES), this);
+        final SmartList l = new SmartList(Resources.getString(Resources.NAV_ITEM_WAYPOINTS), this);
         l.setData(stores);
 
         // add commands
@@ -1128,15 +1190,17 @@ public final class Waypoints extends List
         // result
         final Vector result = new NakedVector(16, 64);
 
+/*
         // name cache
         final String[] NAME_CACHE = {
             TAG_WPT, TAG_RTEPT, TAG_TRKPT, TAG_NAME, TAG_CMT, TAG_DESC, TAG_SYM, ATTR_LAT, ATTR_LON,
             TAG_GS_CACHE, TAG_GS_TYPE, TAG_GS_CONTAINER, TAG_GS_DIFF, TAG_GS_TERRAIN,
             TAG_GS_SHORTL, TAG_GS_LONGL, TAG_GS_COUNTRY, TAG_GS_HINTS, ATTR_GS_ID
         };
+*/
 
-        // parse XML
-        final KXmlParser parser = new KXmlParser(NAME_CACHE);
+        // parse XML               L
+        final KXmlParser parser = new KXmlParser(/*null*//*NAME_CACHE*/);
         parser.setFeature(XmlPullParser.FEATURE_PROCESS_NAMESPACES, true);
         try {
             parser.setInput(in, null); // null is for encoding autodetection
@@ -1159,6 +1223,8 @@ public final class Waypoints extends List
     private static void parseGpx(final KXmlParser parser, final Vector v)
             throws IOException, XmlPullParserException {
 
+        final StringBuffer sb = new StringBuffer(16);
+
         int depth = 0;
         float alt = Float.NaN;
         double lat = -1D, lon = -1D;
@@ -1170,77 +1236,101 @@ public final class Waypoints extends List
                 case XmlPullParser.START_TAG: {
                     switch (depth) {
                         case 0: {
-                            final String tag = parser.getName();
-                            if (TAG_WPT.equals(tag) || TAG_RTEPT.equals(tag) || TAG_TRKPT.equals(tag)){
-                                // start level
-                                depth = 1;
-                                // get lat and lon
-                                lat = Double.parseDouble(parser.getAttributeValue(null, ATTR_LAT));
-                                lon = Double.parseDouble(parser.getAttributeValue(null, ATTR_LON));
+                            final int tag = parser.getHash();
+                            switch (tag) {
+                                case TAG_WPT:
+                                case TAG_RTEPT:
+                                case TAG_TRKPT: {
+                                    // start level
+                                    depth = 1;
+                                    // get lat and lon
+                                    lat = Double.parseDouble(parser.getAttributeValue(null, ATTR_LAT));
+                                    lon = Double.parseDouble(parser.getAttributeValue(null, ATTR_LON));
+                                } break;
                             }
                         } break;
                         case 1: {
-                            final String tag = parser.getName();
-                            if (TAG_NAME.equals(tag)) {
-                                // get name
-                                name = parser.nextText();
-                            } else if (TAG_CMT.equals(tag)) {
-                                // get comment
-                                cmt = parser.nextText();
-                            } else if (TAG_DESC.equals(tag) && cmt == null) {
-                                // get description
-                                cmt = parser.nextText();
-                            } else if (TAG_ELE.equals(tag)) {
-                                // get elevation
-                                alt = Float.parseFloat(parser.nextText());
-                            } else if (TAG_SYM.equals(tag)) {
-                                // get sym
-                                sym = parser.nextText();
-                            } else if (TAG_LINK.equals(tag)) {
-                                // get link
-                                link = parser.getAttributeValue(null, ATTR_HREF);
-                            } else if (TAG_GS_CACHE.equals(tag)) {
-                                // groundspeak
-                                depth = 2;
-                                // create bean
-                                gsbean = new GroundspeakBean(parser.getAttributeValue(null, ATTR_GS_ID));
-                            } else {
-                                // skip
-                                parser.skipSubTree();
+                            final int tag = parser.getHash();
+                            switch (tag) {
+                                case TAG_CMT: {
+                                    // get comment
+                                    cmt = parser.nextText();
+                                } break;
+                                case TAG_ELE: {
+                                    // get elevation
+                                    alt = Float.parseFloat(parser.nextText());
+                                } break;
+                                case TAG_SYM: {
+                                    // get sym
+                                    sym = parser.nextText();
+                                } break;
+                                case TAG_DESC: {
+                                    // get description
+                                    cmt = parser.nextText();
+                                } break;
+                                case TAG_LINK: {
+                                    // get link
+                                    link = parser.getAttributeValue(null, ATTR_HREF);
+                                } break;
+                                case TAG_NAME: {
+                                    // get name
+                                    name = parser.nextText();
+                                } break;
+                                case TAG_GS_CACHE: {
+                                    // groundspeak
+                                    depth = 2;
+                                    // create bean
+                                    gsbean = new GroundspeakBean(parser.getAttributeValue(null, ATTR_GS_ID));
+                                } break;
+                                default: {
+                                    // skip
+                                    parser.skipSubTree();
+                                }
                             }
                         } break;
                         case 2: {
-                            final String tag = parser.getName();
-                            if (TAG_NAME.equals(tag)) {
-                                // get GS name
-                                gsbean.name = parser.nextText();
-                            } else if (TAG_GS_TYPE.equals(tag)) {
-                                // get GS type
-                                gsbean.type = parser.nextText();
-                            } else if (TAG_GS_CONTAINER.equals(tag)) {
-                                // get GS container
-                                gsbean.container = parser.nextText();
-                            } else if (TAG_GS_DIFF.equals(tag)) {
-                                // get GS difficulty
-                                gsbean.difficulty = parser.nextText();
-                            } else if (TAG_GS_TERRAIN.equals(tag)) {
-                                // get GS terrain
-                                gsbean.terrain = parser.nextText();
-                            } else if (TAG_GS_COUNTRY.equals(tag)) {
-                                // get GS terrain
-                                gsbean.country = parser.nextText();
-                            } else if (TAG_GS_SHORTL.equals(tag)) {
-                                // get GS short listing
-                                gsbean.shortListing = parser.nextText();
-                            } else if (TAG_GS_LONGL.equals(tag)) {
-                                // get GS long listing
-                                gsbean.longListing = parser.nextText();
-                            } else if (TAG_GS_HINTS.equals(tag)) {
-                                // get GS long listing
-                                gsbean.encodedHints = parser.nextText().trim();
-                            } else {
-                                // skip
-                                parser.skipSubTree();
+                            final int tag = parser.getHash();
+                            switch (tag) {
+                                case TAG_NAME: {
+                                    // get GS name
+                                    gsbean.name = parser.nextText();
+                                } break;
+                                case TAG_GS_TYPE: {
+                                    // get GS type
+                                    gsbean.type = parser.nextText();
+                                } break;
+                                case TAG_GS_HINTS: {
+                                    // get GS long listing
+                                    gsbean.encodedHints = parser.nextText().trim();
+                                } break;
+                                case TAG_GS_COUNTRY: {
+                                    // get GS terrain
+                                    gsbean.country = parser.nextText();
+                                } break;
+                                case TAG_GS_DIFF: {
+                                    // get GS difficulty
+                                    gsbean.difficulty = parser.nextText();
+                                } break;
+                                case TAG_GS_LONGL: {
+                                    // get GS long listing
+                                    gsbean.longListing = parser.nextText();
+                                } break;
+                                case TAG_GS_TERRAIN: {
+                                    // get GS terrain
+                                    gsbean.terrain = parser.nextText();
+                                } break;
+                                case TAG_GS_CONTAINER: {
+                                    // get GS container
+                                    gsbean.container = parser.nextText();
+                                } break;
+                                case TAG_GS_SHORTL: {
+                                    // get GS short listing
+                                    gsbean.shortListing = parser.nextText();
+                                } break;
+                                default: {
+                                    // skip
+                                    parser.skipSubTree();
+                                }
                             }
                         } break;
                         default:
@@ -1253,35 +1343,37 @@ public final class Waypoints extends List
                 case XmlPullParser.END_TAG: {
                     switch (depth) {
                         case 1: {
-                            final String tag = parser.getName();
-                            if (TAG_WPT.equals(tag) || TAG_RTEPT.equals(tag) || TAG_TRKPT.equals(tag)) {
+                            final int tag = parser.getHash();
+                            switch (tag) {
+                                case TAG_WPT:
+                                case TAG_RTEPT:
+                                case TAG_TRKPT: {
+                                    // got anonymous wpt?
+                                    if (name == null || name.length() == 0) {
+                                        sb.delete(0, sb.length());
+                                        NavigationScreens.append(sb, v.size(), 1000);
+                                        name = sb.toString();
+                                    }
 
-                                // got anonymous wpt?
-                                if (name == null || name.length() == 0) {
-                                    final StringBuffer sb = new StringBuffer(32);
-                                    sb.append('#');
-                                    NavigationScreens.append(sb, v.size(), 1000);
-                                    name = sb.toString();
-                                }
+                                    // add to list
+                                    final Waypoint wpt = new Waypoint(QualifiedCoordinates.newInstance(lat, lon, alt), name, cmt, sym);
+                                    wpt.setLinkPath(link);
+                                    wpt.setUserObject(gsbean);
+                                    v.addElement(wpt);
 
-                                // add to list
-                                final Waypoint wpt = new Waypoint(QualifiedCoordinates.newInstance(lat, lon, alt), name, cmt, sym);
-                                wpt.setLinkPath(link);
-                                wpt.setUserObject(gsbean);
-                                v.addElement(wpt);
+                                    // reset depth
+                                    depth = 0;
 
-                                // reset depth
-                                depth = 0;
-
-                                // reset temps
-                                alt = Float.NaN;
-                                lat = lon = -1D;
-                                name = cmt = link = null;
+                                    // reset temps
+                                    alt = Float.NaN;
+                                    lat = lon = -1D;
+                                    name = cmt = link = null;
+                                } break;
                             }
                         } break;
                         case 2: {
-                            final String tag = parser.getName();
-                            if (TAG_GS_CACHE.equals(tag)) {
+                            final int tag = parser.getHash();
+                            if (TAG_GS_CACHE == tag) {
                                 // back to <wpt> level
                                 depth = 1;
                             }
@@ -1312,25 +1404,28 @@ public final class Waypoints extends List
                 case XmlPullParser.START_TAG: {
                     switch (depth) {
                         case 0: {
-                            final String tag = parser.getName();
-                            if (TAG_WAYPOINT.equals(tag)) {
+                            final int tag = parser.getHash();
+                            if (TAG_WAYPOINT == tag) {
                                 // start level
                                 depth = 1;
                             }
                         } break;
                         case 1: {
-                            final String tag = parser.getName();
-                            if (TAG_NAME.equals(tag)) {
-                                // get name and comment
-                                name = parser.getAttributeValue(null, "id");
-                                comment = parser.nextText();
-                            } else if (TAG_COORD.equals(tag)) {
-                                // get lat and lon
-                                lat = Double.parseDouble(parser.getAttributeValue(null, ATTR_LAT));
-                                lon = Double.parseDouble(parser.getAttributeValue(null, ATTR_LON));
-                            } else {
-                                // skip
-                                parser.skipSubTree();
+                            switch (parser.getHash()) {
+                                case TAG_NAME: {
+                                    // get name and comment
+                                    name = parser.getAttributeValue(null, "id");
+                                    comment = parser.nextText();
+                                } break;
+                                case TAG_COORD: {
+                                    // get lat and lon
+                                    lat = Double.parseDouble(parser.getAttributeValue(null, ATTR_LAT));
+                                    lon = Double.parseDouble(parser.getAttributeValue(null, ATTR_LON));
+                                } break;
+                                default: {
+                                    // skip
+                                    parser.skipSubTree();
+                                }
                             }
                         } break;
                         default: {
@@ -1343,8 +1438,8 @@ public final class Waypoints extends List
                 } break;
                 case XmlPullParser.END_TAG: {
                     if (depth == 1) {
-                        final String tag = parser.getName();
-                        if (TAG_WAYPOINT.equals(tag)) {
+                        final int tag = parser.getHash();
+                        if (TAG_WAYPOINT == tag) {
                             // got wpt
                             v.addElement(new Waypoint(QualifiedCoordinates.newInstance(lat, lon),
                                                       name, comment, null));

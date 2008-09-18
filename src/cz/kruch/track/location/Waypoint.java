@@ -33,7 +33,7 @@ public final class Waypoint {
     private long timestamp;
 
     private Object userObject;
-    private String linkPath;
+    private String linkPath, linkType;
 
     public Waypoint(QualifiedCoordinates qc, String name, String comment, String sym) {
         this.coordinates = qc;
@@ -88,6 +88,14 @@ public final class Waypoint {
 
     public void setLinkPath(String linkPath) {
         this.linkPath = linkPath;
+    }
+
+    public String getLinkType() {
+        return linkType;
+    }
+
+    public void setLinkType(String linkType) {
+        this.linkType = linkType;
     }
 
     public Object getUserObject() {

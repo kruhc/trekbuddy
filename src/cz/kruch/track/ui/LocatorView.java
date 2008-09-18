@@ -1,18 +1,4 @@
-/*
- * Copyright 2006-2007 Ales Pour <kruhc@seznam.cz>.
- * All Rights Reserved.
- * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
- *
- * This code is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License version 2 only, as
- * published by the Free Software Foundation.
- *
- * This code is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
- * version 2 for more details (a copy is included in the LICENSE file that
- * accompanied this code).
- */
+// @LICENSE@
 
 package cz.kruch.track.ui;
 
@@ -54,6 +40,7 @@ final class LocatorView extends View {
     private final Location[][] locations;
     private int[] count;
     private int[] position;
+    private float[] lastCourse;
 
 //    private final QualifiedCoordinates[] coordinatesAvg;
 //    private final int[] satAvg;
@@ -64,9 +51,7 @@ final class LocatorView extends View {
     private int dx, dy;
     private int lineLength;
 
-    private float lastCourse = Float.NaN;
-
-    private final int navigationStrWidth;
+    private final int navigationStrWidth, courseStrWidth;
 
     private final int[] center, vertex;
     private final int[][] triangle;
@@ -83,9 +68,11 @@ final class LocatorView extends View {
 //        this.satAvg = new int[2];
         this.count = new int[2];
         this.position = new int[2];
+        this.lastCourse = new float[2];
         this.rangeIdx = new int[]{ 2, 2 };
         this.navigationStrWidth = Math.max(Desktop.font.stringWidth(MSG_NO_WAYPOINT),
                                            Desktop.font.stringWidth("9.999 M"));
+        this.courseStrWidth = Desktop.font.stringWidth("359\u00b0");
         this.center = new int[2];
         this.vertex = new int[2];
         this.triangle = new int[3][2];
@@ -112,8 +99,8 @@ final class LocatorView extends View {
                 }
             }
             count[i] = position[i] = 0;
+            lastCourse[i] = Float.NaN;
         }
-        lastCourse = Float.NaN;
     }
 
     public int locationUpdated(Location l) {
@@ -190,7 +177,7 @@ final class LocatorView extends View {
 
         // calc avg values
         double latAvg = 0D, lonAvg = 0D;
-        float accuracySum = 0F, wSum = 0F/*, altAvg = 0F*/;
+        float courseAvg = 0F, accuracySum = 0F, wSum = 0F/*, altAvg = 0F*/;
         int c = 0/*, satSum = 0*/;
 
         // calculate avg qcoordinates
@@ -211,6 +198,10 @@ final class LocatorView extends View {
 //                  altAvg += qc.getAlt();
                     wSum += w;
                     c++;
+                    final float course = l.getCourse();
+                    if (!Float.isNaN(course)) {
+                        courseAvg += course * w;
+                    }
                 }
             }
         }
@@ -218,6 +209,7 @@ final class LocatorView extends View {
             latAvg /= wSum;
             lonAvg /= wSum;
 //            altAvg /= c;
+            courseAvg /= wSum;
 /*
             QualifiedCoordinates.releaseInstance(coordinatesAvg[0]);
             coordinatesAvg[0] = null; // gc hint
@@ -229,6 +221,7 @@ final class LocatorView extends View {
             final QualifiedCoordinates qc = QualifiedCoordinates.newInstance(latAvg, lonAvg);
             qc.setHorizontalAccuracy(accuracySum / c);
             final Location l = Location.newInstance(qc, timestamp, -1);
+            l.setCourse(courseAvg);
             append(1, l);
         }
 
@@ -253,9 +246,13 @@ final class LocatorView extends View {
         final int h = Desktop.height;
         final int wHalf = w >> 1;
         final int hHalf = h >> 1;
+        final int dx = this.dx;
+        final int dy = this.dy;
         final int term = this.term;
         final int rangeIdx = this.rangeIdx[term];
         final OSD osd = Desktop.osd;
+        final StringBuffer sb = this.sb;
+        final char[] sbChars = this.sbChars;
         final int fh = osd.bh;
 
         // main colors
@@ -285,7 +282,8 @@ final class LocatorView extends View {
         float course;
 
         /* block */ {
-            final Location current = this.locations[0][this.position[0]];
+            final Location current = this.locations[term][this.position[term]];
+            final float[] lastCourse = this.lastCourse;
             if (current == null) {
                 course = Float.NaN;
             } else {
@@ -293,10 +291,10 @@ final class LocatorView extends View {
             }
             final boolean fresh;
             if (Float.isNaN(course)) {
-                course = lastCourse;
+                course = lastCourse[term];
                 fresh = false;
             } else {
-                lastCourse = course;
+                lastCourse[term] = course;
                 fresh = true;
             }
             drawCompas(wHalf, hHalf, fh, graphics, course, fresh);
@@ -308,6 +306,14 @@ final class LocatorView extends View {
                          lineLength - (fh << 1),
                          lineLength - (fh << 1),
                          0, 360);
+
+        // draw course
+        graphics.setColor(fgColor);
+        sb.delete(0, sb.length());
+        NavigationScreens.append(sb, (int) course).append(NavigationScreens.SIGN);
+        final int cl = sb.length();
+        sb.getChars(0, cl, sbChars, 0);
+        graphics.drawChars(sbChars, 0, cl, w - courseStrWidth, fh, Graphics.LEFT | Graphics.TOP);
 
         // wpt index
         final Waypoint wpt = navigator.getNavigateTo();
@@ -322,8 +328,6 @@ final class LocatorView extends View {
             final double lonAvg = coordsAvg.getLon();
             final int[] xy = this.vertex;
             final int[] center = this.center;
-            final StringBuffer sb = this.sb;
-            final char[] sbChars = this.sbChars;
 
             // get scales
             final double v = ((double) RANGES[rangeIdx]) / 111319.490D;
@@ -474,7 +478,7 @@ final class LocatorView extends View {
                 
                 // draw azimuth
                 sb.delete(0, sb.length());
-                NavigationScreens.append(sb, (int) bearing).append(' ').append(NavigationScreens.SIGN);
+                NavigationScreens.append(sb, (int) bearing).append(NavigationScreens.SIGN);
                 l = sb.length();
                 sb.getChars(0, l, sbChars, 0);
                 graphics.drawChars(sbChars, 0, l,
@@ -566,7 +570,11 @@ final class LocatorView extends View {
         triangle[2][1] = triangle[0][1];
 
         if (uptodate) {
-            g.setColor(0x00A00000);
+            if (term == 0) {
+                g.setColor(0x00A00000);
+            } else {
+                g.setColor(0x001E90FF);
+            }
         }
         drawTriangle(g, course, triangle);
 
@@ -578,7 +586,11 @@ final class LocatorView extends View {
         triangle[2][1] = triangle[0][1];
 
         if (uptodate) {
-            g.setColor(0x00D00000);
+            if (term == 0) {
+                g.setColor(0x00D00000);
+            } else {
+                g.setColor(0x001560BD);
+            }
         }
         drawTriangle(g, course, triangle);
     }

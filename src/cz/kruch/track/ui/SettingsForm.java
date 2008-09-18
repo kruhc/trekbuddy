@@ -133,18 +133,6 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
                 submenu.append(fieldMapPath = new TextField(Resources.getString(Resources.CFG_BASIC_FLD_START_MAP), Config.mapPath, MAX_URL_LENGTH, TextField.URL));
             }
 
-            // language
-/*
-        choiceLanguage = new ChoiceGroup("Language", ChoiceGroup.POPUP);
-        choiceLanguage.setFitPolicy(Choice.TEXT_WRAP_ON);
-        for (int N = I18n.LANGUAGES.length, i = 0; i < N; i++) {
-            choiceLanguage.setSelectedIndex(choiceLanguage.append(I18n.LANGUAGES[i], null), I18n.LANGUAGES[i].equals(Config.language));
-        }
-*/
-/*
-        append(choiceLanguage);
-*/
-
             // map datum
             choiceMapDatum = new ChoiceGroup(Resources.getString(Resources.CFG_BASIC_GROUP_DEFAULT_DATUM), ChoiceGroup.POPUP);
             choiceMapDatum.setFitPolicy(Choice.TEXT_WRAP_ON);
@@ -719,7 +707,7 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
         }
 
         // notify that we are done
-        callback.invoke(changed ? Boolean.TRUE : Boolean.FALSE, null, this);
+        callback.invoke(new Boolean(changed), null, this);
     }
 
     private static int appendWithNewlineAfter(Form form, Item item) {

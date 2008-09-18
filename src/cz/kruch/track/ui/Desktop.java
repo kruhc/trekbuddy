@@ -43,7 +43,6 @@ import api.location.LocationProvider;
 import api.location.LocationListener;
 import api.location.Location;
 import api.location.QualifiedCoordinates;
-import api.location.LocationException;
 import api.file.File;
 
 /**
@@ -597,7 +596,7 @@ public final class Desktop extends GameCanvas
 //#endif
 
         // start Friends
-        if (cz.kruch.track.TrackingMIDlet.jsr120 && Config.locationSharing) {
+        if (cz.kruch.track.TrackingMIDlet.jsr120) {
 //#ifdef __LOG__
              if (log.isEnabled()) log.info("starting SMS listener");
 //#endif
@@ -921,10 +920,12 @@ public final class Desktop extends GameCanvas
                 // stop device control
                 cz.kruch.track.ui.nokia.DeviceControl.destroy();
 
+/*
                 // stop Friends
                 if (friends != null) {
                     friends.destroy();
                 }
+*/
 
 /*
                 // close atlas/map
@@ -976,8 +977,12 @@ public final class Desktop extends GameCanvas
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("location update: " + new Date(location.getTimestamp()) + ";" + location.getQualifiedCoordinates() + "; course = " + location.getCourse());
 //#endif
+/*
         eventing.callSerially(newEvent(Event.EVENT_TRACKING_POSITION_UPDATED,
                               location, null, provider));
+*/
+        LoaderIO.getInstance().enqueue(newEvent(Event.EVENT_TRACKING_POSITION_UPDATED,
+                                                location, null, provider));
     }
 
     public void providerStateChanged(LocationProvider provider, int newState) {
@@ -985,8 +990,13 @@ public final class Desktop extends GameCanvas
         if (log.isEnabled()) log.info("location provider state changed; " + newState);
 //#endif
 
+/*
         eventing.callSerially(newEvent(Event.EVENT_TRACKING_STATUS_CHANGED,
                               new Integer(newState), null, provider));
+*/
+        LoaderIO.getInstance().enqueue(newEvent(Event.EVENT_TRACKING_STATUS_CHANGED,
+                                       new Integer(newState), null, provider));
+
 
         /*
          * hack is needed to ... "kick" the event pump??? (SonyEricsson JP-7, Blackberry)
@@ -1021,6 +1031,7 @@ public final class Desktop extends GameCanvas
         }
 */
 //#ifdef __RIM__
+/* not needed when thread is used instead of callSerially?
         if (cz.kruch.track.TrackingMIDlet.rim) {
             switch (newState) {
                 case LocationProvider._STARTING:
@@ -1035,6 +1046,7 @@ public final class Desktop extends GameCanvas
                 break;
             }
         }
+*/
 //#endif
     }
 
@@ -1364,39 +1376,11 @@ public final class Desktop extends GameCanvas
         return wptDistance;
     }
 
-    public float getWptAlt() {
-        if (wpts == null || wptIdx == -1) {
-            return Float.NaN;
-        }
-        return ((Waypoint) wpts.elementAt(wptIdx)).getQualifiedCoordinates().getAlt();
-    }
-
-    public QualifiedCoordinates getWptCoords() {
+    public Waypoint getWpt() {
         if (wpts == null || wptIdx == -1) {
             return null;
         }
-        return ((Waypoint) wpts.elementAt(wptIdx)).getQualifiedCoordinates();
-    }
-
-    public String getWptName() {
-        if (wpts == null || wptIdx == -1) {
-            return null;
-        }
-        return ((Waypoint) wpts.elementAt(wptIdx)).getName();
-    }
-
-    public String getWptCmt() {
-        if (wpts == null || wptIdx == -1) {
-            return null;
-        }
-        return ((Waypoint) wpts.elementAt(wptIdx)).getComment();
-    }
-
-    public String getWptSym() {
-        if (wpts == null || wptIdx == -1) {
-            return null;
-        }
-        return ((Waypoint) wpts.elementAt(wptIdx)).getSym();
+        return ((Waypoint) wpts.elementAt(wptIdx));
     }
 
     //
@@ -2188,7 +2172,7 @@ public final class Desktop extends GameCanvas
     public static final int MASK_ALL        = MASK_MAP | MASK_OSD | MASK_STATUS | MASK_CROSSHAIR;
     public static final int MASK_SCREEN     = MASK_ALL;
 
-    final class RenderTask implements Runnable {
+    public final class RenderTask implements Runnable {
 //#ifdef __LOG__
         private /*static*/ final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("RenderTask");
 //#endif
@@ -2577,6 +2561,11 @@ public final class Desktop extends GameCanvas
             Config.useDatum(Config.geoDatum);
             resetFont();
             resetBar();
+
+            // runtime ops
+            if (cz.kruch.track.TrackingMIDlet.jsr120) {
+                friends.reconfigure(Desktop.screen);
+            }
 
             // notify views
             for (int i = views.length; --i >= 0; ) {

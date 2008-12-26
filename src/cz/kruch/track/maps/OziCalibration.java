@@ -58,8 +58,8 @@ final class OziCalibration extends Calibration {
         boolean almostDone = false;
 
         // vars
-        final Vector xy = new Vector(4);
-        final Vector ll = new Vector(4);
+        final Vector xy = new Vector(9);
+        final Vector ll = new Vector(9);
         Datum datum = null;
         ProjectionSetup projectionSetup = null;
         String projectionType = null;

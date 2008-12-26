@@ -9,7 +9,7 @@ import cz.kruch.track.util.NmeaParser;
 import cz.kruch.track.maps.io.LoaderIO;
 import cz.kruch.track.Resources;
 import cz.kruch.track.location.Waypoint;
-import cz.kruch.j2se.io.BufferedInputStream;
+import api.io.BufferedInputStream;
 
 import javax.microedition.lcdui.Graphics;
 import javax.microedition.lcdui.Image;
@@ -1168,9 +1168,9 @@ final class ComputerView extends View implements Runnable, CommandListener {
                                 case VALUE_WPT_IMG: {
                                     final Waypoint wpt = navigator.getWpt();
                                     if (wpt != null) {
-                                        final String s = wpt.getLinkPath();
+                                        final String s = wpt.getLink(Waypoint.LINK_GENERIC_IMAGE);
                                         if (s != null) {
-                                            if (s.hashCode() != wptImgId && (s.endsWith(".png") || s.endsWith(".jpg"))) {
+                                            if (s.hashCode() != wptImgId) {
                                                 wptImgId = s.hashCode();
                                                 wptImg = null;
                                                 try {
@@ -1178,7 +1178,7 @@ final class ComputerView extends View implements Runnable, CommandListener {
                                                 } catch (Exception e) {
                                                     sb.append('!');
                                                 }
-                                            } else {
+                                            } else if (wptImg == null) {
                                                 sb.append(s);
                                             }
                                         } else {

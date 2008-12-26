@@ -1,18 +1,4 @@
-/*
- * Copyright 2006-2007 Ales Pour <kruhc@seznam.cz>.
- * All Rights Reserved.
- * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
- *
- * This code is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License version 2 only, as
- * published by the Free Software Foundation.
- *
- * This code is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
- * version 2 for more details (a copy is included in the LICENSE file that
- * accompanied this code).
- */
+// @LICENSE@
 
 package cz.kruch.track.ui.nokia;
 
@@ -29,12 +15,12 @@ import java.util.TimerTask;
 public class DeviceControl extends TimerTask {
     
     private static DeviceControl instance;
-    protected static TimerTask task;
 
     protected int backlight;
-    private String name;
 
-    /** @deprecated make instance member of Desktop... ??? */
+    private String name;
+    private TimerTask task;
+
     public static void initialize() {
 //#ifdef __ALL__
         try {
@@ -43,7 +29,7 @@ public class DeviceControl extends TimerTask {
                 if (cz.kruch.track.TrackingMIDlet.symbian) {
                     instance = (DeviceControl) Class.forName("cz.kruch.track.ui.nokia.S60DeviceControl").newInstance();
                     instance.name = "S60";
-                } else {
+                } else if (!cz.kruch.track.TrackingMIDlet.jbed) {
                     instance = (DeviceControl) Class.forName("cz.kruch.track.ui.nokia.NokiaDeviceControl").newInstance();
                     instance.name = "Nokia";
                 }
@@ -60,6 +46,7 @@ public class DeviceControl extends TimerTask {
                 instance = (DeviceControl) Class.forName("cz.kruch.track.ui.nokia.SiemensDeviceControl").newInstance();
                 instance.name = "Siemens";
             } catch (Throwable t) {
+                // ignore
             }
         }
         if (instance == null) {
@@ -67,7 +54,9 @@ public class DeviceControl extends TimerTask {
                 Class.forName("com.samsung.util.LCDLight");
                 instance = (DeviceControl) Class.forName("cz.kruch.track.ui.nokia.SamsungDeviceControl").newInstance();
                 instance.name = "Samsung";
+                cz.kruch.track.TrackingMIDlet.samsung = true;
             } catch (Throwable t) {
+                // ignore
             }
         }
         if (instance == null) {
@@ -75,7 +64,9 @@ public class DeviceControl extends TimerTask {
                 Class.forName("com.motorola.multimedia.Lighting");
                 instance = (DeviceControl) Class.forName("cz.kruch.track.ui.nokia.MotorolaDeviceControl").newInstance();
                 instance.name = "Motorola";
+                cz.kruch.track.TrackingMIDlet.motorola = true;
             } catch (Throwable t) {
+                // ignore
             }
         }
         if (instance == null) {
@@ -84,6 +75,7 @@ public class DeviceControl extends TimerTask {
                 instance = (DeviceControl) Class.forName("cz.kruch.track.ui.nokia.LgDeviceControl").newInstance();
                 instance.name = "LG";
             } catch (Throwable t) {
+                // ignore
             }
         }
 //#endif
@@ -128,7 +120,7 @@ public class DeviceControl extends TimerTask {
     public static void flash() {
         if (instance != null) {
             if (instance.backlight == 0) {
-                cz.kruch.track.ui.Desktop.display.flashBacklight(1);
+                Desktop.display.flashBacklight(1);
             }
         }
     }
@@ -159,7 +151,7 @@ public class DeviceControl extends TimerTask {
         if (backlight == 0) {
             backlight = 1;
             if (isSchedulable()) {
-                cz.kruch.track.ui.Desktop.timer.scheduleAtFixedRate(task = new DeviceControl(), 7500L, 7500L);
+                Desktop.timer.scheduleAtFixedRate(task = new DeviceControl(), 7500L, 7500L);
             }
         } else {
             backlight = 0;

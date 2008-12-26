@@ -5,6 +5,7 @@ package cz.kruch.track.location;
 import api.location.QualifiedCoordinates;
 import api.location.Location;
 import api.file.File;
+import api.io.BufferedOutputStream;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -14,6 +15,7 @@ import java.util.TimeZone;
 import java.util.TimerTask;
 import java.util.Enumeration;
 import java.util.Hashtable;
+import java.util.Vector;
 
 import org.kxml2.io.KXmlSerializer;
 
@@ -24,7 +26,6 @@ import cz.kruch.track.event.Callback;
 import cz.kruch.track.ui.NavigationScreens;
 import cz.kruch.track.Resources;
 import cz.kruch.track.util.NmeaParser;
-import cz.kruch.j2se.io.BufferedOutputStream;
 
 /**
  * GPX.
@@ -40,10 +41,8 @@ public final class GpxTracklog extends Thread {
     private static final String GPX_1_1_NAMESPACE   = "http://www.topografix.com/GPX/1/1";
     private static final String GS_1_0_NAMESPACE    = "http://www.groundspeak.com/cache/1/0";
     private static final String GS_1_0_PREFIX       = "groundspeak";
-    private static final String EXT_NAMESPACE       = "urn:net:trekbuddy:1.0:nmea:rmc";
-    private static final String EXT_PREFIX          = "rmc";
-    private static final String XDR_NAMESPACE       = "urn:net:trekbuddy:1.0:nmea:xdr";
-    private static final String XDR_PREFIX          = "xdr";
+    private static final String EXT_NAMESPACE       = "urn:net:trekbuddy:1.0:nmea";
+    private static final String EXT_PREFIX          = "nmea";
     private static final String GSM_NAMESPACE       = "urn:net:trekbuddy:1.0:gsm";
     private static final String GSM_PREFIX          = "gsm";
 
@@ -58,7 +57,9 @@ public final class GpxTracklog extends Thread {
 
     public static final int CODE_RECORDING_STOP    = 0;
     public static final int CODE_RECORDING_START   = 1;
+/*
     public static final int CODE_WAYPOINT_INSERTED = 2;
+*/
 
     private static final String ELEMENT_GPX         = "gpx";
     private static final String ELEMENT_TRK         = "trk";
@@ -78,6 +79,8 @@ public final class GpxTracklog extends Thread {
     private static final String ELEMENT_SPEED       = "speed";
     private static final String ELEMENT_CELLID      = "cellid";
     private static final String ELEMENT_LAC         = "lac";
+    private static final String ELEMENT_SENSORS     = "sensors";
+    private static final String ELEMENT_SENSOR      = "sensor";
     private static final String ELEMENT_GS_CACHE        = "cache";
     private static final String ELEMENT_GS_TYPE         = "type";
     private static final String ELEMENT_GS_CONTAINER    = "container";
@@ -94,7 +97,7 @@ public final class GpxTracklog extends Thread {
     private static final String ATTRIBUTE_HREF      = "href";
     private static final String ATTRIBUTE_LAT       = "lat";
     private static final String ATTRIBUTE_LON       = "lon";
-    private static final String ATTRIBUTE_GS_ID     = "id";
+    private static final String ATTRIBUTE_ID        = "id";
 
     private static final String FIX_NONE            = "none";
     private static final String FIX_3D              = "3d";
@@ -123,7 +126,7 @@ public final class GpxTracklog extends Thread {
 
     private Location refLocation;
     private float refCourse, courseDeviation;
-    private int imgNum = 1, ptCount;
+    private int /*imgNum, */ptCount;
     private boolean force;
 
     private File file;
@@ -215,7 +218,6 @@ public final class GpxTracklog extends Thread {
                     serializer.setPrefix(GS_1_0_PREFIX, GS_1_0_NAMESPACE);
                 }
                 serializer.setPrefix(EXT_PREFIX, EXT_NAMESPACE);
-                serializer.setPrefix(XDR_PREFIX, XDR_NAMESPACE);
                 if (Config.gpxGsmInfo) {
                     serializer.setPrefix(GSM_PREFIX, GSM_NAMESPACE);
                 }
@@ -260,7 +262,7 @@ public final class GpxTracklog extends Thread {
 //#ifdef __LOG__
                 if (log.isEnabled()) log.debug("~done");
 //#endif
-            } catch (IOException e) {
+            } catch (Exception e) {
                 // ignore
             }
             serializer = null; // gc hint
@@ -362,16 +364,10 @@ public final class GpxTracklog extends Thread {
                         // flush
                         serializer.flush();
 
-                    } else if (item instanceof Waypoint) {
+                    } /*else if (item instanceof Waypoint) {
 
                         // save <wpt>
-                        final Waypoint w = (Waypoint) item;
-                        final Object uo = w.getUserObject();
-                        if (uo instanceof byte[]) {
-                            w.setLinkPath(saveImage((byte[]) uo));
-                            w.setUserObject(null); // gc hint
-                        }
-                        serializeWpt(w);
+                        serializeWpt((Waypoint) item);
 
                         // flush
                         serializer.flush();
@@ -379,7 +375,7 @@ public final class GpxTracklog extends Thread {
                         // notify TODO ugly ... why ugly???
                         callback.invoke(new Integer(CODE_WAYPOINT_INSERTED), null, this);
 
-                    }
+                    }*/
 
                 } catch (Throwable t) {
 //#ifdef __LOG__
@@ -540,28 +536,28 @@ public final class GpxTracklog extends Thread {
     private void serializeGs(final GroundspeakBean bean) throws IOException {
         final KXmlSerializer serializer = this.serializer;
         serializer.startTag(GS_1_0_NAMESPACE, ELEMENT_GS_CACHE);
-        serializer.attribute(DEFAULT_NAMESPACE, ATTRIBUTE_GS_ID, bean.id);
+        serializer.attribute(DEFAULT_NAMESPACE, ATTRIBUTE_ID, bean.getId());
         serializer.startTag(GS_1_0_NAMESPACE, ELEMENT_NAME);
-        serializer.text(bean.name);
+        serializer.text(bean.getName());
         serializer.endTag(GS_1_0_NAMESPACE, ELEMENT_NAME);
         serializer.startTag(GS_1_0_NAMESPACE, ELEMENT_GS_TYPE);
-        serializer.text(bean.type);
+        serializer.text(bean.getType());
         serializer.endTag(GS_1_0_NAMESPACE, ELEMENT_GS_TYPE);
         serializer.startTag(GS_1_0_NAMESPACE, ELEMENT_GS_CONTAINER);
-        serializer.text(bean.container);
+        serializer.text(bean.getContainer());
         serializer.endTag(GS_1_0_NAMESPACE, ELEMENT_GS_CONTAINER);
         serializer.startTag(GS_1_0_NAMESPACE, ELEMENT_GS_DIFF);
-        serializer.text(bean.difficulty);
+        serializer.text(bean.getDifficulty());
         serializer.endTag(GS_1_0_NAMESPACE, ELEMENT_GS_DIFF);
         serializer.startTag(GS_1_0_NAMESPACE, ELEMENT_GS_TERRAIN);
-        serializer.text(bean.terrain);
+        serializer.text(bean.getTerrain());
         serializer.endTag(GS_1_0_NAMESPACE, ELEMENT_GS_TERRAIN);
         serializer.startTag(GS_1_0_NAMESPACE, ELEMENT_GS_COUNTRY);
-        serializer.text(bean.country);
+        serializer.text(bean.getCountry());
         serializer.endTag(GS_1_0_NAMESPACE, ELEMENT_GS_COUNTRY);
-        serializeElement(serializer, bean.shortListing, GS_1_0_NAMESPACE, ELEMENT_GS_SHORTL);
-        serializeElement(serializer, bean.longListing, GS_1_0_NAMESPACE, ELEMENT_GS_LONGL);
-        serializeElement(serializer, bean.encodedHints, GS_1_0_NAMESPACE, ELEMENT_GS_HINTS);
+        serializeElement(serializer, bean.getShortListing(), GS_1_0_NAMESPACE, ELEMENT_GS_SHORTL);
+        serializeElement(serializer, bean.getLongListing(), GS_1_0_NAMESPACE, ELEMENT_GS_LONGL);
+        serializeElement(serializer, bean.getEncodedHints(), GS_1_0_NAMESPACE, ELEMENT_GS_HINTS);
         serializer.endTag(GS_1_0_NAMESPACE, ELEMENT_GS_CACHE);
     }
 
@@ -569,18 +565,22 @@ public final class GpxTracklog extends Thread {
         final KXmlSerializer serializer = this.serializer;
         serializer.startTag(DEFAULT_NAMESPACE, ELEMENT_WPT);
         serializePt(wpt.getQualifiedCoordinates());
-        serializer.startTag(DEFAULT_NAMESPACE, ELEMENT_TIME);
-        final int i = dateToXsdDate(wpt.getTimestamp());
-        serializer.text(sbChars, 0, i);
-        serializer.endTag(DEFAULT_NAMESPACE, ELEMENT_TIME);
+        if (wpt.getTimestamp() != null) {
+            serializer.startTag(DEFAULT_NAMESPACE, ELEMENT_TIME);
+            final int i = dateToXsdDate(wpt.getTimestamp().getTime());
+            serializer.text(sbChars, 0, i);
+            serializer.endTag(DEFAULT_NAMESPACE, ELEMENT_TIME);
+        }
         serializeElement(serializer, wpt.getName(), DEFAULT_NAMESPACE, ELEMENT_NAME);
         serializeElement(serializer, wpt.getComment(), DEFAULT_NAMESPACE, ELEMENT_CMT);
         serializeElement(serializer, wpt.getSym(), DEFAULT_NAMESPACE, ELEMENT_SYM);
-        final String link = wpt.getLinkPath();
-        if (link != null && link.length() > 0) {
-            serializer.startTag(DEFAULT_NAMESPACE, ELEMENT_LINK);
-            serializer.attribute(DEFAULT_NAMESPACE, ATTRIBUTE_HREF, link);
-            serializer.endTag(DEFAULT_NAMESPACE, ELEMENT_LINK);
+        final Vector links = wpt.getLinks();
+        if (links != null) {
+            for (int N = links.size(), j = 0; j < N; j++) {
+                serializer.startTag(DEFAULT_NAMESPACE, ELEMENT_LINK);
+                serializer.attribute(DEFAULT_NAMESPACE, ATTRIBUTE_HREF, (String) links.elementAt(j));
+                serializer.endTag(DEFAULT_NAMESPACE, ELEMENT_LINK);
+            }
         }
         if (wpt.getUserObject() instanceof GroundspeakBean) {
             serializeGs((GroundspeakBean) wpt.getUserObject());
@@ -599,66 +599,23 @@ public final class GpxTracklog extends Thread {
 
     private void serializeXdr(final KXmlSerializer serializer) throws IOException {
         final Hashtable xdr = NmeaParser.xdr;
-        for (Enumeration keys = xdr.keys(); keys.hasMoreElements(); ) {
-            final Object key = keys.nextElement();
-            final Float value = (Float) xdr.get(key);
-            final String tag = key.toString();
-            serializer.startTag(XDR_NAMESPACE, tag);
-            final int i = doubleToChars(value.floatValue(), 1);
-            serializer.text(sbChars, 0, i);
-            serializer.endTag(XDR_NAMESPACE, tag);
+        if (xdr.size() > 0) {
+            serializer.startTag(EXT_NAMESPACE, ELEMENT_SENSORS);
+            for (Enumeration keys = xdr.keys(); keys.hasMoreElements(); ) {
+                final Object key = keys.nextElement();
+                final Float value = (Float) xdr.get(key);
+                final String id = key.toString();
+                serializer.startTag(EXT_NAMESPACE, ELEMENT_SENSOR);
+                serializer.attribute(DEFAULT_NAMESPACE, ATTRIBUTE_ID, id);
+                final int i = doubleToChars(value.floatValue(), 1);
+                serializer.text(sbChars, 0, i);
+                serializer.endTag(EXT_NAMESPACE, ELEMENT_SENSOR);
+            }
+            serializer.endTag(EXT_NAMESPACE, ELEMENT_SENSORS);
         }
     }
 
-    private String saveImage(final byte[] raw) throws IOException {
-        File file = null;
-        OutputStream output = null;
-
-        try {
-            // images path
-            final String relPath = "images-" + fileDate;
-
-            // check for 'Images' subdir existence
-            final String imgdir = Config.getFolderURL(Config.FOLDER_WPTS) + relPath + "/";
-            file = File.open(imgdir, Connector.READ_WRITE);
-            if (!file.exists()) {
-                file.mkdir();
-            }
-            file.close();
-            file = null;
-
-            // image filename
-            final String fileName = "pic-" + imgNum++ + ".jpg";
-
-            // save picture
-            file = File.open(imgdir + fileName, Connector.READ_WRITE);
-            if (!file.exists()) {
-                file.create();
-            }
-            output = file.openOutputStream();
-            output.write(raw);
-
-            // return relative path
-            return relPath + "/" + fileName;
-
-        } finally {
-            if (output != null) {
-                try {
-                    output.close();
-                } catch (IOException e) {
-                    // ignore
-                }
-            }
-            if (file != null) {
-                try {
-                    file.close();
-                } catch (IOException e) {
-                    // ignore
-                }
-            }
-        }
-    }
-
+/*
     public void insert(final Waypoint waypoint) {
         synchronized (this) {
             freeLocationInQueue();
@@ -667,6 +624,7 @@ public final class GpxTracklog extends Thread {
         }
     }
 
+*/
     public void insert(final Location location) {
         synchronized (this) {
             freeLocationInQueue();

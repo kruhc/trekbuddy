@@ -42,10 +42,7 @@ public final class Friends implements MessageListener, Runnable {
     private String url;
     private String text;
 
-    public Friends() throws IOException {
-        if (Config.locationSharing) {
-            open();
-        }
+    public Friends() {
     }
 
     private Friends(String url, String text) {
@@ -57,12 +54,18 @@ public final class Friends implements MessageListener, Runnable {
         (new Thread(this)).start();
     }
 
+    public void start() throws IOException {
+        if (Config.locationSharing) {
+            open();
+        }
+    }
+
     public void destroy() {
         if (connection != null) {
             try {
                 connection.setMessageListener(null);
                 connection.close();
-            } catch (IOException e) {
+            } catch (Exception e) {
                 // ignore
             } finally {
                 connection = null;
@@ -72,25 +75,24 @@ public final class Friends implements MessageListener, Runnable {
 
     public void reconfigure(Displayable next) {
         if (Config.locationSharing) {
-            if (PushRegistry.getMIDlet(Friends.SERVER_URL) == null) {
+            if (PushRegistry.getMIDlet(SERVER_URL) == null) {
                 destroy(); // avoid IOException in registerConnection
                 try {
-                    PushRegistry.registerConnection(Friends.SERVER_URL,
-                                                    "cz.kruch.track.TrackingMIDlet", "*");
+                    PushRegistry.registerConnection(SERVER_URL, "cz.kruch.track.TrackingMIDlet", "*");
                 } catch (Exception e) {
                     Desktop.showError(Resources.getString(Resources.DESKTOP_MSG_PUSH_SMS_FAILED), e, next);
                 }
             }
             try {
                 open();
-            } catch (Throwable t) {
-                Desktop.showError(Resources.getString(Resources.DESKTOP_MSG_FRIENDS_FAILED), t, next);
+            } catch (Exception e) {
+                Desktop.showError(Resources.getString(Resources.DESKTOP_MSG_FRIENDS_FAILED), e, next);
             }
         } else {
-            destroy();
-            if (PushRegistry.getMIDlet(Friends.SERVER_URL) != null) {
-                PushRegistry.unregisterConnection(Friends.SERVER_URL);
+            if (PushRegistry.getMIDlet(SERVER_URL) != null) {
+                PushRegistry.unregisterConnection(SERVER_URL);
             }
+            destroy();
         }
     }
 
@@ -187,11 +189,6 @@ public final class Friends implements MessageListener, Runnable {
                     // create waypoint
                     final Waypoint wpt = new Waypoint(QualifiedCoordinates.newInstance(lat, lon),
                                                       address, chat, time);
-
-                    // notify user
-                    Desktop.showAlarm(Resources.getString(Resources.DESKTOP_MSG_SMS_RECEIVED) + wpt.getName(),
-                                      null, !Config.autohideNotification);
-                    Thread.yield();
 
                     // notify
                     Waypoints.getInstance().invoke(wpt, null, this);

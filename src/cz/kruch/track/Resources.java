@@ -19,9 +19,8 @@ package cz.kruch.track;
 import cz.kruch.track.configuration.Config;
 import cz.kruch.track.io.LineReader;
 import cz.kruch.track.util.CharArrayTokenizer;
-import cz.kruch.j2se.io.BufferedInputStream;
+import api.io.BufferedInputStream;
 
-import javax.microedition.io.Connector;
 /*
 import java.util.Hashtable;
 */
@@ -29,8 +28,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.DataInputStream;
 import java.io.EOFException;
-import java.util.Hashtable;
-import java.util.Vector;
 
 /**
  * Resource helper (L10n).
@@ -155,6 +152,7 @@ public final class Resources {
     public static final short DESKTOP_MSG_PROV_OUT_OF_SERVICE   = 1386;
     public static final short DESKTOP_MSG_PROV_STARTING         = 1387;
     public static final short DESKTOP_MSG_IN_PROGRESS           = 1388;
+    public static final short DESKTOP_MSG_PUSH_SMS_FAILED       = 1389;
     /* navigation - commands */
     public static final short NAV_CMD_ROUTE_ALONG               = 2000;
     public static final short NAV_CMD_ROUTE_BACK                = 2001;
@@ -171,6 +169,9 @@ public final class Resources {
     public static final short NAV_CMD_UPDATE                    = 2012;
     public static final short NAV_CMD_DELETE                    = 2013;
     public static final short NAV_CMD_SHOW                      = 2014;
+    public static final short NAV_CMD_SORT_BYORDER              = 2015;
+    public static final short NAV_CMD_SORT_BYNAME               = 2016;
+    public static final short NAV_CMD_SORT_BYDIST               = 2017;
     /* navigation - menu */
     public static final short NAV_ITEM_WAYPOINTS                = 2100;
     public static final short NAV_ITEM_RECORD                   = 2101;
@@ -178,7 +179,7 @@ public final class Resources {
     public static final short NAV_ITEM_SMS_IAH                  = 2103;
     public static final short NAV_ITEM_SMS_MYT                  = 2104;
     public static final short NAV_ITEM_STOP                     = 2105;
-    public static final short NAV_STORES                        = 2111;
+    public static final short NAV_ITEM_TRACKS                   = 2106;
     /* navigation - messages */
     public static final short NAV_MSG_LOAD_INJAR_FAILED         = 2300;
     public static final short NAV_MSG_LIST_STORES_FAILED        = 2301;
@@ -227,6 +228,7 @@ public final class Resources {
     public static final short NAV_FLD_GS_LISTING_SHORT          = 2221;
     public static final short NAV_FLD_GS_LISTING_LONG           = 2222;
     public static final short NAV_FLD_GS_HINT                   = 2223;
+    public static final short NAV_FLD_DISTANCE                  = 2224;
     /* settings - commands */
     public static final short CFG_CMD_APPLY                     = 3000;
     public static final short CFG_CMD_SAVE                      = 3001;
@@ -303,6 +305,10 @@ public final class Resources {
     public static final short CFG_NAVIGATION_FLD_AUTOHIDE       = 3708;
     public static final short CFG_NAVIGATION_FLD_REVISIONS      = 3709;
     public static final short CFG_NAVIGATION_FLD_PREFER_GSNAME  = 3710;
+    public static final short CFG_NAVIGATION_GROUP_SORT         = 3711;
+    public static final short CFG_NAVIGATION_FLD_SORT_BYPOS     = 3712;
+    public static final short CFG_NAVIGATION_FLD_SORT_BYNAME    = 3713;
+    public static final short CFG_NAVIGATION_FLD_SORT_BYDIST    = 3714;
     /* settings - tweaks */
     public static final short CFG_TWEAKS_GROUP                  = 3800;
     public static final short CFG_TWEAKS_FLD_SIEMENS_IO         = 3801;

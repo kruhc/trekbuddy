@@ -75,11 +75,15 @@ final class Jsr75File extends File {
         return ((FileConnection) fc).getURL();
     }
 
+    public String getPath() {
+        return ((FileConnection) fc).getPath();
+    }
+
     public void setFileConnection(String path) throws IOException {
-        if (fsType == FS_SXG75) {
-            traverse(path);
-        } else {
+        if (fsType == FS_JSR75) {
             ((FileConnection) fc).setFileConnection(path);
+        } else {
+            traverse(path);
         }
     }
 }

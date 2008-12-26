@@ -73,6 +73,10 @@ final class Motorola1000File extends File {
         return ((com.motorola.io.file.FileConnection) fc).getURL();
     }
 
+    public String getPath() {
+        return ((com.motorola.io.file.FileConnection) fc).getPath();
+    }
+
     public void setFileConnection(String path) throws IOException {
         traverse(path);
     }

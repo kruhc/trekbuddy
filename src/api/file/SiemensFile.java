@@ -73,6 +73,10 @@ final class SiemensFile extends File {
         return ((com.siemens.mp.io.file.FileConnection) fc).getURL();
     }
 
+    public String getPath() {
+        return ((com.siemens.mp.io.file.FileConnection) fc).getPath();
+    }
+
     public void setFileConnection(String path) throws IOException {
         ((com.siemens.mp.io.file.FileConnection) fc).setFileConnection(path);
     }

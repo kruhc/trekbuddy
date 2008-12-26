@@ -59,12 +59,12 @@ public final class BufferedInputStream extends InputStream {
 
         return buffer[pos++] & 0xff;
 */
-        /* Optimistic variant first, at the expense of duplicate code... */
+        /* Optimistic variant first, at the expense of duplicated code... */
         if (position < count) {
             return buffer[position++] & 0xff;
         }
 
-        byte[] buffer = this.buffer;
+        final byte[] buffer = this.buffer;
         
         /* buffer is depleted, fill it */
         position = 0;

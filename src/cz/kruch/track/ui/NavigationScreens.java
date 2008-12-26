@@ -128,14 +128,12 @@ public final class NavigationScreens {
         Image image = loadImage(Config.FOLDER_RESOURCES, "crosshairs.png");
         if (image != null) {
             crosshairs = null;
-            System.gc(); // TODO validate
             crosshairs = image;
             i++;
         }
         image = loadImage(Config.FOLDER_RESOURCES, "arrows.png");
         if (image != null) {
             arrows[ARROW_COURSE] = null;
-            System.gc(); // TODO validate
             arrows[ARROW_COURSE] = image;
             setupVars(ARROW_COURSE);
             i++;
@@ -143,7 +141,6 @@ public final class NavigationScreens {
         image = loadImage(Config.FOLDER_RESOURCES, "naviws.png");
         if (image != null) {
             arrows[ARROW_NAVI] = null;
-            System.gc(); // TODO validate
             arrows[ARROW_NAVI] = image;
             setupVars(ARROW_NAVI);
             i++;
@@ -151,7 +148,6 @@ public final class NavigationScreens {
         image = loadImage(Config.FOLDER_RESOURCES, "wpt.png");
         if (image != null) {
             waypoint = null;
-            System.gc(); // TODO validate
             waypoint = image;
             wptSize2 = waypoint.getHeight() >> 1;
             i++;
@@ -159,12 +155,13 @@ public final class NavigationScreens {
         image = loadImage(Config.FOLDER_RESOURCES, "pois.png");
         if (image != null) {
             pois = null;
-            System.gc(); // TODO validate
             pois = image;
             poiSize = pois.getHeight();
             poiSize2 = poiSize >> 1;
             i++;
         }
+
+        System.gc();
 
         return i;
     }
@@ -417,6 +414,7 @@ public final class NavigationScreens {
     }
 
     public static StringBuffer printTo(final QualifiedCoordinates qc, final StringBuffer sb) {
+/*
         if (Config.useGridFormat && isGrid()) {
             final QualifiedCoordinates localQc = Datum.contextDatum.toLocal(qc);
             toGrid(localQc, sb);
@@ -427,6 +425,29 @@ public final class NavigationScreens {
             if (Config.useGeocachingFormat) {
                 toLL(qc, sb);
             } else {
+                final QualifiedCoordinates localQc = Datum.contextDatum.toLocal(qc);
+                toLL(localQc, sb);
+                QualifiedCoordinates.releaseInstance(localQc);
+            }
+        }
+*/
+        switch (Config.cfmt) {
+            case Config.COORDS_MAP_GRID: {
+                if (isGrid()) {
+                    final QualifiedCoordinates localQc = Datum.contextDatum.toLocal(qc);
+                    toGrid(localQc, sb);
+                    QualifiedCoordinates.releaseInstance(localQc);
+                    break; // break here!
+                }
+            } // no break here - this is not(isGrid) path!
+            case Config.COORDS_UTM: {
+                toUTM(qc, sb);
+                break;
+            }
+            case Config.COORDS_GC_LATLON: {
+                toLL(qc, sb);
+            } break;
+            default: {
                 final QualifiedCoordinates localQc = Datum.contextDatum.toLocal(qc);
                 toLL(localQc, sb);
                 QualifiedCoordinates.releaseInstance(localQc);
@@ -503,10 +524,13 @@ public final class NavigationScreens {
 
     private static StringBuffer append(final StringBuffer sb, final int type,
                                        final double value, final boolean hp) {
+/*
         if (Config.useGeocachingFormat) {
-            appendAsDDMM(sb, type, value, hp);
-        } else {
+*/
+        if (Config.cfmt != Config.COORDS_GC_LATLON) {
             appendAsDDMMSS(sb, type, value, hp);
+        } else {
+            appendAsDDMM(sb, type, value, hp);
         }
 
         return sb;
@@ -612,7 +636,10 @@ public final class NavigationScreens {
 
     public static StringBuffer printTo(final StringBuffer sb, final QualifiedCoordinates qc,
                                        final int mask) {
+        // local coords
         final QualifiedCoordinates localQc = Datum.contextDatum.toLocal(qc);
+
+/*
         if (Config.useGridFormat && isGrid()) {
             final CartesianCoordinates gridCoords = Mercator.LLtoGrid(localQc);
             if ((mask & 1) != 0) {
@@ -650,6 +677,53 @@ public final class NavigationScreens {
                 append(sb, QualifiedCoordinates.LON, lon, Config.decimalPrecision);
             }
         }
+*/
+        switch (Config.cfmt) {
+            case Config.COORDS_MAP_GRID: {
+                if (isGrid()) {
+                    final CartesianCoordinates gridCoords = Mercator.LLtoGrid(localQc);
+                    if ((mask & 1) != 0) {
+                        append(sb, ExtraMath.round(gridCoords.easting)).append('E');
+                    } else if ((mask & 2) != 0) {
+                        append(sb, ExtraMath.round(gridCoords.northing)).append('N');
+                    }
+                    CartesianCoordinates.releaseInstance(gridCoords);
+                    break;
+                }
+            } // no break here for not(isGrid) path!
+            case Config.COORDS_UTM: {
+                final CartesianCoordinates utmCoords = Mercator.LLtoUTM(qc);
+                if ((mask & 1) != 0) {
+                    append(sb, ExtraMath.round(utmCoords.easting)).append('E');
+                } else if ((mask & 2) != 0) {
+                    append(sb, ExtraMath.round(utmCoords.northing)).append('N');
+                }
+                CartesianCoordinates.releaseInstance(utmCoords);
+            } break;
+            default: {
+                if ((mask & 1) != 0) {
+                    final double lat;
+                    if (Config.cfmt != Config.COORDS_GC_LATLON) {
+                        lat = localQc.getLat();
+                    } else {
+                        lat = qc.getLat();
+                    }
+                    sb.append(lat > 0D ? 'N' : 'S').append(' ');
+                    append(sb, QualifiedCoordinates.LAT, lat, Config.decimalPrecision);
+                } else if ((mask & 2) != 0) {
+                    final double lon;
+                    if (Config.cfmt != Config.COORDS_GC_LATLON) {
+                        lon = localQc.getLon();
+                    } else {
+                        lon = qc.getLon();
+                    }
+                    sb.append(lon > 0D ? 'E' : 'W').append(' ');
+                    append(sb, QualifiedCoordinates.LON, lon, Config.decimalPrecision);
+                }
+            }
+        }
+
+        // release
         QualifiedCoordinates.releaseInstance(localQc);
 
         return sb;

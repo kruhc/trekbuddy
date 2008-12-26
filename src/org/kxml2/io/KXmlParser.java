@@ -119,7 +119,7 @@ public final class KXmlParser implements XmlPullParser {
         this.nspStack = new String[8];
         this.nspCounts = new int[4];
         this.srcBuf = new char[4096];
-        this.txtBuf = new char[256];
+        this.txtBuf = new char[512];
         this.attributes = new String[32];
         this.peek = new int[2];
         this.hash = new Int(0);
@@ -925,6 +925,7 @@ public final class KXmlParser implements XmlPullParser {
 
     /*
      * fast text copy (local variant of push-read-peek with some whitespaces hack)
+     * 2008-12-18: whitespace hack commented out
      */
 
     private void fastCopyText() throws IOException {
@@ -937,7 +938,7 @@ public final class KXmlParser implements XmlPullParser {
         int column = this.column;
         int wsCount = 0;
         while (srcPos < srcCount && txtPos < lengh) {
-            char c = srcBuf[srcPos++];
+            final char c = srcBuf[srcPos++];
             if (c == '<' || c == '&') {
                 srcPos--;
                 break;
@@ -946,11 +947,16 @@ public final class KXmlParser implements XmlPullParser {
                 if (c == '\n') {
                     line++;
                     column = 1;
+                    if (wsCount++ > 0) { // let's ignore multiple CRLFs
+                        continue;
+                    }
                 }
+/* 2008-12-18: reformats users breaks
                 if (wsCount++ > 0) {
                     continue;
                 }
                 c = ' ';
+*/
             } else {
                 column++;
                 wsCount = 0;
@@ -1465,22 +1471,14 @@ public final class KXmlParser implements XmlPullParser {
         return type < TEXT || (type == ENTITY_REF && unresolved) ? null : get(0);
     }
 
-    public char[] getTextCharacters(int[] poslen) {
-        if (type >= TEXT) {
-            if (type == ENTITY_REF) {
-                poslen[0] = 0;
-                poslen[1] = name.length();
-                
-                return name.toCharArray();
-            }
-            poslen[0] = 0;
-            poslen[1] = txtPos;
+    public char[] getChars() {
+        if (type == TEXT) {
+            final int l = txtPos;
+            final char[] result = new char[l];
+            System.arraycopy(txtBuf, 0, result, 0, l);
 
-            return txtBuf;
+            return result;
         }
-
-        poslen[0] = -1;
-        poslen[1] = -1;
 
         return null;
     }
@@ -1642,6 +1640,29 @@ public final class KXmlParser implements XmlPullParser {
             next();
         } else {
             result = CONSTANT_EMPTY;
+        }
+
+        if (type != END_TAG) {
+            exception("END_TAG expected");
+        }
+
+        return result;
+    }
+
+    public char[] nextChars() throws XmlPullParserException, IOException {
+        if (type != START_TAG) {
+            exception("precondition: START_TAG");
+        }
+
+        next();
+
+        char[] result;
+
+        if (type == TEXT) {
+            result = getChars();
+            next();
+        } else {
+            result = null;
         }
 
         if (type != END_TAG) {

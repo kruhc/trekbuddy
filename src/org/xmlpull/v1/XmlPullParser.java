@@ -707,34 +707,6 @@ public interface XmlPullParser {
      */
     String getText();
 
-
-    /**
-     * Returns the buffer that contains the text of the current event,
-     * as well as the start offset and length relevant for the current
-     * event. See getText(), next() and nextToken() for description of possible returned values.
-     *
-     * <p><strong>Please note:</strong> this buffer must not
-     * be modified and its content MAY change after a call to
-     * next() or nextToken(). This method will always return the
-     * same value as getText(), except for ENTITY_REF. In the case
-     * of ENTITY ref, getText() returns the replacement text and
-     * this method returns the actual input buffer containing the
-     * entity name.
-     * If getText() returns null, this method returns null as well and
-     * the values returned in the holder array MUST be -1 (both start
-     * and length).
-     *
-     * @see #getText
-     * @see #next
-     * @see #nextToken
-     *
-     * @param holderForStartAndLength Must hold an 2-element int array
-     * into which the start offset and length values will be written.
-     * @return char buffer that contains the text of the current event
-     *  (null if the current event has no text associated).
-     */
-    char[] getTextCharacters(int[] holderForStartAndLength);
-
     // --------------------------------------------------------------------------
     // START_TAG / END_TAG shared methods
 

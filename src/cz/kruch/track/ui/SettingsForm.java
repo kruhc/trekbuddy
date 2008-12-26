@@ -1,18 +1,4 @@
-/*
- * Copyright 2006-2007 Ales Pour <kruhc@seznam.cz>.
- * All Rights Reserved.
- * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
- *
- * This code is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License version 2 only, as
- * published by the Free Software Foundation.
- *
- * This code is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
- * version 2 for more details (a copy is included in the LICENSE file that
- * accompanied this code).
- */
+// @LICENSE@
 
 package cz.kruch.track.ui;
 
@@ -20,6 +6,7 @@ import cz.kruch.track.configuration.Config;
 import cz.kruch.track.configuration.ConfigurationException;
 import cz.kruch.track.event.Callback;
 import cz.kruch.track.Resources;
+import cz.kruch.track.fun.Camera;
 
 import javax.microedition.lcdui.Displayable;
 import javax.microedition.lcdui.Form;
@@ -87,6 +74,7 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
     private TextField fieldCmsCycle;
     private ChoiceGroup choiceWaypoints;
     private TrailItem itemTrailView;
+    private ChoiceGroup choiceSort;
 
     private Form submenu;
     private String section;
@@ -149,12 +137,15 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
             choiceCoordinates.append(Resources.getString(Resources.CFG_BASIC_FLD_COORDS_MAPGRID), null);
             choiceCoordinates.append("UTM", null);
             choiceCoordinates.append(Resources.getString(Resources.CFG_BASIC_FLD_COORDS_GCLL), null);
+/*
             choiceCoordinates.setSelectedFlags(new boolean[]{
                 false,
                 Config.useGridFormat,
                 Config.useUTM,
                 Config.useGeocachingFormat
             });
+*/
+            choiceCoordinates.setSelectedIndex(Config.cfmt, true);
             submenu.append(choiceCoordinates);
 
             // units format
@@ -264,6 +255,15 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
             });
             submenu.append(choiceWaypoints);
 
+            // wpts sorting
+            choiceSort = new ChoiceGroup(Resources.getString(Resources.CFG_NAVIGATION_GROUP_SORT), ChoiceGroup.POPUP);
+            choiceSort.setFitPolicy(Choice.TEXT_WRAP_ON);
+            choiceSort.append(Resources.getString(Resources.CFG_NAVIGATION_FLD_SORT_BYPOS), null);
+            choiceSort.append(Resources.getString(Resources.CFG_NAVIGATION_FLD_SORT_BYNAME), null);
+            choiceSort.append(Resources.getString(Resources.CFG_NAVIGATION_FLD_SORT_BYDIST), null);
+            choiceSort.setSelectedIndex(Config.sort, true);
+            submenu.append(choiceSort);
+
             // 'Friends'
             if (cz.kruch.track.TrackingMIDlet.jsr120) {
                 choiceFriends = new ChoiceGroup(Resources.getString(Resources.CFG_NAVIGATION_GROUP_SMS), ChoiceGroup.MULTIPLE);
@@ -299,18 +299,9 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
             if (cz.kruch.track.TrackingMIDlet.supportsVideoCapture()) {
                 submenu.append(fieldCaptureLocator = new TextField(Resources.getString(Resources.CFG_LOCATION_FLD_CAPTURE_LOCATOR), Config.captureLocator, 16, TextField.URL));
                 submenu.append(choiceSnapshotFormat = new ChoiceGroup(Resources.getString(Resources.CFG_LOCATION_FLD_CAPTURE_FMT), ChoiceGroup.POPUP));
-                String encodings = System.getProperty("video.snapshot.encodings");
-                int start = encodings.indexOf("encoding=");
-                while (start > -1) {
-                    int end = encodings.indexOf("encoding=", start + 9);
-                    final String item;
-                    if (end > -1) {
-                        item = encodings.substring(start, end).trim();
-                    } else {
-                        item = encodings.substring(start).trim();
-                    }
-                    choiceSnapshotFormat.setSelectedIndex(choiceSnapshotFormat.append(item, null), Config.snapshotFormat.equals(item));
-                    start = end;
+                final String[] formats = Camera.getStillResolutions();
+                for (int N = formats.length, i = 0; i < N; i++) {
+                    choiceSnapshotFormat.setSelectedIndex(choiceSnapshotFormat.append(formats[i], null), Config.snapshotFormat.equals(formats[i]));
                 }
                 submenu.append(fieldSnapshotFormat = new TextField(null, Config.snapshotFormat, 64, TextField.ANY));
                 if (Config.snapshotFormat == null || Config.snapshotFormat.length() == 0) {
@@ -552,11 +543,21 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
                 Config.geoDatum = choiceMapDatum.getString(choiceMapDatum.getSelectedIndex());
 
                 // coordinates format
-                final boolean[] fmt = new boolean[choiceCoordinates.size()];
-                choiceCoordinates.getSelectedFlags(fmt);
-                Config.useGridFormat = fmt[1];
-                Config.useUTM = fmt[2];
-                Config.useGeocachingFormat = fmt[3];
+                Config.cfmt = choiceCoordinates.getSelectedIndex();
+/*
+                Config.useGridFormat = Config.useUTM = Config.useGeocachingFormat = false;
+                switch (choiceCoordinates.getSelectedIndex()) { // getSelectedFlags does not work on JP-7
+                    case 1:
+                        Config.useGridFormat = true;
+                        break;
+                    case 2:
+                        Config.useUTM = true;
+                        break;
+                    case 3:
+                        Config.useGeocachingFormat = true;
+                        break;
+                }
+*/
 
                 // units format
                 Config.units = choiceUnits.getSelectedIndex();
@@ -624,6 +625,9 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
                 Config.makeRevisions = wpts[0];
                 Config.preferGsName = wpts[1];
 
+                // wpts sorting
+                Config.sort = choiceSort.getSelectedIndex();
+
                 // location sharing
                 if (cz.kruch.track.TrackingMIDlet.jsr120) {
                     final boolean[] friends = new boolean[choiceFriends.size()];
@@ -672,13 +676,15 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
                 if (cz.kruch.track.TrackingMIDlet.supportsVideoCapture()) {
                     Config.captureLocator = fieldCaptureLocator.getString();
                     Config.snapshotFormat = fieldSnapshotFormat.getString();
+                    Config.snapshotFormatIdx = choiceSnapshotFormat.getSelectedIndex();
                 }
             }
         }
 
         // gc hint
+        submenu.setCommandListener(null);
+        submenu.deleteAll();
         submenu = null;
-        section = null;
 
         // restore top-level menu
         Desktop.display.setCurrent(this);

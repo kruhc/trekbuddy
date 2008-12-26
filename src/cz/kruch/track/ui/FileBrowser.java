@@ -30,22 +30,23 @@ import java.util.Vector;
 import java.io.IOException;
 
 import api.file.File;
+import api.util.Comparator;
 
 /**
  * Generic file browser.
  *
  * @author Ales Pour <kruhc@seznam.cz>
  */
-public final class FileBrowser implements CommandListener, Runnable {
+public final class FileBrowser implements CommandListener, Runnable, Comparator {
 //#ifdef __LOG__
     private static final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("FileBrowser");
 //#endif
 
-    private final String title;
-    private final Callback callback;
-    private final Displayable next;
+    private String title;
+    private Callback callback;
+    private Displayable next;
 
-    private final Command cmdCancel, cmdBack, cmdSelect;
+    private Command cmdCancel, cmdBack, cmdSelect;
 
     private volatile List list;
     private volatile File file;
@@ -62,6 +63,10 @@ public final class FileBrowser implements CommandListener, Runnable {
         this.cmdSelect = new Command(Resources.getString(Resources.DESKTOP_CMD_SELECT), Command.ITEM, 1);
     }
 
+    /* when used as filenames comparator */
+    private FileBrowser() {
+    }
+
     public void show() {
         // browse
         browse();
@@ -70,6 +75,10 @@ public final class FileBrowser implements CommandListener, Runnable {
     private void browse() {
         // on background
         (new Thread(this)).start();
+    }
+
+    public int compare(Object o1, Object o2) {
+        return compareAsFiles((String) o1, (String) o2);
     }
 
     public void run() {
@@ -126,7 +135,6 @@ public final class FileBrowser implements CommandListener, Runnable {
 
                     // list fs roots
                     show(null);
-
                 }
 //#ifdef __LOG__
                 if (log.isEnabled()) log.debug("scanner thread exits");
@@ -158,7 +166,6 @@ public final class FileBrowser implements CommandListener, Runnable {
 
                 // dir flag
                 final boolean isDir;
-
                 if (file.isBrokenTraversal()) {
                     // we know special traversal code is used underneath
                     isDir = file.isDirectory();
@@ -166,14 +173,13 @@ public final class FileBrowser implements CommandListener, Runnable {
                     // detect from URL
                     isDir = file.getURL().endsWith(File.PATH_SEPARATOR);
                 }
-
 //#ifdef __LOG__
                 if (log.isEnabled()) log.error("isDir? " + isDir);
 //#endif
 
                 // list dir content
-                if (isDir) {
-                    show(file);
+                if (isDir) { try {
+                    show(file); } catch (Exception e) { throw new IllegalStateException("3. [" + file.getURL() + "];" + e.toString()); }
                 } else { // otherwise we got a file selected
                     quit(null);
                 }
@@ -184,46 +190,6 @@ public final class FileBrowser implements CommandListener, Runnable {
 //#endif
 
             // quit with throwable
-            quit(t);
-        }
-    }
-
-    private void show(File holder) {
-//#ifdef __LOG__
-        if (log.isEnabled()) log.debug("show; depth = " + depth);
-//#endif
-
-        // reuse current list to show what is going on
-        if (list != null) {
-            list.removeCommand(cmdSelect);
-            list.removeCommand(cmdBack);
-            list.removeCommand(cmdCancel);
-            list.deleteAll();
-            list.setTicker(new Ticker(Resources.getString(Resources.NAV_MSG_TICKER_LISTING)));
-            Thread.yield();
-        }
-
-        // append items
-        list = null; // gc hint
-        try {
-            list = sort2list(title, holder == null ? File.listRoots() : file.list(), depth > 0 ? File.PARENT_DIR : null);
-//#ifdef __LOG__
-            if (log.isEnabled()) log.debug(list.size() + " entries");
-//#endif
-
-            // add commands
-            if (list.size() > 0) {
-                list.setSelectCommand(cmdSelect);
-            } else {
-                list.setSelectCommand(null);
-            }
-            list.addCommand(depth == 0 ? cmdCancel : cmdBack);
-            list.setCommandListener(this);
-
-            // show
-            Desktop.display.setCurrent(list);
-            
-        } catch (Throwable t) {
             quit(t);
         }
     }
@@ -247,6 +213,46 @@ public final class FileBrowser implements CommandListener, Runnable {
             browse();
         } else {
             quit(null);
+        }
+    }
+
+    private void show(final File holder) {
+//#ifdef __LOG__
+        if (log.isEnabled()) log.debug("show; depth = " + depth);
+//#endif
+
+        // reuse current list to show what is going on
+        if (list != null) {
+            list.setCommandListener(null);
+            list.deleteAll();
+            list.removeCommand(cmdCancel);
+            list.removeCommand(cmdBack);
+            list.setTicker(new Ticker(Resources.getString(Resources.NAV_MSG_TICKER_LISTING)));
+            Thread.yield();
+        }
+
+        // append items
+        list = null; // gc hint
+        try {
+            list = sort2list(title, holder == null ? File.listRoots() : file.list(), depth > 0 ? File.PARENT_DIR : null);
+//#ifdef __LOG__
+            if (log.isEnabled()) log.debug(list.size() + " entries");
+//#endif
+
+            // add commands
+            if (list.size() > 0) {
+                list.setSelectCommand(cmdSelect);
+            } else {
+                list.setSelectCommand(null);
+            }
+            list.addCommand(depth == 0 ? cmdCancel : cmdBack);
+            list.setCommandListener(this);
+
+            // show
+            Desktop.display.setCurrent(list);
+
+        } catch (Throwable t) {
+            quit(t);
         }
     }
 
@@ -276,12 +282,12 @@ public final class FileBrowser implements CommandListener, Runnable {
      */
     public static String[] sort2array(final Enumeration items, final String head) {
         // enum to list
-        Vector v = new Vector(16, 16);
+        Vector v = new Vector(64, 64);
         if (head != null) {
             v.addElement(head);
         }
         while (items.hasMoreElements()) {
-            v.addElement((String) items.nextElement());
+            v.addElement(items.nextElement());
         }
 
         // list to array
@@ -302,6 +308,7 @@ public final class FileBrowser implements CommandListener, Runnable {
     /**
      * Sorts enumeration of strings and creates list.
      * TODO optimize - how to find out size of enumeration???
+     *
      * @param title list title
      * @param items enumeration of strings
      * @param head first entry; can be <tt>null</tt>
@@ -312,51 +319,80 @@ public final class FileBrowser implements CommandListener, Runnable {
     }
 
     /**
-     * String array sorting - in-place quicksort. See http://en.wikipedia.org/wiki/Quicksort.
-     * @param array array of strings
+     * Array sorting - in-place quicksort. See http://en.wikipedia.org/wiki/Quicksort.
+     *
+     * @param array array of objects
      * @param left left boundary
      * @param right right boundary
      */
     public static void quicksort(final Object[] array, final int left, final int right) {
+        quicksort(array, new FileBrowser(), left, right);
+    }
+
+    /**
+     * Array sorting - in-place quicksort. See http://en.wikipedia.org/wiki/Quicksort.
+     *
+     * @param array array of objects
+     * @param comparator comparator
+     * @param left left boundary
+     * @param right right boundary
+     */
+    public static void quicksort(final Object[] array, final Comparator comparator,
+                                 final int left, final int right) {
         if (right > left) {
             final int pivotIndex = left;
-            final int pivotNewIndex = partition(array, left, right, pivotIndex);
-            quicksort(array, left, pivotNewIndex - 1);
-            quicksort(array, pivotNewIndex + 1, right);
+            final int pivotNewIndex = partition(array, comparator, left, right, pivotIndex);
+            quicksort(array, comparator, left, pivotNewIndex - 1);
+            quicksort(array, comparator, pivotNewIndex + 1, right);
         }
     }
 
-    private static int partition(final Object[] array, final int left, final int right, final int pivotIndex) {
-        final String pivotValue = (String) array[pivotIndex];
-        // swap
+    private static int partition(final Object[] array, final Comparator comparator,
+                                 final int left, final int right, final int pivotIndex) {
+        final Object pivotValue = array[pivotIndex];
+/*
+        // swap inlined
         Object _o = array[pivotIndex];
         array[pivotIndex] = array[right];
         array[right] = _o;
         // ~swap
+*/      swap(array, pivotIndex, right);
         int storeIndex = left;
         for (int i = left; i < right; i++) { // left ? i < right
-            if (compareAsFiles((String) array[i], pivotValue) < 0) {
+            final int cmp = comparator.compare(array[i], pivotValue);
+            if (cmp < 0) {
+/*
                 // swap
                 _o = array[i];
                 array[i] = array[storeIndex];
                 array[storeIndex] = _o;
                 // ~swap
+*/              swap(array, i, storeIndex);
                 storeIndex++;
             }
         }
+/*
         // swap
         _o = array[storeIndex];
         array[storeIndex] = array[right];
         array[right] = _o;
         // ~swap
+*/      swap(array, storeIndex, right);
         return storeIndex;
+    }
+
+    private static void swap(final Object array[], final int a, final int b) {
+        final Object o = array[a];
+        array[a] = array[b];
+        array[b] = o;
     }
 
     /**
      * Compares objects as filenames, with directories first.
+     *
      * @param s1 first string
      * @param s2 second string
-     * @return {@link String#compareTo(String)}
+     * @return same as {@link String#compareTo(String)}
      */
     private static int compareAsFiles(final String s1, final String s2) {
         final boolean isDir1 = File.isDir(s1) || s1.indexOf(File.PATH_SEPCHAR) > -1;

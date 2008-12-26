@@ -14,7 +14,7 @@ import java.io.DataOutputStream;
  * <p>
  * Service protocol packet is { 0xFF, 0xEB, 0x00, <tt>byte</tt> <i>action</i>, <tt>integer</tt> <i>int context param</i> }. Actions are
  * <ul>
- * <li>0x00 - reset inactivity timer (prevents screensaver to pop up)
+ * <li>0x00 - set lights / reset inactivity timer (prevents screensaver to pop up)
  * <li>0x01 - file open
  * <li>0x02 - file close
  * <li>0x03 - file read

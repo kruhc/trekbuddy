@@ -10,6 +10,7 @@ import javax.microedition.lcdui.List;
 import javax.microedition.lcdui.Graphics;
 import javax.microedition.lcdui.Display;
 import javax.microedition.lcdui.Canvas;
+import javax.microedition.lcdui.Ticker;
 import java.util.Vector;
 
 final class SmartList extends Canvas {
@@ -26,7 +27,7 @@ final class SmartList extends Canvas {
 
     public SmartList(String title, CommandListener listener) {
         setTitle(title);
-        this.listener = listener;
+        setCommandListener(this.listener = listener);
         this.marked = -1;
         if (cz.kruch.track.configuration.Config.safeColors) {
             this.colorBackSel = 0x000000ff;
@@ -46,9 +47,19 @@ final class SmartList extends Canvas {
         sizeChanged(getWidth(), getHeight());
     }
 
+    /* magic - it prevents OutOfMemoryError :-O */
+    public void setTicker(Ticker ticker) {
+        super.setTicker(ticker);
+    }
+
+    public void setCommandListener(CommandListener listener) {
+        super.setCommandListener(this.listener = listener);
+    }
+
     protected void sizeChanged(int w, int h) {
-        width = w;
-        height = h;
+        super.sizeChanged(w, h);
+        this.width = w;
+        this.height = h;
         setVisibleCount(h / getLineHeight());
         makeSelectedVisible();
         repaint();
@@ -158,7 +169,7 @@ final class SmartList extends Canvas {
         final double yd = lines >= count ? getLineHeight() : (double) h / lines;
         final int lh = (int) yd;
         final Object[] items = ((NakedVector) this.items).getData();
-
+        
         int curr = top;
         int last = top + lines;
         double y = 0;
@@ -201,7 +212,7 @@ final class SmartList extends Canvas {
         return selected;
     }
 
-    public void setSelectedIndex(int elementNum, boolean select) {
+    public int setSelectedIndex(int elementNum, boolean select) {
         if (select) {
             if (elementNum >= 0 && elementNum < items.size()) {
                 selected = elementNum;
@@ -213,6 +224,31 @@ final class SmartList extends Canvas {
         } else {
             throw new IllegalArgumentException("Unselect not supported");
         }
+        return selected;
+    }
+
+    public Object getSelectedItem() {
+        return items.elementAt(selected);
+    }
+
+    public int setSelectedItem(Object item) {
+        final Object[] items = ((NakedVector) this.items).getData();
+        for (int i = this.items.size(); --i >= 0; ) {
+            if (item.equals(items[i])) {
+                return setSelectedIndex(i, true);
+            }
+        }
+        return -1;
+    }
+
+    public int getIndex(Object item) {
+        final Object[] items = ((NakedVector) this.items).getData();
+        for (int i = this.items.size(); --i >= 0; ) {
+            if (item.equals(items[i])) {
+                return i;
+            }
+        }
+        return -1;
     }
 
     public String getString(int index) {

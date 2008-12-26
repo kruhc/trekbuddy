@@ -1,18 +1,4 @@
-/*
- * Copyright 2006-2007 Ales Pour <kruhc@seznam.cz>.
- * All Rights Reserved.
- * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
- *
- * This code is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License version 2 only, as
- * published by the Free Software Foundation.
- *
- * This code is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
- * version 2 for more details (a copy is included in the LICENSE file that
- * accompanied this code).
- */
+// @LICENSE@
 
 package cz.kruch.track.location;
 
@@ -30,7 +16,7 @@ import java.io.InputStream;
 import java.util.TimerTask;
 
 /**
- * Serial port (comm, btspp) location provider implemenation.
+ * Stream port (comm, btspp, tcp/ip) location provider implemenation.
  *
  * @author Ales Pour <kruhc@seznam.cz>
  */
@@ -43,12 +29,10 @@ public class SerialLocationProvider
 
     protected volatile String url;
 
-    private volatile InputStream stream;
-    private volatile StreamConnection connection;
-
     private TimerTask watcher;
-
-    private volatile long last;
+    private InputStream stream;
+    private StreamConnection connection;
+    private long last;
 
     public SerialLocationProvider() throws LocationException {
         this("Serial");
@@ -106,9 +90,6 @@ public class SerialLocationProvider
         // reset last I/O stamp
         setLastIO(System.currentTimeMillis());
 
-        // debug
-        setStatus("baby");
-
         // let's roll
         baby();
 
@@ -129,9 +110,6 @@ public class SerialLocationProvider
 
         } finally {
 
-            // debug
-            setStatus("zombie");
-
             // almost dead
             zombie();
         }
@@ -146,9 +124,6 @@ public class SerialLocationProvider
 
     /* this provider has special shutdown sequence */
     public void stop() throws LocationException {
-
-        // debug
-        setStatus("being stopped");
 
         // die gracefully
         die();
@@ -212,9 +187,6 @@ public class SerialLocationProvider
 
                 try {
 
-                    // debug
-                    setStatus("reading location");
-
                     // get next location
                     location = nextLocation(stream, observer);
 
@@ -264,9 +236,6 @@ public class SerialLocationProvider
                 // new location timestamp
                 _setLast(System.currentTimeMillis());
 
-                // debug
-                setStatus("notifying listener");
-
                 // send new location
                 notifyListener(location);
 
@@ -315,6 +284,9 @@ public class SerialLocationProvider
                     connection = null;
                 }
             }
+
+            // native finalizers?
+            System.gc();
 
             // debug
             setStatus("stream and connection closed");

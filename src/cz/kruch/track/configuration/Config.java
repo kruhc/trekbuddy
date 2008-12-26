@@ -106,6 +106,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
     public static String tracklogFormat     = TRACKLOG_FORMAT_GPX;
     public static String captureLocator     = "capture://video";
     public static String snapshotFormat     = EMPTY_STRING;
+    public static int snapshotFormatIdx;
 
     // group [Bluetooth provider options]
     public static int btKeepAlive;
@@ -124,7 +125,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
     public static boolean autohideNotification  = true;
 
     // group [O2Germany provider options]
-    public static int o2Depth                   = 8;
+    public static int o2Depth                   = 1;
 
     // group [Desktop]
     public static boolean fullscreen;
@@ -146,9 +147,10 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
     public static int units;
 
     // [Coordinates]
-    public static boolean useGridFormat;
-    public static boolean useUTM;
-    public static boolean useGeocachingFormat;
+    public static int cfmt;
+//    public static boolean useGridFormat;
+//    public static boolean useUTM;
+//    public static boolean useGeocachingFormat;
 
     // group [Tweaks]
     public static boolean siemensIo;
@@ -179,6 +181,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
     public static int routeThick;
     public static boolean makeRevisions         = true;
     public static boolean preferGsName          = true;
+    public static int sort;
 
     // hidden
     public static String btDeviceName   = EMPTY_STRING;
@@ -190,8 +193,9 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
     public static String cmsProfile     = EMPTY_STRING;
     public static boolean o2provider;
 
-    // runtime
+    // runtime (not persisted)
     public static boolean dataDirAccess, dataDirExists;
+    public static String defaultWptSound;
 
     private Config() {
     }
@@ -217,8 +221,10 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         } else if (cz.kruch.track.TrackingMIDlet.motorola || cz.kruch.track.TrackingMIDlet.a780) {
             dataDir = "file:///b/trekbuddy/";
             forcedGc = true;
+        } else if (cz.kruch.track.TrackingMIDlet.samsung) {
+            dataDir = "file:///tflash/trekbuddy/";
         } else if (cz.kruch.track.TrackingMIDlet.j9 || cz.kruch.track.TrackingMIDlet.jbed || cz.kruch.track.TrackingMIDlet.intent /*|| cz.kruch.track.TrackingMIDlet.phoneme*/) {
-            dataDir = getDefaultDataDir("Storage%20Card/", "TrekBuddy/");
+            dataDir = getDefaultDataDir("/Storage Card/", "TrekBuddy/");
             if (cz.kruch.track.TrackingMIDlet.jbed || cz.kruch.track.TrackingMIDlet.intent) {
                 commUrl = "socket://127.0.0.1:20175";
             }
@@ -276,8 +282,11 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
             try {
                 for (Enumeration roots = File.listRoots(); roots.hasMoreElements(); ) {
                     final String root = (String) roots.nextElement();
+                    if (root.equals(defaultRoot)) {
+                        cardRoot = defaultRoot; break;
+                    }
                     if (root.indexOf("Card") > -1 || root.indexOf("Stick") > -1) {
-                        cardRoot = root; break;
+                        cardRoot = root;
                     }
                 }
             } catch (Exception e) { // IOE or SE
@@ -285,10 +294,13 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
             }
         }
         if (cardRoot == null) {
-            cardRoot = defaultRoot;
+            cardRoot = System.getProperty("fileconn.dir.memorycard"); // usually includes protocol schema
+            if (cardRoot == null) {
+                cardRoot = defaultRoot;
+            }
         }
 
-        return (new StringBuffer("file:///").append(cardRoot).append(appPath)).toString();
+        return (new StringBuffer(cardRoot.startsWith("file://") ? "" : "file:///").append(cardRoot).append(appPath)).toString();
     }
 
     private static void checkDataDirAccess() {
@@ -325,7 +337,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         locationSharing = din.readBoolean();
         fullscreen = din.readBoolean();
         noSounds = din.readBoolean();
-        useUTM = din.readBoolean();
+        /*useUTM = */din.readBoolean();
         osdExtended = din.readBoolean();
         osdNoBackground = din.readBoolean();
         osdMediumFont = din.readBoolean();
@@ -341,7 +353,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
 
         // 0.9.2 extension
         try {
-            useGeocachingFormat = din.readBoolean();
+            /*useGeocachingFormat = */din.readBoolean();
         } catch (Exception e) {
         }
 
@@ -356,7 +368,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         // 0.9.5 extension
         try {
             decimalPrecision = din.readBoolean();
-            useGridFormat = din.readBoolean();
+            /*useGridFormat = */din.readBoolean();
             hpsWptTrueAzimuth = din.readBoolean();
             osdBasic = din.readBoolean();
         } catch (Exception e) {
@@ -480,6 +492,9 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         // 0.9.82 extensions
         try {
             powerSave = din.readBoolean();
+            snapshotFormatIdx = din.readInt();
+            cfmt = din.readInt();
+            sort = din.readInt();
         } catch (Exception e) {
         }
 
@@ -505,19 +520,19 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         dout.writeBoolean(locationSharing);
         dout.writeBoolean(fullscreen);
         dout.writeBoolean(noSounds);
-        dout.writeBoolean(useUTM);
+        dout.writeBoolean(false/*useUTM*/);
         dout.writeBoolean(osdExtended);
         dout.writeBoolean(osdNoBackground);
         dout.writeBoolean(osdMediumFont);
         dout.writeBoolean(osdBoldFont);
         dout.writeBoolean(osdBlackColor);
         dout.writeUTF(EMPTY_STRING/*tracklog*/);
-        dout.writeBoolean(useGeocachingFormat);
+        dout.writeBoolean(false/*useGeocachingFormat*/);
         dout.writeBoolean(false/*optimisticIo*/);
         dout.writeBoolean(S60renderer);
         dout.writeBoolean(false/*cacheOffline*/);
         dout.writeBoolean(decimalPrecision);
-        dout.writeBoolean(useGridFormat);
+        dout.writeBoolean(false/*useGridFormat*/);
         dout.writeBoolean(hpsWptTrueAzimuth);
         dout.writeBoolean(osdBasic);
         dout.writeUTF(locationTimings);
@@ -566,6 +581,9 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         dout.writeBoolean(safeColors);
         /* since 0.9.82 */
         dout.writeBoolean(powerSave);
+        dout.writeInt(snapshotFormatIdx);
+        dout.writeInt(cfmt);
+        dout.writeInt(sort);
 
 //#ifdef __LOG__
         if (log.isEnabled()) log.info("configuration updated");
@@ -694,6 +712,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
                 FOLDER_MAPS, FOLDER_NMEA, FOLDER_PROFILES, FOLDER_RESOURCES,
                 FOLDER_SOUNDS, FOLDER_TRACKS, FOLDER_WPTS
             };
+            /* create folder structure */
             for (int i = folders.length; --i >= 0; ) {
                 File folder = null;
                 try {
@@ -715,6 +734,32 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
                     } catch (Exception e) { // NPE or IOE
                         // ignore
                     }
+                }
+            }
+            /* find default files */
+            File dir = null;
+            try {
+                dir = File.open(Config.getFolderURL(Config.FOLDER_SOUNDS));
+                for (Enumeration enum = dir.list("wpt.*", false); enum.hasMoreElements(); ) {
+                    final String name = (String) enum.nextElement();
+                    if (name.endsWith(".amr") || name.endsWith(".wav") || name.endsWith(".mp3")) {
+//#ifdef __LOG__
+                        if (log.isEnabled()) log.info("found wpt sound file " + name);
+//#endif
+                        defaultWptSound = name; 
+                        break;
+                    }
+                }
+            } catch (Exception e) {
+                // ignore
+//#ifdef __LOG__
+                if (log.isEnabled()) log.info("could not list sounds: " + e);
+//#endif
+            } finally {
+                try {
+                    dir.close();
+                } catch (Exception e) { // NPE or IOE
+                    // ignore
                 }
             }
         }

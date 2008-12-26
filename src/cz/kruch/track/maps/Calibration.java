@@ -282,12 +282,14 @@ abstract class Calibration {
     }
 
     private void computeGrid(final Vector xy, final Vector gp) {
-        int[] index = verticalAxisByX(xy, getWidth(), 0);
+        final int[] index = new int[2];
+
+        verticalAxisByX(xy, getWidth(), 0, index);
 
         final double gridRVscale = Math.abs((((GeodeticPosition) gp.elementAt(index[1])).getV() - ((GeodeticPosition) gp.elementAt(index[0])).getV()) / (((Position) xy.elementAt(index[1])).getY() - ((Position) xy.elementAt(index[0])).getY()));
         final int v1 = ((Position) xy.elementAt(index[0])).getX();
 
-        index = horizontalAxisByY(xy, 0, 0);
+        horizontalAxisByY(xy, 0, 0, index);
 
         final int dx = (((Position) xy.elementAt(index[1])).getX() - ((Position) xy.elementAt(index[0])).getX());
         gridTHscale = Math.abs((((GeodeticPosition) gp.elementAt(index[1])).getH() - ((GeodeticPosition) gp.elementAt(index[0])).getH()) / dx);
@@ -295,12 +297,12 @@ abstract class Calibration {
         final double nk0d = (((Position) xy.elementAt(index[1])).getY() - h0) * gridRVscale;
         nk0 = (((GeodeticPosition) gp.elementAt(index[1])).getV() + nk0d - ((GeodeticPosition) gp.elementAt(index[0])).getV()) / dx;
 
-        index = horizontalAxisByY(xy, 0, getHeight());
+        horizontalAxisByY(xy, 0, getHeight(), index);
 
         final double gridBHscale = Math.abs((((GeodeticPosition) gp.elementAt(index[1])).getH() - ((GeodeticPosition) gp.elementAt(index[0])).getH()) / (((Position) xy.elementAt(index[1])).getX() - ((Position) xy.elementAt(index[0])).getX()));
         final int h1 = ((Position) xy.elementAt(index[0])).getY();
 
-        index = verticalAxisByX(xy, 0, 0);
+        verticalAxisByX(xy, 0, 0, index);
 
         final int dy = (((Position) xy.elementAt(index[1])).getY() - ((Position) xy.elementAt(index[0])).getY());
         gridLVscale = Math.abs((((GeodeticPosition) gp.elementAt(index[1])).getV() - ((GeodeticPosition) gp.elementAt(index[0])).getV()) / dy);
@@ -319,7 +321,8 @@ abstract class Calibration {
         }
     }
 
-    private static int[] verticalAxisByX(final Vector xy, final int px, final int py) {
+    private static void verticalAxisByX(final Vector xy, final int px, final int py,
+                                        final int[] result) {
         int i0 = -1, i1 = -1;
         int d0 = Integer.MAX_VALUE, d1 = Integer.MAX_VALUE;
         for (int N = xy.size(), i = 0; i < N; i++) {
@@ -338,13 +341,16 @@ abstract class Calibration {
         }
 
         if (Math.abs(py - ((Position) xy.elementAt(i0)).getY()) < Math.abs(py - ((Position) xy.elementAt(i1)).getY())) {
-            return new int[]{ i0, i1 };
+            result[0] = i0;
+            result[1] = i1;
         } else {
-            return new int[]{ i1, i0 };
+            result[0] = i1;
+            result[1] = i0;
         }
     }
 
-    private static int[] horizontalAxisByY(final Vector xy, final int px, final int py) {
+    private static void horizontalAxisByY(final Vector xy, final int px, final int py,
+                                          final int[] result) {
         int i0 = -1, i1 = -1;
         int d0 = Integer.MAX_VALUE, d1 = Integer.MAX_VALUE;
         for (int N = xy.size(), i = 0; i < N; i++) {
@@ -363,9 +369,11 @@ abstract class Calibration {
         }
 
         if (Math.abs(px - ((Position) xy.elementAt(i0)).getX()) < Math.abs(px - ((Position) xy.elementAt(i1)).getX())) {
-            return new int[]{ i0, i1 };
+            result[0] = i0;
+            result[1] = i1;
         } else {
-            return new int[]{ i1, i0 };
+            result[0] = i1;
+            result[1] = i0;
         }
     }
 

@@ -1,18 +1,4 @@
-/*
- * Copyright 2006-2007 Ales Pour <kruhc@seznam.cz>.
- * All Rights Reserved.
- * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
- *
- * This code is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License version 2 only, as
- * published by the Free Software Foundation.
- *
- * This code is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
- * version 2 for more details (a copy is included in the LICENSE file that
- * accompanied this code).
- */
+// @LICENSE@
 
 package cz.kruch.track.location;
 
@@ -42,11 +28,13 @@ public final class Jsr179LocationProvider
     private javax.microedition.location.LocationProvider impl;
     private int interval, timeout, maxage;
 
-    private final char[] line;
+    private final char[] raw;
+    private int extraSat, extraFix;
 
     public Jsr179LocationProvider() {
         super("Internal");
-        this.line = new char[NmeaParser.MAX_SENTENCE_LENGTH];
+        this.raw = new char[NmeaParser.MAX_SENTENCE_LENGTH];
+        this.extraSat = this.extraFix = -1;
     }
 
     public int start() throws LocationException {
@@ -110,6 +98,9 @@ public final class Jsr179LocationProvider
             // set listener
             impl.setLocationListener(this, interval, timeout, maxage);
 
+            // status
+            setStatus("running");
+
             // wait for end (kinda stupid variant of gps() from Serial provider ;-) )
             synchronized (this) {
                 while (go) {
@@ -151,12 +142,15 @@ public final class Jsr179LocationProvider
             // enhance with raw NMEA
             int sat = -1;
             if (extra != null) {
+                extraSat = extraFix = -1;
                 try {
-                    final NmeaParser.Record gga = parseNmea(line, extra);
-                    if (gga != null) {
-                        sat = gga.sat;
+                    parseNmea(raw, extra);
+                    if (extraSat > 0) {
+                        sat = extraSat;
                     } else {
-                        sat = NmeaParser.sata;
+                        if (NmeaParser.sata != 0) {
+                            sat = NmeaParser.sata;
+                        }
                     }
                 } catch (Exception e) {
                     setThrowable(e);
@@ -165,10 +159,10 @@ public final class Jsr179LocationProvider
 
             // vars
             javax.microedition.location.QualifiedCoordinates xc = l.getQualifiedCoordinates();
-            float spd = l.getSpeed();
-            float alt = xc.getAltitude();
-            float course = l.getCourse();
-            float accuracy = xc.getHorizontalAccuracy();
+            final float spd = l.getSpeed();
+            /*final*/ float alt = xc.getAltitude();
+            final float course = l.getCourse();
+            final float accuracy = xc.getHorizontalAccuracy();
 
             if (Float.isNaN(alt)) {
                 alt = Float.NaN;
@@ -181,9 +175,10 @@ public final class Jsr179LocationProvider
                                                                        xc.getLongitude(),
                                                                        alt);
             qc.setHorizontalAccuracy(accuracy);
-            Location location = Location.newInstance(qc, l.getTimestamp(), 1, sat);
+            final Location location = Location.newInstance(qc, l.getTimestamp(), 1, sat);
             location.setCourse(course);
             location.setSpeed(spd);
+            location.setFix3d(extraFix == 3);
 
             // signal state change
             if (updateLastState(AVAILABLE)) {
@@ -217,35 +212,35 @@ public final class Jsr179LocationProvider
         }
     }
 
-    private static NmeaParser.Record parseNmea(final char[] line,
-                                               final String extra) throws Exception {
+    private void parseNmea(final char[] line, final String extra) throws Exception {
         final int length = extra.length();
         int start = 0;
         int idx = extra.indexOf("$GP");
-        while (idx > -1) {
+        while (idx != -1) {
             if (idx != 0) {
                 if (idx - start < NmeaParser.MAX_SENTENCE_LENGTH) {
                     extra.getChars(start, idx, line, 0);
                     final NmeaParser.Record rec = NmeaParser.parse(line, idx - start);
-                    if (rec.type == NmeaParser.HEADER_GGA) {
-                        return rec;
+                    switch (rec.type) {
+                        case NmeaParser.HEADER_GGA: {
+                            extraSat = rec.sat;
+                        } break;
+                        case NmeaParser.HEADER_GSA: {
+                            extraFix = rec.fix;
+                        } break;
                     }
                 }
             }
             start = idx;
-            idx = extra.indexOf("$GP", start + 3);
-        }
-        if (start < length) { // always true
-            if (length - start < NmeaParser.MAX_SENTENCE_LENGTH) {
-                extra.getChars(start, length, line, 0);
-                final NmeaParser.Record rec = NmeaParser.parse(line, length - start);
-                if (rec.type == NmeaParser.HEADER_GGA) {
-                    return rec;
+            if (start < length) {
+                idx = extra.indexOf("$GP", start + 3);
+                if (idx == -1) {
+                    idx = length;
                 }
+            } else {
+                break;
             }
         }
-
-        return null;
     }
 
     private static void logNmea(final OutputStream out,

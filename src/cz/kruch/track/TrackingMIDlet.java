@@ -21,9 +21,9 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
     private static String platform, flags;
 
     public static String version;
-    public static boolean jsr82, jsr120, jsr135, jsr179, motorola179, comm;
-    public static boolean sonyEricsson, nokia, siemens, lg, motorola;
-    public static boolean j9, jbed, intent, palm, rim, symbian, uiq, brew/*, phoneme*/;
+    public static boolean jsr82, jsr120, jsr135, jsr179, jsr234, motorola179, comm;
+    public static boolean sonyEricsson, nokia, siemens, lg, motorola, samsung;
+    public static boolean j9, jbed, intent, palm, rim, symbian, s60nd, uiq, brew/*, phoneme*/;
     public static boolean sxg75, a780, s65;
 
     // diagnostics
@@ -58,6 +58,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         rim = platform.startsWith("RIM");
 //#else
         nokia = platform.startsWith("Nokia");
+        s60nd = platform.startsWith("Nokia66") || platform.startsWith("NokiaN70");
         sonyEricsson = System.getProperty("com.sonyericsson.imei") != null;
         siemens = System.getProperty("com.siemens.IMEI") != null || System.getProperty("com.siemens.mp.imei") != null;
         motorola = System.getProperty("com.motorola.IMEI") != null;
@@ -106,6 +107,15 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         } catch (Throwable t) {
         }
         try {
+            Class.forName("javax.microedition.amms.control.camera.CameraControl");
+            Class.forName("javax.microedition.amms.control.camera.SnapshotControl");
+            jsr234 = true;
+//#ifdef __LOG__
+            System.out.println("* JSR-234");
+//#endif
+        } catch (Throwable t) {
+        }
+        try {
             Class.forName("javax.microedition.io.CommConnection");
             comm = true;
 //#ifdef __LOG__
@@ -150,6 +160,9 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
             }
         }
 //#endif
+
+        // init device control (also helps to detect other platforms)
+        cz.kruch.track.ui.nokia.DeviceControl.initialize();
     }
 
     private boolean running;
@@ -259,7 +272,6 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
 
         // init helpers and 'singletons'
         cz.kruch.track.configuration.Config.initDatums(this);
-        cz.kruch.track.ui.nokia.DeviceControl.initialize();
         cz.kruch.track.ui.Waypoints.initialize(desktop);
         cz.kruch.track.util.Mercator.initialize();
 
@@ -345,6 +357,6 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
     }
 
     public static boolean supportsVideoCapture() {
-        return jsr135 && "true".equals(System.getProperty("supports.video.capture"));
+        return (jsr135 && "true".equals(System.getProperty("supports.video.capture"))) || (jsr234);
     }
 }

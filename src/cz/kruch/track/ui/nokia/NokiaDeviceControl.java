@@ -1,18 +1,4 @@
-/*
- * Copyright 2006-2007 Ales Pour <kruhc@seznam.cz>.
- * All Rights Reserved.
- * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
- *
- * This code is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License version 2 only, as
- * published by the Free Software Foundation.
- *
- * This code is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
- * version 2 for more details (a copy is included in the LICENSE file that
- * accompanied this code).
- */
+// @LICENSE@
 
 package cz.kruch.track.ui.nokia;
 
@@ -25,26 +11,31 @@ import cz.kruch.track.Resources;
  */
 class NokiaDeviceControl extends DeviceControl {
 
-    protected static final int[] VALUES = { 0, 10, 25, 50, 100 };
+    protected final int[] values;
 
     NokiaDeviceControl() {
+        if (cz.kruch.track.TrackingMIDlet.s60nd) {
+            values = new int[]{ 0, 100 };
+        } else {
+            values = new int[]{ 0, 10, 25, 50, 100 };
+        }
     }
 
     /** @overriden */
     void nextLevel() {
         backlight++;
-        if (backlight == VALUES.length) {
+        if (backlight == values.length) {
             backlight = 0;
         }
         setLights();
     }
 
     protected void setLights() {
-        com.nokia.mid.ui.DeviceControl.setLights(0, VALUES[backlight]);
+        com.nokia.mid.ui.DeviceControl.setLights(0, values[backlight]);
     }
 
     /** @overriden */
     void sync() {
-        confirm(backlight == 0 ? Resources.getString(Resources.DESKTOP_MSG_BACKLIGHT_OFF) : Resources.getString(Resources.DESKTOP_MSG_BACKLIGHT_ON) + " (" + VALUES[backlight] + "%)");
+        confirm(backlight == 0 ? Resources.getString(Resources.DESKTOP_MSG_BACKLIGHT_OFF) : Resources.getString(Resources.DESKTOP_MSG_BACKLIGHT_ON) + " (" + values[backlight] + "%)");
     }
 }

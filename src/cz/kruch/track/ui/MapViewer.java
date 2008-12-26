@@ -1,18 +1,4 @@
-/*
- * Copyright 2006-2007 Ales Pour <kruhc@seznam.cz>.
- * All Rights Reserved.
- * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
- *
- * This code is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License version 2 only, as
- * published by the Free Software Foundation.
- *
- * This code is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
- * version 2 for more details (a copy is included in the LICENSE file that
- * accompanied this code).
- */
+// @LICENSE@
 
 package cz.kruch.track.ui;
 
@@ -80,9 +66,9 @@ final class MapViewer {
 
     private QualifiedCoordinates[] trailLL;
     private Position[] trailXY;
-    private int[] trailPF;
-    private int lllast, xylast, pflast, llcount, xycount;
     private QualifiedCoordinates refQc;
+    private short[] trailPF;
+    private int lllast, xylast, pflast, llcount, xycount;
     private float accDist, refCourse, courseDeviation;
 
     private int ci, li;
@@ -100,7 +86,7 @@ final class MapViewer {
         this.course = this.course2 = Float.NaN;
         this.trailLL = new QualifiedCoordinates[MAX_TRAJECTORY_LENGTH];
         this.trailXY = new Position[MAX_TRAJECTORY_LENGTH];
-        this.trailPF = new int[MAX_TRAJECTORY_LENGTH];
+        this.trailPF = new short[MAX_TRAJECTORY_LENGTH];
     }
 
     public void sizeChanged(int w, int h) {
@@ -571,7 +557,7 @@ final class MapViewer {
         // local refs for faster access
         final QualifiedCoordinates[] arrayLL = trailLL;
         final Position[] arrayXY = trailXY;
-        final int[] arrayPF = trailPF;
+        final short[] arrayPF = trailPF;
         int lllast = this.lllast;
         int xylast = this.xylast;
         int pflast = this.pflast;
@@ -671,7 +657,7 @@ final class MapViewer {
         } // ~synchronized
 
         // draw trajectory
-        if (Config.trailOn && xycount != 0) {
+        if (Config.trailOn && xycount > 1) {
             drawTrail(graphics);
         }
 
@@ -862,11 +848,11 @@ final class MapViewer {
                 final Waypoint wpt = (Waypoint) Desktop.wpts.elementAt(idx);
                 String text;
                 if (li % 4 < 2) {
-                    text = wpt.getName();
+                    text = wpt.toString(); // either GPX or GC name
                 } else {
                     text = wpt.getComment();
                     if (text == null) {
-                        text = wpt.getName();
+                        text = wpt.toString(); // either GPX or GC name 
                     }
                 }
                 if (text != null) {
@@ -931,24 +917,28 @@ final class MapViewer {
             h = slice_h;
 
         if (w > 0 && h > 0) {
-            if (Config.S60renderer) { // S60 renderer
-                graphics.drawImage(img,
-                                   - x_src + x_dest,
-                                   - y_src + y_dest,
-                                   Graphics.TOP | Graphics.LEFT);
+            if (img != Slice.NO_IMAGE) {
+                if (Config.S60renderer) { // S60 renderer
+                    graphics.drawImage(img,
+                                       - x_src + x_dest,
+                                       - y_src + y_dest,
+                                       Graphics.TOP | Graphics.LEFT);
+                } else {
+                    graphics.drawRegion(img,
+                                        x_src, y_src, w, h,
+                                        Sprite.TRANS_NONE,
+                                        x_dest, y_dest,
+                                        Graphics.TOP | Graphics.LEFT);
+                }
             } else {
-                graphics.drawRegion(img,
-                                    x_src, y_src, w, h,
-                                    Sprite.TRANS_NONE,
-                                    x_dest, y_dest,
-                                    Graphics.TOP | Graphics.LEFT);
+                graphics.fillRect(x_dest, y_dest, w, h);
             }
         }
     }
 
     private void drawTrail(final Graphics graphics) {
         final Position[] arrayXY = trailXY;
-        final int[] arrayPF = trailPF;
+        final short[] arrayPF = trailPF;
         final int count = this.xycount;
         final int x = this.x;
         final int y = this.y;
@@ -1006,7 +996,8 @@ final class MapViewer {
     private static void drawTrailSegment(final Graphics graphics,
                                          final int x0, final int y0,
                                          final int x1, final int y1,
-                                         final int flags) {
+                                         final short flags) {
+/*
         graphics.drawLine(x0, y0, x1, y1);
         int diff = 1;
         for (int thick = flags >> 16; --thick > 0; ) {
@@ -1022,6 +1013,46 @@ final class MapViewer {
                 }
             }
             diff++;
+        }
+*/
+        final int thick = flags >> 8;
+        if (thick > 1) {
+            int t0x0, t0y0, t0x1, t0y1, t0x2, t0y2;
+            int t1x0, t1y0, t1x1, t1y1, t1x2, t1y2;
+            if ((flags & 0x01) != 0) {
+                t0x0 = x0 - thick / 2;
+                t0y0 = y0;
+                t0x1 = x0 + thick / 2;
+                t0y1 = y0;
+                t0x2 = x1 - thick / 2;
+                t0y2 = y1;
+                t1x0 = x0 + thick / 2;
+                t1y0 = y0;
+                t1x1 = x1 - thick / 2;
+                t1y1 = y1;
+                t1x2 = x1 + thick / 2;
+                t1y2 = y1;
+            } else if ((flags & 0x02) != 0) {
+                t0x0 = x0;
+                t0y0 = y0 - thick / 2;
+                t0x1 = x0;
+                t0y1 = y0 + thick / 2;
+                t0x2 = x1;
+                t0y2 = y1 - thick / 2;
+                t1x0 = x0;
+                t1y0 = y0 + thick / 2;
+                t1x1 = x1;
+                t1y1 = y1 - thick / 2;
+                t1x2 = x1;
+                t1y2 = y1 + thick / 2;
+            } else {
+                t0x0 = t0y0 = t0x1 = t0y1 = t0x2 = t0y2 = 0;
+                t1x0 = t1y0 = t1x1 = t1y1 = t1x2 = t1y2 = 0;
+            }
+            graphics.fillTriangle(t0x0, t0y0, t0x1, t0y1, t0x2, t0y2);
+            graphics.fillTriangle(t1x0, t1y0, t1x1, t1y1, t1x2, t1y2);
+        } else {
+            graphics.drawLine(x0, y0, x1, y1);
         }
     }
 
@@ -1257,14 +1288,14 @@ final class MapViewer {
         }
     }
 
-    private static int updatePF(final Position p0, final Position p1) {
+    private static short updatePF(final Position p0, final Position p1) {
         return updatePF(p1.getX() - p0.getX(), p1.getY() - p0.getY());
     }
     
-    private static int updatePF(final double dx, final double dy) {
+    private static short updatePF(final double dx, final double dy) {
         final int thick = Config.trailThick * 2 + 1;
         double aRad;
-        int flags = 0;
+        short flags = 0;
         if (dx > 0) {
             aRad = ExtraMath.atan(dy / Math.abs(dx));
             if (Math.abs(aRad) > Math.PI / 4) {
@@ -1293,7 +1324,7 @@ final class MapViewer {
         }
         
         final double w = thick + ((Math.sqrt(2 * thick * thick) - thick) * Math.abs(Math.sin(2 * aRad)));
-        flags |= ExtraMath.round(w) << 16;
+        flags |= ExtraMath.round(w) << 8;
 
         return flags;
     }

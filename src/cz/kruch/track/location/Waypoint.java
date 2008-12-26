@@ -1,53 +1,96 @@
-/*
- * Copyright 2006-2007 Ales Pour <kruhc@seznam.cz>.
- * All Rights Reserved.
- * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
- *
- * This code is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License version 2 only, as
- * published by the Free Software Foundation.
- *
- * This code is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
- * version 2 for more details (a copy is included in the LICENSE file that
- * accompanied this code).
- */
+// @LICENSE@
 
 package cz.kruch.track.location;
 
 import api.location.QualifiedCoordinates;
 
+import java.util.Vector;
+import java.util.Date;
+
 /**
  * Represents a set of basic.
- * TODO This is practically <b>Landmark</b> from JSR-179
- * and so it should be moved to {@link api.location} package.  
+ *
+ * TODO This is in fact <b>Landmark</b> from JSR-179, and so it should be moved
+ * to {@link api.location} package.
  *
  * @author Ales Pour <kruhc@seznam.cz>
  */
 public final class Waypoint {
+    public static final int LINK_GENERIC_IMAGE = 0;
+    public static final int LINK_GENERIC_SOUND = 1;
+
     private QualifiedCoordinates coordinates;
+    private Date timestamp;
     private String name;
     private String comment;
     private String sym;
-    private long timestamp;
 
     private Object userObject;
-    private String linkPath, linkType;
+    private Vector links;
 
+/*
     public Waypoint(QualifiedCoordinates qc, String name, String comment, String sym) {
         this.coordinates = qc;
         this.name = name;
         this.comment = comment;
         this.sym = sym;
-        this.timestamp = -1;
+    }
+*/
+
+    public Waypoint(QualifiedCoordinates qc, char[] name, char[] comment, char[] sym) {
+        this.coordinates = qc;
+/*
+        this.name = name;
+        this.comment = comment;
+        this.sym = sym;
+*/
+        texts(name, comment, sym);
     }
 
     public Waypoint(QualifiedCoordinates qc, String name, String comment, long timestamp) {
         this.coordinates = qc;
+        this.timestamp = new Date(timestamp);
         this.name = name;
         this.comment = comment;
-        this.timestamp = timestamp;
+    }
+
+    private void texts(char[] name, char[] comment, char[] sym) {
+        int l = 0;
+        if (name != null) {
+            l += name.length;
+        }
+        if (comment != null) {
+            l += comment.length;
+        }
+        if (sym != null) {
+            l += sym.length;
+        }
+        char[] _raw = new char[l];
+        l = 0;
+        if (name != null) {
+            System.arraycopy(name, 0, _raw, 0, name.length);
+            l += name.length;
+        }
+        if (comment != null) {
+            System.arraycopy(comment, 0, _raw, l, comment.length);
+            l += comment.length;
+        }
+        if (sym != null) {
+            System.arraycopy(sym, 0, _raw, l, sym.length);
+        }
+        String _texts = new String(_raw);
+        l = 0;
+        if (name != null) {
+            this.name = _texts.substring(0, name.length);
+            l += name.length;
+        }
+        if (comment != null) {
+            this.comment = _texts.substring(l, l + comment.length);
+            l += comment.length;
+        }
+        if (sym != null) {
+            this.sym = _texts.substring(l);
+        }
     }
 
     public QualifiedCoordinates getQualifiedCoordinates() {
@@ -58,7 +101,7 @@ public final class Waypoint {
         this.coordinates = coordinates;
     }
 
-    public long getTimestamp() {
+    public Date getTimestamp() {
         return timestamp;
     }
 
@@ -82,20 +125,47 @@ public final class Waypoint {
         return sym;
     }
 
-    public String getLinkPath() {
-        return linkPath;
+    public Vector getLinks() {
+        return links;
     }
 
-    public void setLinkPath(String linkPath) {
-        this.linkPath = linkPath;
+    public void setLinks(Vector links) {
+        this.links = links;
     }
 
-    public String getLinkType() {
-        return linkType;
+    public void addLink(String link) {
+        if (this.links == null) {
+            this.links = new Vector(4, 4);
+        }
+        this.links.addElement(link);
     }
 
-    public void setLinkType(String linkType) {
-        this.linkType = linkType;
+    public void removeLink(String link) {
+        if (this.links != null) {
+            this.links.removeElement(link);
+        }
+    }
+
+    public String getLink(int type) {
+        if (links != null) {
+            for (int N = links.size(), i = 0; i < N; i++) {
+                final String link = (String) links.elementAt(i);
+                switch (type) {
+                    case LINK_GENERIC_IMAGE: {
+                        if (link.endsWith(".jpg") || link.endsWith(".png")) {
+                            return link;
+                        }
+                    } break;
+                    case LINK_GENERIC_SOUND: {
+                        if (link.endsWith(".amr") || link.endsWith(".wav") || link.endsWith(".mp3")) {
+                            return link;
+                        }
+                    } break;
+                }
+            }
+        }
+
+        return null;
     }
 
     public Object getUserObject() {
@@ -107,7 +177,7 @@ public final class Waypoint {
     }
 
     public String toString() {
-        if (userObject == null || !cz.kruch.track.configuration.Config.preferGsName)
+        if (userObject == null || !cz.kruch.track.configuration.Config.preferGsName) // TODO ugly dependency
             return name;
         return userObject.toString();
     }

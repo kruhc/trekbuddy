@@ -609,7 +609,7 @@ public final class Mercator {
                 final double p4 = 0.002442D + 0.00132D * X;
 
                 double lon = 2.67825D + a1 * Y + a3 * Y * Y * Y + a5 * Y * Y * Y * Y * Y;
-                double lat = 16.902866 + p0 + p2 * Y * Y + p4 * Y * Y * Y * Y;
+                double lat = 16.902866D + p0 + p2 * Y * Y + p4 * Y * Y * Y * Y;
 
                 lon /= (3600D / 10000D);
                 lat /= (3600D / 10000D);

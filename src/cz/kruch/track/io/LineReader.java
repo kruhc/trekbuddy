@@ -80,7 +80,7 @@ public final class LineReader extends InputStreamReader {
         final CharArrayTokenizer.Token result = readToken(ignoreLF);
         if (result != null) {
             if (!result.isEmpty()) {
-                return result.toString();
+                return result.toString().trim();
             }
             return EMPTY_LINE;
         }

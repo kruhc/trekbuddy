@@ -15,7 +15,7 @@ import cz.kruch.track.configuration.ConfigurationException;
 import cz.kruch.track.location.GpxTracklog;
 import cz.kruch.track.location.Waypoint;
 import cz.kruch.track.util.CharArrayTokenizer;
-import cz.kruch.j2se.io.BufferedOutputStream;
+import api.io.BufferedOutputStream;
 
 import javax.microedition.lcdui.Canvas;
 import javax.microedition.lcdui.Display;
@@ -598,10 +598,11 @@ public final class Desktop extends GameCanvas
         // start Friends
         if (cz.kruch.track.TrackingMIDlet.jsr120) {
 //#ifdef __LOG__
-             if (log.isEnabled()) log.info("starting SMS listener");
+             if (log.isEnabled()) log.info("init friends");
 //#endif
             try {
                 friends = new Friends();
+                friends.start();
             } catch (Throwable t) {
                 showError(Resources.getString(Resources.DESKTOP_MSG_FRIENDS_FAILED), t, this);
             }
@@ -904,9 +905,6 @@ public final class Desktop extends GameCanvas
                 if (log.isEnabled()) log.debug("exit command");
 //#endif
 
-                // close wpts files
-                Waypoints.shutdown();
-
                 // stop tracklog and tracking
                 stopTracking();
                 stopTracklog();
@@ -1124,12 +1122,12 @@ public final class Desktop extends GameCanvas
                         }
                     } else {
                         boolean notified = false;
-                        final String linkPath = ((Waypoint) wpts.elementAt(wptIdx)).getLinkPath();
-                        if (linkPath != null && linkPath.endsWith(".amr")) {
-                            notified = Camera.play(linkPath);
+                        final String s = ((Waypoint) wpts.elementAt(wptIdx)).getLink(Waypoint.LINK_GENERIC_SOUND);
+                        if (s != null) {
+                            notified = Camera.play(s);
                         }
                         if (!notified) {
-                            notified = Camera.play("wpt.amr");
+                            notified = Camera.play(Config.defaultWptSound);
                         }
                         if (notified) {
                             if (!Config.powerSave) {
@@ -1844,6 +1842,13 @@ public final class Desktop extends GameCanvas
         if (log.isEnabled()) log.debug("after tracking " + provider);
 //#endif
 
+        // record provider status
+        providerStatus = provider.getStatus();
+        providerError = provider.getThrowable();
+
+        // gc
+        provider = null;
+        
         // stop tracklog
         stopTracklog();
 
@@ -1895,10 +1900,6 @@ public final class Desktop extends GameCanvas
             return false;
         }
 
-        // record provider status
-        providerStatus = provider.getStatus();
-        providerError = provider.getThrowable();
-
 /*
         // unregister as listener
         provider.setLocationListener(null);
@@ -1909,8 +1910,6 @@ public final class Desktop extends GameCanvas
             provider.stop();
         } catch (Throwable t) {
             showError(Resources.getString(Resources.DESKTOP_MSG_STOP_PROV_FAILED), t, null);
-        } finally {
-            provider = null;
         }
 
 //#ifdef __LOG__
@@ -2085,8 +2084,10 @@ public final class Desktop extends GameCanvas
     public void loadingChanged(final Object result, final Throwable throwable) {
         eventing.callSerially(new Event(Event.EVENT_LOADING_STATUS_CHANGED,
                                         result, throwable, null));
+/*
         // hack for "UI smoothness"
         Thread.yield();
+*/
     }
 
     /*
@@ -3015,6 +3016,9 @@ public final class Desktop extends GameCanvas
                     try {
                         provider.stop();
                     } catch (Exception e) {
+//#ifdef __LOG__
+                        e.printStackTrace();
+//#endif
                         // ignore - never happens?
                     }
 
@@ -3059,6 +3063,9 @@ public final class Desktop extends GameCanvas
                 try {
                     updateNavigation(l.getQualifiedCoordinates());
                 } catch (Exception e) {
+//#ifdef __LOG__
+                    e.printStackTrace();
+//#endif
                     throw new RuntimeException("Exception [navigation update]" + ": " + e.toString());
                 }
 
@@ -3066,6 +3073,9 @@ public final class Desktop extends GameCanvas
                 try {
                     updateRouting(l.getQualifiedCoordinates());
                 } catch (Exception e) {
+//#ifdef __LOG__
+                    e.printStackTrace();
+//#endif
                     throw new RuntimeException("Exception [routing update]" + ": " + e.toString());
                 }
             }

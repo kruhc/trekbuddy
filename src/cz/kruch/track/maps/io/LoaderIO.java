@@ -94,6 +94,7 @@ public final class LoaderIO extends Thread {
 //#endif
             } catch (Throwable t) {
 //#ifdef __LOG__
+                t.printStackTrace();
                 if (log.isEnabled()) log.debug("task failed: " + t);
 //#endif
                 // ignore

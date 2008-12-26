@@ -52,7 +52,8 @@ public abstract class LocationProvider {
     }
 
     protected void setStatus(Object status) {
-        this.status = status;
+//        this.status = status;
+        this.status = this.status + (status == null ? "" : status.toString() + "|");
     }
 
     public boolean isRestartable() {
@@ -87,7 +88,9 @@ public abstract class LocationProvider {
     }
     
     protected final void baby() {
-
+        // debug
+        setStatus("starting");
+        
         // wait for previous thread to die... oh yeah, shit happens sometimes
         if (thread != null) {
             if (thread.isAlive()) {
@@ -114,6 +117,9 @@ public abstract class LocationProvider {
     }
 
     protected final void zombie() {
+        // debug
+        setStatus("zombie");
+
         // be ready for restart
         synchronized (this) {
             go = false;
@@ -124,6 +130,9 @@ public abstract class LocationProvider {
     }
 
     protected final void die() {
+        // debug
+        setStatus("being stopped");
+        
         // shutdown provider thread
         synchronized (this) {
             go = false;

@@ -22,6 +22,7 @@ import api.location.Location;
 import api.location.CartesianCoordinates;
 import api.location.Datum;
 import api.location.LocationProvider;
+import api.location.ProjectionSetup;
 
 import java.io.IOException;
 
@@ -45,11 +46,11 @@ public final class O2GermanyLocationProvider
 
     private volatile Object trigger;
 
-    private static final Mercator.ProjectionSetup[] zones = {
-        new Mercator.ProjectionSetup("GK 2", null, 6D, 0D, 1D, 2500000, 0),
-        new Mercator.ProjectionSetup("GK 3", null, 9D, 0D, 1D, 3500000, 0),
-        new Mercator.ProjectionSetup("GK 4", null, 12D, 0D, 1D, 4500000, 0),
-        new Mercator.ProjectionSetup("GK 5", null, 15D, 0D, 1D, 5500000, 0)
+    private static final ProjectionSetup[] zones = {
+        new ProjectionSetup("GK 2", null, 6D, 0D, 1D, 2500000, 0),
+        new ProjectionSetup("GK 3", null, 9D, 0D, 1D, 3500000, 0),
+        new ProjectionSetup("GK 4", null, 12D, 0D, 1D, 4500000, 0),
+        new ProjectionSetup("GK 5", null, 15D, 0D, 1D, 5500000, 0)
     };
     private static final Datum potsdam = Config.getDatum("Potsdam");
 

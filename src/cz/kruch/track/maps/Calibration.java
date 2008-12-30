@@ -69,9 +69,6 @@ abstract class Calibration {
     private double h2, v2;
     private double hScale, vScale;
 
-    // calibration coordinate system flag
-    private boolean cartesian;
-    
     // reusable info
     private Position proximite;
 
@@ -143,9 +140,9 @@ abstract class Calibration {
         final double v = cgpv + (nk0 * dx) - (dy * (gridLVscale + dx * vScale));
 
         // get local coordinates
-        if (cartesian) {
-            final CartesianCoordinates cc = CartesianCoordinates.newInstance(((Mercator.ProjectionSetup) projectionSetup).zone, h, v);
-            localQc = Mercator.MercatortoLL(cc, getDatum().ellipsoid, (Mercator.ProjectionSetup) projectionSetup);
+        if (projectionSetup.isCartesian()) {
+            final CartesianCoordinates cc = CartesianCoordinates.newInstance(projectionSetup.zone, h, v);
+            localQc = Mercator.MercatortoLL(cc, getDatum().ellipsoid, projectionSetup);
             CartesianCoordinates.releaseInstance(cc);
         } else {
             localQc = QualifiedCoordinates.newInstance(v, h);
@@ -167,9 +164,10 @@ abstract class Calibration {
         final QualifiedCoordinates localQc = getDatum().toLocal(qc);
 
         // get h,v
-        if (cartesian) {
-            CartesianCoordinates cc = Mercator.LLtoMercator(localQc, getDatum().ellipsoid,
-                                                            (Mercator.ProjectionSetup) projectionSetup);
+        if (projectionSetup.isCartesian()) {
+            final CartesianCoordinates cc = Mercator.LLtoMercator(localQc,
+                                                                  getDatum().ellipsoid,
+                                                                  projectionSetup);
             H = cc.getH();
             V = cc.getV();
             CartesianCoordinates.releaseInstance(cc);
@@ -249,13 +247,10 @@ abstract class Calibration {
         cxyy = calibrationXy.getY();
 
         // compute grid
-        if (projectionSetup instanceof Mercator.ProjectionSetup) {
-
-            // use cartesian system
-            cartesian = true;
+        if (projectionSetup.isCartesian()) {
 
             // setup is for Mercator projection
-            final Mercator.ProjectionSetup msetup = (Mercator.ProjectionSetup) projectionSetup;
+            final ProjectionSetup msetup = projectionSetup;
             final Ellipsoid ellipsoid = getDatum().ellipsoid;
 
             /*

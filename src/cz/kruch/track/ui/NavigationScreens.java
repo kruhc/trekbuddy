@@ -410,7 +410,7 @@ public final class NavigationScreens {
     }
 
     public static boolean isGrid() {
-        return ProjectionSetup.contextProjection instanceof Mercator.ProjectionSetup && ProjectionSetup.contextProjection.code != api.location.ProjectionSetup.PROJECTION_MERCATOR;
+        return ProjectionSetup.contextProjection.isCartesian() && ProjectionSetup.contextProjection.code != api.location.ProjectionSetup.PROJECTION_MERCATOR;
     }
 
     public static StringBuffer printTo(final QualifiedCoordinates qc, final StringBuffer sb) {

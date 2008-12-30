@@ -41,16 +41,18 @@ public final class GpxTracklog extends Thread {
     private static final String GPX_1_1_NAMESPACE   = "http://www.topografix.com/GPX/1/1";
     private static final String GS_1_0_NAMESPACE    = "http://www.groundspeak.com/cache/1/0";
     private static final String GS_1_0_PREFIX       = "groundspeak";
-    private static final String EXT_NAMESPACE       = "urn:net:trekbuddy:1.0:nmea";
-    private static final String EXT_PREFIX          = "nmea";
-    private static final String GSM_NAMESPACE       = "urn:net:trekbuddy:1.0:gsm";
+    private static final String AU_1_0_NAMESPACE    = "http://geocaching.com.au/geocache/1";
+    private static final String AU_1_0_PREFIX       = "au";
+    private static final String NMEA_NAMESPACE      = "http://trekbuddy.net/2009/01/gpx/nmea";
+    private static final String NMEA_PREFIX         = "nmea";
+    private static final String GSM_NAMESPACE       = "http://trekbuddy.net/2009/01/gpx/gsm";
     private static final String GSM_PREFIX          = "gsm";
 
-    private static final float  MIN_SPEED_WALK = 1F;        // 1 m/s ~ 3.6 km/h
-    private static final float  MIN_SPEED_BIKE = 5F;        // 5 m/s ~ 18 km/h
-    private static final float  MIN_SPEED_CAR  = 10F;       // 10 m/s ~ 36 km/h
-    private static final float  MIN_COURSE_DIVERSION      = 15F; // 15 degrees
-    private static final float  MIN_COURSE_DIVERSION_FAST = 10F; // 10 degrees
+    private static final float  MIN_SPEED_WALK              = 1F;  // 1 m/s ~ 3.6 km/h
+    private static final float  MIN_SPEED_BIKE              = 5F;  // 5 m/s ~ 18 km/h
+    private static final float  MIN_SPEED_CAR               = 10F; // 10 m/s ~ 36 km/h
+    private static final float  MIN_COURSE_DIVERSION        = 15F; // 15 degrees
+    private static final float  MIN_COURSE_DIVERSION_FAST   = 10F; // 10 degrees
 
     public static final int LOG_WPT = 0;
     public static final int LOG_TRK = 1;
@@ -61,26 +63,26 @@ public final class GpxTracklog extends Thread {
     public static final int CODE_WAYPOINT_INSERTED = 2;
 */
 
-    private static final String ELEMENT_GPX         = "gpx";
-    private static final String ELEMENT_TRK         = "trk";
-    private static final String ELEMENT_TRKSEG      = "trkseg";
-    private static final String ELEMENT_TRKPT       = "trkpt";
-    private static final String ELEMENT_TIME        = "time";
-    private static final String ELEMENT_ELEVATION   = "ele";
-    private static final String ELEMENT_FIX         = "fix";
-    private static final String ELEMENT_SAT         = "sat";
-    private static final String ELEMENT_WPT         = "wpt";
-    private static final String ELEMENT_NAME        = "name";
-    private static final String ELEMENT_CMT         = "cmt";
-    private static final String ELEMENT_SYM         = "sym";
-    private static final String ELEMENT_LINK        = "link";
-    private static final String ELEMENT_EXTENSIONS  = "extensions";
-    private static final String ELEMENT_COURSE      = "course";
-    private static final String ELEMENT_SPEED       = "speed";
-    private static final String ELEMENT_CELLID      = "cellid";
-    private static final String ELEMENT_LAC         = "lac";
-    private static final String ELEMENT_SENSORS     = "sensors";
-    private static final String ELEMENT_SENSOR      = "sensor";
+    private static final String ELEMENT_GPX             = "gpx";
+    private static final String ELEMENT_TRK             = "trk";
+    private static final String ELEMENT_TRKSEG          = "trkseg";
+    private static final String ELEMENT_TRKPT           = "trkpt";
+    private static final String ELEMENT_TIME            = "time";
+    private static final String ELEMENT_ELEVATION       = "ele";
+    private static final String ELEMENT_FIX             = "fix";
+    private static final String ELEMENT_SAT             = "sat";
+    private static final String ELEMENT_WPT             = "wpt";
+    private static final String ELEMENT_NAME            = "name";
+    private static final String ELEMENT_CMT             = "cmt";
+    private static final String ELEMENT_SYM             = "sym";
+    private static final String ELEMENT_LINK            = "link";
+    private static final String ELEMENT_EXTENSIONS      = "extensions";
+    private static final String ELEMENT_COURSE          = "course";
+    private static final String ELEMENT_SPEED           = "speed";
+    private static final String ELEMENT_CELLID          = "cellid";
+    private static final String ELEMENT_LAC             = "lac";
+    private static final String ELEMENT_SENSORS         = "sensors";
+    private static final String ELEMENT_SENSOR          = "sensor";
     private static final String ELEMENT_GS_CACHE        = "cache";
     private static final String ELEMENT_GS_TYPE         = "type";
     private static final String ELEMENT_GS_CONTAINER    = "container";
@@ -90,20 +92,25 @@ public final class GpxTracklog extends Thread {
     private static final String ELEMENT_GS_LONGL        = "long_description";
     private static final String ELEMENT_GS_COUNTRY      = "country";
     private static final String ELEMENT_GS_HINTS        = "encoded_hints";
+    private static final String ELEMENT_AU_CACHE        = "geocache";
+    private static final String ELEMENT_AU_SUMMARY      = "summary";
+    private static final String ELEMENT_AU_DESC         = "description";
+    private static final String ELEMENT_AU_HINTS        = "hints";
 
-    private static final String ATTRIBUTE_UTF_8     = "UTF-8";
-    private static final String ATTRIBUTE_VERSION   = "version";
-    private static final String ATTRIBUTE_CREATOR   = "creator";
-    private static final String ATTRIBUTE_HREF      = "href";
-    private static final String ATTRIBUTE_LAT       = "lat";
-    private static final String ATTRIBUTE_LON       = "lon";
-    private static final String ATTRIBUTE_ID        = "id";
+    private static final String ATTRIBUTE_UTF_8         = "UTF-8";
+    private static final String ATTRIBUTE_VERSION       = "version";
+    private static final String ATTRIBUTE_CREATOR       = "creator";
+    private static final String ATTRIBUTE_HREF          = "href";
+    private static final String ATTRIBUTE_LAT           = "lat";
+    private static final String ATTRIBUTE_LON           = "lon";
+    private static final String ATTRIBUTE_ID            = "id";
+    private static final String ATTRIBUTE_STATUS        = "status";
 
-    private static final String FIX_NONE            = "none";
-    private static final String FIX_3D              = "3d";
-    private static final String FIX_2D              = "2d";
-    private static final String FIX_DGPS            = "dgps";
-    private static final String FIX_PPS             = "pps";
+    private static final String FIX_NONE    = "none";
+    private static final String FIX_3D      = "3d";
+    private static final String FIX_2D      = "2d";
+    private static final String FIX_DGPS    = "dgps";
+    private static final String FIX_PPS     = "pps";
 
     private final Calendar calendar = Calendar.getInstance(TimeZone.getDefault());
     private final Date date = new Date();
@@ -216,8 +223,9 @@ public final class GpxTracklog extends Thread {
                 serializer.setPrefix(null, GPX_1_1_NAMESPACE);
                 if (type == LOG_WPT) {
                     serializer.setPrefix(GS_1_0_PREFIX, GS_1_0_NAMESPACE);
+                    serializer.setPrefix(AU_1_0_PREFIX, AU_1_0_NAMESPACE);
                 }
-                serializer.setPrefix(EXT_PREFIX, EXT_NAMESPACE);
+                serializer.setPrefix(NMEA_PREFIX, NMEA_NAMESPACE);
                 if (Config.gpxGsmInfo) {
                     serializer.setPrefix(GSM_PREFIX, GSM_NAMESPACE);
                 }
@@ -510,16 +518,16 @@ public final class GpxTracklog extends Thread {
         if (!Float.isNaN(course) || !Float.isNaN(speed) || l.isXdrBound() || Config.gpxGsmInfo) {
             serializer.startTag(DEFAULT_NAMESPACE, ELEMENT_EXTENSIONS);
             if (!Float.isNaN(course)) {
-                serializer.startTag(EXT_NAMESPACE, ELEMENT_COURSE);
+                serializer.startTag(NMEA_NAMESPACE, ELEMENT_COURSE);
                 i = doubleToChars(course, 1);
                 serializer.text(sbChars, 0, i);
-                serializer.endTag(EXT_NAMESPACE, ELEMENT_COURSE);
+                serializer.endTag(NMEA_NAMESPACE, ELEMENT_COURSE);
             }
             if (!Float.isNaN(speed)) {
-                serializer.startTag(EXT_NAMESPACE, ELEMENT_SPEED);
+                serializer.startTag(NMEA_NAMESPACE, ELEMENT_SPEED);
                 i = doubleToChars(speed, 1);
                 serializer.text(sbChars, 0, i);
-                serializer.endTag(EXT_NAMESPACE, ELEMENT_SPEED);
+                serializer.endTag(NMEA_NAMESPACE, ELEMENT_SPEED);
             }
             if (l.isXdrBound()) {
                 serializeXdr(serializer);
@@ -535,30 +543,45 @@ public final class GpxTracklog extends Thread {
 
     private void serializeGs(final GroundspeakBean bean) throws IOException {
         final KXmlSerializer serializer = this.serializer;
-        serializer.startTag(GS_1_0_NAMESPACE, ELEMENT_GS_CACHE);
-        serializer.attribute(DEFAULT_NAMESPACE, ATTRIBUTE_ID, bean.getId());
-        serializer.startTag(GS_1_0_NAMESPACE, ELEMENT_NAME);
+        final String ns;
+        if (bean.getId() != null) {
+            ns = GS_1_0_NAMESPACE;
+            serializer.startTag(GS_1_0_NAMESPACE, ELEMENT_GS_CACHE);
+            serializer.attribute(DEFAULT_NAMESPACE, ATTRIBUTE_ID, bean.getId());
+        } else {
+            ns = AU_1_0_NAMESPACE;
+            serializer.startTag(AU_1_0_NAMESPACE, ELEMENT_AU_CACHE);
+            serializer.attribute(DEFAULT_NAMESPACE, ATTRIBUTE_STATUS, "Available");
+        }
+        serializer.startTag(ns, ELEMENT_NAME);
         serializer.text(bean.getName());
-        serializer.endTag(GS_1_0_NAMESPACE, ELEMENT_NAME);
-        serializer.startTag(GS_1_0_NAMESPACE, ELEMENT_GS_TYPE);
+        serializer.endTag(ns, ELEMENT_NAME);
+        serializer.startTag(ns, ELEMENT_GS_TYPE);
         serializer.text(bean.getType());
-        serializer.endTag(GS_1_0_NAMESPACE, ELEMENT_GS_TYPE);
-        serializer.startTag(GS_1_0_NAMESPACE, ELEMENT_GS_CONTAINER);
+        serializer.endTag(ns, ELEMENT_GS_TYPE);
+        serializer.startTag(ns, ELEMENT_GS_CONTAINER);
         serializer.text(bean.getContainer());
-        serializer.endTag(GS_1_0_NAMESPACE, ELEMENT_GS_CONTAINER);
-        serializer.startTag(GS_1_0_NAMESPACE, ELEMENT_GS_DIFF);
+        serializer.endTag(ns, ELEMENT_GS_CONTAINER);
+        serializer.startTag(ns, ELEMENT_GS_DIFF);
         serializer.text(bean.getDifficulty());
-        serializer.endTag(GS_1_0_NAMESPACE, ELEMENT_GS_DIFF);
-        serializer.startTag(GS_1_0_NAMESPACE, ELEMENT_GS_TERRAIN);
+        serializer.endTag(ns, ELEMENT_GS_DIFF);
+        serializer.startTag(ns, ELEMENT_GS_TERRAIN);
         serializer.text(bean.getTerrain());
-        serializer.endTag(GS_1_0_NAMESPACE, ELEMENT_GS_TERRAIN);
-        serializer.startTag(GS_1_0_NAMESPACE, ELEMENT_GS_COUNTRY);
+        serializer.endTag(ns, ELEMENT_GS_TERRAIN);
+        serializer.startTag(ns, ELEMENT_GS_COUNTRY);
         serializer.text(bean.getCountry());
-        serializer.endTag(GS_1_0_NAMESPACE, ELEMENT_GS_COUNTRY);
-        serializeElement(serializer, bean.getShortListing(), GS_1_0_NAMESPACE, ELEMENT_GS_SHORTL);
-        serializeElement(serializer, bean.getLongListing(), GS_1_0_NAMESPACE, ELEMENT_GS_LONGL);
-        serializeElement(serializer, bean.getEncodedHints(), GS_1_0_NAMESPACE, ELEMENT_GS_HINTS);
-        serializer.endTag(GS_1_0_NAMESPACE, ELEMENT_GS_CACHE);
+        serializer.endTag(ns, ELEMENT_GS_COUNTRY);
+        if (bean.getId() != null) {
+            serializeElement(serializer, bean.getShortListing(), GS_1_0_NAMESPACE, ELEMENT_GS_SHORTL);
+            serializeElement(serializer, bean.getLongListing(), GS_1_0_NAMESPACE, ELEMENT_GS_LONGL);
+            serializeElement(serializer, bean.getEncodedHints(), GS_1_0_NAMESPACE, ELEMENT_GS_HINTS);
+            serializer.endTag(GS_1_0_NAMESPACE, ELEMENT_GS_CACHE);
+        } else {
+            serializeElement(serializer, bean.getShortListing(), ns, ELEMENT_AU_SUMMARY);
+            serializeElement(serializer, bean.getLongListing(), ns, ELEMENT_AU_DESC);
+            serializeElement(serializer, bean.getEncodedHints(), ns, ELEMENT_AU_HINTS);
+            serializer.endTag(AU_1_0_NAMESPACE, ELEMENT_AU_CACHE);
+        }
     }
 
     private void serializeWpt(final Waypoint wpt) throws IOException {
@@ -600,18 +623,18 @@ public final class GpxTracklog extends Thread {
     private void serializeXdr(final KXmlSerializer serializer) throws IOException {
         final Hashtable xdr = NmeaParser.xdr;
         if (xdr.size() > 0) {
-            serializer.startTag(EXT_NAMESPACE, ELEMENT_SENSORS);
+            serializer.startTag(NMEA_NAMESPACE, ELEMENT_SENSORS);
             for (Enumeration keys = xdr.keys(); keys.hasMoreElements(); ) {
                 final Object key = keys.nextElement();
                 final Float value = (Float) xdr.get(key);
                 final String id = key.toString();
-                serializer.startTag(EXT_NAMESPACE, ELEMENT_SENSOR);
+                serializer.startTag(NMEA_NAMESPACE, ELEMENT_SENSOR);
                 serializer.attribute(DEFAULT_NAMESPACE, ATTRIBUTE_ID, id);
                 final int i = doubleToChars(value.floatValue(), 1);
                 serializer.text(sbChars, 0, i);
-                serializer.endTag(EXT_NAMESPACE, ELEMENT_SENSOR);
+                serializer.endTag(NMEA_NAMESPACE, ELEMENT_SENSOR);
             }
-            serializer.endTag(EXT_NAMESPACE, ELEMENT_SENSORS);
+            serializer.endTag(NMEA_NAMESPACE, ELEMENT_SENSORS);
         }
     }
 

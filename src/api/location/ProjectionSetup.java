@@ -1,23 +1,9 @@
-/*
- * Copyright 2006-2007 Ales Pour <kruhc@seznam.cz>.
- * All Rights Reserved.
- * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
- *
- * This code is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License version 2 only, as
- * published by the Free Software Foundation.
- *
- * This code is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
- * version 2 for more details (a copy is included in the LICENSE file that
- * accompanied this code).
- */
+// @LICENSE@
 
 package api.location;
 
 /**
- * Represents map projection information. <b>There is not such thing in JSR-179</b>.
+ * Represents map projection information. <b>There is no such thing in JSR-179</b>.
  *
  * @author Ales Pour <kruhc@seznam.cz>
  */
@@ -44,14 +30,130 @@ public class ProjectionSetup {
     public static final int PROJECTION_BNG          = 3;
     public static final int PROJECTION_IG           = 4;
     public static final int PROJECTION_LCC          = 5;
+    public static final int PROJECTION_LATLON       = 666;
 
     public static ProjectionSetup contextProjection;
 
     public final String name;
-    public final int code;
+    public final double lonOrigin, latOrigin;
+    public final double parallel1, parallel2;
+    public final double k0;
+    public final double falseEasting, falseNorthing;
+    public final short zoneNumber;
+    public final char zoneLetter;
+    public final char[] zone;
 
+    public int code;
+
+    /*
+     * Latitude/Longitude constructor.
+     */
     public ProjectionSetup(final String name) {
         this.name = name;
+        decode(name);
+        this.zoneNumber = -1;
+        this.zoneLetter = 'Z';
+        this.k0 = Double.NaN;
+        this.lonOrigin = this.latOrigin = Double.NaN;
+        this.parallel1 = this.parallel2 = Double.NaN;
+        this.falseEasting = this.falseNorthing = Double.NaN;
+        this.zone = null;
+    }
+
+    /*
+     * UTM constructor.
+     */
+    public ProjectionSetup(final String name,
+                           final int zoneNumber, final char zoneLetter,
+                           final double lonOrigin, final double latOrigin,
+                           final double k0,
+                           final double falseEasting, final double falseNorthing) {
+        this.name = name;
+        decode(name);
+        this.zoneNumber = (short) zoneNumber;
+        this.zoneLetter = zoneLetter;
+        this.zone = (new StringBuffer(32)).append(zoneNumber).append(zoneLetter).toString().toCharArray();
+        this.lonOrigin = lonOrigin;
+        this.latOrigin = latOrigin;
+        this.parallel1 = this.parallel2 = Double.NaN;
+        this.k0 = k0;
+        this.falseEasting = falseEasting;
+        this.falseNorthing = falseNorthing;
+    }
+
+    /*
+     * Mercator and Transverse Mercator constructor.
+     */
+    public ProjectionSetup(final String name, final char[] zone,
+                           final double lonOrigin, final double latOrigin,
+                           final double k0,
+                           final double falseEasting, final double falseNorthing) {
+        this.name = name;
+        decode(name);
+        this.zoneNumber = -1;
+        this.zoneLetter = 'Z';
+        this.zone = zone;
+        this.lonOrigin = lonOrigin;
+        this.latOrigin = latOrigin;
+        this.parallel1 = this.parallel2 = Double.NaN;
+        this.k0 = k0;
+        this.falseEasting = falseEasting;
+        this.falseNorthing = falseNorthing;
+    }
+
+    /*
+     * Generic constructor.
+     */
+    public ProjectionSetup(final String name, final char[] zone,
+                           final double lonOrigin, final double latOrigin,
+                           final double k0,
+                           final double falseEasting, final double falseNorthing,
+                           final double parallel1, final double parallel2) {
+        this.name = name;
+        decode(name);
+        this.zoneNumber = -1;
+        this.zoneLetter = 'Z';
+        this.zone = zone;
+        this.lonOrigin = lonOrigin;
+        this.latOrigin = latOrigin;
+        this.parallel1 = parallel1;
+        this.parallel2 = parallel2;
+        this.k0 = k0;
+        this.falseEasting = falseEasting;
+        this.falseNorthing = falseNorthing;
+    }
+
+    // TODO optimize
+    public String toString() {
+        if (PROJ_MERCATOR.equals(name) || PROJ_LATLON.equals(name)) {
+            return (new StringBuffer(32)).append(name).append('{').append('}').toString();
+        }
+
+        final StringBuffer sb = new StringBuffer(32);
+        sb.append(name).append('{');
+        if (zone != null) {
+            sb.append(zone).append(',');
+        }
+        sb.append(lonOrigin).append(',').append(latOrigin).append(',');
+        if (!Double.isNaN(k0)) sb.append(k0);
+        sb.append(',');
+        if (!Double.isNaN(falseEasting)) sb.append(falseEasting);
+        sb.append(',');
+        if (!Double.isNaN(falseNorthing)) sb.append(falseNorthing);
+        sb.append(',');
+        if (!Double.isNaN(parallel1)) sb.append(parallel1);
+        sb.append(',');
+        if (!Double.isNaN(parallel2)) sb.append(parallel2);
+        sb.append('}');
+
+        return sb.toString();
+    }
+
+    public boolean isCartesian() {
+        return code != PROJECTION_LATLON; 
+    }
+
+    private void decode(final String name) {
         if (PROJ_MERCATOR.equals(name)) {
             this.code = PROJECTION_MERCATOR;
         } else if (PROJ_SUI.equals(name)) {
@@ -64,12 +166,10 @@ public class ProjectionSetup {
             this.code = PROJECTION_IG;
         } else if (PROJ_LCC.equals(name)) {
             this.code = PROJECTION_LCC;
+        } else if (PROJ_LATLON.equals(name)) {
+            this.code = PROJECTION_LATLON;
         } else {
             this.code = -1;
         }
-    }
-
-    public String toString() {
-        return (new StringBuffer(32)).append(name).append('{').append('}').toString();
     }
 }

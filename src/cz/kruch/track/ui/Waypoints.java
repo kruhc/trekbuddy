@@ -72,64 +72,45 @@ public final class Waypoints
     private static final String USER_INJAR_STORE    = "<in-jar>";
 */
 
-    private static final String SUFFIX_GPX = ".gpx";
-    private static final String SUFFIX_LOC = ".loc";
+    private static final String SUFFIX_GPX      = ".gpx";
+    private static final String SUFFIX_LOC      = ".loc";
 
-/*
-    private static final String TAG_RTEPT   = "rtept";
-    private static final String TAG_WPT     = "wpt";
-    private static final String TAG_TRKPT   = "trkpt";
-    private static final String TAG_NAME    = "name";
-    private static final String TAG_CMT     = "cmt";
-    private static final String TAG_DESC    = "desc";
-    private static final String TAG_ELE     = "ele";
-    private static final String TAG_LINK    = "link";
-    private static final String TAG_WAYPOINT = "waypoint";
-    private static final String TAG_COORD   = "coord";
-    private static final String TAG_SYM     = "sym";
-*/
-    private static final int TAG_RTEPT   = 0x067cbba7;
-    private static final int TAG_WPT     = 0x0001ccbb;
-    private static final int TAG_TRKPT   = 0x06981871;
-    private static final int TAG_NAME    = 0x00337a8b;
-    private static final int TAG_CMT     = 0x0001814a;
-    private static final int TAG_DESC    = 0x002efe91;
-    private static final int TAG_ELE     = 0x0001889e;
-    private static final int TAG_LINK    = 0x0032affa;
-    private static final int TAG_WAYPOINT= 0x29c10801;
-    private static final int TAG_COORD   = 0x05a73af5;
-    private static final int TAG_SYM     = 0x0001bec7;
+    private static final int TAG_RTEPT          = 0x067cbba7; // "rtept"
+    private static final int TAG_WPT            = 0x0001ccbb; // "wpt"
+    private static final int TAG_TRKPT          = 0x06981871; // "trkpt"
+    private static final int TAG_NAME           = 0x00337a8b; // "name"
+    private static final int TAG_CMT            = 0x0001814a; // "cmt"
+    private static final int TAG_DESC           = 0x002efe91; // "desc"
+    private static final int TAG_ELE            = 0x0001889e; // "ele"
+    private static final int TAG_LINK           = 0x0032affa; // "link"
+    private static final int TAG_WAYPOINT       = 0x29c10801; // "waypoint"
+    private static final int TAG_COORD          = 0x05a73af5; // "coord"
+    private static final int TAG_SYM            = 0x0001bec7; // "sym"
 
-    private static final String ATTR_LAT    = "lat";
-    private static final String ATTR_LON    = "lon";
-    private static final String ATTR_HREF   = "href";
+    private static final String ATTR_LAT        = "lat";
+    private static final String ATTR_LON        = "lon";
+    private static final String ATTR_HREF       = "href";
 
-/*
-    private static final String TAG_GS_CACHE        = "cache";
-    private static final String TAG_GS_TYPE         = "type";
-    private static final String TAG_GS_CONTAINER    = "container";
-    private static final String TAG_GS_DIFF         = "difficulty";
-    private static final String TAG_GS_TERRAIN      = "terrain";
-    private static final String TAG_GS_SHORTL       = "short_description";
-    private static final String TAG_GS_LONGL        = "long_description";
-    private static final String TAG_GS_COUNTRY      = "country";
-    private static final String TAG_GS_HINTS        = "encoded_hints";
-*/
-    private static final int TAG_GS_CACHE        = 0x05a0af82;
-    private static final int TAG_GS_TYPE         = 0x00368f3a;
-    private static final int TAG_GS_CONTAINER    = 0xe7814c81;
-    private static final int TAG_GS_DIFF         = 0x6d0bf7bb;
-    private static final int TAG_GS_TERRAIN      = 0xab281335;
-    private static final int TAG_GS_SHORTL       = 0xf1f88cb9;
-    private static final int TAG_GS_LONGL        = 0x97d2ceb9;
-    private static final int TAG_GS_COUNTRY      = 0x39175796;
-    private static final int TAG_GS_HINTS        = 0x20d8585b;
+    private static final int TAG_GS_CACHE       = 0x05a0af82; // "cache"
+    private static final int TAG_GS_TYPE        = 0x00368f3a; // "type"
+    private static final int TAG_GS_CONTAINER   = 0xe7814c81; // "container"
+    private static final int TAG_GS_DIFF        = 0x6d0bf7bb; // "difficulty"
+    private static final int TAG_GS_TERRAIN     = 0xab281335; // "terrain"
+    private static final int TAG_GS_SHORTL      = 0xf1f88cb9; // "short_description"
+    private static final int TAG_GS_LONGL       = 0x97d2ceb9; // "long_description"
+    private static final int TAG_GS_COUNTRY     = 0x39175796; // "country"
+    private static final int TAG_GS_HINTS       = 0x20d8585b; // "encoded_hints"
 
-    private static final String ATTR_GS_ID          = "id";
+    private static final String ATTR_GS_ID      = "id";
 
-    private static final String PREFIX_WMAP = "wmap-";
-    private static final String PREFIX_WSMS = "wsms-";
-    private static final String PREFIX_WGPS = "wgps-";
+    private static final int TAG_AU_CACHE       = 0x6d790ad1; // "geocache"
+    private static final int TAG_AU_SUMMARY     = 0x9146a7a6; // "summary"
+    private static final int TAG_AU_DESC        = 0x993583fc; // "description"
+    private static final int TAG_AU_HINTS       = 0x05eaf2cc; // "hints"
+
+    private static final String PREFIX_WMAP     = "wmap-";
+    private static final String PREFIX_WSMS     = "wsms-";
+    private static final String PREFIX_WGPS     = "wgps-";
     
     private static final String itemWptsStores   = Resources.getString(Resources.NAV_ITEM_WAYPOINTS);
     private static final String itemTracksStores = Resources.getString(Resources.NAV_ITEM_TRACKS);
@@ -224,10 +205,10 @@ public final class Waypoints
         // show current store, if any...
         if (inUseWpts != null) {
             depth = 2;
-            use(listWaypoints(inUseName, inUseWpts));
+            use(listWaypoints(inUseName, inUseWpts, false));
         } else if (currentWpts != null) {
             depth = 2;
-            use(listWaypoints(currentName, currentWpts));
+            use(listWaypoints(currentName, currentWpts, false));
         } else {
             depth = 0;
             use(this);
@@ -868,7 +849,7 @@ public final class Waypoints
 
             try {
                 // create list
-                use(listWaypoints(_storeName, wpts));
+                use(listWaypoints(_storeName, wpts, true));
 
                 // remove current store from cache IF IT IS NOT in-use
                 if (currentName != null && !currentName.equals(inUseName)) {
@@ -1147,14 +1128,15 @@ public final class Waypoints
         return l;
     }
 
-    private Displayable listWaypoints(final String store, final Vector wpts) {
+    private Displayable listWaypoints(final String store, final Vector wpts,
+                                      final boolean forceSort) {
         // create list
         final SmartList l = new SmartList((new StringBuffer(32)).append(store).append(" [").append(wpts.size()).append(']').toString(), this);
         sortedWpts = null; // gc hint
         l.setData(sortedWpts = new NakedVector((NakedVector) wpts));
 
         // pre-sort
-        sortWaypoints(l, sort, true, wpts);
+        sortWaypoints(l, sort, forceSort, wpts);
 
         // set selected
         if (Desktop.wpts == wpts && Desktop.wptIdx > -1) {
@@ -1404,6 +1386,12 @@ public final class Waypoints
                                     // create bean
                                     gsbean = new GroundspeakBean(parser.getAttributeValue(null, ATTR_GS_ID));
                                 } break;
+                                case TAG_AU_CACHE: {
+                                    // groundspeak
+                                    depth = 2;
+                                    // create bean
+                                    gsbean = new GroundspeakBean(null);
+                                } break;
                                 default: {
                                     // skip
                                     parser.skipSubTree();
@@ -1421,6 +1409,10 @@ public final class Waypoints
                                     // get GS type
                                     gsbean.setType(parser.nextText());
                                 } break;
+                                case TAG_AU_HINTS: {
+                                    // get GS long listing
+                                    gsbean.setEncodedHints(parser.nextText());
+                                } break;
                                 case TAG_GS_HINTS: {
                                     // get GS long listing
                                     gsbean.setEncodedHints(parser.nextText());
@@ -1433,8 +1425,16 @@ public final class Waypoints
                                     // get GS difficulty
                                     gsbean.setDifficulty(parser.nextText());
                                 } break;
+                                case TAG_AU_SUMMARY: {
+                                    // get AU summary used as GS long listing as
+                                    gsbean.setShortListing(parser.nextText());
+                                } break;
                                 case TAG_GS_LONGL: {
                                     // get GS long listing
+                                    gsbean.setLongListing(parser.nextText());
+                                } break;
+                                case TAG_AU_DESC: {
+                                    // get AU description
                                     gsbean.setLongListing(parser.nextText());
                                 } break;
                                 case TAG_GS_TERRAIN: {
@@ -1496,7 +1496,7 @@ public final class Waypoints
                         } break;
                         case 2: {
                             final int tag = parser.getHash();
-                            if (TAG_GS_CACHE == tag) {
+                            if (TAG_GS_CACHE == tag || TAG_AU_CACHE == tag) {
                                 // back to <wpt> level
                                 depth = 1;
                             }

@@ -6,7 +6,7 @@ import java.util.Vector;
 import java.io.UnsupportedEncodingException;
 
 /**
- * Groundspeak GPX wpt extension holder.
+ * Groundspeak and Australian GPX wpt extension holder.
  */
 public final class GroundspeakBean {
     private static final String UTF_8 = "UTF-8";

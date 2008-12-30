@@ -636,13 +636,14 @@ public final class Map implements Runnable {
                             // load image
                             try {
                                 loadSlice(slice);
-                            } catch (Throwable t) {
+                            } catch (IOException e) { // file not found or corrupted
                                 slice.setImage(Slice.NO_IMAGE);
+                            } catch (Throwable t) { // typically out of memory
                                 throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_SLICE_LOAD_FAILED) + ": " + t.toString());
                             }
 
-                            // assertion
-                            if (slice.getImage() == null) {
+                            // assertion and/or user warning
+                            if (slice.getImage() == null || slice.getImage() == Slice.NO_IMAGE) {
                                 throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_NO_SLICE_IMAGE) + " " + slice.toString());
                             }
 
@@ -650,7 +651,6 @@ public final class Map implements Runnable {
                             if (Config.forcedGc) {
                                 System.gc();
                             }
-
 //#ifdef __LOG__
                             if (log.isEnabled()) log.debug("image loaded for slice " + slice.toString());
 //#endif

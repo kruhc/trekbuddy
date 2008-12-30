@@ -1701,43 +1701,46 @@ public final class KXmlParser implements XmlPullParser {
     public void skipSubTree() throws XmlPullParserException, IOException {
         require(START_TAG, null, null);
 
-/*
         int level = 1;
         while (level > 0) {
-            int eventType = next();
-            if (eventType == END_TAG) {
-                --level;
-            }
-            else if (eventType == START_TAG) {
-                ++level;
+            switch (next()) {
+                case START_TAG:
+                    ++level;
+                    break;
+                case END_TAG:
+                    --level;
+                    break;
             }
         }
+/*
+        if (!degenerated) {
+            int c, skipped = 0, level = 1;
+            do {
+                if (skipped > 0) {
+                    read();
+                }
+                c = peek(0);
+                if (c == -1) {
+                    break;
+                }
+                switch (c) {
+                    case '<': {
+                        if (peek(1) == '/') {
+                            --level;
+                        } else {
+                            ++level;
+                        }
+                    } break;
+                    case '/': {
+                        if (peek(1) == '>') {
+                            --level;
+                        }
+                    } break;
+                }
+                skipped++;
+            } while (level > 0);
+        }
 */
-        int c, skipped = 0, level = 1;
-        do {
-            if (skipped > 0) {
-                read();
-            }
-            c = peek(0);
-            if (c == -1) {
-                break;
-            }
-            switch (c) {
-                case '<': {
-                    if (peek(1) == '/') {
-                        --level;
-                    } else {
-                        ++level;
-                    }
-                } break;
-                case '/': {
-                    if (peek(1) == '>') {
-                        --level;
-                    }
-                } break;
-            }
-            skipped++;
-        } while (level > 0);
     }
 
     public void close() throws IOException {

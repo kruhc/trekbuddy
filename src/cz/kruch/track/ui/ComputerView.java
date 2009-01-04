@@ -210,6 +210,7 @@ final class ComputerView extends View implements Runnable, CommandListener {
     private static final String INF_TIME        = "99:99:99";
 
     private static final float AUTO_MIN         = 2.4F;
+    private static final int SHORT_AVG_DEPTH    = 30; // 30 sec (for 1 Hz NMEA)
 
 /*
     private static final Calendar CALENDAR  = Calendar.getInstance(TimeZone.getDefault());
@@ -307,7 +308,7 @@ final class ComputerView extends View implements Runnable, CommandListener {
 
         // trip values
         this.valuesFloat = new float[TOKENS_float.length];
-        this.spdavgFloat = new float[8];
+        this.spdavgFloat = new float[SHORT_AVG_DEPTH];
 
         // reset trip values
         reset();
@@ -548,7 +549,7 @@ final class ComputerView extends View implements Runnable, CommandListener {
                     for (int N = names.length, i = 0; i < N; i++) {
                         list.setSelectedIndex(list.append(names[i], null), names[i].equals(Config.cmsProfile));
                     }
-                    list.addCommand(new Command(Resources.getString(Resources.CMD_CANCEL), Command.CANCEL, 0));
+                    list.addCommand(new Command(Resources.getString(Resources.CMD_CANCEL), Desktop.CANCEL_CMD_TYPE, 0));
                     list.setCommandListener(this);
                     Desktop.display.setCurrent(list);
                 } break;
@@ -756,7 +757,7 @@ final class ComputerView extends View implements Runnable, CommandListener {
         Desktop.display.setCurrent(navigator);
 
         // load new profile if selected
-        if (Command.CANCEL != command.getCommandType()) {
+        if (Desktop.CANCEL_CMD_TYPE != command.getCommandType()) {
 
             // get selection
             synchronized (this) {
@@ -774,8 +775,8 @@ final class ComputerView extends View implements Runnable, CommandListener {
         if (isUsable()) {
 /*
             // get rid of bitmap fonts in all areas
-            for (Enumeration e = profiles.elements(); e.hasMoreElements(); ) {
-                final Object o = e.nextElement();
+            for (final Enumeration seq = profiles.elements(); seq.hasMoreElements(); ) {
+                final Object o = seq.nextElement();
                 if (o instanceof Object[]) {
                     final Vector v = (Vector) ((Object[]) o)[0];
                     for (int N = v.size(), j = 0; j < N; j++) {

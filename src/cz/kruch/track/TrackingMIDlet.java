@@ -29,6 +29,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
     // diagnostics
 
     public static int pauses;
+    public static int state; 
 
 //#ifdef __LOG__
     private static boolean logEnabled;
@@ -165,29 +166,35 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         cz.kruch.track.ui.nokia.DeviceControl.initialize();
     }
 
-    private boolean running;
     private cz.kruch.track.ui.Desktop desktop;
 
     protected void startApp() throws MIDletStateChangeException {
 //#ifdef __LOG__
         System.out.println("* startApp *");
 //#endif
-        if (!running) {
-            running = true;
+        // initial launch?
+        if (state == 0) {
+            state = 1;
             (new Thread(this)).start();
         }
+
+        // update state
+        state = 1;
     }
 
     protected void pauseApp() {
         // diagnostics
         pauses++;
 
-        // anything else to do?
+        // update state
+        state = 2;
     }
 
     protected void destroyApp(boolean unconditional) throws MIDletStateChangeException {
         if (unconditional) {
-            // same as answering "Yes" in "Do you want to quit?"
+            // update state
+            state = 3;
+            // code path same as after answering "Yes" in "Do you want to quit?"
             desktop.response(cz.kruch.track.ui.YesNoDialog.YES, desktop);
         } else {
             // refuse

@@ -1,18 +1,4 @@
-/*
- * Copyright 2006-2007 Ales Pour <kruhc@seznam.cz>.
- * All Rights Reserved.
- * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
- *
- * This code is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License version 2 only, as
- * published by the Free Software Foundation.
- *
- * This code is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
- * version 2 for more details (a copy is included in the LICENSE file that
- * accompanied this code).
- */
+// @LICENSE@
 
 package cz.kruch.track.ui;
 
@@ -57,8 +43,8 @@ final class ItemSelection implements CommandListener {
                 }
             }
         }
-        list.addCommand(new Command(Resources.getString(Resources.CMD_CANCEL), Command.BACK, 1));
-        list.setSelectCommand(new Command(selectLabel, Command.ITEM, 1));
+        list.setSelectCommand(new Command(selectLabel, Desktop.SELECT_CMD_TYPE, 0));
+        list.addCommand(new Command(Resources.getString(Resources.CMD_CANCEL), Desktop.CANCEL_CMD_TYPE, 1));
         list.setCommandListener(this);
 
         // show selection
@@ -70,7 +56,7 @@ final class ItemSelection implements CommandListener {
         Desktop.display.setCurrent(next);
 
         // invoke callback
-        if (command.getCommandType() == Command.ITEM) {
+        if (command.getCommandType() == Desktop.SELECT_CMD_TYPE) {
             List list = (List) displayable;
             callback.invoke(list.getString(list.getSelectedIndex()), null, this);
         } else {

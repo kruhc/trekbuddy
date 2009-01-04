@@ -58,9 +58,9 @@ public final class FileBrowser implements CommandListener, Runnable, Comparator 
         this.title = Resources.prefixed(title);
         this.callback = callback;
         this.next = next;
-        this.cmdCancel = new Command(Resources.getString(Resources.CMD_CANCEL), Command.CANCEL, 1);
-        this.cmdBack = new Command(Resources.getString(Resources.CMD_BACK), Command.BACK, 1);
-        this.cmdSelect = new Command(Resources.getString(Resources.DESKTOP_CMD_SELECT), Command.ITEM, 1);
+        this.cmdCancel = new Command(Resources.getString(Resources.CMD_CANCEL), Desktop.CANCEL_CMD_TYPE, 1);
+        this.cmdBack = new Command(Resources.getString(Resources.CMD_BACK), Desktop.BACK_CMD_TYPE, 1);
+        this.cmdSelect = new Command(Resources.getString(Resources.DESKTOP_CMD_SELECT), Desktop.SELECT_CMD_TYPE, 0);
     }
 
     /* when used as filenames comparator */
@@ -195,7 +195,7 @@ public final class FileBrowser implements CommandListener, Runnable, Comparator 
     }
 
     public void commandAction(Command command, Displayable displayable) {
-        if (Command.ITEM == command.getCommandType()) {
+        if (Desktop.SELECT_CMD_TYPE == command.getCommandType()) {
             path = null; // gc hint
             path = list.getString(list.getSelectedIndex());
             if (File.PARENT_DIR.equals(path)) {
@@ -204,15 +204,17 @@ public final class FileBrowser implements CommandListener, Runnable, Comparator 
                 depth++;
             }
             browse();
-        } else if (Command.BACK == command.getCommandType()) {
-            depth--;
-            if (depth > 0) {
-                path = null; // gc hint
-                path = File.PARENT_DIR;
-            }
-            browse();
         } else {
-            quit(null);
+            depth--;
+            if (depth < 0) {
+                quit(null);
+            } else {
+                if (depth > 0) {
+                    path = null; // gc hint
+                    path = File.PARENT_DIR;
+                }
+                browse();
+            }
         }
     }
 

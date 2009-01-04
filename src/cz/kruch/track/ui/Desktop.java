@@ -2,11 +2,10 @@
 
 package cz.kruch.track.ui;
 
-import cz.kruch.track.TrackingMIDlet;
 import cz.kruch.track.Resources;
 import cz.kruch.track.event.Callback;
 import cz.kruch.track.fun.Friends;
-import cz.kruch.track.fun.Camera;
+import cz.kruch.track.fun.Playback;
 import cz.kruch.track.maps.Map;
 import cz.kruch.track.maps.Atlas;
 import cz.kruch.track.maps.io.LoaderIO;
@@ -15,7 +14,6 @@ import cz.kruch.track.configuration.ConfigurationException;
 import cz.kruch.track.location.GpxTracklog;
 import cz.kruch.track.location.Waypoint;
 import cz.kruch.track.util.CharArrayTokenizer;
-import api.io.BufferedOutputStream;
 
 import javax.microedition.lcdui.Canvas;
 import javax.microedition.lcdui.Display;
@@ -44,6 +42,7 @@ import api.location.LocationListener;
 import api.location.Location;
 import api.location.QualifiedCoordinates;
 import api.file.File;
+import api.io.BufferedOutputStream;
 
 /**
  * Application desktop. Navigator. :-)
@@ -69,7 +68,8 @@ public final class Desktop extends GameCanvas
     private static final int VIEW_CMS       = 2;
 
     // UI
-    static int POSITIVE_CMD_TYPE;
+    public static int POSITIVE_CMD_TYPE, EXIT_CMD_TYPE, SELECT_CMD_TYPE,
+                      BACK_CMD_TYPE, CANCEL_CMD_TYPE;
 
     // desktop screen and display
     public static Displayable screen;
@@ -185,7 +185,22 @@ public final class Desktop extends GameCanvas
         super(false);
 
         // UI
-        POSITIVE_CMD_TYPE = TrackingMIDlet.j9 ? Command.ITEM : Command.SCREEN;
+        POSITIVE_CMD_TYPE = Command.SCREEN;
+        EXIT_CMD_TYPE = POSITIVE_CMD_TYPE;
+        SELECT_CMD_TYPE = Command.ITEM;
+        BACK_CMD_TYPE = Command.BACK;
+        CANCEL_CMD_TYPE = Command.CANCEL;
+
+        // platform-specific hacks
+//#ifdef __J9__
+        POSITIVE_CMD_TYPE = Command.ITEM;
+//#endif
+//#ifdef __RIM__
+        EXIT_CMD_TYPE = Command.EXIT;
+        SELECT_CMD_TYPE = Command.SCREEN;
+        BACK_CMD_TYPE = Command.EXIT;
+        CANCEL_CMD_TYPE = Command.EXIT;
+//#endif
 
         // init static members
         screen = this;
@@ -312,7 +327,7 @@ public final class Desktop extends GameCanvas
         }
         this.addCommand(this.cmdSettings = new Command(Resources.getString(Resources.DESKTOP_CMD_SETTINGS), POSITIVE_CMD_TYPE, 6));
         this.addCommand(this.cmdInfo = new Command(Resources.getString(Resources.DESKTOP_CMD_INFO), POSITIVE_CMD_TYPE, 7));
-        this.addCommand(this.cmdExit = new Command(Resources.getString(Resources.DESKTOP_CMD_EXIT), POSITIVE_CMD_TYPE/*EXIT*/, 8/*1*/));
+        this.addCommand(this.cmdExit = new Command(Resources.getString(Resources.DESKTOP_CMD_EXIT), EXIT_CMD_TYPE, 8/*1*/));
         this.cmdPause = new Command(Resources.getString(Resources.DESKTOP_CMD_PAUSE), Config.fullscreen || cz.kruch.track.TrackingMIDlet.sonyEricsson || cz.kruch.track.TrackingMIDlet.jbed ? POSITIVE_CMD_TYPE : Command.STOP, 1);
         this.cmdContinue = new Command(Resources.getString(Resources.DESKTOP_CMD_CONTINUE), Config.fullscreen || cz.kruch.track.TrackingMIDlet.sonyEricsson || cz.kruch.track.TrackingMIDlet.jbed ? POSITIVE_CMD_TYPE : Command.STOP, 1);
         this.cmdStop = new Command(Resources.getString(Resources.DESKTOP_CMD_STOP), Config.fullscreen || cz.kruch.track.TrackingMIDlet.sonyEricsson || cz.kruch.track.TrackingMIDlet.jbed ? POSITIVE_CMD_TYPE : Command.STOP, 2);
@@ -1124,10 +1139,10 @@ public final class Desktop extends GameCanvas
                         boolean notified = false;
                         final String s = ((Waypoint) wpts.elementAt(wptIdx)).getLink(Waypoint.LINK_GENERIC_SOUND);
                         if (s != null) {
-                            notified = Camera.play(s);
+                            notified = Playback.play(s);
                         }
                         if (!notified) {
-                            notified = Camera.play(Config.defaultWptSound);
+                            notified = Playback.play(Config.defaultWptSound);
                         }
                         if (notified) {
                             if (!Config.powerSave) {
@@ -2057,9 +2072,6 @@ public final class Desktop extends GameCanvas
         g.drawRoundRect(x, y, w - 1, h - 1, 5, 5);
         g.setFont(f);
         g.drawString(s, x + (w - sw) / 2, y + (h - sh) / 2, Graphics.TOP | Graphics.LEFT);
-/*
-        flushGraphics();
-*/
     }
 
     /*
@@ -2222,13 +2234,7 @@ public final class Desktop extends GameCanvas
                 // release task
                 releaseRenderTask(this);
             }
-/*
 
-            if (!postInit && guiReady) {
-                postInit = true;
-                postInit();
-            }
-*/
         }
     }
 

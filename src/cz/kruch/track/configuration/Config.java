@@ -93,7 +93,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
     public static String mapPath            = EMPTY_STRING;
 
     // group [Map datum]
-    public static String geoDatum           = Datum.WGS_84.name;
+    public static String geoDatum           = "WGS 84";
 
     // group [Provider]
     public static int locationProvider      = -1;
@@ -112,10 +112,10 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
     public static int btKeepAlive;
 
     // group [Simulator provider options]
-    public static int simulatorDelay        = 1000; // ms
+    public static int simulatorDelay            = 1000; // ms
 
     // group [Internal provider options]
-    private static String locationTimings   = EMPTY_STRING;
+    private static String locationTimings       = EMPTY_STRING;
 
     // group [Serial provider options]
     public static String commUrl                = "comm:COM5;baudrate=9600";
@@ -280,7 +280,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         String cardRoot = null;
         if (File.isFs()) {
             try {
-                for (Enumeration roots = File.listRoots(); roots.hasMoreElements(); ) {
+                for (final Enumeration roots = File.listRoots(); roots.hasMoreElements(); ) {
                     final String root = (String) roots.nextElement();
                     if (root.equals(defaultRoot)) {
                         cardRoot = defaultRoot; break;
@@ -740,8 +740,8 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
             File dir = null;
             try {
                 dir = File.open(Config.getFolderURL(Config.FOLDER_SOUNDS));
-                for (Enumeration enum = dir.list("wpt.*", false); enum.hasMoreElements(); ) {
-                    final String name = (String) enum.nextElement();
+                for (final Enumeration seq = dir.list("wpt.*", false); seq.hasMoreElements(); ) {
+                    final String name = (String) seq.nextElement();
                     if (name.endsWith(".amr") || name.endsWith(".wav") || name.endsWith(".mp3")) {
 //#ifdef __LOG__
                         if (log.isEnabled()) log.info("found wpt sound file " + name);
@@ -795,18 +795,15 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
 //#endif
     }
 
-    public static Datum currentDatum = Datum.WGS_84;
     public static final Vector datums = new Vector(16);
     public static final Hashtable datumMappings = new Hashtable(16);
+
+    public static Datum currentDatum;
 
     public static void initDatums(MIDlet midlet) {
         // vars
         final char[] delims = { '{', '}', ',', '=' };
         final CharArrayTokenizer tokenizer = new CharArrayTokenizer();
-
-        // WGS-84 is hardcoded
-        datums.addElement(Datum.WGS_84);
-        datumMappings.put("map:WGS 84", Datum.WGS_84);
 
         // first try built-in
         try {
@@ -844,7 +841,10 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
             s = midlet.getAppProperty("Datum-" + Integer.toString(idx++));
         }
 
-        // setup default
+        // inject the very basic datum
+        Datum.WGS_84 = (Datum) datumMappings.get("map:WGS 84");
+
+        // setup defaults
         useDatum(geoDatum);
     }
 

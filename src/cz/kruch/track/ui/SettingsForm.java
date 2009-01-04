@@ -21,7 +21,6 @@ import javax.microedition.lcdui.List;
 import javax.microedition.lcdui.Gauge;
 import javax.microedition.lcdui.CustomItem;
 import javax.microedition.lcdui.Graphics;
-import javax.microedition.lcdui.Display;
 import javax.microedition.lcdui.ItemCommandListener;
 
 import api.file.File;
@@ -30,11 +29,11 @@ import api.location.Datum;
 import java.util.Vector;
 
 /**
- * Settings form.
+ * Settings forms.
  *
  * @author Ales Pour <kruhc@seznam.cz>
  */
-final class SettingsForm extends List implements CommandListener, ItemStateListener {
+final class SettingsForm implements CommandListener, ItemStateListener {
     private static final int MAX_URL_LENGTH = 256;
 
     private final String menuBasic;
@@ -76,6 +75,7 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
     private TrailItem itemTrailView;
     private ChoiceGroup choiceSort;
 
+    private List pane;
     private Form submenu;
     private String section;
     private Vector providers;
@@ -83,7 +83,6 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
     private int gaugeAlphaScale;
 
     SettingsForm(Callback callback) {
-        super(Resources.prefixed(Resources.getString(Resources.DESKTOP_CMD_SETTINGS)), List.IMPLICIT);
         this.callback = callback;
         this.menuBasic = Resources.getString(Resources.CFG_ITEM_BASIC);
         this.menuDesktop = Resources.getString(Resources.CFG_ITEM_DESKTOP);
@@ -93,21 +92,23 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
     }
 
     public void show() {
+        // create main pane
+        pane = new List(Resources.prefixed(Resources.getString(Resources.DESKTOP_CMD_SETTINGS)), List.IMPLICIT);
         // top-level menu
-        append(menuBasic, null);
-        append(menuDesktop, null);
-        append(menuLocation, null);
-        append(menuNavigation, null);
-        append(menuMisc, null);
+        pane.append(menuBasic, null);
+        pane.append(menuDesktop, null);
+        pane.append(menuLocation, null);
+        pane.append(menuNavigation, null);
+        pane.append(menuMisc, null);
 
         // add command and handling
-        addCommand(new Command(Resources.getString(Resources.CMD_CLOSE), Command.BACK, 1));
-        addCommand(new Command(Resources.getString(Resources.CFG_CMD_SAVE), Command.SCREEN, 1));
+        pane.addCommand(new Command(Resources.getString(Resources.CFG_CMD_SAVE), Command.SCREEN, 1));
+        pane.addCommand(new Command(Resources.getString(Resources.CMD_CLOSE), Desktop.BACK_CMD_TYPE, 1));
         /* default SELECT command is of SCREEN type */
-        setCommandListener(this);
+        pane.setCommandListener(this);
 
         // show
-        Desktop.display.setCurrent(this);
+        Desktop.display.setCurrent(pane);
     }
 
     private void show(String section) {
@@ -398,8 +399,8 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
         }
 
         // add command and handling
-        submenu.addCommand(new Command(Resources.getString(Resources.CMD_OK), Desktop.POSITIVE_CMD_TYPE, 1));
-        submenu.addCommand(new Command(Resources.getString(Resources.CMD_CANCEL), Command.BACK, 1));
+        submenu.addCommand(new Command(Resources.getString(Resources.CMD_OK), Desktop.POSITIVE_CMD_TYPE, 0));
+        submenu.addCommand(new Command(Resources.getString(Resources.CMD_CANCEL), Desktop.CANCEL_CMD_TYPE, 1));
         submenu.setCommandListener(this);
 
         // show
@@ -512,11 +513,11 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
 
     public void commandAction(Command command, Displayable displayable) {
         // top-level menu action?
-        if (displayable == this) {
+        if (displayable == pane) {
             // open submenu?
-            if (SELECT_COMMAND == command) {
+            if (List.SELECT_COMMAND == command) {
                 // submenu
-                show(section = getString(getSelectedIndex()));
+                show(section = pane.getString(pane.getSelectedIndex()));
             } else {
                 // main menu action
                 mainMenuCommandAction(command);
@@ -530,7 +531,7 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
     private void subMenuCommandAction(Command command) {
 
         // grab values on OK
-        if (command.getCommandType() != Command.BACK) {
+        if (command.getCommandType() != Desktop.CANCEL_CMD_TYPE) {
 
             if (menuBasic.equals(section)) {
 
@@ -687,7 +688,7 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
         submenu = null;
 
         // restore top-level menu
-        Desktop.display.setCurrent(this);
+        Desktop.display.setCurrent(pane);
     }
 
     private void mainMenuCommandAction(Command command) {
@@ -696,7 +697,7 @@ final class SettingsForm extends List implements CommandListener, ItemStateListe
         Desktop.display.setCurrent(Desktop.screen);
 
         // save?
-        if (command.getCommandType() != Command.BACK) {
+        if (command.getCommandType() != Desktop.BACK_CMD_TYPE) {
             try {
                 // update config
                 Config.update(Config.CONFIG_090);

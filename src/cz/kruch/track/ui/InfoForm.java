@@ -34,14 +34,16 @@ import api.file.File;
  *
  * @author Ales Pour <kruhc@seznam.cz>
  */
-final class InfoForm extends Form implements CommandListener {
+final class InfoForm implements CommandListener {
 
     private Throwable le, te;
     private Object ps;
     private Map map;
 
+    private Form pane;
+
     InfoForm() {
-        super(Resources.prefixed(Resources.getString(Resources.DESKTOP_CMD_INFO)));
+        this.pane = new Form(Resources.prefixed(Resources.getString(Resources.DESKTOP_CMD_INFO)));
     }
 
     public void show(Desktop desktop, Throwable le, Throwable te,
@@ -53,16 +55,16 @@ final class InfoForm extends Form implements CommandListener {
         this.map = map;
 
         // items
-        append(newItem(Resources.getString(Resources.INFO_ITEM_VENDOR), Resources.getString(Resources.INFO_ITEM_VENDOR_VALUE)));
-        append(newItem(Resources.getString(Resources.INFO_ITEM_VERSION), cz.kruch.track.TrackingMIDlet.version));
-        append(newItem(Resources.getString(Resources.INFO_ITEM_KEYS), ""));
-        append(Resources.getString((short) (Resources.INFO_ITEM_KEYS_MS + desktop.mode)));
-        addCommand(new Command(Resources.getString(Resources.INFO_CMD_DETAILS), Desktop.POSITIVE_CMD_TYPE, 1));
-        addCommand(new Command(Resources.getString(Resources.CMD_CLOSE), Command.BACK, 1));
-        setCommandListener(this);
+        pane.append(newItem(Resources.getString(Resources.INFO_ITEM_VENDOR), Resources.getString(Resources.INFO_ITEM_VENDOR_VALUE)));
+        pane.append(newItem(Resources.getString(Resources.INFO_ITEM_VERSION), cz.kruch.track.TrackingMIDlet.version));
+        pane.append(newItem(Resources.getString(Resources.INFO_ITEM_KEYS), ""));
+        pane.append(Resources.getString((short) (Resources.INFO_ITEM_KEYS_MS + desktop.mode)));
+        pane.addCommand(new Command(Resources.getString(Resources.INFO_CMD_DETAILS), Desktop.POSITIVE_CMD_TYPE, 0));
+        pane.addCommand(new Command(Resources.getString(Resources.CMD_CLOSE), Desktop.BACK_CMD_TYPE, 1));
+        pane.setCommandListener(this);
 
         // show
-        Desktop.display.setCurrent(this);
+        Desktop.display.setCurrent(pane);
     }
 
     private void details(final Throwable le, final Throwable te, final Object ps, final Map map) {
@@ -72,10 +74,10 @@ final class InfoForm extends Form implements CommandListener {
         final long freeMemory = Runtime.getRuntime().freeMemory();
 
         // items
-        append(newItem("Platform", cz.kruch.track.TrackingMIDlet.getPlatform()));
+        pane.append(newItem("Platform", cz.kruch.track.TrackingMIDlet.getPlatform()));
         final StringBuffer sb = new StringBuffer(32);
         sb.append(totalMemory).append('/').append(freeMemory);
-        append(newItem("Memory", sb.toString()));
+        pane.append(newItem("Memory", sb.toString()));
         sb.delete(0, sb.length());
         if (File.fsType == File.FS_JSR75 || File.fsType == File.FS_SXG75)
             sb.append("75 ");
@@ -89,54 +91,57 @@ final class InfoForm extends Form implements CommandListener {
             sb.append("179 ");
         if (cz.kruch.track.TrackingMIDlet.jsr234)
             sb.append("234 ");
-        append(newItem("ExtraJsr", sb.toString()));
+        pane.append(newItem("ExtraJsr", sb.toString()));
         if (cz.kruch.track.TrackingMIDlet.getFlags() != null) {
-            append(newItem("AppFlags", cz.kruch.track.TrackingMIDlet.getFlags()));
+            pane.append(newItem("AppFlags", cz.kruch.track.TrackingMIDlet.getFlags()));
         }
         sb.delete(0, sb.length()).append(System.getProperty("microedition.locale")).append(' ').append(System.getProperty("microedition.encoding"));
-        append(newItem("I18n", sb.toString()));
+        pane.append(newItem("I18n", sb.toString()));
         sb.delete(0, sb.length()).append(File.fsType).append("; resetable? ").append(cz.kruch.track.maps.Map.fileInputStreamResetable);
-        append(newItem("Fs", sb.toString()));
+        pane.append(newItem("Fs", sb.toString()));
         sb.delete(0, sb.length()).append(cz.kruch.track.ui.nokia.DeviceControl.getName());
-        append(newItem("DeviceCtrl", sb.toString()));
+        pane.append(newItem("DeviceCtrl", sb.toString()));
         sb.delete(0, sb.length()).append(cz.kruch.track.TrackingMIDlet.hasPorts()).append("; ").append(System.getProperty("microedition.commports"));
-        append(newItem("Ports", sb.toString()));
+        pane.append(newItem("Ports", sb.toString()));
         sb.delete(0, sb.length()).append(TimeZone.getDefault().getID()).append("; ").append(TimeZone.getDefault().useDaylightTime()).append("; ").append(TimeZone.getDefault().getRawOffset());
-        append(newItem("TimeZone", sb.toString()));
+        pane.append(newItem("TimeZone", sb.toString()));
         sb.delete(0, sb.length()).append("safe renderer? ").append(Config.S60renderer).append("; hasRepeatEvents? ").append(Desktop.hasRepeatEvents).append("; ").append(Desktop.screen.getWidth()).append('x').append(Desktop.screen.getHeight());
-        append(newItem("Desktop", sb.toString()));
+        pane.append(newItem("Desktop", sb.toString()));
         if (map == null) {
-            append(newItem("Map", ""));
+            pane.append(newItem("Map", ""));
         } else {
             sb.delete(0, sb.length()).append("datum: ").append(map.getDatum()).append("; projection: ").append(map.getProjection());
-            append(newItem("Map", sb.toString()));
+            pane.append(newItem("Map", sb.toString()));
         }
         sb.delete(0, sb.length()).append((ps == null ? "" : ps.toString())).append("; stalls=").append(api.location.LocationProvider.stalls).append("; restarts=").append(api.location.LocationProvider.restarts).append("; syncs=").append(api.location.LocationProvider.syncs).append("; mismatches=").append(api.location.LocationProvider.mismatches).append("; checksums=").append(api.location.LocationProvider.checksums).append("; errors=").append(api.location.LocationProvider.errors).append("; pings=").append(api.location.LocationProvider.pings);
-        append(new StringItem("ProviderStatus", sb.toString()));
+        pane.append(new StringItem("ProviderStatus", sb.toString()));
         if (le != null) {
-            append(new StringItem("ProviderError", le.toString()));
+            pane.append(new StringItem("ProviderError", le.toString()));
         }
         if (te != null) {
-            append(new StringItem("TracklogError", te.toString()));
+            pane.append(new StringItem("TracklogError", te.toString()));
         }
-        sb.delete(0, sb.length()).append("uncaught: ").append(SmartRunnable.uncaught);
-        append(newItem("Debug", sb.toString()));
+        sb.delete(0, sb.length());
+        sb.append("pauses: ").append(cz.kruch.track.TrackingMIDlet.pauses);
+        sb.append("; uncaught: ").append(SmartRunnable.uncaught);
+        pane.append(newItem("Debug", sb.toString()));
     }
 
     public void commandAction(Command command, Displayable displayable) {
-        if (command.getCommandType() == Command.BACK) {
+        if (command.getCommandType() == Desktop.BACK_CMD_TYPE) {
             // gc hint
             this.le = null;
             this.te = null;
             this.ps = null;
             this.map = null;
+            this.pane = null;
             // restore desktop UI
             Desktop.display.setCurrent(Desktop.screen);
         } else {
             // delete basic info
-            deleteAll();
+            pane.deleteAll();
             // remove 'Details' command
-            removeCommand(command);
+            pane.removeCommand(command);
             // show technical details
             details(le, te, ps, map);
         }

@@ -36,8 +36,7 @@ import java.util.TimeZone;
  *
  * @author Ales Pour <kruhc@seznam.cz>
  */
-final class WaypointForm extends Form
-        implements CommandListener, ItemCommandListener, Callback {
+final class WaypointForm implements CommandListener, ItemCommandListener, Callback {
 
     private static final String CMD_TAKE = Resources.getString(Resources.NAV_CMD_TAKE);
     private static final String CMD_HINT = Resources.getString(Resources.NAV_CMD_SHOW);
@@ -49,9 +48,9 @@ final class WaypointForm extends Form
     private Waypoint waypoint;
     private long timestamp, tracklogTime;
 
+    private Form form;
     private TextField fieldName, fieldComment;
     private TextField fieldZone, fieldLat, fieldLon, fieldAlt;
-
     private TextField fieldNumber, fieldMessage;
     private Object closure;
 
@@ -69,9 +68,9 @@ final class WaypointForm extends Form
      */
     public WaypointForm(Waypoint wpt, Callback callback,
                         float distance, boolean modifiable) {
-        super(Resources.getString(Resources.NAV_TITLE_WPT));
         this.waypoint = wpt;
         this.callback = callback;
+        this.form = new Form(Resources.getString(Resources.NAV_TITLE_WPT));
 
         // name
         appendStringItem(Resources.getString(Resources.NAV_FLD_WPT_NAME), wpt.getName());
@@ -116,20 +115,20 @@ final class WaypointForm extends Form
             }
             if (bean.getEncodedHints() != null && bean.getEncodedHints().length() != 0) {
                 hintNum = appendStringItem(Resources.getString(Resources.NAV_FLD_GS_HINT), ":-)", Item.BUTTON);
-                get(hintNum).setDefaultCommand(new Command(CMD_HINT, Command.ITEM, 1));
-                get(hintNum).setItemCommandListener(this);
+                form.get(hintNum).setDefaultCommand(new Command(CMD_HINT, Command.ITEM, 1));
+                form.get(hintNum).setItemCommandListener(this);
             }
         }
 
         // form command
-        addCommand(new Command(Resources.getString(Resources.CMD_CLOSE), Command.BACK, 1));
-        addCommand(new ActionCommand(Resources.NAV_CMD_NAVIGATE_TO, Desktop.POSITIVE_CMD_TYPE, 1));
-        addCommand(new ActionCommand(Resources.NAV_CMD_ROUTE_ALONG, Desktop.POSITIVE_CMD_TYPE, 2));
-        addCommand(new ActionCommand(Resources.NAV_CMD_ROUTE_BACK, Desktop.POSITIVE_CMD_TYPE, 3));
-        addCommand(new ActionCommand(Resources.NAV_CMD_GO_TO, Desktop.POSITIVE_CMD_TYPE, 4));
+        form.addCommand(new Command(Resources.getString(Resources.CMD_CLOSE), Desktop.BACK_CMD_TYPE, 1));
+        form.addCommand(new ActionCommand(Resources.NAV_CMD_NAVIGATE_TO, Desktop.POSITIVE_CMD_TYPE, 1));
+        form.addCommand(new ActionCommand(Resources.NAV_CMD_ROUTE_ALONG, Desktop.POSITIVE_CMD_TYPE, 2));
+        form.addCommand(new ActionCommand(Resources.NAV_CMD_ROUTE_BACK, Desktop.POSITIVE_CMD_TYPE, 3));
+        form.addCommand(new ActionCommand(Resources.NAV_CMD_GO_TO, Desktop.POSITIVE_CMD_TYPE, 4));
         if (modifiable) {
-            addCommand(new ActionCommand(Resources.NAV_CMD_EDIT, Desktop.POSITIVE_CMD_TYPE, 5));
-            addCommand(new ActionCommand(Resources.NAV_CMD_DELETE, Desktop.POSITIVE_CMD_TYPE, 6));
+            form.addCommand(new ActionCommand(Resources.NAV_CMD_EDIT, Desktop.POSITIVE_CMD_TYPE, 5));
+            form.addCommand(new ActionCommand(Resources.NAV_CMD_DELETE, Desktop.POSITIVE_CMD_TYPE, 6));
         }
     }
 
@@ -137,11 +136,11 @@ final class WaypointForm extends Form
      * "Record Current" constructor.
      */
     public WaypointForm(Location location, Callback callback) {
-        super(Resources.getString(Resources.NAV_TITLE_WPT));
         this.coordinates = location.getQualifiedCoordinates().clone(); // copy
         this.timestamp = location.getTimestamp();
         this.callback = callback;
         this.previewItemIdx = -1;
+        this.form = new Form(Resources.getString(Resources.NAV_TITLE_WPT));
 
         // name
         appendWithNewlineAfter(this.fieldName = createTextField(Resources.NAV_FLD_WPT_NAME, null, 128));
@@ -169,147 +168,44 @@ final class WaypointForm extends Form
             snapshot.setItemCommandListener(this);
             appendWithNewlineAfter(snapshot);
         }
-        addCommand(new Command(Resources.getString(Resources.CMD_CANCEL), Command.BACK, 1));
-        addCommand(new ActionCommand(Resources.NAV_CMD_SAVE, Desktop.POSITIVE_CMD_TYPE, 1));
+        form.addCommand(new Command(Resources.getString(Resources.CMD_CANCEL), Desktop.CANCEL_CMD_TYPE, 1));
+        form.addCommand(new ActionCommand(Resources.NAV_CMD_SAVE, Desktop.POSITIVE_CMD_TYPE, 1));
     }
 
     /**
      * "Enter Custom" constructor.
      */
     public WaypointForm(Callback callback, QualifiedCoordinates pointer) {
-        super(Resources.getString(Resources.NAV_TITLE_WPT));
         this.callback = callback;
+        this.form = new Form(Resources.getString(Resources.NAV_TITLE_WPT));
 
         // generated name
         final StringBuffer sb = new StringBuffer(32);
         sb.append("WPT");
         NavigationScreens.append(sb, cnt + 1, 3);
-/*
-        appendWithNewlineAfter(this.fieldName = createTextField(Resources.NAV_FLD_WPT_NAME, sb.toString(), 128));
 
-        // comment
-        appendWithNewlineAfter(this.fieldComment = createTextField(Resources.NAV_FLD_WPT_CMT, dateToString(CALENDAR.getTime().getTime()), 256));
-
-        // coordinates
-        final String labelX, labelY;
-*/
-/*
-        if (Config.useGridFormat && NavigationScreens.isGrid()) {
-
-            // labels
-            labelX = Resources.getString(Resources.NAV_FLD_EASTING);
-            labelY = Resources.getString(Resources.NAV_FLD_NORTHING);
-
-            // zone
-            final QualifiedCoordinates localQc = Datum.contextDatum.toLocal(pointer);
-            final CartesianCoordinates cc = Mercator.LLtoGrid(pointer);
-            if (cc.zone != null) {
-                appendWithNewlineAfter(this.fieldZone = createTextField(Resources.NAV_FLD_ZONE, new String(cc.zone), 3));
-            }
-            CartesianCoordinates.releaseInstance(cc);
-            QualifiedCoordinates.releaseInstance(localQc);
-
-        } else if (Config.useUTM) {
-
-            // labels
-            labelX = Resources.getString(Resources.NAV_FLD_UTM_EASTING);
-            labelY = Resources.getString(Resources.NAV_FLD_UTM_NORTHING);
-
-            // zone
-            final CartesianCoordinates cc = Mercator.LLtoUTM(pointer);
-            appendWithNewlineAfter(this.fieldZone = createTextField(Resources.NAV_FLD_ZONE, new String(cc.zone), 3));
-            CartesianCoordinates.releaseInstance(cc);
-
-        } else {
-
-            // labels
-            if (Config.useGeocachingFormat) {
-                labelX = Resources.getString(Resources.NAV_FLD_WGS84LAT);
-                labelY = Resources.getString(Resources.NAV_FLD_WGS84LON);
-            } else {
-                labelX = Resources.getString(Resources.NAV_FLD_LAT);
-                labelY = Resources.getString(Resources.NAV_FLD_LON);
-            }
-
-        }
-*/
-/*
-        switch (Config.cfmt) {
-            case Config.COORDS_MAP_GRID: {
-                if (NavigationScreens.isGrid()) {
-                    // labels
-                    labelX = Resources.getString(Resources.NAV_FLD_EASTING);
-                    labelY = Resources.getString(Resources.NAV_FLD_NORTHING);
-
-                    // zone
-                    final QualifiedCoordinates localQc = Datum.contextDatum.toLocal(pointer);
-                    final CartesianCoordinates cc = Mercator.LLtoGrid(pointer);
-                    if (cc.zone != null) {
-                        appendWithNewlineAfter(this.fieldZone = createTextField(Resources.NAV_FLD_ZONE, new String(cc.zone), 3));
-                    }
-                    CartesianCoordinates.releaseInstance(cc);
-                    QualifiedCoordinates.releaseInstance(localQc);
-
-                    // break!
-                    break;
-                }
-            } // no break here for not(isGrid) path!
-            case Config.COORDS_UTM: {
-                // labels
-                labelX = Resources.getString(Resources.NAV_FLD_UTM_EASTING);
-                labelY = Resources.getString(Resources.NAV_FLD_UTM_NORTHING);
-
-                // zone
-                final CartesianCoordinates cc = Mercator.LLtoUTM(pointer);
-                appendWithNewlineAfter(this.fieldZone = createTextField(Resources.NAV_FLD_ZONE, new String(cc.zone), 3));
-                CartesianCoordinates.releaseInstance(cc);
-
-            } break;
-            case Config.COORDS_GC_LATLON: {
-                labelX = Resources.getString(Resources.NAV_FLD_WGS84LAT);
-                labelY = Resources.getString(Resources.NAV_FLD_WGS84LON);
-            } break;
-            default: {
-                labelX = Resources.getString(Resources.NAV_FLD_LAT);
-                labelY = Resources.getString(Resources.NAV_FLD_LON);
-            }
-        }
-
-        // lat/easting
-        sb.delete(0, sb.length());
-        NavigationScreens.printTo(sb, pointer, QualifiedCoordinates.LAT);
-        appendWithNewlineAfter(this.fieldLat = new TextField(labelX, sb.toString(), 13, TextField.ANY));
-
-        // lon/northing
-        sb.delete(0, sb.length());
-        NavigationScreens.printTo(sb, pointer, QualifiedCoordinates.LON);
-        appendWithNewlineAfter(this.fieldLon = new TextField(labelY, sb.toString(), 14, TextField.ANY));
-
-        // altitude
-        appendWithNewlineAfter(this.fieldAlt = createTextField(Resources.NAV_FLD_ALT, "", 4, TextField.NUMERIC));
-*/
         // share
         populateEditableForm(sb.toString(), dateToString(CALENDAR.getTime().getTime()), pointer);
 
         // commands
-        addCommand(new Command(Resources.getString(Resources.CMD_CLOSE), Command.BACK, 1));
-        addCommand(new ActionCommand(Resources.NAV_CMD_ADD, Desktop.POSITIVE_CMD_TYPE, 1));
+        form.addCommand(new Command(Resources.getString(Resources.CMD_CANCEL), Desktop.CANCEL_CMD_TYPE, 1));
+        form.addCommand(new ActionCommand(Resources.NAV_CMD_ADD, Desktop.POSITIVE_CMD_TYPE, 1));
     }
 
     /**
      * Editing constructor.
      */
     public WaypointForm(Callback callback, Waypoint wpt) {
-        super(Resources.getString(Resources.NAV_TITLE_WPT));
         this.callback = callback;
         this.waypoint = wpt;
+        this.form = new Form(Resources.getString(Resources.NAV_TITLE_WPT));
 
         // populate form
         populateEditableForm(wpt.getName(), wpt.getComment(), wpt.getQualifiedCoordinates());
 
         // commands
-        addCommand(new Command(Resources.getString(Resources.CMD_CLOSE), Command.BACK, 1));
-        addCommand(new ActionCommand(Resources.NAV_CMD_UPDATE, Desktop.POSITIVE_CMD_TYPE, 1));
+        form.addCommand(new Command(Resources.getString(Resources.CMD_CANCEL), Desktop.CANCEL_CMD_TYPE, 1));
+        form.addCommand(new ActionCommand(Resources.NAV_CMD_UPDATE, Desktop.POSITIVE_CMD_TYPE, 1));
     }
 
     /**
@@ -317,22 +213,22 @@ final class WaypointForm extends Form
      */
     public WaypointForm(Callback callback, String type,
                         QualifiedCoordinates coordinates) {
-        super("SMS");
         this.callback = callback;
         this.closure = type;
+        this.form = new Form("SMS");
 
         // receiver number and message
-        append(this.fieldNumber = createTextField(Resources.NAV_FLD_RECIPIENT, null, 16, TextField.PHONENUMBER));
-        append(this.fieldMessage = createTextField(Resources.NAV_FLD_MESSAGE, null, 64));
+        form.append(this.fieldNumber = createTextField(Resources.NAV_FLD_RECIPIENT, null, 16, TextField.PHONENUMBER));
+        form.append(this.fieldMessage = createTextField(Resources.NAV_FLD_MESSAGE, null, 64));
 
         // coordinates
         final StringBuffer sb = new StringBuffer(32);
         NavigationScreens.printTo(coordinates, sb);
-        append(new StringItem(Resources.getString(Resources.NAV_FLD_LOC), sb.toString()));
+        form.append(new StringItem(Resources.getString(Resources.NAV_FLD_LOC), sb.toString()));
 
         // commands
-        addCommand(new Command(Resources.getString(Resources.CMD_CANCEL), Command.BACK, 1));
-        addCommand(new ActionCommand(Resources.NAV_CMD_SEND, Desktop.POSITIVE_CMD_TYPE, 1));
+        form.addCommand(new Command(Resources.getString(Resources.CMD_CANCEL), Desktop.CANCEL_CMD_TYPE, 1));
+        form.addCommand(new ActionCommand(Resources.NAV_CMD_SEND, Desktop.POSITIVE_CMD_TYPE, 1));
     }
 
     public void setTracklogTime(long tracklogTime) {
@@ -349,46 +245,6 @@ final class WaypointForm extends Form
 
         // coordinates
         final String labelX, labelY;
-/*
-        if (Config.useGridFormat && NavigationScreens.isGrid()) {
-
-            // labels
-            labelX = Resources.getString(Resources.NAV_FLD_EASTING);
-            labelY = Resources.getString(Resources.NAV_FLD_NORTHING);
-
-            // zone
-            final QualifiedCoordinates localQc = Datum.contextDatum.toLocal(qc);
-            final CartesianCoordinates cc = Mercator.LLtoGrid(qc);
-            if (cc.zone != null) {
-                appendWithNewlineAfter(this.fieldZone = createTextField(Resources.NAV_FLD_ZONE, new String(cc.zone), 3));
-            }
-            CartesianCoordinates.releaseInstance(cc);
-            QualifiedCoordinates.releaseInstance(localQc);
-
-        } else if (Config.useUTM) {
-
-            // labels
-            labelX = Resources.getString(Resources.NAV_FLD_UTM_EASTING);
-            labelY = Resources.getString(Resources.NAV_FLD_UTM_NORTHING);
-
-            // zone
-            final CartesianCoordinates cc = Mercator.LLtoUTM(qc);
-            appendWithNewlineAfter(this.fieldZone = createTextField(Resources.NAV_FLD_ZONE, new String(cc.zone), 3));
-            CartesianCoordinates.releaseInstance(cc);
-
-        } else {
-
-            // labels
-            if (Config.useGeocachingFormat) {
-                labelX = Resources.getString(Resources.NAV_FLD_WGS84LAT);
-                labelY = Resources.getString(Resources.NAV_FLD_WGS84LON);
-            } else {
-                labelX = Resources.getString(Resources.NAV_FLD_LAT);
-                labelY = Resources.getString(Resources.NAV_FLD_LON);
-            }
-
-        }
-*/
         switch (Config.cfmt) {
             case Config.COORDS_MAP_GRID: {
                 if (NavigationScreens.isGrid()) {
@@ -459,7 +315,7 @@ final class WaypointForm extends Form
 
     private int appendWithNewlineAfter(Item item) {
         item.setLayout(Item.LAYOUT_2 | Item.LAYOUT_NEWLINE_AFTER);
-        return append(item);
+        return form.append(item);
     }
 
     private int appendStringItem(final String label, final String text) {
@@ -481,10 +337,10 @@ final class WaypointForm extends Form
 
     public WaypointForm show() {
         // command handling
-        setCommandListener(this);
+        form.setCommandListener(this);
 
         // show
-        Desktop.display.setCurrent(this);
+        Desktop.display.setCurrent(form);
 
         return this;
     }
@@ -492,15 +348,15 @@ final class WaypointForm extends Form
     public void commandAction(Command command, Item item) {
         if (CMD_TAKE.equals(command.getLabel())) {
             try {
-                Camera.take(this, this, tracklogTime);
+                Camera.show(form, this, tracklogTime);
             } catch (Throwable t) {
-                Desktop.showError(Resources.getString(Resources.NAV_MSG_CAMERA_FAILED), t, this);
+                Desktop.showError(Resources.getString(Resources.NAV_MSG_CAMERA_FAILED), t, form);
             }
         } else if (CMD_HINT.equals(command.getLabel())) {
-            removeCommand(command);
-            delete(hintNum);
+            form.removeCommand(command);
+            form.delete(hintNum);
             hintNum = appendStringItem(Resources.getString(Resources.NAV_FLD_GS_HINT), ((GroundspeakBean) waypoint.getUserObject()).getEncodedHints());
-            Desktop.display.setCurrentItem(get(hintNum));
+            Desktop.display.setCurrentItem(form.get(hintNum));
         }
     }
 
@@ -508,13 +364,13 @@ final class WaypointForm extends Form
         if (result instanceof String) { // JSR-234 and new JSR-135 capture snapshot path
             imagePath = (String) result;
             if (previewItemIdx == -1) {
-                previewItemIdx = append(Resources.getString(Resources.NAV_MSG_NO_PREVIEW));
+                previewItemIdx = form.append(Resources.getString(Resources.NAV_MSG_NO_PREVIEW));
             }
-            Desktop.showInfo(Resources.getString(Resources.NAV_MSG_DO_NOT_WORRY), this);
+            Desktop.showInfo(Resources.getString(Resources.NAV_MSG_DO_NOT_WORRY), form);
         } else if (throwable != null) {
-            Desktop.showError(Resources.getString(Resources.NAV_MSG_SNAPSHOT_FAILED), throwable, this);
+            Desktop.showError(Resources.getString(Resources.NAV_MSG_SNAPSHOT_FAILED), throwable, form);
         } else {
-            Desktop.showError(Resources.getString(Resources.NAV_MSG_NO_SNAPSHOT), null, this);
+            Desktop.showError(Resources.getString(Resources.NAV_MSG_NO_SNAPSHOT), null, form);
         }
     }
 

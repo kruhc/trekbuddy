@@ -52,8 +52,7 @@ public abstract class LocationProvider {
     }
 
     protected void setStatus(Object status) {
-//        this.status = status;
-        this.status = this.status + (status == null ? "" : status.toString() + "|");
+        this.status = status;
     }
 
     public boolean isRestartable() {

@@ -115,12 +115,12 @@
 1381=NO POSITION
 1382=NO WPT
 1383=NMEA Playback
-1383=NMEA Playback
 1384=Received location info from:
 1385=Tileset file not found:
 1386=Provider out of service
 1387=Provider starting
 1388=Operation in progress...
+1389=Registration for SMS push failed
 
 # navigation commands
 2000=RouteAlong
@@ -138,6 +138,9 @@
 2012=Update
 2013=Delete
 2014=Show
+2015=SortByPosition
+2016=SortByName
+2017=SortByDistance
 
 # navigation menu
 2100=Waypoints
@@ -146,7 +149,7 @@
 2103=SMS I'm here
 2104=SMS Meet you there
 2105=Stop
-2111=Waypoints
+2106=Tracks
 
 # navigation forms/fields (wpt form)
 2200=Waypoint
@@ -173,6 +176,7 @@
 2221=GC ShortDesc
 2222=GC LongDesc
 2223=GC Hints
+2224=Distance
 
 # navigation messages
 2300=Failed to load in-jar waypoints
@@ -279,10 +283,14 @@
 3708=autohide notification
 3709=file revisions
 3710=prefer GC name
+3711=Sort By
+3712=position
+3713=name
+3714=distance
 
 # settings forms/fields/values (Tweaks)
 3800=Tweaks
-3801=Siemens I/O
+3801=broken I/O
 3802=safe renderer
 3803=forced GC
 3804=1-tile scroll

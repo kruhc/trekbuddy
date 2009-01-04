@@ -472,9 +472,11 @@ public final class Resources {
     }
 
     public static String prefixed(final String title) {
-        if (!cz.kruch.track.TrackingMIDlet.j9) {
-            return title;
+//#ifdef __J9__
+        if (cz.kruch.track.TrackingMIDlet.j9) {
+            return "TrekBuddy - " + title;
         }
-        return "TrekBuddy - " + title;
+//#endif
+        return title;
     }
 }

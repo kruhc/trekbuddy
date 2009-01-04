@@ -125,7 +125,7 @@ public class SerialLocationProvider
     /* this provider has special shutdown sequence */
     public void stop() throws LocationException {
 
-        // die gracefully
+        // die gracefully... unlikely :-(
         die();
 
         // non-blocking forcible kill
@@ -173,6 +173,9 @@ public class SerialLocationProvider
                 os.write("$STA\r\n".getBytes());
                 os.close();
             }
+
+            // debug
+            setStatus("connection opened");
 
             // start keep-alive
             startKeepAlive(connection);
@@ -285,11 +288,11 @@ public class SerialLocationProvider
                 }
             }
 
-            // native finalizers?
-            System.gc();
-
             // debug
             setStatus("stream and connection closed");
+
+            // native finalizers?
+            System.gc();
         }
     }
 
@@ -334,14 +337,18 @@ public class SerialLocationProvider
                 } break;
 
                 case MODE_KILLER: {
-                    setStatus("force stream close"); // debug
+                    setStatus("forced stream close"); // debug
                     synchronized (SerialLocationProvider.this) {
+                        if (thread != null) {
+                            thread.interrupt();
+                        }
                         if (stream != null) {
                             try {
                                 stream.close(); // hopefully forces a thread blocked in read() to receive IOException
                             } catch (Exception e) {
                                 // ignore
                             }
+                            System.gc(); // native finalizers?!?
                         }
                     }
                     setStatus("stream closed"); // debug

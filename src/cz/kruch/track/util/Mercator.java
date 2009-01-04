@@ -13,7 +13,7 @@ import java.util.Vector;
 import cz.kruch.track.configuration.Config;
 
 /**
- * Helper for Mercator transformation. And also Lambert (since 0.9.65).
+ * Helper for spherical <-> cartesian transformations, grids etc.
  *
  * @author Ales Pour <kruhc@seznam.cz>
  */

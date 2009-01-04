@@ -219,8 +219,8 @@ public final class Atlas implements Runnable {
 //#endif
 
         // destroy all cached maps
-        for (Enumeration e = maps.elements(); e.hasMoreElements(); ) {
-            final Map map = (Map) e.nextElement();
+        for (final Enumeration seq = maps.elements(); seq.hasMoreElements(); ) {
+            final Map map = (Map) seq.nextElement();
 //#ifdef __LOG__
             if (log.isEnabled()) log.debug("closing map " + map.getPath());
 //#endif

@@ -624,7 +624,7 @@ public final class GpxTracklog extends Thread {
         final Hashtable xdr = NmeaParser.xdr;
         if (xdr.size() > 0) {
             serializer.startTag(NMEA_NAMESPACE, ELEMENT_SENSORS);
-            for (Enumeration keys = xdr.keys(); keys.hasMoreElements(); ) {
+            for (final Enumeration keys = xdr.keys(); keys.hasMoreElements(); ) {
                 final Object key = keys.nextElement();
                 final Float value = (Float) xdr.get(key);
                 final String id = key.toString();

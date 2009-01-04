@@ -1,17 +1,4 @@
-/*
- * Copyright 2006-2007 Ales Pour <kruhc@seznam.cz>. All Rights Reserved.
- * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
- *
- * This code is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License version 2 only, as
- * published by the Free Software Foundation.
- *
- * This code is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
- * version 2 for more details (a copy is included in the LICENSE file that
- * accompanied this code).
- */
+// @LICENSE@
 
 package cz.kruch.track.location;
 
@@ -25,7 +12,6 @@ import java.io.IOException;
 import java.io.OutputStream;
 
 import cz.kruch.track.util.NmeaParser;
-import cz.kruch.track.configuration.Config;
 
 /**
  * Base class for Serial/Bluetooth and Simulator providers.
@@ -37,31 +23,31 @@ abstract class StreamReadingLocationProvider extends LocationProvider {
     private static final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("Stream");
 //#endif
 
-//    private static final int INPUT_BUFFER_SIZE = 16;  // 512; // as recommended at Nokia forum
-
+    // buffers
     private final byte[] btline;
     private final char[] line;
     private int btlineOffset, btlineCount;
 
-    /* for minimalistic NMEA stream */
+    /* minimalistic NMEA stream hack */
     private int hack_rmc_count;
     private NmeaParser.Record gsa;
 
-    /* for broken streams */
-    private boolean readRetried;
+    /* broken streams hack */
+    private boolean retry;
 
+    // last I/O timestamp
     private volatile long lastIO;
 
     protected StreamReadingLocationProvider(String name) {
         super(name);
-        this.btline = new byte[/*INPUT_BUFFER_SIZE*/NmeaParser.MAX_SENTENCE_LENGTH];
+        this.btline = new byte[NmeaParser.MAX_SENTENCE_LENGTH];
         this.line = new char[NmeaParser.MAX_SENTENCE_LENGTH];
     }
 
     protected void reset() {
         btlineOffset = btlineCount = hack_rmc_count = 0;
-        readRetried = false;
         gsa = null;
+        retry = false;
     }
 
     protected synchronized long getLastIO() {
@@ -220,11 +206,11 @@ abstract class StreamReadingLocationProvider extends LocationProvider {
 
                 // end of stream?
                 if (n == -1) {
-                    if (readRetried || !isGo()) { // already tried once or provider being stopped
+                    if (retry || !isGo()) { // already tried once or provider being stopped
                         c = -1;
                         break;
                     } else { // try read again
-                        readRetried = true;
+                        retry = true;
                         continue;
                     }
                 }
@@ -237,6 +223,9 @@ abstract class StreamReadingLocationProvider extends LocationProvider {
 
                 // update last I/O timestamp
                 lastIO = System.currentTimeMillis();
+
+                // reset retry flag
+                retry = false;
 
                 // NMEA log
                 if (observer != null) {

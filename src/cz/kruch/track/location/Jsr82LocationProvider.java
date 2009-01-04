@@ -1,18 +1,4 @@
-/*
- * Copyright 2006-2007 Ales Pour <kruhc@seznam.cz>.
- * All Rights Reserved.
- * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
- *
- * This code is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License version 2 only, as
- * published by the Free Software Foundation.
- *
- * This code is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
- * version 2 for more details (a copy is included in the LICENSE file that
- * accompanied this code).
- */
+// @LICENSE@
 
 package cz.kruch.track.location;
 
@@ -174,9 +160,7 @@ public final class Jsr82LocationProvider extends SerialLocationProvider {
         }
     }
 
-    private final class Discoverer
-            extends List
-            implements javax.bluetooth.DiscoveryListener, CommandListener, Runnable {
+    private final class Discoverer implements javax.bluetooth.DiscoveryListener, CommandListener, Runnable {
 
         private final javax.bluetooth.UUID[] uuidSet = {
 //            new javax.bluetooth.UUID(0x1101)  // SPP
@@ -194,18 +178,20 @@ public final class Jsr82LocationProvider extends SerialLocationProvider {
 
         private final Vector devices = new Vector();
         
-        private final Command cmdBack = new Command(Resources.getString(Resources.CMD_CANCEL), Command.BACK, 1);
+        private final Command cmdBack = new Command(Resources.getString(Resources.CMD_CANCEL), Desktop.CANCEL_CMD_TYPE, 1);
         private final Command cmdRefresh = new Command(Resources.getString(Resources.DESKTOP_CMD_REFRESH), Command.SCREEN, 1);
         private final Command cmdConnect = new Command(Resources.getString(Resources.DESKTOP_CMD_CONNECT), Command.ITEM, 1);
 
+        private List pane;
+
         public Discoverer() {
-            super(Resources.getString(Resources.DESKTOP_MSG_SELECT_DEVICE), List.IMPLICIT);
-            this.setCommandListener(this);
-            this.removeCommand(List.SELECT_COMMAND);
+            this.pane = new List(Resources.getString(Resources.DESKTOP_MSG_SELECT_DEVICE), List.IMPLICIT);
+            this.pane.setCommandListener(this);
+            this.pane.removeCommand(List.SELECT_COMMAND);
         }
 
         public void start() throws LocationException {
-            Desktop.display.setCurrent(this);
+            Desktop.display.setCurrent(pane);
             try {
                 goDevices();
             } catch (LocationException e) {
@@ -241,7 +227,7 @@ public final class Jsr82LocationProvider extends SerialLocationProvider {
 
         private void goDevices() throws LocationException {
             // reset UI and state
-            deleteAll();
+            pane.deleteAll();
             devices.removeAllElements();
             btspp = null;
             device = null;
@@ -249,7 +235,7 @@ public final class Jsr82LocationProvider extends SerialLocationProvider {
             cancel = false;
 
             // update UI
-            setTicker(new Ticker(Resources.getString(Resources.DESKTOP_MSG_SEARCHING_DEVICES)));
+            pane.setTicker(new Ticker(Resources.getString(Resources.DESKTOP_MSG_SEARCHING_DEVICES)));
             setupCommands(false);
 
             // start inquiry
@@ -266,15 +252,15 @@ public final class Jsr82LocationProvider extends SerialLocationProvider {
             device = null;
 
             // update UI
-            setTicker(null);
-            setTitle(Resources.getString(Resources.DESKTOP_MSG_SELECT_DEVICE));
+            pane.setTicker(null);
+            pane.setTitle(Resources.getString(Resources.DESKTOP_MSG_SELECT_DEVICE));
             setupCommands(true);
         }
 
         private void goServices() {
             // update UI
-            setTitle(Resources.getString(Resources.DESKTOP_MSG_SERVICE_SEARCH));
-            setTicker(new Ticker(Resources.getString(Resources.DESKTOP_MSG_SEARCHING_SERVICE)));
+            pane.setTitle(Resources.getString(Resources.DESKTOP_MSG_SERVICE_SEARCH));
+            pane.setTicker(new Ticker(Resources.getString(Resources.DESKTOP_MSG_SEARCHING_SERVICE)));
             setupCommands(false);
 
             // start search
@@ -287,20 +273,20 @@ public final class Jsr82LocationProvider extends SerialLocationProvider {
         }
 
         private void setupCommands(boolean ready) {
-            removeCommand(cmdBack);
-            removeCommand(cmdRefresh);
-            removeCommand(cmdConnect);
-            addCommand(cmdBack);
+            pane.removeCommand(cmdBack);
+            pane.removeCommand(cmdRefresh);
+            pane.removeCommand(cmdConnect);
+            pane.addCommand(cmdBack);
             if (ready) {
-                addCommand(cmdRefresh);
+                pane.addCommand(cmdRefresh);
                 if (devices.size() > 0) {
-                    addCommand(cmdConnect);
+                    pane.addCommand(cmdConnect);
                 }
             }
         }
 
         public void run() {
-            setTicker(new Ticker(Resources.getString(Resources.DESKTOP_MSG_RESOLVING_NAMES)));
+            pane.setTicker(new Ticker(Resources.getString(Resources.DESKTOP_MSG_RESOLVING_NAMES)));
             for (int N = devices.size(), i = 0; i < N; i++) {
                 String name = null;
                 javax.bluetooth.RemoteDevice remoteDevice = ((javax.bluetooth.RemoteDevice) devices.elementAt(i));
@@ -310,19 +296,19 @@ public final class Jsr82LocationProvider extends SerialLocationProvider {
                         name = remoteDevice.getFriendlyName(true);
                     }
                 } catch (Throwable t) {
-                    //ignore
+                    // ignore
                 }
                 if (name == null) {
                     name = "#" + remoteDevice.getBluetoothAddress();
                 }
-                append(name, null);
+                pane.append(name, null);
             }
-            setTicker(null);
+            pane.setTicker(null);
         }
 
         public void deviceDiscovered(javax.bluetooth.RemoteDevice remoteDevice, javax.bluetooth.DeviceClass deviceClass) {
             devices.addElement(remoteDevice);
-            append("#" + remoteDevice.getBluetoothAddress(), null); // show bt adresses just to signal we are finding any
+            pane.append("#" + remoteDevice.getBluetoothAddress(), null); // show bt adresses just to signal we are finding any
         }
 
         public void servicesDiscovered(int transId, javax.bluetooth.ServiceRecord[] serviceRecords) {
@@ -367,7 +353,7 @@ public final class Jsr82LocationProvider extends SerialLocationProvider {
                     Desktop.showWarning(Resources.getString(Resources.DESKTOP_MSG_SERVICE_NOT_FOUND) + " (" + respMsg + ").",
                                         null, null);
                     // update UI
-                    setTicker(null);
+                    pane.setTicker(null);
 
                     // offer device selection
                     showDevices();
@@ -381,8 +367,8 @@ public final class Jsr82LocationProvider extends SerialLocationProvider {
             inquiryCompleted = true;
 
             // update UI
-            setTicker(null);
-            deleteAll();
+            pane.setTicker(null);
+            pane.deleteAll();
             setupCommands(true);
 
             if (devices.size() == 0) {
@@ -413,15 +399,15 @@ public final class Jsr82LocationProvider extends SerialLocationProvider {
 
         public void commandAction(Command command, Displayable displayable) {
             if (command == cmdConnect) { /* device selection */
-                btname = getString(getSelectedIndex());
-                device = (javax.bluetooth.RemoteDevice) devices.elementAt(getSelectedIndex());
+                btname = pane.getString(pane.getSelectedIndex());
+                device = (javax.bluetooth.RemoteDevice) devices.elementAt(pane.getSelectedIndex());
                 if (cz.kruch.track.TrackingMIDlet.hasFlag("bt_service_search")) {
                     goServices();
                 } else {
                     btspp = "btspp://" + device.getBluetoothAddress() + ":1";
                     letsGo(true);
                 }
-            } else if (command.getCommandType() == Command.BACK) {
+            } else if (command.getCommandType() == Desktop.CANCEL_CMD_TYPE) {
                 cancel = true;
                 if (transactionID > 0) {
                     agent.cancelServiceSearch(transactionID);

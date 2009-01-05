@@ -184,6 +184,7 @@
         <echo>*** Properties:   ${include.properties}</echo>
         <echo>*** Extra Prep:   ${pre.extra}</echo>
         <echo>*** Vendor Dir:   ${vendor.dir}</echo>
+        <echo>*** Locale:       ${locale}</echo>
         <echo>************************************************************</echo>
         <echo/>
         <sleep seconds="5"/>
@@ -294,7 +295,7 @@
             <midlet name="${name}" class="cz.kruch.track.TrackingMIDlet" icon="/resources/icon.png"/>
         </wtkjad>
         <fixcrlf srcdir="tmp" eol="crlf" eof="remove" encoding="UTF-8" includes="trekbuddy${suffix}.jad"/>
-        <copy file="res/resources/language.${locale}.res" tofile="res/resources/language.res"/>
+        <copy file="res/resources/language.${locale}.res" tofile="res/resources/language.res" overwrite="true"/>
     </target>
 
     <target name="a.pack" depends="create.tmp.jad">

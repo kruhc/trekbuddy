@@ -238,7 +238,7 @@ public final class Desktop extends GameCanvas
         consoleInit(g);
 
         // boot sequence
-        consoleShow(g, lineY, "TrekBuddy \u00a9 2008 KrUcH");
+        consoleShow(g, lineY, "TrekBuddy \u00a9 2009 KrUcH");
         lineY += lineHeight;
         String lc = Resources.getString(Resources.BOOT_LOCAL_COPY);
         if (lc.length() > 0) {

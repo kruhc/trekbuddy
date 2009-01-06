@@ -30,6 +30,7 @@ public class ProjectionSetup {
     public static final int PROJECTION_BNG          = 3;
     public static final int PROJECTION_IG           = 4;
     public static final int PROJECTION_LCC          = 5;
+    public static final int PROJECTION_UTM          = 6;
     public static final int PROJECTION_LATLON       = 666;
 
     public static ProjectionSetup contextProjection;
@@ -166,6 +167,8 @@ public class ProjectionSetup {
             this.code = PROJECTION_IG;
         } else if (PROJ_LCC.equals(name)) {
             this.code = PROJECTION_LCC;
+        } else if (PROJ_UTM.equals(name)) {
+            this.code = PROJECTION_UTM;
         } else if (PROJ_LATLON.equals(name)) {
             this.code = PROJECTION_LATLON;
         } else {

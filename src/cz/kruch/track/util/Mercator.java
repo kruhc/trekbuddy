@@ -56,7 +56,8 @@ public final class Mercator {
             }
         }
 
-        cachedUtmSetup = new ProjectionSetup("UTM", zoneNumber, zoneLetter,
+        cachedUtmSetup = new ProjectionSetup(ProjectionSetup.PROJ_UTM,
+                                             zoneNumber, zoneLetter,
                                              lonOrigin, 0D,
                                              0.9996, 500000D, falseNorthing);
 
@@ -92,13 +93,19 @@ public final class Mercator {
     }
 
     public static CartesianCoordinates LLtoGrid(final QualifiedCoordinates qc) {
-        final CartesianCoordinates utm = LLtoMercator(qc, Datum.contextDatum.ellipsoid, ProjectionSetup.contextProjection);
+        final ProjectionSetup projectionSetup;
+        if (ProjectionSetup.contextProjection.code == ProjectionSetup.PROJECTION_UTM) {
+            projectionSetup = getUTMSetup(qc); // cross-zone map scenarios
+        } else {
+            projectionSetup = ProjectionSetup.contextProjection;
+        }
+        final CartesianCoordinates utm = LLtoMercator(qc, Datum.contextDatum.ellipsoid, projectionSetup);
 
         /*
          * handle specific grids
          */
 
-        switch (ProjectionSetup.contextProjection.code) {
+        switch (projectionSetup.code) {
 
             case api.location.ProjectionSetup.PROJECTION_SUI: {
 

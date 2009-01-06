@@ -117,7 +117,9 @@ abstract class StreamReadingLocationProvider extends LocationProvider {
 //#ifdef __LOG__
                 if (log.isEnabled()) log.warn("Invalid NMEA!");
 //#endif
-                checksums++;
+                if (NmeaParser.getType(line, l) != -1) {
+                    checksums++;
+                }
                 continue;
             }
 

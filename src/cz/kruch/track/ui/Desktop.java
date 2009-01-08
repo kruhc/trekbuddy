@@ -1264,9 +1264,6 @@ public final class Desktop extends GameCanvas
      * - different set shown
      */
     public void setVisible(Vector wpts, boolean visible) {
-        // set flag
-        Desktop.showall = visible;
-
         // show?
         if (visible) {
 
@@ -1283,6 +1280,10 @@ public final class Desktop extends GameCanvas
                 ((MapView) views[VIEW_MAP]).mapViewer.nextCrosshair();
                 ((MapView) views[VIEW_MAP]).mapViewer.starTick();
 
+            } else if (Desktop.wpts == wpts && Desktop.showall == false) {
+
+                // this is ok state
+
             } else {
 
                 throw new IllegalStateException("Wrong navigation state");
@@ -1291,10 +1292,15 @@ public final class Desktop extends GameCanvas
 
         } else {
 
+/* 2009-01-07: do nothing, showall flag is enough
             // notify map view // TODO this is ugly
             views[VIEW_MAP].routeChanged(null);
+*/
 
         }
+
+        // set flag
+        Desktop.showall = visible;
 
         // update screen
         update(MASK_ALL);

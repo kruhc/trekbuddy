@@ -72,10 +72,12 @@ final class Jsr234Camera extends Camera implements PlayerListener {
             // adjust focus
             final FocusControl focusCtrl = (FocusControl) player.getControl("javax.microedition.amms.control.camera.FocusControl");
             if (focusCtrl != null) {
-                if (focusCtrl.isAutoFocusSupported()) {
-                    focusCtrl.setFocus(FocusControl.AUTO);
-                } else {
-                    focusCtrl.setFocus(Integer.MAX_VALUE);
+                try {
+                    if (focusCtrl.isAutoFocusSupported()) {
+                        focusCtrl.setFocus(FocusControl.AUTO);
+                    } 
+                } catch (MediaException e) {
+                    // ignore
                 }
             }
         }

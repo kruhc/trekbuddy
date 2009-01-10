@@ -588,7 +588,7 @@ final class ComputerView extends View implements Runnable, CommandListener {
 //#ifdef __LOG__
                 t.printStackTrace();
 //#endif
-                Desktop.showError(Resources.getString(Resources.DESKTOP_MSG_LOAD_PROFILE_FAILED), t, navigator);
+                Desktop.showError(Resources.getString(Resources.DESKTOP_MSG_LOAD_PROFILE_FAILED), t, Desktop.screen);
             }
             
         } else {
@@ -754,7 +754,7 @@ final class ComputerView extends View implements Runnable, CommandListener {
 
     public void commandAction(Command command, Displayable displayable) {
         // restore desktop
-        Desktop.display.setCurrent(navigator);
+        Desktop.display.setCurrent(Desktop.screen);
 
         // load new profile if selected
         if (Desktop.CANCEL_CMD_TYPE != command.getCommandType()) {

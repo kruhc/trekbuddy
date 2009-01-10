@@ -151,7 +151,7 @@ final class MapView extends View {
 
             // notify user
             if (isVisible) {
-                Desktop.showConfirmation(Resources.getString(Resources.DESKTOP_MSG_NAV_STOPPED), navigator);
+                Desktop.showConfirmation(Resources.getString(Resources.DESKTOP_MSG_NAV_STOPPED), Desktop.screen);
             }
         }
 
@@ -303,11 +303,6 @@ final class MapView extends View {
                         }
                     }
                 }
-
-                // fast check again
-                if (repeated) {
-                    navigator.eventing.callSerially(navigator);
-                }
             }
         }
 
@@ -345,7 +340,7 @@ final class MapView extends View {
                     }
 
                 } else if (navigator.isTracking()) {
-                    Desktop.showWarning(navigator._getLoadingResultText(), null, navigator);
+                    Desktop.showWarning(navigator._getLoadingResultText(), null, Desktop.screen);
                 }
             }
             break;

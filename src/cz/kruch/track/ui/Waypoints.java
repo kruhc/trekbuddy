@@ -980,10 +980,10 @@ public final class Waypoints implements CommandListener, Runnable, Callback, Com
             // notify about result
             if (status == null) {
                 Desktop.showConfirmation(Resources.getString(Resources.NAV_MSG_STORE_UPDATED),
-                                         navigator); // restores main UI
+                                         Desktop.screen); // restores main UI
             } else {
                 Desktop.showError(Resources.getString(Resources.NAV_MSG_STORE_UPDATE_FAILED),
-                                  status, navigator); // restores main UI
+                                  status, Desktop.screen); // restores main UI
             }
         }
     }
@@ -1194,7 +1194,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback, Com
         list = null;
         sortedWpts = null;
         // restore navigator
-        Desktop.display.setCurrent(navigator);
+        Desktop.display.setCurrent(Desktop.screen);
     }
 
     private void use(final Displayable l) {

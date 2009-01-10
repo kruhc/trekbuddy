@@ -49,7 +49,7 @@ final class SmartRunnable implements Runnable {
                 if (runnables.size() > 0) {
 
                     // trick #1: avoid duplicates of key-hold checks
-                    if (r instanceof Desktop) { //
+                    if (r instanceof DesktopScreen) { //
                         if (runnables.lastElement() instanceof Desktop) {
                             return;
                         }

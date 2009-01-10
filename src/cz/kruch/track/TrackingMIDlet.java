@@ -252,7 +252,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
             }
         }
 
-        // L10n
+        // localization
         int localized;
         try {
             localized = Resources.initialize();
@@ -263,7 +263,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
             localized = -1;
         }
 
-        // key map
+        // keymap
         int keysmapped;
         try {
             keysmapped = Resources.keymap();
@@ -274,16 +274,9 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
             keysmapped = -1;
         }
 
-        // create desktop canvas
-        desktop = new cz.kruch.track.ui.Desktop(this);
-
         // init helpers and 'singletons'
         cz.kruch.track.configuration.Config.initDatums(this);
-        cz.kruch.track.ui.Waypoints.initialize(desktop);
         cz.kruch.track.util.Mercator.initialize();
-
-        // cleanup after initialization?
-        System.gc();
 
         // setup environment
         if (hasFlag("fs_skip_bug") || siemens /*|| symbian*/) {
@@ -330,10 +323,11 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
             cz.kruch.track.ui.Desktop.hasRepeatEvents = "true".equals(getAppProperty(JAD_UI_HAS_REPEAT_EVENTS));
         }
 
-        // setup & start desktop
-        desktop.setFullScreenMode(cz.kruch.track.configuration.Config.fullscreen);
-        desktop.setTitle(null);
-        Display.getDisplay(this).setCurrent(desktop);
+        // cleanup after initialization?
+        System.gc();
+
+        // create & boot desktop
+        desktop = new cz.kruch.track.ui.Desktop(this);
         desktop.boot(imgcached, configured, customized, localized, keysmapped);
     }
 

@@ -58,7 +58,7 @@ final class InfoForm implements CommandListener {
         pane.append(newItem(Resources.getString(Resources.INFO_ITEM_VENDOR), Resources.getString(Resources.INFO_ITEM_VENDOR_VALUE)));
         pane.append(newItem(Resources.getString(Resources.INFO_ITEM_VERSION), cz.kruch.track.TrackingMIDlet.version));
         pane.append(newItem(Resources.getString(Resources.INFO_ITEM_KEYS), ""));
-        pane.append(Resources.getString((short) (Resources.INFO_ITEM_KEYS_MS + desktop.mode)));
+        pane.append(Resources.getString((short) (Resources.INFO_ITEM_KEYS_MS + desktop.getMode())));
         pane.addCommand(new Command(Resources.getString(Resources.INFO_CMD_DETAILS), Desktop.POSITIVE_CMD_TYPE, 0));
         pane.addCommand(new Command(Resources.getString(Resources.CMD_CLOSE), Desktop.BACK_CMD_TYPE, 1));
         pane.setCommandListener(this);

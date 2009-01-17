@@ -414,23 +414,6 @@ public final class NavigationScreens {
     }
 
     public static StringBuffer printTo(final QualifiedCoordinates qc, final StringBuffer sb) {
-/*
-        if (Config.useGridFormat && isGrid()) {
-            final QualifiedCoordinates localQc = Datum.contextDatum.toLocal(qc);
-            toGrid(localQc, sb);
-            QualifiedCoordinates.releaseInstance(localQc);
-        } else if (Config.useUTM) {
-            toUTM(qc, sb);
-        } else {
-            if (Config.useGeocachingFormat) {
-                toLL(qc, sb);
-            } else {
-                final QualifiedCoordinates localQc = Datum.contextDatum.toLocal(qc);
-                toLL(localQc, sb);
-                QualifiedCoordinates.releaseInstance(localQc);
-            }
-        }
-*/
         switch (Config.cfmt) {
             case Config.COORDS_MAP_GRID: {
                 if (isGrid()) {
@@ -524,9 +507,6 @@ public final class NavigationScreens {
 
     private static StringBuffer append(final StringBuffer sb, final int type,
                                        final double value, final boolean hp) {
-/*
-        if (Config.useGeocachingFormat) {
-*/
         if (Config.cfmt != Config.COORDS_GC_LATLON) {
             appendAsDDMMSS(sb, type, value, hp);
         } else {
@@ -635,49 +615,10 @@ public final class NavigationScreens {
     }
 
     public static StringBuffer printTo(final StringBuffer sb, final QualifiedCoordinates qc,
-                                       final int mask) {
+                                       final int mask, final boolean decimalPrecision) {
         // local coords
         final QualifiedCoordinates localQc = Datum.contextDatum.toLocal(qc);
 
-/*
-        if (Config.useGridFormat && isGrid()) {
-            final CartesianCoordinates gridCoords = Mercator.LLtoGrid(localQc);
-            if ((mask & 1) != 0) {
-                append(sb, ExtraMath.round(gridCoords.easting)).append('E');
-            } else if ((mask & 2) != 0) {
-                append(sb, ExtraMath.round(gridCoords.northing)).append('N');
-            }
-            CartesianCoordinates.releaseInstance(gridCoords);
-        } else if (Config.useUTM) {
-            final CartesianCoordinates utmCoords = Mercator.LLtoUTM(qc);
-            if ((mask & 1) != 0) {
-                append(sb, ExtraMath.round(utmCoords.easting)).append('E');
-            } else if ((mask & 2) != 0) {
-                append(sb, ExtraMath.round(utmCoords.northing)).append('N');
-            }
-            CartesianCoordinates.releaseInstance(utmCoords);
-        } else {
-            if ((mask & 1) != 0) {
-                final double lat;
-                if (Config.useGeocachingFormat) {
-                    lat = qc.getLat();
-                } else {
-                    lat = localQc.getLat();
-                }
-                sb.append(lat > 0D ? 'N' : 'S').append(' ');
-                append(sb, QualifiedCoordinates.LAT, lat, Config.decimalPrecision);
-            } else if ((mask & 2) != 0) {
-                final double lon;
-                if (Config.useGeocachingFormat) {
-                    lon = qc.getLon();
-                } else {
-                    lon = localQc.getLon();
-                }
-                sb.append(lon > 0D ? 'E' : 'W').append(' ');
-                append(sb, QualifiedCoordinates.LON, lon, Config.decimalPrecision);
-            }
-        }
-*/
         switch (Config.cfmt) {
             case Config.COORDS_MAP_GRID: {
                 if (isGrid()) {
@@ -709,7 +650,7 @@ public final class NavigationScreens {
                         lat = qc.getLat();
                     }
                     sb.append(lat > 0D ? 'N' : 'S').append(' ');
-                    append(sb, QualifiedCoordinates.LAT, lat, Config.decimalPrecision);
+                    append(sb, QualifiedCoordinates.LAT, lat, decimalPrecision);
                 } else if ((mask & 2) != 0) {
                     final double lon;
                     if (Config.cfmt != Config.COORDS_GC_LATLON) {
@@ -718,7 +659,7 @@ public final class NavigationScreens {
                         lon = qc.getLon();
                     }
                     sb.append(lon > 0D ? 'E' : 'W').append(' ');
-                    append(sb, QualifiedCoordinates.LON, lon, Config.decimalPrecision);
+                    append(sb, QualifiedCoordinates.LON, lon, decimalPrecision);
                 }
             }
         }

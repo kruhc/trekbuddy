@@ -75,7 +75,7 @@ public final class TarInputStream extends InputStream {
     /**
      * Closes this stream. Closing underlying stream had to be commented out,
      * because Image.createImage() on SE phones closes the stream,
-     * which is something we do not want to happen if we want to happen.
+     * which is something we do not want to happen.
      */
     public void close() throws IOException {
 /* underlying stream is closed elsewhere

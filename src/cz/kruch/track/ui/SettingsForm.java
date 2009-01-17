@@ -737,7 +737,7 @@ final class SettingsForm implements CommandListener, ItemStateListener {
                 providers.addElement(new Integer(Config.LOCATION_PROVIDER_JSR179));
             }
 //#ifdef __ALL__
-            if (cz.kruch.track.TrackingMIDlet.sonyEricsson) {
+            if (cz.kruch.track.TrackingMIDlet.sonyEricssonEx) {
                 providers.addElement(new Integer(Config.LOCATION_PROVIDER_HGE100));
             }
 //#endif

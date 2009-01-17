@@ -118,6 +118,10 @@ final class MapViewer {
         return map != null;
     }
 
+    Map getMap() {
+        return map;
+    }
+
     void setMap(Map map) {
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("set map " + map);
@@ -425,7 +429,7 @@ final class MapViewer {
                 }
                 break;
             default:
-                throw new IllegalArgumentException("Weird direction");
+                throw new IllegalArgumentException("Internal error - weird direction");
         }
 
         return dirty;
@@ -438,17 +442,21 @@ final class MapViewer {
     }
 
     void initRoute(Position[] positions) {
-        this.wptPositions = null;
-        this.wptStatuses = null;
-        if (positions != null) {
-            this.wptPositions = positions;
-            this.wptStatuses = new byte[positions.length];
+        synchronized (this) {
+            this.wptPositions = null;
+            this.wptStatuses = null;
+            if (positions != null) {
+                this.wptPositions = positions;
+                this.wptStatuses = new byte[positions.length];
+            }
         }
     }
 
     void setRoute(Position[] positions) {
-        this.wptPositions = null;
-        this.wptPositions = positions;
+        synchronized (this) {
+            this.wptPositions = null;
+            this.wptPositions = positions;
+        }
     }
 
     void setPoiStatus(int idx, byte status) {
@@ -662,7 +670,9 @@ final class MapViewer {
         }
 
         // paint route/pois/wpt
-        drawNavigation(graphics);
+        if (wptPositions != null) {
+            drawNavigation(graphics);
+        }
 
         // paint crosshair
         if (Config.S60renderer) { // S60 renderer
@@ -727,76 +737,71 @@ final class MapViewer {
         final int color = graphics.getColor();
         graphics.setFont(Desktop.fontWpt);
 
-        // paint route with navigation or single navigation point
-        if (wptPositions != null) {
+        // local ref for faster access
+        final Position[] positions = this.wptPositions;
+        final byte[] statuses = this.wptStatuses;
 
-            // local ref for faster access
-            final Position[] positions = this.wptPositions;
-            final byte[] statuses = this.wptStatuses;
+        // draw polyline
+        if (Desktop.routeDir != 0) {
 
-            // draw polyline
-            if (Desktop.routeDir != 0) {
+            // line color and style
+            graphics.setColor(Config.routeLineColor);
+            if (Config.routeLineStyle) {
+                graphics.setStrokeStyle(Graphics.DOTTED);
+            }
 
-                // line color and style
-                graphics.setColor(Config.routeLineColor);
-                if (Config.routeLineStyle) {
-                    graphics.setStrokeStyle(Graphics.DOTTED);
-                }
-
-                // draw route as line
-                final int x = this.x;
-                final int y = this.y;
-                Position p0 = null;
-                for (int i = positions.length; --i >= 0; ) {
-                    if (positions[i] != null) {
-                        final Position p1 = positions[i];
-                        if (p0 != null) {
-                            graphics.drawLine(p0.getX() - x, p0.getY() - y,
-                                              p1.getX() - x, p1.getY() - y);
-                        }
-                        p0 = p1;
+            // draw route as line
+            final int x = this.x;
+            final int y = this.y;
+            Position p0 = null;
+            for (int i = positions.length; --i >= 0; ) {
+                if (positions[i] != null) {
+                    final Position p1 = positions[i];
+                    if (p0 != null) {
+                        graphics.drawLine(p0.getX() - x, p0.getY() - y,
+                                          p1.getX() - x, p1.getY() - y);
                     }
-                }
-
-                // restore line style
-                if (Config.routeLineStyle) {
-                    graphics.setStrokeStyle(Graphics.SOLID);
+                    p0 = p1;
                 }
             }
 
-            // POI name/desc color
-            graphics.setColor(0x00404040);
+            // restore line style
+            if (Config.routeLineStyle) {
+                graphics.setStrokeStyle(Graphics.SOLID);
+            }
+        }
 
-            // active wpt index
-            final int wptIdx = Desktop.wptIdx;
+        // POI name/desc color
+        graphics.setColor(0x00404040);
 
-            // draw POIs
-            if (Desktop.routeDir != 0 || Desktop.showall) {
-                for (int i = positions.length; --i >= 0; ) {
-                    if (positions[i] != null) {
-                        byte status = statuses[i];
-                        if (status == WPT_STATUS_VOID) {
-                            if (i < wptIdx) {
-                                status = WPT_STATUS_MISSED;
-                            } else if (i == wptIdx) {
-                                continue; // skip for now
-                            }
+        // active wpt index
+        final int wptIdx = Desktop.wptIdx;
+
+        // draw POIs
+        if (Desktop.routeDir != 0 || Desktop.showall) {
+            for (int i = positions.length; --i >= 0; ) {
+                if (positions[i] != null) {
+                    byte status = statuses[i];
+                    if (status == WPT_STATUS_VOID) {
+                        if (i < wptIdx) {
+                            status = WPT_STATUS_MISSED;
+                        } else if (i == wptIdx) {
+                            continue; // skip for now
                         }
-                        drawPoi(graphics, positions[i], status, i);
                     }
+                    drawPoi(graphics, positions[i], status, i);
                 }
             }
+        }
 
-            // draw current POI/WPT
-            if (wptIdx > -1) {
+        // draw current POI/WPT
+        if (wptIdx > -1) {
 
-                // setup color
-                graphics.setColor(0);
+            // setup color
+            graphics.setColor(0);
 
-                // draw current wpt last
-                drawPoi(graphics, positions[wptIdx], WPT_STATUS_CURRENT, wptIdx);
-            }
-
+            // draw current wpt last
+            drawPoi(graphics, positions[wptIdx], WPT_STATUS_CURRENT, wptIdx);
         }
 
         // hack! restore graphics

@@ -16,14 +16,14 @@ final class DesktopScreen extends GameCanvas implements Runnable {
 //#endif
 
     // main application
-    private Desktop delegate;
+    private final Desktop delegate;
 
     // keylock status
     private volatile boolean keylock;
+    private volatile int keyRepeatedCount;
 
     // key repeating simulation support
-    private volatile TimerTask repeatedKeyCheck;
-    private volatile int keyRepeatedCount;
+    private /*volatile*/ TimerTask repeatedKeyCheck;
     private /*volatile*/ int inKey; // using synchronized access helper
 
     public DesktopScreen(Desktop delegate) {
@@ -83,7 +83,6 @@ final class DesktopScreen extends GameCanvas implements Runnable {
     }
 
     void emulateKeyRepeated(final int keyCode) {
-        _setInKey(keyCode); // remember key - some devices do not support getKeyStates()
         synchronized (this) {
             if (repeatedKeyCheck == null) {
                 Desktop.timer.schedule(repeatedKeyCheck = new KeyCheckTimerTask(), 750L);
@@ -160,6 +159,9 @@ final class DesktopScreen extends GameCanvas implements Runnable {
         // counter
         keyRepeatedCount = 0;
 
+        // save key
+        _setInKey(i);
+
         // keymap
         i = Resources.remap(i);
 
@@ -177,12 +179,15 @@ final class DesktopScreen extends GameCanvas implements Runnable {
         if (log.isEnabled()) log.info("keyRepeated");
 //#endif
 
+        // increment counter
+        ++keyRepeatedCount;
+
         // keymap
         i = Resources.remap(i);
 
         // handle keylock
         if (Canvas.KEY_STAR == i) {
-            if (++keyRepeatedCount == 1) {
+            if (keyRepeatedCount == 1) {
                 keylock = !keylock;
                 if (!Config.powerSave) {
                     Desktop.display.vibrate(1000);
@@ -191,13 +196,10 @@ final class DesktopScreen extends GameCanvas implements Runnable {
             return;
         }
 
-        // keylock check
-        if (keylock) {
-            return;
+        // handle key event is not locked
+        if (!keylock) {
+            delegate.handleKey(i, true);
         }
-
-        // handle event
-        delegate.handleKey(i, true);
     }
 
     protected void keyReleased(int i) {
@@ -217,9 +219,6 @@ final class DesktopScreen extends GameCanvas implements Runnable {
             if (repeatedKeyCheck != null) {
                 repeatedKeyCheck.cancel();
                 repeatedKeyCheck = null;
-//#ifdef __LOG__
-                if (log.isEnabled()) log.debug("repeated key check cancelled");
-//#endif
             }
         }
 
@@ -229,12 +228,11 @@ final class DesktopScreen extends GameCanvas implements Runnable {
         // handle keylock
         if (Canvas.KEY_STAR == i) {
             if (keyRepeatedCount != 0) {
-                keyRepeatedCount = 0;
                 Desktop.showConfirmation(keylock ? Resources.getString(Resources.DESKTOP_MSG_KEYS_LOCKED) : Resources.getString(Resources.DESKTOP_MSG_KEYS_UNLOCKED), null);
             }
         }
 
-        // special keys
+        // handle special key events
         if (!keylock) {
             switch (i) {
                 case Canvas.KEY_NUM1: { // hack
@@ -250,6 +248,9 @@ final class DesktopScreen extends GameCanvas implements Runnable {
 
         // no key pressed anymore
         _setInKey(0);
+
+        // reset repeated counter
+        keyRepeatedCount = 0;
 
         // scrolling stops // TODO ugly direct access
         MapView.scrolls = 0;

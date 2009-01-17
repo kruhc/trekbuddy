@@ -12,9 +12,9 @@ import java.io.DataOutputStream;
 /**
  * Designed to work for TarLoader and S60DeviceControl together with native service.
  * <p>
- * Service protocol packet is { 0xFF, 0xEB, 0x00, <tt>byte</tt> <i>action</i>, <tt>integer</tt> <i>int context param</i> }. Actions are
+ * Service protocol packet is { 0xFF, 0xEB, 0x00, <tt>byte</tt> <i>action</i>, <tt>int</tt> <i>context param</i> }. Actions are
  * <ul>
- * <li>0x00 - set lights / reset inactivity timer (prevents screensaver to pop up)
+ * <li>0x00 - reset inactivity timer (to prevent screensaver)
  * <li>0x01 - file open
  * <li>0x02 - file close
  * <li>0x03 - file read
@@ -26,14 +26,14 @@ import java.io.DataOutputStream;
 public final class SymbianService {
 
     /**
-     * Opens "remote" stream.
+     * Opens networked stream.
      *
      * @param name file name (JSR-75 syntax)
-     * @return instance of <code>InputStream</code>, or <code>null</code>
-     *         if it cannot be opened - it does <b>not (!)</b> throw <code>IOException</code>
+     * @return instance of <code>InputStream</code>
+     * @throws IOException if the connection to <b>TrekBuddyService</b> cannot be opened
      */
     public static InputStream openInputStream(String name) throws IOException {
-        return new SymbianInputStream(name);
+        return new NetworkedInputStream(name);
     }
 
     /**
@@ -101,16 +101,16 @@ public final class SymbianService {
     }
 
     /**
-     * Service helper for fast tar-ed maps.
+     * Networked stream fast tar-ed maps.
      */
-    public static class SymbianInputStream extends InputStream {
+    public static final class NetworkedInputStream extends InputStream {
         private StreamConnection connection;
         private DataInputStream input;
         private DataOutputStream output;
         private final byte[] one = new byte[1];
         private final byte[] header = new byte[4];
 
-        public SymbianInputStream(String name) throws IOException {
+        public NetworkedInputStream(String name) throws IOException {
             // get UTF-8 file name
             final byte[] utf8name = name.getBytes("UTF-8");
             if (utf8name.length > 256) {
@@ -119,6 +119,7 @@ public final class SymbianService {
 
             // init communication
             try {
+
                 // open I/O
                 this.connection = (StreamConnection) Connector.open("socket://127.0.0.1:20175", Connector.READ_WRITE);
                 this.input = new DataInputStream(connection.openInputStream());
@@ -130,8 +131,12 @@ public final class SymbianService {
                 output.flush();
 
             } catch (IOException e) {
+
+                // cleanup
                 destroy();
-                throw e; // rethrow
+
+                // rethrow
+                throw e; 
             }
         }
 

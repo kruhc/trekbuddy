@@ -25,17 +25,15 @@ public class DeviceControl extends TimerTask {
 //#ifdef __ALL__
         try {
             Class.forName("com.nokia.mid.ui.DirectUtils");
-            if (System.getProperty("com.sonyericsson.imei") == null) {
-                if (cz.kruch.track.TrackingMIDlet.symbian) {
-                    instance = (DeviceControl) Class.forName("cz.kruch.track.ui.nokia.S60DeviceControl").newInstance();
-                    instance.name = "S60";
-                } else if (!cz.kruch.track.TrackingMIDlet.jbed) {
-                    instance = (DeviceControl) Class.forName("cz.kruch.track.ui.nokia.NokiaDeviceControl").newInstance();
-                    instance.name = "Nokia";
-                }
-            } else {
+            if (cz.kruch.track.TrackingMIDlet.symbian) {
+                instance = (DeviceControl) Class.forName("cz.kruch.track.ui.nokia.S60DeviceControl").newInstance();
+                instance.name = "Symbian";
+            } else if (cz.kruch.track.TrackingMIDlet.sonyEricssonEx) {
                 instance = (DeviceControl) Class.forName("cz.kruch.track.ui.nokia.SonyEricssonDeviceControl").newInstance();
                 instance.name = "SonyEricsson";
+            } else {
+                instance = (DeviceControl) Class.forName("cz.kruch.track.ui.nokia.NokiaDeviceControl").newInstance();
+                instance.name = "Nokia";
             }
         } catch (Throwable t) {
             // ignore

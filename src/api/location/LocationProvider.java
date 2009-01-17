@@ -70,17 +70,21 @@ public abstract class LocationProvider {
     public synchronized boolean updateLastState(int state) {
         final boolean changed = lastState != state;
         lastState = state;
+
         return changed;
     }
 
     public abstract int start() throws LocationException;
-    public abstract void stop() throws LocationException;
+
+    public void stop() throws LocationException {
+        die();
+    }
 
     public final void setLocationListener(LocationListener listener) {
         this.listener = listener;
     }
 
-    protected final boolean isGo() {
+    public final boolean isGo() {
         synchronized (this) {
             return go;
         }
@@ -130,7 +134,7 @@ public abstract class LocationProvider {
 
     protected final void die() {
         // debug
-        setStatus("being stopped");
+        setStatus("requesting stop");
         
         // shutdown provider thread
         synchronized (this) {

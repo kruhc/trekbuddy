@@ -1,18 +1,4 @@
-/*
- * Copyright 2006-2007 Ales Pour <kruhc@seznam.cz>.
- * All Rights Reserved.
- * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
- *
- * This code is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License version 2 only, as
- * published by the Free Software Foundation.
- *
- * This code is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
- * version 2 for more details (a copy is included in the LICENSE file that
- * accompanied this code).
- */
+// @LICENSE@
 
 package cz.kruch.track.location;
 
@@ -73,20 +59,6 @@ public final class O2GermanyLocationProvider
         (new Thread(this)).start();
 
         return LocationProvider._STARTING;
-    }
-
-    public void stop() throws LocationException {
-        // remove listener, and close and gc-free native provider
-        try {
-            impl.setMessageListener(null);
-            impl.close();
-        } catch (IOException e) {
-            // ignore
-        }
-        impl = null;
-
-        // wait for thread to die
-        die();
     }
 
     public void notifyIncomingMessage(javax.wireless.messaging.MessageConnection messageConnection) {
@@ -168,6 +140,15 @@ public final class O2GermanyLocationProvider
             setThrowable(t);
 
         } finally {
+
+            // remove listener, and close and gc-free native provider
+            try {
+                impl.setMessageListener(null);
+                impl.close();
+            } catch (Exception e) {
+                // ignore
+            }
+            impl = null;
 
             // almost dead
             zombie();

@@ -53,15 +53,6 @@ public final class SimulatorLocationProvider
         return LocationProvider._STARTING;
     }
 
-    public void stop() throws LocationException {
-//#ifdef __LOG__
-        if (log.isEnabled()) log.debug("stop request");
-//#endif
-
-        // wait for thread to die
-        die();
-    }
-
     public void invoke(Object result, Throwable throwable, Object source) {
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("playback selection: " + result);

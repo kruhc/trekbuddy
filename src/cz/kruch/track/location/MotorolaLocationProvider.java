@@ -67,11 +67,6 @@ public final class MotorolaLocationProvider
         return LocationProvider._STARTING;
     }
 
-    public void stop() throws LocationException {
-        // wait for thread to die
-        die();
-    }
-
     public void run() {
         // statistics
         restarts++;

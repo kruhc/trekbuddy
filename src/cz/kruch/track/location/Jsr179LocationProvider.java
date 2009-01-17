@@ -46,9 +46,9 @@ public final class Jsr179LocationProvider
             timeout = tokenizer.nextInt();
             maxage = tokenizer.nextInt();
             tokenizer = null; // gc hint
-            final javax.microedition.location.Criteria criteria = new javax.microedition.location.Criteria();
 
             // common criteria
+            final javax.microedition.location.Criteria criteria = new javax.microedition.location.Criteria();
             criteria.setAltitudeRequired(true);
             criteria.setSpeedAndCourseRequired(true);
 
@@ -80,11 +80,6 @@ public final class Jsr179LocationProvider
         (new Thread(this)).start();
 
         return LocationProvider._STARTING;
-    }
-
-    public void stop() throws LocationException {
-        // wait for thread to die
-        die();
     }
 
     public void run() {
@@ -120,7 +115,11 @@ public final class Jsr179LocationProvider
         } finally {
 
             // remove listener and gc-free native provider
-            impl.setLocationListener(null, -1, -1, -1);
+            try {
+                impl.setLocationListener(null, -1, -1, -1);
+            } catch (Exception e) {
+                // ignore
+            }
             impl = null;
 
             // almost dead

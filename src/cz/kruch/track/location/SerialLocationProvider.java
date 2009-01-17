@@ -122,7 +122,7 @@ public class SerialLocationProvider
         return LocationProvider._STARTING;
     }
 
-    /* this provider has special shutdown sequence */
+    /** @overriden */
     public void stop() throws LocationException {
 
         // die gracefully... unlikely :-(
@@ -147,7 +147,7 @@ public class SerialLocationProvider
     }
 
     private void gps() throws IOException {
-        final boolean isHge100 = cz.kruch.track.TrackingMIDlet.sonyEricsson && url.indexOf("AT5") > -1;
+        final boolean isHge100 = cz.kruch.track.TrackingMIDlet.sonyEricssonEx && url.indexOf("AT5") > -1;
         final boolean rw = isHge100 || Config.btKeepAlive != 0;
 
         // reset data

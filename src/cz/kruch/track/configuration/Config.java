@@ -130,7 +130,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
     // group [Desktop]
     public static boolean fullscreen;
     public static boolean noSounds;
-    public static boolean decimalPrecision;
+    public static boolean decimalPrecision      = true;
     public static boolean osdBasic              = true;
     public static boolean osdExtended           = true;
     public static boolean osdScale              = true;
@@ -231,7 +231,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         } else if (cz.kruch.track.TrackingMIDlet.uiq) {
             dataDir = getDefaultDataDir("Ms/", "Other/TrekBuddy/");
             fullscreen = true;
-        } else { // Nokia, SonyEricsson, ...
+        } else { // Nokia, SonyEricssons, ...
             dataDir = getDefaultDataDir("E:/", "TrekBuddy/"); // pstros: "file:///SDCard/TrekBuddy/"
             if (cz.kruch.track.TrackingMIDlet.nokia || cz.kruch.track.TrackingMIDlet.sonyEricsson) {
                 fullscreen = true;

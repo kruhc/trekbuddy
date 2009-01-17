@@ -9,7 +9,6 @@ import cz.kruch.track.util.NmeaParser;
 import cz.kruch.track.maps.io.LoaderIO;
 import cz.kruch.track.Resources;
 import cz.kruch.track.location.Waypoint;
-import api.io.BufferedInputStream;
 
 import javax.microedition.lcdui.Graphics;
 import javax.microedition.lcdui.Image;
@@ -21,9 +20,10 @@ import javax.microedition.lcdui.Displayable;
 import javax.microedition.lcdui.Canvas;
 import javax.microedition.lcdui.game.Sprite;
 
+import api.file.File;
+import api.io.BufferedInputStream;
 import api.location.Location;
 import api.location.QualifiedCoordinates;
-import api.file.File;
 
 import java.io.InputStream;
 import java.io.IOException;
@@ -525,7 +525,11 @@ final class ComputerView extends View implements Runnable, CommandListener {
     }
 
     public int handleAction(final int action, final boolean repeated) {
-        if (!repeated && profilesNames.length > 1) {
+        if (repeated) {
+            return Desktop.MASK_NONE;
+        }
+
+        if (profilesNames.length > 1) {
             switch (action) {
                 case Canvas.LEFT:
                 case Canvas.RIGHT: {
@@ -558,8 +562,22 @@ final class ComputerView extends View implements Runnable, CommandListener {
                 }
             }
         }
+        
+        return Desktop.MASK_NONE;
+    }
 
-        return super.handleAction(action, repeated);
+
+    public int handleKey(int keycode, boolean repeated) {
+        switch (keycode) {
+            case Canvas.KEY_NUM7: {
+                navigator.previousWpt();
+            } break;
+            case Canvas.KEY_NUM9: {
+                navigator.nextWpt();
+            } break;
+        }
+
+        return Desktop.MASK_SCREEN;
     }
 
     /* synchronized to avoid race-cond when rendering */
@@ -598,43 +616,52 @@ final class ComputerView extends View implements Runnable, CommandListener {
 
             // try to load profiles
             if (Config.dataDirExists/* && File.isFs()*/) {
+
                 try {
+
                     // find profiles
                     fillProfiles();
 
                     // got something?
-                    String s = null;
-                    if (profiles.containsKey(Config.cmsProfile)) {
-                        s = Config.cmsProfile;
-                        /* sync index */
-                        for (int i = profilesNames.length; --i >= 0; ) {
-                            if (s.equals(profilesNames[i])) {
-                                profileIdx = i;
-                                break;
+                    if (profiles.size() > 0) {
+
+                        // look for default profile
+                        final String s;
+                        if (profiles.containsKey(Config.cmsProfile)) {
+                            s = Config.cmsProfile;
+                            for (int i = profilesNames.length; --i >= 0; ) {
+                                if (s.equals(profilesNames[i])) {
+                                    profileIdx = i; /* sync index */
+                                    break;
+                                }
+                            }
+                        } else if (profiles.containsKey(CMS_SIMPLE_XML)) {
+                            s = CMS_SIMPLE_XML;
+                        } else {
+                            s = (String) profiles.keys().nextElement();
+                        }
+
+                        // got default profile?
+                        if (s != null) {
+
+                            // finalize initialization
+                            initialize();
+
+                            // load default profile
+                            loadViaCache(s);
+
+                            // prepare profile
+                            prepare(Config.dayNight);
+
+                            // autoswitch
+                            if (Config.cmsCycle > 0) {
+                                Desktop.timer.schedule(rotator = new Rotator(),
+                                                       Config.cmsCycle * 1000,
+                                                       Config.cmsCycle * 1000);
                             }
                         }
-                    } else if (profiles.containsKey(CMS_SIMPLE_XML)) {
-                        s = CMS_SIMPLE_XML;
-                    } else if (profiles.size() > 0) {
-                        s = (String) profiles.keys().nextElement();
                     }
-                    if (s != null) {
-                        // finalize initialization
-                        initialize();
 
-                        // load default profile
-                        loadViaCache(s);
-
-                        // prepare profile
-                        prepare(Config.dayNight);
-
-                        // autoswitch
-                        if (Config.cmsCycle > 0) {
-                            Desktop.timer.schedule(rotator = new Rotator(),
-                                                   Config.cmsCycle * 1000,
-                                                   Config.cmsCycle * 1000);
-                        }
-                    }
                 } catch (Throwable t) {
                     status = t.toString();
 //#ifdef __LOG__
@@ -1122,7 +1149,7 @@ final class ComputerView extends View implements Runnable, CommandListener {
                                         sb.append(MSG_NO_POSITION);
                                     } else {
                                         final int m = idx == VALUE_LAT ? 1 : 2;
-                                        NavigationScreens.printTo(sb, valueCoords, m);
+                                        NavigationScreens.printTo(sb, valueCoords, m, Config.decimalPrecision);
                                     }
                                 } break;
                                 case VALUE_WPT_LAT:
@@ -1136,7 +1163,7 @@ final class ComputerView extends View implements Runnable, CommandListener {
                                         sb.append(MSG_NO_POSITION);
                                     } else {
                                         final int m = idx == VALUE_WPT_LAT ? 1 : 2;
-                                        NavigationScreens.printTo(sb, qc, m);
+                                        NavigationScreens.printTo(sb, qc, m, Config.decimalPrecision);
                                     }
                                 } break;
                                 case VALUE_WPT_NAME: {
@@ -1418,6 +1445,8 @@ final class ComputerView extends View implements Runnable, CommandListener {
         final char[] charset = CHARSET;
         final int N = charset.length;
         final boolean S60renderer = Config.S60renderer;
+        int xoff = 0;
+        int invalids = 0;
 
         for (int i = 0; i < length; i++) {
             final char c = value[i];
@@ -1427,7 +1456,7 @@ final class ComputerView extends View implements Runnable, CommandListener {
                     break;
                 }
             }
-            if (j < N) {
+            if (j < N && invalids <= 1) {
                 final int z = c == '.' || c == ':' ? (int) (cw / 3) : 0;
                 if (S60renderer) {
                     graphics.setClip(x + (int) (i * cw), y, icw - 2 * z, ch);
@@ -1445,14 +1474,25 @@ final class ComputerView extends View implements Runnable, CommandListener {
                 } else {
                     x -= 2 * z;
                 }
+                xoff = 0;
+                invalids = 0;
             } else {
-                final int color = graphics.getColor();
-                graphics.setColor(0x00FF0000);
-                graphics.drawChar(c, x + (int) (i * cw), y, 0);
-                graphics.setColor(color);
 //#ifdef __LOG__
                 if (log.isEnabled()) log.debug("unknown char: '" + c + "'");
 //#endif
+                if (xoff == 0) {
+                    xoff = x + (int) (i * cw);
+                }
+/*
+                final int color = graphics.getColor();
+                graphics.setColor(0x00FF0000);
+*/
+                graphics.drawChar(c, xoff, y, 0);
+/*
+                graphics.setColor(color);
+*/
+                xoff += graphics.getFont().charWidth(c) + 1;
+                invalids++;
             }
         }
     }

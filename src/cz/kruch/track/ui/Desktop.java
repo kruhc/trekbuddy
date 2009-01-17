@@ -72,8 +72,17 @@ public final class Desktop implements CommandListener, LocationListener, YesNoDi
     public static Font font, fontWpt, fontLists, fontStringItems;
 
     // behaviour options
-    public static int fullScreenHeight = -1;
+    public static int fullScreenHeight;
     public static boolean hasRepeatEvents;
+
+    // browsing or tracking
+    static volatile boolean browsing;
+    static volatile boolean paused;
+    static volatile boolean navigating;
+    static volatile boolean showall;
+
+    // all-purpose timer
+    public static Timer timer;
 
     // application
     private MIDlet midlet;
@@ -93,7 +102,7 @@ public final class Desktop implements CommandListener, LocationListener, YesNoDi
     private View[] views;
 
     // screen modes
-    /*private */int mode;
+    private int mode;
 
     // desktop renderer
     private Graphics graphics;
@@ -115,29 +124,18 @@ public final class Desktop implements CommandListener, LocationListener, YesNoDi
     // RSK commands
     private Command cmdPause, cmdContinue;
 
-    // browsing or tracking
-    static volatile boolean browsing;
-    static volatile boolean paused;
-    static volatile boolean navigating;
-    static volatile boolean showall;
-
     // loading states and last-op message
     private /*volatile*/ boolean initializingMap; // using synchronized access helper
     private /*volatile*/ boolean loadingSlices;   // using synchronized access helper
-    private final Object[] loadingResult = {
-        Resources.getString(Resources.DESKTOP_MSG_NO_DEFAULT_MAP), null 
-    };
+    private final Object[] loadingResult;
 
     // location provider and its last-op throwable and status
     private volatile LocationProvider provider;
     private volatile Object providerStatus;
     private volatile Throwable providerError;
     private volatile Throwable tracklogError;
-    private volatile boolean stopRequest;
-    private volatile boolean providerRestart;
-
-    // all-purpose timer
-    public static Timer timer;
+    private /*volatile*/ boolean stopRequest;
+    private /*volatile*/ boolean providerRestart;
 
     // logs
     private boolean tracklog;
@@ -186,14 +184,17 @@ public final class Desktop implements CommandListener, LocationListener, YesNoDi
         screen = new DesktopScreen(this);
         display = Display.getDisplay(midlet);
         timer = new Timer();
-        hasRepeatEvents = screen.hasRepeatEvents();
         browsing = true;
+        fullScreenHeight = -1;
 
         // init basic members
         this.midlet = midlet;
-        this.eventing = SmartRunnable.getInstance();
         this.boot = true;
         this.initializingMap = true;
+        this.eventing = SmartRunnable.getInstance();
+        this.loadingResult = new Object[]{
+            Resources.getString(Resources.DESKTOP_MSG_NO_DEFAULT_MAP), null
+        };
 
         // TODO move to Waypoints???
         Desktop.wptIdx = Desktop.wptEndIdx = Desktop.reachedIdx = -1;
@@ -333,9 +334,6 @@ public final class Desktop implements CommandListener, LocationListener, YesNoDi
 
         // handle commands
         screen.setCommandListener(this);
-        
-        // start I/O loader
-        LoaderIO.getInstance();
     }
 
     public int getHeight() {
@@ -344,6 +342,10 @@ public final class Desktop implements CommandListener, LocationListener, YesNoDi
         }
 
         return screen.getHeight();
+    }
+
+    int getMode() {
+        return mode;
     }
 
     private static void resetFont() {
@@ -607,9 +609,12 @@ public final class Desktop implements CommandListener, LocationListener, YesNoDi
         if (log.isEnabled()) log.info("post init");
 //#endif
 
-        // loads CMS profiles
-        LoaderIO.getInstance().enqueue((Runnable) views[VIEW_CMS]);
-        Thread.yield();
+        // check DataDir structure
+        if (Config.dataDirAccess/*File.isFs()*/) {
+            Config.initDataDir();
+        } else {
+            showError("'DataDir' not accessible - please fix it and restart", null, null);
+        }
 
         // initialize waypoints
         cz.kruch.track.ui.Waypoints.initialize(this);
@@ -627,12 +632,8 @@ public final class Desktop implements CommandListener, LocationListener, YesNoDi
             }
         }
 
-        // check DataDir structure
-        if (Config.dataDirAccess/*File.isFs()*/) {
-            Config.initDataDir();
-        } else {
-            showError("'DataDir' not accessible - please fix it and restart", null, null);
-        }
+        // loads CMS profiles
+        LoaderIO.getInstance().enqueue((Runnable) views[VIEW_CMS]);
     }
 
     public void commandAction(Command command, Displayable displayable) {
@@ -655,15 +656,17 @@ public final class Desktop implements CommandListener, LocationListener, YesNoDi
             (new FileBrowser(Resources.getString(Resources.DESKTOP_MSG_SELECT_ATLAS), new Event(Event.EVENT_FILE_BROWSER_FINISHED, "atlas"), screen)).show();
         } else if (command == cmdRun) {
             // start tracking
-            stopRequest = providerRestart = false;
+            _setStopRequest(false);
+            _setProviderRestart(false);
             preTracking(false);
         } else if (command == cmdStop) {
             // stop tracking
-            stopRequest = true;
+            _setStopRequest(true);
             stopTracking();
         } else if (command == cmdRunLast) {
             // start tracking with known device
-            stopRequest = providerRestart = false;
+            _setStopRequest(false);
+            _setProviderRestart(false);
             preTracking(true);
         } else if (command == cmdExit) {
             (new YesNoDialog(screen, this, this, Resources.getString(Resources.DESKTOP_MSG_WANT_QUIT), null)).show();
@@ -854,7 +857,7 @@ public final class Desktop implements CommandListener, LocationListener, YesNoDi
     }
 
     public boolean isLocation() {
-        return ((MapView)views[VIEW_MAP]).isLocation();
+        return ((MapView) views[VIEW_MAP]).isLocation();
     }
 
     public Atlas getAtlas() {
@@ -1160,6 +1163,47 @@ public final class Desktop implements CommandListener, LocationListener, YesNoDi
         update(mask);
     }
 
+    public Waypoint previousWpt() {
+        if (wpts != null) {
+
+            // not at the first one yet?
+            if (wptIdx > 0) {
+                --wptIdx;
+            }
+
+            // update navinfo // TODO copy&pasted from setNavigateTo
+            if (isTracking() && isLocation()) {
+                updateNavigation(getLocation().getQualifiedCoordinates());
+            } else {
+                updateNavigation(getPointer());
+            }
+
+            return (Waypoint) wpts.elementAt(wptIdx);
+        }
+
+        return null;
+    }
+
+    public Waypoint nextWpt() {
+        if (wpts != null) {
+
+            // not at the last one yet?
+            if (wptIdx < wpts.size() - 1) {
+                ++wptIdx;
+            }
+
+            // update navinfo
+            if (isTracking() && isLocation()) {
+                updateNavigation(getLocation().getQualifiedCoordinates());
+            } else {
+                updateNavigation(getPointer());
+            }
+
+            return (Waypoint) wpts.elementAt(wptIdx);
+        }
+        return null;
+    }
+
     public int getWptAzimuth() {
         return wptAzimuth;
     }
@@ -1190,7 +1234,7 @@ public final class Desktop implements CommandListener, LocationListener, YesNoDi
         }
     }
 
-    void _setLoadingSlices(final boolean b) {
+    private void _setLoadingSlices(final boolean b) {
         synchronized (this) {
             loadingSlices = b;
         }
@@ -1208,9 +1252,33 @@ public final class Desktop implements CommandListener, LocationListener, YesNoDi
         }
     }
 
+    private boolean _isStopRequest() {
+        synchronized (this) {
+            return stopRequest;
+        }
+    }
+
+    private void _setStopRequest(final boolean stopRequest) {
+        synchronized (this) {
+            this.stopRequest = stopRequest;
+        }
+    }
+
+    private boolean _isProviderRestart() {
+        synchronized (this) {
+            return providerRestart;
+        }
+    }
+
+    private void _setProviderRestart(final boolean providerRestart) {
+        synchronized (this) {
+            this.providerRestart = providerRestart;
+        }
+    }
+
     /*
-     * ~end
-     */
+    * ~end
+    */
 
     /*private */void handleKey(final int i, final boolean repeated) {
         final View[] views = this.views;
@@ -1247,10 +1315,11 @@ public final class Desktop implements CommandListener, LocationListener, YesNoDi
                 // handle action
                 mask = views[mode].handleAction(action, repeated);
 
-                if (mode == VIEW_MAP) {
-                    if (repeated) {
-                        eventing.callSerially(Desktop.screen);
-                    } else if (!hasRepeatEvents) {
+                // repetition
+                if (repeated && mode == VIEW_MAP) {
+                    eventing.callSerially(Desktop.screen);
+                } else {
+                    if (!hasRepeatEvents) {
                         screen.emulateKeyRepeated(i);
                     }
                 }
@@ -1321,7 +1390,7 @@ public final class Desktop implements CommandListener, LocationListener, YesNoDi
         update(mask);
     }
 
-    public void update(int mask) {
+    void update(int mask) {
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("update " + Integer.toBinaryString(mask));
 //#endif
@@ -1329,9 +1398,13 @@ public final class Desktop implements CommandListener, LocationListener, YesNoDi
         // anything to update?
         if (mask != MASK_NONE) {
 
-            // prepare slices // TODO ugly - MapView specific
-            if ((mask & MASK_MAP) != 0) {
-                ((MapView) views[VIEW_MAP]).ensureSlices();
+            // prepare slices // TODO MapView specific
+            if ((mask & Desktop.MASK_MAP) != 0) {
+                synchronized (this) {
+                    if (!initializingMap && !loadingSlices) {
+                        ((MapView) views[VIEW_MAP]).prerender();
+                    }
+                }
             }
 
             // enqueu render request
@@ -1565,7 +1638,7 @@ public final class Desktop implements CommandListener, LocationListener, YesNoDi
 //#endif
 
         // be aware
-        providerRestart = true;
+        _setProviderRestart(true);
 
         // update OSD
         osd.setProviderStatus(LocationProvider._STARTING);
@@ -1631,9 +1704,6 @@ public final class Desktop implements CommandListener, LocationListener, YesNoDi
         if (log.isEnabled()) log.debug("stop tracking " + provider);
 //#endif
 
-        // no time
-        trackstart = 0;
-
         // assertion - should never happen
         if (provider == null) {
 //            throw new IllegalStateException("Tracking already stopped");
@@ -1643,10 +1713,16 @@ public final class Desktop implements CommandListener, LocationListener, YesNoDi
             return false;
         }
 
-/*
-        // unregister as listener
-        provider.setLocationListener(null);
-*/
+        // no time
+        trackstart = 0;
+
+        // already stopping?
+        if (!provider.isGo()) {
+//#ifdef __LOG__
+            if (log.isEnabled()) log.error("tracking already stopping");
+//#endif
+            return false;
+        }
 
         // stop provider
         try {
@@ -1676,7 +1752,7 @@ public final class Desktop implements CommandListener, LocationListener, YesNoDi
             final boolean isGpx = Config.TRACKLOG_FORMAT_GPX.equals(Config.tracklogFormat);
 
             // restart?
-            if (providerRestart) {
+            if (_isProviderRestart()) {
 //#ifdef __LOG__
                 if (log.isEnabled()) log.debug("already running");
 //#endif
@@ -2535,7 +2611,8 @@ public final class Desktop implements CommandListener, LocationListener, YesNoDi
                     }
 
                     // setup map viewer
-                    ((MapView) views[VIEW_MAP]).setMap(map);
+                    final MapView mapView = ((MapView) views[VIEW_MAP]);
+                    mapView.setMap(map);
 
                     // move viewer to known position, if any
                     if (_qc != null) {
@@ -2558,7 +2635,7 @@ public final class Desktop implements CommandListener, LocationListener, YesNoDi
 
                             // move to position
                             if (map.isWithin(_qc)) {
-                                ((MapView) views[VIEW_MAP]).setPosition(map.transform(_qc));
+                                mapView.setPosition(map.transform(_qc));
                             }
 
                         } finally {
@@ -2569,13 +2646,16 @@ public final class Desktop implements CommandListener, LocationListener, YesNoDi
                     // map is ready
                     _setInitializingMap(false);
 
-                    // update OSD & navigation UI // TODO ugly code begins ---
-                    QualifiedCoordinates qc = map.transform(((MapView) views[VIEW_MAP]).getPosition());
+                    // TODO ugly code begins ---
+
+                    // update OSD & navigation UI
+                    QualifiedCoordinates qc = map.transform(mapView.getPosition());
                     MapView.setBasicOSD(qc, true);
                     updateNavigation(qc);
                     QualifiedCoordinates.releaseInstance(qc);
                     qc = null; // gc hint
-                    ((MapView) views[VIEW_MAP]).updateNavigationInfo(); // TODO ugly
+                    mapView.updateNavigationInfo(); // TODO ugly
+
                     // TODO -- ugly code ends
 
                     // render screen - it will force slices loading
@@ -2682,14 +2762,14 @@ public final class Desktop implements CommandListener, LocationListener, YesNoDi
                     startTracklog();
 
                     // reset views on fresh start
-                    if (!providerRestart) {
+                    if (!_isProviderRestart()) {
                         for (int i = views.length; --i >= 0; ) {
                             views[i].reset();
                         }
                     }
 
                     // clear restart flag
-                    providerRestart = false;
+                    _setProviderRestart(false);
 
                 } break;
 
@@ -2719,7 +2799,7 @@ public final class Desktop implements CommandListener, LocationListener, YesNoDi
                     }
 
                     // stop tracking completely or restart
-                    if (stopRequest || provider == null) {
+                    if (_isStopRequest() || provider == null) {
 //#ifdef __LOG__
                         if (log.isEnabled()) log.debug("to do: after tracking");
 //#endif
@@ -2839,19 +2919,17 @@ public final class Desktop implements CommandListener, LocationListener, YesNoDi
 
         }
 
-        private void cleanup(final Throwable t) {
+        private void cleanup(final Throwable unused) {
 //#ifdef __LOG__
             if (log.isEnabled()) log.debug("cleanup");
 //#endif
             // update loading result
-            {
-                final String msg = Resources.getString(Resources.DESKTOP_MSG_EVENT_CLENAUP);
-                final int i = msg.indexOf('\n');
-                if (i > /* -1 */ 0) {
-                    _updateLoadingResult(msg.substring(0, i), msg.substring(i + 1));
-                } else {
-                    _updateLoadingResult(msg, (String) null);
-                }
+            final String msg = Resources.getString(Resources.DESKTOP_MSG_EVENT_CLENAUP);
+            final int i = msg.indexOf('\n');
+            if (i > /* -1 */ 0) {
+                _updateLoadingResult(msg.substring(0, i), msg.substring(i + 1));
+            } else {
+                _updateLoadingResult(msg, (String) null);
             }
 
             // clear temporary vars

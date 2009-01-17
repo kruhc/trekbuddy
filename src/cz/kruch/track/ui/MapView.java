@@ -1,18 +1,4 @@
-/*
- * Copyright 2006-2007 Ales Pour <kruhc@seznam.cz>.
- * All Rights Reserved.
- * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
- *
- * This code is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License version 2 only, as
- * published by the Free Software Foundation.
- *
- * This code is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
- * version 2 for more details (a copy is included in the LICENSE file that
- * accompanied this code).
- */
+// @LICENSE@
 
 package cz.kruch.track.ui;
 
@@ -56,25 +42,19 @@ final class MapView extends View {
     /**
      * @deprecated hack
      */
-    public void ensureSlices() {
-        final Desktop navigator = this.navigator;
-        if (!navigator._getInitializingMap() && mapViewer.hasMap()) {
-            synchronized (navigator/*loadingSlicesLock*/) { // same lock as used in _get/_setLoadingSlices!!!
-                if (!navigator._getLoadingSlices()) {
-                    navigator._setLoadingSlices(mapViewer.ensureSlices());
-                }
-            }
-        }
+    boolean prerender() {
+        return mapViewer.hasMap() && mapViewer.ensureSlices();
     }
+
 
     /**
      * @deprecated hack
      */
-    public void setMap(Map map) {
+    void setMap(Map map) {
         // setup map viewer
         mapViewer.setMap(map);
 
-        // forget old route
+        // forget old route; also resets map viewer
         disposeRoute();
 
         // create navigation for new map
@@ -91,23 +71,15 @@ final class MapView extends View {
     /**
      * @deprecated hack
      */
-    public Position getPosition() {
+    Position getPosition() {
         return mapViewer.getPosition();
     }
 
     /**
      * @deprecated hack
      */
-    public void setPosition(Position position) {
+    void setPosition(Position position) {
         mapViewer.setPosition(position);
-    }
-
-    public boolean isLocation() {
-        return location != null;
-    }
-
-    public void close() {
-        mapViewer.setMap(null); // saves crosshair position
     }
 
     void setVisible(boolean b) {
@@ -119,8 +91,16 @@ final class MapView extends View {
         }
     }
 
+    public boolean isLocation() {
+        return location != null;
+    }
+
+    public void close() {
+        mapViewer.setMap(null); // saves crosshair position
+    }
+
     public int routeChanged(Vector wpts) {
-        // release old route
+        // release old route; also resets map viewer
         disposeRoute();
 
         // routing starts
@@ -128,10 +108,10 @@ final class MapView extends View {
 
             // prepare route
             prepareRoute(wpts);
-        }
 
-        // init route
-        mapViewer.initRoute(route);
+            // init route
+            mapViewer.initRoute(route);
+        }
 
         return super.routeChanged(wpts);
     }
@@ -178,22 +158,25 @@ final class MapView extends View {
     }
 
     private void disposeRoute() {
-        final Position[] route = this.route;
-        if (route != null) {
-            for (int i = route.length; --i >= 0;) {
-                Position.releaseInstance(route[i]);
-                route[i] = null; // gc hint
+        synchronized (this) {
+            final Position[] route = this.route;
+            if (route != null) {
+                for (int i = route.length; --i >= 0;) {
+                    Position.releaseInstance(route[i]);
+                    route[i] = null; // gc hint
+                }
+                this.route = null; // gc hint
+                this.mapViewer.setRoute(null);
             }
-            this.route = null; // gc hint
         }
     }
 
     private void prepareRoute(final Vector wpts) {
         // local ref
-        final Map map = navigator.getMap();
+        final Map map = this.mapViewer.getMap();
 
         // allocate new array
-        route = new Position[wpts.size()];
+        final Position[] route = new Position[wpts.size()];
 
         // create
         for (int N = wpts.size(), c = 0, i = 0; i < N; i++) {
@@ -206,6 +189,9 @@ final class MapView extends View {
             // add to route
             route[c++] = position.clone();
         }
+
+        // set
+        this.route = route;
     }
 
     public int handleAction(final int action, final boolean repeated) {
@@ -229,6 +215,7 @@ final class MapView extends View {
                 if (navigator.isTracking() && isLocation()) {
                     mask |= updatedTrick();
                 }
+
             } else { // move left-right-up-down
 
                 // cursor movement breaks real-time tracking
@@ -248,11 +235,7 @@ final class MapView extends View {
 //#endif
 
                 // scroll the maps
-                boolean scrolled = false;
-//                    for (int i = steps; i-- > 0; ) {
-//                        scrolled = mapViewer.scroll(action) || scrolled;
-//                    }
-                scrolled = mapViewer.scroll(action, steps);
+                boolean scrolled = mapViewer.scroll(action, steps);
 
                 // has map been scrolled?
                 if (scrolled) {

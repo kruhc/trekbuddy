@@ -57,6 +57,8 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
         try {
             // open native file
             nativeFile = File.open(map.getPath());
+
+            // do file existence check
             if (!nativeFile.exists()) {
                 throw new IOException("File " + map.getPath() + " not found");
             }
@@ -239,6 +241,7 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
                         token = null; // gc hint
                         token = reader.readToken(false);
                     }
+
                 } catch (InvalidMapException e) {
                     throw e;
                 } catch (IOException e) {
@@ -332,18 +335,10 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
                     tarIn.setStreamOffset(0);
                 }
             } else { // non-resetable stream
-                if (cz.kruch.track.TrackingMIDlet.symbian) {
-                    in = SymbianService.openInputStream(nativeFile.getURL());
 //#ifdef __LOG__
-                    if (log.isEnabled()) log.debug("remote stream? " + in);
+                if (log.isEnabled()) log.debug("new stream");
 //#endif
-                }
-                if (in == null) {
-//#ifdef __LOG__
-                    if (log.isEnabled()) log.debug("open new input stream");
-//#endif
-                    in = nativeFile.openInputStream();
-                }
+                in = nativeFile.openInputStream();
                 buffered.setInputStream(in);
                 tarIn.setStreamOffset(0);
             }

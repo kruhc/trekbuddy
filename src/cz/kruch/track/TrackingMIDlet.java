@@ -22,7 +22,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
 
     public static String version;
     public static boolean jsr82, jsr120, jsr135, jsr179, jsr234, motorola179, comm;
-    public static boolean sonyEricsson, nokia, siemens, lg, motorola, samsung;
+    public static boolean sonyEricsson, sonyEricssonEx, nokia, siemens, lg, motorola, samsung;
     public static boolean j9, jbed, intent, palm, rim, symbian, s60nd, uiq, brew/*, phoneme*/;
     public static boolean sxg75, a780, s65;
 
@@ -61,6 +61,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         nokia = platform.startsWith("Nokia");
         s60nd = platform.startsWith("Nokia66") || platform.startsWith("NokiaN70");
         sonyEricsson = System.getProperty("com.sonyericsson.imei") != null;
+        sonyEricssonEx = sonyEricsson || platform.startsWith("SonyEricsson");
         siemens = System.getProperty("com.siemens.IMEI") != null || System.getProperty("com.siemens.mp.imei") != null;
         motorola = System.getProperty("com.motorola.IMEI") != null;
         lg = platform.startsWith("LG");
@@ -145,18 +146,24 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         } catch (Throwable t) {
         }
         /* detect UIQ */
-        if (sonyEricsson && symbian) {
-            try {
-                Class.forName("java.lang.ref.Reference");
-                uiq = true;
-            } catch (Throwable t) {
+        if (sonyEricssonEx) {
+            if (symbian) {
+                try {
+                    Class.forName("java.lang.ref.Reference");
+                    uiq = true;
+//#ifdef __LOG__
+                    System.out.println("* UIQ");
+//#endif
+                } catch (Throwable t) {
+                }
             }
-        }
-        /* detect Jbed */
-        if (!sonyEricsson) {
+        } else { /* detect Jbed */
             try {
                 Class.forName("com.jbed.io.CharConvUTF8");
                 jbed = true;
+//#ifdef __LOG__
+                System.out.println("* Jbed");
+//#endif
             } catch (Throwable t) {
             }
         }
@@ -291,20 +298,21 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
 //#endif
             cz.kruch.track.maps.Map.useReset = false;
         }
-/*
-        if (!hasFlag("ui_no_partial_flush") && (nokia || sonyEricsson)) {
-//#ifdef __LOG__
-            System.out.println("* ui partial-flush feature on");
-//#endif
-            cz.kruch.track.ui.Desktop.partialFlush = true;
-        }
-*/
         if (hasFlag("provider_o2_germany")) {
+//#ifdef __LOG__
+            System.out.println("* O2 Germany provider");
+//#endif
             cz.kruch.track.configuration.Config.o2provider = true;
         }
         if (sxg75) {
             cz.kruch.track.ui.NavigationScreens.useCondensed = 1;
         }
+
+        // cleanup after initialization?
+        System.gc();
+
+        // create desktop
+        desktop = new cz.kruch.track.ui.Desktop(this);
 
         // custom device handling
         if (getAppProperty(JAD_GPS_CONNECTION_URL) != null) {
@@ -313,6 +321,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         if (getAppProperty(JAD_GPS_DEVICE_NAME) != null) {
             cz.kruch.track.configuration.Config.btDeviceName = getAppProperty(JAD_GPS_DEVICE_NAME);
         }
+
         // broken device handling
         if (getAppProperty(JAD_UI_FULL_SCREEN_HEIGHT) != null) {
             if (cz.kruch.track.configuration.Config.fullscreen) {
@@ -323,11 +332,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
             cz.kruch.track.ui.Desktop.hasRepeatEvents = "true".equals(getAppProperty(JAD_UI_HAS_REPEAT_EVENTS));
         }
 
-        // cleanup after initialization?
-        System.gc();
-
-        // create & boot desktop
-        desktop = new cz.kruch.track.ui.Desktop(this);
+        // boot desktop
         desktop.boot(imgcached, configured, customized, localized, keysmapped);
     }
 
@@ -358,6 +363,6 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
     }
 
     public static boolean supportsVideoCapture() {
-        return (jsr135 && "true".equals(System.getProperty("supports.video.capture"))) || (jsr234);
+        return ((jsr135 || jsr234) && "true".equals(System.getProperty("supports.video.capture")));
     }
 }

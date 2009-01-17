@@ -386,6 +386,7 @@ public final class Map implements Runnable {
         protected static final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("Map.Loader");
 //#endif
         protected static final String SET_DIR_PREFIX = "set/";
+
         protected static final BufferedInputStream buffered = new BufferedInputStream(null, 4096);
 
         protected String basename;

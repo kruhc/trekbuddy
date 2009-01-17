@@ -119,7 +119,7 @@ final class LocatorView extends View {
 
     public int handleAction(final int action, final boolean repeated) {
         if (repeated) {
-            return 0;
+            return Desktop.MASK_NONE;
         }
 
         switch (action) {

@@ -401,8 +401,7 @@ abstract class Calibration {
             }
             c = (Calibration) factory.newInstance();
         } catch (Exception e) {
-            // TODO this is wrong
-            throw new IllegalStateException(e.toString());
+            throw new IllegalStateException("Calibration instance error: " + e.toString());
         }
 
         if (c != null) {

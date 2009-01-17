@@ -35,7 +35,7 @@ final class Jsr234Camera extends Camera implements PlayerListener {
     public Jsr234Camera() {
     }
 
-    public void getResolutions(Vector v) {
+    public void getResolutions(final Vector v) {
         int[] res = null;
         Player player = null;
         try {
@@ -63,22 +63,19 @@ final class Jsr234Camera extends Camera implements PlayerListener {
     }
 
     public void beforeShoot() throws MediaException {
-        if (cz.kruch.track.TrackingMIDlet.jsr234) {
+        // set camera resolution
+        final CameraControl cameraCtrl = (CameraControl) player.getControl("javax.microedition.amms.control.camera.CameraControl");
+        cameraCtrl.setStillResolution(Config.snapshotFormatIdx);
 
-            // set camera resolution
-            final CameraControl cameraCtrl = (CameraControl) player.getControl("javax.microedition.amms.control.camera.CameraControl");
-            cameraCtrl.setStillResolution(Config.snapshotFormatIdx);
-
-            // adjust focus
-            final FocusControl focusCtrl = (FocusControl) player.getControl("javax.microedition.amms.control.camera.FocusControl");
-            if (focusCtrl != null) {
-                try {
-                    if (focusCtrl.isAutoFocusSupported()) {
-                        focusCtrl.setFocus(FocusControl.AUTO);
-                    } 
-                } catch (MediaException e) {
-                    // ignore
+        // adjust focus
+        final FocusControl focusCtrl = (FocusControl) player.getControl("javax.microedition.amms.control.camera.FocusControl");
+        if (focusCtrl != null) {
+            try {
+                if (focusCtrl.isAutoFocusSupported()) {
+                    focusCtrl.setFocus(FocusControl.AUTO);
                 }
+            } catch (MediaException e) {
+                // ignore
             }
         }
     }

@@ -28,7 +28,7 @@ final class Jsr135Camera extends Camera {
     public Jsr135Camera() {
     }
 
-    public void getResolutions(Vector v) {
+    public void getResolutions(final Vector v) {
         final String encodings = System.getProperty("video.snapshot.encodings");
         int start = encodings.indexOf("encoding=");
         while (start > -1) {

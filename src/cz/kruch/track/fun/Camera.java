@@ -41,6 +41,9 @@ public abstract class Camera implements CommandListener, Runnable {
     // supported still resolutions
     private static String[] resolutions;
 
+    // hack
+    private static boolean jsr234fixed;
+
     // image counter
     protected static int imgNum;
 
@@ -53,38 +56,10 @@ public abstract class Camera implements CommandListener, Runnable {
     private Callback callback;
     protected long timestamp;
 
-    public abstract void getResolutions(Vector v);
+    public abstract void getResolutions(final Vector v);
     public abstract void beforeShoot() throws MediaException;
     public abstract void createFinder(final Form form) throws MediaException;
 
-    private static Camera createInstance(Displayable next, Callback callback, long timestamp) {
-        Camera delegate;
-        try {
-            if (cz.kruch.track.TrackingMIDlet.jsr234) {
-                delegate = (Camera) Class.forName("cz.kruch.track.fun.Jsr234Camera").newInstance();
-            } else {
-                delegate = (Camera) Class.forName("cz.kruch.track.fun.Jsr135Camera").newInstance();
-            }
-            delegate.next = next;
-            delegate.callback = callback;
-            delegate.timestamp = timestamp;
-        } catch (Exception e) {
-//#ifdef __LOG__
-            e.printStackTrace();
-//#endif
-            throw new IllegalStateException(e.toString());
-        }
-        return delegate;
-    }
-
-    /**
-     * Opens a camera for shooting.
-     *
-     * @param next next displayable
-     * @param callback event callback
-     * @param timestamp timestamp (for picture taking)
-     * @throws Throwable if anything goes wrong
-     */
     public static void show(final Displayable next, final Callback callback,
                             final long timestamp) throws Throwable {
 //#ifdef __LOG__
@@ -114,6 +89,53 @@ public abstract class Camera implements CommandListener, Runnable {
         } else {
             shutdown();
         }
+    }
+
+    private static void fixJsr234() {
+        // run once only
+        if (jsr234fixed) {
+            return;
+        }
+        jsr234fixed = true;
+
+        // detect broken amms
+        Player player = null;
+        try {
+            player = Manager.createPlayer(Config.captureLocator);
+            player.realize();
+            if (player.getControl("javax.microedition.amms.control.camera.CameraControl") == null) {
+                cz.kruch.track.TrackingMIDlet.jsr234 = false;
+            }
+        } catch (Exception e) {
+            // ignore
+        } finally {
+            try {
+                player.close();
+            } catch (Exception e) { // NPE or ME
+                // ignore
+            }
+        }
+    }
+
+    private static Camera createInstance(Displayable next, Callback callback, long timestamp) {
+        Camera delegate;
+        try {
+            fixJsr234();
+            if (cz.kruch.track.TrackingMIDlet.jsr234) {
+                delegate = (Camera) Class.forName("cz.kruch.track.fun.Jsr234Camera").newInstance();
+            } else {
+                delegate = (Camera) Class.forName("cz.kruch.track.fun.Jsr135Camera").newInstance();
+            }
+            delegate.next = next;
+            delegate.callback = callback;
+            delegate.timestamp = timestamp;
+        } catch (Exception e) {
+//#ifdef __LOG__
+            e.printStackTrace();
+//#endif
+            throw new IllegalStateException(e.toString());
+        }
+        return delegate;
     }
 
     private void open() throws Throwable {

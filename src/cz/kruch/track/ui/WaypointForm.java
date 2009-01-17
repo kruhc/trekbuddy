@@ -287,13 +287,13 @@ final class WaypointForm implements CommandListener, ItemCommandListener, Callba
 
         // lat/easting
         final StringBuffer sb = new StringBuffer(32);
-        NavigationScreens.printTo(sb, qc, QualifiedCoordinates.LAT);
+        NavigationScreens.printTo(sb, qc, QualifiedCoordinates.LAT, true);
         appendWithNewlineAfter(this.fieldLat = new TextField(labelX, sb.toString(), 13, TextField.ANY));
         latHash = fieldLat.getString().trim().hashCode();
 
         // lon/northing
         sb.delete(0, sb.length());
-        NavigationScreens.printTo(sb, qc, QualifiedCoordinates.LON);
+        NavigationScreens.printTo(sb, qc, QualifiedCoordinates.LON, true);
         appendWithNewlineAfter(this.fieldLon = new TextField(labelY, sb.toString(), 14, TextField.ANY));
         lonHash = fieldLon.getString().trim().hashCode();
 
@@ -421,8 +421,10 @@ final class WaypointForm implements CommandListener, ItemCommandListener, Callba
                 case Resources.NAV_CMD_UPDATE: {
                     final Waypoint wpt = waypoint;
                     try {
-                        if (touched()) {
+                        if (touched()) { // full update
                             wpt.setQualifiedCoordinates(parseCoordinates());
+                        } else { // partial update
+                            parseAlt(wpt.getQualifiedCoordinates());
                         }
                         wpt.setName(fieldName.getString());
                         wpt.setComment(fieldComment.getString());
@@ -435,7 +437,7 @@ final class WaypointForm implements CommandListener, ItemCommandListener, Callba
                     callback.invoke(new Object[]{ actionObject, waypoint }, null, this);
                 } break;
                 default:
-                    Desktop.showWarning("Unknown wpt action: " + action, null, null);
+                    Desktop.showWarning("Internal error", new IllegalStateException("Unknown wpt action: " + action), null);
             }
         } else {
             // dummy invocation
@@ -462,28 +464,6 @@ final class WaypointForm implements CommandListener, ItemCommandListener, Callba
         final String lons = trimToDigit(fieldLon.getString());
 
         // get coords
-/*
-        if (Config.useGridFormat && NavigationScreens.isGrid()) {
-            final CartesianCoordinates cc = CartesianCoordinates.newInstance(zone, Integer.parseInt(lats), Integer.parseInt(lons));
-            final QualifiedCoordinates localQc = Mercator.GridtoLL(cc);
-            qc = Datum.contextDatum.toWgs84(localQc);
-            QualifiedCoordinates.releaseInstance(localQc);
-            CartesianCoordinates.releaseInstance(cc);
-        } else if (Config.useUTM) {
-            final CartesianCoordinates cc = CartesianCoordinates.newInstance(zone, Integer.parseInt(lats), Integer.parseInt(lons));
-            qc = Mercator.UTMtoLL(cc);
-            CartesianCoordinates.releaseInstance(cc);
-        } else {
-            final QualifiedCoordinates _qc = QualifiedCoordinates.newInstance(parseLatOrLon(lats),
-                                                                              parseLatOrLon(lons));
-            if (Config.useGeocachingFormat) {
-                qc = _qc;
-            } else {
-                qc = Datum.contextDatum.toWgs84(_qc);
-                QualifiedCoordinates.releaseInstance(_qc);
-            }
-        }
-*/
         switch (Config.cfmt) {
             case Config.COORDS_MAP_GRID: {
                 if (NavigationScreens.isGrid()) {
@@ -515,13 +495,17 @@ final class WaypointForm implements CommandListener, ItemCommandListener, Callba
             }
         }
 
-        // get altitude
+        // update altitude
+        parseAlt(qc);
+
+        return qc;
+    }
+
+    private void parseAlt(final QualifiedCoordinates qc) {
         final String altStr = fieldAlt.getString();
         if (altStr != null && altStr.length() > 0 && !"?".equals(altStr)) {
             qc.setAlt(Float.parseFloat(altStr));
         }
-
-        return qc;
     }
 
     private static double parseLatOrLon(String value) {

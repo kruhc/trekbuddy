@@ -10,7 +10,7 @@ import java.util.Vector;
  * @author Ales Pour <kruhc@seznam.cz>
  */
 final class SmartRunnable implements Runnable {
-    private final static SmartRunnable instance = new SmartRunnable();
+    private static SmartRunnable instance;
 
     private final Vector runnables;
     private boolean go, pending;
@@ -23,6 +23,9 @@ final class SmartRunnable implements Runnable {
     }
 
     public static SmartRunnable getInstance() {
+        if (instance == null) {
+            instance = new SmartRunnable();
+        }
         return instance;
     }
 
@@ -48,15 +51,14 @@ final class SmartRunnable implements Runnable {
                 // try task merge
                 if (runnables.size() > 0) {
 
-                    // trick #1: avoid duplicates of key-hold checks
-                    if (r instanceof DesktopScreen) { //
-                        if (runnables.lastElement() instanceof Desktop) {
+                    final Object last = runnables.lastElement();
+                    if (r instanceof DesktopScreen) { // trick #1: avoid duplicates of key-hold checks
+                        if (last instanceof DesktopScreen) {
                             return;
                         }
-                    } // trick #2: merge render tasks
-                      else if (r instanceof Desktop.RenderTask) {
-                        if (runnables.lastElement() instanceof Desktop.RenderTask) {
-                            ((Desktop.RenderTask) runnables.lastElement()).merge(((Desktop.RenderTask) r));
+                    } else if (r instanceof Desktop.RenderTask) { // trick #2: merge render tasks
+                        if (last instanceof Desktop.RenderTask) {
+                            ((Desktop.RenderTask) last).merge(((Desktop.RenderTask) r));
                             return;
                         }
                     }

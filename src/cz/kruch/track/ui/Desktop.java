@@ -69,7 +69,7 @@ public final class Desktop implements CommandListener, LocationListener, YesNoDi
     // desktop screen and display
     public static DesktopScreen screen;
     public static Display display;
-    public static Font font, fontWpt, fontLists, fontStringItems;
+    public static Font font, fontWpt, fontLists, fontStringItems, fontBtns;
 
     // behaviour options
     public static int fullScreenHeight;
@@ -115,14 +115,14 @@ public final class Desktop implements CommandListener, LocationListener, YesNoDi
     private Friends friends;
 
     // LSM/MSK commands
-    private Command cmdRun, cmdRunLast, cmdStop;
-    private Command cmdWaypoints;
-    private Command cmdLoadMap, cmdLoadAtlas;
-    private Command cmdSettings;
-    private Command cmdInfo;
-    private Command cmdExit;
+    /*private */Command cmdRun, cmdRunLast, cmdStop;
+    /*private */Command cmdWaypoints;
+    /*private */Command cmdLoadMap, cmdLoadAtlas;
+    /*private */Command cmdSettings;
+    /*private */Command cmdInfo;
+    /*private */Command cmdExit;
     // RSK commands
-    private Command cmdPause, cmdContinue;
+    /*private */Command cmdPause, cmdContinue;
 
     // loading states and last-op message
     private /*volatile*/ boolean initializingMap; // using synchronized access helper
@@ -361,6 +361,10 @@ public final class Desktop implements CommandListener, LocationListener, YesNoDi
         fontLists = Font.getFont(Font.getDefaultFont().getFace(),
                                  Font.STYLE_BOLD/*Font.getDefaultFont().getStyle()*/,
                                  Font.SIZE_SMALL);
+        fontBtns = null; // gc hint
+        fontBtns = Font.getFont(Font.getDefaultFont().getFace(),
+                                Font.STYLE_BOLD/*Font.getDefaultFont().getStyle()*/,
+                                Font.SIZE_MEDIUM);
     }
 
     private static void resetBar() {
@@ -1861,19 +1865,19 @@ public final class Desktop implements CommandListener, LocationListener, YesNoDi
         }
     }
 
+    // TODO move to DesktopScreen???
     private void drawPause(final Graphics g) {
         final Font f = Font.getDefaultFont();
         final String s = Resources.getString(Resources.DESKTOP_MSG_PAUSED);
         final int sw = f.stringWidth(s);
         final int sh = f.getHeight();
-        final int w = screen.getWidth() * 7 / 8;
+        final int w = screen.getWidth() * 6 / 8;
         final int h = sh << 1;
         final int x = (screen.getWidth() - w) / 2;
         final int y = (getHeight() - h);
-        g.setColor(0x00D2E9FF);
-        g.fillRoundRect(x, y, w, h, 5, 5);
-        g.setColor(0x0);
-        g.drawRoundRect(x, y, w - 1, h - 1, 5, 5);
+        g.setColor(DesktopScreen.BTN_COLOR);
+        g.fillRect(x, y, w, h);
+        g.setColor(0x00ffffff);
         g.setFont(f);
         g.drawString(s, x + (w - sw) / 2, y + (h - sh) / 2, Graphics.TOP | Graphics.LEFT);
     }

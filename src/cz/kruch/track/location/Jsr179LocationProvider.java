@@ -165,7 +165,7 @@ public final class Jsr179LocationProvider
 
             if (Float.isNaN(alt)) {
                 alt = Float.NaN;
-            } else if (cz.kruch.track.TrackingMIDlet.sxg75) {
+            } else if (cz.kruch.track.TrackingMIDlet.brew) {
                 alt -= 540;
             }
 

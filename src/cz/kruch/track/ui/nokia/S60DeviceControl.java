@@ -4,6 +4,8 @@ package cz.kruch.track.ui.nokia;
 
 import cz.kruch.track.device.SymbianService;
 
+import java.io.IOException;
+
 /**
  * Device control implementation for S60 phones.
  *
@@ -13,14 +15,16 @@ final class S60DeviceControl extends NokiaDeviceControl {
 
     private SymbianService.Inactivity inactivity;
 
-    S60DeviceControl() {
+    S60DeviceControl() throws IOException {
         this.inactivity = SymbianService.openInactivity();
     }
 
     /** @overriden */
     protected void setLights() {
         inactivity.setLights(values[backlight]);
-        super.setLights();
+        if (cz.kruch.track.TrackingMIDlet.nokia) {
+            super.setLights();
+        }
     }
 
     /** @overriden */

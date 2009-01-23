@@ -25,6 +25,9 @@ import java.io.DataOutputStream;
  */
 public final class SymbianService {
 
+    // TBSVC URL
+    private static final String URL = "socket://127.0.0.1:20175";
+
     /**
      * Opens networked stream.
      *
@@ -40,9 +43,10 @@ public final class SymbianService {
      * Creates "inactivity" control.
      *
      * @return instance of <code>TimerTask</code>, or <code>null</code>
-     *         if it cannot be created - it does <b>not (!)</b> throw <code>IOException</code> 
+     *         if it cannot be created - it does <b>not (!)</b> throw <code>IOException</code>
+     * @throws IOException
      */
-    public static Inactivity openInactivity() {
+    public static Inactivity openInactivity() throws IOException {
         return new Inactivity();
     }
 
@@ -68,23 +72,24 @@ public final class SymbianService {
      * Service helper for backlight control. Misuse <code>TimerTasl</code>.
      */
     public static class Inactivity {
+        private StreamConnection connection;
         private DataOutputStream output;
 
-        public Inactivity() {
+        Inactivity() throws IOException {
+            try {
+                this.connection = (StreamConnection) Connector.open(URL, Connector.READ_WRITE);
+                this.output = new DataOutputStream(connection.openOutputStream());
+            } catch (IOException e) {
+                close();
+                throw e;
+            }
         }
 
         public void setLights(int value) {
             try {
-                if (output == null) {
-                    output = new DataOutputStream(Connector.openOutputStream("socket://127.0.0.1:20175"));
-                }
                 sendPacket(output, (byte) 0x00, value);
             } catch (Exception e) {
-                try {
-                    output.close();
-                } catch (Exception exc) {
-                    output = null;
-                }
+                // ignore
             }
         }
 
@@ -97,6 +102,14 @@ public final class SymbianService {
                 }
                 output = null;
             }
+            if (connection != null) {
+                try {
+                    connection.close();
+                } catch (IOException e) {
+                    // ignore
+                }
+                connection = null;
+            }
         }
     }
 
@@ -107,21 +120,24 @@ public final class SymbianService {
         private StreamConnection connection;
         private DataInputStream input;
         private DataOutputStream output;
-        private final byte[] one = new byte[1];
-        private final byte[] header = new byte[4];
+        private final byte[] one, header;
 
-        public NetworkedInputStream(String name) throws IOException {
+        NetworkedInputStream(String name) throws IOException {
             // get UTF-8 file name
             final byte[] utf8name = name.getBytes("UTF-8");
             if (utf8name.length > 256) {
                 throw new IllegalArgumentException("Filename too long");
             }
 
+            // buffers
+            this.one = new byte[1];
+            this.header = new byte[4];
+
             // init communication
             try {
 
                 // open I/O
-                this.connection = (StreamConnection) Connector.open("socket://127.0.0.1:20175", Connector.READ_WRITE);
+                this.connection = (StreamConnection) Connector.open(URL, Connector.READ_WRITE);
                 this.input = new DataInputStream(connection.openInputStream());
                 this.output = new DataOutputStream(connection.openOutputStream());
 

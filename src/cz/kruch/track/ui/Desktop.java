@@ -172,6 +172,7 @@ public final class Desktop implements CommandListener, LocationListener, YesNoDi
         // platform-specific hacks
 //#ifdef __J9__
         POSITIVE_CMD_TYPE = Command.ITEM;
+        EXIT_CMD_TYPE = Command.ITEM;
 //#endif
 //#ifdef __RIM__
         EXIT_CMD_TYPE = Command.EXIT;

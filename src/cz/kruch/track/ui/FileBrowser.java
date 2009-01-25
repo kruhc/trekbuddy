@@ -255,7 +255,7 @@ public final class FileBrowser implements CommandListener, Runnable, Comparator 
         Desktop.display.setCurrent(next);
 
         // we are done
-        callback.invoke(file, throwable, this);
+        callback.invoke(throwable == null ? file : null, throwable, this);
 
         // gc hint
         file = null;

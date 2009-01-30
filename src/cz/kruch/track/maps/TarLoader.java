@@ -148,6 +148,11 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
             
         } finally {
 
+            // detach tar stream
+            if (tarIn != null) {
+                tarIn.setInputStream(null);
+            }
+
             // reusable
             if (nativeIn != null) {
 
@@ -166,11 +171,6 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
                 } catch (Exception e) { // NPE or IOE
                     // ignore
                 }
-            }
-
-            // detach tar stream
-            if (tarIn != null) {
-                tarIn.setInputStream(null);
             }
         }
     }
@@ -193,7 +193,7 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
                 final char[] delims = { ':' };
                 try {
                     // read entry meta info
-                    reader = new LineReader(buffered.setInputStream(file.openInputStream()));
+                    reader = new LineReader(file.openInputStream());
                     CharArrayTokenizer.Token token = reader.readToken(false);
                     while (token != null) {
 
@@ -255,6 +255,15 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
     }
 
     public void dispose() throws IOException {
+        // detach buffered stream
+        buffered.setInputStream(null);
+
+        // dispose tar stream
+        if (tarIn != null) {
+            tarIn.setInputStream(null);
+            tarIn = null; // gc hint
+        }
+
         // close native stream
         if (nativeIn != null) {
 //#ifdef __LOG__
@@ -276,17 +285,6 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
                 // ignore
             }
             nativeFile = null; // gc hint
-        }
-
-        // dispose tar stream
-        if (tarIn != null) {
-            tarIn.setInputStream(null);
-            tarIn = null; // gc hint
-        }
-
-        // dispose buffered stream
-        if (buffered != null) {
-            buffered.setInputStream(null);
         }
 
         // parent
@@ -433,6 +431,11 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
 
         } finally {
 
+            // dispose tar stream
+            if (tar != null) {
+                tar.setInputStream(null);
+            }
+
             // close input stream
             try {
                 in.close();
@@ -445,11 +448,6 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
                 file.close();
             } catch (Exception e) { // NPE or IOE
                 // ignore
-            }
-
-            // dispose tar stream
-            if (tar != null) {
-                tar.setInputStream(null);
             }
         }
     }

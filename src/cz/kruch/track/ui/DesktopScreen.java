@@ -9,6 +9,7 @@ import javax.microedition.lcdui.game.GameCanvas;
 import javax.microedition.lcdui.Graphics;
 import javax.microedition.lcdui.Canvas;
 import javax.microedition.lcdui.Command;
+import javax.microedition.midlet.MIDlet;
 import java.util.TimerTask;
 
 final class DesktopScreen extends GameCanvas implements Runnable {
@@ -22,9 +23,13 @@ final class DesktopScreen extends GameCanvas implements Runnable {
     // main application
     private final Desktop delegate;
 
+    // behaviour
+    private int fullScreenHeight;
+    private boolean hasRepeatEvents;
+
     // keylock status
-    private volatile boolean keylock;
     private volatile int keyRepeatedCount;
+    private volatile boolean keylock;
 
     // key repeating simulation support
     private /*volatile*/ TimerTask repeatedKeyCheck;
@@ -33,15 +38,25 @@ final class DesktopScreen extends GameCanvas implements Runnable {
     // touch ops
     private volatile boolean inTouch;
 
-    public DesktopScreen(Desktop delegate) {
+    public DesktopScreen(Desktop delegate, MIDlet midlet) {
         super(false);
         this.delegate = delegate;
+        if (midlet.getAppProperty(cz.kruch.track.TrackingMIDlet.JAD_UI_FULL_SCREEN_HEIGHT) != null) {
+            fullScreenHeight = Integer.parseInt(midlet.getAppProperty(cz.kruch.track.TrackingMIDlet.JAD_UI_FULL_SCREEN_HEIGHT));
+        }
+        if (midlet.getAppProperty(cz.kruch.track.TrackingMIDlet.JAD_UI_HAS_REPEAT_EVENTS) != null) {
+            hasRepeatEvents = "true".equals(midlet.getAppProperty(cz.kruch.track.TrackingMIDlet.JAD_UI_HAS_REPEAT_EVENTS));
+        } else {
+            hasRepeatEvents = super.hasRepeatEvents();
+        }
     }
 
+    /** @overriden to make <code>Graphics</code> public accessible */
     public Graphics getGraphics() {
         return super.getGraphics();
     }
 
+    /** @overriden for touch menu hook */
     public void flushGraphics() {
         if (inTouch) {
             drawTouchMenu();
@@ -49,8 +64,18 @@ final class DesktopScreen extends GameCanvas implements Runnable {
         super.flushGraphics();
     }
 
-    public boolean isKeylock() {
-        return keylock;
+    /** @overriden for broken device handling */
+    public int getHeight() {
+        if (fullScreenHeight == 0 || !Config.fullscreen) {
+            return super.getHeight();
+        }
+
+        return fullScreenHeight;
+    }
+
+    /** @overriden for broken device handling */
+    public boolean hasRepeatEvents() {
+        return hasRepeatEvents;
     }
 
     /**
@@ -92,20 +117,12 @@ final class DesktopScreen extends GameCanvas implements Runnable {
         }
     }
 
-    void emulateKeyRepeated(final int keyCode) {
-        synchronized (this) {
-            if (repeatedKeyCheck == null) {
-                Desktop.timer.schedule(repeatedKeyCheck = new KeyCheckTimerTask(), 750L);
-            }
-        }
-    }
-
     protected void sizeChanged(int w, int h) {
 //#ifdef __LOG__
         if (log.isEnabled()) log.info("size changed: " + w + "x" + h);
 //#endif
 
-        // reset GUI // TODO check for dimensions change EDIT done in resetGui TODO move here
+        // reset GUI
         delegate.resetGui();
 
 //#ifdef __LOG__
@@ -119,13 +136,24 @@ final class DesktopScreen extends GameCanvas implements Runnable {
 //#endif
 
         if (inTouch) {
+
+            // set "touch menu is on" flag
             inTouch = false;
+
+            // find simulated command
             final Command cmd = pointerToCmd(x, y);
+
+            // run the command
             if (cmd != null) {
                 delegate.commandAction(cmd, this);
             }
+
+            // update screen anyway
             delegate.update(Desktop.MASK_SCREEN);
+
         } else {
+
+            // detect action
             final int key = pointerToKey(x, y);
             if (key != 0) {
                 keyPressed(key);
@@ -134,14 +162,18 @@ final class DesktopScreen extends GameCanvas implements Runnable {
                     case Canvas.LEFT:
                     case Canvas.RIGHT:
                     case Canvas.DOWN: {
+                        // emulate repetition as there is not "touch repeated" event
                         emulateKeyRepeated(key);
                     } break;
                     default: {
-                        if (Canvas.KEY_STAR == key) {
-                            if (!keylock) {
-                                inTouch = true;
-                                flushGraphics();
-                            }
+                        // bottom-left corner turns touch menu on
+                        if (Canvas.KEY_STAR == key && !keylock) {
+
+                            // set "touch menu on" flag
+                            inTouch = true;
+
+                            // repaint
+                            flushGraphics();
                         }
                     }
                 }
@@ -279,6 +311,24 @@ final class DesktopScreen extends GameCanvas implements Runnable {
 
         // scrolling stops // TODO ugly direct access
         MapView.scrolls = 0;
+    }
+
+    boolean isKeylock() {
+        return keylock;
+    }
+
+    void checkKeyRepeated(final int keyCode) {
+        if (!hasRepeatEvents) {
+            emulateKeyRepeated(keyCode);
+        }
+    }
+
+    void emulateKeyRepeated(final int keyCode) {
+        synchronized (this) {
+            if (repeatedKeyCheck == null) {
+                Desktop.timer.schedule(repeatedKeyCheck = new KeyCheckTimerTask(), 750L);
+            }
+        }
     }
 
     private void drawTouchMenu() {

@@ -105,7 +105,7 @@ final class InfoForm implements CommandListener {
         pane.append(newItem("Ports", sb.toString()));
         sb.delete(0, sb.length()).append(TimeZone.getDefault().getID()).append("; ").append(TimeZone.getDefault().useDaylightTime()).append("; ").append(TimeZone.getDefault().getRawOffset());
         pane.append(newItem("TimeZone", sb.toString()));
-        sb.delete(0, sb.length()).append("safe renderer? ").append(Config.S60renderer).append("; hasRepeatEvents? ").append(Desktop.hasRepeatEvents).append("; ").append(Desktop.screen.getWidth()).append('x').append(Desktop.screen.getHeight());
+        sb.delete(0, sb.length()).append("safe renderer? ").append(Config.S60renderer).append("; hasRepeatEvents? ").append(Desktop.screen.hasRepeatEvents()).append("; ").append(Desktop.screen.getWidth()).append('x').append(Desktop.screen.getHeight());
         pane.append(newItem("Desktop", sb.toString()));
         if (map == null) {
             pane.append(newItem("Map", ""));

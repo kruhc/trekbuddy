@@ -35,11 +35,11 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
     private static boolean logEnabled;
 //#endif
 
-    private static final String JAD_GPS_CONNECTION_URL      = "GPS-Connection-URL";
-    private static final String JAD_GPS_DEVICE_NAME         = "GPS-Device-Name";
-    private static final String JAD_UI_FULL_SCREEN_HEIGHT   = "UI-FullScreen-Height";
-    private static final String JAD_UI_HAS_REPEAT_EVENTS    = "UI-HasRepeatEvents";
-    private static final String JAD_APP_FLAGS               = "App-Flags";
+    public static final String JAD_GPS_CONNECTION_URL      = "GPS-Connection-URL";
+    public static final String JAD_GPS_DEVICE_NAME         = "GPS-Device-Name";
+    public static final String JAD_UI_FULL_SCREEN_HEIGHT   = "UI-FullScreen-Height";
+    public static final String JAD_UI_HAS_REPEAT_EVENTS    = "UI-HasRepeatEvents";
+    public static final String JAD_APP_FLAGS               = "App-Flags";
 
     public TrackingMIDlet() {
         // detect environment
@@ -320,16 +320,6 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         }
         if (getAppProperty(JAD_GPS_DEVICE_NAME) != null) {
             cz.kruch.track.configuration.Config.btDeviceName = getAppProperty(JAD_GPS_DEVICE_NAME);
-        }
-
-        // broken device handling
-        if (getAppProperty(JAD_UI_FULL_SCREEN_HEIGHT) != null) {
-            if (cz.kruch.track.configuration.Config.fullscreen) {
-                cz.kruch.track.ui.Desktop.fullScreenHeight = Integer.parseInt(getAppProperty(JAD_UI_FULL_SCREEN_HEIGHT));
-            }
-        }
-        if (getAppProperty(JAD_UI_HAS_REPEAT_EVENTS) != null) {
-            cz.kruch.track.ui.Desktop.hasRepeatEvents = "true".equals(getAppProperty(JAD_UI_HAS_REPEAT_EVENTS));
         }
 
         // boot desktop

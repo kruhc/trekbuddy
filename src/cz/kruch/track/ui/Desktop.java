@@ -71,10 +71,6 @@ public final class Desktop implements CommandListener, LocationListener, YesNoDi
     public static Display display;
     public static Font font, fontWpt, fontLists, fontStringItems, fontBtns;
 
-    // behaviour options
-    public static int fullScreenHeight;
-    public static boolean hasRepeatEvents;
-
     // browsing or tracking
     static volatile boolean browsing;
     static volatile boolean paused;
@@ -182,11 +178,10 @@ public final class Desktop implements CommandListener, LocationListener, YesNoDi
 //#endif
 
         // init static members
-        screen = new DesktopScreen(this);
+        screen = new DesktopScreen(this, midlet);
         display = Display.getDisplay(midlet);
         timer = new Timer();
         browsing = true;
-        fullScreenHeight = -1;
 
         // init basic members
         this.midlet = midlet;
@@ -337,14 +332,6 @@ public final class Desktop implements CommandListener, LocationListener, YesNoDi
         screen.setCommandListener(this);
     }
 
-    public int getHeight() {
-        if (fullScreenHeight > -1) {
-            return fullScreenHeight;
-        }
-
-        return screen.getHeight();
-    }
-
     int getMode() {
         return mode;
     }
@@ -431,21 +418,20 @@ public final class Desktop implements CommandListener, LocationListener, YesNoDi
 //#endif
 
         final int w = screen.getWidth();
-        final int h = getHeight();
+        final int h = screen.getHeight();
 
-        boolean sizeChanged = w != width || h != height;
-        if (!sizeChanged) {
+        if (w == width && h == height) {
             return; // no change, just quit
-        }
-
-        // update env setup
-        if (w < 176) { // narrow screen
-            NavigationScreens.useCondensed = 2;
         }
 
         // remember new size
         width = w;
         height = h;
+
+        // update env setup
+        if (w < 176) { // narrow screen on old phones
+            NavigationScreens.useCondensed = 2;
+        }
 
         // clear main area with black
         Graphics g = graphics;
@@ -458,13 +444,9 @@ public final class Desktop implements CommandListener, LocationListener, YesNoDi
         g.fillRect(0, 0, w, h);
         g.clipRect(0, 0, w, h);
 
-        // create bg bar and font
-        if (font == null) {
-            resetFont();
-        }
-        if (bar == null) {
-            resetBar();
-        }
+        // reset fonts and bars
+        resetFont();
+        resetBar();
 
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("GUI reset - step 1");
@@ -499,25 +481,13 @@ public final class Desktop implements CommandListener, LocationListener, YesNoDi
         if (v == null) {
             v = new View[3];
             v[VIEW_MAP] = new MapView(this);
-//            v[VIEW_MAP].setCanvas(this);
             v[VIEW_HPS] = new LocatorView(this);
-//            v[VIEW_HPS].setCanvas(this);
             v[VIEW_CMS] = new ComputerView(this);
-//            v[VIEW_CMS].setCanvas(this);
             v[0].setVisible(true);
-/*
-            sizeChanged = true; // enforce sizeChanged notification
-*/
         }
-/*
-        if (sizeChanged) {
-*/
-            v[VIEW_MAP].sizeChanged(w, h);
-            v[VIEW_HPS].sizeChanged(w, h);
-            v[VIEW_CMS].sizeChanged(w, h);
-/*
-        }
-*/
+        v[VIEW_MAP].sizeChanged(w, h);
+        v[VIEW_HPS].sizeChanged(w, h);
+        v[VIEW_CMS].sizeChanged(w, h);
 
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("GUI reset - final step");
@@ -1324,9 +1294,7 @@ public final class Desktop implements CommandListener, LocationListener, YesNoDi
                 if (repeated && mode == VIEW_MAP) {
                     eventing.callSerially(Desktop.screen);
                 } else {
-                    if (!hasRepeatEvents) {
-                        screen.emulateKeyRepeated(i);
-                    }
+                    screen.checkKeyRepeated(i);
                 }
 
             } break;
@@ -1875,7 +1843,7 @@ public final class Desktop implements CommandListener, LocationListener, YesNoDi
         final int w = screen.getWidth() * 6 / 8;
         final int h = sh << 1;
         final int x = (screen.getWidth() - w) / 2;
-        final int y = (getHeight() - h);
+        final int y = (screen.getHeight() - h);
         g.setColor(DesktopScreen.BTN_COLOR);
         g.fillRect(x, y, w, h);
         g.setColor(0x00ffffff);
@@ -2019,7 +1987,6 @@ public final class Desktop implements CommandListener, LocationListener, YesNoDi
                     g = screen.getGraphics();
                 }
 //#endif
-
                 // render current view
                 views[mode].render(g, font, mask);
 
@@ -2967,7 +2934,7 @@ public final class Desktop implements CommandListener, LocationListener, YesNoDi
 
     private void consoleInit(final Graphics g) {
         g.setColor(0x0);
-        g.fillRect(0, 0, screen.getWidth(), getHeight());
+        g.fillRect(0, 0, screen.getWidth(), screen.getHeight());
         screen.flushGraphics();
     }
 

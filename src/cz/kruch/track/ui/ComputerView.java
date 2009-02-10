@@ -883,7 +883,15 @@ final class ComputerView extends View implements Runnable, CommandListener {
                                 idx = resolveTokenIndex(area, token);
                             }
                             switch (idx) {
-                                case VALUE_ALT:
+                                case VALUE_ALT: {
+                                    float alt = valuesFloat[idx];
+                                    switch (units) {
+                                        case Config.UNITS_IMPERIAL:
+                                            alt /= 0.3048F;
+                                        break;
+                                    }
+                                    NavigationScreens.append(sb, (int) alt);
+                                } break;
                                 case VALUE_COURSE:  {
                                     NavigationScreens.append(sb, (int) valuesFloat[idx]);
                                 } break;
@@ -954,7 +962,13 @@ final class ComputerView extends View implements Runnable, CommandListener {
                                 case VALUE_SPD_DMAX:
                                 case VALUE_SPD_DAVG: {
                                     float value = valuesFloat[idx];
-                                    if (idx > VALUE_SPD_D) {
+                                    if (idx == VALUE_ALT_D) {
+                                        switch (units) {
+                                            case Config.UNITS_IMPERIAL:
+                                                value /= 0.3048F;
+                                            break;
+                                        }
+                                    } else if (idx > VALUE_COURSE_D) {
                                         switch (units) {
                                             case Config.UNITS_IMPERIAL:
                                                 value /= 1.609F;
@@ -1125,6 +1139,11 @@ final class ComputerView extends View implements Runnable, CommandListener {
                                     if (Float.isNaN(alt)) {
                                         sb.append('?');
                                     } else {
+                                        switch (units) {
+                                            case Config.UNITS_IMPERIAL:
+                                                alt /= 0.3048F;
+                                            break;
+                                        }
                                         NavigationScreens.append(sb, (int) alt);
                                     }
                                 } break;
@@ -1228,7 +1247,12 @@ final class ComputerView extends View implements Runnable, CommandListener {
                                     if (Float.isNaN(wptAlt)) {
                                         sb.append('?');
                                     } else {
-                                        final float diff = wptAlt - valuesFloat[VALUE_ALT];
+                                        float diff = wptAlt - valuesFloat[VALUE_ALT];
+                                        switch (units) {
+                                            case Config.UNITS_IMPERIAL:
+                                                diff /= 0.3048F;
+                                            break;
+                                        }
                                         NavigationScreens.append(sb, (int) diff);
                                     }
                                 } break;

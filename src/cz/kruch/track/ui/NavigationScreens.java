@@ -45,6 +45,7 @@ public final class NavigationScreens {
     public static final char[] DIST_STR_M      = { ' ', 'm', ' ' };
     public static final char[] DIST_STR_KM     = { ' ', 'k', 'm', ' ' };
     public static final char[] DIST_STR_NMI    = { ' ', 'M', ' ' };
+    public static final char[] DIST_STR_FT     = { ' ', 'f', 't', ' ' };
 
     public static final char SIGN         = 0xb0;
     public static final char PLUSMINUS    = 0xb1;
@@ -64,7 +65,8 @@ public final class NavigationScreens {
     private static final String STR_MPH = " mph ";
     private static final String STR_KMH = " km/h ";
     private static final String STR_M   = " m";
-    
+    private static final String STR_FT  = " ft";
+
     /*
      * image cache
      */
@@ -392,7 +394,7 @@ public final class NavigationScreens {
                         append(sb, speed * 3.6F / 1.609F, 1).append(STR_MPH);
                     }
                     if (!Float.isNaN(alt)) {
-                        append(sb, alt, 1).append(STR_M);
+                        append(sb, alt / 0.3048F, 1).append(STR_FT);
                     }
                 } break;
                 case Config.UNITS_NAUTICAL: {
@@ -767,6 +769,26 @@ public final class NavigationScreens {
                 } break;
                 case Config.UNITS_NAUTICAL: {
                     append(sb, distance / 1852F, 0).append(DIST_STR_NMI);
+                } break;
+            }
+        } else {
+            sb.append('?');
+        }
+
+        return sb;
+    }
+
+    public static StringBuffer printAltitude(final StringBuffer sb, final float altitude) {
+        if (!Float.isNaN(altitude)) {
+            switch (Config.units) {
+                case Config.UNITS_METRIC: {
+                    append(sb, (int) altitude).append(DIST_STR_M);
+                } break;
+                case Config.UNITS_IMPERIAL: {
+                    append(sb, altitude / 0.3048F, 0).append(DIST_STR_FT);
+                } break;
+                case Config.UNITS_NAUTICAL: {
+                    append(sb, (int) altitude).append(DIST_STR_M);
                 } break;
             }
         } else {

@@ -90,7 +90,7 @@ final class WaypointForm implements CommandListener, ItemCommandListener, Callba
 
         // altitude
         sb.delete(0, sb.length());
-        fillAltitudeInfo(wpt.getQualifiedCoordinates().getAlt(), sb);
+        NavigationScreens.printAltitude(sb, wpt.getQualifiedCoordinates().getAlt());
         appendStringItem(Resources.getString(Resources.NAV_FLD_ALT), sb.toString());
 
         // distance
@@ -158,7 +158,7 @@ final class WaypointForm implements CommandListener, ItemCommandListener, Callba
 
         // altitude
         sb.delete(0, sb.length());
-        fillAltitudeInfo(location.getQualifiedCoordinates().getAlt(), sb);
+        NavigationScreens.printAltitude(sb, location.getQualifiedCoordinates().getAlt());
         appendWithNewlineAfter(new StringItem(Resources.getString(Resources.NAV_FLD_ALT), sb.toString()));
 
         // form commands
@@ -298,19 +298,9 @@ final class WaypointForm implements CommandListener, ItemCommandListener, Callba
         lonHash = fieldLon.getString().trim().hashCode();
 
         // altitude
-        appendWithNewlineAfter(this.fieldAlt = createTextField(Resources.NAV_FLD_ALT,
-                                                               Float.isNaN(qc.getAlt()) ? "?" : Integer.toString((int) qc.getAlt()),
-                                                               4));
-    }
-
-    private StringBuffer fillAltitudeInfo(final float alt, final StringBuffer sb) {
-        if (Float.isNaN(alt)) {
-            sb.append('?');
-        } else {
-            NavigationScreens.append(sb, (int) alt);
-        }
-        sb.append(' ').append('m');
-        return sb;
+        sb.delete(0, sb.length());
+        NavigationScreens.printAltitude(sb, qc.getAlt());
+        appendWithNewlineAfter(this.fieldAlt = createTextField(Resources.NAV_FLD_ALT, sb.toString(), 5));
     }
 
     private int appendWithNewlineAfter(Item item) {
@@ -503,8 +493,14 @@ final class WaypointForm implements CommandListener, ItemCommandListener, Callba
 
     private void parseAlt(final QualifiedCoordinates qc) {
         final String altStr = fieldAlt.getString();
-        if (altStr != null && altStr.length() > 0 && !"?".equals(altStr)) {
-            qc.setAlt(Float.parseFloat(altStr));
+        if (altStr != null && altStr.length() > 0 && altStr.indexOf("?") == -1) {
+            float alt = Float.parseFloat(altStr);
+            switch (Config.units) {
+                case Config.UNITS_IMPERIAL: {
+                    alt *= 0.3048F;
+                } break;
+            }
+            qc.setAlt(alt);
         }
     }
 

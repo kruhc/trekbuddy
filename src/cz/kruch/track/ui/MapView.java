@@ -606,7 +606,7 @@ final class MapView extends View {
         NavigationScreens.append(extInfo, navigator.wptAzimuth).append(NavigationScreens.SIGN);
         if (!Float.isNaN(navigator.wptHeightDiff)) {
             extInfo.append(' ').append(NavigationScreens.DELTA_d).append('=');
-            NavigationScreens.append(extInfo, (int) navigator.wptHeightDiff);
+            NavigationScreens.printAltitude(extInfo, navigator.wptHeightDiff);
         }
     }
 

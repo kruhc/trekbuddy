@@ -32,8 +32,9 @@ public final class Friends implements MessageListener, Runnable {
     private static final String TBSMS_HEADER    = "$TB";
     private static final String TBSMS_IAH       = "$TBIAH";
     private static final String TBSMS_MYT       = "$TBMYT";
-    private static final String CHAT_IAH        = "(I am here) ";
-    private static final String CHAT_MYT        = "(Meet you there) ";
+
+    private static String CHAT_IAH;
+    private static String CHAT_MYT;
 
     private static final char SEPARATOR_CHAR = ',';
 
@@ -43,6 +44,8 @@ public final class Friends implements MessageListener, Runnable {
     private String text;
 
     public Friends() {
+        Friends.CHAT_IAH = headerify(Resources.getString(Resources.NAV_ITEM_SMS_IAH));
+        Friends.CHAT_MYT = headerify(Resources.getString(Resources.NAV_ITEM_SMS_MYT));
     }
 
     private Friends(String url, String text) {
@@ -314,6 +317,13 @@ public final class Friends implements MessageListener, Runnable {
         sb.append(',').append(type == QualifiedCoordinates.LAT ? (sign == -1 ? "S" : "N") : (sign == -1 ? "W" : "E"));
 
         return sb.toString();
+    }
+
+    private static String headerify(String s) {
+        if (s.startsWith("SMS")) {
+            s = s.substring(3).trim();
+        }
+        return "(" + s + ") ";
     }
 
 //#ifdef __LOG__

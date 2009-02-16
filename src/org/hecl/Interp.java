@@ -45,7 +45,11 @@ import jline.SimpleCompletor;
  * @author <a href="mailto:davidw@dedasys.com">David N. Welton </a>
  * @version 1.0
  */
-public class Interp extends Thread/*implements Runnable*/ {
+public class Interp
+//#if threads
+        extends Thread/*implements Runnable*/
+//#endif
+{
     /**
      * Package name prefix of the module classes.
      */
@@ -124,7 +128,9 @@ public class Interp extends Thread/*implements Runnable*/ {
         // Set up stack frame for globals.
         stack.push(new Hashtable());
         initInterp();
-	start();
+//#if threads
+        start();
+//#endif
     }
 
 //#ifdef j2se
@@ -362,6 +368,14 @@ public class Interp extends Thread/*implements Runnable*/ {
 	commands.remove(name);
     }
 
+    /**
+     * Gets a command from an <code>Interp</code>.
+     *
+     * @param name the name of the command to get.
+     */
+    public synchronized Command getCommand(String name) {
+        return (Command) commands.get(name);
+    }
 
     /**
      * Attach auxiliary data to an <code>Interp</code>.
@@ -556,7 +570,6 @@ public class Interp extends Thread/*implements Runnable*/ {
 	idle.removeElement(idletask);
     }
     
-    
     public boolean doOneEvent(int flags) {
 
 	if((flags & ALL_EVENTS) == 0)
@@ -603,8 +616,11 @@ public class Interp extends Thread/*implements Runnable*/ {
 	    if(count > 0 || maxblocktime <= 0)
 		break;
 
-	    yield();			    // give other thread a chance
-	    synchronized(this) {
+//#if threads
+        yield();			    // give other thread a chance
+//#endif
+        
+        synchronized(this) {
 		try {
 		    this.wait(maxblocktime);
 		} catch (InterruptedException e) {
@@ -659,13 +675,16 @@ public class Interp extends Thread/*implements Runnable*/ {
      * eventually finish its run-method.
      *
      */
+//#if threads
     public void terminate() {
 	running = false;
 	synchronized(this) {
 	    notify();
 	}
     }
+//#endif
 
+//#if threads
     public void run() {
 //	System.err.println("interp running...");
 	long now = System.currentTimeMillis();
@@ -674,7 +693,7 @@ public class Interp extends Thread/*implements Runnable*/ {
 	}
 //	System.err.println("interp stopped!");
     }
-
+//#endif
 
     /**
      * The <code>initCommands</code> method initializes all the built in
@@ -822,10 +841,10 @@ public class Interp extends Thread/*implements Runnable*/ {
         }
         return res;
 //#else
-	if(res == GLOBALREFTHING) {
+	if(res == null || res == GLOBALREFTHING) {
 	    // ref to a global var
 	    Hashtable globalhash = getVarhash(0);
-	    res = (Thing)globalhash.get(varname);
+        res = (Thing)globalhash.get(varname);
 	    if(res == GLOBALREFTHING) {
 		// should not happen, but just in case...
 		System.err.println("Unexpected GLOBALREFTHING in globalhash");
@@ -946,8 +965,10 @@ public class Interp extends Thread/*implements Runnable*/ {
 		//System.err.println(" forwarded to global value");
 		lookup = getVarhash(0);
 	    }
-	}
-	lookup.put(varname, value);
+	} else if(getVarhash(0).containsKey(varname)) {
+        lookup = getVarhash(0);
+    }
+    lookup.put(varname, value);
 //#endif
     }
 

@@ -148,14 +148,10 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         /* detect UIQ */
         if (sonyEricssonEx) {
             if (symbian) {
-                try {
-                    Class.forName("java.lang.ref.Reference");
-                    uiq = true;
+                uiq = true;
 //#ifdef __LOG__
-                    System.out.println("* UIQ");
+                System.out.println("* UIQ");
 //#endif
-                } catch (Throwable t) {
-                }
             }
         } else { /* detect Jbed */
             try {

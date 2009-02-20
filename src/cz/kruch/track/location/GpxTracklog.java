@@ -533,8 +533,8 @@ public final class GpxTracklog extends Thread {
                 serializeXdr(serializer);
             }
             if (Config.gpxGsmInfo) {
-                serializeElement(serializer, System.getProperty("com.sonyericsson.net.cellid"), GSM_NAMESPACE, ELEMENT_CELLID);
-                serializeElement(serializer, System.getProperty("com.sonyericsson.net.lac"), GSM_NAMESPACE, ELEMENT_LAC);
+                serializeElement(serializer, cz.kruch.track.ui.nokia.DeviceControl.getGsmCellId(), GSM_NAMESPACE, ELEMENT_CELLID);
+                serializeElement(serializer, cz.kruch.track.ui.nokia.DeviceControl.getGsmLac(), GSM_NAMESPACE, ELEMENT_LAC);
             }
             serializer.endTag(DEFAULT_NAMESPACE, ELEMENT_EXTENSIONS);
         }

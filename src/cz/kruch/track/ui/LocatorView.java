@@ -46,7 +46,7 @@ final class LocatorView extends View {
 //    private final int[] satAvg;
     private final int[] rangeIdx;
 
-    private int term;
+    private int term, mode;
 
     private int dx, dy;
     private int lineLength;
@@ -140,6 +140,21 @@ final class LocatorView extends View {
         }
 
         return Desktop.MASK_ALL;
+    }
+
+    public int handleKey(int keycode, boolean repeated) {
+        int mask;
+
+        switch (keycode) {
+            case Canvas.KEY_STAR: {
+                mode++;
+                mask = Desktop.MASK_ALL;
+            } break;
+            default:
+                mask = Desktop.MASK_NONE;
+        }
+
+        return mask;
     }
 
     private void append(final int term, final Location l) {
@@ -284,20 +299,20 @@ final class LocatorView extends View {
         /* block */ {
             final Location current = this.locations[term][this.position[term]];
             final float[] lastCourse = this.lastCourse;
-            if (current == null) {
-                course = Float.NaN;
-            } else {
+            if (current != null) {
                 course = current.getCourse();
+            } else {
+                course = Float.NaN;
             }
             final boolean fresh;
-            if (Float.isNaN(course)) {
-                course = lastCourse[term];
-                fresh = false;
-            } else {
+            if (!Float.isNaN(course)) {
                 lastCourse[term] = course;
                 fresh = true;
+            } else {
+                course = lastCourse[term];
+                fresh = false;
             }
-            drawCompas(wHalf, hHalf, fh, graphics, course, fresh);
+            drawCompas(wHalf, hHalf, fh, graphics, mode % 2 == 0 ? course : 0, fresh);
         } /* ~ */
 
         // compas boundary
@@ -358,7 +373,7 @@ final class LocatorView extends View {
                     xy[1] = hHalf - (int) ((qc.getLat() - latAvg) * yScale);
 
                     // tranform
-                    if (course > 1F) {
+                    if (course > 1F && mode % 2 == 0) {
                         transform(center, course, xy);
                     }
 
@@ -435,7 +450,7 @@ final class LocatorView extends View {
 
                 // transform vertex
                 boolean onScreen = true;
-                if (course > 1F) {
+                if (course > 1F && mode % 2 == 0) {
                     onScreen = transform(center, course, xy);
                 }
 
@@ -445,7 +460,7 @@ final class LocatorView extends View {
                 // calculate bearing
                 float bearing = coordsAvg.azimuthTo(qc, distance);
                 float arrowa;
-                if (course > 0F) { // relative to top (moving direction)
+                if (course > 0F && mode % 2 == 0) { // relative to top (moving direction)
                     arrowa = bearing + 360 - course;
                 } else {
                     arrowa = bearing;

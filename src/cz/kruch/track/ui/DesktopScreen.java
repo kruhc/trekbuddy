@@ -82,6 +82,7 @@ final class DesktopScreen extends GameCanvas implements Runnable {
      * Used for key repetition emulation
      */
     public void run() {
+/*
         int key = 0;
 
 //#ifndef __RIM__
@@ -102,6 +103,9 @@ final class DesktopScreen extends GameCanvas implements Runnable {
         if (key == 0) {
             key = _getInKey();
         }
+*/
+        // shortcut 
+        final int key = _getInKey();
 
         // action
         if (key != 0) {
@@ -213,9 +217,6 @@ final class DesktopScreen extends GameCanvas implements Runnable {
             return;
         }
 
-        // counter
-        keyRepeatedCount = 0;
-
         // save key
         _setInKey(i);
 
@@ -236,15 +237,12 @@ final class DesktopScreen extends GameCanvas implements Runnable {
         if (log.isEnabled()) log.info("keyRepeated");
 //#endif
 
-        // increment counter
-        ++keyRepeatedCount;
-
         // keymap
         i = Resources.remap(i);
 
         // handle keylock
         if (Canvas.KEY_STAR == i) {
-            if (keyRepeatedCount == 1) {
+            if (++keyRepeatedCount == 1) {
                 keylock = !keylock;
                 if (!Config.powerSave) {
                     Desktop.display.vibrate(1000);
@@ -285,6 +283,7 @@ final class DesktopScreen extends GameCanvas implements Runnable {
         // handle keylock
         if (Canvas.KEY_STAR == i) {
             if (keyRepeatedCount != 0) {
+                keyRepeatedCount = 0;
                 Desktop.showConfirmation(keylock ? Resources.getString(Resources.DESKTOP_MSG_KEYS_LOCKED) : Resources.getString(Resources.DESKTOP_MSG_KEYS_UNLOCKED), null);
             }
         }
@@ -305,9 +304,6 @@ final class DesktopScreen extends GameCanvas implements Runnable {
 
         // no key pressed anymore
         _setInKey(0);
-
-        // reset repeated counter
-        keyRepeatedCount = 0;
 
         // scrolling stops // TODO ugly direct access
         MapView.scrolls = 0;

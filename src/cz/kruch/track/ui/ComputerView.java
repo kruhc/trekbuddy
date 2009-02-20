@@ -68,12 +68,7 @@ final class ComputerView extends View implements Runnable, CommandListener {
     private static final String ATTR_W          = "w";
     private static final String ATTR_H          = "h";
     private static final String ATTR_ALIGN      = "align";
-
-/*
-    private static final String[] NAME_CACHE = {
-        TAG_FONT, TAG_AREA, TAG_VALUE, ATTR_X, ATTR_Y, ATTR_H, ATTR_W, ATTR_ALIGN
-    };
-*/
+    private static final String ATTR_IMAGE      = "image";
 
     // special values
     private static final String TOKEN_COORDS        = "coords";
@@ -101,6 +96,8 @@ final class ComputerView extends View implements Runnable, CommandListener {
     private static final String TOKEN_WPT_ALT_DIFF  = "wpt-alt-diff";
     private static final String TOKEN_XDR           = "xdr.";
     private static final String TOKEN_PACE          = "pace";
+    private static final String TOKEN_COURSE_SLIDING    = "course.g-sliding";
+    private static final String TOKEN_WPT_AZI_SLIDING   = "wpt-azi.g-sliding";
 
     // numeric values
     private static final String[] TOKENS_float = {
@@ -187,6 +184,8 @@ final class ComputerView extends View implements Runnable, CommandListener {
     private static final int VALUE_WPT_IMG      = 1019;
     private static final int VALUE_WPT_ALT_DIFF = 1020;
     private static final int VALUE_PACE         = 1021;
+    private static final int VALUE_COURSE_SLIDING   = 1022;
+    private static final int VALUE_WPT_AZI_SLIDING  = 1023;
 
     // even more special
     private static final int VALUE_SNR0         = 1100; // 12 slots
@@ -303,8 +302,8 @@ final class ComputerView extends View implements Runnable, CommandListener {
         this.sb = new StringBuffer(128);
 
         // init shared
-        this.fonts = new Hashtable(4);
-        this.backgrounds = new Hashtable(2);
+        this.fonts = new Hashtable(8);
+        this.backgrounds = new Hashtable(8);
 
         // trip values
         this.valuesFloat = new float[TOKENS_float.length];
@@ -866,8 +865,11 @@ final class ComputerView extends View implements Runnable, CommandListener {
 //#ifdef __LOG__
                 if (log.isEnabled()) log.debug("area - font: " + area.fontName + "; value: " + new String(area.value));
 //#endif
+                // prepare text buffer
                 sb.delete(0, sb.length());
                 tokenizer.init(area.value, area.value.length, DELIMITERS, true);
+
+                // local vars
                 int narrowChars = 0;
                 Image img = null;
 
@@ -1277,6 +1279,19 @@ final class ComputerView extends View implements Runnable, CommandListener {
                                         sb.append("99:99");
                                     }
                                 } break;
+                                case VALUE_COURSE_SLIDING: {
+                                    drawSlider(graphics, (int) valuesFloat[VALUE_COURSE], area);
+                                    continue; // TODO UGLY
+                                } // break;
+                                case VALUE_WPT_AZI_SLIDING: {
+                                    final int azi = navigator.getWptAzimuth();
+                                    if (azi < 0F) {
+                                        // what to do?
+                                    } else {
+                                        drawSlider(graphics, azi, area);
+                                    }
+                                    continue; // TODO UGLY
+                                } // break;
                                 case VALUE_SNR0:
                                 case VALUE_SNR0 + 1:
                                 case VALUE_SNR0 + 2:
@@ -1426,6 +1441,10 @@ final class ComputerView extends View implements Runnable, CommandListener {
                 area.index = VALUE_WPT_ALT_DIFF;
             } else if (token.equals(TOKEN_PACE)) {
                 area.index = VALUE_PACE;
+            } else if (token.equals(TOKEN_COURSE_SLIDING)) {
+                area.index = VALUE_COURSE_SLIDING;
+            } else if (token.equals(TOKEN_WPT_AZI_SLIDING)) {
+                area.index = VALUE_WPT_AZI_SLIDING;
             } else if (token.startsWith(TOKEN_XDR)) {
                 area.index = VALUE_XDR;
             } else {
@@ -1458,9 +1477,9 @@ final class ComputerView extends View implements Runnable, CommandListener {
         return sb;
     }
 
-    private void drawChars(final Graphics graphics, final char[] value,
-                           final int length, int x, int y,
-                           final Area area) {
+    private static void drawChars(final Graphics graphics, final char[] value,
+                                  final int length, int x, int y,
+                                  final Area area) {
         final Image image = (Image) area.fontImpl;
         final float cw = area.cw;
         final int scw = (int) (cw - cw / 5);
@@ -1518,6 +1537,25 @@ final class ComputerView extends View implements Runnable, CommandListener {
                 xoff += graphics.getFont().charWidth(c) + 1;
                 invalids++;
             }
+        }
+    }
+
+    private static void drawSlider(final Graphics graphics, final int value,
+                                   final Area area) {
+        final Image image = (Image) area.fontImpl;
+        if (image != null) {
+            final int iw = image.getWidth();
+            final int x0 = value - area.w / 2;
+            final int x1 = value + area.w / 2;
+            graphics.setClip(area.x, area.y, area.w, area.h);
+            if (x0 < 0) {
+                graphics.drawImage(image, area.x - (iw + x0), area.y, Graphics.LEFT | Graphics.TOP);
+            }
+            graphics.drawImage(image, area.x + area.w / 2 - value, area.y, Graphics.LEFT | Graphics.TOP);
+            if (x1 > iw) {
+                graphics.drawImage(image, area.x + area.w + (iw - x1), area.y, Graphics.LEFT | Graphics.TOP);
+            }
+            graphics.setClip(0, 0, Desktop.width, Desktop.height);
         }
     }
 
@@ -1676,14 +1714,6 @@ final class ComputerView extends View implements Runnable, CommandListener {
                             area.ralign = "right".equals(parser.getAttributeValue(null, ATTR_ALIGN));
                             final String font = parser.getAttributeValue(null, TAG_FONT);
                             if (font != null) {
-/*
-                                if (fo instanceof byte[]) {
-                                    Image image = (Image) fo;
-                                    area.cw = image.getWidth() / CHARSET.length;
-                                    area.ch = (short) image.getHeight();
-                                }
-                                area.font = fo;
-*/
                                 area.fontName = font;
                                 final Object fo = fonts.get(font);
                                 if (fo instanceof Font) {
@@ -1692,6 +1722,15 @@ final class ComputerView extends View implements Runnable, CommandListener {
                             } else {
                                 area.fontName = "Desktop";
                                 area.fontImpl = Desktop.font;
+                            }
+                            final String name = parser.getAttributeValue(null, ATTR_IMAGE);
+                            if (name != null) {
+                                final byte[] image = (byte[]) load(name);
+                                if (image != null) {
+                                    area.fontName = name;
+                                    area.fontImpl = null;
+                                    fonts.put(name, image);
+                                }
                             }
                         } else if (TAG_VALUE.equals(tag)) {
                             area.value = parser.nextText().toCharArray();

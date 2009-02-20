@@ -100,6 +100,8 @@ final class InfoForm implements CommandListener {
         sb.delete(0, sb.length()).append(File.fsType).append("; resetable? ").append(cz.kruch.track.maps.Map.fileInputStreamResetable);
         pane.append(newItem("Fs", sb.toString()));
         sb.delete(0, sb.length()).append(cz.kruch.track.ui.nokia.DeviceControl.getName());
+        sb.append(' ').append(cz.kruch.track.ui.nokia.DeviceControl.getGsmCellId());
+        sb.append('/').append(cz.kruch.track.ui.nokia.DeviceControl.getGsmLac());
         pane.append(newItem("DeviceCtrl", sb.toString()));
         sb.delete(0, sb.length()).append(cz.kruch.track.TrackingMIDlet.hasPorts()).append("; ").append(System.getProperty("microedition.commports"));
         pane.append(newItem("Ports", sb.toString()));

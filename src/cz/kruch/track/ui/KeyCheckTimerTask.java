@@ -17,7 +17,9 @@ final class KeyCheckTimerTask extends TimerTask {
     * Therefore the dummy getKeyStates() call before invoking run().
     */
     public void run() {
+/* must correspond with DesktopScreen.run()!!!
         Desktop.screen.getKeyStates(); // trick
+*/
         SmartRunnable.getInstance().callSerially(Desktop.screen);
     }
 }

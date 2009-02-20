@@ -26,7 +26,7 @@ import java.io.DataOutputStream;
 public final class SymbianService {
 
     // TBSVC URL
-    private static final String URL = "socket://127.0.0.1:20175";
+    private static final String URL = "socket://localhost:20175";
 
     /**
      * Opens networked stream.

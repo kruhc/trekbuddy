@@ -226,7 +226,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         } else if (cz.kruch.track.TrackingMIDlet.j9 || cz.kruch.track.TrackingMIDlet.jbed || cz.kruch.track.TrackingMIDlet.intent /*|| cz.kruch.track.TrackingMIDlet.phoneme*/) {
             dataDir = getDefaultDataDir("/Storage Card/", "TrekBuddy/");
             if (cz.kruch.track.TrackingMIDlet.jbed || cz.kruch.track.TrackingMIDlet.intent) {
-                commUrl = "socket://127.0.0.1:20175";
+                commUrl = "socket://localhost:20175";
             }
         } else if (cz.kruch.track.TrackingMIDlet.uiq) {
             dataDir = getDefaultDataDir("Ms/", "Other/TrekBuddy/");

@@ -1,5 +1,4 @@
-// (c) Copyright 2006-2007  Hewlett-Packard Development Company, L.P. All rights reserved.
-// Use is subject to license terms.
+// @LICENSE@
 
 package cz.kruch.track.ui.nokia;
 
@@ -11,12 +10,17 @@ package cz.kruch.track.ui.nokia;
 final class MotorolaDeviceControl extends DeviceControl {
 
     MotorolaDeviceControl() {
+        this.name = "Motorola";
+        this.cellIdProperty = "CellID";
+        this.lacProperty = "LocAreaCode";
     }
 
+    /** @overriden */
     void turnOn() {
         com.motorola.multimedia.Lighting.backlightOn();
     }
 
+    /** @overriden */
     void turnOff() {
         com.motorola.multimedia.Lighting.backlightOff();
     }

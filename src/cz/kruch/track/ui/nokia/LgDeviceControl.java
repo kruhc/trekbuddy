@@ -1,5 +1,4 @@
-// (c) Copyright 2006-2007  Hewlett-Packard Development Company, L.P. All rights reserved.
-// Use is subject to license terms.
+// @LICENSE@
 
 package cz.kruch.track.ui.nokia;
 
@@ -11,16 +10,21 @@ package cz.kruch.track.ui.nokia;
 final class LgDeviceControl extends DeviceControl {
 
     LgDeviceControl() {
+        this.name = "LG";
+        this.cellIdProperty = "com.lge.net.cellid";
     }
 
+    /** @overriden */
     boolean isSchedulable() {
         return true;
     }
 
+    /** @overriden */
     void turnOn() {
         mmpp.media.BackLight.on(0); // SDK says: "If timeout is 0, turns on permanently."
     }
 
+    /** @overriden */
     void turnOff() {
         mmpp.media.BackLight.off();
     }

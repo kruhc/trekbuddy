@@ -1,18 +1,4 @@
-/*
- * Copyright 2006-2007 Ales Pour <kruhc@seznam.cz>.
- * All Rights Reserved.
- * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
- *
- * This code is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License version 2 only, as
- * published by the Free Software Foundation.
- *
- * This code is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
- * version 2 for more details (a copy is included in the LICENSE file that
- * accompanied this code).
- */
+// @LICENSE@
 
 package cz.kruch.track.ui.nokia;
 
@@ -24,19 +10,46 @@ package cz.kruch.track.ui.nokia;
 final class SonyEricssonDeviceControl extends DeviceControl {
 
     SonyEricssonDeviceControl() {
+        this.name = "SonyEricsson";
+        this.cellIdProperty = "com.sonyericsson.net.cellid";
+        this.lacProperty = "com.sonyericsson.net.lac";
     }
 
+    /** @overriden */
+    String getCellId() {
+        return hexToDec(super.getCellId());
+    }
+
+    /** @overriden */
+    String getLac() {
+        return hexToDec(super.getLac());
+    }
+
+    /** @overriden */
     boolean isSchedulable() {
         return true;
     }
 
+    /** @overriden */
     void turnOn() {
         cz.kruch.track.ui.Desktop.display.flashBacklight(1);
         com.nokia.mid.ui.DeviceControl.setLights(0, 100);
     }
 
+    /** @overriden */
     void turnOff() {
         cz.kruch.track.ui.Desktop.display.flashBacklight(0);
 //        com.nokia.mid.ui.DeviceControl.setLights(0, 0);
+    }
+
+    private static String hexToDec(final String id) {
+        if (id != null && id.length() != 0) {
+            try {
+                return Integer.toString(Integer.parseInt(id, 16));
+            } catch (Exception e) {
+                return id;
+            }
+        }
+        return null;
     }
 }

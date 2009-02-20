@@ -1,5 +1,4 @@
-// (c) Copyright 2006-2007  Hewlett-Packard Development Company, L.P. All rights reserved.
-// Use is subject to license terms.
+// @LICENSE@
 
 package cz.kruch.track.ui.nokia;
 
@@ -11,20 +10,25 @@ package cz.kruch.track.ui.nokia;
 final class SamsungDeviceControl extends DeviceControl {
 
     SamsungDeviceControl() {
+        this.name = "Samsung";
     }
 
+    /** @overriden */
     boolean isSchedulable() {
         return true;
     }
 
+    /** @overriden */
     boolean forceOff() {
         return true;
     }
 
+    /** @overriden */
     void turnOn() {
         com.samsung.util.LCDLight.on(10000);
     }
 
+    /** @overriden */
     void turnOff() {
         com.samsung.util.LCDLight.off();
     }

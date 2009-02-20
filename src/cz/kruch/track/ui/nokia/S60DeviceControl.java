@@ -16,6 +16,12 @@ final class S60DeviceControl extends NokiaDeviceControl {
     private SymbianService.Inactivity inactivity;
 
     S60DeviceControl() throws IOException {
+        if (cz.kruch.track.TrackingMIDlet.uiq) {
+            this.name = "Symbian/UIQ";
+        } else {
+            this.name = "Symbian/S60";
+            this.cellIdProperty = "com.nokia.mid.cellid";
+        }
         this.inactivity = SymbianService.openInactivity();
     }
 

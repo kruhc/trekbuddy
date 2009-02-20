@@ -14,10 +14,12 @@ class NokiaDeviceControl extends DeviceControl {
     protected final int[] values;
 
     NokiaDeviceControl() {
+        this.name = "Nokia";
+        this.cellIdProperty = "Cell-ID";
         if (cz.kruch.track.TrackingMIDlet.s60nd) {
-            values = new int[]{ 0, 100 };
+            this.values = new int[]{ 0, 100 };
         } else {
-            values = new int[]{ 0, 10, 25, 50, 100 };
+            this.values = new int[]{ 0, 10, 25, 50, 100 };
         }
     }
 
@@ -30,12 +32,12 @@ class NokiaDeviceControl extends DeviceControl {
         setLights();
     }
 
-    protected void setLights() {
-        com.nokia.mid.ui.DeviceControl.setLights(0, values[backlight]);
-    }
-
     /** @overriden */
     void sync() {
         confirm(backlight == 0 ? Resources.getString(Resources.DESKTOP_MSG_BACKLIGHT_OFF) : Resources.getString(Resources.DESKTOP_MSG_BACKLIGHT_ON) + " (" + values[backlight] + "%)");
+    }
+
+    protected void setLights() {
+        com.nokia.mid.ui.DeviceControl.setLights(0, values[backlight]);
     }
 }

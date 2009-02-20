@@ -18,22 +18,23 @@ public class DeviceControl extends TimerTask {
 
     protected int backlight;
 
-    private String name;
+    protected String name;
+    protected String cellIdProperty, lacProperty;
+
     private TimerTask task;
 
     public static void initialize() {
 //#ifdef __ALL__
         try {
             Class.forName("com.nokia.mid.ui.DirectUtils");
-            if (cz.kruch.track.TrackingMIDlet.symbian) {
+            if (cz.kruch.track.TrackingMIDlet.jbed) {
+                // do nothing
+            } else if (cz.kruch.track.TrackingMIDlet.symbian) {
                 instance = (DeviceControl) Class.forName("cz.kruch.track.ui.nokia.S60DeviceControl").newInstance();
-                instance.name = "Symbian/" + (cz.kruch.track.TrackingMIDlet.uiq ? "UIQ" : "S60");
             } else if (cz.kruch.track.TrackingMIDlet.sonyEricssonEx) {
                 instance = (DeviceControl) Class.forName("cz.kruch.track.ui.nokia.SonyEricssonDeviceControl").newInstance();
-                instance.name = "SonyEricsson";
             } else {
                 instance = (DeviceControl) Class.forName("cz.kruch.track.ui.nokia.NokiaDeviceControl").newInstance();
-                instance.name = "Nokia";
             }
         } catch (Throwable t) {
             // ignore
@@ -42,7 +43,6 @@ public class DeviceControl extends TimerTask {
             try {
                 Class.forName("com.siemens.mp.game.Light");
                 instance = (DeviceControl) Class.forName("cz.kruch.track.ui.nokia.SiemensDeviceControl").newInstance();
-                instance.name = "Siemens";
             } catch (Throwable t) {
                 // ignore
             }
@@ -51,7 +51,6 @@ public class DeviceControl extends TimerTask {
             try {
                 Class.forName("com.samsung.util.LCDLight");
                 instance = (DeviceControl) Class.forName("cz.kruch.track.ui.nokia.SamsungDeviceControl").newInstance();
-                instance.name = "Samsung";
                 cz.kruch.track.TrackingMIDlet.samsung = true;
             } catch (Throwable t) {
                 // ignore
@@ -61,7 +60,6 @@ public class DeviceControl extends TimerTask {
             try {
                 Class.forName("com.motorola.multimedia.Lighting");
                 instance = (DeviceControl) Class.forName("cz.kruch.track.ui.nokia.MotorolaDeviceControl").newInstance();
-                instance.name = "Motorola";
                 cz.kruch.track.TrackingMIDlet.motorola = true;
             } catch (Throwable t) {
                 // ignore
@@ -71,7 +69,6 @@ public class DeviceControl extends TimerTask {
             try {
                 Class.forName("mmpp.media.BackLight");
                 instance = (DeviceControl) Class.forName("cz.kruch.track.ui.nokia.LgDeviceControl").newInstance();
-                instance.name = "LG";
             } catch (Throwable t) {
                 // ignore
             }
@@ -82,7 +79,6 @@ public class DeviceControl extends TimerTask {
             try {
                 Class.forName("net.rim.device.api.system.Backlight");
                 instance = (DeviceControl) Class.forName("cz.kruch.track.ui.nokia.BlackberryDeviceControl").newInstance();
-                instance.name = "Blackberry";
             } catch (Throwable t) {
                 // ignore
             }
@@ -91,40 +87,55 @@ public class DeviceControl extends TimerTask {
         if (instance == null) {
             try {
                 instance = (DeviceControl) Class.forName("cz.kruch.track.ui.nokia.Midp2DeviceControl").newInstance();
-                instance.name = "MIDP2";
             } catch (Throwable t) {
                 // ignore
             }
         }
     }
 
-    public static String getName() {
-        return instance != null ? instance.name : "?";
+    public static void destroy() {
+        instance.close();
     }
 
-    public static void destroy() {
-        if (instance != null) {
-            instance.close();
-        }
+    public static String getName() {
+        return instance.name;
     }
 
     public static void setBacklight() {
-        if (instance != null) {
-            instance.nextLevel();
-            instance.sync();
-        }
+        instance.nextLevel();
+        instance.sync();
     }
 
     public static void flash() {
-        if (instance != null) {
-            if (instance.backlight == 0) {
-                Desktop.display.flashBacklight(1);
-            }
+        if (instance.backlight == 0) {
+            Desktop.display.flashBacklight(1);
         }
     }
 
-    protected final void confirm(String message) {
+    public static String getGsmCellId() {
+        return instance.getCellId();
+    }
+
+    public static String getGsmLac() {
+        return instance.getLac();
+    }
+
+    final void confirm(String message) {
         Desktop.showConfirmation(message, null);
+    }
+
+    String getCellId() {
+        if (cellIdProperty != null) {
+            return System.getProperty(cellIdProperty);
+        }
+        return null;
+    }
+
+    String getLac() {
+        if (lacProperty != null) {
+            return System.getProperty(lacProperty);
+        }
+        return null;
     }
 
     void sync() {

@@ -51,6 +51,10 @@ public final class Jsr179LocationProvider
             final javax.microedition.location.Criteria criteria = new javax.microedition.location.Criteria();
             criteria.setAltitudeRequired(true);
             criteria.setSpeedAndCourseRequired(true);
+            criteria.setPreferredPowerConsumption(javax.microedition.location.Criteria.POWER_USAGE_MEDIUM);
+//#ifdef __RIM__
+            criteria.setCostAllowed(false);
+//#endif
 
             // adjust criteria for current device
 //#ifdef __ALL__
@@ -117,10 +121,14 @@ public final class Jsr179LocationProvider
             // remove listener and gc-free native provider
             try {
                 impl.setLocationListener(null, -1, -1, -1);
+                impl.reset();
             } catch (Exception e) {
                 // ignore
             }
             impl = null;
+            
+            // workaround for impl bug
+            System.gc();
 
             // almost dead
             zombie();

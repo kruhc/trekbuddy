@@ -471,7 +471,7 @@ public final class Map implements Runnable {
             }
 
 //#ifdef __LOG__
-            if (log.isEnabled()) log.debug("all requested slices loaded for " + map.getPath());
+            if (log.isEnabled()) log.debug("task finished");
 //#endif
 
             // we are done
@@ -665,7 +665,7 @@ public final class Map implements Runnable {
                 }
             } catch (Throwable t) {
 //#ifdef __LOG__
-                if (log.isEnabled()) log.debug("image loading for slice");
+                if (log.isEnabled()) log.debug("image loading for slice failed", t);
 //#endif
                 return t;
             }

@@ -60,14 +60,18 @@ public final class Playback implements PlayerListener {
     /**
      * Plays a sound from file.
 
-     * @param name filename
+     * @param url sound file URL
      * @return <code>true</code> if player started playing; <code>false</code> otherwise
      */
-    public static boolean play(final String name) {
-        if (Config.dataDirExists/* && api.file.File.isFs()*/ && name != null) {
+    public static boolean play(final String url) {
+//#ifdef __LOG__
+        if (log.isEnabled()) log.debug("play " + url);
+//#endif
+        
+        if (Config.dataDirExists/* && api.file.File.isFs()*/) {
             InputStream in = null;
             try {
-                return (new Playback(in = Connector.openInputStream(Config.getFolderURL(Config.FOLDER_SOUNDS) + name), name)).sound();
+                return (new Playback(in = Connector.openInputStream(url), url)).sound();
             } catch (Throwable t) {
                 try {
                     in.close();

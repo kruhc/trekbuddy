@@ -89,18 +89,8 @@ final class LocatorView extends View {
         this.center[1] = h >> 1;
     }
 
-    public void reset() {
-        for (int i = 2; --i >= 0; ) {
-            final Location[] array = locations[i];
-            for (int j = HISTORY_DEPTH; --j >= 0; ) {
-                if (array[j] != null) {
-                    Location.releaseInstance(array[j]);
-                    array[j] = null; // gc hint
-                }
-            }
-            count[i] = position[i] = 0;
-            lastCourse[i] = Float.NaN;
-        }
+    public void trackingStarted() {
+        reset();
     }
 
     public int locationUpdated(Location l) {
@@ -137,24 +127,26 @@ final class LocatorView extends View {
             case Canvas.DOWN: {
                 term = term == 0 ? 1 : 0;
             } break;
+            case Canvas.FIRE: {
+                mode++;
+            } break;
         }
 
         return Desktop.MASK_ALL;
     }
 
-    public int handleKey(int keycode, boolean repeated) {
-        int mask;
-
-        switch (keycode) {
-            case Canvas.KEY_STAR: {
-                mode++;
-                mask = Desktop.MASK_ALL;
-            } break;
-            default:
-                mask = Desktop.MASK_NONE;
+    private void reset() {
+        for (int i = 2; --i >= 0; ) {
+            final Location[] array = locations[i];
+            for (int j = HISTORY_DEPTH; --j >= 0; ) {
+                if (array[j] != null) {
+                    Location.releaseInstance(array[j]);
+                    array[j] = null; // gc hint
+                }
+            }
+            count[i] = position[i] = 0;
+            lastCourse[i] = Float.NaN;
         }
-
-        return mask;
     }
 
     private void append(final int term, final Location l) {

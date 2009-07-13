@@ -6,8 +6,13 @@ import cz.kruch.track.configuration.Config;
 import cz.kruch.track.util.CharArrayTokenizer;
 import cz.kruch.track.util.SimpleCalendar;
 import cz.kruch.track.util.NmeaParser;
+import cz.kruch.track.util.NakedVector;
+import cz.kruch.track.util.Mercator;
 import cz.kruch.track.maps.io.LoaderIO;
 import cz.kruch.track.Resources;
+//#ifdef __HECL__
+import cz.kruch.track.hecl.ControlledInterp;
+//#endif
 import cz.kruch.track.location.Waypoint;
 
 import javax.microedition.lcdui.Graphics;
@@ -19,30 +24,54 @@ import javax.microedition.lcdui.Command;
 import javax.microedition.lcdui.Displayable;
 import javax.microedition.lcdui.Canvas;
 import javax.microedition.lcdui.game.Sprite;
+import javax.microedition.io.Connector;
 
 import api.file.File;
 import api.io.BufferedInputStream;
 import api.location.Location;
 import api.location.QualifiedCoordinates;
+import api.location.CartesianCoordinates;
 
 import java.io.InputStream;
 import java.io.IOException;
+import java.io.InputStreamReader;
 import java.util.Vector;
 import java.util.Hashtable;
 import java.util.Calendar;
 import java.util.TimeZone;
 import java.util.TimerTask;
+import java.util.Enumeration;
 
-import org.kxml2.io.KXmlParser;
+import org.kxml2.io.HXmlParser;
 import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
+
+//#ifdef __HECL__
+import org.hecl.HeclException;
+import org.hecl.Thing;
+import org.hecl.Interp;
+import org.hecl.IntThing;
+import org.hecl.DoubleThing;
+import org.hecl.NumberThing;
+import org.hecl.RealThing;
+import org.hecl.LongThing;
+import org.hecl.StringThing;
+import org.hecl.CodeThing;
+import org.hecl.FloatThing;
+//#endif
 
 /**
  * CMS aka 'Cockpit' screen.
  *
  * @author Ales Pour <kruhc@seznam.cz>
  */
-final class ComputerView extends View implements Runnable, CommandListener {
+final class ComputerView
+        extends View
+        implements Runnable, CommandListener
+//#ifdef __HECL__
+                   , ControlledInterp.Lookup
+//#endif
+                                             {
 //#ifdef __LOG__
     private static final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("ComputerView");
 //#endif
@@ -54,6 +83,7 @@ final class ComputerView extends View implements Runnable, CommandListener {
     private static final String TAG_SCREEN      = "screen";
     private static final String TAG_AREA        = "area";
     private static final String TAG_VALUE       = "value";
+    private static final String TAG_SCRIPT      = "script";
     private static final String ATTR_NAME       = "name";
     private static final String ATTR_FILE       = "file";
     private static final String ATTR_SYSTEM     = "system";
@@ -192,8 +222,11 @@ final class ComputerView extends View implements Runnable, CommandListener {
     private static final int VALUE_PRN0         = 1112; // 12 slots
     private static final int VALUE_XDR          = 1200;
 
-    // sign "index"
+    // extra special
     private static final int VALUE_SIGN         = 2000;
+//#ifdef __HECL__
+    private static final int VALUE_HECL         = 2001;
+//#endif                                                 
 
     // charset
     private static final char[] CHARSET = {
@@ -216,6 +249,16 @@ final class ComputerView extends View implements Runnable, CommandListener {
     private static final Date DATE = new Date();
 */
 
+//#ifdef __HECL__
+    private static final String EVENT_ON_LOCATION_UPDATED   = "onLocationUpdated";
+    private static final String EVENT_ON_TRACKING_START     = "onTrackingStart";
+    private static final String EVENT_ON_TRACKING_STOP      = "onTrackingStop";
+    private static final String EVENT_ON_KEY_PRESS          = "onKeyPress";
+/*
+    private static final String EVENT_ON_TIMER              = "onTimer";
+*/
+ //#endif
+
     private static int[] CRC_TABLE;
 
     private static final class Area {
@@ -223,6 +266,9 @@ final class ComputerView extends View implements Runnable, CommandListener {
         public String fontName;
         public Object fontImpl;
         public char[] value;
+//#ifdef __HECL__
+        public CodeThing scriptlet;
+//#endif
         public boolean ralign;        public float cw;
         public short ch;
         public short index = -1;
@@ -239,17 +285,28 @@ final class ComputerView extends View implements Runnable, CommandListener {
 
     /* profile vars */
     private Integer units;
-    private Vector areas;
+    private NakedVector areas;
     private Image backgroundImage;
     private int[] colors;
 
-    /* shared among profiles */
+    /* graphics - shared among profiles */
     private Hashtable fonts, backgrounds;
+
+//#ifdef __HECL__
+    /* HECL - shared among profiles */
+    private ControlledInterp interp;
+    private NakedVector heclOnUpdated, heclOnStart, heclOnStop, heclOnKey/*, heclOnTimer*/;
+    private Thing[] heclArgvOnUpdated, heclArgvOnStart, heclArgvOnStop, heclArgvOnKey/*, heclArgvOnTimer*/;
+    private Hashtable heclResults;
+/*
+    private TimerTask heclTimer;
+*/
+//#endif
 
     /* profiles and current profile */
     private String status;
     private Hashtable profiles;
-    private String[] profilesNames;
+    private String[] profilesNames; // TODO get rid of
     private int profileIdx;
 
     /* current wpt image */
@@ -313,33 +370,43 @@ final class ComputerView extends View implements Runnable, CommandListener {
         reset();
     }
 
-    public void reset() {
+//#ifdef __HECL__
+/*
+    void setVisible(boolean b) {
+        super.setVisible(b);
+        if (heclOnTimer != null) {
+            if (heclTimer != null) {
+                heclTimer.cancel();
+                heclTimer = null; // gc hint
+            }
+            if (b) {
+                Desktop.timer.schedule(heclTimer = new Timer(this), 100, 100);
+            }
+        }
+    }
+*/
+//#endif
+
+    public void trackingStarted() {
         if (!isUsable()) {
             return;
         }
-        
-        TIME_CALENDAR.reset();
-        ETA_CALENDAR.reset();
 
-        valueCoords = snrefCoords = null;
-        timestamp = starttime = timetauto = 0;
-        counter = sat = fix = 0;
-        fix3d = false;
-/*
-        altLast = Float.NaN;
-        altDiff = 0F;
-*/
-        final float[] valuesFloat = this.valuesFloat;
-        for (int i = valuesFloat.length; --i >= 0; ) {
-            valuesFloat[i] = 0F;
-        }
-        final float[] spdavgFloat = this.spdavgFloat;
-        for (int i = spdavgFloat.length; --i >= 0; ) {
-            spdavgFloat[i] = -1F;
-        }
-        spdavgIndex = 0;
-        spdavgShort = 0F;
+        // reset trip values
+        reset();
+
+//#ifdef __HECL__
+        // invoke handlers
+        invokeHandlers(interp, heclOnStart, heclArgvOnStart);
+//#endif
     }
+
+//#ifdef __HECL__
+    public void trackingStopped() {
+        // invoke handlers
+        invokeHandlers(interp, heclOnStop, heclArgvOnStop);
+    }
+//#endif
 
     public int locationUpdated(Location l) {
         // got any profile?
@@ -502,6 +569,14 @@ final class ComputerView extends View implements Runnable, CommandListener {
                 }
 */
             }
+
+//#ifdef __HECL__
+            // invalidate vars
+            interp.cacheversion++;
+
+            // invoke users handlers
+            invokeHandlers(interp, heclOnUpdated, heclArgvOnUpdated);
+//#endif
         }
 
         return Desktop.MASK_SCREEN;
@@ -530,17 +605,25 @@ final class ComputerView extends View implements Runnable, CommandListener {
 
         if (profilesNames.length > 1) {
             switch (action) {
-                case Canvas.LEFT:
+                case Canvas.UP: {
+//#ifdef __HECL__
+                    ((IntThing) heclArgvOnKey[1].getVal()).set(action);
+                    invokeHandlers(interp, heclOnKey, heclArgvOnKey);
+//#endif
+                } break;
+                case Canvas.LEFT: {
+                    synchronized (this) {
+                        if (--profileIdx < 0) {
+                            profileIdx = profilesNames.length - 1;
+                        }
+                        _profileName = profilesNames[profileIdx];
+                    }
+                    LoaderIO.getInstance().enqueue(this);
+                } break;
                 case Canvas.RIGHT: {
                     synchronized (this) {
-                        if (action == Canvas.LEFT) {
-                            if (--profileIdx < 0) {
-                                profileIdx = profilesNames.length - 1;
-                            }
-                        } else {
-                            if (++profileIdx == profilesNames.length) {
-                                profileIdx = 0;
-                            }
+                        if (++profileIdx == profilesNames.length) {
+                            profileIdx = 0;
                         }
                         _profileName = profilesNames[profileIdx];
                     }
@@ -558,13 +641,12 @@ final class ComputerView extends View implements Runnable, CommandListener {
                 } break;
                 case Canvas.FIRE: {
                     rotate = !rotate;
-                }
+                } break;
             }
         }
         
         return Desktop.MASK_NONE;
     }
-
 
     public int handleKey(int keycode, boolean repeated) {
         switch (keycode) {
@@ -619,10 +701,37 @@ final class ComputerView extends View implements Runnable, CommandListener {
                 try {
 
                     // find profiles
-                    fillProfiles();
+                    findProfiles();
 
                     // got something?
                     if (profiles.size() > 0) {
+
+//#ifdef __HECL__
+
+                        // initialize interp
+                        interp = new ControlledInterp(false);
+                        interp.addFallback(this);
+                        interp.addCommand("print", new PrintCommand(this));
+
+                        // debug help
+                        heclResults = new Hashtable(16);
+                        
+                        // find handlers
+                        findHandlers();
+
+                        // get handlers
+                        heclOnUpdated = interp.getHandlers(EVENT_ON_LOCATION_UPDATED);
+                        heclOnStart = interp.getHandlers(EVENT_ON_TRACKING_START);
+                        heclOnStop = interp.getHandlers(EVENT_ON_TRACKING_STOP);
+                        heclOnKey = interp.getHandlers(EVENT_ON_KEY_PRESS);
+//                        heclOnTimer = interp.getHandlers(EVENT_ON_TIMER);
+                        heclArgvOnUpdated = new Thing[]{ new Thing(EVENT_ON_LOCATION_UPDATED) };
+                        heclArgvOnStart = new Thing[]{ new Thing(EVENT_ON_TRACKING_START) };
+                        heclArgvOnStop = new Thing[]{ new Thing(EVENT_ON_TRACKING_STOP) };
+                        heclArgvOnKey = new Thing[]{ new Thing(EVENT_ON_KEY_PRESS), IntThing.create(0) };
+//                        heclArgvOnTimer = new Thing[]{ new Thing(EVENT_ON_TIMER), LongThing.create(0) };
+
+//#endif /* __HECL__ */
 
                         // look for default profile
                         final String s;
@@ -676,6 +785,7 @@ final class ComputerView extends View implements Runnable, CommandListener {
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("prepare: " + Config.cmsProfile);
 //#endif
+
         // panel stuff
         if (backgrounds != null) {
 
@@ -686,7 +796,7 @@ final class ComputerView extends View implements Runnable, CommandListener {
             final byte[] data = (byte[]) backgrounds.get(Config.cmsProfile);
             if (data != null) {
 //#ifdef __LOG__
-                if (log.isEnabled()) log.debug("prepare panel");
+                if (log.isEnabled()) log.debug("prepare panel for " + Config.cmsProfile);
 //#endif
                 // colorify panel
                 colorifyPng(data, colors[dayNight * 4 + 1]);
@@ -706,15 +816,13 @@ final class ComputerView extends View implements Runnable, CommandListener {
         if (areas != null) {
 
             // local cache
-            final Hashtable cache = new Hashtable(2);
+            final Hashtable cache = new Hashtable(4);
 
             // make sure image fonts are ready
             for (int i = areas.size(); --i >= 0; ) {
                 final Area area = (Area) areas.elementAt(i);
                 if (area.fontImpl == null || area.fontImpl instanceof Image) {
-//#ifdef __LOG__
-                    if (log.isEnabled()) log.debug("populate area " + (new String(area.value))+ " bitmap font");
-//#endif
+
                     // gc hint;
                     area.fontImpl = null;
 
@@ -726,7 +834,7 @@ final class ComputerView extends View implements Runnable, CommandListener {
                         if (bitmap == null) { // create fresh new
 
 //#ifdef __LOG__
-                            if (log.isEnabled()) log.error("bitmap font image not found: " + area.fontName + "; colorify using " + Integer.toHexString(colors[dayNight * 4 + 1]) + " color");
+                            if (log.isEnabled()) log.error("bitmap font image not colorified yet: " + area.fontName + "; colorify using " + Integer.toHexString(colors[dayNight * 4 + 1]) + " color");
 //#endif
 
                             // get raw data
@@ -838,16 +946,16 @@ final class ComputerView extends View implements Runnable, CommandListener {
 
         // got profile?
         if (isUsable() && status == null) {
-            final Vector areas = this.areas;
+            final Object[] areas = this.areas.getData();
             final CharArrayTokenizer tokenizer = this.tokenizer;
             final StringBuffer sb = this.sb;
             final Desktop navigator = this.navigator;
             final QualifiedCoordinates valueCoords = this.valueCoords;
             final float[] valuesFloat = this.valuesFloat;
-            final int units = this.units.intValue();
-            final int mode = Config.dayNight;
             final int[] colors = this.colors;
             final char[] text = this.text;
+            final int units = this.units.intValue();
+            final int mode = Config.dayNight;
 
             int state = 0;
 
@@ -859,489 +967,481 @@ final class ComputerView extends View implements Runnable, CommandListener {
                 graphics.drawImage(backgroundImage, 0, 0, Graphics.TOP | Graphics.LEFT);
             }
 
-            for (int N = areas.size(), i = 0; i < N; i++) {
-                final Area area = (Area) areas.elementAt(i);
-
+            for (int N = this.areas.size(), i = 0; i < N; i++) {
+                final Area area = (Area) areas[i];
 //#ifdef __LOG__
-                if (log.isEnabled()) log.debug("area - font: " + area.fontName + "; value: " + new String(area.value));
+//                if (log.isEnabled()) log.debug("area - font: " + area.fontName + "; value: " + (area.value != null ? new String(area.value) : "") + "; script: " + area.script);
+                if (log.isEnabled()) log.debug("area - font: " + area.fontName + "; value: " + area.value);
 //#endif
-                // prepare text buffer
-                sb.delete(0, sb.length());
-                tokenizer.init(area.value, area.value.length, DELIMITERS, true);
 
                 // local vars
                 int narrowChars = 0;
                 Image img = null;
 
-                while (tokenizer.hasMoreTokens()) {
-                    final CharArrayTokenizer.Token token = tokenizer.next();
-                    if (token.isDelimiter) {
-                        state++;
-                    } else {
-                        graphics.setColor(colors[mode * 4 + 1]);
-                        if (state % 2 == 1) {
-                            int idx = area.index;
-                            if (idx == -1) {
-                                idx = resolveTokenIndex(area, token);
-                            }
-                            switch (idx) {
-                                case VALUE_ALT: {
-                                    float alt = valuesFloat[idx];
-                                    switch (units) {
-                                        case Config.UNITS_IMPERIAL:
-                                            alt /= 0.3048F;
-                                        break;
-                                    }
-                                    NavigationScreens.append(sb, (int) alt);
-                                } break;
-                                case VALUE_COURSE:  {
-                                    NavigationScreens.append(sb, (int) valuesFloat[idx]);
-                                } break;
-                                case VALUE_SPD:
-                                case VALUE_SPD_MAX:
-                                case VALUE_SPD_AVG:
-                                case VALUE_SPD_AVG_AUTO: {
-                                    float value = valuesFloat[idx];
-                                    switch (units) {
-                                        case Config.UNITS_IMPERIAL:
-                                            value /= 1.609F;
-                                        break;
-                                        case Config.UNITS_NAUTICAL:
-                                            value /= 1.852F;
-                                        break;
-                                    }
-                                    NavigationScreens.append(sb, value, 1);
-                                    narrowChars++;
-                                } break;
-                                case VALUE_SPDi:
-                                case VALUE_SPDi_MAX:
-                                case VALUE_SPDi_AVG:
-                                case VALUE_SPDi_AVG_AUTO: {
-                                    float value = valuesFloat[idx - 4];
-                                    switch (units) {
-                                        case Config.UNITS_IMPERIAL:
-                                            value /= 1.609F;
-                                        break;
-                                        case Config.UNITS_NAUTICAL:
-                                            value /= 1.852F;
-                                        break;
-                                    }
-                                    NavigationScreens.append(sb, (int) value);
-                                } break;
-                                case VALUE_SPDd:
-                                case VALUE_SPDd_MAX:
-                                case VALUE_SPDd_AVG:
-                                case VALUE_SPDd_AVG_AUTO: {
-                                    float value = valuesFloat[idx - 8];
-                                    switch (units) {
-                                        case Config.UNITS_IMPERIAL:
-                                            value /= 1.609F;
-                                        break;
-                                        case Config.UNITS_NAUTICAL:
-                                            value /= 1.852F;
-                                        break;
-                                    }
-                                    value -= (int) value;
-                                    value *= 10;
-                                    NavigationScreens.append(sb, (int) value);
-                                } break;
-                                case VALUE_DIST_T: {
-                                    float value = valuesFloat[idx];
-                                    switch (units) {
-                                        case Config.UNITS_IMPERIAL:
-                                            value /= 1.609F;
-                                        break;
-                                        case Config.UNITS_NAUTICAL:
-                                            value /= 1.852F;
-                                        break;
-                                    }
-                                    NavigationScreens.append(sb, value, 0);
-                                    narrowChars++;
-                                } break;
-                                case VALUE_ALT_D:
-                                case VALUE_COURSE_D:
-                                case VALUE_SPD_D:
-                                case VALUE_SPD_DMAX:
-                                case VALUE_SPD_DAVG: {
-                                    float value = valuesFloat[idx];
-                                    if (idx == VALUE_ALT_D) {
-                                        switch (units) {
-                                            case Config.UNITS_IMPERIAL:
-                                                value /= 0.3048F;
-                                            break;
-                                        }
-                                    } else if (idx > VALUE_COURSE_D) {
-                                        switch (units) {
-                                            case Config.UNITS_IMPERIAL:
-                                                value /= 1.609F;
-                                            break;
-                                            case Config.UNITS_NAUTICAL:
-                                                value /= 1.852F;
-                                            break;
-                                        }
-                                    }
-                                    if (value >= 0F) {
-                                        sb.append('+');
-                                        graphics.setColor(colors[mode * 4 + 3]);
-                                    } else {
-                                        graphics.setColor(colors[mode * 4 + 2]);
-                                    }
-                                    NavigationScreens.append(sb, value, 1);
-                                    narrowChars++;
-                                } break;
-                                case VALUE_ASC_T: {
-                                    NavigationScreens.append(sb, (long) valuesFloat[idx]);
-                                } break;
-                                case VALUE_DESC_T: {
-                                    NavigationScreens.append(sb, (long) (-1 * valuesFloat[idx]));
-                                } break;
-                                case VALUE_SAT: {
-                                    NavigationScreens.append(sb, sat);
-                                } break;
-                                case VALUE_FIX: {
-                                    final char c;
-                                    switch (fix) {
-                                        case 1:
-                                            c = fix3d ? '3' : '2';
-                                        break;
-                                        case 2:
-                                            c = 'D';
-                                        break;
-                                        default:
-                                            c = (char) ('0' + fix);
-                                    }
-                                    sb.append(c);
-                                } break;
-                                case VALUE_PDOP: {
-                                    NavigationScreens.append(sb, NmeaParser.pdop, 1);
-                                } break;
-                                case VALUE_HDOP: {
-                                    NavigationScreens.append(sb, NmeaParser.hdop, 1);
-                                } break;
-                                case VALUE_VDOP: {
-                                    NavigationScreens.append(sb, NmeaParser.vdop, 1);
-                                } break;
-                                case VALUE_SATV: {
-                                    NavigationScreens.append(sb, NmeaParser.satv);
-                                } break;
-                                case VALUE_COORDS: {
-                                    if (valueCoords == null) {
-                                        sb.append(MSG_NO_POSITION);
-                                    } else {
-                                        NavigationScreens.printTo(valueCoords, sb);
-                                    }
-                                } break;
-                                case VALUE_TIME: {
-                                    if (timestamp == 0) {
-                                        sb.append(NO_TIME);
-                                    } else {
-                                        TIME_CALENDAR.setTimeSafe(timestamp);
-                                        printTime(sb, TIME_CALENDAR.get(Calendar.HOUR_OF_DAY),
-                                                      TIME_CALENDAR.get(Calendar.MINUTE),
-                                                      TIME_CALENDAR.get(Calendar.SECOND));
-                                    }
-                                    narrowChars += 2;
-                                } break;
-                                case VALUE_TIME_T:
-                                case VALUE_TIME_T_AUTO: {
-                                    if (timestamp == 0) {
-                                        sb.append(NO_TIME);
-                                    } else {
-                                        final int dt = (int) (idx == VALUE_TIME_T ? (timestamp - starttime) : timetauto) / 1000;
-                                        final int hours = dt / 3600;
-                                        final int mins = (dt % 3600) / 60;
-                                        final int secs = (dt % 3600) % 60;
-                                        printTime(sb, hours, mins, secs);
-                                    }
-                                    narrowChars += 2;
-                                } break;
-                                case VALUE_STATUS: {
-                                    NavigationScreens.drawProviderStatus(graphics, Desktop.osd.providerStatus,
-                                                                         area.x, area.y, 0);
-                                } break;
-                                case VALUE_WPT_AZI: {
-                                    final int azi = navigator.getWptAzimuth();
-                                    if (azi < 0F) {
-                                        sb.append('?');
-                                    } else {
-                                        NavigationScreens.append(sb, azi);
-                                    }
-                                } break;
-                                case VALUE_WPT_DIST: {
-                                    float dist = navigator.getWptDistance();
-                                    if (dist < 0F) {
-                                        sb.append('?');
-                                    } else {
-                                        switch (units) {
-                                            case Config.UNITS_METRIC:
-                                                dist /= 1000F;
-                                            break;
-                                            case Config.UNITS_IMPERIAL:
-                                                dist /= 1609F;
-                                            break;
-                                            case Config.UNITS_NAUTICAL:
-                                                dist /= 1852F;
-                                            break;
-                                        }
-                                        NavigationScreens.append(sb, dist, 0);
-                                        narrowChars++;
-                                    }
-                                } break;
-                                case VALUE_WPT_ETA: {
-                                    final int azi = navigator.getWptAzimuth();
-                                    final float dist = navigator.getWptDistance();
-                                    if (azi < 0F || dist < 0F || timestamp == 0) {
-                                        sb.append(NO_TIME);
-                                    } else {
-                                        if (dist > Config.wptProximity) {
-                                            final double vmg = spdavgShort/*valuesFloat[VALUE_SPD]*/ * (Math.cos(Math.toRadians(valuesFloat[VALUE_COURSE] - azi)));
-                                            if (vmg > 0F) {
-                                                final long dt = (long) (1000 * (dist / (vmg / 3.6F)));
-                                                final long eta = timestamp + (dt < 0F ? 2 * -dt : dt);
-                                                ETA_CALENDAR.setTime(eta);
-                                                printTime(sb, ETA_CALENDAR.get(Calendar.HOUR_OF_DAY),
-                                                              ETA_CALENDAR.get(Calendar.MINUTE),
-                                                              ETA_CALENDAR.get(Calendar.SECOND));
-                                            } else {
-                                                sb.append(INF_TIME);
-                                            }
-                                        } else {
-                                            ETA_CALENDAR.setTimeSafe(timestamp);
-                                            printTime(sb, ETA_CALENDAR.get(Calendar.HOUR_OF_DAY),
-                                                          ETA_CALENDAR.get(Calendar.MINUTE),
-                                                          ETA_CALENDAR.get(Calendar.SECOND));
-                                        }
-                                    }
-                                    narrowChars += 2;
-                                } break;
-                                case VALUE_WPT_VMG: {
-                                    final int azi = navigator.getWptAzimuth();
-                                    if (azi < 0F) {
-                                        sb.append('?');
-                                    } else {
-                                        double vmg = spdavgShort/*valuesFloat[VALUE_SPD]*/ * (Math.cos(Math.toRadians(valuesFloat[VALUE_COURSE] - azi)));
-                                        switch (units) {
-                                            case Config.UNITS_IMPERIAL:
-                                                vmg /= 1.609F;
-                                            break;
-                                            case Config.UNITS_NAUTICAL:
-                                                vmg /= 1.852F;
-                                            break;
-                                        }
-                                        NavigationScreens.append(sb, vmg, 1);
-                                        narrowChars++;
-                                    }
-                                } break;
-                                case VALUE_WPT_ALT: {
-                                    float alt = Float.NaN;
-                                    final Waypoint wpt = navigator.getWpt();
-                                    if (wpt != null) {
-                                        alt = wpt.getQualifiedCoordinates().getAlt();
-                                    }
-                                    if (Float.isNaN(alt)) {
-                                        sb.append('?');
-                                    } else {
+                // prepare text buffer
+                sb.delete(0, sb.length());
+
+                // template or script?
+                if (area.value != null) {
+
+                    // init tokenizer
+                    tokenizer.init(area.value, area.value.length, DELIMITERS, true);
+
+                    while (tokenizer.hasMoreTokens()) {
+                        final CharArrayTokenizer.Token token = tokenizer.next();
+                        if (token.isDelimiter) {
+                            state++;
+                        } else {
+                            graphics.setColor(colors[mode * 4 + 1]);
+                            if (state % 2 == 1) { // variable
+                                int idx = area.index;
+                                if (idx == -1) {
+                                    idx = resolveTokenIndex(area, token);
+                                }
+                                switch (idx) {
+                                    case VALUE_ALT: {
+                                        float alt = valuesFloat[idx];
                                         switch (units) {
                                             case Config.UNITS_IMPERIAL:
                                                 alt /= 0.3048F;
                                             break;
                                         }
                                         NavigationScreens.append(sb, (int) alt);
-                                    }
-                                } break;
-                                case VALUE_WPT_COORDS: {
-                                    QualifiedCoordinates qc = null;
-                                    final Waypoint wpt = navigator.getWpt();
-                                    if (wpt != null) {
-                                        qc = wpt.getQualifiedCoordinates();
-                                    }
-                                    if (qc == null) {
-                                        sb.append(MSG_NO_POSITION);
-                                    } else {
-                                        NavigationScreens.printTo(qc, sb);
-                                    }
-                                } break;
-                                case VALUE_TIMER: {
-                                    sb.append((timestamp / 1000) % 10);
-                                } break;
-                                case VALUE_LAT:
-                                case VALUE_LON: {
-                                    if (valueCoords == null) {
-                                        sb.append(MSG_NO_POSITION);
-                                    } else {
-                                        final int m = idx == VALUE_LAT ? 1 : 2;
-                                        NavigationScreens.printTo(sb, valueCoords, m, Config.decimalPrecision);
-                                    }
-                                } break;
-                                case VALUE_WPT_LAT:
-                                case VALUE_WPT_LON: {
-                                    QualifiedCoordinates qc = null;
-                                    final Waypoint wpt = navigator.getWpt();
-                                    if (wpt != null) {
-                                        qc = wpt.getQualifiedCoordinates();
-                                    }
-                                    if (qc == null) {
-                                        sb.append(MSG_NO_POSITION);
-                                    } else {
-                                        final int m = idx == VALUE_WPT_LAT ? 1 : 2;
-                                        NavigationScreens.printTo(sb, qc, m, Config.decimalPrecision);
-                                    }
-                                } break;
-                                case VALUE_WPT_NAME: {
-                                    final Waypoint wpt = navigator.getWpt();
-                                    if (wpt != null) {
-                                        final String s = wpt.getName();
-                                        if (s != null){
-                                            sb.append(s);
+                                    } break;
+                                    case VALUE_COURSE:  {
+                                        NavigationScreens.append(sb, (int) valuesFloat[idx]);
+                                    } break;
+                                    case VALUE_SPD:
+                                    case VALUE_SPD_MAX:
+                                    case VALUE_SPD_AVG:
+                                    case VALUE_SPD_AVG_AUTO: {
+                                        float value = fromKmh(units, valuesFloat[idx]);
+                                        NavigationScreens.append(sb, value, 1);
+                                        narrowChars++;
+                                    } break;
+                                    case VALUE_SPDi:
+                                    case VALUE_SPDi_MAX:
+                                    case VALUE_SPDi_AVG:
+                                    case VALUE_SPDi_AVG_AUTO: {
+                                        float value = fromKmh(units, valuesFloat[idx - 4]);
+                                        NavigationScreens.append(sb, (int) value);
+                                    } break;
+                                    case VALUE_SPDd:
+                                    case VALUE_SPDd_MAX:
+                                    case VALUE_SPDd_AVG:
+                                    case VALUE_SPDd_AVG_AUTO: {
+                                        float value = fromKmh(units, valuesFloat[idx - 8]);
+                                        value -= (int) value;
+                                        value *= 10;
+                                        NavigationScreens.append(sb, (int) value);
+                                    } break;
+                                    case VALUE_DIST_T: {
+                                        float value = fromKmh(units, valuesFloat[idx]);
+                                        NavigationScreens.append(sb, value, 0);
+                                        narrowChars++;
+                                    } break;
+                                    case VALUE_ALT_D:
+                                    case VALUE_COURSE_D:
+                                    case VALUE_SPD_D:
+                                    case VALUE_SPD_DMAX:
+                                    case VALUE_SPD_DAVG: {
+                                        float value = valuesFloat[idx];
+                                        if (idx == VALUE_ALT_D) {
+                                            switch (units) {
+                                                case Config.UNITS_IMPERIAL:
+                                                    value /= 0.3048F;
+                                                break;
+                                            }
+                                        } else if (idx > VALUE_COURSE_D) {
+                                            switch (units) {
+                                                case Config.UNITS_IMPERIAL:
+                                                    value /= 1.609F;
+                                                break;
+                                                case Config.UNITS_NAUTICAL:
+                                                    value /= 1.852F;
+                                                break;
+                                            }
                                         }
-                                    }
-                                } break;
-                                case VALUE_WPT_CMT: {
-                                    final Waypoint wpt = navigator.getWpt();
-                                    if (wpt != null) {
-                                        final String s = wpt.getComment();
-                                        if (s != null){
-                                            sb.append(s);
+                                        if (value >= 0F) {
+                                            sb.append('+');
+                                            graphics.setColor(colors[mode * 4 + 3]);
+                                        } else {
+                                            graphics.setColor(colors[mode * 4 + 2]);
                                         }
-                                    }
-                                } break;
-                                case VALUE_WPT_SYM: {
-                                    final Waypoint wpt = navigator.getWpt();
-                                    if (wpt != null) {
-                                        final String s = wpt.getSym();
-                                        if (s != null){
-                                            sb.append(s);
+                                        NavigationScreens.append(sb, value, 1);
+                                        narrowChars++;
+                                    } break;
+                                    case VALUE_ASC_T: {
+                                        NavigationScreens.append(sb, (long) valuesFloat[idx]);
+                                    } break;
+                                    case VALUE_DESC_T: {
+                                        NavigationScreens.append(sb, (long) (-1 * valuesFloat[idx]));
+                                    } break;
+                                    case VALUE_SAT: {
+                                        NavigationScreens.append(sb, sat);
+                                    } break;
+                                    case VALUE_FIX: {
+                                        final char c;
+                                        switch (fix) {
+                                            case 1:
+                                                c = fix3d ? '3' : '2';
+                                            break;
+                                            case 2:
+                                                c = 'D';
+                                            break;
+                                            default:
+                                                c = (char) ('0' + fix);
                                         }
-                                    }
-                                } break;
-                                case VALUE_WPT_IMG: {
-                                    final Waypoint wpt = navigator.getWpt();
-                                    if (wpt != null) {
-                                        final String s = wpt.getLink(Waypoint.LINK_GENERIC_IMAGE);
-                                        if (s != null) {
-                                            if (s.hashCode() != wptImgId) {
-                                                wptImgId = s.hashCode();
-                                                wptImg = null;
-                                                try {
-                                                    wptImg = NavigationScreens.loadImage(Config.FOLDER_WPTS, s);
-                                                } catch (Exception e) {
-                                                    sb.append('!');
+                                        sb.append(c);
+                                    } break;
+                                    case VALUE_PDOP: {
+                                        NavigationScreens.append(sb, NmeaParser.pdop, 1);
+                                    } break;
+                                    case VALUE_HDOP: {
+                                        NavigationScreens.append(sb, NmeaParser.hdop, 1);
+                                    } break;
+                                    case VALUE_VDOP: {
+                                        NavigationScreens.append(sb, NmeaParser.vdop, 1);
+                                    } break;
+                                    case VALUE_SATV: {
+                                        NavigationScreens.append(sb, NmeaParser.satv);
+                                    } break;
+                                    case VALUE_COORDS: {
+                                        if (valueCoords == null) {
+                                            sb.append(MSG_NO_POSITION);
+                                        } else {
+                                            NavigationScreens.printTo(valueCoords, sb);
+                                        }
+                                    } break;
+                                    case VALUE_TIME: {
+                                        if (timestamp == 0) {
+                                            sb.append(NO_TIME);
+                                        } else {
+                                            TIME_CALENDAR.setTimeSafe(timestamp);
+                                            printTime(sb, TIME_CALENDAR.get(Calendar.HOUR_OF_DAY),
+                                                          TIME_CALENDAR.get(Calendar.MINUTE),
+                                                          TIME_CALENDAR.get(Calendar.SECOND));
+                                        }
+                                        narrowChars += 2;
+                                    } break;
+                                    case VALUE_TIME_T:
+                                    case VALUE_TIME_T_AUTO: {
+                                        if (timestamp == 0) {
+                                            sb.append(NO_TIME);
+                                        } else {
+                                            final int dt = (int) (idx == VALUE_TIME_T ? (timestamp - starttime) : timetauto) / 1000;
+                                            final int hours = dt / 3600;
+                                            final int mins = (dt % 3600) / 60;
+                                            final int secs = (dt % 3600) % 60;
+                                            printTime(sb, hours, mins, secs);
+                                        }
+                                        narrowChars += 2;
+                                    } break;
+                                    case VALUE_STATUS: {
+                                        NavigationScreens.drawProviderStatus(graphics, Desktop.osd.providerStatus,
+                                                                             area.x, area.y, 0);
+                                    } break;
+                                    case VALUE_WPT_AZI: {
+                                        final int azi = navigator.getWptAzimuth();
+                                        if (azi < 0F) {
+                                            sb.append('?');
+                                        } else {
+                                            NavigationScreens.append(sb, azi);
+                                        }
+                                    } break;
+                                    case VALUE_WPT_DIST: {
+                                        float dist = navigator.getWptDistance();
+                                        if (dist < 0F) {
+                                            sb.append('?');
+                                        } else {
+                                            switch (units) {
+                                                case Config.UNITS_METRIC:
+                                                    dist /= 1000F;
+                                                break;
+                                                case Config.UNITS_IMPERIAL:
+                                                    dist /= 1609F;
+                                                break;
+                                                case Config.UNITS_NAUTICAL:
+                                                    dist /= 1852F;
+                                                break;
+                                            }
+                                            NavigationScreens.append(sb, dist, 0);
+                                            narrowChars++;
+                                        }
+                                    } break;
+                                    case VALUE_WPT_ETA: {
+                                        final int azi = navigator.getWptAzimuth();
+                                        final float dist = navigator.getWptDistance();
+                                        if (azi < 0F || dist < 0F || timestamp == 0) {
+                                            sb.append(NO_TIME);
+                                        } else {
+                                            if (dist > Config.wptProximity) {
+                                                final double vmg = spdavgShort/*valuesFloat[VALUE_SPD]*/ * (Math.cos(Math.toRadians(valuesFloat[VALUE_COURSE] - azi)));
+                                                if (vmg > 0F) {
+                                                    final long dt = (long) (1000 * (dist / (vmg / 3.6F)));
+                                                    final long eta = timestamp + (dt < 0F ? 2 * -dt : dt);
+                                                    ETA_CALENDAR.setTime(eta);
+                                                    printTime(sb, ETA_CALENDAR.get(Calendar.HOUR_OF_DAY),
+                                                                  ETA_CALENDAR.get(Calendar.MINUTE),
+                                                                  ETA_CALENDAR.get(Calendar.SECOND));
+                                                } else {
+                                                    sb.append(INF_TIME);
                                                 }
-                                            } else if (wptImg == null) {
+                                            } else {
+                                                ETA_CALENDAR.setTimeSafe(timestamp);
+                                                printTime(sb, ETA_CALENDAR.get(Calendar.HOUR_OF_DAY),
+                                                              ETA_CALENDAR.get(Calendar.MINUTE),
+                                                              ETA_CALENDAR.get(Calendar.SECOND));
+                                            }
+                                        }
+                                        narrowChars += 2;
+                                    } break;
+                                    case VALUE_WPT_VMG: {
+                                        final int azi = navigator.getWptAzimuth();
+                                        if (azi < 0F) {
+                                            sb.append('?');
+                                        } else {
+                                            double vmg = fromKmh(units, spdavgShort/*valuesFloat[VALUE_SPD]*/ * (float)(Math.cos(Math.toRadians(valuesFloat[VALUE_COURSE] - azi))));
+                                            NavigationScreens.append(sb, vmg, 1);
+                                            narrowChars++;
+                                        }
+                                    } break;
+                                    case VALUE_WPT_ALT: {
+                                        float alt = Float.NaN;
+                                        final Waypoint wpt = navigator.getWpt();
+                                        if (wpt != null) {
+                                            alt = wpt.getQualifiedCoordinates().getAlt();
+                                        }
+                                        if (Float.isNaN(alt)) {
+                                            sb.append('?');
+                                        } else {
+                                            switch (units) {
+                                                case Config.UNITS_IMPERIAL:
+                                                    alt /= 0.3048F;
+                                                break;
+                                            }
+                                            NavigationScreens.append(sb, (int) alt);
+                                        }
+                                    } break;
+                                    case VALUE_WPT_COORDS: {
+                                        QualifiedCoordinates qc = null;
+                                        final Waypoint wpt = navigator.getWpt();
+                                        if (wpt != null) {
+                                            qc = wpt.getQualifiedCoordinates();
+                                        }
+                                        if (qc == null) {
+                                            sb.append(MSG_NO_POSITION);
+                                        } else {
+                                            NavigationScreens.printTo(qc, sb);
+                                        }
+                                    } break;
+                                    case VALUE_TIMER: {
+                                        sb.append((timestamp / 1000) % 10);
+                                    } break;
+                                    case VALUE_LAT:
+                                    case VALUE_LON: {
+                                        if (valueCoords == null) {
+                                            sb.append(MSG_NO_POSITION);
+                                        } else {
+                                            final int m = idx == VALUE_LAT ? 1 : 2;
+                                            NavigationScreens.printTo(sb, valueCoords, m, Config.decimalPrecision);
+                                        }
+                                    } break;
+                                    case VALUE_WPT_LAT:
+                                    case VALUE_WPT_LON: {
+                                        QualifiedCoordinates qc = null;
+                                        final Waypoint wpt = navigator.getWpt();
+                                        if (wpt != null) {
+                                            qc = wpt.getQualifiedCoordinates();
+                                        }
+                                        if (qc == null) {
+                                            sb.append(MSG_NO_POSITION);
+                                        } else {
+                                            final int m = idx == VALUE_WPT_LAT ? 1 : 2;
+                                            NavigationScreens.printTo(sb, qc, m, Config.decimalPrecision);
+                                        }
+                                    } break;
+                                    case VALUE_WPT_NAME: {
+                                        final Waypoint wpt = navigator.getWpt();
+                                        if (wpt != null) {
+                                            final String s = wpt.getName();
+                                            if (s != null){
                                                 sb.append(s);
+                                            }
+                                        }
+                                    } break;
+                                    case VALUE_WPT_CMT: {
+                                        final Waypoint wpt = navigator.getWpt();
+                                        if (wpt != null) {
+                                            final String s = wpt.getComment();
+                                            if (s != null){
+                                                sb.append(s);
+                                            }
+                                        }
+                                    } break;
+                                    case VALUE_WPT_SYM: {
+                                        final Waypoint wpt = navigator.getWpt();
+                                        if (wpt != null) {
+                                            final String s = wpt.getSym();
+                                            if (s != null){
+                                                sb.append(s);
+                                            }
+                                        }
+                                    } break;
+                                    case VALUE_WPT_IMG: {
+                                        final Waypoint wpt = navigator.getWpt();
+                                        if (wpt != null) {
+                                            final String s = wpt.getLink(Waypoint.LINK_GENERIC_IMAGE);
+                                            if (s != null) {
+                                                if (s.hashCode() != wptImgId) {
+                                                    wptImgId = s.hashCode();
+                                                    wptImg = null;
+                                                    try {
+                                                        wptImg = NavigationScreens.loadImage(Config.FOLDER_WPTS, s);
+                                                    } catch (Exception e) {
+                                                        sb.append('!');
+                                                    }
+                                                } else if (wptImg == null) {
+                                                    sb.append(s);
+                                                }
+                                            } else {
+                                                wptImgId = 0;
+                                                wptImg = null; // gc hint
                                             }
                                         } else {
                                             wptImgId = 0;
                                             wptImg = null; // gc hint
                                         }
-                                    } else {
-                                        wptImgId = 0;
-                                        wptImg = null; // gc hint
-                                    }
-                                    img = wptImg;
-                                } break;
-                                case VALUE_WPT_ALT_DIFF: {
-                                    float wptAlt = Float.NaN;
-                                    final Waypoint wpt = navigator.getWpt();
-                                    if (wpt != null) {
-                                        wptAlt = wpt.getQualifiedCoordinates().getAlt();
-                                    }
-                                    if (Float.isNaN(wptAlt)) {
-                                        sb.append('?');
-                                    } else {
-                                        float diff = wptAlt - valuesFloat[VALUE_ALT];
-                                        switch (units) {
-                                            case Config.UNITS_IMPERIAL:
-                                                diff /= 0.3048F;
-                                            break;
+                                        img = wptImg;
+                                    } break;
+                                    case VALUE_WPT_ALT_DIFF: {
+                                        float wptAlt = Float.NaN;
+                                        final Waypoint wpt = navigator.getWpt();
+                                        if (wpt != null) {
+                                            wptAlt = wpt.getQualifiedCoordinates().getAlt();
                                         }
-                                        NavigationScreens.append(sb, (int) diff);
+                                        if (Float.isNaN(wptAlt)) {
+                                            sb.append('?');
+                                        } else {
+                                            float diff = wptAlt - valuesFloat[VALUE_ALT];
+                                            switch (units) {
+                                                case Config.UNITS_IMPERIAL:
+                                                    diff /= 0.3048F;
+                                                break;
+                                            }
+                                            NavigationScreens.append(sb, (int) diff);
+                                        }
+                                    } break;
+                                    case VALUE_PACE: {
+                                        float value = fromKmh(units, spdavgShort/*valuesFloat[VALUE_SPD]*/);
+                                        value = 60 / value;
+                                        if (value < 100F) {
+                                            final int mins = (int) value;
+                                            final int secs = (int) (60 * (value - mins));
+                                            NavigationScreens.append(sb, mins, 2);
+                                            sb.append(':');
+                                            NavigationScreens.append(sb, secs, 2);
+                                        } else {
+                                            sb.append("99:99");
+                                        }
+                                    } break;
+                                    case VALUE_COURSE_SLIDING: {
+                                        drawSlider(graphics, (int) valuesFloat[VALUE_COURSE], area);
+                                        continue; // TODO UGLY
+                                    } // break;
+                                    case VALUE_WPT_AZI_SLIDING: {
+                                        final int azi = navigator.getWptAzimuth();
+                                        if (azi < 0F) {
+                                            // what to do?
+                                        } else {
+                                            drawSlider(graphics, azi, area);
+                                        }
+                                        continue; // TODO UGLY
+                                    } // break;
+                                    case VALUE_SNR0:
+                                    case VALUE_SNR0 + 1:
+                                    case VALUE_SNR0 + 2:
+                                    case VALUE_SNR0 + 3:
+                                    case VALUE_SNR0 + 4:
+                                    case VALUE_SNR0 + 5:
+                                    case VALUE_SNR0 + 6:
+                                    case VALUE_SNR0 + 7:
+                                    case VALUE_SNR0 + 8:
+                                    case VALUE_SNR0 + 9:
+                                    case VALUE_SNR0 + 10:
+                                    case VALUE_SNR0 + 11: {
+                                        NavigationScreens.append(sb, NmeaParser.snrs[idx - VALUE_SNR0]);
+                                    } break;
+                                    case VALUE_PRN0:
+                                    case VALUE_PRN0 + 1:
+                                    case VALUE_PRN0 + 2:
+                                    case VALUE_PRN0 + 3:
+                                    case VALUE_PRN0 + 4:
+                                    case VALUE_PRN0 + 5:
+                                    case VALUE_PRN0 + 6:
+                                    case VALUE_PRN0 + 7:
+                                    case VALUE_PRN0 + 8:
+                                    case VALUE_PRN0 + 9:
+                                    case VALUE_PRN0 + 10:
+                                    case VALUE_PRN0 + 11: {
+                                        NavigationScreens.append(sb, NmeaParser.prns[idx - VALUE_PRN0]);
+                                    } break;
+                                    case VALUE_XDR: {
+                                        final String xdrId = token.substring(4/* TOKEN_XDR.length() */);
+                                        final Float value = (Float) NmeaParser.xdr.get(xdrId);
+                                        if (value != null && !value.isNaN()) {
+                                            NavigationScreens.append(sb, value.floatValue(), 1);
+                                        } else {
+                                            sb.append('?');
+                                        }
+                                    } break;
+                                    case VALUE_SIGN: {
+                                        sb.append(NavigationScreens.SIGN);
+                                    } break;
+//#ifdef __HECL__
+                                    case VALUE_HECL: {
+                                        try {
+                                            area.scriptlet.run(interp);
+//                                            interp.eval(area.scriptlet);
+                                        } catch (Throwable t) {
+//#ifdef __LOG__
+                                            t.printStackTrace();
+                                            if (log.isEnabled()) log.debug("interp script eval failed: " + area.scriptlet);
+//#endif
+                                            sb.append(t.toString());
+                                        }
+                                    } break;
+//#endif
+                                    default: {
+                                        sb.append('{');
+                                        sb.append(token.array, token.begin, token.length);
+                                        sb.append('}');
                                     }
-                                } break;
-                                case VALUE_PACE: {
-                                    float value = spdavgShort/*valuesFloat[VALUE_SPD]*/;
-                                    switch (units) {
-                                        case Config.UNITS_IMPERIAL:
-                                            value /= 1.609F;
-                                        break;
-                                        case Config.UNITS_NAUTICAL:
-                                            value /= 1.852F;
-                                        break;
-                                    }
-                                    value = 60 / value;
-                                    if (value < 100F) {
-                                        final int mins = (int) value;
-                                        final int secs = (int) (60 * (value - mins));
-                                        NavigationScreens.append(sb, mins, 2);
-                                        sb.append(':');
-                                        NavigationScreens.append(sb, secs, 2);
-                                    } else {
-                                        sb.append("99:99");
-                                    }
-                                } break;
-                                case VALUE_COURSE_SLIDING: {
-                                    drawSlider(graphics, (int) valuesFloat[VALUE_COURSE], area);
-                                    continue; // TODO UGLY
-                                } // break;
-                                case VALUE_WPT_AZI_SLIDING: {
-                                    final int azi = navigator.getWptAzimuth();
-                                    if (azi < 0F) {
-                                        // what to do?
-                                    } else {
-                                        drawSlider(graphics, azi, area);
-                                    }
-                                    continue; // TODO UGLY
-                                } // break;
-                                case VALUE_SNR0:
-                                case VALUE_SNR0 + 1:
-                                case VALUE_SNR0 + 2:
-                                case VALUE_SNR0 + 3:
-                                case VALUE_SNR0 + 4:
-                                case VALUE_SNR0 + 5:
-                                case VALUE_SNR0 + 6:
-                                case VALUE_SNR0 + 7:
-                                case VALUE_SNR0 + 8:
-                                case VALUE_SNR0 + 9:
-                                case VALUE_SNR0 + 10:
-                                case VALUE_SNR0 + 11: {
-                                    NavigationScreens.append(sb, NmeaParser.snrs[idx - VALUE_SNR0]);
-                                } break;
-                                case VALUE_PRN0:
-                                case VALUE_PRN0 + 1:
-                                case VALUE_PRN0 + 2:
-                                case VALUE_PRN0 + 3:
-                                case VALUE_PRN0 + 4:
-                                case VALUE_PRN0 + 5:
-                                case VALUE_PRN0 + 6:
-                                case VALUE_PRN0 + 7:
-                                case VALUE_PRN0 + 8:
-                                case VALUE_PRN0 + 9:
-                                case VALUE_PRN0 + 10:
-                                case VALUE_PRN0 + 11: {
-                                    NavigationScreens.append(sb, NmeaParser.prns[idx - VALUE_PRN0]);
-                                } break;
-                                case VALUE_XDR: {
-                                    final String xdrId = token.substring(4/* TOKEN_XDR.length() */);
-                                    final Float value = (Float) NmeaParser.xdr.get(xdrId);
-                                    if (value != null && !value.isNaN()) {
-                                        NavigationScreens.append(sb, value.floatValue(), 1);
-                                    } else {
-                                        sb.append('?');
-                                    }
-                                } break;
-                                case VALUE_SIGN: {
-                                    sb.append(NavigationScreens.SIGN);
-                                } break;
-                                default: {
-                                    sb.append('{');
-                                    sb.append(token.array, token.begin, token.length);
-                                    sb.append('}');
                                 }
+                            } else {
+                                sb.append(token.array, token.begin, token.length);
                             }
-                        } else {
-                            sb.append(token.array, token.begin, token.length);
                         }
                     }
+
+//#ifdef __HECL__
+
+                } else if (area.scriptlet != null) {
+
+                    // eval script
+                    try {
+                        area.scriptlet.run(interp);
+//                        interp.eval(area.scriptlet);
+                    } catch (Throwable t) {
+//#ifdef __LOG__
+                        t.printStackTrace();
+                        if (log.isEnabled()) log.debug("interp script eval failed: " + area.scriptlet);
+//#endif
+                        sb.append(t.toString());
+                    }
+
+//#endif /* __HECL__ */                    
+
                 }
 
                 final int l = sb.length();
@@ -1373,14 +1473,10 @@ final class ComputerView extends View implements Runnable, CommandListener {
                 graphics.drawString(status, 0, Desktop.font.getHeight(), Graphics.TOP | Graphics.LEFT);
             }
         }
-/*
-
-        // flush
-        flushGraphics();
-*/
     }
 
-    private int resolveTokenIndex(final Area area, final CharArrayTokenizer.Token token) {
+    private /*static*/ int resolveTokenIndex(final Area area,
+                                         final CharArrayTokenizer.Token token) {
         int idx = -1;
 
         final String[] keys = TOKENS_float;
@@ -1447,8 +1543,18 @@ final class ComputerView extends View implements Runnable, CommandListener {
                 area.index = VALUE_WPT_AZI_SLIDING;
             } else if (token.startsWith(TOKEN_XDR)) {
                 area.index = VALUE_XDR;
+//#ifdef __HECL__
+            } else if (token.startsWith('$')) {
+                try {
+                    area.scriptlet = CodeThing.get(interp, new Thing("print " + token.toString()));
+//                    area.scriptlet = new Thing("print " + token.toString());
+                    area.index = VALUE_HECL;
+                } catch (HeclException e) {
+                    area.value = e.toString().toCharArray();
+                }
+//#endif
             } else {
-                area.index = -666;
+                area.index = -1;
             }
             idx = area.index;
         }
@@ -1456,14 +1562,8 @@ final class ComputerView extends View implements Runnable, CommandListener {
         return idx;
     }
 
-    private boolean isUsable() {
-        return profiles != null && profiles.size() != 0 // got some profiles
-                && Config.cmsProfile != null && Config.cmsProfile.length() != 0 // got default profile
-                && valuesFloat != null; // and initialized
-    }
-
-    private StringBuffer printTime(final StringBuffer sb,
-                                   final int hour, final int min, final int sec) {
+    private static StringBuffer printTime(final StringBuffer sb,
+                                          final int hour, final int min, final int sec) {
         if (hour < 10)
             sb.append('0');
         NavigationScreens.append(sb, hour).append(':');
@@ -1559,6 +1659,43 @@ final class ComputerView extends View implements Runnable, CommandListener {
         }
     }
 
+    private boolean isUsable() {
+        return profiles != null && profiles.size() != 0 // got some profiles
+                && Config.cmsProfile != null && Config.cmsProfile.length() != 0 // got default profile
+                && valuesFloat != null; // and initialized
+    }
+
+    private void reset() {
+        // reset calendars
+        TIME_CALENDAR.reset();
+        ETA_CALENDAR.reset();
+
+        // reset vars
+        valueCoords = snrefCoords = null;
+        timestamp = starttime = timetauto = 0;
+        counter = sat = fix = 0;
+        fix3d = false;
+/*
+        altLast = Float.NaN;
+        altDiff = 0F;
+*/
+        final float[] valuesFloat = this.valuesFloat;
+        for (int i = valuesFloat.length; --i >= 0; ) {
+            valuesFloat[i] = 0F;
+        }
+        final float[] spdavgFloat = this.spdavgFloat;
+        for (int i = spdavgFloat.length; --i >= 0; ) {
+            spdavgFloat[i] = -1F;
+        }
+        spdavgIndex = 0;
+        spdavgShort = 0F;
+
+//#ifdef __HECL__
+        // invalidate vars
+        interp.cacheversion++;
+//#endif
+    }
+
     private String loadViaCache(final String filename) {
 
         // release current profile bitmap fonts
@@ -1586,7 +1723,7 @@ final class ComputerView extends View implements Runnable, CommandListener {
 //#endif
             // populate members
             final Object[] cached = (Object[]) o;
-            areas = (Vector) cached[0];
+            areas = (NakedVector) cached[0];
             colors = (int[]) cached[1];
             units = (Integer) cached[2];
 
@@ -1597,7 +1734,7 @@ final class ComputerView extends View implements Runnable, CommandListener {
 //#endif
             // new vars
             colors = new int[8];
-            areas = new Vector(4, 4);
+            areas = new NakedVector(4, 4);
 
             // load from file
             load(filename);
@@ -1665,17 +1802,20 @@ final class ComputerView extends View implements Runnable, CommandListener {
         return result;
     }
 
-    private void fillProfiles() throws IOException {
+    private void findProfiles() throws IOException {
         File dir = null;
 
         try {
             // open stores directory
             dir = File.open(Config.getFolderURL(Config.FOLDER_PROFILES));
 
-            // list file stores
+            // list profiles
             if (dir.exists()) {
-                profilesNames = FileBrowser.sort2array(dir.list("cms.*.xml", false), null);
+                profilesNames = FileBrowser.sort2array(dir.list("cms.*.xml", false), null, null);
                 for (int N = profilesNames.length, i = 0; i < N; i++) {
+//#ifdef __LOG__
+                    if (log.isEnabled()) log.debug("found profile " + profilesNames[i]);
+//#endif
                     profiles.put(profilesNames[i], this/* hack: null not allowed */);
                 }
             }
@@ -1689,289 +1829,693 @@ final class ComputerView extends View implements Runnable, CommandListener {
         }
     }
 
-    private String loadProfile(final String filename, final InputStream in) throws IOException, XmlPullParserException {
-        // instantiate parser
-        final KXmlParser parser = new KXmlParser(/*NAME_CACHE*/);
+     private String loadProfile(final String filename, final InputStream in) throws IOException, XmlPullParserException {
+         // instantiate parser
+         final HXmlParser parser = new HXmlParser();
+
+         try {
+             // set input
+             parser.setInput(in, null); // null is for encoding autodetection
+
+             // var
+             Area area = null;
+
+             // sax
+             for (int eventType = parser.next(); eventType != XmlPullParser.END_DOCUMENT; eventType = parser.next()) {
+                 switch (eventType) {
+                     case XmlPullParser.START_TAG: {
+                         final String tag = parser.getName();
+                         if (TAG_AREA.equals(tag)) {
+                             area = new Area();
+                             area.x = Short.parseShort(parser.getAttributeValue(null, ATTR_X));
+                             area.y = Short.parseShort(parser.getAttributeValue(null, ATTR_Y));
+                             area.w = Short.parseShort(parser.getAttributeValue(null, ATTR_W));
+                             area.h = Short.parseShort(parser.getAttributeValue(null, ATTR_H));
+                             area.ralign = "right".equals(parser.getAttributeValue(null, ATTR_ALIGN));
+                             final String font = parser.getAttributeValue(null, TAG_FONT);
+                             if (font != null) {
+                                 area.fontName = font;
+                                 final Object fo = fonts.get(font);
+                                 if (fo instanceof Font) {
+                                     area.fontImpl = fo;
+                                 }
+                             } else {
+                                 area.fontName = "Desktop";
+                                 area.fontImpl = Desktop.font;
+                             }
+                             final String name = parser.getAttributeValue(null, ATTR_IMAGE);
+                             if (name != null) {
+                                 final byte[] image = (byte[]) load(name);
+                                 if (image != null) {
+                                     area.fontName = name;
+                                     area.fontImpl = null;
+                                     fonts.put(name, image);
+                                 }
+                             }
+                         } else if (TAG_VALUE.equals(tag)) {
+                             area.value = parser.nextText().toCharArray();
+//#ifdef __HECL__
+                         } else if (TAG_SCRIPT.equals(tag)) {
+                             try {
+                                 area.scriptlet = CodeThing.get(interp, new Thing(parser.nextText()));
+//                                 area.scriptlet = new Thing(parser.nextText());
+                             } catch (HeclException e) {
+                                 area.value = e.toString().toCharArray();
+                             }
+//#endif
+                         } else if (TAG_UNITS.equals(tag)) {
+                             final String system = parser.getAttributeValue(null, ATTR_SYSTEM);
+                             if ("metric".equals(system)) {
+                                 units = new Integer(Config.UNITS_METRIC);
+                             } else if ("imperial".equals(system)) {
+                                 units = new Integer(Config.UNITS_IMPERIAL);
+                             } else if ("nautical".equals(system)) {
+                                 units = new Integer(Config.UNITS_NAUTICAL);
+                             }
+                         } else if (TAG_FONT.equals(tag)) {
+                             final String name = parser.getAttributeValue(null, ATTR_NAME);
+                             if (!fonts.containsKey(name)) {
+                                 String source = parser.getAttributeValue(null, ATTR_FILE);
+                                 if (source != null) {
+                                     final byte[] image = (byte[]) load(source);
+                                     if (image != null) {
+                                         fonts.put(name, image);
+                                     }
+                                 } else {
+                                     source = parser.getAttributeValue(null, ATTR_SYSTEM);
+                                     if (source != null) {
+                                         final int code = Integer.parseInt(source, 16);
+                                         fonts.put(name, Font.getFont((code >> 16) & 0x000000FF,
+                                                                      (code >> 8) & 0x000000FF,
+                                                                      (code) & 0x0000FF));
+                                     }
+                                 }
+                             }
+                         } else if (TAG_COLORS.equals(tag)) {
+                             int offset = 0;
+                             if ("night".equals(parser.getAttributeValue(null, ATTR_MODE))) {
+                                 offset = 4;
+                             }
+                             colors[offset] = Integer.parseInt(parser.getAttributeValue(null, ATTR_BGCOLOR), 16);
+                             colors[offset + 1] = Integer.parseInt(parser.getAttributeValue(null, ATTR_FGCOLOR), 16);
+                             colors[offset + 2] = Integer.parseInt(parser.getAttributeValue(null, ATTR_NXCOLOR), 16);
+                             colors[offset + 3] = Integer.parseInt(parser.getAttributeValue(null, ATTR_PXCOLOR), 16);
+                         } else if (TAG_SCREEN.equals(tag)) {
+                             final String background = parser.getAttributeValue(null, ATTR_BACKGROUND);
+                             if (background != null) {
+                                 final byte[] image = (byte[]) load(background);
+                                 if (image != null) {
+                                     backgrounds.put(filename, image);
+                                 }
+                             }
+                         }
+                     } break;
+                     case XmlPullParser.END_TAG: {
+                         final String tag = parser.getName();
+                         if (TAG_AREA.equals(tag)){
+                             areas.addElement(area);
+                         }
+                     } break;
+                 }
+             }
+         } finally {
+             try {
+                 parser.close();
+             } catch (IOException e) {
+                 // ignore
+             }
+         }
+
+         return filename;
+     }
+
+     private static byte[] loadFont(final InputStream in, final long size) throws IOException {
+         final int length = (int) size;
+         final byte[] data = new byte[length];
+         int offset = 0;
+
+         int count = in.read(data, 0, length);
+         while (count > -1 && offset < length) {
+             offset += count;
+             count = in.read(data, offset, length - offset);
+         }
+
+         if (offset < length) {
+             throw new IOException("Incomplete read");
+         }
+
+         return data;
+     }
+
+     private static void colorifyPng(final byte[] data, final int color) {
+         final int length = data.length;
+         final int tRnsStart = find_tRns(data, length);
+
+         if (tRnsStart > 0) {
+             int chunkStart = 8;
+             int chunkDataLength = 0;
+             int plte = 0;
+             int plteStart = 0;
+             int plteDataOffset = 0;
+             long plteCrc = 0;
+
+             for (int offset = 8; offset < length; offset++) {
+                 final int i = data[offset];
+                 final char c = (char) i;
+
+                 switch (plte) {
+                     case 0:
+                         if (c == 'P') {
+                             plte++;
+                         }
+                     break;
+                     case 1:
+                         if (c == 'L') {
+                             plte++;
+                         } else {
+                             plte = 0;
+                         }
+                     break;
+                     case 2:
+                         if (c == 'T') {
+                             plte++;
+                         } else {
+                             plte = 0;
+                         }
+                     break;
+                     case 3:
+                         if (c == 'E') {
+                             plte++;
+                         } else {
+                             plte = 0;
+                         }
+                     break;
+                 }
+
+                 if (plte == -1) {
+                     // PLTE already processed
+                     break;
+                 } else {
+                     if (offset == chunkStart) {
+                         chunkDataLength = 0;
+                     }
+                     if (offset >= chunkStart) {
+                         if (offset <= chunkStart + 3) {
+                             chunkDataLength |= i << 8 * (3 - (offset - chunkStart));
+     //                        if (offset == chunkStart + 3) {
+     //                            System.out.println("chunk data length = " + chunkDataLength);
+     //                        }
+                         } else if (plte == 4) {
+                             if (plteStart == 0) {
+                                 plteStart = chunkStart + 4;
+                                 plteDataOffset = 0;
+                             } else if (offset < chunkStart + 4 + 4 + chunkDataLength) {
+     //                            System.out.println("palette byte at " + offset + " is " + (byte) i);
+                                 data[offset] = (byte) i;
+                                 if (plteDataOffset % 3 == 0) {
+     //                                if (data[offset] != (byte) 0xff || data[offset + 1] != (byte) 0xff || data[offset + 2] != (byte) 0xff) {
+                                     if (data[tRnsStart + plteDataOffset / 3] != 0) {
+                                         data[offset] = (byte) ((color >>> 16) & 0xff);
+                                         data[offset + 1] = (byte) ((color >>> 8) & 0xff);
+                                         data[offset + 2] = (byte) (color & 0xff);
+                                     }
+                                 }
+                                 plteDataOffset++;
+                             } else {
+                                 if (offset == chunkStart + 4 + 4 + chunkDataLength) {
+                                     plteCrc = calcCrc(data, plteStart, 4 + chunkDataLength);
+                                 }
+                                 data[offset] = (byte) ((plteCrc >>> (8 * (3 - (offset - (chunkStart + 4 + 4 + chunkDataLength))))) & 0x000000FF);
+                                 if (offset == chunkStart + 4 + 4 + chunkDataLength + 4) {
+                                     plte = -1;
+                                 }
+                             }
+                         } else if (offset == chunkStart + 4 + 4 + chunkDataLength) {
+                             chunkStart += 4 + 4 + chunkDataLength + 4;
+     //                        System.out.println("next chunk at = " + chunkStart);
+                         }
+                     }
+                 }
+             }
+         }
+     }
+
+     private static long calcCrc(final byte[] buf, int off, int len) {
+         final int[] crc_table = CRC_TABLE;
+         int c = ~0;
+         while (--len >= 0)
+             c = crc_table[(c ^ buf[off++]) & 0xff] ^ (c >>> 8);
+         return (long) ~c & 0xffffffffL;
+     }
+
+     private static int find_tRns(final byte[] data, final int length) {
+         int trns = 0;
+         for (int offset = 8; offset < length; offset++) {
+             final int i = data[offset];
+             final char c = (char) i;
+
+             switch (trns) {
+                 case 0:
+                     if (c == 't') {
+                         trns++;
+                     }
+                 break;
+                 case 1:
+                     if (c == 'R') {
+                         trns++;
+                     } else {
+                         trns = 0;
+                     }
+                 break;
+                 case 2:
+                     if (c == 'N') {
+                         trns++;
+                     } else {
+                         trns = 0;
+                     }
+                 break;
+                 case 3:
+                     if (c == 'S') {
+                         trns++;
+                     } else {
+                         trns = 0;
+                     }
+                 break;
+             }
+
+             if (trns == 4) {
+                 return offset + 1;
+             }
+         }
+
+         return -1;
+     }
+
+     private class Rotator extends TimerTask {
+
+         /* prevents $1 generation */
+         public Rotator() {
+         }
+
+         public void run() {
+             if (isVisible && rotate) {
+                 handleAction(Canvas.RIGHT, false);
+             }
+         }
+     }
+
+    private static float fromKmh(final int units, float value) {
+        switch (units) {
+            case Config.UNITS_IMPERIAL:
+                value /= 1.609F;
+            break;
+            case Config.UNITS_NAUTICAL:
+                value /= 1.852F;
+            break;
+        }
+
+        return value;
+    }
+
+//#ifdef __HECL__
+
+    private void findHandlers() throws IOException, HeclException {
+        File dir = null;
 
         try {
-            // set input
-            parser.setInput(in, null); // null is for encoding autodetection
+            // open stores directory
+            dir = File.open(Config.getFolderURL(Config.FOLDER_PROFILES));
 
-            // var
-            Area area = null;
+            // parse handlers
+            if (dir.exists()) {
 
-            // sax
-            for (int eventType = parser.next(); eventType != XmlPullParser.END_DOCUMENT; eventType = parser.next()) {
-                switch (eventType) {
-                    case XmlPullParser.START_TAG: {
-                        final String tag = parser.getName();
-                        if (TAG_AREA.equals(tag)) {
-                            area = new Area();
-                            area.x = Short.parseShort(parser.getAttributeValue(null, ATTR_X));
-                            area.y = Short.parseShort(parser.getAttributeValue(null, ATTR_Y));
-                            area.w = Short.parseShort(parser.getAttributeValue(null, ATTR_W));
-                            area.h = Short.parseShort(parser.getAttributeValue(null, ATTR_H));
-                            area.ralign = "right".equals(parser.getAttributeValue(null, ATTR_ALIGN));
-                            final String font = parser.getAttributeValue(null, TAG_FONT);
-                            if (font != null) {
-                                area.fontName = font;
-                                final Object fo = fonts.get(font);
-                                if (fo instanceof Font) {
-                                    area.fontImpl = fo;
-                                }
-                            } else {
-                                area.fontName = "Desktop";
-                                area.fontImpl = Desktop.font;
-                            }
-                            final String name = parser.getAttributeValue(null, ATTR_IMAGE);
-                            if (name != null) {
-                                final byte[] image = (byte[]) load(name);
-                                if (image != null) {
-                                    area.fontName = name;
-                                    area.fontImpl = null;
-                                    fonts.put(name, image);
-                                }
-                            }
-                        } else if (TAG_VALUE.equals(tag)) {
-                            area.value = parser.nextText().toCharArray();
-                        } else if (TAG_UNITS.equals(tag)) {
-                            final String system = parser.getAttributeValue(null, ATTR_SYSTEM);
-                            if ("metric".equals(system)) {
-                                units = new Integer(Config.UNITS_METRIC);
-                            } else if ("imperial".equals(system)) {
-                                units = new Integer(Config.UNITS_IMPERIAL);
-                            } else if ("nautical".equals(system)) {
-                                units = new Integer(Config.UNITS_NAUTICAL);
-                            }
-                        } else if (TAG_FONT.equals(tag)) {
-                            final String name = parser.getAttributeValue(null, ATTR_NAME);
-                            if (!fonts.containsKey(name)) {
-                                String source = parser.getAttributeValue(null, ATTR_FILE);
-                                if (source != null) {
-                                    final byte[] image = (byte[]) load(source);
-                                    if (image != null) {
-                                        fonts.put(name, image);
-                                    }
-                                } else {
-                                    source = parser.getAttributeValue(null, ATTR_SYSTEM);
-                                    if (source != null) {
-                                        final int code = Integer.parseInt(source, 16);
-                                        fonts.put(name, Font.getFont((code >> 16) & 0x000000FF,
-                                                                     (code >> 8) & 0x000000FF,
-                                                                     (code) & 0x0000FF));
-                                    }
-                                }
-                            }
-                        } else if (TAG_COLORS.equals(tag)) {
-                            int offset = 0;
-                            if ("night".equals(parser.getAttributeValue(null, ATTR_MODE))) {
-                                offset = 4;
-                            }
-                            colors[offset] = Integer.parseInt(parser.getAttributeValue(null, ATTR_BGCOLOR), 16);
-                            colors[offset + 1] = Integer.parseInt(parser.getAttributeValue(null, ATTR_FGCOLOR), 16);
-                            colors[offset + 2] = Integer.parseInt(parser.getAttributeValue(null, ATTR_NXCOLOR), 16);
-                            colors[offset + 3] = Integer.parseInt(parser.getAttributeValue(null, ATTR_PXCOLOR), 16);
-                        } else if (TAG_SCREEN.equals(tag)) {
-                            final String background = parser.getAttributeValue(null, ATTR_BACKGROUND);
-                            if (background != null) {
-                                final byte[] image = (byte[]) load(background);
-                                if (image != null) {
-                                    backgrounds.put(filename, image);
-                                }
-                            }
+                // locals
+                char[] buffer = new char[512];
+                StringBuffer sb = new StringBuffer(4096);
+                InputStreamReader reader = null;
+
+                // eval all scripts
+                for (Enumeration e = dir.list("*.hcl", false); e.hasMoreElements(); ) {
+                    final String filename = (String) e.nextElement();
+                    try {
+
+                        // read script from file
+                        reader = new InputStreamReader(Connector.openInputStream(Config.getFolderURL(Config.FOLDER_PROFILES) + filename));
+                        int c = reader.read(buffer);
+                        while (c != -1) {
+                            sb.append(buffer, 0, c);
+                            c = reader.read(buffer);
                         }
-                    } break;
-                    case XmlPullParser.END_TAG: {
-                        final String tag = parser.getName();
-                        if (TAG_AREA.equals(tag)){
-                            areas.addElement(area);
+                        String script = sb.toString();
+
+//#ifdef __LOG__
+                        if (log.isEnabled()) {
+                            log.debug("-- evaluate: \n");
+                            log.debug(script);
+                            log.debug("-- ~evaluate");
                         }
-                    } break;
+//#endif
+
+                        // register handlers
+                        interp.eval(new Thing(script));
+
+                    } finally {
+
+                        // cleanup
+                        try {
+                            reader.close();
+                        } catch (Exception ex) { // NPE or IOE or SE
+                            // ignore
+                        }
+                        reader = null;
+
+                        // reset string buffer
+                        sb.delete(0, sb.length());
+                    }
                 }
             }
         } finally {
+            // close dir
             try {
-                parser.close();
-            } catch (IOException e) {
+                dir.close();
+            } catch (Exception e) { // IOE or NPE
                 // ignore
             }
         }
-
-        return filename;
     }
 
-    private static byte[] loadFont(final InputStream in, final long size) throws IOException {
-        final int length = (int) size;
-        final byte[] data = new byte[length];
-        int offset = 0;
-
-        int count = in.read(data, 0, length);
-        while (count > -1 && offset < length) {
-            offset += count;
-            count = in.read(data, offset, length - offset);
+    /* synchronized to avoid race-cond with hecl processing in render */
+    private /*static*/ synchronized void invokeHandlers(final Interp interp,
+                                       final NakedVector handlers,
+                                       final Thing[] argv) {
+        if (interp == null || handlers == null || argv == null) {
+            return;
         }
-
-        if (offset < length) {
-            throw new IOException("Incomplete read");
+        
+        final Object[] items = handlers.getData();
+        for (int i = handlers.size(); --i >= 0; ) {
+//#ifdef __LOG__
+            if (log.isEnabled()) log.debug("invoking handler " + items[i]);
+//#endif
+            try {
+                ((org.hecl.Command) items[i]).cmdCode(interp, argv);
+                heclResults.put(items[i].toString(), "{SUCCESS}");
+            } catch (Throwable t) {
+//#ifdef __LOG__
+                if (log.isEnabled()) log.debug("handler failed: " + t);
+//#endif
+                heclResults.put(items[i].toString(), t.toString());
+            }
         }
-
-        return data;
     }
 
-    private static void colorifyPng(final byte[] data, final int color) {
-        final int length = data.length;
-        final int tRnsStart = find_tRns(data, length);
+    private static final int HASH_SPD_AVG_AUTO  = 0x866fa930;   // -2039502544
+    private static final int HASH_SPD_AVG       = 0x882281ac;   // -2011004500
+    private static final int HASH_SPD_MAX       = 0x8822ac3e;   // -2010993602
+    private static final int HASH_COURSE        = 0xaf42e01b;   // -1354571749
+    private static final int HASH_DESC_T        = 0xb069a438;   // -1335253960
+    private static final int HASH_DIST_T        = 0xb0a2420d;   // -1331543539
+    private static final int HASH_COURSE_D      = 0xea0b4b32;   // -368358606
+    private static final int HASH_PROFILE       = 0xed8e89a9;   // -309425751
+    private static final int HASH_ALT           = 0x179a9;      // 96681
+    private static final int HASH_FIX           = 0x18c15;      // 101397
+    private static final int HASH_SAT           = 0x1bbe6;      // 113638
+    private static final int HASH_SPD           = 0x1bda7;      // 114087
+    private static final int HASH_HDOP          = 0x30cbdd;     // 3197917
+    private static final int HASH_PDOP          = 0x346ed5;     // 3436245
+    private static final int HASH_SATV          = 0x35c150;     // 3522896
+    private static final int HASH_VDOP          = 0x37290f;     // 3614991
+    private static final int HASH_ALT_D         = 0x589b940;    // 92911936
+    private static final int HASH_ASC_T         = 0x58ca818;    // 93104152
+//    private static final int HASH_SPD_D         = 0x688f5be;    // 109639102
+//    private static final int HASH_SPD_DAVG      = 0x7c2ec454;   // 2083439700
+//    private static final int HASH_SPD_DMAX      = 0x7c2eeee6;   // 2083450598
 
-        if (tRnsStart > 0) {
-            int chunkStart = 8;
-            int chunkDataLength = 0;
-            int plte = 0;
-            int plteStart = 0;
-            int plteDataOffset = 0;
-            long plteCrc = 0;
+//    private static final int HASH_COORDS	    = 0xaf40241e; // -1354750946
+//    private static final int HASH_STATUS	    = 0xcacdcff2; // -892481550
+//    private static final int HASH_TIME_T	    = 0xcbecd974; // -873670284
+//    private static final int HASH_TIME_T_AUTO	= 0xdbccee68; // -607326616
+//    private static final int HASH_WPT_ALT_DIFF	= 0xeeff2e7b; // -285266309
+    private static final int HASH_LAT	        = 0x1a19f; // 106911
+    private static final int HASH_LON	        = 0x1a34b; // 107339
+//    private static final int HASH_PRN	        = 0x1b2ac; // 111276
+//    private static final int HASH_SNR	        = 0x1bd77; // 114039
+//    private static final int HASH_PACE	        = 0x346213; // 3432979
+    private static final int HASH_TIME	        = 0x3652cd; // 3560141
+    private static final int HASH_UTM_X	        = 0x6a71e27; // 111615527
+    private static final int HASH_UTM_Y	        = 0x6a71e28; // 111615528
+//    private static final int HASH_WPT_DIST	    = 0x37011f78; // 922820472
+//    private static final int HASH_WPT_NAME	    = 0x37058c5d; // 923110493
+//    private static final int HASH_WPT_ALT	    = 0x5c9ce597; // 1553786263
+    private static final int HASH_WPT_AZI	    = 0x5c9ce73e; // 1553786686
+//    private static final int HASH_WPT_CMT	    = 0x5c9ced38; // 1553788216
+//    private static final int HASH_WPT_ETA	    = 0x5c9cf580; // 1553790336
+//    private static final int HASH_WPT_IMG	    = 0x5c9d03b1; // 1553793969
+//    private static final int HASH_WPT_LAT	    = 0x5c9d0d8d; // 1553796493
+//    private static final int HASH_WPT_LON	    = 0x5c9d0f39; // 1553796921
+//    private static final int HASH_WPT_SYM	    = 0x5c9d2ab5; // 1553803957
+//    private static final int HASH_WPT_VMG	    = 0x5c9d347e; // 1553806462
+//    private static final int HASH_WPT_COORDS	= 0x79d50970; // 2044004720
 
-            for (int offset = 8; offset < length; offset++) {
-                final int i = data[offset];
-                final char c = (char) i;
+    public Thing get(String varname) {
+//#ifdef __LOG__
+        if (log.isEnabled()) log.debug("interp get: " + varname);
+//#endif
+        Thing result = null;
 
-                switch (plte) {
-                    case 0:
-                        if (c == 'P') {
-                            plte++;
-                        }
-                    break;
-                    case 1:
-                        if (c == 'L') {
-                            plte++;
+        if (varname.startsWith("cms::")) {
+            final int hash = hash(varname, 5);
+            final int units = this.units.intValue();
+//#ifdef __LOG__
+            if (log.isEnabled()) log.debug("var hash: " + Integer.toHexString(hash));
+//#endif
+            int idx = -1;
+            switch (hash) {
+                case HASH_SPD_AVG_AUTO: {
+//                    idx = VALUE_SPD_AVG_AUTO;
+                    result = FloatThing.create(fromKmh(units, valuesFloat[VALUE_SPD_AVG_AUTO]));
+                } break;
+                case HASH_SPD_AVG: {
+//                    idx = VALUE_SPD_AVG;
+                    result = FloatThing.create(fromKmh(units, valuesFloat[VALUE_SPD_AVG]));
+                } break;
+                case HASH_SPD_MAX: {
+//                    idx = VALUE_SPD_MAX;
+                    result = FloatThing.create(fromKmh(units, valuesFloat[VALUE_SPD_MAX]));
+                } break;
+                case HASH_COURSE: {
+//                    idx = VALUE_COURSE;
+                    result = IntThing.create((int) valuesFloat[VALUE_COURSE]);
+                } break;
+                case HASH_DESC_T: {
+                    idx = VALUE_DESC_T;
+                } break;
+                case HASH_DIST_T: {
+//                    idx = VALUE_DIST_T;
+                    result = FloatThing.create(fromKmh(units, valuesFloat[VALUE_DIST_T]));
+                } break;
+                case HASH_COURSE_D: {
+                    idx = VALUE_COURSE_D;
+                } break;
+                case HASH_PROFILE: {
+                    result = StringThing.create(Config.cmsProfile);
+                } break;
+                case HASH_ALT: {
+                    idx = VALUE_ALT;
+                } break;
+                case HASH_FIX: {
+                    idx = VALUE_FIX;
+                } break;
+                case HASH_SAT: {
+                    idx = VALUE_SAT;
+                } break;
+                case HASH_SPD: {
+//                    idx = VALUE_SPD;
+                    result = FloatThing.create(fromKmh(units, valuesFloat[VALUE_SPD]));
+                } break;
+                case HASH_HDOP: {
+                    idx = VALUE_HDOP;
+                } break;
+                case HASH_PDOP: {
+                    idx = VALUE_PDOP;
+                } break;
+                case HASH_SATV: {
+                    idx = VALUE_SATV;
+                } break;
+                case HASH_VDOP: {
+                    idx = VALUE_VDOP;
+                } break;
+                case HASH_ALT_D: {
+                    idx = VALUE_ALT_D;
+                } break;
+                case HASH_ASC_T: {
+                    idx = VALUE_ASC_T;
+                } break;
+            }
+            if (idx > -1) {
+//#ifdef __LOG__
+                if (log.isEnabled()) log.debug("var " + varname + " resolved as float, idx = " + idx + ", value = " + valuesFloat[idx]);
+//#endif
+                result = FloatThing.create(valuesFloat[idx]);
+
+            } else if (result == null) {
+
+                switch (hash) {
+                    case HASH_LAT: {
+                        result = DoubleThing.create(valueCoords != null ? valueCoords.getLat() : 0D);
+                    } break;
+                    case HASH_LON: {
+                        result = DoubleThing.create(valueCoords != null ? valueCoords.getLon() : 0D);
+                    } break;
+                    case HASH_TIME: {
+                        result = LongThing.create(timestamp);
+                    } break;
+                    case HASH_UTM_X: {
+                        final double val;
+                        if (valueCoords != null) {
+                            CartesianCoordinates cc = Mercator.LLtoUTM(valueCoords);
+                            val = cc.getH();
+                            CartesianCoordinates.releaseInstance(cc);
                         } else {
-                            plte = 0;
+                            val = 0D;
                         }
-                    break;
-                    case 2:
-                        if (c == 'T') {
-                            plte++;
+                        result = DoubleThing.create(val);
+                    } break;
+                    case HASH_UTM_Y: {
+                        final double val;
+                        if (valueCoords != null) {
+                            CartesianCoordinates cc = Mercator.LLtoUTM(valueCoords);
+                            val = cc.getV();
+                            CartesianCoordinates.releaseInstance(cc);
                         } else {
-                            plte = 0;
+                            val = 0D;
                         }
-                    break;
-                    case 3:
-                        if (c == 'E') {
-                            plte++;
-                        } else {
-                            plte = 0;
-                        }
-                    break;
+                        result = DoubleThing.create(val);
+                    } break;
+                    case HASH_WPT_AZI: {
+                        result = IntThing.create(navigator.getWptAzimuth());
+                    } break;
                 }
+            }
+        } else {
+            final Object msg = heclResults.get(varname);
+            if (msg != null) {
+//#ifdef __LOG__
+                if (log.isEnabled()) log.debug("found handler " + varname + " status: " + msg);
+//#endif
+                result = StringThing.create((String) msg);
+            }
+        }
 
-                if (plte == -1) {
-                    // PLTE already processed
-                    break;
+//#ifdef __LOG__
+        if (log.isEnabled()) log.debug("result: " + result);
+//#endif
+
+        return result;
+    }
+
+    private static Thing updateCachedOrCreate(final Thing cached, final double value) {
+        final Thing result;
+        if (cached != null) {
+            ((DoubleThing) cached.getVal()).set(value);
+            result = cached;
+        } else {
+            result = DoubleThing.create(value);
+        }
+        return result;
+    }
+
+    private static Thing updateCachedOrCreate(final Thing cached, final float value) {
+        final Thing result;
+        if (cached != null) {
+            ((FloatThing) cached.getVal()).set(value);
+            result = cached;
+        } else {
+            result = FloatThing.create(value);
+        }
+        return result;
+    }
+
+    private static Thing updateCachedOrCreate(final Thing cached, final int value) {
+        final Thing result;
+        if (cached != null) {
+            ((IntThing) cached.getVal()).set(value);
+            result = cached;
+        } else {
+            result = IntThing.create(value);
+        }
+        return result;
+    }
+
+    private static Thing updateCachedOrCreate(final Thing cached, final long value) {
+        final Thing result;
+        if (cached != null) {
+            ((LongThing) cached.getVal()).set(value);
+            result = cached;
+        } else {
+            result = LongThing.create(value);
+        }
+        return result;
+    }
+
+    private static int hash(final String varname, int pos) {
+        int h = 0;
+        for (int i = varname.length() - pos; --i >= 0;) {
+            h = 31 * h + varname.charAt(pos++);
+        }
+        return h;
+    }
+
+    private static final class PrintCommand implements org.hecl.Command {
+//#ifdef __LOG__
+        private static final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("PrintCommand");
+//#endif
+
+        private ComputerView parent;
+
+        /* to avoid $1 */
+        public PrintCommand(ComputerView parent) {
+            this.parent = parent;
+        }
+
+        public Thing cmdCode(Interp interp, Thing[] argv) throws HeclException {
+//#ifdef __LOG__
+            if (log.isEnabled()) log.debug("interp print: " + argv[1] + (argv.length > 2 ? " " + argv[2].toString() : ""));
+//#endif
+            
+            final StringBuffer sb = parent.sb;
+            final RealThing thing = argv[1].getVal();
+
+            if (thing instanceof NumberThing) {
+                final NumberThing number = (NumberThing) thing;
+                if (number.isIntegral()) {
+//#ifdef __LOG__
+                    if (log.isEnabled()) log.debug("interp print int " + argv[1]);
+//#endif
+                    NavigationScreens.append(sb, number.longValue());
                 } else {
-                    if (offset == chunkStart) {
-                        chunkDataLength = 0;
+                    final int precision;
+                    if (argv.length > 2) {
+                        precision = ((IntThing) argv[2].getVal()).intValue();
+                    } else {
+                        precision = 0;
                     }
-                    if (offset >= chunkStart) {
-                        if (offset <= chunkStart + 3) {
-                            chunkDataLength |= i << 8 * (3 - (offset - chunkStart));
-    //                        if (offset == chunkStart + 3) {
-    //                            System.out.println("chunk data length = " + chunkDataLength);
-    //                        }
-                        } else if (plte == 4) {
-                            if (plteStart == 0) {
-                                plteStart = chunkStart + 4;
-                                plteDataOffset = 0;
-                            } else if (offset < chunkStart + 4 + 4 + chunkDataLength) {
-    //                            System.out.println("palette byte at " + offset + " is " + (byte) i);
-                                data[offset] = (byte) i;
-                                if (plteDataOffset % 3 == 0) {
-    //                                if (data[offset] != (byte) 0xff || data[offset + 1] != (byte) 0xff || data[offset + 2] != (byte) 0xff) {
-                                    if (data[tRnsStart + plteDataOffset / 3] != 0) {
-                                        data[offset] = (byte) ((color >>> 16) & 0xff);
-                                        data[offset + 1] = (byte) ((color >>> 8) & 0xff);
-                                        data[offset + 2] = (byte) (color & 0xff);
-                                    }
-                                }
-                                plteDataOffset++;
-                            } else {
-                                if (offset == chunkStart + 4 + 4 + chunkDataLength) {
-                                    plteCrc = calcCrc(data, plteStart, 4 + chunkDataLength);
-                                }
-                                data[offset] = (byte) ((plteCrc >>> (8 * (3 - (offset - (chunkStart + 4 + 4 + chunkDataLength))))) & 0x000000FF);
-                                if (offset == chunkStart + 4 + 4 + chunkDataLength + 4) {
-                                    plte = -1;
-                                }
-                            }
-                        } else if (offset == chunkStart + 4 + 4 + chunkDataLength) {
-                            chunkStart += 4 + 4 + chunkDataLength + 4;
-    //                        System.out.println("next chunk at = " + chunkStart);
-                        }
-                    }
+//#ifdef __LOG__
+                    if (log.isEnabled()) log.debug("interp print double " + argv[1] + " with precision " + precision);
+//#endif
+                    NavigationScreens.append(sb, number.doubleValue(), precision);
                 }
+            } else {
+//#ifdef __LOG__
+                if (log.isEnabled()) log.debug("interp print object " + thing.thingclass() + " with toString value " + argv[1]);
+//#endif
+                sb.append(argv[1]);
             }
+
+            return null;
         }
     }
 
-    private static long calcCrc(final byte[] buf, int off, int len) {
-        final int[] crc_table = CRC_TABLE;
-        int c = ~0;
-        while (--len >= 0)
-            c = crc_table[(c ^ buf[off++]) & 0xff] ^ (c >>> 8);
-        return (long) ~c & 0xffffffffL;
-    }
+//#endif /* __HECL__ */
 
-    private static int find_tRns(final byte[] data, final int length) {
-        int trns = 0;
-        for (int offset = 8; offset < length; offset++) {
-            final int i = data[offset];
-            final char c = (char) i;
-
-            switch (trns) {
-                case 0:
-                    if (c == 't') {
-                        trns++;
-                    }
-                break;
-                case 1:
-                    if (c == 'R') {
-                        trns++;
-                    } else {
-                        trns = 0;
-                    }
-                break;
-                case 2:
-                    if (c == 'N') {
-                        trns++;
-                    } else {
-                        trns = 0;
-                    }
-                break;
-                case 3:
-                    if (c == 'S') {
-                        trns++;
-                    } else {
-                        trns = 0;
-                    }
-                break;
-            }
-
-            if (trns == 4) {
-                return offset + 1;
-            }
-        }
-
-        return -1;
-    }
-
-    private class Rotator extends TimerTask {
-
-        /* prevents $1 generation */
-        public Rotator() {
-        }
-
-        public void run() {
-            if (isVisible && rotate) {
-                handleAction(Canvas.RIGHT, false);
-            }
-        }
-    }
 }

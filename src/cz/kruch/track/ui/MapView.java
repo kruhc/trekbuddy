@@ -365,9 +365,14 @@ final class MapView extends View {
         mapViewer.sizeChanged(w, h);
     }
 
-    public void reset() {
+    public void trackingStarted() {
         // pass event
         mapViewer.reset();
+    }
+
+    public void trackingStopped() {
+        // set mode
+        browsingOn(true);
     }
 
     public int locationUpdated(Location l) {
@@ -657,8 +662,8 @@ final class MapView extends View {
             if (scrolls >= 30) {
                 steps = 3;
             }
-            if (scrolls >= 40) {
-                steps = 4;
+            if (scrolls >= 45) {
+                steps = 6;
             }
         }
 

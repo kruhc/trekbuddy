@@ -115,10 +115,13 @@ public final class QualifiedCoordinates implements GeodeticPosition {
     }
 
     public float distance(QualifiedCoordinates neighbour) {
-        return distance(neighbour.lat, neighbour.lon);
+        return distance(lat, lon, neighbour.lat, neighbour.lon);
     }
 
-    private float distance(final double neighbourLat, final double neighbourLon) {
+    public static float distance(final double lat, 
+                                 final double lon,
+                                 final double neighbourLat,
+                                 final double neighbourLon) {
         if (lat == neighbourLat && lon == neighbourLon) {
             return 0F;
         }

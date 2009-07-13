@@ -52,8 +52,8 @@ final class SmartRunnable implements Runnable {
                 if (runnables.size() > 0) {
 
                     final Object last = runnables.lastElement();
-                    if (r instanceof DesktopScreen) { // trick #1: avoid duplicates of key-hold checks
-                        if (last instanceof DesktopScreen) {
+                    if (r instanceof DeviceScreen) { // trick #1: avoid duplicates of key-hold checks
+                        if (last instanceof DeviceScreen) {
                             return;
                         }
                     } else if (r instanceof Desktop.RenderTask) { // trick #2: merge render tasks

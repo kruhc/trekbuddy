@@ -48,7 +48,9 @@ public final class SimulatorLocationProvider
     }
 
     public int start() throws LocationException {
-        (new FileBrowser(Resources.getString(Resources.DESKTOP_MSG_NMEA_PLAYBACK), this, Desktop.screen)).show();
+        (new FileBrowser(Resources.getString(Resources.DESKTOP_MSG_NMEA_PLAYBACK),
+                         this, Desktop.screen, Config.FOLDER_NMEA,
+                         new String[]{ ".nmea" })).show();
 
         return LocationProvider._STARTING;
     }

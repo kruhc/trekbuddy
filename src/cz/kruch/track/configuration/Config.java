@@ -208,6 +208,11 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         commUrl = "btspp://000276fd79da:1";
         fullscreen = true;
         safeColors = true;
+//#elifdef __ANDROID__
+        /* default for Android (emu) */
+        dataDir = getDefaultDataDir("sdcard/", "TrekBuddy/");
+        fullscreen = true;
+        safeColors = true;
 //#else
         if (cz.kruch.track.TrackingMIDlet.sxg75) {
             dataDir = "file:///fs/tb/";
@@ -222,7 +227,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
             dataDir = "file:///b/trekbuddy/";
             forcedGc = true;
         } else if (cz.kruch.track.TrackingMIDlet.samsung) {
-            dataDir = "file:///tflash/trekbuddy/";
+            dataDir = "file:///mmc/trekbuddy/";
         } else if (cz.kruch.track.TrackingMIDlet.j9 || cz.kruch.track.TrackingMIDlet.jbed || cz.kruch.track.TrackingMIDlet.intent /*|| cz.kruch.track.TrackingMIDlet.phoneme*/) {
             dataDir = getDefaultDataDir("/Storage Card/", "TrekBuddy/");
             if (cz.kruch.track.TrackingMIDlet.jbed || cz.kruch.track.TrackingMIDlet.intent) {
@@ -943,23 +948,25 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
     }
 
     public static String getLocationTimings(final int provider) {
+        if (provider == locationProvider && locationTimings != null && locationTimings.length() != 0) {
+            return locationTimings;
+        }
+
         String timings = "1,-1,-1";
 
-//#ifdef __ALL__
         switch (provider) {
             case LOCATION_PROVIDER_JSR179:
                 if (cz.kruch.track.TrackingMIDlet.a780) {
                     timings = "2,2,-1"; /* from http://www.kiu.weite-welt.com/de.schoar.blog/?p=186 */
+                } else if (cz.kruch.track.TrackingMIDlet.rim) {
+                    timings = "2,-1,-1";
                 }
             break;
+//#ifdef __ALL__
             case LOCATION_PROVIDER_MOTOROLA:
                 timings = "9999,1,2000";
             break;
-        }
 //#endif
-
-        if (provider == locationProvider && locationTimings != null && locationTimings.length() != 0) {
-            return locationTimings;
         }
 
         return timings;

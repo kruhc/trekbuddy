@@ -23,7 +23,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
     public static String version;
     public static boolean jsr82, jsr120, jsr135, jsr179, jsr234, motorola179, comm;
     public static boolean sonyEricsson, sonyEricssonEx, nokia, siemens, lg, motorola, samsung;
-    public static boolean j9, jbed, intent, palm, rim, symbian, s60nd, uiq, brew/*, phoneme*/;
+    public static boolean j9, jbed, intent, palm, rim, symbian, s60nd, uiq, brew, android;
     public static boolean sxg75, a780, s65;
 
     // diagnostics
@@ -53,15 +53,21 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         logEnabled = hasFlag("log_enable");
         System.out.println("* platform is " + platform);
 //#endif
+//#ifdef __ANDROID__
+        logEnabled = true;
+//#endif
 
         // detect brand/device
 //#ifdef __RIM__
-        rim = platform.startsWith("RIM");
+        rim = true;
+//#elifdef __ANDROID__
+        android = true;
 //#else
         nokia = platform.startsWith("Nokia");
         s60nd = platform.startsWith("Nokia66") || platform.startsWith("NokiaN70");
         sonyEricsson = System.getProperty("com.sonyericsson.imei") != null;
         sonyEricssonEx = sonyEricsson || platform.startsWith("SonyEricsson");
+        samsung = platform.startsWith("SAMSUNG") || platform.startsWith("SGH");
         siemens = System.getProperty("com.siemens.IMEI") != null || System.getProperty("com.siemens.mp.imei") != null;
         motorola = System.getProperty("com.motorola.IMEI") != null;
         lg = platform.startsWith("LG");
@@ -73,6 +79,9 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         brew = sxg75 || "BENQ-M7".equals(platform);
         a780 = "j2me".equals(platform);
         s65 = "S65".equals(platform);
+        // for IntelliJ
+        rim = platform.startsWith("RIM");
+        android = platform.indexOf("android") > -1;
 //#endif
 
         // detect runtime capabilities
@@ -223,7 +232,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         }
 
         // initialize file API
-        api.file.File.initialize(sxg75 || hasFlag("fs_traverse_bug"));
+        api.file.File.initialize(sxg75 || android || hasFlag("fs_traverse_bug"));
 //#ifdef __LOG__
         System.out.println("* FsType: " + api.file.File.fsType);
 //#endif

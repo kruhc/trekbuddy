@@ -25,19 +25,26 @@ public class DeviceControl extends TimerTask {
 
     public static void initialize() {
 //#ifdef __ALL__
-        try {
-            Class.forName("com.nokia.mid.ui.DirectUtils");
-            if (cz.kruch.track.TrackingMIDlet.jbed) {
-                // do nothing
-            } else if (cz.kruch.track.TrackingMIDlet.symbian) {
+        if (cz.kruch.track.TrackingMIDlet.symbian) {
+            try {
                 instance = (DeviceControl) Class.forName("cz.kruch.track.ui.nokia.S60DeviceControl").newInstance();
-            } else if (cz.kruch.track.TrackingMIDlet.sonyEricssonEx) {
-                instance = (DeviceControl) Class.forName("cz.kruch.track.ui.nokia.SonyEricssonDeviceControl").newInstance();
-            } else {
-                instance = (DeviceControl) Class.forName("cz.kruch.track.ui.nokia.NokiaDeviceControl").newInstance();
+            } catch (Throwable t) {
+                // user denied connection
             }
-        } catch (Throwable t) {
-            // ignore
+        }
+        if (instance == null) {
+            try {
+                Class.forName("com.nokia.mid.ui.DirectUtils");
+                if (cz.kruch.track.TrackingMIDlet.jbed) {
+                    // do nothing
+                } else if (cz.kruch.track.TrackingMIDlet.sonyEricssonEx) {
+                    instance = (DeviceControl) Class.forName("cz.kruch.track.ui.nokia.SonyEricssonDeviceControl").newInstance();
+                } else {
+                    instance = (DeviceControl) Class.forName("cz.kruch.track.ui.nokia.NokiaDeviceControl").newInstance();
+                }
+            } catch (Throwable t) {
+                // ignore
+            }
         }
         if (instance == null) {
             try {
@@ -69,6 +76,7 @@ public class DeviceControl extends TimerTask {
             try {
                 Class.forName("mmpp.media.BackLight");
                 instance = (DeviceControl) Class.forName("cz.kruch.track.ui.nokia.LgDeviceControl").newInstance();
+                cz.kruch.track.TrackingMIDlet.lg = true;
             } catch (Throwable t) {
                 // ignore
             }

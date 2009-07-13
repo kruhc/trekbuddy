@@ -71,6 +71,7 @@ public final class NavigationScreens {
      * image cache
      */
 
+    public static Image logo;  // TODO fix visibility
     public static Image crosshairs; // TODO fix visibility
 /*
     public static Image[] stores;   // TODO fix visibility
@@ -162,6 +163,7 @@ public final class NavigationScreens {
             poiSize2 = poiSize >> 1;
             i++;
         }
+        logo = loadImage(Config.FOLDER_RESOURCES, "logo.png");
 
         System.gc();
 

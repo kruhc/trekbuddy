@@ -26,6 +26,7 @@ import javax.microedition.lcdui.Graphics;
 import javax.microedition.lcdui.Font;
 import javax.microedition.lcdui.Image;
 import javax.microedition.lcdui.Form;
+import javax.microedition.lcdui.Choice;
 import javax.microedition.midlet.MIDlet;
 import javax.microedition.io.Connector;
 import java.io.IOException;
@@ -64,10 +65,10 @@ public final class Desktop implements CommandListener, LocationListener, YesNoDi
 
     // UI
     public static int POSITIVE_CMD_TYPE, EXIT_CMD_TYPE, SELECT_CMD_TYPE,
-                      BACK_CMD_TYPE, CANCEL_CMD_TYPE;
+                      BACK_CMD_TYPE, CANCEL_CMD_TYPE, CHOICE_POPUP_TYPE;
 
     // desktop screen and display
-    public static DesktopScreen screen;
+    public static DeviceScreen screen;
     public static Display display;
     public static Font font, fontWpt, fontLists, fontStringItems, fontBtns;
 
@@ -99,9 +100,6 @@ public final class Desktop implements CommandListener, LocationListener, YesNoDi
 
     // screen modes
     private int mode;
-
-    // desktop renderer
-    private Graphics graphics;
 
     // data components
     private Map map;
@@ -164,23 +162,29 @@ public final class Desktop implements CommandListener, LocationListener, YesNoDi
         SELECT_CMD_TYPE = Command.ITEM;
         BACK_CMD_TYPE = Command.BACK;
         CANCEL_CMD_TYPE = Command.CANCEL;
+        CHOICE_POPUP_TYPE = Choice.POPUP;
 
         // platform-specific hacks
-//#ifdef __J9__
+//#ifdef __ALL__
+        if (cz.kruch.track.TrackingMIDlet.uiq) {
+            BACK_CMD_TYPE = Command.EXIT;
+        }
+//#elifdef __J9__
         POSITIVE_CMD_TYPE = Command.ITEM;
         EXIT_CMD_TYPE = Command.ITEM;
-//#endif
-//#ifdef __RIM__
+//#elifdef __RIM__
         EXIT_CMD_TYPE = Command.EXIT;
         SELECT_CMD_TYPE = Command.SCREEN;
         BACK_CMD_TYPE = Command.EXIT;
         CANCEL_CMD_TYPE = Command.EXIT;
+//#elifdef __ANDROID__
+        CHOICE_POPUP_TYPE = Choice.EXCLUSIVE;
 //#endif
 
         // init static members
-        screen = new DesktopScreen(this, midlet);
-        display = Display.getDisplay(midlet);
         timer = new Timer();
+        screen = new DeviceScreen(this, midlet);
+        display = Display.getDisplay(midlet);
         browsing = true;
 
         // init basic members
@@ -207,19 +211,19 @@ public final class Desktop implements CommandListener, LocationListener, YesNoDi
 //#endif
 
         // finalize and show screen
-        screen.setFullScreenMode(cz.kruch.track.configuration.Config.fullscreen);
+        screen.setFullScreenMode(Config.fullscreen);
         screen.setTitle(null);
-        display.setCurrent(screen);
+        Desktop.display.setCurrent(screen);
 
         // get graphics
-        final Graphics g = graphics = screen.getGraphics();
+        final Graphics g = screen.getGraphics();
         g.setFont(Font.getFont(Font.FACE_MONOSPACE, Font.STYLE_PLAIN, Font.SIZE_SMALL));
 
         // console text position
         short lineY = 0;
-        short lineHeight = (short) g.getFont().getHeight();
+        final short lineHeight = (short) g.getFont().getHeight();
 
-        // prepare console
+        // console init
         consoleInit(g);
 
         // show copyright(s)
@@ -235,6 +239,7 @@ public final class Desktop implements CommandListener, LocationListener, YesNoDi
 
         // help boot show
         Thread.yield();
+        final long tStart = System.currentTimeMillis();
 
         // show initial steps results
         consoleShow(g, lineY, Resources.getString(Resources.BOOT_CACHING_IMAGES));
@@ -259,19 +264,6 @@ public final class Desktop implements CommandListener, LocationListener, YesNoDi
             lineY += lineHeight;
         }
 
-        // show final steps
-        consoleShow(g, lineY, Resources.getString(Resources.BOOT_CREATING_UI));
-        try {
-            configure();
-            consoleResult(g, lineY, 1);
-        } catch (Throwable t) {
-//#ifdef __LOG__
-            t.printStackTrace();
-//#endif
-            consoleResult(g, lineY, -1);
-        }
-        lineY += lineHeight;
-
         // show load map
         consoleShow(g, lineY, Resources.getString(Resources.BOOT_LOADING_MAP));
         try {
@@ -291,12 +283,13 @@ public final class Desktop implements CommandListener, LocationListener, YesNoDi
         }
 
         // show boot progress for a while
-        consoleDelay();
+        consoleDelay(tStart);
 
         // booting finished
         boot = false;
 
         // create default desktop components
+        configure();
         resetGui();
 
         // last
@@ -304,16 +297,14 @@ public final class Desktop implements CommandListener, LocationListener, YesNoDi
     }
 
     private void configure() {
-        // create and add commands to the screen
+        // create and attach commands
         if (Config.fullscreen && cz.kruch.track.TrackingMIDlet.brew) {
             screen.addCommand(new Command("", Command.SCREEN, 0));
         }
         if (Config.btDeviceName.length() > 0) {
             screen.addCommand(this.cmdRunLast = new Command(Resources.getString(Resources.DESKTOP_CMD_START) + " " + Config.btDeviceName, POSITIVE_CMD_TYPE, 1));
-            screen.addCommand(this.cmdRun = new Command(Resources.getString(Resources.DESKTOP_CMD_START), POSITIVE_CMD_TYPE, 2));
-        } else {
-            screen.addCommand(this.cmdRun = new Command(Resources.getString(Resources.DESKTOP_CMD_START), POSITIVE_CMD_TYPE, 1));
         }
+        screen.addCommand(this.cmdRun = new Command(Resources.getString(Resources.DESKTOP_CMD_START), POSITIVE_CMD_TYPE, 2));
         if (cz.kruch.track.TrackingMIDlet.getPlatform().startsWith("NokiaE61")) {
             screen.addCommand(this.cmdWaypoints = new Command(Resources.getString(Resources.DESKTOP_CMD_NAVIGATION), POSITIVE_CMD_TYPE, 3));
         }
@@ -434,12 +425,7 @@ public final class Desktop implements CommandListener, LocationListener, YesNoDi
         }
 
         // clear main area with black
-        Graphics g = graphics;
-//#ifdef __ALL__
-        if (cz.kruch.track.TrackingMIDlet.s65) {
-            g = screen.getGraphics();
-        }
-//#endif
+        final Graphics g = screen.getGraphics();
         g.setColor(0x0);
         g.fillRect(0, 0, w, h);
         g.clipRect(0, 0, w, h);
@@ -519,7 +505,7 @@ public final class Desktop implements CommandListener, LocationListener, YesNoDi
     /* hack - call blocking method to show result in boot console */
     private void initMap() throws Throwable {
 //#ifdef __LOG__
-        if (log.isEnabled()) log.info("init map");
+        if (log.isEnabled()) log.debug("init map");
 //#endif
 
         String mapPath = Config.mapPath;
@@ -527,11 +513,14 @@ public final class Desktop implements CommandListener, LocationListener, YesNoDi
         Atlas _atlas = null;
 
 //#ifdef __LOG__
-        if (log.isEnabled()) log.info("startup map: " + mapPath);
+        if (log.isEnabled()) log.debug("startup map: " + mapPath);
 //#endif
 
         // load atlas first
         if (mapPath.indexOf('?') > -1) {
+//#ifdef __LOG__
+            if (log.isEnabled()) log.debug("loading atlas");
+//#endif
 
             // get atlas index path
             final CharArrayTokenizer tokenizer = new CharArrayTokenizer();
@@ -544,6 +533,9 @@ public final class Desktop implements CommandListener, LocationListener, YesNoDi
             if (t != null) {
                 throw t;
             }
+//#ifdef __LOG__
+            if (log.isEnabled()) log.debug("atlas loaded");
+//#endif
 
             // get layer and map name
             tokenizer.next(); // layer
@@ -554,6 +546,10 @@ public final class Desktop implements CommandListener, LocationListener, YesNoDi
             mapPath = _atlas.getMapURL(mapName);
         }
 
+//#ifdef __LOG__
+        if (log.isEnabled()) log.debug("loading map");
+//#endif
+
         // load map now
         final Map _map = new Map(mapPath, mapName, this);
         if (_atlas != null) { // calibration may already be available
@@ -563,6 +559,9 @@ public final class Desktop implements CommandListener, LocationListener, YesNoDi
         if (t != null) {
             throw t;
         }
+//#ifdef __LOG__
+        if (log.isEnabled()) log.debug("map loaded");
+//#endif
 
         // use these
         map = _map;
@@ -626,9 +625,13 @@ public final class Desktop implements CommandListener, LocationListener, YesNoDi
         } else if (command == cmdWaypoints) {
             Waypoints.getInstance().show();
         } else if (command == cmdLoadMap) {
-            (new FileBrowser(Resources.getString(Resources.DESKTOP_MSG_SELECT_MAP), new Event(Event.EVENT_FILE_BROWSER_FINISHED, "map"), screen)).show();
+            (new FileBrowser(Resources.getString(Resources.DESKTOP_MSG_SELECT_MAP), new Event(Event.EVENT_FILE_BROWSER_FINISHED, "map"),
+                             screen, Config.FOLDER_MAPS,
+                             new String[]{ ".map", ".gmi", ".xml", ".j2n", ".tar" })).show();
         } else if (command == cmdLoadAtlas) {
-            (new FileBrowser(Resources.getString(Resources.DESKTOP_MSG_SELECT_ATLAS), new Event(Event.EVENT_FILE_BROWSER_FINISHED, "atlas"), screen)).show();
+            (new FileBrowser(Resources.getString(Resources.DESKTOP_MSG_SELECT_ATLAS), new Event(Event.EVENT_FILE_BROWSER_FINISHED, "atlas"),
+                             screen, Config.FOLDER_MAPS,
+                             new String[]{ ".tba", ".idx", ".tar" })).show();
         } else if (command == cmdRun) {
             // start tracking
             _setStopRequest(false);
@@ -890,10 +893,10 @@ public final class Desktop implements CommandListener, LocationListener, YesNoDi
                         boolean notified = false;
                         final String s = ((Waypoint) wpts.elementAt(wptIdx)).getLink(Waypoint.LINK_GENERIC_SOUND);
                         if (s != null) {
-                            notified = Playback.play(s);
+                            notified = Playback.play(Config.getFolderURL(Config.FOLDER_SOUNDS) + s);
                         }
                         if (!notified) {
-                            notified = Playback.play(Config.defaultWptSound);
+                            notified = Playback.play(Config.getFolderURL(Config.FOLDER_SOUNDS) + Config.defaultWptSound);
                         }
                         if (notified) {
                             if (!Config.powerSave) {
@@ -1371,8 +1374,9 @@ public final class Desktop implements CommandListener, LocationListener, YesNoDi
         // anything to update?
         if (mask != MASK_NONE) {
 
-            // prepare slices // TODO MapView specific
-            if ((mask & Desktop.MASK_MAP) != 0) {
+            // notify view render event is about to happen to have tiles ready asap
+            // TODO MapView specific
+            if ((mask & Desktop.MASK_MAP) != 0 && mode == VIEW_MAP) {
                 synchronized (this) {
                     if (!initializingMap && !loadingSlices) {
                         ((MapView) views[VIEW_MAP]).prerender();
@@ -1487,7 +1491,11 @@ public final class Desktop implements CommandListener, LocationListener, YesNoDi
             Class providerClass = null;
             switch (Config.locationProvider) {
                 case Config.LOCATION_PROVIDER_JSR179:
-                    providerClass = Class.forName("cz.kruch.track.location.Jsr179LocationProvider");
+                    if (cz.kruch.track.TrackingMIDlet.android) {
+                        providerClass = Class.forName("cz.kruch.track.location.AndroidLocationProvider");
+                    } else {
+                        providerClass = Class.forName("cz.kruch.track.location.Jsr179LocationProvider");
+                    }
                     providerName = "Internal";
                 break;
                 case Config.LOCATION_PROVIDER_JSR82:
@@ -1653,9 +1661,13 @@ public final class Desktop implements CommandListener, LocationListener, YesNoDi
         osd.setProviderStatus(LocationProvider.OUT_OF_SERVICE);
         osd.resetExtendedInfo();
         osd.setRecording(false);
-        // hack
-        ((MapView) views[VIEW_MAP]).browsingOn(true);
-        // update
+
+        // notify views
+        for (int i = views.length; --i >= 0; ) {
+            views[i].trackingStopped();
+        }
+
+        // request screen update
         update(MASK_OSD | MASK_CROSSHAIR);
 
         // update menu
@@ -1834,7 +1846,7 @@ public final class Desktop implements CommandListener, LocationListener, YesNoDi
         }
     }
 
-    // TODO move to DesktopScreen???
+    // TODO move to DeviceScreen???
     private void drawPause(final Graphics g) {
         final Font f = Font.getDefaultFont();
         final String s = Resources.getString(Resources.DESKTOP_MSG_PAUSED);
@@ -1844,7 +1856,7 @@ public final class Desktop implements CommandListener, LocationListener, YesNoDi
         final int h = sh << 1;
         final int x = (screen.getWidth() - w) / 2;
         final int y = (screen.getHeight() - h);
-        g.setColor(DesktopScreen.BTN_COLOR);
+        g.setColor(DeviceScreen.BTN_COLOR);
         g.fillRect(x, y, w, h);
         g.setColor(0x00ffffff);
         g.setFont(f);
@@ -1981,12 +1993,8 @@ public final class Desktop implements CommandListener, LocationListener, YesNoDi
             // render
             try {
                 // get graphics
-                Graphics g = graphics;
-//#ifdef __ALL__
-                if (cz.kruch.track.TrackingMIDlet.s65) {
-                    g = screen.getGraphics();
-                }
-//#endif
+                final Graphics g = screen.getGraphics();
+
                 // render current view
                 views[mode].render(g, font, mask);
 
@@ -2736,7 +2744,7 @@ public final class Desktop implements CommandListener, LocationListener, YesNoDi
                     // reset views on fresh start
                     if (!_isProviderRestart()) {
                         for (int i = views.length; --i >= 0; ) {
-                            views[i].reset();
+                            views[i].trackingStarted();
                         }
                     }
 
@@ -2935,14 +2943,19 @@ public final class Desktop implements CommandListener, LocationListener, YesNoDi
     private void consoleInit(final Graphics g) {
         g.setColor(0x0);
         g.fillRect(0, 0, screen.getWidth(), screen.getHeight());
+        if (NavigationScreens.logo != null) {
+            final Image logo = NavigationScreens.logo;
+            final int x = (screen.getWidth() - logo.getWidth()) / 2;
+            final int y = (screen.getHeight() - logo.getHeight()) / 2;
+            g.drawImage(logo, x, y, Graphics.TOP | Graphics.LEFT);
+        }
         screen.flushGraphics();
     }
 
     private void consoleShow(final Graphics g, final int y, final String text) {
-//#ifdef __LOG__
-        if (log.isEnabled()) log.debug("console show - " + text);
-//#endif
-
+        if (NavigationScreens.logo != null) {
+            return;
+        }
         if (text == null) {
             return;
         }
@@ -2952,6 +2965,9 @@ public final class Desktop implements CommandListener, LocationListener, YesNoDi
     }
 
     private void consoleResult(final Graphics g, final int y, final int code) {
+        if (NavigationScreens.logo != null) {
+            return;
+        }
         final int x = screen.getWidth() - 2 - g.getFont().charWidth('*');
         switch (code) {
             case -1:
@@ -2969,8 +2985,16 @@ public final class Desktop implements CommandListener, LocationListener, YesNoDi
         screen.flushGraphics();
     }
 
-    private void consoleDelay() {
-        final long delay = consoleErrors > 0 ? 750 : (consoleSkips > 0 ? 250 : 0);
+    private void consoleDelay(final long tStart) {
+        final long delay;
+        if (NavigationScreens.logo != null) {
+            delay = 3500 - (System.currentTimeMillis() - tStart);
+        } else {
+            delay = consoleErrors > 0 ? 750 : (consoleSkips > 0 ? 250 : 0);
+        }
+//#ifdef __LOG__
+        if (log.isEnabled()) log.debug("console delay " + delay);
+//#endif
         if (delay > 0) {
             try {
                 Thread.sleep(delay);

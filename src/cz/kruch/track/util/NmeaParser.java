@@ -450,9 +450,12 @@ public final class NmeaParser {
         final int mins = /*(int)*/ tl / 100;
         tl -= mins * 100;
         final int sec = /*(int)*/ tl;
-//        int ms = parseInt(token.array, token.begin + 7, 3);
-
-        return (3600 * hours + 60 * mins + sec) * 1000/* + ms*/; // in millis
+//#ifdef ONE_HZ
+//        final int ms = 0;
+//#else
+        final int ms = CharArrayTokenizer.parseInt(token.array, token.begin + 7, 3);
+//#endif
+        return (3600 * hours + 60 * mins + sec) * 1000 + ms;
     }
 
     private static long parseDate(final CharArrayTokenizer.Token token) {

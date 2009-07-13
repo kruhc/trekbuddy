@@ -16,7 +16,7 @@
 
 package cz.kruch.track.maps;
 
-import org.kxml2.io.KXmlParser;
+import org.kxml2.io.HXmlParser;
 import org.xmlpull.v1.XmlPullParser;
 
 import java.io.InputStream;
@@ -24,7 +24,6 @@ import java.io.IOException;
 import java.util.Vector;
 
 import cz.kruch.track.ui.Position;
-import cz.kruch.track.util.Mercator;
 import api.location.QualifiedCoordinates;
 import api.location.ProjectionSetup;
 
@@ -45,7 +44,7 @@ final class J2NCalibration extends Calibration {
 
         final Vector xy = new Vector();
         final Vector ll = new Vector();
-        KXmlParser parser = new KXmlParser(/*null*/);
+        HXmlParser parser = new HXmlParser();
 
         try {
             parser.setInput(in, null); // null is for encoding autodetection

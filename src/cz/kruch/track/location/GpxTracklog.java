@@ -17,7 +17,7 @@ import java.util.Enumeration;
 import java.util.Hashtable;
 import java.util.Vector;
 
-import org.kxml2.io.KXmlSerializer;
+import org.kxml2.io.HXmlSerializer;
 
 import javax.microedition.io.Connector;
 
@@ -138,7 +138,7 @@ public final class GpxTracklog extends Thread {
 
     private File file;
     private OutputStream output;
-    private KXmlSerializer serializer;
+    private HXmlSerializer serializer;
 
     public GpxTracklog(int type, Callback callback, String creator, long time) {
         this.type = type;
@@ -216,8 +216,8 @@ public final class GpxTracklog extends Thread {
                 output = new BufferedOutputStream(file.openOutputStream(), 4096);
 
                 // init serializer
-                final KXmlSerializer serializer = this.serializer = new KXmlSerializer();
-                serializer.setFeature(KXmlSerializer.FEATURE_INDENT_OUTPUT, true);
+                final HXmlSerializer serializer = this.serializer = new HXmlSerializer();
+                serializer.setFeature(HXmlSerializer.FEATURE_INDENT_OUTPUT, true);
                 serializer.setOutput(output, ATTRIBUTE_UTF_8);
                 serializer.startDocument(ATTRIBUTE_UTF_8, null);
                 serializer.setPrefix(null, GPX_1_1_NAMESPACE);
@@ -314,14 +314,7 @@ public final class GpxTracklog extends Thread {
 //#ifdef __LOG__
                 if (log.isEnabled()) log.debug("starting flusher");
 //#endif
-                cz.kruch.track.ui.Desktop.timer.schedule(flusher = new TimerTask() {
-                    public void run() {
-//#ifdef __LOG__
-                        if (log.isEnabled()) log.debug("trigger flush at " + new Date());
-//#endif
-                        insert(Boolean.FALSE);
-                    }
-                }, 60000L, 60000L);
+                cz.kruch.track.ui.Desktop.timer.schedule(flusher = new Flusher(this), 60000L, 60000L);
             }
 
 //#ifdef __LOG__
@@ -424,7 +417,7 @@ public final class GpxTracklog extends Thread {
     }
 
     private void serializePt(final QualifiedCoordinates qc) throws IOException {
-        final KXmlSerializer serializer = this.serializer;
+        final HXmlSerializer serializer = this.serializer;
         final char[] sbChars = this.sbChars;
         int i = doubleToChars(qc.getLat(), 9);
         serializer.attribute(DEFAULT_NAMESPACE, ATTRIBUTE_LAT, sbChars, i);
@@ -441,7 +434,7 @@ public final class GpxTracklog extends Thread {
     }
 
     private void serializeTrkpt(final Location l) throws IOException {
-        final KXmlSerializer serializer = this.serializer;
+        final HXmlSerializer serializer = this.serializer;
         serializer.startTag(DEFAULT_NAMESPACE, ELEMENT_TRKPT);
         serializePt(l.getQualifiedCoordinates());
         serializer.startTag(DEFAULT_NAMESPACE, ELEMENT_TIME);
@@ -542,7 +535,7 @@ public final class GpxTracklog extends Thread {
     }
 
     private void serializeGs(final GroundspeakBean bean) throws IOException {
-        final KXmlSerializer serializer = this.serializer;
+        final HXmlSerializer serializer = this.serializer;
         final String ns;
         if (bean.getId() != null) {
             ns = GS_1_0_NAMESPACE;
@@ -585,7 +578,7 @@ public final class GpxTracklog extends Thread {
     }
 
     private void serializeWpt(final Waypoint wpt) throws IOException {
-        final KXmlSerializer serializer = this.serializer;
+        final HXmlSerializer serializer = this.serializer;
         serializer.startTag(DEFAULT_NAMESPACE, ELEMENT_WPT);
         serializePt(wpt.getQualifiedCoordinates());
         if (wpt.getTimestamp() != null) {
@@ -611,7 +604,7 @@ public final class GpxTracklog extends Thread {
         serializer.endTag(DEFAULT_NAMESPACE, ELEMENT_WPT);
     }
 
-    private static void serializeElement(final KXmlSerializer serializer, final String value,
+    private static void serializeElement(final HXmlSerializer serializer, final String value,
                                          final String ns, final String tag) throws IOException {
         if (value != null && value.length() > 0) {
             serializer.startTag(ns, tag);
@@ -620,7 +613,7 @@ public final class GpxTracklog extends Thread {
         }
     }
 
-    private void serializeXdr(final KXmlSerializer serializer) throws IOException {
+    private void serializeXdr(final HXmlSerializer serializer) throws IOException {
         final Hashtable xdr = NmeaParser.xdr;
         if (xdr.size() > 0) {
             serializer.startTag(NMEA_NAMESPACE, ELEMENT_SENSORS);
@@ -842,5 +835,22 @@ public final class GpxTracklog extends Thread {
         NavigationScreens.append(sb, i);
 
         return sb;
+    }
+
+    private static final class Flusher extends TimerTask {
+
+        private GpxTracklog tracklog;
+
+        /* to avoid $1 */
+        public Flusher(GpxTracklog tracklog) {
+            this.tracklog = tracklog;
+        }
+
+        public void run() {
+//#ifdef __LOG__
+            if (log.isEnabled()) log.debug("trigger flush at " + new Date());
+//#endif
+            tracklog.insert(Boolean.FALSE);
+        }
     }
 }

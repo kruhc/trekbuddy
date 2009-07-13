@@ -36,14 +36,18 @@ public final class FileBrowser implements CommandListener, Runnable, Comparator 
 
     private volatile List list;
     private volatile File file;
-    private volatile String path;
+    private volatile String path, folder;
+    private volatile String[] filter;
     private volatile int depth;
     private volatile int history = -1;
 
-    public FileBrowser(String title, Callback callback, Displayable next) {
+    public FileBrowser(String title, Callback callback, Displayable next,
+                       String folder, String[] filter) {
         this.title = Resources.prefixed(title);
         this.callback = callback;
         this.next = next;
+        this.folder = folder;
+        this.filter = filter;
         this.cmdCancel = new Command(Resources.getString(Resources.CMD_CANCEL), Desktop.CANCEL_CMD_TYPE, 1);
         this.cmdBack = new Command(Resources.getString(Resources.CMD_BACK), Desktop.BACK_CMD_TYPE, 1);
         this.cmdSelect = new Command(Resources.getString(Resources.DESKTOP_CMD_SELECT), Desktop.SELECT_CMD_TYPE, 0);
@@ -81,13 +85,14 @@ public final class FileBrowser implements CommandListener, Runnable, Comparator 
                     // maximum robustness here needed
                     try {
                         // try DataDir first
-                        final String dataDir = Config.getDataDir();
-                        file = File.open(dataDir);
+                        final String folder = this.folder;
+                        final String dir = Config.getFolderURL(folder);
+                        file = File.open(dir);
                         if (file.exists()) {
 
                             // calculate and fix depth
-                            for (int i = dataDir.length(); --i >= 0; ) {
-                                if (dataDir.charAt(i) == File.PATH_SEPCHAR) {
+                            for (int i = dir.length(); --i >= 0; ) {
+                                if (dir.charAt(i) == File.PATH_SEPCHAR) {
                                     depth++;
                                 }
                             }
@@ -222,7 +227,9 @@ public final class FileBrowser implements CommandListener, Runnable, Comparator 
         // append items
         list = null; // gc hint
         try {
-            list = sort2list(title, holder == null ? File.listRoots() : file.list(), depth > 0 ? File.PARENT_DIR : null);
+            final Enumeration items = holder == null ? File.listRoots() : file.list();
+            final String head = depth > 0 ? File.PARENT_DIR : null;
+            list = new List(title, List.IMPLICIT, sort2array(items, head, filter), null);
 //#ifdef __LOG__
             if (log.isEnabled()) log.debug(list.size() + " entries");
 //#endif
@@ -268,14 +275,27 @@ public final class FileBrowser implements CommandListener, Runnable, Comparator 
      * @param head first entry; can be <tt>null</tt>
      * @return list
      */
-    public static String[] sort2array(final Enumeration items, final String head) {
+    public static String[] sort2array(final Enumeration items, final String head,
+                                      final String[] allowed) {
         // enum to list
         Vector v = new Vector(64, 64);
         if (head != null) {
             v.addElement(head);
         }
         while (items.hasMoreElements()) {
-            v.addElement(items.nextElement());
+            final String item = (String) items.nextElement();
+            if (allowed != null) {
+                for (int i = allowed.length; --i >= 0; ) {
+//#ifdef __LOG__
+                    if (log.isEnabled()) log.debug("apply filter [" + allowed[i] + "] to " + item);
+//#endif
+                    if (item.endsWith(allowed[i]) || File.isDir(item)) {
+                        v.addElement(item);
+                    }
+                }
+            } else {
+                v.addElement(item);
+            }
         }
 
         // list to array
@@ -291,19 +311,6 @@ public final class FileBrowser implements CommandListener, Runnable, Comparator 
 
         // result
         return array;
-    }
-
-    /**
-     * Sorts enumeration of strings and creates list.
-     * TODO optimize - how to find out size of enumeration???
-     *
-     * @param title list title
-     * @param items enumeration of strings
-     * @param head first entry; can be <tt>null</tt>
-     * @return list
-     */
-    public static List sort2list(final String title, final Enumeration items, final String head) {
-        return new List(title, List.IMPLICIT, sort2array(items, head), null);
     }
 
     /**

@@ -123,7 +123,7 @@ final class SettingsForm implements CommandListener, ItemStateListener {
             }
 
             // map datum
-            choiceMapDatum = new ChoiceGroup(Resources.getString(Resources.CFG_BASIC_GROUP_DEFAULT_DATUM), ChoiceGroup.POPUP);
+            choiceMapDatum = new ChoiceGroup(Resources.getString(Resources.CFG_BASIC_GROUP_DEFAULT_DATUM), Desktop.CHOICE_POPUP_TYPE);
             choiceMapDatum.setFitPolicy(Choice.TEXT_WRAP_ON);
             for (int N = Config.datums.size(), i = 0; i < N; i++) {
                 String id = ((Datum) Config.datums.elementAt(i)).name;
@@ -132,7 +132,7 @@ final class SettingsForm implements CommandListener, ItemStateListener {
             submenu.append(choiceMapDatum);
 
             // coordinates format
-            choiceCoordinates = new ChoiceGroup(Resources.getString(Resources.CFG_BASIC_GROUP_COORDS_FMT), ChoiceGroup.POPUP);
+            choiceCoordinates = new ChoiceGroup(Resources.getString(Resources.CFG_BASIC_GROUP_COORDS_FMT), Desktop.CHOICE_POPUP_TYPE);
             choiceCoordinates.setFitPolicy(Choice.TEXT_WRAP_ON);
             choiceCoordinates.append(Resources.getString(Resources.CFG_BASIC_FLD_COORDS_MAPLL), null);
             choiceCoordinates.append(Resources.getString(Resources.CFG_BASIC_FLD_COORDS_MAPGRID), null);
@@ -150,7 +150,7 @@ final class SettingsForm implements CommandListener, ItemStateListener {
             submenu.append(choiceCoordinates);
 
             // units format
-            choiceUnits = new ChoiceGroup(Resources.getString(Resources.CFG_BASIC_GROUP_UNITS), ChoiceGroup.POPUP);
+            choiceUnits = new ChoiceGroup(Resources.getString(Resources.CFG_BASIC_GROUP_UNITS), Desktop.CHOICE_POPUP_TYPE);
             choiceUnits.setFitPolicy(Choice.TEXT_WRAP_ON);
             choiceUnits.append(Resources.getString(Resources.CFG_BASIC_FLD_UNITS_METRIC), null);
             choiceUnits.append(Resources.getString(Resources.CFG_BASIC_FLD_UNITS_IMPERIAL), null);
@@ -257,7 +257,7 @@ final class SettingsForm implements CommandListener, ItemStateListener {
             submenu.append(choiceWaypoints);
 
             // wpts sorting
-            choiceSort = new ChoiceGroup(Resources.getString(Resources.CFG_NAVIGATION_GROUP_SORT), ChoiceGroup.POPUP);
+            choiceSort = new ChoiceGroup(Resources.getString(Resources.CFG_NAVIGATION_GROUP_SORT), Desktop.CHOICE_POPUP_TYPE);
             choiceSort.setFitPolicy(Choice.TEXT_WRAP_ON);
             choiceSort.append(Resources.getString(Resources.CFG_NAVIGATION_FLD_SORT_BYPOS), null);
             choiceSort.append(Resources.getString(Resources.CFG_NAVIGATION_FLD_SORT_BYNAME), null);
@@ -299,7 +299,7 @@ final class SettingsForm implements CommandListener, ItemStateListener {
 
             if (cz.kruch.track.TrackingMIDlet.supportsVideoCapture()) {
                 submenu.append(fieldCaptureLocator = new TextField(Resources.getString(Resources.CFG_LOCATION_FLD_CAPTURE_LOCATOR), Config.captureLocator, 16, TextField.URL));
-                submenu.append(choiceSnapshotFormat = new ChoiceGroup(Resources.getString(Resources.CFG_LOCATION_FLD_CAPTURE_FMT), ChoiceGroup.POPUP));
+                submenu.append(choiceSnapshotFormat = new ChoiceGroup(Resources.getString(Resources.CFG_LOCATION_FLD_CAPTURE_FMT), Desktop.CHOICE_POPUP_TYPE));
                 final String[] formats = Camera.getStillResolutions();
                 for (int N = formats.length, i = 0; i < N; i++) {
                     choiceSnapshotFormat.setSelectedIndex(choiceSnapshotFormat.append(formats[i], null), Config.snapshotFormat.equals(formats[i]));
@@ -412,7 +412,7 @@ final class SettingsForm implements CommandListener, ItemStateListener {
 
             final Form submenu = this.submenu;
             for (int i = submenu.size(); --i >= 0; ) {
-                Item item = submenu.get(i);
+                final Item item = submenu.get(i);
 
                 if (choiceProvider == item)
                     continue;
@@ -443,8 +443,10 @@ final class SettingsForm implements CommandListener, ItemStateListener {
                     break;
                     case Config.LOCATION_PROVIDER_JSR179:
                     case Config.LOCATION_PROVIDER_MOTOROLA:
+//#ifndef __ANDROID__
                         fieldLocationTimings.setString(Config.getLocationTimings(provider));
                         appendWithNewlineAfter(submenu, fieldLocationTimings);
+//#endif
                     break;
                     case Config.LOCATION_PROVIDER_SERIAL:
                         appendWithNewlineAfter(submenu, fieldCommUrl);
@@ -579,7 +581,7 @@ final class SettingsForm implements CommandListener, ItemStateListener {
                 if (File.isFs()) {
                     Config.simulatorDelay = Integer.parseInt(fieldSimulatorDelay.getString());
                 }
-                if (cz.kruch.track.TrackingMIDlet.jsr179) {
+                if (cz.kruch.track.TrackingMIDlet.jsr179 || cz.kruch.track.TrackingMIDlet.motorola179) {
                     Config.setLocationTimings(fieldLocationTimings.getString());
                 }
                 if (cz.kruch.track.TrackingMIDlet.jsr82) {
@@ -733,7 +735,7 @@ final class SettingsForm implements CommandListener, ItemStateListener {
             if (cz.kruch.track.TrackingMIDlet.jsr82) {
                 providers.addElement(new Integer(Config.LOCATION_PROVIDER_JSR82));
             }
-            if (cz.kruch.track.TrackingMIDlet.jsr179) {
+            if (cz.kruch.track.TrackingMIDlet.jsr179 || cz.kruch.track.TrackingMIDlet.android) {
                 providers.addElement(new Integer(Config.LOCATION_PROVIDER_JSR179));
             }
 //#ifdef __ALL__

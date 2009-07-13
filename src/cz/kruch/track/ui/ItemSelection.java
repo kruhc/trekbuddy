@@ -34,7 +34,7 @@ final class ItemSelection implements CommandListener {
 
     public void show(final Enumeration items, final String currentItem) {
         // add items and commands
-        final List list = FileBrowser.sort2list(title, items, null);
+        final List list = new List(title, List.IMPLICIT, FileBrowser.sort2array(items, null, null), null);
         if (currentItem != null) {
             for (int i = list.size(); --i >= 0; ) {
                 if (list.getString(i).equals(currentItem)) {

@@ -81,7 +81,10 @@ abstract class View {
         throw new IllegalStateException("Illegal view for this operation");
     }
 
-    public void reset() {
+    public void trackingStarted() {
+    }
+
+    public void trackingStopped() {
     }
 
     public void sizeChanged(int w, int h) {

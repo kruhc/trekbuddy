@@ -30,13 +30,14 @@ import java.io.Reader;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import java.io.UnsupportedEncodingException;
+
+import api.lang.Int;
 
 /**
  * A simple, pull based XML parser. This classe replaces the kXML 1
  * XmlParser class and the corresponding event classes.
  */
-public final class KXmlParser implements XmlPullParser {
+public final class HXmlParser implements XmlPullParser {
     private static final String UNEXPECTED_EOF  = "Unexpected EOF";
     private static final String ILLEGAL_TYPE    = "Wrong event type";
     private static final String CONSTANT_XMLNS  = "xmlns";
@@ -94,13 +95,13 @@ public final class KXmlParser implements XmlPullParser {
 
     private final String[] composite;
     private final Hashtable nameCache;
-    private Int txtHash;
+    private final Int txtHash;
 
+    private String[] attributes;
+    private String error;
     private boolean degenerated;
     private int attributeCount;
-    private String[] attributes;
     private int stackMismatch;
-    private String error;
 
     /**
      * A separate peek buffer seems simpler than managing
@@ -114,7 +115,7 @@ public final class KXmlParser implements XmlPullParser {
     private boolean unresolved;
     private boolean token;
 
-    public KXmlParser() {
+    public HXmlParser() {
         this.elementStack = new String[16];
         this.nspStack = new String[8];
         this.nspCounts = new int[4];
@@ -1471,6 +1472,14 @@ public final class KXmlParser implements XmlPullParser {
         return type < TEXT || (type == ENTITY_REF && unresolved) ? null : get(0);
     }
 
+//#ifdef __ANDROID__
+
+    public char[] getTextCharacters(int ai[]) {
+        throw new RuntimeException("Android satisfaction?");
+    }
+
+//#endif
+
     public char[] getChars() {
         if (type == TEXT) {
             final int l = txtPos;
@@ -1750,41 +1759,6 @@ public final class KXmlParser implements XmlPullParser {
             } finally {
                 reader = null;
             }
-        }
-    }
-
-    private static final class Int {
-        private int value;
-
-        public Int(int value) {
-            this.value = value;
-        }
-
-        public Int clone() {
-            return new Int(value);
-        }
-
-        public int getValue() {
-            return value;
-        }
-
-        public void setValue(int value) {
-            this.value = value;
-        }
-
-        public int hashCode() {
-            return value;
-        }
-
-        public boolean equals(Object object) {
-            if (object instanceof Int) {
-                return ((Int) object).value == value;
-            }
-            return false;
-        }
-
-        public String toString() {
-            return Integer.toString(value);
         }
     }
 }

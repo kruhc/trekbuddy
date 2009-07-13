@@ -27,7 +27,7 @@ import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.OutputStream;
 
-public final class KXmlSerializer implements XmlSerializer {
+public final class HXmlSerializer implements XmlSerializer {
     public static final String FEATURE_INDENT_OUTPUT = "http://xmlpull.org/v1/doc/features.html#indent-output";
 
     private static final String EMPTY_STRING = "";
@@ -49,7 +49,7 @@ public final class KXmlSerializer implements XmlSerializer {
     private boolean unicode;
     private String encoding;
 
-    public KXmlSerializer() {
+    public HXmlSerializer() {
         this.elementStack = new String[24];
         this.nspCounts = new int[8];
         this.nspStack = new String[8];

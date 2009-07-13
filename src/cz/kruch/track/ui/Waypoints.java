@@ -35,7 +35,7 @@ import java.util.Date;
 
 import org.xmlpull.v1.XmlPullParserException;
 import org.xmlpull.v1.XmlPullParser;
-import org.kxml2.io.KXmlParser;
+import org.kxml2.io.HXmlParser;
 
 /**
  * Navigation manager.
@@ -1284,17 +1284,8 @@ public final class Waypoints implements CommandListener, Runnable, Callback, Com
         // result
         final Vector result = new NakedVector(512, 512);
 
-/*
-        // name cache
-        final String[] NAME_CACHE = {
-            TAG_WPT, TAG_RTEPT, TAG_TRKPT, TAG_NAME, TAG_CMT, TAG_DESC, TAG_SYM, ATTR_LAT, ATTR_LON,
-            TAG_GS_CACHE, TAG_GS_TYPE, TAG_GS_CONTAINER, TAG_GS_DIFF, TAG_GS_TERRAIN,
-            TAG_GS_SHORTL, TAG_GS_LONGL, TAG_GS_COUNTRY, TAG_GS_HINTS, ATTR_GS_ID
-        };
-*/
-
         // parse XML
-        final KXmlParser parser = new KXmlParser(/*null*//*NAME_CACHE*/);
+        final HXmlParser parser = new HXmlParser();
         parser.setFeature(XmlPullParser.FEATURE_PROCESS_NAMESPACES, true);
         try {
             parser.setInput(in, null); // null is for encoding autodetection
@@ -1317,15 +1308,13 @@ public final class Waypoints implements CommandListener, Runnable, Callback, Com
         return result;
     }
 
-    private static void parseGpx(final KXmlParser parser, final Vector v)
+    private static void parseGpx(final HXmlParser parser, final Vector v)
             throws IOException, XmlPullParserException {
-
-        final StringBuffer sb = new StringBuffer(16);
-
         int depth = 0;
         float alt = Float.NaN;
         double lat = -1D, lon = -1D;
         char[] name = null, cmt = null, sym = null;
+        final StringBuffer sb = new StringBuffer(16);
         NakedVector links = null;
         GroundspeakBean gsbean = null;
 
@@ -1511,7 +1500,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback, Com
         }
     }
 
-    private static void parseLoc(final KXmlParser parser, final Vector v)
+    private static void parseLoc(final HXmlParser parser, final Vector v)
             throws IOException, XmlPullParserException {
 
         int depth = 0;

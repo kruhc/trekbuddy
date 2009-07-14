@@ -453,7 +453,8 @@ public final class NmeaParser {
 //#ifdef ONE_HZ
 //        final int ms = 0;
 //#else
-        final int ms = CharArrayTokenizer.parseInt(token.array, token.begin + 7, 3);
+//        final int ms = CharArrayTokenizer.parseInt(token.array, token.begin + 7, 3);
+        final int ms = (token.array[token.begin + 7] - '0') * 100;
 //#endif
         return (3600 * hours + 60 * mins + sec) * 1000 + ms;
     }

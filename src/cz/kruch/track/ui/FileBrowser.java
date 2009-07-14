@@ -284,12 +284,14 @@ public final class FileBrowser implements CommandListener, Runnable, Comparator 
         }
         while (items.hasMoreElements()) {
             final String item = (String) items.nextElement();
-            if (allowed != null) {
+            if (File.isDir(item)) {
+                v.addElement(item);
+            } else if (allowed != null) {
                 for (int i = allowed.length; --i >= 0; ) {
 //#ifdef __LOG__
                     if (log.isEnabled()) log.debug("apply filter [" + allowed[i] + "] to " + item);
 //#endif
-                    if (item.endsWith(allowed[i]) || File.isDir(item)) {
+                    if (item.endsWith(allowed[i])) {
                         v.addElement(item);
                     }
                 }

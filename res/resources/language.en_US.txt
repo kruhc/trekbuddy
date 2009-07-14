@@ -163,7 +163,7 @@
 2208=Recipient
 2209=Message
 2210=Camera
-2211=Altitude (m)
+2211=Altitude
 2212=Zone
 2213=Lat
 2214=Lon

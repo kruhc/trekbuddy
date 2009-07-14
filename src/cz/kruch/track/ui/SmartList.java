@@ -144,10 +144,12 @@ final class SmartList extends Canvas {
 
     protected void pointerPressed(int x, int y) {
         final int count = items.size();
-        final int h = getHeight();
+        final int h = height;
         final int lines = h / getLineHeight();
-        final double yd = lines >= count ? getLineHeight() : (double) h / lines;
-        final int line = ExtraMath.round((double) y / yd);
+//        final double yd = lines >= count ? getLineHeight() : (double) h / lines;
+//        final int line = ExtraMath.round((double) y / yd);
+        int line = y / getLineHeight();
+        if (line > lines) line--;
 
         // select wpt and open it
         if (line + top < count) {
@@ -166,13 +168,14 @@ final class SmartList extends Canvas {
         final int marked = this.marked;
         final int count = this.items.size();
         final int lines = h / getLineHeight();
-        final double yd = lines >= count ? getLineHeight() : (double) h / lines;
-        final int lh = (int) yd;
+//        final double yd = lines >= count ? getLineHeight() : (double) h / lines;
+//        final int lh = (int) yd;
+        final int lh = getLineHeight();
         final Object[] items = ((NakedVector) this.items).getData();
         
         int curr = top;
-        int last = top + lines;
-        double y = 0;
+        int last = top + lines + 1 + 1/* partial */;
+        /*double*/int y = 0;
 
         g.setFont(Desktop.fontLists);
         g.setColor(colorBackUnsel);
@@ -180,23 +183,23 @@ final class SmartList extends Canvas {
         g.setColor(colorForeUnsel);
 
         while (curr < last && curr < count) {
-            final int yy = ExtraMath.round(y);
+//            final int yy = ExtraMath.round(y);
             if (curr == selected) { // set color for selected item
                 g.setColor(colorBackSel);
-                g.fillRect(0, yy, w, lh);
+                g.fillRect(0, y/*y*/, w, lh);
                 g.setColor(colorForeSel);
             }
             final String s = items[curr].toString();
             if (curr != marked) {
-                g.drawString(s, HL_INSET, yy, Graphics.TOP | Graphics.LEFT);
+                g.drawString(s, HL_INSET, y/*y*/, Graphics.TOP | Graphics.LEFT);
             } else {
-                g.drawString("(*) " + s, HL_INSET, yy, Graphics.TOP | Graphics.LEFT);
+                g.drawString("(*) " + s, HL_INSET, y/*y*/, Graphics.TOP | Graphics.LEFT);
             }
             if (curr == selected) { // restore color
                 g.setColor(colorForeUnsel);
             }
             curr++;
-            y += yd;
+            y += lh;
         }
     }
 

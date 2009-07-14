@@ -187,11 +187,11 @@ public final class Atlas implements Runnable {
 //#endif
 
             // run loader
+            final String urllc = url.toLowerCase();
             final Class factory;
-            if (url.endsWith(".tba") || url.endsWith(".TBA")) {
+            if (urllc.endsWith(".tba")) {
                 factory = Class.forName("cz.kruch.track.maps.DirLoader");
-            } else if (url.endsWith(".tar") || url.endsWith(".TAR")
-                    || url.endsWith(".idx") || url.endsWith(".IDX")) {
+            } else if (urllc.endsWith(".tar") || urllc.endsWith(".idx")) {
                 factory = Class.forName("cz.kruch.track.maps.TarLoader");
             } else {
                 throw new InvalidMapException("Unsupported format");

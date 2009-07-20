@@ -48,7 +48,9 @@ import api.location.QualifiedCoordinates;
  *
  * @author Ales Pour <kruhc@seznam.cz>
  */
-public final class Desktop implements CommandListener, LocationListener, YesNoDialog.AnswerListener {
+public final class Desktop implements CommandListener,
+                                      LocationListener,
+                                      YesNoDialog.AnswerListener {
 //#ifdef __LOG__
     private static final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("Desktop");
 //#endif
@@ -337,9 +339,12 @@ public final class Desktop implements CommandListener, LocationListener, YesNoDi
                                Config.osdBoldFont ? Font.STYLE_BOLD : Font.STYLE_PLAIN,
                                Font.SIZE_SMALL);
         fontLists = null; // gc hint
-        fontLists = Font.getFont(Font.getDefaultFont().getFace(),
-                                 Font.STYLE_BOLD/*Font.getDefaultFont().getStyle()*/,
-                                 Font.SIZE_SMALL);
+/*
+        fontLists = Font.getFont(Config.listFont & 0x00ff0000,
+                                 Config.listFont & 0x0000ff00,
+                                 Config.listFont & 0x000000ff);
+*/
+        fontLists = Font.getFont(Font.FONT_STATIC_TEXT);
         fontBtns = null; // gc hint
         fontBtns = Font.getFont(Font.getDefaultFont().getFace(),
                                 Font.STYLE_BOLD/*Font.getDefaultFont().getStyle()*/,
@@ -976,7 +981,7 @@ public final class Desktop implements CommandListener, LocationListener, YesNoDi
     }
 
     public String getTracklogCreator() {
-        return cz.kruch.track.TrackingMIDlet.APP_TITLE + " " + midlet.getAppProperty("MIDlet-Version");
+        return cz.kruch.track.TrackingMIDlet.APP_TITLE + " " + cz.kruch.track.TrackingMIDlet.version;
     }
 
     public void goTo(Waypoint wpt) {
@@ -1258,7 +1263,7 @@ public final class Desktop implements CommandListener, LocationListener, YesNoDi
     * ~end
     */
 
-    /*private */void handleKey(final int i, final boolean repeated) {
+    /*private */void handleKeyDown(final int i, final boolean repeated) {
         final View[] views = this.views;
 
         if (views == null || paused) {
@@ -1284,7 +1289,7 @@ public final class Desktop implements CommandListener, LocationListener, YesNoDi
         }
 
         switch (action) {
-            
+
             case Canvas.UP:
             case Canvas.LEFT:
             case Canvas.RIGHT:
@@ -1346,20 +1351,44 @@ public final class Desktop implements CommandListener, LocationListener, YesNoDi
                     } break;
 
                     case Canvas.KEY_NUM1: { // navigation
-                        if (!repeated) {
-                            Waypoints.getInstance().show();
-                        } else {
+                        if (repeated) {
                             Waypoints.getInstance().showCurrent();
+                        }
+                    } break;
+
+                    case Canvas.KEY_NUM3: { // notify device control
+                        if (!repeated) {
+                            cz.kruch.track.ui.nokia.DeviceControl.setBacklight();
                         }
                     } break;
 
                     default: {
                         if (!repeated) {
-                            mask = views[mode].handleKey(i, repeated);
+                            mask = views[mode].handleKey(i, false);
                         }
                     }
                 }
             }
+        }
+
+        // update
+        update(mask);
+    }
+
+    /*private */void handleKeyUp(final int i) {
+
+        int mask = MASK_NONE;
+
+        // scrolling stops // TODO ugly - delegate event to views; then make scrolls private
+        MapView.scrolls = 0;
+
+        switch (i) {
+            case Canvas.KEY_NUM1: { // navigation
+                Waypoints.getInstance().show();
+            } break;
+            case Canvas.KEY_NUM3: { // notify device control
+                cz.kruch.track.ui.nokia.DeviceControl.setBacklight();
+            } break;
         }
 
         // update
@@ -1544,14 +1573,11 @@ public final class Desktop implements CommandListener, LocationListener, YesNoDi
         } catch (Throwable t) {
             showError(Resources.getString(Resources.DESKTOP_MSG_START_PROV_FAILED) + " [" + provider.getName() + "]", t, null);
 
-            // clear member
+            // cleanup
             provider = null;
 
-            return false;
+			return false;
         }
-
-        // remember track start
-        trackstart = System.currentTimeMillis();
 
         // not browsing
         browsing = false;
@@ -1593,9 +1619,6 @@ public final class Desktop implements CommandListener, LocationListener, YesNoDi
 
         // (re)start BT provider
         (new Thread((Runnable) provider)).start();
-
-        // remember track start
-        trackstart = System.currentTimeMillis();
 
         // not browsing
         browsing = false;
@@ -2738,7 +2761,10 @@ public final class Desktop implements CommandListener, LocationListener, YesNoDi
 
                 case LocationProvider._STARTING: {
 
-                    // start tracklog
+					// remember track start
+					trackstart = System.currentTimeMillis();
+					
+					// start tracklog
                     startTracklog();
 
                     // reset views on fresh start

@@ -9,7 +9,7 @@ import javax.microedition.lcdui.game.GameCanvas;
 import javax.microedition.lcdui.Graphics;
 import javax.microedition.lcdui.Canvas;
 import javax.microedition.lcdui.Command;
-import javax.microedition.lcdui.Image;
+import javax.microedition.lcdui.CommandListener;
 import javax.microedition.midlet.MIDlet;
 import java.util.TimerTask;
 
@@ -18,8 +18,9 @@ final class DeviceScreen extends GameCanvas implements Runnable {
     private static final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("Canvas");
 //#endif
 
-    static final int BTN_ARC    = 10;
-    static final int BTN_COLOR  = 0x002664bf;
+    static final int BTN_ARC        = 10;
+    static final int BTN_COLOR      = 0x005b87ce;
+    static final int BTN_HICOLOR    = 0x000a2468;
 
     // main application
     private final Desktop delegate;
@@ -40,7 +41,7 @@ final class DeviceScreen extends GameCanvas implements Runnable {
     private /*volatile*/ int inKey; // using synchronized access helper
 
     // touch ops
-    private volatile boolean inTouch;
+    private volatile boolean isTouchMenuActive;
 
     public DeviceScreen(Desktop delegate, MIDlet midlet) {
         super(false);
@@ -55,7 +56,7 @@ final class DeviceScreen extends GameCanvas implements Runnable {
         }
     }
 
-    /** @overriden to make <code>Graphics</code> public accessible */
+    /** @overriden to make <code>Graphics</code> publicly accessible and handle weird states */
     public Graphics getGraphics() {
         if (graphics == null || cz.kruch.track.TrackingMIDlet.s65) {
             graphics = null;
@@ -66,7 +67,7 @@ final class DeviceScreen extends GameCanvas implements Runnable {
 
     /** @overriden for touch menu hook */
     public void flushGraphics() {
-        if (inTouch) {
+        if (isTouchMenuActive) {
             drawTouchMenu();
         }
         super.flushGraphics();
@@ -87,15 +88,22 @@ final class DeviceScreen extends GameCanvas implements Runnable {
     }
 
     /** @overriden */
+    public void setCommandListener(CommandListener commandListener) {
+        if (!hasPointerEvents() || "j2me".equals(cz.kruch.track.TrackingMIDlet.getPlatform())) {
+            super.setCommandListener(commandListener);
+        }
+    }
+
+    /** @overriden */
     public void addCommand(Command command) {
-        if (!hasPointerEvents()) {
+        if (!hasPointerEvents() || "j2me".equals(cz.kruch.track.TrackingMIDlet.getPlatform())) {
             super.addCommand(command);
         }
     }
 
     /** @overriden */
     public void removeCommand(Command command) {
-        if (!hasPointerEvents()) {
+        if (!hasPointerEvents() || "j2me".equals(cz.kruch.track.TrackingMIDlet.getPlatform())) {
             super.removeCommand(command);
         }
     }
@@ -126,9 +134,9 @@ final class DeviceScreen extends GameCanvas implements Runnable {
             key = _getInKey();
         }
 */
-        // shortcut 
+        // shortcut
         final int key = _getInKey();
-
+        
         // action
         if (key != 0) {
 //#ifdef __LOG__
@@ -138,6 +146,7 @@ final class DeviceScreen extends GameCanvas implements Runnable {
             keyRepeated(key);
 
         } else {
+
             // notify
             keyReleased(0); // TODO unknown key?
         }
@@ -148,12 +157,8 @@ final class DeviceScreen extends GameCanvas implements Runnable {
         if (log.isEnabled()) log.info("size changed: " + w + "x" + h);
 //#endif
 
-////#ifdef __RIM__
-//        if (cz.kruch.track.TrackingMIDlet.rim) {
-            // release current graphics - may have become useless after size change
-            graphics = null;
-//        }
-////#endif
+        // release current graphics - probably will not work after size change (RIM, ANDROID)
+        graphics = null;
 
         // reset GUI
         delegate.resetGui();
@@ -168,10 +173,11 @@ final class DeviceScreen extends GameCanvas implements Runnable {
         if (log.isEnabled()) log.info("pointerPressed");
 //#endif
 
-        if (inTouch) {
+        // menu shown?
+        if (isTouchMenuActive) {
 
             // set "touch menu is on" flag
-            inTouch = false;
+            isTouchMenuActive = false;
 
             // find simulated command
             final Command cmd = pointerToCmd(x, y);
@@ -184,32 +190,17 @@ final class DeviceScreen extends GameCanvas implements Runnable {
             // update screen anyway
             delegate.update(Desktop.MASK_SCREEN);
 
-        } else {
+        } else { // no, detect action
 
-            // detect action
+            // resolve coordinates to keypress
             final int key = pointerToKey(x, y);
             if (key != 0) {
+
+                // invoke emulated event
                 keyPressed(key);
-                switch (getGameAction(key)) {
-                    case Canvas.UP:
-                    case Canvas.LEFT:
-                    case Canvas.RIGHT:
-                    case Canvas.DOWN: {
-                        // emulate repetition as there is not "touch repeated" event
-                        emulateKeyRepeated(key);
-                    } break;
-                    default: {
-                        // bottom-left corner turns touch menu on
-                        if (Canvas.KEY_STAR == key && !keylock) {
 
-                            // set "touch menu on" flag
-                            inTouch = true;
-
-                            // repaint
-                            flushGraphics();
-                        }
-                    }
-                }
+                // help repetition
+                emulateKeyRepeated(key);
             }
         }
     }
@@ -219,7 +210,36 @@ final class DeviceScreen extends GameCanvas implements Runnable {
         if (log.isEnabled()) log.info("pointerPressed");
 //#endif
 
-        keyReleased(pointerToKey(x, y));
+        // detect action
+        final int key = pointerToKey(x, y);
+
+        // distinguish screenlock and menu "popup"
+        if (key == Canvas.KEY_STAR && _getInKey() == Canvas.KEY_STAR && keyRepeatedCount == 0) {
+
+            // render repeated check blind
+            _setInKey(0);
+
+            if (!keylock) {
+
+                // set "touch menu on" flag
+                isTouchMenuActive = true;
+
+                // repaint
+                flushGraphics();
+
+            } else {
+
+                // screenlock warning
+                Desktop.showWarning(Resources.getString(Resources.DESKTOP_MSG_KEYS_LOCKED), null, null);
+
+            }
+
+        } else {
+
+            // usual handling
+            keyReleased(key);
+
+        }
     }
 
     protected void keyPressed(int i) {
@@ -244,22 +264,15 @@ final class DeviceScreen extends GameCanvas implements Runnable {
         // save key
         _setInKey(i);
 
+        // help repeat
+        checkKeyRepeated(i);
+
         // keymap
         i = Resources.remap(i);
 
-        // special handling
-        switch (i) {
-            case KEY_STAR: { // help keylock
-                checkKeyRepeated(i);
-            } break;
-            case KEY_NUM1: { // only repeated handled for '1' // TODO hacky
-                return;
-            } /*break;*/ // unreachable
-        }
-
         // handle key
         if (!keylock) {
-            delegate.handleKey(i, false);
+            delegate.handleKeyDown(i, false);
         }
     }
 
@@ -284,7 +297,7 @@ final class DeviceScreen extends GameCanvas implements Runnable {
 
         // handle key event is not locked
         if (!keylock) {
-            delegate.handleKey(i, true);
+            delegate.handleKeyDown(i, true);
         }
     }
 
@@ -308,6 +321,9 @@ final class DeviceScreen extends GameCanvas implements Runnable {
             }
         }
 
+        // no key pressed anymore
+        _setInKey(0);
+
         // keymap
         i = Resources.remap(i);
 
@@ -319,25 +335,10 @@ final class DeviceScreen extends GameCanvas implements Runnable {
             }
         }
 
-        // handle special key events
+        // handle key
         if (!keylock) {
-            switch (i) {
-                case Canvas.KEY_NUM1: { // hack
-                    delegate.handleKey(i, false);
-                }
-                break;
-                case Canvas.KEY_NUM3: { // notify device control
-                    cz.kruch.track.ui.nokia.DeviceControl.setBacklight();
-                }
-                break;
-            }
+            delegate.handleKeyUp(i);
         }
-
-        // no key pressed anymore
-        _setInKey(0);
-
-        // scrolling stops // TODO ugly direct access
-        MapView.scrolls = 0;
     }
 
     boolean isKeylock() {
@@ -355,6 +356,12 @@ final class DeviceScreen extends GameCanvas implements Runnable {
             if (repeatedKeyCheck == null) {
                 Desktop.timer.schedule(repeatedKeyCheck = new KeyCheckTimerTask(), 750L);
             }
+        }
+    }
+
+    void firedKeyRepeated() {
+        synchronized (this) {
+            repeatedKeyCheck = null;
         }
     }
 
@@ -384,8 +391,10 @@ final class DeviceScreen extends GameCanvas implements Runnable {
 
     private void drawButton(final Graphics g, final Command cmd,
                             final int x, final int y, final int bw, final int bh) {
-        g.setColor(BTN_COLOR);
+        g.setColor(BTN_HICOLOR);
         g.fillRoundRect(x, y, bw, bh, BTN_ARC, BTN_ARC);
+        g.setColor(BTN_COLOR);
+        g.drawRoundRect(x, y, bw, bh, BTN_ARC, BTN_ARC);
         final String label = cmd.getLabel();
         final int fh = Desktop.fontBtns.getHeight();
         final int sw = Desktop.fontBtns.stringWidth(label);

@@ -81,12 +81,19 @@ public class DeviceControl extends TimerTask {
                 // ignore
             }
         }
-//#endif
-//#ifdef __RIM__
+//#elifdef __RIM__
         if (instance == null) {
             try {
                 Class.forName("net.rim.device.api.system.Backlight");
                 instance = (DeviceControl) Class.forName("cz.kruch.track.ui.nokia.BlackberryDeviceControl").newInstance();
+            } catch (Throwable t) {
+                // ignore
+            }
+        }
+//#elifdef __ANDROID__
+        if (instance == null) {
+            try {
+                instance = (DeviceControl) Class.forName("cz.kruch.track.ui.nokia.AndroidDeviceControl").newInstance();
             } catch (Throwable t) {
                 // ignore
             }

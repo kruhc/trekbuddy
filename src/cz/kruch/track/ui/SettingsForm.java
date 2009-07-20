@@ -74,6 +74,7 @@ final class SettingsForm implements CommandListener, ItemStateListener {
     private ChoiceGroup choiceWaypoints;
     private TrailItem itemTrailView;
     private ChoiceGroup choiceSort;
+    private TextField fieldListFont;
 
     private List pane;
     private Form submenu;
@@ -218,6 +219,13 @@ final class SettingsForm implements CommandListener, ItemStateListener {
             submenu.append(gaugeTrailThick = new Gauge(Resources.getString(Resources.CFG_DESKTOP_FLD_TRAIL_THICK), true, 2, Config.trailThick));
             submenu.setItemStateListener(this);
 */
+
+            // smartlist font
+            StringBuffer hexstr = new StringBuffer(Integer.toHexString(Config.listFont));
+            while (hexstr.length() < 6) {
+                hexstr.insert(0, '0');
+            }
+            submenu.append(fieldListFont = new TextField("Lists font", hexstr.toString(), 10, TextField.ANY));
             
             // CMS cycling
             submenu.append(fieldCmsCycle = new TextField(Resources.getString(Resources.CFG_DESKTOP_FLD_CMS_CYCLE), Integer.toString(Config.cmsCycle), 4, TextField.NUMERIC));
@@ -659,6 +667,7 @@ final class SettingsForm implements CommandListener, ItemStateListener {
                 Config.osdBlackColor = misc[12];
                 Config.osdAlpha = gaugeAlpha.getValue() * gaugeAlphaScale;
                 Config.cmsCycle = Integer.parseInt(fieldCmsCycle.getString());
+                Config.listFont = Integer.parseInt(fieldCmsCycle.getString(), 16);
                 Config.trailColor = itemTrailView.color/*gaugeTrailColor.getValue()*/;
                 Config.trailThick = itemTrailView.thick/*gaugeTrailThick.getValue()*/;
                 changed = true;

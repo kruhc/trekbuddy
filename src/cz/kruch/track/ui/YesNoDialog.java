@@ -14,7 +14,7 @@ import javax.microedition.lcdui.Alert;
  *
  * @author Ales Pour <kruhc@seznam.cz>
  */
-public final class YesNoDialog extends Alert implements CommandListener {
+public final class YesNoDialog implements CommandListener {
 
     public interface AnswerListener {
         public void response(int answer, Object closure);
@@ -26,20 +26,22 @@ public final class YesNoDialog extends Alert implements CommandListener {
     private final Displayable next;
     private final AnswerListener callback;
     private final Object closure;
+    private final String question;
 
     public YesNoDialog(Displayable next, AnswerListener callback, Object closure,
                        String question, String item) {
-        super(null, question, null, null);
         this.next = next != null ? next : Desktop.display.getCurrent();
         this.callback = callback;
         this.closure = closure;
+        this.question = question;
     }
 
     public void show() {
-        addCommand(new Command(Resources.getString(Resources.CMD_YES), Command.OK, 1));
-        addCommand(new Command(Resources.getString(Resources.CMD_NO), Command.CANCEL, 1));
-        setCommandListener(this);
-        Desktop.display.setCurrent(this);
+        final Alert alert = new Alert(null, question, null, null);
+        alert.addCommand(new Command(Resources.getString(Resources.CMD_YES), Command.OK, 1));
+        alert.addCommand(new Command(Resources.getString(Resources.CMD_NO), Command.CANCEL, 1));
+        alert.setCommandListener(this);
+        Desktop.display.setCurrent(alert);
     }
 
     public void commandAction(Command command, Displayable displayable) {

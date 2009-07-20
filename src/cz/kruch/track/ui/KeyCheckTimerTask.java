@@ -21,5 +21,6 @@ final class KeyCheckTimerTask extends TimerTask {
         Desktop.screen.getKeyStates(); // trick
 */
         SmartRunnable.getInstance().callSerially(Desktop.screen);
+        Desktop.screen.firedKeyRepeated();
     }
 }

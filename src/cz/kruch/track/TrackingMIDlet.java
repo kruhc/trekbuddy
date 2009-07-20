@@ -52,9 +52,9 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
 //#ifdef __LOG__
         logEnabled = hasFlag("log_enable");
         System.out.println("* platform is " + platform);
-//#endif
 //#ifdef __ANDROID__
         logEnabled = true;
+//#endif
 //#endif
 
         // detect brand/device

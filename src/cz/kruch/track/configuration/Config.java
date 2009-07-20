@@ -142,6 +142,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
     public static boolean safeColors;
     public static int osdAlpha                  = 0x80;
     public static int cmsCycle;
+    public static int listFont;
 
     // [Units]
     public static int units;
@@ -500,6 +501,12 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
             snapshotFormatIdx = din.readInt();
             cfmt = din.readInt();
             sort = din.readInt();
+        } catch (Exception e) {
+        }
+
+        // 0.9.85 extensions
+        try {
+            listFont = din.readInt();
         } catch (Exception e) {
         }
 

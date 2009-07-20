@@ -3,7 +3,6 @@
 package cz.kruch.track.ui;
 
 import cz.kruch.track.util.NakedVector;
-import cz.kruch.track.util.ExtraMath;
 
 import javax.microedition.lcdui.CommandListener;
 import javax.microedition.lcdui.List;
@@ -15,6 +14,11 @@ import java.util.Vector;
 
 final class SmartList extends Canvas {
     private static final int HL_INSET = 2;
+    private static final int colorSbBg = 0x00e6e6e6;
+    private static final int colorSbHiBorder = 0x00666666;
+    private static final int colorSbLoBorder = 0x00999999;
+    private static final int colorSbMain = DeviceScreen.BTN_COLOR;
+    private static final int colorSbHiMain = DeviceScreen.BTN_HICOLOR;
 
     private CommandListener listener;
     private Vector items;
@@ -22,7 +26,7 @@ final class SmartList extends Canvas {
     private int top, selected, marked;
     private int visible;
 
-    private int width, height;
+    private int width, height, sbY, sbWidth, sbHeight, pY;
     private int colorBackSel, colorBackUnsel, colorForeSel, colorForeUnsel;
 
     public SmartList(String title, CommandListener listener) {
@@ -34,11 +38,15 @@ final class SmartList extends Canvas {
             this.colorBackUnsel = 0x00ffffff;
             this.colorForeSel = 0x00ffffff;
             this.colorForeUnsel = 0x0;
+//            this.colorBorder = 0x00b0b0b0;
+//            this.colorHiBorder = 0x00707070;
         } else {
             this.colorBackSel = Desktop.display.getColor(Display.COLOR_HIGHLIGHTED_BACKGROUND);
             this.colorBackUnsel = Desktop.display.getColor(Display.COLOR_BACKGROUND);
             this.colorForeSel = Desktop.display.getColor(Display.COLOR_HIGHLIGHTED_FOREGROUND);
             this.colorForeUnsel = Desktop.display.getColor(Display.COLOR_FOREGROUND);
+//            this.colorBorder = Desktop.display.getColor(Display.COLOR_BORDER);
+//            this.colorHiBorder = Desktop.display.getColor(Display.COLOR_HIGHLIGHTED_BORDER);
         }
     }
 
@@ -60,7 +68,13 @@ final class SmartList extends Canvas {
         super.sizeChanged(w, h);
         this.width = w;
         this.height = h;
-        setVisibleCount(h / getLineHeight());
+        this.sbWidth = w / 18;
+        if (this.sbWidth > 12) {
+            this.sbWidth = 12;
+        }
+        final int v = h / getLineHeight();
+        this.sbHeight = (int) Math.ceil(h * ((float)v / size())); 
+        setVisibleCount(v);
         makeSelectedVisible();
         repaint();
     }
@@ -68,16 +82,92 @@ final class SmartList extends Canvas {
     protected void keyPressed(int i) {
         boolean repaint = false;
         switch (i) {
+            case Canvas.KEY_NUM1:
+				selected = 0;
+				repaint = true;
+				break;
             case Canvas.KEY_NUM2:
+				repaint = stepOnto('a', 'A');
+				if (!repaint) {
+					repaint = stepOnto('b', 'B');
+					if (!repaint) {
+						repaint = stepOnto('c', 'C');
+					}
+				}
+				break;
             case Canvas.KEY_NUM3:
+				repaint = stepOnto('d', 'D');
+				if (!repaint) {
+					repaint = stepOnto('e', 'E');
+					if (!repaint) {
+						repaint = stepOnto('f', 'F');
+					}
+				}
+				break;
             case Canvas.KEY_NUM4:
+				repaint = stepOnto('g', 'G');
+				if (!repaint) {
+					repaint = stepOnto('h', 'H');
+					if (!repaint) {
+						repaint = stepOnto('i', 'I');
+					}
+				}
+				break;
             case Canvas.KEY_NUM5:
+				repaint = stepOnto('j', 'J');
+				if (!repaint) {
+					repaint = stepOnto('k', 'K');
+					if (!repaint) {
+						repaint = stepOnto('l', 'L');
+					}
+				}
+				break;
             case Canvas.KEY_NUM6:
+				repaint = stepOnto('m', 'M');
+				if (!repaint) {
+					repaint = stepOnto('n', 'N');
+					if (!repaint) {
+						repaint = stepOnto('o', 'O');
+					}
+				}
+				break;
             case Canvas.KEY_NUM7:
+				repaint = stepOnto('p', 'P');
+				if (!repaint) {
+					repaint = stepOnto('q', 'Q');
+					if (!repaint) {
+						repaint = stepOnto('r', 'R');
+						if (!repaint) {
+							repaint = stepOnto('s', 'S');
+						}
+					}
+				}
+				break;
             case Canvas.KEY_NUM8:
+				repaint = stepOnto('t', 'T');
+				if (!repaint) {
+					repaint = stepOnto('u', 'U');
+					if (!repaint) {
+						repaint = stepOnto('v', 'V');
+					}
+				}
+				break;
             case Canvas.KEY_NUM9:
-                // TODO search by name
-                break;
+				repaint = stepOnto('w', 'W');
+				if (!repaint) {
+					repaint = stepOnto('x', 'X');
+					if (!repaint) {
+						repaint = stepOnto('y', 'Y');
+						if (!repaint) {
+							repaint = stepOnto('z', 'Z');
+						}
+					}
+				}
+				break;
+            case Canvas.KEY_POUND:
+				selected = items.size() - 1;
+				repaint = true;
+				break;
             default: {
                 switch (getGameAction(i)) {
                     case Canvas.UP: { // one up
@@ -146,18 +236,61 @@ final class SmartList extends Canvas {
         final int count = items.size();
         final int h = height;
         final int lines = h / getLineHeight();
-//        final double yd = lines >= count ? getLineHeight() : (double) h / lines;
-//        final int line = ExtraMath.round((double) y / yd);
         int line = y / getLineHeight();
         if (line > lines) line--;
 
-        // select wpt and open it
-        if (line + top < count) {
-            setSelectedIndex(line + top, true);
-            makeSelectedVisible();
-            repaint();
-            serviceRepaints();
-            listener.commandAction(List.SELECT_COMMAND, this);
+        if (lines < count || x < width - sbWidth - 2 * HL_INSET) { // select wpt and open it
+            if (line + top < count) {
+                setSelectedIndex(line + top, true);
+                makeSelectedVisible();
+                repaint();
+                serviceRepaints();
+                listener.commandAction(List.SELECT_COMMAND, this);
+            }
+        } else { // move scrollbar
+            if (y < sbY || y > sbY + sbHeight) {
+//                pointerDragged(x, y);
+            } else {
+                pY = y;
+            }
+        }
+    }
+
+    protected void pointerDragged(int x, int y) {
+		final int count = items.size();
+		final int lines = height / getLineHeight();
+		if (lines < count && x > width - sbWidth - HL_INSET) {
+            final int size = size();
+            final int dy = y - pY;
+            final int dl = cz.kruch.track.util.ExtraMath.round(size() * ((float) dy / height));
+            if (Math.abs(dl) > 0) {
+                pY = y;
+                top += dl;
+                if (dl > 0) {
+                    if (y > sbY + sbHeight) {
+                        top++;
+                    }
+                    if (top + visible > size) {
+                        top = size - visible;
+                    }
+                } else {
+                    if (y < sbY) {
+                        top--;
+                    }
+                    if (top < 0) {
+                        top = 0;
+                    }
+                }
+                repaint();
+            }
+        }
+    }
+
+    protected void pointerReleased(int x, int y) {
+		final int count = items.size();
+		final int lines = height / getLineHeight();
+		if (lines < count && x > width - sbWidth - HL_INSET) {
+            this.pY = y;
         }
     }
 
@@ -168,14 +301,12 @@ final class SmartList extends Canvas {
         final int marked = this.marked;
         final int count = this.items.size();
         final int lines = h / getLineHeight();
-//        final double yd = lines >= count ? getLineHeight() : (double) h / lines;
-//        final int lh = (int) yd;
         final int lh = getLineHeight();
         final Object[] items = ((NakedVector) this.items).getData();
         
         int curr = top;
         int last = top + lines + 1 + 1/* partial */;
-        /*double*/int y = 0;
+        int y = 0;
 
         g.setFont(Desktop.fontLists);
         g.setColor(colorBackUnsel);
@@ -183,17 +314,16 @@ final class SmartList extends Canvas {
         g.setColor(colorForeUnsel);
 
         while (curr < last && curr < count) {
-//            final int yy = ExtraMath.round(y);
             if (curr == selected) { // set color for selected item
                 g.setColor(colorBackSel);
-                g.fillRect(0, y/*y*/, w, lh);
+                g.fillRect(0, y, w, lh);
                 g.setColor(colorForeSel);
             }
             final String s = items[curr].toString();
             if (curr != marked) {
-                g.drawString(s, HL_INSET, y/*y*/, Graphics.TOP | Graphics.LEFT);
+                g.drawString(s, HL_INSET, y, Graphics.TOP | Graphics.LEFT);
             } else {
-                g.drawString("(*) " + s, HL_INSET, y/*y*/, Graphics.TOP | Graphics.LEFT);
+                g.drawString("(*) " + s, HL_INSET, y, Graphics.TOP | Graphics.LEFT);
             }
             if (curr == selected) { // restore color
                 g.setColor(colorForeUnsel);
@@ -201,7 +331,26 @@ final class SmartList extends Canvas {
             curr++;
             y += lh;
         }
-    }
+
+		if (lines < count) { // draw scrollbar
+			sbY = (int) (h * ((float)top / size()));
+
+			g.setColor(colorSbHiBorder);
+			g.drawLine(w - sbWidth - 2, 0, w - sbWidth - 2, h);
+			g.setColor(colorSbLoBorder);
+			g.drawLine(w - sbWidth - 1, 0, w - sbWidth - 1, h);
+			g.setColor(colorSbBg);
+			g.fillRect(w - sbWidth, 0, sbWidth - 1, h);
+			g.setColor(colorSbHiMain);
+			g.drawRect(w - sbWidth - 2, sbY, sbWidth + 2, sbHeight);
+			g.setColor(colorSbMain);
+			g.fillRect(w - sbWidth - 1, sbY + 1, sbWidth, sbHeight - 1);
+			g.setColor(colorSbLoBorder);
+			g.drawLine(w - sbWidth - 1, sbY + sbHeight + 1, w - 1, sbY + sbHeight + 1);
+			g.setColor(colorSbHiBorder);
+			g.drawLine(w - 1, 0, w - 1, h);
+		}
+	}
 
     public void setVisibleCount(int count) {
         visible = (count > 0 ? count : 1);
@@ -277,4 +426,16 @@ final class SmartList extends Canvas {
             }
         }
     }
+
+	private boolean stepOnto(final char lc, final char uc) {
+		final Object[] raw = ((NakedVector) this.items).getData();
+		for (int N = items.size(), i = 0; i < N; i++) {
+			final char c = raw[i].toString().charAt(0);
+			if (c == lc || c == uc) {
+				selected = i;
+				return true;
+			}
+		}
+		return false;
+	}
 }

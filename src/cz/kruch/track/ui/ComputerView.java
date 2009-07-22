@@ -1905,9 +1905,15 @@ final class ComputerView
                                      source = parser.getAttributeValue(null, ATTR_SYSTEM);
                                      if (source != null) {
                                          final int code = Integer.parseInt(source, 16);
-                                         fonts.put(name, Font.getFont((code >> 16) & 0x000000FF,
-                                                                      (code >> 8) & 0x000000FF,
-                                                                      (code) & 0x0000FF));
+                                         Font font;
+                                         try {
+                                             font = Font.getFont((code >> 16) & 0x000000ff,
+                                                                 (code >> 8) & 0x000000ff,
+                                                                 (code) & 0x0000ff);
+                                         } catch (IllegalArgumentException e) {
+                                             font = Font.getDefaultFont();
+                                         }
+                                         fonts.put(name, font);
                                      }
                                  }
                              }

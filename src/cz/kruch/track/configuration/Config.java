@@ -596,6 +596,8 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         dout.writeInt(snapshotFormatIdx);
         dout.writeInt(cfmt);
         dout.writeInt(sort);
+        /* since 0.9.86 */
+        dout.writeInt(listFont);
 
 //#ifdef __LOG__
         if (log.isEnabled()) log.info("configuration updated");

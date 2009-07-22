@@ -22,6 +22,7 @@ final class SmartList extends Canvas {
 
     private CommandListener listener;
     private Vector items;
+    private String title;
 
     private int top, selected, marked;
     private int visible;
@@ -29,30 +30,32 @@ final class SmartList extends Canvas {
     private int width, height, sbY, sbWidth, sbHeight, pY;
     private int colorBackSel, colorBackUnsel, colorForeSel, colorForeUnsel;
 
-    public SmartList(String title, CommandListener listener) {
-        setTitle(title);
-        setCommandListener(this.listener = listener);
+    public SmartList(String title) {
+        try {
+            super.setTitle(title);
+        } catch (Exception e) { // RIM bug???
+            this.title = title;
+        }
         this.marked = -1;
         if (cz.kruch.track.configuration.Config.safeColors) {
             this.colorBackSel = 0x000000ff;
             this.colorBackUnsel = 0x00ffffff;
             this.colorForeSel = 0x00ffffff;
             this.colorForeUnsel = 0x0;
-//            this.colorBorder = 0x00b0b0b0;
-//            this.colorHiBorder = 0x00707070;
         } else {
             this.colorBackSel = Desktop.display.getColor(Display.COLOR_HIGHLIGHTED_BACKGROUND);
             this.colorBackUnsel = Desktop.display.getColor(Display.COLOR_BACKGROUND);
             this.colorForeSel = Desktop.display.getColor(Display.COLOR_HIGHLIGHTED_FOREGROUND);
             this.colorForeUnsel = Desktop.display.getColor(Display.COLOR_FOREGROUND);
-//            this.colorBorder = Desktop.display.getColor(Display.COLOR_BORDER);
-//            this.colorHiBorder = Desktop.display.getColor(Display.COLOR_HIGHLIGHTED_BORDER);
         }
     }
 
     public void setData(Vector items) {
+        if (items == null) {
+            throw new NullPointerException("List items is null");
+        }
         this.items = items;
-        sizeChanged(getWidth(), getHeight());
+        this.sizeChanged(getWidth(), getHeight());
     }
 
     /* magic - it prevents OutOfMemoryError :-O */
@@ -62,6 +65,16 @@ final class SmartList extends Canvas {
 
     public void setCommandListener(CommandListener listener) {
         super.setCommandListener(this.listener = listener);
+    }
+
+    protected void showNotify() {
+        if (title != null) {
+            try {
+                super.setTitle(title);
+            } catch (Exception e) {
+                Desktop.showError("XXXX", e, null);
+            }
+        }
     }
 
     protected void sizeChanged(int w, int h) {
@@ -239,7 +252,7 @@ final class SmartList extends Canvas {
         int line = y / getLineHeight();
         if (line > lines) line--;
 
-        if (lines < count || x < width - sbWidth - 2 * HL_INSET) { // select wpt and open it
+        if (count <= lines || x < width - sbWidth - 2 * HL_INSET) { // select wpt and open it
             if (line + top < count) {
                 setSelectedIndex(line + top, true);
                 makeSelectedVisible();
@@ -259,7 +272,7 @@ final class SmartList extends Canvas {
     protected void pointerDragged(int x, int y) {
 		final int count = items.size();
 		final int lines = height / getLineHeight();
-		if (lines < count && x > width - sbWidth - HL_INSET) {
+		if (count > lines && x > width - sbWidth - HL_INSET) {
             final int size = size();
             final int dy = y - pY;
             final int dl = cz.kruch.track.util.ExtraMath.round(size() * ((float) dy / height));

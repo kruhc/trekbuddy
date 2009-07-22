@@ -667,7 +667,7 @@ final class SettingsForm implements CommandListener, ItemStateListener {
                 Config.osdBlackColor = misc[12];
                 Config.osdAlpha = gaugeAlpha.getValue() * gaugeAlphaScale;
                 Config.cmsCycle = Integer.parseInt(fieldCmsCycle.getString());
-                Config.listFont = Integer.parseInt(fieldCmsCycle.getString(), 16);
+                Config.listFont = Integer.parseInt(fieldListFont.getString(), 16);
                 Config.trailColor = itemTrailView.color/*gaugeTrailColor.getValue()*/;
                 Config.trailThick = itemTrailView.thick/*gaugeTrailThick.getValue()*/;
                 changed = true;

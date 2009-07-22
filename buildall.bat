@@ -3,11 +3,12 @@
 if "%1"=="" goto help
 if not exist properties\build-%1.properties goto vendor
 
-cmd /c build %1 generic en_US
-cmd /c build %1 std en_US
+cmd /c build %1 standard en_US
+cmd /c build %1 minimal en_US
 cmd /c build %1 j9 en_US
 cmd /c build %1 rim41 en_US
 cmd /c build %1 rim42 en_US
+cmd /c build %1 android en_US
 goto end
 
 :vendor

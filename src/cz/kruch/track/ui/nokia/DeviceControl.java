@@ -116,9 +116,12 @@ public class DeviceControl extends TimerTask {
         return instance.name;
     }
 
+    public static void getBacklight() {
+        instance.sync();
+    }
+
     public static void setBacklight() {
         instance.nextLevel();
-        instance.sync();
     }
 
     public static void flash() {

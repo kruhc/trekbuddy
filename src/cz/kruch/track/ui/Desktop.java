@@ -304,7 +304,10 @@ public final class Desktop implements CommandListener,
             screen.addCommand(new Command("", Command.SCREEN, 0));
         }
         if (Config.btDeviceName.length() > 0) {
-            screen.addCommand(this.cmdRunLast = new Command(Resources.getString(Resources.DESKTOP_CMD_START) + " " + Config.btDeviceName, POSITIVE_CMD_TYPE, 1));
+            this.cmdRunLast = new Command(Resources.getString(Resources.DESKTOP_CMD_START) + " " + Config.btDeviceName, POSITIVE_CMD_TYPE, 1);
+            if (Config.locationProvider == Config.LOCATION_PROVIDER_JSR82) {
+                screen.addCommand(this.cmdRunLast);
+            }
         }
         screen.addCommand(this.cmdRun = new Command(Resources.getString(Resources.DESKTOP_CMD_START), POSITIVE_CMD_TYPE, 2));
         if (cz.kruch.track.TrackingMIDlet.getPlatform().startsWith("NokiaE61")) {
@@ -339,12 +342,13 @@ public final class Desktop implements CommandListener,
                                Config.osdBoldFont ? Font.STYLE_BOLD : Font.STYLE_PLAIN,
                                Font.SIZE_SMALL);
         fontLists = null; // gc hint
-/*
-        fontLists = Font.getFont(Config.listFont & 0x00ff0000,
-                                 Config.listFont & 0x0000ff00,
-                                 Config.listFont & 0x000000ff);
-*/
-        fontLists = Font.getFont(Font.FONT_STATIC_TEXT);
+        try {
+            fontLists = Font.getFont((Config.listFont >> 16) & 0x000000ff,
+                                     (Config.listFont >> 8) & 0x000000ff,
+                                     Config.listFont & 0x000000ff);
+        } catch (IllegalArgumentException e) {
+            fontLists = Font.getDefaultFont();
+        }
         fontBtns = null; // gc hint
         fontBtns = Font.getFont(Font.getDefaultFont().getFace(),
                                 Font.STYLE_BOLD/*Font.getDefaultFont().getStyle()*/,
@@ -1263,7 +1267,7 @@ public final class Desktop implements CommandListener,
     * ~end
     */
 
-    /*private */void handleKeyDown(final int i, final boolean repeated) {
+    void handleKeyDown(final int i, final boolean repeated) {
         final View[] views = this.views;
 
         if (views == null || paused) {
@@ -1333,9 +1337,7 @@ public final class Desktop implements CommandListener,
 
                     case Canvas.KEY_NUM0: { // day/night switch
                         if (!repeated) {
-                            if (mode == VIEW_MAP) { // TODO hack
-                                mask |= views[VIEW_MAP].handleKey(i, false);
-                            } else {
+                            if (mode != VIEW_MAP) {
                                 Config.dayNight++;
                                 if (Config.dayNight == 2) {
                                     Config.dayNight = 0;
@@ -1363,7 +1365,7 @@ public final class Desktop implements CommandListener,
                     } break;
 
                     default: {
-                        if (!repeated) {
+                        if (!repeated) { // TODO let view decide
                             mask = views[mode].handleKey(i, false);
                         }
                     }
@@ -1375,24 +1377,61 @@ public final class Desktop implements CommandListener,
         update(mask);
     }
 
-    /*private */void handleKeyUp(final int i) {
+    void handleKeyUp(final int i) {
 
         int mask = MASK_NONE;
 
-        // scrolling stops // TODO ugly - delegate event to views; then make scrolls private
-        MapView.scrolls = 0;
-
+        // handle events common to all screens
         switch (i) {
+
+            case Canvas.KEY_NUM0: { // day/night switch
+                if (mode == VIEW_MAP) { // TODO hack
+                    mask |= views[VIEW_MAP].handleKey(i, false);
+                }
+            } break;
+
             case Canvas.KEY_NUM1: { // navigation
                 Waypoints.getInstance().show();
             } break;
-            case Canvas.KEY_NUM3: { // notify device control
-                cz.kruch.track.ui.nokia.DeviceControl.setBacklight();
+
+            case Canvas.KEY_NUM3: { // notify user
+                cz.kruch.track.ui.nokia.DeviceControl.getBacklight();
             } break;
+
+        }
+
+        // TODO hacky!!!!
+        if (mode == VIEW_MAP) {
+            MapView.scrolls = 0;
+            switch (i) {
+                case Canvas.KEY_NUM7: { // layer switch
+                    changeLayer();
+                } break;
+                case Canvas.KEY_NUM9: { // map switch
+                    changeMap();
+                } break;
+            }
         }
 
         // update
         update(mask);
+    }
+
+    // TODO hacky!!!!
+    void handleMove(int x, int y) {
+        int mask = MASK_NONE;
+        if (mode == VIEW_MAP) {
+            Desktop.browsing = true;
+            mask = ((MapView) views[mode]).moveTo(x, y);
+        }
+        update(mask);
+    }
+
+    // TODO hacky!!!!
+    void handleStall(int x, int y) {
+        if (mode == VIEW_MAP) {
+            ((MapView) views[mode]).moveTo(-1, -1);
+        }
     }
 
     void update(int mask) {
@@ -1699,7 +1738,9 @@ public final class Desktop implements CommandListener,
         screen.removeCommand(cmdContinue);
         screen.addCommand(cmdRun);
         if (cmdRunLast != null) {
-            screen.addCommand(cmdRunLast);
+            if (Config.locationProvider == Config.LOCATION_PROVIDER_JSR82) {
+                screen.addCommand(cmdRunLast);
+            }
         }
 
 //#ifdef __LOG__
@@ -1878,9 +1919,11 @@ public final class Desktop implements CommandListener,
         final int w = screen.getWidth() * 6 / 8;
         final int h = sh << 1;
         final int x = (screen.getWidth() - w) / 2;
-        final int y = (screen.getHeight() - h);
+        final int y = (screen.getHeight() - h) - DeviceScreen.BTN_ARC;
         g.setColor(DeviceScreen.BTN_COLOR);
-        g.fillRect(x, y, w, h);
+        g.fillRoundRect(x, y, w, h, DeviceScreen.BTN_ARC, DeviceScreen.BTN_ARC);
+        g.setColor(DeviceScreen.BTN_HICOLOR);
+        g.drawRoundRect(x, y, w, h, DeviceScreen.BTN_ARC, DeviceScreen.BTN_ARC);
         g.setColor(0x00ffffff);
         g.setFont(f);
         g.drawString(s, x + (w - sw) / 2, y + (h - sh) / 2, Graphics.TOP | Graphics.LEFT);
@@ -2053,7 +2096,7 @@ public final class Desktop implements CommandListener,
     private volatile boolean _switch;
     private volatile boolean _osd;
 
-    void changeLayer() {
+    private void changeLayer() {
         if (atlas != null) {
             final Enumeration e = atlas.getLayers();
             if (e.hasMoreElements()) {
@@ -2065,7 +2108,7 @@ public final class Desktop implements CommandListener,
         }
     }
 
-    void changeMap() {
+    private void changeMap() {
         if (atlas != null) {
             final Enumeration e = atlas.getMapNames();
             if (e.hasMoreElements()) {
@@ -2379,6 +2422,15 @@ public final class Desktop implements CommandListener,
             // runtime ops
             if (cz.kruch.track.TrackingMIDlet.jsr120) {
                 friends.reconfigure(Desktop.screen);
+            }
+
+            // smart menu
+            if (cmdRunLast != null) {
+                if (Config.locationProvider == Config.LOCATION_PROVIDER_JSR82) {
+                    screen.addCommand(cmdRunLast);
+                } else {
+                    screen.removeCommand(cmdRunLast);
+                }
             }
 
             // notify views

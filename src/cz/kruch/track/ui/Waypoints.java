@@ -1117,12 +1117,13 @@ public final class Waypoints implements CommandListener, Runnable, Callback, Com
 
     private Displayable listStores(final Vector stores) {
         // create UI list
-        final SmartList l = new SmartList(Resources.getString(folder == Config.FOLDER_WPTS ? Resources.NAV_ITEM_WAYPOINTS : Resources.NAV_ITEM_TRACKS), this);
+        final SmartList l = new SmartList(Resources.getString(folder == Config.FOLDER_WPTS ? Resources.NAV_ITEM_WAYPOINTS : Resources.NAV_ITEM_TRACKS));
         l.setData(stores);
-
+        
         // add commands
         l.addCommand(cmdOpen);
         l.addCommand(cmdBack);
+        l.setCommandListener(this);
 
         return l;
     }
@@ -1130,7 +1131,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback, Com
     private Displayable listWaypoints(final String store, final Vector wpts,
                                       final boolean forceSort) {
         // create list
-        final SmartList l = new SmartList((new StringBuffer(32)).append(store).append(" [").append(wpts.size()).append(']').toString(), this);
+        final SmartList l = new SmartList((new StringBuffer(32)).append(store).append(" [").append(wpts.size()).append(']').toString());
         sortedWpts = null; // gc hint
         l.setData(sortedWpts = new NakedVector((NakedVector) wpts));
 
@@ -1185,6 +1186,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback, Com
         l.addCommand(cmdSortByName);
         l.addCommand(cmdSortByDist);
         l.addCommand(cmdBack);
+        l.setCommandListener(this);
 
         return l;
     }

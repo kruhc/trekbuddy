@@ -41,7 +41,11 @@ final class DeviceScreen extends GameCanvas implements Runnable {
     private /*volatile*/ int inKey; // using synchronized access helper
 
     // touch ops
-    private volatile boolean isTouchMenuActive;
+    private volatile boolean touchMenuActive, cmdExec;
+
+    // movement filter
+    private int gx, gy;
+    private boolean inMove;
 
     public DeviceScreen(Desktop delegate, MIDlet midlet) {
         super(false);
@@ -67,7 +71,7 @@ final class DeviceScreen extends GameCanvas implements Runnable {
 
     /** @overriden for touch menu hook */
     public void flushGraphics() {
-        if (isTouchMenuActive) {
+        if (touchMenuActive) {
             drawTouchMenu();
         }
         super.flushGraphics();
@@ -89,21 +93,21 @@ final class DeviceScreen extends GameCanvas implements Runnable {
 
     /** @overriden */
     public void setCommandListener(CommandListener commandListener) {
-        if (!hasPointerEvents() || "j2me".equals(cz.kruch.track.TrackingMIDlet.getPlatform())) {
+        if (!cz.kruch.track.TrackingMIDlet.jbed) {
             super.setCommandListener(commandListener);
         }
     }
 
     /** @overriden */
     public void addCommand(Command command) {
-        if (!hasPointerEvents() || "j2me".equals(cz.kruch.track.TrackingMIDlet.getPlatform())) {
+        if (!cz.kruch.track.TrackingMIDlet.jbed) {
             super.addCommand(command);
         }
     }
 
     /** @overriden */
     public void removeCommand(Command command) {
-        if (!hasPointerEvents() || "j2me".equals(cz.kruch.track.TrackingMIDlet.getPlatform())) {
+        if (!cz.kruch.track.TrackingMIDlet.jbed) {
             super.removeCommand(command);
         }
     }
@@ -173,11 +177,16 @@ final class DeviceScreen extends GameCanvas implements Runnable {
         if (log.isEnabled()) log.info("pointerPressed");
 //#endif
 
-        // menu shown?
-        if (isTouchMenuActive) {
+		// set helpers
+		gx = x;
+		gy = y;
 
-            // set "touch menu is on" flag
-            isTouchMenuActive = false;
+		// menu shown?
+        if (touchMenuActive) {
+
+            // ops flags
+            touchMenuActive = false;
+            cmdExec = true;
 
             // find simulated command
             final Command cmd = pointerToCmd(x, y);
@@ -191,6 +200,9 @@ final class DeviceScreen extends GameCanvas implements Runnable {
             delegate.update(Desktop.MASK_SCREEN);
 
         } else { // no, detect action
+
+            // ops flags
+            cmdExec = false;
 
             // resolve coordinates to keypress
             final int key = pointerToKey(x, y);
@@ -207,8 +219,23 @@ final class DeviceScreen extends GameCanvas implements Runnable {
 
     protected void pointerReleased(int x, int y) {
 //#ifdef __LOG__
-        if (log.isEnabled()) log.info("pointerPressed");
+        if (log.isEnabled()) log.info("pointerReleased");
 //#endif
+
+		// clear helpers
+		gx = gy = 0;
+        
+        // ignore the event when menu was on
+        if (cmdExec) {
+            return;
+        }
+
+        // end of drag?
+        if (_getInMove()) {
+            _setInMove(false);
+            delegate.handleStall(x, y);
+            return;
+        }
 
         // detect action
         final int key = pointerToKey(x, y);
@@ -222,7 +249,7 @@ final class DeviceScreen extends GameCanvas implements Runnable {
             if (!keylock) {
 
                 // set "touch menu on" flag
-                isTouchMenuActive = true;
+                touchMenuActive = true;
 
                 // repaint
                 flushGraphics();
@@ -239,6 +266,37 @@ final class DeviceScreen extends GameCanvas implements Runnable {
             // usual handling
             keyReleased(key);
 
+        }
+    }
+
+    protected void pointerDragged(int x, int y) {
+//#ifdef __LOG__
+        if (log.isEnabled()) log.info("pointerDragged");
+//#endif
+
+        // ignore the event when menu was on
+        if (cmdExec) {
+            return;
+        }
+
+        final int dx = x - gx;
+        final int dy = y - gy;
+        final int adx = Math.abs(dx);
+        final int ady = Math.abs(dy);
+        if (adx > 10 || ady > 10) {
+            _setInKey(0);
+            _setInMove(true);
+            if (adx < 5) {
+                x = gx;
+            } else {
+                gx = x;
+            }
+            if (ady < 5) {
+                y = gy;
+            } else {
+                gy = y;
+            }
+            delegate.handleMove(x, y);
         }
     }
 
@@ -378,7 +436,9 @@ final class DeviceScreen extends GameCanvas implements Runnable {
         } else {
             drawButton(g, delegate.cmdRun, dy, dy, bw, bh);
             if (delegate.cmdRunLast != null) {
-                drawButton(g, delegate.cmdRunLast, dy + bw + dy, dy, bw, bh);
+                if (Config.locationProvider == Config.LOCATION_PROVIDER_JSR82) {
+                    drawButton(g, delegate.cmdRunLast, dy + bw + dy, dy, bw, bh);
+                }
             }
         }
         drawButton(g, delegate.cmdLoadMap, dy, 2 * dy + bh, bw, bh);
@@ -391,9 +451,9 @@ final class DeviceScreen extends GameCanvas implements Runnable {
 
     private void drawButton(final Graphics g, final Command cmd,
                             final int x, final int y, final int bw, final int bh) {
-        g.setColor(BTN_HICOLOR);
-        g.fillRoundRect(x, y, bw, bh, BTN_ARC, BTN_ARC);
         g.setColor(BTN_COLOR);
+        g.fillRoundRect(x, y, bw, bh, BTN_ARC, BTN_ARC);
+        g.setColor(BTN_HICOLOR);
         g.drawRoundRect(x, y, bw, bh, BTN_ARC, BTN_ARC);
         final String label = cmd.getLabel();
         final int fh = Desktop.fontBtns.getHeight();
@@ -415,7 +475,7 @@ final class DeviceScreen extends GameCanvas implements Runnable {
                 if (x > i && x < w / 2 - i) {
                     cmd = delegate.isTracking() ? (Desktop.paused ? delegate.cmdContinue : delegate.cmdPause) : delegate.cmdRun;
                 } else if (x > w / 2 + i && x < w - i) {
-                    cmd = delegate.isTracking() ? delegate.cmdStop : delegate.cmdRunLast;
+                    cmd = delegate.isTracking() ? delegate.cmdStop : (Config.locationProvider == Config.LOCATION_PROVIDER_JSR82 ? delegate.cmdRunLast : null);
                 }
             } break;
             case 5:
@@ -539,6 +599,18 @@ final class DeviceScreen extends GameCanvas implements Runnable {
     private void _setInKey(final int i) {
         synchronized (this) {
             inKey = i;
+        }
+    }
+
+    private boolean _getInMove() {
+        synchronized (this) {
+            return inMove;
+        }
+    }
+
+    private void _setInMove(final boolean b) {
+        synchronized (this) {
+            inMove = b;
         }
     }
 }

@@ -157,6 +157,16 @@ final class MapView extends View {
         }
     }
 
+    int moveTo(int x, int y) { // TODO direct access from Desktop
+        int mask = Desktop.MASK_NONE;
+        browsingOn(false);
+        if (mapViewer.move(x, y)) {
+            syncOSD();
+            mask = Desktop.MASK_MAP | Desktop.MASK_OSD;
+        }
+        return mask;
+    }
+
     private void disposeRoute() {
         synchronized (this) {
             final Position[] route = this.route;
@@ -327,14 +337,6 @@ final class MapView extends View {
                 }
             }
             break;
-
-            case Canvas.KEY_NUM7: { // layer switch
-                navigator.changeLayer();
-            } break;
-
-            case Canvas.KEY_NUM9: { // map switch
-                navigator.changeMap();
-            } break;
 
             case Canvas.KEY_STAR: {
                 mapViewer.starTick();

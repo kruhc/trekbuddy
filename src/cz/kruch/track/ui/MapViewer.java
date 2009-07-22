@@ -42,7 +42,9 @@ final class MapViewer {
     private int chx0, chy0;
     private int crosshairSize, crosshairSize2;
     private int mWidth, mHeight;
-    
+
+    private int gx, gy;
+
 /*
     private final int[] clip;
 */
@@ -98,6 +100,7 @@ final class MapViewer {
         this.chx0 = this.chx = (w - crosshairSize) >> 1;
         this.chy0 = this.chy = (h - crosshairSize) >> 1;
         this.x = this.y = 0;
+        this.gx = this.gy = 0;
         // ??? ... start scrolling at left-top corner ... ???
         if (Config.oneTileScroll) {
             this.chx = 0 - crosshairSize2/* - 1*/;
@@ -164,6 +167,7 @@ final class MapViewer {
             this.chx0 = this.chx = (Desktop.width - crosshairSize) >> 1;
             this.chy0 = this.chy = (Desktop.height - crosshairSize) >> 1;
             this.x = this.y = 0;
+            this.gx = this.gy = 0;
             if (Config.oneTileScroll) {
                 this.chx = 0 - crosshairSize2;
                 this.chy = 0 - crosshairSize2;
@@ -300,10 +304,6 @@ final class MapViewer {
     }
 
     boolean scroll(final int direction, final int steps) {
-        final int dWidth = Desktop.width;
-        final int dHeight = Desktop.height;
-        final int crosshairSize2 = this.crosshairSize2;
-
         int mHeight = this.mHeight;
         int mWidth = this.mWidth;
         int x0 = 0;
@@ -348,6 +348,10 @@ final class MapViewer {
             x0 = slice.getX();
             y0 = slice.getY();
         }
+
+        final int dWidth = Desktop.width;
+        final int dHeight = Desktop.height;
+        final int crosshairSize2 = this.crosshairSize2;
 
         boolean dirty = false;
 
@@ -430,6 +434,33 @@ final class MapViewer {
                 break;
             default:
                 throw new IllegalArgumentException("Internal error - weird direction");
+        }
+
+        return dirty;
+    }
+
+    boolean move(int x, int y) {
+        boolean dirty = false;
+
+        if (x == -1 && y == -1) {
+            gx = gy = 0;
+        } else {
+            if (gx != 0 || gy != 0) {
+                final int dx = x - gx;
+                final int dy = y - gy;
+                if (dx < 0) {
+                    dirty |= scroll(Canvas.RIGHT, -dx);
+                } else if (dx > 0) {
+                    dirty |= scroll(Canvas.LEFT, dx);
+                }
+                if (dy < 0) {
+                    dirty |= scroll(Canvas.DOWN, -dy);
+                } else if (dy > 0) {
+                    dirty |= scroll(Canvas.UP, dy);
+                }
+            }
+            gx = x;
+            gy = y;
         }
 
         return dirty;
@@ -653,7 +684,7 @@ final class MapViewer {
 
         /* synchronized to avoid race condition with ensureSlices() */
         synchronized (this) {
-
+         
             // local ref for faster access
             final Vector slices = this.slices;
 

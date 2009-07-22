@@ -142,7 +142,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
     public static boolean safeColors;
     public static int osdAlpha                  = 0x80;
     public static int cmsCycle;
-    public static int listFont;
+    public static int listFont                  = 0x200008;
 
     // [Units]
     public static int units;
@@ -267,7 +267,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
 
         // correct initial values
         if (locationProvider == -1) {
-            if (cz.kruch.track.TrackingMIDlet.jsr179) {
+            if (cz.kruch.track.TrackingMIDlet.jsr179 || cz.kruch.track.TrackingMIDlet.android) {
                 locationProvider = Config.LOCATION_PROVIDER_JSR179;
             } else if (cz.kruch.track.TrackingMIDlet.jsr82) {
                 locationProvider = Config.LOCATION_PROVIDER_JSR82;

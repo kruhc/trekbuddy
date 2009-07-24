@@ -47,7 +47,7 @@ final class BlackberryDeviceControl extends DeviceControl {
 
     /** @overriden */
     public void run() {
-        if (backlight != 0) {
+        if (backlight != STATUS_OFF) {
             net.rim.device.api.system.Backlight.enable(false);
             net.rim.device.api.system.Backlight.enable(true);
         }

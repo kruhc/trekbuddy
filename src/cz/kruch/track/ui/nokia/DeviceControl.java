@@ -13,7 +13,10 @@ import java.util.TimerTask;
  * @author Ales Pour <kruhc@seznam.cz>
  */
 public class DeviceControl extends TimerTask {
-    
+
+    protected static final int STATUS_OFF = 0;
+    protected static final int STATUS_ON  = 1;
+
     private static DeviceControl instance;
 
     protected int backlight;
@@ -21,7 +24,7 @@ public class DeviceControl extends TimerTask {
     protected String name;
     protected String cellIdProperty, lacProperty;
 
-    private TimerTask task;
+    protected TimerTask task;
 
     public static void initialize() {
 //#ifdef __ALL__
@@ -125,7 +128,7 @@ public class DeviceControl extends TimerTask {
     }
 
     public static void flash() {
-        if (instance.backlight == 0) {
+        if (instance.backlight == STATUS_OFF) {
             Desktop.display.flashBacklight(1);
         }
     }
@@ -157,7 +160,7 @@ public class DeviceControl extends TimerTask {
     }
 
     void sync() {
-        confirm(backlight == 0 ? Resources.getString(Resources.DESKTOP_MSG_BACKLIGHT_OFF) : Resources.getString(Resources.DESKTOP_MSG_BACKLIGHT_ON));
+        confirm(backlight == STATUS_OFF ? Resources.getString(Resources.DESKTOP_MSG_BACKLIGHT_OFF) : Resources.getString(Resources.DESKTOP_MSG_BACKLIGHT_ON));
     }
 
     void close() {
@@ -175,19 +178,20 @@ public class DeviceControl extends TimerTask {
     }
 
     void nextLevel() {
-        if (backlight == 0) {
-            backlight = 1;
+        // invert status and put timer task into proper state (for schedulable control)
+        if (backlight == STATUS_OFF) {
+            backlight = STATUS_ON;
             if (isSchedulable()) {
                 Desktop.timer.scheduleAtFixedRate(task = new DeviceControl(), 7500L, 7500L);
             }
         } else {
-            backlight = 0;
+            backlight = STATUS_OFF;
             if (/*isSchedulable()*/task != null) {
                 task.cancel();
                 task = null;
             }
         }
-        if (backlight == 0) {
+        if (backlight == STATUS_OFF) {
             if (isSchedulable()) {
                 if (forceOff()) {
                     turnOff();
@@ -213,7 +217,7 @@ public class DeviceControl extends TimerTask {
     }
 
     public void run() {
-        if (instance.backlight != 0) {
+        if (instance.backlight != STATUS_OFF) {
             instance.turnOn();
         }
     }

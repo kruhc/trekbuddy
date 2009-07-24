@@ -23,7 +23,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
     public static String version;
     public static boolean jsr82, jsr120, jsr135, jsr179, jsr234, motorola179, comm;
     public static boolean sonyEricsson, sonyEricssonEx, nokia, siemens, lg, motorola, samsung;
-    public static boolean j9, jbed, intent, palm, rim, symbian, s60nd, uiq, brew, android;
+    public static boolean j9, jbed, intent, palm, rim, symbian, s60nd, s60rdfp2, uiq, brew, android;
     public static boolean sxg75, a780, s65;
 
     // diagnostics
@@ -64,7 +64,9 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         android = true;
 //#else
         nokia = platform.startsWith("Nokia");
-        s60nd = platform.startsWith("Nokia66") || platform.startsWith("NokiaN70");
+        s60nd = nokia && platform.startsWith("Nokia66") || platform.startsWith("NokiaN70");
+        s60rdfp2 = nokia && platform.indexOf("sw_platform=S60") > -1;
+        symbian = s60rdfp2;
         sonyEricsson = System.getProperty("com.sonyericsson.imei") != null;
         sonyEricssonEx = sonyEricsson || platform.startsWith("SonyEricsson");
         samsung = platform.startsWith("SAMSUNG") || platform.startsWith("SGH");
@@ -311,6 +313,9 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         }
         if (sxg75) {
             cz.kruch.track.ui.NavigationScreens.useCondensed = 1;
+        }
+        if (s60rdfp2) {
+            cz.kruch.track.maps.Map.networkInputStreamAvailable = false;
         }
 
         // cleanup after initialization?

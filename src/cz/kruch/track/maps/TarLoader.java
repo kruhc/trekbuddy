@@ -50,8 +50,14 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
             }
 
             // open stream
-            if (cz.kruch.track.TrackingMIDlet.symbian) {
-                in = SymbianService.openInputStream(map.getPath());
+            if (cz.kruch.track.TrackingMIDlet.symbian && Map.networkInputStreamAvailable) {
+                try {
+                    in = SymbianService.openInputStream(map.getPath());
+                    Map.networkInputStreamAvailable = true;
+                } catch (Exception e) { // IOE or SE
+                    // service not running/available
+                    Map.networkInputStreamAvailable = false;
+                }
             }
             if (in == null) {
                 in = nativeFile.openInputStream();

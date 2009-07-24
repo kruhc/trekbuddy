@@ -676,6 +676,7 @@ public final class Map implements Runnable {
 
     /* stream characteristic */
     public static int fileInputStreamResetable;
+    public static boolean networkInputStreamAvailable = true;
     /* behaviour flags */
     public static boolean useReset = true;
     public static boolean useSkip = true;

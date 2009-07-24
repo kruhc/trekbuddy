@@ -454,7 +454,12 @@ public final class NmeaParser {
 //        final int ms = 0;
 //#else
 //        final int ms = CharArrayTokenizer.parseInt(token.array, token.begin + 7, 3);
-        final int ms = (token.array[token.begin + 7] - '0') * 100;
+        final int ms;
+        if (token.length > 7) {
+            ms = (token.array[token.begin + 7] - '0') * 100;
+        } else {
+            ms = 0;
+        }
 //#endif
         return (3600 * hours + 60 * mins + sec) * 1000 + ms;
     }

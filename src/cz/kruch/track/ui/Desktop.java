@@ -236,6 +236,12 @@ public final class Desktop implements CommandListener,
             consoleShow(g, lineY, lc);
             lineY += lineHeight;
         }
+
+        // show version
+        consoleShow(g, lineY, Resources.getString(Resources.INFO_ITEM_VERSION) + " " + cz.kruch.track.TrackingMIDlet.version);
+        lineY += lineHeight;
+
+        // vertical space
         consoleShow(g, lineY, "");
         lineY += lineHeight;
 

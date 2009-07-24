@@ -1743,10 +1743,8 @@ public final class Desktop implements CommandListener,
         screen.removeCommand(cmdPause);
         screen.removeCommand(cmdContinue);
         screen.addCommand(cmdRun);
-        if (cmdRunLast != null) {
-            if (Config.locationProvider == Config.LOCATION_PROVIDER_JSR82) {
-                screen.addCommand(cmdRunLast);
-            }
+        if (Config.locationProvider == Config.LOCATION_PROVIDER_JSR82) {
+            screen.addCommand(cmdRunLast);
         }
 
 //#ifdef __LOG__
@@ -2431,12 +2429,10 @@ public final class Desktop implements CommandListener,
             }
 
             // smart menu
-            if (cmdRunLast != null) {
-                if (Config.locationProvider == Config.LOCATION_PROVIDER_JSR82) {
-                    screen.addCommand(cmdRunLast);
-                } else {
-                    screen.removeCommand(cmdRunLast);
-                }
+            if (Config.locationProvider == Config.LOCATION_PROVIDER_JSR82) {
+                screen.addCommand(cmdRunLast);
+            } else {
+                screen.removeCommand(cmdRunLast);
             }
 
             // notify views

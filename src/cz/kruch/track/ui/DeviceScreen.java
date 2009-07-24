@@ -100,14 +100,14 @@ final class DeviceScreen extends GameCanvas implements Runnable {
 
     /** @overriden */
     public void addCommand(Command command) {
-        if (!cz.kruch.track.TrackingMIDlet.jbed) {
+        if (command != null && !cz.kruch.track.TrackingMIDlet.jbed) {
             super.addCommand(command);
         }
     }
 
     /** @overriden */
     public void removeCommand(Command command) {
-        if (!cz.kruch.track.TrackingMIDlet.jbed) {
+        if (command != null && !cz.kruch.track.TrackingMIDlet.jbed) {
             super.removeCommand(command);
         }
     }
@@ -190,7 +190,7 @@ final class DeviceScreen extends GameCanvas implements Runnable {
 
             // find simulated command
             final Command cmd = pointerToCmd(x, y);
-
+            
             // run the command
             if (cmd != null) {
                 delegate.commandAction(cmd, this);
@@ -431,14 +431,12 @@ final class DeviceScreen extends GameCanvas implements Runnable {
         final int c = g.getColor();
         g.setFont(Desktop.fontBtns);
         if (delegate.isTracking()) {
-            drawButton(g, Desktop.paused ? delegate.cmdContinue : delegate.cmdPause, dy, dy, bw, bh);
-            drawButton(g, delegate.cmdStop, dy + bw + dy, dy, bw, bh);
+            drawButton(g, delegate.cmdStop, dy, dy, bw, bh);
+            drawButton(g, Desktop.paused ? delegate.cmdContinue : delegate.cmdPause, dy + bw + dy, dy, bw, bh);
         } else {
             drawButton(g, delegate.cmdRun, dy, dy, bw, bh);
-            if (delegate.cmdRunLast != null) {
-                if (Config.locationProvider == Config.LOCATION_PROVIDER_JSR82) {
-                    drawButton(g, delegate.cmdRunLast, dy + bw + dy, dy, bw, bh);
-                }
+            if (Config.locationProvider == Config.LOCATION_PROVIDER_JSR82 && delegate.cmdRunLast != null) {
+                drawButton(g, delegate.cmdRunLast, dy + bw + dy, dy, bw, bh);
             }
         }
         drawButton(g, delegate.cmdLoadMap, dy, 2 * dy + bh, bw, bh);
@@ -472,10 +470,18 @@ final class DeviceScreen extends GameCanvas implements Runnable {
             case 1:
             case 2:
             case 3: {
-                if (x > i && x < w / 2 - i) {
-                    cmd = delegate.isTracking() ? (Desktop.paused ? delegate.cmdContinue : delegate.cmdPause) : delegate.cmdRun;
-                } else if (x > w / 2 + i && x < w - i) {
-                    cmd = delegate.isTracking() ? delegate.cmdStop : (Config.locationProvider == Config.LOCATION_PROVIDER_JSR82 ? delegate.cmdRunLast : null);
+                if (delegate.isTracking()) {
+                    if (x > i && x < w / 2 - i) {
+                        cmd = delegate.cmdStop;
+                    } else if (x > w / 2 + i && x < w - i) {
+                        cmd = Desktop.paused ? delegate.cmdContinue : delegate.cmdPause;
+                    }
+                } else {
+                    if (x > i && x < w / 2 - i) {
+                        cmd = delegate.cmdRun;
+                    } else if (x > w / 2 + i && x < w - i) {
+                        cmd = Config.locationProvider == Config.LOCATION_PROVIDER_JSR82 && delegate.cmdRunLast != null ? delegate.cmdRunLast : null;
+                    }
                 }
             } break;
             case 5:

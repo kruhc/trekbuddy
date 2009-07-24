@@ -81,9 +81,13 @@ final class SmartList extends Canvas {
         super.sizeChanged(w, h);
         this.width = w;
         this.height = h;
-        this.sbWidth = w / 18;
-        if (this.sbWidth > 12) {
-            this.sbWidth = 12;
+        if (Desktop.screen.hasPointerEvents()) {
+            this.sbWidth = w / 18;
+            if (this.sbWidth > 15) {
+                this.sbWidth = 15;
+            }
+        } else {
+            this.sbWidth = 5;
         }
         final int v = h / getLineHeight();
         this.sbHeight = (int) Math.ceil(h * ((float)v / size())); 

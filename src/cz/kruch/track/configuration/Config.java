@@ -214,6 +214,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         dataDir = getDefaultDataDir("sdcard/", "TrekBuddy/");
         fullscreen = true;
         safeColors = true;
+		listFont = 0x200000;
 //#else
         if (cz.kruch.track.TrackingMIDlet.sxg75) {
             dataDir = "file:///fs/tb/";

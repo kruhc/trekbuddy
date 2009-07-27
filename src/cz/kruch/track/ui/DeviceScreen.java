@@ -274,8 +274,8 @@ final class DeviceScreen extends GameCanvas implements Runnable {
         if (log.isEnabled()) log.info("pointerDragged");
 //#endif
 
-        // ignore the event when menu was on
-        if (cmdExec) {
+        // ignore the event when menu was on or keylocked
+        if (cmdExec || keylock) {
             return;
         }
 

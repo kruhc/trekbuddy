@@ -31,9 +31,9 @@ public abstract class Camera implements CommandListener, Runnable {
     private static final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("Camera");
 //#endif
 
-    protected static final String PIC_PREFIX      = "pic-";
-    protected static final String PIC_SUFFIX      = ".jpg";
-    protected static final String FOLDER_PREFIX   = "images-";
+    protected static final String PIC_PREFIX    = "pic-";
+    protected static final String PIC_SUFFIX    = ".jpg";
+    protected static final String FOLDER_PREFIX = "images-";
 
     // thumbnail byte marker
     private static final byte BYTE_FF = (byte) 0xFF;
@@ -56,22 +56,37 @@ public abstract class Camera implements CommandListener, Runnable {
     private Callback callback;
     protected long timestamp;
 
-    public abstract void getResolutions(final Vector v);
-    public abstract void beforeShoot() throws MediaException;
-    public abstract void createFinder(final Form form) throws MediaException;
+    abstract void getResolutions(final Vector v);
+    abstract void beforeShoot() throws MediaException;
+    abstract void createFinder(final Form form) throws MediaException;
+    abstract boolean playSound(final String url);
+
+    public static boolean play(final String url) {
+//#ifdef __LOG__
+        if (log.isEnabled()) log.debug("play " + url);
+//#endif
+        if (Config.dataDirExists/* && api.file.File.isFs()*/) {
+            try {
+                return createPlayback().playSound(url);
+            } catch (Exception e) {
+                // ignore
+            }
+        }
+        return false;
+    }
 
     public static void show(final Displayable next, final Callback callback,
                             final long timestamp) throws Throwable {
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("capture locator: " + Config.captureLocator);
 //#endif
-        createInstance(next, callback, timestamp).open();
+        createRecorder(next, callback, timestamp).open();
     }
 
     public static String[] getStillResolutions() {
         if (resolutions == null) {
             final Vector v = new Vector(8);
-            createInstance(null, null, -1).getResolutions(v);
+            createRecorder(null, null, -1).getResolutions(v);
             resolutions = new String[v.size()];
             v.copyInto(resolutions);
         }
@@ -117,7 +132,19 @@ public abstract class Camera implements CommandListener, Runnable {
         }
     }
 
-    private static Camera createInstance(Displayable next, Callback callback, long timestamp) {
+    private static Camera createPlayback() throws Exception {
+        Camera delegate;
+        if (cz.kruch.track.TrackingMIDlet.android) {
+            delegate = (Camera) Class.forName("cz.kruch.track.fun.AndroidCamera").newInstance();
+        } else {
+            delegate = (Camera) Class.forName("cz.kruch.track.fun.Jsr135Camera").newInstance();
+        }
+        return delegate;
+    }
+
+    private static Camera createRecorder(final Displayable next,
+                                         final Callback callback,
+                                         final long timestamp) {
         Camera delegate;
         try {
             fixJsr234();

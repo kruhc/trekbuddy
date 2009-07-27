@@ -7,7 +7,7 @@ import cz.kruch.track.configuration.Config;
 import cz.kruch.track.configuration.ConfigurationException;
 import cz.kruch.track.event.Callback;
 import cz.kruch.track.fun.Friends;
-import cz.kruch.track.fun.Playback;
+import cz.kruch.track.fun.Camera;
 import cz.kruch.track.location.GpxTracklog;
 import cz.kruch.track.location.Waypoint;
 import cz.kruch.track.maps.Map;
@@ -908,10 +908,10 @@ public final class Desktop implements CommandListener,
                         boolean notified = false;
                         final String s = ((Waypoint) wpts.elementAt(wptIdx)).getLink(Waypoint.LINK_GENERIC_SOUND);
                         if (s != null) {
-                            notified = Playback.play(Config.getFolderURL(Config.FOLDER_SOUNDS) + s);
+                            notified = Camera.play(Config.getFolderURL(Config.FOLDER_SOUNDS) + s);
                         }
                         if (!notified) {
-                            notified = Playback.play(Config.getFolderURL(Config.FOLDER_SOUNDS) + Config.defaultWptSound);
+                            notified = Camera.play(Config.getFolderURL(Config.FOLDER_SOUNDS) + Config.defaultWptSound);
                         }
                         if (notified) {
                             if (!Config.powerSave) {

@@ -12,6 +12,7 @@ import javax.microedition.lcdui.Item;
 import java.util.Vector;
 import java.io.IOException;
 import java.io.OutputStream;
+import java.io.InputStream;
 
 import api.file.File;
 
@@ -28,7 +29,7 @@ final class Jsr135Camera extends Camera {
     public Jsr135Camera() {
     }
 
-    public void getResolutions(final Vector v) {
+    void getResolutions(final Vector v) {
         final String encodings = System.getProperty("video.snapshot.encodings");
         int start = encodings.indexOf("encoding=");
         while (start > -1) {
@@ -44,10 +45,18 @@ final class Jsr135Camera extends Camera {
         }
     }
 
-    public void beforeShoot() throws MediaException {
+    void beforeShoot() throws MediaException {
     }
 
-    public void run() {
+	void createFinder(final Form form) throws MediaException {
+		createFinder(form, (VideoControl) control);
+	}
+
+	boolean playSound(final String url) {
+		return sound(url);
+	}
+
+	public void run() {
         /*byte[] result = null;*/
         String result = null;
         Throwable throwable = null;
@@ -123,10 +132,6 @@ final class Jsr135Camera extends Camera {
         }
     }
 
-    public void createFinder(final Form form) throws MediaException {
-        createFinder(form, (VideoControl) control);
-    }
-
     static void createFinder(final Form form, final VideoControl control) throws MediaException {
         final Item item = (Item) control.initDisplayMode(VideoControl.USE_GUI_PRIMITIVE, null);
         item.setLayout(Item.LAYOUT_TOP | Item.LAYOUT_LEFT);
@@ -155,5 +160,19 @@ final class Jsr135Camera extends Camera {
             }
             ((VideoControl) control).setVisible(true);
 */
+    }
+
+    static boolean sound(final String url) {
+        InputStream in = null;
+        try {
+            return (new Playback(in = Connector.openInputStream(url), url)).sound();
+        } catch (Exception e) {
+            try {
+                in.close();
+            } catch (Exception exc) { // NPE or IOE
+                // ignore
+            }
+        }
+        return false;
     }
 }

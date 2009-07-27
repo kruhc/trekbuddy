@@ -7,12 +7,11 @@ import org.hecl.HeclException;
 import org.hecl.Thing;
 import org.hecl.NumberThing;
 import org.hecl.FloatThing;
-import org.hecl.StringThing;
 
 import java.util.Enumeration;
 
 import cz.kruch.track.util.NakedVector;
-import cz.kruch.track.fun.Playback;
+import cz.kruch.track.fun.Camera;
 import cz.kruch.track.configuration.Config;
 import api.location.QualifiedCoordinates;
 
@@ -224,7 +223,7 @@ public final class ControlledInterp extends Interp {
                     // does nothing
                 } break;
                 case CMD_PLAY: {
-                    if (!Playback.play(Config.getFolderURL(Config.FOLDER_PROFILES) + argv[1].toString())) {
+                    if (!Camera.play(Config.getFolderURL(Config.FOLDER_PROFILES) + argv[1].toString())) {
                         AlertType.WARNING.playSound(cz.kruch.track.ui.Desktop.display);
                     }
                 } break;

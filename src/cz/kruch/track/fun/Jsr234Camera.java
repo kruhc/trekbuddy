@@ -35,7 +35,7 @@ final class Jsr234Camera extends Camera implements PlayerListener {
     public Jsr234Camera() {
     }
 
-    public void getResolutions(final Vector v) {
+    void getResolutions(final Vector v) {
         int[] res = null;
         Player player = null;
         try {
@@ -62,7 +62,7 @@ final class Jsr234Camera extends Camera implements PlayerListener {
         }
     }
 
-    public void beforeShoot() throws MediaException {
+    void beforeShoot() throws MediaException {
         // set camera resolution
         final CameraControl cameraCtrl = (CameraControl) player.getControl("javax.microedition.amms.control.camera.CameraControl");
         cameraCtrl.setStillResolution(Config.snapshotFormatIdx);
@@ -80,8 +80,12 @@ final class Jsr234Camera extends Camera implements PlayerListener {
         }
     }
 
-    public void createFinder(final Form form) throws MediaException {
+    void createFinder(final Form form) throws MediaException {
         Jsr135Camera.createFinder(form, (VideoControl) control);
+    }
+
+    boolean playSound(final String url) {
+        return Jsr135Camera.sound(url);
     }
 
     public void playerUpdate(Player player, String event, Object eventData) {

@@ -2,23 +2,20 @@
 
 package cz.kruch.track.fun;
 
-import cz.kruch.track.configuration.Config;
-
 import javax.microedition.media.PlayerListener;
 import javax.microedition.media.Player;
 import javax.microedition.media.Manager;
 import javax.microedition.media.Control;
 import javax.microedition.media.control.VolumeControl;
-import javax.microedition.io.Connector;
 import java.io.InputStream;
 import java.io.IOException;
 
 /**
- * Sound player.
+ * JSR-135 sound player.
  *
  * @author Ales Pour <kruhc@seznam.cz>
  */
-public final class Playback implements PlayerListener {
+final class Playback implements PlayerListener {
 //#ifdef __LOG__
     private static final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("Playback");
 //#endif
@@ -28,7 +25,7 @@ public final class Playback implements PlayerListener {
     private String contentType;
     private int level;
 
-    private Playback(InputStream in, String name) {
+    Playback(InputStream in, String name) {
         this.in = in;
         if (name.endsWith(".amr")) {
             contentType = "audio/amr";
@@ -57,34 +54,7 @@ public final class Playback implements PlayerListener {
 //#endif
     }
 
-    /**
-     * Plays a sound from file.
-
-     * @param url sound file URL
-     * @return <code>true</code> if player started playing; <code>false</code> otherwise
-     */
-    public static boolean play(final String url) {
-//#ifdef __LOG__
-        if (log.isEnabled()) log.debug("play " + url);
-//#endif
-        
-        if (Config.dataDirExists/* && api.file.File.isFs()*/) {
-            InputStream in = null;
-            try {
-                return (new Playback(in = Connector.openInputStream(url), url)).sound();
-            } catch (Throwable t) {
-                try {
-                    in.close();
-                } catch (Exception e) { // NPE or IOE
-                    // ignore
-                }
-            }
-        }
-
-        return false;
-    }
-
-    private boolean sound() {
+    boolean sound() {
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("play sound");
 //#endif

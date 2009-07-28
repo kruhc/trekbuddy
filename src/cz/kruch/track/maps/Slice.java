@@ -14,10 +14,13 @@ import javax.microedition.lcdui.Image;
  * @author Ales Pour <kruhc@seznam.cz>
  */
 public class Slice {
-    public static Image NO_IMAGE = Image.createImage(4, 4); 
+    public static Image NO_IMAGE = Image.createImage(4, 4);
+
+    private static final int MAX_XY_VALUE = 0x000fffff; // 1M
+    private static final int MAX_WH_VALUE = 0x00000fff; // 4096
 
     private Image image;
-    private int wh, xy;
+    private int wx, hy;
 
     /**
      * Constructor for TB, J2N map slice.
@@ -55,19 +58,19 @@ public class Slice {
     }
 
     public final int getX() {
-        return (xy >> 16) & 0x0000ffff;
+        return wx & 0x000fffff;
     }
 
     public final int getY() {
-        return xy & 0x0000ffff;
+        return hy & 0x000fffff;
     }
 
     public final int getWidth() {
-        return (wh >> 16) & 0x0000ffff;
+        return (wx >> 20) & 0x00000fff;
     }
 
     public final int getHeight() {
-        return wh & 0x0000ffff;
+        return (hy >> 20) & 0x00000fff;
     }
 
     public final boolean isWithin(final int x, final int y) {
@@ -82,11 +85,7 @@ public class Slice {
         return false;
     }
 
-    // TODO optimize
     public String toString() {
-/*
-        return (new StringBuffer(32)).append(getX()).append('-').append(getY()).append(' ').append(getWidth()).append('x').append(getHeight()).toString();
-*/
         final StringBuffer sb = new StringBuffer(32);
         NavigationScreens.append(sb, getX()).append('-');
         NavigationScreens.append(sb, getY()).append(' ');
@@ -105,7 +104,7 @@ public class Slice {
         return sb;
     }
 
-    final void doFinal(final int xmax, final int ymax, int xi, int yi) throws InvalidMapException {
+    final void setDimensions(final int xmax, final int ymax, int xi, int yi) throws InvalidMapException {
         final int x = getX();
         if (x + xi > xmax) {
             xi = xmax - x;
@@ -114,7 +113,8 @@ public class Slice {
         if (y + yi > ymax) {
             yi = ymax - y;
         }
-        wh = asShort(xi) << 16 | asShort(yi);
+        wx |= as12b(xi) << 20;
+        hy |= as12b(yi) << 20;
     }
     
 /*
@@ -145,14 +145,22 @@ public class Slice {
             }
         }
         if (p0 > -1 && p1 > -1) {
-            xy = asShort(parseInt(array, p0 + 1, p1)) << 16 | asShort(parseInt(array, p1 + 1, i));
+            wx = as20b(parseInt(array, p0 + 1, p1));
+            hy = as20b(parseInt(array, p1 + 1, i));
         } else {
             throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_INVALID_SLICE_NAME) + token.toString());
         }
     }
 
-    private static int asShort(final int i) throws InvalidMapException {
-        if (i <= Short.MAX_VALUE) {
+    private static int as20b(final int i) throws InvalidMapException {
+        if (i <= MAX_XY_VALUE) {
+            return i;
+        }
+        throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_SLICE_TOO_BIG) + ": " + i);
+    }
+
+    private static int as12b(final int i) throws InvalidMapException {
+        if (i <= MAX_WH_VALUE) {
             return i;
         }
         throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_SLICE_TOO_BIG) + ": " + i);

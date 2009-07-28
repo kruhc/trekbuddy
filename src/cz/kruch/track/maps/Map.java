@@ -24,25 +24,10 @@ import api.location.ProjectionSetup;
  * @author Ales Pour <kruhc@seznam.cz>
  */
 public final class Map implements Runnable {
-/*
-    public interface StateListener {
-        public void mapOpened(Object result, Throwable throwable);
-        public void slicesLoading(Object result, Throwable throwable);
-        public void slicesLoaded(Object result, Throwable throwable);
-        public void loadingChanged(Object result, Throwable throwable);
-    }
-*/
-
 //#ifdef __LOG__
     private static final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("Map");
 //#endif
 
-/*
-    private static final int EVENT_MAP_OPENED       = 0;
-    private static final int EVENT_SLICES_LOADING   = 1;
-    private static final int EVENT_SLICES_LOADED    = 2;
-    private static final int EVENT_LOADING_CHANGED  = 3;
-*/
     // interaction with outside world
     private String path;
     private String name;
@@ -439,7 +424,7 @@ public final class Map implements Runnable {
 
             // set slices dimensions
             for (int i = map.numberOfSlices; --i >= 0; ) {
-                slices[i].doFinal(mapWidth, mapHeight, xi, yi);
+                slices[i].setDimensions(mapWidth, mapHeight, xi, yi);
 //#ifdef __LOG__
                 if (log.isEnabled()) log.debug("ready slice " + slices[i]);
 //#endif

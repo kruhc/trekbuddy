@@ -116,6 +116,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
 
     // group [Internal provider options]
     private static String locationTimings       = EMPTY_STRING;
+    public static int altCorrection;
 
     // group [Serial provider options]
     public static String commUrl                = "comm:COM5;baudrate=9600";
@@ -149,9 +150,6 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
 
     // [Coordinates]
     public static int cfmt;
-//    public static boolean useGridFormat;
-//    public static boolean useUTM;
-//    public static boolean useGeocachingFormat;
 
     // group [Tweaks]
     public static boolean siemensIo;
@@ -219,6 +217,8 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         if (cz.kruch.track.TrackingMIDlet.sxg75) {
             dataDir = "file:///fs/tb/";
             fullscreen = true;
+        } else if (cz.kruch.track.TrackingMIDlet.brew) {
+            altCorrection = -540;
         } else if (cz.kruch.track.TrackingMIDlet.siemens) {
             dataDir = "file:///4:/TrekBuddy/";
             fullscreen = true;
@@ -511,6 +511,12 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         } catch (Exception e) {
         }
 
+        // 0.9.88 extensions
+        try {
+            altCorrection = din.readInt();
+        } catch (Exception e) {
+        }
+
 //#ifdef __LOG__
         if (log.isEnabled()) log.info("configuration read");
 //#endif
@@ -599,6 +605,8 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         dout.writeInt(sort);
         /* since 0.9.86 */
         dout.writeInt(listFont);
+        /* since 0.9.88 */
+        dout.writeInt(altCorrection);
 
 //#ifdef __LOG__
         if (log.isEnabled()) log.info("configuration updated");

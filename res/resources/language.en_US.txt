@@ -193,6 +193,8 @@
 2311=Waypoint enlisted
 2312=Listing...
 2313=Loading...
+2314=Add waypoint to [%s]?
+2315=Enter new store filename
 2400=Camera failed
 2401=\n<no preview>
 2402=No preview :-(
@@ -245,6 +247,7 @@
 3515=Trail line
 3516=Mode
 3517=safe colors
+3518=List font
 
 # settings forms/fields/values (Location)
 3600=Provider
@@ -270,6 +273,7 @@
 3620=log gsm info
 3621=HGE-100
 3622=Keep-alive (ms)
+3623=Alt correction (m)
 
 # settings forms/fields/values (Navigation)
 3700=Wpt Proximity
@@ -287,6 +291,7 @@
 3712=position
 3713=name
 3714=distance
+3715=dynamic
 
 # settings forms/fields/values (Tweaks)
 3800=Tweaks

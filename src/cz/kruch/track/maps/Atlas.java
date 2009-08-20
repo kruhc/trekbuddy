@@ -33,22 +33,9 @@ import api.file.File;
  * @author Ales Pour <kruhc@seznam.cz>
  */
 public final class Atlas implements Runnable {
-
-/*
-    public interface StateListener {
-        public void atlasOpened(Object result, Throwable throwable);
-        public void loadingChanged(Object result, Throwable throwable);
-    }
-*/
-
 //#ifdef __LOG__
     private static final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("Atlas");
 //#endif
-
-/*
-    private static final int EVENT_ATLAS_OPENED     = 0;
-    private static final int EVENT_LOADING_CHANGED  = 1;
-*/
 
     // interaction with outside world
     private String url;

@@ -316,7 +316,7 @@ final class ComputerView
     /* trip vars */
     private volatile QualifiedCoordinates valueCoords, snrefCoords;
     private volatile long timestamp, starttime, /*snreftime,*/ timetauto;
-    /*private volatile float altLast, altDiff;*/
+    private volatile float altLast, altDiff;
     private volatile int counter, sat, fix;
     private volatile boolean fix3d;
     private float[] valuesFloat;
@@ -416,7 +416,7 @@ final class ComputerView
             final long t = l.getTimestamp();
 
             // calculate time diff
-            final long dt = timestamp == 0 ? 0 : (t - timestamp);
+            final float dt = timestamp == 0 ? 0 : (t - timestamp);
 
             // update times
             timestamp = t;
@@ -440,9 +440,7 @@ final class ComputerView
 
                 // accuracy
                 final float hAccuracy = l.getQualifiedCoordinates().getHorizontalAccuracy();
-/*
-                final float vAccuracy = l.getQualifiedCoordinates().getVerticalAccuracy();
-*/
+//                final float vAccuracy = l.getQualifiedCoordinates().getVerticalAccuracy();
 
                 // calculate distance - emulate static navigation
                 float ds = 0F;
@@ -485,6 +483,19 @@ final class ComputerView
 
                     // alt
                     valuesFloat[VALUE_ALT] = alt;
+
+                    // asc-t/desc-t
+                    if (true/*fix3d && vAccuracy < 15F &&*/) {
+                        altDiff += (alt - altLast);
+                        if (altDiff >= 50F) {
+                            valuesFloat[VALUE_ASC_T] += altDiff;
+                            altDiff = 0F;
+                        } else if (altDiff <= -50F) {
+                            valuesFloat[VALUE_DESC_T] += altDiff;
+                            altDiff = 0F;
+                        }
+                        altLast = alt;
+                    }
                 }
 
                 // course, course-d
@@ -500,10 +511,11 @@ final class ComputerView
                 // spd, spd-d
                 float f = l.getSpeed();
                 if (!Float.isNaN(f)) {
+                    
                     // to km/h
                     f *= 3.6F;
 
-                    // time and spd-avg 'auto' - when speed over ~1.8 km/h
+                    // 'auto' time and spd-avg - when speed over ~1.8 km/h
                     if (f > AUTO_MIN) {
                         timetauto += dt;
                         if (valuesFloat[VALUE_DIST_T] > 0.5F || tt > 30000) {
@@ -549,23 +561,6 @@ final class ComputerView
                 // spd-avg as dist / time
                 if (valuesFloat[VALUE_DIST_T] > 0.5F || tt > 30000) {
                     valuesFloat[VALUE_SPD_AVG] = valuesFloat[VALUE_DIST_T] / ((float) tt / (1000 * 3600));
-                }
-*/
-
-/*
-                // asc/desc - decent accuracy, valid altitude
-                if (fix3d && vAccuracy < 15F && !Float.isNaN(alt)) {
-                    if (!Float.isNaN(altLast)) {
-                        altDiff += (alt - altLast);
-                        if (altDiff > 25F) {
-                            valuesFloat[VALUE_ASC_T] += altDiff;
-                            altDiff = 0F;
-                        } else if (altDiff < -25F) {
-                            valuesFloat[VALUE_DESC_T] += altDiff;
-                            altDiff = 0F;
-                        }
-                    }
-                    altLast = alt;
                 }
 */
             }
@@ -1000,12 +995,7 @@ final class ComputerView
                                 }
                                 switch (idx) {
                                     case VALUE_ALT: {
-                                        float alt = valuesFloat[idx];
-                                        switch (units) {
-                                            case Config.UNITS_IMPERIAL:
-                                                alt /= 0.3048F;
-                                            break;
-                                        }
+                                        float alt = asAltitude(units, valuesFloat[idx]);
                                         NavigationScreens.append(sb, (int) alt);
                                     } break;
                                     case VALUE_COURSE:  {
@@ -1047,20 +1037,9 @@ final class ComputerView
                                     case VALUE_SPD_DAVG: {
                                         float value = valuesFloat[idx];
                                         if (idx == VALUE_ALT_D) {
-                                            switch (units) {
-                                                case Config.UNITS_IMPERIAL:
-                                                    value /= 0.3048F;
-                                                break;
-                                            }
+                                            value = asAltitude(units, value);
                                         } else if (idx > VALUE_COURSE_D) {
-                                            switch (units) {
-                                                case Config.UNITS_IMPERIAL:
-                                                    value /= 1.609F;
-                                                break;
-                                                case Config.UNITS_NAUTICAL:
-                                                    value /= 1.852F;
-                                                break;
-                                            }
+                                            value = fromKmh(units, value);
                                         }
                                         if (value >= 0F) {
                                             sb.append('+');
@@ -1118,9 +1097,7 @@ final class ComputerView
                                             sb.append(NO_TIME);
                                         } else {
                                             TIME_CALENDAR.setTimeSafe(timestamp);
-                                            printTime(sb, TIME_CALENDAR.get(Calendar.HOUR_OF_DAY),
-                                                          TIME_CALENDAR.get(Calendar.MINUTE),
-                                                          TIME_CALENDAR.get(Calendar.SECOND));
+                                            printTime(sb, TIME_CALENDAR, units);
                                         }
                                         narrowChars += 2;
                                     } break;
@@ -1154,17 +1131,7 @@ final class ComputerView
                                         if (dist < 0F) {
                                             sb.append('?');
                                         } else {
-                                            switch (units) {
-                                                case Config.UNITS_METRIC:
-                                                    dist /= 1000F;
-                                                break;
-                                                case Config.UNITS_IMPERIAL:
-                                                    dist /= 1609F;
-                                                break;
-                                                case Config.UNITS_NAUTICAL:
-                                                    dist /= 1852F;
-                                                break;
-                                            }
+                                            dist = asDistance(units, dist);
                                             NavigationScreens.append(sb, dist, 0);
                                             narrowChars++;
                                         }
@@ -1181,17 +1148,13 @@ final class ComputerView
                                                     final long dt = (long) (1000 * (dist / (vmg / 3.6F)));
                                                     final long eta = timestamp + (dt < 0F ? 2 * -dt : dt);
                                                     ETA_CALENDAR.setTime(eta);
-                                                    printTime(sb, ETA_CALENDAR.get(Calendar.HOUR_OF_DAY),
-                                                                  ETA_CALENDAR.get(Calendar.MINUTE),
-                                                                  ETA_CALENDAR.get(Calendar.SECOND));
+                                                    printTime(sb, ETA_CALENDAR, units);
                                                 } else {
                                                     sb.append(INF_TIME);
                                                 }
                                             } else {
                                                 ETA_CALENDAR.setTimeSafe(timestamp);
-                                                printTime(sb, ETA_CALENDAR.get(Calendar.HOUR_OF_DAY),
-                                                              ETA_CALENDAR.get(Calendar.MINUTE),
-                                                              ETA_CALENDAR.get(Calendar.SECOND));
+                                                printTime(sb, ETA_CALENDAR, units);
                                             }
                                         }
                                         narrowChars += 2;
@@ -1215,11 +1178,7 @@ final class ComputerView
                                         if (Float.isNaN(alt)) {
                                             sb.append('?');
                                         } else {
-                                            switch (units) {
-                                                case Config.UNITS_IMPERIAL:
-                                                    alt /= 0.3048F;
-                                                break;
-                                            }
+                                            alt = asAltitude(units, alt);
                                             NavigationScreens.append(sb, (int) alt);
                                         }
                                     } break;
@@ -1323,12 +1282,7 @@ final class ComputerView
                                         if (Float.isNaN(wptAlt)) {
                                             sb.append('?');
                                         } else {
-                                            float diff = wptAlt - valuesFloat[VALUE_ALT];
-                                            switch (units) {
-                                                case Config.UNITS_IMPERIAL:
-                                                    diff /= 0.3048F;
-                                                break;
-                                            }
+                                            float diff = asAltitude(units, wptAlt - valuesFloat[VALUE_ALT]);
                                             NavigationScreens.append(sb, (int) diff);
                                         }
                                     } break;
@@ -1563,15 +1517,24 @@ final class ComputerView
     }
 
     private static StringBuffer printTime(final StringBuffer sb,
+                                          final SimpleCalendar calendar, final int units) {
+        final int H = units == Config.UNITS_IMPERIAL ? Calendar.HOUR : Calendar.HOUR_OF_DAY;
+        return printTime(sb, calendar.get(H), calendar.get(Calendar.MINUTE), calendar.get(Calendar.SECOND));
+    }
+
+    private static StringBuffer printTime(final StringBuffer sb,
                                           final int hour, final int min, final int sec) {
-        if (hour < 10)
+        if (hour < 10) {
             sb.append('0');
+        }
         NavigationScreens.append(sb, hour).append(':');
-        if (min < 10)
+        if (min < 10) {
             sb.append('0');
+        }
         NavigationScreens.append(sb, min).append(':');
-        if (sec < 10)
+        if (sec < 10) {
             sb.append('0');
+        }
         NavigationScreens.append(sb, sec);
 
         return sb;
@@ -1673,6 +1636,7 @@ final class ComputerView
         // reset vars
         valueCoords = snrefCoords = null;
         timestamp = starttime = timetauto = 0;
+        altLast = altDiff = Float.NaN;
         counter = sat = fix = 0;
         fix3d = false;
 /*
@@ -1959,7 +1923,6 @@ final class ComputerView
          final int length = (int) size;
          final byte[] data = new byte[length];
          int offset = 0;
-
          int count = in.read(data, 0, length);
          while (count > -1 && offset < length) {
              offset += count;
@@ -1975,8 +1938,33 @@ final class ComputerView
 
      private static void colorifyPng(final byte[] data, final int color) {
          final int length = data.length;
-         final int tRnsStart = find_tRns(data, length);
+         final int tRnsStart = findChunk(data, 8, length, "tRNS".toCharArray());
+         if (tRnsStart > 0) {
+             final int trnsLength = getChunkLength(data, tRnsStart);
+             final int plteStart = findChunk(data, 8, length, "PLTE".toCharArray());
+             if (plteStart > 0) {
+                 final int plteLength = getChunkLength(data, plteStart);
+                 final int plteEntries = plteLength / 3;
+                 int plteOffset = plteStart;
+                 for (int i = 0; i < plteEntries; i++) {
+                     if (i >= trnsLength || data[tRnsStart + i] != 0) {
+                         data[plteOffset++] = (byte) ((color >>> 16) & 0xff);
+                         data[plteOffset++] = (byte) ((color >>> 8) & 0xff);
+                         data[plteOffset++] = (byte) (color & 0xff);
+                     } else {
+                         plteOffset += 3;
+                     }
+                 }
+                 final long plteCrc = calcCrc(data, plteStart - 4, 4 + plteLength);
+                 plteOffset = plteStart + plteLength;
+                 data[plteOffset++] = (byte) ((plteCrc >>> 24) & 0xff);
+                 data[plteOffset++] = (byte) ((plteCrc >>> 16) & 0xff);
+                 data[plteOffset++] = (byte) ((plteCrc >>> 8) & 0xff);
+                 data[plteOffset] = (byte) (plteCrc & 0xff);
+             }
+         }
 
+/*
          if (tRnsStart > 0) {
              int chunkStart = 8;
              int chunkDataLength = 0;
@@ -2028,18 +2016,13 @@ final class ComputerView
                      if (offset >= chunkStart) {
                          if (offset <= chunkStart + 3) {
                              chunkDataLength |= i << 8 * (3 - (offset - chunkStart));
-     //                        if (offset == chunkStart + 3) {
-     //                            System.out.println("chunk data length = " + chunkDataLength);
-     //                        }
                          } else if (plte == 4) {
                              if (plteStart == 0) {
                                  plteStart = chunkStart + 4;
                                  plteDataOffset = 0;
                              } else if (offset < chunkStart + 4 + 4 + chunkDataLength) {
-     //                            System.out.println("palette byte at " + offset + " is " + (byte) i);
                                  data[offset] = (byte) i;
                                  if (plteDataOffset % 3 == 0) {
-     //                                if (data[offset] != (byte) 0xff || data[offset + 1] != (byte) 0xff || data[offset + 2] != (byte) 0xff) {
                                      if (data[tRnsStart + plteDataOffset / 3] != 0) {
                                          data[offset] = (byte) ((color >>> 16) & 0xff);
                                          data[offset + 1] = (byte) ((color >>> 8) & 0xff);
@@ -2058,22 +2041,24 @@ final class ComputerView
                              }
                          } else if (offset == chunkStart + 4 + 4 + chunkDataLength) {
                              chunkStart += 4 + 4 + chunkDataLength + 4;
-     //                        System.out.println("next chunk at = " + chunkStart);
                          }
                      }
                  }
              }
          }
+*/
      }
 
      private static long calcCrc(final byte[] buf, int off, int len) {
          final int[] crc_table = CRC_TABLE;
          int c = ~0;
-         while (--len >= 0)
+         while (--len >= 0) {
              c = crc_table[(c ^ buf[off++]) & 0xff] ^ (c >>> 8);
+         }
          return (long) ~c & 0xffffffffL;
      }
 
+/*
      private static int find_tRns(final byte[] data, final int length) {
          int trns = 0;
          for (int offset = 8; offset < length; offset++) {
@@ -2116,6 +2101,58 @@ final class ComputerView
 
          return -1;
      }
+*/
+
+     private static int findChunk(final byte[] data, final int offset,
+                                  final int length, final char[] sequence) {
+         int chunk = 0;
+         for (int rel = offset; rel < length; rel++) {
+             final int c = data[rel];
+
+             switch (chunk) {
+                 case 0:
+                     if (c == sequence[0]) {
+                         chunk++;
+                     }
+                 break;
+                 case 1:
+                     if (c == sequence[1]) {
+                         chunk++;
+                     } else {
+                         chunk = 0;
+                     }
+                 break;
+                 case 2:
+                     if (c == sequence[2]) {
+                         chunk++;
+                     } else {
+                         chunk = 0;
+                     }
+                 break;
+                 case 3:
+                     if (c == sequence[3]) {
+                         chunk++;
+                     } else {
+                         chunk = 0;
+                     }
+                 break;
+             }
+
+             if (chunk == 4) {
+                 return rel + 1;
+             }
+         }
+
+         return -1;
+     }
+
+     private static int getChunkLength(final byte[] data, final int offset) {
+         int result = (data[offset - 8] & 0xff) << 24;
+         result |= (data[offset - 7] & 0xff) << 16;
+         result |= (data[offset - 6] & 0xff) << 8;
+         result |= (data[offset - 5] & 0xff);
+         return result;
+     }
 
      private class Rotator extends TimerTask {
 
@@ -2143,6 +2180,32 @@ final class ComputerView
         return value;
     }
 
+    private static float asDistance(final int units, float value) {
+        switch (units) {
+            case Config.UNITS_METRIC:
+                value /= 1000F;
+            break;
+            case Config.UNITS_IMPERIAL:
+                value /= 1609F;
+            break;
+            case Config.UNITS_NAUTICAL:
+                value /= 1852F;
+            break;
+        }
+
+        return value;
+    }
+
+    private static float asAltitude(final int units, float value) {
+        switch (units) {
+            case Config.UNITS_IMPERIAL:
+                value /= 0.3048F;
+            break;
+        }
+
+        return value;
+    }
+
 //#ifdef __HECL__
 
     private void findHandlers() throws IOException, HeclException {
@@ -2164,7 +2227,6 @@ final class ComputerView
                 for (Enumeration e = dir.list("*.hcl", false); e.hasMoreElements(); ) {
                     final String filename = (String) e.nextElement();
                     try {
-
                         // read script from file
                         reader = new InputStreamReader(Connector.openInputStream(Config.getFolderURL(Config.FOLDER_PROFILES) + filename));
                         int c = reader.read(buffer);
@@ -2173,7 +2235,6 @@ final class ComputerView
                             c = reader.read(buffer);
                         }
                         String script = sb.toString();
-
 //#ifdef __LOG__
                         if (log.isEnabled()) {
                             log.debug("-- evaluate: \n");
@@ -2181,7 +2242,6 @@ final class ComputerView
                             log.debug("-- ~evaluate");
                         }
 //#endif
-
                         // register handlers
                         interp.eval(new Thing(script));
 
@@ -2235,6 +2295,24 @@ final class ComputerView
         }
     }
 
+    private static final int HASH_ALT           = 0x179a9;      // 96681
+    private static final int HASH_FIX           = 0x18c15;      // 101397
+    private static final int HASH_LAT	        = 0x1a19f;      // 106911
+    private static final int HASH_LON	        = 0x1a34b;      // 107339
+    private static final int HASH_SAT           = 0x1bbe6;      // 113638
+    private static final int HASH_SPD           = 0x1bda7;      // 114087
+    private static final int HASH_HDOP          = 0x30cbdd;     // 3197917
+    private static final int HASH_PDOP          = 0x346ed5;     // 3436245
+    private static final int HASH_SATV          = 0x35c150;     // 3522896
+    private static final int HASH_TIME	        = 0x3652cd;     // 3560141
+    private static final int HASH_VDOP          = 0x37290f;     // 3614991
+    private static final int HASH_ALT_D         = 0x589b940;    // 92911936
+    private static final int HASH_ASC_T         = 0x58ca818;    // 93104152
+    private static final int HASH_UTM_X	        = 0x6a71e27;    // 111615527
+    private static final int HASH_UTM_Y	        = 0x6a71e28;    // 111615528
+    private static final int HASH_WPT_DIST	    = 0x37011f78;   // 922820472
+    private static final int HASH_WPT_ALT	    = 0x5c9ce597;   // 1553786263
+    private static final int HASH_WPT_AZI	    = 0x5c9ce73e;   // 1553786686
     private static final int HASH_SPD_AVG_AUTO  = 0x866fa930;   // -2039502544
     private static final int HASH_SPD_AVG       = 0x882281ac;   // -2011004500
     private static final int HASH_SPD_MAX       = 0x8822ac3e;   // -2010993602
@@ -2243,37 +2321,19 @@ final class ComputerView
     private static final int HASH_DIST_T        = 0xb0a2420d;   // -1331543539
     private static final int HASH_COURSE_D      = 0xea0b4b32;   // -368358606
     private static final int HASH_PROFILE       = 0xed8e89a9;   // -309425751
-    private static final int HASH_ALT           = 0x179a9;      // 96681
-    private static final int HASH_FIX           = 0x18c15;      // 101397
-    private static final int HASH_SAT           = 0x1bbe6;      // 113638
-    private static final int HASH_SPD           = 0x1bda7;      // 114087
-    private static final int HASH_HDOP          = 0x30cbdd;     // 3197917
-    private static final int HASH_PDOP          = 0x346ed5;     // 3436245
-    private static final int HASH_SATV          = 0x35c150;     // 3522896
-    private static final int HASH_VDOP          = 0x37290f;     // 3614991
-    private static final int HASH_ALT_D         = 0x589b940;    // 92911936
-    private static final int HASH_ASC_T         = 0x58ca818;    // 93104152
+    private static final int HASH_WPT_ALT_DIFF	= 0xeeff2e7b;   // -285266309
+
 //    private static final int HASH_SPD_D         = 0x688f5be;    // 109639102
 //    private static final int HASH_SPD_DAVG      = 0x7c2ec454;   // 2083439700
 //    private static final int HASH_SPD_DMAX      = 0x7c2eeee6;   // 2083450598
-
 //    private static final int HASH_COORDS	    = 0xaf40241e; // -1354750946
 //    private static final int HASH_STATUS	    = 0xcacdcff2; // -892481550
 //    private static final int HASH_TIME_T	    = 0xcbecd974; // -873670284
 //    private static final int HASH_TIME_T_AUTO	= 0xdbccee68; // -607326616
-//    private static final int HASH_WPT_ALT_DIFF	= 0xeeff2e7b; // -285266309
-    private static final int HASH_LAT	        = 0x1a19f; // 106911
-    private static final int HASH_LON	        = 0x1a34b; // 107339
 //    private static final int HASH_PRN	        = 0x1b2ac; // 111276
 //    private static final int HASH_SNR	        = 0x1bd77; // 114039
 //    private static final int HASH_PACE	        = 0x346213; // 3432979
-    private static final int HASH_TIME	        = 0x3652cd; // 3560141
-    private static final int HASH_UTM_X	        = 0x6a71e27; // 111615527
-    private static final int HASH_UTM_Y	        = 0x6a71e28; // 111615528
-//    private static final int HASH_WPT_DIST	    = 0x37011f78; // 922820472
 //    private static final int HASH_WPT_NAME	    = 0x37058c5d; // 923110493
-//    private static final int HASH_WPT_ALT	    = 0x5c9ce597; // 1553786263
-    private static final int HASH_WPT_AZI	    = 0x5c9ce73e; // 1553786686
 //    private static final int HASH_WPT_CMT	    = 0x5c9ced38; // 1553788216
 //    private static final int HASH_WPT_ETA	    = 0x5c9cf580; // 1553790336
 //    private static final int HASH_WPT_IMG	    = 0x5c9d03b1; // 1553793969
@@ -2325,6 +2385,9 @@ final class ComputerView
                 } break;
                 case HASH_PROFILE: {
                     result = StringThing.create(Config.cmsProfile);
+                } break;
+                case HASH_WPT_ALT_DIFF: {
+                    // TODO
                 } break;
                 case HASH_ALT: {
                     idx = VALUE_ALT;
@@ -2397,6 +2460,26 @@ final class ComputerView
                             val = 0D;
                         }
                         result = DoubleThing.create(val);
+                    } break;
+                    case HASH_WPT_DIST: {
+                        float dist = navigator.getWptDistance();
+                        if (dist < 0F) {
+                            dist = 0;
+                        } else {
+                            dist = asDistance(units, dist);
+                        }
+                        result = FloatThing.create(dist);
+                    } break;
+                    case HASH_WPT_ALT: {
+                        float alt = 0;
+                        final Waypoint wpt = navigator.getWpt();
+                        if (wpt != null) {
+                            alt = wpt.getQualifiedCoordinates().getAlt();
+                            if (!Float.isNaN(alt)) {
+                                alt = asAltitude(units, alt);
+                            }
+                        }
+                        result = FloatThing.create(alt);
                     } break;
                     case HASH_WPT_AZI: {
                         result = IntThing.create(navigator.getWptAzimuth());

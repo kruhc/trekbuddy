@@ -24,16 +24,10 @@ import cz.kruch.track.util.CharArrayTokenizer;
  * @author Ales Pour <kruhc@seznam.cz>
  */
 final class TarSlice extends Slice {
+
     private int streamOffset;
 
-/*
-    public TarSlice(String path) throws InvalidMapException {
-        super(path);
-    }
-*/
-
-    TarSlice(CharArrayTokenizer.Token token) throws InvalidMapException {
-        super(token);
+    TarSlice() {
     }
 
     public int getStreamOffset() {

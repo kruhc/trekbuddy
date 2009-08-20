@@ -27,13 +27,36 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
     private InputStream nativeIn;
     private TarInputStream tarIn;
 
+    private long[] pointers;
+    private int numberOfPointers;
+    private int hintTmiFileSize, hintTmiTokenLength, hintInitialCapacity,
+                increment;
+    private int readLimit;
+
     TarLoader() {
-        super();
         this.isTar = true;
     }
 
-    protected Slice newSlice(final CharArrayTokenizer.Token token) throws InvalidMapException {
-        return new TarSlice(token);
+    Slice newSlice() {
+        return new TarSlice();
+    }
+
+    Slice getSlice(int x, int y) {
+        final TarSlice slice = (TarSlice) super.getSlice(x, y);
+        final long xy = slice.getXyLong();
+        final long[] pointers = this.pointers;
+        for (int i = numberOfPointers; --i >= 0; ) {
+            final long pointer = pointers[i];
+            if (((pointer & 0x000000ffffffffffL) ^ xy) == 0) {
+                slice.setStreamOffset((int)(pointer >> 40));
+                return slice;
+            }
+        }
+        return null;
+    }
+
+    boolean hasSlices() {
+        return pointers != null;
     }
 
     void loadMeta(final Map map) throws IOException {
@@ -70,30 +93,30 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
             if (Map.useReset) {
                 if (in.markSupported()) {
                     try {
-                        in.mark((int) nativeFile.fileSize());
+                        in.mark(readLimit = (int) nativeFile.fileSize());
                         nativeIn = in;
                         Map.fileInputStreamResetable = 1;
-//#ifdef __LOG__
-                        if (log.isEnabled()) log.debug("input stream support marking, very good");
-//#endif
+                    } catch (OutOfMemoryError e) {
+                        /*
+                         * OutOfMemoryError on S60. Let's try smaller buffer.
+                         */
+                        // TODO
+                        Map.fileInputStreamResetable = -7;
                     } catch (Throwable t) {
-                        /* OutOfMemoryError on S60 3rd without helper service */
+                        Map.fileInputStreamResetable = -1;
                     }
                 } else {
                     try {
                         in.reset(); // try reset
                         nativeIn = in;
                         Map.fileInputStreamResetable = 2;
-//#ifdef __LOG__
-                        if (log.isEnabled()) log.debug("input stream may be resetable");
-//#endif
                     } catch (Throwable t) {
-                        Map.fileInputStreamResetable = -1;
-//#ifdef __LOG__
-                        if (log.isEnabled()) log.debug("input stream definitely not resetable");
-//#endif
+                        Map.fileInputStreamResetable = -2;
                     }
                 }
+//#ifdef __LOG__
+                if (log.isEnabled()) log.debug("input stream resetable? " + Map.fileInputStreamResetable);
+//#endif
             }
 
             /*
@@ -101,7 +124,7 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
             */
 
             // try tar metainfo file first
-            if (getMapSlices() == null) {
+            if (pointers == null) {
                 loadTmi(map);
             }
 
@@ -109,10 +132,10 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
             tarIn = new TarInputStream(in);
 
             // do not have calibration or slices yet
-            if (getMapCalibration() == null || getMapSlices() == null) {
+            if (getMapCalibration() == null || pointers == null) {
 
                 // changes during loading - we need to remember initial state
-                final boolean gotSlices = getMapSlices() != null;
+                final boolean gotSlices = pointers != null;
 //#ifdef __LOG__
                 if (log.isEnabled()) log.debug("calibration or slices missing; " + gotSlices);
 //#endif
@@ -128,7 +151,7 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
                         && (entryName.endsWith(".png") || entryName.endsWith(".jpg"))) { // slice
 
                         // add slice
-                        ((TarSlice) addSlice(entryName)).setStreamOffset((int) (entry.getPosition()));
+                        registerSlice(entryName, (int) entry.getPosition());
 
                     } else if (entryName.indexOf(File.PATH_SEPCHAR) == -1
                         && getMapCalibration() == null) { // no calibration nativeFile yet
@@ -181,91 +204,23 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
         }
     }
 
-    private void loadTmi(final Map map) throws IOException {
-        // var
-        File file = null;
-
-        try {
-            // check for .ser nativeFile
-            final String tmiPath = map.getPath().substring(0, map.getPath().lastIndexOf('.')) + ".tmi";
-            file = File.open(tmiPath);
-            if (file.exists()) {
-//#ifdef __LOG__
-                if (log.isEnabled()) log.debug("gonna use " + tmiPath);
-//#endif
-                // each line is a slice filename
-                LineReader reader = null;
-                final CharArrayTokenizer tokenizer = new CharArrayTokenizer();
-                final char[] delims = { ':' };
-                try {
-                    // read entry meta info
-                    reader = new LineReader(file.openInputStream());
-                    CharArrayTokenizer.Token token = reader.readToken(false);
-                    while (token != null) {
-
-                        // skip leading "block  ", if any...
-                        token.skipNonDigits();
-
-                        // init tokenizer
-                        tokenizer.init(token, delims, false);
-
-                        // get block offset
-                        final int block = tokenizer.nextInt();
-
-                        // move to slice name
-                        token = tokenizer.next();
-
-                        // trim
-                        token.trim();
-//#ifdef __LOG__
-                        if (log.isEnabled()) log.debug("tmi line filename: " + token.toString());
-//#endif
-
-                        // add slice
-                        if (token.startsWith("set/") && (token.endsWith(".png") || token.endsWith(".jpg"))) {
-                            ((TarSlice) addSlice(token)).setStreamOffset(block * TarInputStream.DEFAULT_RCDSIZE);
-                        }
-
-                        // next line
-                        token = null; // gc hint
-                        token = reader.readToken(false);
-                    }
-
-                } catch (InvalidMapException e) {
-                    throw e;
-                } catch (IOException e) {
-                    throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_PARSE_SET_FAILED), e);
-                } finally {
-
-                    // close reader
-                    try {
-                        reader.close();
-                    } catch (Exception e) { // NPE or IOE
-                        // ignore
-                    }
-//#ifdef __LOG__
-                    if (log.isEnabled()) log.debug("tmi utilized: " + tmiPath);
-//#endif
-                }
-            }
-
-        } finally {
-
-            // close file
-            try {
-                file.close();
-            } catch (Exception e) { // NPE or IOE
-                // ignore
-            }
-        }
-    }
-
-    public void dispose() throws IOException {
+    void dispose(final boolean deep) throws IOException {
         // detach buffered stream
         buffered.setInputStream(null);
 
+        // release pointers when deep
+        if (deep) {
+//#ifdef __LOG__
+            if (log.isEnabled()) log.debug("release pointers");
+//#endif
+            pointers = null;
+        }
+
         // dispose tar stream
         if (tarIn != null) {
+//#ifdef __LOG__
+            if (log.isEnabled()) log.debug("release tar input stream");
+//#endif
             tarIn.setInputStream(null);
             tarIn = null; // gc hint
         }
@@ -294,10 +249,10 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
         }
 
         // parent
-        super.dispose();
+        super.dispose(deep);
     }
 
-    public void loadSlice(final Slice slice) throws IOException {
+    void loadSlice(final Slice slice) throws IOException {
         // input stream
         InputStream in = null;
 
@@ -456,5 +411,158 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
                 // ignore
             }
         }
+    }
+
+    private void loadTmi(final Map map) throws IOException {
+        // var
+        File file = null;
+
+        try {
+            // check for .tmi nativeFile
+            final String tmiPath = map.getPath().substring(0, map.getPath().lastIndexOf('.')) + ".tmi";
+            file = File.open(tmiPath);
+            if (file.exists()) {
+//#ifdef __LOG__
+                if (log.isEnabled()) log.debug("gonna use " + tmiPath);
+//#endif
+                // helper member
+                hintTmiFileSize = (int) file.fileSize();
+
+                // each line is a slice filename
+                LineReader reader = null;
+                final CharArrayTokenizer tokenizer = new CharArrayTokenizer();
+                final char[] delims = { ':' };
+                try {
+                    // read entry meta info
+                    reader = new LineReader(file.openInputStream());
+                    CharArrayTokenizer.Token token = reader.readToken(false);
+                    while (token != null) {
+
+                        // skip leading "block  ", if any...
+                        token.skipNonDigits();
+
+                        // init tokenizer
+                        tokenizer.init(token, delims, false);
+
+                        // get block offset
+                        final int block = tokenizer.nextInt();
+
+                        // move to slice name
+                        token = tokenizer.next();
+
+                        // set helper member
+                        hintTmiTokenLength = token.length;
+
+                        // trim
+                        token.trim();
+//#ifdef __LOG__
+                        if (log.isEnabled()) log.debug("tmi line filename: " + token.toString());
+//#endif
+
+                        // add slice
+                        if (token.startsWith("set/") && (token.endsWith(".png") || token.endsWith(".jpg"))) {
+                            registerSlice(token, block * TarInputStream.DEFAULT_RCDSIZE);
+                        }
+
+                        // next line
+                        token = null; // gc hint
+                        token = reader.readToken(false);
+                    }
+
+                } catch (InvalidMapException e) {
+                    throw e;
+                } catch (IOException e) {
+                    throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_PARSE_SET_FAILED), e);
+                } finally {
+
+                    // close reader
+                    try {
+                        reader.close();
+                    } catch (Exception e) { // NPE or IOE
+                        // ignore
+                    }
+//#ifdef __LOG__
+                    if (log.isEnabled()) log.debug("tmi utilized: " + tmiPath);
+//#endif
+                }
+            }
+
+        } finally {
+
+            // close file
+            try {
+                file.close();
+            } catch (Exception e) { // NPE or IOE
+                // ignore
+            }
+        }
+    }
+
+    private void registerSlice(final CharArrayTokenizer.Token token,
+                               final int block) throws InvalidMapException {
+        // add slice
+        final long xy = addSlice(token);
+
+        // already got some?
+        if (pointers != null) {
+
+            // ensure array capacity
+            if (numberOfPointers == pointers.length) {
+
+                // allocate new array
+                final long[] array = new long[numberOfPointers + increment];
+
+                // copy existing pointers
+                System.arraycopy(pointers, 0, array, 0, numberOfPointers);
+
+                // use new array
+                this.pointers = null; // gc hint
+                this.pointers = array;
+            }
+
+        } else { // no, first slice being added
+
+            // suggest pointers capacity
+            if (hintTmiFileSize > 0 && hintTmiTokenLength > 0) {
+                hintInitialCapacity = (hintTmiFileSize / hintTmiTokenLength) / 2;
+                if (hintInitialCapacity < 64) {
+                    hintInitialCapacity = 64;
+                }
+            }
+
+            // alloc initial array
+            this.pointers = allocate();
+            this.numberOfPointers = 0;
+
+        }
+
+        // cook and add pointer
+        this.pointers[this.numberOfPointers++] = (long) block << 40 | xy;
+    }
+
+    private long[] allocate() {
+        final Calibration calibration = getMapCalibration();
+        int initialCapacity;
+        if (calibration != null) {
+            if (!isGPSka) {
+                initialCapacity = ((((calibration.getWidth() * calibration.getHeight()) / (256 * 256)) / 16) + 1) * 16;
+                if (initialCapacity < 16) {
+                    initialCapacity = 16;
+                }
+            } else {
+                initialCapacity = 1;
+            }
+        } else if (hintInitialCapacity > 0) {
+            initialCapacity = hintInitialCapacity;
+        } else {
+            initialCapacity = 256;
+        }
+        increment = initialCapacity / 4;
+
+//#ifdef __LOG__
+        if (log.isEnabled()) log.debug("increment is " + increment);
+//#endif
+
+        return new long[initialCapacity];
     }
 }

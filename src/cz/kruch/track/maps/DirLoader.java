@@ -39,12 +39,10 @@ final class DirLoader extends Map.Loader implements Atlas.Loader {
     private String dir;
 
     DirLoader() {
-        super();
     }
 
     void init(final Map map, final String url) throws IOException {
         super.init(map, url);
-        this.isGPSka = url.toLowerCase().endsWith(Calibration.XML_EXT);
 
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("init map " + url);
@@ -100,7 +98,7 @@ final class DirLoader extends Map.Loader implements Atlas.Loader {
         }
 
         // prepare slices
-        if (getMapSlices() == null) {
+        if (getSliceBasename() == null) {
 //#ifdef __LOG__
             if (log.isEnabled()) log.debug("do not have slices yet");
 //#endif
@@ -150,7 +148,7 @@ final class DirLoader extends Map.Loader implements Atlas.Loader {
 
     void loadSlice(final Slice slice) throws IOException {
         // path sb
-        StringBuffer sb = new StringBuffer(32);
+        final StringBuffer sb = new StringBuffer(32);
 
         // construct slice path
         sb.append(dir).append(SET_DIR_PREFIX).append(basename);
@@ -161,7 +159,6 @@ final class DirLoader extends Map.Loader implements Atlas.Loader {
 
         // get full url
         final String url = sb.toString();
-        sb = null; // gc hint
 
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("load slice image from " + url);
@@ -182,8 +179,8 @@ final class DirLoader extends Map.Loader implements Atlas.Loader {
     }
 
     /*
-     * Atlas.Loader contract.
-     */
+    * Atlas.Loader contract.
+    */
 
     public void loadIndex(final Atlas atlas, final String url, final String baseUrl) throws IOException {
         // file

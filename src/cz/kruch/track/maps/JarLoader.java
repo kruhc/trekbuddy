@@ -31,7 +31,6 @@ final class JarLoader extends Map.Loader /*implements Atlas.Loader*/ {
     private static final String RESOURCES_SET_FILE = "/resources/world.set";
 
     JarLoader() {
-        super();
     }
 
     void loadMeta(final Map map) throws IOException {
@@ -67,14 +66,6 @@ final class JarLoader extends Map.Loader /*implements Atlas.Loader*/ {
 
             // each line is a slice filename
             reader = new LineReader(JarLoader.class.getResourceAsStream(RESOURCES_SET_FILE));
-/*
-            String entry = reader.readLine(false);
-            while (entry != null) {
-                addSlice(entry);
-                entry = null; // gc hint
-                entry = reader.readLine(false);
-            }
-*/
             CharArrayTokenizer.Token token = reader.readToken(false);
             while (token != null) {
                 addSlice(token);
@@ -114,7 +105,7 @@ final class JarLoader extends Map.Loader /*implements Atlas.Loader*/ {
 
     void loadSlice(final Slice slice) throws IOException {
         // path sb
-        StringBuffer sb = new StringBuffer(32);
+        final StringBuffer sb = new StringBuffer(32);
 
         // construct slice path
         sb.append(RESOURCES_SET_DIR).append(basename);
@@ -125,7 +116,6 @@ final class JarLoader extends Map.Loader /*implements Atlas.Loader*/ {
 
         // get full url
         final String url = sb.toString();
-        sb = null; // gc hint
 
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("load slice image from " + url);
@@ -133,9 +123,12 @@ final class JarLoader extends Map.Loader /*implements Atlas.Loader*/ {
 
         // read image
         try {
+
             // read image
             slice.setImage(NavigationScreens.createImage(buffered.setInputStream(JarLoader.class.getResourceAsStream(url))));
+
         } finally {
+
             // check for Palm - it resets :-(
             if (!cz.kruch.track.TrackingMIDlet.palm) {
                 try {
@@ -144,6 +137,7 @@ final class JarLoader extends Map.Loader /*implements Atlas.Loader*/ {
                     // ignore
                 }
             }
+
         }
     }
 }

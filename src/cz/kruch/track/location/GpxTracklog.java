@@ -112,24 +112,24 @@ public final class GpxTracklog extends Thread {
     private static final String FIX_DGPS    = "dgps";
     private static final String FIX_PPS     = "pps";
 
-    private final Calendar calendar = Calendar.getInstance(TimeZone.getDefault());
-    private final Date date = new Date();
+    private final Calendar calendar;
+    private final Date date;
+/*
     private final String tzOffset;
+*/
 
-    private final StringBuffer sb = new StringBuffer(32);
-    private final char[] sbChars = new char[32];
+    private final StringBuffer sb;
+    private final char[] sbChars;
     
     private Callback callback;
     private String creator;
-    private String fileDate;
-    private String fileName;
-    private String path;
-    private int type;
+    private String url, fileDate, fileName, filePrefix;
     private long time;
+    private int type;
 
     private Object queue;
     private TimerTask flusher;
-    private boolean go = true;
+    private boolean go;
 
     private Location refLocation;
     private float refCourse, courseDeviation;
@@ -146,7 +146,13 @@ public final class GpxTracklog extends Thread {
         this.creator = creator;
         this.time = time;
         this.fileDate = dateToFileDate(time);
+/*
         this.tzOffset = tzOffset(calendar);
+*/
+        this.calendar = Calendar.getInstance(TimeZone.getTimeZone("GMT"));
+        this.date = new Date();
+        this.sb = new StringBuffer(32);
+        this.sbChars = new char[32];
     }
 
     public long getTime() {
@@ -157,12 +163,16 @@ public final class GpxTracklog extends Thread {
         return creator;
     }
 
+    public String getDefaultFileName() {
+        return (filePrefix == null ? "" : filePrefix) + fileDate + ".gpx";
+    }
+
     public String getFileName() {
         return fileName;
     }
 
     public void setFilePrefix(String filePrefix) {
-        this.fileName = (filePrefix == null ? "" : filePrefix) + fileDate + ".gpx";
+        this.filePrefix = filePrefix;
     }
 
     public void setFileName(String fileName) {
@@ -182,11 +192,14 @@ public final class GpxTracklog extends Thread {
         Throwable throwable = null;
 
         // construct path
-        path = Config.getFolderURL(type == LOG_TRK ? Config.FOLDER_TRACKS : Config.FOLDER_WPTS) + fileName;
+        if (fileName == null) {
+            fileName = getDefaultFileName();
+        }
+        url = Config.getFolderURL(type == LOG_TRK ? Config.FOLDER_TRACKS : Config.FOLDER_WPTS) + fileName;
 
         // try to open and create a file - isolated operation
         try {
-            file = File.open(path, Connector.READ_WRITE);
+            file = File.open(url, Connector.READ_WRITE);
             if (file.exists()) {
                 file.delete();
             }
@@ -305,6 +318,9 @@ public final class GpxTracklog extends Thread {
 
     public void run() {
 
+        // good to go
+        this.go = true;
+
         // open
         final Throwable status = open();
         if (status == null) {
@@ -407,7 +423,7 @@ public final class GpxTracklog extends Thread {
         } else {
 
             // signal failure
-            callback.invoke(Resources.getString(Resources.DESKTOP_MSG_START_TRACKLOG_FAILED)+ ": " + path, status, this);
+            callback.invoke(Resources.getString(Resources.DESKTOP_MSG_START_TRACKLOG_FAILED)+ ": " + url, status, this);
 
         }
     }
@@ -581,9 +597,9 @@ public final class GpxTracklog extends Thread {
         final HXmlSerializer serializer = this.serializer;
         serializer.startTag(DEFAULT_NAMESPACE, ELEMENT_WPT);
         serializePt(wpt.getQualifiedCoordinates());
-        if (wpt.getTimestamp() != null) {
+        if (wpt.getTimestamp() != -1) {
             serializer.startTag(DEFAULT_NAMESPACE, ELEMENT_TIME);
-            final int i = dateToXsdDate(wpt.getTimestamp().getTime());
+            final int i = dateToXsdDate(wpt.getTimestamp());
             serializer.text(sbChars, 0, i);
             serializer.endTag(DEFAULT_NAMESPACE, ELEMENT_TIME);
         }
@@ -599,7 +615,9 @@ public final class GpxTracklog extends Thread {
             }
         }
         if (wpt.getUserObject() instanceof GroundspeakBean) {
+            serializer.startTag(DEFAULT_NAMESPACE, ELEMENT_EXTENSIONS);
             serializeGs((GroundspeakBean) wpt.getUserObject());
+            serializer.endTag(DEFAULT_NAMESPACE, ELEMENT_EXTENSIONS);
         }
         serializer.endTag(DEFAULT_NAMESPACE, ELEMENT_WPT);
     }
@@ -781,8 +799,14 @@ public final class GpxTracklog extends Thread {
         appendTwoDigitStr(sb, calendar.get(Calendar.HOUR_OF_DAY)).append(':');
         appendTwoDigitStr(sb, calendar.get(Calendar.MINUTE)).append(':');
         appendTwoDigitStr(sb, calendar.get(Calendar.SECOND));
-//        sb.append('Z'/*CALENDAR.getTimeZone().getID()*/);
+        final long ms = timestamp % 1000;
+        if (ms > 0) {
+            appendFractional(sb, (int) ms);
+        }
+        sb.append('Z'/*CALENDAR.getTimeZone().getID()*/);
+/*
         sb.append(tzOffset);
+*/
 
         final int result = sb.length();
         sb.getChars(0, result, sbChars, 0);
@@ -833,6 +857,22 @@ public final class GpxTracklog extends Thread {
             sb.append('0');
         }
         NavigationScreens.append(sb, i);
+
+        return sb;
+    }
+
+    private static StringBuffer appendFractional(final StringBuffer sb, int i) {
+        int f = i / 100;
+        sb.append(f);
+        i = i % 100;
+        if (i != 0) {
+            f = i / 10;
+            sb.append(f);
+            f = i % 10;
+            if (f != 0) {
+                sb.append(f);
+            }
+        }
 
         return sb;
     }

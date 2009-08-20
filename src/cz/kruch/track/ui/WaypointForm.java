@@ -10,6 +10,10 @@ import cz.kruch.track.location.Waypoint;
 import cz.kruch.track.location.GroundspeakBean;
 import cz.kruch.track.util.Mercator;
 
+import java.util.Date;
+import java.util.Calendar;
+import java.util.TimeZone;
+
 import javax.microedition.lcdui.Form;
 import javax.microedition.lcdui.CommandListener;
 import javax.microedition.lcdui.Displayable;
@@ -18,18 +22,12 @@ import javax.microedition.lcdui.Command;
 import javax.microedition.lcdui.StringItem;
 import javax.microedition.lcdui.Item;
 import javax.microedition.lcdui.ItemCommandListener;
-import javax.microedition.lcdui.Image;
-import javax.microedition.lcdui.ImageItem;
 import javax.microedition.lcdui.Font;
 
 import api.location.Location;
 import api.location.QualifiedCoordinates;
 import api.location.CartesianCoordinates;
 import api.location.Datum;
-
-import java.util.Date;
-import java.util.Calendar;
-import java.util.TimeZone;
 
 /**
  * Form for waypoints.
@@ -65,6 +63,11 @@ final class WaypointForm implements CommandListener, ItemCommandListener, Callba
 
     /**
      * Info view constructor.
+     *
+     * @param wpt waypoint
+     * @param callback callback
+     * @param distance distance to the waypoint from current position
+     * @param modifiable flag
      */
     public WaypointForm(Waypoint wpt, Callback callback,
                         float distance, boolean modifiable) {
@@ -79,8 +82,8 @@ final class WaypointForm implements CommandListener, ItemCommandListener, Callba
         appendStringItem(Resources.getString(Resources.NAV_FLD_WPT_CMT), wpt.getComment());
 
         // timestamp
-        if (wpt.getTimestamp() != null) {
-            appendStringItem(Resources.getString(Resources.NAV_FLD_TIME), dateToString(wpt.getTimestamp().getTime()));
+        if (wpt.getTimestamp() != -1) {
+            appendStringItem(Resources.getString(Resources.NAV_FLD_TIME), dateToString(wpt.getTimestamp()));
         }
 
         // lat+lon
@@ -101,6 +104,7 @@ final class WaypointForm implements CommandListener, ItemCommandListener, Callba
         // Groundspeak
         if (wpt.getUserObject() instanceof GroundspeakBean) {
             final GroundspeakBean bean = (GroundspeakBean) wpt.getUserObject();
+            appendStringItem("GC " + Resources.getString(Resources.NAV_FLD_WPT_NAME), bean.getName());
             appendStringItem(Resources.getString(Resources.NAV_FLD_GS_ID), bean.getId());
             appendStringItem(Resources.getString(Resources.NAV_FLD_GS_CLASS), bean.classify());
             final String shortListing = bean.getShortListing();
@@ -134,6 +138,9 @@ final class WaypointForm implements CommandListener, ItemCommandListener, Callba
 
     /**
      * "Record Current" constructor.
+     *
+     * @param location location
+     * @param callback callback
      */
     public WaypointForm(Location location, Callback callback) {
         this.coordinates = location.getQualifiedCoordinates().clone(); // copy
@@ -174,6 +181,9 @@ final class WaypointForm implements CommandListener, ItemCommandListener, Callba
 
     /**
      * "Enter Custom" constructor.
+     *
+     * @param callback callback
+     * @param pointer current position
      */
     public WaypointForm(Callback callback, QualifiedCoordinates pointer) {
         this.callback = callback;
@@ -185,7 +195,7 @@ final class WaypointForm implements CommandListener, ItemCommandListener, Callba
         NavigationScreens.append(sb, cnt + 1, 3);
 
         // share
-        populateEditableForm(sb.toString(), dateToString(CALENDAR.getTime().getTime()), pointer);
+        populateEditableForm(sb.toString(), ""/*dateToString(CALENDAR.getTime().getTime())*/, pointer);
 
         // commands
         form.addCommand(new Command(Resources.getString(Resources.CMD_CANCEL), Desktop.CANCEL_CMD_TYPE, 1));
@@ -194,6 +204,9 @@ final class WaypointForm implements CommandListener, ItemCommandListener, Callba
 
     /**
      * Editing constructor.
+     *
+     * @param callback callback
+     * @param wpt waypoint
      */
     public WaypointForm(Callback callback, Waypoint wpt) {
         this.callback = callback;
@@ -210,6 +223,10 @@ final class WaypointForm implements CommandListener, ItemCommandListener, Callba
 
     /**
      * Send SMS constructor.
+     *
+     * @param callback callback
+     * @param type SMS type
+     * @param coordinates coordinates
      */
     public WaypointForm(Callback callback, String type,
                         QualifiedCoordinates coordinates) {
@@ -550,7 +567,7 @@ final class WaypointForm implements CommandListener, ItemCommandListener, Callba
 
     private static String dateToString(final long time) {
         CALENDAR.setTime(new Date(time));
-        StringBuffer sb = new StringBuffer(32);
+        final StringBuffer sb = new StringBuffer(32);
         NavigationScreens.append(sb, CALENDAR.get(Calendar.YEAR)).append('-');
         appendTwoDigitStr(sb, CALENDAR.get(Calendar.MONTH) + 1).append('-');
         appendTwoDigitStr(sb, CALENDAR.get(Calendar.DAY_OF_MONTH)).append(' ');

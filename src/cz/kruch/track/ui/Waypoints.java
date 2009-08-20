@@ -42,7 +42,11 @@ import org.kxml2.io.HXmlParser;
  *
  * @author Ales Pour <kruhc@seznam.cz>
  */
-public final class Waypoints implements CommandListener, Runnable, Callback, Comparator {
+public final class Waypoints implements CommandListener,
+                                        Runnable,
+                                        Callback,
+                                        Comparator,
+                                        YesNoDialog.AnswerListener {
 //#ifdef __LOG__
     private static final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("Waypoints");
 //#endif
@@ -63,12 +67,9 @@ public final class Waypoints implements CommandListener, Runnable, Callback, Com
     private static final int FRAME_MEMA = 3;
 */
 
-    private static final String USER_CUSTOM_STORE   = "<wmap>";
-    private static final String USER_RECORDED_STORE = "<wgps>";
-    private static final String USER_FRIENDS_STORE  = "<wsms>";
-/*
-    private static final String USER_INJAR_STORE    = "<in-jar>";
-*/
+    private static final String USER_CUSTOM_STORE   = "<custom>";
+    private static final String USER_RECORDED_STORE = "<recorded>";
+    private static final String USER_FRIENDS_STORE  = "<received>";
 
     private static final String SUFFIX_GPX      = ".gpx";
     private static final String SUFFIX_LOC      = ".loc";
@@ -84,6 +85,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback, Com
     private static final int TAG_WAYPOINT       = 0x29c10801; // "waypoint"
     private static final int TAG_COORD          = 0x05a73af5; // "coord"
     private static final int TAG_SYM            = 0x0001bec7; // "sym"
+    private static final int TAG_EXTENSIONS     = 0x94266c14; // "extensions"
 
     private static final String ATTR_LAT        = "lat";
     private static final String ATTR_LON        = "lon";
@@ -118,24 +120,9 @@ public final class Waypoints implements CommandListener, Runnable, Callback, Com
     private static final String itemFriendThere  = Resources.getString(Resources.NAV_ITEM_SMS_MYT);
     private static final String itemStop         = Resources.getString(Resources.NAV_ITEM_STOP);
 
-//    /*private */static final String CMD_SET_CURRENT = Resources.getString(Resources.NAV_CMD_SET_AS_ACTIVE);
-//    /*private */static final String CMD_SHOW_ALL = Resources.getString(Resources.NAV_CMD_SHOW_ALL);
-//    /*private */static final String CMD_HIDE_ALL = Resources.getString(Resources.NAV_CMD_HIDE_ALL);
-//    /*private */static final String CMD_NAVIGATE_ALONG = Resources.getString(Resources.NAV_CMD_ROUTE_ALONG);
-//    /*private */static final String CMD_NAVIGATE_BACK = Resources.getString(Resources.NAV_CMD_ROUTE_BACK);
-//    /*private */static final String CMD_NAVIGATE_TO = Resources.getString(Resources.NAV_CMD_NAVIGATE_TO);
-//    /*private */static final String CMD_GO_TO = Resources.getString(Resources.NAV_CMD_GO_TO);
-//    /*private */static final String CMD_EDIT = Resources.getString(Resources.NAV_CMD_EDIT);
-//    /*private */static final String CMD_ENTER = Resources.getString(Resources.NAV_CMD_ADD);
-//    /*private */static final String CMD_RECORD = Resources.getString(Resources.NAV_CMD_SAVE);
-//    /*private */static final String CMD_UPDATE = Resources.getString(Resources.NAV_CMD_UPDATE);
-//    /*private */static final String CMD_DELETE = Resources.getString(Resources.NAV_CMD_DELETE);
-
     private final /*Navigator*/Desktop navigator;
+    private final Hashtable stores, backends;
 
-    private final Hashtable stores;
-    private final Hashtable memoryStores;
-    private final Vector memoryFilenames;
     private Vector currentWpts, inUseWpts;
     private String currentName, inUseName;
 
@@ -167,14 +154,13 @@ public final class Waypoints implements CommandListener, Runnable, Callback, Com
 
     private Waypoints(/*Navigator*/Desktop navigator) {
         this.navigator = navigator;
-        this.idx = new Object[3];
-        this.sort = Config.sort;
-        this.memoryStores = new Hashtable(3);
-        this.memoryFilenames = new Vector(3);
+        this.backends = new Hashtable(4);
         this.stores = new Hashtable(8);
         this.stores.put(USER_CUSTOM_STORE, new NakedVector(16, 16));
         this.stores.put(USER_RECORDED_STORE, new NakedVector(16, 16));
         this.stores.put(USER_FRIENDS_STORE, new NakedVector(16, 16));
+        this.idx = new Object[3];
+        this.sort = Config.sort;
         this.cmdBack = new Command(Resources.getString(Resources.CMD_BACK), Desktop.BACK_CMD_TYPE, 1);
         this.cmdOpen = new Command(Resources.getString(Resources.DESKTOP_CMD_SELECT), Desktop.SELECT_CMD_TYPE, 0);
         this.cmdNavigateTo = new ActionCommand(Resources.NAV_CMD_NAVIGATE_TO, Command.ITEM, 2);
@@ -204,10 +190,10 @@ public final class Waypoints implements CommandListener, Runnable, Callback, Com
         // show current store, if any...
         if (inUseWpts != null) {
             depth = 2;
-            use(listWaypoints(inUseName, inUseWpts, false));
+            use(listWaypoints(inUseName, inUseWpts, true));
         } else if (currentWpts != null) {
             depth = 2;
-            use(listWaypoints(currentName, currentWpts, false));
+            use(listWaypoints(currentName, currentWpts, true));
         } else {
             depth = 0;
             use(pane);
@@ -527,12 +513,12 @@ public final class Waypoints implements CommandListener, Runnable, Callback, Com
 
                     case Resources.NAV_CMD_ADD: {
                         // add waypoint, possibly save
-                        addToStore(USER_CUSTOM_STORE, (Waypoint) ret[1]);
+                        addToPrefferedStore(USER_CUSTOM_STORE, (Waypoint) ret[1]);
                     } break;
 
                     case Resources.NAV_CMD_SAVE: {
                         // add waypoint to memory store
-                        addToStore(USER_RECORDED_STORE, (Waypoint) ret[1]);
+                        addToPrefferedStore(USER_RECORDED_STORE, (Waypoint) ret[1]);
                     } break;
 
                     case Resources.NAV_CMD_UPDATE: {
@@ -592,7 +578,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback, Com
             Thread.yield(); // this is safe, it is called from a thread, see Friends.execPop()
 
             // add waypoint to store
-            addToStore(USER_FRIENDS_STORE, wpt);
+            addToStore(USER_FRIENDS_STORE, null, wpt);
 
         } /* 2008-10-15: waypoints are save "synchronously" here
           else if (source instanceof GpxTracklog) { // waypoint recording notification
@@ -648,6 +634,21 @@ public final class Waypoints implements CommandListener, Runnable, Callback, Com
         return cmp;
     }
 
+    public void response(int answer, Object closure) {
+        final Object[] data = (Object[]) closure;
+        if (answer == YesNoDialog.YES) {
+            if (data[1] instanceof StringBuffer) {
+                final String storeName = data[1].toString();
+                getBackend(data[0], null).setFileName(storeName);
+                addToStore(data[0], null, (Waypoint) data[2]);
+            } else {
+                addToStore(data[1], (String) data[1], (Waypoint) data[2]);
+            }
+        } else {
+            addToReadyStore(data[0], (Waypoint) data[2]);
+        }
+    }
+
     /**
      * Background I/O operations.
      */
@@ -693,9 +694,6 @@ public final class Waypoints implements CommandListener, Runnable, Callback, Com
             listKnown(v, USER_RECORDED_STORE);
             listKnown(v, USER_CUSTOM_STORE);
             listKnown(v, USER_FRIENDS_STORE);
-/*
-            listKnown(v, USER_INJAR_STORE);
-*/
 
             // list "wpts/" recursively
             recursive = true;
@@ -946,7 +944,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback, Com
                 status = _storeUpdate.open();
                 if (status == null) {
 //#ifdef __LOG__
-                    if (log.isEnabled()) log.debug("store opened for writing");
+                    if (log.isEnabled()) log.debug("store opened for writing: " + _storeUpdate.getFileName());
 //#endif
                     // save all wpts
                     final Object[] elements = ((NakedVector) wpts).getData();
@@ -996,13 +994,50 @@ public final class Waypoints implements CommandListener, Runnable, Callback, Com
         }
     }
 
-    private void addToStore(final Object storeKey, final Waypoint wpt) {
-        // add to store
-        final Vector wpts = (Vector) stores.get(storeKey);
-        wpts.addElement(wpt);
+    private void addToPrefferedStore(final Object storeKey, final Waypoint wpt) {
+/*        if (inUseWpts != null) {
+            (new YesNoDialog(null, this, new Object[]{ storeKey, inUseName, wpt },
+                             Resources.format(Resources.NAV_MSG_WPT_ADD_TO, inUseName), null)).show();
+        } else*/
+        if (currentWpts != null) {
+            (new YesNoDialog(null, this, new Object[]{ storeKey, currentName, wpt },
+                             Resources.format(Resources.NAV_MSG_WPT_ADD_TO, currentName), null)).show();
+        } else {
+            addToReadyStore(storeKey, wpt);
+        }
+    }
 
-        // start GPX log if needed
-        GpxTracklog gpx = (GpxTracklog) memoryStores.get(storeKey);
+    private void addToReadyStore(final Object storeKey, final Waypoint wpt) {
+        final GpxTracklog backend = getBackend(storeKey, null);
+        if (backend.getFileName() == null) {
+            final StringBuffer sb = new StringBuffer(backend.getDefaultFileName());
+            (new YesNoDialog(null, this, new Object[]{ storeKey, sb, wpt },
+                             Resources.getString(Resources.NAV_MSG_ENTER_STORE_FILENAME),
+                             sb)).show();
+        } else {
+            addToStore(storeKey, null, wpt);
+        }
+    }
+
+    private boolean hideStore(final String storeName) {
+        GpxTracklog gpx;
+        gpx = (GpxTracklog) backends.get(USER_CUSTOM_STORE);
+        if (gpx != null && gpx.getFileName().equals(storeName)) {
+            return true;
+        }
+        gpx = (GpxTracklog) backends.get(USER_RECORDED_STORE);
+        if (gpx != null && gpx.getFileName().equals(storeName)) {
+            return true;
+        }
+        gpx = (GpxTracklog) backends.get(USER_FRIENDS_STORE);
+        if (gpx != null && gpx.getFileName().equals(storeName)) {
+            return true;
+        }
+        return false;
+    }
+
+    private GpxTracklog getBackend(final Object storeKey, final String storeName) {
+        GpxTracklog gpx = (GpxTracklog) backends.get(storeKey);
         if (gpx == null) {
             gpx = new GpxTracklog(GpxTracklog.LOG_WPT, null/*this*/,
                                   navigator.getTracklogCreator(),
@@ -1011,44 +1046,61 @@ public final class Waypoints implements CommandListener, Runnable, Callback, Com
                 gpx.setFilePrefix(PREFIX_WMAP);
             } else if (USER_FRIENDS_STORE.equals(storeKey)) {
                 gpx.setFilePrefix(PREFIX_WSMS);
-            } else {
+            } else if (USER_FRIENDS_STORE.equals(storeKey)) {
                 gpx.setFilePrefix(PREFIX_WGPS);
+            } else {
+                // assertion
+                if (storeName == null) {
+                    throw new NullPointerException("storeName");
+                }
+                // remove previous file backend
+                for (Enumeration e = backends.keys(); e.hasMoreElements(); ) {
+                    final String key = (String) e.nextElement();
+                    if (!key.startsWith("<")) {
+//#ifdef __LOG__
+                        if (log.isEnabled()) log.debug("removing previous file backend " + key);
+//#endif
+                        backends.remove(key);
+                        break;
+                    }
+                }
+                // set requested filename
+                gpx.setFileName(storeName);
             }
 
             // add to collection
-            memoryStores.put(storeKey, gpx);
-            memoryFilenames.addElement(gpx.getFileName());
+            backends.put(storeKey, gpx);
         }
 
-        // update store
+        return gpx;
+    }
+
+    private void addToStore(final Object storeKey,
+                            final String storeName,
+                            final Waypoint wpt) {
+        // add wpt to store
+        final Vector wpts = (Vector) stores.get(storeKey);
+        wpts.addElement(wpt);
+
+        // make sure backend is initialized
+        getBackend(storeKey, storeName);
+
+        // update via backend
         updateStore((String) storeKey, wpts);
     }
 
     private void updateStore(final String name, final Vector wpts) {
-        // check if it is file store
-        if (!name.startsWith("<w")) { // or: !memoryStores.contains(name)
-            
-            // instantiate GPX
-            _storeUpdate = new GpxTracklog(GpxTracklog.LOG_WPT, null/*this*/,
-                                           navigator.getTracklogCreator(),
-                                           navigator.getTracklogTime());
-            // flag update revision
-            _updateRevision = Config.makeRevisions;
-            // update name
-            _updateName = name;
+        // get backend
+        _storeUpdate = (GpxTracklog) backends.get(name);
 
-        } else { // memory store
-
-            // get existing GPX
-            _storeUpdate = (GpxTracklog) memoryStores.get(name);
-            // no revisions for memory stores
-            _updateRevision = false;
-            // resolve update name
-            _updateName = _storeUpdate.getFileName();
-        }
+        // resolve update name
+        _updateName = _storeUpdate.getFileName();
 
         // updated collection
         _updateWpts = wpts;
+
+        // flag update revision
+        _updateRevision = name.startsWith("<") ? false : Config.makeRevisions;
 
         // do the rest on background
         LoaderIO.getInstance().enqueue(this);
@@ -1068,9 +1120,6 @@ public final class Waypoints implements CommandListener, Runnable, Callback, Com
             // list file stores in the directory
             if (dir.exists()) {
 
-                // local ref
-                final Vector hidden = memoryFilenames;
-
                 // iterate over directory
                 for (final Enumeration e = dir.list(); e.hasMoreElements(); ) {
 
@@ -1081,7 +1130,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback, Com
                         final String lcname = name.toLowerCase();
                         if (lcname.endsWith(SUFFIX_GPX) || lcname.endsWith(SUFFIX_LOC)) {
                             if (recursive) {
-                                if (!hidden.contains(name)) { // filter memory stores 'backends'
+                                if (!hideStore(name)) { // filter memory stores 'backends'
                                     v.addElement(name);
                                 }
                             } else {
@@ -1382,6 +1431,9 @@ public final class Waypoints implements CommandListener, Runnable, Callback, Com
                                     // create bean
                                     gsbean = new GroundspeakBean(null);
                                 } break;
+                                case TAG_EXTENSIONS: {
+                                    // groundspeak in GPX 1.1
+                                } break;
                                 default: {
                                     // skip
                                     parser.skipSubTree();
@@ -1489,6 +1541,8 @@ public final class Waypoints implements CommandListener, Runnable, Callback, Com
                             if (TAG_GS_CACHE == tag || TAG_AU_CACHE == tag) {
                                 // back to <wpt> level
                                 depth = 1;
+                            } else if (TAG_EXTENSIONS == tag) {
+                                // nothing to do
                             }
                         } break;
                         default:

@@ -5,10 +5,9 @@ package cz.kruch.track.location;
 import api.location.QualifiedCoordinates;
 
 import java.util.Vector;
-import java.util.Date;
 
 /**
- * Represents a set of basic.
+ * Waypoint representation.
  *
  * TODO This is in fact <b>Landmark</b> from JSR-179, and so it should be moved
  * to {@link api.location} package.
@@ -20,7 +19,7 @@ public final class Waypoint {
     public static final int LINK_GENERIC_SOUND = 1;
 
     private QualifiedCoordinates coordinates;
-    private Date timestamp;
+    private long timestamp;
     private String name;
     private String comment;
     private String sym;
@@ -28,28 +27,15 @@ public final class Waypoint {
     private Object userObject;
     private Vector links;
 
-/*
-    public Waypoint(QualifiedCoordinates qc, String name, String comment, String sym) {
-        this.coordinates = qc;
-        this.name = name;
-        this.comment = comment;
-        this.sym = sym;
-    }
-*/
-
     public Waypoint(QualifiedCoordinates qc, char[] name, char[] comment, char[] sym) {
         this.coordinates = qc;
-/*
-        this.name = name;
-        this.comment = comment;
-        this.sym = sym;
-*/
+        this.timestamp = -1;
         texts(name, comment, sym);
     }
 
     public Waypoint(QualifiedCoordinates qc, String name, String comment, long timestamp) {
         this.coordinates = qc;
-        this.timestamp = new Date(timestamp);
+        this.timestamp = timestamp;
         this.name = name;
         this.comment = comment;
     }
@@ -101,7 +87,7 @@ public final class Waypoint {
         this.coordinates = coordinates;
     }
 
-    public Date getTimestamp() {
+    public long getTimestamp() {
         return timestamp;
     }
 

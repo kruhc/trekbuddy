@@ -165,8 +165,6 @@ public final class NavigationScreens {
         }
         logo = loadImage(Config.FOLDER_RESOURCES, "logo.png");
 
-        System.gc();
-
         return i;
     }
 

@@ -75,6 +75,7 @@ final class SettingsForm implements CommandListener, ItemStateListener {
     private TrailItem itemTrailView;
     private ChoiceGroup choiceSort;
     private TextField fieldListFont;
+    private TextField fieldAltCorrection;
 
     private List pane;
     private Form submenu;
@@ -396,6 +397,7 @@ final class SettingsForm implements CommandListener, ItemStateListener {
             }
             if (cz.kruch.track.TrackingMIDlet.jsr179 || cz.kruch.track.TrackingMIDlet.motorola179) {
                 fieldLocationTimings = new TextField(Resources.getString(Resources.CFG_LOCATION_FLD_LOCATION_TIMINGS), "", 12, TextField.ANY);
+                fieldAltCorrection = new TextField(Resources.getString(Resources.CFG_LOCATION_FLD_ALT_CORRECTION), "", 4, TextField.NUMERIC);
             }
             if (cz.kruch.track.TrackingMIDlet.hasFlag("provider_o2_germany")) {
                 fieldO2Depth = new TextField(Resources.getString(Resources.CFG_LOCATION_FLD_FILTER_DEPTH), Integer.toString(Config.o2Depth), 2, TextField.NUMERIC);
@@ -426,12 +428,12 @@ final class SettingsForm implements CommandListener, ItemStateListener {
                     continue;
 
                 if (choiceTracklogFormat == affected) {
-                    if (fieldSimulatorDelay == item || fieldLocationTimings == item || fieldCommUrl == item || fieldBtKeepalive == item || fieldO2Depth == item || choiceTracklog == item || choiceTracklogFormat == item)
+                    if (fieldSimulatorDelay == item || fieldLocationTimings == item || fieldCommUrl == item || fieldBtKeepalive == item || fieldO2Depth == item || fieldAltCorrection == item || choiceTracklog == item || choiceTracklogFormat == item)
                         continue;
                 }
 
                 if (choiceTracklog == affected) {
-                    if (fieldSimulatorDelay == item || fieldLocationTimings == item || fieldCommUrl == item || fieldBtKeepalive == item || fieldO2Depth == item || choiceTracklog == item)
+                    if (fieldSimulatorDelay == item || fieldLocationTimings == item || fieldCommUrl == item || fieldBtKeepalive == item || fieldO2Depth == item || fieldAltCorrection == item || choiceTracklog == item)
                         continue;
                 }
 
@@ -454,6 +456,8 @@ final class SettingsForm implements CommandListener, ItemStateListener {
 //#ifndef __ANDROID__
                         fieldLocationTimings.setString(Config.getLocationTimings(provider));
                         appendWithNewlineAfter(submenu, fieldLocationTimings);
+                        fieldAltCorrection.setString(Integer.toString(Config.altCorrection));
+                        appendWithNewlineAfter(submenu, fieldAltCorrection);
 //#endif
                     break;
                     case Config.LOCATION_PROVIDER_SERIAL:
@@ -591,6 +595,7 @@ final class SettingsForm implements CommandListener, ItemStateListener {
                 }
                 if (cz.kruch.track.TrackingMIDlet.jsr179 || cz.kruch.track.TrackingMIDlet.motorola179) {
                     Config.setLocationTimings(fieldLocationTimings.getString());
+                    Config.altCorrection = Integer.parseInt(fieldAltCorrection.getString());
                 }
                 if (cz.kruch.track.TrackingMIDlet.jsr82) {
                     Config.btKeepAlive = Integer.parseInt(fieldBtKeepalive.getString());

@@ -52,9 +52,6 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
 //#ifdef __LOG__
         logEnabled = hasFlag("log_enable");
         System.out.println("* platform is " + platform);
-//#ifdef __ANDROID__
-        logEnabled = true;
-//#endif
 //#endif
 
         // detect brand/device
@@ -64,8 +61,8 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         android = true;
 //#else
         nokia = platform.startsWith("Nokia");
-        s60nd = nokia && platform.startsWith("Nokia66") || platform.startsWith("NokiaN70");
-        s60rdfp2 = nokia && platform.indexOf("sw_platform=S60") > -1;
+        s60nd = platform.startsWith("Nokia6630") || platform.startsWith("Nokia668") || platform.startsWith("NokiaN70") || platform.startsWith("NokiaN72");
+        s60rdfp2 = platform.indexOf("sw_platform=S60") > -1;
         symbian = s60rdfp2;
         sonyEricsson = System.getProperty("com.sonyericsson.imei") != null;
         sonyEricssonEx = sonyEricsson || platform.startsWith("SonyEricsson");
@@ -81,7 +78,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         brew = sxg75 || "BENQ-M7".equals(platform);
         a780 = "j2me".equals(platform);
         s65 = "S65".equals(platform);
-        // for IntelliJ
+        // for IntelliJ IDEA
         rim = platform.startsWith("RIM");
         android = platform.indexOf("android") > -1;
 //#endif
@@ -223,7 +220,6 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         // fit static images into video memory
         int imgcached;
         try {
-            System.gc();
             cz.kruch.track.ui.NavigationScreens.initialize();
             imgcached = 1;
         } catch (Throwable t) {
@@ -254,8 +250,6 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         // customize UI
         int customized = 0;
         if (cz.kruch.track.configuration.Config.dataDirExists/* && api.file.File.isFs()*/) {
-            // gc - loading of images ahead...
-            System.gc();
             try {
                 customized = cz.kruch.track.ui.NavigationScreens.customize();
             } catch (Throwable t) {
@@ -319,7 +313,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         }
 
         // cleanup after initialization?
-        System.gc();
+        System.gc(); // unconditional!!!
 
         // create desktop
         desktop = new cz.kruch.track.ui.Desktop(this);

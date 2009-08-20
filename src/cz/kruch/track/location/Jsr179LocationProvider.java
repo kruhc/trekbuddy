@@ -128,7 +128,7 @@ public final class Jsr179LocationProvider
             impl = null;
             
             // workaround for impl bug
-            System.gc();
+            System.gc(); // unconditional!!!
 
             // almost dead
             zombie();
@@ -167,15 +167,9 @@ public final class Jsr179LocationProvider
             // vars
             javax.microedition.location.QualifiedCoordinates xc = l.getQualifiedCoordinates();
             final float spd = l.getSpeed();
-            /*final*/ float alt = xc.getAltitude();
             final float course = l.getCourse();
+            final float alt = xc.getAltitude() + Config.altCorrection;
             final float accuracy = xc.getHorizontalAccuracy();
-
-            if (Float.isNaN(alt)) {
-                alt = Float.NaN;
-            } else if (cz.kruch.track.TrackingMIDlet.brew) {
-                alt -= 540;
-            }
 
             // create up-to-date location
             QualifiedCoordinates qc = QualifiedCoordinates.newInstance(xc.getLatitude(),

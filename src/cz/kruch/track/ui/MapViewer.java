@@ -1188,12 +1188,18 @@ final class MapViewer {
 //#endif
             }
 
+            // gc cleanup
+            oldSlices.removeAllElements();
+
             // exchange vectors and do cleanup
+/*
             final Vector v = slices;
             slices = slices2;
             slices2 = v;
             slices2.removeAllElements();
-
+*/
+            slices = newSlices;
+            slices2 = oldSlices;
         } // ~synchronized
 
         // forced gc - after release or loading ahead
@@ -1240,6 +1246,9 @@ final class MapViewer {
         if (slice != null) {
             // assertion
             if (!newSlices.contains(slice)) {
+//#ifdef __LOG__
+                if (log.isEnabled()) log.debug("add to new slices set: " + slice);
+//#endif
                 newSlices.addElement(slice);
             } else {
                 throw new IllegalStateException("Slice " + slice + " already added for " + x + "-" + y);

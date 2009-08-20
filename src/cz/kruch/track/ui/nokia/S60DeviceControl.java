@@ -2,9 +2,6 @@
 
 package cz.kruch.track.ui.nokia;
 
-import cz.kruch.track.device.SymbianService;
-import cz.kruch.track.ui.Desktop;
-
 import java.io.IOException;
 
 /**
@@ -14,7 +11,7 @@ import java.io.IOException;
  */
 final class S60DeviceControl extends NokiaDeviceControl {
 
-    private SymbianService.Inactivity inactivity;
+    private cz.kruch.track.device.SymbianService.Inactivity inactivity;
 
     S60DeviceControl() throws IOException {
         if (cz.kruch.track.TrackingMIDlet.uiq) {
@@ -25,13 +22,13 @@ final class S60DeviceControl extends NokiaDeviceControl {
                 this.values[0] = 10; // N5800 workaround???
             } else {
                 this.name = "S60";
-                try {
-                    this.inactivity = SymbianService.openInactivity();
-                } catch (Exception e) { // IOE or SE
-                    // service not running/accessible
-                }
             }
             this.cellIdProperty = "com.nokia.mid.cellid";
+        }
+        try {
+            this.inactivity = cz.kruch.track.device.SymbianService.openInactivity();
+        } catch (Exception e) { // IOE or SE
+            // service not running/accessible
         }
     }
 
@@ -39,7 +36,7 @@ final class S60DeviceControl extends NokiaDeviceControl {
     /** @Override */
     protected void setLights() {
 
-        // old S60 or UIQ and service avail
+        // service avail?
         if (inactivity != null) {
             inactivity.setLights(values[backlight]);
         }
@@ -49,18 +46,6 @@ final class S60DeviceControl extends NokiaDeviceControl {
 
             // set light level via Nokia UI API
             super.setLights();
-
-            // service either not avail or not needed (S60 3rd FP2+)
-            if (inactivity == null) {
-                if (backlight == STATUS_OFF) {
-                    if (task != null) {
-                        task.cancel();
-                        task = null;
-                    }
-                } else if (task == null) {
-                    Desktop.timer.scheduleAtFixedRate(task = new DeviceControl(), 5000L, 5000L);
-                }
-            }
         }
     }
 
@@ -70,10 +55,5 @@ final class S60DeviceControl extends NokiaDeviceControl {
             inactivity.close();
         }
         super.close();
-    }
-
-    /** @Override */
-    public void run() {
-        super.setLights();
     }
 }

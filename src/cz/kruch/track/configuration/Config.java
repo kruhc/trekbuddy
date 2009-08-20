@@ -203,43 +203,44 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
 
 //#ifdef __RIM__
         /* default for Blackberry */
-        dataDir = getDefaultDataDir("SDCard/", "TrekBuddy/");
+        dataDir = getDefaultDataDir("file:///SDCard/", "TrekBuddy/");
         commUrl = "btspp://000276fd79da:1";
         fullscreen = true;
         safeColors = true;
 //#elifdef __ANDROID__
         /* default for Android (emu) */
-        dataDir = getDefaultDataDir("sdcard/", "TrekBuddy/");
+        dataDir = getDefaultDataDir("file:///sdcard/", "TrekBuddy/");
         fullscreen = true;
         safeColors = true;
 		listFont = 0x200000;
 //#else
         if (cz.kruch.track.TrackingMIDlet.sxg75) {
-            dataDir = "file:///fs/tb/";
+            dataDir = getDefaultDataDir("file:///fs/", "tb/");
             fullscreen = true;
         } else if (cz.kruch.track.TrackingMIDlet.brew) {
+            dataDir = getDefaultDataDir("file:///fs/", "tb/");
             altCorrection = -540;
         } else if (cz.kruch.track.TrackingMIDlet.siemens) {
-            dataDir = "file:///4:/TrekBuddy/";
+            dataDir = getDefaultDataDir("file:///4:/", "TrekBuddy/");
             fullscreen = true;
         } else if (cz.kruch.track.TrackingMIDlet.lg) {
-            dataDir = getDefaultDataDir("Card/", "TrekBuddy/");
+            dataDir = getDefaultDataDir("file:///Card/", "TrekBuddy/");
             fullscreen = true;
         } else if (cz.kruch.track.TrackingMIDlet.motorola || cz.kruch.track.TrackingMIDlet.a780) {
-            dataDir = "file:///b/trekbuddy/";
+            dataDir = getDefaultDataDir("file:///b/", "trekbuddy/");
             forcedGc = true;
         } else if (cz.kruch.track.TrackingMIDlet.samsung) {
-            dataDir = "file:///mmc/trekbuddy/";
+            dataDir = getDefaultDataDir("file:///mmc/", "trekbuddy/");
         } else if (cz.kruch.track.TrackingMIDlet.j9 || cz.kruch.track.TrackingMIDlet.jbed || cz.kruch.track.TrackingMIDlet.intent /*|| cz.kruch.track.TrackingMIDlet.phoneme*/) {
-            dataDir = getDefaultDataDir("/Storage Card/", "TrekBuddy/");
+            dataDir = getDefaultDataDir("file:///Storage Card/", "TrekBuddy/");
             if (cz.kruch.track.TrackingMIDlet.jbed || cz.kruch.track.TrackingMIDlet.intent) {
                 commUrl = "socket://localhost:20175";
             }
         } else if (cz.kruch.track.TrackingMIDlet.uiq) {
-            dataDir = getDefaultDataDir("Ms/", "Other/TrekBuddy/");
+            dataDir = getDefaultDataDir("file:///Ms/", "Other/TrekBuddy/");
             fullscreen = true;
         } else { // Nokia, SonyEricssons, ...
-            dataDir = getDefaultDataDir("E:/", "TrekBuddy/"); // pstros: "file:///SDCard/TrekBuddy/"
+            dataDir = getDefaultDataDir("file:///E:/", "TrekBuddy/"); // pstros: "file:///SDCard/TrekBuddy/"
             if (cz.kruch.track.TrackingMIDlet.nokia || cz.kruch.track.TrackingMIDlet.sonyEricsson) {
                 fullscreen = true;
             }
@@ -284,6 +285,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
 
     private static String getDefaultDataDir(final String defaultRoot,
                                             final String appPath) {
+/*
         String cardRoot = null;
         if (File.isFs()) {
             try {
@@ -306,8 +308,26 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
                 cardRoot = defaultRoot;
             }
         }
+*/
+        String cardRoot = System.getProperty("fileconn.dir.memorycard"); // usually includes protocol schema
+        if (cardRoot == null) {
+            cardRoot = defaultRoot;
+        }
 
-        return (new StringBuffer(cardRoot.startsWith("file://") ? "" : "file:///").append(cardRoot).append(appPath)).toString();
+        final StringBuffer sb = new StringBuffer(32);
+        if (!cardRoot.startsWith(File.FILE_PROTOCOL)) {
+            sb.append(File.FILE_PROTOCOL);
+            if (!cardRoot.startsWith("/")) {
+                sb.append('/');
+            }
+        }
+        sb.append(cardRoot);
+        if (!cardRoot.endsWith("/")) {
+            sb.append('/');
+        }
+        sb.append(appPath);
+
+        return sb.toString();
     }
 
     private static void checkDataDirAccess() {

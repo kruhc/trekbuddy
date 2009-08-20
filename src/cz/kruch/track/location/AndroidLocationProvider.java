@@ -87,9 +87,6 @@ public final class AndroidLocationProvider
             }
             manager = null;
 
-            // workaround for impl bug
-            System.gc();
-
             // almost dead
             zombie();
         }

@@ -8,9 +8,11 @@ import javax.microedition.lcdui.Displayable;
 import javax.microedition.lcdui.Command;
 import javax.microedition.lcdui.CommandListener;
 import javax.microedition.lcdui.Alert;
+import javax.microedition.lcdui.TextBox;
+import javax.microedition.lcdui.TextField;
 
 /**
- * Generic YES-NO dialog.
+ * Feedback dialog.
  *
  * @author Ales Pour <kruhc@seznam.cz>
  */
@@ -25,28 +27,42 @@ public final class YesNoDialog implements CommandListener {
 
     private final Displayable next;
     private final AnswerListener callback;
-    private final Object closure;
+    private final Object closure, item;
     private final String question;
 
     public YesNoDialog(Displayable next, AnswerListener callback, Object closure,
-                       String question, String item) {
+                       String question, Object item) {
         this.next = next != null ? next : Desktop.display.getCurrent();
         this.callback = callback;
         this.closure = closure;
         this.question = question;
+        this.item = item;
     }
 
     public void show() {
-        final Alert alert = new Alert(null, question, null, null);
-        alert.addCommand(new Command(Resources.getString(Resources.CMD_YES), Command.OK, 1));
-        alert.addCommand(new Command(Resources.getString(Resources.CMD_NO), Command.CANCEL, 1));
-        alert.setCommandListener(this);
-        Desktop.display.setCurrent(alert);
+        Displayable dialog;
+        if (item instanceof StringBuffer) {
+            dialog = new TextBox(question, item.toString(), 32, TextField.URL);
+            dialog.addCommand(new Command(Resources.getString(Resources.CMD_OK), Command.OK, 1));
+        } else {
+            dialog = new Alert(null, question, null, null);
+            dialog.addCommand(new Command(Resources.getString(Resources.CMD_YES), Command.OK, 1));
+            dialog.addCommand(new Command(Resources.getString(Resources.CMD_NO), Command.CANCEL, 1));
+        }
+        dialog.setCommandListener(this);
+        Desktop.display.setCurrent(dialog);
     }
 
     public void commandAction(Command command, Displayable displayable) {
         // advance to next screen
         Desktop.display.setCurrent(next);
+
+        // grab input
+        if (item instanceof StringBuffer) {
+            final StringBuffer sb = (StringBuffer) item;
+            sb.delete(0, sb.length());
+            sb.append(((TextBox) displayable).getString());
+        }
 
         // return response code
         callback.response(command.getCommandType() == Command.OK ? YES : NO, closure);

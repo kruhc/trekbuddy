@@ -58,7 +58,9 @@ final class SmartRunnable implements Runnable {
                         }
                     } else if (r instanceof Desktop.RenderTask) { // trick #2: merge render tasks
                         if (last instanceof Desktop.RenderTask) {
-                            ((Desktop.RenderTask) last).merge(((Desktop.RenderTask) r));
+                            Desktop.RenderTask rt = (Desktop.RenderTask) r;
+                            ((Desktop.RenderTask) last).merge(rt);
+                            Desktop.releaseRenderTask(rt);
                             return;
                         }
                     }

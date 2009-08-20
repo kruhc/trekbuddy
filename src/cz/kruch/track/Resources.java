@@ -195,6 +195,8 @@ public final class Resources {
     public static final short NAV_MSG_WPT_ENLISTED              = 2311;
     public static final short NAV_MSG_TICKER_LISTING            = 2312;
     public static final short NAV_MSG_TICKER_LOADING            = 2313;
+    public static final short NAV_MSG_WPT_ADD_TO                = 2314;
+    public static final short NAV_MSG_ENTER_STORE_FILENAME      = 2315;
     public static final short NAV_MSG_CAMERA_FAILED             = 2400;
     public static final short NAV_MSG_NO_PREVIEW                = 2401;
     public static final short NAV_MSG_DO_NOT_WORRY              = 2402;
@@ -269,6 +271,7 @@ public final class Resources {
     public static final short CFG_DESKTOP_FLD_TRAIL_PREVIEW     = 3515;
     public static final short CFG_DESKTOP_CMD_TRAIL_MODE        = 3516;
     public static final short CFG_DESKTOP_FLD_SAFE_COLORS       = 3517;
+    public static final short CFG_DESKTOP_FLD_LIST_FONT         = 3518;
     /* settings - Location */
     public static final short CFG_LOCATION_GROUP_PROVIDER       = 3600;
     public static final short CFG_LOCATION_GROUP_TRACKLOG       = 3601;
@@ -293,6 +296,7 @@ public final class Resources {
     public static final short CFG_LOCATION_FLD_GPX_LOG_GSM      = 3620;
     public static final short CFG_LOCATION_FLD_PROV_HGE100      = 3621;
     public static final short CFG_LOCATION_FLD_BT_KEEP_ALIVE    = 3622;
+    public static final short CFG_LOCATION_FLD_ALT_CORRECTION   = 3623;
     /* settings - navigation */
     public static final short CFG_NAVIGATION_FLD_WPT_PROXIMITY  = 3700;
     public static final short CFG_NAVIGATION_FLD_POI_PROXIMITY  = 3701;
@@ -309,6 +313,7 @@ public final class Resources {
     public static final short CFG_NAVIGATION_FLD_SORT_BYPOS     = 3712;
     public static final short CFG_NAVIGATION_FLD_SORT_BYNAME    = 3713;
     public static final short CFG_NAVIGATION_FLD_SORT_BYDIST    = 3714;
+    public static final short CFG_NAVIGATION_FLD_DYNAMIC_PROX   = 3715;
     /* settings - tweaks */
     public static final short CFG_TWEAKS_GROUP                  = 3800;
     public static final short CFG_TWEAKS_FLD_SIEMENS_IO         = 3801;
@@ -457,6 +462,19 @@ public final class Resources {
             result = Integer.toString(id);
         }
         return result;
+    }
+
+    public static String format(final short id, final String content) {
+        String s = getString(id);
+        final int wi = s.indexOf("%s");
+        if (wi > -1) {
+            final StringBuffer sb = new StringBuffer(s.length() + content.length());
+            sb.append(s.substring(0, wi));
+            sb.append(content);
+            sb.append(s.substring(wi + 2));
+            s = sb.toString();
+        }
+        return s;
     }
 
     public static int remap(final int keycode) {

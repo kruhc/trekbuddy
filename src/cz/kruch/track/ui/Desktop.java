@@ -29,6 +29,7 @@ import javax.microedition.lcdui.Form;
 import javax.microedition.lcdui.Choice;
 import javax.microedition.midlet.MIDlet;
 import javax.microedition.io.Connector;
+
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Date;
@@ -171,6 +172,10 @@ public final class Desktop implements CommandListener,
         if (cz.kruch.track.TrackingMIDlet.uiq) {
             BACK_CMD_TYPE = Command.EXIT;
         }
+        if (cz.kruch.track.TrackingMIDlet.sonyEricssonEx) {
+            EXIT_CMD_TYPE = Command.BACK;
+            CANCEL_CMD_TYPE = Command.BACK;
+        }
 //#elifdef __J9__
         POSITIVE_CMD_TYPE = Command.ITEM;
         EXIT_CMD_TYPE = Command.ITEM;
@@ -181,6 +186,7 @@ public final class Desktop implements CommandListener,
         CANCEL_CMD_TYPE = Command.EXIT;
 //#elifdef __ANDROID__
         CHOICE_POPUP_TYPE = Choice.EXCLUSIVE;
+        CANCEL_CMD_TYPE = Command.BACK;
 //#endif
 
         // init static members
@@ -1205,6 +1211,10 @@ public final class Desktop implements CommandListener,
         return wptDistance;
     }
 
+    public float getWptAltDiff() {
+        return wptHeightDiff;
+    }
+
     public Waypoint getWpt() {
         if (wpts == null || wptIdx == -1) {
             return null;
@@ -1453,7 +1463,14 @@ public final class Desktop implements CommandListener,
             if ((mask & Desktop.MASK_MAP) != 0 && mode == VIEW_MAP) {
                 synchronized (this) {
                     if (!initializingMap && !loadingSlices) {
-                        ((MapView) views[VIEW_MAP]).prerender();
+                        try {
+                            ((MapView) views[VIEW_MAP]).prerender();
+                        } catch (Throwable t) {
+//#ifdef __LOG__
+                            t.printStackTrace();
+//#endif
+                            showError(null, t, null);
+                        }
                     }
                 }
             }
@@ -2005,7 +2022,7 @@ public final class Desktop implements CommandListener,
      * POOL
      */
 
-    private static final RenderTask[] rtPool = new RenderTask[32];
+    private static final RenderTask[] rtPool = new RenderTask[16];
     private static int rtCountFree;
 
     private RenderTask newRenderTask(final int m) {
@@ -2024,7 +2041,7 @@ public final class Desktop implements CommandListener,
         return result;
     }
 
-    private static void releaseRenderTask(final RenderTask task) {
+    static void releaseRenderTask(final RenderTask task) {
         synchronized (rtPool) {
             if (rtCountFree < rtPool.length) {
                 rtPool[rtCountFree++] = task;

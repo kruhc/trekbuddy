@@ -11,12 +11,15 @@ import javax.microedition.lcdui.Canvas;
 import javax.microedition.lcdui.Command;
 import javax.microedition.lcdui.CommandListener;
 import javax.microedition.midlet.MIDlet;
+
 import java.util.TimerTask;
 
 final class DeviceScreen extends GameCanvas implements Runnable {
-    //#ifdef __LOG__
+//#ifdef __LOG__
     private static final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("Canvas");
 //#endif
+
+    private static final String FLAG_UI_NO_SOFTKEY_MENU = "ui_no_softkey_menu";
 
     static final int BTN_ARC        = 10;
     static final int BTN_COLOR      = 0x005b87ce;
@@ -91,24 +94,28 @@ final class DeviceScreen extends GameCanvas implements Runnable {
         return hasRepeatEvents;
     }
 
-    /** @overriden */
+    /** @Override */
     public void setCommandListener(CommandListener commandListener) {
-        if (!cz.kruch.track.TrackingMIDlet.jbed) {
+        if (!cz.kruch.track.TrackingMIDlet.hasFlag(FLAG_UI_NO_SOFTKEY_MENU)) {
             super.setCommandListener(commandListener);
         }
     }
 
-    /** @overriden */
+    /** @Override */
     public void addCommand(Command command) {
-        if (command != null && !cz.kruch.track.TrackingMIDlet.jbed) {
-            super.addCommand(command);
+        if (!cz.kruch.track.TrackingMIDlet.hasFlag(FLAG_UI_NO_SOFTKEY_MENU)) {
+            if (command != null) {
+                super.addCommand(command);
+            }
         }
     }
 
-    /** @overriden */
+    /** @Override */
     public void removeCommand(Command command) {
-        if (command != null && !cz.kruch.track.TrackingMIDlet.jbed) {
-            super.removeCommand(command);
+        if (!cz.kruch.track.TrackingMIDlet.hasFlag(FLAG_UI_NO_SOFTKEY_MENU)) {
+            if (command != null) {
+                super.removeCommand(command);
+            }
         }
     }
 
@@ -286,6 +293,7 @@ final class DeviceScreen extends GameCanvas implements Runnable {
         if (adx > 10 || ady > 10) {
             _setInKey(0);
             _setInMove(true);
+/*
             if (adx < 5) {
                 x = gx;
             } else {
@@ -296,6 +304,7 @@ final class DeviceScreen extends GameCanvas implements Runnable {
             } else {
                 gy = y;
             }
+*/
             delegate.handleMove(x, y);
         }
     }

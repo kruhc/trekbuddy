@@ -69,7 +69,7 @@ final class Jsr135Camera extends Camera {
             }
 
             // prepare for Armageddon
-            System.gc();
+            System.gc(); // unconditional!!!
 
             // take the snapshot
             /*result = ((VideoControl) video).getSnapshot(format);*/

@@ -291,8 +291,8 @@ public class SerialLocationProvider
             // debug
             setStatus("stream and connection closed");
 
-            // native finalizers?
-            System.gc();
+            /* native finalizers? */
+            System.gc(); // unconditional!!!
         }
     }
 
@@ -348,7 +348,8 @@ public class SerialLocationProvider
                             } catch (Exception e) {
                                 // ignore
                             }
-                            System.gc(); // native finalizers?!?
+                            /* native finalizers?!? */
+                            System.gc(); // unconditional!!!
                         }
                     }
                     setStatus("stream closed"); // debug

@@ -27,6 +27,7 @@ import java.util.TimeZone;
 import cz.kruch.track.configuration.Config;
 import cz.kruch.track.maps.Map;
 import cz.kruch.track.Resources;
+
 import api.file.File;
 
 /**
@@ -40,10 +41,7 @@ final class InfoForm implements CommandListener {
     private Object ps;
     private Map map;
 
-    private Form pane;
-
     InfoForm() {
-        this.pane = new Form(Resources.prefixed(Resources.getString(Resources.DESKTOP_CMD_INFO)));
     }
 
     public void show(Desktop desktop, Throwable le, Throwable te,
@@ -55,6 +53,7 @@ final class InfoForm implements CommandListener {
         this.map = map;
 
         // items
+        final Form pane = new Form(Resources.prefixed(Resources.getString(Resources.DESKTOP_CMD_INFO)));
         pane.append(newItem(Resources.getString(Resources.INFO_ITEM_VENDOR), Resources.getString(Resources.INFO_ITEM_VENDOR_VALUE)));
         pane.append(newItem(Resources.getString(Resources.INFO_ITEM_VERSION), cz.kruch.track.TrackingMIDlet.version));
         pane.append(newItem(Resources.getString(Resources.INFO_ITEM_KEYS), ""));
@@ -67,9 +66,11 @@ final class InfoForm implements CommandListener {
         Desktop.display.setCurrent(pane);
     }
 
-    private void details(final Throwable le, final Throwable te, final Object ps, final Map map) {
+    private void details(final Form pane,
+                         final Throwable le, final Throwable te,
+                         final Object ps, final Map map) {
         // gc - for memory info to be correct...
-        System.gc();
+        System.gc(); // unconditional!!!
         final long totalMemory = Runtime.getRuntime().totalMemory();
         final long freeMemory = Runtime.getRuntime().freeMemory();
 
@@ -136,16 +137,17 @@ final class InfoForm implements CommandListener {
             this.te = null;
             this.ps = null;
             this.map = null;
-            this.pane = null;
             // restore desktop UI
             Desktop.display.setCurrent(Desktop.screen);
         } else {
+            // form
+            final Form pane = (Form) displayable;
             // delete basic info
             pane.deleteAll();
             // remove 'Details' command
             pane.removeCommand(command);
             // show technical details
-            details(le, te, ps, map);
+            details(pane, le, te, ps, map);
         }
     }
 

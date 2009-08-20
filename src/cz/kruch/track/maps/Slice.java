@@ -22,21 +22,6 @@ public class Slice {
     private Image image;
     private int wx, hy;
 
-    /**
-     * Constructor for TB, J2N map slice.
-     *
-     * @param token slice path (as token)
-     * @throws InvalidMapException when anything goes wrong
-     */
-    Slice(CharArrayTokenizer.Token token) throws InvalidMapException {
-        this.parseXy(token);
-    }
-
-    /**
-     * Constructor for GPSka map slice.
-     *
-     * @deprecated
-     */
     Slice() {
     }
 
@@ -85,6 +70,23 @@ public class Slice {
         return false;
     }
 
+    public final long getXyLong() {
+        return (long) getX() << 20 | getY();
+    }
+
+    // TODO
+    public int hashCode() {
+        return super.hashCode();
+    }
+
+    public boolean equals(Object object) {
+        if (object instanceof Slice) {
+            Slice s = (Slice) object;
+            return s.wx == wx && s.hy == hy;
+        }
+        return false;
+    }
+
     public String toString() {
         final StringBuffer sb = new StringBuffer(32);
         NavigationScreens.append(sb, getX()).append('-');
@@ -104,52 +106,9 @@ public class Slice {
         return sb;
     }
 
-    final void setDimensions(final int xmax, final int ymax, int xi, int yi) throws InvalidMapException {
-        final int x = getX();
-        if (x + xi > xmax) {
-            xi = xmax - x;
-        }
-        final int y = getY();
-        if (y + yi > ymax) {
-            yi = ymax - y;
-        }
-        wx |= as12b(xi) << 20;
-        hy |= as12b(yi) << 20;
-    }
-    
-/*
-    private void parseXy(String path) throws InvalidMapException {
-        int p0 = -1, p1 = -1;
-        int i = 0;
-        for (final int N = path.length() - 4; i < N; i++) {
-            if ('_' == path.charAt(i)) {
-                p0 = p1;
-                p1 = i;
-            }
-        }
-        if (p0 == -1 || p1 == -1) {
-            throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_INVALID_SLICE_NAME) + ": " + path);
-        }
-        xy = asShort(parseInt(path, p0 + 1, p1)) << 16 | asShort(parseInt(path, p1 + 1, i));
-    }
-*/
-
-    private void parseXy(final CharArrayTokenizer.Token token) throws InvalidMapException {
-        int p0 = -1, p1 = -1;
-        int i = token.begin;
-        final char[] array = token.array;
-        for (final int N = token.begin + token.length - 4/* extension length */; i < N; i++) {
-            if ('_' == array[i]) {
-                p0 = p1;
-                p1 = i;
-            }
-        }
-        if (p0 > -1 && p1 > -1) {
-            wx = as20b(parseInt(array, p0 + 1, p1));
-            hy = as20b(parseInt(array, p1 + 1, i));
-        } else {
-            throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_INVALID_SLICE_NAME) + token.toString());
-        }
+    final void setRect(final int x, final int y, final int w, final int h) {
+        wx = w << 20 | x;
+        hy = h << 20 | y;
     }
 
     private static int as20b(final int i) throws InvalidMapException {
@@ -165,28 +124,6 @@ public class Slice {
         }
         throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_SLICE_TOO_BIG) + ": " + i);
     }
-
-/*
-    private static int parseInt(String value, int offset, final int end) {
-        if (offset == end || value == null) {
-            throw new NumberFormatException("No input");
-        }
-
-        int result = 0;
-
-        while (offset < end) {
-            final char ch = value.charAt(offset++);
-            if (ch >= '0' && ch <= '9') {
-                result *= 10;
-                result += ch - '0';
-            } else {
-                throw new NumberFormatException("Not a digit: " + ch);
-            }
-        }
-
-        return result;
-    }
-*/
 
     private static int parseInt(final char[] value, int offset, final int end) {
         if (offset == end) {
@@ -206,6 +143,23 @@ public class Slice {
         }
 
         return result;
+    }
+
+    static long parseXyLong(final CharArrayTokenizer.Token token) throws InvalidMapException {
+        int p0 = -1, p1 = -1;
+        int i = token.begin;
+        final char[] array = token.array;
+        for (final int N = token.begin + token.length - 4/* extension length */; i < N; i++) {
+            if ('_' == array[i]) {
+                p0 = p1;
+                p1 = i;
+            }
+        }
+        if (p0 > -1 && p1 > -1) {
+            return (long) as20b(parseInt(array, p0 + 1, p1)) << 20 | as20b(parseInt(array, p1 + 1, i));
+        } else {
+            throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_INVALID_SLICE_NAME) + token.toString());
+        }
     }
 }
 

@@ -1044,10 +1044,10 @@ public final class Waypoints implements CommandListener,
                                   navigator.getTracklogTime());
             if (USER_CUSTOM_STORE.equals(storeKey)) {
                 gpx.setFilePrefix(PREFIX_WMAP);
+            } else if (USER_RECORDED_STORE.equals(storeKey)) {
+                gpx.setFilePrefix(PREFIX_WGPS);
             } else if (USER_FRIENDS_STORE.equals(storeKey)) {
                 gpx.setFilePrefix(PREFIX_WSMS);
-            } else if (USER_FRIENDS_STORE.equals(storeKey)) {
-                gpx.setFilePrefix(PREFIX_WGPS);
             } else {
                 // assertion
                 if (storeName == null) {

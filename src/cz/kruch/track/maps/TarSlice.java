@@ -25,16 +25,16 @@ import cz.kruch.track.util.CharArrayTokenizer;
  */
 final class TarSlice extends Slice {
 
-    private int streamOffset;
+    private int blockOffset;
 
     TarSlice() {
     }
 
-    public int getStreamOffset() {
-        return streamOffset;
+    public int getBlockOffset() {
+        return blockOffset;
     }
 
-    public void setStreamOffset(int streamOffset) {
-        this.streamOffset = streamOffset;
+    public void setStreamOffset(int blockOffset) {
+        this.blockOffset = blockOffset;
     }
 }

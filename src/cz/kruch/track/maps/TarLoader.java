@@ -151,7 +151,7 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
                         && (entryName.endsWith(".png") || entryName.endsWith(".jpg"))) { // slice
 
                         // add slice
-                        registerSlice(entryName, (int) entry.getPosition());
+                        registerSlice(entryName, (int) (entry.getPosition() / TarInputStream.DEFAULT_RCDSIZE));
 
                     } else if (entryName.indexOf(File.PATH_SEPCHAR) == -1
                         && getMapCalibration() == null) { // no calibration nativeFile yet
@@ -257,7 +257,7 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
         InputStream in = null;
 
         // slice entry stream offset
-        final int streamOffset = ((TarSlice) slice).getStreamOffset();
+        final int streamOffset = ((TarSlice) slice).getBlockOffset() * TarInputStream.DEFAULT_RCDSIZE;
 
         try {
             // local ref
@@ -461,7 +461,7 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
 
                         // add slice
                         if (token.startsWith("set/") && (token.endsWith(".png") || token.endsWith(".jpg"))) {
-                            registerSlice(token, block * TarInputStream.DEFAULT_RCDSIZE);
+                            registerSlice(token, block);
                         }
 
                         // next line

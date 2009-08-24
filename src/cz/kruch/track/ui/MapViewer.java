@@ -473,6 +473,7 @@ final class MapViewer {
     }
 
     void initRoute(Position[] positions) {
+        /* synchronized to avoid race condition with render() */
         synchronized (this) {
             this.wptPositions = null;
             this.wptStatuses = null;
@@ -484,6 +485,7 @@ final class MapViewer {
     }
 
     void setRoute(Position[] positions) {
+        /* synchronized to avoid race condition with render() */
         synchronized (this) {
             this.wptPositions = null;
             this.wptPositions = positions;
@@ -618,7 +620,8 @@ final class MapViewer {
             lllast = 0;
         }
 
-        synchronized (this) { // synchronized to avoid race condition with setMap(...)
+        /* synchronized to avoid race condition with setMap() */
+        synchronized (this) {
             final Map map = this.map;
             if (map != null) {
 

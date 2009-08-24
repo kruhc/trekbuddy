@@ -1,8 +1,5 @@
 @echo off
 
-rem set JAVA_HOME=C:\Program Files\Java\jdk1.5.0_12
-set PATH=%JAVA_HOME%\bin;%PATH%
-
 if "%1"=="" goto help
 if "%2"=="" goto help
 if "%3"=="" goto help

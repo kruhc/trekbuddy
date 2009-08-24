@@ -19,6 +19,7 @@ package cz.kruch.track;
 import cz.kruch.track.configuration.Config;
 import cz.kruch.track.io.LineReader;
 import cz.kruch.track.util.CharArrayTokenizer;
+import cz.kruch.track.util.NakedVector;
 import api.io.BufferedInputStream;
 
 /*
@@ -122,7 +123,7 @@ public final class Resources {
     public static final short DESKTOP_MSG_INVALID_MMPLL         = 1355;
     public static final short DESKTOP_MSG_INVALID_IWH           = 1356;
     public static final short DESKTOP_MSG_MM_SIZE_MISMATCH      = 1357;
-    public static final short DESKTOP_MSG_MAP_TOO_BIG           = 1358;
+    public static final short DESKTOP_MSG_MAP_TOO_LARGE         = 1358;
     public static final short DESKTOP_MSG_TOO_FEW_CALPOINTS     = 1359;
     public static final short DESKTOP_MSG_NO_CALIBRATION        = 1360;
     public static final short DESKTOP_MSG_NO_SLICES             = 1361;
@@ -331,23 +332,37 @@ public final class Resources {
     public static final short INFO_ITEM_KEYS                    = 4203;
     public static final short INFO_ITEM_KEYS_MS                 = 4204;
 
-    private static int[] ids;
-    private static String[] values;
-    private static String value;
-    private static int keymapSize;
-    private static int[] keymap0, keymap1;
+    private static String[] values, userValues;
+    private static String value, userValue;
+    private static int[] ids, userIds;
+    private static short[] keymap0, keymap1;
+    private static short keymapSize;
+
+    private Resources() {
+    }
 
     static int initialize() throws IOException {
         int result = 0;
-        InputStream in = null;
+        Object[] holder = new Object[2];
+
+        // read default locale resources
+        loadRes(Resources.class.getResourceAsStream("/resources/language.res"), holder);
+        ids = (int[]) holder[0];
+        value = (String) holder[1];
+        values = new String[ids.length];
 
 //#ifdef __USERL10N__
-        if (Config.dataDirExists/* && api.file.File.isFs()*/) {
+
+        // read user resources
+        if (Config.dataDirExists) {
             api.file.File file = null;
             try {
                 file = api.file.File.open(Config.getFolderURL(Config.FOLDER_RESOURCES) + "language.res");
                 if (file.exists()) {
-                    in = file.openInputStream();
+                    loadRes(file.openInputStream(), holder);
+                    userIds = (int[]) holder[0];
+                    userValue = (String) holder[1];
+                    userValues = new String[userIds.length];
                     result++;
                 }
             } catch (Throwable t) {
@@ -360,33 +375,8 @@ public final class Resources {
                 }
             }
         }
-//#endif
-        if (in == null) {
-            in = Resources.class.getResourceAsStream("/resources/language.res");
-        }
 
-        if (in != null) {
-            final DataInputStream resin = new DataInputStream(new BufferedInputStream(in, 4096));
-            try {
-                final int signature = resin.readInt(); // signature: 0xEA4D4910; // JSR-238: 0xEE4D4910
-                final int hl = resin.readInt();        // header length
-                final int count = hl / 8;
-                ids = new int[count];
-                values = new String[count];
-                for (int i = 0; i < count; i++) {
-                    ids[i] = resin.readInt() - hl;
-                }
-                value = resin.readUTF();
-            } catch (EOFException e) {
-                // end of stream
-            } finally {
-                try {
-                    resin.close();
-                } catch (IOException e) {
-                    // ignore
-                }
-            }
-        }
+//#endif
 
         return result;
     }
@@ -402,15 +392,15 @@ public final class Resources {
                     LineReader reader = null;
                     try {
                         reader = new LineReader(file.openInputStream());
-                        keymap0 = new int[32];
-                        keymap1 = new int[32];
+                        keymap0 = new short[32];
+                        keymap1 = new short[32];
                         final char[] delims = { '=' };
                         final CharArrayTokenizer tokenizer = new CharArrayTokenizer();
                         CharArrayTokenizer.Token token = reader.readToken(false);
                         while (token != null && keymapSize < 32) {
                             tokenizer.init(token, delims, false);
-                            keymap0[keymapSize] = tokenizer.nextInt();
-                            keymap1[keymapSize] = tokenizer.nextInt();
+                            keymap0[keymapSize] = (short) tokenizer.nextInt();
+                            keymap1[keymapSize] = (short) tokenizer.nextInt();
                             keymapSize++;
                             result++;
                             token = null; // gc hint
@@ -439,28 +429,17 @@ public final class Resources {
     }
 
     public static String getString(final short id) {
-        final int[] ids = Resources.ids;
-        final String[] values = Resources.values;
         String result = null;
-        for (int i = ids.length; --i >= 0; ) {
-            if (id == ((ids[i] >> 16) & 0x0000ffff)) {
-                result = values[i];
-                if (result == null) {
-                    final int start = ids[i] & 0x0000ffff;
-                    if (i < ids.length - 1) {
-                        final int end = ids[i + 1] & 0x0000ffff;
-                        result = value.substring(start, end);
-                    } else {
-                        result = value.substring(start);
-                    }
-                    values[i] = result;
-                }
-                break;
-            }
+        if (userIds != null && userValues != null && userValue != null) {
+            result = get(id, userIds, userValues, userValue);
         }
         if (result == null) {
-            result = Integer.toString(id);
+            result = get(id, ids, values, value);
+            if (result == null) {
+                result = Integer.toString(id);
+            }
         }
+
         return result;
     }
 
@@ -496,5 +475,52 @@ public final class Resources {
         }
 //#endif
         return title;
+    }
+
+    private static void loadRes(final InputStream in, final Object[] retval) throws IOException {
+        if (in != null) {
+            final DataInputStream resin = new DataInputStream(new BufferedInputStream(in, 4096));
+            try {
+                final int signature = resin.readInt(); // signature: 0xEA4D4910; // JSR-238: 0xEE4D4910
+                final int hl = resin.readInt();        // header length
+                final int count = hl / 8;
+                int[] IDs = new int[count];
+                for (int i = 0; i < count; i++) {
+                    IDs[i] = resin.readInt() - hl;
+                }
+                retval[0] = IDs;
+                retval[1] = resin.readUTF();
+            } catch (EOFException e) {
+                // end of stream
+            } finally {
+                try {
+                    resin.close();
+                } catch (IOException e) {
+                    // ignore
+                }
+            }
+        }
+    }
+
+    public static String get(final short id, final int[] ids,
+                             final String[] values, final String value) {
+        String result = null;
+        for (int i = ids.length; --i >= 0; ) {
+            if (id == ((ids[i] >> 16) & 0x0000ffff)) {
+                result = values[i];
+                if (result == null) {
+                    final int start = ids[i] & 0x0000ffff;
+                    if (i < ids.length - 1) {
+                        final int end = ids[i + 1] & 0x0000ffff;
+                        result = value.substring(start, end);
+                    } else {
+                        result = value.substring(start);
+                    }
+                    values[i] = result;
+                }
+                break;
+            }
+        }
+        return result;
     }
 }

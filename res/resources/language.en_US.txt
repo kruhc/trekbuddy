@@ -194,7 +194,7 @@
 2312=Listing...
 2313=Loading...
 2314=Add waypoint to [%s]?
-2315=Enter new store filename
+2315=Enter new store filename:
 2400=Camera failed
 2401=\n<no preview>
 2402=No preview :-(

@@ -801,6 +801,7 @@ public final class GpxTracklog extends Thread {
         appendTwoDigitStr(sb, calendar.get(Calendar.SECOND));
         final long ms = timestamp % 1000;
         if (ms > 0) {
+            sb.append('.');
             appendFractional(sb, (int) ms);
         }
         sb.append('Z'/*CALENDAR.getTimeZone().getID()*/);

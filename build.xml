@@ -16,16 +16,14 @@
     <property name="permission.attribute" value="MIDlet-Permissions-Opt"/>
 
     <property name="wtk.home" value="c:\J2ME\WTK2.5.2"/>
-    <property name="motorola.home" value="c:\J2ME\Motorola\SDKv6.2\EmulatorM.3"/>
-    <property name="garnet.home" value="c:\J2ME\Garnet\PalmOS JVM 5.7.2\Tools"/>
+    <property name="motorola.home" value="z:\J2ME\Motorola\SDKv6.2\EmulatorM.3"/>
+    <property name="garnet.home" value="z:\J2ME\Garnet\PalmOS JVM 5.7.2\Tools"/>
     <property name="rim41.home" value="c:\J2ME\RIM\JDE 4.1.0"/>
     <property name="rim42.home" value="c:\J2ME\RIM\JDE 4.2.1"/>
-<!--
-    <property name="android.home" value="c:\J2ME\android-sdk-windows-1.5_r2\platforms\android-1.1"/>
--->
     <property name="android.home" value="z:\J2ME\android-sdk-windows-1.5_r2\platforms\android-1.5"/>
-    <property name="microemu.home" value="z:\repository\microemulator"/>
+    <property name="microemu.home" value="z:\repository\microemu"/>
     <property name="proguard.home" value="z:\apps\proguard3.11"/>
+    <property name="proguard4.home" value="z:\apps\proguard4.4"/>
 
 <!--
     <taskdef resource="antenna.properties" classpath="lib/antenna-bin-0.9.14.jar"/>
@@ -104,9 +102,24 @@
         <antcall target="sign.and.update" inheritall="true"/>
     </target>
 
-    <target name="minimal">
-        <property name="suffix" value="-min"/>
-        <property name="dist.dir" value="minimal"/>
+    <target name="standard-lite">
+        <property name="suffix" value="-lite"/>
+        <property name="dist.dir" value="standard-lite"/>
+        <property name="libraryjars" value="${wtk.home}\lib\cldcapi11.jar;${wtk.home}\lib\midpapi20.jar;${wtk.home}\lib\jsr75.jar;${wtk.home}\lib\jsr082.jar;${wtk.home}\lib\jsr179.jar;${wtk.home}\lib\jsr234.jar;${wtk.home}\lib\wma11.jar;lib\motorola-location.jar"/>
+        <property name="classpath.preverify" value="${libraryjars}"/>
+        <antcall target="clean"/>
+        <antcall target="a.pre.generic-lite"/>
+        <antcall target="compile.generic-lite"/>
+        <antcall target="lite.pack" inheritall="true"/>
+        <antcall target="obfuscate" inheritall="true"/>
+        <antcall target="preverify" inheritall="true"/>
+        <antcall target="dist" inheritall="true"/>
+        <antcall target="sign.and.update" inheritall="true"/>
+    </target>
+
+    <target name="basic">
+        <property name="suffix" value="-basic"/>
+        <property name="dist.dir" value="basic"/>
         <property name="libraryjars" value="${wtk.home}\lib\cldcapi11.jar;${wtk.home}\lib\midpapi20.jar;${wtk.home}\lib\jsr75.jar;${wtk.home}\lib\jsr082.jar;${wtk.home}\lib\jsr179.jar;${wtk.home}\lib\jsr234.jar;${wtk.home}\lib\wma11.jar"/>
         <property name="classpath.preverify" value="${libraryjars}"/>
         <antcall target="clean"/>
@@ -180,17 +193,28 @@
         <property name="libraryjars" value="${wtk.home}\lib\cldcapi11.jar;${wtk.home}\lib\midpapi20.jar;${wtk.home}\lib\jsr75.jar;${wtk.home}\lib\wma11.jar;${android.home}\android.jar"/>
         <property name="classpath.preverify" value="${libraryjars}"/>
         <antcall target="clean"/>
+        <ant dir="z:/repository/microemu/microemu-android"
+             antfile="build-trekbuddy.xml" target="clean"
+             inheritAll="false" inheritRefs="false">
+        </ant>
         <antcall target="a.pre.android"/>
         <antcall target="compile.android"/>
         <antcall target="a.pack" inheritall="true"/>
         <antcall target="obfuscate.android" inheritall="true"/>
-<!--
+<!-- not needed, so rename the jar as if it happened
         <antcall target="preverify" inheritall="true"/>
 -->
         <move file="tmp/trekbuddy${suffix}-obfuscated.jar"
               tofile="tmp/preverified/trekbuddy${suffix}-obfuscated.jar"/>
         <antcall target="dist" inheritall="true"/>
-        <antcall target="sign.and.update" inheritall="true"/>
+        <ant dir="z:/repository/microemu/microemu-android"
+             antfile="build-trekbuddy.xml"
+             inheritAll="false" inheritRefs="false">
+            <property name="javac.debug" value="true"/>
+            <property name="javac.debuglevel" value="source,lines"/>
+        </ant>
+        <copy file="z:/repository/microemu/microemu-android/bin/trekbuddy.apk"
+              todir="dist/${vendor.dir}/${dist.dir}"/>
     </target>
 
     <target name="emulator">
@@ -238,43 +262,62 @@
     <target name="a.pre.generic" depends="a.pre.hecl">
         <mkdir dir="tmp/src"/>
         <wtkpreprocess srcdir="src" destdir="tmp/src" version="1"
+                       symbols="__HECL__,__ALL__,${pre.extra}"/>
+    </target>
+
+    <target name="a.pre.generic-lite">
+        <mkdir dir="tmp/src"/>
+        <wtkpreprocess srcdir="src" destdir="tmp/src" version="1"
                        symbols="__ALL__,${pre.extra}"/>
     </target>
 
     <target name="a.pre.std" depends="a.pre.hecl">
         <mkdir dir="tmp/src"/>
         <wtkpreprocess srcdir="src" destdir="tmp/src" version="1"
-                       symbols="${pre.extra}"/>
+                       symbols="__HECL__,${pre.extra}"/>
     </target>
 
     <target name="a.pre.j9" depends="a.pre.hecl">
         <mkdir dir="tmp/src"/>
         <wtkpreprocess srcdir="src" destdir="tmp/src" version="1"
-                       symbols="__J9__,${pre.extra}"/>
+                       symbols="__HECL__,__J9__,${pre.extra}"/>
     </target>
 
     <target name="a.pre.rim" depends="a.pre.hecl">
         <mkdir dir="tmp/src"/>
         <wtkpreprocess srcdir="src" destdir="tmp/src" version="1"
-                       symbols="__RIM__,${pre.extra}"/>
+                       symbols="__HECL__,__RIM__,${pre.extra}"/>
     </target>
 
     <target name="a.pre.emulator" depends="a.pre.hecl">
         <mkdir dir="tmp/src"/>
         <wtkpreprocess srcdir="src" destdir="tmp/src" version="1"
-                       symbols="__ALL__,__LOG__,${pre.extra}"/>
+                       symbols="__HECL__,__ALL__,__LOG__,${pre.extra}"/>
     </target>
 
     <target name="a.pre.android" depends="a.pre.hecl">
         <mkdir dir="tmp/src"/>
         <wtkpreprocess srcdir="src" destdir="tmp/src" version="1"
-                       symbols="__ANDROID__,${pre.extra}"/>
+                       symbols="__HECL__,__ANDROID__,__LOG__,${pre.extra}"/>
     </target>
 
     <target name="compile.generic" depends="remove.rim.src,remove.android.src">
         <mkdir dir="tmp/build/classes"/>
+        <mkdir dir="tmp/ant"/>
         <javac srcdir="tmp/src"
                destdir="tmp/build/classes"
+               tempdir="tmp/ant"
+               fork="true"
+               target="1.1" source="1.3"
+               bootclasspathref="bootclasspath.generic"/>
+    </target>
+
+    <target name="compile.generic-lite" depends="remove.rim.src,remove.android.src,remove.hecl.src">
+        <mkdir dir="tmp/build/classes"/>
+        <mkdir dir="tmp/ant"/>
+        <javac srcdir="tmp/src"
+               destdir="tmp/build/classes"
+               tempdir="tmp/ant"
                fork="true"
                target="1.1" source="1.3"
                bootclasspathref="bootclasspath.generic"/>
@@ -282,8 +325,10 @@
 
     <target name="compile.std" depends="remove.nonstd.src,remove.rim.src,remove.android.src">
         <mkdir dir="tmp/build/classes"/>
+        <mkdir dir="tmp/ant"/>
         <javac srcdir="tmp/src"
                destdir="tmp/build/classes"
+               tempdir="tmp/ant"
                fork="true"
                target="1.1" source="1.3"
                bootclasspathref="bootclasspath.std"/>
@@ -291,8 +336,10 @@
 
     <target name="compile.rim41" depends="remove.nonrim41.src">
         <mkdir dir="tmp/build/classes"/>
+        <mkdir dir="tmp/ant"/>
         <javac srcdir="tmp/src"
                destdir="tmp/build/classes"
+               tempdir="tmp/ant"
                fork="true"
                target="1.1" source="1.3"
                bootclasspathref="bootclasspath.rim41"/>
@@ -300,8 +347,10 @@
 
     <target name="compile.rim42" depends="remove.nonrim42.src">
         <mkdir dir="tmp/build/classes"/>
+        <mkdir dir="tmp/ant"/>
         <javac srcdir="tmp/src"
                destdir="tmp/build/classes"
+               tempdir="tmp/ant"
                fork="true"
                target="1.1" source="1.3"
                bootclasspathref="bootclasspath.rim42"/>
@@ -309,10 +358,12 @@
 
     <target name="compile.android" depends="remove.nonandroid.src,remove.rim.src">
         <mkdir dir="tmp/build/classes"/>
+        <mkdir dir="tmp/ant"/>
         <javac srcdir="tmp/src"
                destdir="tmp/build/classes"
+               tempdir="tmp/ant"
                fork="true"
-               target="1.5" source="1.3" debug="false"
+               target="1.5" source="1.3"
                bootclasspathref="bootclasspath.android"/>
     </target>
 
@@ -333,11 +384,16 @@
         <delete file="tmp/src/cz/kruch/track/location/MotorolaLocationProvider.java"/>
     </target>
 
+    <target name="remove.hecl.src">
+        <delete file="tmp/src/cz/kruch/track/hecl/ControlledInterp.java"/>
+    </target>
+
     <target name="remove.rim.src">
         <delete file="tmp/src/cz/kruch/track/ui/nokia/BlackberryDeviceControl.java"/>
     </target>
 
     <target name="remove.android.src">
+        <delete file="tmp/src/cz/kruch/track/fun/AndroidCamera.java"/>
         <delete file="tmp/src/cz/kruch/track/location/AndroidLocationProvider.java"/>
         <delete file="tmp/src/cz/kruch/track/ui/nokia/AndroidDeviceControl.java"/>
     </target>
@@ -376,6 +432,7 @@
             <attribute name="${permission.attribute}" value="javax.microedition.io.Connector.file.read,javax.microedition.io.Connector.file.write,javax.microedition.io.Connector.bluetooth.client,javax.microedition.location.Location,javax.microedition.media.control.VideoControl.getSnapshot,javax.microedition.io.Connector.sms,javax.wireless.messaging.sms.receive,javax.wireless.messaging.sms.send,javax.microedition.io.Connector.comm,javax.microedition.io.Connector.cbs,javax.wireless.messaging.cbs.receive,javax.microedition.io.Connector.socket, javax.microedition.io.PushRegistry"/>
             <attribute name="Nokia-MIDlet-Category" value="Application"/>
             <attribute name="Nokia-MIDlet-No-Exit" value="true"/>
+            <attribute name="LGE-MIDlet-FlipHandling-Option" value="Pause"/>
             <midlet name="${name}" class="cz.kruch.track.TrackingMIDlet" icon="/resources/icon.png"/>
         </wtkjad>
         <fixcrlf srcdir="tmp" eol="crlf" eof="remove" encoding="UTF-8" includes="trekbuddy${suffix}.jad"/>
@@ -389,13 +446,32 @@
                     profile="MIDP-${wtk.midp.version}">
             <fileset dir="tmp/build/classes"/>
             <fileset dir="res">
-                <include name="**/*.png"/>
                 <include name="**/datums.txt"/>
                 <include name="**/language.res"/>
+                <include name="**/*.png"/>
                 <include name="**/world.*"/>
                 <include name="**/set/**"/>
             </fileset>
-            <exclude_from_manifest list="Nokia-MIDlet-Category,Nokia-MIDlet-No-Exit"/>
+            <exclude_from_manifest list="Nokia-MIDlet-Category,Nokia-MIDlet-No-Exit,LGE-MIDlet-FlipHandling-Option"/>
+            <manifest>
+                <attribute name="Built-By" value="kruhc@seznam.cz"/>
+            </manifest>
+        </wtkpackage>
+    </target>
+
+    <target name="lite.pack" depends="create.tmp.jad">
+        <wtkpackage jarfile="tmp/trekbuddy${suffix}.jar"
+                    jadfile="tmp/trekbuddy${suffix}.jad"
+                    config="CLDC-${wtk.cldc.version}"
+                    profile="MIDP-${wtk.midp.version}">
+            <fileset dir="tmp/build/classes"/>
+            <fileset dir="res">
+                <include name="**/datums.txt"/>
+                <include name="**/language.res"/>
+                <include name="**/*.png"/>
+                <exclude name="**/set/*.png"/>
+            </fileset>
+            <exclude_from_manifest list="Nokia-MIDlet-Category,Nokia-MIDlet-No-Exit,LGE-MIDlet-FlipHandling-Option"/>
             <manifest>
                 <attribute name="Built-By" value="kruhc@seznam.cz"/>
             </manifest>
@@ -454,9 +530,6 @@
             <arg value="-overloadaggressively"/>
             <arg value="-allowaccessmodification"/>
             <arg value="-keep class * implements javax.microedition.midlet.MIDlet"/>
-<!-- kXML
-            <arg value="-keepnames class org.**"/>
--->
             <arg value="-keepnames class cz.** extends java.lang.Exception"/>
             <arg value="-keepnames class api.** extends java.lang.Exception"/>
             <arg value="-keepnames class org.hecl.** extends java.lang.Exception"/>
@@ -485,14 +558,11 @@
             <arg value="-dontskipnonpubliclibraryclasses"/>
             <arg value="-dontusemixedcaseclassnames"/>
             <arg value="-defaultpackage ''"/>
-<!-- cannot be used
+<!-- cannot be used with RIM
             <arg value="-overloadaggressively"/>
             <arg value="-allowaccessmodification"/>
 -->
             <arg value="-keep class * implements javax.microedition.midlet.MIDlet"/>
-<!-- kXML
-            <arg value="-keepnames class org.**"/>
--->
             <arg value="-keepnames class cz.** extends java.lang.Exception"/>
             <arg value="-keepnames class api.** extends java.lang.Exception"/>
             <arg value="-keepnames class org.hecl.** extends java.lang.Exception"/>
@@ -519,15 +589,42 @@
 -->
             <arg value="-dontusemixedcaseclassnames"/>
             <arg value="-dontskipnonpubliclibraryclasses"/>
+            <arg value="-dontobfuscate"/>
             <arg value="-defaultpackage ''"/>
             <arg value="-allowaccessmodification"/>
-<!--
+<!-- !3.11
             <arg value="-overloadaggressively"/>
 -->
             <arg value="-keep class * implements javax.microedition.midlet.MIDlet"/>
-<!-- kXML
-            <arg value="-keepnames class org.**"/>
--->
+            <arg value="-keepnames class cz.** extends java.lang.Exception"/>
+            <arg value="-keepnames class api.** extends java.lang.Exception"/>
+            <arg value="-keepnames class org.hecl.** extends java.lang.Exception"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.fun.Friends"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.maps.io.FileInput"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.ui.WaypointForm"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.util.NakedVector"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.util.Logger"/>
+            <arg value="-whyareyoukeeping class api.io.BufferedOutputStream"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.hecl.ControlledInterp"/>
+            <arg value="-printmapping dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.map"/>
+            <arg value="-printseeds"/>
+            <arg value="-printusage dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.dco"/>
+            <arg value="-verbose"/>
+        </java>
+    </target>
+
+    <target name="obfuscate.android.4x">
+	    <java jar="${proguard4.home}\lib\proguard.jar" fork="true">
+            <arg value="-injars tmp/trekbuddy${suffix}.jar"/>
+            <arg value="-outjars tmp/trekbuddy${suffix}-obfuscated.jar"/>
+            <arg value="-libraryjars ${libraryjars}"/>
+            <arg value="-dontusemixedcaseclassnames"/>
+            <arg value="-dontskipnonpubliclibraryclasses"/>
+            <arg value="-repackageclasses ''"/>
+            <arg value="-allowaccessmodification"/>
+            <arg value="-overloadaggressively"/>
+            <arg value="-optimizations !code/simplification/arithmetic"/>
+            <arg value="-keep class * implements javax.microedition.midlet.MIDlet"/>
             <arg value="-keepnames class cz.** extends java.lang.Exception"/>
             <arg value="-keepnames class api.** extends java.lang.Exception"/>
             <arg value="-keepnames class org.hecl.** extends java.lang.Exception"/>
@@ -600,6 +697,7 @@
             <attribute name="${permission.attribute}" value="javax.microedition.io.Connector.file.read,javax.microedition.io.Connector.file.write,javax.microedition.io.Connector.bluetooth.client,javax.microedition.location.Location,javax.microedition.media.control.VideoControl.getSnapshot,javax.microedition.io.Connector.sms,javax.wireless.messaging.sms.receive,javax.wireless.messaging.sms.send,javax.microedition.io.Connector.comm,javax.microedition.io.Connector.cbs,javax.wireless.messaging.cbs.receive,javax.microedition.io.Connector.socket, javax.microedition.io.PushRegistry"/>
             <attribute name="Nokia-MIDlet-Category" value="Application"/>
             <attribute name="Nokia-MIDlet-No-Exit" value="true"/>
+            <attribute name="LGE-MIDlet-FlipHandling-Option" value="Pause"/>
             <midlet name="${name}" class="cz.kruch.track.TrackingMIDlet" icon="/resources/icon.png"/>
         </wtkjad>
         <fixcrlf srcdir="dist/${vendor.dir}/${dist.dir}"

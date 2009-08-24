@@ -39,7 +39,7 @@ abstract class Calibration {
     protected String imgname;
 
     // map dimensions
-    protected int wh;
+    protected int w, h;
 
     // map datum and projection params
     private Datum datum;
@@ -75,19 +75,19 @@ abstract class Calibration {
     }
 
     public int getWidth() {
-        return (this.wh >> 16) & 0x0000ffff;
+        return w;
     }
 
     public int getHeight() {
-        return this.wh & 0x0000ffff;
+        return h;
     }
 
     public void setWidth(int width) {
-        this.wh |= (width << 16) & 0xffff0000;
+        this.w = width;
     }
 
     public void setHeight(int height) {
-        this.wh |= height & 0x0000ffff;
+        this.h = height;
     }
 
     public ProjectionSetup getProjection() {
@@ -202,7 +202,7 @@ abstract class Calibration {
         }
 
         // dimension check
-        if (wh == 0) {
+        if (w == 0 || h == 0) {
             throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_INVALID_MAP_DIMENSION));
         }
 
@@ -402,11 +402,11 @@ abstract class Calibration {
         return c;
     }
 
-    protected static short getDimension(final int i) throws InvalidMapException {
-        if (i <= Short.MAX_VALUE) {
-            return (short) i;
+    protected static int getDimension(final int i) throws InvalidMapException {
+        if (i < 0xfffff) {
+            return i;
         }
-        throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_MAP_TOO_BIG));
+        throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_MAP_TOO_LARGE));
     }
 
     abstract void init(InputStream in, String path) throws IOException;

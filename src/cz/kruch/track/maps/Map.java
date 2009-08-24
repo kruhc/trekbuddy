@@ -383,8 +383,8 @@ public final class Map implements Runnable {
 
             // detect tile dimensions
             final long lxly = Slice.parseXyLong(token);
-            final int x = (int) (lxly >> 20);
-            final int y = (int) (lxly);
+            final int x = (int) ((lxly >> 20) & 0xfffff);
+            final int y = (int) (lxly & 0xfffff);
             if (x > 0 && x < tileWidth) {
                 tileWidth = x;
             }

@@ -1,18 +1,4 @@
-/*
- * Copyright 2006-2007 Ales Pour <kruhc@seznam.cz>.
- * All Rights Reserved.
- * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
- *
- * This code is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License version 2 only, as
- * published by the Free Software Foundation.
- *
- * This code is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
- * version 2 for more details (a copy is included in the LICENSE file that
- * accompanied this code).
- */
+// @LICENSE@
 
 package cz.kruch.track.ui;
 
@@ -108,7 +94,7 @@ final class InfoForm implements CommandListener {
         pane.append(newItem("Ports", sb.toString()));
         sb.delete(0, sb.length()).append(TimeZone.getDefault().getID()).append("; ").append(TimeZone.getDefault().useDaylightTime()).append("; ").append(TimeZone.getDefault().getRawOffset());
         pane.append(newItem("TimeZone", sb.toString()));
-        sb.delete(0, sb.length()).append("safe renderer? ").append(Config.S60renderer).append("; hasRepeatEvents? ").append(Desktop.screen.hasRepeatEvents()).append("; hasPointerEvents? ").append(Desktop.screen.hasPointerEvents()).append("; ").append(Desktop.screen.getWidth()).append('x').append(Desktop.screen.getHeight());
+        sb.delete(0, sb.length()).append("safe renderer? ").append(Config.S60renderer).append("; hasRepeatEvents? ").append(Desktop.screen.hasRepeatEvents()).append("; hasPointerEvents? ").append(Desktop.screen.hasPointerEvents()).append("; ").append(Desktop.screen.getWidth()).append('x').append(Desktop.screen.getHeight()).append("; skips? ").append(Desktop.skips);
         pane.append(newItem("Desktop", sb.toString()));
         if (map == null) {
             pane.append(newItem("Map", ""));

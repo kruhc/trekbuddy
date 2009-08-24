@@ -290,7 +290,7 @@ final class DeviceScreen extends GameCanvas implements Runnable {
         final int dy = y - gy;
         final int adx = Math.abs(dx);
         final int ady = Math.abs(dy);
-        if (adx > 10 || ady > 10) {
+        if (adx >= 15 || ady >= 15 || _getInMove()) {
             _setInKey(0);
             _setInMove(true);
 /*

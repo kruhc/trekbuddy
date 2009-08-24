@@ -5,7 +5,9 @@ package cz.kruch.track.maps.io;
 import java.util.Vector;
 
 /**
- * File loading helper. It is a task runner actually :-)
+ * File loading helper.
+ * TODO Misused!
+ * TODO Rename and move! It is a task runner actually :-)
  *
  * @author Ales Pour <kruhc@seznam.cz>
  */
@@ -63,8 +65,12 @@ public final class LoaderIO extends Thread {
         if (log.isEnabled()) log.debug("I/O thread starting...");
 //#endif
 
+        final Vector tasks = this.tasks;
+
         while (true) {
+
             Runnable task = null;
+
             synchronized (this) {
                 while (go && tasks.size() == 0) {
                     try {
@@ -78,9 +84,8 @@ public final class LoaderIO extends Thread {
                     tasks.setElementAt(null, 0);
                     tasks.removeElementAt(0);
                 }
+                if (!go) break;
             }
-
-            if (!go) break;
 
 //#ifdef __LOG__
             if (log.isEnabled()) log.debug("popped task: " + task);

@@ -105,8 +105,8 @@ public final class Desktop implements CommandListener,
     private int mode;
 
     // data components
-    private Map map;
-    private Atlas atlas;
+    private volatile Map map;
+    private volatile Atlas atlas;
 
     // groupware components
     private Friends friends;
@@ -152,6 +152,9 @@ public final class Desktop implements CommandListener,
 
     // eventing
     private final SmartRunnable eventing;
+/*
+    private final Object renderLock;
+*/
 
     /**
      * Desktop constructor.
@@ -185,7 +188,6 @@ public final class Desktop implements CommandListener,
         BACK_CMD_TYPE = Command.EXIT;
         CANCEL_CMD_TYPE = Command.EXIT;
 //#elifdef __ANDROID__
-        CHOICE_POPUP_TYPE = Choice.EXCLUSIVE;
         CANCEL_CMD_TYPE = Command.BACK;
 //#endif
 
@@ -199,6 +201,9 @@ public final class Desktop implements CommandListener,
         this.midlet = midlet;
         this.boot = true;
         this.initializingMap = true;
+/*
+        this.renderLock = new Object();
+*/
         this.eventing = SmartRunnable.getInstance();
         this.loadingResult = new Object[]{
             Resources.getString(Resources.DESKTOP_MSG_NO_DEFAULT_MAP), null
@@ -694,7 +699,7 @@ public final class Desktop implements CommandListener,
 //#ifdef __LOG__
                 if (log.isEnabled()) log.debug("exit command");
 //#endif
-
+                
                 // stop tracklog and tracking
                 stopTracking();
                 stopTracklog();
@@ -765,12 +770,8 @@ public final class Desktop implements CommandListener,
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("location update: " + new Date(location.getTimestamp()) + ";" + location.getQualifiedCoordinates() + "; course = " + location.getCourse());
 //#endif
-/*
         eventing.callSerially(newEvent(Event.EVENT_TRACKING_POSITION_UPDATED,
                               location, null, provider));
-*/
-        LoaderIO.getInstance().enqueue(newEvent(Event.EVENT_TRACKING_POSITION_UPDATED,
-                                                location, null, provider));
     }
 
     public void providerStateChanged(LocationProvider provider, int newState) {
@@ -778,12 +779,8 @@ public final class Desktop implements CommandListener,
         if (log.isEnabled()) log.info("location provider state changed; " + newState);
 //#endif
 
-/*
         eventing.callSerially(newEvent(Event.EVENT_TRACKING_STATUS_CHANGED,
                               new Integer(newState), null, provider));
-*/
-        LoaderIO.getInstance().enqueue(newEvent(Event.EVENT_TRACKING_STATUS_CHANGED,
-                                       new Integer(newState), null, provider));
 
 
         /*
@@ -1286,7 +1283,7 @@ public final class Desktop implements CommandListener,
     void handleKeyDown(final int i, final boolean repeated) {
         final View[] views = this.views;
 
-        if (views == null || paused) {
+        if (views == null) {
             return;
         }
 
@@ -1475,8 +1472,23 @@ public final class Desktop implements CommandListener,
                 }
             }
 
-            // enqueu render request
+            /*
+             * I would say the best strategy is to use display.callSerially
+             * together with renderLock in Event.run and RenderTask.run, but
+             * eventing (including LoaderIO task runner) should be reviewed.
+             *
+             * See note in SmartRunnable.
+             */
+
+			// enqueu render task
             eventing.callSerially(newRenderTask(mask));
+/*
+            if (screen.isShown() && cz.kruch.track.TrackingMIDlet.state == 1) {
+                display.callSerially(newRenderTask(mask));
+//                newRenderTask(mask).run();
+			}
+*/
+
         }
 //#ifdef __LOG__
           else {
@@ -1955,8 +1967,8 @@ public final class Desktop implements CommandListener,
      */
 
     public void mapOpened(final Object result, final Throwable throwable) {
-        eventing.callSerially(new Event(Event.EVENT_MAP_OPENED,
-                                        result, throwable, null));
+        eventing.callSerially(newEvent(Event.EVENT_MAP_OPENED,
+                                       result, throwable, null));
     }
 
     public void slicesLoading(final Object result, final Throwable throwable) {
@@ -1965,17 +1977,13 @@ public final class Desktop implements CommandListener,
 
     public void slicesLoaded(final Object result, final Throwable throwable) {
         _setLoadingSlices(false);
-        eventing.callSerially(new Event(Event.EVENT_SLICES_LOADED,
-                                        result, throwable, null));
+        eventing.callSerially(newEvent(Event.EVENT_SLICES_LOADED,
+                                       result, throwable, null));
     }
 
     public void loadingChanged(final Object result, final Throwable throwable) {
-        eventing.callSerially(new Event(Event.EVENT_LOADING_STATUS_CHANGED,
-                                        result, throwable, null));
-/*
-        // hack for "UI smoothness"
-        Thread.yield();
-*/
+        eventing.callSerially(newEvent(Event.EVENT_LOADING_STATUS_CHANGED,
+                                       result, throwable, null));
     }
 
     /*
@@ -1983,7 +1991,7 @@ public final class Desktop implements CommandListener,
     */
 
     public void atlasOpened(final Object result, final Throwable throwable) {
-        eventing.callSerially(new Event(Event.EVENT_ATLAS_OPENED,
+        eventing.callSerially(newEvent(Event.EVENT_ATLAS_OPENED,
                                         result, throwable, null));
     }
 
@@ -2061,14 +2069,15 @@ public final class Desktop implements CommandListener,
     public static final int MASK_ALL        = MASK_MAP | MASK_OSD | MASK_STATUS | MASK_CROSSHAIR;
     public static final int MASK_SCREEN     = MASK_ALL;
 
-    public final class RenderTask implements Runnable {
+    static long skips;
+
+    final class RenderTask implements Runnable {
 //#ifdef __LOG__
         private /*static*/ final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("RenderTask");
 //#endif
-
         private int mask;
 
-        public RenderTask(final int m) {
+        private RenderTask(final int m) {
             this.mask = m;
         }
 
@@ -2083,14 +2092,20 @@ public final class Desktop implements CommandListener,
                 final Graphics g = screen.getGraphics();
 
                 // render current view
+/*
+                synchronized (renderLock) {
+*/
                 views[mode].render(g, font, mask);
+/*
+                }
+*/
 
-                // paused?
+				// paused?
                 if (paused) {
                     drawPause(g);
                 }
 
-                // flush
+                // flush offscreen buffer
                 screen.flushGraphics();
 
             } catch (Throwable t) {
@@ -2276,7 +2291,7 @@ public final class Desktop implements CommandListener,
      * ~POOL
      */
 
-    private final class Event implements Runnable, Callback, YesNoDialog.AnswerListener {
+    final class Event implements Runnable, Callback, YesNoDialog.AnswerListener {
 //#ifdef __LOG__
         private /*static*/ final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("Event");
 //#endif
@@ -2373,6 +2388,9 @@ public final class Desktop implements CommandListener,
                 if (log.isEnabled()) log.debug("event run; " + this);
 //#endif
 
+/*
+                synchronized (renderLock) {
+*/
                 switch (code) {
                     case EVENT_CONFIGURATION_CHANGED: {
                         execConfigChanged();
@@ -2408,6 +2426,9 @@ public final class Desktop implements CommandListener,
                         execTrackingPositionUpdated();
                     } break;
                 }
+/*
+                }
+*/
 
 //#ifdef __LOG__
                 if (log.isEnabled()) log.debug("~event run; " + this);
@@ -2804,11 +2825,6 @@ public final class Desktop implements CommandListener,
                 status.setStatus((String) result);
 
                 // status update
-//                if (result == null) {
-//                    update(MASK_STATUS /* | MASK_MAP */);
-//                } else {
-//                    update(MASK_STATUS);
-//                }
                 update(MASK_ALL);
 
             } else {

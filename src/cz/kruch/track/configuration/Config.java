@@ -208,11 +208,11 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         fullscreen = true;
         safeColors = true;
 //#elifdef __ANDROID__
-        /* default for Android (emu) */
+        /* default for Android (MicroEmu) */
         dataDir = getDefaultDataDir("file:///sdcard/", "TrekBuddy/");
         fullscreen = true;
-        safeColors = true;
-		listFont = 0x200000;
+        safeColors = false;
+        listFont = 0x200010;
 //#else
         if (cz.kruch.track.TrackingMIDlet.sxg75) {
             dataDir = getDefaultDataDir("file:///fs/", "tb/");

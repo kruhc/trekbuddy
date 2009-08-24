@@ -2386,9 +2386,6 @@ final class ComputerView
                 case HASH_PROFILE: {
                     result = StringThing.create(Config.cmsProfile);
                 } break;
-                case HASH_WPT_ALT_DIFF: {
-                    // TODO
-                } break;
                 case HASH_ALT: {
                     idx = VALUE_ALT;
                 } break;
@@ -2484,6 +2481,13 @@ final class ComputerView
                     case HASH_WPT_AZI: {
                         result = IntThing.create(navigator.getWptAzimuth());
                     } break;
+					case HASH_WPT_ALT_DIFF: {
+						float diff = navigator.getWptAltDiff();
+						if (!Float.isNaN(diff)) {
+							diff = asAltitude(units, diff);
+						}
+						result = FloatThing.create(diff);
+					} break;
                 }
             }
         } else {

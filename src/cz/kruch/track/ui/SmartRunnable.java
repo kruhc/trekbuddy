@@ -9,11 +9,11 @@ import java.util.Vector;
  *
  * @author Ales Pour <kruhc@seznam.cz>
  */
-final class SmartRunnable implements Runnable {
+final class SmartRunnable extends Thread {
     private static SmartRunnable instance;
 
     private final Vector runnables;
-    private boolean go, pending;
+    private boolean go;
 
     static int uncaught;
 
@@ -25,6 +25,8 @@ final class SmartRunnable implements Runnable {
     public static SmartRunnable getInstance() {
         if (instance == null) {
             instance = new SmartRunnable();
+            instance.setPriority(Thread.MAX_PRIORITY);
+            instance.start();
         }
         return instance;
     }
@@ -32,26 +34,41 @@ final class SmartRunnable implements Runnable {
     public void destroy() {
         synchronized (this) {
             go = false;
+            notify();
         }
     }
 
+    /*
+     * I would guess the best performance (smoothness) could be achieved by:
+     *
+     * 1. passing instance(s?) of DeviceScreen (key holded check) and Desktop.RenderTask
+     *    to display.callSerialy if the screen is shown and midlet state is running
+     * 2. queueing instances of Desktop.Event in this task runner
+     *
+     * This implies synchronization around render lock in Desktop.
+     */
+
     public void callSerially(final Runnable r) {
-        // local ref
-        final Vector runnables = this.runnables;
 
-        // fire flag
-        boolean fire = false;
+/*
+        if (r instanceof Desktop.Event) {
+            r.run();
+        } else {
+            cz.kruch.track.maps.io.LoaderIO.getInstance().enqueue(r);
+        }
+*/
 
-        // thread-safe
+        final Vector tasks = this.runnables;
+
         synchronized (this) {
 
             // accept task only if running
             if (go) {
 
                 // try task merge
-                if (runnables.size() > 0) {
+                if (tasks.size() > 0) {
 
-                    final Object last = runnables.lastElement();
+                    final Object last = tasks.lastElement();
                     if (r instanceof DeviceScreen) { // trick #1: avoid duplicates of key-hold checks
                         if (last instanceof DeviceScreen) {
                             return;
@@ -68,56 +85,46 @@ final class SmartRunnable implements Runnable {
                 }
 
                 // enqueue task
-                runnables.addElement(r);
+                tasks.addElement(r);
 
-                // "schedule" a task if no task is currently running
-                if (!pending) {
-                    fire = pending = true;
-                }
+                // wake up
+                notify();
             }
-        }
-
-        if (fire) {
-            Desktop.display.callSerially(this);
         }
     }
 
     public void run() {
-        final Vector runnables = this.runnables;
-        Runnable r = null;
 
-        synchronized (this) {
-            if (runnables.size() > 0) {
-                r = (Runnable) runnables.elementAt(0);
-                runnables.setElementAt(null, 0);
-                runnables.removeElementAt(0);
+        final Vector tasks = this.runnables;
+
+        while (true) {
+
+            Runnable task = null;
+			
+            synchronized (this) {
+                while (go && tasks.size() == 0) {
+                    try {
+                        wait();
+                    } catch (InterruptedException e) {
+                        // ignore
+                    }
+                }
+                if (tasks.size() > 0) {
+                    task = (Runnable) tasks.elementAt(0);
+                    tasks.setElementAt(null, 0);
+                    tasks.removeElementAt(0);
+                }
+                if (!go) break;
             }
-        }
 
-        if (r != null) {
             try {
-                r.run();
+                task.run();
             } catch (Throwable t) {
                 uncaught++;
 //#ifdef __LOG__
                 t.printStackTrace();
 //#endif
             }
-        }
-
-        // fire flag
-        boolean fire = false;
-
-        synchronized (this) {
-            if (runnables.size() > 0) {
-                fire = pending = true;
-            } else {
-                pending = false;
-            }
-        }
-
-        if (fire) {
-            Desktop.display.callSerially(this);
         }
     }
 }

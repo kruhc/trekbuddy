@@ -238,7 +238,11 @@ public final class Map implements Runnable {
         final Throwable throwable = loadMap();
 
 //#ifdef __LOG__
-        if (log.isEnabled()) log.debug("map loading finished for " + getPath() + "; " + throwable);
+        if (log.isEnabled()) {
+            log.debug("map loading finished for " + getPath() + "; " + throwable);
+            log.debug("  tile basename: " + loader.basename);
+            log.debug("  tile dimensions: " + loader.tileWidth + "x" + loader.tileHeight);
+        }
 //#endif
 
         // we are done
@@ -527,11 +531,6 @@ public final class Map implements Runnable {
                             if (slice.getImage() == null || slice.getImage() == Slice.NO_IMAGE) {
                                 throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_NO_SLICE_IMAGE) + " " + slice.toString());
                             }
-
-                            // gc
-                            if (Config.forcedGc) {
-                                System.gc();
-                            }
 //#ifdef __LOG__
                             if (log.isEnabled()) log.debug("image loaded for slice " + slice.toString());
 //#endif
@@ -548,6 +547,14 @@ public final class Map implements Runnable {
                 if (log.isEnabled()) log.debug("image loading for slice failed", t);
 //#endif
                 return t;
+
+            } finally {
+
+                // gc
+                if (Config.forcedGc) {
+                    System.gc();
+                }
+                
             }
 
             return null;

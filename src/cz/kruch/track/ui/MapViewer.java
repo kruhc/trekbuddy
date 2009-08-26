@@ -489,6 +489,14 @@ final class MapViewer {
         synchronized (this) {
             this.wptPositions = null;
             this.wptPositions = positions;
+            if (positions != null) {
+                if (this.wptStatuses != null && this.wptStatuses.length != positions.length) {
+                    final byte[] newStatuses = new byte[positions.length];
+                    System.arraycopy(this.wptStatuses, 0, newStatuses, 0, this.wptStatuses.length);
+                    this.wptStatuses = null;
+                    this.wptStatuses = newStatuses;
+                }
+            }
         }
     }
 

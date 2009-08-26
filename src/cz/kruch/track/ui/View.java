@@ -1,24 +1,9 @@
-/*
- * Copyright 2006-2007 Ales Pour <kruhc@seznam.cz>.
- * All Rights Reserved.
- * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
- *
- * This code is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License version 2 only, as
- * published by the Free Software Foundation.
- *
- * This code is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
- * version 2 for more details (a copy is included in the LICENSE file that
- * accompanied this code).
- */
+// @LICENSE@
 
 package cz.kruch.track.ui;
 
 import javax.microedition.lcdui.Graphics;
 import javax.microedition.lcdui.Font;
-import javax.microedition.lcdui.game.GameCanvas;
 
 import api.location.Location;
 import api.location.QualifiedCoordinates;
@@ -28,7 +13,7 @@ import java.util.Vector;
 import cz.kruch.track.Resources;
 
 /**
- * Base class for screens
+ * Base class for screens.
  *
  * @author Ales Pour <kruhc@seznam.cz>
  */
@@ -36,6 +21,7 @@ abstract class View {
     protected static final String MSG_NO_POSITION = Resources.getString(Resources.DESKTOP_MSG_NO_POSITION);
 
     protected final /*Navigator*/Desktop navigator;
+
     protected boolean isVisible;
 
     protected View(/*Navigator*/Desktop navigator) {
@@ -63,6 +49,10 @@ abstract class View {
     }
 
     public int routeChanged(Vector wpts) {
+        return isVisible ? Desktop.MASK_SCREEN : Desktop.MASK_NONE;
+    }
+
+    public int routeExpanded(Vector wpts) {
         return isVisible ? Desktop.MASK_SCREEN : Desktop.MASK_NONE;
     }
 

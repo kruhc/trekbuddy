@@ -198,6 +198,7 @@ public final class Resources {
     public static final short NAV_MSG_TICKER_LOADING            = 2313;
     public static final short NAV_MSG_WPT_ADD_TO                = 2314;
     public static final short NAV_MSG_ENTER_STORE_FILENAME      = 2315;
+    public static final short NAV_MSG_SELECT_STORE              = 2316;
     public static final short NAV_MSG_CAMERA_FAILED             = 2400;
     public static final short NAV_MSG_NO_PREVIEW                = 2401;
     public static final short NAV_MSG_DO_NOT_WORRY              = 2402;

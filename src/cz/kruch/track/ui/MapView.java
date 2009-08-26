@@ -116,7 +116,21 @@ final class MapView extends View {
         return super.routeChanged(wpts);
     }
 
-    public int navigationChanged(final Vector wpts, final int idx, final boolean silent) {
+    public int routeExpanded(Vector wpts) {
+        // release old route; also resets map viewer
+        disposeRoute();
+
+        // prepare route
+        prepareRoute(wpts);
+
+        // set route
+        mapViewer.setRoute(route);
+
+        return super.routeExpanded(wpts);
+    }
+
+    // TODO vector not used
+	public int navigationChanged(final Vector wpts, final int idx, final boolean silent) {
         // navigation started or changed
         if (wpts != null) {
 

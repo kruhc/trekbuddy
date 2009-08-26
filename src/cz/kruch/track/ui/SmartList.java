@@ -72,7 +72,7 @@ final class SmartList extends Canvas {
             try {
                 super.setTitle(title);
             } catch (Exception e) {
-                Desktop.showError("XXXX", e, null);
+                // ignore
             }
         }
     }

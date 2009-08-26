@@ -125,6 +125,7 @@ public final class Desktop implements CommandListener,
     private /*volatile*/ boolean initializingMap; // using synchronized access helper
     private /*volatile*/ boolean loadingSlices;   // using synchronized access helper
     private final Object[] loadingResult;
+    private final Object loadingLock;
 
     // location provider and its last-op throwable and status
     private volatile LocationProvider provider;
@@ -142,6 +143,7 @@ public final class Desktop implements CommandListener,
 
     // navigation // TODO move to Waypoints
     /*public*/ static volatile Vector wpts;
+    /*public*/ static volatile String wptsName;
     /*public*/ static volatile int wptIdx, wptEndIdx, reachedIdx;
     /*public*/ static volatile int routeDir;
 
@@ -208,6 +210,7 @@ public final class Desktop implements CommandListener,
         this.loadingResult = new Object[]{
             Resources.getString(Resources.DESKTOP_MSG_NO_DEFAULT_MAP), null
         };
+        this.loadingLock = new Object();
 
         // TODO move to Waypoints???
         Desktop.wptIdx = Desktop.wptEndIdx = Desktop.reachedIdx = -1;
@@ -848,23 +851,23 @@ public final class Desktop implements CommandListener,
     // Navigator contract
     //
 
-    public boolean isTracking() {
+    boolean isTracking() {
         return this.provider != null;
     }
 
-    public boolean isLocation() {
+    boolean isLocation() {
         return ((MapView) views[VIEW_MAP]).isLocation();
     }
 
-    public Atlas getAtlas() {
+    Atlas getAtlas() {
         return this.atlas;
     }
 
-    public Map getMap() {
+    Map getMap() {
         return this.map;
     }
 
-    public void updateNavigation(final QualifiedCoordinates from) {
+    void updateNavigation(final QualifiedCoordinates from) {
         // got active wpt?
         if (wpts != null && wptIdx > -1) {
 
@@ -883,7 +886,7 @@ public final class Desktop implements CommandListener,
         }
     }
 
-    public void updateRouting(final QualifiedCoordinates from) {
+    private void updateRouting(final QualifiedCoordinates from) {
         // route navigation?
         if (wpts != null && wptIdx > -1) {
 
@@ -964,7 +967,7 @@ public final class Desktop implements CommandListener,
      * Called by {@link Waypoints} only.
      * @return last known position from GPS
      */
-    public Location getLocation() {
+    Location getLocation() {
         return views[VIEW_MAP].getLocation();
     }
 
@@ -973,31 +976,31 @@ public final class Desktop implements CommandListener,
      * Called by {@link Waypoints} only.
      * @return current pointer coordinates
      */
-    public QualifiedCoordinates getPointer() {
+    QualifiedCoordinates getPointer() {
         return views[VIEW_MAP].getPointer();
     }
 
     /**
      * @deprecated redesign
      */
-    public void saveLocation(Location l) {
+    void saveLocation(Location l) {
         if (tracklogGpx != null) {
             tracklogGpx.insert(l);
         }
     }
 
-    public long getTracklogTime() {
+    long getTracklogTime() {
         if (trackstart == 0) {
             return System.currentTimeMillis();
         }
         return trackstart;
     }
 
-    public String getTracklogCreator() {
+    String getTracklogCreator() {
         return cz.kruch.track.TrackingMIDlet.APP_TITLE + " " + cz.kruch.track.TrackingMIDlet.version;
     }
 
-    public void goTo(Waypoint wpt) {
+    void goTo(Waypoint wpt) {
         final QualifiedCoordinates qc = wpt.getQualifiedCoordinates();
 
         if (map.isWithin(qc)) {
@@ -1035,7 +1038,8 @@ public final class Desktop implements CommandListener,
      * - no set is shown, or
      * - different set shown
      */
-    public void setVisible(Vector wpts, boolean visible) {
+    void showWaypoints(final Vector wpts, final String wptsName,
+                       final boolean visible) {
         // show?
         if (visible) {
 
@@ -1044,6 +1048,7 @@ public final class Desktop implements CommandListener,
 
                 // use wpts
                 Desktop.wpts = wpts;
+                Desktop.wptsName = wptsName;
                 wptsId = wpts.hashCode();
 
                 // notify map view // TODO this is ugly
@@ -1078,14 +1083,28 @@ public final class Desktop implements CommandListener,
         update(MASK_ALL);
     }
 
-    /**
-     * @deprecated should be?
-     */
-    public Waypoint getNavigateTo() {
+    void addWaypoint(final Waypoint wpt) {
+        // append to vector
+        Desktop.wpts.addElement(wpt);
+
+        int mask = MASK_OSD;
+
+        // notify views
+        for (int i = views.length; --i >= 0; ) {
+            mask |= views[i].routeExpanded(Desktop.wpts);
+        }
+
+        // update screen
+        update(mask);
+
+    }
+
+    Waypoint getNavigateTo() {
         return wpts == null || wptIdx == -1 ? null : ((Waypoint) wpts.elementAt(wptIdx));
     }
 
-    public void setNavigateTo(Vector wpts, int fromIndex, int toIndex) {
+    void setNavigateTo(final Vector wpts, final String wptsName,
+                       final int fromIndex, final int toIndex) {
         // 'route changed' flag
         boolean rchange = false;
 
@@ -1098,6 +1117,7 @@ public final class Desktop implements CommandListener,
             // update state vars
             Desktop.navigating = true;
             Desktop.wpts = wpts;
+            Desktop.wptsName = wptsName;
 
             if (toIndex < 0) { // forward routing
                 Desktop.wptIdx = fromIndex;
@@ -1159,7 +1179,7 @@ public final class Desktop implements CommandListener,
         update(mask);
     }
 
-    public Waypoint previousWpt() {
+    Waypoint previousWpt() {
         if (wpts != null) {
 
             // not at the first one yet?
@@ -1180,7 +1200,7 @@ public final class Desktop implements CommandListener,
         return null;
     }
 
-    public Waypoint nextWpt() {
+    Waypoint nextWpt() {
         if (wpts != null) {
 
             // not at the last one yet?
@@ -1200,19 +1220,19 @@ public final class Desktop implements CommandListener,
         return null;
     }
 
-    public int getWptAzimuth() {
+    int getWptAzimuth() {
         return wptAzimuth;
     }
 
-    public float getWptDistance() {
+    float getWptDistance() {
         return wptDistance;
     }
 
-    public float getWptAltDiff() {
+    float getWptAltDiff() {
         return wptHeightDiff;
     }
 
-    public Waypoint getWpt() {
+    Waypoint getWpt() {
         if (wpts == null || wptIdx == -1) {
             return null;
         }
@@ -1229,25 +1249,25 @@ public final class Desktop implements CommandListener,
      */
 
     boolean _getLoadingSlices() {
-        synchronized (this) {
+        synchronized (loadingLock) {
             return loadingSlices;
         }
     }
 
     private void _setLoadingSlices(final boolean b) {
-        synchronized (this) {
+        synchronized (loadingLock) {
             loadingSlices = b;
         }
     }
 
     boolean _getInitializingMap() {
-        synchronized (this) {
+        synchronized (loadingLock) {
             return initializingMap;
         }
     }
 
     private void _setInitializingMap(final boolean b) {
-        synchronized (this) {
+        synchronized (loadingLock) {
             initializingMap = b;
         }
     }
@@ -1458,7 +1478,7 @@ public final class Desktop implements CommandListener,
             // notify view render event is about to happen to have tiles ready asap
             // TODO MapView specific
             if ((mask & Desktop.MASK_MAP) != 0 && mode == VIEW_MAP) {
-                synchronized (this) {
+                synchronized (loadingLock) {
                     if (!initializingMap && !loadingSlices) {
                         try {
                             ((MapView) views[VIEW_MAP]).prerender();
@@ -2158,32 +2178,45 @@ public final class Desktop implements CommandListener,
 
     boolean startAlternateMap(final String layerName, final QualifiedCoordinates qc,
                               final String notFoundMsg) {
-        // find map for given coords
-        final String mapUrl = atlas.getMapURL(layerName, qc);
-        final String mapName = atlas.getMapName(layerName, qc);
 
-        // got map for given coordinates?
-        if (mapUrl != null) {
+        synchronized (loadingLock) {
+
+            // already in progress check
+            if (initializingMap) {
 //#ifdef __LOG__
-            if (log.isEnabled()) log.debug("loading alternate map " + mapUrl);
+                if (log.isEnabled()) log.debug("some alternate map being loaded");
 //#endif
-            // 'switch' flag
-            _switch = true;
+                return false;
+            }
 
-            // focus on these coords once the new map is loaded
-            _qc = qc;
+            // find map for given coords
+            final String mapUrl = atlas.getMapURL(layerName, qc);
+            final String mapName = atlas.getMapName(layerName, qc);
 
-            // change atlas layer
-            atlas.setLayer(layerName);
+            // got map for given coordinates?
+            if (mapUrl != null) {
+//#ifdef __LOG__
+                if (log.isEnabled()) log.debug("loading alternate map " + mapUrl);
+//#endif
+                // 'switch' flag
+                _switch = true;
 
-            // start loading task
-            startOpenMap(mapUrl, mapName);
+                // focus on these coords once the new map is loaded
+                _qc = qc;
 
-        } else if (notFoundMsg != null) {
-            showWarning(notFoundMsg, null, Desktop.screen);
-        }
+                // change atlas layer
+                atlas.setLayer(layerName);
 
-        return mapUrl != null;
+                // start loading task
+                startOpenMap(mapUrl, mapName);
+
+            } else if (notFoundMsg != null) {
+                showWarning(notFoundMsg, null, Desktop.screen);
+            }
+
+            return mapUrl != null;
+
+        } // ~synchronized
     }
 
     private void startOpenMap(final String url, final String name) {
@@ -2738,9 +2771,6 @@ public final class Desktop implements CommandListener,
                         }
                     }
 
-                    // map is ready
-                    _setInitializingMap(false);
-
                     // TODO ugly code begins ---
 
                     // update OSD & navigation UI
@@ -2752,6 +2782,9 @@ public final class Desktop implements CommandListener,
                     mapView.updateNavigationInfo(); // TODO ugly
 
                     // TODO -- ugly code ends
+
+                    // map is ready
+                    _setInitializingMap(false);
 
                     // render screen - it will force slices loading
                     update(MASK_MAP | MASK_OSD);

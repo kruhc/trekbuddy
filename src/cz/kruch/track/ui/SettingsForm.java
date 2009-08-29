@@ -376,9 +376,11 @@ final class SettingsForm implements CommandListener, ItemStateListener {
                 choiceGpx = new ChoiceGroup(Resources.getString(Resources.CFG_LOCATION_GROUP_GPX_OPTS), ChoiceGroup.MULTIPLE);
                 choiceGpx.append(Resources.getString(Resources.CFG_LOCATION_FLD_GPX_LOG_VALID), null);
                 choiceGpx.append(Resources.getString(Resources.CFG_LOCATION_FLD_GPX_LOG_GSM), null);
+                choiceGpx.append(Resources.getString(Resources.CFG_LOCATION_FLD_GPX_LOG_TIME_MS), null);
                 choiceGpx.setSelectedFlags(new boolean[] {
                     Config.gpxOnlyValid,
-                    Config.gpxGsmInfo
+                    Config.gpxGsmInfo,
+                    Config.gpxSecsDecimal
                 });
 
                 fieldGpxDt = new TextField("GPX dt (s)", Integer.toString(Config.gpxDt), 5, TextField.NUMERIC);
@@ -618,6 +620,7 @@ final class SettingsForm implements CommandListener, ItemStateListener {
                     choiceGpx.getSelectedFlags(opts);
                     Config.gpxOnlyValid = opts[0];
                     Config.gpxGsmInfo = opts[1];
+                    Config.gpxSecsDecimal = opts[2];
                     Config.gpxDt = Integer.parseInt(fieldGpxDt.getString());
                     Config.gpxDs = Integer.parseInt(fieldGpxDs.getString());
                 }

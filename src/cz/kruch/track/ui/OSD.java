@@ -36,11 +36,13 @@ final class OSD extends Bar {
     private static final String MM = "<>";
 
     int providerStatus;
+
     private boolean recording;
     private boolean ok;
     private int sat;
 
     int semaforX, semaforY;
+
     private final StringBuffer sb;
     private final int rw, mmw, str1w, str2w;
 
@@ -183,7 +185,7 @@ final class OSD extends Bar {
         NavigationScreens.printTo(qc, sb);
         cInfoLength = sb.length();
         if (cInfoLength > cInfo.length) {
-            throw new IllegalStateException("Info length = " + cInfoLength);
+            cInfoLength = cInfo.length;
         }
         sb.getChars(0, cInfoLength, cInfo, 0);
         this.ok = ok;

@@ -4,7 +4,6 @@ package cz.kruch.track;
 
 import javax.microedition.midlet.MIDlet;
 import javax.microedition.midlet.MIDletStateChangeException;
-import javax.microedition.lcdui.Display;
 
 /**
  * Main MIDlet.
@@ -48,7 +47,11 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         if (flags == null) {
             flags = System.getProperty("trekbuddy.app-flags");
         }
+//#ifdef __ANDROID__
+        version = System.getProperty("MIDlet-Version");
+//#else
         version = getAppProperty("MIDlet-Version");
+//#endif		
 //#ifdef __LOG__
         logEnabled = hasFlag("log_enable");
         System.out.println("* platform is " + platform);
@@ -100,6 +103,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
 //#endif
         } catch (Throwable t) {
         }
+//#ifndef __ANDROID__
         try {
             Class.forName("javax.wireless.messaging.TextMessage");
             jsr120 = true;
@@ -108,6 +112,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
 //#endif
         } catch (Throwable t) {
         }
+//#endif        
         try {
             Class.forName("javax.microedition.media.control.VideoControl");
             jsr135 = true;

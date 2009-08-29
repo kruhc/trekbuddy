@@ -101,6 +101,9 @@ public final class SimpleCalendar {
     public int get(final int field) {
         int value;
         switch (field) {
+            case Calendar.HOUR:
+                value = fieldHour % 12;
+            break;
             case Calendar.HOUR_OF_DAY:
                 value = fieldHour;
             break;

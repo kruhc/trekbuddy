@@ -105,7 +105,10 @@ final class WaypointForm implements CommandListener, ItemCommandListener, Callba
         if (wpt.getUserObject() instanceof GroundspeakBean) {
             final GroundspeakBean bean = (GroundspeakBean) wpt.getUserObject();
             appendStringItem("GC " + Resources.getString(Resources.NAV_FLD_WPT_NAME), bean.getName());
-            appendStringItem(Resources.getString(Resources.NAV_FLD_GS_ID), bean.getId());
+            final String id = bean.getId();
+            if (id != null && id.length() != 0) {
+                appendStringItem(Resources.getString(Resources.NAV_FLD_GS_ID), id);
+            }
             appendStringItem(Resources.getString(Resources.NAV_FLD_GS_CLASS), bean.classify());
             final String shortListing = bean.getShortListing();
             if (shortListing != null && shortListing.length() != 0) {

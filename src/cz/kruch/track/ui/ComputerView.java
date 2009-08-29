@@ -613,7 +613,7 @@ final class ComputerView
                         }
                         _profileName = profilesNames[profileIdx];
                     }
-                    LoaderIO.getInstance().enqueue(this);
+                    navigator.getDiskWorker().enqueue(this);
                 } break;
                 case Canvas.RIGHT: {
                     synchronized (this) {
@@ -622,7 +622,7 @@ final class ComputerView
                         }
                         _profileName = profilesNames[profileIdx];
                     }
-                    LoaderIO.getInstance().enqueue(this);
+                    navigator.getDiskWorker().enqueue(this);
                 } break;
                 case Canvas.DOWN: {
                     final List list = new List(Resources.getString(Resources.DESKTOP_MSG_PROFILES), List.IMPLICIT);
@@ -895,7 +895,7 @@ final class ComputerView
             }
 
             // enqueue load task
-            LoaderIO.getInstance().enqueue(this);
+            navigator.getDiskWorker().enqueue(this);
         }
     }
 

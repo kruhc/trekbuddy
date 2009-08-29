@@ -5,126 +5,110 @@ package cz.kruch.track.ui;
 import java.util.Vector;
 
 /**
- * Eventing engine.
+ * Buffered backend for Display.callserially(Runnable) with task merging support.
  *
  * @author Ales Pour <kruhc@seznam.cz>
  */
-final class SmartRunnable extends Thread {
-    private static SmartRunnable instance;
+final class SmartRunnable implements Runnable {
+    static int uncaught, mergedRT, mergedKT;
 
     private final Vector runnables;
-    private boolean go;
+    private boolean go, pending;
 
-    static int uncaught;
-
-    private SmartRunnable() {
+    public SmartRunnable() {
         this.runnables = new Vector(16);
         this.go = true;
-    }
-
-    public static SmartRunnable getInstance() {
-        if (instance == null) {
-            instance = new SmartRunnable();
-            instance.setPriority(Thread.MAX_PRIORITY);
-            instance.start();
-        }
-        return instance;
     }
 
     public void destroy() {
         synchronized (this) {
             go = false;
-            notify();
         }
     }
 
-    /*
-     * I would guess the best performance (smoothness) could be achieved by:
-     *
-     * 1. passing instance(s?) of DeviceScreen (key holded check) and Desktop.RenderTask
-     *    to display.callSerialy if the screen is shown and midlet state is running
-     * 2. queueing instances of Desktop.Event in this task runner
-     *
-     * This implies synchronization around render lock in Desktop.
-     */
-
     public void callSerially(final Runnable r) {
+		// local ref
+        final Vector runnables = this.runnables;
 
-/*
-        if (r instanceof Desktop.Event) {
-            r.run();
-        } else {
-            cz.kruch.track.maps.io.LoaderIO.getInstance().enqueue(r);
-        }
-*/
+        // fire flag
+        boolean fire = false;
 
-        final Vector tasks = this.runnables;
-
+        // thread-safe
         synchronized (this) {
 
             // accept task only if running
             if (go) {
 
                 // try task merge
-                if (tasks.size() > 0) {
+                if (runnables.size() > 0) {
 
-                    final Object last = tasks.lastElement();
+                    final Object last = runnables.lastElement();
                     if (r instanceof DeviceScreen) { // trick #1: avoid duplicates of key-hold checks
                         if (last instanceof DeviceScreen) {
-                            return;
+							mergedKT++;
+							return;
                         }
                     } else if (r instanceof Desktop.RenderTask) { // trick #2: merge render tasks
                         if (last instanceof Desktop.RenderTask) {
-                            Desktop.RenderTask rt = (Desktop.RenderTask) r;
-                            ((Desktop.RenderTask) last).merge(rt);
-                            Desktop.releaseRenderTask(rt);
-                            return;
+                            ((Desktop.RenderTask) last).merge(((Desktop.RenderTask) r));
+							mergedRT++;
+							return;
                         }
                     }
 
                 }
 
                 // enqueue task
-                tasks.addElement(r);
+                runnables.addElement(r);
 
-                // wake up
-                notify();
+                // "schedule" a task if no task is currently running
+                if (!pending) {
+                    fire = pending = true;
+                }
             }
+        }
+
+        if (fire) {
+            Desktop.display.callSerially(this);
         }
     }
 
     public void run() {
+        final Vector runnables = this.runnables;
+        Runnable r = null;
 
-        final Vector tasks = this.runnables;
-
-        while (true) {
-
-            Runnable task = null;
-			
-            synchronized (this) {
-                while (go && tasks.size() == 0) {
-                    try {
-                        wait();
-                    } catch (InterruptedException e) {
-                        // ignore
-                    }
-                }
-                if (tasks.size() > 0) {
-                    task = (Runnable) tasks.elementAt(0);
-                    tasks.setElementAt(null, 0);
-                    tasks.removeElementAt(0);
-                }
-                if (!go) break;
+        synchronized (this) {
+            if (runnables.size() > 0) {
+                r = (Runnable) runnables.elementAt(0);
+                runnables.setElementAt(null, 0);
+                runnables.removeElementAt(0);
             }
+        }
 
+        if (r != null) {
             try {
-                task.run();
+                r.run();
             } catch (Throwable t) {
                 uncaught++;
 //#ifdef __LOG__
                 t.printStackTrace();
 //#endif
             }
+        }
+
+        // fire flag
+        boolean fire = false;
+
+        synchronized (this) {
+            if (runnables.size() > 0) {
+                fire = pending = true;
+            } else {
+                pending = false;
+            }
+        }
+
+        if (fire) {
+            Desktop.display.callSerially(this);
         }
     }
 }

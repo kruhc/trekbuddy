@@ -9,16 +9,26 @@ import java.io.UnsupportedEncodingException;
  * Groundspeak and Australian GPX wpt extension holder.
  */
 public final class GroundspeakBean {
+//#ifdef __LOG__
+    private static final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("GroundspaekBean");
+//#endif
+
     private static final String UTF_8 = "UTF-8";
     private static final Vector tokens = new Vector(16, 16);
 
+    private String ns;
     private String id, name;
     private String encodedHints;
     private String type, container, difficulty, terrain, country;
     private Object shortListing, longListing;
 
-    public GroundspeakBean(String id) {
+    public GroundspeakBean(String ns, String id) {
+        this.ns = ns;
         this.id = id;
+    }
+
+    public String getNs() {
+        return ns;
     }
 
     public String getId() {
@@ -135,6 +145,9 @@ public final class GroundspeakBean {
         final Vector tokens = GroundspeakBean.tokens;
         final int i = tokens.indexOf(input);
         if (i > -1) {
+//#ifdef __LOG__
+            if (log.isEnabled()) log.debug("token '" + input + "' is cached");
+//#endif
             return (String) tokens.elementAt(i);
         }
         if (tokens.size() < 256) { // paranoia

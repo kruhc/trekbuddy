@@ -32,17 +32,17 @@ import cz.kruch.track.util.NmeaParser;
  *
  * @author Ales Pour <kruhc@seznam.cz>
  */
-public final class GpxTracklog extends Thread {
+public final class GpxTracklog implements Runnable {
 //#ifdef __LOG__
     private static final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("Gpx");
 //#endif
 
     private static final String DEFAULT_NAMESPACE   = null; // this is wrong but KXML handles it well :-)
     private static final String GPX_1_1_NAMESPACE   = "http://www.topografix.com/GPX/1/1";
-    private static final String GS_1_0_NAMESPACE    = "http://www.groundspeak.com/cache/1/0";
-    private static final String GS_1_0_PREFIX       = "groundspeak";
-    private static final String AU_1_0_NAMESPACE    = "http://geocaching.com.au/geocache/1";
-    private static final String AU_1_0_PREFIX       = "au";
+    public static final String GS_1_0_NAMESPACE     = "http://www.groundspeak.com/cache/1/0";
+    public static final String GS_1_0_PREFIX        = "groundspeak";
+    public static final String AU_1_0_NAMESPACE     = "http://geocaching.com.au/geocache/1";
+    public static final String AU_1_0_PREFIX        = "au";
     private static final String NMEA_NAMESPACE      = "http://trekbuddy.net/2009/01/gpx/nmea";
     private static final String NMEA_PREFIX         = "nmea";
     private static final String GSM_NAMESPACE       = "http://trekbuddy.net/2009/01/gpx/gsm";
@@ -105,6 +105,7 @@ public final class GpxTracklog extends Thread {
     private static final String ATTRIBUTE_LON           = "lon";
     private static final String ATTRIBUTE_ID            = "id";
     private static final String ATTRIBUTE_STATUS        = "status";
+    private static final String ATTRIBUTE_AVAILABLE     = "available";
 
     private static final String FIX_NONE    = "none";
     private static final String FIX_3D      = "3d";
@@ -139,6 +140,8 @@ public final class GpxTracklog extends Thread {
     private File file;
     private OutputStream output;
     private HXmlSerializer serializer;
+
+    private Thread thread;
 
     public GpxTracklog(int type, Callback callback, String creator, long time) {
         this.type = type;
@@ -177,6 +180,25 @@ public final class GpxTracklog extends Thread {
 
     public void setFileName(String fileName) {
         this.fileName = fileName;
+    }
+
+    public boolean isAlive() {
+        if (thread != null) {
+            return thread.isAlive();
+        }
+        return false;
+    }
+
+    public void start() {
+        go = true;
+        thread = new Thread(this, "GPX tracklog");
+        thread.start();
+    }
+
+    public void join() throws InterruptedException {
+        if (thread != null) {
+            thread.join();
+        }
     }
 
     public void shutdown() {
@@ -318,9 +340,6 @@ public final class GpxTracklog extends Thread {
 
     public void run() {
 
-        // good to go
-        this.go = true;
-
         // open
         final Throwable status = open();
         if (status == null) {
@@ -340,7 +359,8 @@ public final class GpxTracklog extends Thread {
             callback.invoke(new Integer(CODE_RECORDING_START), null, this);
 
             // pop items until end
-            while (go) {
+            while (true) {
+
                 final Object item;
                 synchronized (this) {
                     while (go && queue == null) {
@@ -352,9 +372,9 @@ public final class GpxTracklog extends Thread {
                     }
                     item = queue;
                     queue = null; // gc hint
+                    if (!go)
+                        break;
                 }
-
-                if (!go) break;
 
                 try {
 
@@ -552,43 +572,37 @@ public final class GpxTracklog extends Thread {
 
     private void serializeGs(final GroundspeakBean bean) throws IOException {
         final HXmlSerializer serializer = this.serializer;
+        final String prefix = bean.getNs();
         final String ns;
-        if (bean.getId() != null) {
+        if (prefix == GS_1_0_PREFIX) { // '==' is OK
             ns = GS_1_0_NAMESPACE;
             serializer.startTag(GS_1_0_NAMESPACE, ELEMENT_GS_CACHE);
-            serializer.attribute(DEFAULT_NAMESPACE, ATTRIBUTE_ID, bean.getId());
-        } else {
+            if (bean.getId() != null) {
+                serializer.attribute(DEFAULT_NAMESPACE, ATTRIBUTE_ID, bean.getId());
+            }
+            serializer.attribute(DEFAULT_NAMESPACE, ATTRIBUTE_AVAILABLE, "True");
+        } else if (prefix == AU_1_0_PREFIX) {
             ns = AU_1_0_NAMESPACE;
             serializer.startTag(AU_1_0_NAMESPACE, ELEMENT_AU_CACHE);
             serializer.attribute(DEFAULT_NAMESPACE, ATTRIBUTE_STATUS, "Available");
+        } else {
+            return;
         }
-        serializer.startTag(ns, ELEMENT_NAME);
-        serializer.text(bean.getName());
-        serializer.endTag(ns, ELEMENT_NAME);
-        serializer.startTag(ns, ELEMENT_GS_TYPE);
-        serializer.text(bean.getType());
-        serializer.endTag(ns, ELEMENT_GS_TYPE);
-        serializer.startTag(ns, ELEMENT_GS_CONTAINER);
-        serializer.text(bean.getContainer());
-        serializer.endTag(ns, ELEMENT_GS_CONTAINER);
-        serializer.startTag(ns, ELEMENT_GS_DIFF);
-        serializer.text(bean.getDifficulty());
-        serializer.endTag(ns, ELEMENT_GS_DIFF);
-        serializer.startTag(ns, ELEMENT_GS_TERRAIN);
-        serializer.text(bean.getTerrain());
-        serializer.endTag(ns, ELEMENT_GS_TERRAIN);
-        serializer.startTag(ns, ELEMENT_GS_COUNTRY);
-        serializer.text(bean.getCountry());
-        serializer.endTag(ns, ELEMENT_GS_COUNTRY);
-        if (bean.getId() != null) {
+        serializeElement(serializer, bean.getName(), ns, ELEMENT_NAME);
+        serializeElement(serializer, bean.getType(), ns, ELEMENT_GS_TYPE);
+        serializeElement(serializer, bean.getContainer(), ns, ELEMENT_GS_CONTAINER);
+        serializeElement(serializer, bean.getDifficulty(), ns, ELEMENT_GS_DIFF);
+        serializeElement(serializer, bean.getTerrain(), ns, ELEMENT_GS_TERRAIN);
+        serializeElement(serializer, bean.getCountry(), ns, ELEMENT_GS_COUNTRY);
+        if (prefix == GS_1_0_PREFIX) {
             serializeElement(serializer, bean.getShortListing(), GS_1_0_NAMESPACE, ELEMENT_GS_SHORTL);
             serializeElement(serializer, bean.getLongListing(), GS_1_0_NAMESPACE, ELEMENT_GS_LONGL);
             serializeElement(serializer, bean.getEncodedHints(), GS_1_0_NAMESPACE, ELEMENT_GS_HINTS);
             serializer.endTag(GS_1_0_NAMESPACE, ELEMENT_GS_CACHE);
         } else {
-            serializeElement(serializer, bean.getShortListing(), ns, ELEMENT_AU_SUMMARY);
-            serializeElement(serializer, bean.getLongListing(), ns, ELEMENT_AU_DESC);
-            serializeElement(serializer, bean.getEncodedHints(), ns, ELEMENT_AU_HINTS);
+            serializeElement(serializer, bean.getShortListing(), AU_1_0_NAMESPACE, ELEMENT_AU_SUMMARY);
+            serializeElement(serializer, bean.getLongListing(), AU_1_0_NAMESPACE, ELEMENT_AU_DESC);
+            serializeElement(serializer, bean.getEncodedHints(), AU_1_0_NAMESPACE, ELEMENT_AU_HINTS);
             serializer.endTag(AU_1_0_NAMESPACE, ELEMENT_AU_CACHE);
         }
     }
@@ -799,15 +813,14 @@ public final class GpxTracklog extends Thread {
         appendTwoDigitStr(sb, calendar.get(Calendar.HOUR_OF_DAY)).append(':');
         appendTwoDigitStr(sb, calendar.get(Calendar.MINUTE)).append(':');
         appendTwoDigitStr(sb, calendar.get(Calendar.SECOND));
-        final long ms = timestamp % 1000;
-        if (ms > 0) {
-            sb.append('.');
-            appendFractional(sb, (int) ms);
+        if (Config.gpxSecsDecimal) {
+            final long ms = timestamp % 1000;
+            if (ms > 0) {
+                sb.append('.');
+                appendFractional(sb, (int) ms);
+            }
         }
-        sb.append('Z'/*CALENDAR.getTimeZone().getID()*/);
-/*
-        sb.append(tzOffset);
-*/
+        sb.append('Z');
 
         final int result = sb.length();
         sb.getChars(0, result, sbChars, 0);

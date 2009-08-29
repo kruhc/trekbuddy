@@ -3,6 +3,7 @@
 package cz.kruch.track.configuration;
 
 import cz.kruch.track.util.CharArrayTokenizer;
+import cz.kruch.track.util.Worker;
 import cz.kruch.track.io.LineReader;
 import cz.kruch.track.ui.YesNoDialog;
 
@@ -164,6 +165,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
     public static int gpxDs                     = -1;
     public static boolean gpxOnlyValid          = true;
     public static boolean gpxGsmInfo;
+    public static boolean gpxSecsDecimal        = true;
 
     // group [Trajectory]
     public static boolean trailOn;
@@ -178,7 +180,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
     public static boolean routePoiMarks         = true;
     public static int routeColor;
     public static int routeThick;
-    public static boolean makeRevisions         = true;
+    public static boolean makeRevisions;
     public static boolean preferGsName          = true;
     public static int sort;
 
@@ -534,6 +536,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         // 0.9.88 extensions
         try {
             altCorrection = din.readInt();
+            gpxSecsDecimal = din.readBoolean();
         } catch (Exception e) {
         }
 
@@ -627,6 +630,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         dout.writeInt(listFont);
         /* since 0.9.88 */
         dout.writeInt(altCorrection);
+        dout.writeBoolean(gpxSecsDecimal);
 
 //#ifdef __LOG__
         if (log.isEnabled()) log.info("configuration updated");
@@ -711,8 +715,8 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         }
     }
 
-    public static void initDataDir() {
-        cz.kruch.track.maps.io.LoaderIO.getInstance().enqueue(new Config());
+    public static void initDataDir(final Worker worker) {
+        worker.enqueue(new Config());
     }
 
     public void run() {

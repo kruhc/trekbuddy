@@ -12,8 +12,8 @@ import cz.kruch.track.location.GpxTracklog;
 import cz.kruch.track.location.Waypoint;
 import cz.kruch.track.maps.Map;
 import cz.kruch.track.maps.Atlas;
-import cz.kruch.track.maps.io.LoaderIO;
 import cz.kruch.track.util.CharArrayTokenizer;
+import cz.kruch.track.util.Worker;
 
 import javax.microedition.lcdui.Canvas;
 import javax.microedition.lcdui.Display;
@@ -125,7 +125,6 @@ public final class Desktop implements CommandListener,
     private /*volatile*/ boolean initializingMap; // using synchronized access helper
     private /*volatile*/ boolean loadingSlices;   // using synchronized access helper
     private final Object[] loadingResult;
-    private final Object loadingLock;
 
     // location provider and its last-op throwable and status
     private volatile LocationProvider provider;
@@ -152,13 +151,14 @@ public final class Desktop implements CommandListener,
     /*private */volatile int wptAzimuth;
     /*private */volatile int wptsId, wptsSize;
 
-    // eventing
-    private final SmartRunnable eventing;
-/*
+	// sync objects
+    private final Object loadingLock;
     private final Object renderLock;
-*/
 
-    /**
+	// workers
+	private Worker diskWorker, eventWorker;
+
+	/**
      * Desktop constructor.
      * 
      * @param midlet midlet instance
@@ -178,7 +178,7 @@ public final class Desktop implements CommandListener,
             BACK_CMD_TYPE = Command.EXIT;
         }
         if (cz.kruch.track.TrackingMIDlet.sonyEricssonEx) {
-            EXIT_CMD_TYPE = Command.BACK;
+            EXIT_CMD_TYPE = Command.EXIT;
             CANCEL_CMD_TYPE = Command.BACK;
         }
 //#elifdef __J9__
@@ -203,20 +203,35 @@ public final class Desktop implements CommandListener,
         this.midlet = midlet;
         this.boot = true;
         this.initializingMap = true;
-/*
-        this.renderLock = new Object();
-*/
-        this.eventing = SmartRunnable.getInstance();
         this.loadingResult = new Object[]{
             Resources.getString(Resources.DESKTOP_MSG_NO_DEFAULT_MAP), null
         };
+
+        // locking objects
         this.loadingLock = new Object();
+        this.renderLock = new Object();
 
         // TODO move to Waypoints???
         Desktop.wptIdx = Desktop.wptEndIdx = Desktop.reachedIdx = -1;
         this.wptAzimuth = -1;
         this.wptDistance = -1F;
         this.wptHeightDiff = Float.NaN;
+    }
+
+    public Worker getDiskWorker() {
+        if (diskWorker == null) {
+            diskWorker = new Worker("Disk Worker");
+            diskWorker.start();
+        }
+        return diskWorker;
+    }
+
+    public Worker getEventWorker() {
+        if (eventWorker == null) {
+            eventWorker = new Worker("Event Worker");
+            eventWorker.start();
+        }
+        return eventWorker;
     }
 
     public void boot(final int imgcached, final int configured,
@@ -614,7 +629,7 @@ public final class Desktop implements CommandListener,
 
         // check DataDir structure
         if (Config.dataDirAccess/*File.isFs()*/) {
-            Config.initDataDir();
+            Config.initDataDir(getDiskWorker());
         } else {
             showError("'DataDir' not accessible - please fix it and restart", null, null);
         }
@@ -636,7 +651,7 @@ public final class Desktop implements CommandListener,
         }
 
         // loads CMS profiles
-        LoaderIO.getInstance().enqueue((Runnable) views[VIEW_CMS]);
+        getDiskWorker().enqueue((Runnable) views[VIEW_CMS]);
     }
 
     public void commandAction(Command command, Displayable displayable) {
@@ -711,7 +726,7 @@ public final class Desktop implements CommandListener,
                 timer.cancel();
 
                 // stop eventing
-                eventing.destroy();
+                // TODO
 
                 // stop device control
                 cz.kruch.track.ui.nokia.DeviceControl.destroy();
@@ -773,8 +788,10 @@ public final class Desktop implements CommandListener,
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("location update: " + new Date(location.getTimestamp()) + ";" + location.getQualifiedCoordinates() + "; course = " + location.getCourse());
 //#endif
-        eventing.callSerially(newEvent(Event.EVENT_TRACKING_POSITION_UPDATED,
-                              location, null, provider));
+//        eventing.callSerially(newEvent(Event.EVENT_TRACKING_POSITION_UPDATED,
+//                              location, null, provider));
+        getEventWorker().enqueue(newEvent(Event.EVENT_TRACKING_POSITION_UPDATED,
+                                          location, null, provider));
     }
 
     public void providerStateChanged(LocationProvider provider, int newState) {
@@ -782,16 +799,17 @@ public final class Desktop implements CommandListener,
         if (log.isEnabled()) log.info("location provider state changed; " + newState);
 //#endif
 
-        eventing.callSerially(newEvent(Event.EVENT_TRACKING_STATUS_CHANGED,
-                              new Integer(newState), null, provider));
-
+//        eventing.callSerially(newEvent(Event.EVENT_TRACKING_STATUS_CHANGED,
+//                              new Integer(newState), null, provider));
+        getEventWorker().enqueue(newEvent(Event.EVENT_TRACKING_STATUS_CHANGED,
+                                          new Integer(newState), null, provider));
 
         /*
-         * hack is needed to ... "kick" the event pump??? (SonyEricsson JP-7, Blackberry)
-         * shortly displayed dialog helps, but not on S60 :-(
-         * 2008-06-10: stop() of SerialLocationProvider changed; only BB seems to
-         * have problems now
-         */
+        * hack is needed to ... "kick" the event pump??? (SonyEricsson JP-7, Blackberry)
+        * shortly displayed dialog helps, but not on S60 :-(
+        * 2008-06-10: stop() of SerialLocationProvider changed; only BB seems to
+        * have problems now
+        */
 
 /*
         switch (newState) {
@@ -842,9 +860,12 @@ public final class Desktop implements CommandListener,
 //#ifdef __LOG__
         if (log.isEnabled()) log.info("tracklog state changed; " + isRecording);
 //#endif
-        eventing.callSerially(newEvent(Event.EVENT_TRACKLOG,
-                              new Integer(isRecording ? GpxTracklog.CODE_RECORDING_START : GpxTracklog.CODE_RECORDING_STOP),
-                              null, provider));
+//        eventing.callSerially(newEvent(Event.EVENT_TRACKLOG,
+//                              new Integer(isRecording ? GpxTracklog.CODE_RECORDING_START : GpxTracklog.CODE_RECORDING_STOP),
+//                              null, provider));
+        getEventWorker().enqueue(newEvent(Event.EVENT_TRACKLOG,
+                                          new Integer(isRecording ? GpxTracklog.CODE_RECORDING_START : GpxTracklog.CODE_RECORDING_STOP),
+                                          null, provider));
     }
 
     //
@@ -1337,7 +1358,7 @@ public final class Desktop implements CommandListener,
 
                 // repetition
                 if (repeated && mode == VIEW_MAP) {
-                    eventing.callSerially(Desktop.screen);
+                    screen.callSerially(Desktop.screen);
                 } else {
                     screen.checkKeyRepeated(i);
                 }
@@ -1472,6 +1493,11 @@ public final class Desktop implements CommandListener,
         if (log.isEnabled()) log.debug("update " + Integer.toBinaryString(mask));
 //#endif
 
+        // wen can ignore update request when paused
+        if (cz.kruch.track.TrackingMIDlet.state != 1) {
+            return;
+        }
+
         // anything to update?
         if (mask != MASK_NONE) {
 
@@ -1492,27 +1518,13 @@ public final class Desktop implements CommandListener,
                 }
             }
 
-            /*
-             * I would say the best strategy is to use display.callSerially
-             * together with renderLock in Event.run and RenderTask.run, but
-             * eventing (including LoaderIO task runner) should be reviewed.
-             *
-             * See note in SmartRunnable.
-             */
-
-			// enqueu render task
-            eventing.callSerially(newRenderTask(mask));
-/*
-            if (screen.isShown() && cz.kruch.track.TrackingMIDlet.state == 1) {
-                display.callSerially(newRenderTask(mask));
-//                newRenderTask(mask).run();
-			}
-*/
+            // call render task
+            screen.callSerially(newRenderTask(mask));
 
         }
 //#ifdef __LOG__
           else {
-            if (log.isEnabled()) log.debug("update 0!");
+            if (log.isEnabled()) log.debug("update with mask 0");
         }
 //#endif
     }
@@ -1987,8 +1999,10 @@ public final class Desktop implements CommandListener,
      */
 
     public void mapOpened(final Object result, final Throwable throwable) {
-        eventing.callSerially(newEvent(Event.EVENT_MAP_OPENED,
-                                       result, throwable, null));
+//        eventing.callSerially(newEvent(Event.EVENT_MAP_OPENED,
+//                                       result, throwable, null));
+        getEventWorker().enqueue(newEvent(Event.EVENT_MAP_OPENED,
+                                          result, throwable, null));
     }
 
     public void slicesLoading(final Object result, final Throwable throwable) {
@@ -1997,13 +2011,17 @@ public final class Desktop implements CommandListener,
 
     public void slicesLoaded(final Object result, final Throwable throwable) {
         _setLoadingSlices(false);
-        eventing.callSerially(newEvent(Event.EVENT_SLICES_LOADED,
-                                       result, throwable, null));
+//        eventing.callSerially(newEvent(Event.EVENT_SLICES_LOADED,
+//                                       result, throwable, null));
+        getEventWorker().enqueue(newEvent(Event.EVENT_SLICES_LOADED,
+                                          result, throwable, null));
     }
 
     public void loadingChanged(final Object result, final Throwable throwable) {
-        eventing.callSerially(newEvent(Event.EVENT_LOADING_STATUS_CHANGED,
-                                       result, throwable, null));
+//        eventing.callSerially(newEvent(Event.EVENT_LOADING_STATUS_CHANGED,
+//                                       result, throwable, null));
+        getEventWorker().enqueue(newEvent(Event.EVENT_LOADING_STATUS_CHANGED,
+                                          result, throwable, null));
     }
 
     /*
@@ -2011,8 +2029,10 @@ public final class Desktop implements CommandListener,
     */
 
     public void atlasOpened(final Object result, final Throwable throwable) {
-        eventing.callSerially(newEvent(Event.EVENT_ATLAS_OPENED,
-                                        result, throwable, null));
+//        eventing.callSerially(newEvent(Event.EVENT_ATLAS_OPENED,
+//                                        result, throwable, null));
+        getEventWorker().enqueue(newEvent(Event.EVENT_ATLAS_OPENED,
+                                          result, throwable, null));
     }
 
     /* TODO remove
@@ -2092,12 +2112,9 @@ public final class Desktop implements CommandListener,
     static long skips;
 
     final class RenderTask implements Runnable {
-//#ifdef __LOG__
-        private /*static*/ final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("RenderTask");
-//#endif
         private int mask;
 
-        private RenderTask(final int m) {
+        public RenderTask(final int m) {
             this.mask = m;
         }
 
@@ -2109,29 +2126,25 @@ public final class Desktop implements CommandListener,
             // render
             try {
                 // get graphics
-                final Graphics g = screen.getGraphics();
+                final Graphics g = Desktop.screen.getGraphics();
 
                 // render current view
-/*
-                synchronized (renderLock) {
-*/
-                views[mode].render(g, font, mask);
-/*
+                synchronized (Desktop.this.renderLock) {
+                    Desktop.this.views[mode].render(g, font, mask);
                 }
-*/
 
-				// paused?
-                if (paused) {
-                    drawPause(g);
+                // paused?
+                if (Desktop.paused) {
+                    Desktop.this.drawPause(g);
                 }
 
                 // flush offscreen buffer
-                screen.flushGraphics();
-
+                Desktop.screen.flushGraphics();
+                
             } catch (Throwable t) {
 //#ifdef __LOG__
                 t.printStackTrace();
-                if (log.isEnabled()) log.error("render failure", t);
+                if (Desktop.log.isEnabled()) Desktop.log.error("render failure", t);
 //#endif
                 Desktop.showError("_RENDER FAILURE_", t, null);
 
@@ -2346,34 +2359,36 @@ public final class Desktop implements CommandListener,
         private Throwable throwable;
         private Object closure;
 
-        private boolean release = true;
+        private boolean release;
 
         public Event(int code) {
             this.code = code;
+            this.release = true;
         }
 
         public Event(int code, Object closure) {
-            this.code = code;
+            this(code);
             this.closure = closure;
         }
 
         public Event(int code, Object result, Throwable throwable, Object closure) {
-            this.code = code;
+            this(code, closure);
             this.result = result;
             this.throwable = throwable;
-            this.closure = closure;
         }
 
         public void invoke(final Object result, final Throwable throwable, final Object source) {
 //#ifdef __LOG__
             if (log.isEnabled()) log.debug("firing event " + this.toString());
 //#endif
-
             this.result = result;
             this.throwable = throwable;
             this.release = false; // direct invocation, do not release
 
+/* safer against deadlocks
             run();
+*/
+            Desktop.this.getEventWorker().enqueue(this);
         }
 
         /**
@@ -2387,10 +2402,10 @@ public final class Desktop implements CommandListener,
             // update cfg if requested
             if (answer == YesNoDialog.YES) {
                 try {
-                    if (atlas == null) {
-                        Config.mapPath = map.getPath();
+                    if (Desktop.this.atlas == null) {
+                        Config.mapPath = Desktop.this.map.getPath();
                     } else {
-                        Config.mapPath = atlas.getURL(map.getName());
+                        Config.mapPath = Desktop.this.atlas.getURL(Desktop.this.map.getName());
                     }
                     Config.defaultMapPath = Config.mapPath;
                     Config.update(Config.CONFIG_090);
@@ -2421,47 +2436,43 @@ public final class Desktop implements CommandListener,
                 if (log.isEnabled()) log.debug("event run; " + this);
 //#endif
 
-/*
-                synchronized (renderLock) {
-*/
-                switch (code) {
-                    case EVENT_CONFIGURATION_CHANGED: {
-                        execConfigChanged();
-                    } break;
-                    case EVENT_FILE_BROWSER_FINISHED: {
-                        execFileBrowserFinished();
-                    } break;
-                    case EVENT_TRACKLOG: {
-                        execTracklog();
-                    } break;
-                    case EVENT_ATLAS_OPENED: {
-                        execAtlasOpened();
-                    } break;
-                    case EVENT_LAYER_SELECTION_FINISHED: {
-                        execLayerSelectionFinished();
-                    } break;
-                    case EVENT_MAP_SELECTION_FINISHED: {
-                        execMapSelectionFinished();
-                    } break;
-                    case EVENT_MAP_OPENED: {
-                        execMapOpened();
-                    } break;
-                    case EVENT_SLICES_LOADED: {
-                        execSlicesLoaded();
-                    } break;
-                    case EVENT_LOADING_STATUS_CHANGED: {
-                        execLoadingStatusChanged();
-                    } break;
-                    case EVENT_TRACKING_STATUS_CHANGED: {
-                        execTrackingStatusChanged();
-                    } break;
-                    case EVENT_TRACKING_POSITION_UPDATED: {
-                        execTrackingPositionUpdated();
-                    } break;
-                }
-/*
-                }
-*/
+                synchronized (Desktop.this.renderLock) {
+                    switch (code) {
+                        case EVENT_CONFIGURATION_CHANGED: {
+                            execConfigChanged();
+                        } break;
+                        case EVENT_FILE_BROWSER_FINISHED: {
+                            execFileBrowserFinished();
+                        } break;
+                        case EVENT_TRACKLOG: {
+                            execTracklog();
+                        } break;
+                        case EVENT_ATLAS_OPENED: {
+                            execAtlasOpened();
+                        } break;
+                        case EVENT_LAYER_SELECTION_FINISHED: {
+                            execLayerSelectionFinished();
+                        } break;
+                        case EVENT_MAP_SELECTION_FINISHED: {
+                            execMapSelectionFinished();
+                        } break;
+                        case EVENT_MAP_OPENED: {
+                            execMapOpened();
+                        } break;
+                        case EVENT_SLICES_LOADED: {
+                            execSlicesLoaded();
+                        } break;
+                        case EVENT_LOADING_STATUS_CHANGED: {
+                            execLoadingStatusChanged();
+                        } break;
+                        case EVENT_TRACKING_STATUS_CHANGED: {
+                            execTrackingStatusChanged();
+                        } break;
+                        case EVENT_TRACKING_POSITION_UPDATED: {
+                            execTrackingPositionUpdated();
+                        } break;
+                    }
+                } // ~synchronized
 
 //#ifdef __LOG__
                 if (log.isEnabled()) log.debug("~event run; " + this);
@@ -2496,20 +2507,20 @@ public final class Desktop implements CommandListener,
 
             // runtime ops
             if (cz.kruch.track.TrackingMIDlet.jsr120) {
-                friends.reconfigure(Desktop.screen);
+                Desktop.this.friends.reconfigure(Desktop.screen);
             }
 
             // smart menu
             if (Config.locationProvider == Config.LOCATION_PROVIDER_JSR82) {
-                screen.addCommand(cmdRunLast);
+                Desktop.screen.addCommand(Desktop.this.cmdRunLast);
             } else {
-                screen.removeCommand(cmdRunLast);
+                Desktop.screen.removeCommand(Desktop.this.cmdRunLast);
             }
 
             // notify views
-            for (int i = views.length; --i >= 0; ) {
+            for (int i = Desktop.this.views.length; --i >= 0; ) {
                 try {
-                    views[i].configChanged();
+                    Desktop.this.views[i].configChanged();
                 } catch (Exception e) {
 //#ifdef __LOG__
                     e.printStackTrace();
@@ -2519,7 +2530,7 @@ public final class Desktop implements CommandListener,
             }
 
             // update screen
-            update(MASK_ALL);
+            Desktop.this.update(MASK_ALL);
 
         }
 
@@ -2529,7 +2540,7 @@ public final class Desktop implements CommandListener,
             if (result != null) {
 
                 // user intention to load map or atlas
-                _switch = false;
+                Desktop.this._switch = false;
 
                 // cast to file connection
                 final api.file.File file = (api.file.File) result;
@@ -2543,30 +2554,30 @@ public final class Desktop implements CommandListener,
                 }
 
                 // to recover position when new map loaded
-                if (map != null) {
-                    _qc = getPointer();
+                if (Desktop.this.map != null) {
+                    Desktop.this._qc = getPointer();
                 }
 
                 // release current data
-                if (atlas != null) {
-                    atlas.close();
-                    atlas = null;
+                if (Desktop.this.atlas != null) {
+                    Desktop.this.atlas.close();
+                    Desktop.this.atlas = null;
                 }
-                if (map != null) {
-                    map.close();
-                    map = null;
+                if (Desktop.this.map != null) {
+                    Desktop.this.map.close();
+                    Desktop.this.map = null;
                 }
 
                 // background task
                 if ("atlas".equals(closure)) {
-                    _target = "atlas";
-                    startOpenAtlas(url);
+                    Desktop.this._target = "atlas";
+                    Desktop.this.startOpenAtlas(url);
                 } else {
-                    _target = "map";
-                    startOpenMap(url, null);
+                    Desktop.this._target = "map";
+                    Desktop.this.startOpenMap(url, null);
                 }
             } else if (throwable != null) {
-                showError("[1]", throwable, Desktop.screen);
+                Desktop.showError("[1]", throwable, Desktop.screen);
             }
 
         }
@@ -2590,18 +2601,18 @@ public final class Desktop implements CommandListener,
             } else {
 
                 // store error
-                tracklogError = throwable;
+                Desktop.this.tracklogError = throwable;
 
                 // display warning
-                showWarning(result == null ? Resources.getString(Resources.DESKTOP_MSG_TRACKLOG_ERROR) : result.toString(),
-                            throwable, Desktop.screen);
+                Desktop.showWarning(result == null ? Resources.getString(Resources.DESKTOP_MSG_TRACKLOG_ERROR) : result.toString(),
+                                    throwable, Desktop.screen);
 
                 // no more recording
-                osd.setRecording(false);
+                Desktop.osd.setRecording(false);
             }
 
             // update screen
-            update(MASK_OSD);
+            Desktop.this.update(MASK_OSD);
 
         }
 
@@ -2611,16 +2622,17 @@ public final class Desktop implements CommandListener,
             if (throwable == null) {
 
                 // use new atlas
-                atlas = _atlas;
-                _atlas = null;
+                Desktop.this.atlas = Desktop.this._atlas;
+                Desktop.this._atlas = null;
 
                 // force user to select layer
-                (new ItemSelection(Desktop.screen, Resources.getString(Resources.DESKTOP_MSG_SELECT_LAYER), new Event(Event.EVENT_LAYER_SELECTION_FINISHED))).show(atlas.getLayers(), null);
+                (new ItemSelection(Desktop.screen, Resources.getString(Resources.DESKTOP_MSG_SELECT_LAYER),
+                                   new Event(Event.EVENT_LAYER_SELECTION_FINISHED))).show(Desktop.this.atlas.getLayers(), null);
 
             } else {
 
                 // show a user error
-                showError("[3] " + result, throwable, Desktop.screen);
+                Desktop.showError("[3] " + result, throwable, Desktop.screen);
 
                 // cleanup
                 cleanup(throwable);
@@ -2631,7 +2643,7 @@ public final class Desktop implements CommandListener,
         private void execLayerSelectionFinished() {
 
             // layer switch with '7'
-            _switch = "switch".equals(closure);
+            Desktop.this._switch = "switch".equals(closure);
 
             // had user selected anything?
             if (result != null) {
@@ -2640,26 +2652,26 @@ public final class Desktop implements CommandListener,
                 final String layerName = (String) result;
 
                 // has layer changed?
-                if (!layerName.equals(atlas.getLayer())) {
+                if (!layerName.equals(Desktop.this.atlas.getLayer())) {
 
                     // from load task
                     if (closure == null) {
 
                         // setup atlas
-                        atlas.setLayer(layerName);
+                        Desktop.this.atlas.setLayer(layerName);
 
                         // force user to select default map
                         (new ItemSelection(Desktop.screen, Resources.getString(Resources.DESKTOP_MSG_SELECT_MAP),
-                                           new Event(Event.EVENT_MAP_SELECTION_FINISHED))).show(atlas.getMapNames(), null);
+                                           new Event(Event.EVENT_MAP_SELECTION_FINISHED))).show(Desktop.this.atlas.getMapNames(), null);
 
                     } else { // layer switch
 
                         // switch match
-                        if (!startAlternateMap(layerName, getPointer(),
-                                               Resources.getString(Resources.DESKTOP_MSG_NO_MAP_FOR_POS) + " '" + layerName + "'.")) {
+                        if (!Desktop.this.startAlternateMap(layerName, getPointer(),
+                                                            Resources.getString(Resources.DESKTOP_MSG_NO_MAP_FOR_POS) + " '" + layerName + "'.")) {
                             // let user to select any map
                             (new ItemSelection(Desktop.screen, Resources.getString(Resources.DESKTOP_MSG_SELECT_MAP),
-                                               new Event(Event.EVENT_MAP_SELECTION_FINISHED, layerName))).show(atlas.getMapNames(layerName), null);
+                                               new Event(Event.EVENT_MAP_SELECTION_FINISHED, layerName))).show(Desktop.this.atlas.getMapNames(layerName), null);
                         }
                     }
                 }
@@ -2678,27 +2690,27 @@ public final class Desktop implements CommandListener,
         private void execMapSelectionFinished() {
 
             // map switch with '9'
-            _switch = "switch".equals(closure);
+            Desktop.this._switch = "switch".equals(closure);
 
             // had user selected anything?
             if (result != null) {
 
                 // trick - focus on these coords once the new map is loaded
-                if (map != null) {
-                    _qc = getPointer();
+                if (Desktop.this.map != null) {
+                    Desktop.this._qc = getPointer();
                 }
 
                 // map name
                 final String name = (String) result;
 
                 // phantom layer
-                if (!_switch && closure != null && atlas != null) {
-                    atlas.setLayer((String) closure);
-                    _switch = true;
+                if (!Desktop.this._switch && closure != null && Desktop.this.atlas != null) {
+                    Desktop.this.atlas.setLayer((String) closure);
+                    Desktop.this._switch = true;
                 }
 
                 // background task
-                startOpenMap(atlas.getMapURL(name), name);
+                Desktop.this.startOpenMap(Desktop.this.atlas.getMapURL(name), name);
 
             } else { // cancelled
 
@@ -2718,65 +2730,65 @@ public final class Desktop implements CommandListener,
             if (throwable == null) {
                 try {
                     // destroy existing map definitely if it is standalone
-                    if (atlas == null && map != null) {
+                    if (Desktop.this.atlas == null && Desktop.this.map != null) {
 //#ifdef __LOG__
-                        if (log.isEnabled()) log.debug("definitely destroy map " + map.getPath());
+                        if (log.isEnabled()) log.debug("definitely destroy map " + Desktop.this.map.getPath());
 //#endif
-                        map.close();
-                        map = null; // gc hint
+                        Desktop.this.map.close();
+                        Desktop.this.map = null; // gc hint
                     }
 
                     // use new map
-                    map = _map;
-                    _map = null;
+                    Desktop.this.map = Desktop.this._map;
+                    Desktop.this._map = null;
 
                     // cache map
-                    if (atlas != null && map != null) {
+                    if (Desktop.this.atlas != null && Desktop.this.map != null) {
 //#ifdef __LOG__
-                        if (log.isEnabled()) log.debug("caching map " + map.getPath());
+                        if (log.isEnabled()) log.debug("caching map " + Desktop.this.map.getPath());
 //#endif
-                        atlas.getMaps().put(map.getPath(), map);
+                        Desktop.this.atlas.getMaps().put(Desktop.this.map.getPath(), Desktop.this.map);
                     }
 
                     // setup map viewer
-                    final MapView mapView = ((MapView) views[VIEW_MAP]);
-                    mapView.setMap(map);
+                    final MapView mapView = ((MapView) Desktop.this.views[VIEW_MAP]);
+                    mapView.setMap(Desktop.this.map);
 
                     // move viewer to known position, if any
-                    if (_qc != null) {
+                    if (Desktop.this._qc != null) {
                         try {
-
+                            QualifiedCoordinates _qc = Desktop.this._qc;
                             // handle fake qc when browsing across map boundary
                             if (_qc.getLat() == 90D) {
                                 _qc = null; // gc hint
-                                _qc = QualifiedCoordinates.newInstance(map.getRange(2), _qc.getLon());
+                                _qc = QualifiedCoordinates.newInstance(Desktop.this.map.getRange(2), _qc.getLon());
                             } else if (_qc.getLat() == -90D) {
                                 _qc = null; // gc hint
-                                _qc = QualifiedCoordinates.newInstance(map.getRange(0), _qc.getLon());
+                                _qc = QualifiedCoordinates.newInstance(Desktop.this.map.getRange(0), _qc.getLon());
                             } else if (_qc.getLon() == 180D) {
                                 _qc = null; // gc hint
-                                _qc = QualifiedCoordinates.newInstance(_qc.getLat(), map.getRange(1));
+                                _qc = QualifiedCoordinates.newInstance(_qc.getLat(), Desktop.this.map.getRange(1));
                             } else if (_qc.getLon() == -180D) {
                                 _qc = null; // gc hint
-                                _qc = QualifiedCoordinates.newInstance(_qc.getLat(), map.getRange(3));
+                                _qc = QualifiedCoordinates.newInstance(_qc.getLat(), Desktop.this.map.getRange(3));
                             }
 
                             // move to position
-                            if (map.isWithin(_qc)) {
-                                mapView.setPosition(map.transform(_qc));
+                            if (Desktop.this.map.isWithin(_qc)) {
+                                mapView.setPosition(Desktop.this.map.transform(_qc));
                             }
 
                         } finally {
-                            _qc = null;
+                            Desktop.this._qc = null;
                         }
                     }
 
                     // TODO ugly code begins ---
 
                     // update OSD & navigation UI
-                    QualifiedCoordinates qc = map.transform(mapView.getPosition());
+                    QualifiedCoordinates qc = Desktop.this.map.transform(mapView.getPosition());
                     MapView.setBasicOSD(qc, true);
-                    updateNavigation(qc);
+                    Desktop.this.updateNavigation(qc);
                     QualifiedCoordinates.releaseInstance(qc);
                     qc = null; // gc hint
                     mapView.updateNavigationInfo(); // TODO ugly
@@ -2784,17 +2796,19 @@ public final class Desktop implements CommandListener,
                     // TODO -- ugly code ends
 
                     // map is ready
-                    _setInitializingMap(false);
+                    Desktop.this._setInitializingMap(false);
 
                     // render screen - it will force slices loading
-                    update(MASK_MAP | MASK_OSD);
+                    Desktop.this.update(MASK_MAP | MASK_OSD);
 
                     // offer use as default?
-                    if (!_switch) {
-                        if ("atlas".equals(_target)) {
-                            (new YesNoDialog(Desktop.screen, this, null, Resources.getString(Resources.DESKTOP_MSG_USE_AS_DEFAULT_ATLAS), atlas.getURL())).show();
+                    if (!Desktop.this._switch) {
+                        if ("atlas".equals(Desktop.this._target)) {
+                            (new YesNoDialog(Desktop.screen, this, null, Resources.getString(Resources.DESKTOP_MSG_USE_AS_DEFAULT_ATLAS),
+                                             Desktop.this.atlas.getURL())).show();
                         } else {
-                            (new YesNoDialog(Desktop.screen, this, null, Resources.getString(Resources.DESKTOP_MSG_USE_AS_DEFAULT_MAP), map.getPath())).show();
+                            (new YesNoDialog(Desktop.screen, this, null, Resources.getString(Resources.DESKTOP_MSG_USE_AS_DEFAULT_MAP),
+                                             Desktop.this.map.getPath())).show();
                         }
                     }
                 } catch (Throwable t) {
@@ -2803,7 +2817,7 @@ public final class Desktop implements CommandListener,
 //#endif
 
                     // show user the error
-                    showError(Resources.getString(Resources.DESKTOP_MSG_USE_MAP_FAILED), t, Desktop.screen);
+                    Desktop.showError(Resources.getString(Resources.DESKTOP_MSG_USE_MAP_FAILED), t, Desktop.screen);
 
                     // cleanup
                     cleanup(t);
@@ -2812,10 +2826,10 @@ public final class Desktop implements CommandListener,
             } else {
 
                 // update loading result
-                _updateLoadingResult(Resources.getString(Resources.DESKTOP_MSG_LOAD_MAP_FAILED), throwable);
+                Desktop.this._updateLoadingResult(Resources.getString(Resources.DESKTOP_MSG_LOAD_MAP_FAILED), throwable);
 
                 // show user the error
-                showError("[6] " + result, throwable, Desktop.screen);
+                Desktop.showError("[6] " + result, throwable, Desktop.screen);
 
                 // cleanup
                 cleanup(throwable);
@@ -2827,21 +2841,21 @@ public final class Desktop implements CommandListener,
         private void execSlicesLoaded() {
 
             // update loading result
-            _updateLoadingResult(Resources.getString(Resources.DESKTOP_MSG_SLICES_LOADED), throwable);
+            Desktop.this._updateLoadingResult(Resources.getString(Resources.DESKTOP_MSG_SLICES_LOADED), throwable);
 
             // if loading was ok
             if (throwable == null) {
 
                 // restore OSD
-                osd.setVisible(_osd);
+                Desktop.osd.setVisible(_osd);
 
                 // update screen
-                update(MASK_MAP | MASK_OSD);
+                Desktop.this.update(MASK_MAP | MASK_OSD);
 
             } else {
 
                 // show user the error
-                showError("[7] " + result, throwable, Desktop.screen);
+                Desktop.showError("[7] " + result, throwable, Desktop.screen);
             }
 
         }
@@ -2849,21 +2863,21 @@ public final class Desktop implements CommandListener,
         private void execLoadingStatusChanged() {
 
             // update loading result
-            _updateLoadingResult(Resources.getString(Resources.DESKTOP_MSG_LOADING_STATUS), throwable);
+            Desktop.this._updateLoadingResult(Resources.getString(Resources.DESKTOP_MSG_LOADING_STATUS), throwable);
 
             // loading ok?
             if (throwable == null) {
 
                 // update status
-                status.setStatus((String) result);
+                Desktop.status.setStatus((String) result);
 
                 // status update
-                update(MASK_ALL);
+                Desktop.this.update(MASK_ALL);
 
             } else {
 
                 // show user the error
-                showError("[8] " + result, throwable, Desktop.screen);
+                Desktop.showError("[8] " + result, throwable, Desktop.screen);
             }
 
         }
@@ -2874,7 +2888,7 @@ public final class Desktop implements CommandListener,
             final int newState = ((Integer) result).intValue();
 
             // TODO keep state somewhere else
-            osd.setProviderStatus(newState);
+            Desktop.osd.setProviderStatus(newState);
 
             // how severe is the change
             switch (newState) {
@@ -2882,20 +2896,20 @@ public final class Desktop implements CommandListener,
                 case LocationProvider._STARTING: {
 
 					// remember track start
-					trackstart = System.currentTimeMillis();
+					Desktop.this.trackstart = System.currentTimeMillis();
 					
 					// start tracklog
-                    startTracklog();
+                    Desktop.this.startTracklog();
 
                     // reset views on fresh start
-                    if (!_isProviderRestart()) {
-                        for (int i = views.length; --i >= 0; ) {
-                            views[i].trackingStarted();
+                    if (!Desktop.this._isProviderRestart()) {
+                        for (int i = Desktop.this.views.length; --i >= 0; ) {
+                            Desktop.this.views[i].trackingStarted();
                         }
                     }
 
                     // clear restart flag
-                    _setProviderRestart(false);
+                    Desktop.this._setProviderRestart(false);
 
                 } break;
 
@@ -2903,7 +2917,7 @@ public final class Desktop implements CommandListener,
 
                     // beep
                     if (!Config.noSounds) {
-                        AlertType.INFO.playSound(display);
+                        AlertType.INFO.playSound(Desktop.display);
                     }
 
                 } break;
@@ -2912,7 +2926,7 @@ public final class Desktop implements CommandListener,
 
                     // beep
                     if (!Config.noSounds) {
-                        AlertType.WARNING.playSound(display);
+                        AlertType.WARNING.playSound(Desktop.display);
                     }
 
                 } break;
@@ -2921,26 +2935,26 @@ public final class Desktop implements CommandListener,
 
                     // alarm
                     if (!Config.noSounds) {
-                        AlertType.ALARM.playSound(display);
+                        AlertType.ALARM.playSound(Desktop.display);
                     }
 
                     // stop tracking completely or restart
-                    if (_isStopRequest() || provider == null) {
+                    if (Desktop.this._isStopRequest() || Desktop.this.provider == null) {
 //#ifdef __LOG__
                         if (log.isEnabled()) log.debug("to do: after tracking");
 //#endif
-                        afterTracking();
-                    } else if (provider.isRestartable()) {
+                        Desktop.this.afterTracking();
+                    } else if (Desktop.this.provider.isRestartable()) {
 //#ifdef __LOG__
                         if (log.isEnabled()) log.debug("to do: restart tracking");
 //#endif
-                        restartTracking();
+                        Desktop.this.restartTracking();
                     } else {
 //#ifdef __LOG__
                         if (log.isEnabled()) log.debug("to do: stop tracking");
 //#endif
-                        stopTracking();
-                        afterTracking();
+                        Desktop.this.stopTracking();
+                        Desktop.this.afterTracking();
                     }
 
                 } break;
@@ -2949,12 +2963,12 @@ public final class Desktop implements CommandListener,
 
                     // beep
                     if (!Config.noSounds) {
-                        AlertType.WARNING.playSound(display);
+                        AlertType.WARNING.playSound(Desktop.display);
                     }
 
                     // stop provider - if it is restartable, it will be restarted (see above case)
                     try {
-                        provider.stop();
+                        Desktop.this.provider.stop();
                     } catch (Exception e) {
 //#ifdef __LOG__
                         e.printStackTrace();
@@ -2967,21 +2981,21 @@ public final class Desktop implements CommandListener,
                 case LocationProvider._CANCELLED: {
 
                     // stop and resume
-                    stopTracking();
-                    afterTracking();
+                    Desktop.this.stopTracking();
+                    Desktop.this.afterTracking();
 
                 } break;
             }
 
             // update screen
-            update(MASK_MAP | MASK_OSD);
+            Desktop.this.update(MASK_MAP | MASK_OSD);
 
         }
 
         private void execTrackingPositionUpdated() {
 
             // paused?
-            if (paused) {
+            if (Desktop.paused) {
                 return;
             }
 
@@ -2992,8 +3006,8 @@ public final class Desktop implements CommandListener,
             }
 
             // update tracklog
-            if (tracklogGpx != null) {
-                tracklogGpx.locationUpdated(l);
+            if (Desktop.this.tracklogGpx != null) {
+                Desktop.this.tracklogGpx.locationUpdated(l);
             }
 
             // if valid position do updates
@@ -3001,7 +3015,7 @@ public final class Desktop implements CommandListener,
 
                 // update wpt navigation
                 try {
-                    updateNavigation(l.getQualifiedCoordinates());
+                    Desktop.this.updateNavigation(l.getQualifiedCoordinates());
                 } catch (Exception e) {
 //#ifdef __LOG__
                     e.printStackTrace();
@@ -3011,7 +3025,7 @@ public final class Desktop implements CommandListener,
 
                 // update route navigation
                 try {
-                    updateRouting(l.getQualifiedCoordinates());
+                    Desktop.this.updateRouting(l.getQualifiedCoordinates());
                 } catch (Exception e) {
 //#ifdef __LOG__
                     e.printStackTrace();
@@ -3041,7 +3055,7 @@ public final class Desktop implements CommandListener,
             Location.releaseInstance(l);
 
             // update screen
-            update(mask);
+            Desktop.this.update(mask);
 
         }
 
@@ -3053,23 +3067,23 @@ public final class Desktop implements CommandListener,
             final String msg = Resources.getString(Resources.DESKTOP_MSG_EVENT_CLENAUP);
             final int i = msg.indexOf('\n');
             if (i > /* -1 */ 0) {
-                _updateLoadingResult(msg.substring(0, i), msg.substring(i + 1));
+                Desktop.this._updateLoadingResult(msg.substring(0, i), msg.substring(i + 1));
             } else {
-                _updateLoadingResult(msg, (String) null);
+                Desktop.this._updateLoadingResult(msg, (String) null);
             }
 
             // clear temporary vars
-            if (_atlas != null) {
-                _atlas.close();
-                _atlas = null;
+            if (Desktop.this._atlas != null) {
+                Desktop.this._atlas.close();
+                Desktop.this._atlas = null;
             }
-            if (_map != null) {
-                _map.close();
-                _map = null;
+            if (Desktop.this._map != null) {
+                Desktop.this._map.close();
+                Desktop.this._map = null;
             }
 
             // show hint
-            update(MASK_SCREEN);
+            Desktop.this.update(MASK_SCREEN);
         }
 
         // debug

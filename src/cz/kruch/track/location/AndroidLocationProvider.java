@@ -108,18 +108,23 @@ public final class AndroidLocationProvider
 
     public void onLocationChanged(android.location.Location l) {
 //#ifdef __LOG__
-        if (log.isEnabled()) log.debug("onLocationUpdated");
+        if (log.isEnabled()) log.debug("onLocationChanged");
 //#endif
         // create up-to-date location
-        QualifiedCoordinates qc = QualifiedCoordinates.newInstance(l.getLatitude(),
-                                                                   l.getLongitude());
+        final QualifiedCoordinates qc = QualifiedCoordinates.newInstance(l.getLatitude(),
+                                                                         l.getLongitude());
         if (l.hasAltitude()) {
             qc.setAlt((float) l.getAltitude());
         }
         if (l.hasAccuracy()) {
             qc.setHorizontalAccuracy(l.getAccuracy());
         }
-        final Location location = Location.newInstance(qc, l.getTime(), 1);
+        int sat = -1;
+        final android.os.Bundle extras = l.getExtras();
+        if (extras != null) {
+            sat = extras.getInt("satellites", -1);
+        }
+        final Location location = Location.newInstance(qc, l.getTime(), 1, sat);
         if (l.hasBearing()) {
             location.setCourse(l.getBearing());
         }

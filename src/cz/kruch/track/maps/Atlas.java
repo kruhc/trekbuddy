@@ -136,7 +136,7 @@ public final class Atlas implements Runnable {
 //#endif
 
         // open atlas in background
-        LoaderIO.getInstance().enqueue(this);
+        listener.getDiskWorker().enqueue(this);
 
         return true;
     }

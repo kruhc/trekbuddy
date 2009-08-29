@@ -548,7 +548,7 @@ final class MapView extends View {
             if ((mask & Desktop.MASK_OSD) != 0) {
 
                 // set text color
-                g.setColor(Config.osdBlackColor ? 0x00000000 : 0x00FFFFFF);
+                g.setColor(Config.osdBlackColor ? 0x0 : 0x00FFFFFF);
 
                 // render
                 Desktop.osd.render(g);

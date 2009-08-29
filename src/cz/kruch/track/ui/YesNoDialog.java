@@ -42,7 +42,10 @@ public final class YesNoDialog implements CommandListener {
     public void show() {
         Displayable dialog;
         if (item instanceof StringBuffer) {
-            dialog = new TextBox(question, item.toString(), 32, TextField.URL);
+            dialog = new TextBox(question, item.toString(), 64, TextField.URL);
+//#ifdef __ANDROID__
+            ((TextBox) dialog).setString(item.toString());
+//#endif
             dialog.addCommand(new Command(Resources.getString(Resources.CMD_OK), Command.OK, 1));
         } else {
             dialog = new Alert(null, question, null, null);

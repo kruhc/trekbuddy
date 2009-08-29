@@ -6,7 +6,6 @@ import cz.kruch.track.event.Callback;
 import cz.kruch.track.location.Waypoint;
 import cz.kruch.track.location.GpxTracklog;
 import cz.kruch.track.location.GroundspeakBean;
-import cz.kruch.track.maps.io.LoaderIO;
 import cz.kruch.track.fun.Friends;
 import cz.kruch.track.configuration.Config;
 import cz.kruch.track.Resources;
@@ -236,23 +235,17 @@ public final class Waypoints implements CommandListener,
             } break;
             case 1: {
                 // set last known choice
-/*
-                if (idx[depth] < ((SmartList) list).size()) {
-                    ((SmartList) list).setSelectedIndex(idx[depth], true);
-                }
-*/
                 if (idx[depth] != null) {
-                    ((SmartList) list).setSelectedItem(idx[depth]);
+                    if (list instanceof SmartList) {
+                        ((SmartList) list).setSelectedItem(idx[depth]);
+                    } else {
+                        ((List) list).setSelectedIndex(((Integer) idx[depth]).intValue(), true);
+                    }
                 }
             } break;
             case 2: {
                 // set last known choice
                 if (inUseName == null || currentName.equals(inUseName)) {
-/*
-                    if (idx[depth] < ((SmartList) list).size()) {
-                        ((SmartList) list).setSelectedIndex(idx[depth], true);
-                    }
-*/
                     if (idx[depth] != null) {
                         ((SmartList) list).setSelectedItem(idx[depth]);
                     }
@@ -284,9 +277,6 @@ public final class Waypoints implements CommandListener,
             switch (depth) {
                 case 0: { // main menu
                     // get command item
-/*
-                    final String item = ((List) list).getString(idx[depth] = ((List) list).getSelectedIndex());
-*/
                     final String item = ((List) list).getString(((List) list).getSelectedIndex());
                     idx[depth] = item;
                     // exec
@@ -294,11 +284,14 @@ public final class Waypoints implements CommandListener,
                 } break;
                 case 1: { // store action
                     // get store name
-/*
-                    final String item = ((SmartList) list).getString(idx[depth] = ((SmartList) list).getSelectedIndex());
-*/
-                    final String item = (String) ((SmartList) list).getSelectedItem();
-                    idx[depth] = item;
+                    final String item;
+                    if (list instanceof SmartList) {
+                        item = (String) ((SmartList) list).getSelectedItem();
+                        idx[depth] = item;
+                    } else {
+                        item = ((List) list).getString(((List) list).getSelectedIndex());
+                        idx[depth] = new Integer(((List) list).getSelectedIndex());
+                    }
                     // store action
                     if (List.SELECT_COMMAND == command || cmdOpen == command) {
                         onBackground(item, null);
@@ -307,9 +300,9 @@ public final class Waypoints implements CommandListener,
                 case 2: { // wpt action
                     // selected wpt index
                     final Waypoint item = (Waypoint) ((SmartList) list).getSelectedItem();
-                    // exec command
+					// exec command
                     if (List.SELECT_COMMAND == command || cmdOpen == command) {
-                        // remember idx
+                        // save current depth list position
                         if (/*inUseName == null || */currentName.equals(inUseName)) {
                             idx[depth] = item;
                         }
@@ -464,9 +457,6 @@ public final class Waypoints implements CommandListener,
             } else if (action instanceof Integer) { // wpt action
 
                 // wpt index (in currentWpts collection)
-/*
-                final int idxSelected = this == list ? -1 : ((SmartList) list).getSelectedIndex();
-*/
                 final int idxSelected = pane == list ? -1 : itemIdx(currentWpts, ((SmartList) list).getSelectedItem());
                 
                 switch (((Integer) action).intValue()) {
@@ -671,6 +661,10 @@ public final class Waypoints implements CommandListener,
      * Background I/O operations.
      */
     public void run() {
+//#ifdef __LOG__
+        if (log.isEnabled()) log.debug("run; " + _storeUpdate + ";" + _storeName + ";" + _listingTitle + "/" + action);
+//#endif
+
         if (_storeUpdate == null) {
             if (_storeName == null) {
                 actionListStores(_listingTitle);
@@ -679,10 +673,16 @@ public final class Waypoints implements CommandListener,
                     actionListStore(_storeName, false);
                 } else if (action == actionListTargets) { // '==' is OK
                     actionUpdateTarget(_storeName, _addWptStoreKey, _addWptSelf);
+//                    _addWptStoreKey = null;
+//                    _addWptSelf = null;
                 }
+                _storeName = null;
             }
         } else {
             actionUpdateStore(_updateName, _updateWpts);
+            _storeUpdate = null;
+//            _updateName = null;
+//            _updateWpts = null;
         }
     }
 
@@ -703,7 +703,7 @@ public final class Waypoints implements CommandListener,
         if (listingTitle != null) {
             this._listingTitle = listingTitle;
         }
-        LoaderIO.getInstance().enqueue(this);
+        navigator.getDiskWorker().enqueue(this);
     }
 
     /**
@@ -712,6 +712,10 @@ public final class Waypoints implements CommandListener,
      * @param title list title
      */
     private void actionListStores(final String title) {
+//#ifdef __LOG__
+        if (log.isEnabled()) log.debug("list stores as " + title);
+//#endif
+
         final NakedVector v = new NakedVector(cacheDiskHint + 16, INCREMENT_LIST_SIZE);
         final boolean recursive;
 
@@ -728,7 +732,8 @@ public final class Waypoints implements CommandListener,
 //            listKnown(v, USER_CUSTOM_STORE);
 //            listKnown(v, STORE_USER);
 //            listKnown(v, STORE_FRIENDS);
-			listKnown(v);
+            //
+            listKnown(v);
 
 			// list "wpts/" recursively
             recursive = true;
@@ -947,11 +952,11 @@ public final class Waypoints implements CommandListener,
         // execution status
         Throwable status = null;
 
-        // wait screen
+		// wait screen
         Desktop.showWaitScreen(Resources.getString(Resources.DESKTOP_CMD_NAVIGATION),
                                Resources.getString(Resources.DESKTOP_MSG_IN_PROGRESS));
 
-        try {
+		try {
             
             // create file revision
             if (_updateRevision) {
@@ -1047,7 +1052,7 @@ public final class Waypoints implements CommandListener,
     private void actionUpdateTarget(final String name, final Object storeKey,
                                     final Waypoint wpt) {
 //#ifdef __LOG__
-        if (log.isEnabled()) log.debug("action update store '" + name + "'");
+        if (log.isEnabled()) log.debug("action update target '" + name + "'");
 //#endif
 
         Object useKey = storeKey;
@@ -1087,7 +1092,11 @@ public final class Waypoints implements CommandListener,
 
     private void listKnown(final Vector v) {
 		for (final Enumeration e = backends.elements(); e.hasMoreElements(); ) {
-			v.addElement(((GpxTracklog) e.nextElement()).getFileName());
+            final GpxTracklog backend = (GpxTracklog) e.nextElement();
+//#ifdef __LOG__
+            if (log.isEnabled()) log.debug("list known backend file " + backend.getFileName());
+//#endif
+            v.addElement(backend.getFileName());
 		}
 	}
 
@@ -1119,7 +1128,14 @@ public final class Waypoints implements CommandListener,
 //        }
 
 		for (final Enumeration e = backends.elements(); e.hasMoreElements(); ) {
-			if (storeName.equals((((GpxTracklog) e.nextElement()).getFileName()))) {
+			final GpxTracklog backendName = ((GpxTracklog) e.nextElement());
+//#ifdef __LOG__
+            if (log.isEnabled()) log.debug("hide file " + storeName + " as backend file " + backendName.getFileName());
+//#endif
+            if (storeName.equals((backendName.getFileName()))) {
+//#ifdef __LOG__
+                if (log.isEnabled()) log.debug("yes");
+//#endif
 			    return true;
 			}
 		}
@@ -1168,6 +1184,10 @@ public final class Waypoints implements CommandListener,
 
     private void addToStore(final Object storeKey, final String storeName,
                             final Waypoint wpt) {
+//#ifdef __LOG__
+        if (log.isEnabled()) log.debug("add " + wpt + " to store " + storeKey + "/" + storeName);
+//#endif
+
         // add wpt to store
         Vector wpts = (Vector) stores.get(storeKey);
         if (wpts == null) {
@@ -1178,7 +1198,7 @@ public final class Waypoints implements CommandListener,
         }
         wpts.addElement(wpt);
 
-        // update navigator if we update store being used
+		// update navigator if we update store being used
         if (Desktop.wpts != null) {
             if (storeName.equals(Desktop.wptsName)) {
                 navigator.addWaypoint(wpt);
@@ -1203,7 +1223,7 @@ public final class Waypoints implements CommandListener,
         _updateRevision = name.startsWith(SPECIAL_STORE_HEADING) ? false : Config.makeRevisions;
 
         // do the rest on background
-        LoaderIO.getInstance().enqueue(this);
+        navigator.getDiskWorker().enqueue(this);
     }
 
     private void listWptFiles(final String path, final Vector v,
@@ -1263,10 +1283,19 @@ public final class Waypoints implements CommandListener,
     }
 
     private Displayable listStores(final Vector stores, final String title) {
-        // create UI list
-        final SmartList l = new SmartList(title);
-        l.setData(stores);
-        
+		// create UI list
+        Displayable l = null;
+//#ifndef __ANDROID__
+        l = new SmartList(title);
+        ((SmartList) l).setData(stores);
+//#else
+        if (cz.kruch.track.TrackingMIDlet.android) { // always true
+            final String[] strings = new String[stores.size()];
+            stores.copyInto(strings);
+            l = new List(title, List.IMPLICIT, strings, null);
+        }
+//#endif
+
         // add commands
         l.addCommand(cmdOpen);
         if (action == actionListWpts || action == actionListTracks) { // '==' is OK
@@ -1373,9 +1402,7 @@ public final class Waypoints implements CommandListener,
                                final boolean force, final Vector wpts) {
         // sorting criterium changed or sorting forced
         if (sort != by || force) {
-/*
-            final Waypoint wpt = (Waypoint) ((SmartList) list).getSelectedItem();
-*/
+
             // remember criterium
             sort = by;
 
@@ -1537,13 +1564,14 @@ public final class Waypoints implements CommandListener,
                                     // groundspeak
                                     depth = 2;
                                     // create bean
-                                    gsbean = new GroundspeakBean(parser.getAttributeValue(null, ATTR_GS_ID));
+                                    gsbean = new GroundspeakBean(GpxTracklog.GS_1_0_PREFIX,
+                                                                 parser.getAttributeValue(null, ATTR_GS_ID));
                                 } break;
                                 case TAG_AU_CACHE: {
                                     // groundspeak
                                     depth = 2;
                                     // create bean
-                                    gsbean = new GroundspeakBean(null);
+                                    gsbean = new GroundspeakBean(GpxTracklog.AU_1_0_PREFIX, null);
                                 } break;
                                 case TAG_EXTENSIONS: {
                                     // groundspeak in GPX 1.1

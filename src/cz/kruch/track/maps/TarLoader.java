@@ -31,7 +31,6 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
     private int numberOfPointers;
     private int hintTmiFileSize, hintTmiTokenLength, hintInitialCapacity,
                 increment;
-    private int readLimit;
 
     TarLoader() {
         this.isTar = true;
@@ -42,24 +41,27 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
     }
 
     Slice getSlice(int x, int y) {
-        final TarSlice slice = (TarSlice) super.getSlice(x, y);
+        final Slice slice = super.getSlice(x, y);
         final long xy = slice.getXyLong();
         final long[] pointers = this.pointers;
         for (int i = numberOfPointers; --i >= 0; ) {
             final long pointer = pointers[i];
             if (((pointer & 0x000000ffffffffffL) ^ xy) == 0) {
-                slice.setStreamOffset((int)(pointer >> 40));
-                return slice;
+                ((TarSlice) slice).setStreamOffset((int)(pointer >> 40));
+                break;
             }
         }
-        return null;
+        return slice;
     }
 
     boolean hasSlices() {
         return pointers != null;
     }
 
-    void loadMeta(final Map map) throws IOException {
+    void loadMeta() throws IOException {
+        // local ref
+        final Map map = this.map;
+
         // input stream
         InputStream in = null;
 
@@ -93,7 +95,7 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
             if (Map.useReset) {
                 if (in.markSupported()) {
                     try {
-                        in.mark(readLimit = (int) nativeFile.fileSize());
+                        in.mark((int) nativeFile.fileSize());
                         nativeIn = in;
                         Map.fileInputStreamResetable = 1;
                     } catch (OutOfMemoryError e) {
@@ -259,6 +261,10 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
         // slice entry stream offset
         final int streamOffset = ((TarSlice) slice).getBlockOffset() * TarInputStream.DEFAULT_RCDSIZE;
 
+        // incomplete map handling
+        if (streamOffset < 0) {
+            slice.setImage(Slice.NO_IMAGE);
+        } else
         try {
             // local ref
             final TarInputStream tarIn = this.tarIn;

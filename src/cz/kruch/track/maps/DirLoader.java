@@ -60,8 +60,10 @@ final class DirLoader extends Map.Loader implements Atlas.Loader {
 //#endif
     }
 
-    void loadMeta(final Map map) throws IOException {
-        
+    void loadMeta() throws IOException {
+        // local ref
+        final Map map = this.map;
+
         // read calibration
         if (getMapCalibration() == null) {
 //#ifdef __LOG__

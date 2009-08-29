@@ -33,7 +33,10 @@ final class JarLoader extends Map.Loader /*implements Atlas.Loader*/ {
     JarLoader() {
     }
 
-    void loadMeta(final Map map) throws IOException {
+    void loadMeta() throws IOException {
+        // local ref
+        final Map map = this.map;
+        
         // input
         InputStream in = null;
         LineReader reader = null;

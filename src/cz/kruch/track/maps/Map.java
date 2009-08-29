@@ -19,6 +19,8 @@ import api.location.QualifiedCoordinates;
 import api.location.Datum;
 import api.location.ProjectionSetup;
 
+import javax.microedition.lcdui.Image;
+
 /**
  * Map representation and handling.
  *  
@@ -156,7 +158,6 @@ public final class Map implements Runnable {
 
     /**
      * Disposes map - releases map images and disposes loader.
-     * Does gc at the end.
      */
     public void dispose() {
 //#ifdef __LOG__
@@ -221,7 +222,7 @@ public final class Map implements Runnable {
 //#endif
 
         // open map in background
-        LoaderIO.getInstance().enqueue(this);
+        listener.getDiskWorker().enqueue(this);
 
         return true;
     }
@@ -264,7 +265,7 @@ public final class Map implements Runnable {
         listener.slicesLoading(null, null);
 
         // load images at background
-        LoaderIO.getInstance().enqueue(loader.use(list));
+        listener.getDiskWorker().enqueue(loader.use(list));
 
         return true;
     }
@@ -287,7 +288,8 @@ public final class Map implements Runnable {
             }
 
             // loads whatever is needed
-            loader.loadMeta(this);
+            loader.loadMeta();
+            loader.fix();
 
 //#ifdef __LOG__
             if (log.isEnabled()) log.debug("map opened");
@@ -344,20 +346,19 @@ public final class Map implements Runnable {
         protected static final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("Map.Loader");
 //#endif
         protected static final String SET_DIR_PREFIX = "set/";
-
         protected static final BufferedInputStream buffered = new BufferedInputStream(null, 4096);
 
+        protected Map map;
         protected String basename;
         protected String extension;
+        protected boolean isGPSka, isTar;
 
-        private Map map;
+        private int tileWidth, tileHeight;
+        
         private Vector _list;
 
-        protected boolean isGPSka, isTar;
-        protected int tileWidth, tileHeight;
-
-        abstract void loadMeta(Map map) throws IOException;
-        abstract void loadSlice(Slice slice) throws IOException;
+        abstract void loadMeta() throws IOException;
+        abstract void loadSlice(final Slice slice) throws IOException;
 
         Loader() {
             this.tileWidth = this.tileHeight = Integer.MAX_VALUE;
@@ -369,8 +370,26 @@ public final class Map implements Runnable {
         }
 
         void dispose(final boolean deep) throws IOException {
-            if (deep) {
-                this.map = null;
+        }
+
+        void fix() throws InvalidMapException {
+            if (tileWidth == Integer.MAX_VALUE || tileHeight == Integer.MAX_VALUE) {
+//#ifdef __LOG__
+                if (log.isEnabled()) log.debug("find tile dimensions from root tile");
+//#endif
+                final Slice slice = getSlice(0, 0);
+                if (slice != null) {
+                    try {
+                        loadSlice(slice);
+                        tileWidth = slice.getImage().getWidth();
+                        tileHeight = slice.getImage().getHeight();
+                        slice.setImage(null);
+                    } catch (Exception e) {
+                        throw new InvalidMapException("Root tile 0-0 missing");
+                    }
+                } else {
+                    throw new InvalidMapException("Root tile 0-0 missing");
+                }
             }
         }
 
@@ -457,10 +476,6 @@ public final class Map implements Runnable {
             return this;
         }
 
-        final String getMapPath() {
-            return map.getPath();
-        }
-
         final Calibration getMapCalibration() {
             return map.calibration;
         }
@@ -528,7 +543,7 @@ public final class Map implements Runnable {
                             }
 
                             // assertion and/or user warning
-                            if (slice.getImage() == null || slice.getImage() == Slice.NO_IMAGE) {
+                            if (slice.getImage() == null/* || slice.getImage() == Slice.NO_IMAGE*/) {
                                 throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_NO_SLICE_IMAGE) + " " + slice.toString());
                             }
 //#ifdef __LOG__

@@ -32,7 +32,7 @@ public class Slice {
     public final synchronized void setImage(Image image) {
         // assertion
         if (this.image != null && image != null) {
-            throw new IllegalStateException("Replacing image in slice " + this);
+            throw new IllegalStateException("Replacing image in tile " + this);
         }
 
         if (this.image == NO_IMAGE) {

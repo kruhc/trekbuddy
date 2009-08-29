@@ -35,6 +35,9 @@ final class DeviceScreen extends GameCanvas implements Runnable {
     // graphics
     private Graphics graphics;
 
+    // eventing
+    private final SmartRunnable eventing;
+
     // keylock status
     private volatile int keyRepeatedCount;
     private volatile boolean keylock;
@@ -53,6 +56,7 @@ final class DeviceScreen extends GameCanvas implements Runnable {
     public DeviceScreen(Desktop delegate, MIDlet midlet) {
         super(false);
         this.delegate = delegate;
+        this.eventing = new SmartRunnable();
         if (midlet.getAppProperty(cz.kruch.track.TrackingMIDlet.JAD_UI_FULL_SCREEN_HEIGHT) != null) {
             fullScreenHeight = Integer.parseInt(midlet.getAppProperty(cz.kruch.track.TrackingMIDlet.JAD_UI_FULL_SCREEN_HEIGHT));
         }
@@ -117,6 +121,10 @@ final class DeviceScreen extends GameCanvas implements Runnable {
                 super.removeCommand(command);
             }
         }
+    }
+
+    public void callSerially(Runnable r) {
+        eventing.callSerially(r);
     }
 
     /**
@@ -320,7 +328,7 @@ final class DeviceScreen extends GameCanvas implements Runnable {
             final int now = _getInKey();
             _setInKey(i);
             if (now == 0 || now == i) {
-                SmartRunnable.getInstance().callSerially(this);
+                callSerially(this);
             } else {
                 _setInKey(0);
             }

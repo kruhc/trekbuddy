@@ -978,7 +978,14 @@ final class MapViewer {
                                         Graphics.TOP | Graphics.LEFT);
                 }
             } else {
+                graphics.setColor(0x0);
                 graphics.fillRect(x_dest, y_dest, w, h);
+                graphics.setColor(0x00404040);
+                graphics.drawRect(x_dest, y_dest, w, h);
+                graphics.drawString(slice.toString(),
+                                    - x_src + x_dest + 2, // padding
+                                    - y_src + y_dest + 2, // padding 
+                                    Graphics.TOP | Graphics.LEFT);
             }
         }
     }
@@ -1149,7 +1156,7 @@ final class MapViewer {
 
             // assertion
             if (!newSlices.isEmpty()) {
-                throw new IllegalStateException("Temporary slices collection not empty");
+                throw new IllegalStateException("New tiles collection not empty");
             }
 
             // find needed slices ("row by row")
@@ -1171,7 +1178,7 @@ final class MapViewer {
                             gotAll = false;
                         }
                     } else {
-                        throw new IllegalStateException("Out of map - no slice for " + _x + "-" + _y);
+                        throw new IllegalStateException("Out of map - no tile for " + _x + "-" + _y);
                     }
                 }
                 _y = _l; // next "line" of slices
@@ -1262,7 +1269,7 @@ final class MapViewer {
 //#endif
                 newSlices.addElement(slice);
             } else {
-                throw new IllegalStateException("Slice " + slice + " already added for " + x + "-" + y);
+                throw new IllegalStateException("Tile " + slice + " already added for " + x + "-" + y);
             }
         }
 

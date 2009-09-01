@@ -6,8 +6,6 @@ import cz.kruch.track.Resources;
 import cz.kruch.track.configuration.Config;
 import cz.kruch.track.configuration.ConfigurationException;
 import cz.kruch.track.event.Callback;
-import cz.kruch.track.fun.Friends;
-import cz.kruch.track.fun.Camera;
 import cz.kruch.track.location.GpxTracklog;
 import cz.kruch.track.location.Waypoint;
 import cz.kruch.track.maps.Map;
@@ -109,7 +107,9 @@ public final class Desktop implements CommandListener,
     private volatile Atlas atlas;
 
     // groupware components
-    private Friends friends;
+//#ifndef __ANDROID__
+    private cz.kruch.track.fun.Friends friends;
+//#endif    
 
     // LSM/MSK commands
     /*private */Command cmdRun, cmdRunLast, cmdStop;
@@ -175,10 +175,11 @@ public final class Desktop implements CommandListener,
         // platform-specific hacks
 //#ifdef __ALL__
         if (cz.kruch.track.TrackingMIDlet.uiq) {
-            BACK_CMD_TYPE = Command.EXIT;
+//            BACK_CMD_TYPE = Command.EXIT;
+            CANCEL_CMD_TYPE = Command.BACK;
         }
         if (cz.kruch.track.TrackingMIDlet.sonyEricssonEx) {
-            EXIT_CMD_TYPE = Command.EXIT;
+//            EXIT_CMD_TYPE = Command.EXIT;
             CANCEL_CMD_TYPE = Command.BACK;
         }
 //#elifdef __J9__
@@ -637,18 +638,22 @@ public final class Desktop implements CommandListener,
         // initialize waypoints
         cz.kruch.track.ui.Waypoints.initialize(this);
 
+//#ifndef __ANDROID__
+
         // start Friends
         if (cz.kruch.track.TrackingMIDlet.jsr120) {
 //#ifdef __LOG__
              if (log.isEnabled()) log.info("init friends");
 //#endif
             try {
-                friends = new Friends();
+                friends = new cz.kruch.track.fun.Friends();
                 friends.start();
             } catch (Throwable t) {
                 showError(Resources.getString(Resources.DESKTOP_MSG_FRIENDS_FAILED), t, screen);
             }
         }
+
+//#endif
 
         // loads CMS profiles
         getDiskWorker().enqueue((Runnable) views[VIEW_CMS]);
@@ -935,10 +940,10 @@ public final class Desktop implements CommandListener,
                         boolean notified = false;
                         final String s = ((Waypoint) wpts.elementAt(wptIdx)).getLink(Waypoint.LINK_GENERIC_SOUND);
                         if (s != null) {
-                            notified = Camera.play(Config.getFolderURL(Config.FOLDER_SOUNDS) + s);
+                            notified = cz.kruch.track.fun.Camera.play(Config.getFolderURL(Config.FOLDER_SOUNDS) + s);
                         }
                         if (!notified) {
-                            notified = Camera.play(Config.getFolderURL(Config.FOLDER_SOUNDS) + Config.defaultWptSound);
+                            notified = cz.kruch.track.fun.Camera.play(Config.getFolderURL(Config.FOLDER_SOUNDS) + Config.defaultWptSound);
                         }
                         if (notified) {
                             if (!Config.powerSave) {
@@ -1104,10 +1109,7 @@ public final class Desktop implements CommandListener,
         update(MASK_ALL);
     }
 
-    void addWaypoint(final Waypoint wpt) {
-        // append to vector
-        Desktop.wpts.addElement(wpt);
-
+    void routeExpanded(final Waypoint wpt) {
         int mask = MASK_OSD;
 
         // notify views
@@ -2504,12 +2506,12 @@ public final class Desktop implements CommandListener,
             Config.useDatum(Config.geoDatum);
             resetFont();
             resetBar();
-
+//#ifndef __ANDROID__
             // runtime ops
             if (cz.kruch.track.TrackingMIDlet.jsr120) {
                 Desktop.this.friends.reconfigure(Desktop.screen);
             }
-
+//#endif
             // smart menu
             if (Config.locationProvider == Config.LOCATION_PROVIDER_JSR82) {
                 Desktop.screen.addCommand(Desktop.this.cmdRunLast);

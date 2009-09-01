@@ -19,13 +19,14 @@ public final class Waypoint {
     public static final int LINK_GENERIC_SOUND = 1;
 
     private QualifiedCoordinates coordinates;
-    private long timestamp;
     private String name;
     private String comment;
     private String sym;
 
     private Object userObject;
     private Vector links;
+
+    private long timestamp;
 
     public Waypoint(QualifiedCoordinates qc, char[] name, char[] comment, char[] sym) {
         this.coordinates = qc;

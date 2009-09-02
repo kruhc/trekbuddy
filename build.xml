@@ -156,6 +156,7 @@
         <property name="libraryjars" value="${rim41.home}\lib\net_rim_api.jar"/>
         <property name="classpath.preverify" value="${libraryjars}"/>
         <property name="rim.cod.dependencies" value="net_rim_cldc,net_rim_os,net_rim_locationapi"/>
+        <property name="rim.bb.version" value="[4.1,4.2)"/>
         <antcall target="clean"/>
         <antcall target="a.pre.rim"/>
         <antcall target="compile.rim41"/>
@@ -175,6 +176,7 @@
         <property name="libraryjars" value="${rim42.home}\lib\net_rim_api.jar"/>
         <property name="classpath.preverify" value="${libraryjars}"/>
         <property name="rim.cod.dependencies" value="net_rim_cldc,net_rim_locationapi,net_rim_bluetooth"/>
+        <property name="rim.bb.version" value="[4.2,)"/>
         <antcall target="clean"/>
         <antcall target="a.pre.rim"/>
         <antcall target="compile.rim42"/>
@@ -194,12 +196,13 @@
         <property name="classpath.preverify" value="${libraryjars}"/>
         <antcall target="clean"/>
         <ant dir="z:/repository/microemu/microemu-android"
-             antfile="build-trekbuddy.xml" target="clean"
+             antfile="build-trekbuddy.xml"
+             target="clean"
              inheritAll="false" inheritRefs="false">
         </ant>
         <antcall target="a.pre.android"/>
         <antcall target="compile.android"/>
-        <antcall target="a.pack" inheritall="true"/>
+        <antcall target="android.pack" inheritall="true"/>
         <antcall target="obfuscate.android" inheritall="true"/>
 <!-- not needed, so rename the jar as if it happened
         <antcall target="preverify" inheritall="true"/>
@@ -209,9 +212,15 @@
         <antcall target="dist" inheritall="true"/>
         <ant dir="z:/repository/microemu/microemu-android"
              antfile="build-trekbuddy.xml"
+             target="package-apk"
              inheritAll="false" inheritRefs="false">
+<!--
             <property name="javac.debug" value="true"/>
             <property name="javac.debuglevel" value="source,lines"/>
+-->
+<!--
+            <property name="do.obfuscate" value="true"/>
+-->
         </ant>
         <copy file="z:/repository/microemu/microemu-android/bin/trekbuddy.apk"
               todir="dist/${vendor.dir}/${dist.dir}"/>
@@ -298,7 +307,7 @@
     <target name="a.pre.android" depends="a.pre.hecl">
         <mkdir dir="tmp/src"/>
         <wtkpreprocess srcdir="src" destdir="tmp/src" version="1"
-                       symbols="__HECL__,__ANDROID__,__LOG__,${pre.extra}"/>
+                       symbols="__HECL__,__ANDROID__,${pre.extra}"/>
     </target>
 
     <target name="compile.generic" depends="remove.rim.src,remove.android.src">
@@ -352,6 +361,7 @@
                destdir="tmp/build/classes"
                tempdir="tmp/ant"
                fork="true"
+               deprecation="true"
                target="1.1" source="1.3"
                bootclasspathref="bootclasspath.rim42"/>
     </target>
@@ -412,6 +422,7 @@
 
     <target name="remove.nonandroid.src" depends="remove.nonmidp.src">
         <delete dir="tmp/src/org/xmlpull"/>
+        <delete file="tmp/src/cz/kruch/track/fun/Friends.java"/>
         <delete file="tmp/src/cz/kruch/track/fun/Jsr135Camera.java"/>
         <delete file="tmp/src/cz/kruch/track/fun/Jsr234Camera.java"/>
         <delete file="tmp/src/cz/kruch/track/location/Jsr82LocationProvider.java"/>
@@ -516,7 +527,26 @@
         </wtkpackage>
     </target>
 
-    <target name="obfuscate">
+	<target name="android.pack" depends="create.tmp.jad">
+		<wtkpackage jarfile="tmp/trekbuddy${suffix}.jar"
+					jadfile="tmp/trekbuddy${suffix}.jad"
+					config="CLDC-${wtk.cldc.version}"
+					profile="MIDP-${wtk.midp.version}">
+			<fileset dir="tmp/build/classes"/>
+			<fileset dir="res-RIM"/>
+			<fileset dir="res">
+				<include name="**/datums.txt"/>
+				<include name="**/language.res"/>
+				<include name="**/world.*"/>
+				<include name="**/set/**"/>
+			</fileset>
+			<manifest>
+				<attribute name="Built-By" value="kruhc@seznam.cz"/>
+			</manifest>
+		</wtkpackage>
+	</target>
+
+	<target name="obfuscate">
 	    <java jar="${proguard.home}\lib\proguard.jar" fork="true">
             <arg value="-injars tmp/trekbuddy${suffix}.jar"/>
             <arg value="-outjars tmp/trekbuddy${suffix}-obfuscated.jar"/>
@@ -535,6 +565,7 @@
             <arg value="-keepnames class org.hecl.** extends java.lang.Exception"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.fun.Friends"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.maps.io.FileInput"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.maps.io.LoaderIO"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.ui.WaypointForm"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.util.NakedVector"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.util.Logger"/>
@@ -568,6 +599,7 @@
             <arg value="-keepnames class org.hecl.** extends java.lang.Exception"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.fun.Friends"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.maps.io.FileInput"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.maps.io.LoaderIO"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.ui.WaypointForm"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.util.NakedVector"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.util.Logger"/>
@@ -587,12 +619,15 @@
 <!-- 4.x
             <arg value="-dontpreverify"/>
 -->
+<!--
+            <arg value="-dontobfuscate"/>
+-->
             <arg value="-dontusemixedcaseclassnames"/>
             <arg value="-dontskipnonpubliclibraryclasses"/>
-            <arg value="-dontobfuscate"/>
-            <arg value="-defaultpackage ''"/>
+			<arg value="-defaultpackage ''"/>
             <arg value="-allowaccessmodification"/>
 <!-- !3.11
+
             <arg value="-overloadaggressively"/>
 -->
             <arg value="-keep class * implements javax.microedition.midlet.MIDlet"/>
@@ -601,6 +636,7 @@
             <arg value="-keepnames class org.hecl.** extends java.lang.Exception"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.fun.Friends"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.maps.io.FileInput"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.maps.io.LoaderIO"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.ui.WaypointForm"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.util.NakedVector"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.util.Logger"/>
@@ -736,6 +772,7 @@
         <copy file="${basedir}\trekbuddy.alx"
               tofile="${basedir}\dist\${vendor.dir}\${dist.dir}\trekbuddy${suffix}.alx"/>
         <replace file="${basedir}\dist\${vendor.dir}\${dist.dir}\trekbuddy${suffix}.alx" token="@SUFFIX@" value="${suffix}"/>
+        <replace file="${basedir}\dist\${vendor.dir}\${dist.dir}\trekbuddy${suffix}.alx" token="@BBVERSION@" value="${rim.bb.version}"/>
         <replace file="${basedir}\dist\${vendor.dir}\${dist.dir}\trekbuddy${suffix}.alx" token="@DESCRIPTION@" value="${description}"/>
         <replace file="${basedir}\dist\${vendor.dir}\${dist.dir}\trekbuddy${suffix}.alx" token="@VERSION@" value="${version}"/>
         <replace file="${basedir}\dist\${vendor.dir}\${dist.dir}\trekbuddy${suffix}.alx" token="@VENDOR@" value="${vendor}"/>
@@ -792,6 +829,7 @@
         <copy file="${basedir}\trekbuddy.alx"
               tofile="${rim.ota.dir}\trekbuddy${suffix}.alx"/>
         <replace file="${rim.ota.dir}\trekbuddy${suffix}.alx" token="@SUFFIX@" value="${suffix}"/>
+        <replace file="${rim.ota.dir}\trekbuddy${suffix}.alx" token="@BBVERSION@" value="${rim.bb.version}"/>
         <replace file="${rim.ota.dir}\trekbuddy${suffix}.alx" token="@DESCRIPTION@" value="${description}"/>
         <replace file="${rim.ota.dir}\trekbuddy${suffix}.alx" token="@VERSION@" value="${version}"/>
         <replace file="${rim.ota.dir}\trekbuddy${suffix}.alx" token="@VENDOR@" value="${vendor}"/>

@@ -174,7 +174,7 @@ final class MapView extends View {
     int moveTo(int x, int y) { // TODO direct access from Desktop
         int mask = Desktop.MASK_NONE;
         browsingOn(false);
-        if (mapViewer.move(x, y)) {
+        if (mapViewer.hasMap() && mapViewer.move(x, y)) {
             syncOSD();
             mask = Desktop.MASK_MAP | Desktop.MASK_OSD;
         }

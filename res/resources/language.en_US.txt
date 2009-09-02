@@ -29,7 +29,7 @@
 1009=Exit
 1010=Refresh
 1011=Connect
-1012=Open
+1012=Select
 
 # desktop messages
 1300=Failed to init location sharing
@@ -180,9 +180,9 @@
 
 # navigation messages
 2300=Failed to load in-jar waypoints
-2301=Failed to list stores
-2302=No landmark stores
-2303=Failed to list store
+2301=Failed to list files
+2302=No landmarks files
+2303=Failed to list landmarks
 2304=No waypoints found in
 2305=waypoints loaded
 2306=No position yet
@@ -194,15 +194,16 @@
 2312=Listing...
 2313=Loading...
 2314=Add waypoint to [%s]?
-2315=Enter new store filename:
+2315=Enter landmarks filename:
+2316=Select destination:
 2400=Camera failed
 2401=\n<no preview>
 2402=No preview :-(
 2403=Snapshot failed
 2404=No snapshot
 2405=Malformed coordinate:
-2406=Landmark store updated
-2407=Failed to update landmark store
+2406=Landmarks updated
+2407=Failed to update landmarks
 
 # settings commands
 3000=Apply
@@ -274,6 +275,7 @@
 3621=HGE-100
 3622=Keep-alive (ms)
 3623=Alt correction (m)
+3624=log time ms
 
 # settings forms/fields/values (Navigation)
 3700=Wpt Proximity

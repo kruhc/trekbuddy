@@ -72,7 +72,7 @@ final class InfoForm implements CommandListener {
             sb.append("82 ");
         if (cz.kruch.track.TrackingMIDlet.jsr120)
             sb.append("120 ");
-        if (cz.kruch.track.TrackingMIDlet.jsr120)
+        if (cz.kruch.track.TrackingMIDlet.jsr135)
             sb.append("135 ");
         if (cz.kruch.track.TrackingMIDlet.jsr179)
             sb.append("179 ");

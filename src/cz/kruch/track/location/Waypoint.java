@@ -14,34 +14,36 @@ import java.util.Vector;
  *
  * @author Ales Pour <kruhc@seznam.cz>
  */
-public final class Waypoint {
+public class Waypoint {
+//#ifdef __LOG__
+    private static final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("Waypoint");
+//#endif
+
     public static final int LINK_GENERIC_IMAGE = 0;
     public static final int LINK_GENERIC_SOUND = 1;
+
+    private static final Vector tokens = new Vector(16, 16);
 
     private QualifiedCoordinates coordinates;
     private String name;
     private String comment;
     private String sym;
 
-    private Object userObject;
-    private Vector links;
-
-    private long timestamp;
-
     public Waypoint(QualifiedCoordinates qc, char[] name, char[] comment, char[] sym) {
         this.coordinates = qc;
-        this.timestamp = -1;
-        texts(name, comment, sym);
+        this.texts(name, comment/*, sym*/);
+        if (sym != null && sym.length != 0) {
+            this.sym = cache(new String(sym));
+        }
     }
 
-    public Waypoint(QualifiedCoordinates qc, String name, String comment, long timestamp) {
+    public Waypoint(QualifiedCoordinates qc, String name, String comment) {
         this.coordinates = qc;
-        this.timestamp = timestamp;
         this.name = name;
         this.comment = comment;
     }
 
-    private void texts(char[] name, char[] comment, char[] sym) {
+    private void texts(char[] name, char[] comment/*, char[] sym*/) {
         int l = 0;
         if (name != null) {
             l += name.length;
@@ -49,10 +51,12 @@ public final class Waypoint {
         if (comment != null) {
             l += comment.length;
         }
+/*
         if (sym != null) {
             l += sym.length;
         }
-        char[] _raw = new char[l];
+*/
+        final char[] _raw = new char[l];
         l = 0;
         if (name != null) {
             System.arraycopy(name, 0, _raw, 0, name.length);
@@ -62,10 +66,12 @@ public final class Waypoint {
             System.arraycopy(comment, 0, _raw, l, comment.length);
             l += comment.length;
         }
+/*
         if (sym != null) {
             System.arraycopy(sym, 0, _raw, l, sym.length);
         }
-        String _texts = new String(_raw);
+*/
+        final String _texts = new String(_raw);
         l = 0;
         if (name != null) {
             this.name = _texts.substring(0, name.length);
@@ -75,9 +81,11 @@ public final class Waypoint {
             this.comment = _texts.substring(l, l + comment.length);
             l += comment.length;
         }
+/*
         if (sym != null) {
             this.sym = _texts.substring(l);
         }
+*/
     }
 
     public QualifiedCoordinates getQualifiedCoordinates() {
@@ -86,10 +94,6 @@ public final class Waypoint {
 
     public void setQualifiedCoordinates(QualifiedCoordinates coordinates) {
         this.coordinates = coordinates;
-    }
-
-    public long getTimestamp() {
-        return timestamp;
     }
 
     public String getName() {
@@ -112,60 +116,38 @@ public final class Waypoint {
         return sym;
     }
 
-    public Vector getLinks() {
-        return links;
-    }
-
-    public void setLinks(Vector links) {
-        this.links = links;
-    }
-
-    public void addLink(String link) {
-        if (this.links == null) {
-            this.links = new Vector(4, 4);
-        }
-        this.links.addElement(link);
-    }
-
-    public void removeLink(String link) {
-        if (this.links != null) {
-            this.links.removeElement(link);
-        }
-    }
-
-    public String getLink(int type) {
-        if (links != null) {
-            for (int N = links.size(), i = 0; i < N; i++) {
-                final String link = (String) links.elementAt(i);
-                switch (type) {
-                    case LINK_GENERIC_IMAGE: {
-                        if (link.endsWith(".jpg") || link.endsWith(".png")) {
-                            return link;
-                        }
-                    } break;
-                    case LINK_GENERIC_SOUND: {
-                        if (link.endsWith(".amr") || link.endsWith(".wav") || link.endsWith(".mp3")) {
-                            return link;
-                        }
-                    } break;
-                }
-            }
-        }
-
-        return null;
+    public long getTimestamp() {
+        return 0;
     }
 
     public Object getUserObject() {
-        return userObject;
+        return null;
     }
 
-    public void setUserObject(Object userObject) {
-        this.userObject = userObject;
+    public Vector getLinks() {
+        return null;
+    }
+
+    public String getLink(int type) {
+        return null;
     }
 
     public String toString() {
-        if (userObject == null || !cz.kruch.track.configuration.Config.preferGsName) // TODO ugly dependency
-            return name;
-        return userObject.toString();
+        return name;
+    }
+
+    private static String cache(String input) {
+        final Vector tokens = Waypoint.tokens;
+        final int i = tokens.indexOf(input);
+        if (i > -1) {
+//#ifdef __LOG__
+            if (log.isEnabled()) log.debug("token '" + input + "' is cached");
+//#endif
+            return (String) tokens.elementAt(i);
+        }
+        if (tokens.size() < 64) { // paranoia
+            tokens.addElement(input);
+        }
+        return input;
     }
 }

@@ -1164,7 +1164,7 @@ public final class HXmlParser implements XmlPullParser {
         String result = (String) nameCache.get(hash);
         if (result == null) {
             result = get(pos);
-            nameCache.put(hash.clone(), result);
+            nameCache.put(hash._clone(), result);
         }
         return result;
     }

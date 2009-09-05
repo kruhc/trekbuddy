@@ -211,7 +211,7 @@ final class MapView extends View {
             final Position position = map.transform(qc);
 
             // add to route
-            route[c++] = position.clone();
+            route[c++] = position._clone();
         }
 
         // set
@@ -396,7 +396,7 @@ final class MapView extends View {
         synchronized (this) {
             Location.releaseInstance(location);
             location = null; // gc hint
-            location = l.clone();
+            location = l._clone();
         }
 
         // pass event

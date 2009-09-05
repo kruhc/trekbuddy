@@ -96,7 +96,7 @@ final class MapViewer {
         if (log.isEnabled()) log.debug("size changed");
 //#endif
 
-        Position p = getPosition().clone();
+        Position p = getPosition()._clone();
         this.chx0 = this.chx = (w - crosshairSize) >> 1;
         this.chy0 = this.chy = (h - crosshairSize) >> 1;
         this.x = this.y = 0;
@@ -598,7 +598,7 @@ final class MapViewer {
 
             // ref (~ last)
             QualifiedCoordinates.releaseInstance(refQc);
-            refQc = coords.clone();
+            refQc = coords._clone();
         }
     }
 
@@ -622,7 +622,7 @@ final class MapViewer {
         }
 
         // append to LL array
-        final QualifiedCoordinates cloned = coords.clone();
+        final QualifiedCoordinates cloned = coords._clone();
         arrayLL[lllast] = cloned;
         if (++lllast == MAX_TRAJECTORY_LENGTH) {
             lllast = 0;
@@ -641,7 +641,7 @@ final class MapViewer {
 
                 // calculate missing XYs
                 do {
-                    arrayXY[xylast] = map.transform(arrayLL[xylast]).clone();
+                    arrayXY[xylast] = map.transform(arrayLL[xylast])._clone();
                     if (++xylast == MAX_TRAJECTORY_LENGTH) {
                         xylast = 0;
                     }
@@ -1345,7 +1345,7 @@ final class MapViewer {
                 if (arrayXY[tlast] != null) {
                     arrayXY[tlast].setXy(p.getX(), p.getY());
                 } else {
-                    arrayXY[tlast] = p.clone();
+                    arrayXY[tlast] = p._clone();
                 }
             }
         }

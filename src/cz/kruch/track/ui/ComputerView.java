@@ -445,7 +445,7 @@ final class ComputerView
                 // calculate distance - emulate static navigation
                 float ds = 0F;
                 if (snrefCoords == null) {
-                    snrefCoords = l.getQualifiedCoordinates().clone();
+                    snrefCoords = l.getQualifiedCoordinates()._clone();
                     /*snreftime = timestamp;*/
                 } else {
                     ds = snrefCoords.distance(l.getQualifiedCoordinates());
@@ -458,7 +458,7 @@ final class ComputerView
                     } else {
                         QualifiedCoordinates.releaseInstance(snrefCoords);
                         snrefCoords = null;
-                        snrefCoords = l.getQualifiedCoordinates().clone();
+                        snrefCoords = l.getQualifiedCoordinates()._clone();
                         /*snreftime = timestamp;*/
                     }
                 }
@@ -466,7 +466,7 @@ final class ComputerView
                 // update coords
                 QualifiedCoordinates.releaseInstance(valueCoords);
                 valueCoords = null;
-                valueCoords = l.getQualifiedCoordinates().clone();
+                valueCoords = l.getQualifiedCoordinates()._clone();
 
                 // local ref for faster access
                 final float[] valuesFloat = this.valuesFloat;

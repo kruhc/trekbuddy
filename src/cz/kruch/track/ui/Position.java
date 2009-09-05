@@ -74,7 +74,7 @@ public final class Position {
         return this.y;
     }
 
-    public Position clone() {
+    public Position _clone() {
         return new Position(getX(), getY());
     }
 

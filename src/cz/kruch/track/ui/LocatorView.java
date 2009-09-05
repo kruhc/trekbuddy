@@ -98,7 +98,7 @@ final class LocatorView extends View {
         if (l.getFix() > 0) {
 
             // update array
-            append(0, l.clone());
+            append(0, l._clone());
 
             // recalc
             recalc(l.getTimestamp());

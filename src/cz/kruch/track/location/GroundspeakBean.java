@@ -141,7 +141,7 @@ public final class GroundspeakBean {
         return name;
     }
 
-    private String cache(String input) {
+    private static String cache(String input) {
         final Vector tokens = GroundspeakBean.tokens;
         final int i = tokens.indexOf(input);
         if (i > -1) {
@@ -150,7 +150,7 @@ public final class GroundspeakBean {
 //#endif
             return (String) tokens.elementAt(i);
         }
-        if (tokens.size() < 256) { // paranoia
+        if (tokens.size() < 64) { // paranoia
             tokens.addElement(input);
         }
         return input;

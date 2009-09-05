@@ -26,6 +26,10 @@ public class DeviceControl extends TimerTask {
 
     protected TimerTask task;
 
+    //
+    // public interface
+    //
+
     public static void initialize() {
 //#ifdef __ALL__
         if (cz.kruch.track.TrackingMIDlet.symbian) {
@@ -141,6 +145,15 @@ public class DeviceControl extends TimerTask {
         return instance.getLac();
     }
 
+    public static void setTicker(javax.microedition.lcdui.List list,
+                                 String ticker) {
+        instance.useTicker(list, ticker);
+    }
+
+    //
+    // implementation
+    //
+
     final void confirm(String message) {
         Desktop.showConfirmation(message, null);
     }
@@ -215,6 +228,18 @@ public class DeviceControl extends TimerTask {
     void turnOff() {
         throw new IllegalStateException("override");
     }
+
+    void useTicker(Object list, String msg) {
+        if (msg != null) {
+            ((javax.microedition.lcdui.List) list).setTicker(new javax.microedition.lcdui.Ticker(msg));
+        } else {
+            ((javax.microedition.lcdui.List) list).setTicker(null);
+        }
+    }
+
+    //
+    // interface contract
+    //
 
     public void run() {
         if (instance.backlight != STATUS_OFF) {

@@ -219,6 +219,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         if (cz.kruch.track.TrackingMIDlet.sxg75) {
             dataDir = getDefaultDataDir("file:///fs/", "tb/");
             fullscreen = true;
+            altCorrection = -540;
         } else if (cz.kruch.track.TrackingMIDlet.brew) {
             dataDir = getDefaultDataDir("file:///fs/", "tb/");
             altCorrection = -540;

@@ -59,9 +59,6 @@ public final class GpxTracklog implements Runnable {
 
     public static final int CODE_RECORDING_STOP    = 0;
     public static final int CODE_RECORDING_START   = 1;
-/*
-    public static final int CODE_WAYPOINT_INSERTED = 2;
-*/
 
     private static final String ELEMENT_GPX             = "gpx";
     private static final String ELEMENT_TRK             = "trk";
@@ -98,6 +95,7 @@ public final class GpxTracklog implements Runnable {
     private static final String ELEMENT_AU_HINTS        = "hints";
 
     private static final String ATTRIBUTE_UTF_8         = "UTF-8";
+    private static final String ATTRIBUTE_ISO_8859_1    = "ISO-8859-1";
     private static final String ATTRIBUTE_VERSION       = "version";
     private static final String ATTRIBUTE_CREATOR       = "creator";
     private static final String ATTRIBUTE_HREF          = "href";
@@ -253,8 +251,13 @@ public final class GpxTracklog implements Runnable {
                 // init serializer
                 final HXmlSerializer serializer = this.serializer = new HXmlSerializer();
                 serializer.setFeature(HXmlSerializer.FEATURE_INDENT_OUTPUT, true);
-                serializer.setOutput(output, ATTRIBUTE_UTF_8);
-                serializer.startDocument(ATTRIBUTE_UTF_8, null);
+                if (type == LOG_WPT) {
+                    serializer.setOutput(output, ATTRIBUTE_UTF_8);
+                    serializer.startDocument(ATTRIBUTE_UTF_8, null);
+                } else {
+                    serializer.setOutput(output, ATTRIBUTE_ISO_8859_1);
+                    serializer.startDocument(ATTRIBUTE_ISO_8859_1, null);
+                }
                 serializer.setPrefix(null, GPX_1_1_NAMESPACE);
                 if (type == LOG_WPT) {
                     serializer.setPrefix(GS_1_0_PREFIX, GS_1_0_NAMESPACE);
@@ -401,18 +404,7 @@ public final class GpxTracklog implements Runnable {
                         // flush
                         serializer.flush();
 
-                    } /*else if (item instanceof Waypoint) {
-
-                        // save <wpt>
-                        serializeWpt((Waypoint) item);
-
-                        // flush
-                        serializer.flush();
-
-                        // notify TODO ugly ... why ugly???
-                        callback.invoke(new Integer(CODE_WAYPOINT_INSERTED), null, this);
-
-                    }*/
+                    }
 
                 } catch (Throwable t) {
 //#ifdef __LOG__
@@ -611,7 +603,7 @@ public final class GpxTracklog implements Runnable {
         final HXmlSerializer serializer = this.serializer;
         serializer.startTag(DEFAULT_NAMESPACE, ELEMENT_WPT);
         serializePt(wpt.getQualifiedCoordinates());
-        if (wpt.getTimestamp() != -1) {
+        if (wpt.getTimestamp() != 0) {
             serializer.startTag(DEFAULT_NAMESPACE, ELEMENT_TIME);
             final int i = dateToXsdDate(wpt.getTimestamp());
             serializer.text(sbChars, 0, i);
@@ -677,7 +669,7 @@ public final class GpxTracklog implements Runnable {
         synchronized (this) {
             freeLocationInQueue();
             force = true;
-            queue = location.clone();
+            queue = location._clone();
             notify();
         }
     }
@@ -696,7 +688,7 @@ public final class GpxTracklog implements Runnable {
             final Location l = check(location);
             if (l != null) {
                 freeLocationInQueue();
-                queue = location.clone();
+                queue = location._clone();
                 notify();
             }
         }
@@ -725,7 +717,7 @@ public final class GpxTracklog implements Runnable {
         boolean bLog = false;
 
         if (refLocation == null) {
-            refLocation = location.clone();
+            refLocation = location._clone();
             bLog = true;
         } else if (force) {
             force = false;
@@ -789,7 +781,7 @@ public final class GpxTracklog implements Runnable {
             // use location as new reference
             Location.releaseInstance(refLocation);
             refLocation = null;
-            refLocation = location.clone();
+            refLocation = location._clone();
 
             // new heading 
             courseDeviation = 0F;

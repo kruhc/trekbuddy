@@ -38,6 +38,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
     public static final String JAD_GPS_DEVICE_NAME         = "GPS-Device-Name";
     public static final String JAD_UI_FULL_SCREEN_HEIGHT   = "UI-FullScreen-Height";
     public static final String JAD_UI_HAS_REPEAT_EVENTS    = "UI-HasRepeatEvents";
+    public static final String JAD_UI_RIGHT_KEY            = "UI-RightKey";
     public static final String JAD_APP_FLAGS               = "App-Flags";
 
     public TrackingMIDlet() {
@@ -86,6 +87,8 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         android = platform.indexOf("android") > -1;
 //#endif
 
+//#ifndef __ANDROID__
+
         // detect runtime capabilities
         try {
             Class.forName("javax.microedition.location.LocationProvider");
@@ -103,7 +106,6 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
 //#endif
         } catch (Throwable t) {
         }
-//#ifndef __ANDROID__
         try {
             Class.forName("javax.wireless.messaging.TextMessage");
             jsr120 = true;
@@ -112,7 +114,6 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
 //#endif
         } catch (Throwable t) {
         }
-//#endif        
         try {
             Class.forName("javax.microedition.media.control.VideoControl");
             jsr135 = true;
@@ -139,7 +140,10 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         } catch (Throwable t) {
         }
 
+//#endif /* !__ANDROID__ */
+        
 //#ifdef __ALL__
+
         /* try Motorola-specific Location API */
         try {
             Class.forName("com.motorola.location.PositionSource");
@@ -176,7 +180,8 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
             } catch (Throwable t) {
             }
         }
-//#endif
+
+//#endif /* __ALL__ */
 
         // init device control (also helps to detect other platforms)
         cz.kruch.track.ui.nokia.DeviceControl.initialize();

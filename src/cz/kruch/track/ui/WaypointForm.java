@@ -8,6 +8,8 @@ import cz.kruch.track.event.Callback;
 import cz.kruch.track.fun.Camera;
 import cz.kruch.track.location.Waypoint;
 import cz.kruch.track.location.GroundspeakBean;
+import cz.kruch.track.location.ExtWaypoint;
+import cz.kruch.track.location.StampedWaypoint;
 import cz.kruch.track.util.Mercator;
 
 import java.util.Date;
@@ -82,7 +84,7 @@ final class WaypointForm implements CommandListener, ItemCommandListener, Callba
         appendStringItem(Resources.getString(Resources.NAV_FLD_WPT_CMT), wpt.getComment());
 
         // timestamp
-        if (wpt.getTimestamp() != -1) {
+        if (wpt.getTimestamp() != 0) {
             appendStringItem(Resources.getString(Resources.NAV_FLD_TIME), dateToString(wpt.getTimestamp()));
         }
 
@@ -146,7 +148,7 @@ final class WaypointForm implements CommandListener, ItemCommandListener, Callba
      * @param callback callback
      */
     public WaypointForm(Location location, Callback callback) {
-        this.coordinates = location.getQualifiedCoordinates().clone(); // copy
+        this.coordinates = location.getQualifiedCoordinates()._clone(); // copy
         this.timestamp = location.getTimestamp();
         this.callback = callback;
         this.previewItemIdx = -1;
@@ -397,10 +399,10 @@ final class WaypointForm implements CommandListener, ItemCommandListener, Callba
                 } break;
                 case Resources.NAV_CMD_ADD: {
                     try {
-                        final Waypoint wpt = new Waypoint(parseCoordinates(),
-                                                          fieldName.getString(),
-                                                          fieldComment.getString(),
-                                                          System.currentTimeMillis());
+                        final Waypoint wpt = new StampedWaypoint(parseCoordinates(),
+                                                                 fieldName.getString(),
+                                                                 fieldComment.getString(),
+                                                                 System.currentTimeMillis());
                         callback.invoke(new Object[]{ actionObject, wpt }, null, this);
                         cnt++;
                     } catch (IllegalArgumentException e) {
@@ -408,10 +410,10 @@ final class WaypointForm implements CommandListener, ItemCommandListener, Callba
                     }
                 } break;
                 case Resources.NAV_CMD_SAVE: {
-                    final Waypoint wpt = new Waypoint(coordinates,
-                                                      fieldName.getString(),
-                                                      fieldComment.getString(),
-                                                      timestamp);
+                    final ExtWaypoint wpt = new ExtWaypoint(coordinates,
+                                                            fieldName.getString(),
+                                                            fieldComment.getString(),
+                                                            timestamp);
                     if (imagePath != null) {
                         wpt.addLink(imagePath);
                     }

@@ -192,7 +192,12 @@ final class DeviceScreen extends GameCanvas implements Runnable {
         if (log.isEnabled()) log.info("pointerPressed");
 //#endif
 
-		// set helpers
+        // happens on android sometimes?!?
+        if (cz.kruch.track.TrackingMIDlet.state != 1) {
+            return;
+        }
+
+        // set helpers
 		gx = x;
 		gy = y;
 
@@ -237,7 +242,12 @@ final class DeviceScreen extends GameCanvas implements Runnable {
         if (log.isEnabled()) log.info("pointerReleased");
 //#endif
 
-		// clear helpers
+        // happens on android sometimes?!?
+        if (cz.kruch.track.TrackingMIDlet.state != 1) {
+            return;
+        }
+
+        // clear helpers
 		gx = gy = 0;
         
         // ignore the event when menu was on
@@ -289,6 +299,11 @@ final class DeviceScreen extends GameCanvas implements Runnable {
         if (log.isEnabled()) log.info("pointerDragged");
 //#endif
 
+        // happens on android sometimes?!?
+        if (cz.kruch.track.TrackingMIDlet.state != 1) {
+            return;
+        }
+
         // ignore the event when menu was on or keylocked
         if (cmdExec || keylock) {
             return;
@@ -301,18 +316,6 @@ final class DeviceScreen extends GameCanvas implements Runnable {
         if (adx >= 15 || ady >= 15 || _getInMove()) {
             _setInKey(0);
             _setInMove(true);
-/*
-            if (adx < 5) {
-                x = gx;
-            } else {
-                gx = x;
-            }
-            if (ady < 5) {
-                y = gy;
-            } else {
-                gy = y;
-            }
-*/
             delegate.handleMove(x, y);
         }
     }
@@ -534,7 +537,6 @@ final class DeviceScreen extends GameCanvas implements Runnable {
     private int pointerToKey(final int x, final int y) {
         final int j = x / (getWidth() / 5);
         final int i = y / (getHeight() / 10);
-
         int key = 0;
 
         switch (i) {
@@ -592,7 +594,8 @@ final class DeviceScreen extends GameCanvas implements Runnable {
                 }
             }
             break;
-            case 9: {
+            case 9:
+            case 10: {
                 switch (j) {
                     case 0:
                         key = Canvas.KEY_STAR;

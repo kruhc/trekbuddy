@@ -10,7 +10,7 @@ import javax.microedition.lcdui.List;
 import javax.microedition.lcdui.Command;
 import javax.microedition.lcdui.CommandListener;
 import javax.microedition.lcdui.Displayable;
-import javax.microedition.lcdui.Ticker;
+
 import java.io.IOException;
 import java.util.Enumeration;
 import java.util.Vector;
@@ -213,16 +213,6 @@ public final class FileBrowser implements CommandListener, Runnable, Comparator 
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("show; depth = " + depth);
 //#endif
-
-        // reuse current list to show what is going on
-        if (list != null) {
-            list.setCommandListener(null);
-            list.deleteAll();
-            list.removeCommand(cmdCancel);
-            list.removeCommand(cmdBack);
-            list.setTicker(new Ticker(Resources.getString(Resources.NAV_MSG_TICKER_LISTING)));
-            Thread.yield();
-        }
 
         // append items
         list = null; // gc hint

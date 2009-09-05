@@ -170,7 +170,7 @@ abstract class StreamReadingLocationProvider extends LocationProvider {
         if (rmc.timestamp == gga.timestamp) {
             final QualifiedCoordinates qc = QualifiedCoordinates.newInstance(rmc.lat, rmc.lon, gga.altitude);
             qc.setHorizontalAccuracy(/*gga.hdop*/NmeaParser.hdop * 5);
-            qc.setVerticalAccuracy(/*gga.vdop*/NmeaParser.vdop * 5);
+//            qc.setVerticalAccuracy(/*gga.vdop*/NmeaParser.vdop * 5);
             location = Location.newInstance(qc, datetime, rmc.status == 'A' ? gga.fix : 0, gga.sat);
         } else {
 //#ifdef __LOG__

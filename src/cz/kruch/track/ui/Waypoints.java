@@ -7,21 +7,23 @@ import cz.kruch.track.event.Callback;
 import cz.kruch.track.location.Waypoint;
 import cz.kruch.track.location.GpxTracklog;
 import cz.kruch.track.location.GroundspeakBean;
+import cz.kruch.track.location.ExtWaypoint;
+import cz.kruch.track.location.StampedWaypoint;
 import cz.kruch.track.configuration.Config;
 import cz.kruch.track.util.NakedVector;
+import cz.kruch.track.util.CharArrayTokenizer;
 
 import javax.microedition.lcdui.CommandListener;
 import javax.microedition.lcdui.Command;
 import javax.microedition.lcdui.Displayable;
 import javax.microedition.lcdui.List;
-import javax.microedition.lcdui.Ticker;
 import javax.microedition.lcdui.Choice;
 import javax.microedition.io.Connector;
 
+import api.file.File;
 import api.io.BufferedInputStream;
 import api.location.QualifiedCoordinates;
 import api.location.Location;
-import api.file.File;
 import api.util.Comparator;
 
 import java.io.IOException;
@@ -30,6 +32,8 @@ import java.util.Vector;
 import java.util.Enumeration;
 import java.util.Hashtable;
 import java.util.Date;
+import java.util.Calendar;
+import java.util.TimeZone;
 
 import org.xmlpull.v1.XmlPullParserException;
 import org.xmlpull.v1.XmlPullParser;
@@ -65,18 +69,12 @@ public final class Waypoints implements CommandListener,
     private static final int FRAME_MEMA = 3;
 */
 
-//    private static final String USER_CUSTOM_STORE   = "<custom>";
-//    private static final String USER_RECORDED_STORE = "<recorded>";
-//    private static final String USER_FRIENDS_STORE  = "<received>";
     private static final String STORE_USER      = "<user>";
     private static final String STORE_FRIENDS   = "<sms>";
     private static final String NEW_FILE_STORE  = "<new file>";
 
     private static final String SPECIAL_STORE_HEADING = "<";
 
-//    private static final String PREFIX_WMAP     = "wmap-";
-//    private static final String PREFIX_WSMS     = "wsms-";
-//    private static final String PREFIX_WGPS     = "wgps-";
     private static final String PREFIX_USER     = "user-";
     private static final String PREFIX_FRIENDS  = "sms-";
 
@@ -87,6 +85,7 @@ public final class Waypoints implements CommandListener,
     private static final int TAG_WPT            = 0x0001ccbb; // "wpt"
     private static final int TAG_TRKPT          = 0x06981871; // "trkpt"
     private static final int TAG_NAME           = 0x00337a8b; // "name"
+    private static final int TAG_TIME           = 0x003652cd; // "time"
     private static final int TAG_CMT            = 0x0001814a; // "cmt"
     private static final int TAG_DESC           = 0x002efe91; // "desc"
     private static final int TAG_ELE            = 0x0001889e; // "ele"
@@ -297,7 +296,7 @@ public final class Waypoints implements CommandListener,
                     }
                 } break;
                 case 2: { // wpt action
-                    // selected wpt index
+                    // selected item
                     final Waypoint item = (Waypoint) ((SmartList) list).getSelectedItem();
 					// exec command
                     if (List.SELECT_COMMAND == command || cmdOpen == command) {
@@ -410,7 +409,7 @@ public final class Waypoints implements CommandListener,
                 Desktop.showInfo(Resources.getString(Resources.NAV_MSG_NO_POS_YET), pane);
             } else {
                 (new WaypointForm(this, cz.kruch.track.fun.Friends.TYPE_IAH,
-                                  location.getQualifiedCoordinates().clone())).show();
+                                  location.getQualifiedCoordinates()._clone())).show();
             }
         } else if (itemFriendThere.equals(item)) {
             // got position?
@@ -559,7 +558,7 @@ public final class Waypoints implements CommandListener,
                         // get message type and location
                         if (cz.kruch.track.fun.Friends.TYPE_IAH == type) { // '==' is OK
                             time = navigator.getLocation().getTimestamp();
-                            qc = navigator.getLocation().getQualifiedCoordinates().clone();
+                            qc = navigator.getLocation().getQualifiedCoordinates()._clone();
                         } else { // Friends.TYPE_MYT
                             time = System.currentTimeMillis();
                             qc = navigator.getPointer();
@@ -738,7 +737,8 @@ public final class Waypoints implements CommandListener,
                 try {
 
                     // may take some time - start ticker
-                    list.setTicker(new Ticker(Resources.getString(Resources.NAV_MSG_TICKER_LISTING)));
+                    cz.kruch.track.ui.nokia.DeviceControl.setTicker((List) list, Resources.getString(Resources.NAV_MSG_TICKER_LISTING));
+//                    list.setTicker(new Ticker(Resources.getString(Resources.NAV_MSG_TICKER_LISTING)));
 
                     // list file stores
                     listWptFiles("", cachedDisk = new NakedVector(cacheDiskHint + 16, INCREMENT_LIST_SIZE), recursive);
@@ -752,7 +752,8 @@ public final class Waypoints implements CommandListener,
                 } finally {
 
                     // remove ticker
-                    list.setTicker(null);
+                    cz.kruch.track.ui.nokia.DeviceControl.setTicker((List) list, null);
+//                    list.setTicker(null);
                 }
 
             }
@@ -816,7 +817,8 @@ public final class Waypoints implements CommandListener,
 
                 // may take some time - start ticker
                 if (!onBackground) {
-                    list.setTicker(new Ticker(Resources.getString(Resources.NAV_MSG_TICKER_LOADING)));
+                    cz.kruch.track.ui.nokia.DeviceControl.setTicker((List) list, Resources.getString(Resources.NAV_MSG_TICKER_LOADING));
+//                    list.setTicker(new Ticker(Resources.getString(Resources.NAV_MSG_TICKER_LOADING)));
                 }
 
                 // open file
@@ -854,7 +856,8 @@ public final class Waypoints implements CommandListener,
 
                 // remove ticker
                 if (!onBackground) {
-                    list.setTicker(null);
+                    cz.kruch.track.ui.nokia.DeviceControl.setTicker((List) list, null);
+//                    list.setTicker(null);
                 }
 
                 // close file
@@ -1492,13 +1495,18 @@ public final class Waypoints implements CommandListener,
 
     private static void parseGpx(final HXmlParser parser, final Vector v)
             throws IOException, XmlPullParserException {
-        int depth = 0;
-        float alt = Float.NaN;
-        double lat = -1D, lon = -1D;
-        char[] name = null, cmt = null, sym = null;
-        final StringBuffer sb = new StringBuffer(16);
         NakedVector links = null;
         GroundspeakBean gsbean = null;
+        char[] name = null, cmt = null, sym = null;
+        double lat = -1D, lon = -1D;
+        float alt = Float.NaN;
+        long timestamp = 0;
+
+        int depth = 0;
+        final StringBuffer sb = new StringBuffer(16);
+        final Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone("GMT"));
+        final CharArrayTokenizer tokenizer = new CharArrayTokenizer();
+        final char[] timeDelims = new char[]{ '+', '-', ':', 'T', 'Z' };
 
         for (int eventType = parser.next(); eventType != XmlPullParser.END_DOCUMENT; eventType = parser.next()) {
             switch (eventType) {
@@ -1533,12 +1541,6 @@ public final class Waypoints implements CommandListener,
                                     // get sym
                                     sym = parser.nextChars();
                                 } break;
-/*
-                                case TAG_DESC: {
-                                    // get description
-                                    cmt = parser.nextText();
-                                } break;
-*/
                                 case TAG_LINK: {
                                     // get link
                                     if (links == null) {
@@ -1549,6 +1551,43 @@ public final class Waypoints implements CommandListener,
                                 case TAG_NAME: {
                                     // get name
                                     name = parser.nextChars();
+                                } break;
+                                case TAG_TIME: {
+                                    // get time
+                                    final char[] chars = parser.nextChars();
+                                    try {
+                                        tokenizer.init(chars, chars.length, timeDelims, false);
+                                        int step = 0;
+                                        while (tokenizer.hasMoreTokens() && step <= 5) {
+                                            switch (step++) {
+                                                case 0: {
+                                                    calendar.set(Calendar.YEAR, tokenizer.nextInt());
+                                                } break;
+                                                case 1: {
+                                                    calendar.set(Calendar.MONTH, tokenizer.nextInt() - 1);
+                                                } break;
+                                                case 2: {
+                                                    calendar.set(Calendar.DATE, tokenizer.nextInt());
+                                                } break;
+                                                case 3: {
+                                                    calendar.set(Calendar.HOUR_OF_DAY, tokenizer.nextInt());
+                                                } break;
+                                                case 4: {
+                                                    calendar.set(Calendar.MINUTE, tokenizer.nextInt());
+                                                } break;
+                                                case 5: {
+                                                    final double sss = tokenizer.nextDouble();
+                                                    calendar.set(Calendar.SECOND, (int) sss);
+                                                    calendar.set(Calendar.MILLISECOND, (int) ((sss - (int) sss) * 1000));
+                                                } break;
+                                            }
+                                        }
+                                        if (step >= 5) {
+                                            timestamp = calendar.getTime().getTime();
+                                        }
+                                    } catch (Throwable t) {
+                                        // ignore
+                                    }
                                 } break;
                                 case TAG_GS_CACHE: {
                                     // groundspeak
@@ -1644,17 +1683,26 @@ public final class Waypoints implements CommandListener,
                                 case TAG_WPT:
                                 case TAG_RTEPT:
                                 case TAG_TRKPT: {
-                                    // got anonymous wpt?
+                                    // anonymous wpt, trkpt or rtept
                                     if (name == null || name.length == 0) {
                                         sb.delete(0, sb.length());
-                                        NavigationScreens.append(sb, v.size(), 1000);
+                                        NavigationScreens.append(sb, v.size() + 1, 10000);
                                         name = sb.toString().toCharArray();
                                     }
 
-                                    // add to list
-                                    final Waypoint wpt = new Waypoint(QualifiedCoordinates.newInstance(lat, lon, alt), name, cmt, sym);
-                                    wpt.setLinks(links);
-                                    wpt.setUserObject(gsbean);
+                                    // create wpt
+                                    final Waypoint wpt;
+                                    final QualifiedCoordinates qc = QualifiedCoordinates.newInstance(lat, lon, alt);
+                                    if (gsbean != null || links != null) {
+                                        wpt = new ExtWaypoint(qc, name, cmt, sym, timestamp,
+                                                              gsbean, links);
+                                    } else if (timestamp != 0) {
+                                        wpt = new StampedWaypoint(qc, name, cmt, sym, timestamp);
+                                    } else {
+                                        wpt = new Waypoint(qc, name, cmt, sym);
+                                    }
+
+                                    // add wpt to list
                                     v.addElement(wpt);
 
                                     // reset depth
@@ -1663,8 +1711,10 @@ public final class Waypoints implements CommandListener,
                                     // reset temps
                                     alt = Float.NaN;
                                     lat = lon = -1D;
+                                    timestamp = 0;
                                     name = cmt = null;
                                     links = null;
+
                                 } break;
                             }
                         } break;

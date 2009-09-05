@@ -31,7 +31,7 @@ public final class Datum {
 
     public QualifiedCoordinates toLocal(final QualifiedCoordinates qc) {
         if (this == WGS_84) {
-            return qc.clone();
+            return qc._clone();
         }
 
         return transform(qc, WGS_84.ellipsoid, ellipsoid, -1);
@@ -39,7 +39,7 @@ public final class Datum {
 
     public QualifiedCoordinates toWgs84(final QualifiedCoordinates qc) {
         if (this == WGS_84) {
-            return qc.clone();
+            return qc._clone();
         }
 
         return transform(qc, ellipsoid, WGS_84.ellipsoid, 1);

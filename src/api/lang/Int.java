@@ -7,16 +7,16 @@ public final class Int {
         this.value = value;
     }
 
-    public Int clone() {
-        return new Int(value);
-    }
-
     public int getValue() {
         return value;
     }
 
     public void setValue(int value) {
         this.value = value;
+    }
+
+    public Int _clone() {
+        return new Int(value);
     }
 
     public int hashCode() {

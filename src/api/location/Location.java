@@ -76,8 +76,8 @@ public final class Location {
      * ~POOL
      */
 
-    public Location clone() {
-        final Location l = newInstance(coordinates.clone(), timestamp,
+    public Location _clone() {
+        final Location l = newInstance(coordinates._clone(), timestamp,
                                        getFix(), getSat());
         l.course = course;
         l.speed = speed;

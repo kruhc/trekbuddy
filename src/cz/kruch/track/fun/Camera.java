@@ -7,10 +7,12 @@ import cz.kruch.track.configuration.Config;
 import cz.kruch.track.ui.Desktop;
 import cz.kruch.track.Resources;
 
+//#ifndef __ANDROID__
 import javax.microedition.media.Player;
 import javax.microedition.media.Manager;
 import javax.microedition.media.MediaException;
 import javax.microedition.media.Control;
+//#endif
 import javax.microedition.io.Connector;
 import javax.microedition.lcdui.CommandListener;
 import javax.microedition.lcdui.Displayable;
@@ -22,11 +24,15 @@ import java.util.Vector;
 import api.file.File;
 
 /**
- * Camera for taking snapshots.
+ * Camera for taking snapshots. Also plays sound.
  *
  * @author Ales Pour <kruhc@seznam.cz>
  */
-public abstract class Camera implements CommandListener, Runnable {
+public abstract class Camera implements
+//#ifndef __ANDROID__
+        CommandListener,
+//#endif
+        Runnable {
 //#ifdef __LOG__
     private static final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("Camera");
 //#endif
@@ -47,25 +53,29 @@ public abstract class Camera implements CommandListener, Runnable {
     // image counter
     protected static int imgNum;
 
+//#ifndef __ANDROID__
     // common members
     protected Player player;
     protected Control control;
+//#endif
 
     // video capture members
     private Displayable next;
     private Callback callback;
     protected long timestamp;
 
+//#ifndef __ANDROID__
     abstract void getResolutions(final Vector v);
     abstract void beforeShoot() throws MediaException;
     abstract void createFinder(final Form form) throws MediaException;
+//#endif    
     abstract boolean playSound(final String url);
 
     public static boolean play(final String url) {
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("play " + url);
 //#endif
-        if (Config.dataDirExists/* && api.file.File.isFs()*/) {
+        if (Config.dataDirExists) {
             try {
                 return createPlayback().playSound(url);
             } catch (Exception e) {
@@ -80,19 +90,25 @@ public abstract class Camera implements CommandListener, Runnable {
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("capture locator: " + Config.captureLocator);
 //#endif
+//#ifndef __ANDROID__
         createRecorder(next, callback, timestamp).open();
+//#endif
     }
 
     public static String[] getStillResolutions() {
         if (resolutions == null) {
             final Vector v = new Vector(8);
+//#ifndef __ANDROID__
             createRecorder(null, null, -1).getResolutions(v);
+//#endif            
             resolutions = new String[v.size()];
             v.copyInto(resolutions);
         }
 
         return resolutions;
     }
+
+//#ifndef __ANDROID__
 
     public void commandAction(Command c, Displayable d) {
         if (c.getCommandType() == Command.SCREEN) {
@@ -132,6 +148,8 @@ public abstract class Camera implements CommandListener, Runnable {
         }
     }
 
+//#endif /* !__ANDROID__ */    
+
     private static Camera createPlayback() throws Exception {
         Camera delegate;
         if (cz.kruch.track.TrackingMIDlet.android) {
@@ -141,6 +159,8 @@ public abstract class Camera implements CommandListener, Runnable {
         }
         return delegate;
     }
+
+//#ifndef __ANDROID__
 
     private static Camera createRecorder(final Displayable next,
                                          final Callback callback,
@@ -336,4 +356,7 @@ public abstract class Camera implements CommandListener, Runnable {
 
         return position - offset;
     }
+
+//#endif /* !__ANDROID__ */
+
 }

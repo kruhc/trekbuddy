@@ -22,7 +22,7 @@ import java.io.IOException;
 import api.location.QualifiedCoordinates;
 
 /**
- * SMS-based friends.
+ * JSR-120 (SMS) friends.
  *
  * @author Ales Pour <kruhc@seznam.cz>
  */

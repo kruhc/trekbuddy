@@ -145,9 +145,9 @@ public class DeviceControl extends TimerTask {
         return instance.getLac();
     }
 
-    public static void setTicker(javax.microedition.lcdui.List list,
+    public static void setTicker(javax.microedition.lcdui.Displayable displayable,
                                  String ticker) {
-        instance.useTicker(list, ticker);
+        instance.useTicker(displayable, ticker);
     }
 
     //
@@ -231,9 +231,9 @@ public class DeviceControl extends TimerTask {
 
     void useTicker(Object list, String msg) {
         if (msg != null) {
-            ((javax.microedition.lcdui.List) list).setTicker(new javax.microedition.lcdui.Ticker(msg));
+            ((javax.microedition.lcdui.Displayable) list).setTicker(new javax.microedition.lcdui.Ticker(msg));
         } else {
-            ((javax.microedition.lcdui.List) list).setTicker(null);
+            ((javax.microedition.lcdui.Displayable) list).setTicker(null);
         }
     }
 

@@ -65,18 +65,11 @@
     </path>
 
     <path id="bootclasspath.android">
-        <pathelement location="${wtk.home}\lib\cldcapi11.jar"/>
-        <pathelement location="${wtk.home}\lib\midpapi20.jar"/>
-        <pathelement location="${wtk.home}\lib\jsr75.jar"/>
-        <pathelement location="${wtk.home}\lib\wma11.jar"/>
-<!--
-        <pathelement location="${wtk.home}\lib\jsr082.jar"/>
-        <pathelement location="${wtk.home}\lib\jsr179.jar"/>
-        <pathelement location="${wtk.home}\lib\jsr234.jar"/>
-        <pathelement location="${wtk.home}\lib\mmapi.jar"/>
--->
-        <pathelement location="${android.home}\android.jar"/>
+        <pathelement location="${microemu.home}\microemu-cldc\target\microemu-cldc-3.0.0-SNAPSHOT.jar"/>
+        <pathelement location="${microemu.home}\microemu-midp\target\microemu-midp-3.0.0-SNAPSHOT.jar"/>
+        <pathelement location="${microemu.home}\microemu-extensions\microemu-jsr-75\target\microemu-jsr-75-3.0.0-SNAPSHOT.jar"/>
         <pathelement location="${microemu.home}\microemu-android\microemu-android-idea.jar"/>
+        <pathelement location="${android.home}\android.jar"/>
     </path>
 
     <path id="bootclasspath.rim41">
@@ -192,8 +185,7 @@
     <target name="android">
         <property name="suffix" value="-android"/>
         <property name="dist.dir" value="android"/>
-        <property name="libraryjars" value="${wtk.home}\lib\cldcapi11.jar;${wtk.home}\lib\midpapi20.jar;${wtk.home}\lib\jsr75.jar;${wtk.home}\lib\wma11.jar;${android.home}\android.jar"/>
-        <property name="classpath.preverify" value="${libraryjars}"/>
+        <property name="libraryjars" value="${microemu.home}\microemu-cldc\target\microemu-cldc-3.0.0-SNAPSHOT.jar;${microemu.home}\microemu-midp\target\microemu-midp-3.0.0-SNAPSHOT.jar;${microemu.home}\microemu-extensions\microemu-jsr-75\target\microemu-jsr-75-3.0.0-SNAPSHOT.jar;${android.home}\android.jar"/>
         <antcall target="clean"/>
         <ant dir="z:/repository/microemu/microemu-android"
              antfile="build-trekbuddy.xml"
@@ -422,11 +414,13 @@
 
     <target name="remove.nonandroid.src" depends="remove.nonmidp.src">
         <delete dir="tmp/src/org/xmlpull"/>
-        <delete file="tmp/src/cz/kruch/track/fun/Friends.java"/>
+        <delete file="tmp/src/cz/kruch/track/fun/Jsr120Friends.java"/>
         <delete file="tmp/src/cz/kruch/track/fun/Jsr135Camera.java"/>
         <delete file="tmp/src/cz/kruch/track/fun/Jsr234Camera.java"/>
+        <delete file="tmp/src/cz/kruch/track/fun/Playback.java"/>
         <delete file="tmp/src/cz/kruch/track/location/Jsr82LocationProvider.java"/>
         <delete file="tmp/src/cz/kruch/track/location/Jsr179LocationProvider.java"/>
+        <delete file="tmp/src/cz/kruch/track/location/O2GermanyLocationProvider.java"/>
     </target>
 
     <target name="create.tmp.jad">
@@ -563,7 +557,6 @@
             <arg value="-keepnames class cz.** extends java.lang.Exception"/>
             <arg value="-keepnames class api.** extends java.lang.Exception"/>
             <arg value="-keepnames class org.hecl.** extends java.lang.Exception"/>
-            <arg value="-whyareyoukeeping class cz.kruch.track.fun.Friends"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.maps.io.FileInput"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.maps.io.LoaderIO"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.ui.WaypointForm"/>
@@ -597,7 +590,6 @@
             <arg value="-keepnames class cz.** extends java.lang.Exception"/>
             <arg value="-keepnames class api.** extends java.lang.Exception"/>
             <arg value="-keepnames class org.hecl.** extends java.lang.Exception"/>
-            <arg value="-whyareyoukeeping class cz.kruch.track.fun.Friends"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.maps.io.FileInput"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.maps.io.LoaderIO"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.ui.WaypointForm"/>
@@ -634,7 +626,6 @@
             <arg value="-keepnames class cz.** extends java.lang.Exception"/>
             <arg value="-keepnames class api.** extends java.lang.Exception"/>
             <arg value="-keepnames class org.hecl.** extends java.lang.Exception"/>
-            <arg value="-whyareyoukeeping class cz.kruch.track.fun.Friends"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.maps.io.FileInput"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.maps.io.LoaderIO"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.ui.WaypointForm"/>
@@ -664,7 +655,6 @@
             <arg value="-keepnames class cz.** extends java.lang.Exception"/>
             <arg value="-keepnames class api.** extends java.lang.Exception"/>
             <arg value="-keepnames class org.hecl.** extends java.lang.Exception"/>
-            <arg value="-whyareyoukeeping class cz.kruch.track.fun.Friends"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.maps.io.FileInput"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.ui.WaypointForm"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.util.NakedVector"/>
@@ -688,11 +678,6 @@
 -->
             <arg value="-dontobfuscate"/>
             <arg value="-keep class * implements javax.microedition.midlet.MIDlet"/>
-            <arg value="-whyareyoukeeping class cz.kruch.track.fun.Friends"/>
-            <arg value="-whyareyoukeeping class cz.kruch.track.maps.io.FileInput"/>
-            <arg value="-whyareyoukeeping class cz.kruch.track.ui.WaypointForm"/>
-            <arg value="-whyareyoukeeping class cz.kruch.track.util.NakedVector"/>
-            <arg value="-whyareyoukeeping class cz.kruch.track.util.Logger"/>
             <arg value="-printmapping dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.map"/>
             <arg value="-printseeds"/>
             <arg value="-verbose"/>

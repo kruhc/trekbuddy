@@ -6,6 +6,7 @@ import cz.kruch.track.Resources;
 import cz.kruch.track.configuration.Config;
 import cz.kruch.track.configuration.ConfigurationException;
 import cz.kruch.track.event.Callback;
+import cz.kruch.track.fun.Friends;
 import cz.kruch.track.location.GpxTracklog;
 import cz.kruch.track.location.Waypoint;
 import cz.kruch.track.maps.Map;
@@ -102,14 +103,12 @@ public final class Desktop implements CommandListener,
     // screen modes
     private int mode;
 
+    // groupware components
+    private Friends friends;
+
     // data components
     private volatile Map map;
     private volatile Atlas atlas;
-
-    // groupware components
-//#ifndef __ANDROID__
-    private cz.kruch.track.fun.Friends friends;
-//#endif    
 
     // LSM/MSK commands
     /*private */Command cmdRun, cmdRunLast, cmdStop;
@@ -135,10 +134,10 @@ public final class Desktop implements CommandListener,
     private /*volatile*/ boolean providerRestart;
 
     // logs
-    private boolean tracklog;
-    private long trackstart;
     private GpxTracklog tracklogGpx;
     private OutputStream trackLogNmea;
+    private long trackstart;
+    private boolean tracklog;
 
     // navigation // TODO move to Waypoints
     /*public*/ static volatile Vector wpts;
@@ -175,12 +174,13 @@ public final class Desktop implements CommandListener,
         // platform-specific hacks
 //#ifdef __ALL__
         if (cz.kruch.track.TrackingMIDlet.uiq) {
-//            BACK_CMD_TYPE = Command.EXIT;
             CANCEL_CMD_TYPE = Command.BACK;
         }
         if (cz.kruch.track.TrackingMIDlet.sonyEricssonEx) {
-//            EXIT_CMD_TYPE = Command.EXIT;
             CANCEL_CMD_TYPE = Command.BACK;
+        }
+        if ("Exit".equals(midlet.getAppProperty(cz.kruch.track.TrackingMIDlet.JAD_UI_RIGHT_KEY))) {
+            EXIT_CMD_TYPE = Command.EXIT; 
         }
 //#elifdef __J9__
         POSITIVE_CMD_TYPE = Command.ITEM;
@@ -356,6 +356,9 @@ public final class Desktop implements CommandListener,
         screen.addCommand(this.cmdSettings = new Command(Resources.getString(Resources.DESKTOP_CMD_SETTINGS), POSITIVE_CMD_TYPE, 6));
         screen.addCommand(this.cmdInfo = new Command(Resources.getString(Resources.DESKTOP_CMD_INFO), POSITIVE_CMD_TYPE, 7));
         screen.addCommand(this.cmdExit = new Command(Resources.getString(Resources.DESKTOP_CMD_EXIT), EXIT_CMD_TYPE, 8/*1*/));
+        if ("...".equals(midlet.getAppProperty(cz.kruch.track.TrackingMIDlet.JAD_UI_RIGHT_KEY))) {
+            screen.addCommand(new Command("...", Command.CANCEL, 0));
+        }
         this.cmdPause = new Command(Resources.getString(Resources.DESKTOP_CMD_PAUSE), Config.fullscreen || cz.kruch.track.TrackingMIDlet.sonyEricsson || cz.kruch.track.TrackingMIDlet.jbed ? POSITIVE_CMD_TYPE : Command.STOP, 1);
         this.cmdContinue = new Command(Resources.getString(Resources.DESKTOP_CMD_CONTINUE), Config.fullscreen || cz.kruch.track.TrackingMIDlet.sonyEricsson || cz.kruch.track.TrackingMIDlet.jbed ? POSITIVE_CMD_TYPE : Command.STOP, 1);
         this.cmdStop = new Command(Resources.getString(Resources.DESKTOP_CMD_STOP), Config.fullscreen || cz.kruch.track.TrackingMIDlet.sonyEricsson || cz.kruch.track.TrackingMIDlet.jbed ? POSITIVE_CMD_TYPE : Command.STOP, 2);
@@ -629,31 +632,24 @@ public final class Desktop implements CommandListener,
 //#endif
 
         // check DataDir structure
-        if (Config.dataDirAccess/*File.isFs()*/) {
+        if (Config.dataDirAccess) {
             Config.initDataDir(getDiskWorker());
         } else {
             showError("'DataDir' not accessible - please fix it and restart", null, null);
         }
 
         // initialize waypoints
-        cz.kruch.track.ui.Waypoints.initialize(this);
+        Waypoints.initialize(this);
 
-//#ifndef __ANDROID__
-
-        // start Friends
+        // initialize groupware
         if (cz.kruch.track.TrackingMIDlet.jsr120) {
-//#ifdef __LOG__
-             if (log.isEnabled()) log.info("init friends");
-//#endif
             try {
-                friends = new cz.kruch.track.fun.Friends();
+                friends = Friends.createInstance();
                 friends.start();
             } catch (Throwable t) {
                 showError(Resources.getString(Resources.DESKTOP_MSG_FRIENDS_FAILED), t, screen);
             }
         }
-
-//#endif
 
         // loads CMS profiles
         getDiskWorker().enqueue((Runnable) views[VIEW_CMS]);
@@ -713,6 +709,9 @@ public final class Desktop implements CommandListener,
             screen.addCommand(cmdPause);
             // update screen
             update(MASK_SCREEN);
+        } else {
+            // update screen
+            showAlert(AlertType.INFO, "...", 250, null);
         }
     }
 
@@ -893,6 +892,10 @@ public final class Desktop implements CommandListener,
         return this.map;
     }
 
+    Friends getFriends() {
+        return friends;
+    }
+
     void updateNavigation(final QualifiedCoordinates from) {
         // got active wpt?
         if (wpts != null && wptIdx > -1) {
@@ -991,6 +994,7 @@ public final class Desktop implements CommandListener,
     /**
      * Gets last known position from GPS (WGS-84).
      * Called by {@link Waypoints} only.
+     *
      * @return last known position from GPS
      */
     Location getLocation() {
@@ -1000,6 +1004,7 @@ public final class Desktop implements CommandListener,
     /**
      * Gets current pointer coordinates (WGS-84).
      * Called by {@link Waypoints} only.
+     *
      * @return current pointer coordinates
      */
     QualifiedCoordinates getPointer() {
@@ -2506,12 +2511,12 @@ public final class Desktop implements CommandListener,
             Config.useDatum(Config.geoDatum);
             resetFont();
             resetBar();
-//#ifndef __ANDROID__
+
             // runtime ops
-            if (cz.kruch.track.TrackingMIDlet.jsr120) {
+            if (Desktop.this.friends != null) {
                 Desktop.this.friends.reconfigure(Desktop.screen);
             }
-//#endif
+
             // smart menu
             if (Config.locationProvider == Config.LOCATION_PROVIDER_JSR82) {
                 Desktop.screen.addCommand(Desktop.this.cmdRunLast);

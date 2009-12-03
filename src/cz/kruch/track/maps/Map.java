@@ -486,9 +486,11 @@ public final class Map implements Runnable {
 
         private String getBasename(final CharArrayTokenizer.Token token) throws InvalidMapException {
             String name = token.toString();
+
             if (isTar) {
                 name = name.substring(4); // skips leading "set/..."
             }
+
             if (!isGPSka) {
                 int p0 = -1, p1 = -1;
                 int i = 0;
@@ -504,6 +506,24 @@ public final class Map implements Runnable {
                     throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_INVALID_SLICE_NAME) + name);
                 }
             }
+
+/*
+            // URL encode
+            final StringBuffer sb = new StringBuffer(name.length() + 16);
+            for (int N = name.length(), i = 0; i < N; i++) {
+                final char c = name.charAt(i);
+                if ((c >= 0x30 && c <= 0x39) || (c >= 0x41 && c <= 0x5A) || (c >= 0x61 && c <= 0x7A)) {
+                    sb.append(c);
+                } else {
+                    sb.append('%');
+                    if (c <= 0xf) {
+                        sb.append('0');
+                    }
+                    sb.append(Integer.toHexString(c).toUpperCase());
+                }
+            }
+            name = sb.toString();
+*/
 
             return name;
         }

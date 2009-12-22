@@ -12,7 +12,6 @@ import com.ice.tar.TarEntry;
 
 import cz.kruch.track.Resources;
 import cz.kruch.track.configuration.Config;
-import cz.kruch.track.device.SymbianService;
 import cz.kruch.track.io.LineReader;
 import cz.kruch.track.util.CharArrayTokenizer;
 import cz.kruch.track.ui.NavigationScreens;
@@ -75,15 +74,17 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
             }
 
             // open stream
-            if (cz.kruch.track.TrackingMIDlet.symbian && Map.networkInputStreamAvailable) {
+//#ifdef __SYMBIAN__
+			if (cz.kruch.track.TrackingMIDlet.symbian && Map.networkInputStreamAvailable) {
                 try {
-                    in = SymbianService.openInputStream(map.getPath());
+                    in = cz.kruch.track.device.SymbianService.openInputStream(map.getPath());
                     Map.networkInputStreamAvailable = true;
                 } catch (Exception e) { // IOE or SE
                     // service not running/available
                     Map.networkInputStreamAvailable = false;
                 }
             }
+//#endif
             if (in == null) {
                 in = nativeFile.openInputStream();
             }

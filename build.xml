@@ -1,5 +1,5 @@
 <?xml version="1.0"?>
-<project name="TrekBuddy" default="generic" basedir=".">
+<project name="TrekBuddy" default="standard" basedir=".">
 
     <property file="${include.properties}" prefix="external."/>
 
@@ -20,7 +20,8 @@
     <property name="garnet.home" value="z:\J2ME\Garnet\PalmOS JVM 5.7.2\Tools"/>
     <property name="rim41.home" value="c:\J2ME\RIM\JDE 4.1.0"/>
     <property name="rim42.home" value="c:\J2ME\RIM\JDE 4.2.1"/>
-    <property name="android.home" value="z:\J2ME\android-sdk-windows-1.5_r2\platforms\android-1.5"/>
+    <property name="android15.home" value="c:\J2ME\android-sdk-windows\platforms\android-1.5"/>
+    <property name="android16.home" value="c:\J2ME\android-sdk-windows\platforms\android-1.6"/>
     <property name="microemu.home" value="z:\repository\microemu"/>
     <property name="proguard.home" value="z:\apps\proguard3.11"/>
     <property name="proguard4.home" value="z:\apps\proguard4.4"/>
@@ -53,6 +54,18 @@
         <pathelement location="lib\samsung-apis.jar"/>
     </path>
 
+    <path id="bootclasspath.symbian">
+        <pathelement location="${wtk.home}\lib\cldcapi11.jar"/>
+        <pathelement location="${wtk.home}\lib\midpapi20.jar"/>
+        <pathelement location="${wtk.home}\lib\jsr75.jar"/>
+        <pathelement location="${wtk.home}\lib\jsr082.jar"/>
+        <pathelement location="${wtk.home}\lib\jsr179.jar"/>
+        <pathelement location="${wtk.home}\lib\jsr234.jar"/>
+        <pathelement location="${wtk.home}\lib\wma11.jar"/>
+        <pathelement location="${wtk.home}\lib\mmapi.jar"/>
+        <pathelement location="lib\nokia-ui.jar"/>
+    </path>
+
     <path id="bootclasspath.std">
         <pathelement location="${wtk.home}\lib\cldcapi11.jar"/>
         <pathelement location="${wtk.home}\lib\midpapi20.jar"/>
@@ -64,12 +77,20 @@
         <pathelement location="${wtk.home}\lib\mmapi.jar"/>
     </path>
 
-    <path id="bootclasspath.android">
+    <path id="bootclasspath.android15">
         <pathelement location="${microemu.home}\microemu-cldc\target\microemu-cldc-3.0.0-SNAPSHOT.jar"/>
         <pathelement location="${microemu.home}\microemu-midp\target\microemu-midp-3.0.0-SNAPSHOT.jar"/>
         <pathelement location="${microemu.home}\microemu-extensions\microemu-jsr-75\target\microemu-jsr-75-3.0.0-SNAPSHOT.jar"/>
         <pathelement location="${microemu.home}\microemu-android\microemu-android-idea.jar"/>
-        <pathelement location="${android.home}\android.jar"/>
+        <pathelement location="${android15.home}\android.jar"/>
+    </path>
+
+    <path id="bootclasspath.android16">
+        <pathelement location="${microemu.home}\microemu-cldc\target\microemu-cldc-3.0.0-SNAPSHOT.jar"/>
+        <pathelement location="${microemu.home}\microemu-midp\target\microemu-midp-3.0.0-SNAPSHOT.jar"/>
+        <pathelement location="${microemu.home}\microemu-extensions\microemu-jsr-75\target\microemu-jsr-75-3.0.0-SNAPSHOT.jar"/>
+        <pathelement location="${microemu.home}\microemu-android\microemu-android-idea.jar"/>
+        <pathelement location="${android16.home}\android.jar"/>
     </path>
 
     <path id="bootclasspath.rim41">
@@ -118,6 +139,21 @@
         <antcall target="clean"/>
         <antcall target="a.pre.std"/>
         <antcall target="compile.std"/>
+        <antcall target="a.pack" inheritall="true"/>
+        <antcall target="obfuscate" inheritall="true"/>
+        <antcall target="preverify" inheritall="true"/>
+        <antcall target="dist" inheritall="true"/>
+        <antcall target="sign.and.update" inheritall="true"/>
+    </target>
+
+    <target name="symbian">
+        <property name="suffix" value="-symbian"/>
+        <property name="dist.dir" value="symbian"/>
+        <property name="libraryjars" value="${wtk.home}\lib\cldcapi11.jar;${wtk.home}\lib\midpapi20.jar;${wtk.home}\lib\jsr75.jar;${wtk.home}\lib\jsr082.jar;${wtk.home}\lib\jsr179.jar;${wtk.home}\lib\jsr234.jar;${wtk.home}\lib\wma11.jar;lib\motorola-location.jar"/>
+        <property name="classpath.preverify" value="${libraryjars}"/>
+        <antcall target="clean"/>
+        <antcall target="a.pre.symbian"/>
+        <antcall target="compile.symbian"/>
         <antcall target="a.pack" inheritall="true"/>
         <antcall target="obfuscate" inheritall="true"/>
         <antcall target="preverify" inheritall="true"/>
@@ -182,18 +218,20 @@
         <antcall target="rim.ota" inheritall="true"/>
     </target>
 
-    <target name="android">
+    <target name="android15">
         <property name="suffix" value="-android"/>
-        <property name="dist.dir" value="android"/>
-        <property name="libraryjars" value="${microemu.home}\microemu-cldc\target\microemu-cldc-3.0.0-SNAPSHOT.jar;${microemu.home}\microemu-midp\target\microemu-midp-3.0.0-SNAPSHOT.jar;${microemu.home}\microemu-extensions\microemu-jsr-75\target\microemu-jsr-75-3.0.0-SNAPSHOT.jar;${android.home}\android.jar"/>
+        <property name="dist.dir" value="android15"/>
+        <property name="libraryjars" value="${microemu.home}\microemu-cldc\target\microemu-cldc-3.0.0-SNAPSHOT.jar;${microemu.home}\microemu-midp\target\microemu-midp-3.0.0-SNAPSHOT.jar;${microemu.home}\microemu-extensions\microemu-jsr-75\target\microemu-jsr-75-3.0.0-SNAPSHOT.jar;${android15.home}\android.jar"/>
         <antcall target="clean"/>
         <ant dir="z:/repository/microemu/microemu-android"
-             antfile="build-trekbuddy.xml"
-             target="clean"
+             antfile="build-trekbuddy.xml" target="clean"
              inheritAll="false" inheritRefs="false">
-        </ant>
+			<property name="sdk.version" value="1.5"/>
+			<property name="api.level" value="3"/>
+			<property name="dist.dir" value="android15"/>
+		</ant>
         <antcall target="a.pre.android"/>
-        <antcall target="compile.android"/>
+        <antcall target="compile.android15"/>
         <antcall target="android.pack" inheritall="true"/>
         <antcall target="obfuscate.android" inheritall="true"/>
 <!-- not needed, so rename the jar as if it happened
@@ -203,9 +241,11 @@
               tofile="tmp/preverified/trekbuddy${suffix}-obfuscated.jar"/>
         <antcall target="dist" inheritall="true"/>
         <ant dir="z:/repository/microemu/microemu-android"
-             antfile="build-trekbuddy.xml"
-             target="package-apk"
+             antfile="build-trekbuddy.xml" target="sign"
              inheritAll="false" inheritRefs="false">
+			<property name="sdk.version" value="1.5"/>
+			<property name="api.level" value="3"/>
+			<property name="dist.dir" value="android15"/>
 <!--
             <property name="javac.debug" value="true"/>
             <property name="javac.debuglevel" value="source,lines"/>
@@ -215,7 +255,47 @@
 -->
         </ant>
         <copy file="z:/repository/microemu/microemu-android/bin/trekbuddy.apk"
-              todir="dist/${vendor.dir}/${dist.dir}"/>
+              tofile="dist/${vendor.dir}/${dist.dir}/trekbuddy_android_15.apk"/>
+    </target>
+
+    <target name="android16">
+        <property name="suffix" value="-android"/>
+        <property name="dist.dir" value="android16"/>
+        <property name="libraryjars" value="${microemu.home}\microemu-cldc\target\microemu-cldc-3.0.0-SNAPSHOT.jar;${microemu.home}\microemu-midp\target\microemu-midp-3.0.0-SNAPSHOT.jar;${microemu.home}\microemu-extensions\microemu-jsr-75\target\microemu-jsr-75-3.0.0-SNAPSHOT.jar;${android16.home}\android.jar"/>
+        <antcall target="clean"/>
+        <ant dir="z:/repository/microemu/microemu-android"
+             antfile="build-trekbuddy.xml" target="clean"
+             inheritAll="false" inheritRefs="false">
+			<property name="sdk.version" value="1.6"/>
+			<property name="api.level" value="4"/>
+			<property name="dist.dir" value="android16"/>
+		</ant>
+        <antcall target="a.pre.android"/>
+        <antcall target="compile.android16"/>
+        <antcall target="android.pack" inheritall="true"/>
+        <antcall target="obfuscate.android" inheritall="true"/>
+<!-- not needed, so rename the jar as if it happened
+        <antcall target="preverify" inheritall="true"/>
+-->
+        <move file="tmp/trekbuddy${suffix}-obfuscated.jar"
+              tofile="tmp/preverified/trekbuddy${suffix}-obfuscated.jar"/>
+        <antcall target="dist" inheritall="true"/>
+        <ant dir="z:/repository/microemu/microemu-android"
+             antfile="build-trekbuddy.xml" target="sign"
+             inheritAll="false" inheritRefs="false">
+			<property name="sdk.version" value="1.6"/>
+			<property name="api.level" value="4"/>
+			<property name="dist.dir" value="android16"/>
+<!--
+            <property name="javac.debug" value="true"/>
+            <property name="javac.debuglevel" value="source,lines"/>
+-->
+<!--
+            <property name="do.obfuscate" value="true"/>
+-->
+        </ant>
+        <copy file="z:/repository/microemu/microemu-android/bin/trekbuddy.apk"
+			  tofile="dist/${vendor.dir}/${dist.dir}/trekbuddy_android_16.apk"/>
     </target>
 
     <target name="emulator">
@@ -278,6 +358,12 @@
                        symbols="__HECL__,${pre.extra}"/>
     </target>
 
+	<target name="a.pre.symbian" depends="a.pre.hecl">
+		<mkdir dir="tmp/src"/>
+		<wtkpreprocess srcdir="src" destdir="tmp/src" version="1"
+					   symbols="__HECL__,__ALL__,__SYMBIAN__,${pre.extra}"/>
+	</target>
+
     <target name="a.pre.j9" depends="a.pre.hecl">
         <mkdir dir="tmp/src"/>
         <wtkpreprocess srcdir="src" destdir="tmp/src" version="1"
@@ -302,7 +388,7 @@
                        symbols="__HECL__,__ANDROID__,${pre.extra}"/>
     </target>
 
-    <target name="compile.generic" depends="remove.rim.src,remove.android.src">
+    <target name="compile.generic" depends="remove.symbian.src,remove.rim.src,remove.android.src">
         <mkdir dir="tmp/build/classes"/>
         <mkdir dir="tmp/ant"/>
         <javac srcdir="tmp/src"
@@ -313,7 +399,7 @@
                bootclasspathref="bootclasspath.generic"/>
     </target>
 
-    <target name="compile.generic-lite" depends="remove.rim.src,remove.android.src,remove.hecl.src">
+    <target name="compile.generic-lite" depends="remove.symbian.src,remove.rim.src,remove.android.src,remove.hecl.src">
         <mkdir dir="tmp/build/classes"/>
         <mkdir dir="tmp/ant"/>
         <javac srcdir="tmp/src"
@@ -333,6 +419,17 @@
                fork="true"
                target="1.1" source="1.3"
                bootclasspathref="bootclasspath.std"/>
+    </target>
+
+    <target name="compile.symbian" depends="remove.nonsymbian.src,remove.rim.src,remove.android.src">
+        <mkdir dir="tmp/build/classes"/>
+        <mkdir dir="tmp/ant"/>
+        <javac srcdir="tmp/src"
+               destdir="tmp/build/classes"
+               tempdir="tmp/ant"
+               fork="true"
+               target="1.1" source="1.3"
+               bootclasspathref="bootclasspath.symbian"/>
     </target>
 
     <target name="compile.rim41" depends="remove.nonrim41.src">
@@ -358,7 +455,7 @@
                bootclasspathref="bootclasspath.rim42"/>
     </target>
 
-    <target name="compile.android" depends="remove.nonandroid.src,remove.rim.src">
+    <target name="compile.android15" depends="remove.nonandroid.src,remove.rim.src">
         <mkdir dir="tmp/build/classes"/>
         <mkdir dir="tmp/ant"/>
         <javac srcdir="tmp/src"
@@ -366,7 +463,18 @@
                tempdir="tmp/ant"
                fork="true"
                target="1.5" source="1.3"
-               bootclasspathref="bootclasspath.android"/>
+               bootclasspathref="bootclasspath.android15"/>
+    </target>
+
+    <target name="compile.android16" depends="remove.nonandroid.src,remove.rim.src">
+        <mkdir dir="tmp/build/classes"/>
+        <mkdir dir="tmp/ant"/>
+        <javac srcdir="tmp/src"
+               destdir="tmp/build/classes"
+               tempdir="tmp/ant"
+               fork="true"
+               target="1.5" source="1.3"
+               bootclasspathref="bootclasspath.android16"/>
     </target>
 
     <target name="remove.nonstd.src" depends="remove.nonmidp.src,remove.android.src">
@@ -384,6 +492,23 @@
         <delete file="tmp/src/cz/kruch/track/ui/nokia/SamsungDeviceControl.java"/>
         <delete file="tmp/src/cz/kruch/track/ui/nokia/LgDeviceControl.java"/>
         <delete file="tmp/src/cz/kruch/track/location/MotorolaLocationProvider.java"/>
+    </target>
+
+    <target name="remove.nonsymbian.src">
+        <delete file="tmp/src/api/file/MotorolaFile.java"/>
+        <delete file="tmp/src/api/file/Motorola1000File.java"/>
+        <delete file="tmp/src/api/file/SiemensFile.java"/>
+        <delete file="tmp/src/cz/kruch/track/ui/nokia/MotorolaDeviceControl.java"/>
+        <delete file="tmp/src/cz/kruch/track/ui/nokia/SiemensDeviceControl.java"/>
+        <delete file="tmp/src/cz/kruch/track/ui/nokia/SonyEricssonDeviceControl.java"/>
+        <delete file="tmp/src/cz/kruch/track/ui/nokia/SamsungDeviceControl.java"/>
+        <delete file="tmp/src/cz/kruch/track/ui/nokia/LgDeviceControl.java"/>
+        <delete file="tmp/src/cz/kruch/track/location/MotorolaLocationProvider.java"/>
+    </target>
+
+    <target name="remove.symbian.src">
+		<delete file="tmp/src/cz/kruch/track/device/SymbianService.java"/>
+		<delete file="tmp/src/cz/kruch/track/ui/nokia/S60DeviceControl.java"/>
     </target>
 
     <target name="remove.hecl.src">

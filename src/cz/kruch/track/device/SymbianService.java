@@ -3,7 +3,7 @@
 package cz.kruch.track.device;
 
 import javax.microedition.io.Connector;
-import javax.microedition.io.StreamConnection;
+import javax.microedition.io.SocketConnection;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.DataInputStream;
@@ -67,16 +67,22 @@ public final class SymbianService {
         output.flush();
     }
 
-    /**
-     * Service helper for backlight control. Misuse <code>TimerTasl</code>.
+	private static SocketConnection openConnection(String url) throws IOException {
+		SocketConnection connection = (SocketConnection) Connector.open(url, Connector.READ_WRITE);
+		connection.setSocketOption(SocketConnection.DELAY, 0);
+		return connection;
+	}
+
+	/**
+     * Service helper for backlight control. Misuse <code>TimerTask</code>.
      */
     public static class Inactivity {
-        private StreamConnection connection;
+        private SocketConnection connection;
         private DataOutputStream output;
 
         Inactivity() throws IOException {
             try {
-                this.connection = (StreamConnection) Connector.open(URL, Connector.READ_WRITE);
+                this.connection = openConnection(URL);
                 this.output = new DataOutputStream(connection.openOutputStream());
             } catch (IOException e) {
                 close();
@@ -116,7 +122,7 @@ public final class SymbianService {
      * Networked stream fast tar-ed maps.
      */
     public static final class NetworkedInputStream extends InputStream {
-        private StreamConnection connection;
+        private SocketConnection connection;
         private DataInputStream input;
         private DataOutputStream output;
         private final byte[] one, header;
@@ -136,7 +142,7 @@ public final class SymbianService {
             try {
 
                 // open I/O
-                this.connection = (StreamConnection) Connector.open(URL, Connector.READ_WRITE);
+                this.connection = openConnection(URL);
                 this.input = new DataInputStream(connection.openInputStream());
                 this.output = new DataOutputStream(connection.openOutputStream());
 

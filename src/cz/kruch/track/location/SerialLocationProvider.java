@@ -292,7 +292,9 @@ public class SerialLocationProvider
             setStatus("stream and connection closed");
 
             /* native finalizers? */
+//#ifndef __RIM__
             System.gc(); // unconditional!!!
+//#endif            
         }
     }
 
@@ -349,7 +351,9 @@ public class SerialLocationProvider
                                 // ignore
                             }
                             /* native finalizers?!? */
+//#ifndef __RIM__
                             System.gc(); // unconditional!!!
+//#endif                            
                         }
                     }
                     setStatus("stream closed"); // debug

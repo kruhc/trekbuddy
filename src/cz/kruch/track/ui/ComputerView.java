@@ -875,7 +875,7 @@ final class ComputerView
 
         // GC
         if (Config.forcedGc) {
-            System.gc();
+            System.gc(); // conditional
         }
     }
 

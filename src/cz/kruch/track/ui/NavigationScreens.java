@@ -206,7 +206,7 @@ public final class NavigationScreens {
         }
 
         if (Config.forcedGc) {
-            System.gc();
+            System.gc(); // conditional
         }
         
         return image;
@@ -216,7 +216,7 @@ public final class NavigationScreens {
         if (in != null) {
             final Image image = Image.createImage(in);
             if (Config.forcedGc) {
-                System.gc();
+                System.gc(); // conditional
             }
 
             return image;
@@ -242,7 +242,7 @@ public final class NavigationScreens {
         }
 
         if (Config.forcedGc) {
-            System.gc();
+            System.gc(); // conditional
         }
 
         return image;

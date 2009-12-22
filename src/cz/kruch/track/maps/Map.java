@@ -180,7 +180,7 @@ public final class Map implements Runnable {
 
         // GC
         if (Config.forcedGc) {
-            System.gc();
+            System.gc(); // conditional
         }
     }
 
@@ -587,7 +587,7 @@ public final class Map implements Runnable {
 
                 // gc
                 if (Config.forcedGc) {
-                    System.gc();
+                    System.gc(); // conditional
                 }
                 
             }

@@ -1222,7 +1222,7 @@ final class MapViewer {
 
         // forced gc - after release or loading ahead
         if (Config.forcedGc && (releasing || !gotAll)) {
-            System.gc();
+            System.gc(); // conditional
         }
 
         // loading flag

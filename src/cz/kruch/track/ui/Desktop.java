@@ -413,7 +413,7 @@ public final class Desktop implements CommandListener,
         bar = Image.createRGBImage(shadow, w, h, true);
         shadow = null; // gc hint
         if (Config.forcedGc) {
-            System.gc();
+            System.gc(); // conditional
         }
 
         // wpt label bar
@@ -427,7 +427,7 @@ public final class Desktop implements CommandListener,
         barWpt = Image.createRGBImage(shadow, w, h, true);
         shadow = null; // gc hint
         if (Config.forcedGc) {
-            System.gc();
+            System.gc(); // conditional
         }
 
         // scale bar
@@ -442,7 +442,7 @@ public final class Desktop implements CommandListener,
         barScale = Image.createRGBImage(shadow, w, h, true);
         shadow = null; // gc hint
         if (Config.forcedGc) {
-            System.gc();
+            System.gc(); // conditional
         }
     }
 

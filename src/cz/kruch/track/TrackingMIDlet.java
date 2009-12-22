@@ -326,7 +326,9 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         }
 
         // cleanup after initialization?
-        System.gc(); // unconditional!!!
+//#ifndef __RIM__
+        System.gc(); // unconditional!!! 
+//#endif
 
         // create desktop
         desktop = new cz.kruch.track.ui.Desktop(this);

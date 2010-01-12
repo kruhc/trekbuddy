@@ -1,30 +1,12 @@
-/*
- * Copyright 2006-2007 Ales Pour <kruhc@seznam.cz>.
- * All Rights Reserved.
- * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
- *
- * This code is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License version 2 only, as
- * published by the Free Software Foundation.
- *
- * This code is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
- * version 2 for more details (a copy is included in the LICENSE file that
- * accompanied this code).
- */
+// @LICENSE@
 
 package cz.kruch.track;
 
 import cz.kruch.track.configuration.Config;
 import cz.kruch.track.io.LineReader;
 import cz.kruch.track.util.CharArrayTokenizer;
-import cz.kruch.track.util.NakedVector;
 import api.io.BufferedInputStream;
 
-/*
-import java.util.Hashtable;
-*/
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.DataInputStream;
@@ -32,6 +14,8 @@ import java.io.EOFException;
 
 /**
  * Resource helper (L10n).
+ *
+ * @author kruhc@seznam.cz
  */
 public final class Resources {
     /* common commands */
@@ -300,6 +284,7 @@ public final class Resources {
     public static final short CFG_LOCATION_FLD_BT_KEEP_ALIVE    = 3622;
     public static final short CFG_LOCATION_FLD_ALT_CORRECTION   = 3623;
     public static final short CFG_LOCATION_FLD_GPX_LOG_TIME_MS  = 3624;
+    public static final short CFG_LOCATION_FLD_NEGATIVE_ALT_FIX = 3625;
     /* settings - navigation */
     public static final short CFG_NAVIGATION_FLD_WPT_PROXIMITY  = 3700;
     public static final short CFG_NAVIGATION_FLD_POI_PROXIMITY  = 3701;

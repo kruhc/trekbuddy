@@ -44,9 +44,9 @@ import api.location.Location;
 import api.location.QualifiedCoordinates;
 
 /**
- * Navigator.
+ * Main user interface and event handling.
  *
- * @author Ales Pour <kruhc@seznam.cz>
+ * @author kruhc@seznam.cz
  */
 public final class Desktop implements CommandListener,
                                       LocationListener,
@@ -113,7 +113,7 @@ public final class Desktop implements CommandListener,
     // LSM/MSK commands
     /*private */Command cmdRun, cmdRunLast, cmdStop;
     /*private */Command cmdWaypoints;
-    /*private */Command cmdLoadMap, cmdLoadAtlas;
+    /*private */Command /*cmdLoad,*/ cmdLoadMap, cmdLoadAtlas;
     /*private */Command cmdSettings;
     /*private */Command cmdInfo;
     /*private */Command cmdExit;
@@ -259,7 +259,7 @@ public final class Desktop implements CommandListener,
         consoleInit(g);
 
         // show copyright(s)
-        consoleShow(g, lineY, "TrekBuddy \u00a9 2009 KrUcH");
+        consoleShow(g, lineY, "TrekBuddy \u00a9 2010 KrUcH");
         lineY += lineHeight;
         String lc = Resources.getString(Resources.BOOT_LOCAL_COPY);
         if (lc.length() > 0) {
@@ -352,6 +352,9 @@ public final class Desktop implements CommandListener,
         if (File.isFs()) {
             screen.addCommand(this.cmdLoadMap = new Command(Resources.getString(Resources.DESKTOP_CMD_LOAD_MAP), POSITIVE_CMD_TYPE, 4));
             screen.addCommand(this.cmdLoadAtlas = new Command(Resources.getString(Resources.DESKTOP_CMD_LOAD_ATLAS), POSITIVE_CMD_TYPE, 5));
+/*
+            screen.addCommand(this.cmdLoad = new Command(Resources.getString(Resources.DESKTOP_CMD_LOAD_MAP), POSITIVE_CMD_TYPE, 5));
+*/
         }
         screen.addCommand(this.cmdSettings = new Command(Resources.getString(Resources.DESKTOP_CMD_SETTINGS), POSITIVE_CMD_TYPE, 6));
         screen.addCommand(this.cmdInfo = new Command(Resources.getString(Resources.DESKTOP_CMD_INFO), POSITIVE_CMD_TYPE, 7));
@@ -677,6 +680,12 @@ public final class Desktop implements CommandListener,
             (new FileBrowser(Resources.getString(Resources.DESKTOP_MSG_SELECT_ATLAS), new Event(Event.EVENT_FILE_BROWSER_FINISHED, "atlas"),
                              screen, Config.FOLDER_MAPS,
                              new String[]{ ".tba", ".idx", ".tar" })).show();
+/*
+        } else if (command == cmdLoad) {
+            (new FileBrowser(Resources.getString(Resources.DESKTOP_MSG_SELECT_MAP), new Event(Event.EVENT_FILE_BROWSER_FINISHED),
+                             screen, Config.FOLDER_MAPS,
+                             new String[]{ ".tba", ".idx", ".tar", ".map", ".gmi", ".xml", ".j2n" })).show();
+*/
         } else if (command == cmdRun) {
             // start tracking
             _setStopRequest(false);
@@ -2575,7 +2584,20 @@ public final class Desktop implements CommandListener,
                     Desktop.this.map = null;
                 }
 
-                // background task
+                // load map or atlas
+/*
+                final int i = url.lastIndexOf('.');
+                if (i > -1) {
+                    final String suffix = url.substring(i).toLowerCase();
+                    if (".idx".equals(suffix) || ".tba".equals(suffix) || ".tar".equals(suffix)) {
+                        Desktop.this._target = "atlas";
+                        Desktop.this.startOpenAtlas(url);
+                    } else if (".map".equals(suffix) || ".gmi".equals(suffix) || ".j2n".equals(suffix) || ".xml".equals(suffix)) {
+                        Desktop.this._target = "map";
+                        Desktop.this.startOpenMap(url, null);
+                    }
+                }
+*/
                 if ("atlas".equals(closure)) {
                     Desktop.this._target = "atlas";
                     Desktop.this.startOpenAtlas(url);

@@ -2,13 +2,10 @@
 
 package cz.kruch.track.hecl;
 
-import org.hecl.Interp;
-import org.hecl.HeclException;
-import org.hecl.Thing;
-import org.hecl.NumberThing;
-import org.hecl.FloatThing;
+import org.hecl.*;
 
 import java.util.Enumeration;
+import java.util.Hashtable;
 
 import cz.kruch.track.util.NakedVector;
 import cz.kruch.track.fun.Camera;
@@ -27,9 +24,15 @@ public final class ControlledInterp extends Interp {
     }
 
     private Lookup fallback;
+/*
+    private Hashtable codes;
+*/
 
     public ControlledInterp(boolean background) throws HeclException {
         super();
+/*
+        codes = new Hashtable(16);
+*/
 
         // internal commands
         addCommand("var", new VarCmd()); // stateful variables support
@@ -77,6 +80,18 @@ public final class ControlledInterp extends Interp {
     public synchronized void start() {
         // do nothing
     }
+
+    /* @overriden */
+/*
+    public synchronized Thing eval(Thing in) throws HeclException {
+        CodeThing thing = (CodeThing) codes.get(in);
+        if (thing == null) {
+            codes.put(in ,thing = CodeThing.get(this, in));
+            System.out.println("cached; " + codes.size());
+        }
+        return thing.run(this);
+    }
+*/
 
     /* @overriden */
     public synchronized Thing getVar(String varname, int level) throws HeclException {

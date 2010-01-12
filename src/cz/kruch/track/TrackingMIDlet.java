@@ -297,7 +297,6 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
 
         // init helpers and 'singletons'
         cz.kruch.track.configuration.Config.initDatums(this);
-        cz.kruch.track.util.Mercator.initialize();
 
         // setup environment
         if (hasFlag("fs_skip_bug") || siemens /*|| symbian*/) {

@@ -16,8 +16,8 @@
     <property name="permission.attribute" value="MIDlet-Permissions-Opt"/>
 
     <property name="wtk.home" value="c:\J2ME\WTK2.5.2"/>
-    <property name="motorola.home" value="z:\J2ME\Motorola\SDKv6.2\EmulatorM.3"/>
-    <property name="garnet.home" value="z:\J2ME\Garnet\PalmOS JVM 5.7.2\Tools"/>
+    <property name="motorola.home" value="c:\J2ME\Motorola\SDKv6.2\EmulatorM.3"/>
+    <property name="garnet.home" value="c:\J2ME\Garnet\PalmOS JVM 5.7.2\Tools"/>
     <property name="rim41.home" value="c:\J2ME\RIM\JDE 4.1.0"/>
     <property name="rim42.home" value="c:\J2ME\RIM\JDE 4.2.1"/>
     <property name="android15.home" value="c:\J2ME\android-sdk-windows\platforms\android-1.5"/>
@@ -853,16 +853,16 @@
 
     <target name="sign.and.update">
         <java jar="${wtk.home}\bin\JadTool.jar" fork="true">
-            <arg line="-addcert -certnum 1 -alias 'trekbuddy2009' -keystore keystores\trekbuddy2009.jks -inputjad dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad -outputjad dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad"/>
+            <arg line="-addcert -certnum 1 -alias 'trekbuddy2010' -keystore keystores\trekbuddy2010.jks -inputjad dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad -outputjad dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad"/>
         </java>
         <java jar="${wtk.home}\bin\JadTool.jar" fork="true">
-            <arg line="-addcert -certnum 2 -alias 'trekbuddy2009' -keystore keystores\trekbuddy2009.jks -inputjad dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad -outputjad dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad"/>
+            <arg line="-addcert -certnum 2 -alias 'trekbuddy2010' -keystore keystores\trekbuddy2010.jks -inputjad dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad -outputjad dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad"/>
         </java>
         <java jar="${wtk.home}\bin\JadTool.jar" fork="true">
-            <arg line="-addcert -certnum 3 -alias 'trekbuddy2009' -keystore keystores\trekbuddy2009.jks -inputjad dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad -outputjad dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad"/>
+            <arg line="-addcert -certnum 3 -alias 'trekbuddy2010' -keystore keystores\trekbuddy2010.jks -inputjad dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad -outputjad dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad"/>
         </java>
         <java jar="${wtk.home}\bin\JadTool.jar" fork="true">
-            <arg line="-addjarsig -alias 'trekbuddy2009' -keystore keystores\trekbuddy2009.jks -keypass changeit -jarfile dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jar -inputjad dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad -outputjad dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad"/>
+            <arg line="-addjarsig -alias 'trekbuddy2010' -keystore keystores\trekbuddy2010.jks -keypass changeit -jarfile dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jar -inputjad dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad -outputjad dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad"/>
         </java>
         <fixcrlf srcdir="dist/${vendor.dir}/${dist.dir}"
                  eol="crlf" eof="remove" encoding="UTF-8"
@@ -953,7 +953,7 @@
         <echo>Using garnet.home=${garnet.home}</echo>
         <exec dir="${basedir}" newenvironment="true" executable="${garnet.home}\bin\jad2prc.exe">
             <env key="JAVA_HOME" value="${garnet.home}"/>
-            <arg line="-keystore keystores\j2me-manufacturer2009.keystore -vmOption -Xmx4M -o ${basedir}\dist/${vendor.dir}\palm\trekbuddy.prc ${basedir}\dist/${vendor.dir}\${dist.dir}\trekbuddy${suffix}.jad"/>
+            <arg line="-keystore keystores\j2me-manufacturer2010.keystore -vmOption -Xmx4M -o ${basedir}\dist/${vendor.dir}\palm\trekbuddy.prc ${basedir}\dist/${vendor.dir}\${dist.dir}\trekbuddy${suffix}.jad"/>
         </exec>
     </target>
 

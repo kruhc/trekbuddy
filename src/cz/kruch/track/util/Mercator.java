@@ -2,11 +2,11 @@
 
 package cz.kruch.track.util;
 
-import api.location.QualifiedCoordinates;
-import api.location.Datum;
 import api.location.CartesianCoordinates;
+import api.location.Datum;
 import api.location.Ellipsoid;
 import api.location.ProjectionSetup;
+import api.location.QualifiedCoordinates;
 
 import java.util.Vector;
 
@@ -15,16 +15,12 @@ import cz.kruch.track.configuration.Config;
 /**
  * Helper for spherical <-> cartesian transformations, grids etc.
  *
- * @author Ales Pour <kruhc@seznam.cz>
+ * @author kruhc@seznam.cz
  */
 public final class Mercator {
 
     private static Datum ntf;
     private static ProjectionSetup cachedUtmSetup;
-
-    public static void initialize() {
-        ntf = Config.getDatum("NTF");
-    }
 
     public static ProjectionSetup getUTMSetup(final QualifiedCoordinates qc) {
         final double lon = qc.getLon();
@@ -261,7 +257,7 @@ public final class Mercator {
                 final double m2 = Math.cos(fi) / Math.sqrt(1 - eccSquared * sinfi * sinfi);
                 final double n = ExtraMath.ln(m1 / m2) / ExtraMath.ln(t1 / t2);
 
-                QualifiedCoordinates localQc = ntf.toLocal(qc);
+                QualifiedCoordinates localQc = getNtfDatum().toLocal(qc);
                 fi = Math.toRadians(localQc.getLat());
                 sinfi = Math.sin(fi);
                 lambda = Math.toRadians(localQc.getLon());
@@ -578,7 +574,7 @@ public final class Mercator {
                 lon = Math.toDegrees(lon);
 
                 QualifiedCoordinates localQc = QualifiedCoordinates.newInstance(lat, lon);
-                qc = ntf.toWgs84(localQc);
+                qc = getNtfDatum().toWgs84(localQc);
                 QualifiedCoordinates.releaseInstance(localQc);
 
             } break;
@@ -705,6 +701,13 @@ public final class Mercator {
         else letterDesignator = 'Z'; // error flag to show that the latitude is outside the UTM limits
 
         return letterDesignator;
+    }
+
+    private static Datum getNtfDatum() {
+        if (ntf == null) {
+            ntf = Config.getDatum("NTF");
+        }
+        return ntf;
     }
 
 /*

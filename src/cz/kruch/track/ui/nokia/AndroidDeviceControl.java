@@ -38,4 +38,9 @@ final class AndroidDeviceControl extends DeviceControl {
             }
         });
     }
+
+//    /** @Override */
+//    String getCardURL() throws Exception {
+//        return android.os.Environment.getExternalStorageDirectory().toURL().toString();
+//    }
 }

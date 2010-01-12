@@ -150,6 +150,10 @@ public class DeviceControl extends TimerTask {
         instance.useTicker(displayable, ticker);
     }
 
+//    public static String getStorageURL() throws Exception {
+//        return instance.getCardURL();
+//    }
+
     //
     // implementation
     //
@@ -171,6 +175,10 @@ public class DeviceControl extends TimerTask {
         }
         return null;
     }
+
+//    String getCardURL() throws Exception {
+//        return null;
+//    }
 
     void sync() {
         confirm(backlight == STATUS_OFF ? Resources.getString(Resources.DESKTOP_MSG_BACKLIGHT_OFF) : Resources.getString(Resources.DESKTOP_MSG_BACKLIGHT_ON));

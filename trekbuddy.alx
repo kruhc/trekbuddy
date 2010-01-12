@@ -4,7 +4,7 @@
     <description>@DESCRIPTION@</description>  
     <version>@VERSION@</version>
     <vendor>@VENDOR@</vendor>  
-    <copyright>Copyright (C) 2009 @VENDOR@</copyright>  
+    <copyright>Copyright (C) 2010 @VENDOR@</copyright>  
     <fileset Java="1.0">
       <files>
           @MODULES@

@@ -276,6 +276,7 @@
 3622=Keep-alive (ms)
 3623=Alt correction (m)
 3624=log time ms
+3625=negative alt fix
 
 # settings forms/fields/values (Navigation)
 3700=Wpt Proximity

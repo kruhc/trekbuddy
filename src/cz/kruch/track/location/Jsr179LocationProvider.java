@@ -167,17 +167,21 @@ public final class Jsr179LocationProvider
             }
 
             // vars
-            javax.microedition.location.QualifiedCoordinates xc = l.getQualifiedCoordinates();
+            final javax.microedition.location.QualifiedCoordinates xc = l.getQualifiedCoordinates();
             final float spd = l.getSpeed();
             final float course = l.getCourse();
-            final float alt = xc.getAltitude() + Config.altCorrection;
-            final float accuracy = xc.getHorizontalAccuracy();
+            float alt = xc.getAltitude() + Config.altCorrection;
+//#ifdef __RIM__
+            if (Config.negativeAltFix) {
+                alt *= -1;
+            }
+//#endif
 
             // create up-to-date location
             QualifiedCoordinates qc = QualifiedCoordinates.newInstance(xc.getLatitude(),
                                                                        xc.getLongitude(),
                                                                        alt);
-            qc.setHorizontalAccuracy(accuracy);
+            qc.setHorizontalAccuracy(xc.getHorizontalAccuracy());
             final Location location = Location.newInstance(qc, l.getTimestamp(), 1, sat);
             location.setCourse(course);
             location.setSpeed(spd);

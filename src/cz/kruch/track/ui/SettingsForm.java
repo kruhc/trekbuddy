@@ -25,13 +25,14 @@ import javax.microedition.lcdui.ItemCommandListener;
 
 import api.file.File;
 import api.location.Datum;
+import api.location.ProjectionSetup;
 
 import java.util.Vector;
 
 /**
  * Settings forms.
  *
- * @author Ales Pour <kruhc@seznam.cz>
+ * @author kruhc@seznam.cz
  */
 final class SettingsForm implements CommandListener, ItemStateListener {
     private static final int MAX_URL_LENGTH = 256;
@@ -76,6 +77,7 @@ final class SettingsForm implements CommandListener, ItemStateListener {
     private ChoiceGroup choiceSort;
     private TextField fieldListFont;
     private TextField fieldAltCorrection;
+    private ChoiceGroup choiceBlackberry;
 
     private List pane;
     private Form submenu;
@@ -128,7 +130,7 @@ final class SettingsForm implements CommandListener, ItemStateListener {
             choiceMapDatum = new ChoiceGroup(Resources.getString(Resources.CFG_BASIC_GROUP_DEFAULT_DATUM), Desktop.CHOICE_POPUP_TYPE);
             choiceMapDatum.setFitPolicy(Choice.TEXT_WRAP_ON);
             for (int N = Config.datums.size(), i = 0; i < N; i++) {
-                String id = ((Datum) Config.datums.elementAt(i)).name;
+                final String id = ((Datum) Config.datums.elementAt(i)).name;
                 choiceMapDatum.setSelectedIndex(choiceMapDatum.append(id, null), Config.geoDatum.equals(id));
             }
             submenu.append(choiceMapDatum);
@@ -138,16 +140,9 @@ final class SettingsForm implements CommandListener, ItemStateListener {
             choiceCoordinates.setFitPolicy(Choice.TEXT_WRAP_ON);
             choiceCoordinates.append(Resources.getString(Resources.CFG_BASIC_FLD_COORDS_MAPLL), null);
             choiceCoordinates.append(Resources.getString(Resources.CFG_BASIC_FLD_COORDS_MAPGRID), null);
-            choiceCoordinates.append("UTM", null);
             choiceCoordinates.append(Resources.getString(Resources.CFG_BASIC_FLD_COORDS_GCLL), null);
-/*
-            choiceCoordinates.setSelectedFlags(new boolean[]{
-                false,
-                Config.useGridFormat,
-                Config.useUTM,
-                Config.useGeocachingFormat
-            });
-*/
+            choiceCoordinates.append(ProjectionSetup.PROJ_UTM, null);
+            // TODO: add BNG, IG, SG, SUI
             choiceCoordinates.setSelectedIndex(Config.cfmt, true);
             submenu.append(choiceCoordinates);
 
@@ -400,6 +395,13 @@ final class SettingsForm implements CommandListener, ItemStateListener {
             if (cz.kruch.track.TrackingMIDlet.jsr179 || cz.kruch.track.TrackingMIDlet.motorola179) {
                 fieldLocationTimings = new TextField(Resources.getString(Resources.CFG_LOCATION_FLD_LOCATION_TIMINGS), "", 12, TextField.ANY);
                 fieldAltCorrection = new TextField(Resources.getString(Resources.CFG_LOCATION_FLD_ALT_CORRECTION), "", 4, TextField.NUMERIC);
+//#ifdef __RIM__
+                choiceBlackberry = new ChoiceGroup("Blackberry", ChoiceGroup.MULTIPLE);
+                choiceBlackberry.append(Resources.getString(Resources.CFG_LOCATION_FLD_NEGATIVE_ALT_FIX), null);
+                choiceBlackberry.setSelectedFlags(new boolean[] {
+                    Config.negativeAltFix
+                });
+//#endif
             }
             if (cz.kruch.track.TrackingMIDlet.hasFlag("provider_o2_germany")) {
                 fieldO2Depth = new TextField(Resources.getString(Resources.CFG_LOCATION_FLD_FILTER_DEPTH), Integer.toString(Config.o2Depth), 2, TextField.NUMERIC);
@@ -430,12 +432,12 @@ final class SettingsForm implements CommandListener, ItemStateListener {
                     continue;
 
                 if (choiceTracklogFormat == affected) {
-                    if (fieldSimulatorDelay == item || fieldLocationTimings == item || fieldCommUrl == item || fieldBtKeepalive == item || fieldO2Depth == item || fieldAltCorrection == item || choiceTracklog == item || choiceTracklogFormat == item)
+                    if (fieldSimulatorDelay == item || fieldLocationTimings == item || fieldCommUrl == item || fieldBtKeepalive == item || fieldO2Depth == item || fieldAltCorrection == item || choiceBlackberry == item || choiceTracklog == item || choiceTracklogFormat == item)
                         continue;
                 }
 
                 if (choiceTracklog == affected) {
-                    if (fieldSimulatorDelay == item || fieldLocationTimings == item || fieldCommUrl == item || fieldBtKeepalive == item || fieldO2Depth == item || fieldAltCorrection == item || choiceTracklog == item)
+                    if (fieldSimulatorDelay == item || fieldLocationTimings == item || fieldCommUrl == item || fieldBtKeepalive == item || fieldO2Depth == item || fieldAltCorrection == item || choiceBlackberry == item || choiceTracklog == item)
                         continue;
                 }
 
@@ -460,6 +462,9 @@ final class SettingsForm implements CommandListener, ItemStateListener {
                         appendWithNewlineAfter(submenu, fieldLocationTimings);
                         fieldAltCorrection.setString(Integer.toString(Config.altCorrection));
                         appendWithNewlineAfter(submenu, fieldAltCorrection);
+//#endif
+//#ifdef __RIM__
+                        appendWithNewlineAfter(submenu, choiceBlackberry);
 //#endif
                     break;
                     case Config.LOCATION_PROVIDER_SERIAL:
@@ -561,20 +566,6 @@ final class SettingsForm implements CommandListener, ItemStateListener {
 
                 // coordinates format
                 Config.cfmt = choiceCoordinates.getSelectedIndex();
-/*
-                Config.useGridFormat = Config.useUTM = Config.useGeocachingFormat = false;
-                switch (choiceCoordinates.getSelectedIndex()) { // getSelectedFlags does not work on JP-7
-                    case 1:
-                        Config.useGridFormat = true;
-                        break;
-                    case 2:
-                        Config.useUTM = true;
-                        break;
-                    case 3:
-                        Config.useGeocachingFormat = true;
-                        break;
-                }
-*/
 
                 // units format
                 Config.units = choiceUnits.getSelectedIndex();
@@ -611,6 +602,11 @@ final class SettingsForm implements CommandListener, ItemStateListener {
                 if (cz.kruch.track.TrackingMIDlet.hasFlag("provider_o2_germany")) {
                     Config.o2Depth = Integer.parseInt(fieldO2Depth.getString());
                 }
+//#ifdef __RIM__
+                final boolean[] bbopts = new boolean[choiceBlackberry.size()];
+                choiceBlackberry.getSelectedFlags(bbopts);
+                Config.negativeAltFix = bbopts[0];
+//#endif
 
                 // tracklogs, waypoints
                 if (File.isFs()) {

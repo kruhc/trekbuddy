@@ -61,15 +61,14 @@ import org.hecl.FloatThing;
 //#endif
 
 /**
- * CMS aka 'Cockpit' screen.
+ * CMS aka computer screen.
  *
- * @author Ales Pour <kruhc@seznam.cz>
+ * @author kruhc@seznam.cz
  */
-final class ComputerView
-        extends View
-        implements Runnable, CommandListener
+final class ComputerView extends View
+                         implements Runnable, CommandListener
 //#ifdef __HECL__
-                   , ControlledInterp.Lookup
+                         , ControlledInterp.Lookup
 //#endif
                                              {
 //#ifdef __LOG__
@@ -1287,7 +1286,7 @@ final class ComputerView
                                         }
                                     } break;
                                     case VALUE_PACE: {
-                                        float value = fromKmh(units, spdavgShort/*valuesFloat[VALUE_SPD]*/);
+                                        float value = fromKmh(units, /*spdavgShort*/valuesFloat[VALUE_SPD_AVG]);
                                         value = 60 / value;
                                         if (value < 100F) {
                                             final int mins = (int) value;
@@ -2272,8 +2271,8 @@ final class ComputerView
 
     /* synchronized to avoid race-cond with hecl processing in render */
     private /*static*/ synchronized void invokeHandlers(final Interp interp,
-                                       final NakedVector handlers,
-                                       final Thing[] argv) {
+                                                        final NakedVector handlers,
+                                                        final Thing[] argv) {
         if (interp == null || handlers == null || argv == null) {
             return;
         }

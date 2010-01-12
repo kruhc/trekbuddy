@@ -16,6 +16,11 @@ import cz.kruch.track.io.LineReader;
 import cz.kruch.track.util.CharArrayTokenizer;
 import cz.kruch.track.ui.NavigationScreens;
 
+/**
+ * TAR map and atlas support.
+ *
+ * @author kruhc@seznam.cz
+ */
 final class TarLoader extends Map.Loader implements Atlas.Loader {
 
     /*
@@ -369,7 +374,7 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
                             // construct URLs
                             final String realUrl = entryName.append(sb).toString();
                             final String fakeUrl;
-                            if (url.endsWith(".idx")) {
+                            if (url.endsWith(".idx") || url.endsWith(".IDX")) {
                                 fakeUrl = realUrl;
                             } else {
                                 fakeUrl = sb.delete(0, sb.length()).append(baseUrl).append(lName).append(File.PATH_SEPCHAR).append(mName).append(File.PATH_SEPCHAR).append(mName).append(".tar").toString();

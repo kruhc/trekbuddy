@@ -27,7 +27,7 @@ import api.file.File;
 /**
  * Represents and handles configuration persisted in RMS.
  *
- * @author Ales Pour <kruhc@seznam.cz>
+ * @author kruhc@seznam.cz
  */
 public final class Config implements Runnable, YesNoDialog.AnswerListener {
 //#ifdef __LOG__
@@ -55,8 +55,8 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
     /* coordinate format */
     public static final int COORDS_MAP_LATLON       = 0;
     public static final int COORDS_MAP_GRID         = 1;
-    public static final int COORDS_UTM              = 2;
-    public static final int COORDS_GC_LATLON        = 3;
+    public static final int COORDS_GC_LATLON        = 2;
+    public static final int COORDS_UTM              = 3;
 
     /* units */
     public static final int UNITS_METRIC            = 0;
@@ -128,6 +128,9 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
 
     // group [O2Germany provider options]
     public static int o2Depth                   = 1;
+
+    // group [Blackberry]
+    public static boolean negativeAltFix        = true;
 
     // group [Desktop]
     public static boolean fullscreen;
@@ -211,7 +214,11 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         safeColors = true;
 //#elifdef __ANDROID__
         /* default for Android (MicroEmu) */
-        dataDir = getDefaultDataDir("file:///sdcard/", "TrekBuddy/");
+//        try {
+//            dataDir = getDefaultDataDir(cz.kruch.track.ui.nokia.DeviceControl.getStorageURL(), "TrekBuddy/");
+//        } catch (Exception e) {
+            dataDir = getDefaultDataDir("file:///sdcard/", "TrekBuddy/");
+//        }
         fullscreen = true;
         safeColors = false;
         listFont = 0x200010;
@@ -541,6 +548,12 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         } catch (Exception e) {
         }
 
+        // 0.9.91 extensions
+        try {
+            negativeAltFix = din.readBoolean();
+        } catch (Exception e) {
+        }
+
 //#ifdef __LOG__
         if (log.isEnabled()) log.info("configuration read");
 //#endif
@@ -632,6 +645,8 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         /* since 0.9.88 */
         dout.writeInt(altCorrection);
         dout.writeBoolean(gpxSecsDecimal);
+        /* since 0.9.91 */
+        dout.writeBoolean(negativeAltFix);
 
 //#ifdef __LOG__
         if (log.isEnabled()) log.info("configuration updated");

@@ -24,9 +24,9 @@ import java.util.Calendar;
 import java.util.TimeZone;
 
 /**
- * All-stuff helper.
+ * Misc helper.
  *
- * @author Ales Pour <kruhc@seznam.cz>
+ * @author kruhc@seznam.cz
  */
 public final class NavigationScreens {
 

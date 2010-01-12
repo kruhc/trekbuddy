@@ -14,6 +14,11 @@ import javax.microedition.midlet.MIDlet;
 
 import java.util.TimerTask;
 
+/**
+ * Graphic output and user interaction.
+ *
+ * @author kruhc@seznam.cz
+ */
 final class DeviceScreen extends GameCanvas implements Runnable {
 //#ifdef __LOG__
     private static final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("Canvas");

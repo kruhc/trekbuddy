@@ -15,9 +15,9 @@ import javax.microedition.lcdui.Graphics;
 import javax.microedition.lcdui.Font;
 
 /**
- * HPS.
+ * HPS aka compass screen.
  *
- * @author Ales Pour <kruhc@seznam.cz>
+ * @author kruhc@seznam.cz
  */
 final class LocatorView extends View {
     private static final String MSG_NO_WAYPOINT = Resources.getString(Resources.DESKTOP_MSG_NO_WPT);
@@ -395,10 +395,15 @@ final class LocatorView extends View {
 
             // draw lat/lon
             sb.delete(0, sb.length());
-            NavigationScreens.printTo(coordsAvg, sb);
+            NavigationScreens.printTo(sb, coordsAvg, QualifiedCoordinates.LAT, true);
             int l = sb.length();
             sb.getChars(0, l, sbChars, 0);
             graphics.drawChars(sbChars, 0, l, OSD.BORDER, 0, Graphics.LEFT | Graphics.TOP);
+            sb.delete(0, sb.length());
+            NavigationScreens.printTo(sb, coordsAvg, QualifiedCoordinates.LON, true);
+            l = sb.length();
+            sb.getChars(0, l, sbChars, 0);
+            graphics.drawChars(sbChars, 0, l, OSD.BORDER, fh, Graphics.LEFT | Graphics.TOP);
 
             // draw hdop
             final float hAccuracy = coordsAvg.getHorizontalAccuracy();
@@ -413,7 +418,7 @@ final class LocatorView extends View {
                 sb.append(' ').append('m');
                 l = sb.length();
                 sb.getChars(0, l, sbChars, 0);
-                graphics.drawChars(sbChars, 0, l, OSD.BORDER, fh, 0);
+                graphics.drawChars(sbChars, 0, l, OSD.BORDER, 2 * fh, 0);
             }
 
             // draw sat

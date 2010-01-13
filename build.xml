@@ -20,6 +20,7 @@
     <property name="garnet.home" value="c:\J2ME\Garnet\PalmOS JVM 5.7.2\Tools"/>
     <property name="rim41.home" value="c:\J2ME\RIM\JDE 4.1.0"/>
     <property name="rim42.home" value="c:\J2ME\RIM\JDE 4.2.1"/>
+    <property name="rim50.home" value="c:\J2ME\RIM\JDE 5.0"/>
     <property name="android15.home" value="c:\J2ME\android-sdk-windows\platforms\android-1.5"/>
     <property name="android16.home" value="c:\J2ME\android-sdk-windows\platforms\android-1.6"/>
     <property name="microemu.home" value="z:\repository\microemu"/>
@@ -99,6 +100,10 @@
 
     <path id="bootclasspath.rim42">
         <pathelement location="${rim42.home}\lib\net_rim_api.jar"/>
+    </path>
+
+    <path id="bootclasspath.rim50">
+        <pathelement location="${rim50.home}\lib\net_rim_api.jar"/>
     </path>
 
     <target name="standard">
@@ -218,6 +223,26 @@
         <antcall target="rim.ota" inheritall="true"/>
     </target>
 
+    <target name="rim50">
+        <property name="suffix" value="_bb_v50"/>
+        <property name="dist.dir" value="rim50"/>
+        <property name="rim.home" value="${rim50.home}"/>
+        <property name="libraryjars" value="${rim50.home}\lib\net_rim_api.jar"/>
+        <property name="classpath.preverify" value="${libraryjars}"/>
+        <property name="rim.cod.dependencies" value="net_rim_cldc,net_rim_locationapi,net_rim_bluetooth"/>
+        <property name="rim.bb.version" value="[5.0,)"/>
+        <antcall target="clean"/>
+        <antcall target="a.pre.rim"/>
+        <antcall target="compile.rim50"/>
+        <antcall target="rim.pack" inheritall="true"/>
+        <antcall target="obfuscate.rim" inheritall="true"/>
+        <antcall target="rim.preverify" inheritall="true"/>
+        <antcall target="dist" inheritall="true"/>
+        <antcall target="rim.rapc" inheritall="true"/>
+        <antcall target="rim.sign" inheritall="true"/>
+        <antcall target="rim.ota" inheritall="true"/>
+    </target>
+
     <target name="android15">
         <property name="suffix" value="-android"/>
         <property name="dist.dir" value="android15"/>
@@ -241,7 +266,7 @@
               tofile="tmp/preverified/trekbuddy${suffix}-obfuscated.jar"/>
         <antcall target="dist" inheritall="true"/>
         <ant dir="z:/repository/microemu/microemu-android"
-             antfile="build-trekbuddy.xml" target="sign"
+             antfile="build-trekbuddy.xml" target="zipalign"
              inheritAll="false" inheritRefs="false">
 			<property name="sdk.version" value="1.5"/>
 			<property name="api.level" value="3"/>
@@ -281,7 +306,7 @@
               tofile="tmp/preverified/trekbuddy${suffix}-obfuscated.jar"/>
         <antcall target="dist" inheritall="true"/>
         <ant dir="z:/repository/microemu/microemu-android"
-             antfile="build-trekbuddy.xml" target="sign"
+             antfile="build-trekbuddy.xml" target="zipalign"
              inheritAll="false" inheritRefs="false">
 			<property name="sdk.version" value="1.6"/>
 			<property name="api.level" value="4"/>
@@ -455,6 +480,18 @@
                bootclasspathref="bootclasspath.rim42"/>
     </target>
 
+    <target name="compile.rim50" depends="remove.nonrim50.src">
+        <mkdir dir="tmp/build/classes"/>
+        <mkdir dir="tmp/ant"/>
+        <javac srcdir="tmp/src"
+               destdir="tmp/build/classes"
+               tempdir="tmp/ant"
+               fork="true"
+               deprecation="true"
+               target="1.1" source="1.3"
+               bootclasspathref="bootclasspath.rim50"/>
+    </target>
+
     <target name="compile.android15" depends="remove.nonandroid.src,remove.rim.src">
         <mkdir dir="tmp/build/classes"/>
         <mkdir dir="tmp/ant"/>
@@ -534,6 +571,10 @@
 
     <target name="remove.nonrim42.src" depends="remove.nonstd.src,remove.android.src">
         <delete file="tmp/src/cz/kruch/track/fun/Jsr234Camera.java"/>
+        <delete file="tmp/src/cz/kruch/track/ui/nokia/Midp2DeviceControl.java"/>
+    </target>
+
+    <target name="remove.nonrim50.src" depends="remove.nonstd.src,remove.android.src">
         <delete file="tmp/src/cz/kruch/track/ui/nokia/Midp2DeviceControl.java"/>
     </target>
 

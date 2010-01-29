@@ -787,7 +787,7 @@ final class MapViewer {
         if (Desktop.routeDir != 0) {
 
             // line color and style
-            graphics.setColor(Config.routeLineColor);
+            graphics.setColor(Config.routeColor);
             if (Config.routeLineStyle) {
                 graphics.setStrokeStyle(Graphics.DOTTED);
             }

@@ -184,6 +184,8 @@ public final class TarEntry {
      */
     private static final byte LF_DIR = (byte) '5';
 
+    private static final char[] DIR_SUFFIX = { '/' };
+
     /**
      * The entry's name.
      */
@@ -257,7 +259,7 @@ public final class TarEntry {
      * @return True if this entry is a directory.
      */
     public boolean isDirectory() {
-        return this.linkFlag == LF_DIR || this.name.endsWith("/");
+        return this.linkFlag == LF_DIR || this.name.endsWith(DIR_SUFFIX);
     }
 
     /**

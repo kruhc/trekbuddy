@@ -6,9 +6,9 @@ import javax.microedition.midlet.MIDlet;
 import javax.microedition.midlet.MIDletStateChangeException;
 
 /**
- * Main MIDlet.
+ * The MIDlet.
  *
- * @author Ales Pour <kruhc@seznam.cz>
+ * @author kruhc@seznam.cz
  */
 public class TrackingMIDlet extends MIDlet implements Runnable {
 

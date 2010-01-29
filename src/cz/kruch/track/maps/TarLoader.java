@@ -156,7 +156,7 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
                     final CharArrayTokenizer.Token entryName = entry.getName();
 
                     if (!gotSlices && entryName.startsWith(SET_DIR_PREFIX)
-                        && (entryName.endsWith(".png") || entryName.endsWith(".jpg"))) { // slice
+                        && (entryName.endsWith(EXT_PNG) || entryName.endsWith(EXT_JPG))) { // slice
 
                         // add slice
                         registerSlice(entryName, (int) (entry.getPosition() / TarInputStream.DEFAULT_RCDSIZE));
@@ -430,7 +430,7 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
         File file = null;
 
         try {
-            // check for .tmi nativeFile
+            // check for .tmi existence
             final String tmiPath = map.getPath().substring(0, map.getPath().lastIndexOf('.')) + ".tmi";
             file = File.open(tmiPath);
             if (file.exists()) {
@@ -472,7 +472,7 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
 //#endif
 
                         // add slice
-                        if (token.startsWith("set/") && (token.endsWith(".png") || token.endsWith(".jpg"))) {
+                        if (token.startsWith(SET_DIR_PREFIX) && (token.endsWith(EXT_PNG) || token.endsWith(EXT_JPG))) {
                             registerSlice(token, block);
                         }
 

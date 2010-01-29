@@ -345,12 +345,15 @@ public final class Map implements Runnable {
 //#ifdef __LOG__
         protected static final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("Map.Loader");
 //#endif
-        protected static final String SET_DIR_PREFIX = "set/";
+        protected static final char[] SET_DIR_PREFIX = { 's', 'e', 't', '/' };
+        protected static final char[] EXT_PNG = { '.', 'p', 'n', 'g' };
+        protected static final char[] EXT_JPG = { '.', 'j', 'p', 'g' };
+        
         protected static final BufferedInputStream buffered = new BufferedInputStream(null, 4096);
 
         protected Map map;
         protected String basename;
-        protected String extension;
+        protected char[] extension;
         protected boolean isGPSka, isTar;
 
         private int tileWidth, tileHeight;
@@ -528,11 +531,11 @@ public final class Map implements Runnable {
             return name;
         }
 
-        private String getExtension(final CharArrayTokenizer.Token token) throws InvalidMapException {
+        private char[] getExtension(final CharArrayTokenizer.Token token) throws InvalidMapException {
             final String name = token.toString();
             final int i = name.lastIndexOf('.');
             if (i > -1) {
-                return name.substring(i);
+                return name.substring(i).toCharArray();
             }
             throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_INVALID_SLICE_NAME) + name);
         }

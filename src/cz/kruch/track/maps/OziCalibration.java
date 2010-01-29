@@ -36,12 +36,12 @@ final class OziCalibration extends Calibration {
     private static final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("OziCalibration");
 //#endif
 
-    private static final String LINE_POINT          = "Point";
-    private static final String LINE_MAP_PROJECTION = "Map Projection";
-    private static final String LINE_PROJECTION_SETUP = "Projection Setup";
-    private static final String LINE_MMPXY          = "MMPXY";
-    private static final String LINE_MMPLL          = "MMPLL";
-    private static final String LINE_IWH            = "IWH";
+    private static final char[] LINE_POINT              = { 'P', 'o', 'i', 'n', 't' };
+    private static final char[] LINE_MAP_PROJECTION     = { 'M', 'a', 'p', ' ', 'P', 'r', 'o', 'j', 'e', 'c', 't', 'i', 'o', 'n' };
+    private static final char[] LINE_PROJECTION_SETUP   = { 'P', 'r', 'o', 'j', 'e', 'c', 't', 'i', 'o', 'n', ' ', 'S', 'e', 't', 'u', 'p' };
+    private static final char[] LINE_MMPXY              = { 'M', 'M', 'P', 'X', 'Y' };
+    private static final char[] LINE_MMPLL              = { 'M', 'M', 'P', 'L', 'L' };
+    private static final char[] LINE_IWH                = { 'I', 'W', 'H' };
 
     OziCalibration() {
         super();

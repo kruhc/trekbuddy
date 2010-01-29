@@ -1,18 +1,4 @@
-/*
- * Copyright 2006-2007 Ales Pour <kruhc@seznam.cz>.
- * All Rights Reserved.
- * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
- *
- * This code is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License version 2 only, as
- * published by the Free Software Foundation.
- *
- * This code is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
- * version 2 for more details (a copy is included in the LICENSE file that
- * accompanied this code).
- */
+// @LICENSE@
 
 package cz.kruch.track.util;
 
@@ -21,7 +7,7 @@ import java.util.NoSuchElementException;
 /**
  * Tokenizer for char arrays.
  *
- * @author Ales Pour <kruhc@seznam.cz>
+ * @author kruhc@seznam.cz
  */
 public final class CharArrayTokenizer {
     private static final char[] DEFAULT_DELIMS = { ',' };
@@ -345,6 +331,51 @@ public final class CharArrayTokenizer {
             length = end - offset;
         }
 
+        public boolean startsWith(final char[] s) {
+            int sl = s.length;
+            if (sl <= length) {
+                final char[] array = this.array;
+                int affset = this.begin;
+                int offset = 0;
+                boolean cond = true;
+
+                while (--sl >= 0) {
+                    if (array[affset] != s[offset]) {
+                        cond = false; break;
+                    }
+                    affset++;
+                    offset++;
+                }
+
+                return cond;
+            }
+
+            return false;
+        }
+
+        public boolean endsWith(final char[] s) {
+            final int sl = s.length;
+            if (sl <= length) {
+                final char[] array = this.array;
+                int affset = this.begin + this.length - sl;
+                int offset = 0;
+                boolean cond = true;
+
+                while (offset < sl) {
+                    if (array[affset] != s[offset]) {
+                        cond = false; break;
+                    }
+                    affset++;
+                    offset++;
+                }
+
+                return cond;
+            }
+
+            return false;
+        }
+
+        /** @deprecated */
         public boolean startsWith(final String s) {
             int sl = s.length();
             if (sl > length) {
@@ -367,6 +398,7 @@ public final class CharArrayTokenizer {
             return cond;
         }
 
+        /** @deprecated */
         public boolean endsWith(final String s) {
             final int sl = s.length();
             if (sl > length) {

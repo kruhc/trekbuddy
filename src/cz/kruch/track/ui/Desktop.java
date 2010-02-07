@@ -230,6 +230,7 @@ public final class Desktop implements CommandListener,
     public Worker getEventWorker() {
         if (eventWorker == null) {
             eventWorker = new Worker("Event Worker");
+            eventWorker.setPriority(Thread.MAX_PRIORITY);
             eventWorker.start();
         }
         return eventWorker;
@@ -654,6 +655,19 @@ public final class Desktop implements CommandListener,
             }
         }
 
+//#ifdef __ANDROID__
+/*
+        // start orientation sensing
+        try {
+            LocationProvider sensor = new cz.kruch.track.location.AndroidLocationProvider();
+            sensor.setLocationListener(this);
+            ((cz.kruch.track.location.AndroidLocationProvider) sensor).sense();
+        } catch (Throwable t) {
+            showError("Sensor", t, screen);
+        }
+*/
+//#endif
+
         // loads CMS profiles
         getDiskWorker().enqueue((Runnable) views[VIEW_CMS]);
     }
@@ -879,6 +893,17 @@ public final class Desktop implements CommandListener,
         getEventWorker().enqueue(newEvent(Event.EVENT_TRACKLOG,
                                           new Integer(isRecording ? GpxTracklog.CODE_RECORDING_START : GpxTracklog.CODE_RECORDING_STOP),
                                           null, provider));
+    }
+
+    public void orientationChanged(LocationProvider provider, int heading) {
+//#ifdef __LOG__
+        if (log.isEnabled()) log.info("orientation changed; " + heading);
+//#endif
+
+//        eventing.callSerially(newEvent(Event.EVENT_ORIENTATION_CHANGED,
+//                              new Integer(heading), null, provider));
+        getEventWorker().enqueue(newEvent(Event.EVENT_ORIENTATION_CHANGED,
+                                          new Integer(heading), null, provider));
     }
 
     //
@@ -1509,15 +1534,11 @@ public final class Desktop implements CommandListener,
         if (log.isEnabled()) log.debug("update " + Integer.toBinaryString(mask));
 //#endif
 
-        // wen can ignore update request when paused
-        if (cz.kruch.track.TrackingMIDlet.state != 1) {
-            return;
-        }
+        // anything to update and not paused?
+        if (mask != MASK_NONE && cz.kruch.track.TrackingMIDlet.state == 1) {
 
-        // anything to update?
-        if (mask != MASK_NONE) {
-
-            // notify view render event is about to happen to have tiles ready asap
+            // notify map view that render event is about to happen...
+            // so that it can start loading tiles asap...
             // TODO MapView specific
             if ((mask & Desktop.MASK_MAP) != 0 && mode == VIEW_MAP) {
                 synchronized (loadingLock) {
@@ -2369,6 +2390,7 @@ public final class Desktop implements CommandListener,
         public static final int EVENT_LOADING_STATUS_CHANGED        = 8;
         public static final int EVENT_TRACKING_STATUS_CHANGED       = 9;
         public static final int EVENT_TRACKING_POSITION_UPDATED     = 10;
+        public static final int EVENT_ORIENTATION_CHANGED           = 11;
 
         private int code;
         private Object result;
@@ -2487,6 +2509,9 @@ public final class Desktop implements CommandListener,
                         case EVENT_TRACKING_POSITION_UPDATED: {
                             execTrackingPositionUpdated();
                         } break;
+                        case EVENT_ORIENTATION_CHANGED: {
+                            execOrientationChanged();
+                        } break;
                     }
                 } // ~synchronized
 
@@ -2498,7 +2523,7 @@ public final class Desktop implements CommandListener,
                 t.printStackTrace();
                 if (log.isEnabled()) log.debug("event failure", t);
 //#endif
-                Desktop.showError("_EVENT FAILURE_ (" + this + ")", t, null);
+                Desktop.showError("_EVENT FAILURE_ (" + this + ")", t, Desktop.screen);
 
             } finally {
 
@@ -3086,6 +3111,32 @@ public final class Desktop implements CommandListener,
             // update screen
             Desktop.this.update(mask);
 
+        }
+
+        private void execOrientationChanged() {
+
+            // grab event data
+            final int heading = ((Integer) result).intValue();
+            
+            // notify views
+            int mask = MASK_NONE;
+            final View[] views = Desktop.this.views;
+            for (int i = views.length; --i >= 0; ) {
+                try {
+                    final int m = views[i].orientationChanged(heading);
+                    if (i == mode) { // current view
+                        mask |= m;
+                    }
+                } catch (Exception e) {
+//#ifdef __LOG__
+                    e.printStackTrace();
+//#endif
+                    throw new RuntimeException("Exception [orientation changed] in view #" + i + ": " + e.toString());
+                }
+            }
+
+            // update screen
+            Desktop.this.update(mask);
         }
 
         private void cleanup(final Throwable unused) {

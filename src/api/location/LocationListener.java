@@ -30,4 +30,7 @@ public interface LocationListener {
 
     public void tracklogStateChanged(LocationProvider provider,
                                      boolean isRecording);
+
+    public void orientationChanged(LocationProvider provider,
+                                   int heading);
 }

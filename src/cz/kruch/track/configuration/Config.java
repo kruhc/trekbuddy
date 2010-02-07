@@ -178,7 +178,6 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
     // group [Navigation]
     public static int wptProximity              = 50;
     public static int poiProximity              = 1000;
-    public static int routeLineColor;
     public static boolean routeLineStyle;
     public static boolean routePoiMarks         = true;
     public static int routeColor;
@@ -357,7 +356,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         }
     }
 
-    private static void readMain(DataInputStream din) throws IOException {
+    private static void readMain(final DataInputStream din) throws IOException {
         mapPath = din.readUTF();
         String _locationProvider = din.readUTF();
         /*timeZone = */din.readUTF();
@@ -425,7 +424,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
             wptProximity = din.readInt();
             poiProximity = din.readInt();
             /*language = */din.readUTF();
-            routeLineColor = din.readInt();
+            /*routeLineColor = */din.readInt();
             routeLineStyle = din.readBoolean();
             routePoiMarks = din.readBoolean();
             /*scrollingDelay = */din.readInt();
@@ -559,7 +558,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
 //#endif
     }
 
-    private static void writeMain(DataOutputStream dout) throws IOException {
+    private static void writeMain(final DataOutputStream dout) throws IOException {
         dout.writeUTF(mapPath);
         dout.writeUTF(EMPTY_STRING/*locationProvider*/);
         dout.writeUTF(EMPTY_STRING/*timeZone*/);
@@ -602,7 +601,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         dout.writeInt(wptProximity);
         dout.writeInt(poiProximity);
         dout.writeUTF(EMPTY_STRING/*language*/);
-        dout.writeInt(routeLineColor);
+        dout.writeInt(0/*routeLineColor*/);
         dout.writeBoolean(routeLineStyle);
         dout.writeBoolean(routePoiMarks);
         dout.writeInt(0/*scrollingDelay*/);
@@ -653,7 +652,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
 //#endif
     }
 
-    private static void initialize(String rms) throws ConfigurationException {
+    private static void initialize(final String rms) throws ConfigurationException {
         RecordStore rs = null;
         DataInputStream din = null;
 
@@ -693,7 +692,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         }
     }
 
-    public static void update(String rms) throws ConfigurationException {
+    public static void update(final String rms) throws ConfigurationException {
         RecordStore rs = null;
         DataOutputStream dout = null;
 

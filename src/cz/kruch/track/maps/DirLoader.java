@@ -83,7 +83,7 @@ final class DirLoader extends Map.Loader implements Atlas.Loader {
                 // GPSka hack
                 if (isGPSka) {
                     basename = getMapCalibration().getImgname();
-                    extension = ".png";
+                    extension = EXT_PNG;
                     addSlice(null);
                 }
 

@@ -41,6 +41,7 @@ final class LocatorView extends View {
     private int[] count;
     private int[] position;
     private float[] lastCourse;
+    private int orientation;
 
 //    private final QualifiedCoordinates[] coordinatesAvg;
 //    private final int[] satAvg;
@@ -69,6 +70,7 @@ final class LocatorView extends View {
         this.count = new int[2];
         this.position = new int[2];
         this.lastCourse = new float[2];
+        this.orientation = -1;
         this.rangeIdx = new int[]{ 2, 2 };
         this.navigationStrWidth = Math.max(Desktop.font.stringWidth(MSG_NO_WAYPOINT),
                                            Desktop.font.stringWidth("9.999 M"));
@@ -103,6 +105,13 @@ final class LocatorView extends View {
             // recalc
             recalc(l.getTimestamp());
         }
+
+        return Desktop.MASK_SCREEN;
+    }
+
+    public int orientationChanged(int heading) {
+        // remember
+        this.orientation = heading;
 
         return Desktop.MASK_SCREEN;
     }
@@ -261,6 +270,7 @@ final class LocatorView extends View {
         final StringBuffer sb = this.sb;
         final char[] sbChars = this.sbChars;
         final int fh = osd.bh;
+        final int orientation = this.orientation;
 
         // main colors
         final int bgColor, fgColor, wptColor;
@@ -296,13 +306,11 @@ final class LocatorView extends View {
             } else {
                 course = Float.NaN;
             }
-            final boolean fresh;
-            if (!Float.isNaN(course)) {
+            final boolean fresh = !Float.isNaN(course);
+            if (fresh) {
                 lastCourse[term] = course;
-                fresh = true;
             } else {
                 course = lastCourse[term];
-                fresh = false;
             }
             drawCompas(wHalf, hHalf, fh, graphics, mode % 2 == 0 ? course : 0, fresh);
         } /* ~ */
@@ -314,13 +322,26 @@ final class LocatorView extends View {
                          lineLength - (fh << 1),
                          0, 360);
 
-        // draw course
-        graphics.setColor(fgColor);
-        sb.delete(0, sb.length());
-        NavigationScreens.append(sb, (int) course).append(NavigationScreens.SIGN);
-        final int cl = sb.length();
-        sb.getChars(0, cl, sbChars, 0);
-        graphics.drawChars(sbChars, 0, cl, w - courseStrWidth, fh, Graphics.LEFT | Graphics.TOP);
+        // draw course // TODO move bellow
+        if (count[term] > 0) {
+            graphics.setColor(fgColor);
+            sb.delete(0, sb.length());
+            NavigationScreens.append(sb, (int) course).append(NavigationScreens.SIGN);
+            final int cl = sb.length();
+            sb.getChars(0, cl, sbChars, 0);
+            graphics.drawChars(sbChars, 0, cl, w - courseStrWidth, fh, Graphics.LEFT | Graphics.TOP);
+        }
+
+/*
+        // draw orientation
+        if (heading != -1) {
+            sb.delete(0, sb.length());
+            NavigationScreens.append(sb, heading).append(NavigationScreens.SIGN);
+            final int l = sb.length();
+            sb.getChars(0, l, sbChars, 0);
+            graphics.drawChars(sbChars, 0, l, w - courseStrWidth, 2 * fh, Graphics.LEFT | Graphics.TOP);
+        }
+*/
 
         // wpt index
         final Waypoint wpt = navigator.getNavigateTo();
@@ -405,7 +426,7 @@ final class LocatorView extends View {
             sb.getChars(0, l, sbChars, 0);
             graphics.drawChars(sbChars, 0, l, OSD.BORDER, fh, Graphics.LEFT | Graphics.TOP);
 
-            // draw hdop
+            // draw hdop and orientation
             final float hAccuracy = coordsAvg.getHorizontalAccuracy();
             if (!Float.isNaN(hAccuracy)) {
                 sb.delete(0, sb.length());
@@ -418,7 +439,7 @@ final class LocatorView extends View {
                 sb.append(' ').append('m');
                 l = sb.length();
                 sb.getChars(0, l, sbChars, 0);
-                graphics.drawChars(sbChars, 0, l, OSD.BORDER, 2 * fh, 0);
+                graphics.drawChars(sbChars, 0, l, OSD.BORDER, 2 * fh, Graphics.LEFT | Graphics.TOP);
             }
 
             // draw sat

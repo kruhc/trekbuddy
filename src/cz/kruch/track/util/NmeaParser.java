@@ -445,22 +445,24 @@ public final class NmeaParser {
 
     private static int parseTime(final CharArrayTokenizer.Token token) {
         int tl = CharArrayTokenizer.parseInt(token.array, token.begin, 6/*token.length*/);
-        final int hours = /*(int)*/ tl / 10000;
+        final int hours = tl / 10000;
         tl -= hours * 10000;
-        final int mins = /*(int)*/ tl / 100;
+        final int mins = tl / 100;
         tl -= mins * 100;
-        final int sec = /*(int)*/ tl;
-//#ifdef ONE_HZ
-//        final int ms = 0;
-//#else
-//        final int ms = CharArrayTokenizer.parseInt(token.array, token.begin + 7, 3);
-        final int ms;
+        final int sec = tl;
+        int ms = 0;
         if (token.length > 7) {
             ms = (token.array[token.begin + 7] - '0') * 100;
-        } else {
-            ms = 0;
         }
-//#endif
+        if (cz.kruch.track.configuration.Config.nmeaMsExact) {
+            if (token.length > 8) {
+                ms += (token.array[token.begin + 8] - '0') * 10;
+            }
+            if (token.length > 9) {
+                ms += (token.array[token.begin + 9] - '0');
+            }
+        }
+
         return (3600 * hours + 60 * mins + sec) * 1000 + ms;
     }
 

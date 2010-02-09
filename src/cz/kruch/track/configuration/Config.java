@@ -96,6 +96,9 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
     // group [Map datum]
     public static String geoDatum           = "WGS 84";
 
+    // group [Startup screen]
+    public static int startupScreen;
+
     // group [Provider]
     public static int locationProvider      = -1;
 
@@ -132,6 +135,9 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
     // group [Blackberry]
     public static boolean negativeAltFix        = true;
 
+    // group [NMEA]
+    public static boolean nmeaMsExact           = true;
+
     // group [Desktop]
     public static boolean fullscreen;
     public static boolean noSounds;
@@ -140,11 +146,11 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
     public static boolean osdExtended           = true;
     public static boolean osdScale              = true;
     public static boolean osdNoBackground;
-    public static boolean osdMediumFont;
     public static boolean osdBoldFont;
     public static boolean osdBlackColor;
     public static boolean hpsWptTrueAzimuth     = true;
     public static boolean safeColors;
+    public static int desktopFontSize;
     public static int osdAlpha                  = 0x80;
     public static int cmsCycle;
     public static int listFont                  = 0x200008;
@@ -180,7 +186,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
     public static int poiProximity              = 1000;
     public static boolean routeLineStyle;
     public static boolean routePoiMarks         = true;
-    public static int routeColor;
+    public static int routeColor                = 6;
     public static int routeThick;
     public static boolean makeRevisions;
     public static boolean preferGsName          = true;
@@ -376,7 +382,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         /*useUTM = */din.readBoolean();
         osdExtended = din.readBoolean();
         osdNoBackground = din.readBoolean();
-        osdMediumFont = din.readBoolean();
+        /*osdMediumFont = */din.readBoolean();
         osdBoldFont = din.readBoolean();
         osdBlackColor = din.readBoolean();
 
@@ -445,6 +451,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
             tracklog = din.readInt();
             gpxOnlyValid = din.readBoolean();
         } catch (Exception e) {
+/* obsolete
             if ("Bluetooth".equals(_locationProvider)) {
                 locationProvider = Config.LOCATION_PROVIDER_JSR82;
             } else if ("Internal".equals(_locationProvider)) {
@@ -461,17 +468,20 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
             } else if ("always".equals(_tracklog)) {
                 tracklog = TRACKLOG_ALWAYS;
             }
+*/
         }
 
         // 0.9.66 extensions
         try {
             units = din.readInt();
         } catch (Exception e) {
+/* obsolete
             if (_unitsImperial) {
                 units = Config.UNITS_IMPERIAL;
             } else if (_unitsNautical) {
                 units = Config.UNITS_NAUTICAL;
             }
+*/
         }
 
         // 0.9.69 extensions
@@ -479,7 +489,9 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
             o2Depth = din.readInt();
             siemensIo = din.readBoolean();
         } catch (Exception e) {
+/* obsolete
             siemensIo = cz.kruch.track.TrackingMIDlet.siemens && !cz.kruch.track.TrackingMIDlet.sxg75;
+*/
         }
 
         // 0.9.70 extensions
@@ -553,6 +565,13 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         } catch (Exception e) {
         }
 
+        // 0.9.92 extensions
+        try {
+            desktopFontSize = din.readInt();
+            startupScreen = din.readInt();
+        } catch (Exception e) {
+        }
+
 //#ifdef __LOG__
         if (log.isEnabled()) log.info("configuration read");
 //#endif
@@ -571,14 +590,14 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         dout.writeUTF(btDeviceName);
         dout.writeUTF(btServiceUrl);
         dout.writeInt(simulatorDelay);
-        dout.writeInt(-1/*locationInterval*/);
+        dout.writeInt(0/*locationInterval*/);
         dout.writeBoolean(locationSharing);
         dout.writeBoolean(fullscreen);
         dout.writeBoolean(noSounds);
         dout.writeBoolean(false/*useUTM*/);
         dout.writeBoolean(osdExtended);
         dout.writeBoolean(osdNoBackground);
-        dout.writeBoolean(osdMediumFont);
+        dout.writeBoolean(false/*osdMediumFont*/);
         dout.writeBoolean(osdBoldFont);
         dout.writeBoolean(osdBlackColor);
         dout.writeUTF(EMPTY_STRING/*tracklog*/);
@@ -646,6 +665,9 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         dout.writeBoolean(gpxSecsDecimal);
         /* since 0.9.91 */
         dout.writeBoolean(negativeAltFix);
+        /* since 0.9.92 */
+        dout.writeInt(desktopFontSize);
+        dout.writeInt(startupScreen);
 
 //#ifdef __LOG__
         if (log.isEnabled()) log.info("configuration updated");
@@ -697,7 +719,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         DataOutputStream dout = null;
 
         try {
-            ByteArrayOutputStream data = new ByteArrayOutputStream();
+            final ByteArrayOutputStream data = new ByteArrayOutputStream();
             dout = new DataOutputStream(data);
             if (CONFIG_090.equals(rms)) {
                 writeMain(dout);
@@ -705,7 +727,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
                 writeVars(dout);
             }
             dout.flush();
-            byte[] bytes = data.toByteArray();
+            final byte[] bytes = data.toByteArray();
             rs = RecordStore.openRecordStore(rms, true,
                                              RecordStore.AUTHMODE_PRIVATE,
                                              true);

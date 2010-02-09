@@ -8,25 +8,27 @@ import cz.kruch.track.event.Callback;
 import cz.kruch.track.Resources;
 import cz.kruch.track.fun.Camera;
 
-import javax.microedition.lcdui.Displayable;
-import javax.microedition.lcdui.Form;
-import javax.microedition.lcdui.ChoiceGroup;
-import javax.microedition.lcdui.CommandListener;
-import javax.microedition.lcdui.Command;
-import javax.microedition.lcdui.TextField;
-import javax.microedition.lcdui.ItemStateListener;
-import javax.microedition.lcdui.Item;
-import javax.microedition.lcdui.Choice;
-import javax.microedition.lcdui.List;
-import javax.microedition.lcdui.Gauge;
-import javax.microedition.lcdui.CustomItem;
-import javax.microedition.lcdui.Graphics;
-import javax.microedition.lcdui.ItemCommandListener;
 
 import api.file.File;
 import api.location.Datum;
 import api.location.ProjectionSetup;
 
+import javax.microedition.lcdui.CommandListener;
+import javax.microedition.lcdui.TextField;
+import javax.microedition.lcdui.ItemStateListener;
+import javax.microedition.lcdui.ItemCommandListener;
+import javax.microedition.lcdui.ChoiceGroup;
+import javax.microedition.lcdui.Gauge;
+import javax.microedition.lcdui.ImageItem;
+import javax.microedition.lcdui.Form;
+import javax.microedition.lcdui.List;
+import javax.microedition.lcdui.Command;
+import javax.microedition.lcdui.Choice;
+import javax.microedition.lcdui.Item;
+import javax.microedition.lcdui.Displayable;
+import javax.microedition.lcdui.Image;
+import javax.microedition.lcdui.Graphics;
+import javax.microedition.lcdui.Spacer;
 import java.util.Vector;
 
 /**
@@ -34,7 +36,7 @@ import java.util.Vector;
  *
  * @author kruhc@seznam.cz
  */
-final class SettingsForm implements CommandListener, ItemStateListener {
+final class SettingsForm implements CommandListener, ItemStateListener, ItemCommandListener {
     private static final int MAX_URL_LENGTH = 256;
 
     private final String menuBasic;
@@ -49,6 +51,7 @@ final class SettingsForm implements CommandListener, ItemStateListener {
     private ChoiceGroup choiceMapDatum;
     private ChoiceGroup choiceCoordinates;
     private ChoiceGroup choiceUnits;
+    private ChoiceGroup choiceScreen;
     private ChoiceGroup choiceProvider;
     private ChoiceGroup choiceTracklog;
     private ChoiceGroup choiceTracklogFormat;
@@ -70,21 +73,24 @@ final class SettingsForm implements CommandListener, ItemStateListener {
     private ChoiceGroup choiceGpx;
     private TextField fieldGpxDt;
     private TextField fieldGpxDs;
-    private Gauge gaugeAlpha;
+    private Gauge gaugeDesktopFont;
+    private Gauge gaugeOsdAlpha;
     private TextField fieldCmsCycle;
     private ChoiceGroup choiceWaypoints;
-    private TrailItem itemTrailView;
+    private ImageItem itemLineCfg;
     private ChoiceGroup choiceSort;
     private TextField fieldListFont;
     private TextField fieldAltCorrection;
     private ChoiceGroup choiceBlackberry;
+    private ChoiceGroup choiceNmea;
 
     private List pane;
     private Form submenu;
     private String section;
     private Vector providers;
-    private boolean changed;
     private int gaugeAlphaScale;
+
+    private boolean changed;
 
     SettingsForm(Callback callback) {
         this.callback = callback;
@@ -155,18 +161,21 @@ final class SettingsForm implements CommandListener, ItemStateListener {
             choiceUnits.setSelectedIndex(Config.units, true);
             submenu.append(choiceUnits);
 
+            // startup screen
+            choiceScreen = new ChoiceGroup(Resources.getString(Resources.CFG_BASIC_GROUP_START_SCREEN), Desktop.CHOICE_POPUP_TYPE);
+            choiceScreen.setFitPolicy(Choice.TEXT_WRAP_ON);
+            choiceScreen.append(Resources.getString(Resources.CFG_BASIC_FLD_SCREEN_MAP), null);
+            choiceScreen.append(Resources.getString(Resources.CFG_BASIC_FLD_SCREEN_HPS), null);
+            choiceScreen.append(Resources.getString(Resources.CFG_BASIC_FLD_SCREEN_CMS), null);
+            choiceScreen.setSelectedIndex(Config.startupScreen, true);
+            submenu.append(choiceScreen);
+
             // datadir
             if (File.isFs()) {
                 submenu.append(fieldDataDir = new TextField(Resources.getString(Resources.CFG_BASIC_FLD_DATA_DIR), Config.getDataDir(), MAX_URL_LENGTH, TextField.URL));
             }
 
         } else if (menuDesktop.equals(section)) {
-
-            // trail line setup
-            if (cz.kruch.track.TrackingMIDlet.sonyEricsson) {
-                submenu.append(itemTrailView = new TrailItem(Resources.getString(Resources.CFG_DESKTOP_FLD_TRAIL_PREVIEW),
-                                                             Config.trailColor, Config.trailThick));
-            }
 
             // desktop settings
             choiceMisc = new ChoiceGroup(Resources.getString(Resources.CFG_DESKTOP_GROUP), ChoiceGroup.MULTIPLE);
@@ -180,7 +189,9 @@ final class SettingsForm implements CommandListener, ItemStateListener {
             choiceMisc.append(Resources.getString(Resources.CFG_DESKTOP_FLD_OSD_EXT), null);
             choiceMisc.append(Resources.getString(Resources.CFG_DESKTOP_FLD_OSD_SCALE), null);
             choiceMisc.append(Resources.getString(Resources.CFG_DESKTOP_FLD_OSD_NO_BG), null);
+/* obsoleted in 0.9.92
             choiceMisc.append(Resources.getString(Resources.CFG_DESKTOP_FLD_OSD_MED_FONT), null);
+*/
             choiceMisc.append(Resources.getString(Resources.CFG_DESKTOP_FLD_OSD_BOLD_FONT), null);
             choiceMisc.append(Resources.getString(Resources.CFG_DESKTOP_FLD_OSD_BLACK), null);
             choiceMisc.setSelectedFlags(new boolean[] {
@@ -194,11 +205,16 @@ final class SettingsForm implements CommandListener, ItemStateListener {
                 Config.osdExtended,
                 Config.osdScale,
                 Config.osdNoBackground,
+/* obsoleted in 0.9.92
                 Config.osdMediumFont,
+*/
                 Config.osdBoldFont,
                 Config.osdBlackColor,
             });
             submenu.append(choiceMisc);
+
+            // font
+            submenu.append(gaugeDesktopFont = new Gauge("Font", true, 2, Config.desktopFontSize));
 
             // OSD transparency
             int alphaSteps = Desktop.display.numAlphaLevels();
@@ -207,14 +223,7 @@ final class SettingsForm implements CommandListener, ItemStateListener {
             }
             gaugeAlphaScale = 0x100 / alphaSteps;
             final int value = Config.osdAlpha / gaugeAlphaScale;
-            submenu.append(gaugeAlpha = new Gauge(Resources.getString(Resources.CFG_DESKTOP_TRANSPARENCY), true, alphaSteps, value));
-
-            // trail line setup
-/*
-            submenu.append(gaugeTrailColor = new Gauge(Resources.getString(Resources.CFG_DESKTOP_FLD_TRAIL_COLOR), true, 15, Config.trailColor));
-            submenu.append(gaugeTrailThick = new Gauge(Resources.getString(Resources.CFG_DESKTOP_FLD_TRAIL_THICK), true, 2, Config.trailThick));
-            submenu.setItemStateListener(this);
-*/
+            submenu.append(gaugeOsdAlpha = new Gauge(Resources.getString(Resources.CFG_DESKTOP_TRANSPARENCY), true, alphaSteps, value));
 
             // smartlist font
             StringBuffer hexstr = new StringBuffer(Integer.toHexString(Config.listFont));
@@ -226,11 +235,10 @@ final class SettingsForm implements CommandListener, ItemStateListener {
             // CMS cycling
             submenu.append(fieldCmsCycle = new TextField(Resources.getString(Resources.CFG_DESKTOP_FLD_CMS_CYCLE), Integer.toString(Config.cmsCycle), 4, TextField.NUMERIC));
 
-            // trail line setup
-            if (!cz.kruch.track.TrackingMIDlet.sonyEricsson) {
-                submenu.append(itemTrailView = new TrailItem(Resources.getString(Resources.CFG_DESKTOP_FLD_TRAIL_PREVIEW),
-                                                             Config.trailColor, Config.trailThick));
-            }
+            // trail line
+            submenu.append(itemLineCfg = createLineCfgItem(Resources.getString(Resources.CFG_DESKTOP_FLD_TRAIL_PREVIEW),
+                                                           Config.trailColor, Config.trailThick));
+            submenu.append(new Spacer(submenu.getWidth(), 1));
 
         } else if (menuNavigation.equals(section)) {
 
@@ -241,14 +249,19 @@ final class SettingsForm implements CommandListener, ItemStateListener {
             // route line
             choiceRouteLine = new ChoiceGroup(Resources.getString(Resources.CFG_NAVIGATION_GROUP_ROUTE_LINE), ChoiceGroup.MULTIPLE);
             choiceRouteLine.append(Resources.getString(Resources.CFG_NAVIGATION_FLD_DOTTED), null);
-            choiceRouteLine.append(Resources.getString(Resources.CFG_NAVIGATION_FLD_RED), null);
+//            choiceRouteLine.append(Resources.getString(Resources.CFG_NAVIGATION_FLD_RED), null);
             choiceRouteLine.append(Resources.getString(Resources.CFG_NAVIGATION_FLD_POI_ICONS), null);
             choiceRouteLine.setSelectedFlags(new boolean[] {
                 Config.routeLineStyle,
-                Config.routeLineColor != 0,
+//                Config.routeLineColor != 0,
                 Config.routePoiMarks
             });
             submenu.append(choiceRouteLine);
+
+            // route line
+            submenu.append(itemLineCfg = createLineCfgItem(Resources.getString(Resources.CFG_NAVIGATION_GROUP_ROUTE_LINE),
+                                                           Config.routeColor, Config.routeThick));
+            submenu.append(new Spacer(submenu.getWidth(), 1));
 
             // waypoints
             choiceWaypoints = new ChoiceGroup(Resources.getString(Resources.NAV_ITEM_WAYPOINTS), ChoiceGroup.MULTIPLE);
@@ -348,8 +361,10 @@ final class SettingsForm implements CommandListener, ItemStateListener {
                         resourceId = Resources.CFG_LOCATION_FLD_PROV_HGE100;
                     break;
                 }
-                choiceProvider.setSelectedIndex(choiceProvider.append(Resources.getString(resourceId), null),
-                                                Config.locationProvider == provider);
+                final int idx = choiceProvider.append(Resources.getString(resourceId), null);
+                if (Config.locationProvider == provider) {
+                    choiceProvider.setSelectedIndex(idx, true);
+                }
             }
             if (choiceProvider.size() > 0) {
                 submenu.append(choiceProvider);
@@ -393,8 +408,8 @@ final class SettingsForm implements CommandListener, ItemStateListener {
                 fieldBtKeepalive = new TextField(Resources.getString(Resources.CFG_LOCATION_FLD_BT_KEEP_ALIVE), Integer.toString(Config.btKeepAlive), 6, TextField.NUMERIC);
             }
             if (cz.kruch.track.TrackingMIDlet.jsr179 || cz.kruch.track.TrackingMIDlet.motorola179) {
-                fieldLocationTimings = new TextField(Resources.getString(Resources.CFG_LOCATION_FLD_LOCATION_TIMINGS), "", 12, TextField.ANY);
-                fieldAltCorrection = new TextField(Resources.getString(Resources.CFG_LOCATION_FLD_ALT_CORRECTION), "", 4, TextField.NUMERIC);
+                fieldLocationTimings = new TextField(Resources.getString(Resources.CFG_LOCATION_FLD_LOCATION_TIMINGS), Config.getLocationTimings(Config.locationProvider), 12, TextField.ANY);
+                fieldAltCorrection = new TextField(Resources.getString(Resources.CFG_LOCATION_FLD_ALT_CORRECTION), Integer.toString(Config.altCorrection), 5, TextField.NUMERIC);
 //#ifdef __RIM__
                 choiceBlackberry = new ChoiceGroup("Blackberry", ChoiceGroup.MULTIPLE);
                 choiceBlackberry.append(Resources.getString(Resources.CFG_LOCATION_FLD_NEGATIVE_ALT_FIX), null);
@@ -406,6 +421,11 @@ final class SettingsForm implements CommandListener, ItemStateListener {
             if (cz.kruch.track.TrackingMIDlet.hasFlag("provider_o2_germany")) {
                 fieldO2Depth = new TextField(Resources.getString(Resources.CFG_LOCATION_FLD_FILTER_DEPTH), Integer.toString(Config.o2Depth), 2, TextField.NUMERIC);
             }
+            choiceNmea = new ChoiceGroup("NMEA", ChoiceGroup.MULTIPLE);
+            choiceNmea.append(Resources.getString(Resources.CFG_LOCATION_FLD_NMEA_MS_ROUNDING), null);
+            choiceNmea.setSelectedFlags(new boolean[] {
+                Config.nmeaMsExact
+            });
 
             // show current provider and tracklog specific options
             itemStateChanged(choiceProvider);
@@ -432,12 +452,12 @@ final class SettingsForm implements CommandListener, ItemStateListener {
                     continue;
 
                 if (choiceTracklogFormat == affected) {
-                    if (fieldSimulatorDelay == item || fieldLocationTimings == item || fieldCommUrl == item || fieldBtKeepalive == item || fieldO2Depth == item || fieldAltCorrection == item || choiceBlackberry == item || choiceTracklog == item || choiceTracklogFormat == item)
+                    if (fieldSimulatorDelay == item || fieldLocationTimings == item || fieldCommUrl == item || fieldBtKeepalive == item || fieldO2Depth == item || fieldAltCorrection == item || choiceBlackberry == item || choiceNmea == item || choiceTracklog == item || choiceTracklogFormat == item)
                         continue;
                 }
 
                 if (choiceTracklog == affected) {
-                    if (fieldSimulatorDelay == item || fieldLocationTimings == item || fieldCommUrl == item || fieldBtKeepalive == item || fieldO2Depth == item || fieldAltCorrection == item || choiceBlackberry == item || choiceTracklog == item)
+                    if (fieldSimulatorDelay == item || fieldLocationTimings == item || fieldCommUrl == item || fieldBtKeepalive == item || fieldO2Depth == item || fieldAltCorrection == item || choiceBlackberry == item || choiceNmea == item || choiceTracklog == item)
                         continue;
                 }
 
@@ -454,13 +474,14 @@ final class SettingsForm implements CommandListener, ItemStateListener {
                 switch (provider) {
                     case Config.LOCATION_PROVIDER_JSR82:
                         appendWithNewlineAfter(submenu, fieldBtKeepalive);
+                        appendWithNewlineAfter(submenu, choiceNmea);
                     break;
                     case Config.LOCATION_PROVIDER_JSR179:
                     case Config.LOCATION_PROVIDER_MOTOROLA:
 //#ifndef __ANDROID__
+                        // different timings for Motorola and others, hence update...
                         fieldLocationTimings.setString(Config.getLocationTimings(provider));
                         appendWithNewlineAfter(submenu, fieldLocationTimings);
-                        fieldAltCorrection.setString(Integer.toString(Config.altCorrection));
                         appendWithNewlineAfter(submenu, fieldAltCorrection);
 //#endif
 //#ifdef __RIM__
@@ -469,9 +490,11 @@ final class SettingsForm implements CommandListener, ItemStateListener {
                     break;
                     case Config.LOCATION_PROVIDER_SERIAL:
                         appendWithNewlineAfter(submenu, fieldCommUrl);
+                        appendWithNewlineAfter(submenu, choiceNmea);
                     break;
                     case Config.LOCATION_PROVIDER_SIMULATOR:
                         appendWithNewlineAfter(submenu, fieldSimulatorDelay);
+                        appendWithNewlineAfter(submenu, choiceNmea);
                     break;
                     case Config.LOCATION_PROVIDER_O2GERMANY:
                         appendWithNewlineAfter(submenu, fieldO2Depth);
@@ -527,9 +550,8 @@ final class SettingsForm implements CommandListener, ItemStateListener {
             final int i0 = choiceSnapshotFormat.getSelectedIndex();
             final String s0 = choiceSnapshotFormat.getString(i0);
             fieldSnapshotFormat.setString(s0);
-        } /*else if (affected == gaugeTrailColor || affected == gaugeTrailThick) {
-            gaugeTrailView.update();
-        }*/
+        }
+        
     }
 
     public void commandAction(Command command, Displayable displayable) {
@@ -538,15 +560,29 @@ final class SettingsForm implements CommandListener, ItemStateListener {
             // open submenu?
             if (List.SELECT_COMMAND == command) {
                 // submenu
-                show(section = pane.getString(pane.getSelectedIndex()));
+                try {
+                    show(section = pane.getString(pane.getSelectedIndex()));
+                } catch (Throwable t) {
+//#ifdef __RIM__                    
+                    t.printStackTrace(); /* stack trace will go to Event Log in Blackberry*/
+//#endif
+                }
             } else {
                 // main menu action
                 mainMenuCommandAction(command);
             }
         } else {
             // grab changes
-            subMenuCommandAction(command);
+            try {
+                subMenuCommandAction(command);
+            } catch (Throwable t) {
+                Desktop.showError("Submenu action error", t, pane);
+            }
         }
+    }
+
+    public void commandAction(Command command, Item item) {
+        (new LineCfgForm()).show();
     }
 
     private void subMenuCommandAction(Command command) {
@@ -569,6 +605,9 @@ final class SettingsForm implements CommandListener, ItemStateListener {
 
                 // units format
                 Config.units = choiceUnits.getSelectedIndex();
+
+                // startup screen
+                Config.startupScreen = choiceScreen.getSelectedIndex();
 
                 // datadir
                 if (File.isFs()) {
@@ -602,6 +641,12 @@ final class SettingsForm implements CommandListener, ItemStateListener {
                 if (cz.kruch.track.TrackingMIDlet.hasFlag("provider_o2_germany")) {
                     Config.o2Depth = Integer.parseInt(fieldO2Depth.getString());
                 }
+
+                // NMEA
+                final boolean[] nopts = new boolean[choiceNmea.size()];
+                choiceNmea.getSelectedFlags(nopts);
+                Config.nmeaMsExact = nopts[0];
+
 //#ifdef __RIM__
                 final boolean[] bbopts = new boolean[choiceBlackberry.size()];
                 choiceBlackberry.getSelectedFlags(bbopts);
@@ -631,8 +676,11 @@ final class SettingsForm implements CommandListener, ItemStateListener {
                 final boolean[] rl = new boolean[choiceRouteLine.size()];
                 choiceRouteLine.getSelectedFlags(rl);
                 Config.routeLineStyle = rl[0];
-                Config.routeLineColor = rl[1] ? 0x00FF0000 : 0x0;
-                Config.routePoiMarks = rl[2];
+//                Config.routeLineColor = rl[1] ? 0x00FF0000 : 0x0;
+//                Config.routePoiMarks = rl[2];
+                Config.routePoiMarks = rl[1];
+                Config.routeColor = itemLineColor;
+                Config.routeThick = itemLineThick;
 
                 // waypoints
                 final boolean[] wpts = new boolean[choiceWaypoints.size()];
@@ -666,14 +714,17 @@ final class SettingsForm implements CommandListener, ItemStateListener {
                 Config.osdExtended = misc[7];
                 Config.osdScale = misc[8];
                 Config.osdNoBackground = misc[9];
+/* obsoleted in 0.9.92
                 Config.osdMediumFont = misc[10];
-                Config.osdBoldFont = misc[11];
-                Config.osdBlackColor = misc[12];
-                Config.osdAlpha = gaugeAlpha.getValue() * gaugeAlphaScale;
+*/
+                Config.osdBoldFont = misc[10/*11*/];
+                Config.osdBlackColor = misc[11/*12*/];
+                Config.desktopFontSize = gaugeDesktopFont.getValue();
+                Config.osdAlpha = gaugeOsdAlpha.getValue() * gaugeAlphaScale;
                 Config.cmsCycle = Integer.parseInt(fieldCmsCycle.getString());
                 Config.listFont = Integer.parseInt(fieldListFont.getString(), 16);
-                Config.trailColor = itemTrailView.color/*gaugeTrailColor.getValue()*/;
-                Config.trailThick = itemTrailView.thick/*gaugeTrailThick.getValue()*/;
+                Config.trailColor = itemLineColor;
+                Config.trailThick = itemLineThick;
                 changed = true;
 
             } else if (menuMisc.equals(section)) {
@@ -775,175 +826,68 @@ final class SettingsForm implements CommandListener, ItemStateListener {
         return providers;
     }
 
-    private final class TrailItem extends CustomItem implements ItemCommandListener {
+    private ImageItem createLineCfgItem(final String label, final int color, final int thickness) {
+        itemLineImage = Image.createImage((int) ((float)submenu.getWidth() / 3),
+                                          3 + 7 + 3); // space + max trail thickness + space
+        itemLineLabel = label;
+        itemLineColor = color;
+        itemLineThick = thickness;
+        itemLinePaint();
+        itemLineCfg = new ImageItem(label, itemLineImage, 0, "?", Item.BUTTON);
+        itemLineCfg.setDefaultCommand(new Command("Change", Command.ITEM, 1));
+        itemLineCfg.setItemCommandListener(this);
+        return itemLineCfg;
+    }
+    
+    private void itemLinePaint() {
+        final Graphics graphics = itemLineImage.getGraphics();
+        final int w = itemLineImage.getWidth();
+        final int h = itemLineImage.getHeight();
+        graphics.setColor(0x40ffffff);
+        graphics.fillRect(0, 0, w, h);
+        graphics.setColor(Config.COLORS_16[itemLineColor]);
+        graphics.fillRect(3, /*3 + 3*/h / 2 - itemLineThick, w - 3 - 3, itemLineThick * 2 + 1);
+    }
 
-        private int thick;
-        private int color;
-        
-        private boolean isIn;
-        private int mode;
+    private Image itemLineImage;
+    private String itemLineLabel;
+    private int itemLineColor;
+    private int itemLineThick;
 
-        public TrailItem(String label, int color, int thickness) {
-            super(label);
-            this.color = color;
-            this.thick = thickness;
-            this.setDefaultCommand(new Command(Resources.getString(Resources.CFG_DESKTOP_CMD_TRAIL_MODE), Command.ITEM, 1));
-            this.setItemCommandListener(this);
+    private final class LineCfgForm implements CommandListener, ItemStateListener {
+        private Gauge gaugeColor, gaugeThickness;
+        private int idx;
+
+        public LineCfgForm() {
         }
 
-        public void commandAction(Command command, Item item) {
-            mode++;
+        public void show() {
+            final Form form = new Form(itemLineLabel);
+            form.append(gaugeColor = new Gauge("Color", true, 15, itemLineColor));
+            form.append(gaugeThickness = new Gauge("Thickness", true, 2, itemLineThick));
+            form.append(new Spacer(form.getWidth(), 7));
+            idx = form.append(itemLineImage);
+            form.addCommand(new Command(Resources.getString(Resources.CMD_CLOSE), Desktop.BACK_CMD_TYPE, 1));
+            form.setItemStateListener(this);
+            form.setCommandListener(this);
+            Desktop.display.setCurrent(form);
         }
 
-        protected boolean traverse(int dir, int viewportWidth, int viewportHeight, int[] visRect_inout) {
-            // ??? mobile-utopia textfield
-            super.traverse(dir, viewportWidth, viewportHeight, visRect_inout);
-
-            boolean notify = false;
-            boolean repaint = false;
-
-            if (isIn) {
-                switch (dir) {
-                    case javax.microedition.lcdui.Canvas.LEFT: {
-                        if (mode % 2 == 0) {
-                            if (--color < 0) {
-                                ++color;
-                            } else {
-                                notify = repaint = true;
-                            }
-                        } else {
-                            if (--thick < 0) {
-                                ++thick;
-                            } else {
-                                notify = repaint = true;
-                            }
-                        }
-                    } break;
-                    case javax.microedition.lcdui.Canvas.RIGHT: {
-                        if (mode % 2 == 0) {
-                            if (++color == Config.COLORS_16.length) {
-                                --color;
-                            } else {
-                                notify = repaint = true;
-                            }
-                        } else {
-                            if (++thick == 4) {
-                                --thick;
-                            } else {
-                                notify = repaint = true;
-                            }
-                        }
-                    } break;
-                    case javax.microedition.lcdui.Canvas.UP:
-                    case javax.microedition.lcdui.Canvas.DOWN:
-                        return false;
-                }
-            } else {
-                repaint = true;
-                isIn = true;
+        public void itemStateChanged(Item item) {
+            if (item == gaugeColor) {
+                itemLineColor = gaugeColor.getValue();
+            } else if (item == gaugeThickness) {
+                itemLineThick = gaugeThickness.getValue();
             }
-
-            if (repaint) {
-                repaint();
-            }
-            if (notify) {
-                notifyStateChanged();
-            }
-
-            return true;
+            itemLinePaint();
+            final Form form = (Form) Desktop.display.getCurrent();
+            form.delete(idx);
+            idx = form.append(itemLineImage);
         }
 
-        protected void traverseOut() {
-            super.traverseOut(); // ??? both mobile-utopia and google code
-            isIn = false;
-        }
-
-        protected int getMinContentWidth() {
-            return (int) ((float)submenu.getWidth() * 0.85F);
-        }
-
-        protected int getMinContentHeight() {
-            return 3 + 7 + 3; // space + max trail thickness + space
-        }
-
-        protected int getPrefContentWidth(int i) {
-            return getMinContentWidth();
-        }
-
-        protected int getPrefContentHeight(int i) {
-            return getMinContentHeight();
-        }
-
-        protected void keyPressed(int i) {
-            int a;
-            try {
-                a = getGameAction(i);
-            } catch (Exception e) {
-                a = NONE;
-            }
-            switch (a) {
-                case javax.microedition.lcdui.Canvas.UP:
-                case javax.microedition.lcdui.Canvas.LEFT:
-                case javax.microedition.lcdui.Canvas.RIGHT:
-                case javax.microedition.lcdui.Canvas.DOWN:
-                    // ignore
-                    break;
-                default:
-                    mode++;
-            }
-        }
-
-        protected void pointerPressed(int x, int y) {
-            boolean notify = false;
-            boolean repaint = false;
-
-            if (x < getMinContentWidth() * 0.33D) {
-                if (mode % 2 == 0) {
-                    if (--color < 0) {
-                        ++color;
-                    } else {
-                        notify = repaint = true;
-                    }
-                } else {
-                    if (--thick < 0) {
-                        ++thick;
-                    } else {
-                        notify = repaint = true;
-                    }
-                }
-            } else if (x > getMinContentWidth() * 0.66D) {
-                if (mode % 2 == 0) {
-                    if (++color == Config.COLORS_16.length) {
-                        --color;
-                    } else {
-                        notify = repaint = true;
-                    }
-                } else {
-                    if (++thick == 4) {
-                        --thick;
-                    } else {
-                        notify = repaint = true;
-                    }
-                }
-            } else {
-                mode++;
-            }
-
-            if (repaint) {
-                repaint();
-            }
-            if (notify) {
-                notifyStateChanged();
-            }
-        }
-
-        protected void paint(Graphics graphics, int w, int h) {
-            final int c = graphics.getColor();
-            graphics.setColor(0x40ffffff);
-            graphics.fillRect(0, 0, w, h);
-            graphics.setColor(Config.COLORS_16[color]);
-            graphics.fillRect(3, /*3 + 3*/h / 2 - thick, w - 3 - 3, thick * 2 + 1);
-            graphics.setColor(c);
+        public void commandAction(Command command, Displayable displayable) {
+            itemLineCfg.setImage(itemLineImage);
+            Desktop.display.setCurrent(submenu);
         }
     }
 }

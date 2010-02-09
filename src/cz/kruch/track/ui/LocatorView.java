@@ -95,6 +95,10 @@ final class LocatorView extends View {
         reset();
     }
 
+    public void trackingStopped() {
+        reset();
+    }
+
     public int locationUpdated(Location l) {
         // only fix is good enough
         if (l.getFix() > 0) {
@@ -202,9 +206,6 @@ final class LocatorView extends View {
             if (l != null) {
                 final QualifiedCoordinates qc = l.getQualifiedCoordinates();
                 final float hAccuracy = qc.getHorizontalAccuracy();
-/*
-                System.out.println("haccuracy = " + hAccuracy);
-*/
                 if (!Float.isNaN(hAccuracy)) {
                     final float w = 5F / hAccuracy;
                     accuracySum += hAccuracy;
@@ -258,6 +259,8 @@ final class LocatorView extends View {
 
     public void render(final Graphics graphics, final Font font, final int mask) {
         // local references for faster access
+        final OSD osd = Desktop.osd;
+        final StringBuffer sb = this.sb;
         final int w = Desktop.width;
         final int h = Desktop.height;
         final int wHalf = w >> 1;
@@ -266,11 +269,9 @@ final class LocatorView extends View {
         final int dy = this.dy;
         final int term = this.term;
         final int rangeIdx = this.rangeIdx[term];
-        final OSD osd = Desktop.osd;
-        final StringBuffer sb = this.sb;
-        final char[] sbChars = this.sbChars;
         final int fh = osd.bh;
         final int orientation = this.orientation;
+        final char[] sbChars = this.sbChars;
 
         // main colors
         final int bgColor, fgColor, wptColor;
@@ -298,21 +299,38 @@ final class LocatorView extends View {
         // draw compas
         float course;
 
+        // draw internal compass value
+        if (orientation != -1) {
+            drawCompas(wHalf, hHalf, fh, 4, graphics, orientation, true,
+                       0x00FFD700, 0x00FFAA00);
+        }
+
         /* block */ {
             final Location current = this.locations[term][this.position[term]];
-            final float[] lastCourse = this.lastCourse;
             if (current != null) {
                 course = current.getCourse();
             } else {
                 course = Float.NaN;
             }
+            final float[] lastCourse = this.lastCourse;
             final boolean fresh = !Float.isNaN(course);
             if (fresh) {
                 lastCourse[term] = course;
             } else {
                 course = lastCourse[term];
             }
-            drawCompas(wHalf, hHalf, fh, graphics, mode % 2 == 0 ? course : 0, fresh);
+            if (!Float.isNaN(course)) {
+                final float useCourse = mode % 2 == 0 ? course : 0;
+                final int colorHi, colorLo;
+                if (term == 0) {
+                    colorHi = 0x00D00000;
+                    colorLo = 0x00A00000;
+                } else {
+                    colorHi = 0x001E90FF;
+                    colorLo = 0x001560BD;
+                }
+                drawCompas(wHalf, hHalf, fh, 7, graphics, useCourse, fresh, colorHi, colorLo);
+            }
         } /* ~ */
 
         // compas boundary
@@ -322,32 +340,19 @@ final class LocatorView extends View {
                          lineLength - (fh << 1),
                          0, 360);
 
-        // draw course // TODO move bellow
+        // wpt index
+        final Waypoint wpt = navigator.getNavigateTo();
+
+        // draw points
         if (count[term] > 0) {
+
+            // print course
             graphics.setColor(fgColor);
             sb.delete(0, sb.length());
             NavigationScreens.append(sb, (int) course).append(NavigationScreens.SIGN);
             final int cl = sb.length();
             sb.getChars(0, cl, sbChars, 0);
             graphics.drawChars(sbChars, 0, cl, w - courseStrWidth, fh, Graphics.LEFT | Graphics.TOP);
-        }
-
-/*
-        // draw orientation
-        if (heading != -1) {
-            sb.delete(0, sb.length());
-            NavigationScreens.append(sb, heading).append(NavigationScreens.SIGN);
-            final int l = sb.length();
-            sb.getChars(0, l, sbChars, 0);
-            graphics.drawChars(sbChars, 0, l, w - courseStrWidth, 2 * fh, Graphics.LEFT | Graphics.TOP);
-        }
-*/
-
-        // wpt index
-        final Waypoint wpt = navigator.getNavigateTo();
-
-        // draw points
-        if (count[term] > 0) {
 
             // local refs
             final Location[] locations = this.locations[term];
@@ -427,8 +432,16 @@ final class LocatorView extends View {
             graphics.drawChars(sbChars, 0, l, OSD.BORDER, fh, Graphics.LEFT | Graphics.TOP);
 
             // draw hdop and orientation
-            final float hAccuracy = coordsAvg.getHorizontalAccuracy();
+            float hAccuracy = coordsAvg.getHorizontalAccuracy();
             if (!Float.isNaN(hAccuracy)) {
+                char[] uc = NavigationScreens.DIST_STR_M;
+                switch (Config.units) {
+                    case Config.UNITS_IMPERIAL:
+                    case Config.UNITS_NAUTICAL: {
+                        uc = NavigationScreens.DIST_STR_FT;
+                        hAccuracy /= 0.3048F;
+                    } break;
+                }
                 sb.delete(0, sb.length());
                 sb.append(NavigationScreens.PLUSMINUS);
                 if (hAccuracy >= 10F) {
@@ -436,7 +449,7 @@ final class LocatorView extends View {
                 } else {
                     NavigationScreens.append(sb, hAccuracy, 1);
                 }
-                sb.append(' ').append('m');
+                sb.append(' ').append(uc);
                 l = sb.length();
                 sb.getChars(0, l, sbChars, 0);
                 graphics.drawChars(sbChars, 0, l, OSD.BORDER, 2 * fh, Graphics.LEFT | Graphics.TOP);
@@ -554,76 +567,79 @@ final class LocatorView extends View {
 */
     }
 
-    private void drawCompas(final int width2, final int height2, final int fh,
-                            final Graphics g, final float course, final boolean uptodate) {
+    private void drawCompas(final int width2, final int height2, final int fh, final int thick,
+                            final Graphics g, final float course, final boolean uptodate,
+                            final int colorHi, final int colorLo) {
         final int[][] triangle = this.triangle;
+        final int[] triangle0 = triangle[0];
+        final int[] triangle1 = triangle[1];
+        final int[] triangle2 = triangle[2];
 
-        triangle[0][0] = width2;
-        triangle[0][1] = height2;
-        triangle[1][0] = width2;
-        triangle[1][1] = dy + lineLength - fh;
-        triangle[2][0] = width2 + 7;
-        triangle[2][1] = height2;
-
-        g.setColor(0x00909090);
-        drawTriangle(g, course, triangle);
-
-        triangle[0][0] = width2 - 7;
-        triangle[0][1] = height2;
-        triangle[1][0] = width2;
-        triangle[1][1] = dy + lineLength - fh;
-        triangle[2][0] = width2;
-        triangle[2][1] = height2;
+        triangle0[0] = width2;
+        triangle0[1] = height2;
+        triangle1[0] = width2;
+        triangle1[1] = dy + lineLength - fh;
+        triangle2[0] = width2 + thick;
+        triangle2[1] = height2;
 
         g.setColor(0x00707070);
         drawTriangle(g, course, triangle);
 
-        triangle[0][0] = dx + fh;
-        triangle[0][1] = height2;
-        triangle[1][0] = triangle[0][0] + 9;
-        triangle[1][1] = height2 - 3;
-        triangle[2][0] = triangle[1][0];
-        triangle[2][1] = height2 + 3;
+        triangle0[0] = width2 - thick;
+        triangle0[1] = height2;
+        triangle1[0] = width2;
+        triangle1[1] = dy + lineLength - fh;
+        triangle2[0] = width2;
+        triangle2[1] = height2;
+
+        g.setColor(0x00909090);
+        drawTriangle(g, course, triangle);
+
+/*
+        triangle0[0] = dx + fh;
+        triangle0[1] = height2;
+        triangle1[0] = triangle0[0] + 9;
+        triangle1[1] = height2 - 3;
+        triangle2[0] = triangle1[0];
+        triangle2[1] = height2 + 3;
 
         drawTriangle(g, course, triangle);
 
-        triangle[0][0] = dx + lineLength - fh;
-        triangle[0][1] = height2;
-        triangle[1][0] = triangle[0][0] - 9;
-        triangle[1][1] = height2 - 3;
-        triangle[2][0] = triangle[1][0];
-        triangle[2][1] = height2 + 3;
+        triangle0[0] = dx + lineLength - fh;
+        triangle0[1] = height2;
+        triangle1[0] = triangle0[0] - 9;
+        triangle1[1] = height2 - 3;
+        triangle2[0] = triangle1[0];
+        triangle2[1] = height2 + 3;
 
         drawTriangle(g, course, triangle);
-        triangle[0][0] = width2 - 7;
-        triangle[0][1] = height2;
-        triangle[1][0] = width2;
-        triangle[1][1] = dy + fh;
-        triangle[2][0] = width2;
-        triangle[2][1] = triangle[0][1];
+*/
+
+        triangle0[0] = width2 - thick;
+        triangle0[1] = height2;
+        triangle1[0] = width2;
+        triangle1[1] = dy + fh;
+        triangle2[0] = width2;
+        triangle2[1] = triangle0[1];
 
         if (uptodate) {
-            if (term == 0) {
-                g.setColor(0x00A00000);
-            } else {
-                g.setColor(0x001E90FF);
-            }
+            g.setColor(colorHi);
+        } else {
+            g.setColor(0x00707070);
         }
         drawTriangle(g, course, triangle);
 
-        triangle[0][0] = width2;
-        triangle[0][1] = height2;
-        triangle[1][0] = width2;
-        triangle[1][1] = dy + fh;
-        triangle[2][0] = width2 + 7;
-        triangle[2][1] = triangle[0][1];
+        triangle0[0] = width2;
+        triangle0[1] = height2;
+        triangle1[0] = width2;
+        triangle1[1] = dy + fh;
+        triangle2[0] = width2 + thick;
+        triangle2[1] = triangle0[1];
 
         if (uptodate) {
-            if (term == 0) {
-                g.setColor(0x00D00000);
-            } else {
-                g.setColor(0x001560BD);
-            }
+            g.setColor(colorLo);
+        } else {
+            g.setColor(0x00505050);
         }
         drawTriangle(g, course, triangle);
     }

@@ -663,7 +663,8 @@ final class MapViewer {
                         if (pfnext == MAX_TRAJECTORY_LENGTH) {
                             pfnext = 0;
                         }
-                        arrayPF[pflast] = updatePF(arrayXY[pflast], arrayXY[pfnext]);
+                        arrayPF[pflast] = updatePF(Config.trailThick,
+                                                   arrayXY[pflast], arrayXY[pfnext]);
                         if (++pflast == MAX_TRAJECTORY_LENGTH) {
                             pflast = 0;
                         }
@@ -787,12 +788,13 @@ final class MapViewer {
         if (Desktop.routeDir != 0) {
 
             // line color and style
-            graphics.setColor(Config.routeColor);
+            graphics.setColor(Config.COLORS_16[Config.routeColor]);
             if (Config.routeLineStyle) {
                 graphics.setStrokeStyle(Graphics.DOTTED);
             }
 
             // draw route as line
+            final int thickness = Config.routeThick;
             final int x = this.x;
             final int y = this.y;
             Position p0 = null;
@@ -800,8 +802,16 @@ final class MapViewer {
                 if (positions[i] != null) {
                     final Position p1 = positions[i];
                     if (p0 != null) {
-                        graphics.drawLine(p0.getX() - x, p0.getY() - y,
-                                          p1.getX() - x, p1.getY() - y);
+                        if (thickness == 0) { // as gauge value!
+                            graphics.drawLine(p0.getX() - x, p0.getY() - y,
+                                              p1.getX() - x, p1.getY() - y);
+                        } else {
+                            drawTrailSegment(graphics,
+                                             p0.getX() - x, p0.getY() - y,
+                                             p1.getX() - x, p1.getY() - y,
+                                             updatePF(Config.routeThick,
+                                                      p0, p1));
+                        }
                     }
                     p0 = p1;
                 }
@@ -1036,11 +1046,13 @@ final class MapViewer {
 
         // draw line from last "gpx" point to current position
         if (!Desktop.browsing) {
-            final int x0 = arrayXY[idx0].getX() - x;
-            final int y0 = arrayXY[idx0].getY() - y;
+            final Position p0 = arrayXY[idx0];
+            final int x0 = p0.getX() - x;
+            final int y0 = p0.getY() - y;
             final int x1 = chx + crosshairSize2;
             final int y1 = chy + crosshairSize2;
-            drawTrailSegment(graphics, x0, y0, x1, y1, updatePF(x1 - x0, y1 - y0));
+            drawTrailSegment(graphics, x0, y0, x1, y1, updatePF(Config.trailThick, 
+                                                                x1 - x0, y1 - y0));
         }
         
         // restore color and style
@@ -1297,16 +1309,51 @@ final class MapViewer {
 
             // valid scale?
             if (scale > 1F) {
-                char[] units = NavigationScreens.DIST_STR_M;
+                char[] uc = null;
+                switch (Config.units) {
+                    case Config.UNITS_METRIC: {
+                        uc = NavigationScreens.DIST_STR_M;
+                    } break;
+                    case Config.UNITS_IMPERIAL: {
+                        uc = NavigationScreens.DIST_STR_FT;
+                        scale /= 0.3048F;
+                    } break;
+                    case Config.UNITS_NAUTICAL: {
+                        uc = NavigationScreens.DIST_STR_FT;
+                        scale /= 0.3048F;
+                    } break;
+                }
                 long half = (long) (scale * ((Desktop.width >> 1) - scaleDx));
                 if (half >= 10000) {
-                    units = NavigationScreens.DIST_STR_KM;
-                    final long m = half % 1000;
-                    half /= 1000;
-                    if (m > 500) {
-                        half++;
+                    switch (Config.units) {
+                        case Config.UNITS_METRIC: {
+                            uc = NavigationScreens.DIST_STR_KM;
+                            final long m = half % 1000;
+                            half /= 1000;
+                            scale /= 1000F;
+                            if (m > 500) {
+                                half++;
+                            }
+                        } break;
+                        case Config.UNITS_IMPERIAL: {
+                            uc = NavigationScreens.DIST_STR_MI;
+                            final long m = half % 5280;
+                            half /= 5280;
+                            scale /= 5280F;
+                            if (m > 2640) {
+                                half++;
+                            }
+                        } break;
+                        case Config.UNITS_NAUTICAL: {
+                            uc = NavigationScreens.DIST_STR_NMI;
+                            final long m = half % 6076;
+                            half /= 6076;
+                            scale /= 6076F;
+                            if (m > 3038) {
+                                half++;
+                            }
+                        } break;
                     }
-                    scale /= 1000F;
                 }
                 final int grade = ExtraMath.grade(half);
                 long guess = (half / grade) * grade;
@@ -1315,7 +1362,7 @@ final class MapViewer {
                 }
                 scaleLength = (int) (guess / scale);
                 final StringBuffer sb = new StringBuffer(32);
-                sb.append(guess).append(units);
+                sb.append(guess).append(uc);
                 if (sb.length() > sInfo.length) {
                     throw new IllegalStateException("Scale length = " + sInfoLength);
                 }
@@ -1351,12 +1398,12 @@ final class MapViewer {
         }
     }
 
-    private static short updatePF(final Position p0, final Position p1) {
-        return updatePF(p1.getX() - p0.getX(), p1.getY() - p0.getY());
+    private static short updatePF(final int thick0, final Position p0, final Position p1) {
+        return updatePF(thick0, p1.getX() - p0.getX(), p1.getY() - p0.getY());
     }
     
-    private static short updatePF(final double dx, final double dy) {
-        final int thick = Config.trailThick * 2 + 1;
+    private static short updatePF(final int thick0, final double dx, final double dy) {
+        final int thick = thick0 * 2 + 1;
         double aRad;
         short flags = 0;
         if (dx > 0) {

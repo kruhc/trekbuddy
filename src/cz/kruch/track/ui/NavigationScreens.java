@@ -44,6 +44,7 @@ public final class NavigationScreens {
 
     public static final char[] DIST_STR_M      = { ' ', 'm', ' ' };
     public static final char[] DIST_STR_KM     = { ' ', 'k', 'm', ' ' };
+    public static final char[] DIST_STR_MI     = { ' ', 'm', 'i', ' ' };
     public static final char[] DIST_STR_NMI    = { ' ', 'M', ' ' };
     public static final char[] DIST_STR_FT     = { ' ', 'f', 't', ' ' };
 
@@ -765,7 +766,7 @@ public final class NavigationScreens {
                     }
                 } break;
                 case Config.UNITS_IMPERIAL: {
-                    append(sb, distance / 1609F, 0).append(DIST_STR_NMI);
+                    append(sb, distance / 1609F, 0).append(DIST_STR_MI);
                 } break;
                 case Config.UNITS_NAUTICAL: {
                     append(sb, distance / 1852F, 0).append(DIST_STR_NMI);

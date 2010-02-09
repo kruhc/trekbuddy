@@ -228,6 +228,10 @@
 3409=<Map Lat/Lon>
 3410=<Map Grid>
 3411=<Geocaching Lat/Lon>
+3412=Startup screen
+3413=map
+3414=compass
+3415=cms
 
 # settings forms/fields/values (Desktop)
 3500=Desktop
@@ -277,6 +281,7 @@
 3623=Alt correction (m)
 3624=log time ms
 3625=negative alt fix
+3626=exact time match
 
 # settings forms/fields/values (Navigation)
 3700=Wpt Proximity

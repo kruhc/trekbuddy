@@ -205,7 +205,7 @@ public final class Desktop implements CommandListener,
         this.boot = true;
         this.initializingMap = true;
         this.loadingResult = new Object[]{
-            Resources.getString(Resources.DESKTOP_MSG_NO_DEFAULT_MAP), null
+            Resources.getString(Resources.DESKTOP_MSG_NO_DEFAULT_MAP), null, null
         };
 
         // locking objects
@@ -379,7 +379,8 @@ public final class Desktop implements CommandListener,
         font = null; // gc hint
         font = Font.getFont(Font.FACE_MONOSPACE,
                             Config.osdBoldFont ? Font.STYLE_BOLD : Font.STYLE_PLAIN,
-                            Config.osdMediumFont ? Font.SIZE_MEDIUM : Font.SIZE_SMALL);
+                            Config.desktopFontSize == 0 ? Font.SIZE_SMALL :
+                                    (Config.desktopFontSize == 1 ? Font.SIZE_MEDIUM : Font.SIZE_LARGE));
         fontWpt = null; // gc hint
         fontWpt = Font.getFont(Font.FACE_SYSTEM,
                                Config.osdBoldFont ? Font.STYLE_BOLD : Font.STYLE_PLAIN,
@@ -521,7 +522,7 @@ public final class Desktop implements CommandListener,
             v[VIEW_MAP] = new MapView(this);
             v[VIEW_HPS] = new LocatorView(this);
             v[VIEW_CMS] = new ComputerView(this);
-            v[0].setVisible(true);
+            v[mode = Config.startupScreen].setVisible(true);
         }
         v[VIEW_MAP].sizeChanged(w, h);
         v[VIEW_HPS].sizeChanged(w, h);
@@ -656,7 +657,6 @@ public final class Desktop implements CommandListener,
         }
 
 //#ifdef __ANDROID__
-/*
         // start orientation sensing
         try {
             LocationProvider sensor = new cz.kruch.track.location.AndroidLocationProvider();
@@ -665,7 +665,6 @@ public final class Desktop implements CommandListener,
         } catch (Throwable t) {
             showError("Sensor", t, screen);
         }
-*/
 //#endif
 
         // loads CMS profiles

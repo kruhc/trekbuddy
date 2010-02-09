@@ -583,7 +583,10 @@ final class MapView extends View {
                     if (t.getMessage() != null) {
                         g.drawString(t.getMessage(), 0, 2 * Desktop.font.getHeight(), Graphics.TOP | Graphics.LEFT);
                     }
-                    Desktop.showError("Init map", t, null);
+                    if (result[2] == null) {
+                        result[2] = result[1];
+                        Desktop.showError("Init map", t, Desktop.screen);
+                    }
                 } else {
                     g.drawString(result[1].toString(), 0, Desktop.font.getHeight(), Graphics.TOP | Graphics.LEFT);
                 }

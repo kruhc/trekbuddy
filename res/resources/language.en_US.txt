@@ -253,6 +253,8 @@
 3516=Mode
 3517=safe colors
 3518=List font
+3519=Color
+3520=Thickness
 
 # settings forms/fields/values (Location)
 3600=Provider

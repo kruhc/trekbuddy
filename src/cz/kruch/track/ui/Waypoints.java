@@ -240,7 +240,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
             } break;
             case 2: {
                 // set last known choice
-                if (inUseName == null || currentName.equals(inUseName)) {
+                if (inUseName == null || inUseName.equals(currentName)) {
                     if (idx[depth] != null) {
                         ((SmartList) list).setSelectedItem(idx[depth]);
                     }
@@ -423,7 +423,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
             close();
             // stop navigation
             navigator.setNavigateTo(null, null, -1, -1);
-            // remove in-use store from cache
+            // remove in-use store from cache IF IT IS NOT current
             if (inUseName != null && !inUseName.equals(currentName)) {
                 stores.remove(inUseName);
             }
@@ -739,7 +739,6 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
 
                     // may take some time - start ticker
                     cz.kruch.track.ui.nokia.DeviceControl.setTicker(list, Resources.getString(Resources.NAV_MSG_TICKER_LISTING));
-//                    list.setTicker(new Ticker(Resources.getString(Resources.NAV_MSG_TICKER_LISTING)));
 
                     // list file stores
                     listWptFiles("", cachedDisk = new NakedVector(cacheDiskHint + 16, INCREMENT_LIST_SIZE), recursive);
@@ -754,7 +753,6 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
 
                     // remove ticker
                     cz.kruch.track.ui.nokia.DeviceControl.setTicker(list, null);
-//                    list.setTicker(null);
                 }
 
             }
@@ -811,6 +809,14 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
         final Vector wptsCached = (Vector) stores.get(storeName);
         if (wptsCached == null) { // no, load from file
 
+            // remove current store from cache IF IT IS NOT in use
+            if (currentName != null && !currentName.equals(inUseName)) {
+                stores.remove(currentName);
+            }
+            // no current store
+            currentWpts = null; // gc hint
+            currentName = null; // gc hint
+
             // parse XML-based store
             File file = null;
 
@@ -819,7 +825,6 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                 // may take some time - start ticker
                 if (!onBackground) {
                     cz.kruch.track.ui.nokia.DeviceControl.setTicker(list, Resources.getString(Resources.NAV_MSG_TICKER_LOADING));
-//                    list.setTicker(new Ticker(Resources.getString(Resources.NAV_MSG_TICKER_LOADING)));
                 }
 
                 // open file
@@ -839,13 +844,6 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
 
                 }
 
-/* 2008-12-03: cache only in-use and current
-                // cache non-empty store
-                if (wpts != null && wpts.size() > 0) {
-                    stores.put(_storeName, wpts);
-                }
-*/
-
             } catch (Throwable t) {
 //#ifdef __LOG__
                 t.printStackTrace();
@@ -858,7 +856,6 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                 // remove ticker
                 if (!onBackground) {
                     cz.kruch.track.ui.nokia.DeviceControl.setTicker(list, null);
-//                    list.setTicker(null);
                 }
 
                 // close file
@@ -897,18 +894,11 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                 // create list
                 use(listWaypoints(storeName, wpts, true));
 
-                // remove current store from cache IF IT IS NOT in-use
-                if (currentName != null && !currentName.equals(inUseName)) {
-                    stores.remove(currentName);
-                }
-
                 // remember current store
-                currentWpts = null; // gc hint
                 currentWpts = wpts;
-                currentName = null; // gc hint
                 currentName = storeName;
 
-                // cache current store IF IT IS NOT in-use (already cached)
+                // cache current store IF IT IS NOT in-use (it is already cached then)
                 if (currentName != null && !currentName.equals(inUseName)) {
                     stores.put(currentName, currentWpts);
                 }
@@ -1135,8 +1125,6 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                     navigator.getTracklogTime());
             if (STORE_USER.equals(storeKey)) {
                 gpx.setFilePrefix(PREFIX_USER);
-//            } else if (USER_RECORDED_STORE.equals(storeKey)) {
-//                gpx.setFilePrefix(PREFIX_WGPS);
             } else if (STORE_FRIENDS.equals(storeKey)) {
                 gpx.setFilePrefix(PREFIX_FRIENDS);
             } else {

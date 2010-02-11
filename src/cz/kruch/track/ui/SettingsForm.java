@@ -2,12 +2,11 @@
 
 package cz.kruch.track.ui;
 
+import cz.kruch.track.Resources;
 import cz.kruch.track.configuration.Config;
 import cz.kruch.track.configuration.ConfigurationException;
 import cz.kruch.track.event.Callback;
-import cz.kruch.track.Resources;
 import cz.kruch.track.fun.Camera;
-
 
 import api.file.File;
 import api.location.Datum;
@@ -29,6 +28,7 @@ import javax.microedition.lcdui.Displayable;
 import javax.microedition.lcdui.Image;
 import javax.microedition.lcdui.Graphics;
 import javax.microedition.lcdui.Spacer;
+import javax.microedition.lcdui.StringItem;
 import java.util.Vector;
 
 /**
@@ -77,7 +77,7 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
     private Gauge gaugeOsdAlpha;
     private TextField fieldCmsCycle;
     private ChoiceGroup choiceWaypoints;
-    private ImageItem itemLineCfg;
+    private Item itemLineCfg;
     private ChoiceGroup choiceSort;
     private TextField fieldListFont;
     private TextField fieldAltCorrection;
@@ -230,7 +230,7 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
             while (hexstr.length() < 6) {
                 hexstr.insert(0, '0');
             }
-            submenu.append(fieldListFont = new TextField("Lists font", hexstr.toString(), 10, TextField.ANY));
+            submenu.append(fieldListFont = new TextField(Resources.getString(Resources.CFG_DESKTOP_FLD_LIST_FONT), hexstr.toString(), 10, TextField.ANY));
             
             // CMS cycling
             submenu.append(fieldCmsCycle = new TextField(Resources.getString(Resources.CFG_DESKTOP_FLD_CMS_CYCLE), Integer.toString(Config.cmsCycle), 4, TextField.NUMERIC));
@@ -826,15 +826,26 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
         return providers;
     }
 
-    private ImageItem createLineCfgItem(final String label, final int color, final int thickness) {
-        itemLineImage = Image.createImage((int) ((float)submenu.getWidth() / 3),
-                                          3 + 7 + 3); // space + max trail thickness + space
-        itemLineLabel = label;
+    private int itemLineColor;
+    private int itemLineThick;
+
+    private String itemLineLabel;
+    private Image itemLineImage;
+
+    private Item createLineCfgItem(final String label, final int color, final int thickness) {
         itemLineColor = color;
         itemLineThick = thickness;
+        itemLineLabel = label;
+        itemLineImage = Image.createImage((int) ((float)submenu.getWidth() / 3),
+                                          3 + 7 + 3); // space + max trail thickness + space
         itemLinePaint();
-        itemLineCfg = new ImageItem(label, itemLineImage, 0, "?", Item.BUTTON);
-        itemLineCfg.setDefaultCommand(new Command("Change", Command.ITEM, 1));
+//#ifdef __RIM__
+//        itemLineCfg = new TrailItem(label);
+        itemLineCfg = new StringItem(label, "<no preview>", Item.BUTTON);
+//#else
+        itemLineCfg = new ImageItem(label, itemLineImage, Item.LAYOUT_DEFAULT, "<no preview>", Item.BUTTON);
+//#endif
+        itemLineCfg.setDefaultCommand(new Command(Resources.getString(Resources.NAV_CMD_EDIT), Command.ITEM, 1));
         itemLineCfg.setItemCommandListener(this);
         return itemLineCfg;
     }
@@ -849,11 +860,6 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
         graphics.fillRect(3, /*3 + 3*/h / 2 - itemLineThick, w - 3 - 3, itemLineThick * 2 + 1);
     }
 
-    private Image itemLineImage;
-    private String itemLineLabel;
-    private int itemLineColor;
-    private int itemLineThick;
-
     private final class LineCfgForm implements CommandListener, ItemStateListener {
         private Gauge gaugeColor, gaugeThickness;
         private int idx;
@@ -863,8 +869,8 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
 
         public void show() {
             final Form form = new Form(itemLineLabel);
-            form.append(gaugeColor = new Gauge("Color", true, 15, itemLineColor));
-            form.append(gaugeThickness = new Gauge("Thickness", true, 2, itemLineThick));
+            form.append(gaugeColor = new Gauge(Resources.getString(Resources.CFG_DESKTOP_FLD_COLOR), true, 15, itemLineColor));
+            form.append(gaugeThickness = new Gauge(Resources.getString(Resources.CFG_DESKTOP_FLD_THICKNESS), true, 2, itemLineThick));
             form.append(new Spacer(form.getWidth(), 7));
             idx = form.append(itemLineImage);
             form.addCommand(new Command(Resources.getString(Resources.CMD_CLOSE), Desktop.BACK_CMD_TYPE, 1));
@@ -886,8 +892,182 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
         }
 
         public void commandAction(Command command, Displayable displayable) {
-            itemLineCfg.setImage(itemLineImage);
+            if (itemLineCfg instanceof ImageItem) {
+                ((ImageItem) itemLineCfg).setImage(itemLineImage);
+            }
             Desktop.display.setCurrent(submenu);
         }
     }
+
+/*
+    private final class TrailItem extends javax.microedition.lcdui.CustomItem implements ItemCommandListener {
+
+        private boolean isIn;
+        private int mode;
+
+        public TrailItem(String label) {
+            super(label);
+            this.setDefaultCommand(new Command(Resources.getString(Resources.CFG_DESKTOP_CMD_TRAIL_MODE), Command.ITEM, 1));
+            this.setItemCommandListener(this);
+        }
+
+        public void commandAction(Command command, Item item) {
+            mode++;
+        }
+
+        protected boolean traverse(int dir, int viewportWidth, int viewportHeight, int[] visRect_inout) {
+            // ??? mobile-utopia textfield
+            super.traverse(dir, viewportWidth, viewportHeight, visRect_inout);
+
+            boolean notify = false;
+            boolean repaint = false;
+
+            if (isIn) {
+                switch (dir) {
+                    case javax.microedition.lcdui.Canvas.LEFT: {
+                        if (mode % 2 == 0) {
+                            if (--itemLineColor < 0) {
+                                ++itemLineColor;
+                            } else {
+                                notify = repaint = true;
+                            }
+                        } else {
+                            if (--itemLineThick < 0) {
+                                ++itemLineThick;
+                            } else {
+                                notify = repaint = true;
+                            }
+                        }
+                    } break;
+                    case javax.microedition.lcdui.Canvas.RIGHT: {
+                        if (mode % 2 == 0) {
+                            if (++itemLineColor == Config.COLORS_16.length) {
+                                --itemLineColor;
+                            } else {
+                                notify = repaint = true;
+                            }
+                        } else {
+                            if (++itemLineThick == 4) {
+                                --itemLineThick;
+                            } else {
+                                notify = repaint = true;
+                            }
+                        }
+                    } break;
+                    case javax.microedition.lcdui.Canvas.UP:
+                    case javax.microedition.lcdui.Canvas.DOWN:
+                        return false;
+                }
+            } else {
+                repaint = true;
+                isIn = true;
+            }
+
+            if (repaint) {
+                repaint();
+            }
+            if (notify) {
+                notifyStateChanged();
+            }
+
+            return true;
+        }
+
+        protected void traverseOut() {
+            super.traverseOut(); // ??? both mobile-utopia and google code
+            isIn = false;
+        }
+
+        protected int getMinContentWidth() {
+            return (int) ((float)submenu.getWidth() * 0.85F);
+        }
+
+        protected int getMinContentHeight() {
+            return 3 + 7 + 3; // space + max trail thickness + space
+        }
+
+        protected int getPrefContentWidth(int i) {
+            return getMinContentWidth();
+        }
+
+        protected int getPrefContentHeight(int i) {
+            return getMinContentHeight();
+        }
+
+        protected void keyPressed(int i) {
+            int a;
+            try {
+                a = getGameAction(i);
+            } catch (Exception e) {
+                a = NONE;
+            }
+            switch (a) {
+                case javax.microedition.lcdui.Canvas.UP:
+                case javax.microedition.lcdui.Canvas.LEFT:
+                case javax.microedition.lcdui.Canvas.RIGHT:
+                case javax.microedition.lcdui.Canvas.DOWN:
+                    // ignore
+                    break;
+                default:
+                    mode++;
+            }
+        }
+
+        protected void pointerPressed(int x, int y) {
+            boolean notify = false;
+            boolean repaint = false;
+
+            if (x < getMinContentWidth() * 0.33D) {
+                if (mode % 2 == 0) {
+                    if (--itemLineColor < 0) {
+                        ++itemLineColor;
+                    } else {
+                        notify = repaint = true;
+                    }
+                } else {
+                    if (--itemLineThick < 0) {
+                        ++itemLineThick;
+                    } else {
+                        notify = repaint = true;
+                    }
+                }
+            } else if (x > getMinContentWidth() * 0.66D) {
+                if (mode % 2 == 0) {
+                    if (++itemLineColor == Config.COLORS_16.length) {
+                        --itemLineColor;
+                    } else {
+                        notify = repaint = true;
+                    }
+                } else {
+                    if (++itemLineThick == 4) {
+                        --itemLineThick;
+                    } else {
+                        notify = repaint = true;
+                    }
+                }
+            } else {
+                mode++;
+            }
+
+            if (repaint) {
+                repaint();
+            }
+            if (notify) {
+                notifyStateChanged();
+            }
+        }
+
+        protected void paint(Graphics graphics, int w, int h) {
+            final int c = graphics.getColor();
+            graphics.setColor(0x40ffffff);
+            graphics.fillRect(0, 0, w, h);
+            graphics.setColor(Config.COLORS_16[itemLineColor]);
+            graphics.fillRect(3, h / 2 - itemLineThick,
+                              w - 3 - 3, itemLineThick * 2 + 1);
+            graphics.setColor(c);
+        }
+    }
+
+*/
+
 }

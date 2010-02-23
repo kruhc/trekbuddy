@@ -150,6 +150,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
     public static boolean osdBlackColor;
     public static boolean hpsWptTrueAzimuth     = true;
     public static boolean safeColors;
+    public static boolean noQuestions;
     public static int desktopFontSize;
     public static int osdAlpha                  = 0x80;
     public static int cmsCycle;
@@ -572,6 +573,12 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         } catch (Exception e) {
         }
 
+        // 0.9.94 extensions
+        try {
+            noQuestions = din.readBoolean();
+        } catch (Exception e) {
+        }
+
 //#ifdef __LOG__
         if (log.isEnabled()) log.info("configuration read");
 //#endif
@@ -668,6 +675,8 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         /* since 0.9.92 */
         dout.writeInt(desktopFontSize);
         dout.writeInt(startupScreen);
+        /* since 0.9.94 */
+        dout.writeBoolean(noQuestions);
 
 //#ifdef __LOG__
         if (log.isEnabled()) log.info("configuration updated");
@@ -764,7 +773,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         if (dataDirExists) {
             response(YesNoDialog.NO, null);
         } else {
-            (new YesNoDialog(null, new Config(), null,
+            (new YesNoDialog(this, null,
                              "DataDir '" + getDataDir().substring(8 /* "file:///".length() */) + "' does not exists. Create it?",
                              null)).show();
         }

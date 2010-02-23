@@ -182,6 +182,7 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
             choiceMisc.append(Resources.getString(Resources.CFG_DESKTOP_FLD_FULLSCREEN), null);
             choiceMisc.append(Resources.getString(Resources.CFG_DESKTOP_FLD_SAFE_COLORS), null);
             choiceMisc.append(Resources.getString(Resources.CFG_DESKTOP_FLD_NO_SOUNDS), null);
+            choiceMisc.append(Resources.getString(Resources.CFG_DESKTOP_FLD_NO_QUESTIONS), null);
             choiceMisc.append(Resources.getString(Resources.CFG_DESKTOP_FLD_TRAJECTORY), null);
             choiceMisc.append(Resources.getString(Resources.CFG_DESKTOP_FLD_DEC_PRECISION), null);
             choiceMisc.append(Resources.getString(Resources.CFG_DESKTOP_FLD_HPS_WPT_TRUE_AZI), null);
@@ -198,6 +199,7 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
                 Config.fullscreen,
                 Config.safeColors,
                 Config.noSounds,
+                Config.noQuestions,
                 Config.trailOn,
                 Config.decimalPrecision,
                 Config.hpsWptTrueAzimuth,
@@ -205,9 +207,6 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
                 Config.osdExtended,
                 Config.osdScale,
                 Config.osdNoBackground,
-/* obsoleted in 0.9.92
-                Config.osdMediumFont,
-*/
                 Config.osdBoldFont,
                 Config.osdBlackColor,
             });
@@ -707,18 +706,16 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
                 Config.fullscreen = misc[0];
                 Config.safeColors = misc[1];
                 Config.noSounds = misc[2];
-                Config.trailOn = misc[3];
-                Config.decimalPrecision = misc[4];
-                Config.hpsWptTrueAzimuth = misc[5];
-                Config.osdBasic = misc[6];
-                Config.osdExtended = misc[7];
-                Config.osdScale = misc[8];
-                Config.osdNoBackground = misc[9];
-/* obsoleted in 0.9.92
-                Config.osdMediumFont = misc[10];
-*/
-                Config.osdBoldFont = misc[10/*11*/];
-                Config.osdBlackColor = misc[11/*12*/];
+                Config.noQuestions = misc[3];
+                Config.trailOn = misc[4];
+                Config.decimalPrecision = misc[5];
+                Config.hpsWptTrueAzimuth = misc[6];
+                Config.osdBasic = misc[7];
+                Config.osdExtended = misc[8];
+                Config.osdScale = misc[9];
+                Config.osdNoBackground = misc[10];
+                Config.osdBoldFont = misc[11];
+                Config.osdBlackColor = misc[12];
                 Config.desktopFontSize = gaugeDesktopFont.getValue();
                 Config.osdAlpha = gaugeOsdAlpha.getValue() * gaugeAlphaScale;
                 Config.cmsCycle = Integer.parseInt(fieldCmsCycle.getString());

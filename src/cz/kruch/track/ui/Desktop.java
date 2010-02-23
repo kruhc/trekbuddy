@@ -643,6 +643,9 @@ public final class Desktop implements CommandListener,
             showError("'DataDir' not accessible - please fix it and restart", null, null);
         }
 
+        // loads CMS profiles // TODO move to resetGui???
+        getDiskWorker().enqueue((Runnable) views[VIEW_CMS]);
+
         // initialize waypoints
         Waypoints.initialize(this);
 
@@ -666,9 +669,6 @@ public final class Desktop implements CommandListener,
             showError("Sensor", t, screen);
         }
 //#endif
-
-        // loads CMS profiles
-        getDiskWorker().enqueue((Runnable) views[VIEW_CMS]);
     }
 
     public void commandAction(Command command, Displayable displayable) {
@@ -714,7 +714,11 @@ public final class Desktop implements CommandListener,
             _setProviderRestart(false);
             preTracking(true);
         } else if (command == cmdExit) {
-            (new YesNoDialog(screen, this, this, Resources.getString(Resources.DESKTOP_MSG_WANT_QUIT), null)).show();
+            if (Config.noQuestions) {
+                response(YesNoDialog.YES, this);
+            } else {
+                (new YesNoDialog(screen, this, this, Resources.getString(Resources.DESKTOP_MSG_WANT_QUIT), null)).show();
+            }
         } else if (command == cmdPause) {
             // update flag
             paused = true;
@@ -1637,7 +1641,7 @@ public final class Desktop implements CommandListener,
                 if (last) startTrackingLast(); else startTracking();
             } break;
             case Config.TRACKLOG_ASK: {
-                (new YesNoDialog(display.getCurrent(), this, new Boolean(last), Resources.getString(Resources.DESKTOP_MSG_START_TRACKLOG), null)).show();
+                (new YesNoDialog(screen, this, new Boolean(last), Resources.getString(Resources.DESKTOP_MSG_START_TRACKLOG), null)).show();
             } break;
             case Config.TRACKLOG_ALWAYS: {
                 tracklog = true; // !
@@ -2855,7 +2859,7 @@ public final class Desktop implements CommandListener,
                     Desktop.this.update(MASK_MAP | MASK_OSD);
 
                     // offer use as default?
-                    if (!Desktop.this._switch) {
+                    if (!Desktop.this._switch && !Config.noQuestions) {
                         if ("atlas".equals(Desktop.this._target)) {
                             (new YesNoDialog(Desktop.screen, this, null, Resources.getString(Resources.DESKTOP_MSG_USE_AS_DEFAULT_ATLAS),
                                              Desktop.this.atlas.getURL())).show();

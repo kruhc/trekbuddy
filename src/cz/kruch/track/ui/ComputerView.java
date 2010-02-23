@@ -762,6 +762,11 @@ final class ComputerView extends View
                                                        Config.cmsCycle * 1000);
                             }
                         }
+
+                        // redraw
+                        if (isVisible) {
+                            navigator.update(Desktop.MASK_SCREEN);
+                        }
                     }
 
                 } catch (Throwable t) {
@@ -1421,7 +1426,13 @@ final class ComputerView extends View
             graphics.setColor(0x00FFFFFF);
             graphics.fillRect(0, 0, w, h);
             graphics.setColor(0x00000000);
-            graphics.drawString(Resources.getString(Resources.DESKTOP_MSG_NO_CMS_PROFILES), 0, 0, Graphics.TOP | Graphics.LEFT);
+            final short msgCode;
+            if (profiles == null) {
+                msgCode = Resources.NAV_MSG_TICKER_LOADING;
+            } else {
+                msgCode = Resources.DESKTOP_MSG_NO_CMS_PROFILES;
+            }
+            graphics.drawString(Resources.getString(msgCode), 0, 0, Graphics.TOP | Graphics.LEFT);
             if (status != null) {
                 graphics.drawString(status, 0, Desktop.font.getHeight(), Graphics.TOP | Graphics.LEFT);
             }

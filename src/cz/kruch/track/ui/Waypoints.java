@@ -1070,9 +1070,9 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
             if (fileName.endsWith(SUFFIX_GPX)) {
                 sb.delete(sb.length() - 4, sb.length());
             }
-            (new YesNoDialog(null, this, new Object[]{useKey, sb, wpt},
-                    Resources.getString(Resources.NAV_MSG_ENTER_STORE_FILENAME),
-                    sb)).show();
+            (new YesNoDialog(this, new Object[]{useKey, sb, wpt},
+                             Resources.getString(Resources.NAV_MSG_ENTER_STORE_FILENAME),
+                             sb)).show();
         } else {
             addToStore(useKey, name, wpt);
         }

@@ -30,9 +30,13 @@ public final class YesNoDialog implements CommandListener {
     private final Object closure, item;
     private final String question;
 
+    public YesNoDialog(AnswerListener callback, Object closure, String question, Object item) {
+        this(Desktop.display.getCurrent(), callback, closure, question, item);
+    }
+
     public YesNoDialog(Displayable next, AnswerListener callback, Object closure,
                        String question, Object item) {
-        this.next = next != null ? next : Desktop.display.getCurrent();
+        this.next = next;
         this.callback = callback;
         this.closure = closure;
         this.question = question;
@@ -40,7 +44,7 @@ public final class YesNoDialog implements CommandListener {
     }
 
     public void show() {
-        Displayable dialog;
+        final Displayable dialog;
         if (item instanceof StringBuffer) {
             dialog = new TextBox(question, item.toString(), 64, TextField.URL);
 //#ifdef __ANDROID__
@@ -48,7 +52,8 @@ public final class YesNoDialog implements CommandListener {
 //#endif
             dialog.addCommand(new Command(Resources.getString(Resources.CMD_OK), Command.OK, 1));
         } else {
-            dialog = new Alert(null, question, null, null);
+            dialog = new Alert("TrekBuddy");
+            ((Alert) dialog).setString(question);
             dialog.addCommand(new Command(Resources.getString(Resources.CMD_YES), Command.OK, 1));
             dialog.addCommand(new Command(Resources.getString(Resources.CMD_NO), Command.CANCEL, 1));
         }

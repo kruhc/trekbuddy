@@ -259,6 +259,10 @@ public final class Desktop implements CommandListener,
         // console init
         consoleInit(g);
 
+        // help boot show
+        Thread.yield();
+        final long tStart = System.currentTimeMillis();
+
         // show copyright(s)
         consoleShow(g, lineY, "TrekBuddy \u00a9 2010 KrUcH");
         lineY += lineHeight;
@@ -275,10 +279,6 @@ public final class Desktop implements CommandListener,
         // vertical space
         consoleShow(g, lineY, "");
         lineY += lineHeight;
-
-        // help boot show
-        Thread.yield();
-        final long tStart = System.currentTimeMillis();
 
         // show initial steps results
         consoleShow(g, lineY, Resources.getString(Resources.BOOT_CACHING_IMAGES));

@@ -15,31 +15,35 @@ final class SonyEricssonDeviceControl extends DeviceControl {
         this.lacProperty = "com.sonyericsson.net.lac";
     }
 
-    /** @overriden */
+    /** @Override */
     String getCellId() {
         return hexToDec(super.getCellId());
     }
 
-    /** @overriden */
+    /** @Override */
     String getLac() {
         return hexToDec(super.getLac());
     }
 
-    /** @overriden */
+    /** @Override */
     boolean isSchedulable() {
         return true;
     }
 
-    /** @overriden */
+    /** @Override */
     void turnOn() {
         cz.kruch.track.ui.Desktop.display.flashBacklight(1);
         com.nokia.mid.ui.DeviceControl.setLights(0, 100);
     }
 
-    /** @overriden */
+    /** @Override */
     void turnOff() {
         cz.kruch.track.ui.Desktop.display.flashBacklight(0);
-//        com.nokia.mid.ui.DeviceControl.setLights(0, 0);
+//        com.nokia.mid.ui.DeviceControl.setLights(0, 0);  /* intentionally commented out */
+    }
+
+    void setColor(javax.microedition.lcdui.Graphics graphics, int argbcolor) {
+        com.nokia.mid.ui.DirectUtils.getDirectGraphics(graphics).setARGBColor(argbcolor);
     }
 
     private static String hexToDec(final String id) {

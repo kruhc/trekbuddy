@@ -23,7 +23,7 @@ class NokiaDeviceControl extends DeviceControl {
         }
     }
 
-    /** @overriden */
+    /** @Override */
     void nextLevel() {
         backlight++;
         if (backlight == values.length) {
@@ -32,9 +32,14 @@ class NokiaDeviceControl extends DeviceControl {
         setLights();
     }
 
-    /** @overriden */
+    /** @Override */
     void sync() {
         confirm(backlight == 0 ? Resources.getString(Resources.DESKTOP_MSG_BACKLIGHT_OFF) : Resources.getString(Resources.DESKTOP_MSG_BACKLIGHT_ON) + " (" + values[backlight] + "%)");
+    }
+
+    /** @Override */
+    void setColor(javax.microedition.lcdui.Graphics graphics, int argbcolor) {
+        com.nokia.mid.ui.DirectUtils.getDirectGraphics(graphics).setARGBColor(argbcolor);
     }
 
     protected void setLights() {

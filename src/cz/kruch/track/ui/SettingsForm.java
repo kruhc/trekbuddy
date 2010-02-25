@@ -213,7 +213,7 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
             submenu.append(choiceMisc);
 
             // font
-            submenu.append(gaugeDesktopFont = new Gauge("Font", true, 2, Config.desktopFontSize));
+            submenu.append(gaugeDesktopFont = new Gauge(Resources.getString(Resources.CFG_DESKTOP_FLD_FONT_SIZE), true, 2, Config.desktopFontSize));
 
             // OSD transparency
             int alphaSteps = Desktop.display.numAlphaLevels();

@@ -256,6 +256,7 @@
 3519=Color
 3520=Thickness
 3521=no questions
+3522=Font size
 
 # settings forms/fields/values (Location)
 3600=Provider

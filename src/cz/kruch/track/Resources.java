@@ -265,6 +265,7 @@ public final class Resources {
     public static final short CFG_DESKTOP_FLD_COLOR             = 3519;
     public static final short CFG_DESKTOP_FLD_THICKNESS         = 3520;
     public static final short CFG_DESKTOP_FLD_NO_QUESTIONS      = 3521;
+    public static final short CFG_DESKTOP_FLD_FONT_SIZE         = 3522;
     /* settings - Location */
     public static final short CFG_LOCATION_GROUP_PROVIDER       = 3600;
     public static final short CFG_LOCATION_GROUP_TRACKLOG       = 3601;

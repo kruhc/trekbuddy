@@ -1499,12 +1499,14 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
             throws IOException, XmlPullParserException {
         NakedVector links = null;
         GroundspeakBean gsbean = null;
+
         char[] name = null, cmt = null, sym = null;
         double lat = -1D, lon = -1D;
         float alt = Float.NaN;
         long timestamp = 0;
 
         int depth = 0;
+
         final StringBuffer sb = new StringBuffer(16);
         final Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone("GMT"));
         final CharArrayTokenizer tokenizer = new CharArrayTokenizer();
@@ -1596,7 +1598,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                                     depth = 2;
                                     // create bean
                                     gsbean = new GroundspeakBean(GpxTracklog.GS_1_0_PREFIX,
-                                            parser.getAttributeValue(null, ATTR_GS_ID));
+                                                                 parser.getAttributeValue(null, ATTR_GS_ID));
                                 } break;
                                 case TAG_AU_CACHE: {
                                     // groundspeak
@@ -1697,8 +1699,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                                     final Waypoint wpt;
                                     final QualifiedCoordinates qc = QualifiedCoordinates.newInstance(lat, lon, alt);
                                     if (gsbean != null || links != null) {
-                                        wpt = new ExtWaypoint(qc, name, cmt, sym, timestamp,
-                                                gsbean, links);
+                                        wpt = new ExtWaypoint(qc, name, cmt, sym, timestamp, gsbean, links);
                                     } else if (timestamp != 0) {
                                         wpt = new StampedWaypoint(qc, name, cmt, sym, timestamp);
                                     } else {
@@ -1717,6 +1718,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                                     timestamp = 0;
                                     name = cmt = null;
                                     links = null;
+                                    gsbean = null;
 
                                 } break;
                             }

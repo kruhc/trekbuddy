@@ -707,14 +707,14 @@ final class MapViewer {
 
         } // ~synchronized
 
-        // draw trajectory
-        if (Config.trailOn && xycount > 1) {
-            drawTrail(graphics);
-        }
-
         // paint route/pois/wpt
         if (wptPositions != null) {
             drawNavigation(graphics);
+        }
+
+        // draw trajectory
+        if (Config.trailOn && xycount > 1) {
+            drawTrail(graphics);
         }
 
         // paint crosshair
@@ -788,29 +788,34 @@ final class MapViewer {
         if (Desktop.routeDir != 0) {
 
             // line color and style
-            graphics.setColor(Config.COLORS_16[Config.routeColor]);
             if (Config.routeLineStyle) {
                 graphics.setStrokeStyle(Graphics.DOTTED);
             }
+            graphics.setColor(Config.COLORS_16[Config.routeColor]);
 
             // draw route as line
             final int thickness = Config.routeThick;
+            final int w = Desktop.width;
+            final int h = Desktop.height;
             final int x = this.x;
             final int y = this.y;
             Position p0 = null;
             for (int i = positions.length; --i >= 0; ) {
-                if (positions[i] != null) {
-                    final Position p1 = positions[i];
+                final Position p1 = positions[i];
+                if (p1 != null) {
                     if (p0 != null) {
-                        if (thickness == 0) { // as gauge value!
-                            graphics.drawLine(p0.getX() - x, p0.getY() - y,
-                                              p1.getX() - x, p1.getY() - y);
-                        } else {
-                            drawTrailSegment(graphics,
-                                             p0.getX() - x, p0.getY() - y,
-                                             p1.getX() - x, p1.getY() - y,
-                                             updatePF(Config.routeThick,
-                                                      p0, p1));
+                        final int x0 = p0.getX() - x;
+                        final int y0 = p0.getY() - y;
+                        final int x1 = p1.getX() - x;
+                        final int y1 = p1.getY() - y;
+
+                        // bounding box check first
+                        final boolean xIsOff = (x0 < 0 && x1 < 0) || (x0 >= w && x1 >= w);
+                        final boolean yIsOff = (y0 < 0 && y1 < 0) || (y0 >= h && y1 >= h);
+                        if (!xIsOff && !yIsOff) {
+
+                            // draw segment
+                            drawLineSegment(graphics, x0, y0, x1, y1, updatePF(thickness, p0, p1), w, h);
                         }
                     }
                     p0 = p1;
@@ -1032,13 +1037,14 @@ final class MapViewer {
             final int y0 = p0.getY() - y;
             final int x1 = p1.getX() - x;
             final int y1 = p1.getY() - y;
-            final boolean xIsOff = (x0 < 0 && x1 < 0) || (x0 > w && x1 > w);
-            final boolean yIsOff = (y0 < 0 && y1 < 0) || (y0 > h && y1 > h);
+            final boolean xIsOff = (x0 < 0 && x1 < 0) || (x0 >= w && x1 >= w);
+            final boolean yIsOff = (y0 < 0 && y1 < 0) || (y0 >= h && y1 >= h);
+
+            // bounding box check first
             if (!xIsOff && !yIsOff) {
-//#ifdef __LOG__
-                if (log.isEnabled()) log.debug("xIsOff? " + xIsOff + " yIsOff? " + yIsOff);
-//#endif
-                drawTrailSegment(graphics, x0, y0, x1, y1, arrayPF[idx0]);
+                
+                // draw segment
+                drawLineSegment(graphics, x0, y0, x1, y1, arrayPF[idx0], w, h);
             }
 
             idx0 = idx1;
@@ -1051,66 +1057,166 @@ final class MapViewer {
             final int y0 = p0.getY() - y;
             final int x1 = chx + crosshairSize2;
             final int y1 = chy + crosshairSize2;
-            drawTrailSegment(graphics, x0, y0, x1, y1, updatePF(Config.trailThick, 
-                                                                x1 - x0, y1 - y0));
+            /* bounding box check not necessary ;-) */
+            drawLineSegment(graphics, x0, y0, x1, y1, updatePF(Config.trailThick, x1 - x0, y1 - y0));
         }
         
         // restore color and style
         graphics.setColor(color);
     }
 
-    private static void drawTrailSegment(final Graphics graphics,
-                                         final int x0, final int y0,
-                                         final int x1, final int y1,
-                                         final short flags) {
-/*
-        graphics.drawLine(x0, y0, x1, y1);
-        int diff = 1;
-        for (int thick = flags >> 16; --thick > 0; ) {
-            if ((flags & 0x01) != 0) {
-                graphics.drawLine(x0 - diff, y0, x1 - diff, y1);
-                if (--thick > 0) {
-                    graphics.drawLine(x0 + diff, y0, x1 + diff, y1);
-                }
-            } else if ((flags & 0x02) != 0) {
-                graphics.drawLine(x0, y0 - diff, x1, y1 - diff);
-                if (--thick > 0) {
-                    graphics.drawLine(x0, y0 + diff, x1, y1 + diff);
+    private static void drawLineSegment(final Graphics graphics,
+                                        int x0, int y0,
+                                        int x1, int y1,
+                                        final short flags,
+                                        final int w, final int h) {
+        final boolean p0IsWithin = x0 >=0 && x0 < w && y0 >=0 && y0 < h;
+        final boolean p1IsWithin = x1 >=0 && x1 < w && y1 >=0 && y1 < h;
+        if (!p0IsWithin || !p1IsWithin) {
+            final int px0y;
+            final int pxwy;
+            final int py0x;
+            final int pyhx;
+            if (x0 == x1) {
+                px0y = pxwy = -1;
+                py0x = pyhx = x0;
+            } else if (y0 == y1) {
+                px0y = pxwy = y0;
+                py0x = pyhx = -1;
+            } else {
+                final double k = (double)(y1 - y0) / (x1 - x0);
+                px0y = (int) (-k * x0 + y0);
+                pxwy = (int) (k * (w - x0) + y0);
+                py0x = (int) ((k * x0 - y0) / k);
+                pyhx = (int) ((k * x0 + h - y0) / k);
+            }
+            int ps = 0, pe = 0;
+            if (px0y >= 0 && px0y < h) {
+                ps = px0y;
+            }
+            if (pxwy >= 0 && pxwy < h) {
+                if (ps == 0) {
+                    ps = w << 16 | pxwy;
+                } else {
+                    pe = w << 16 | pxwy;
                 }
             }
-            diff++;
+            if (py0x >= 0 && py0x < w) {
+                if (ps == 0) {
+                    ps = py0x << 16;
+                } else if (pe == 0) {
+                    pe = py0x << 16;
+                }
+            }
+            if (pyhx >= 0 && pyhx < w) {
+                if (ps == 0) {
+                    ps = pyhx << 16 | h;
+                } else if (pe == 0) {
+                    pe = pyhx << 16 | h;
+                }
+            }
+            if (!p0IsWithin && !p1IsWithin) {
+                x0 = ps >>> 16;
+                y0 = ps & 0x0000ffff;
+                x1 = pe >>> 16;
+                y1 = pe & 0x0000ffff;
+            } else if (p0IsWithin) {
+                final int xa = ps >>> 16;
+                final int xb = pe >>> 16;
+                final int ya = ps & 0x0000ffff;
+                final int yb = pe & 0x0000ffff;
+                if (x1 < x0) {
+                    if (xa < xb) {
+                        x1 = xa;
+                        y1 = ya;
+                    } else {
+                        x1 = xb;
+                        y1 = yb;
+                    }
+                } else if (x1 > x0) {
+                    if (xa > xb) {
+                        x1 = xa;
+                        y1 = ya;
+                    } else {
+                        x1 = xb;
+                        y1 = yb;
+                    }
+                } else {
+                    if (y1 > y0) {
+                        y1 = h;
+                    } else {
+                        y1 = 0;
+                    }
+                }
+            } else if (p1IsWithin) {
+                final int xa = ps >>> 16;
+                final int xb = pe >>> 16;
+                final int ya = ps & 0x0000ffff;
+                final int yb = pe & 0x0000ffff;
+                if (x1 < x0) {
+                    if (xa < xb) {
+                        x0 = xb;
+                        y0 = yb;
+                    } else {
+                        x0 = xa;
+                        y0 = ya;
+                    }
+                } else if (x1 > x0) {
+                    if (xa < xb) {
+                        x0 = xa;
+                        y0 = ya;
+                    } else {
+                        x0 = xb;
+                        y0 = yb;
+                    }
+                } else {
+                    if (y1 > y0) {
+                        y0 = 0;
+                    } else {
+                        y0 = h;
+                    }
+                }
+            }
         }
-*/
-        final int thick = flags >> 8;
+        drawLineSegment(graphics, x0, y0, x1, y1, flags);
+    }
+
+    private static void drawLineSegment(final Graphics graphics,
+                                        final int x0, final int y0,
+                                        final int x1, final int y1,
+                                        final short flags) {
+
+        final int thick = flags >>> 8;
         if (thick > 1) {
-            int t0x0, t0y0, t0x1, t0y1, t0x2, t0y2;
-            int t1x0, t1y0, t1x1, t1y1, t1x2, t1y2;
+            final int t0x0, t0y0, t0x1, t0y1, t0x2, t0y2;
+            final int t1x0, t1y0, t1x1, t1y1, t1x2, t1y2;
+            final int th2 = thick / 2;
             if ((flags & 0x01) != 0) {
-                t0x0 = x0 - thick / 2;
+                t0x0 = x0 - th2;
                 t0y0 = y0;
-                t0x1 = x0 + thick / 2;
+                t0x1 = x0 + th2;
                 t0y1 = y0;
-                t0x2 = x1 - thick / 2;
+                t0x2 = x1 - th2;
                 t0y2 = y1;
-                t1x0 = x0 + thick / 2;
+                t1x0 = x0 + th2;
                 t1y0 = y0;
-                t1x1 = x1 - thick / 2;
+                t1x1 = x1 - th2;
                 t1y1 = y1;
-                t1x2 = x1 + thick / 2;
+                t1x2 = x1 + th2;
                 t1y2 = y1;
             } else if ((flags & 0x02) != 0) {
                 t0x0 = x0;
-                t0y0 = y0 - thick / 2;
+                t0y0 = y0 - th2;
                 t0x1 = x0;
-                t0y1 = y0 + thick / 2;
+                t0y1 = y0 + th2;
                 t0x2 = x1;
-                t0y2 = y1 - thick / 2;
+                t0y2 = y1 - th2;
                 t1x0 = x0;
-                t1y0 = y0 + thick / 2;
+                t1y0 = y0 + th2;
                 t1x1 = x1;
-                t1y1 = y1 - thick / 2;
+                t1y1 = y1 - th2;
                 t1x2 = x1;
-                t1y2 = y1 + thick / 2;
+                t1y2 = y1 + th2;
             } else {
                 t0x0 = t0y0 = t0x1 = t0y1 = t0x2 = t0y2 = 0;
                 t1x0 = t1y0 = t1x1 = t1y1 = t1x2 = t1y2 = 0;
@@ -1434,7 +1540,7 @@ final class MapViewer {
         }
         
         final double w = thick + ((Math.sqrt(2 * thick * thick) - thick) * Math.abs(Math.sin(2 * aRad)));
-        flags |= ExtraMath.round(w) << 8;
+        flags |= (short) (ExtraMath.round(w) << 8);
 
         return flags;
     }

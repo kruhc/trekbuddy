@@ -340,6 +340,14 @@ final class LocatorView extends View {
                          lineLength - (fh << 1),
                          0, 360);
 
+        // draw north lock
+        if (mode % 2 != 0) {
+            graphics.drawImage(NavigationScreens.nlock,
+                               wHalf - NavigationScreens.nlockSize2,
+                               hHalf - (lineLength >> 1) - NavigationScreens.nlockSize2,
+                               Graphics.LEFT | Graphics.TOP);
+        }
+
         // wpt index
         final Waypoint wpt = navigator.getNavigateTo();
 
@@ -560,11 +568,6 @@ final class LocatorView extends View {
         graphics.drawString(RANGES_STR[rangeIdx],
                             dx + 3, h - fh - 2,
                             Graphics.LEFT | Graphics.TOP);
-
-/*
-        // flush
-        flushGraphics();
-*/
     }
 
     private void drawCompas(final int width2, final int height2, final int fh, final int thick,

@@ -62,11 +62,11 @@ public final class NavigationScreens {
 */
     private static final SimpleCalendar CALENDAR = new SimpleCalendar(Calendar.getInstance(TimeZone.getDefault()));
 
-    private static final String STR_KN  = " kn ";
-    private static final String STR_MPH = " mph ";
-    private static final String STR_KMH = " km/h ";
-    private static final String STR_M   = " m";
-    private static final String STR_FT  = " ft";
+    private static final char[] STR_KN  = { ' ', 'k', 'n', ' ' };
+    private static final char[] STR_MPH = { ' ', 'm', 'p', 'h', ' ' };
+    private static final char[] STR_KMH = { ' ', 'k', 'm', '/', 'h', ' ' };
+    private static final char[] STR_M   = { ' ', 'm' };
+    private static final char[] STR_FT  = { ' ', 'f', 't' };
 
     /*
      * image cache
@@ -74,6 +74,7 @@ public final class NavigationScreens {
 
     public static Image logo;  // TODO fix visibility
     public static Image crosshairs; // TODO fix visibility
+    public static Image nlock; // TODO fix visibility
 /*
     public static Image[] stores;   // TODO fix visibility
 */
@@ -89,11 +90,12 @@ public final class NavigationScreens {
     private static int[] arrowSize2;
     private static boolean[] arrowsFull;
     private static int wptSize2;
-    private static int poiSize, poiSize2;
+    private static int poiSize;
 
     // public (???) vars
     public static int bulletSize;
     public static int useCondensed;
+    public static int nlockSize2;
 
     public static void initialize() throws IOException {
         // init image cache
@@ -105,6 +107,7 @@ public final class NavigationScreens {
         pois = createImage("/resources/pois.png");
         waypoint = createImage("/resources/wpt.png");
         providers = createImage("/resources/bullets.png");
+        nlock = createImage("/resources/nlock.png");
 /*
         stores = new Image[] {
             createImage("/resources/icon.store.xml.png"),
@@ -123,7 +126,7 @@ public final class NavigationScreens {
         wptSize2 = waypoint.getHeight() >> 1;
         bulletSize = providers.getHeight();
         poiSize = pois.getHeight();
-        poiSize2 = poiSize >> 1;
+        nlockSize2 = nlock.getHeight() >> 1;
     }
 
     public static int customize() throws IOException {
@@ -161,7 +164,13 @@ public final class NavigationScreens {
             pois = null;
             pois = image;
             poiSize = pois.getHeight();
-            poiSize2 = poiSize >> 1;
+            i++;
+        }
+        image = loadImage(Config.FOLDER_RESOURCES, "nlock.png");
+        if (image != null) {
+            nlock = null;
+            nlock = image;
+            nlockSize2 = nlock.getHeight() >> 1;
             i++;
         }
         logo = loadImage(Config.FOLDER_RESOURCES, "logo.png");
@@ -324,7 +333,7 @@ public final class NavigationScreens {
     public static void drawPOI(final Graphics graphics, final int status,
                                final int x, final int y, final int anchor) {
         final int poiSize = NavigationScreens.poiSize;
-        final int poiSize2 = NavigationScreens.poiSize2;
+        final int poiSize2 = poiSize >> 1;
 
         if (Config.S60renderer) {
             graphics.setClip(x - poiSize2, y - poiSize2, poiSize, poiSize);

@@ -1057,8 +1057,7 @@ final class MapViewer {
             final int y0 = p0.getY() - y;
             final int x1 = chx + crosshairSize2;
             final int y1 = chy + crosshairSize2;
-            /* bounding box check not necessary ;-) */
-            drawLineSegment(graphics, x0, y0, x1, y1, updatePF(Config.trailThick, x1 - x0, y1 - y0));
+            drawLineSegment(graphics, x0, y0, x1, y1, updatePF(Config.trailThick, x1 - x0, y1 - y0), w, h);
         }
         
         // restore color and style
@@ -1073,48 +1072,48 @@ final class MapViewer {
         final boolean p0IsWithin = x0 >=0 && x0 < w && y0 >=0 && y0 < h;
         final boolean p1IsWithin = x1 >=0 && x1 < w && y1 >=0 && y1 < h;
         if (!p0IsWithin || !p1IsWithin) {
-            final int px0y;
-            final int pxwy;
-            final int py0x;
-            final int pyhx;
+            int ps = -1, pe = -1;
             if (x0 == x1) {
-                px0y = pxwy = -1;
-                py0x = pyhx = x0;
+                ps = x0 << 16;
+                pe = x0 << 16 | (h - 1);
             } else if (y0 == y1) {
-                px0y = pxwy = y0;
-                py0x = pyhx = -1;
+                ps = y0;
+                pe = (w - 1) << 16 | y0;
             } else {
-                final double k = (double)(y1 - y0) / (x1 - x0);
-                px0y = (int) (-k * x0 + y0);
-                pxwy = (int) (k * (w - x0) + y0);
-                py0x = (int) ((k * x0 - y0) / k);
-                pyhx = (int) ((k * x0 + h - y0) / k);
-            }
-            int ps = 0, pe = 0;
-            if (px0y >= 0 && px0y < h) {
-                ps = px0y;
-            }
-            if (pxwy >= 0 && pxwy < h) {
-                if (ps == 0) {
-                    ps = w << 16 | pxwy;
-                } else {
-                    pe = w << 16 | pxwy;
+                final float k = (float)(y1 - y0) / (x1 - x0);
+                final float px0y = (-k * x0 + y0); // q
+                final float py0x = (-px0y / k);
+                final float pxwy = (k * (w - 1) + px0y);
+                final float pyhx = ((h - 1 - px0y) / k);
+                if (px0y >= 0 && px0y <= (h - 1)) {
+                    ps = (int)px0y;
+                }
+                if (pxwy >= 0 && pxwy <= (h - 1)) {
+                    final int value = (w - 1) << 16 | (int)pxwy;
+                    if (ps < 0) {
+                        ps = value;
+                    } else {
+                        pe = value;
+                    }
+                }
+                if (py0x >= 0 && py0x <= (w - 1)) {
+                    final int value = (int)py0x << 16;
+                    if (ps < 0) {
+                        ps = value;
+                    } else if (pe < 0) {
+                        pe = value;
+                    }
+                }
+                if (pyhx >= 0 && pyhx <= (w - 1)) {
+                    final int value = (int)pyhx << 16 | (h - 1);
+                    if (ps < 0) {
+                        ps = value;
+                    } else if (pe < 0) {
+                        pe = value;
+                    }
                 }
             }
-            if (py0x >= 0 && py0x < w) {
-                if (ps == 0) {
-                    ps = py0x << 16;
-                } else if (pe == 0) {
-                    pe = py0x << 16;
-                }
-            }
-            if (pyhx >= 0 && pyhx < w) {
-                if (ps == 0) {
-                    ps = pyhx << 16 | h;
-                } else if (pe == 0) {
-                    pe = pyhx << 16 | h;
-                }
-            }
+            if (pe < 0) pe = ps;
             if (!p0IsWithin && !p1IsWithin) {
                 x0 = ps >>> 16;
                 y0 = ps & 0x0000ffff;
@@ -1178,10 +1177,10 @@ final class MapViewer {
                 }
             }
         }
-        drawLineSegment(graphics, x0, y0, x1, y1, flags);
+        clipLineSegment(graphics, x0, y0, x1, y1, flags);
     }
 
-    private static void drawLineSegment(final Graphics graphics,
+    private static void clipLineSegment(final Graphics graphics,
                                         final int x0, final int y0,
                                         final int x1, final int y1,
                                         final short flags) {

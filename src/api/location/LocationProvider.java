@@ -17,8 +17,9 @@ public abstract class LocationProvider {
     public static final int _STALLED                = 0x04; // non-JSR_179
     public static final int _CANCELLED              = 0x05; // non-JSR_179
 
-    public static int syncs, mismatches, checksums, restarts, stalls, errors, pings;
-    
+    public static int syncs, mismatches, invalids, checksums,
+                      restarts, stalls, errors, pings, maxavail;
+
     private String name;
     private LocationListener listener;
     private Throwable throwable;
@@ -32,7 +33,7 @@ public abstract class LocationProvider {
 
     protected LocationProvider(String name) {
         this.name = name;
-        syncs = mismatches = checksums = restarts = stalls = errors = pings = 0;
+        syncs = mismatches = invalids = checksums = restarts = stalls = errors = pings = maxavail = 0;
     }
 
     public String getName() {

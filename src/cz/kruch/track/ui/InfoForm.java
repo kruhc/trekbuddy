@@ -102,7 +102,15 @@ final class InfoForm implements CommandListener {
             sb.delete(0, sb.length()).append("datum: ").append(map.getDatum()).append("; projection: ").append(map.getProjection());
             pane.append(newItem("Map", sb.toString()));
         }
-        sb.delete(0, sb.length()).append((ps == null ? "" : ps.toString())).append("; stalls=").append(api.location.LocationProvider.stalls).append("; restarts=").append(api.location.LocationProvider.restarts).append("; syncs=").append(api.location.LocationProvider.syncs).append("; mismatches=").append(api.location.LocationProvider.mismatches).append("; checksums=").append(api.location.LocationProvider.checksums).append("; errors=").append(api.location.LocationProvider.errors).append("; pings=").append(api.location.LocationProvider.pings);
+        sb.delete(0, sb.length()).append((ps == null ? "" : ps.toString()))
+                .append("; stalls=").append(api.location.LocationProvider.stalls)
+                .append("; restarts=").append(api.location.LocationProvider.restarts)
+                .append("; syncs=").append(api.location.LocationProvider.syncs)
+                .append("; mismatches=").append(api.location.LocationProvider.mismatches)
+                .append("; checksums=").append(api.location.LocationProvider.checksums)
+                .append("; errors=").append(api.location.LocationProvider.errors)
+                .append("; pings=").append(api.location.LocationProvider.pings)
+                .append("; maxavail=").append(api.location.LocationProvider.maxavail);
         pane.append(new StringItem("ProviderStatus", sb.toString()));
         if (le != null) {
             pane.append(new StringItem("ProviderError", le.toString()));
@@ -111,11 +119,11 @@ final class InfoForm implements CommandListener {
             pane.append(new StringItem("TracklogError", te.toString()));
         }
         sb.delete(0, sb.length());
-        sb.append("pauses: ").append(cz.kruch.track.TrackingMIDlet.pauses);
-        sb.append("; uncaught: ").append(SmartRunnable.uncaught);
-        sb.append("; mergedRT: ").append(SmartRunnable.mergedRT);
-        sb.append("; mergedKT: ").append(SmartRunnable.mergedKT);
-        pane.append(newItem("Debug", sb.toString()));
+        sb.append("pauses: ").append(cz.kruch.track.TrackingMIDlet.pauses)
+                .append("; uncaught: ").append(SmartRunnable.uncaught)
+                .append("; mergedRT: ").append(SmartRunnable.mergedRT)
+                .append("; mergedKT: ").append(SmartRunnable.mergedKT)
+                .append(newItem("Debug", sb.toString()));
     }
 
     public void commandAction(Command command, Displayable displayable) {

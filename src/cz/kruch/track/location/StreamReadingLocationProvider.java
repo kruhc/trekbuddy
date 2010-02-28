@@ -23,6 +23,9 @@ abstract class StreamReadingLocationProvider extends LocationProvider {
     private static final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("Stream");
 //#endif
 
+    // max buffer available
+    private static final int MAX_INPUT_SIZE = 1024;
+
     // buffers
     private final byte[] btline;
     private final char[] line;
@@ -40,7 +43,11 @@ abstract class StreamReadingLocationProvider extends LocationProvider {
 
     protected StreamReadingLocationProvider(String name) {
         super(name);
-        this.btline = new byte[NmeaParser.MAX_SENTENCE_LENGTH];
+        if (!cz.kruch.track.configuration.Config.reliableInput) {
+            this.btline = new byte[NmeaParser.MAX_SENTENCE_LENGTH];
+        } else {
+            this.btline = new byte[MAX_INPUT_SIZE];
+        }
         this.line = new char[NmeaParser.MAX_SENTENCE_LENGTH];
     }
 
@@ -164,7 +171,7 @@ abstract class StreamReadingLocationProvider extends LocationProvider {
 
         // new location
         final Location location;
-
+        
         // combine
         final long datetime = rmc.date + rmc.timestamp;
         if (rmc.timestamp == gga.timestamp) {
@@ -204,7 +211,26 @@ abstract class StreamReadingLocationProvider extends LocationProvider {
             if (btlineOffset == btlineCount) {
 
                 // read from stream
-                final int n = in.read(btline);
+                final int n;
+                if (!cz.kruch.track.configuration.Config.reliableInput) {
+                    n = in.read(btline);
+                } else {
+                    final int available = in.available();
+                    if (available > 0) {
+                        n = in.read(btline, 0, Math.min(available, btline.length));
+                        if (available > maxavail) {
+                            maxavail = available;
+                        }
+                    } else {
+                        final int i = in.read();
+                        if (i == -1) {
+                            n = -1;
+                        } else {
+                            n = 1;
+                            btline[0] = (byte)i;
+                        }
+                    }
+                }
 
                 // end of stream?
                 if (n == -1) {

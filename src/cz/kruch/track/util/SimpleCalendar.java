@@ -25,20 +25,14 @@ public final class SimpleCalendar {
     }
 
     public void setTimeSafe(long millis) {
-        if (Math.abs(millis - last) >= 3600) { // if time jumps too much (1 hour)
+        if (Math.abs(millis - last) >= 3600000) { // if time jumps too much (1 hour)
             date = null;
         }
         setTime(millis);
     }
 
     public void setTime(long millis) {
-        if (date == null) {
-            date = new Date(millis);
-            calendar.setTime(date);
-            fieldHour = calendar.get(Calendar.HOUR_OF_DAY);
-            fieldMin = calendar.get(Calendar.MINUTE);
-            fieldSec = calendar.get(Calendar.SECOND);
-        } else {
+        if (date != null) {
             final int dt = (int) (millis - last) / 1000;
             final int h = dt / 3600;
             final int m = (dt % 3600) / 60;
@@ -74,14 +68,24 @@ public final class SimpleCalendar {
                 }
                 hour += h;
                 if (hour > 23) {
-                    hour %= 24; // TODO what to do?
+                    date = null;
+                    setTime(millis);
                 }
             }
             fieldHour = hour;
             fieldMin = minute;
             fieldSec = second;
+            if (dt != 0) {
+                last = millis;
+            }
+        } else {
+            date = new Date(millis);
+            calendar.setTime(date);
+            fieldHour = calendar.get(Calendar.HOUR_OF_DAY);
+            fieldMin = calendar.get(Calendar.MINUTE);
+            fieldSec = calendar.get(Calendar.SECOND);
+            last = millis;
         }
-        last = millis;
     }
 
     public int get(final int field) {

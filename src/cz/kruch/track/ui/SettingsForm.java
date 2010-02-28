@@ -298,6 +298,7 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
             // tweaks
             choicePerformance = new ChoiceGroup(Resources.getString(Resources.CFG_TWEAKS_GROUP), ChoiceGroup.MULTIPLE);
             choicePerformance.append(Resources.getString(Resources.CFG_TWEAKS_FLD_SIEMENS_IO), null);
+            choicePerformance.append(Resources.getString(Resources.CFG_TWEAKS_FLD_RELIABLE_INPUT), null);
             choicePerformance.append(Resources.getString(Resources.CFG_TWEAKS_FLD_SAFE_RENDERER), null);
             choicePerformance.append(Resources.getString(Resources.CFG_TWEAKS_FLD_FORCED_GC), null);
             choicePerformance.append(Resources.getString(Resources.CFG_TWEAKS_FLD_POWER_SAVE), null);
@@ -305,6 +306,7 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
             choicePerformance.append(Resources.getString(Resources.CFG_TWEAKS_FLD_LARGE_ATLASES), null);
             choicePerformance.setSelectedFlags(new boolean[] {
                 Config.siemensIo,
+                Config.reliableInput,
                 Config.S60renderer,
                 Config.forcedGc,
                 Config.powerSave,
@@ -730,11 +732,12 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
                 final boolean[] perf = new boolean[choicePerformance.size()];
                 choicePerformance.getSelectedFlags(perf);
                 Config.siemensIo = perf[0];
-                Config.S60renderer = perf[1];
-                Config.forcedGc = perf[2];
-                Config.powerSave = perf[3];
-                Config.oneTileScroll = perf[4];
-                Config.largeAtlases = perf[5];
+                Config.reliableInput = perf[1];
+                Config.S60renderer = perf[2];
+                Config.forcedGc = perf[3];
+                Config.powerSave = perf[4];
+                Config.oneTileScroll = perf[5];
+                Config.largeAtlases = perf[6];
 
                 // multimedia
                 if (cz.kruch.track.TrackingMIDlet.supportsVideoCapture()) {

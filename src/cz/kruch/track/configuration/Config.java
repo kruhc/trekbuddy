@@ -169,6 +169,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
     public static boolean oneTileScroll;
     public static boolean largeAtlases;
     public static boolean powerSave;
+    public static boolean reliableInput;
 
     // group [GPX options]
     public static int gpxDt                     = 60; // 1 min

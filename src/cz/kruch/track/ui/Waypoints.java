@@ -139,7 +139,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
     private NakedVector sortedWpts, cachedDisk;
     private String folder;
     private final Object[] idx;
-    private int depth, sort, cacheDiskHint;
+    private int entry, depth, sort, cacheDiskHint;
 
     private Command cmdBack, cmdCancel;
     private Command cmdOpen, cmdNavigateTo, cmdNavigateAlong, cmdNavigateBack,
@@ -188,7 +188,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
 
     public void show() {
         // let's start with basic menu
-        depth = 0;
+        entry = depth = 0;
         use(pane);
         menu(0);
     }
@@ -196,13 +196,13 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
     public void showCurrent() {
         // show current store, if any...
         if (inUseWpts != null) {
-            depth = 2;
+            entry = depth = 2;
             use(listWaypoints(inUseName, inUseWpts, true));
         } else if (currentWpts != null) {
-            depth = 2;
+            entry = depth = 2;
             use(listWaypoints(currentName, currentWpts, true));
         } else {
-            depth = 0;
+            entry = depth = 0;
             use(pane);
         }
         menu(depth);
@@ -263,7 +263,12 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                         menu(depth);
                     } break;
                     case 1: {
-                        actionListStores(_listingTitle);
+                        if (entry == 2) {
+                            depth = 0;
+                            close();
+                        } else {
+                            actionListStores(_listingTitle);
+                        }
                     } break;
                 }
             }
@@ -311,7 +316,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                         }
                         // open waypoint form
                         (new WaypointForm(item, this, distance,
-                                folder == Config.FOLDER_WPTS && currentWpts != Desktop.wpts)).show();
+                                          folder == Config.FOLDER_WPTS && currentWpts != Desktop.wpts)).show();
                     } else if (cmdNavigateTo == command) {
                         // remember idx
                         idx[depth] = item;
@@ -553,7 +558,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                         final long time;
 
                         // get message type and location
-                        if (cz.kruch.track.fun.Friends.TYPE_IAH == type) { // '==' is OK
+                        if (cz.kruch.track.fun.Friends.TYPE_IAH == type) { // == is OK
                             time = navigator.getLocation().getTimestamp();
                             qc = navigator.getLocation().getQualifiedCoordinates()._clone();
                         } else { // Friends.TYPE_MYT
@@ -654,9 +659,9 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
             if (_storeName == null) {
                 actionListStores(_listingTitle);
             } else {
-                if (_listingTitle == actionListWpts || _listingTitle == actionListTracks) { // '==' is OK
+                if (_listingTitle == actionListWpts || _listingTitle == actionListTracks) { // == is OK
                     actionListStore(_storeName, false);
-                } else if (_listingTitle == actionListTargets) { // '==' is OK
+                } else if (_listingTitle == actionListTargets) { // == is OK
                     actionUpdateTarget(_storeName, _addWptStoreKey, _addWptSelf);
                 }
                 _storeName = null;
@@ -708,12 +713,15 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
         final boolean recursive;
 
         // offer new file when selecting target
-        if (title == actionListTargets) { // '==' is OK
+        if (title == actionListTargets) { // == is OK
             v.addElement(NEW_FILE_STORE);
+            // "wpts/" folder is only supported
+            folder = Config.FOLDER_WPTS;
+            cachedDisk = null;
         }
 
         // list special stores first only when listing "wpts/" folder
-        if (folder == Config.FOLDER_WPTS) { // '==' is OK
+        if (folder == Config.FOLDER_WPTS) { // == is OK
 
             // add prefered stores
             listKnown(v);
@@ -891,6 +899,11 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
         } else {
 
             try {
+                // make sure we have backend ready // TODO why???
+                if (folder == Config.FOLDER_WPTS) {
+                    getBackend(storeName, storeName);
+                }
+                
                 // create list
                 use(listWaypoints(storeName, wpts, true));
 
@@ -1147,7 +1160,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                 gpx.setFileName(storeName);
             }
 
-            // add to collection
+            // add to backends
 //#ifdef __LOG__
             if (log.isEnabled()) log.debug("put to backends: " + storeKey + "/" + gpx + "(" + gpx.getFileName() + ")");
 //#endif
@@ -1177,7 +1190,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
 
         // update navigator if we update store being used
         if (Desktop.wpts != null) {
-            if (storeName.equals(Desktop.wptsName)) {
+            if (Desktop.wptsName.equals(storeName)) {
                 navigator.routeExpanded(wpt);
             }
         }
@@ -1285,9 +1298,9 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
 
         // add commands
         l.addCommand(cmdOpen);
-        if (title == actionListWpts || title == actionListTracks) { // '==' is OK
+        if (title == actionListWpts || title == actionListTracks) { // == is OK
             l.addCommand(cmdBack);
-        } else if (title == actionListTargets) {
+        } else if (title == actionListTargets) { // == is OK
             l.addCommand(cmdCancel);
         }
         l.setCommandListener(this);
@@ -1300,9 +1313,6 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("list waypoint from " + store);
 //#endif
-
-        // make sure we have backend ready
-        getBackend(store, store);
 
         // create list
         final SmartList l = new SmartList((new StringBuffer(32)).append(store).append(" [").append(wpts.size()).append(']').toString());

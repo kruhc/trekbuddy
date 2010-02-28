@@ -122,8 +122,8 @@ final class InfoForm implements CommandListener {
         sb.append("pauses: ").append(cz.kruch.track.TrackingMIDlet.pauses)
                 .append("; uncaught: ").append(SmartRunnable.uncaught)
                 .append("; mergedRT: ").append(SmartRunnable.mergedRT)
-                .append("; mergedKT: ").append(SmartRunnable.mergedKT)
-                .append(newItem("Debug", sb.toString()));
+                .append("; mergedKT: ").append(SmartRunnable.mergedKT);
+        pane.append(newItem("Debug", sb.toString()));
     }
 
     public void commandAction(Command command, Displayable displayable) {

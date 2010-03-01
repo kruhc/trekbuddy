@@ -24,7 +24,7 @@ abstract class StreamReadingLocationProvider extends LocationProvider {
 //#endif
 
     // max buffer available
-    private static final int MAX_INPUT_SIZE = 1024;
+    private static final int MAX_INPUT_SIZE = 2048;
 
     // buffers
     private final byte[] btline;

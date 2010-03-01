@@ -35,7 +35,7 @@
     
     <property name="classpath.proguard" value="${proguard.home}\lib\proguard.jar"/>
 
-    <path id="bootclasspath.generic">
+    <path id="bootclasspath.standard">
         <pathelement location="${wtk.home}\lib\cldcapi11.jar"/>
         <pathelement location="${wtk.home}\lib\midpapi20.jar"/>
         <pathelement location="${wtk.home}\lib\jsr75.jar"/>
@@ -112,8 +112,8 @@
         <property name="libraryjars" value="${wtk.home}\lib\cldcapi11.jar;${wtk.home}\lib\midpapi20.jar;${wtk.home}\lib\jsr75.jar;${wtk.home}\lib\jsr082.jar;${wtk.home}\lib\jsr179.jar;${wtk.home}\lib\jsr234.jar;${wtk.home}\lib\wma11.jar;lib\motorola-location.jar"/>
         <property name="classpath.preverify" value="${libraryjars}"/>
         <antcall target="clean"/>
-        <antcall target="a.pre.generic"/>
-        <antcall target="compile.generic"/>
+        <antcall target="a.pre.standard"/>
+        <antcall target="compile.standard"/>
         <antcall target="a.pack" inheritall="true"/>
         <antcall target="obfuscate" inheritall="true"/>
         <antcall target="preverify" inheritall="true"/>
@@ -127,8 +127,8 @@
         <property name="libraryjars" value="${wtk.home}\lib\cldcapi11.jar;${wtk.home}\lib\midpapi20.jar;${wtk.home}\lib\jsr75.jar;${wtk.home}\lib\jsr082.jar;${wtk.home}\lib\jsr179.jar;${wtk.home}\lib\jsr234.jar;${wtk.home}\lib\wma11.jar;lib\motorola-location.jar"/>
         <property name="classpath.preverify" value="${libraryjars}"/>
         <antcall target="clean"/>
-        <antcall target="a.pre.generic-lite"/>
-        <antcall target="compile.generic-lite"/>
+        <antcall target="a.pre.standard-lite"/>
+        <antcall target="compile.standard-lite"/>
         <antcall target="lite.pack" inheritall="true"/>
         <antcall target="obfuscate" inheritall="true"/>
         <antcall target="preverify" inheritall="true"/>
@@ -330,7 +330,7 @@
         <property name="classpath.preverify" value="${libraryjars}"/>
         <antcall target="clean"/>
         <antcall target="a.pre.emulator"/>
-        <antcall target="compile.generic"/>
+        <antcall target="compile.standard"/>
         <antcall target="a.pack" inheritall="true"/>
         <antcall target="emulator.obfuscate" inheritall="true"/>
         <move file="tmp/trekbuddy${suffix}.jar"
@@ -365,13 +365,13 @@
         <ant antfile="hecl.xml" target="compile"/>
     </target>
 
-    <target name="a.pre.generic" depends="a.pre.hecl">
+    <target name="a.pre.standard" depends="a.pre.hecl">
         <mkdir dir="tmp/src"/>
         <wtkpreprocess srcdir="src" destdir="tmp/src" version="1"
                        symbols="__HECL__,__ALL__,${pre.extra}"/>
     </target>
 
-    <target name="a.pre.generic-lite">
+    <target name="a.pre.standard-lite">
         <mkdir dir="tmp/src"/>
         <wtkpreprocess srcdir="src" destdir="tmp/src" version="1"
                        symbols="__ALL__,${pre.extra}"/>
@@ -413,7 +413,7 @@
                        symbols="__HECL__,__ANDROID__,${pre.extra}"/>
     </target>
 
-    <target name="compile.generic" depends="remove.symbian.src,remove.rim.src,remove.android.src">
+    <target name="compile.standard" depends="remove.symbian.src,remove.rim.src,remove.android.src">
         <mkdir dir="tmp/build/classes"/>
         <mkdir dir="tmp/ant"/>
         <javac srcdir="tmp/src"
@@ -421,10 +421,10 @@
                tempdir="tmp/ant"
                fork="true"
                target="1.1" source="1.3"
-               bootclasspathref="bootclasspath.generic"/>
+               bootclasspathref="bootclasspath.standard"/>
     </target>
 
-    <target name="compile.generic-lite" depends="remove.symbian.src,remove.rim.src,remove.android.src,remove.hecl.src">
+    <target name="compile.standard-lite" depends="remove.symbian.src,remove.rim.src,remove.android.src,remove.hecl.src">
         <mkdir dir="tmp/build/classes"/>
         <mkdir dir="tmp/ant"/>
         <javac srcdir="tmp/src"
@@ -432,7 +432,7 @@
                tempdir="tmp/ant"
                fork="true"
                target="1.1" source="1.3"
-               bootclasspathref="bootclasspath.generic"/>
+               bootclasspathref="bootclasspath.standard"/>
     </target>
 
     <target name="compile.std" depends="remove.nonstd.src,remove.rim.src,remove.android.src">

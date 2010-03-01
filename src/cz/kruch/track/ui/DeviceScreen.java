@@ -21,7 +21,7 @@ import java.util.TimerTask;
  */
 final class DeviceScreen extends GameCanvas implements Runnable {
 //#ifdef __LOG__
-    private static final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("Canvas");
+    private static final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("DeviceScreen");
 //#endif
 
     private static final String FLAG_UI_NO_SOFTKEY_MENU = "ui_no_softkey_menu";
@@ -41,7 +41,7 @@ final class DeviceScreen extends GameCanvas implements Runnable {
     private Graphics graphics;
 
     // eventing
-    private final SmartRunnable eventing;
+    private SmartRunnable eventing;
 
     // keylock status
     private volatile int keyRepeatedCount;
@@ -72,7 +72,17 @@ final class DeviceScreen extends GameCanvas implements Runnable {
         }
     }
 
-    /** @overriden to make <code>Graphics</code> publicly accessible and handle weird states */
+    /** @Override */
+    protected void hideNotify() {
+        eventing.setActive(false);
+    }
+
+    /** @Override */
+    protected void showNotify() {
+        eventing.setActive(true);
+    }
+
+    /** @Override to make <code>Graphics</code> publicly accessible and handle weird states */
     public Graphics getGraphics() {
         if (graphics == null || cz.kruch.track.TrackingMIDlet.s65) {
             graphics = null;
@@ -81,7 +91,7 @@ final class DeviceScreen extends GameCanvas implements Runnable {
         return graphics;
     }
 
-    /** @overriden for touch menu hook */
+    /** @Override for touch menu hook */
     public void flushGraphics() {
         if (touchMenuActive) {
             drawTouchMenu();
@@ -89,7 +99,7 @@ final class DeviceScreen extends GameCanvas implements Runnable {
         super.flushGraphics();
     }
 
-    /** @overriden for broken device handling */
+    /** @Override for broken device handling */
     public int getHeight() {
         if (fullScreenHeight == 0 || !Config.fullscreen) {
             return super.getHeight();
@@ -98,7 +108,7 @@ final class DeviceScreen extends GameCanvas implements Runnable {
         return fullScreenHeight;
     }
 
-    /** @overriden for broken device handling */
+    /** @Override for broken device handling */
     public boolean hasRepeatEvents() {
         return hasRepeatEvents;
     }

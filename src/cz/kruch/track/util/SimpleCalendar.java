@@ -34,48 +34,51 @@ public final class SimpleCalendar {
     public void setTime(long millis) {
         if (date != null) {
             final int dt = (int) (millis - last) / 1000;
-            final int h = dt / 3600;
-            final int m = (dt % 3600) / 60;
-            final int s = (dt % 3600) % 60;
-            int hour = fieldHour;
-            int minute = fieldMin;
-            int second = fieldSec;
-            if (dt < 0) {
-                second += s;
-                if (second < 0) {
-                    minute--;
-                    second = 60 + second;
-                }
-                minute += m;
-                if (minute < 0) {
-                    hour--;
-                    minute = 60 + minute;
-                }
-                hour += h;
-                if (hour < 0) {
-                    hour = 24 + hour % 24; // TODO what to do?
-                }
-            } else {
-                second += s;
-                if (second > 59) {
-                    second -= 60;
-                    minute++;
-                }
-                minute += m;
-                if (minute > 59) {
-                    minute -= 60;
-                    hour++;
-                }
-                hour += h;
-                if (hour > 23) {
-                    date = null;
-                    setTime(millis);
-                }
-            }
-            fieldHour = hour;
-            fieldMin = minute;
-            fieldSec = second;
             if (dt != 0) {
+                final int h = dt / 3600;
+                final int m = (dt % 3600) / 60;
+                final int s = (dt % 3600) % 60;
+                int hour = fieldHour;
+                int minute = fieldMin;
+                int second = fieldSec;
+                if (dt > 0) {
+                    second += s;
+                    if (second > 59) {
+                        second -= 60;
+                        minute++;
+                    }
+                    minute += m;
+                    if (minute > 59) {
+                        minute -= 60;
+                        hour++;
+                    }
+                    hour += h;
+                    if (hour > 23) {
+                        date = null;
+                        setTime(millis);
+                        return;
+                    }
+                } else {
+                    second += s;
+                    if (second < 0) {
+                        minute--;
+                        second = 60 + second;
+                    }
+                    minute += m;
+                    if (minute < 0) {
+                        hour--;
+                        minute = 60 + minute;
+                    }
+                    hour += h;
+                    if (hour < 0) {
+                        date = null;
+                        setTime(millis);
+                        return;
+                    }
+                }
+                fieldHour = hour;
+                fieldMin = minute;
+                fieldSec = second;
                 last = millis;
             }
         } else {

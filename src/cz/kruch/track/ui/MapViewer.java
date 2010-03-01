@@ -1101,7 +1101,9 @@ final class MapViewer {
                     if (ps < 0) {
                         ps = value;
                     } else if (pe < 0) {
-                        pe = value;
+                        if (value != ps) {
+                            pe = value;
+                        }
                     }
                 }
                 if (pyhx >= 0 && pyhx <= (w - 1)) {
@@ -1110,6 +1112,9 @@ final class MapViewer {
                         ps = value;
                     } else if (pe < 0) {
                         pe = value;
+                        if (value != ps) {
+                            pe = value;
+                        }
                     }
                 }
             }

@@ -747,28 +747,27 @@ public final class Desktop implements CommandListener,
 //#ifdef __LOG__
                 if (log.isEnabled()) log.debug("exit command");
 //#endif
-                
-                // stop tracklog and tracking
-                stopTracking();
-                stopTracklog();
+                // stop device control
+                cz.kruch.track.ui.nokia.DeviceControl.destroy();
+
+                // no more UI events
+                screen.hideNotify();
 
                 // stop timer
                 timer.cancel();
 
-                // stop eventing
-                // TODO
+                // stop tracklog and tracking
+                stopTracking();
+                stopTracklog();
 
-                // stop device control
-                cz.kruch.track.ui.nokia.DeviceControl.destroy();
-
-/*
+/* probably not necessary
                 // stop Friends
                 if (friends != null) {
                     friends.destroy();
                 }
 */
 
-/*
+/* most probably not necessary
                 // close atlas/map
                 if (atlas != null) {
                     atlas.close();
@@ -789,11 +788,6 @@ public final class Desktop implements CommandListener,
                 } catch (ConfigurationException e) {
                     // ignore
                 }
-
-/*
-                // stop I/O loader
-                LoaderIO.getInstance().destroy();
-*/
 
                 // bail out
                 midlet.notifyDestroyed();

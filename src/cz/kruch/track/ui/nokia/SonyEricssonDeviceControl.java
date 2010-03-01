@@ -42,10 +42,6 @@ final class SonyEricssonDeviceControl extends DeviceControl {
 //        com.nokia.mid.ui.DeviceControl.setLights(0, 0);  /* intentionally commented out */
     }
 
-    void setColor(javax.microedition.lcdui.Graphics graphics, int argbcolor) {
-        com.nokia.mid.ui.DirectUtils.getDirectGraphics(graphics).setARGBColor(argbcolor);
-    }
-
     private static String hexToDec(final String id) {
         if (id != null && id.length() != 0) {
             try {

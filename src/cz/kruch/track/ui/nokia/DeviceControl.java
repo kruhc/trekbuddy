@@ -150,10 +150,6 @@ public class DeviceControl extends TimerTask {
         instance.useTicker(displayable, ticker);
     }
 
-    public static void setARGBColor(javax.microedition.lcdui.Graphics graphics, int argbcolor) {
-        instance.setColor(graphics, argbcolor);
-    }
-
 //    public static String getStorageURL() throws Exception {
 //        return instance.getCardURL();
 //    }
@@ -247,10 +243,6 @@ public class DeviceControl extends TimerTask {
         } else {
             ((javax.microedition.lcdui.Displayable) list).setTicker(null);
         }
-    }
-
-    void setColor(javax.microedition.lcdui.Graphics graphics, int argbcolor) {
-        graphics.setColor(argbcolor & 0x00ffffff);
     }
 
     //

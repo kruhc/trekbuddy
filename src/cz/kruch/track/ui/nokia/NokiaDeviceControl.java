@@ -37,11 +37,6 @@ class NokiaDeviceControl extends DeviceControl {
         confirm(backlight == 0 ? Resources.getString(Resources.DESKTOP_MSG_BACKLIGHT_OFF) : Resources.getString(Resources.DESKTOP_MSG_BACKLIGHT_ON) + " (" + values[backlight] + "%)");
     }
 
-    /** @Override */
-    void setColor(javax.microedition.lcdui.Graphics graphics, int argbcolor) {
-        com.nokia.mid.ui.DirectUtils.getDirectGraphics(graphics).setARGBColor(argbcolor);
-    }
-
     protected void setLights() {
         com.nokia.mid.ui.DeviceControl.setLights(0, values[backlight]);
     }

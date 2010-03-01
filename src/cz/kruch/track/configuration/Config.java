@@ -577,6 +577,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         // 0.9.94 extensions
         try {
             noQuestions = din.readBoolean();
+            reliableInput = din.readBoolean();
         } catch (Exception e) {
         }
 
@@ -678,6 +679,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         dout.writeInt(startupScreen);
         /* since 0.9.94 */
         dout.writeBoolean(noQuestions);
+        dout.writeBoolean(reliableInput);
 
 //#ifdef __LOG__
         if (log.isEnabled()) log.info("configuration updated");

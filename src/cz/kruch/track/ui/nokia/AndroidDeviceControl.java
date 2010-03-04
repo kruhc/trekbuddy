@@ -12,6 +12,18 @@ final class AndroidDeviceControl extends DeviceControl {
     }
 
     /** @Override */
+    void doPostInit(cz.kruch.track.ui.Desktop desktop) {
+        // start orientation sensing
+        try {
+            api.location.LocationProvider sensor = new cz.kruch.track.location.AndroidLocationProvider();
+            sensor.setLocationListener(desktop);
+            ((cz.kruch.track.location.AndroidLocationProvider) sensor).sense();
+        } catch (Throwable t) {
+            cz.kruch.track.ui.Desktop.showError("Sensor", t, cz.kruch.track.ui.Desktop.screen);
+        }
+    }
+
+    /** @Override */
     void turnOn() {
         android.os.PowerManager pm = (android.os.PowerManager) org.microemu.android.MicroEmulator.context.getSystemService(android.content.Context.POWER_SERVICE);
         wl = pm.newWakeLock(android.os.PowerManager.SCREEN_BRIGHT_WAKE_LOCK, "TrekBuddy");

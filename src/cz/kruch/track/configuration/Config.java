@@ -133,7 +133,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
     public static int o2Depth                   = 1;
 
     // group [Blackberry]
-    public static boolean negativeAltFix        = true;
+    public static boolean negativeAltFix;
 
     // group [NMEA]
     public static boolean nmeaMsExact           = true;
@@ -170,6 +170,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
     public static boolean largeAtlases;
     public static boolean powerSave;
     public static boolean reliableInput;
+    public static boolean hideBarCmd;
 
     // group [GPX options]
     public static int gpxDt                     = 60; // 1 min
@@ -389,195 +390,109 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         osdBlackColor = din.readBoolean();
 
         // 0.9.1 extension - obsolete since 0.9.65
-        String _tracklog = "never";
-        try {
-            _tracklog = din.readUTF();
-        } catch (Exception e) {
-        }
+        /*tracklog = */din.readUTF();
 
         // 0.9.2 extension
-        try {
-            /*useGeocachingFormat = */din.readBoolean();
-        } catch (Exception e) {
-        }
+        /*useGeocachingFormat = */din.readBoolean();
 
         // pre 0.9.4 extension
-        try {
-            /*optimisticIo = */din.readBoolean();
-            S60renderer = din.readBoolean();
-            /*cacheOffline = */din.readBoolean();
-        } catch (Exception e) {
-        }
+        /*optimisticIo = */din.readBoolean();
+        S60renderer = din.readBoolean();
+        /*cacheOffline = */din.readBoolean();
 
         // 0.9.5 extension
-        try {
-            decimalPrecision = din.readBoolean();
-            /*useGridFormat = */din.readBoolean();
-            hpsWptTrueAzimuth = din.readBoolean();
-            osdBasic = din.readBoolean();
-        } catch (Exception e) {
-        }
+        decimalPrecision = din.readBoolean();
+        /*useGridFormat = */din.readBoolean();
+        hpsWptTrueAzimuth = din.readBoolean();
+        osdBasic = din.readBoolean();
 
         // 0.9.5x extensions
-        boolean _unitsNautical = false, _unitsImperial = false;
-        try {
-            locationTimings = din.readUTF();
-            trailOn = din.readBoolean();
-            forcedGc = din.readBoolean();
-            oneTileScroll = din.readBoolean();
-            /*gpxRaw = */din.readBoolean();
-            _unitsNautical = din.readBoolean();
-            commUrl = din.readUTF();
-            _unitsImperial = din.readBoolean();
-            wptProximity = din.readInt();
-            poiProximity = din.readInt();
-            /*language = */din.readUTF();
-            /*routeLineColor = */din.readInt();
-            routeLineStyle = din.readBoolean();
-            routePoiMarks = din.readBoolean();
-            /*scrollingDelay = */din.readInt();
-            gpxDt = din.readInt();
-            gpxDs = din.readInt();
-        } catch (Exception e) {
-        }
+        locationTimings = din.readUTF();
+        trailOn = din.readBoolean();
+        forcedGc = din.readBoolean();
+        oneTileScroll = din.readBoolean();
+        /*gpxRaw = */din.readBoolean();
+        /*unitsNautical = */din.readBoolean();
+        commUrl = din.readUTF();
+        /*unitsImperial = */din.readBoolean();
+        wptProximity = din.readInt();
+        poiProximity = din.readInt();
+        /*language = */din.readUTF();
+        /*routeLineColor = */din.readInt();
+        routeLineStyle = din.readBoolean();
+        routePoiMarks = din.readBoolean();
+        /*scrollingDelay = */din.readInt();
+        gpxDt = din.readInt();
+        gpxDs = din.readInt();
 
         // 0.9.63 extensions
-        try {
-            osdScale = din.readBoolean();
-        } catch (Exception e) {
-        }
+        osdScale = din.readBoolean();
 
         // 0.9.65 extensions
-        try {
-            locationProvider = din.readInt();
-            tracklog = din.readInt();
-            gpxOnlyValid = din.readBoolean();
-        } catch (Exception e) {
-/* obsolete
-            if ("Bluetooth".equals(_locationProvider)) {
-                locationProvider = Config.LOCATION_PROVIDER_JSR82;
-            } else if ("Internal".equals(_locationProvider)) {
-                locationProvider = Config.LOCATION_PROVIDER_JSR179;
-            } else if ("Serial".equals(_locationProvider)) {
-                locationProvider = Config.LOCATION_PROVIDER_SERIAL;
-            } else if ("Simulator".equals(_locationProvider)) {
-                locationProvider = Config.LOCATION_PROVIDER_SIMULATOR;
-            }
-            if ("never".equals(_tracklog)) {
-                tracklog = TRACKLOG_NEVER;
-            } else if ("ask".equals(_tracklog)) {
-                tracklog = TRACKLOG_ASK;
-            } else if ("always".equals(_tracklog)) {
-                tracklog = TRACKLOG_ALWAYS;
-            }
-*/
-        }
+        locationProvider = din.readInt();
+        tracklog = din.readInt();
+        gpxOnlyValid = din.readBoolean();
 
-        // 0.9.66 extensions
         try {
+            // 0.9.66 extensions
             units = din.readInt();
-        } catch (Exception e) {
-/* obsolete
-            if (_unitsImperial) {
-                units = Config.UNITS_IMPERIAL;
-            } else if (_unitsNautical) {
-                units = Config.UNITS_NAUTICAL;
-            }
-*/
-        }
 
-        // 0.9.69 extensions
-        try {
+            // 0.9.69 extensions
             o2Depth = din.readInt();
             siemensIo = din.readBoolean();
-        } catch (Exception e) {
-/* obsolete
-            siemensIo = cz.kruch.track.TrackingMIDlet.siemens && !cz.kruch.track.TrackingMIDlet.sxg75;
-*/
-        }
 
-        // 0.9.70 extensions
-        try {
+            // 0.9.70 extensions
             largeAtlases = din.readBoolean();
             gpxGsmInfo = din.readBoolean();
-        } catch (Exception e) {
-        }
 
-        // 0.9.74 extensions
-        try {
+            // 0.9.74 extensions
             osdAlpha = din.readInt();
-        } catch (Exception e) {
-        }
 
-        // 0.9.77 extensions
-        try {
+            // 0.9.77 extensions
             btKeepAlive = din.readInt();
-        } catch (Exception e) {
-        }
 
-        // 0.9.78 extensions
-        try {
+            // 0.9.78 extensions
             cmsCycle = din.readInt();
-        } catch (Exception e) {
-        }
 
-        // 0.9.79 extensions
-        try {
+            // 0.9.79 extensions
             trailColor = din.readInt();
             trailThick = din.readInt();
             routeColor = din.readInt();
             routeThick = din.readInt();
-        } catch (Exception e) {
-        }
 
-        // 0.9.81 extensions
-        try {
+            // 0.9.81 extensions
             makeRevisions = din.readBoolean();
             autohideNotification = din.readBoolean();
             preferGsName = din.readBoolean();
             safeColors = din.readBoolean();
-        } catch (Exception e) {
-        }
 
-        // 0.9.82 extensions
-        try {
+            // 0.9.82 extensions
             powerSave = din.readBoolean();
             snapshotFormatIdx = din.readInt();
             cfmt = din.readInt();
             sort = din.readInt();
-        } catch (Exception e) {
-        }
 
-        // 0.9.85 extensions
-        try {
+            // 0.9.85 extensions
             listFont = din.readInt();
-        } catch (Exception e) {
-        }
 
-        // 0.9.88 extensions
-        try {
+            // 0.9.88 extensions
             altCorrection = din.readInt();
             gpxSecsDecimal = din.readBoolean();
-        } catch (Exception e) {
-        }
 
-        // 0.9.91 extensions
-        try {
+            // 0.9.91 extensions
             negativeAltFix = din.readBoolean();
-        } catch (Exception e) {
-        }
 
-        // 0.9.92 extensions
-        try {
+            // 0.9.92 extensions
             desktopFontSize = din.readInt();
             startupScreen = din.readInt();
-        } catch (Exception e) {
-        }
 
-        // 0.9.94 extensions
-        try {
+            // 0.9.94 extensions
             noQuestions = din.readBoolean();
             reliableInput = din.readBoolean();
+
+            // 0.9.95 extensions
+            hideBarCmd = din.readBoolean();
+
         } catch (Exception e) {
         }
 
@@ -680,6 +595,8 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         /* since 0.9.94 */
         dout.writeBoolean(noQuestions);
         dout.writeBoolean(reliableInput);
+        /* since 0.9.95 */
+        dout.writeBoolean(hideBarCmd);
 
 //#ifdef __LOG__
         if (log.isEnabled()) log.info("configuration updated");

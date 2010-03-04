@@ -7,67 +7,87 @@ import java.util.Vector;
 /**
  * Buffered backend for Display.callserially(Runnable) with task merging support.
  *
- * @author Ales Pour <kruhc@seznam.cz>
+ * @author kruhc@seznam.cz
  */
 final class SmartRunnable implements Runnable {
-    static int uncaught, mergedRT, mergedKT;
+    // statistics
+    static int uncaught, mergedRT, mergedKT, maxQT;
 
+    // task queue
     private final Vector runnables;
-    private boolean go, pending;
 
-    public SmartRunnable() {
+    // state vars
+    private boolean pending, active;
+
+    SmartRunnable() {
         this.runnables = new Vector(16);
-        this.go = true;
+        this.active = true;
     }
 
-    public void destroy() {
+    void setActive(boolean active) {
+        // fire flag
+        final boolean fire;
+
+        // avoid collision with run()
         synchronized (this) {
-            go = false;
+            this.active = active;
+            if (active && !pending) {
+                fire = pending = true;
+            } else {
+                fire = false;
+            }
+        }
+
+        // better enqueue it out of synchronized block
+        if (fire) {
+            Desktop.display.callSerially(this);
         }
     }
 
-    public void callSerially(final Runnable r) {
+    void callSerially(final Runnable r) {
 		// local ref
         final Vector runnables = this.runnables;
 
         // fire flag
-        boolean fire = false;
+        final boolean fire;
 
-        // thread-safe
+        // avoid collisino with run() or setActive()
         synchronized (this) {
 
-            // accept task only if running
-            if (go) {
-
-                // try task merge
-                if (runnables.size() > 0) {
-
-                    final Object last = runnables.lastElement();
-                    if (r instanceof DeviceScreen) { // trick #1: avoid duplicates of key-hold checks
-                        if (last instanceof DeviceScreen) {
-							mergedKT++;
-							return;
-                        }
-                    } else if (r instanceof Desktop.RenderTask) { // trick #2: merge render tasks
-                        if (last instanceof Desktop.RenderTask) {
-                            ((Desktop.RenderTask) last).merge(((Desktop.RenderTask) r));
-							mergedRT++;
-							return;
-                        }
+            // try task merge first
+            if (runnables.size() > 0) {
+                final Object last = runnables.lastElement();
+                if (r instanceof Desktop.RenderTask) { // trick #1: merge render tasks
+                    if (last instanceof Desktop.RenderTask) {
+                        ((Desktop.RenderTask) last).merge(((Desktop.RenderTask) r));
+                        mergedRT++;
+                        return;
                     }
-
+                } else if (r instanceof DeviceScreen) { // trick #2: avoid duplicates of key-hold checks
+                    if (last instanceof DeviceScreen) {
+                        mergedKT++;
+                        return;
+                    }
                 }
+            }
 
-                // enqueue task
-                runnables.addElement(r);
+            // no task to merge with, just append
+            runnables.addElement(r);
 
-                // "schedule" a task if no task is currently running
-                if (!pending) {
-                    fire = pending = true;
-                }
+            // debug info
+            if (runnables.size() > maxQT) {
+                maxQT = runnables.size();
+            }
+
+            // fire task if no task is running
+            if (active && !pending) {
+                fire = pending = true;
+            } else {
+                fire = false;
             }
         }
 
+        // better enqueue it out of synchronized block
         if (fire) {
             Desktop.display.callSerially(this);
         }
@@ -75,16 +95,20 @@ final class SmartRunnable implements Runnable {
 
     public void run() {
         final Vector runnables = this.runnables;
-        Runnable r = null;
+        final Runnable r;
 
+        // pop task
         synchronized (this) {
             if (runnables.size() > 0) {
                 r = (Runnable) runnables.elementAt(0);
-                runnables.setElementAt(null, 0);
+                runnables.setElementAt(null, 0); // helps GC?
                 runnables.removeElementAt(0);
+            } else { // should never happen
+                r = null;
             }
         }
 
+        // execute
         if (r != null) {
             try {
                 r.run();
@@ -97,16 +121,18 @@ final class SmartRunnable implements Runnable {
         }
 
         // fire flag
-        boolean fire = false;
+        final boolean fire;
 
+        // more work to do?
         synchronized (this) {
-            if (runnables.size() > 0) {
-                fire = pending = true;
+            if (active && runnables.size() > 0) {
+                fire = true;
             } else {
-                pending = false;
+                fire = pending = false;
             }
         }
 
+        // better enqueue it out of synchronized block
         if (fire) {
             Desktop.display.callSerially(this);
         }

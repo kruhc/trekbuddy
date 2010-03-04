@@ -339,6 +339,9 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         if (getAppProperty(JAD_GPS_DEVICE_NAME) != null) {
             cz.kruch.track.configuration.Config.btDeviceName = getAppProperty(JAD_GPS_DEVICE_NAME);
         }
+        if (getAppProperty(JAD_UI_RIGHT_KEY) != null) {
+            cz.kruch.track.configuration.Config.hideBarCmd = "...".equals(getAppProperty(JAD_UI_RIGHT_KEY));
+        }
 
         // boot desktop
         desktop.boot(imgcached, configured, customized, localized, keysmapped);

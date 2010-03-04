@@ -13,6 +13,7 @@ import javax.microedition.lcdui.CommandListener;
 import javax.microedition.midlet.MIDlet;
 
 import java.util.TimerTask;
+import java.util.Vector;
 
 /**
  * Graphic output and user interaction.
@@ -58,28 +59,37 @@ final class DeviceScreen extends GameCanvas implements Runnable {
     private int gx, gy;
     private boolean inMove;
 
+    // status
+    private boolean active;
+
+    // commands
+    private Vector commands;
+
     public DeviceScreen(Desktop delegate, MIDlet midlet) {
         super(false);
         this.delegate = delegate;
         this.eventing = new SmartRunnable();
+        if (Config.fullscreen && Config.hideBarCmd) {
+            this.commands = new Vector(8);
+        }
         if (midlet.getAppProperty(cz.kruch.track.TrackingMIDlet.JAD_UI_FULL_SCREEN_HEIGHT) != null) {
-            fullScreenHeight = Integer.parseInt(midlet.getAppProperty(cz.kruch.track.TrackingMIDlet.JAD_UI_FULL_SCREEN_HEIGHT));
+            this.fullScreenHeight = Integer.parseInt(midlet.getAppProperty(cz.kruch.track.TrackingMIDlet.JAD_UI_FULL_SCREEN_HEIGHT));
         }
         if (midlet.getAppProperty(cz.kruch.track.TrackingMIDlet.JAD_UI_HAS_REPEAT_EVENTS) != null) {
-            hasRepeatEvents = "true".equals(midlet.getAppProperty(cz.kruch.track.TrackingMIDlet.JAD_UI_HAS_REPEAT_EVENTS));
+            this.hasRepeatEvents = "true".equals(midlet.getAppProperty(cz.kruch.track.TrackingMIDlet.JAD_UI_HAS_REPEAT_EVENTS));
         } else {
-            hasRepeatEvents = super.hasRepeatEvents();
+            this.hasRepeatEvents = super.hasRepeatEvents();
         }
     }
 
     /** @Override */
     protected void hideNotify() {
-        eventing.setActive(false);
+        eventing.setActive(active = false);
     }
 
     /** @Override */
     protected void showNotify() {
-        eventing.setActive(true);
+        eventing.setActive(active = true);
     }
 
     /** @Override to make <code>Graphics</code> publicly accessible and handle weird states */
@@ -125,6 +135,9 @@ final class DeviceScreen extends GameCanvas implements Runnable {
         if (!cz.kruch.track.TrackingMIDlet.hasFlag(FLAG_UI_NO_SOFTKEY_MENU)) {
             if (command != null) {
                 super.addCommand(command);
+                if (commands != null && !commands.contains(command)) {
+                    commands.addElement(command);
+                }
             }
         }
     }
@@ -134,12 +147,11 @@ final class DeviceScreen extends GameCanvas implements Runnable {
         if (!cz.kruch.track.TrackingMIDlet.hasFlag(FLAG_UI_NO_SOFTKEY_MENU)) {
             if (command != null) {
                 super.removeCommand(command);
+                if (commands != null && commands.contains(command)) {
+                    commands.removeElement(command);
+                }
             }
         }
-    }
-
-    public void callSerially(Runnable r) {
-        eventing.callSerially(r);
     }
 
     /**
@@ -431,6 +443,30 @@ final class DeviceScreen extends GameCanvas implements Runnable {
         // handle key
         if (!keylock) {
             delegate.handleKeyUp(i);
+        }
+    }
+
+    void callSerially(Runnable r) {
+        eventing.callSerially(r);
+    }
+
+    boolean isActive() {
+        return active;
+    }
+
+    void hideCommands() {
+        if (commands != null) {
+            for (int n = commands.size(), i = 0; i < n; i++) {
+                super.removeCommand((Command) commands.elementAt(i));
+            }
+        }
+    }
+
+    void showCommands() {
+        if (commands != null) {
+            for (int n = commands.size(), i = 0; i < n; i++) {
+                super.addCommand((Command) commands.elementAt(i));
+            }
         }
     }
 

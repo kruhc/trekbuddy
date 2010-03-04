@@ -360,7 +360,7 @@ public final class Desktop implements CommandListener,
         screen.addCommand(this.cmdSettings = new Command(Resources.getString(Resources.DESKTOP_CMD_SETTINGS), POSITIVE_CMD_TYPE, 6));
         screen.addCommand(this.cmdInfo = new Command(Resources.getString(Resources.DESKTOP_CMD_INFO), POSITIVE_CMD_TYPE, 7));
         screen.addCommand(this.cmdExit = new Command(Resources.getString(Resources.DESKTOP_CMD_EXIT), EXIT_CMD_TYPE, 8/*1*/));
-        if ("...".equals(midlet.getAppProperty(cz.kruch.track.TrackingMIDlet.JAD_UI_RIGHT_KEY))) {
+        if (Config.fullscreen && Config.hideBarCmd) {
             screen.addCommand(new Command("...", Command.CANCEL, 0));
         }
         this.cmdPause = new Command(Resources.getString(Resources.DESKTOP_CMD_PAUSE), Config.fullscreen || cz.kruch.track.TrackingMIDlet.sonyEricsson || cz.kruch.track.TrackingMIDlet.jbed ? POSITIVE_CMD_TYPE : Command.STOP, 1);
@@ -659,16 +659,8 @@ public final class Desktop implements CommandListener,
             }
         }
 
-//#ifdef __ANDROID__
-        // start orientation sensing
-        try {
-            LocationProvider sensor = new cz.kruch.track.location.AndroidLocationProvider();
-            sensor.setLocationListener(this);
-            ((cz.kruch.track.location.AndroidLocationProvider) sensor).sense();
-        } catch (Throwable t) {
-            showError("Sensor", t, screen);
-        }
-//#endif
+        // device-specific post init
+        cz.kruch.track.ui.nokia.DeviceControl.postInit(this);
     }
 
     public void commandAction(Command command, Displayable displayable) {
@@ -735,9 +727,10 @@ public final class Desktop implements CommandListener,
             screen.addCommand(cmdPause);
             // update screen
             update(MASK_SCREEN);
-        } else {
-            // update screen
-            showAlert(AlertType.INFO, "...", 250, null);
+        } else { // hide-menubar-command command is used
+            // try to hide menubar gently
+            screen.setFullScreenMode(false);
+            screen.setFullScreenMode(true);
         }
     }
 
@@ -1456,6 +1449,17 @@ public final class Desktop implements CommandListener,
                         }
                     } break;
 
+                    case -8: { // try to hide menu bar
+                        if (Config.fullscreen && Config.hideBarCmd) {
+                            screen.setFullScreenMode(false);
+                            screen.hideCommands();
+                            screen.setCommandListener(null);
+//                            screen.setFullScreenMode(true);
+//                            screen.showCommands();
+//                            screen.setCommandListener(this);
+                        }
+                    } break;
+
                     default: {
                         if (!repeated) { // TODO let view decide
                             mask = views[mode].handleKey(i, false);
@@ -1531,8 +1535,8 @@ public final class Desktop implements CommandListener,
         if (log.isEnabled()) log.debug("update " + Integer.toBinaryString(mask));
 //#endif
 
-        // anything to update and not paused?
-        if (mask != MASK_NONE && cz.kruch.track.TrackingMIDlet.state == 1) {
+        // anything to update when shown and not paused?
+        if (mask != MASK_NONE && screen.isActive()) {
 
             // notify map view that render event is about to happen...
             // so that it can start loading tiles asap...
@@ -2549,10 +2553,12 @@ public final class Desktop implements CommandListener,
             }
 
             // smart menu
-            if (Config.locationProvider == Config.LOCATION_PROVIDER_JSR82) {
-                Desktop.screen.addCommand(Desktop.this.cmdRunLast);
-            } else {
-                Desktop.screen.removeCommand(Desktop.this.cmdRunLast);
+            if (Desktop.this.cmdRunLast != null && !isTracking()) {
+                if (Config.locationProvider == Config.LOCATION_PROVIDER_JSR82) {
+                    Desktop.screen.addCommand(Desktop.this.cmdRunLast);
+                } else {
+                    Desktop.screen.removeCommand(Desktop.this.cmdRunLast);
+                }
             }
 
             // notify views

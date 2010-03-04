@@ -320,6 +320,7 @@ public final class Resources {
     public static final short CFG_TWEAKS_FLD_LARGE_ATLASES      = 3805;
     public static final short CFG_TWEAKS_FLD_POWER_SAVE         = 3806;
     public static final short CFG_TWEAKS_FLD_RELIABLE_INPUT     = 3807;
+    public static final short CFG_TWEAKS_FLD_HIDEBAR_CMD        = 3808;
     /* info - commands */
     public static final short INFO_CMD_DETAILS                  = 4000;
     /* info - items */

@@ -304,6 +304,9 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
             choicePerformance.append(Resources.getString(Resources.CFG_TWEAKS_FLD_POWER_SAVE), null);
             choicePerformance.append(Resources.getString(Resources.CFG_TWEAKS_FLD_1TILE_SCROLL), null);
             choicePerformance.append(Resources.getString(Resources.CFG_TWEAKS_FLD_LARGE_ATLASES), null);
+            if (Config.fullscreen && cz.kruch.track.TrackingMIDlet.sonyEricssonEx) {
+                choicePerformance.append(Resources.getString(Resources.CFG_TWEAKS_FLD_HIDEBAR_CMD), null);
+            }
             choicePerformance.setSelectedFlags(new boolean[] {
                 Config.siemensIo,
                 Config.reliableInput,
@@ -311,7 +314,8 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
                 Config.forcedGc,
                 Config.powerSave,
                 Config.oneTileScroll,
-                Config.largeAtlases
+                Config.largeAtlases,
+                Config.hideBarCmd
             });
             submenu.append(choicePerformance);
 
@@ -738,6 +742,9 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
                 Config.powerSave = perf[4];
                 Config.oneTileScroll = perf[5];
                 Config.largeAtlases = perf[6];
+                if (Config.fullscreen && cz.kruch.track.TrackingMIDlet.sonyEricssonEx) {
+                    Config.hideBarCmd = perf[7];
+                }
 
                 // multimedia
                 if (cz.kruch.track.TrackingMIDlet.supportsVideoCapture()) {

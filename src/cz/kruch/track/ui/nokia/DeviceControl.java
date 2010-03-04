@@ -8,7 +8,7 @@ import cz.kruch.track.Resources;
 import java.util.TimerTask;
 
 /**
- * Device control - backlight (for now).
+ * Device specific control.
  *
  * @author Ales Pour <kruhc@seznam.cz>
  */
@@ -119,6 +119,10 @@ public class DeviceControl extends TimerTask {
         instance.close();
     }
 
+    public static void postInit(Desktop desktop) {
+        instance.doPostInit(desktop);
+    }
+
     public static String getName() {
         return instance.name;
     }
@@ -155,11 +159,18 @@ public class DeviceControl extends TimerTask {
 //    }
 
     //
-    // implementation
+    // package methods
     //
 
     final void confirm(String message) {
         Desktop.showConfirmation(message, null);
+    }
+
+    //
+    // implementation
+    //
+
+    void doPostInit(Desktop desktop) {
     }
 
     String getCellId() {

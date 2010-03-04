@@ -7,7 +7,7 @@ import java.util.Vector;
 /**
  * Worker that executes tasks in a thread.
  *
- * @author Ales Pour <kruhc@seznam.cz>
+ * @author kruhc@seznam.cz
  */
 public final class Worker extends Thread {
 //#ifdef __LOG__
@@ -23,7 +23,11 @@ public final class Worker extends Thread {
         this.go = true;
     }
 
-	public void destroy() {
+    public int getQueueSize() {
+        return tasks.size();
+    }
+
+    public void destroy() {
         synchronized (this) {
             go = false;
             notify();
@@ -67,7 +71,7 @@ public final class Worker extends Thread {
                 }
                 if (tasks.size() > 0) {
                     task = (Runnable) tasks.elementAt(0);
-                    tasks.setElementAt(null, 0);
+                    tasks.setElementAt(null, 0); // helps GC?
                     tasks.removeElementAt(0);
                 }
                 if (!go)

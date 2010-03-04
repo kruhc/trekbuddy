@@ -25,7 +25,7 @@ public final class SimpleCalendar {
     }
 
     public void setTimeSafe(long millis) {
-        if (Math.abs(millis - last) >= 3600000) { // if time jumps too much (1 hour)
+        if (Math.abs(millis - last) >= 60000) { // if time jumps too much (1 min)
             date = null;
         }
         setTime(millis);
@@ -34,52 +34,33 @@ public final class SimpleCalendar {
     public void setTime(long millis) {
         if (date != null) {
             final int dt = (int) (millis - last) / 1000;
-            if (dt != 0) {
+            if (dt > 0) {
                 final int h = dt / 3600;
                 final int m = (dt % 3600) / 60;
                 final int s = (dt % 3600) % 60;
                 int hour = fieldHour;
                 int minute = fieldMin;
                 int second = fieldSec;
-                if (dt > 0) {
-                    second += s;
-                    if (second > 59) {
-                        second -= 60;
-                        minute++;
-                    }
-                    minute += m;
-                    if (minute > 59) {
-                        minute -= 60;
-                        hour++;
-                    }
-                    hour += h;
-                    if (hour > 23) {
-                        date = null;
-                        setTime(millis);
-                        return;
-                    }
-                } else {
-                    second += s;
-                    if (second < 0) {
-                        minute--;
-                        second = 60 + second;
-                    }
-                    minute += m;
-                    if (minute < 0) {
-                        hour--;
-                        minute = 60 + minute;
-                    }
-                    hour += h;
-                    if (hour < 0) {
-                        date = null;
-                        setTime(millis);
-                        return;
-                    }
+                second += s;
+                if (second > 59) {
+                    second -= 60;
+                    minute++;
+                }
+                minute += m;
+                if (minute > 59) {
+                    minute -= 60;
+                    hour++;
+                }
+                hour += h;
+                if (hour > 23) {
+                    date = null;
+                    setTime(millis);
+                    return;
                 }
                 fieldHour = hour;
                 fieldMin = minute;
                 fieldSec = second;
-                last = millis;
+                last += (h * 3600 + m * 60 + s) * 1000;
             }
         } else {
             date = new Date(millis);
@@ -87,7 +68,7 @@ public final class SimpleCalendar {
             fieldHour = calendar.get(Calendar.HOUR_OF_DAY);
             fieldMin = calendar.get(Calendar.MINUTE);
             fieldSec = calendar.get(Calendar.SECOND);
-            last = millis;
+            last = (millis / 1000) * 1000;
         }
     }
 

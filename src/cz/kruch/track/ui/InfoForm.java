@@ -23,6 +23,7 @@ import api.file.File;
  */
 final class InfoForm implements CommandListener {
 
+    private Desktop desktop;
     private Throwable le, te;
     private Object ps;
     private Map map;
@@ -33,6 +34,7 @@ final class InfoForm implements CommandListener {
     public void show(Desktop desktop, Throwable le, Throwable te,
                      Object ps, Map map) {
         // members
+        this.desktop = desktop;
         this.le = le;
         this.te = te;
         this.ps = ps;
@@ -52,9 +54,7 @@ final class InfoForm implements CommandListener {
         Desktop.display.setCurrent(pane);
     }
 
-    private void details(final Form pane,
-                         final Throwable le, final Throwable te,
-                         final Object ps, final Map map) {
+    private void details(final Form pane) {
         // gc - for memory info to be correct...
         System.gc(); // unconditional!!!
         final long totalMemory = Runtime.getRuntime().totalMemory();
@@ -82,24 +82,36 @@ final class InfoForm implements CommandListener {
         if (cz.kruch.track.TrackingMIDlet.getFlags() != null) {
             pane.append(newItem("AppFlags", cz.kruch.track.TrackingMIDlet.getFlags()));
         }
-        sb.delete(0, sb.length()).append(System.getProperty("microedition.locale")).append(' ').append(System.getProperty("microedition.encoding"));
+        sb.delete(0, sb.length()).append(System.getProperty("microedition.locale"))
+                .append(' ').append(System.getProperty("microedition.encoding"));
         pane.append(newItem("I18n", sb.toString()));
-        sb.delete(0, sb.length()).append(File.fsType).append("; resetable? ").append(cz.kruch.track.maps.Map.fileInputStreamResetable).append("; network stream? ").append(cz.kruch.track.maps.Map.networkInputStreamAvailable);
+        sb.delete(0, sb.length()).append(File.fsType)
+                .append("; resetable? ").append(cz.kruch.track.maps.Map.fileInputStreamResetable)
+                .append("; network stream? ").append(cz.kruch.track.maps.Map.networkInputStreamAvailable)
+                .append("; memorycard: ").append(System.getProperty("fileconn.dir.memorycard"));
         pane.append(newItem("Fs", sb.toString()));
-        sb.delete(0, sb.length()).append(cz.kruch.track.ui.nokia.DeviceControl.getName());
-        sb.append(' ').append(cz.kruch.track.ui.nokia.DeviceControl.getGsmCellId());
-        sb.append('/').append(cz.kruch.track.ui.nokia.DeviceControl.getGsmLac());
+        sb.delete(0, sb.length()).append(cz.kruch.track.ui.nokia.DeviceControl.getName())
+                .append(' ').append(cz.kruch.track.ui.nokia.DeviceControl.getGsmCellId())
+                .append('/').append(cz.kruch.track.ui.nokia.DeviceControl.getGsmLac());
         pane.append(newItem("DeviceCtrl", sb.toString()));
-        sb.delete(0, sb.length()).append(cz.kruch.track.TrackingMIDlet.hasPorts()).append("; ").append(System.getProperty("microedition.commports"));
+        sb.delete(0, sb.length()).append(cz.kruch.track.TrackingMIDlet.hasPorts())
+                .append("; ").append(System.getProperty("microedition.commports"));
         pane.append(newItem("Ports", sb.toString()));
-        sb.delete(0, sb.length()).append(TimeZone.getDefault().getID()).append("; ").append(TimeZone.getDefault().useDaylightTime()).append("; ").append(TimeZone.getDefault().getRawOffset());
+        sb.delete(0, sb.length()).append(TimeZone.getDefault().getID())
+                .append("; ").append(TimeZone.getDefault().useDaylightTime())
+                .append("; ").append(TimeZone.getDefault().getRawOffset());
         pane.append(newItem("TimeZone", sb.toString()));
-        sb.delete(0, sb.length()).append("safe renderer? ").append(Config.S60renderer).append("; hasRepeatEvents? ").append(Desktop.screen.hasRepeatEvents()).append("; hasPointerEvents? ").append(Desktop.screen.hasPointerEvents()).append("; ").append(Desktop.screen.getWidth()).append('x').append(Desktop.screen.getHeight()).append("; skips? ").append(Desktop.skips);
+        sb.delete(0, sb.length()).append("safe renderer? ").append(Config.S60renderer)
+                .append("; hasRepeatEvents? ").append(Desktop.screen.hasRepeatEvents())
+                .append("; hasPointerEvents? ").append(Desktop.screen.hasPointerEvents())
+                .append("; ").append(Desktop.screen.getWidth()).append('x').append(Desktop.screen.getHeight())
+                .append("; skips? ").append(Desktop.skips);
         pane.append(newItem("Desktop", sb.toString()));
         if (map == null) {
             pane.append(newItem("Map", ""));
         } else {
-            sb.delete(0, sb.length()).append("datum: ").append(map.getDatum()).append("; projection: ").append(map.getProjection());
+            sb.delete(0, sb.length()).append("datum: ").append(map.getDatum())
+                    .append("; projection: ").append(map.getProjection());
             pane.append(newItem("Map", sb.toString()));
         }
         sb.delete(0, sb.length()).append((ps == null ? "" : ps.toString()))
@@ -121,15 +133,16 @@ final class InfoForm implements CommandListener {
         sb.delete(0, sb.length());
         sb.append("pauses: ").append(cz.kruch.track.TrackingMIDlet.pauses)
                 .append("; uncaught: ").append(SmartRunnable.uncaught)
-                .append("; maxQT: ").append(SmartRunnable.maxQT)
-                .append("; mergedRT: ").append(SmartRunnable.mergedRT)
-                .append("; mergedKT: ").append(SmartRunnable.mergedKT);
+                .append("; maxtasks: ").append(SmartRunnable.maxQT)
+                .append("; merged: ").append(SmartRunnable.mergedRT).append('/').append(SmartRunnable.mergedKT)
+                .append("; workers: ").append(desktop.getEventWorker().getQueueSize()).append('/').append(desktop.getDiskWorker().getQueueSize());
         pane.append(newItem("Debug", sb.toString()));
     }
 
     public void commandAction(Command command, Displayable displayable) {
         if (command.getCommandType() == Desktop.BACK_CMD_TYPE) {
             // gc hint
+            this.desktop = null;
             this.le = null;
             this.te = null;
             this.ps = null;
@@ -144,7 +157,7 @@ final class InfoForm implements CommandListener {
             // remove 'Details' command
             pane.removeCommand(command);
             // show technical details
-            details(pane, le, te, ps, map);
+            details(pane);
         }
     }
 

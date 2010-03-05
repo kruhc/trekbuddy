@@ -20,9 +20,9 @@ import java.io.IOException;
 import java.io.InputStream;
 
 /**
- * Calibration info.
+ * Calibration support.
  *
- * @author Ales Pour <kruhc@seznam.cz>
+ * @author kruhc@seznam.cz
  */
 abstract class Calibration {
 //#ifdef __LOG__

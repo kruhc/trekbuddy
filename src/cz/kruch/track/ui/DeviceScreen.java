@@ -62,16 +62,10 @@ final class DeviceScreen extends GameCanvas implements Runnable {
     // status
     private boolean active;
 
-    // commands
-    private Vector commands;
-
     public DeviceScreen(Desktop delegate, MIDlet midlet) {
         super(false);
         this.delegate = delegate;
         this.eventing = new SmartRunnable();
-        if (Config.fullscreen && Config.hideBarCmd) {
-            this.commands = new Vector(8);
-        }
         if (midlet.getAppProperty(cz.kruch.track.TrackingMIDlet.JAD_UI_FULL_SCREEN_HEIGHT) != null) {
             this.fullScreenHeight = Integer.parseInt(midlet.getAppProperty(cz.kruch.track.TrackingMIDlet.JAD_UI_FULL_SCREEN_HEIGHT));
         }
@@ -135,9 +129,6 @@ final class DeviceScreen extends GameCanvas implements Runnable {
         if (!cz.kruch.track.TrackingMIDlet.hasFlag(FLAG_UI_NO_SOFTKEY_MENU)) {
             if (command != null) {
                 super.addCommand(command);
-                if (commands != null && !commands.contains(command)) {
-                    commands.addElement(command);
-                }
             }
         }
     }
@@ -147,9 +138,6 @@ final class DeviceScreen extends GameCanvas implements Runnable {
         if (!cz.kruch.track.TrackingMIDlet.hasFlag(FLAG_UI_NO_SOFTKEY_MENU)) {
             if (command != null) {
                 super.removeCommand(command);
-                if (commands != null && commands.contains(command)) {
-                    commands.removeElement(command);
-                }
             }
         }
     }
@@ -452,22 +440,6 @@ final class DeviceScreen extends GameCanvas implements Runnable {
 
     boolean isActive() {
         return active;
-    }
-
-    void hideCommands() {
-        if (commands != null) {
-            for (int n = commands.size(), i = 0; i < n; i++) {
-                super.removeCommand((Command) commands.elementAt(i));
-            }
-        }
-    }
-
-    void showCommands() {
-        if (commands != null) {
-            for (int n = commands.size(), i = 0; i < n; i++) {
-                super.addCommand((Command) commands.elementAt(i));
-            }
-        }
     }
 
     boolean isKeylock() {

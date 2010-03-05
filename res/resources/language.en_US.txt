@@ -314,6 +314,7 @@
 3805=large atlases
 3806=power save
 3807=reliable input
+3808=hide menubar cmd
 
 # info commands
 4000=Technical

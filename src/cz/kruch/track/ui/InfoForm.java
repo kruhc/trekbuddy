@@ -111,7 +111,8 @@ final class InfoForm implements CommandListener {
             pane.append(newItem("Map", ""));
         } else {
             sb.delete(0, sb.length()).append("datum: ").append(map.getDatum())
-                    .append("; projection: ").append(map.getProjection());
+                    .append("; projection: ").append(map.getProjection())
+                    .append("; tmi? ").append(map.isTmi());
             pane.append(newItem("Map", sb.toString()));
         }
         sb.delete(0, sb.length()).append((ps == null ? "" : ps.toString()))

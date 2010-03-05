@@ -446,7 +446,7 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
                 final char[] delims = { ':' };
                 try {
                     // read entry meta info
-                    reader = new LineReader(file.openInputStream());
+                    reader = new LineReader(file.openInputStream(), 4096);
                     CharArrayTokenizer.Token token = reader.readToken(false);
                     while (token != null) {
 
@@ -481,6 +481,9 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
                         token = reader.readToken(false);
                     }
 
+                    // tmi used
+                    isTmi = true;
+                    
                 } catch (InvalidMapException e) {
                     throw e;
                 } catch (IOException e) {

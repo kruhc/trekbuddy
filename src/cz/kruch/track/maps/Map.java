@@ -156,6 +156,10 @@ public final class Map implements Runnable {
         return calibration.isWithin(coordinates);
     }
 
+    public boolean isTmi() {
+        return loader != null && loader.isTmi;
+    }
+
     /**
      * Disposes map - releases map images and disposes loader.
      */
@@ -354,7 +358,7 @@ public final class Map implements Runnable {
         protected Map map;
         protected String basename;
         protected char[] extension;
-        protected boolean isGPSka, isTar;
+        protected boolean isGPSka, isTar, isTmi;
 
         private int tileWidth, tileHeight;
         

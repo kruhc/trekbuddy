@@ -184,7 +184,7 @@
     </target>
 
     <target name="rim41">
-        <property name="suffix" value="_bb_v41"/>
+        <property name="suffix" value="_bb_os41"/>
         <property name="dist.dir" value="rim41"/>
         <property name="rim.home" value="${rim41.home}"/>
         <property name="libraryjars" value="${rim41.home}\lib\net_rim_api.jar"/>
@@ -204,13 +204,13 @@
     </target>
 
     <target name="rim42">
-        <property name="suffix" value="_bb_v42"/>
+        <property name="suffix" value="_bb_os42"/>
         <property name="dist.dir" value="rim42"/>
         <property name="rim.home" value="${rim42.home}"/>
         <property name="libraryjars" value="${rim42.home}\lib\net_rim_api.jar"/>
         <property name="classpath.preverify" value="${libraryjars}"/>
         <property name="rim.cod.dependencies" value="net_rim_cldc,net_rim_locationapi,net_rim_bluetooth"/>
-        <property name="rim.bb.version" value="[4.2,)"/>
+        <property name="rim.bb.version" value="[4.2,5.0)"/>
         <antcall target="clean"/>
         <antcall target="a.pre.rim"/>
         <antcall target="compile.rim42"/>
@@ -224,7 +224,7 @@
     </target>
 
     <target name="rim50">
-        <property name="suffix" value="_bb_v50"/>
+        <property name="suffix" value="_bb_os50"/>
         <property name="dist.dir" value="rim50"/>
         <property name="rim.home" value="${rim50.home}"/>
         <property name="libraryjars" value="${rim50.home}\lib\net_rim_api.jar"/>
@@ -280,7 +280,7 @@
 -->
         </ant>
         <copy file="${microemu.home}/microemu-android/bin/trekbuddy.apk"
-              tofile="dist/${vendor.dir}/${dist.dir}/trekbuddy_android_15.apk"/>
+              tofile="dist/${vendor.dir}/${dist.dir}/trekbuddy_android15.apk"/>
     </target>
 
     <target name="android16">
@@ -320,7 +320,7 @@
 -->
         </ant>
         <copy file="${microemu.home}/microemu-android/bin/trekbuddy.apk"
-			  tofile="dist/${vendor.dir}/${dist.dir}/trekbuddy_android_16.apk"/>
+			  tofile="dist/${vendor.dir}/${dist.dir}/trekbuddy_android16.apk"/>
     </target>
 
     <target name="emulator">
@@ -935,7 +935,7 @@
         <replace file="${basedir}\dist\${vendor.dir}\${dist.dir}\trekbuddy${suffix}.alx" token="@SUFFIX@" value="${suffix}"/>
         <replace file="${basedir}\dist\${vendor.dir}\${dist.dir}\trekbuddy${suffix}.alx" token="@BBVERSION@" value="${rim.bb.version}"/>
         <replace file="${basedir}\dist\${vendor.dir}\${dist.dir}\trekbuddy${suffix}.alx" token="@DESCRIPTION@" value="${description}"/>
-        <replace file="${basedir}\dist\${vendor.dir}\${dist.dir}\trekbuddy${suffix}.alx" token="@VERSION@" value="${version}"/>
+        <replace file="${basedir}\dist\${vendor.dir}\${dist.dir}\trekbuddy${suffix}.alx" token="@VERSION@" value="${version}.100"/>
         <replace file="${basedir}\dist\${vendor.dir}\${dist.dir}\trekbuddy${suffix}.alx" token="@VENDOR@" value="${vendor}"/>
         <replace file="${basedir}\dist\${vendor.dir}\${dist.dir}\trekbuddy${suffix}.alx" token="@MODULES@" value="trekbuddy${suffix}.cod"/>
     </target>

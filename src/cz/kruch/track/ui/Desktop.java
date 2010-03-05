@@ -1449,17 +1449,6 @@ public final class Desktop implements CommandListener,
                         }
                     } break;
 
-                    case -8: { // try to hide menu bar
-                        if (Config.fullscreen && Config.hideBarCmd) {
-                            screen.setFullScreenMode(false);
-                            screen.hideCommands();
-                            screen.setCommandListener(null);
-//                            screen.setFullScreenMode(true);
-//                            screen.showCommands();
-//                            screen.setCommandListener(this);
-                        }
-                    } break;
-
                     default: {
                         if (!repeated) { // TODO let view decide
                             mask = views[mode].handleKey(i, false);
@@ -1535,8 +1524,8 @@ public final class Desktop implements CommandListener,
         if (log.isEnabled()) log.debug("update " + Integer.toBinaryString(mask));
 //#endif
 
-        // anything to update when shown and not paused?
-        if (mask != MASK_NONE && screen.isActive()) {
+        // anything to update?
+        if (mask != MASK_NONE) {
 
             // notify map view that render event is about to happen...
             // so that it can start loading tiles asap...
@@ -2127,7 +2116,7 @@ public final class Desktop implements CommandListener,
         return result;
     }
 
-    static void releaseRenderTask(final RenderTask task) {
+    private void releaseRenderTask(final RenderTask task) {
         synchronized (rtPool) {
             if (rtCountFree < rtPool.length) {
                 rtPool[rtCountFree++] = task;

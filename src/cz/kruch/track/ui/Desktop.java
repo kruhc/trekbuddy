@@ -397,6 +397,9 @@ public final class Desktop implements CommandListener,
         fontBtns = Font.getFont(Font.getDefaultFont().getFace(),
                                 Font.STYLE_BOLD/*Font.getDefaultFont().getStyle()*/,
                                 Font.SIZE_MEDIUM);
+        fontStringItems = null;
+        final Font df = Font.getDefaultFont();
+        Desktop.fontStringItems = Font.getFont(df.getFace(), df.getStyle(), Font.SIZE_SMALL);
     }
 
     private static void resetBar() {

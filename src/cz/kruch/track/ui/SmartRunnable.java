@@ -36,6 +36,9 @@ final class SmartRunnable implements Runnable {
             } else {
                 fire = false;
             }
+            if (!active) { // might help SE
+                runnables.removeAllElements();
+            }
         }
 
         // better enqueue it out of synchronized block

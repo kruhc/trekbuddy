@@ -21,6 +21,7 @@ public final class GroundspeakBean {
     private String encodedHints;
     private String type, container, difficulty, terrain, country;
     private Object shortListing, longListing;
+    private Vector logs;
 
     public GroundspeakBean(String ns, String id) {
         this.ns = ns;
@@ -129,6 +130,17 @@ public final class GroundspeakBean {
         }
     }
 
+    public Vector getLogs() {
+        return logs;
+    }
+
+    public void addLog(Log log) {
+        if (logs == null) {
+            logs = new Vector(4);
+        }
+        logs.addElement(log);
+    }
+
     public String classify() {
         final StringBuffer sb = new StringBuffer(8);
         sb.append(type.charAt(0)).append(container.charAt(0));
@@ -154,5 +166,51 @@ public final class GroundspeakBean {
             tokens.addElement(input);
         }
         return input;
+    }
+
+    public static class Log {
+        private String id;
+        private String date, type, finder;
+        private String text;
+
+        public Log(String id) {
+            this.id = id;
+        }
+
+        public String getId() {
+            return id;
+        }
+
+        public String getDate() {
+            return date;
+        }
+
+        public void setDate(String date) {
+            this.date = date;
+        }
+
+        public String getFinder() {
+            return finder;
+        }
+
+        public void setFinder(String finder) {
+            this.finder = finder;
+        }
+
+        public String getText() {
+            return text;
+        }
+
+        public void setText(String text) {
+            this.text = cache(text);
+        }
+
+        public String getType() {
+            return type;
+        }
+
+        public void setType(String type) {
+            this.type = type;
+        }
     }
 }

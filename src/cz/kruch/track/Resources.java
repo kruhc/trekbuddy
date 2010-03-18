@@ -217,6 +217,12 @@ public final class Resources {
     public static final short NAV_FLD_GS_LISTING_LONG           = 2222;
     public static final short NAV_FLD_GS_HINT                   = 2223;
     public static final short NAV_FLD_DISTANCE                  = 2224;
+    public static final short NAV_FLD_GS_LOGS                   = 2225;
+    public static final short NAV_FLD_GS_LOG                    = 2226;
+    public static final short NAV_FLD_DATE                      = 2227;
+    public static final short NAV_FLD_TYPE                      = 2228;
+    public static final short NAV_FLD_FINDER                    = 2229;
+    public static final short NAV_FLD_TEXT                      = 2230;
     /* settings - commands */
     public static final short CFG_CMD_APPLY                     = 3000;
     public static final short CFG_CMD_SAVE                      = 3001;
@@ -321,6 +327,8 @@ public final class Resources {
     public static final short CFG_TWEAKS_FLD_POWER_SAVE         = 3806;
     public static final short CFG_TWEAKS_FLD_RELIABLE_INPUT     = 3807;
     public static final short CFG_TWEAKS_FLD_HIDEBAR_CMD        = 3808;
+    public static final short CFG_TWEAKS_FLD_USE_TBSVC          = 3809;
+    public static final short CFG_TWEAKS_FLD_LAZY_GPX           = 3810;
     /* info - commands */
     public static final short INFO_CMD_DETAILS                  = 4000;
     /* info - items */
@@ -341,7 +349,7 @@ public final class Resources {
 
     static int initialize() throws IOException {
         int result = 0;
-        Object[] holder = new Object[2];
+        final Object[] holder = new Object[2];
 
         // read default locale resources
         loadRes(Resources.class.getResourceAsStream("/resources/language.res"), holder);

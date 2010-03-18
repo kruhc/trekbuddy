@@ -171,6 +171,8 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
     public static boolean powerSave;
     public static boolean reliableInput;
     public static boolean hideBarCmd;
+    public static boolean useNativeService;
+    public static boolean lazyGpxParsing;
 
     // group [GPX options]
     public static int gpxDt                     = 60; // 1 min
@@ -257,11 +259,14 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         } else if (cz.kruch.track.TrackingMIDlet.uiq) {
             dataDir = getDefaultDataDir("file:///Ms/", "Other/TrekBuddy/");
             fullscreen = true;
-        } else { // Nokia, SonyEricssons, ...
+        } else { // Nokia, SonyEricsson, ...
             dataDir = getDefaultDataDir("file:///E:/", "TrekBuddy/"); // pstros: "file:///SDCard/TrekBuddy/"
-            if (cz.kruch.track.TrackingMIDlet.nokia || cz.kruch.track.TrackingMIDlet.sonyEricsson) {
-                fullscreen = true;
-            }
+            fullscreen = cz.kruch.track.TrackingMIDlet.nokia || cz.kruch.track.TrackingMIDlet.sonyEricsson;
+        }
+        if (cz.kruch.track.TrackingMIDlet.symbian) {
+            useNativeService = !cz.kruch.track.TrackingMIDlet.s60rdfp2;
+        } else {
+            lazyGpxParsing = true;
         }
 //#endif
 
@@ -493,6 +498,10 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
             // 0.9.95 extensions
             hideBarCmd = din.readBoolean();
 
+            // 0.9.96 extensions
+            useNativeService = din.readBoolean();
+            lazyGpxParsing = din.readBoolean();
+
         } catch (Exception e) {
         }
 
@@ -597,6 +606,9 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         dout.writeBoolean(reliableInput);
         /* since 0.9.95 */
         dout.writeBoolean(hideBarCmd);
+        /* since 0.9.96 */
+        dout.writeBoolean(useNativeService);
+        dout.writeBoolean(lazyGpxParsing);
 
 //#ifdef __LOG__
         if (log.isEnabled()) log.info("configuration updated");

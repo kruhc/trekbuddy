@@ -304,9 +304,7 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
             choicePerformance.append(Resources.getString(Resources.CFG_TWEAKS_FLD_POWER_SAVE), null);
             choicePerformance.append(Resources.getString(Resources.CFG_TWEAKS_FLD_1TILE_SCROLL), null);
             choicePerformance.append(Resources.getString(Resources.CFG_TWEAKS_FLD_LARGE_ATLASES), null);
-            if (Config.fullscreen && cz.kruch.track.TrackingMIDlet.sonyEricssonEx) {
-                choicePerformance.append(Resources.getString(Resources.CFG_TWEAKS_FLD_HIDEBAR_CMD), null);
-            }
+            choicePerformance.append(Resources.getString(Resources.CFG_TWEAKS_FLD_LAZY_GPX), null);
             choicePerformance.setSelectedFlags(new boolean[] {
                 Config.siemensIo,
                 Config.reliableInput,
@@ -315,8 +313,15 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
                 Config.powerSave,
                 Config.oneTileScroll,
                 Config.largeAtlases,
-                Config.hideBarCmd
+                Config.lazyGpxParsing
             });
+            if (cz.kruch.track.TrackingMIDlet.symbian) {
+                choicePerformance.setSelectedIndex(choicePerformance.append(Resources.getString(Resources.CFG_TWEAKS_FLD_USE_TBSVC), null),
+                                                   Config.useNativeService);
+            } else if (cz.kruch.track.TrackingMIDlet.sonyEricssonEx) {
+                choicePerformance.setSelectedIndex(choicePerformance.append(Resources.getString(Resources.CFG_TWEAKS_FLD_HIDEBAR_CMD), null),
+                                                   Config.hideBarCmd);
+            }
             submenu.append(choicePerformance);
 
             if (cz.kruch.track.TrackingMIDlet.supportsVideoCapture()) {
@@ -742,8 +747,11 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
                 Config.powerSave = perf[4];
                 Config.oneTileScroll = perf[5];
                 Config.largeAtlases = perf[6];
-                if (Config.fullscreen && cz.kruch.track.TrackingMIDlet.sonyEricssonEx) {
-                    Config.hideBarCmd = perf[7];
+                Config.lazyGpxParsing = perf[7];
+                if (cz.kruch.track.TrackingMIDlet.symbian) {
+                    Config.useNativeService = perf[8];
+                } else if (cz.kruch.track.TrackingMIDlet.sonyEricssonEx) {
+                    Config.hideBarCmd = perf[8];
                 }
 
                 // multimedia

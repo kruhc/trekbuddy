@@ -292,7 +292,7 @@
 3624=log time ms
 3625=negative alt fix
 3626=exact time match
-3627=assisted GPS
+3627=try assisted GPS
 
 # settings forms/fields/values (Navigation)
 3700=Wpt Proximity

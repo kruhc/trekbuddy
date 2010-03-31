@@ -115,6 +115,8 @@ public final class HXmlParser implements XmlPullParser {
     private boolean unresolved;
     private boolean token;
 
+    public int offset, elementOffset;
+
     public HXmlParser() {
         this.elementStack = new String[16];
         this.nspStack = new String[8];
@@ -590,30 +592,17 @@ public final class HXmlParser implements XmlPullParser {
         return new String(txtBuf, pos, txtPos - pos);
     }
 
-/*
-    private String getCached(final int pos) {
-        if (nameCache != null) {
-            final int length = txtPos - pos;
-            final char[] buf = txtBuf;
-            final String[] cache = nameCache;
-            for (int i = cache.length; --i >= 0; ) {
-                final String item = cache[i];
-                if (length != item.length())
-                    continue;
-                int j = length;
-                while (--j >= 0) {
-                    if (buf[pos + j] != item.charAt(j))
-                        break;
-                }
-                if (j < 0) {
-                    return item;
-                }
+    private String get2(int pos) {
+        if (txtBuf[pos] <= 0x20) {
+            while (txtBuf[pos] <= 0x20 && pos < txtPos) {
+                pos++;
+            }
+            if (pos == txtPos) {
+                return CONSTANT_EMPTY;
             }
         }
-
-        return get(pos);
+        return new String(txtBuf, pos, txtPos - pos);
     }
-*/
 
 /*
     private String pop(int pos) {
@@ -964,6 +953,7 @@ public final class HXmlParser implements XmlPullParser {
             }
             txtBuf[txtPos++] = c;
         }
+        this.offset += srcPos - this.srcPos;
         this.srcPos = srcPos;
         this.txtPos = txtPos;
         this.column = column;
@@ -997,6 +987,7 @@ public final class HXmlParser implements XmlPullParser {
             srcPos--;
             break;
         }
+        this.offset += srcPos - this.srcPos;
         this.srcPos = srcPos;
         this.txtPos = txtPos;
         this.column = column;
@@ -1055,6 +1046,7 @@ public final class HXmlParser implements XmlPullParser {
                 }
                 srcPos = 1;
             }
+            offset++;
 
             switch (nw) {
                 case '\n': {
@@ -1318,7 +1310,7 @@ public final class HXmlParser implements XmlPullParser {
                 encoding = enc;
             }
             srcCount = sc;
-
+            offset = srcPos;
         } catch (Exception e) {
             throw new XmlPullParserException("Invalid stream or encoding: " + e, this, e);
         }
@@ -1469,7 +1461,7 @@ public final class HXmlParser implements XmlPullParser {
     }
 
     public String getText() {
-        return type < TEXT || (type == ENTITY_REF && unresolved) ? null : get(0);
+        return type < TEXT || (type == ENTITY_REF && unresolved) ? null : get2(0);
     }
 
 //#ifdef __ANDROID__
@@ -1578,6 +1570,7 @@ public final class HXmlParser implements XmlPullParser {
         txtPos = 0;
         isWhitespace = true;
         token = false;
+        elementOffset = offset - peekCount;
 
         int minType = 9999;
 
@@ -1760,5 +1753,16 @@ public final class HXmlParser implements XmlPullParser {
                 reader = null;
             }
         }
+    }
+
+    public long skip(long n) throws IOException {
+        if (n > (srcCount - srcPos)) {
+            reader.skip(n - (srcCount - srcPos));
+            srcPos = srcCount = 0;
+        } else {
+            srcPos += n;
+        }
+        offset = elementOffset = (int) n;
+        return n;
     }
 }

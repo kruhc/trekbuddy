@@ -52,7 +52,7 @@ public final class Jsr179LocationProvider
             criteria.setAltitudeRequired(true);
             criteria.setSpeedAndCourseRequired(true);
             criteria.setPreferredPowerConsumption(javax.microedition.location.Criteria.POWER_USAGE_HIGH);
-            criteria.setCostAllowed(false);
+            criteria.setCostAllowed(Config.assistedGps);
 
             // adjust criteria for specific devices
 //#ifdef __ALL__

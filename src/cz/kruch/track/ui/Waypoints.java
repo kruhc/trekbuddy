@@ -42,7 +42,7 @@ import org.kxml2.io.HXmlParser;
 /**
  * Navigation manager.
  *
- * @author Ales Pour <kruhc@seznam.cz>
+ * @author kruhc@seznam.cz
  */
 public final class Waypoints implements CommandListener, Runnable, Callback,
                                         Comparator, YesNoDialog.AnswerListener {
@@ -105,6 +105,11 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
     private static final int TAG_GS_LONGL       = 0x97d2ceb9; // "long_description"
     private static final int TAG_GS_COUNTRY     = 0x39175796; // "country"
     private static final int TAG_GS_HINTS       = 0x20d8585b; // "encoded_hints"
+    private static final int TAG_GS_LOGS        = 0x0032c5af; // "logs"
+    private static final int TAG_GS_LOG         = 0x0001a344; // "log"
+    private static final int TAG_GS_DATE        = 0x002eefae; // "date"
+    private static final int TAG_GS_FINDER      = 0xb4097826; // "finder"
+    private static final int TAG_GS_TEXT        = 0x0036452d; // "text"
 
     private static final String ATTR_GS_ID      = "id";
 
@@ -112,6 +117,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
     private static final int TAG_AU_SUMMARY     = 0x9146a7a6; // "summary"
     private static final int TAG_AU_DESC        = 0x993583fc; // "description"
     private static final int TAG_AU_HINTS       = 0x05eaf2cc; // "hints"
+    private static final int TAG_AU_FINDER      = 0x41a84fc1; // "geocacher"
 
     private static final String itemWptsStores = Resources.getString(Resources.NAV_ITEM_WAYPOINTS);
     private static final String itemTracksStores = Resources.getString(Resources.NAV_ITEM_TRACKS);
@@ -308,15 +314,21 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                         }
                         // calculate distance
                         QualifiedCoordinates qc = navigator.getPointer();
-                        final float distance;
                         if (qc != null) {
-                            distance = qc.distance(item.getQualifiedCoordinates());
+                            _distance = qc.distance(item.getQualifiedCoordinates());
                         } else {
-                            distance = Float.NaN;
+                            _distance = Float.NaN;
                         }
-                        // open waypoint form
-                        (new WaypointForm(item, this, distance,
-                                          folder == Config.FOLDER_WPTS && currentWpts != Desktop.wpts)).show();
+                        // check parsing status
+                        if (item.getUserObject() instanceof GroundspeakBean && !((GroundspeakBean) item.getUserObject()).isParsed()) {
+                            // fully parse bean and show wpt details
+                            _parseWpt = item;
+                            navigator.getDiskWorker().enqueue(this);
+                        } else {
+                            // open waypoint form
+                            (new WaypointForm(item, this, _distance,
+                                              isModifiable())).show();
+                        }
                     } else if (cmdNavigateTo == command) {
                         // remember idx
                         idx[depth] = item;
@@ -657,10 +669,15 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
 
         if (_storeUpdate == null) {
             if (_storeName == null) {
-                actionListStores(_listingTitle);
+                if (_parseWpt == null) {
+                    actionListStores(_listingTitle);
+                } else {
+                    actionParseWpt(_parseWpt);
+                    _parseWpt = null;
+                }
             } else {
                 if (_listingTitle == actionListWpts || _listingTitle == actionListTracks) { // == is OK
-                    actionListStore(_storeName, false);
+                    actionListStore(_storeName, false, Config.lazyGpxParsing);
                 } else if (_listingTitle == actionListTargets) { // == is OK
                     actionUpdateTarget(_storeName, _addWptStoreKey, _addWptSelf);
                 }
@@ -681,8 +698,10 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
     private volatile QualifiedCoordinates _pointer;
     private volatile String _storeName, _updateName, _listingTitle;
     private volatile GpxTracklog _storeUpdate;
+    private volatile Waypoint _parseWpt;
     private volatile Vector _updateWpts;
     private volatile boolean _updateRevision;
+    private volatile float _distance;
 
     /*
      * Background task launcher.
@@ -714,17 +733,22 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
 
         // offer new file when selecting target
         if (title == actionListTargets) { // == is OK
+
+            // offer new file
             v.addElement(NEW_FILE_STORE);
+
             // "wpts/" folder is only supported
             folder = Config.FOLDER_WPTS;
-            cachedDisk = null;
+
+            // re-read folder content
+            /*cachedDisk = null;*/ // see note N20100318
         }
 
         // list special stores first only when listing "wpts/" folder
         if (folder == Config.FOLDER_WPTS) { // == is OK
 
             // add prefered stores
-            listKnown(v);
+            listKnown(v, title == actionListTargets);
 
             // list "wpts/" recursively
             recursive = true;
@@ -767,8 +791,15 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
 
         }
 
-        // now use cached
-        appendCached(v);
+        // now append (cached) folder content
+        /**
+         * Note N20100318: the condition bellow will allow the user to
+         * select only new or parsed file. For some reason I thought
+         * it would be dangerous, but it seems ok (2010-03-30).
+         */
+//        if (title != actionListTargets) { // '==' is OK
+            appendCached(v);
+//        }
 
         // got anything?
         if (v.size() == 0) {
@@ -804,7 +835,9 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
     /**
      * Loads waypoints from file landmark store.
      */
-    private Vector actionListStore(final String storeName, final boolean onBackground) {
+    private Vector actionListStore(final String storeName,
+                                   final boolean onBackground,
+                                   final boolean lazyGs) {
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("list store: " + storeName);
 //#endif
@@ -844,9 +877,9 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                     if (i > -1) {
                         final String lcname = storeName.toLowerCase();
                         if (lcname.endsWith(SUFFIX_GPX)) {
-                            wpts = parseWaypoints(file, TYPE_GPX);
+                            wpts = parseWaypoints(file, TYPE_GPX, lazyGs);
                         } else if (lcname.endsWith(SUFFIX_LOC)) {
-                            wpts = parseWaypoints(file, TYPE_LOC);
+                            wpts = parseWaypoints(file, TYPE_LOC, lazyGs);
                         }
                     }
 
@@ -952,7 +985,6 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
         }
 
         try {
-
             // create file revision
             if (_updateRevision) {
 
@@ -1024,7 +1056,9 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                 }
             }
         } catch (Throwable t) {
-
+//#ifdef __LOG__
+            t.printStackTrace();
+//#endif
             // report
             status = t;
 
@@ -1091,16 +1125,121 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
         }
     }
 
-    private void listKnown(final Vector v) {
-        for (final Enumeration e = backends.elements(); e.hasMoreElements();) {
-            final String backendName = ((GpxTracklog) e.nextElement()).getFileName();
-            if (backendName != null && !v.contains(backendName)) {
+    private void actionParseWpt(final Waypoint wpt) {
+        // parse XML-based store
+        File file = null;
+
+        try {
+
+            // may take some time - start ticker
+            cz.kruch.track.ui.nokia.DeviceControl.setTicker(list, Resources.getString(Resources.NAV_MSG_TICKER_LOADING));
+
+            // open file
+            file = File.open(Config.getFolderURL(folder) + currentName);
+
+            // input stream and parser
+            InputStream in = null;
+            HXmlParser parser = null;
+
+            try {
+                // open input
+                in = new BufferedInputStream(file.openInputStream(), 4096);
+
+                // create parser
+                parser = new HXmlParser();
+                parser.setFeature(XmlPullParser.FEATURE_PROCESS_NAMESPACES, true);
+
+                // get bean
+                final GroundspeakBean bean = (GroundspeakBean) wpt.getUserObject();
+
+                // init parser
+                parser.setInput(in, null); // null is for encoding autodetection
+                parser.skip(bean.getFileOffset());
+
+                // parse
+                parseBean(parser, bean, 1, false);
+
+                // open waypoint form
+                (new WaypointForm(wpt, this, _distance,
+                                  isModifiable())).show();
+
+            } finally {
+                try {
+                    parser.close();
+                } catch (Exception e) { // NPE or IOE
+                    // ignore
+                }
+                try {
+                    in.close();
+                } catch (Exception e) { // NPE or IOE
+                    // ignore
+                }
+            }
+
+        } catch (Throwable t) {
 //#ifdef __LOG__
-                if (log.isEnabled()) log.debug("list known backend file " + backendName);
+            t.printStackTrace();
 //#endif
-                v.addElement(backendName);
+            Desktop.showError("Parse error", t, null);
+
+        } finally {
+
+            // remove ticker
+            cz.kruch.track.ui.nokia.DeviceControl.setTicker(list, null);
+
+            // close file
+            try {
+                file.close();
+            } catch (Exception e) { // NPE or IOE
+                // ignore
             }
         }
+    }
+
+    private void listKnown(final Vector v, final boolean omitUnparsed) {
+
+        for (final Enumeration e = backends.keys(); e.hasMoreElements();) {
+
+            // get backend name (ie. filename)
+            final String storeKey = (String) e.nextElement();
+            final String backendName = ((GpxTracklog) backends.get(storeKey)).getFileName();
+
+            // avoid duplicity
+            if (backendName != null && !v.contains(backendName)) {
+
+                // check for lazy-parsed waypoints
+                boolean rw = true;
+                if (omitUnparsed) {
+                    rw = isWriteable(storeKey);
+                }
+
+                // list known store only if is "read-write"
+                if (rw) {
+//#ifdef __LOG__
+                    if (log.isEnabled()) log.debug("list known backend file " + backendName);
+//#endif
+                    v.addElement(backendName);
+                }
+            }
+        }
+    }
+
+    private boolean isWriteable(final String storeKey) {
+        final NakedVector wpts = (NakedVector) stores.get(storeKey);
+        if (wpts != null) {
+            final Object[] raw = wpts.getData();
+            for (int i = wpts.size(); --i >= 0; ) {
+                final Waypoint wpt = (Waypoint) raw[i];
+                if (wpt.getUserObject() instanceof GroundspeakBean && !((GroundspeakBean) wpt.getUserObject()).isParsed()) {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    private boolean isModifiable() {
+        return (folder == Config.FOLDER_WPTS && currentWpts != Desktop.wpts) && isWriteable(currentName);
     }
 
     private void addToPrefferedStore(final Object storeKey, final Waypoint wpt) {
@@ -1179,8 +1318,8 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
         // add wpt to store
         Vector wpts = (Vector) stores.get(storeKey);
         if (wpts == null) {
-            if (storeName != null) {
-                wpts = actionListStore(storeName, true);
+            if (storeName != null) { // store not loaded yet
+                wpts = actionListStore(storeName, true, false);
             }
         }
         if (wpts == null) {
@@ -1459,13 +1598,46 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
         return -1;
     }
 
-    private static Vector parseWaypoints(final File file, final int fileType)
+    private static Vector parseWaypoints(final File file, final int fileType,
+                                         final boolean lazyGs)
             throws IOException, XmlPullParserException {
+        // result
+        final Vector result = new NakedVector(256, 256);
+
+        // input stream and parser
         InputStream in = null;
+        HXmlParser parser = null;
 
         try {
-            return parseWaypoints(in = new BufferedInputStream(file.openInputStream(), 4096), fileType);
+            // open input
+            in = new BufferedInputStream(file.openInputStream(), 4096);
+
+            // create parser
+            parser = new HXmlParser();
+            parser.setFeature(XmlPullParser.FEATURE_PROCESS_NAMESPACES, true);
+
+            // init parser
+            parser.setInput(in, null); // null is for encoding autodetection
+
+            // parse
+            switch (fileType) {
+                case TYPE_GPX: {
+                    parseGpx(parser, result, lazyGs);
+                } break;
+                case TYPE_LOC: {
+                    parseLoc(parser, result);
+                }
+                break;
+            }
+
+            return result;
+
         } finally {
+            try {
+                parser.close();
+            } catch (Exception e) { // NPE or IOE
+                // ignore
+            }
             try {
                 in.close();
             } catch (Exception e) { // NPE or IOE
@@ -1474,38 +1646,8 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
         }
     }
 
-    private static Vector parseWaypoints(final InputStream in, final int fileType)
-            throws IOException, XmlPullParserException {
-
-        // result
-        final Vector result = new NakedVector(512, 512);
-
-        // parse XML
-        final HXmlParser parser = new HXmlParser();
-        parser.setFeature(XmlPullParser.FEATURE_PROCESS_NAMESPACES, true);
-        try {
-            parser.setInput(in, null); // null is for encoding autodetection
-            switch (fileType) {
-                case TYPE_GPX: {
-                    parseGpx(parser, result);
-                } break;
-                case TYPE_LOC: {
-                    parseLoc(parser, result);
-                }
-                break;
-            }
-        } finally {
-            try {
-                parser.close();
-            } catch (IOException e) {
-                // ignore
-            }
-        }
-
-        return result;
-    }
-
-    private static void parseGpx(final HXmlParser parser, final Vector v)
+    private static void parseGpx(final HXmlParser parser, final Vector v,
+                                 final boolean lazyGs)
             throws IOException, XmlPullParserException {
         NakedVector links = null;
         GroundspeakBean gsbean = null;
@@ -1515,14 +1657,12 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
         float alt = Float.NaN;
         long timestamp = 0;
 
-        int depth = 0;
-
         final StringBuffer sb = new StringBuffer(16);
         final Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone("GMT"));
         final CharArrayTokenizer tokenizer = new CharArrayTokenizer();
         final char[] timeDelims = new char[]{'+', '-', ':', 'T', 'Z'};
 
-        for (int eventType = parser.next(); eventType != XmlPullParser.END_DOCUMENT; eventType = parser.next()) {
+        for (int depth = 0, eventType = parser.next(); eventType != XmlPullParser.END_DOCUMENT; eventType = parser.next()) {
             switch (eventType) {
                 case XmlPullParser.START_TAG: {
                     switch (depth) {
@@ -1604,78 +1744,18 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                                     }
                                 } break;
                                 case TAG_GS_CACHE: {
-                                    // groundspeak
-                                    depth = 2;
                                     // create bean
                                     gsbean = new GroundspeakBean(GpxTracklog.GS_1_0_PREFIX,
                                                                  parser.getAttributeValue(null, ATTR_GS_ID));
+                                    parseBean(parser, gsbean, 2, lazyGs);
                                 } break;
                                 case TAG_AU_CACHE: {
-                                    // groundspeak
-                                    depth = 2;
                                     // create bean
                                     gsbean = new GroundspeakBean(GpxTracklog.AU_1_0_PREFIX, null);
+                                    parseBean(parser, gsbean, 2, lazyGs);
                                 } break;
                                 case TAG_EXTENSIONS: {
                                     // groundspeak in GPX 1.1
-                                } break;
-                                default: {
-                                    // skip
-                                    parser.skipSubTree();
-                                }
-                            }
-                        }
-                        break;
-                        case 2: {
-                            final int tag = parser.getHash();
-                            switch (tag) {
-                                case TAG_NAME: {
-                                    // get GS name
-                                    gsbean.setName(parser.nextText().trim());
-                                } break;
-                                case TAG_GS_TYPE: {
-                                    // get GS type
-                                    gsbean.setType(parser.nextText());
-                                } break;
-                                case TAG_AU_HINTS: {
-                                    // get GS long listing
-                                    gsbean.setEncodedHints(parser.nextText());
-                                } break;
-                                case TAG_GS_HINTS: {
-                                    // get GS long listing
-                                    gsbean.setEncodedHints(parser.nextText());
-                                } break;
-                                case TAG_GS_COUNTRY: {
-                                    // get GS terrain
-                                    gsbean.setCountry(parser.nextText());
-                                } break;
-                                case TAG_GS_DIFF: {
-                                    // get GS difficulty
-                                    gsbean.setDifficulty(parser.nextText());
-                                } break;
-                                case TAG_AU_SUMMARY: {
-                                    // get AU summary used as GS long listing as
-                                    gsbean.setShortListing(parser.nextText());
-                                } break;
-                                case TAG_GS_LONGL: {
-                                    // get GS long listing
-                                    gsbean.setLongListing(parser.nextText());
-                                } break;
-                                case TAG_AU_DESC: {
-                                    // get AU description
-                                    gsbean.setLongListing(parser.nextText());
-                                } break;
-                                case TAG_GS_TERRAIN: {
-                                    // get GS terrain
-                                    gsbean.setTerrain(parser.nextText());
-                                } break;
-                                case TAG_GS_CONTAINER: {
-                                    // get GS container
-                                    gsbean.setContainer(parser.nextText());
-                                } break;
-                                case TAG_GS_SHORTL: {
-                                    // get GS short listing
-                                    gsbean.setShortListing(parser.nextText());
                                 } break;
                                 default: {
                                     // skip
@@ -1726,22 +1806,180 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                                     alt = Float.NaN;
                                     lat = lon = -1D;
                                     timestamp = 0;
-                                    name = cmt = null;
+                                    name = cmt = sym = null;
                                     links = null;
                                     gsbean = null;
 
                                 } break;
                             }
                         } break;
+                        default:
+                            // up one level
+                            if (depth > 0) {
+                                depth--;
+                            }
+                    }
+                } break;
+            }
+        }
+    }
+
+    private static void parseBean(final HXmlParser parser, final GroundspeakBean gsbean,
+                                  final int start, final boolean lazy) throws IOException, XmlPullParserException {
+        if (start == 1 || lazy == false) {
+            gsbean.ctor();
+        } else {
+            gsbean.setFileOffset(parser.elementOffset);
+        }
+
+        GroundspeakBean.Log gslog = null;
+
+        for (int depth = start, eventType = parser.next(); ; eventType = parser.next()) {
+            switch (eventType) {
+                case XmlPullParser.START_TAG: {
+                    switch (depth) {
+                        case 1: { // standalone <cache> parsing
+                            final int tag = parser.getHash();
+                            if (TAG_GS_CACHE == tag || TAG_AU_CACHE == tag) {
+                                depth = 2;
+                            } else {
+                                throw new IllegalStateException("Unexpected start tag: " + parser.getName());
+                            }
+                        } break;
+                        case 2: {
+                            final int tag = parser.getHash();
+                            switch (tag) {
+                                case TAG_NAME: {
+                                    // get GS name
+                                    gsbean.setName(parser.nextText().trim());
+                                    // partial or full parsing?
+                                    if (lazy) {
+                                        return;
+                                    }
+                                } break;
+                                case TAG_GS_TYPE: {
+                                    // get GS type
+                                    gsbean.setType(parser.nextText());
+                                } break;
+                                case TAG_AU_HINTS: {
+                                    // get GS long listing
+                                    gsbean.setEncodedHints(parser.nextText());
+                                } break;
+                                case TAG_GS_HINTS: {
+                                    // get GS long listing
+                                    gsbean.setEncodedHints(parser.nextText());
+                                } break;
+                                case TAG_GS_COUNTRY: {
+                                    // get GS terrain
+                                    gsbean.setCountry(parser.nextText());
+                                } break;
+                                case TAG_GS_DIFF: {
+                                    // get GS difficulty
+                                    gsbean.setDifficulty(parser.nextText());
+                                } break;
+                                case TAG_AU_SUMMARY: {
+                                    // get AU summary used as GS long listing as
+                                    gsbean.setShortListing(parser.nextText());
+                                } break;
+                                case TAG_GS_LONGL: {
+                                    // get GS long listing
+                                    gsbean.setLongListing(parser.nextText());
+                                } break;
+                                case TAG_AU_DESC: {
+                                    // get AU description
+                                    gsbean.setLongListing(parser.nextText());
+                                } break;
+                                case TAG_GS_TERRAIN: {
+                                    // get GS terrain
+                                    gsbean.setTerrain(parser.nextText());
+                                } break;
+                                case TAG_GS_CONTAINER: {
+                                    // get GS container
+                                    gsbean.setContainer(parser.nextText());
+                                } break;
+                                case TAG_GS_SHORTL: {
+                                    // get GS short listing
+                                    gsbean.setShortListing(parser.nextText());
+                                } break;
+                                // TODO
+                                case TAG_GS_LOGS: {
+                                    // depth
+                                    depth = 3;
+                                } break;
+                                default: {
+                                    // skip
+                                    parser.skipSubTree();
+                                }
+                            }
+                        } break;
+                        case 3: {
+                            final int tag = parser.getHash();
+                            switch (tag) {
+                                case TAG_GS_LOG: {
+                                    // depth
+                                    depth = 4;
+                                    // log instance
+                                    gslog = new GroundspeakBean.Log(parser.getAttributeValue(null, ATTR_GS_ID));
+                                } break;
+                                default: {
+                                    // skip
+                                    parser.skipSubTree();
+                                }
+                            }
+                        } break;
+                        case 4: {
+                            final int tag = parser.getHash();
+                            switch (tag) {
+                                case TAG_TIME: // AU timestamp
+                                case TAG_GS_DATE: { // GS timestamp
+                                    // date
+                                    gslog.setDate(parser.nextText());
+                                } break;
+                                case TAG_GS_TYPE: {
+                                    // date
+                                    gslog.setType(parser.nextText());
+                                } break;
+                                case TAG_AU_FINDER:
+                                case TAG_GS_FINDER: {
+                                    // date
+                                    gslog.setFinder(parser.nextText());
+                                } break;
+                                case TAG_GS_TEXT: {
+                                    // date
+                                    gslog.setText(parser.nextText());
+                                } break;
+                                default: {
+                                    // skip
+                                    parser.skipSubTree();
+                                }
+                            }
+                        } break;
+                        default:
+                            // down one level
+                            if (depth > 0) {
+                                depth++;
+                            }
+                    }
+                } break;
+                case XmlPullParser.END_TAG: {
+                    switch (depth) {
                         case 2: {
                             final int tag = parser.getHash();
                             if (TAG_GS_CACHE == tag || TAG_AU_CACHE == tag) {
-                                // back to <wpt> level
-                                depth = 1;
-                            } else if (TAG_EXTENSIONS == tag) {
-                                // nothing to do
+                                return;
+                            } else {
+                                throw new IllegalStateException("Unexpected end tag: " + parser.getName());
                             }
-                        } break;
+                        } // no break here - unreachable
+                        case 4: {
+                            final int tag = parser.getHash();
+                            if (TAG_GS_LOG == tag) {
+                                // add log
+                                gsbean.addLog(gslog);
+                                // gc hint
+                                gslog = null;
+                            }
+                        } // no break here intentionally
                         default:
                             // up one level
                             if (depth > 0) {

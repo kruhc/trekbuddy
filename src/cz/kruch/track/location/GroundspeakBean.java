@@ -6,7 +6,7 @@ import java.util.Vector;
 import java.io.UnsupportedEncodingException;
 
 /**
- * Groundspeak and Australian GPX wpt extension holder.
+ * Groundspeak or Australian GPX wpt extension holder.
  */
 public final class GroundspeakBean {
 //#ifdef __LOG__
@@ -16,16 +16,33 @@ public final class GroundspeakBean {
     private static final String UTF_8 = "UTF-8";
     private static final Vector tokens = new Vector(16, 16);
 
+    private static final int IDX_TYPE       = 0;
+    private static final int IDX_CONTAINER  = 1;
+    private static final int IDX_DIFF       = 2;
+    private static final int IDX_TERRAIN    = 3;
+    private static final int IDX_COUNTRY    = 4;
+    private static final int IDX_SHORTL     = 5;
+    private static final int IDX_LONGL      = 6;
+    private static final int IDX_HINTS      = 7;
+    private static final int IDX_LOGS       = 8;
+
+    private static final int N_PROPERTIES   = 9;
+
     private String ns;
     private String id, name;
-    private String encodedHints;
-    private String type, container, difficulty, terrain, country;
-    private Object shortListing, longListing;
-    private Vector logs;
+    private Object properties;
 
     public GroundspeakBean(String ns, String id) {
         this.ns = ns;
         this.id = id;
+    }
+
+    public void ctor() {
+        this.properties = new Object[N_PROPERTIES];
+    }
+
+    public boolean isParsed() {
+        return properties instanceof Object[];
     }
 
     public String getNs() {
@@ -44,113 +61,133 @@ public final class GroundspeakBean {
         this.name = name;
     }
 
+    public int getFileOffset() {
+        if (this.properties instanceof Integer) {
+            return ((Integer) this.properties).intValue();
+        }
+        throw new IllegalStateException("File offset not set (" + properties + ")");
+    }
+
+    public void setFileOffset(int offset) {
+        this.properties = new Integer(offset);
+    }
+
     public String getEncodedHints() {
-        return encodedHints;
+        return (String) getProperties()[IDX_HINTS];
     }
 
     public void setEncodedHints(String encodedHints) {
-        this.encodedHints = encodedHints;
+        this.getProperties()[IDX_HINTS] = encodedHints;
     }
 
     public String getType() {
-        return type;
+        return (String) getProperties()[IDX_TYPE];
     }
 
     public void setType(String type) {
-        this.type = cache(type);
+        this.getProperties()[IDX_TYPE] = cache(type);
     }
 
     public String getContainer() {
-        return container;
+        return (String) getProperties()[IDX_CONTAINER];
     }
 
     public void setContainer(String container) {
-        this.container = cache(container);
+        this.getProperties()[IDX_CONTAINER] = cache(container);
     }
 
     public String getDifficulty() {
-        return difficulty;
+        return (String) getProperties()[IDX_DIFF];
     }
 
     public void setDifficulty(String difficulty) {
-        this.difficulty = cache(difficulty);
+        this.getProperties()[IDX_DIFF] = cache(difficulty);
     }
 
     public String getTerrain() {
-        return terrain;
+        return (String) getProperties()[IDX_TERRAIN];
     }
 
     public void setTerrain(String terrain) {
-        this.terrain = cache(terrain);
+        this.getProperties()[IDX_TERRAIN] = cache(terrain);
     }
 
     public String getCountry() {
-        return country;
+        return (String) getProperties()[IDX_COUNTRY];
     }
 
     public void setCountry(String country) {
-        this.country = cache(country);
+        this.getProperties()[IDX_COUNTRY] = cache(country);
     }
 
     public String getShortListing() {
-        if (shortListing instanceof byte[]) {
+        if (getProperties()[IDX_SHORTL] instanceof byte[]) {
             try {
-                return new String((byte[]) shortListing, UTF_8);
+                return new String((byte[]) getProperties()[IDX_SHORTL], UTF_8);
             } catch (UnsupportedEncodingException e) {
                 // should never happen
             }
         }
-        return (String) shortListing;
+        return (String) getProperties()[IDX_SHORTL];
     }
 
     public void setShortListing(String shortListing) {
         try {
-            this.shortListing = shortListing.getBytes(UTF_8);
+            this.getProperties()[IDX_SHORTL] = shortListing.getBytes(UTF_8);
         } catch (UnsupportedEncodingException e) {
-            this.shortListing = shortListing;
+            this.getProperties()[IDX_SHORTL] = shortListing;
         }
     }
 
     public String getLongListing() {
-        if (longListing instanceof byte[]) {
+        if (getProperties()[IDX_LONGL] instanceof byte[]) {
             try {
-                return new String((byte[]) longListing, UTF_8);
+                return new String((byte[]) getProperties()[IDX_LONGL], UTF_8);
             } catch (UnsupportedEncodingException e) {
                 // should never happen
             }
         }
-        return (String) longListing;
+        return (String) getProperties()[IDX_LONGL];
     }
 
     public void setLongListing(String longListing) {
         try {
-            this.longListing = longListing.getBytes(UTF_8);
+            this.getProperties()[IDX_LONGL] = longListing.getBytes(UTF_8);
         } catch (UnsupportedEncodingException e) {
-            this.longListing = longListing;
+            this.getProperties()[IDX_LONGL] = longListing;
         }
     }
 
     public Vector getLogs() {
-        return logs;
+        return (Vector) getProperties()[IDX_LOGS];
     }
 
     public void addLog(Log log) {
-        if (logs == null) {
-            logs = new Vector(4);
+        final Object[] p = getProperties();
+        if (p[IDX_LOGS] == null) {
+            p[IDX_LOGS] = new Vector(4);
         }
-        logs.addElement(log);
+        ((Vector) p[IDX_LOGS]).addElement(log);
     }
 
     public String classify() {
+        final Object[] p = getProperties();
         final StringBuffer sb = new StringBuffer(8);
-        sb.append(type.charAt(0)).append(container.charAt(0));
-        sb.append(difficulty).append('/').append(terrain);
+        sb.append(((String) p[IDX_TYPE]).charAt(0))
+                .append(((String) p[IDX_CONTAINER]).charAt(0))
+                .append(((String) p[IDX_DIFF]))
+                .append('/')
+                .append(((String) p[IDX_TERRAIN]));
 
         return sb.toString();
     }
 
     public String toString() {
         return name;
+    }
+
+    private Object[] getProperties() {
+        return (Object[]) properties;
     }
 
     private static String cache(String input) {

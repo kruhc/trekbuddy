@@ -83,6 +83,7 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
     private TextField fieldAltCorrection;
     private ChoiceGroup choiceBlackberry;
     private ChoiceGroup choiceNmea;
+    private ChoiceGroup choiceInternal;
 
     private List pane;
     private Form submenu;
@@ -422,9 +423,19 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
                 fieldAltCorrection = new TextField(Resources.getString(Resources.CFG_LOCATION_FLD_ALT_CORRECTION), Integer.toString(Config.altCorrection), 5, TextField.NUMERIC);
 //#ifdef __RIM__
                 choiceBlackberry = new ChoiceGroup("Blackberry", ChoiceGroup.MULTIPLE);
+                choiceBlackberry.append(Resources.getString(Resources.CFG_LOCATION_FLD_ASSISTED_GPS), null);
                 choiceBlackberry.append(Resources.getString(Resources.CFG_LOCATION_FLD_NEGATIVE_ALT_FIX), null);
                 choiceBlackberry.setSelectedFlags(new boolean[] {
+                    Config.assistedGps,
                     Config.negativeAltFix
+                });
+//#elifdef __ANDROID__
+                // nothing for Android
+//#else
+                choiceInternal = new ChoiceGroup(Resources.getString(Resources.CFG_LOCATION_FLD_PROV_INTERNAL), ChoiceGroup.MULTIPLE);
+                choiceInternal.append(Resources.getString(Resources.CFG_LOCATION_FLD_ASSISTED_GPS), null);
+                choiceInternal.setSelectedFlags(new boolean[] {
+                    Config.assistedGps
                 });
 //#endif
             }
@@ -462,12 +473,12 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
                     continue;
 
                 if (choiceTracklogFormat == affected) {
-                    if (fieldSimulatorDelay == item || fieldLocationTimings == item || fieldCommUrl == item || fieldBtKeepalive == item || fieldO2Depth == item || fieldAltCorrection == item || choiceBlackberry == item || choiceNmea == item || choiceTracklog == item || choiceTracklogFormat == item)
+                    if (fieldSimulatorDelay == item || fieldLocationTimings == item || fieldCommUrl == item || fieldBtKeepalive == item || fieldO2Depth == item || fieldAltCorrection == item || choiceBlackberry == item || choiceInternal == item || choiceNmea == item || choiceTracklog == item || choiceTracklogFormat == item)
                         continue;
                 }
 
                 if (choiceTracklog == affected) {
-                    if (fieldSimulatorDelay == item || fieldLocationTimings == item || fieldCommUrl == item || fieldBtKeepalive == item || fieldO2Depth == item || fieldAltCorrection == item || choiceBlackberry == item || choiceNmea == item || choiceTracklog == item)
+                    if (fieldSimulatorDelay == item || fieldLocationTimings == item || fieldCommUrl == item || fieldBtKeepalive == item || fieldO2Depth == item || fieldAltCorrection == item || choiceBlackberry == item || choiceInternal == item || choiceNmea == item || choiceTracklog == item)
                         continue;
                 }
 
@@ -496,6 +507,10 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
 //#endif
 //#ifdef __RIM__
                         appendWithNewlineAfter(submenu, choiceBlackberry);
+//#elifdef __ANDROID__
+                        // nothing for Android
+//#else
+                        appendWithNewlineAfter(submenu, choiceInternal);
 //#endif
                     break;
                     case Config.LOCATION_PROVIDER_SERIAL:
@@ -638,6 +653,16 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
                 if (cz.kruch.track.TrackingMIDlet.jsr179 || cz.kruch.track.TrackingMIDlet.motorola179) {
                     Config.setLocationTimings(fieldLocationTimings.getString());
                     Config.altCorrection = Integer.parseInt(fieldAltCorrection.getString());
+//#ifdef __RIM__
+                    final boolean[] bbopts = new boolean[choiceBlackberry.size()];
+                    choiceBlackberry.getSelectedFlags(bbopts);
+                    Config.assistedGps = bbopts[0];
+                    Config.negativeAltFix = bbopts[1];
+//#else
+                    final boolean[] iopts = new boolean[choiceInternal.size()];
+                    choiceInternal.getSelectedFlags(iopts);
+                    Config.assistedGps = iopts[0];
+//#endif
                 }
                 if (cz.kruch.track.TrackingMIDlet.jsr82) {
                     Config.btKeepAlive = Integer.parseInt(fieldBtKeepalive.getString());
@@ -656,12 +681,6 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
                 final boolean[] nopts = new boolean[choiceNmea.size()];
                 choiceNmea.getSelectedFlags(nopts);
                 Config.nmeaMsExact = nopts[0];
-
-//#ifdef __RIM__
-                final boolean[] bbopts = new boolean[choiceBlackberry.size()];
-                choiceBlackberry.getSelectedFlags(bbopts);
-                Config.negativeAltFix = bbopts[0];
-//#endif
 
                 // tracklogs, waypoints
                 if (File.isFs()) {

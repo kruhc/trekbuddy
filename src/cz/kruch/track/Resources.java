@@ -300,6 +300,7 @@ public final class Resources {
     public static final short CFG_LOCATION_FLD_GPX_LOG_TIME_MS  = 3624;
     public static final short CFG_LOCATION_FLD_NEGATIVE_ALT_FIX = 3625;
     public static final short CFG_LOCATION_FLD_NMEA_MS_ROUNDING = 3626;
+    public static final short CFG_LOCATION_FLD_ASSISTED_GPS     = 3627;
     /* settings - navigation */
     public static final short CFG_NAVIGATION_FLD_WPT_PROXIMITY  = 3700;
     public static final short CFG_NAVIGATION_FLD_POI_PROXIMITY  = 3701;

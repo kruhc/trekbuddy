@@ -177,6 +177,12 @@
 2222=GC LongDesc
 2223=GC Hints
 2224=Distance
+2225=GC Logs
+2226=GC Log
+2227=Date
+2228=Type
+2229=Finder
+2230=Text
 
 # navigation messages
 2300=Failed to load in-jar waypoints
@@ -286,6 +292,7 @@
 3624=log time ms
 3625=negative alt fix
 3626=exact time match
+3627=assisted GPS
 
 # settings forms/fields/values (Navigation)
 3700=Wpt Proximity
@@ -315,6 +322,8 @@
 3806=power save
 3807=reliable input
 3808=hide menubar cmd
+3809=use native service
+3810=lazy GPX parsing
 
 # info commands
 4000=Technical

@@ -121,6 +121,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
     // group [Internal provider options]
     private static String locationTimings       = EMPTY_STRING;
     public static int altCorrection;
+    public static boolean assistedGps;
 
     // group [Serial provider options]
     public static String commUrl                = "comm:COM5;baudrate=9600";
@@ -265,8 +266,6 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         }
         if (cz.kruch.track.TrackingMIDlet.symbian) {
             useNativeService = !cz.kruch.track.TrackingMIDlet.s60rdfp2;
-        } else {
-            lazyGpxParsing = true;
         }
 //#endif
 
@@ -501,6 +500,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
             // 0.9.96 extensions
             useNativeService = din.readBoolean();
             lazyGpxParsing = din.readBoolean();
+            assistedGps = din.readBoolean();
 
         } catch (Exception e) {
         }
@@ -609,6 +609,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         /* since 0.9.96 */
         dout.writeBoolean(useNativeService);
         dout.writeBoolean(lazyGpxParsing);
+        dout.writeBoolean(assistedGps);
 
 //#ifdef __LOG__
         if (log.isEnabled()) log.info("configuration updated");

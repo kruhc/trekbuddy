@@ -33,8 +33,7 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
 
     private long[] pointers;
     private int numberOfPointers;
-    private int hintTmiFileSize, hintTmiTokenLength, hintInitialCapacity,
-                increment;
+    private int hintTmiFileSize, increment;
 
     TarLoader() {
         this.isTar = true;
@@ -442,15 +441,16 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
 
                 // each line is a slice filename
                 LineReader reader = null;
+                CharArrayTokenizer.Token token = null;
                 final CharArrayTokenizer tokenizer = new CharArrayTokenizer();
                 final char[] delims = { ':' };
                 try {
                     // read entry meta info
                     reader = new LineReader(file.openInputStream(), 4096);
-                    CharArrayTokenizer.Token token = reader.readToken(false);
+                    token = reader.readToken(false);
                     while (token != null) {
 
-                        // skip leading "block  ", if any...
+                        // skip leading "block  ", if any
                         token.skipNonDigits();
 
                         // init tokenizer
@@ -461,9 +461,6 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
 
                         // move to slice name
                         token = tokenizer.next();
-
-                        // set helper member
-                        hintTmiTokenLength = token.length;
 
                         // trim
                         token.trim();
@@ -486,7 +483,7 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
                     
                 } catch (InvalidMapException e) {
                     throw e;
-                } catch (IOException e) {
+                } catch (Exception e) {
                     throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_PARSE_SET_FAILED), e);
                 } finally {
 
@@ -531,53 +528,30 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
                 System.arraycopy(pointers, 0, array, 0, numberOfPointers);
 
                 // use new array
-                this.pointers = null; // gc hint
-                this.pointers = array;
+                pointers = null; // gc hint
+                pointers = array;
             }
 
         } else { // no, first slice being added
 
             // suggest pointers capacity
-            if (hintTmiFileSize > 0 && hintTmiTokenLength > 0) {
-                hintInitialCapacity = (hintTmiFileSize / hintTmiTokenLength) / 2;
-                if (hintInitialCapacity < 64) {
-                    hintInitialCapacity = 64;
+            int initialCapacity;
+            if (hintTmiFileSize > 0 && token.length > 0) {
+                initialCapacity = (hintTmiFileSize / token.length) / 2;
+                if (initialCapacity < 64) {
+                    initialCapacity = 64;
                 }
+            } else {
+                initialCapacity = 4096;
             }
 
             // alloc initial array
-            this.pointers = allocate();
-            this.numberOfPointers = 0;
-
+            pointers = new long[initialCapacity];
+            numberOfPointers = 0;
+            increment = initialCapacity / 4;
         }
 
         // cook and add pointer
-        this.pointers[this.numberOfPointers++] = (long) block << 40 | xy;
-    }
-
-    private long[] allocate() {
-        final Calibration calibration = getMapCalibration();
-        int initialCapacity;
-        if (calibration != null) {
-            if (!isGPSka) {
-                initialCapacity = ((((calibration.getWidth() * calibration.getHeight()) / (256 * 256)) / 16) + 1) * 16;
-                if (initialCapacity < 16) {
-                    initialCapacity = 16;
-                }
-            } else {
-                initialCapacity = 1;
-            }
-        } else if (hintInitialCapacity > 0) {
-            initialCapacity = hintInitialCapacity;
-        } else {
-            initialCapacity = 256;
-        }
-        increment = initialCapacity / 4;
-
-//#ifdef __LOG__
-        if (log.isEnabled()) log.debug("increment is " + increment);
-//#endif
-
-        return new long[initialCapacity];
+        pointers[numberOfPointers++] = (long) block << 40 | xy;
     }
 }

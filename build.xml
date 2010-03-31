@@ -524,6 +524,7 @@
         <delete file="tmp/src/cz/kruch/track/ui/nokia/NokiaDeviceControl.java"/>
         <delete file="tmp/src/cz/kruch/track/ui/nokia/MotorolaDeviceControl.java"/>
         <delete file="tmp/src/cz/kruch/track/ui/nokia/S60DeviceControl.java"/>
+        <delete file="tmp/src/cz/kruch/track/ui/nokia/SymbianDeviceControl.java"/>
         <delete file="tmp/src/cz/kruch/track/ui/nokia/SiemensDeviceControl.java"/>
         <delete file="tmp/src/cz/kruch/track/ui/nokia/SonyEricssonDeviceControl.java"/>
         <delete file="tmp/src/cz/kruch/track/ui/nokia/SamsungDeviceControl.java"/>
@@ -546,6 +547,7 @@
     <target name="remove.symbian.src">
 		<delete file="tmp/src/cz/kruch/track/device/SymbianService.java"/>
 		<delete file="tmp/src/cz/kruch/track/ui/nokia/S60DeviceControl.java"/>
+		<delete file="tmp/src/cz/kruch/track/ui/nokia/SymbianDeviceControl.java"/>
     </target>
 
     <target name="remove.hecl.src">
@@ -992,7 +994,7 @@
         <replace file="${rim.ota.dir}\trekbuddy${suffix}.alx" token="@SUFFIX@" value="${suffix}"/>
         <replace file="${rim.ota.dir}\trekbuddy${suffix}.alx" token="@BBVERSION@" value="${rim.bb.version}"/>
         <replace file="${rim.ota.dir}\trekbuddy${suffix}.alx" token="@DESCRIPTION@" value="${description}"/>
-        <replace file="${rim.ota.dir}\trekbuddy${suffix}.alx" token="@VERSION@" value="${version}"/>
+        <replace file="${rim.ota.dir}\trekbuddy${suffix}.alx" token="@VERSION@" value="${version}.100"/>
         <replace file="${rim.ota.dir}\trekbuddy${suffix}.alx" token="@VENDOR@" value="${vendor}"/>
         <replace file="${rim.ota.dir}\trekbuddy${suffix}.alx" token="@MODULES@" value="${rim.cod.modules}"/>
         <zip destfile="${rim.ota.dir}\trekbuddy${suffix}.zip"

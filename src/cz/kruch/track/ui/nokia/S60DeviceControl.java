@@ -17,12 +17,7 @@ final class S60DeviceControl extends NokiaDeviceControl {
         if (cz.kruch.track.TrackingMIDlet.uiq) {
             this.name = "UIQ";
         } else {
-            if (cz.kruch.track.TrackingMIDlet.s60rdfp2) {
-                this.name = "S60 (3rd FP2)";
-                this.values[0] = 10; // N5800 workaround???
-            } else {
-                this.name = "S60";
-            }
+            this.name = "S60";
             this.cellIdProperty = "com.nokia.mid.cellid";
         }
         try {
@@ -35,17 +30,8 @@ final class S60DeviceControl extends NokiaDeviceControl {
 
     /** @Override */
     protected void setLights() {
-
-        // service avail?
         if (inactivity != null) {
             inactivity.setLights(values[backlight]);
-        }
-
-        // S60, not UIQ
-        if (cz.kruch.track.TrackingMIDlet.nokia) {
-
-            // set light level via Nokia UI API
-            super.setLights();
         }
     }
 

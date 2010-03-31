@@ -8,7 +8,6 @@ import cz.kruch.track.util.SimpleCalendar;
 import cz.kruch.track.util.NmeaParser;
 import cz.kruch.track.util.NakedVector;
 import cz.kruch.track.util.Mercator;
-import cz.kruch.track.maps.io.LoaderIO;
 import cz.kruch.track.Resources;
 //#ifdef __HECL__
 import cz.kruch.track.hecl.ControlledInterp;

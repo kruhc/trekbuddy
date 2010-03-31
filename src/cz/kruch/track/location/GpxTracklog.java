@@ -94,6 +94,14 @@ public final class GpxTracklog implements Runnable {
     private static final String ELEMENT_AU_DESC         = "description";
     private static final String ELEMENT_AU_HINTS        = "hints";
 
+    private static final String ELEMENT_LOGS            = "logs";
+    private static final String ELEMENT_LOG             = "log";
+    private static final String ELEMENT_DATE            = "date";
+    private static final String ELEMENT_TYPE            = "type";
+    private static final String ELEMENT_TEXT            = "text";
+    private static final String ELEMENT_GS_FINDER       = "finder";
+    private static final String ELEMENT_AU_FINDER       = "geocacher";
+
     private static final String ATTRIBUTE_UTF_8         = "UTF-8";
     private static final String ATTRIBUTE_ISO_8859_1    = "ISO-8859-1";
     private static final String ATTRIBUTE_VERSION       = "version";
@@ -566,16 +574,27 @@ public final class GpxTracklog implements Runnable {
         final HXmlSerializer serializer = this.serializer;
         final String prefix = bean.getNs();
         final String ns;
+        final String eleCache, eleShortL, eleLongL, eleHints, eleDate, eleFinder;
         if (prefix == GS_1_0_PREFIX) { // '==' is OK
             ns = GS_1_0_NAMESPACE;
-            serializer.startTag(GS_1_0_NAMESPACE, ELEMENT_GS_CACHE);
+            eleShortL = ELEMENT_GS_SHORTL;
+            eleLongL = ELEMENT_GS_LONGL;
+            eleHints = ELEMENT_GS_HINTS;
+            eleDate = ELEMENT_DATE;
+            eleFinder = ELEMENT_GS_FINDER;
+            serializer.startTag(GS_1_0_NAMESPACE, eleCache = ELEMENT_GS_CACHE);
             if (bean.getId() != null) {
                 serializer.attribute(DEFAULT_NAMESPACE, ATTRIBUTE_ID, bean.getId());
             }
             serializer.attribute(DEFAULT_NAMESPACE, ATTRIBUTE_AVAILABLE, "True");
         } else if (prefix == AU_1_0_PREFIX) {
             ns = AU_1_0_NAMESPACE;
-            serializer.startTag(AU_1_0_NAMESPACE, ELEMENT_AU_CACHE);
+            eleShortL = ELEMENT_AU_SUMMARY;
+            eleLongL = ELEMENT_AU_DESC;
+            eleHints = ELEMENT_AU_HINTS;
+            eleDate = ELEMENT_TIME;
+            eleFinder = ELEMENT_AU_FINDER;
+            serializer.startTag(AU_1_0_NAMESPACE, eleCache = ELEMENT_AU_CACHE);
             serializer.attribute(DEFAULT_NAMESPACE, ATTRIBUTE_STATUS, "Available");
         } else {
             return;
@@ -586,17 +605,25 @@ public final class GpxTracklog implements Runnable {
         serializeElement(serializer, bean.getDifficulty(), ns, ELEMENT_GS_DIFF);
         serializeElement(serializer, bean.getTerrain(), ns, ELEMENT_GS_TERRAIN);
         serializeElement(serializer, bean.getCountry(), ns, ELEMENT_GS_COUNTRY);
-        if (prefix == GS_1_0_PREFIX) {
-            serializeElement(serializer, bean.getShortListing(), GS_1_0_NAMESPACE, ELEMENT_GS_SHORTL);
-            serializeElement(serializer, bean.getLongListing(), GS_1_0_NAMESPACE, ELEMENT_GS_LONGL);
-            serializeElement(serializer, bean.getEncodedHints(), GS_1_0_NAMESPACE, ELEMENT_GS_HINTS);
-            serializer.endTag(GS_1_0_NAMESPACE, ELEMENT_GS_CACHE);
-        } else {
-            serializeElement(serializer, bean.getShortListing(), AU_1_0_NAMESPACE, ELEMENT_AU_SUMMARY);
-            serializeElement(serializer, bean.getLongListing(), AU_1_0_NAMESPACE, ELEMENT_AU_DESC);
-            serializeElement(serializer, bean.getEncodedHints(), AU_1_0_NAMESPACE, ELEMENT_AU_HINTS);
-            serializer.endTag(AU_1_0_NAMESPACE, ELEMENT_AU_CACHE);
+        serializeElement(serializer, bean.getShortListing(), ns, eleShortL);
+        serializeElement(serializer, bean.getLongListing(), ns, eleLongL);
+        serializeElement(serializer, bean.getEncodedHints(), ns, eleHints);
+        final Vector logs = bean.getLogs();
+        if (logs != null && logs.size() > 0) {
+            serializer.startTag(ns, ELEMENT_LOGS);
+            for (int i = 0; i < logs.size(); i++) {
+                final GroundspeakBean.Log entry = (GroundspeakBean.Log) logs.elementAt(i);
+                serializer.startTag(ns, ELEMENT_LOG);
+                serializer.attribute(DEFAULT_NAMESPACE, ATTRIBUTE_ID, entry.getId());
+                serializeElement(serializer, entry.getDate(), ns, eleDate);
+                serializeElement(serializer, entry.getType(), ns, ELEMENT_TYPE);
+                serializeElement(serializer, entry.getFinder(), ns, eleFinder);
+                serializeElement(serializer, entry.getText(), ns, ELEMENT_TEXT);
+                serializer.endTag(ns, ELEMENT_LOG);
+            }
+            serializer.endTag(ns, ELEMENT_LOGS);
         }
+        serializer.endTag(ns, eleCache);
     }
 
     private void serializeWpt(final Waypoint wpt) throws IOException {
@@ -621,9 +648,11 @@ public final class GpxTracklog implements Runnable {
             }
         }
         if (wpt.getUserObject() instanceof GroundspeakBean) {
-            serializer.startTag(DEFAULT_NAMESPACE, ELEMENT_EXTENSIONS);
-            serializeGs((GroundspeakBean) wpt.getUserObject());
-            serializer.endTag(DEFAULT_NAMESPACE, ELEMENT_EXTENSIONS);
+            if (((GroundspeakBean) wpt.getUserObject()).isParsed()) {
+                serializer.startTag(DEFAULT_NAMESPACE, ELEMENT_EXTENSIONS);
+                serializeGs((GroundspeakBean) wpt.getUserObject());
+                serializer.endTag(DEFAULT_NAMESPACE, ELEMENT_EXTENSIONS);
+            }
         }
         serializer.endTag(DEFAULT_NAMESPACE, ELEMENT_WPT);
     }

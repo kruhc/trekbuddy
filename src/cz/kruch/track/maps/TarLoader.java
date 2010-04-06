@@ -79,7 +79,7 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
 
             // open stream
 //#ifdef __SYMBIAN__
-			if (cz.kruch.track.TrackingMIDlet.symbian && Map.networkInputStreamAvailable) {
+			if (Config.useNativeService && Map.networkInputStreamAvailable) {
                 try {
                     in = cz.kruch.track.device.SymbianService.openInputStream(map.getPath());
                     Map.networkInputStreamAvailable = true;

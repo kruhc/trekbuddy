@@ -524,7 +524,6 @@
         <delete file="tmp/src/cz/kruch/track/ui/nokia/NokiaDeviceControl.java"/>
         <delete file="tmp/src/cz/kruch/track/ui/nokia/MotorolaDeviceControl.java"/>
         <delete file="tmp/src/cz/kruch/track/ui/nokia/S60DeviceControl.java"/>
-        <delete file="tmp/src/cz/kruch/track/ui/nokia/SymbianDeviceControl.java"/>
         <delete file="tmp/src/cz/kruch/track/ui/nokia/SiemensDeviceControl.java"/>
         <delete file="tmp/src/cz/kruch/track/ui/nokia/SonyEricssonDeviceControl.java"/>
         <delete file="tmp/src/cz/kruch/track/ui/nokia/SamsungDeviceControl.java"/>
@@ -547,7 +546,6 @@
     <target name="remove.symbian.src">
 		<delete file="tmp/src/cz/kruch/track/device/SymbianService.java"/>
 		<delete file="tmp/src/cz/kruch/track/ui/nokia/S60DeviceControl.java"/>
-		<delete file="tmp/src/cz/kruch/track/ui/nokia/SymbianDeviceControl.java"/>
     </target>
 
     <target name="remove.hecl.src">

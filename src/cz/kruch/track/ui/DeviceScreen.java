@@ -13,7 +13,6 @@ import javax.microedition.lcdui.CommandListener;
 import javax.microedition.midlet.MIDlet;
 
 import java.util.TimerTask;
-import java.util.Vector;
 
 /**
  * Graphic output and user interaction.
@@ -24,8 +23,6 @@ final class DeviceScreen extends GameCanvas implements Runnable {
 //#ifdef __LOG__
     private static final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("DeviceScreen");
 //#endif
-
-    private static final String FLAG_UI_NO_SOFTKEY_MENU = "ui_no_softkey_menu";
 
     static final int BTN_ARC        = 10;
     static final int BTN_COLOR      = 0x005b87ce;
@@ -119,14 +116,14 @@ final class DeviceScreen extends GameCanvas implements Runnable {
 
     /** @Override */
     public void setCommandListener(CommandListener commandListener) {
-        if (!cz.kruch.track.TrackingMIDlet.hasFlag(FLAG_UI_NO_SOFTKEY_MENU)) {
+        if (!Config.uiNoCommands) {
             super.setCommandListener(commandListener);
         }
     }
 
     /** @Override */
     public void addCommand(Command command) {
-        if (!cz.kruch.track.TrackingMIDlet.hasFlag(FLAG_UI_NO_SOFTKEY_MENU)) {
+        if (!Config.uiNoCommands) {
             if (command != null) {
                 super.addCommand(command);
             }
@@ -135,7 +132,7 @@ final class DeviceScreen extends GameCanvas implements Runnable {
 
     /** @Override */
     public void removeCommand(Command command) {
-        if (!cz.kruch.track.TrackingMIDlet.hasFlag(FLAG_UI_NO_SOFTKEY_MENU)) {
+        if (!Config.uiNoCommands) {
             if (command != null) {
                 super.removeCommand(command);
             }

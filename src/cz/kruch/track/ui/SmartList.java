@@ -10,6 +10,7 @@ import javax.microedition.lcdui.Graphics;
 import javax.microedition.lcdui.Display;
 import javax.microedition.lcdui.Canvas;
 import javax.microedition.lcdui.Ticker;
+import javax.microedition.lcdui.Command;
 import java.util.Vector;
 
 final class SmartList extends Canvas {
@@ -61,6 +62,11 @@ final class SmartList extends Canvas {
     /* magic - it prevents OutOfMemoryError :-O */
     public void setTicker(Ticker ticker) {
         super.setTicker(ticker);
+    }
+
+    // TODO
+    public void setSelectCommand(Command command) {
+        super.addCommand(command);
     }
 
     public void setCommandListener(CommandListener listener) {

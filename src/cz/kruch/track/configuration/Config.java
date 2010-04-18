@@ -114,6 +114,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
 
     // group [Bluetooth provider options]
     public static int btKeepAlive;
+    public static boolean btDoServiceSearch;
 
     // group [Simulator provider options]
     public static int simulatorDelay            = 1000; // ms
@@ -152,6 +153,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
     public static boolean hpsWptTrueAzimuth     = true;
     public static boolean safeColors;
     public static boolean noQuestions;
+    public static boolean uiNoCommands;
     public static int desktopFontSize;
     public static int osdAlpha                  = 0x80;
     public static int cmsCycle;
@@ -266,6 +268,12 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         }
         if (cz.kruch.track.TrackingMIDlet.symbian) {
             useNativeService = !cz.kruch.track.TrackingMIDlet.s60rdfp2;
+        }
+        if (cz.kruch.track.TrackingMIDlet.hasFlag("bt_service_search")) {
+            btDoServiceSearch = true;
+        }
+        if (cz.kruch.track.TrackingMIDlet.hasFlag("ui_no_softkey_menu")) {
+            uiNoCommands = true;
         }
 //#endif
 
@@ -502,6 +510,10 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
             lazyGpxParsing = din.readBoolean();
             assistedGps = din.readBoolean();
 
+            // 0.9.97 extensions
+            btDoServiceSearch = din.readBoolean();
+            uiNoCommands = din.readBoolean();
+
         } catch (Exception e) {
         }
 
@@ -610,6 +622,9 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         dout.writeBoolean(useNativeService);
         dout.writeBoolean(lazyGpxParsing);
         dout.writeBoolean(assistedGps);
+        /* since 0.9.96 */
+        dout.writeBoolean(btDoServiceSearch);
+        dout.writeBoolean(uiNoCommands);
 
 //#ifdef __LOG__
         if (log.isEnabled()) log.info("configuration updated");
@@ -979,8 +994,10 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
             case LOCATION_PROVIDER_JSR179:
                 if (cz.kruch.track.TrackingMIDlet.a780) {
                     timings = "2,2,-1"; /* from http://www.kiu.weite-welt.com/de.schoar.blog/?p=186 */
+/* Blackberries seem fine with 1,-1,-1 
                 } else if (cz.kruch.track.TrackingMIDlet.rim) {
                     timings = "2,-1,-1";
+*/
                 }
             break;
 //#ifdef __ALL__

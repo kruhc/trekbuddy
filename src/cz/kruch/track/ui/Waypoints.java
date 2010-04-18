@@ -18,6 +18,8 @@ import javax.microedition.lcdui.Command;
 import javax.microedition.lcdui.Displayable;
 import javax.microedition.lcdui.List;
 import javax.microedition.lcdui.Choice;
+import javax.microedition.lcdui.TextBox;
+import javax.microedition.lcdui.TextField;
 import javax.microedition.io.Connector;
 
 import api.file.File;
@@ -126,6 +128,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
     private static final String itemFriendHere = Resources.getString(Resources.NAV_ITEM_SMS_IAH);
     private static final String itemFriendThere = Resources.getString(Resources.NAV_ITEM_SMS_MYT);
     private static final String itemStop = Resources.getString(Resources.NAV_ITEM_STOP);
+    private static final String itemFieldNotes = "Field Notes";
 
     private static final String actionListWpts = Resources.getString(Resources.NAV_ITEM_WAYPOINTS);
     private static final String actionListTracks = Resources.getString(Resources.NAV_ITEM_TRACKS);
@@ -140,14 +143,14 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
     private Vector currentWpts, inUseWpts;
     private String currentName, inUseName;
 
-    private List pane;
+    private List pane, notes;
     private Displayable list;
-    private NakedVector sortedWpts, cachedDisk;
+    private NakedVector sortedWpts, cachedDisk, fieldNotes;
     private String folder;
     private final Object[] idx;
     private int entry, depth, sort, cacheDiskHint;
 
-    private Command cmdBack, cmdCancel;
+    private Command cmdBack, cmdCancel, cmdClose;
     private Command cmdOpen, cmdNavigateTo, cmdNavigateAlong, cmdNavigateBack,
                     cmdSetAsCurrent, cmdGoTo, cmdShowAll, cmdHideAll,
                     cmdSortByOrder, cmdSortByName, cmdSortByDist;
@@ -170,11 +173,13 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
         this.navigator = navigator;
         this.backends = new Hashtable(4);
         this.stores = new Hashtable(4);
+        this.fieldNotes = new NakedVector(0, 4);
         this.idx = new Object[3];
         this.sort = Config.sort;
         this.cacheDiskHint = INITIAL_LIST_SIZE;
         this.cmdBack = new Command(Resources.getString(Resources.CMD_BACK), Desktop.BACK_CMD_TYPE, 1);
         this.cmdCancel = new Command(Resources.getString(Resources.CMD_CANCEL), Desktop.CANCEL_CMD_TYPE, 1);
+        this.cmdClose = new Command(Resources.getString(Resources.CMD_CLOSE), Desktop.BACK_CMD_TYPE, 1);
         this.cmdOpen = new Command(Resources.getString(Resources.DESKTOP_CMD_SELECT), Desktop.SELECT_CMD_TYPE, 0);
         this.cmdNavigateTo = new ActionCommand(Resources.NAV_CMD_NAVIGATE_TO, Command.ITEM, 2);
         this.cmdNavigateAlong = new ActionCommand(Resources.NAV_CMD_ROUTE_ALONG, Command.ITEM, 3);
@@ -222,6 +227,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                 // create menu
                 pane.append(itemWptsStores, null);
                 pane.append(itemTracksStores, null);
+                pane.append(itemFieldNotes, null);
                 pane.append(itemAddNew, null);
                 pane.append(itemEnterCustom, null);
                 if (cz.kruch.track.TrackingMIDlet.jsr120) {
@@ -258,121 +264,143 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
     }
 
     public void commandAction(Command command, Displayable displayable) {
-        final int type = command.getCommandType();
-        if (Desktop.BACK_CMD_TYPE == type || Desktop.CANCEL_CMD_TYPE == type) {
-            if (depth == 0) {
-                close();
+        // command source
+        boolean fn = false;
+        if (displayable instanceof List) {
+            fn = itemFieldNotes.equals(displayable.getTitle());
+        }
+
+        // field notes action?
+        if (fn) {
+
+            if (List.SELECT_COMMAND == command || cmdOpen == command) {
+                // open field note
+                (new FieldNoteForm((String[]) fieldNotes.elementAt(((List) displayable).getSelectedIndex()),
+                                   displayable, this)).show();
             } else {
-                switch (--depth) {
-                    case 0: {
-                        use(pane);
-                        menu(depth);
+                // restore main menu
+                notes = null; // gc hint
+                Desktop.display.setCurrent(list);
+            }
+
+        } else { // menu or list action
+
+            final int type = command.getCommandType();
+            if (Desktop.BACK_CMD_TYPE == type || Desktop.CANCEL_CMD_TYPE == type) {
+                if (depth == 0) {
+                    close();
+                } else {
+                    switch (--depth) {
+                        case 0: {
+                            use(pane);
+                            menu(depth);
+                        } break;
+                        case 1: {
+                            if (entry == 2) {
+                                depth = 0;
+                                close();
+                            } else {
+                                actionListStores(_listingTitle);
+                            }
+                        } break;
+                    }
+                }
+            } else {
+                // depth-specific action
+                switch (depth) {
+                    case 0: { // main menu
+                        // get command item
+                        final String item = ((List) list).getString(((List) list).getSelectedIndex());
+                        idx[depth] = item;
+                        // exec
+                        mainMenuCommandAction(item);
                     } break;
-                    case 1: {
-                        if (entry == 2) {
-                            depth = 0;
-                            close();
+                    case 1: { // store action
+                        // get store name
+                        final String item;
+                        if (list instanceof SmartList) {
+                            item = (String) ((SmartList) list).getSelectedItem();
+                            idx[depth] = item;
                         } else {
-                            actionListStores(_listingTitle);
+                            item = ((List) list).getString(((List) list).getSelectedIndex());
+                            idx[depth] = new Integer(((List) list).getSelectedIndex());
+                        }
+                        // store action
+                        if (List.SELECT_COMMAND == command || cmdOpen == command) {
+                            onBackground(item, null);
+                        }
+                    } break;
+                    case 2: { // wpt action
+                        // selected item
+                        final Waypoint item = (Waypoint) ((SmartList) list).getSelectedItem();
+                        // exec command
+                        if (List.SELECT_COMMAND == command || cmdOpen == command) {
+                            // save current depth list position
+                            if (/*inUseName == null || */currentName.equals(inUseName)) {
+                                idx[depth] = item;
+                            }
+                            // calculate distance
+                            QualifiedCoordinates qc = navigator.getPointer();
+                            if (qc != null) {
+                                _distance = qc.distance(item.getQualifiedCoordinates());
+                            } else {
+                                _distance = Float.NaN;
+                            }
+                            // check parsing status
+                            if (item.getUserObject() instanceof GroundspeakBean && !((GroundspeakBean) item.getUserObject()).isParsed()) {
+                                // fully parse bean and show wpt details
+                                _parseWpt = item;
+                                navigator.getDiskWorker().enqueue(this);
+                            } else {
+                                // open waypoint form
+                                (new WaypointForm(item, this, _distance,
+                                                  isModifiable())).show();
+                            }
+                        } else if (cmdNavigateTo == command) {
+                            // remember idx
+                            idx[depth] = item;
+                            // same as action in waypoint form
+                            invoke(new Object[]{new Integer(Resources.NAV_CMD_NAVIGATE_TO), null}, null, this);
+                        } else if (cmdNavigateAlong == command) {
+                            // remember idx
+                            idx[depth] = item;
+                            // same as action in waypoint form
+                            invoke(new Object[]{new Integer(Resources.NAV_CMD_ROUTE_ALONG), null}, null, this);
+                        } else if (cmdNavigateBack == command) {
+                            // remember idx
+                            idx[depth] = item;
+                            // same as action in waypoint form
+                            invoke(new Object[]{new Integer(Resources.NAV_CMD_ROUTE_BACK), null}, null, this);
+                        } else if (cmdSetAsCurrent == command) {
+                            // remember idx
+                            idx[depth] = item;
+                            // same as action in waypoint form
+                            invoke(new Object[]{new Integer(Resources.NAV_CMD_SET_AS_ACTIVE), null}, null, this);
+                        } else if (cmdGoTo == command) {
+                            // same as action in waypoint form
+                            invoke(new Object[]{new Integer(Resources.NAV_CMD_GO_TO), null}, null, this);
+                        } else if (cmdShowAll == command) {
+                            // close nav UI
+                            close();
+                            // call navigator
+                            navigator.showWaypoints(currentWpts, currentName, true);
+                        } else if (cmdHideAll == command) {
+                            // close nav UI
+                            close();
+                            // call navigator
+                            navigator.showWaypoints(currentWpts, currentName, false);
+                        } else if (cmdSortByOrder == command) {
+                            // sort
+                            sortWaypoints((SmartList) list, SORT_BYORDER, false, currentWpts);
+                        } else if (cmdSortByName == command) {
+                            // sort
+                            sortWaypoints((SmartList) list, SORT_BYNAME, false, currentWpts);
+                        } else if (cmdSortByDist == command) {
+                            // sort
+                            sortWaypoints((SmartList) list, SORT_BYDIST, false, currentWpts);
                         }
                     } break;
                 }
-            }
-        } else {
-            // depth-specific action
-            switch (depth) {
-                case 0: { // main menu
-                    // get command item
-                    final String item = ((List) list).getString(((List) list).getSelectedIndex());
-                    idx[depth] = item;
-                    // exec
-                    mainMenuCommandAction(item);
-                } break;
-                case 1: { // store action
-                    // get store name
-                    final String item;
-                    if (list instanceof SmartList) {
-                        item = (String) ((SmartList) list).getSelectedItem();
-                        idx[depth] = item;
-                    } else {
-                        item = ((List) list).getString(((List) list).getSelectedIndex());
-                        idx[depth] = new Integer(((List) list).getSelectedIndex());
-                    }
-                    // store action
-                    if (List.SELECT_COMMAND == command || cmdOpen == command) {
-                        onBackground(item, null);
-                    }
-                } break;
-                case 2: { // wpt action
-                    // selected item
-                    final Waypoint item = (Waypoint) ((SmartList) list).getSelectedItem();
-                    // exec command
-                    if (List.SELECT_COMMAND == command || cmdOpen == command) {
-                        // save current depth list position
-                        if (/*inUseName == null || */currentName.equals(inUseName)) {
-                            idx[depth] = item;
-                        }
-                        // calculate distance
-                        QualifiedCoordinates qc = navigator.getPointer();
-                        if (qc != null) {
-                            _distance = qc.distance(item.getQualifiedCoordinates());
-                        } else {
-                            _distance = Float.NaN;
-                        }
-                        // check parsing status
-                        if (item.getUserObject() instanceof GroundspeakBean && !((GroundspeakBean) item.getUserObject()).isParsed()) {
-                            // fully parse bean and show wpt details
-                            _parseWpt = item;
-                            navigator.getDiskWorker().enqueue(this);
-                        } else {
-                            // open waypoint form
-                            (new WaypointForm(item, this, _distance,
-                                              isModifiable())).show();
-                        }
-                    } else if (cmdNavigateTo == command) {
-                        // remember idx
-                        idx[depth] = item;
-                        // same as action in waypoint form
-                        invoke(new Object[]{new Integer(Resources.NAV_CMD_NAVIGATE_TO), null}, null, this);
-                    } else if (cmdNavigateAlong == command) {
-                        // remember idx
-                        idx[depth] = item;
-                        // same as action in waypoint form
-                        invoke(new Object[]{new Integer(Resources.NAV_CMD_ROUTE_ALONG), null}, null, this);
-                    } else if (cmdNavigateBack == command) {
-                        // remember idx
-                        idx[depth] = item;
-                        // same as action in waypoint form
-                        invoke(new Object[]{new Integer(Resources.NAV_CMD_ROUTE_BACK), null}, null, this);
-                    } else if (cmdSetAsCurrent == command) {
-                        // remember idx
-                        idx[depth] = item;
-                        // same as action in waypoint form
-                        invoke(new Object[]{new Integer(Resources.NAV_CMD_SET_AS_ACTIVE), null}, null, this);
-                    } else if (cmdGoTo == command) {
-                        // same as action in waypoint form
-                        invoke(new Object[]{new Integer(Resources.NAV_CMD_GO_TO), null}, null, this);
-                    } else if (cmdShowAll == command) {
-                        // close nav UI
-                        close();
-                        // call navigator
-                        navigator.showWaypoints(currentWpts, currentName, true);
-                    } else if (cmdHideAll == command) {
-                        // close nav UI
-                        close();
-                        // call navigator
-                        navigator.showWaypoints(currentWpts, currentName, false);
-                    } else if (cmdSortByOrder == command) {
-                        // sort
-                        sortWaypoints((SmartList) list, SORT_BYORDER, false, currentWpts);
-                    } else if (cmdSortByName == command) {
-                        // sort
-                        sortWaypoints((SmartList) list, SORT_BYNAME, false, currentWpts);
-                    } else if (cmdSortByDist == command) {
-                        // sort
-                        sortWaypoints((SmartList) list, SORT_BYDIST, false, currentWpts);
-                    }
-                } break;
             }
         }
     }
@@ -391,6 +419,13 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
             cachedDisk = null;
             // list in thread
             onBackground(null, actionListTracks);
+        } else if (itemFieldNotes.equals(item)) {
+            // show notes
+            if (fieldNotes.size() > 0) {
+                showFieldNotes();
+            } else {
+                Desktop.showInfo(Resources.getString(Resources.NAV_MSG_NO_NOTES_YET), null);
+            }
         } else if (itemAddNew.equals(item)) {
             // only when tracking
             if (navigator.isTracking()) {
@@ -453,12 +488,44 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
     /**
      * External action.
      *
-     * @param result    array
+     * @param result array
      * @param throwable problem
      */
     public void invoke(final Object result, final Throwable throwable, final Object source) {
         // handle action
-        if (result instanceof Object[]) { // list or waypoint form origin
+        if (source instanceof FieldNoteForm) { // new or updated field note
+            
+            // update or append to notes
+            if (fieldNotes.contains(result)) {
+                notes.set(fieldNotes.indexOf(result),
+                          FieldNoteForm.format((String[]) result, new StringBuffer(128)), 
+                          null);
+            } else {
+                fieldNotes.addElement(result);
+            }
+
+            // persist changes
+            // TODO
+
+//#ifndef __ANDROID__
+        } else if (source instanceof cz.kruch.track.fun.Friends) { // SMS received
+
+            // get result
+            final Waypoint wpt = (Waypoint) result;
+
+            // notify user
+            Desktop.showAlarm(Resources.getString(Resources.DESKTOP_MSG_SMS_RECEIVED) + wpt.getName(),
+                    list, !Config.autohideNotification);
+            Thread.yield(); // this is safe, it is called from a thread, see Friends.execPop()
+
+            // add waypoint to store
+            final GpxTracklog backend = getBackend(STORE_FRIENDS, null);
+            if (backend.getFileName() == null) {
+                backend.setFileName(backend.getDefaultFileName());
+            }
+            addToStore(STORE_FRIENDS, backend.getFileName(), wpt);
+//#endif
+        } else if (result instanceof Object[]) { // list or waypoint form origin
 
             // action type
             final Object[] ret = (Object[]) result;
@@ -589,24 +656,6 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
             } else {
                 throw new IllegalArgumentException("Unknown waypoint form invocation; result = " + result + "; throwable = " + throwable);
             }
-//#ifndef __ANDROID__
-        } else if (source instanceof cz.kruch.track.fun.Friends) { // SMS received
-
-            // get result
-            final Waypoint wpt = (Waypoint) result;
-
-            // notify user
-            Desktop.showAlarm(Resources.getString(Resources.DESKTOP_MSG_SMS_RECEIVED) + wpt.getName(),
-                    list, !Config.autohideNotification);
-            Thread.yield(); // this is safe, it is called from a thread, see Friends.execPop()
-
-            // add waypoint to store
-            final GpxTracklog backend = getBackend(STORE_FRIENDS, null);
-            if (backend.getFileName() == null) {
-                backend.setFileName(backend.getDefaultFileName());
-            }
-            addToStore(STORE_FRIENDS, backend.getFileName(), wpt);
-//#endif
         } else {
             throw new IllegalArgumentException("Unknown invocation; result = " + result + "; throwable = " + throwable);
         }
@@ -857,6 +906,9 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
             // no current store
             currentWpts = null; // gc hint
             currentName = null; // gc hint
+//#ifndef __RIM__
+            System.gc(); // unconditional!!! 
+//#endif
 
             // parse XML-based store
             File file = null;
@@ -1224,6 +1276,24 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
         }
     }
 
+    private void showFieldNotes() {
+        final StringBuffer sb = new StringBuffer(128);
+        final Vector data = fieldNotes;
+        final List l = notes = new List(itemFieldNotes, List.IMPLICIT);
+        l.setFitPolicy(Choice.TEXT_WRAP_OFF);
+        for (int N = data.size(), i = 0; i < N; i++) {
+            sb.delete(0, sb.length());
+            l.append(FieldNoteForm.format((String[]) data.elementAt(i), sb), null);
+        }
+        for (int N = l.size(), i = 0; i < N; i++) {
+            l.setFont(i, Desktop.fontStringItems);
+        }
+        l.setSelectCommand(cmdOpen);
+        l.addCommand(cmdClose);
+        l.setCommandListener(this);
+        Desktop.display.setCurrent(l);
+    }
+
     private boolean isWriteable(final String storeKey) {
         final NakedVector wpts = (NakedVector) stores.get(storeKey);
         if (wpts != null) {
@@ -1428,7 +1498,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
         l = new SmartList(title);
         ((SmartList) l).setData(stores);
 //#else
-        if (cz.kruch.track.TrackingMIDlet.android) { // always true
+        if (cz.kruch.track.TrackingMIDlet.android) { // always true when built; IDEA hack!
             final String[] strings = new String[stores.size()];
             stores.copyInto(strings);
             l = new List(title, List.IMPLICIT, strings, null);
@@ -1436,7 +1506,13 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
 //#endif
 
         // add commands
-        l.addCommand(cmdOpen);
+//#ifndef __ANDROID__
+        ((SmartList) l).setSelectCommand(cmdOpen);
+//#else
+        if (cz.kruch.track.TrackingMIDlet.android) { // always true when built; IDEA hack!
+            ((List) l).setSelectCommand(cmdOpen);
+        }
+//#endif
         if (title == actionListWpts || title == actionListTracks) { // == is OK
             l.addCommand(cmdBack);
         } else if (title == actionListTargets) { // == is OK
@@ -1471,7 +1547,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
         }
 
         // add commands
-        l.addCommand(cmdOpen);
+        l.setSelectCommand(cmdOpen);
         if (Desktop.wpts == wpts) {
             if (Desktop.routeDir != 0) {
                 l.addCommand(cmdSetAsCurrent);

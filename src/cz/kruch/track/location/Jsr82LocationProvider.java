@@ -36,7 +36,7 @@ public final class Jsr82LocationProvider extends SerialLocationProvider {
         /* BT turned on check */
         try {
             javax.bluetooth.LocalDevice.getLocalDevice();
-        } catch (Exception e) {
+        } catch (Throwable t) {
             throw new LocationException(Resources.getString(Resources.DESKTOP_MSG_BT_OFF));
         }
     }
@@ -401,7 +401,7 @@ public final class Jsr82LocationProvider extends SerialLocationProvider {
             if (command == cmdConnect) { /* device selection */
                 btname = pane.getString(pane.getSelectedIndex());
                 device = (javax.bluetooth.RemoteDevice) devices.elementAt(pane.getSelectedIndex());
-                if (cz.kruch.track.TrackingMIDlet.hasFlag("bt_service_search")) {
+                if (Config.btDoServiceSearch) {
                     goServices();
                 } else {
                     btspp = "btspp://" + device.getBluetoothAddress() + ":1";

@@ -14,7 +14,7 @@ import java.io.OutputStream;
 import cz.kruch.track.util.NmeaParser;
 
 /**
- * Base class for Serial/Bluetooth and Simulator providers.
+ * Base class for Serial/Bluetooth/Simulator providers.
  *
  * @author Ales Pour <kruhc@seznam.cz>
  */
@@ -84,7 +84,10 @@ abstract class StreamReadingLocationProvider extends LocationProvider {
 //#endif
                 return null;
             }
-                           
+                          
+            // update last I/O timestamp
+            lastIO = System.currentTimeMillis();
+
             // checksum check
             if (NmeaParser.validate(line, l)) {
 
@@ -248,9 +251,6 @@ abstract class StreamReadingLocationProvider extends LocationProvider {
 
                 // starting at the beginning
                 btlineOffset = 0;
-
-                // update last I/O timestamp
-                lastIO = System.currentTimeMillis();
 
                 // reset retry flag
                 retry = false;

@@ -885,19 +885,23 @@ final class ComputerView extends View
     private volatile String _profileName;
 
     public void commandAction(Command command, Displayable displayable) {
-        // restore desktop
-        Desktop.display.setCurrent(Desktop.screen);
-
         // load new profile if selected
+        boolean load = false;
         if (Desktop.CANCEL_CMD_TYPE != command.getCommandType()) {
-
             // get selection
             synchronized (this) {
                 final List list = (List) displayable;
                 _profileName = list.getString(profileIdx = list.getSelectedIndex());
             }
+            load = true;
+        }
 
-            // enqueue load task
+        // restore desktop
+        displayable.setCommandListener(null);
+        Desktop.display.setCurrent(Desktop.screen);
+
+        // enqueue load task
+        if (load) {
             navigator.getDiskWorker().enqueue(this);
         }
     }

@@ -62,15 +62,16 @@ public final class YesNoDialog implements CommandListener {
     }
 
     public void commandAction(Command command, Displayable displayable) {
-        // advance to next screen
-        Desktop.display.setCurrent(next);
-
         // grab input
         if (item instanceof StringBuffer) {
             final StringBuffer sb = (StringBuffer) item;
             sb.delete(0, sb.length());
             sb.append(((TextBox) displayable).getString());
         }
+
+        // advance to next screen
+        displayable.setCommandListener(null);
+        Desktop.display.setCurrent(next);
 
         // return response code
         callback.response(command.getCommandType() == Command.OK ? YES : NO, closure);

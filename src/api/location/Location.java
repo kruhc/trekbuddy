@@ -27,9 +27,9 @@ public final class Location {
 
     private QualifiedCoordinates coordinates;
     private long timestamp;
-    private int fixsat;
     private float speed;
     private float course;
+    private int fixsat;
 
     /*
      * POOL

@@ -82,7 +82,7 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
     private TextField fieldListFont;
     private TextField fieldAltCorrection;
     private ChoiceGroup choiceBlackberry;
-    private ChoiceGroup choiceNmea;
+    private ChoiceGroup choiceShared;
     private ChoiceGroup choiceInternal;
 
     private List pane;
@@ -184,6 +184,7 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
             choiceMisc.append(Resources.getString(Resources.CFG_DESKTOP_FLD_SAFE_COLORS), null);
             choiceMisc.append(Resources.getString(Resources.CFG_DESKTOP_FLD_NO_SOUNDS), null);
             choiceMisc.append(Resources.getString(Resources.CFG_DESKTOP_FLD_NO_QUESTIONS), null);
+            choiceMisc.append(Resources.getString(Resources.CFG_DESKTOP_FLD_NO_COMMANDS), null);
             choiceMisc.append(Resources.getString(Resources.CFG_DESKTOP_FLD_TRAJECTORY), null);
             choiceMisc.append(Resources.getString(Resources.CFG_DESKTOP_FLD_DEC_PRECISION), null);
             choiceMisc.append(Resources.getString(Resources.CFG_DESKTOP_FLD_HPS_WPT_TRUE_AZI), null);
@@ -201,6 +202,7 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
                 Config.safeColors,
                 Config.noSounds,
                 Config.noQuestions,
+                Config.uiNoCommands,
                 Config.trailOn,
                 Config.decimalPrecision,
                 Config.hpsWptTrueAzimuth,
@@ -299,7 +301,6 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
             // tweaks
             choicePerformance = new ChoiceGroup(Resources.getString(Resources.CFG_TWEAKS_GROUP), ChoiceGroup.MULTIPLE);
             choicePerformance.append(Resources.getString(Resources.CFG_TWEAKS_FLD_SIEMENS_IO), null);
-            choicePerformance.append(Resources.getString(Resources.CFG_TWEAKS_FLD_RELIABLE_INPUT), null);
             choicePerformance.append(Resources.getString(Resources.CFG_TWEAKS_FLD_SAFE_RENDERER), null);
             choicePerformance.append(Resources.getString(Resources.CFG_TWEAKS_FLD_FORCED_GC), null);
             choicePerformance.append(Resources.getString(Resources.CFG_TWEAKS_FLD_POWER_SAVE), null);
@@ -308,7 +309,6 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
             choicePerformance.append(Resources.getString(Resources.CFG_TWEAKS_FLD_LAZY_GPX), null);
             choicePerformance.setSelectedFlags(new boolean[] {
                 Config.siemensIo,
-                Config.reliableInput,
                 Config.S60renderer,
                 Config.forcedGc,
                 Config.powerSave,
@@ -442,11 +442,6 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
             if (cz.kruch.track.TrackingMIDlet.hasFlag("provider_o2_germany")) {
                 fieldO2Depth = new TextField(Resources.getString(Resources.CFG_LOCATION_FLD_FILTER_DEPTH), Integer.toString(Config.o2Depth), 2, TextField.NUMERIC);
             }
-            choiceNmea = new ChoiceGroup("NMEA", ChoiceGroup.MULTIPLE);
-            choiceNmea.append(Resources.getString(Resources.CFG_LOCATION_FLD_NMEA_MS_ROUNDING), null);
-            choiceNmea.setSelectedFlags(new boolean[] {
-                Config.nmeaMsExact
-            });
 
             // show current provider and tracklog specific options
             itemStateChanged(choiceProvider);
@@ -473,12 +468,12 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
                     continue;
 
                 if (choiceTracklogFormat == affected) {
-                    if (fieldSimulatorDelay == item || fieldLocationTimings == item || fieldCommUrl == item || fieldBtKeepalive == item || fieldO2Depth == item || fieldAltCorrection == item || choiceBlackberry == item || choiceInternal == item || choiceNmea == item || choiceTracklog == item || choiceTracklogFormat == item)
+                    if (fieldSimulatorDelay == item || fieldLocationTimings == item || fieldCommUrl == item || fieldBtKeepalive == item || fieldO2Depth == item || fieldAltCorrection == item || choiceBlackberry == item || choiceInternal == item || choiceShared == item || choiceTracklog == item || choiceTracklogFormat == item)
                         continue;
                 }
 
                 if (choiceTracklog == affected) {
-                    if (fieldSimulatorDelay == item || fieldLocationTimings == item || fieldCommUrl == item || fieldBtKeepalive == item || fieldO2Depth == item || fieldAltCorrection == item || choiceBlackberry == item || choiceInternal == item || choiceNmea == item || choiceTracklog == item)
+                    if (fieldSimulatorDelay == item || fieldLocationTimings == item || fieldCommUrl == item || fieldBtKeepalive == item || fieldO2Depth == item || fieldAltCorrection == item || choiceBlackberry == item || choiceInternal == item || choiceShared == item || choiceTracklog == item)
                         continue;
                 }
 
@@ -492,10 +487,11 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
             final boolean isTracklogGpx = isTracklog && Config.TRACKLOG_FORMAT_GPX.equals(choiceTracklogFormat.getString(choiceTracklogFormat.getSelectedIndex()));
 
             if (choiceProvider == affected) {
+                final String providerName = choiceProvider.getString(choiceProvider.getSelectedIndex());
                 switch (provider) {
                     case Config.LOCATION_PROVIDER_JSR82:
                         appendWithNewlineAfter(submenu, fieldBtKeepalive);
-                        appendWithNewlineAfter(submenu, choiceNmea);
+                        appendWithNewlineAfter(submenu, createSharedChoice(provider, providerName));
                     break;
                     case Config.LOCATION_PROVIDER_JSR179:
                     case Config.LOCATION_PROVIDER_MOTOROLA:
@@ -515,11 +511,11 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
                     break;
                     case Config.LOCATION_PROVIDER_SERIAL:
                         appendWithNewlineAfter(submenu, fieldCommUrl);
-                        appendWithNewlineAfter(submenu, choiceNmea);
+                        appendWithNewlineAfter(submenu, createSharedChoice(provider, providerName));
                     break;
                     case Config.LOCATION_PROVIDER_SIMULATOR:
                         appendWithNewlineAfter(submenu, fieldSimulatorDelay);
-                        appendWithNewlineAfter(submenu, choiceNmea);
+                        appendWithNewlineAfter(submenu, createSharedChoice(provider, providerName));
                     break;
                     case Config.LOCATION_PROVIDER_O2GERMANY:
                         appendWithNewlineAfter(submenu, fieldO2Depth);
@@ -593,6 +589,10 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
 //#endif
                 }
             } else {
+                // restore desktop
+                displayable.setCommandListener(null);
+                Desktop.display.setCurrent(Desktop.screen);
+
                 // main menu action
                 mainMenuCommandAction(command);
             }
@@ -677,10 +677,20 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
                     Config.o2Depth = Integer.parseInt(fieldO2Depth.getString());
                 }
 
-                // NMEA
-                final boolean[] nopts = new boolean[choiceNmea.size()];
-                choiceNmea.getSelectedFlags(nopts);
-                Config.nmeaMsExact = nopts[0];
+                // Shared
+                final boolean[] nopts = new boolean[choiceShared.size()];
+                choiceShared.getSelectedFlags(nopts);
+                switch (choiceShared.size()) {
+                    case 2:
+                        Config.nmeaMsExact = nopts[0];
+                        Config.reliableInput = nopts[1];
+                        break;
+                    case 3:
+                        Config.nmeaMsExact = nopts[0];
+                        Config.reliableInput = nopts[1];
+                        Config.btDoServiceSearch = nopts[2];
+                        break;
+                }
 
                 // tracklogs, waypoints
                 if (File.isFs()) {
@@ -737,15 +747,16 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
                 Config.safeColors = misc[1];
                 Config.noSounds = misc[2];
                 Config.noQuestions = misc[3];
-                Config.trailOn = misc[4];
-                Config.decimalPrecision = misc[5];
-                Config.hpsWptTrueAzimuth = misc[6];
-                Config.osdBasic = misc[7];
-                Config.osdExtended = misc[8];
-                Config.osdScale = misc[9];
-                Config.osdNoBackground = misc[10];
-                Config.osdBoldFont = misc[11];
-                Config.osdBlackColor = misc[12];
+                Config.uiNoCommands = misc[4];
+                Config.trailOn = misc[5];
+                Config.decimalPrecision = misc[6];
+                Config.hpsWptTrueAzimuth = misc[7];
+                Config.osdBasic = misc[8];
+                Config.osdExtended = misc[9];
+                Config.osdScale = misc[10];
+                Config.osdNoBackground = misc[11];
+                Config.osdBoldFont = misc[12];
+                Config.osdBlackColor = misc[13];
                 Config.desktopFontSize = gaugeDesktopFont.getValue();
                 Config.osdAlpha = gaugeOsdAlpha.getValue() * gaugeAlphaScale;
                 Config.cmsCycle = Integer.parseInt(fieldCmsCycle.getString());
@@ -760,17 +771,16 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
                 final boolean[] perf = new boolean[choicePerformance.size()];
                 choicePerformance.getSelectedFlags(perf);
                 Config.siemensIo = perf[0];
-                Config.reliableInput = perf[1];
-                Config.S60renderer = perf[2];
-                Config.forcedGc = perf[3];
-                Config.powerSave = perf[4];
-                Config.oneTileScroll = perf[5];
-                Config.largeAtlases = perf[6];
-                Config.lazyGpxParsing = perf[7];
+                Config.S60renderer = perf[1];
+                Config.forcedGc = perf[2];
+                Config.powerSave = perf[3];
+                Config.oneTileScroll = perf[4];
+                Config.largeAtlases = perf[5];
+                Config.lazyGpxParsing = perf[6];
                 if (cz.kruch.track.TrackingMIDlet.symbian) {
-                    Config.useNativeService = perf[8];
+                    Config.useNativeService = perf[7];
                 } else if (cz.kruch.track.TrackingMIDlet.sonyEricssonEx) {
-                    Config.hideBarCmd = perf[8];
+                    Config.hideBarCmd = perf[7];
                 }
 
                 // multimedia
@@ -792,9 +802,6 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
     }
 
     private void mainMenuCommandAction(Command command) {
-
-        // restore desktop
-        Desktop.display.setCurrent(Desktop.screen);
 
         // save?
         if (command.getCommandType() != Desktop.BACK_CMD_TYPE) {
@@ -858,6 +865,33 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
         }
 
         return providers;
+    }
+
+    private ChoiceGroup createSharedChoice(final int provider, final String providerName) {
+        choiceShared = new ChoiceGroup(providerName, ChoiceGroup.MULTIPLE);
+        switch (provider) {
+            case Config.LOCATION_PROVIDER_JSR82:
+                choiceShared.append(Resources.getString(Resources.CFG_LOCATION_FLD_NMEA_MS_ROUNDING), null);
+                choiceShared.append(Resources.getString(Resources.CFG_TWEAKS_FLD_RELIABLE_INPUT), null);
+                choiceShared.append(Resources.getString(Resources.CFG_LOCATION_FLD_DO_SERVICE_SEARCH), null);
+                choiceShared.setSelectedFlags(new boolean[] {
+                    Config.nmeaMsExact,
+                    Config.reliableInput,
+                    Config.btDoServiceSearch
+                });
+                break;
+            case Config.LOCATION_PROVIDER_SERIAL:
+            case Config.LOCATION_PROVIDER_SIMULATOR:
+                choiceShared.append(Resources.getString(Resources.CFG_LOCATION_FLD_NMEA_MS_ROUNDING), null);
+                choiceShared.append(Resources.getString(Resources.CFG_TWEAKS_FLD_RELIABLE_INPUT), null);
+                choiceShared.setSelectedFlags(new boolean[] {
+                    Config.nmeaMsExact,
+                    Config.reliableInput
+                });
+                break;
+        }
+
+        return choiceShared;
     }
 
     private int itemLineColor;

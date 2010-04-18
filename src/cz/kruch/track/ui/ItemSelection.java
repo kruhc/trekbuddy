@@ -19,17 +19,12 @@ import java.util.Enumeration;
 final class ItemSelection implements CommandListener {
     private final Callback callback;
     private final Displayable next;
-    private final String title, selectLabel;
+    private final String title;
 
     ItemSelection(Displayable next, String title, Callback callback) {
-        this(next, title, Resources.getString(Resources.DESKTOP_CMD_SELECT), callback);
-    }
-
-    private ItemSelection(Displayable next, String title, String selectLabel, Callback callback) {
         this.callback = callback;
         this.next = next;
         this.title = Resources.prefixed(title);
-        this.selectLabel = selectLabel;
     }
 
     public void show(final Enumeration items, final String currentItem) {
@@ -43,7 +38,7 @@ final class ItemSelection implements CommandListener {
                 }
             }
         }
-        list.setSelectCommand(new Command(selectLabel, Desktop.SELECT_CMD_TYPE, 0));
+        list.setSelectCommand(new Command(Resources.getString(Resources.DESKTOP_CMD_SELECT), Desktop.SELECT_CMD_TYPE, 1));
         list.addCommand(new Command(Resources.getString(Resources.CMD_CANCEL), Desktop.CANCEL_CMD_TYPE, 1));
         list.setCommandListener(this);
 
@@ -52,15 +47,18 @@ final class ItemSelection implements CommandListener {
     }
 
     public void commandAction(Command command, Displayable displayable) {
+        // get selected layer
+        String selected = null;
+        if (command.getCommandType() == Desktop.SELECT_CMD_TYPE) {
+            final List list = (List) displayable;
+            selected = list.getString(list.getSelectedIndex());
+        }
+
         // close selection
+        displayable.setCommandListener(null);
         Desktop.display.setCurrent(next);
 
         // invoke callback
-        if (command.getCommandType() == Desktop.SELECT_CMD_TYPE) {
-            List list = (List) displayable;
-            callback.invoke(list.getString(list.getSelectedIndex()), null, this);
-        } else {
-            callback.invoke(null, null, this);
-        }
+        callback.invoke(selected, null, this);
     }
 }

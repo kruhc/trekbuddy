@@ -124,12 +124,12 @@ final class InfoForm implements CommandListener {
                 .append("; errors=").append(api.location.LocationProvider.errors)
                 .append("; pings=").append(api.location.LocationProvider.pings)
                 .append("; maxavail=").append(api.location.LocationProvider.maxavail);
-        pane.append(new StringItem("ProviderStatus", sb.toString()));
+        pane.append(newItem("ProviderStatus", sb.toString()));
         if (le != null) {
-            pane.append(new StringItem("ProviderError", le.toString()));
+            pane.append(newItem("ProviderError", le.toString()));
         }
         if (te != null) {
-            pane.append(new StringItem("TracklogError", te.toString()));
+            pane.append(newItem("TracklogError", te.toString()));
         }
         sb.delete(0, sb.length());
         sb.append("pauses: ").append(cz.kruch.track.TrackingMIDlet.pauses)
@@ -149,6 +149,7 @@ final class InfoForm implements CommandListener {
             this.ps = null;
             this.map = null;
             // restore desktop UI
+            displayable.setCommandListener(null);
             Desktop.display.setCurrent(Desktop.screen);
         } else {
             // form
@@ -163,8 +164,9 @@ final class InfoForm implements CommandListener {
     }
 
     private static StringItem newItem(final String label, final String text) {
-        final StringItem item = new StringItem(label, text);
+        final StringItem item = new StringItem(label + ": ", text);
         item.setLayout(Item.LAYOUT_2 | Item.LAYOUT_NEWLINE_AFTER);
+        item.setFont(Desktop.fontStringItems);
         return item;
     }
 }

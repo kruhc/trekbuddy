@@ -64,7 +64,7 @@ final class MapViewer {
     private Position[] wptPositions;
     private byte[] wptStatuses;
 
-    private short star;
+    private int star;
 
     private QualifiedCoordinates[] trailLL;
     private Position[] trailXY;
@@ -482,6 +482,7 @@ final class MapViewer {
                 this.wptStatuses = new byte[positions.length];
             }
         }
+        this.star = this.ci = this.li = 0;
     }
 
     void setRoute(Position[] positions) {
@@ -489,7 +490,7 @@ final class MapViewer {
         synchronized (this) {
             this.wptPositions = null;
             this.wptPositions = positions;
-            if (positions != null) {
+            if (positions != null) { // use new route
                 if (this.wptStatuses != null && this.wptStatuses.length != positions.length) {
                     final byte[] newStatuses = new byte[positions.length];
                     System.arraycopy(this.wptStatuses, 0, newStatuses, 0, this.wptStatuses.length);

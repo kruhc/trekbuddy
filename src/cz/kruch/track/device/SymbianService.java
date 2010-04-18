@@ -4,10 +4,11 @@ package cz.kruch.track.device;
 
 import javax.microedition.io.Connector;
 import javax.microedition.io.SocketConnection;
+import javax.microedition.io.StreamConnection;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.DataInputStream;
-import java.io.DataOutputStream;
+import java.io.OutputStream;
 
 /**
  * Designed to work for TarLoader and S60DeviceControl together with native service.
@@ -26,6 +27,7 @@ import java.io.DataOutputStream;
 public final class SymbianService {
 
     private static final String URL = "socket://127.0.0.1:20175";
+    private static final byte[] PKT = new byte[8];
 
     /**
      * Opens networked stream.
@@ -43,6 +45,7 @@ public final class SymbianService {
      *
      * @return instance of <code>TimerTask</code>, or <code>null</code>
      *         if it cannot be created - it does <b>not (!)</b> throw <code>IOException</code>
+     *
      * @throws IOException
      */
     public static Inactivity openInactivity() throws IOException {
@@ -55,47 +58,75 @@ public final class SymbianService {
      * @param output output stream
      * @param action protocol command
      * @param param command generic parameter
+     *
      * @throws IOException if anything goes wrong
      */
-    private static void sendPacket(final DataOutputStream output,
+    private static void sendPacket(final OutputStream output,
                                    final byte action, final int param) throws IOException {
-        output.writeByte(0xFF);
-        output.writeByte(0xEB);
-        output.writeByte(0x00);
-        output.writeByte(action);
-        output.writeInt(param);
+        PKT[0] = (byte)0xFF;
+        PKT[1] = (byte)0xEB;
+        PKT[2] = (byte)0x00;
+        PKT[3] = action;
+        PKT[4] = (byte)(param >> 24);
+        PKT[5] = (byte)(param >> 16);
+        PKT[6] = (byte)(param >> 8);
+        PKT[7] = (byte)(param);
+        output.write(PKT);
         output.flush();
     }
 
-	private static SocketConnection openConnection(String url) throws IOException {
-		SocketConnection connection = (SocketConnection) Connector.open(url, Connector.READ_WRITE);
-		connection.setSocketOption(SocketConnection.DELAY, 0);
-		return connection;
+    /**
+     * Sends packet with extra data.
+     *
+     * @param output output stream
+     * @param action protocol command
+     * @param param command generic parameter
+     * @param extra extra data
+     *
+     * @throws IOException if anything goes wrong
+     */
+    private static void sendPacketEx(final OutputStream output,
+                                     final byte action, final int param,
+                                     final byte[] extra) throws IOException {
+        final byte[] large = new byte[8 + extra.length];
+        large[0] = (byte)0xFF;
+        large[1] = (byte)0xEB;
+        large[2] = (byte)0x00;
+        large[3] = action;
+        large[4] = (byte)(param >> 24);
+        large[5] = (byte)(param >> 16);
+        large[6] = (byte)(param >> 8);
+        large[7] = (byte)(param);
+        System.arraycopy(extra, 0, large, 8, extra.length);
+        output.write(large);
+        output.flush();
+    }
+
+	private static StreamConnection openConnection(String url) throws IOException {
+        final SocketConnection connection = (SocketConnection) Connector.open(url, Connector.READ_WRITE);
+        connection.setSocketOption(SocketConnection.DELAY, 0);
+        return connection;
 	}
 
 	/**
-     * Service helper for backlight control. Misuse <code>TimerTask</code>.
+     * Service helper for backlight control.
      */
     public static class Inactivity {
-        private SocketConnection connection;
-        private DataOutputStream output;
+        private StreamConnection connection;
+        private OutputStream output;
 
         Inactivity() throws IOException {
             try {
                 this.connection = openConnection(URL);
-                this.output = new DataOutputStream(connection.openOutputStream());
+                this.output = connection.openOutputStream();
             } catch (IOException e) {
                 close();
                 throw e;
             }
         }
 
-        public void setLights(int value) {
-            try {
-                sendPacket(output, (byte) 0x00, value);
-            } catch (Exception e) {
-                // ignore
-            }
+        public void setLights(int value) throws IOException {
+            sendPacket(output, (byte) 0x00, value);
         }
 
         public void close() {
@@ -122,9 +153,9 @@ public final class SymbianService {
      * Networked stream fast tar-ed maps.
      */
     public static final class NetworkedInputStream extends InputStream {
-        private SocketConnection connection;
+        private StreamConnection connection;
         private DataInputStream input;
-        private DataOutputStream output;
+        private OutputStream output;
         private final byte[] one, header;
 
         NetworkedInputStream(String name) throws IOException {
@@ -143,13 +174,11 @@ public final class SymbianService {
 
                 // open I/O
                 this.connection = openConnection(URL);
+                this.output = connection.openOutputStream();
                 this.input = new DataInputStream(connection.openInputStream());
-                this.output = new DataOutputStream(connection.openOutputStream());
 
                 // open remote file
-                sendPacket(output, (byte) 0x01, utf8name.length);
-                output.write(utf8name);
-                output.flush();
+                sendPacketEx(output, (byte) 0x01, utf8name.length, utf8name);
 
             } catch (IOException e) {
 

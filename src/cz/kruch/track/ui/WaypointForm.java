@@ -27,6 +27,7 @@ import javax.microedition.lcdui.StringItem;
 import javax.microedition.lcdui.Item;
 import javax.microedition.lcdui.ItemCommandListener;
 import javax.microedition.lcdui.List;
+import javax.microedition.lcdui.Choice;
 
 import api.location.Location;
 import api.location.QualifiedCoordinates;
@@ -76,8 +77,8 @@ final class WaypointForm implements CommandListener, ItemCommandListener, Callba
      * @param distance distance to the waypoint from current position
      * @param modifiable flag
      */
-    public WaypointForm(Waypoint wpt, Callback callback,
-                        float distance, boolean modifiable) {
+    public WaypointForm(final Waypoint wpt, final Callback callback,
+                        final float distance, final boolean modifiable) {
         this.waypoint = wpt;
         this.callback = callback;
         this.form = new Form(Resources.getString(Resources.NAV_TITLE_WPT));
@@ -124,23 +125,23 @@ final class WaypointForm implements CommandListener, ItemCommandListener, Callba
             }
             final String longListing = bean.getLongListing();
             if (longListing != null && longListing.length() != 0) {
-                final int idx = appendStringItem(Resources.getString(Resources.NAV_FLD_GS_LISTING_LONG),
-                                                 VALUE_SEE_MORE, Item.HYPERLINK);
-                form.get(idx).setDefaultCommand(new Command(CMD_HINT, Command.ITEM, 1));
+                final String related = Resources.getString(Resources.NAV_FLD_GS_LISTING_LONG);
+                final int idx = appendStringItem(related, VALUE_SEE_MORE, Item.HYPERLINK);
+                form.get(idx).setDefaultCommand(new Command(CMD_HINT + " " + related, Command.ITEM, 1));
                 form.get(idx).setItemCommandListener(this);
             }
             final Vector logs = bean.getLogs();
             if (logs != null && logs.size() != 0) {
-                final int idx = appendStringItem(Resources.getString(Resources.NAV_FLD_GS_LOGS),
-                                                 VALUE_SEE_MORE, Item.HYPERLINK);
-                form.get(idx).setDefaultCommand(new Command(CMD_HINT, Command.ITEM, 1));
+                final String related = Resources.getString(Resources.NAV_FLD_GS_LOGS);
+                final int idx = appendStringItem(related, VALUE_SEE_MORE, Item.HYPERLINK);
+                form.get(idx).setDefaultCommand(new Command(CMD_HINT + " " + related, Command.ITEM, 1));
                 form.get(idx).setItemCommandListener(this);
             }
             final String encodedHints = bean.getEncodedHints();
             if (encodedHints != null && encodedHints.length() != 0) {
-                hintNum = appendStringItem(Resources.getString(Resources.NAV_FLD_GS_HINT),
-                                           VALUE_SEE_MORE, Item.HYPERLINK);
-                form.get(hintNum).setDefaultCommand(new Command(CMD_HINT, Command.ITEM, 1));
+                final String related = Resources.getString(Resources.NAV_FLD_GS_HINT);
+                hintNum = appendStringItem(related, VALUE_SEE_MORE, Item.HYPERLINK);
+                form.get(hintNum).setDefaultCommand(new Command(CMD_HINT + " " + related, Command.ITEM, 1));
                 form.get(hintNum).setItemCommandListener(this);
             }
         }
@@ -155,6 +156,7 @@ final class WaypointForm implements CommandListener, ItemCommandListener, Callba
             form.addCommand(new ActionCommand(Resources.NAV_CMD_EDIT, Desktop.POSITIVE_CMD_TYPE, 5));
             form.addCommand(new ActionCommand(Resources.NAV_CMD_DELETE, Desktop.POSITIVE_CMD_TYPE, 6));
         }
+        form.addCommand(new ActionCommand(Resources.NAV_CMD_NEW_NOTE, Desktop.POSITIVE_CMD_TYPE, 7));
     }
 
     /**
@@ -163,7 +165,7 @@ final class WaypointForm implements CommandListener, ItemCommandListener, Callba
      * @param location location
      * @param callback callback
      */
-    public WaypointForm(Location location, Callback callback) {
+    public WaypointForm(final Location location, final Callback callback) {
         this.coordinates = location.getQualifiedCoordinates()._clone(); // copy
         this.timestamp = location.getTimestamp();
         this.callback = callback;
@@ -177,21 +179,22 @@ final class WaypointForm implements CommandListener, ItemCommandListener, Callba
         appendWithNewlineAfter(this.fieldComment = createTextField(Resources.NAV_FLD_WPT_CMT, null, 256));
 
         // timestamp
-        appendWithNewlineAfter(new StringItem(Resources.getString(Resources.NAV_FLD_TIME), dateToString(location.getTimestamp())));
+        appendWithNewlineAfter(Resources.getString(Resources.NAV_FLD_TIME), dateToString(location.getTimestamp()));
 
         // coords
         final StringBuffer sb = new StringBuffer(32);
         NavigationScreens.printTo(location.getQualifiedCoordinates(), sb);
-        appendWithNewlineAfter(new StringItem(Resources.getString(Resources.NAV_FLD_LOC), sb.toString()));
+        appendWithNewlineAfter(Resources.getString(Resources.NAV_FLD_LOC), sb.toString());
 
         // altitude
         sb.delete(0, sb.length());
         NavigationScreens.printAltitude(sb, location.getQualifiedCoordinates().getAlt());
-        appendWithNewlineAfter(new StringItem(Resources.getString(Resources.NAV_FLD_ALT), sb.toString()));
+        appendWithNewlineAfter(Resources.getString(Resources.NAV_FLD_ALT), sb.toString());
 
         // form commands
         if (cz.kruch.track.TrackingMIDlet.supportsVideoCapture()) {
             final StringItem snapshot = new StringItem(Resources.getString(Resources.NAV_FLD_SNAPSHOT), CMD_TAKE, Item.BUTTON);
+            snapshot.setFont(Desktop.fontStringItems);
             snapshot.setDefaultCommand(new Command(CMD_TAKE, Command.ITEM, 1));
             snapshot.setItemCommandListener(this);
             appendWithNewlineAfter(snapshot);
@@ -206,7 +209,7 @@ final class WaypointForm implements CommandListener, ItemCommandListener, Callba
      * @param callback callback
      * @param pointer current position
      */
-    public WaypointForm(Callback callback, QualifiedCoordinates pointer) {
+    public WaypointForm(final Callback callback, final QualifiedCoordinates pointer) {
         this.callback = callback;
         this.form = new Form(Resources.getString(Resources.NAV_TITLE_WPT));
 
@@ -229,7 +232,7 @@ final class WaypointForm implements CommandListener, ItemCommandListener, Callba
      * @param callback callback
      * @param wpt waypoint
      */
-    public WaypointForm(Callback callback, Waypoint wpt) {
+    public WaypointForm(final Callback callback, final Waypoint wpt) {
         this.callback = callback;
         this.waypoint = wpt;
         this.form = new Form(Resources.getString(Resources.NAV_TITLE_WPT));
@@ -249,8 +252,8 @@ final class WaypointForm implements CommandListener, ItemCommandListener, Callba
      * @param type SMS type
      * @param coordinates coordinates
      */
-    public WaypointForm(Callback callback, String type,
-                        QualifiedCoordinates coordinates) {
+    public WaypointForm(final Callback callback, final String type,
+                        final QualifiedCoordinates coordinates) {
         this.callback = callback;
         this.closure = type;
         this.form = new Form("SMS");
@@ -262,7 +265,7 @@ final class WaypointForm implements CommandListener, ItemCommandListener, Callba
         // coordinates
         final StringBuffer sb = new StringBuffer(32);
         NavigationScreens.printTo(coordinates, sb);
-        form.append(new StringItem(Resources.getString(Resources.NAV_FLD_LOC), sb.toString()));
+        form.append(new StringItem(Resources.getString(Resources.NAV_FLD_LOC) + ": ", sb.toString()));
 
         // commands
         form.addCommand(new Command(Resources.getString(Resources.CMD_CANCEL), Desktop.CANCEL_CMD_TYPE, 1));
@@ -282,13 +285,13 @@ final class WaypointForm implements CommandListener, ItemCommandListener, Callba
         appendWithNewlineAfter(this.fieldComment = createTextField(Resources.NAV_FLD_WPT_CMT, comment, 256));
 
         // coordinates
-        final String labelX, labelY;
+        final short labelX, labelY;
         switch (Config.cfmt) {
             case Config.COORDS_MAP_GRID: {
                 if (NavigationScreens.isGrid()) {
                     // labels
-                    labelX = Resources.getString(Resources.NAV_FLD_EASTING);
-                    labelY = Resources.getString(Resources.NAV_FLD_NORTHING);
+                    labelX = Resources.NAV_FLD_EASTING;
+                    labelY = Resources.NAV_FLD_NORTHING;
 
                     // zone
                     final QualifiedCoordinates localQc = Datum.contextDatum.toLocal(qc);
@@ -305,8 +308,8 @@ final class WaypointForm implements CommandListener, ItemCommandListener, Callba
             } // no break here for not(isGrid) path!
             case Config.COORDS_UTM: {
                 // labels
-                labelX = Resources.getString(Resources.NAV_FLD_UTM_EASTING);
-                labelY = Resources.getString(Resources.NAV_FLD_UTM_NORTHING);
+                labelX = Resources.NAV_FLD_UTM_EASTING;
+                labelY = Resources.NAV_FLD_UTM_NORTHING;
 
                 // zone
                 final CartesianCoordinates cc = Mercator.LLtoUTM(qc);
@@ -314,25 +317,25 @@ final class WaypointForm implements CommandListener, ItemCommandListener, Callba
                 CartesianCoordinates.releaseInstance(cc);
             } break;
             case Config.COORDS_GC_LATLON: {
-                labelX = Resources.getString(Resources.NAV_FLD_WGS84LAT);
-                labelY = Resources.getString(Resources.NAV_FLD_WGS84LON);
+                labelX = Resources.NAV_FLD_WGS84LAT;
+                labelY = Resources.NAV_FLD_WGS84LON;
             } break;
             default: {
-                labelX = Resources.getString(Resources.NAV_FLD_LAT);
-                labelY = Resources.getString(Resources.NAV_FLD_LON);
+                labelX = Resources.NAV_FLD_LAT;
+                labelY = Resources.NAV_FLD_LON;
             }
         }
 
         // lat/easting
         final StringBuffer sb = new StringBuffer(32);
         NavigationScreens.printTo(sb, qc, QualifiedCoordinates.LAT, true);
-        appendWithNewlineAfter(this.fieldLat = new TextField(labelX, sb.toString(), 13, TextField.ANY));
+        appendWithNewlineAfter(this.fieldLat = createTextField(labelX, sb.toString(), 13));
         latHash = fieldLat.getString().trim().hashCode();
 
         // lon/northing
         sb.delete(0, sb.length());
         NavigationScreens.printTo(sb, qc, QualifiedCoordinates.LON, true);
-        appendWithNewlineAfter(this.fieldLon = new TextField(labelY, sb.toString(), 14, TextField.ANY));
+        appendWithNewlineAfter(this.fieldLon = createTextField(labelY, sb.toString(), 14));
         lonHash = fieldLon.getString().trim().hashCode();
 
         // altitude
@@ -341,9 +344,8 @@ final class WaypointForm implements CommandListener, ItemCommandListener, Callba
         appendWithNewlineAfter(this.fieldAlt = createTextField(Resources.NAV_FLD_ALT, sb.toString(), 5));
     }
 
-    private int appendWithNewlineAfter(Item item) {
-        item.setLayout(Item.LAYOUT_2 | Item.LAYOUT_SHRINK | Item.LAYOUT_NEWLINE_AFTER);
-        return form.append(item);
+    private int appendWithNewlineAfter(final String label, final String text) {
+        return appendStringItem(label, text, Item.PLAIN);
     }
 
     private int appendStringItem(final String label, final String text) {
@@ -354,22 +356,31 @@ final class WaypointForm implements CommandListener, ItemCommandListener, Callba
     }
 
     private int appendStringItem(final String label, final String text, final int appearance) {
-        final StringItem item = new StringItem(label, text, appearance);
+        final StringItem item = new StringItem(label + ": ", text, appearance);
         item.setFont(Desktop.fontStringItems);
         return appendWithNewlineAfter(item);
     }
 
+    private int appendWithNewlineAfter(Item item) {
+        item.setLayout(Item.LAYOUT_2 | Item.LAYOUT_SHRINK | Item.LAYOUT_NEWLINE_AFTER);
+        return form.append(item);
+    }
+
     public void invoke(Object result, Throwable throwable, Object source) {
-        if (result instanceof String) { // JSR-234 and new JSR-135 capture snapshot path
-            imagePath = (String) result;
-            if (previewItemIdx == -1) {
-                previewItemIdx = form.append(Resources.getString(Resources.NAV_MSG_NO_PREVIEW));
+        if (source instanceof cz.kruch.track.fun.Camera) { // JSR-234 and new JSR-135 capture snapshot path
+            if (result instanceof String) {
+                imagePath = (String) result;
+                if (previewItemIdx == -1) {
+                    previewItemIdx = form.append(Resources.getString(Resources.NAV_MSG_NO_PREVIEW));
+                }
+                Desktop.showInfo(Resources.getString(Resources.NAV_MSG_DO_NOT_WORRY), form);
+            } else if (throwable != null) {
+                Desktop.showError(Resources.getString(Resources.NAV_MSG_SNAPSHOT_FAILED), throwable, form);
+            } else {
+                Desktop.showError(Resources.getString(Resources.NAV_MSG_NO_SNAPSHOT), null, form);
             }
-            Desktop.showInfo(Resources.getString(Resources.NAV_MSG_DO_NOT_WORRY), form);
-        } else if (throwable != null) {
-            Desktop.showError(Resources.getString(Resources.NAV_MSG_SNAPSHOT_FAILED), throwable, form);
-        } else {
-            Desktop.showError(Resources.getString(Resources.NAV_MSG_NO_SNAPSHOT), null, form);
+        } else if (source instanceof FieldNoteForm) {
+            callback.invoke(result, throwable, source);
         }
     }
 
@@ -405,6 +416,7 @@ final class WaypointForm implements CommandListener, ItemCommandListener, Callba
             } else if (Resources.getString(Resources.NAV_FLD_GS_LOGS).equals(label)) {
                 final Vector logs = bean.getLogs();
                 final List l = list = new List(label, List.IMPLICIT);
+                l.setFitPolicy(Choice.TEXT_WRAP_OFF);
                 for (int N = logs.size(), i = 0; i < N; i++) {
                     l.append(((GroundspeakBean.Log) logs.elementAt(i)).getDate(), null);
                 }
@@ -484,6 +496,9 @@ final class WaypointForm implements CommandListener, ItemCommandListener, Callba
                     } break;
                     case Resources.NAV_CMD_DELETE: {
                         callback.invoke(new Object[]{ actionObject, waypoint }, null, this);
+                    } break;
+                    case Resources.NAV_CMD_NEW_NOTE: {
+                        (new FieldNoteForm(waypoint, displayable, this)).show();
                     } break;
                     default:
                         Desktop.showWarning("Internal error", new IllegalStateException("Unknown wpt action: " + action), null);
@@ -688,95 +703,6 @@ final class WaypointForm implements CommandListener, ItemCommandListener, Callba
         }
         return result;
     }
-
-/*
-    private static String stripHtml(final String value) {
-        try {
-            final char[] raw = htmlize(value);
-            int end = raw.length;
-            int i = 0, i0 = -1, i1 = -1;
-            while (i < end) {
-                if (i0 == -1) {
-                    if (raw[i] == '<') {
-                        i0 = i;
-                    }
-                } else {
-                    if (raw[i] == '>') {
-                        final int tagLen = i - i0 + 1;
-                        int less = 0;
-                        if (i0 == i1 + 1) {
-                            less = 0;
-                        } else {
-                            int is = i0 + 1;
-                            while (is < i && is == ' ') is++;
-                            switch (raw[is]) {
-                                case 'b':
-                                case 'p': { */
-/* probably <p> or <br> */
-/*
-                                    raw[i0] = '\n';
-                                    less = 1;
-                                } break;
-                                case '/': {
-                                } break;
-                                default: {
-                                    raw[i0] = 0xb7;
-                                    raw[i0 + 1] = ' ';
-                                    less = 2;
-                                }
-                            }
-                        }
-                        System.arraycopy(raw, i + 1, raw, i0 + less, end - i - 1);
-                        end -= tagLen - less;
-                        i = i0 + (less - 1);
-                        i1 = i;
-                        i0 = -1;
-                    }
-                }
-                i++;
-            }
-            return new String(raw, 0, end);
-        } catch (Exception e) {
-            return value;
-        }
-    }
-
-    public static char[] htmlize(String value) {
-        final StringBuffer sb = new StringBuffer(value);
-        final String[] replace = { "&lt;", "&gt;", "&nbsp;" };
-        final char[] rchars = { '<', '>', ' ' };
-        for (int i = replace.length; --i >= 0; ) {
-            final String r = replace[i];
-            final int n = r.length();
-            int dis = 0;
-            int idx = value.indexOf(r);
-            while (idx > -1) {
-                sb.delete(idx - dis, idx - dis + n);
-                sb.insert(idx - dis, rchars[i]);
-                dis += n - 1;
-                idx = value.indexOf(r, idx + 1);
-            }
-            value = sb.toString();
-        }
-        final String[] remove = { "<br/>", "<br />", "<br/>\n", "<br />\n" };
-        for (int i = remove.length; --i >= 0; ) {
-            final String r = remove[i];
-            final int n = r.length();
-            int dis = 0;
-            int idx = value.indexOf(r);
-            while (idx > -1) {
-                sb.delete(idx - dis, idx - dis + n);
-                dis += n;
-                idx = value.indexOf(r, idx + 1);
-            }
-            value = sb.toString();
-        }
-        
-        final char[] result = new char[sb.length()];
-        sb.getChars(0, sb.length(), result, 0);
-        return result;
-    }
-*/
 
     public static String convertHtmlSnippet(String escapedHtmlSnippet) {
         //String unescapedSnippet = undoHtmlEscape(escapedHtmlSnippet); - this is unescaped from GPX parser :-)

@@ -141,6 +141,7 @@
 2015=SortByPosition
 2016=SortByName
 2017=SortByDistance
+2018=Add Field Note
 
 # navigation menu
 2100=Waypoints
@@ -183,6 +184,7 @@
 2228=Type
 2229=Finder
 2230=Text
+2231=Field Note
 
 # navigation messages
 2300=Failed to load in-jar waypoints
@@ -210,6 +212,7 @@
 2405=Malformed coordinate:
 2406=Landmarks updated
 2407=Failed to update landmarks
+2408=No notes yet
 
 # settings commands
 3000=Apply
@@ -263,6 +266,7 @@
 3520=Thickness
 3521=no questions
 3522=Font size
+3523=no softkey menu
 
 # settings forms/fields/values (Location)
 3600=Provider
@@ -293,6 +297,7 @@
 3625=negative alt fix
 3626=exact time match
 3627=try assisted GPS
+3628=lookup with service search
 
 # settings forms/fields/values (Navigation)
 3700=Wpt Proximity

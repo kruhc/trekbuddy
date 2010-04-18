@@ -157,6 +157,7 @@ public final class Resources {
     public static final short NAV_CMD_SORT_BYORDER              = 2015;
     public static final short NAV_CMD_SORT_BYNAME               = 2016;
     public static final short NAV_CMD_SORT_BYDIST               = 2017;
+    public static final short NAV_CMD_NEW_NOTE                  = 2018;
     /* navigation - menu */
     public static final short NAV_ITEM_WAYPOINTS                = 2100;
     public static final short NAV_ITEM_RECORD                   = 2101;
@@ -191,6 +192,7 @@ public final class Resources {
     public static final short NAV_MSG_MALFORMED_COORD           = 2405;
     public static final short NAV_MSG_STORE_UPDATED             = 2406;
     public static final short NAV_MSG_STORE_UPDATE_FAILED       = 2407;
+    public static final short NAV_MSG_NO_NOTES_YET              = 2408;
     /* navigation - waypoint form */
     public static final short NAV_TITLE_WPT                     = 2200;
     public static final short NAV_FLD_WPT_NAME                  = 2201;
@@ -223,6 +225,7 @@ public final class Resources {
     public static final short NAV_FLD_TYPE                      = 2228;
     public static final short NAV_FLD_FINDER                    = 2229;
     public static final short NAV_FLD_TEXT                      = 2230;
+    public static final short NAV_TITLE_FIELD_NOTE              = 2231;
     /* settings - commands */
     public static final short CFG_CMD_APPLY                     = 3000;
     public static final short CFG_CMD_SAVE                      = 3001;
@@ -272,6 +275,7 @@ public final class Resources {
     public static final short CFG_DESKTOP_FLD_THICKNESS         = 3520;
     public static final short CFG_DESKTOP_FLD_NO_QUESTIONS      = 3521;
     public static final short CFG_DESKTOP_FLD_FONT_SIZE         = 3522;
+    public static final short CFG_DESKTOP_FLD_NO_COMMANDS       = 3523;
     /* settings - Location */
     public static final short CFG_LOCATION_GROUP_PROVIDER       = 3600;
     public static final short CFG_LOCATION_GROUP_TRACKLOG       = 3601;
@@ -301,6 +305,7 @@ public final class Resources {
     public static final short CFG_LOCATION_FLD_NEGATIVE_ALT_FIX = 3625;
     public static final short CFG_LOCATION_FLD_NMEA_MS_ROUNDING = 3626;
     public static final short CFG_LOCATION_FLD_ASSISTED_GPS     = 3627;
+    public static final short CFG_LOCATION_FLD_DO_SERVICE_SEARCH = 3628;
     /* settings - navigation */
     public static final short CFG_NAVIGATION_FLD_WPT_PROXIMITY  = 3700;
     public static final short CFG_NAVIGATION_FLD_POI_PROXIMITY  = 3701;

@@ -67,7 +67,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         nokia = platform.startsWith("Nokia");
         s60nd = platform.startsWith("Nokia6630") || platform.startsWith("Nokia668") || platform.startsWith("NokiaN70") || platform.startsWith("NokiaN72");
         s60rdfp2 = platform.indexOf("sw_platform=S60") > -1;
-        symbian = s60rdfp2;
+        symbian = s60nd || s60rdfp2;
         sonyEricsson = System.getProperty("com.sonyericsson.imei") != null;
         sonyEricssonEx = sonyEricsson || platform.startsWith("SonyEricsson");
         samsung = platform.startsWith("SAMSUNG") || platform.startsWith("SGH");
@@ -82,9 +82,10 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         brew = sxg75 || "BENQ-M7".equals(platform);
         a780 = "j2me".equals(platform);
         s65 = "S65".equals(platform);
-        // for IntelliJ IDEA
+        // for IntelliJ IDEA; all should resolve to false
         rim = platform.startsWith("RIM");
         android = platform.indexOf("android") > -1;
+        // ~
 //#endif
 
 //#ifndef __ANDROID__
@@ -319,9 +320,6 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         }
         if (sxg75) {
             cz.kruch.track.ui.NavigationScreens.useCondensed = 1;
-        }
-        if (s60rdfp2) {
-            cz.kruch.track.maps.Map.networkInputStreamAvailable = false;
         }
 
         // cleanup after initialization?

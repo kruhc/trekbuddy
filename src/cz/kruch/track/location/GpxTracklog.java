@@ -39,10 +39,12 @@ public final class GpxTracklog implements Runnable {
 
     private static final String DEFAULT_NAMESPACE   = null; // this is wrong but KXML handles it well :-)
     private static final String GPX_1_1_NAMESPACE   = "http://www.topografix.com/GPX/1/1";
+
     public static final String GS_1_0_NAMESPACE     = "http://www.groundspeak.com/cache/1/0";
     public static final String GS_1_0_PREFIX        = "groundspeak";
     public static final String AU_1_0_NAMESPACE     = "http://geocaching.com.au/geocache/1";
     public static final String AU_1_0_PREFIX        = "au";
+
     private static final String NMEA_NAMESPACE      = "http://trekbuddy.net/2009/01/gpx/nmea";
     private static final String NMEA_PREFIX         = "nmea";
     private static final String GSM_NAMESPACE       = "http://trekbuddy.net/2009/01/gpx/gsm";

@@ -1127,10 +1127,11 @@ public final class Desktop implements CommandListener,
 
         } else {
 
-/* 2009-01-07: do nothing, showall flag is enough
+/* 2009-01-07: do nothing, showall flag is enough */
+/* 2010-04-08: and what about releasing memory?? and map viewer state?? */
             // notify map view // TODO this is ugly
             views[VIEW_MAP].routeChanged(null);
-*/
+            ((MapView) views[VIEW_MAP]).mapViewer.setRoute(null);
 
         }
 
@@ -2412,13 +2413,14 @@ public final class Desktop implements CommandListener,
 //#ifdef __LOG__
             if (log.isEnabled()) log.debug("firing event " + this.toString());
 //#endif
+            // fill with results
             this.result = result;
             this.throwable = throwable;
-            this.release = false; // direct invocation, do not release
 
-/* safer against deadlocks
-            run();
-*/
+            // direct invocation, do not release this instance
+            this.release = false;
+
+            // enqueu for execution
             Desktop.this.getEventWorker().enqueue(this);
         }
 
@@ -2505,6 +2507,8 @@ public final class Desktop implements CommandListener,
                         case EVENT_ORIENTATION_CHANGED: {
                             execOrientationChanged();
                         } break;
+                        default:
+                            throw new IllegalArgumentException("Unknown event " + code);
                     }
                 } // ~synchronized
 
@@ -2704,7 +2708,7 @@ public final class Desktop implements CommandListener,
                 if (!layerName.equals(Desktop.this.atlas.getLayer())) {
 
                     // from load task
-                    if (closure == null) {
+                    if (!Desktop.this._switch) {
 
                         // setup atlas
                         Desktop.this.atlas.setLayer(layerName);
@@ -2726,12 +2730,9 @@ public final class Desktop implements CommandListener,
                 }
             } else { // cancelled
 
-                // from load task
-                if (closure == null) {
+                // cleanup 
+                cleanup(null);
 
-                    // restore desktop
-                    cleanup(null);
-                }
             }
 
         }
@@ -2763,12 +2764,9 @@ public final class Desktop implements CommandListener,
 
             } else { // cancelled
 
-                // from load task
-                if (closure == null) {
+                // cleanup
+                cleanup(null);
 
-                    // cleanup
-                    cleanup(null);
-                }
             }
 
         }
@@ -2777,6 +2775,7 @@ public final class Desktop implements CommandListener,
 
             // opening was ok
             if (throwable == null) {
+
                 try {
                     // destroy existing map definitely if it is standalone
                     if (Desktop.this.atlas == null && Desktop.this.map != null) {
@@ -2852,13 +2851,15 @@ public final class Desktop implements CommandListener,
 
                     // offer use as default?
                     if (!Desktop.this._switch && !Config.noQuestions) {
+                        final YesNoDialog dialog;
                         if ("atlas".equals(Desktop.this._target)) {
-                            (new YesNoDialog(Desktop.screen, this, null, Resources.getString(Resources.DESKTOP_MSG_USE_AS_DEFAULT_ATLAS),
-                                             Desktop.this.atlas.getURL())).show();
+                            dialog = new YesNoDialog(Desktop.screen, this, null, Resources.getString(Resources.DESKTOP_MSG_USE_AS_DEFAULT_ATLAS),
+                                                     Desktop.this.atlas.getURL());
                         } else {
-                            (new YesNoDialog(Desktop.screen, this, null, Resources.getString(Resources.DESKTOP_MSG_USE_AS_DEFAULT_MAP),
-                                             Desktop.this.map.getPath())).show();
+                            dialog = new YesNoDialog(Desktop.screen, this, null, Resources.getString(Resources.DESKTOP_MSG_USE_AS_DEFAULT_MAP),
+                                                     Desktop.this.map.getPath());
                         }
+                        dialog.show();
                     }
                 } catch (Throwable t) {
 //#ifdef __LOG__
@@ -2872,6 +2873,7 @@ public final class Desktop implements CommandListener,
                     cleanup(t);
 
                 }
+                
             } else {
 
                 // update loading result
@@ -3136,8 +3138,9 @@ public final class Desktop implements CommandListener,
 
         private void cleanup(final Throwable unused) {
 //#ifdef __LOG__
-            if (log.isEnabled()) log.debug("cleanup");
+            if (log.isEnabled()) log.debug("cleanup; " + unused);
 //#endif
+
             // update loading result
             final String msg = Resources.getString(Resources.DESKTOP_MSG_EVENT_CLENAUP);
             final int i = msg.indexOf('\n');

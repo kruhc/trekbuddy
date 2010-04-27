@@ -600,11 +600,12 @@
             <attribute name="MicroEdition-Profile" value="MIDP-${wtk.midp.version}"/>
             <attribute name="MIDlet-Description" value="${description}"/>
             <attribute name="MIDlet-Info-URL" value="http://www.trekbuddy.net"/>
-            <attribute name="${permission.attribute}" value="javax.microedition.io.Connector.file.read,javax.microedition.io.Connector.file.write,javax.microedition.io.Connector.bluetooth.client,javax.microedition.location.Location,javax.microedition.media.control.VideoControl.getSnapshot,javax.microedition.io.Connector.sms,javax.wireless.messaging.sms.receive,javax.wireless.messaging.sms.send,javax.microedition.io.Connector.comm,javax.microedition.io.Connector.cbs,javax.wireless.messaging.cbs.receive,javax.microedition.io.Connector.socket, javax.microedition.io.PushRegistry"/>
+            <attribute name="${permission.attribute}" value="javax.microedition.io.Connector.file.read,javax.microedition.io.Connector.file.write,javax.microedition.io.Connector.bluetooth.client,javax.microedition.location.Location,javax.microedition.media.control.VideoControl.getSnapshot,javax.microedition.io.Connector.sms,javax.wireless.messaging.sms.receive,javax.wireless.messaging.sms.send,javax.microedition.io.Connector.comm,javax.microedition.io.Connector.cbs,javax.wireless.messaging.cbs.receive,javax.microedition.io.Connector.socket,javax.microedition.io.PushRegistry"/>
+            <attribute name="Content-Folder" value="Applications"/>
             <attribute name="Nokia-MIDlet-Category" value="Application"/>
             <attribute name="Nokia-MIDlet-No-Exit" value="true"/>
+            <attribute name="Nokia-MIDlet-S60-Selection-Key-Compatibility" value="true"/>
             <attribute name="Nokia-MIDlet-On-Screen-Keypad" value="no"/>
-            <attribute name="LGE-MIDlet-FlipHandling-Option" value="Pause"/>
             <midlet name="${name}" class="cz.kruch.track.TrackingMIDlet" icon="/resources/icon.png"/>
         </wtkjad>
         <fixcrlf srcdir="tmp" eol="crlf" eof="remove" encoding="UTF-8" includes="trekbuddy${suffix}.jad"/>
@@ -625,7 +626,7 @@
                 <include name="**/world.*"/>
                 <include name="**/set/**"/>
             </fileset>
-            <exclude_from_manifest list="Nokia-MIDlet-Category,Nokia-MIDlet-No-Exit,Nokia-MIDlet-On-Screen-Keypad,LGE-MIDlet-FlipHandling-Option"/>
+            <exclude_from_manifest list="Nokia-MIDlet-Category,Nokia-MIDlet-No-Exit,Nokia-MIDlet-S60-Selection-Key-Compatibility,Nokia-MIDlet-On-Screen-Keypad,Content-Folder"/>
             <manifest>
                 <attribute name="Built-By" value="kruhc@seznam.cz"/>
             </manifest>
@@ -645,7 +646,7 @@
                 <exclude name="**/icon.store.*.png"/>
                 <exclude name="**/set/*.png"/>
             </fileset>
-            <exclude_from_manifest list="Nokia-MIDlet-Category,Nokia-MIDlet-No-Exit,Nokia-MIDlet-On-Screen-Keypad,LGE-MIDlet-FlipHandling-Option"/>
+            <exclude_from_manifest list="Nokia-MIDlet-Category,Nokia-MIDlet-No-Exit,Nokia-MIDlet-S60-Selection-Key-Compatibility,Nokia-MIDlet-On-Screen-Keypad,Content-Folder"/>
             <manifest>
                 <attribute name="Built-By" value="kruhc@seznam.cz"/>
             </manifest>
@@ -890,11 +891,12 @@
             <attribute name="MicroEdition-Profile" value="MIDP-${wtk.midp.version}"/>
             <attribute name="MIDlet-Description" value="${description}"/>
             <attribute name="MIDlet-Info-URL" value="http://www.trekbuddy.net"/>
-            <attribute name="${permission.attribute}" value="javax.microedition.io.Connector.file.read,javax.microedition.io.Connector.file.write,javax.microedition.io.Connector.bluetooth.client,javax.microedition.location.Location,javax.microedition.media.control.VideoControl.getSnapshot,javax.microedition.io.Connector.sms,javax.wireless.messaging.sms.receive,javax.wireless.messaging.sms.send,javax.microedition.io.Connector.comm,javax.microedition.io.Connector.cbs,javax.wireless.messaging.cbs.receive,javax.microedition.io.Connector.socket, javax.microedition.io.PushRegistry"/>
+            <attribute name="${permission.attribute}" value="javax.microedition.io.Connector.file.read,javax.microedition.io.Connector.file.write,javax.microedition.io.Connector.bluetooth.client,javax.microedition.location.Location,javax.microedition.media.control.VideoControl.getSnapshot,javax.microedition.io.Connector.sms,javax.wireless.messaging.sms.receive,javax.wireless.messaging.sms.send,javax.microedition.io.Connector.comm,javax.microedition.io.Connector.cbs,javax.wireless.messaging.cbs.receive,javax.microedition.io.Connector.socket,javax.microedition.io.PushRegistry"/>
+            <attribute name="Content-Folder" value="Applications"/>
             <attribute name="Nokia-MIDlet-Category" value="Application"/>
             <attribute name="Nokia-MIDlet-No-Exit" value="true"/>
+            <attribute name="Nokia-MIDlet-S60-Selection-Key-Compatibility" value="true"/>
             <attribute name="Nokia-MIDlet-On-Screen-Keypad" value="no"/>
-            <attribute name="LGE-MIDlet-FlipHandling-Option" value="Pause"/>
             <midlet name="${name}" class="cz.kruch.track.TrackingMIDlet" icon="/resources/icon.png"/>
         </wtkjad>
         <fixcrlf srcdir="dist/${vendor.dir}/${dist.dir}"
@@ -971,7 +973,7 @@
             <attribute name="MicroEdition-Profile" value="MIDP-${wtk.midp.version}"/>
             <attribute name="MIDlet-Description" value="${description}"/>
             <attribute name="MIDlet-Info-URL" value="http://www.trekbuddy.net"/>
-            <attribute name="${permission.attribute}" value="javax.microedition.io.Connector.file.read,javax.microedition.io.Connector.file.write,javax.microedition.io.Connector.bluetooth.client,javax.microedition.location.Location,javax.microedition.media.control.VideoControl.getSnapshot,javax.microedition.io.Connector.sms,javax.wireless.messaging.sms.receive,javax.wireless.messaging.sms.send,javax.microedition.io.Connector.comm,javax.microedition.io.Connector.cbs,javax.wireless.messaging.cbs.receive,javax.microedition.io.Connector.socket"/>
+            <attribute name="${permission.attribute}" value="javax.microedition.io.Connector.file.read,javax.microedition.io.Connector.file.write,javax.microedition.io.Connector.bluetooth.client,javax.microedition.location.Location,javax.microedition.media.control.VideoControl.getSnapshot,javax.microedition.io.Connector.sms,javax.wireless.messaging.sms.receive,javax.wireless.messaging.sms.send,javax.microedition.io.Connector.comm,javax.microedition.io.Connector.cbs,javax.wireless.messaging.cbs.receive,javax.microedition.io.Connector.socket,javax.microedition.io.PushRegistry"/>
             <attribute name="Content-Folder" value="Applications"/>
             <attribute name="RIM-COD-Creation-Time" value="${rim.cod.modified}"/>
             <attribute name="RIM-COD-Module-Name" value="trekbuddy${suffix}"/>

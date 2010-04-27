@@ -401,10 +401,10 @@ final class WaypointForm implements CommandListener, ItemCommandListener, Callba
             } catch (Throwable t) {
                 Desktop.showError(Resources.getString(Resources.NAV_MSG_CAMERA_FAILED), t, form);
             }
-        } else if (CMD_HINT.equals(command.getLabel())) {
+        } else /*if (CMD_HINT.equals(command.getLabel()))*/ {
             final String label = item.getLabel();
             final GroundspeakBean bean = ((GroundspeakBean) waypoint.getUserObject());
-            if (Resources.getString(Resources.NAV_FLD_GS_LISTING_LONG).equals(label)) {
+            if (label.startsWith(Resources.getString(Resources.NAV_FLD_GS_LISTING_LONG))) {
                 final String text = convertHtmlSnippet(bean.getLongListing());
                 final Form box = new Form(label);
                 final StringItem content = new StringItem(null, text);
@@ -413,7 +413,7 @@ final class WaypointForm implements CommandListener, ItemCommandListener, Callba
                 box.addCommand(new Command(Resources.getString(Resources.CMD_CLOSE), Desktop.BACK_CMD_TYPE, 1));
                 box.setCommandListener(this);
                 Desktop.display.setCurrent(box);
-            } else if (Resources.getString(Resources.NAV_FLD_GS_LOGS).equals(label)) {
+            } else if (label.startsWith(Resources.getString(Resources.NAV_FLD_GS_LOGS))) {
                 final Vector logs = bean.getLogs();
                 final List l = list = new List(label, List.IMPLICIT);
                 l.setFitPolicy(Choice.TEXT_WRAP_OFF);
@@ -426,7 +426,7 @@ final class WaypointForm implements CommandListener, ItemCommandListener, Callba
                 l.addCommand(new Command(Resources.getString(Resources.CMD_CLOSE), Desktop.BACK_CMD_TYPE, 1));
                 l.setCommandListener(this);
                 Desktop.display.setCurrent(l);
-            } else if (Resources.getString(Resources.NAV_FLD_GS_HINT).equals(label)) {
+            } else if (label.startsWith(Resources.getString(Resources.NAV_FLD_GS_HINT))) {
                 form.delete(hintNum);
                 hintNum = appendStringItem(Resources.getString(Resources.NAV_FLD_GS_HINT), bean.getEncodedHints());
                 Desktop.display.setCurrentItem(form.get(hintNum));
@@ -935,7 +935,7 @@ final class WaypointForm implements CommandListener, ItemCommandListener, Callba
 
         private void processEntityReference() {
             resolveUpToPosition();
-            if (skipToSemicolon()) {    // we know there is one ';' char ahead
+            if (skipToSemicolon() && position - bookmark < MAGIC_LONGEST_KNOWN_ENTITY_NAME) {    // we know there is one ';' char ahead
                 char translatedChar;
                 if (htmlBuffer[bookmark + 1] == '#') {
                     translatedChar = translateCharacterEscape();
@@ -943,6 +943,10 @@ final class WaypointForm implements CommandListener, ItemCommandListener, Callba
                     translatedChar = translateEntity();
                 }
                 outBuffer.append(translatedChar);
+            } else {
+                outBuffer.append('&');
+				position = bookmark + 1;
+                lastResolved = bookmark;
             }
         }
 
@@ -961,7 +965,7 @@ final class WaypointForm implements CommandListener, ItemCommandListener, Callba
         }
 
         private boolean skipToSemicolon() {
-            return skipToChar(';');
+            return skipToWhitespaceOrChar(';');
         }
 
         private boolean skipToSpaceOrGt() {
@@ -977,6 +981,16 @@ final class WaypointForm implements CommandListener, ItemCommandListener, Callba
             return position < inLimit && (htmlBuffer[position] == ch1 || htmlBuffer[position] == ch2);
         }
 
+        private boolean skipToWhitespaceOrChar(char ch) {
+            bookmark = position;
+            do {
+                position++;
+            } while (position < inLimit && htmlBuffer[position] != ch
+                     && htmlBuffer[position] != ' ' && htmlBuffer[position] != '\n' && htmlBuffer[position] != '\t');
+            lastResolved = position;
+            return position < inLimit && htmlBuffer[position] == ch;
+        }
+
         private boolean skipToChar(char ch) {
             bookmark = position;
             do {
@@ -986,6 +1000,7 @@ final class WaypointForm implements CommandListener, ItemCommandListener, Callba
             return position < inLimit && htmlBuffer[position] == ch;
         }
 
+        private static final int MAGIC_LONGEST_KNOWN_ENTITY_NAME = 10;
         private static final Hashtable ENTITIES = createEntities();
 
         private static Hashtable createEntities() {
@@ -1108,7 +1123,7 @@ final class WaypointForm implements CommandListener, ItemCommandListener, Callba
             int startIndex = hexEscape ? bookmark + 3 : bookmark + 2;
             String numberStr = new String(htmlBuffer, startIndex, position - startIndex);
             try {
-                return (char) Integer.parseInt(numberStr, hexEscape ? 16 : 10);
+                return (char) Integer.parseInt(numberStr, hexEscape ? 16 : MAGIC_LONGEST_KNOWN_ENTITY_NAME);
             } catch (NumberFormatException ignored) {
                 return '?';
             }

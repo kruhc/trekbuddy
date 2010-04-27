@@ -51,16 +51,8 @@ public final class Jsr179LocationProvider
             final javax.microedition.location.Criteria criteria = new javax.microedition.location.Criteria();
             criteria.setAltitudeRequired(true);
             criteria.setSpeedAndCourseRequired(true);
-            criteria.setPreferredPowerConsumption(javax.microedition.location.Criteria.POWER_USAGE_HIGH);
+            criteria.setPreferredPowerConsumption(Config.powerUsage);
             criteria.setCostAllowed(Config.assistedGps);
-
-            // adjust criteria for specific devices
-//#ifdef __ALL__
-            if (cz.kruch.track.TrackingMIDlet.a780) {
-                /* from bikeator */
-                criteria.setPreferredPowerConsumption(javax.microedition.location.Criteria.POWER_USAGE_HIGH);
-            }
-//#endif
 
             // init provider
             impl = javax.microedition.location.LocationProvider.getInstance(criteria);

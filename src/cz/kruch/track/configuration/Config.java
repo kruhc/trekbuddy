@@ -71,6 +71,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
     public static final String FOLDER_PROFILES     = "ui-profiles/";
     public static final String FOLDER_RESOURCES    = "resources/";
     public static final String FOLDER_SOUNDS       = "sounds/";
+    public static final String FOLDER_GC           = "gc/";
 
     /* 16 basic colors */
     public static final int[] COLORS_16 = {
@@ -122,6 +123,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
     // group [Internal provider options]
     private static String locationTimings       = EMPTY_STRING;
     public static int altCorrection;
+    public static int powerUsage                = 2;
     public static boolean assistedGps;
 
     // group [Serial provider options]
@@ -315,30 +317,6 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
 
     private static String getDefaultDataDir(final String defaultRoot,
                                             final String appPath) {
-/*
-        String cardRoot = null;
-        if (File.isFs()) {
-            try {
-                for (final Enumeration roots = File.listRoots(); roots.hasMoreElements(); ) {
-                    final String root = (String) roots.nextElement();
-                    if (root.equals(defaultRoot)) {
-                        cardRoot = defaultRoot; break;
-                    }
-                    if (root.indexOf("Card") > -1 || root.indexOf("Stick") > -1) {
-                        cardRoot = root;
-                    }
-                }
-            } catch (Exception e) { // IOE or SE
-                // ignore
-            }
-        }
-        if (cardRoot == null) {
-            cardRoot = System.getProperty("fileconn.dir.memorycard"); // usually includes protocol schema
-            if (cardRoot == null) {
-                cardRoot = defaultRoot;
-            }
-        }
-*/
         String cardRoot = System.getProperty("fileconn.dir.memorycard"); // usually includes protocol schema
         if (cardRoot == null) {
             cardRoot = defaultRoot;
@@ -513,6 +491,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
             // 0.9.97 extensions
             btDoServiceSearch = din.readBoolean();
             uiNoCommands = din.readBoolean();
+            powerUsage = din.readInt();
 
         } catch (Exception e) {
         }
@@ -622,9 +601,10 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         dout.writeBoolean(useNativeService);
         dout.writeBoolean(lazyGpxParsing);
         dout.writeBoolean(assistedGps);
-        /* since 0.9.96 */
+        /* since 0.9.97 */
         dout.writeBoolean(btDoServiceSearch);
         dout.writeBoolean(uiNoCommands);
+        dout.writeInt(powerUsage);
 
 //#ifdef __LOG__
         if (log.isEnabled()) log.info("configuration updated");
@@ -751,7 +731,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         if (dataDirExists) {
             final String[] folders = {
                 FOLDER_MAPS, FOLDER_NMEA, FOLDER_PROFILES, FOLDER_RESOURCES,
-                FOLDER_SOUNDS, FOLDER_TRACKS, FOLDER_WPTS
+                FOLDER_SOUNDS, FOLDER_TRACKS, FOLDER_WPTS, FOLDER_GC
             };
             /* create folder structure */
             for (int i = folders.length; --i >= 0; ) {

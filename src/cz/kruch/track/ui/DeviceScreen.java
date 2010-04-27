@@ -379,7 +379,7 @@ final class DeviceScreen extends GameCanvas implements Runnable {
             if (++keyRepeatedCount == 1) {
                 keylock = !keylock;
                 if (!Config.powerSave) {
-                    Desktop.display.vibrate(1000);
+                    Desktop.display.vibrate(500);
                 }
             }
             return;

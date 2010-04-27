@@ -193,6 +193,7 @@ public final class Resources {
     public static final short NAV_MSG_STORE_UPDATED             = 2406;
     public static final short NAV_MSG_STORE_UPDATE_FAILED       = 2407;
     public static final short NAV_MSG_NO_NOTES_YET              = 2408;
+    public static final short NAV_MSG_NOTE_ADDED                = 2409;
     /* navigation - waypoint form */
     public static final short NAV_TITLE_WPT                     = 2200;
     public static final short NAV_FLD_WPT_NAME                  = 2201;
@@ -306,6 +307,7 @@ public final class Resources {
     public static final short CFG_LOCATION_FLD_NMEA_MS_ROUNDING = 3626;
     public static final short CFG_LOCATION_FLD_ASSISTED_GPS     = 3627;
     public static final short CFG_LOCATION_FLD_DO_SERVICE_SEARCH = 3628;
+    public static final short CFG_LOCATION_GROUP_POWER          = 3629;
     /* settings - navigation */
     public static final short CFG_NAVIGATION_FLD_WPT_PROXIMITY  = 3700;
     public static final short CFG_NAVIGATION_FLD_POI_PROXIMITY  = 3701;

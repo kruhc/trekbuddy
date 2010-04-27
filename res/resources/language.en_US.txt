@@ -213,6 +213,7 @@
 2406=Landmarks updated
 2407=Failed to update landmarks
 2408=No notes yet
+2409=Note added
 
 # settings commands
 3000=Apply
@@ -298,6 +299,7 @@
 3626=exact time match
 3627=try assisted GPS
 3628=lookup with service search
+3629=Power usage
 
 # settings forms/fields/values (Navigation)
 3700=Wpt Proximity

@@ -75,6 +75,7 @@ public final class NavigationScreens {
     public static Image logo;  // TODO fix visibility
     public static Image crosshairs; // TODO fix visibility
     public static Image nlock; // TODO fix visibility
+    public static Image backlight; // TODO fix visibility
 /*
     public static Image[] stores;   // TODO fix visibility
 */
@@ -91,6 +92,7 @@ public final class NavigationScreens {
     private static boolean[] arrowsFull;
     private static int wptSize2;
     private static int poiSize;
+    private static int bulbSize;
 
     // public (???) vars
     public static int bulletSize;
@@ -108,6 +110,7 @@ public final class NavigationScreens {
         waypoint = createImage("/resources/wpt.png");
         providers = createImage("/resources/bullets.png");
         nlock = createImage("/resources/nlock.png");
+        backlight = createImage("/resources/bulb.png");
 /*
         stores = new Image[] {
             createImage("/resources/icon.store.xml.png"),
@@ -127,6 +130,7 @@ public final class NavigationScreens {
         bulletSize = providers.getHeight();
         poiSize = pois.getHeight();
         nlockSize2 = nlock.getHeight() >> 1;
+        bulbSize = backlight.getHeight();
     }
 
     public static int customize() throws IOException {
@@ -171,6 +175,13 @@ public final class NavigationScreens {
             nlock = null;
             nlock = image;
             nlockSize2 = nlock.getHeight() >> 1;
+            i++;
+        }
+        image = loadImage(Config.FOLDER_RESOURCES, "bulb.png");
+        if (image != null) {
+            backlight = null;
+            backlight = image;
+            bulbSize = backlight.getHeight();
             i++;
         }
         logo = loadImage(Config.FOLDER_RESOURCES, "logo.png");
@@ -364,6 +375,12 @@ public final class NavigationScreens {
                                 ci * bulletSize, 0, bulletSize, bulletSize,
                                 Sprite.TRANS_NONE, x, y, anchor);
         }
+    }
+
+    public static void drawBacklightStatus(final Graphics graphics) {
+        graphics.drawImage(backlight,
+                           Desktop.width - bulbSize, Desktop.height - bulbSize,
+                           Graphics.TOP | Graphics.LEFT);
     }
 
     public static StringBuffer toStringBuffer(final Location l, final StringBuffer sb) {

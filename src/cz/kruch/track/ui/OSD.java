@@ -137,6 +137,11 @@ final class OSD extends Bar {
         NavigationScreens.drawProviderStatus(graphics, providerStatus,
                                              semaforX, semaforY,
                                              Graphics.TOP | Graphics.LEFT);
+
+        // draw backlight status
+        if (cz.kruch.track.ui.nokia.DeviceControl.getBacklightStatus() != 0) {
+            NavigationScreens.drawBacklightStatus(graphics);
+        }
     }
 
     public StringBuffer _getSb() {

@@ -12,6 +12,7 @@ import java.io.IOException;
 final class S60DeviceControl extends NokiaDeviceControl {
 
     private cz.kruch.track.device.SymbianService.Inactivity inactivity;
+    private String lastError;
 
     S60DeviceControl() throws IOException {
         if (cz.kruch.track.TrackingMIDlet.uiq) {
@@ -20,18 +21,33 @@ final class S60DeviceControl extends NokiaDeviceControl {
             this.name = "S60";
             this.cellIdProperty = "com.nokia.mid.cellid";
         }
-        try {
-            this.inactivity = cz.kruch.track.device.SymbianService.openInactivity();
-        } catch (Exception e) { // IOE or SE
-            // service not running/accessible
-        }
     }
 
 
     /** @Override */
     protected void setLights() {
+        if (inactivity == null) {
+            try {
+                this.inactivity = cz.kruch.track.device.SymbianService.openInactivity();
+            } catch (Exception e) { // IOE or SE
+                this.lastError = "Service not accessible. " + e.toString();
+            }
+        }
         if (inactivity != null) {
-            inactivity.setLights(values[backlight]);
+            try {
+                inactivity.setLights(values[backlight]);
+            } catch (IOException e) {
+                lastError = "Service not accessible. " + e.toString();
+            }
+        }
+    }
+
+    /** @Override */
+    void confirm() {
+        if (lastError == null) {
+            super.confirm();
+        } else {
+            cz.kruch.track.ui.Desktop.showError(lastError, null, null);
         }
     }
 

@@ -25,7 +25,7 @@ final class SamsungDeviceControl extends DeviceControl {
 
     /** @overriden */
     void turnOn() {
-        com.samsung.util.LCDLight.on(10000);
+        com.samsung.util.LCDLight.on(REFRESH_PERIOD * 2);
     }
 
     /** @overriden */

@@ -3,7 +3,6 @@
 package cz.kruch.track.ui.nokia;
 
 import cz.kruch.track.ui.Desktop;
-import cz.kruch.track.Resources;
 
 import java.util.TimerTask;
 
@@ -14,12 +13,13 @@ import java.util.TimerTask;
  */
 public class DeviceControl extends TimerTask {
 
+    protected static final int REFRESH_PERIOD = 7500;
     protected static final int STATUS_OFF = 0;
     protected static final int STATUS_ON  = 1;
 
     private static DeviceControl instance;
 
-    protected int backlight;
+    protected int backlight, presses;
 
     protected String name;
     protected String cellIdProperty, lacProperty;
@@ -37,28 +37,6 @@ public class DeviceControl extends TimerTask {
                 instance = (DeviceControl) Class.forName("cz.kruch.track.ui.nokia.S60DeviceControl").newInstance();
             } catch (Throwable t) {
                 // user denied connection
-            }
-        }
-        if (instance == null) {
-            try {
-                Class.forName("com.nokia.mid.ui.DirectUtils");
-                if (cz.kruch.track.TrackingMIDlet.jbed) {
-                    // do nothing
-                } else if (cz.kruch.track.TrackingMIDlet.sonyEricssonEx) {
-                    instance = (DeviceControl) Class.forName("cz.kruch.track.ui.nokia.SonyEricssonDeviceControl").newInstance();
-                } else {
-                    instance = (DeviceControl) Class.forName("cz.kruch.track.ui.nokia.NokiaDeviceControl").newInstance();
-                }
-            } catch (Throwable t) {
-                // ignore
-            }
-        }
-        if (instance == null) {
-            try {
-                Class.forName("com.siemens.mp.game.Light");
-                instance = (DeviceControl) Class.forName("cz.kruch.track.ui.nokia.SiemensDeviceControl").newInstance();
-            } catch (Throwable t) {
-                // ignore
             }
         }
         if (instance == null) {
@@ -84,6 +62,28 @@ public class DeviceControl extends TimerTask {
                 Class.forName("mmpp.media.BackLight");
                 instance = (DeviceControl) Class.forName("cz.kruch.track.ui.nokia.LgDeviceControl").newInstance();
                 cz.kruch.track.TrackingMIDlet.lg = true;
+            } catch (Throwable t) {
+                // ignore
+            }
+        }
+        if (instance == null) {
+            try {
+                Class.forName("com.siemens.mp.game.Light");
+                instance = (DeviceControl) Class.forName("cz.kruch.track.ui.nokia.SiemensDeviceControl").newInstance();
+            } catch (Throwable t) {
+                // ignore
+            }
+        }
+        if (instance == null) {
+            try {
+                Class.forName("com.nokia.mid.ui.DeviceControl");
+                if (cz.kruch.track.TrackingMIDlet.jbed) {
+                    // do nothing
+                } else if (cz.kruch.track.TrackingMIDlet.sonyEricssonEx) {
+                    instance = (DeviceControl) Class.forName("cz.kruch.track.ui.nokia.SonyEricssonDeviceControl").newInstance();
+                } else {
+                    instance = (DeviceControl) Class.forName("cz.kruch.track.ui.nokia.NokiaDeviceControl").newInstance();
+                }
             } catch (Throwable t) {
                 // ignore
             }
@@ -132,7 +132,7 @@ public class DeviceControl extends TimerTask {
     }
 
     public static void setBacklight() {
-        instance.nextLevel();
+        instance.next();
     }
 
     public static void flash() {
@@ -154,16 +154,8 @@ public class DeviceControl extends TimerTask {
         instance.useTicker(displayable, ticker);
     }
 
-//    public static String getStorageURL() throws Exception {
-//        return instance.getCardURL();
-//    }
-
-    //
-    // package methods
-    //
-
-    final void confirm(String message) {
-        Desktop.showConfirmation(message, null);
+    public static int getBacklightStatus() {
+        return instance.backlight;
     }
 
     //
@@ -187,14 +179,6 @@ public class DeviceControl extends TimerTask {
         return null;
     }
 
-//    String getCardURL() throws Exception {
-//        return null;
-//    }
-
-    void sync() {
-        confirm(backlight == STATUS_OFF ? Resources.getString(Resources.DESKTOP_MSG_BACKLIGHT_OFF) : Resources.getString(Resources.DESKTOP_MSG_BACKLIGHT_ON));
-    }
-
     void close() {
         // restore original setting?
         // ...
@@ -209,12 +193,33 @@ public class DeviceControl extends TimerTask {
         return false;
     }
 
+    void next() {
+        if (presses++ == 0) {
+            nextLevel();
+            confirm();
+        }
+    }
+
+    void sync() {
+        if (presses == 0) {
+            nextLevel();
+            confirm();
+        }
+        presses = 0;
+    }
+
+    void confirm() {
+        if (!cz.kruch.track.configuration.Config.powerSave) {
+            Desktop.display.vibrate(100);
+        }
+    }
+
     void nextLevel() {
         // invert status and put timer task into proper state (for schedulable control)
         if (backlight == STATUS_OFF) {
             backlight = STATUS_ON;
             if (isSchedulable()) {
-                Desktop.timer.scheduleAtFixedRate(task = new DeviceControl(), 7500L, 7500L);
+                Desktop.timer.scheduleAtFixedRate(task = new DeviceControl(), REFRESH_PERIOD, REFRESH_PERIOD);
             }
         } else {
             backlight = STATUS_OFF;

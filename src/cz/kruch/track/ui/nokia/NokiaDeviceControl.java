@@ -2,8 +2,6 @@
 
 package cz.kruch.track.ui.nokia;
 
-import cz.kruch.track.Resources;
-
 /**
  * Device control implementation for Nokia phones.
  *
@@ -12,6 +10,8 @@ import cz.kruch.track.Resources;
 class NokiaDeviceControl extends DeviceControl {
 
     protected final int[] values;
+
+    private int last;
 
     NokiaDeviceControl() {
         this.name = "Nokia";
@@ -24,20 +24,45 @@ class NokiaDeviceControl extends DeviceControl {
     }
 
     /** @Override */
+    void next() {
+        if (presses++ == 0) {
+            if (last == 0) {
+                nextLevel();
+            } else {
+                invertLevel();
+            }
+            confirm();
+        }
+    }
+
+    /** @Override */
+    void sync() {
+        if (presses == 0) {
+            nextLevel();
+            confirm();
+        }
+        presses = 0;
+    }
+
+    /** @Override */
     void nextLevel() {
-        backlight++;
+        last = ++backlight;
         if (backlight == values.length) {
             backlight = 0;
         }
         setLights();
     }
 
-    /** @Override */
-    void sync() {
-        confirm(backlight == 0 ? Resources.getString(Resources.DESKTOP_MSG_BACKLIGHT_OFF) : Resources.getString(Resources.DESKTOP_MSG_BACKLIGHT_ON) + " (" + values[backlight] + "%)");
-    }
-
     protected void setLights() {
         com.nokia.mid.ui.DeviceControl.setLights(0, values[backlight]);
+    }
+
+    private void invertLevel() {
+        if (backlight == 0) {
+            backlight = last;
+        } else {
+            backlight = 0;
+        }
+        setLights();
     }
 }

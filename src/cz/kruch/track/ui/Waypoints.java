@@ -18,18 +18,18 @@ import javax.microedition.lcdui.Command;
 import javax.microedition.lcdui.Displayable;
 import javax.microedition.lcdui.List;
 import javax.microedition.lcdui.Choice;
-import javax.microedition.lcdui.TextBox;
-import javax.microedition.lcdui.TextField;
 import javax.microedition.io.Connector;
 
 import api.file.File;
 import api.io.BufferedInputStream;
+import api.io.BufferedOutputStream;
 import api.location.QualifiedCoordinates;
 import api.location.Location;
 import api.util.Comparator;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.Vector;
 import java.util.Enumeration;
 import java.util.Hashtable;
@@ -133,6 +133,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
     private static final String actionListWpts = Resources.getString(Resources.NAV_ITEM_WAYPOINTS);
     private static final String actionListTracks = Resources.getString(Resources.NAV_ITEM_TRACKS);
     private static final String actionListTargets = Resources.getString(Resources.NAV_MSG_SELECT_STORE);
+    private static final String actionAddFieldNote = Resources.getString(Resources.NAV_CMD_NEW_NOTE);
 
     private static final int INITIAL_LIST_SIZE = 128;
     private static final int INCREMENT_LIST_SIZE = 32;
@@ -146,7 +147,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
     private List pane, notes;
     private Displayable list;
     private NakedVector sortedWpts, cachedDisk, fieldNotes;
-    private String folder;
+    private String folder, notesFilename;
     private final Object[] idx;
     private int entry, depth, sort, cacheDiskHint;
 
@@ -177,6 +178,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
         this.idx = new Object[3];
         this.sort = Config.sort;
         this.cacheDiskHint = INITIAL_LIST_SIZE;
+        this.notesFilename = "fieldnotes." + GpxTracklog.dateToFileDate(System.currentTimeMillis()) + ".txt";
         this.cmdBack = new Command(Resources.getString(Resources.CMD_BACK), Desktop.BACK_CMD_TYPE, 1);
         this.cmdCancel = new Command(Resources.getString(Resources.CMD_CANCEL), Desktop.CANCEL_CMD_TYPE, 1);
         this.cmdClose = new Command(Resources.getString(Resources.CMD_CLOSE), Desktop.BACK_CMD_TYPE, 1);
@@ -239,6 +241,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                 if (navigator.getNavigateTo() != null) {
                     pane.append(itemStop, null);
                 }
+                pane.setSelectedIndex(0, true);
             } break;
             case 1: {
                 // set last known choice
@@ -505,7 +508,9 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
             }
 
             // persist changes
-            // TODO
+            _storeName = notesFilename;
+            _listingTitle = actionAddFieldNote;
+            navigator.getDiskWorker().enqueue(this);
 
 //#ifndef __ANDROID__
         } else if (source instanceof cz.kruch.track.fun.Friends) { // SMS received
@@ -729,6 +734,9 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                     actionListStore(_storeName, false, Config.lazyGpxParsing);
                 } else if (_listingTitle == actionListTargets) { // == is OK
                     actionUpdateTarget(_storeName, _addWptStoreKey, _addWptSelf);
+                } else if (_listingTitle == actionAddFieldNote) {
+                    _listingTitle = actionListWpts; // hack
+                    actionUpdateNotes();
                 }
                 _storeName = null;
             }
@@ -1238,6 +1246,64 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
 
             // remove ticker
             cz.kruch.track.ui.nokia.DeviceControl.setTicker(list, null);
+
+            // close file
+            try {
+                file.close();
+            } catch (Exception e) { // NPE or IOE
+                // ignore
+            }
+        }
+    }
+
+    private void actionUpdateNotes() {
+        File file = null;
+
+        try {
+
+            // create file
+            file = File.open(Config.getFolderURL(Config.FOLDER_GC) + notesFilename, Connector.READ_WRITE);
+            if (file.exists()) {
+                file.delete();
+            }
+            file.create();
+
+            // output
+            OutputStream out = null;
+
+            try {
+                // open output
+                out = new BufferedOutputStream(file.openOutputStream(), 512);
+
+                // write notes
+                final Vector fieldNotes = this.fieldNotes;
+                final StringBuffer sb = new StringBuffer(128);
+                for (int N = fieldNotes.size(), i = 0; i < N; i++) {
+                    sb.delete(0, sb.length());
+                    FieldNoteForm.format((String[]) fieldNotes.elementAt(i), sb);
+                    out.write(sb.toString().getBytes());
+                    out.write(0x0D);
+                    out.write(0x0A);
+                }
+
+                // notify user
+                Desktop.showConfirmation(Resources.getString(Resources.NAV_MSG_NOTE_ADDED), null);
+
+            } finally {
+                try {
+                    out.close();
+                } catch (Exception e) { // NPE or IOE
+                    // ignore
+                }
+            }
+
+        } catch (Throwable t) {
+//#ifdef __LOG__
+            t.printStackTrace();
+//#endif
+            Desktop.showError("Failed to save field notes", t, null);
+
+        } finally {
 
             // close file
             try {

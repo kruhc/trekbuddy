@@ -964,7 +964,7 @@ public final class Desktop implements CommandListener,
                     // play sound and vibrate
                     if (Config.noSounds) {
                         if (!Config.powerSave) {
-                            display.vibrate(1000);
+                            display.vibrate(500);
                         }
                     } else {
                         boolean notified = false;
@@ -977,7 +977,7 @@ public final class Desktop implements CommandListener,
                         }
                         if (notified) {
                             if (!Config.powerSave) {
-                                display.vibrate(1000);
+                                display.vibrate(500);
                             }
                         } else { // fallback to system alarm
                             AlertType.ALARM.playSound(display);
@@ -1448,8 +1448,9 @@ public final class Desktop implements CommandListener,
                     } break;
 
                     case Canvas.KEY_NUM3: { // notify device control
-                        if (!repeated) {
+                        if (repeated) {
                             cz.kruch.track.ui.nokia.DeviceControl.setBacklight();
+                            mask = MASK_ALL;
                         }
                     } break;
 
@@ -1485,6 +1486,7 @@ public final class Desktop implements CommandListener,
 
             case Canvas.KEY_NUM3: { // notify user
                 cz.kruch.track.ui.nokia.DeviceControl.getBacklight();
+                mask = MASK_ALL;
             } break;
 
         }
@@ -1573,7 +1575,7 @@ public final class Desktop implements CommandListener,
     public static void showAlarm(String message, Displayable nextDisplayable,
                                  boolean forever) {
         if (Config.noSounds) {
-            Desktop.display.vibrate(1000);
+            Desktop.display.vibrate(500);
         }
         showAlert(AlertType.ALARM, message, forever ? Alert.FOREVER : ALARM_DIALOG_TIMEOUT, nextDisplayable);
     }

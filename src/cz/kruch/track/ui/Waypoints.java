@@ -1281,7 +1281,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                 for (int N = fieldNotes.size(), i = 0; i < N; i++) {
                     sb.delete(0, sb.length());
                     FieldNoteForm.format((String[]) fieldNotes.elementAt(i), sb);
-                    out.write(sb.toString().getBytes());
+                    out.write(sb.toString().getBytes("UTF-8"));
                     out.write(0x0D);
                     out.write(0x0A);
                 }

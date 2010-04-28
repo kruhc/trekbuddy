@@ -42,7 +42,7 @@ final class InfoForm implements CommandListener {
 
         // items
         final Form pane = new Form(Resources.prefixed(Resources.getString(Resources.DESKTOP_CMD_INFO)));
-        pane.append(newItem(Resources.getString(Resources.INFO_ITEM_VENDOR), Resources.getString(Resources.INFO_ITEM_VENDOR_VALUE)));
+        pane.append(newItem(Resources.getString(Resources.INFO_ITEM_VENDOR), Resources.getString(Resources.INFO_ITEM_VENDOR_VALUE), Item.HYPERLINK));
         pane.append(newItem(Resources.getString(Resources.INFO_ITEM_VERSION), cz.kruch.track.TrackingMIDlet.version));
         pane.append(newItem(Resources.getString(Resources.INFO_ITEM_KEYS), ""));
         pane.append(Resources.getString((short) (Resources.INFO_ITEM_KEYS_MS + desktop.getMode())));
@@ -164,7 +164,12 @@ final class InfoForm implements CommandListener {
     }
 
     private static StringItem newItem(final String label, final String text) {
-        final StringItem item = new StringItem(label + ": ", text);
+        return newItem(label, text, Item.PLAIN);
+    }
+
+    private static StringItem newItem(final String label, final String text,
+                                      final int appearance) {
+        final StringItem item = new StringItem(label + ": ", text, appearance);
         item.setLayout(Item.LAYOUT_2 | Item.LAYOUT_NEWLINE_AFTER);
         item.setFont(Desktop.fontStringItems);
         return item;

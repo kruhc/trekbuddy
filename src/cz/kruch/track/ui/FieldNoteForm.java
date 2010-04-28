@@ -55,7 +55,7 @@ final class FieldNoteForm implements CommandListener {
         final StringBuffer sb = new StringBuffer(32);
         sb.append(calendar.get(Calendar.YEAR)).append('-');
         appendTwoDigitStr(sb, calendar.get(Calendar.MONTH) + 1).append('-');
-        appendTwoDigitStr(sb, calendar.get(Calendar.DAY_OF_MONTH)).append(',');
+        appendTwoDigitStr(sb, calendar.get(Calendar.DAY_OF_MONTH)).append('T');
         appendTwoDigitStr(sb, calendar.get(Calendar.HOUR_OF_DAY)).append(':');
         appendTwoDigitStr(sb, calendar.get(Calendar.MINUTE)).append('Z');
         this.note[1] = sb.toString();
@@ -86,7 +86,7 @@ final class FieldNoteForm implements CommandListener {
         form.append(createStringItem(Resources.getString(Resources.NAV_FLD_WPT_NAME), note[0]));
         form.append(createStringItem(Resources.getString(Resources.NAV_FLD_TIME), note[1]));
         typeChoice = new ChoiceGroup(Resources.getString(Resources.NAV_FLD_TYPE), Desktop.CHOICE_POPUP_TYPE,
-                                     new String[]{ "Found it", "Didn't Find It", "Needs Maintenance", "Archive" }, null);
+                                     new String[]{ "Found it", "Didn't find it", "Write note", "Needs Archived", "Needs Maintenance" }, null);
         if (note[2] != null) {
             for (int N = typeChoice.size(), i = 0; i < N; i++) {
                 typeChoice.setSelectedIndex(i, note[2].equals(typeChoice.getString(i)));

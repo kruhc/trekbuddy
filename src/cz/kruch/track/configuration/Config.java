@@ -116,6 +116,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
     // group [Bluetooth provider options]
     public static int btKeepAlive;
     public static boolean btDoServiceSearch;
+    public static boolean btAddressWorkaround;
 
     // group [Simulator provider options]
     public static int simulatorDelay            = 1000; // ms
@@ -125,6 +126,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
     public static int altCorrection;
     public static int powerUsage                = 2;
     public static boolean assistedGps;
+    public static boolean timeFix;
 
     // group [Serial provider options]
     public static String commUrl                = "comm:COM5;baudrate=9600";
@@ -178,6 +180,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
     public static boolean hideBarCmd;
     public static boolean useNativeService;
     public static boolean lazyGpxParsing;
+    public static boolean lowmemIo;
 
     // group [GPX options]
     public static int gpxDt                     = 60; // 1 min
@@ -234,8 +237,6 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
 //        } catch (Exception e) {
             dataDir = getDefaultDataDir("file:///sdcard/", "TrekBuddy/");
 //        }
-        fullscreen = true;
-        safeColors = false;
         listFont = 0x200010;
 //#else
         if (cz.kruch.track.TrackingMIDlet.sxg75) {
@@ -266,10 +267,10 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
             fullscreen = true;
         } else { // Nokia, SonyEricsson, ...
             dataDir = getDefaultDataDir("file:///E:/", "TrekBuddy/"); // pstros: "file:///SDCard/TrekBuddy/"
-            fullscreen = cz.kruch.track.TrackingMIDlet.nokia || cz.kruch.track.TrackingMIDlet.sonyEricsson;
+            fullscreen = cz.kruch.track.TrackingMIDlet.nokia || cz.kruch.track.TrackingMIDlet.sonyEricsson || cz.kruch.track.TrackingMIDlet.symbian;
         }
         if (cz.kruch.track.TrackingMIDlet.symbian) {
-            useNativeService = !cz.kruch.track.TrackingMIDlet.s60rdfp2;
+            useNativeService = true; // !cz.kruch.track.TrackingMIDlet.s60rdfp2;
         }
         if (cz.kruch.track.TrackingMIDlet.hasFlag("bt_service_search")) {
             btDoServiceSearch = true;
@@ -357,7 +358,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
 
     private static void readMain(final DataInputStream din) throws IOException {
         mapPath = din.readUTF();
-        String _locationProvider = din.readUTF();
+        /*String _locationProvider = */din.readUTF();
         /*timeZone = */din.readUTF();
         geoDatum = din.readUTF();
         /*tracklogsOn = */din.readBoolean(); // bc
@@ -493,6 +494,11 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
             uiNoCommands = din.readBoolean();
             powerUsage = din.readInt();
 
+            // 0.9.98 extensions
+            btAddressWorkaround = din.readBoolean();
+            lowmemIo = din.readBoolean();
+            timeFix = din.readBoolean();
+
         } catch (Exception e) {
         }
 
@@ -605,6 +611,10 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         dout.writeBoolean(btDoServiceSearch);
         dout.writeBoolean(uiNoCommands);
         dout.writeInt(powerUsage);
+        /* since 0.9.98 */
+        dout.writeBoolean(btAddressWorkaround);
+        dout.writeBoolean(lowmemIo);
+        dout.writeBoolean(timeFix);
 
 //#ifdef __LOG__
         if (log.isEnabled()) log.info("configuration updated");
@@ -763,7 +773,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
                 dir = File.open(Config.getFolderURL(Config.FOLDER_SOUNDS));
                 for (final Enumeration seq = dir.list("wpt.*", false); seq.hasMoreElements(); ) {
                     final String name = (String) seq.nextElement();
-                    if (name.endsWith(".amr") || name.endsWith(".wav") || name.endsWith(".mp3")) {
+                    if (name.endsWith(".amr") || name.endsWith(".wav") || name.endsWith(".mp3") || name.endsWith(".aac")|| name.endsWith(".m4a")|| name.endsWith(".3gp")) {
 //#ifdef __LOG__
                         if (log.isEnabled()) log.info("found wpt sound file " + name);
 //#endif

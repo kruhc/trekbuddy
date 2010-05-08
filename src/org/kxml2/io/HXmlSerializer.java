@@ -494,12 +494,9 @@ public final class HXmlSerializer implements XmlSerializer {
         writer.flush();
     }
 
-/*
     public void close() throws IOException {
-        check();
         writer.close();
     }
-*/
 
     public XmlSerializer endTag(String namespace, String name) throws IOException {
         if (!pending) {

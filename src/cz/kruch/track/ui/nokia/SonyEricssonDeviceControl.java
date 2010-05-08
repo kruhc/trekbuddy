@@ -9,10 +9,18 @@ package cz.kruch.track.ui.nokia;
  */
 final class SonyEricssonDeviceControl extends DeviceControl {
 
+    private boolean jp6plus;
+
     SonyEricssonDeviceControl() {
-        this.name = "SonyEricsson";
         this.cellIdProperty = "com.sonyericsson.net.cellid";
         this.lacProperty = "com.sonyericsson.net.lac";
+        try {
+            Class.forName("java.rmi.Remote");
+            this.name = "SonyEricsson JP6+";
+            this.jp6plus = true;
+        } catch (Throwable t) {
+            this.name = "SonyEricsson";
+        }
     }
 
     /** @Override */
@@ -40,6 +48,17 @@ final class SonyEricssonDeviceControl extends DeviceControl {
     void turnOff() {
         cz.kruch.track.ui.Desktop.display.flashBacklight(0);
 //        com.nokia.mid.ui.DeviceControl.setLights(0, 0);  /* intentionally commented out */
+    }
+
+    /** @Override */
+    void confirm() {
+        if (jp6plus) {
+            if (!cz.kruch.track.configuration.Config.powerSave) {
+                cz.kruch.track.ui.Desktop.display.vibrate(100);
+            }
+        } else {
+            cz.kruch.track.ui.Desktop.showConfirmation(cz.kruch.track.Resources.getString(backlight == STATUS_OFF ? cz.kruch.track.Resources.DESKTOP_MSG_BACKLIGHT_OFF : cz.kruch.track.Resources.DESKTOP_MSG_BACKLIGHT_ON), null);
+        }
     }
 
     private static String hexToDec(final String id) {

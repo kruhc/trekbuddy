@@ -186,6 +186,10 @@ public final class NavigationScreens {
         }
         logo = loadImage(Config.FOLDER_RESOURCES, "logo.png");
 
+        if (i > 0 && Config.forcedGc) {
+            System.gc(); // conditional
+        }
+
         return i;
     }
 
@@ -226,10 +230,6 @@ public final class NavigationScreens {
             }
         }
 
-        if (Config.forcedGc) {
-            System.gc(); // conditional
-        }
-        
         return image;
     }
 

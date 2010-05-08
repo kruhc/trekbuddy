@@ -13,11 +13,11 @@ import com.ice.tar.TarEntry;
 import cz.kruch.track.Resources;
 import cz.kruch.track.configuration.Config;
 import cz.kruch.track.io.LineReader;
-import cz.kruch.track.util.CharArrayTokenizer;
 import cz.kruch.track.ui.NavigationScreens;
+import cz.kruch.track.util.CharArrayTokenizer;
 
 /**
- * TAR map and atlas support.
+ * Packed map and atlas support.
  *
  * @author kruhc@seznam.cz
  */
@@ -33,7 +33,8 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
 
     private long[] pointers;
     private int numberOfPointers;
-    private int hintTmiFileSize, increment;
+    private int hintTmiFileSize, increment, calBlockOffset;
+    private String calEntryName;
 
     TarLoader() {
         this.isTar = true;
@@ -97,6 +98,7 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
             * test quality of File API
             */
 
+            Map.useReset = !cz.kruch.track.configuration.Config.lowmemIo;
             if (Map.useReset) {
                 if (in.markSupported()) {
                     try {
@@ -147,38 +149,56 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
                 if (log.isEnabled()) log.debug("calibration or slices missing; " + gotSlices);
 //#endif
 
-                // iterate over tar
-                TarEntry entry = tarIn.getNextEntry();
-                while (entry != null) {
-
-                    // get entry name
-                    final CharArrayTokenizer.Token entryName = entry.getName();
-
-                    if (!gotSlices && entryName.startsWith(SET_DIR_PREFIX)
-                        && (entryName.endsWith(EXT_PNG) || entryName.endsWith(EXT_JPG))) { // slice
-
-                        // add slice
-                        registerSlice(entryName, (int) (entry.getPosition() / TarInputStream.DEFAULT_RCDSIZE));
-
-                    } else if (entryName.indexOf(File.PATH_SEPCHAR) == -1
-                        && getMapCalibration() == null) { // no calibration nativeFile yet
+                // need only calibration?
+                if (gotSlices && calEntryName != null) {
 //#ifdef __LOG__
-                        if (log.isEnabled()) log.debug("do not have calibration yet");
+                    if (log.isEnabled()) log.debug("calibration " + calEntryName + " is at block " + calBlockOffset);
 //#endif
-                        // try this root entry as a calibration
-                        map.setCalibration(Calibration.newInstance(tarIn, entryName.toString()));
 
-                        // skip the rest if we already have them
-                        if (gotSlices && getMapCalibration() != null) {
-//#ifdef __LOG__
-                            if (log.isEnabled()) log.debug("calibration is all we need");
-//#endif
-                            break;
-                        }
+                    // skip to calibration
+                    if (calBlockOffset > 0) {
+                        tarIn.skip(calBlockOffset * TarInputStream.DEFAULT_RCDSIZE);
                     }
+                    tarIn.getNextEntry();
 
-                    // next
-                    entry = tarIn.getNextEntry();
+                    // try this root entry as a calibration
+                    map.setCalibration(Calibration.newInstance(tarIn, calEntryName));
+
+                } else { // do a full scan
+
+                    // iterate over tar
+                    TarEntry entry = tarIn.getNextEntry();
+                    while (entry != null) {
+
+                        // get entry name
+                        final CharArrayTokenizer.Token entryName = entry.getName();
+
+                        if (!gotSlices && entryName.startsWith(SET_DIR_PREFIX)
+                            && (entryName.endsWith(EXT_PNG) || entryName.endsWith(EXT_JPG))) { // slice
+
+                            // add slice
+                            registerSlice(entryName, (int) (entry.getPosition() / TarInputStream.DEFAULT_RCDSIZE));
+
+                        } else if (entryName.indexOf(File.PATH_SEPCHAR) == -1
+                            && getMapCalibration() == null) { // no calibration nativeFile yet
+//#ifdef __LOG__
+                            if (log.isEnabled()) log.debug("do not have calibration yet");
+//#endif
+                            // try this root entry as a calibration
+                            map.setCalibration(Calibration.newInstance(tarIn, entryName.toString()));
+
+                            // skip the rest if we already have them
+                            if (gotSlices && getMapCalibration() != null) {
+//#ifdef __LOG__
+                                if (log.isEnabled()) log.debug("calibration is all we need");
+//#endif
+                                break;
+                            }
+                        }
+
+                        // next
+                        entry = tarIn.getNextEntry();
+                    }
                 }
             }
             
@@ -260,64 +280,70 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
     }
 
     void loadSlice(final Slice slice) throws IOException {
-        // input stream
-        InputStream in = null;
-
         // slice entry stream offset
         final int streamOffset = ((TarSlice) slice).getBlockOffset() * TarInputStream.DEFAULT_RCDSIZE;
 
-        // incomplete map handling
-        if (streamOffset < 0) {
-            slice.setImage(Slice.NO_IMAGE);
-        } else
-        try {
+        // slice exists in the archive
+        if (streamOffset >= 0) {
+
+            // input stream
+            InputStream in = null;
+
             // local ref
             final TarInputStream tarIn = this.tarIn;
 
-            // resetable stream
-            if (nativeIn != null) {
+            try {
+                // resetable stream
+                if (nativeIn != null) {
 //#ifdef __LOG__
-                if (log.isEnabled()) log.debug("reuse stream");
+                    if (log.isEnabled()) log.debug("reuse stream");
 //#endif
-                if (streamOffset < tarIn.getStreamOffset() || Config.siemensIo) {
+                    if (streamOffset < tarIn.getStreamOffset() || Config.siemensIo) {
 //#ifdef __LOG__
-                    if (log.isEnabled()) log.debug("but reset it first");
+                        if (log.isEnabled()) log.debug("but reset it first");
 //#endif
-                    nativeIn.reset();
-                    buffered.setInputStream(nativeIn);
+                        nativeIn.reset();
+                        buffered.setInputStream(nativeIn);
+                        tarIn.setStreamOffset(0);
+                    }
+                } else { // non-resetable stream
+//#ifdef __LOG__
+                    if (log.isEnabled()) log.debug("new stream");
+//#endif
+                    in = nativeFile.openInputStream();
+                    buffered.setInputStream(in);
                     tarIn.setStreamOffset(0);
                 }
-            } else { // non-resetable stream
+
+                // prepare tar stream
+                tarIn.setInputStream(buffered);
+                tarIn.skip(streamOffset - tarIn.getStreamOffset());
+                tarIn.getNextEntry();
+
+                // read image
+                slice.setImage(NavigationScreens.createImage(tarIn));
+
+            } finally {
+
+                // close native stream when not reusable
+                if (in != null) {
 //#ifdef __LOG__
-                if (log.isEnabled()) log.debug("new stream");
+                    if (log.isEnabled()) log.debug("input stream not reusable -> close it");
 //#endif
-                in = nativeFile.openInputStream();
-                buffered.setInputStream(in);
-                tarIn.setStreamOffset(0);
-            }
-
-            // prepare tar stream
-            tarIn.setInputStream(buffered);
-            tarIn.skip(streamOffset - tarIn.getStreamOffset());
-            tarIn.getNextEntry();
-
-            // read image
-            slice.setImage(NavigationScreens.createImage(tarIn));
-
-        } finally {
-
-            // close native stream when not reusable
-            if (in != null) {
-//#ifdef __LOG__
-                if (log.isEnabled()) log.debug("input stream not reusable -> close it");
-//#endif
-                // close buffered
-                try {
-                    buffered.close();
-                } catch (IOException e) {
-                    // ignore
+                    // close buffered
+                    try {
+                        buffered.close();
+                    } catch (IOException e) {
+                        // ignore
+                    }
                 }
             }
+            
+        } else { // incomplete archive handling
+
+            // use empty image
+            slice.setImage(Slice.NO_IMAGE);
+
         }
     }
 
@@ -471,6 +497,12 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
                         // add slice
                         if (token.startsWith(SET_DIR_PREFIX) && (token.endsWith(EXT_PNG) || token.endsWith(EXT_JPG))) {
                             registerSlice(token, block);
+                        } else if (calEntryName == null && Calibration.isCalibration(token)) {
+                            calEntryName = token.toString();
+                            calBlockOffset = block;
+//#ifdef __LOG__
+                            if (log.isEnabled()) log.debug("found calibration " + calEntryName + " at block " + calBlockOffset);
+//#endif
                         }
 
                         // next line

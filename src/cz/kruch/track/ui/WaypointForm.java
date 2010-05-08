@@ -77,8 +77,8 @@ final class WaypointForm implements CommandListener, ItemCommandListener, Callba
      * @param distance distance to the waypoint from current position
      * @param modifiable flag
      */
-    public WaypointForm(final Waypoint wpt, final Callback callback,
-                        final float distance, final boolean modifiable) {
+    public WaypointForm(final Waypoint wpt, final Callback callback, final float distance,
+                        final boolean modifiable, final boolean cache) {
         this.waypoint = wpt;
         this.callback = callback;
         this.form = new Form(Resources.getString(Resources.NAV_TITLE_WPT));
@@ -156,7 +156,9 @@ final class WaypointForm implements CommandListener, ItemCommandListener, Callba
             form.addCommand(new ActionCommand(Resources.NAV_CMD_EDIT, Desktop.POSITIVE_CMD_TYPE, 5));
             form.addCommand(new ActionCommand(Resources.NAV_CMD_DELETE, Desktop.POSITIVE_CMD_TYPE, 6));
         }
-        form.addCommand(new ActionCommand(Resources.NAV_CMD_NEW_NOTE, Desktop.POSITIVE_CMD_TYPE, 7));
+        if (cache) {
+            form.addCommand(new ActionCommand(Resources.NAV_CMD_NEW_NOTE, Desktop.POSITIVE_CMD_TYPE, 7));
+        }
     }
 
     /**
@@ -373,7 +375,9 @@ final class WaypointForm implements CommandListener, ItemCommandListener, Callba
                 if (previewItemIdx == -1) {
                     previewItemIdx = form.append(Resources.getString(Resources.NAV_MSG_NO_PREVIEW));
                 }
+/* commented out since 0.9.98 - it is too annoying
                 Desktop.showInfo(Resources.getString(Resources.NAV_MSG_DO_NOT_WORRY), form);
+*/
             } else if (throwable != null) {
                 Desktop.showError(Resources.getString(Resources.NAV_MSG_SNAPSHOT_FAILED), throwable, form);
             } else {

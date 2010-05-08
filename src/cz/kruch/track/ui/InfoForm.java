@@ -87,13 +87,18 @@ final class InfoForm implements CommandListener {
         pane.append(newItem("I18n", sb.toString()));
         sb.delete(0, sb.length()).append(File.fsType)
                 .append("; resetable? ").append(cz.kruch.track.maps.Map.fileInputStreamResetable)
+//#ifdef __SYMBIAN__
                 .append("; network stream? ").append(cz.kruch.track.maps.Map.networkInputStreamAvailable)
+//#endif                
                 .append("; card: ").append(System.getProperty("fileconn.dir.memorycard"));
         pane.append(newItem("Fs", sb.toString()));
         sb.delete(0, sb.length()).append(cz.kruch.track.ui.nokia.DeviceControl.getName())
                 .append(' ').append(cz.kruch.track.ui.nokia.DeviceControl.getGsmCellId())
                 .append('/').append(cz.kruch.track.ui.nokia.DeviceControl.getGsmLac());
         pane.append(newItem("DeviceCtrl", sb.toString()));
+        sb.delete(0, sb.length()).append(cz.kruch.track.fun.Camera.type)
+                .append("; resolutions: ").append(System.getProperty("camera.resolutions"));
+        pane.append(newItem("Camera", sb.toString()));
         sb.delete(0, sb.length()).append(cz.kruch.track.TrackingMIDlet.hasPorts())
                 .append("; ").append(System.getProperty("microedition.commports"));
         pane.append(newItem("Ports", sb.toString()));

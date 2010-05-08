@@ -307,14 +307,14 @@ public final class GpxTracklog implements Runnable {
 //#ifdef __LOG__
             if (log.isEnabled()) log.debug("closing document");
 //#endif
+            final HXmlSerializer s = this.serializer;
             try {
                 if (type == LOG_TRK) { // '==' is ok
-                    serializer.endTag(DEFAULT_NAMESPACE, ELEMENT_TRKSEG);
-                    serializer.endTag(DEFAULT_NAMESPACE, ELEMENT_TRK);
+                    s.endTag(DEFAULT_NAMESPACE, ELEMENT_TRKSEG);
+                    s.endTag(DEFAULT_NAMESPACE, ELEMENT_TRK);
                 }
-                serializer.endTag(DEFAULT_NAMESPACE, ELEMENT_GPX);
-                serializer.endDocument();
-                serializer.flush();
+                s.endTag(DEFAULT_NAMESPACE, ELEMENT_GPX);
+                s.endDocument(); // includes writer flush
 //#ifdef __LOG__
                 if (log.isEnabled()) log.debug("~done");
 //#endif
@@ -334,7 +334,7 @@ public final class GpxTracklog implements Runnable {
 //#ifdef __LOG__
                 if (log.isEnabled()) log.debug("~done");
 //#endif
-            } catch (IOException e) {
+            } catch (Exception e) {
                 // ignore
             }
             output = null; // gc hint
@@ -344,7 +344,7 @@ public final class GpxTracklog implements Runnable {
         if (file != null) {
             try {
                 file.close();
-            } catch (IOException e) {
+            } catch (Exception e) {
                 // ignore
             }
             file = null; // gc hint
@@ -875,6 +875,7 @@ public final class GpxTracklog implements Runnable {
         return sb.toString();
     }
 
+/*
     private static String tzOffset(final Calendar calendar) {
         final int tOffset = calendar.getTimeZone().getRawOffset();
         if (tOffset == 0) {
@@ -888,6 +889,7 @@ public final class GpxTracklog implements Runnable {
 
         return sb.toString();
     }
+*/
 
     private static StringBuffer appendTwoDigitStr(final StringBuffer sb, final int i) {
         if (i < 10) {

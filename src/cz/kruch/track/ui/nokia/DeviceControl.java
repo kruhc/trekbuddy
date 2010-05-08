@@ -31,14 +31,17 @@ public class DeviceControl extends TimerTask {
     //
 
     public static void initialize() {
-//#ifdef __ALL__
-        if (cz.kruch.track.TrackingMIDlet.symbian) {
-            try {
-                instance = (DeviceControl) Class.forName("cz.kruch.track.ui.nokia.S60DeviceControl").newInstance();
-            } catch (Throwable t) {
-                // user denied connection
+//#ifdef __SYMBIAN__
+        if (instance == null) {
+            if (cz.kruch.track.TrackingMIDlet.symbian) { // for IDEA only
+                try {
+                    instance = (DeviceControl) Class.forName("cz.kruch.track.ui.nokia.S60DeviceControl").newInstance();
+                } catch (Throwable t) {
+                    // ignore
+                }
             }
         }
+//#elifdef __ALL__
         if (instance == null) {
             try {
                 Class.forName("com.samsung.util.LCDLight");
@@ -119,8 +122,12 @@ public class DeviceControl extends TimerTask {
         instance.close();
     }
 
-    public static void postInit(Desktop desktop) {
-        instance.doPostInit(desktop);
+    public static void senseOn(api.location.LocationListener listener) {
+        instance.sense(listener);
+    }
+
+    public static void senseOff(api.location.LocationListener listener) {
+        instance.nonsense(listener);
     }
 
     public static String getName() {
@@ -162,7 +169,10 @@ public class DeviceControl extends TimerTask {
     // implementation
     //
 
-    void doPostInit(Desktop desktop) {
+    void sense(api.location.LocationListener listener) {
+    }
+
+    void nonsense(api.location.LocationListener listener) {
     }
 
     String getCellId() {

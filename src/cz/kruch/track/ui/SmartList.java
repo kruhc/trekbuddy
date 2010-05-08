@@ -88,9 +88,9 @@ final class SmartList extends Canvas {
         this.width = w;
         this.height = h;
         if (Desktop.screen.hasPointerEvents()) {
-            this.sbWidth = w / 18;
-            if (this.sbWidth > 15) {
-                this.sbWidth = 15;
+            this.sbWidth = w / 10;
+            if (this.sbWidth > 20) {
+                this.sbWidth = 20;
             }
         } else {
             this.sbWidth = 5;

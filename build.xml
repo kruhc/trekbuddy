@@ -401,16 +401,16 @@
                        symbols="__HECL__,__RIM__,${pre.extra}"/>
     </target>
 
-    <target name="a.pre.emulator" depends="a.pre.hecl">
-        <mkdir dir="tmp/src"/>
-        <wtkpreprocess srcdir="src" destdir="tmp/src" version="1"
-                       symbols="__HECL__,__ALL__,__LOG__,${pre.extra}"/>
-    </target>
-
     <target name="a.pre.android" depends="a.pre.hecl">
         <mkdir dir="tmp/src"/>
         <wtkpreprocess srcdir="src" destdir="tmp/src" version="1"
                        symbols="__HECL__,__ANDROID__,${pre.extra}"/>
+    </target>
+
+    <target name="a.pre.emulator" depends="a.pre.hecl">
+        <mkdir dir="tmp/src"/>
+        <wtkpreprocess srcdir="src" destdir="tmp/src" version="1"
+                       symbols="__HECL__,__ALL__,__LOG__,${pre.extra}"/>
     </target>
 
     <target name="compile.standard" depends="remove.symbian.src,remove.rim.src,remove.android.src">
@@ -600,6 +600,7 @@
             <attribute name="MicroEdition-Profile" value="MIDP-${wtk.midp.version}"/>
             <attribute name="MIDlet-Description" value="${description}"/>
             <attribute name="MIDlet-Info-URL" value="http://www.trekbuddy.net"/>
+            <attribute name="MIDlet-Data-Size" value="4096"/>
             <attribute name="${permission.attribute}" value="javax.microedition.io.Connector.file.read,javax.microedition.io.Connector.file.write,javax.microedition.io.Connector.bluetooth.client,javax.microedition.location.Location,javax.microedition.media.control.VideoControl.getSnapshot,javax.microedition.io.Connector.sms,javax.wireless.messaging.sms.receive,javax.wireless.messaging.sms.send,javax.microedition.io.Connector.comm,javax.microedition.io.Connector.cbs,javax.wireless.messaging.cbs.receive,javax.microedition.io.Connector.socket,javax.microedition.io.PushRegistry"/>
             <attribute name="Content-Folder" value="Applications"/>
             <attribute name="Nokia-MIDlet-Category" value="Application"/>
@@ -891,6 +892,7 @@
             <attribute name="MicroEdition-Profile" value="MIDP-${wtk.midp.version}"/>
             <attribute name="MIDlet-Description" value="${description}"/>
             <attribute name="MIDlet-Info-URL" value="http://www.trekbuddy.net"/>
+            <attribute name="MIDlet-Data-Size" value="4096"/>
             <attribute name="${permission.attribute}" value="javax.microedition.io.Connector.file.read,javax.microedition.io.Connector.file.write,javax.microedition.io.Connector.bluetooth.client,javax.microedition.location.Location,javax.microedition.media.control.VideoControl.getSnapshot,javax.microedition.io.Connector.sms,javax.wireless.messaging.sms.receive,javax.wireless.messaging.sms.send,javax.microedition.io.Connector.comm,javax.microedition.io.Connector.cbs,javax.wireless.messaging.cbs.receive,javax.microedition.io.Connector.socket,javax.microedition.io.PushRegistry"/>
             <attribute name="Content-Folder" value="Applications"/>
             <attribute name="Nokia-MIDlet-Category" value="Application"/>
@@ -973,6 +975,7 @@
             <attribute name="MicroEdition-Profile" value="MIDP-${wtk.midp.version}"/>
             <attribute name="MIDlet-Description" value="${description}"/>
             <attribute name="MIDlet-Info-URL" value="http://www.trekbuddy.net"/>
+            <attribute name="MIDlet-Data-Size" value="4096"/>
             <attribute name="${permission.attribute}" value="javax.microedition.io.Connector.file.read,javax.microedition.io.Connector.file.write,javax.microedition.io.Connector.bluetooth.client,javax.microedition.location.Location,javax.microedition.media.control.VideoControl.getSnapshot,javax.microedition.io.Connector.sms,javax.wireless.messaging.sms.receive,javax.wireless.messaging.sms.send,javax.microedition.io.Connector.comm,javax.microedition.io.Connector.cbs,javax.wireless.messaging.cbs.receive,javax.microedition.io.Connector.socket,javax.microedition.io.PushRegistry"/>
             <attribute name="Content-Folder" value="Applications"/>
             <attribute name="RIM-COD-Creation-Time" value="${rim.cod.modified}"/>

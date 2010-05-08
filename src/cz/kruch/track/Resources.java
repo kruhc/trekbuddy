@@ -166,6 +166,7 @@ public final class Resources {
     public static final short NAV_ITEM_SMS_MYT                  = 2104;
     public static final short NAV_ITEM_STOP                     = 2105;
     public static final short NAV_ITEM_TRACKS                   = 2106;
+    public static final short NAV_ITEM_FIELD_NOTES              = 2107;
     /* navigation - messages */
     public static final short NAV_MSG_LOAD_INJAR_FAILED         = 2300;
     public static final short NAV_MSG_LIST_STORES_FAILED        = 2301;
@@ -308,6 +309,8 @@ public final class Resources {
     public static final short CFG_LOCATION_FLD_ASSISTED_GPS     = 3627;
     public static final short CFG_LOCATION_FLD_DO_SERVICE_SEARCH = 3628;
     public static final short CFG_LOCATION_GROUP_POWER          = 3629;
+    public static final short CFG_LOCATION_FLD_ADDRESS_FIX      = 3630;
+    public static final short CFG_LOCATION_FLD_TIME_FIX         = 3631;
     /* settings - navigation */
     public static final short CFG_NAVIGATION_FLD_WPT_PROXIMITY  = 3700;
     public static final short CFG_NAVIGATION_FLD_POI_PROXIMITY  = 3701;
@@ -337,6 +340,7 @@ public final class Resources {
     public static final short CFG_TWEAKS_FLD_HIDEBAR_CMD        = 3808;
     public static final short CFG_TWEAKS_FLD_USE_TBSVC          = 3809;
     public static final short CFG_TWEAKS_FLD_LAZY_GPX           = 3810;
+    public static final short CFG_TWEAKS_FLD_LOWMEM_IO          = 3811;
     /* info - commands */
     public static final short INFO_CMD_DETAILS                  = 4000;
     /* info - items */
@@ -398,7 +402,7 @@ public final class Resources {
     static int keymap() throws IOException {
         int result = 0;
 
-        if (Config.dataDirExists/* && api.file.File.isFs()*/) {
+        if (Config.dataDirExists) {
             api.file.File file = null;
             try {
                 file = api.file.File.open(Config.getFolderURL(Config.FOLDER_RESOURCES) + "keymap.txt");

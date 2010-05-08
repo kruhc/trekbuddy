@@ -150,7 +150,8 @@ final class MapViewer {
             this.map = map;
 
             // clear slices collection
-            this.slices.removeAllElements(); // slicesTemp is always empty
+            this.slices.removeAllElements();
+            /* slicesTemp is always empty */
 
         } // ~synchronized
 
@@ -1342,11 +1343,6 @@ final class MapViewer {
             slices = newSlices;
             slices2 = oldSlices;
         } // ~synchronized
-
-        // forced gc - after release or loading ahead
-        if (Config.forcedGc && (releasing || !gotAll)) {
-            System.gc(); // conditional
-        }
 
         // loading flag
         boolean loading = false;

@@ -15,15 +15,12 @@ import api.location.Location;
 
 public final class AndroidLocationProvider
         extends api.location.LocationProvider
-        implements android.location.LocationListener,
-                   android.hardware.SensorListener,
-                   Runnable {
+        implements android.location.LocationListener, Runnable {
 //#ifdef __LOG__
     private static final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("AndroidLocationProvider");
 //#endif
 
     private android.location.LocationManager manager;
-    private android.hardware.SensorManager sensors;
     private android.os.Looper looper;
 
     public AndroidLocationProvider() {
@@ -49,21 +46,6 @@ public final class AndroidLocationProvider
         (new Thread(this)).start();
 
         return LocationProvider._STARTING;
-    }
-
-    public void sense() throws LocationException {
-        try {
-            sensors = (android.hardware.SensorManager) org.microemu.android.MicroEmulator.context.getSystemService(android.content.Context.SENSOR_SERVICE);
-            if (sensors == null) {
-                throw new LocationException("Service not found");
-            }
-            sensors.registerListener(this, android.hardware.SensorManager.SENSOR_ORIENTATION,
-                                     android.hardware.SensorManager.SENSOR_DELAY_NORMAL);
-        } catch (LocationException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new LocationException(e);
-        }
     }
 
     public void run() {
@@ -194,15 +176,6 @@ public final class AndroidLocationProvider
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("onProviderDisabled");
 //#endif
-        // TODO
-    }
-
-    public void onSensorChanged(int sensor, float[] values) {
-        // notify
-        notifySenser((int) values[0]);
-    }
-
-    public void onAccuracyChanged(int arg0, int arg1) {
         // TODO
     }
 }

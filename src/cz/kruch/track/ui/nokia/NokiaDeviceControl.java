@@ -16,6 +16,7 @@ class NokiaDeviceControl extends DeviceControl {
     NokiaDeviceControl() {
         this.name = "Nokia";
         this.cellIdProperty = "Cell-ID";
+        this.lacProperty = "com.nokia.mid.lac";
         if (cz.kruch.track.TrackingMIDlet.s60nd) {
             this.values = new int[]{ 0, 100 };
         } else {

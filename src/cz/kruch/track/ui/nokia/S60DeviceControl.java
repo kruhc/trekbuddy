@@ -20,6 +20,7 @@ final class S60DeviceControl extends NokiaDeviceControl {
         } else {
             this.name = "S60";
             this.cellIdProperty = "com.nokia.mid.cellid";
+            this.lacProperty = "com.nokia.mid.lac";
         }
     }
 

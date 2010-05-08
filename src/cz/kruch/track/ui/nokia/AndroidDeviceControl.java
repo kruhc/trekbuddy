@@ -2,37 +2,44 @@
 
 package cz.kruch.track.ui.nokia;
 
-final class AndroidDeviceControl extends DeviceControl {
+final class AndroidDeviceControl
+        extends DeviceControl
+        implements android.hardware.SensorEventListener {
 
     private android.os.PowerManager.WakeLock wl;
     private android.app.ProgressDialog ticker;
+    private android.hardware.Sensor sensor;
+
+    private api.location.LocationListener listener;
+
+    private int wake;
 
     AndroidDeviceControl() {
         this.name = "Android";
     }
 
     /** @Override */
-    void doPostInit(cz.kruch.track.ui.Desktop desktop) {
-        // start orientation sensing
-        try {
-            api.location.LocationProvider sensor = new cz.kruch.track.location.AndroidLocationProvider();
-            sensor.setLocationListener(desktop);
-            ((cz.kruch.track.location.AndroidLocationProvider) sensor).sense();
-        } catch (Throwable t) {
-            cz.kruch.track.ui.Desktop.showError("Sensor", t, cz.kruch.track.ui.Desktop.screen);
-        }
+    boolean isSchedulable() {
+        return true;
+    }
+
+    /** @Override */
+    boolean forceOff() {
+        return true;
     }
 
     /** @Override */
     void turnOn() {
-        android.os.PowerManager pm = (android.os.PowerManager) org.microemu.android.MicroEmulator.context.getSystemService(android.content.Context.POWER_SERVICE);
-        wl = pm.newWakeLock(android.os.PowerManager.SCREEN_BRIGHT_WAKE_LOCK, "TrekBuddy");
+        if (wl == null) {
+            wl = ((android.os.PowerManager) org.microemu.android.MicroEmulator.context.getSystemService(android.content.Context.POWER_SERVICE)).newWakeLock((wake++ % 2 == 0 ? android.os.PowerManager.SCREEN_DIM_WAKE_LOCK : android.os.PowerManager.SCREEN_BRIGHT_WAKE_LOCK) | android.os.PowerManager.ON_AFTER_RELEASE, "TrekBuddy");
+        }
         wl.acquire();
+        wl.release();
     }
 
     /** @Override */
     void turnOff() {
-        wl.release();
+        wl = null;
      }
 
     /** @Override */
@@ -51,8 +58,44 @@ final class AndroidDeviceControl extends DeviceControl {
         });
     }
 
-//    /** @Override */
-//    String getCardURL() throws Exception {
-//        return android.os.Environment.getExternalStorageDirectory().toURL().toString();
-//    }
+    /** @Override */
+    void sense(api.location.LocationListener listener) {
+        this.listener = listener;
+        final android.hardware.SensorManager sm = (android.hardware.SensorManager) org.microemu.android.MicroEmulator.context.getSystemService(android.content.Context.SENSOR_SERVICE);
+        sensor = sm.getDefaultSensor(android.hardware.Sensor.TYPE_ORIENTATION);
+        if (sensor != null) {
+            sm.registerListener(this, sensor, android.hardware.SensorManager.SENSOR_DELAY_NORMAL);
+        }
+    }
+
+    /** @Override */
+    void nonsense(api.location.LocationListener listener) {
+        final android.hardware.SensorManager sm = (android.hardware.SensorManager) org.microemu.android.MicroEmulator.context.getSystemService(android.content.Context.SENSOR_SERVICE);
+        if (sensor != null) {
+            sm.unregisterListener(this, sensor);
+            sensor = null;
+        }
+        this.listener = null;
+    }
+
+    /** @Override */
+    public void onSensorChanged(android.hardware.SensorEvent event) {
+        // notify
+        notifySenser((int) event.values[0]);
+    }
+
+    /** @Override */
+    public void onAccuracyChanged(android.hardware.Sensor sensor, int accuracy) {
+        // TODO
+    }
+
+    private void notifySenser(final int heading) {
+        if (listener != null) {
+            try {
+                listener.orientationChanged(null, heading);
+            } catch (Throwable t) {
+                // TODO
+            }
+        }
+    }
 }

@@ -301,6 +301,7 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
             // tweaks
             choicePerformance = new ChoiceGroup(Resources.getString(Resources.CFG_TWEAKS_GROUP), ChoiceGroup.MULTIPLE);
             choicePerformance.append(Resources.getString(Resources.CFG_TWEAKS_FLD_SIEMENS_IO), null);
+            choicePerformance.append(Resources.getString(Resources.CFG_TWEAKS_FLD_LOWMEM_IO), null);
             choicePerformance.append(Resources.getString(Resources.CFG_TWEAKS_FLD_SAFE_RENDERER), null);
             choicePerformance.append(Resources.getString(Resources.CFG_TWEAKS_FLD_FORCED_GC), null);
             choicePerformance.append(Resources.getString(Resources.CFG_TWEAKS_FLD_POWER_SAVE), null);
@@ -309,6 +310,7 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
             choicePerformance.append(Resources.getString(Resources.CFG_TWEAKS_FLD_LAZY_GPX), null);
             choicePerformance.setSelectedFlags(new boolean[] {
                 Config.siemensIo,
+                Config.lowmemIo,
                 Config.S60renderer,
                 Config.forcedGc,
                 Config.powerSave,
@@ -432,8 +434,10 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
 //#else
                 choiceInternal = new ChoiceGroup(Resources.getString(Resources.CFG_LOCATION_FLD_PROV_INTERNAL), ChoiceGroup.MULTIPLE);
                 choiceInternal.append(Resources.getString(Resources.CFG_LOCATION_FLD_ASSISTED_GPS), null);
+                choiceInternal.append(Resources.getString(Resources.CFG_LOCATION_FLD_TIME_FIX), null);
                 choiceInternal.setSelectedFlags(new boolean[] {
-                    Config.assistedGps
+                    Config.assistedGps,
+                    Config.timeFix
                 });
 //#endif
 //#ifndef __ANDROID__
@@ -665,6 +669,7 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
                     final boolean[] iopts = new boolean[choiceInternal.size()];
                     choiceInternal.getSelectedFlags(iopts);
                     Config.assistedGps = iopts[0];
+                    Config.timeFix = iopts[1];
 //#endif
 //#ifndef __ANDROID__
                     Config.powerUsage = choicePower.getSelectedIndex();
@@ -691,8 +696,9 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
                     choiceStream.getSelectedFlags(nopts);
                     Config.nmeaMsExact = nopts[0];
                     Config.reliableInput = nopts[1];
-                    if (choiceStream.size() == 3) {
+                    if (choiceStream.size() == 4) {
                         Config.btDoServiceSearch = nopts[2];
+                        Config.btAddressWorkaround = nopts[3];
                     }
                 }
 
@@ -775,16 +781,17 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
                 final boolean[] perf = new boolean[choicePerformance.size()];
                 choicePerformance.getSelectedFlags(perf);
                 Config.siemensIo = perf[0];
-                Config.S60renderer = perf[1];
-                Config.forcedGc = perf[2];
-                Config.powerSave = perf[3];
-                Config.oneTileScroll = perf[4];
-                Config.largeAtlases = perf[5];
-                Config.lazyGpxParsing = perf[6];
+                Config.lowmemIo = perf[1];
+                Config.S60renderer = perf[2];
+                Config.forcedGc = perf[3];
+                Config.powerSave = perf[4];
+                Config.oneTileScroll = perf[5];
+                Config.largeAtlases = perf[6];
+                Config.lazyGpxParsing = perf[7];
                 if (cz.kruch.track.TrackingMIDlet.symbian) {
-                    Config.useNativeService = perf[7];
+                    Config.useNativeService = perf[8];
                 } else if (cz.kruch.track.TrackingMIDlet.sonyEricssonEx) {
-                    Config.hideBarCmd = perf[7];
+                    Config.hideBarCmd = perf[8];
                 }
 
                 // multimedia
@@ -877,6 +884,7 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
         choiceStream.setSelectedIndex(choiceStream.append(Resources.getString(Resources.CFG_TWEAKS_FLD_RELIABLE_INPUT), null), Config.reliableInput);
         if (provider == Config.LOCATION_PROVIDER_JSR82) {
             choiceStream.setSelectedIndex(choiceStream.append(Resources.getString(Resources.CFG_LOCATION_FLD_DO_SERVICE_SEARCH), null), Config.btDoServiceSearch);
+            choiceStream.setSelectedIndex(choiceStream.append(Resources.getString(Resources.CFG_LOCATION_FLD_TIME_FIX), null), Config.btAddressWorkaround);
         }
         return choiceStream;
     }

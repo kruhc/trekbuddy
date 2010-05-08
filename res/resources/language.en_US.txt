@@ -151,6 +151,7 @@
 2104=SMS Meet you there
 2105=Stop
 2106=Tracks
+2107=Field Notes
 
 # navigation forms/fields (wpt form)
 2200=Waypoint
@@ -297,9 +298,11 @@
 3624=log time ms
 3625=negative alt fix
 3626=exact time match
-3627=try assisted GPS
-3628=lookup with service search
+3627=assisted GPS
+3628=do service search
 3629=Power usage
+3630=address fix
+3631=time fix
 
 # settings forms/fields/values (Navigation)
 3700=Wpt Proximity
@@ -331,6 +334,7 @@
 3808=hide menubar cmd
 3809=use native service
 3810=lazy GPX parsing
+3811=lowmem I/O
 
 # info commands
 4000=Technical
@@ -340,6 +344,6 @@
 4201=www.trekbuddy.net
 4202=Version
 4203=Keys
-4204=\n0 - crosshairs, 1 - navigation (hold for quick active wpts list access), 3 - backlight, 5/FIRE - tracking/navigation OSD info, 2-4-6-8/JOY - map scroll, 7 - layers (atlas), 9 - maps (atlas), # - screens, * - keylock (hold; press shortly then 0 for wpts names display)
-4205=\n0 - day/night, 1 - navigation (hold for quick active wpts list access), 3 - backlight, 2-8/JOY UP-DOWN - location averaging, 4-6/JOY LEFT-RIGHT - scale, # - screens, * - keylock (hold)
-4206=\n0 - day/night, 1 - navigation (hold for quick active wpts list access), 3 - backlight, 8/JOY DOWN - profiles, # - screens, * - keylock (hold)
+4204=0 - crosshairs, 1 - navigation (hold for quick active wpts list access), 3 - backlight, 5/FIRE - tracking/navigation OSD info, 2-4-6-8/JOY - map scroll, 7 - layers (atlas), 9 - maps (atlas), # - screens, * - keylock (hold; press shortly then 0 for wpts names display)
+4205=0 - day/night, 1 - navigation (hold for quick active wpts list access), 3 - backlight, 2-8/JOY UP-DOWN - location averaging, 4-6/JOY LEFT-RIGHT - scale, # - screens, * - keylock (hold)
+4206=0 - day/night, 1 - navigation (hold for quick active wpts list access), 3 - backlight, 8/JOY DOWN - profiles, # - screens, * - keylock (hold)

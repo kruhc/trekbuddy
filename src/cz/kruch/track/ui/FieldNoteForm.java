@@ -33,7 +33,7 @@ final class FieldNoteForm implements CommandListener {
     private Displayable next;
     private Form form;
     private ChoiceGroup typeChoice;
-    private TextField textField;
+    private TextField timeField, noteField;
 
     private String[] note;
 
@@ -84,6 +84,7 @@ final class FieldNoteForm implements CommandListener {
 
         // populate form
         form.append(createStringItem(Resources.getString(Resources.NAV_FLD_WPT_NAME), note[0]));
+        form.append(timeField = new TextField(Resources.getString(Resources.NAV_FLD_TIME), note[1], 24, TextField.ANY));
         form.append(createStringItem(Resources.getString(Resources.NAV_FLD_TIME), note[1]));
         typeChoice = new ChoiceGroup(Resources.getString(Resources.NAV_FLD_TYPE), Desktop.CHOICE_POPUP_TYPE,
                                      new String[]{ "Found it", "Didn't find it", "Write note", "Needs Archived", "Needs Maintenance" }, null);
@@ -94,8 +95,7 @@ final class FieldNoteForm implements CommandListener {
         }
         typeChoice.setFitPolicy(Choice.TEXT_WRAP_ON);
         form.append(typeChoice);
-        textField = new TextField(Resources.getString(Resources.NAV_FLD_TEXT), note[3], 128, TextField.ANY);
-        form.append(textField);
+        form.append(noteField = new TextField(Resources.getString(Resources.NAV_FLD_TEXT), note[3], 128, TextField.ANY));
 
         // add commands
         form.addCommand(new Command(Resources.getString(Resources.CMD_OK), Desktop.POSITIVE_CMD_TYPE, 1));
@@ -114,8 +114,9 @@ final class FieldNoteForm implements CommandListener {
 
         // grab form data
         if (fire) {
+            note[1] = timeField.getString();
             note[2] = typeChoice.getString(typeChoice.getSelectedIndex());
-            note[3] = textField.getString();
+            note[3] = noteField.getString();
         }
 
         // show next

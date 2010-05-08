@@ -114,6 +114,7 @@ public final class SimulatorLocationProvider
 
                     // record exception
                     if (t instanceof InterruptedException) {
+                        setStatus("interrupted");
                         // probably stop request
                     } else {
                         // record
@@ -153,6 +154,7 @@ public final class SimulatorLocationProvider
 //#endif
 
             if (t instanceof InterruptedException) {
+                setStatus("interrupted");
                 // stop request
             }  else {
                 // record

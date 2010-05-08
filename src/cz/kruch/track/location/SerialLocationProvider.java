@@ -153,16 +153,15 @@ public class SerialLocationProvider
         // reset data
         reset();
 
-        // clear status
-        setStatus(null);
-        setThrowable(null);
-
         try {
             // debug
             setStatus("opening connection");
 
             // open connection
             connection = (StreamConnection) Connector.open(url, rw ? Connector.READ_WRITE : Connector.READ);
+
+            // debug
+            setStatus("opening input stream");
 
             // open stream for reading
             stream = connection.openInputStream();
@@ -175,13 +174,16 @@ public class SerialLocationProvider
             }
 
             // debug
-            setStatus("connection opened");
+            setStatus("stream opened");
 
             // start keep-alive
             startKeepAlive(connection);
 
             // start watcher
             startWatcher();
+
+            // clear throwable
+            setThrowable(null);
 
             // read NMEA until error or stop request
             while (isGo()) {
@@ -213,6 +215,7 @@ public class SerialLocationProvider
 
                     // stop request?
                     if (t instanceof InterruptedException) {
+                        setStatus("interrupted");
                         break;
                     }
 
@@ -247,6 +250,17 @@ public class SerialLocationProvider
                 if (updateLastState(newState)) {
                     notifyListener(newState);
                 }
+
+/* yield in nextSentence isn't enough?
+                // free CPU on Samsung
+                if (cz.kruch.track.TrackingMIDlet.samsung) {
+                    try {
+                        Thread.sleep(5);
+                    } catch (InterruptedException e) {
+                        // ignore
+                    }
+                }
+*/
 
             } // for (; go ;)
 

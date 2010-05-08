@@ -173,14 +173,4 @@ public abstract class LocationProvider {
             }
         }
     }
-
-    protected final void notifySenser(final int heading) {
-        if (listener != null) {
-            try {
-                listener.orientationChanged(this, heading);
-            } catch (Throwable t) {
-                setThrowable(t);
-            }
-        }
-    }
 }

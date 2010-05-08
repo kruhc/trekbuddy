@@ -255,6 +255,11 @@ abstract class StreamReadingLocationProvider extends LocationProvider {
                 // reset retry flag
                 retry = false;
 
+                // free CPU on Samsung
+                if (cz.kruch.track.TrackingMIDlet.samsung) {
+                    Thread.yield();
+                }
+
                 // NMEA log
                 if (observer != null) {
                     try {

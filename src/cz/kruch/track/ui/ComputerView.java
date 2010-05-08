@@ -2,17 +2,14 @@
 
 package cz.kruch.track.ui;
 
+import cz.kruch.track.Resources;
 import cz.kruch.track.configuration.Config;
+import cz.kruch.track.location.Waypoint;
 import cz.kruch.track.util.CharArrayTokenizer;
 import cz.kruch.track.util.SimpleCalendar;
 import cz.kruch.track.util.NmeaParser;
 import cz.kruch.track.util.NakedVector;
 import cz.kruch.track.util.Mercator;
-import cz.kruch.track.Resources;
-//#ifdef __HECL__
-import cz.kruch.track.hecl.ControlledInterp;
-//#endif
-import cz.kruch.track.location.Waypoint;
 
 import javax.microedition.lcdui.Graphics;
 import javax.microedition.lcdui.Image;
@@ -46,6 +43,8 @@ import org.xmlpull.v1.XmlPullParser;
 import org.xmlpull.v1.XmlPullParserException;
 
 //#ifdef __HECL__
+import cz.kruch.track.hecl.ControlledInterp;
+
 import org.hecl.HeclException;
 import org.hecl.Thing;
 import org.hecl.Interp;
@@ -242,6 +241,9 @@ final class ComputerView extends View
     private static final float AUTO_MIN         = 2.4F;
     private static final int SHORT_AVG_DEPTH    = 30; // 30 sec (for 1 Hz NMEA)
 
+    private static final int MAX_TEXT_LENGTH = 128;
+
+
 /*
     private static final Calendar CALENDAR  = Calendar.getInstance(TimeZone.getDefault());
     private static final Date DATE = new Date();
@@ -353,8 +355,8 @@ final class ComputerView extends View
 
         // init vars
         this.tokenizer = new CharArrayTokenizer();
-        this.text = new char[128];
-        this.sb = new StringBuffer(128);
+        this.text = new char[MAX_TEXT_LENGTH];
+        this.sb = new StringBuffer(MAX_TEXT_LENGTH);
 
         // init shared
         this.fonts = new Hashtable(8);
@@ -1405,9 +1407,10 @@ final class ComputerView extends View
 
                 }
 
-                final int l = sb.length();
+                int l = sb.length();
                 if (l > 0) {
-                    sb.getChars(0, sb.length(), text, 0);
+                    if (l > MAX_TEXT_LENGTH) l = MAX_TEXT_LENGTH;
+                    sb.getChars(0, l, text, 0);
                     graphics.setClip(area.x, area.y, area.w, area.h);
                     if (area.fontImpl instanceof Font) {
                         final Font f = (Font) area.fontImpl;
@@ -1426,9 +1429,9 @@ final class ComputerView extends View
                 }
             }
         } else {
-            graphics.setColor(0x00FFFFFF);
-            graphics.fillRect(0, 0, w, h);
             graphics.setColor(0x00000000);
+            graphics.fillRect(0, 0, w, h);
+            graphics.setColor(0x00FFFFFF);
             final short msgCode;
             if (profiles == null) {
                 msgCode = Resources.NAV_MSG_TICKER_LOADING;
@@ -1788,7 +1791,14 @@ final class ComputerView extends View
 
             // list profiles
             if (dir.exists()) {
-                profilesNames = FileBrowser.sort2array(dir.list("cms.*.xml", false), null, null);
+                final Vector v = new Vector(8);
+                final String[] xmls = FileBrowser.sort2array(dir.list("*.xml", false), null, null);
+                for (int N = xmls.length, i = 0; i < N; i++) {
+                    if (xmls[i].startsWith("cms.")) {
+                        v.addElement(xmls[i]);
+                    }
+                }
+                v.copyInto(profilesNames = new String[v.size()]);
                 for (int N = profilesNames.length, i = 0; i < N; i++) {
 //#ifdef __LOG__
                     if (log.isEnabled()) log.debug("found profile " + profilesNames[i]);

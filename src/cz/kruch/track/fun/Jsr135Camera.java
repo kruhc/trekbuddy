@@ -71,7 +71,7 @@ final class Jsr135Camera extends Camera {
             // prepare for Armageddon
 //#ifndef __RIM__
             System.gc(); // unconditional!!!
-//#endif            
+//#endif
 
             // take the snapshot
             /*result = ((VideoControl) video).getSnapshot(format);*/

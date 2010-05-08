@@ -7,6 +7,7 @@ import cz.kruch.track.configuration.Config;
 import javax.microedition.amms.control.camera.CameraControl;
 import javax.microedition.amms.control.camera.FocusControl;
 import javax.microedition.amms.control.camera.SnapshotControl;
+import javax.microedition.amms.control.camera.FlashControl;
 import javax.microedition.media.Player;
 import javax.microedition.media.Manager;
 import javax.microedition.media.MediaException;
@@ -31,6 +32,7 @@ final class Jsr234Camera extends Camera implements PlayerListener {
 
     private String callbackResult;
     private Throwable callbackException;
+    private String imagePath;
 
     public Jsr234Camera() {
     }
@@ -41,8 +43,7 @@ final class Jsr234Camera extends Camera implements PlayerListener {
         try {
             player = Manager.createPlayer(Config.captureLocator);
             player.realize();
-            CameraControl camCtrl = (CameraControl) player.getControl("javax.microedition.amms.control.camera.CameraControl");
-            res = camCtrl.getSupportedStillResolutions();
+            res = ((CameraControl) player.getControl("javax.microedition.amms.control.camera.CameraControl")).getSupportedStillResolutions();
         } catch (Exception e) {
             // ignore
         } finally {
@@ -63,21 +64,7 @@ final class Jsr234Camera extends Camera implements PlayerListener {
     }
 
     void beforeShoot() throws MediaException {
-        // set camera resolution
-        final CameraControl cameraCtrl = (CameraControl) player.getControl("javax.microedition.amms.control.camera.CameraControl");
-        cameraCtrl.setStillResolution(Config.snapshotFormatIdx);
-
-        // adjust focus
-        final FocusControl focusCtrl = (FocusControl) player.getControl("javax.microedition.amms.control.camera.FocusControl");
-        if (focusCtrl != null) {
-            try {
-                if (focusCtrl.isAutoFocusSupported()) {
-                    focusCtrl.setFocus(FocusControl.AUTO);
-                }
-            } catch (MediaException e) {
-                // ignore
-            }
-        }
+        worker.enqueue(this);
     }
 
     void createFinder(final Form form) throws MediaException {
@@ -93,16 +80,23 @@ final class Jsr234Camera extends Camera implements PlayerListener {
         if (log.isEnabled()) log.debug("event " + event + "; data " + eventData);
 //#endif
         if (event.equals(PlayerListener.CLOSED)) {
+
             // player is zombie
             this.player = null;
+
             // shutdown
             shutdown();
+
             // notify
             finished(callbackResult, callbackException);
+
         } else if (event.equals(PlayerListener.END_OF_MEDIA) || event.equals(PlayerListener.ERROR) || event.equals(PlayerListener.STOPPED)) {
+
             // close player
             player.close();
-        } else if (event.equals(/*"SHOOTING_STOPPED"*/SnapshotControl.SHOOTING_STOPPED)) {
+
+        } else if (event.equals(SnapshotControl.SHOOTING_STOPPED)) {
+
             // storage error preceeded?
             if (callbackException == null) {
                 // prepare result
@@ -114,14 +108,19 @@ final class Jsr234Camera extends Camera implements PlayerListener {
                 // rename image
                 callbackResult = moveImage(callbackResult);
             }
+
             // close player
             player.close();
-        } else if (event.equals(/*"STORAGE_ERROR"*/SnapshotControl.STORAGE_ERROR)) {
+
+        } else if (event.equals(SnapshotControl.STORAGE_ERROR)) {
+
             // prepare result
             callbackResult = null;
             callbackException = new MediaException(event + ": " + eventData);
+
             // close player
             player.close();
+
         }
 //#ifdef __LOG__
         else {
@@ -131,23 +130,67 @@ final class Jsr234Camera extends Camera implements PlayerListener {
     }
 
     public void run() {
+
         try {
 
-            // create images folder
-            final String path = createImagesFolder(true);
-            callbackResult = path.substring(path.indexOf(FOLDER_PREFIX));
+            // prepare phase? called from beforeShoot via worker...
+            if (imagePath == null) {
 
-            // set snapshot attributes
-            SnapshotControl snapshotCtrl = (SnapshotControl) player.getControl("javax.microedition.amms.control.camera.SnapshotControl");
-            snapshotCtrl.setFilePrefix(PIC_PREFIX);
-            snapshotCtrl.setFileSuffix(PIC_SUFFIX);
-            snapshotCtrl.setDirectory(path);
+                // prepare storage
+                imagePath = createImagesFolder(true);
 
-            // we need to listen
-            player.addPlayerListener(this);
+                // set camera resolution
+                final CameraControl cameraCtrl = (CameraControl) player.getControl("javax.microedition.amms.control.camera.CameraControl");
+                cameraCtrl.setStillResolution(Config.snapshotFormatIdx);
+                if (!cameraCtrl.isShutterFeedbackEnabled()) {
+                    try {
+                        cameraCtrl.enableShutterFeedback(true);
+                    } catch (Exception e) {
+                        // ignore - not important
+                    }
+                }
 
-            // shoot one picture
-            snapshotCtrl.start(1);
+                // set snapshot attributes
+                final SnapshotControl snapshotCtrl = (SnapshotControl) player.getControl("javax.microedition.amms.control.camera.SnapshotControl");
+                snapshotCtrl.setFilePrefix(PIC_PREFIX);
+                snapshotCtrl.setFileSuffix(PIC_SUFFIX);
+                snapshotCtrl.setDirectory(imagePath);
+
+            } else { // take snapshot
+
+                // result
+                callbackResult = imagePath.substring(imagePath.indexOf(FOLDER_PREFIX));
+
+                // we need to listen
+                player.addPlayerListener(this);
+
+                // adjust focus
+                final FocusControl focusCtrl = (FocusControl) player.getControl("javax.microedition.amms.control.camera.FocusControl");
+                if (focusCtrl != null) {
+                    try {
+                        if (focusCtrl.isAutoFocusSupported()) {
+                            focusCtrl.setFocus(FocusControl.AUTO);
+                        }
+                    } catch (Exception e) {
+                        // ignore
+                    }
+                }
+
+                // adjust flash
+                final FlashControl flashCtrl = (FlashControl) player.getControl("javax.microedition.amms.control.camera.FlashControl");
+                if (flashCtrl != null) {
+                    try {
+                        flashCtrl.setMode(FlashControl.AUTO);
+                    } catch (Exception e) {
+                        // ignore
+                    }
+                }
+
+                // shoot one picture
+                final SnapshotControl snapshotCtrl = (SnapshotControl) player.getControl("javax.microedition.amms.control.camera.SnapshotControl");
+                snapshotCtrl.start(SnapshotControl.FREEZE);
+
+            }
 
         } catch (Throwable t) {
 //#ifdef __LOG__

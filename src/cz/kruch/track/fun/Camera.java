@@ -6,6 +6,7 @@ import cz.kruch.track.event.Callback;
 import cz.kruch.track.configuration.Config;
 import cz.kruch.track.ui.Desktop;
 import cz.kruch.track.Resources;
+import cz.kruch.track.util.Worker;
 
 //#ifndef __ANDROID__
 import javax.microedition.media.Player;
@@ -41,6 +42,9 @@ public abstract class Camera implements
     protected static final String PIC_SUFFIX    = ".jpg";
     protected static final String FOLDER_PREFIX = "images-";
 
+    private static final String TYPE_JSR234 = "JSR234";
+    private static final String TYPE_JSR135 = "JSR135";
+
     // thumbnail byte marker
     private static final byte BYTE_FF = (byte) 0xFF;
 
@@ -64,11 +68,17 @@ public abstract class Camera implements
     private Callback callback;
     protected long timestamp;
 
+    // camera type
+    public static String type;
+
+    // worker
+    public static Worker worker;
+
 //#ifndef __ANDROID__
     abstract void getResolutions(final Vector v);
     abstract void beforeShoot() throws MediaException;
     abstract void createFinder(final Form form) throws MediaException;
-//#endif    
+//#endif
     abstract boolean playSound(final String url);
 
     public static boolean play(final String url) {
@@ -113,7 +123,7 @@ public abstract class Camera implements
     public void commandAction(Command c, Displayable d) {
         if (c.getCommandType() == Command.SCREEN) {
             if (cz.kruch.track.TrackingMIDlet.jsr234) {
-                (new Thread(this)).start();
+                worker.enqueue(this);
             } else {
                 run();
             }
@@ -170,8 +180,10 @@ public abstract class Camera implements
             fixJsr234();
             if (cz.kruch.track.TrackingMIDlet.jsr234) {
                 delegate = (Camera) Class.forName("cz.kruch.track.fun.Jsr234Camera").newInstance();
+                type = TYPE_JSR234;
             } else {
                 delegate = (Camera) Class.forName("cz.kruch.track.fun.Jsr135Camera").newInstance();
+                type = TYPE_JSR135;
             }
             delegate.next = next;
             delegate.callback = callback;
@@ -198,7 +210,7 @@ public abstract class Camera implements
                 throw new MediaException("Capture not supported");
             }
 
-            // advanced settings (first time only)
+            // one-time preparation
             beforeShoot();
 
             // create form
@@ -252,7 +264,7 @@ public abstract class Camera implements
         }
     }
 
-    String createImagesFolder(final boolean pathOnly) throws IOException {
+    final String createImagesFolder(final boolean pathOnly) throws IOException {
         String result = null;
 
         // create folder url

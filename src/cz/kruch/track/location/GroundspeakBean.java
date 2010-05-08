@@ -173,8 +173,8 @@ public final class GroundspeakBean {
     public String classify() {
         final Object[] p = getProperties();
         final StringBuffer sb = new StringBuffer(8);
-        sb.append(((String) p[IDX_TYPE]).charAt(0))
-                .append(((String) p[IDX_CONTAINER]).charAt(0))
+        sb.append(charAt0((String) p[IDX_TYPE]))
+                .append(charAt0((String) p[IDX_CONTAINER]))
                 .append(((String) p[IDX_DIFF]))
                 .append('/')
                 .append(((String) p[IDX_TERRAIN]));
@@ -188,6 +188,13 @@ public final class GroundspeakBean {
 
     private Object[] getProperties() {
         return (Object[]) properties;
+    }
+
+    private char charAt0(final String property) {
+        if (property != null) {
+            return property.charAt(0);
+        }
+        return '?';
     }
 
     private static String cache(String input) {

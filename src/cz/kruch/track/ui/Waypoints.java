@@ -128,7 +128,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
     private static final String itemFriendHere = Resources.getString(Resources.NAV_ITEM_SMS_IAH);
     private static final String itemFriendThere = Resources.getString(Resources.NAV_ITEM_SMS_MYT);
     private static final String itemStop = Resources.getString(Resources.NAV_ITEM_STOP);
-    private static final String itemFieldNotes = "Field Notes";
+    private static final String itemFieldNotes = Resources.getString(Resources.NAV_ITEM_FIELD_NOTES);
 
     private static final String actionListWpts = Resources.getString(Resources.NAV_ITEM_WAYPOINTS);
     private static final String actionListTracks = Resources.getString(Resources.NAV_ITEM_TRACKS);
@@ -229,7 +229,9 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                 // create menu
                 pane.append(itemWptsStores, null);
                 pane.append(itemTracksStores, null);
-                pane.append(itemFieldNotes, null);
+                if (fieldNotes.size() > 0) {
+                    pane.append(itemFieldNotes, null);
+                }
                 pane.append(itemAddNew, null);
                 pane.append(itemEnterCustom, null);
                 if (cz.kruch.track.TrackingMIDlet.jsr120) {
@@ -357,7 +359,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                             } else {
                                 // open waypoint form
                                 (new WaypointForm(item, this, _distance,
-                                                  isModifiable())).show();
+                                                  isModifiable(), isCache())).show();
                             }
                         } else if (cmdNavigateTo == command) {
                             // remember idx
@@ -503,7 +505,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                 notes.set(fieldNotes.indexOf(result),
                           FieldNoteForm.format((String[]) result, new StringBuffer(128)), 
                           null);
-            } else {
+            } else { // add new note
                 fieldNotes.addElement(result);
             }
 
@@ -520,7 +522,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
 
             // notify user
             Desktop.showAlarm(Resources.getString(Resources.DESKTOP_MSG_SMS_RECEIVED) + wpt.getName(),
-                    list, !Config.autohideNotification);
+                              list, !Config.autohideNotification);
             Thread.yield(); // this is safe, it is called from a thread, see Friends.execPop()
 
             // add waypoint to store
@@ -1106,10 +1108,10 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
 //#endif
                         }
                     } catch (Exception e) {
+                        status = e;
 //#ifdef __LOG__
                         if (log.isEnabled()) log.error("error writting wpt", e);
 //#endif
-                        status = e;
                     } finally {
                         _storeUpdate.close(); // safe operation
                     }
@@ -1221,7 +1223,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
 
                 // open waypoint form
                 (new WaypointForm(wpt, this, _distance,
-                                  isModifiable())).show();
+                                  isModifiable(), isCache())).show();
 
             } finally {
                 try {
@@ -1275,15 +1277,19 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                 // open output
                 out = new BufferedOutputStream(file.openOutputStream(), 512);
 
+                // write BOM
+                out.write((byte) 0xEF);
+                out.write((byte) 0xBB);
+                out.write((byte) 0xBF);
+
                 // write notes
                 final Vector fieldNotes = this.fieldNotes;
                 final StringBuffer sb = new StringBuffer(128);
                 for (int N = fieldNotes.size(), i = 0; i < N; i++) {
                     sb.delete(0, sb.length());
                     FieldNoteForm.format((String[]) fieldNotes.elementAt(i), sb);
+                    sb.append("\r\n");
                     out.write(sb.toString().getBytes("UTF-8"));
-                    out.write(0x0D);
-                    out.write(0x0A);
                 }
 
                 // notify user
@@ -1376,6 +1382,10 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
 
     private boolean isModifiable() {
         return (folder == Config.FOLDER_WPTS && currentWpts != Desktop.wpts) && isWriteable(currentName);
+    }
+
+    private boolean isCache() {
+        return (folder == Config.FOLDER_WPTS);
     }
 
     private void addToPrefferedStore(final Object storeKey, final Waypoint wpt) {

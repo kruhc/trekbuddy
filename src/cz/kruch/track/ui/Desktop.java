@@ -258,9 +258,6 @@ public final class Desktop implements CommandListener,
 
         // console init
         consoleInit(g);
-
-        // help boot show
-        Thread.yield();
         final long tStart = System.currentTimeMillis();
 
         // show copyright(s)
@@ -275,6 +272,9 @@ public final class Desktop implements CommandListener,
         // show version
         consoleShow(g, lineY, Resources.getString(Resources.INFO_ITEM_VERSION) + " " + cz.kruch.track.TrackingMIDlet.version);
         lineY += lineHeight;
+
+        // help boot show
+        Thread.yield();
 
         // vertical space
         consoleShow(g, lineY, "");
@@ -662,8 +662,8 @@ public final class Desktop implements CommandListener,
             }
         }
 
-        // device-specific post init
-        cz.kruch.track.ui.nokia.DeviceControl.postInit(this);
+        // initialize camera
+        cz.kruch.track.fun.Camera.worker = getDiskWorker();
     }
 
     public void commandAction(Command command, Displayable displayable) {
@@ -1757,7 +1757,11 @@ public final class Desktop implements CommandListener,
         provider.setLocationListener(this);
 
         // (re)start BT provider
-        (new Thread((Runnable) provider)).start();
+        final Thread thread = new Thread((Runnable) provider);
+        if (cz.kruch.track.TrackingMIDlet.samsung) {
+            thread.setPriority(Thread.MIN_PRIORITY);
+        }
+        thread.start();
 
         // not browsing
         browsing = false;

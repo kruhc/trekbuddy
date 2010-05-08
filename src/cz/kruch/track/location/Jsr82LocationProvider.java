@@ -173,8 +173,8 @@ public final class Jsr82LocationProvider extends SerialLocationProvider {
         private String btspp, btname;
         private int transactionID;
         private boolean inquiryCompleted;
-
         private boolean cancel;
+        private boolean preknownUsed;
 
         private final Vector devices = new Vector();
         
@@ -218,7 +218,11 @@ public final class Jsr82LocationProvider extends SerialLocationProvider {
 
                 // start
                 Jsr82LocationProvider.this.url = btspp;
-                (new Thread(Jsr82LocationProvider.this)).start();
+                final Thread thread = new Thread(Jsr82LocationProvider.this);
+                if (cz.kruch.track.TrackingMIDlet.samsung) {
+                    thread.setPriority(Thread.MIN_PRIORITY);
+                }
+                thread.start();
 
             } else {
                 notifyListener(LocationProvider._CANCELLED);
@@ -276,30 +280,45 @@ public final class Jsr82LocationProvider extends SerialLocationProvider {
             pane.removeCommand(cmdBack);
             pane.removeCommand(cmdRefresh);
             pane.removeCommand(cmdConnect);
-            pane.addCommand(cmdBack);
             if (ready) {
                 pane.addCommand(cmdRefresh);
                 if (devices.size() > 0) {
                     pane.addCommand(cmdConnect);
                 }
             }
+            pane.addCommand(cmdBack);
+        }
+
+        private String getFixedAddress(javax.bluetooth.RemoteDevice device) {
+            final String address = device.getBluetoothAddress();
+            if (preknownUsed && cz.kruch.track.configuration.Config.btAddressWorkaround) {
+                try {
+                    final byte[] bytes = address.getBytes("UTF-8");
+                    final StringBuffer sb = new StringBuffer(12);
+                    for (int N = bytes.length, i = 0; i < N; ) {
+                        sb.append((char) bytes[N - i - 2]).append((char) bytes[N - i - 1]);
+                        i += 2;
+                    }
+                    return sb.toString();
+                } catch (Exception e) {
+                    // ignore
+                }
+            }
+            return address;
         }
 
         public void run() {
             pane.setTicker(new Ticker(Resources.getString(Resources.DESKTOP_MSG_RESOLVING_NAMES)));
             for (int N = devices.size(), i = 0; i < N; i++) {
+                final javax.bluetooth.RemoteDevice remoteDevice = ((javax.bluetooth.RemoteDevice) devices.elementAt(i));
                 String name = null;
-                javax.bluetooth.RemoteDevice remoteDevice = ((javax.bluetooth.RemoteDevice) devices.elementAt(i));
                 try {
-                    name = remoteDevice.getFriendlyName(false);
-                    if (name == null) {
-                        name = remoteDevice.getFriendlyName(true);
-                    }
+                    name = remoteDevice.getFriendlyName(true);
                 } catch (Throwable t) {
                     // ignore
                 }
-                if (name == null) {
-                    name = "#" + remoteDevice.getBluetoothAddress();
+                if (name == null || name.length() == 0) {
+                    name = getFixedAddress(remoteDevice);
                 }
                 pane.append(name, null);
             }
@@ -308,7 +327,7 @@ public final class Jsr82LocationProvider extends SerialLocationProvider {
 
         public void deviceDiscovered(javax.bluetooth.RemoteDevice remoteDevice, javax.bluetooth.DeviceClass deviceClass) {
             devices.addElement(remoteDevice);
-            pane.append("#" + remoteDevice.getBluetoothAddress(), null); // show bt adresses just to signal we are finding any
+            pane.append(remoteDevice.getBluetoothAddress(), null); // show bt adresses just to signal we are finding any
         }
 
         public void servicesDiscovered(int transId, javax.bluetooth.ServiceRecord[] serviceRecords) {
@@ -364,18 +383,35 @@ public final class Jsr82LocationProvider extends SerialLocationProvider {
         }
 
         public void inquiryCompleted(int discType) {
+            // set flag
             inquiryCompleted = true;
+
+            // fallback to preknown devices
+            if (devices.size() == 0) {
+                final javax.bluetooth.RemoteDevice[] preknown = agent.retrieveDevices(javax.bluetooth.DiscoveryAgent.PREKNOWN);
+                if (preknown != null && preknown.length != 0) {
+                    pane.setTitle(Resources.getString(Resources.DESKTOP_MSG_SELECT_DEVICE) + " (PREKNOWN)");
+                    preknownUsed = true;
+                    for (int N = preknown.length, i = 0; i < N; i++) {
+                        devices.addElement(preknown[i]);
+                        pane.append(getFixedAddress(preknown[i]), null); // show bt adresses just to signal we are finding any
+                    }
+                }
+            }
 
             // update UI
             pane.setTicker(null);
             pane.deleteAll();
+            
+            // adjust commands
             setupCommands(true);
 
+            // decide
             if (devices.size() == 0) {
                 if (cancel) {
                     letsGo(false);
                 } else {
-                    String codeStr;
+                    final String codeStr;
                     switch (discType) {
                         case javax.bluetooth.DiscoveryListener.INQUIRY_COMPLETED:
                             codeStr = "INQUIRY_COMPLETED";
@@ -393,7 +429,10 @@ public final class Jsr82LocationProvider extends SerialLocationProvider {
                 }
             } else {
                 // resolve names in a thread
+/*
                 (new Thread(this)).start();
+*/              // can't we resolve names from impl callback?
+                run();
             }
         }
 
@@ -404,7 +443,7 @@ public final class Jsr82LocationProvider extends SerialLocationProvider {
                 if (Config.btDoServiceSearch) {
                     goServices();
                 } else {
-                    btspp = "btspp://" + device.getBluetoothAddress() + ":1";
+                    btspp = "btspp://" + getFixedAddress(device) + ":1";
                     letsGo(true);
                 }
             } else if (command.getCommandType() == Desktop.CANCEL_CMD_TYPE) {

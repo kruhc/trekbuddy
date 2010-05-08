@@ -156,25 +156,30 @@ public final class Jsr179LocationProvider
                 }
             }
 
-            // vars
+            // fixable vars
             final javax.microedition.location.QualifiedCoordinates xc = l.getQualifiedCoordinates();
-            final float spd = l.getSpeed();
-            final float course = l.getCourse();
+            long timestamp = l.getTimestamp();
             float alt = xc.getAltitude() + Config.altCorrection;
 //#ifdef __RIM__
             if (Config.negativeAltFix) {
                 alt *= -1;
             }
+//#else
+            if (timestamp == 0 && Config.timeFix) {
+                timestamp = System.currentTimeMillis();
+            }
 //#endif
 
-            // create up-to-date location
+            // create up-to-date coordinates
             QualifiedCoordinates qc = QualifiedCoordinates.newInstance(xc.getLatitude(),
                                                                        xc.getLongitude(),
                                                                        alt);
             qc.setHorizontalAccuracy(xc.getHorizontalAccuracy());
-            final Location location = Location.newInstance(qc, l.getTimestamp(), 1, sat);
-            location.setCourse(course);
-            location.setSpeed(spd);
+
+            // create location
+            final Location location = Location.newInstance(qc, timestamp, 1, sat);
+            location.setCourse(l.getCourse());
+            location.setSpeed(l.getSpeed());
             location.setFix3d(extraFix == 3);
 
             // signal state change

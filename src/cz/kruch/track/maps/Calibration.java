@@ -11,6 +11,7 @@ import api.location.Ellipsoid;
 
 import cz.kruch.track.util.Mercator;
 import cz.kruch.track.util.ExtraMath;
+import cz.kruch.track.util.CharArrayTokenizer;
 import cz.kruch.track.ui.Position;
 import cz.kruch.track.configuration.Config;
 import cz.kruch.track.Resources;
@@ -364,6 +365,13 @@ abstract class Calibration {
                 || url.endsWith(Calibration.GMI_EXT)
                 || url.endsWith(Calibration.XML_EXT)
                 || url.endsWith(Calibration.J2N_EXT);
+    }
+
+    public static boolean isCalibration(CharArrayTokenizer.Token token) {
+        return token.endsWith(Calibration.OZI_EXT)
+                || token.endsWith(Calibration.GMI_EXT)
+                || token.endsWith(Calibration.XML_EXT)
+                || token.endsWith(Calibration.J2N_EXT);
     }
 
     public static Calibration newInstance(final InputStream in, final String url) throws IOException {

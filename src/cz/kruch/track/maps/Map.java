@@ -456,6 +456,11 @@ public final class Map implements Runnable {
             if (log.isEnabled()) log.debug("slice loading task started for " + map.getPath());
 //#endif
 
+            // gc
+            if (Config.forcedGc) {
+                System.gc(); // conditional
+            }
+
             // load images
             final Throwable throwable = loadImages(_list);
 
@@ -564,8 +569,14 @@ public final class Map implements Runnable {
                             try {
                                 loadSlice(slice);
                             } catch (IOException e) { // file not found or corrupted
+//#ifdef __LOG__
+                                if (log.isEnabled()) log.debug("image loading failed: " + e);
+//#endif
                                 slice.setImage(Slice.NO_IMAGE);
                             } catch (Throwable t) { // typically out of memory
+//#ifdef __LOG__
+                                if (log.isEnabled()) log.debug("image loading failed: " + t);
+//#endif
                                 throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_SLICE_LOAD_FAILED) + ": " + t.toString());
                             }
 
@@ -590,13 +601,6 @@ public final class Map implements Runnable {
 //#endif
                 return t;
 
-            } finally {
-
-                // gc
-                if (Config.forcedGc) {
-                    System.gc(); // conditional
-                }
-                
             }
 
             return null;
@@ -605,7 +609,9 @@ public final class Map implements Runnable {
 
     /* stream characteristic */
     public static int fileInputStreamResetable;
+//#ifdef __SYMBIAN__
     public static boolean networkInputStreamAvailable = true;
+//#endif
     /* behaviour flags */
     public static boolean useReset = true;
     public static boolean useSkip = true;

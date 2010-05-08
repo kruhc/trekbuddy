@@ -82,6 +82,7 @@ final class MapView extends View {
         mapViewer.setPosition(position);
     }
 
+    /* @Override */
     void setVisible(boolean b) {
         super.setVisible(b);
         if (b) { /* trick */

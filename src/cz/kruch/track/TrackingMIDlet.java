@@ -63,11 +63,12 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         rim = true;
 //#elifdef __ANDROID__
         android = true;
-//#else
-        nokia = platform.startsWith("Nokia");
+//#elifdef __SYMBIAN__
         s60nd = platform.startsWith("Nokia6630") || platform.startsWith("Nokia668") || platform.startsWith("NokiaN70") || platform.startsWith("NokiaN72");
         s60rdfp2 = platform.indexOf("sw_platform=S60") > -1;
-        symbian = s60nd || s60rdfp2;
+        symbian = true; // s60nd || s60rdfp2;
+//#else
+        nokia = platform.startsWith("Nokia");
         sonyEricsson = System.getProperty("com.sonyericsson.imei") != null;
         sonyEricssonEx = sonyEricsson || platform.startsWith("SonyEricsson");
         samsung = platform.startsWith("SAMSUNG") || platform.startsWith("SGH");
@@ -83,8 +84,9 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         a780 = "j2me".equals(platform);
         s65 = "S65".equals(platform);
         // for IntelliJ IDEA; all should resolve to false
-        rim = platform.startsWith("RIM");
-        android = platform.indexOf("android") > -1;
+        rim = false;
+        android = false;
+        symbian = false;
         // ~
 //#endif
 
@@ -149,41 +151,25 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         try {
             Class.forName("com.motorola.location.PositionSource");
             motorola179 = true;
-//#ifdef __LOG__
-            System.out.println("* Motorola-179");
-//#endif
         } catch (Throwable throwable) {
         }
-        /* detect Symbian */
-        try {
-            Class.forName("com.symbian.midp.io.protocol.http.Protocol");
-            symbian = true;
-//#ifdef __LOG__
-            System.out.println("* Symbian");
-//#endif
-        } catch (Throwable t) {
-        }
+
         /* detect UIQ */
         if (sonyEricssonEx) {
             if (symbian) {
                 uiq = true;
-//#ifdef __LOG__
-                System.out.println("* UIQ");
-//#endif
             }
         } else { /* detect Jbed */
             try {
                 Class.forName("com.jbed.io.CharConvUTF8");
                 jbed = true;
-//#ifdef __LOG__
-                System.out.println("* Jbed");
-//#endif
             } catch (Throwable t) {
+                // ignore
             }
         }
 
 //#endif /* __ALL__ */
-
+        
         // init device control (also helps to detect other platforms)
         cz.kruch.track.ui.nokia.DeviceControl.initialize();
     }
@@ -323,9 +309,11 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         }
 
         // cleanup after initialization?
+/* ugly UI effect 
 //#ifndef __RIM__
         System.gc(); // unconditional!!! 
 //#endif
+*/
 
         // create desktop
         desktop = new cz.kruch.track.ui.Desktop(this);

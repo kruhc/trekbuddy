@@ -228,7 +228,7 @@ final class DirLoader extends Map.Loader implements Atlas.Loader {
                                     if (Calibration.isCalibration(fileEntry)) {
 
                                         // create URL
-                                        final String path = sb.delete(0, sb.length()).append(file.getURL()).append(fileEntry).toString();
+                                        final String path = escape(sb.delete(0, sb.length()).append(file.getURL()).append(fileEntry).toString());
 
                                         // load map calibration file
                                         InputStream in = null;

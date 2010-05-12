@@ -605,6 +605,25 @@ public final class Map implements Runnable {
 
             return null;
         }
+
+        protected static String escape(final String url) {
+            int idx = url.indexOf(' ');
+            if (idx == -1) {
+                return url;
+            }
+            final StringBuffer sb = new StringBuffer(64);
+            int s0 = 0;
+            while (idx > -1) {
+                sb.append(url.substring(s0, idx));
+                sb.append("%20");
+                s0 = idx + 1;
+                idx = url.indexOf(' ', s0);
+            }
+            if (s0 < url.length()) {
+                sb.append(url.substring(s0));
+            }
+            return sb.toString();
+        }
     }
 
     /* stream characteristic */

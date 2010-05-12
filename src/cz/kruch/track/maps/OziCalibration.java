@@ -85,9 +85,9 @@ final class OziCalibration extends Calibration {
                     if (ProjectionSetup.PROJ_TRANSVERSE_MERCATOR.equals(projectionType) || ProjectionSetup.PROJ_LCC.equals(projectionType)) {
                         tokenizer.init(line, true);
                         projectionSetup = parseProjectionSetup(projectionType, tokenizer);
-    //#ifdef __LOG__
+//#ifdef __LOG__
                         if (log.isEnabled()) log.debug("projection setup parsed");
-    //#endif
+//#endif
                     }
                 } else if (line.startsWith(LINE_IWH)) { // for crippled .map files :-(
                     tokenizer.init(line, false);

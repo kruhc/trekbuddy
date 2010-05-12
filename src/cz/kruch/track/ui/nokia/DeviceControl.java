@@ -158,7 +158,9 @@ public class DeviceControl extends TimerTask {
 
     public static void setTicker(javax.microedition.lcdui.Displayable displayable,
                                  String ticker) {
-        instance.useTicker(displayable, ticker);
+        if (displayable != null) {
+            instance.useTicker(displayable, ticker);
+        }
     }
 
     public static int getBacklightStatus() {

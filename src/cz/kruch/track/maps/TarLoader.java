@@ -162,7 +162,7 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
                     tarIn.getNextEntry();
 
                     // try this root entry as a calibration
-                    map.setCalibration(Calibration.newInstance(tarIn, calEntryName));
+                    map.setCalibration(Calibration.newInstance(tarIn, map.getPath(), calEntryName));
 
                 } else { // do a full scan
 
@@ -185,7 +185,7 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
                             if (log.isEnabled()) log.debug("do not have calibration yet");
 //#endif
                             // try this root entry as a calibration
-                            map.setCalibration(Calibration.newInstance(tarIn, entryName.toString()));
+                            map.setCalibration(Calibration.newInstance(tarIn, map.getPath(), entryName.toString()));
 
                             // skip the rest if we already have them
                             if (gotSlices && getMapCalibration() != null) {
@@ -400,9 +400,9 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
                             final String realUrl = entryName.append(sb).toString();
                             final String fakeUrl;
                             if (url.endsWith(".idx") || url.endsWith(".IDX")) {
-                                fakeUrl = realUrl;
+                                fakeUrl = escape(realUrl);
                             } else {
-                                fakeUrl = sb.delete(0, sb.length()).append(baseUrl).append(lName).append(File.PATH_SEPCHAR).append(mName).append(File.PATH_SEPCHAR).append(mName).append(".tar").toString();
+                                fakeUrl = escape(sb.delete(0, sb.length()).append(baseUrl).append(lName).append(File.PATH_SEPCHAR).append(mName).append(File.PATH_SEPCHAR).append(mName).append(".tar").toString());
                             }
 
                             // load map calibration file

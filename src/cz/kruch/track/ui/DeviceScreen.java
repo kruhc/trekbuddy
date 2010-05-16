@@ -479,8 +479,12 @@ final class DeviceScreen extends GameCanvas implements Runnable {
                 drawButton(g, delegate.cmdRunLast, dy + bw + dy, dy, bw, bh);
             }
         }
-        drawButton(g, delegate.cmdLoadMap, dy, 2 * dy + bh, bw, bh);
-        drawButton(g, delegate.cmdLoadAtlas, dy + bw + dy, 2 * dy + bh, bw, bh);
+//#ifndef __B2B__
+        if (api.file.File.isFs()) {
+            drawButton(g, delegate.cmdLoadMap, dy, 2 * dy + bh, bw, bh);
+            drawButton(g, delegate.cmdLoadAtlas, dy + bw + dy, 2 * dy + bh, bw, bh);
+        }
+//#endif        
         drawButton(g, delegate.cmdSettings, dy, 3 * dy + 2 * bh, bw, bh);
         drawButton(g, delegate.cmdInfo, dy + bw + dy, 3 * dy + 2 * bh, bw, bh);
         drawButton(g, delegate.cmdExit, dy + bw + dy, 4 * dy + 3 * bh, bw, bh);
@@ -527,11 +531,15 @@ final class DeviceScreen extends GameCanvas implements Runnable {
             case 5:
             case 6:
             case 7: {
-                if (x > i && x < w / 2 - i) {
-                    cmd = delegate.cmdLoadMap;
-                } else if (x > w / 2 + i && x < w - i) {
-                    cmd = delegate.cmdLoadAtlas;
+//#ifndef __B2B__
+                if (api.file.File.isFs()) {
+                    if (x > i && x < w / 2 - i) {
+                        cmd = delegate.cmdLoadMap;
+                    } else if (x > w / 2 + i && x < w - i) {
+                        cmd = delegate.cmdLoadAtlas;
+                    }
                 }
+//#endif                
             } break;
             case 9:
             case 10:

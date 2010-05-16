@@ -136,6 +136,36 @@
         <antcall target="sign.and.update" inheritall="true"/>
     </target>
 
+    <target name="b2b-lite">
+        <property name="suffix" value=""/>
+        <property name="dist.dir" value="b2b-lite"/>
+        <property name="libraryjars" value="${wtk.home}\lib\cldcapi11.jar;${wtk.home}\lib\midpapi20.jar;${wtk.home}\lib\jsr75.jar;${wtk.home}\lib\jsr082.jar;${wtk.home}\lib\jsr179.jar;${wtk.home}\lib\jsr234.jar;${wtk.home}\lib\wma11.jar;lib\motorola-location.jar"/>
+        <property name="classpath.preverify" value="${libraryjars}"/>
+        <antcall target="clean"/>
+        <antcall target="a.pre.b2b-lite"/>
+        <antcall target="compile.standard-lite"/>
+        <antcall target="lite.pack" inheritall="true"/>
+        <antcall target="obfuscate" inheritall="true"/>
+        <antcall target="preverify" inheritall="true"/>
+        <antcall target="dist" inheritall="true"/>
+        <antcall target="sign.and.update" inheritall="true"/>
+    </target>
+
+    <target name="b2b-builder">
+        <property name="suffix" value="-builder"/>
+        <property name="dist.dir" value="b2b-builder"/>
+        <property name="libraryjars" value="${wtk.home}\lib\cldcapi11.jar;${wtk.home}\lib\midpapi20.jar;${wtk.home}\lib\jsr75.jar;${wtk.home}\lib\jsr082.jar;${wtk.home}\lib\jsr179.jar;${wtk.home}\lib\jsr234.jar;${wtk.home}\lib\wma11.jar;lib\motorola-location.jar"/>
+        <property name="classpath.preverify" value="${libraryjars}"/>
+        <antcall target="clean"/>
+        <antcall target="a.pre.b2b-builder"/>
+        <antcall target="compile.standard-lite"/>
+        <antcall target="lite.pack" inheritall="true"/>
+        <antcall target="obfuscate" inheritall="true"/>
+        <antcall target="preverify" inheritall="true"/>
+        <antcall target="dist" inheritall="true"/>
+        <antcall target="sign.and.update" inheritall="true"/>
+    </target>
+
     <target name="basic">
         <property name="suffix" value="-basic"/>
         <property name="dist.dir" value="basic"/>
@@ -377,6 +407,18 @@
                        symbols="__ALL__,${pre.extra}"/>
     </target>
 
+    <target name="a.pre.b2b-lite">
+        <mkdir dir="tmp/src"/>
+        <wtkpreprocess srcdir="src" destdir="tmp/src" version="1"
+                       symbols="__ALL__,__B2B__,__CRC__,${pre.extra}"/>
+    </target>
+
+    <target name="a.pre.b2b-builder">
+        <mkdir dir="tmp/src"/>
+        <wtkpreprocess srcdir="src" destdir="tmp/src" version="1"
+                       symbols="__ALL__,__BUILDER__,__CRC__,${pre.extra}"/>
+    </target>
+
     <target name="a.pre.std" depends="a.pre.hecl">
         <mkdir dir="tmp/src"/>
         <wtkpreprocess srcdir="src" destdir="tmp/src" version="1"
@@ -559,7 +601,12 @@
     <target name="remove.android.src">
         <delete file="tmp/src/cz/kruch/track/fun/AndroidCamera.java"/>
         <delete file="tmp/src/cz/kruch/track/location/AndroidLocationProvider.java"/>
+        <delete file="tmp/src/cz/kruch/track/location/AndroidExternalLocationProvider.java"/>
         <delete file="tmp/src/cz/kruch/track/ui/nokia/AndroidDeviceControl.java"/>
+    </target>
+
+    <target name="remove.b2b.src">
+        <delete file="tmp/src/cz/kruch/track/io/CrcInputStream.java"/>
     </target>
 
     <target name="remove.nonrim41.src" depends="remove.nonstd.src,remove.android.src">
@@ -598,9 +645,10 @@
                 version="${version}">
             <attribute name="MicroEdition-Configuration" value="CLDC-${wtk.cldc.version}"/>
             <attribute name="MicroEdition-Profile" value="MIDP-${wtk.midp.version}"/>
+            <attribute name="MIDlet-Data-Size" value="4096"/>
             <attribute name="MIDlet-Description" value="${description}"/>
             <attribute name="MIDlet-Info-URL" value="http://www.trekbuddy.net"/>
-            <attribute name="MIDlet-Data-Size" value="4096"/>
+            <attribute name="MIDlet-Icon" value="/resources/icon.png"/>
             <attribute name="${permission.attribute}" value="javax.microedition.io.Connector.file.read,javax.microedition.io.Connector.file.write,javax.microedition.io.Connector.bluetooth.client,javax.microedition.location.Location,javax.microedition.media.control.VideoControl.getSnapshot,javax.microedition.io.Connector.sms,javax.wireless.messaging.sms.receive,javax.wireless.messaging.sms.send,javax.microedition.io.Connector.comm,javax.microedition.io.Connector.cbs,javax.wireless.messaging.cbs.receive,javax.microedition.io.Connector.socket,javax.microedition.io.PushRegistry"/>
             <attribute name="Content-Folder" value="Applications"/>
             <attribute name="Nokia-MIDlet-Category" value="Application"/>
@@ -736,8 +784,7 @@
             <arg value="-keepnames class org.hecl.** extends java.lang.Exception"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.maps.io.FileInput"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.maps.io.LoaderIO"/>
-            <arg value="-whyareyoukeeping class cz.kruch.track.ui.WaypointForm"/>
-            <arg value="-whyareyoukeeping class cz.kruch.track.util.NakedVector"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.io.CrcInputStream"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.util.Logger"/>
             <arg value="-whyareyoukeeping class api.io.BufferedOutputStream"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.hecl.ControlledInterp"/>
@@ -769,8 +816,7 @@
             <arg value="-keepnames class org.hecl.** extends java.lang.Exception"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.maps.io.FileInput"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.maps.io.LoaderIO"/>
-            <arg value="-whyareyoukeeping class cz.kruch.track.ui.WaypointForm"/>
-            <arg value="-whyareyoukeeping class cz.kruch.track.util.NakedVector"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.io.CrcInputStream"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.util.Logger"/>
             <arg value="-whyareyoukeeping class api.io.BufferedOutputStream"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.hecl.ControlledInterp"/>
@@ -805,8 +851,7 @@
             <arg value="-keepnames class org.hecl.** extends java.lang.Exception"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.maps.io.FileInput"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.maps.io.LoaderIO"/>
-            <arg value="-whyareyoukeeping class cz.kruch.track.ui.WaypointForm"/>
-            <arg value="-whyareyoukeeping class cz.kruch.track.util.NakedVector"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.io.CrcInputStream"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.util.Logger"/>
             <arg value="-whyareyoukeeping class api.io.BufferedOutputStream"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.hecl.ControlledInterp"/>
@@ -833,8 +878,7 @@
             <arg value="-keepnames class api.** extends java.lang.Exception"/>
             <arg value="-keepnames class org.hecl.** extends java.lang.Exception"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.maps.io.FileInput"/>
-            <arg value="-whyareyoukeeping class cz.kruch.track.ui.WaypointForm"/>
-            <arg value="-whyareyoukeeping class cz.kruch.track.util.NakedVector"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.io.CrcInputStream"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.util.Logger"/>
             <arg value="-whyareyoukeeping class api.io.BufferedOutputStream"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.hecl.ControlledInterp"/>
@@ -890,9 +934,10 @@
                 version="${version}">
             <attribute name="MicroEdition-Configuration" value="CLDC-${wtk.cldc.version}"/>
             <attribute name="MicroEdition-Profile" value="MIDP-${wtk.midp.version}"/>
+            <attribute name="MIDlet-Data-Size" value="4096"/>
             <attribute name="MIDlet-Description" value="${description}"/>
             <attribute name="MIDlet-Info-URL" value="http://www.trekbuddy.net"/>
-            <attribute name="MIDlet-Data-Size" value="4096"/>
+            <attribute name="MIDlet-Icon" value="/resources/icon.png"/>
             <attribute name="${permission.attribute}" value="javax.microedition.io.Connector.file.read,javax.microedition.io.Connector.file.write,javax.microedition.io.Connector.bluetooth.client,javax.microedition.location.Location,javax.microedition.media.control.VideoControl.getSnapshot,javax.microedition.io.Connector.sms,javax.wireless.messaging.sms.receive,javax.wireless.messaging.sms.send,javax.microedition.io.Connector.comm,javax.microedition.io.Connector.cbs,javax.wireless.messaging.cbs.receive,javax.microedition.io.Connector.socket,javax.microedition.io.PushRegistry"/>
             <attribute name="Content-Folder" value="Applications"/>
             <attribute name="Nokia-MIDlet-Category" value="Application"/>
@@ -973,9 +1018,10 @@
                 version="${version}">
             <attribute name="MicroEdition-Configuration" value="CLDC-${wtk.cldc.version}"/>
             <attribute name="MicroEdition-Profile" value="MIDP-${wtk.midp.version}"/>
+            <attribute name="MIDlet-Data-Size" value="4096"/>
             <attribute name="MIDlet-Description" value="${description}"/>
             <attribute name="MIDlet-Info-URL" value="http://www.trekbuddy.net"/>
-            <attribute name="MIDlet-Data-Size" value="4096"/>
+            <attribute name="MIDlet-Icon" value="/resources/icon.png"/>
             <attribute name="${permission.attribute}" value="javax.microedition.io.Connector.file.read,javax.microedition.io.Connector.file.write,javax.microedition.io.Connector.bluetooth.client,javax.microedition.location.Location,javax.microedition.media.control.VideoControl.getSnapshot,javax.microedition.io.Connector.sms,javax.wireless.messaging.sms.receive,javax.wireless.messaging.sms.send,javax.microedition.io.Connector.comm,javax.microedition.io.Connector.cbs,javax.wireless.messaging.cbs.receive,javax.microedition.io.Connector.socket,javax.microedition.io.PushRegistry"/>
             <attribute name="Content-Folder" value="Applications"/>
             <attribute name="RIM-COD-Creation-Time" value="${rim.cod.modified}"/>

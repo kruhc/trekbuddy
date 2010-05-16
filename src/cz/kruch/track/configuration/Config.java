@@ -104,7 +104,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
     public static int locationProvider      = -1;
 
     // group [DataDir]
-    private static String dataDir;
+    public static String dataDir;
 
     // group [common provider options]
     public static int tracklog              = TRACKLOG_NEVER;
@@ -219,6 +219,22 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
     public static boolean dataDirAccess, dataDirExists;
     public static String defaultWptSound;
 
+//#ifdef __B2B__
+
+    // vendor configuration support
+    public static boolean vendorChecksumKnown;
+    public static int vendorChecksum;
+    public static String vendorNaviStore, vendorNaviCmd;
+
+//#endif
+
+//#ifdef __CRC__
+
+    // builder ops
+    public static boolean calcCrc = true;
+
+//#endif
+
     private Config() {
     }
 
@@ -232,11 +248,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         safeColors = true;
 //#elifdef __ANDROID__
         /* default for Android (MicroEmu) */
-//        try {
-//            dataDir = getDefaultDataDir(cz.kruch.track.ui.nokia.DeviceControl.getStorageURL(), "TrekBuddy/");
-//        } catch (Exception e) {
-            dataDir = getDefaultDataDir("file:///sdcard/", "TrekBuddy/");
-//        }
+        dataDir = getDefaultDataDir("file:///sdcard/", "TrekBuddy/");
         listFont = 0x200010;
 //#else
         if (cz.kruch.track.TrackingMIDlet.sxg75) {

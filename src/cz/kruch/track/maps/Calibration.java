@@ -378,7 +378,9 @@ abstract class Calibration {
         return newInstance(in, url, url);
     }
 
-    public static Calibration newInstance(final InputStream in, final String path, final String url) throws IOException {
+    public static Calibration newInstance(final InputStream in,
+                                          final String path,
+                                          final String url) throws IOException {
         final Calibration c;
 
         try {
@@ -400,7 +402,12 @@ abstract class Calibration {
 
         if (c != null) {
             try {
-                c.init(in, path);
+//#ifdef __CRC__
+                if (Config.calcCrc)
+                    vendorCheckedInit(c, in, path, url);
+                if (!Config.calcCrc)
+//#endif /* weird 'if-if' construct to satisfy IntelliJ IDEA
+                    c.init(in, path);
             } catch (InvalidMapException e) {
                 e.setName(path);
                 throw e;
@@ -418,4 +425,18 @@ abstract class Calibration {
     }
 
     abstract void init(InputStream in, String path) throws IOException;
+
+//#ifdef __CRC__
+
+    private static void vendorCheckedInit(final Calibration c, final InputStream in,
+                                          final String path, final String url) throws IOException {
+        // let's spy with CRC calculation
+        cz.kruch.track.io.CrcInputStream crcIn = new cz.kruch.track.io.CrcInputStream(in);
+        c.init(crcIn, path);        // usual init
+        while (crcIn.read() > -1);  // complete reading
+        crcIn.dispose();            // really closes the stream
+    }
+
+//#endif
+
 }

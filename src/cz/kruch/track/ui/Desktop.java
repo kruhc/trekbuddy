@@ -237,8 +237,7 @@ public final class Desktop implements CommandListener,
     }
 
     public void boot(final int imgcached, final int configured,
-                     final int customized, final int localized,
-                     final int keysmapped) {
+                     final int customized, final int localized) {
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("boot");
 //#endif
@@ -263,8 +262,8 @@ public final class Desktop implements CommandListener,
         // show copyright(s)
         consoleShow(g, lineY, "TrekBuddy \u00a9 2010 KrUcH");
         lineY += lineHeight;
-        String lc = Resources.getString(Resources.BOOT_LOCAL_COPY);
-        if (lc.length() > 0) {
+        final String lc = Resources.getString(Resources.BOOT_LOCAL_COPY);
+        if (lc != null && lc.length() > 0) {
             consoleShow(g, lineY, lc);
             lineY += lineHeight;
         }
@@ -297,6 +296,17 @@ public final class Desktop implements CommandListener,
             consoleResult(g, lineY, localized);
             lineY += lineHeight;
         }
+
+        // show load keymap
+        int keysmapped = 0;
+        try {
+            keysmapped = Resources.keymap();
+        } catch (Throwable t) {
+//#ifdef __LOG__
+            t.printStackTrace();
+//#endif
+            keysmapped = -1;
+        }
         if (keysmapped != 0) {
             consoleShow(g, lineY, Resources.getString(Resources.BOOT_KEYMAP));
             consoleResult(g, lineY, keysmapped);
@@ -317,22 +327,43 @@ public final class Desktop implements CommandListener,
 //#ifdef __LOG__
             t.printStackTrace();
 //#endif
+            map = null;
+            atlas = null;
             _updateLoadingResult(Resources.getString(Resources.DESKTOP_MSG_INIT_MAP), t);
             consoleResult(g, lineY, -1);
         }
 
+//#ifdef __B2B__
+        if (Config.vendorChecksumKnown) {
+            if (Config.vendorChecksum != cz.kruch.track.io.CrcInputStream.getChecksum()) {
+                showAlert(AlertType.ERROR, Resources.getString(Resources.VENDOR_CORRUPTED_MAP), Alert.FOREVER, null);
+                try {
+                    Thread.sleep(5000);
+                } catch (InterruptedException e) {
+                    // ignore
+                }
+                midlet.notifyDestroyed();
+            }
+        }
+//#endif
+
         // show boot progress for a while
         consoleDelay(tStart);
+
+        // setup commands
+        configure();
 
         // booting finished
         boot = false;
 
         // create default desktop components
-        configure();
         resetGui();
 
         // last
         postInit();
+
+        // render screen
+        update(MASK_SCREEN);
     }
 
     private void configure() {
@@ -350,6 +381,7 @@ public final class Desktop implements CommandListener,
         if (cz.kruch.track.TrackingMIDlet.getPlatform().startsWith("NokiaE61")) {
             screen.addCommand(this.cmdWaypoints = new Command(Resources.getString(Resources.DESKTOP_CMD_NAVIGATION), POSITIVE_CMD_TYPE, 3));
         }
+//#ifndef __B2B__
         if (File.isFs()) {
             screen.addCommand(this.cmdLoadMap = new Command(Resources.getString(Resources.DESKTOP_CMD_LOAD_MAP), POSITIVE_CMD_TYPE, 4));
             screen.addCommand(this.cmdLoadAtlas = new Command(Resources.getString(Resources.DESKTOP_CMD_LOAD_ATLAS), POSITIVE_CMD_TYPE, 5));
@@ -357,6 +389,7 @@ public final class Desktop implements CommandListener,
             screen.addCommand(this.cmdLoad = new Command(Resources.getString(Resources.DESKTOP_CMD_LOAD_MAP), POSITIVE_CMD_TYPE, 5));
 */
         }
+//#endif
         screen.addCommand(this.cmdSettings = new Command(Resources.getString(Resources.DESKTOP_CMD_SETTINGS), POSITIVE_CMD_TYPE, 6));
         screen.addCommand(this.cmdInfo = new Command(Resources.getString(Resources.DESKTOP_CMD_INFO), POSITIVE_CMD_TYPE, 7));
         screen.addCommand(this.cmdExit = new Command(Resources.getString(Resources.DESKTOP_CMD_EXIT), EXIT_CMD_TYPE, 8/*1*/));
@@ -537,9 +570,6 @@ public final class Desktop implements CommandListener,
 
         // UI is ready now
         views = v;
-
-        // render screen
-        update(MASK_ALL);
     }
 
     private void initDefaultMap() throws Throwable {
@@ -646,11 +676,11 @@ public final class Desktop implements CommandListener,
             showError("'DataDir' not accessible - please fix it and restart", null, null);
         }
 
-        // loads CMS profiles // TODO move to resetGui???
-        getDiskWorker().enqueue((Runnable) views[VIEW_CMS]);
-
         // initialize waypoints
         Waypoints.initialize(this);
+
+        // loads CMS profiles // TODO move to resetGui???
+        getDiskWorker().enqueue((Runnable) views[VIEW_CMS]);
 
         // initialize groupware
         if (cz.kruch.track.TrackingMIDlet.jsr120) {
@@ -734,6 +764,8 @@ public final class Desktop implements CommandListener,
             // try to hide menubar gently
             screen.setFullScreenMode(false);
             screen.setFullScreenMode(true);
+            // update screen
+            update(MASK_SCREEN);
         }
     }
 
@@ -2614,20 +2646,12 @@ public final class Desktop implements CommandListener,
                     Desktop.this.map = null;
                 }
 
+//#ifdef __BUILDER__
+                // reset checksum
+                cz.kruch.track.io.CrcInputStream.doReset();
+//#endif
+                
                 // load map or atlas
-/*
-                final int i = url.lastIndexOf('.');
-                if (i > -1) {
-                    final String suffix = url.substring(i).toLowerCase();
-                    if (".idx".equals(suffix) || ".tba".equals(suffix) || ".tar".equals(suffix)) {
-                        Desktop.this._target = "atlas";
-                        Desktop.this.startOpenAtlas(url);
-                    } else if (".map".equals(suffix) || ".gmi".equals(suffix) || ".j2n".equals(suffix) || ".xml".equals(suffix)) {
-                        Desktop.this._target = "map";
-                        Desktop.this.startOpenMap(url, null);
-                    }
-                }
-*/
                 if ("atlas".equals(closure)) {
                     Desktop.this._target = "atlas";
                     Desktop.this.startOpenAtlas(url);
@@ -3236,6 +3260,7 @@ public final class Desktop implements CommandListener,
         } else {
             delay = consoleErrors > 0 ? 750 : (consoleSkips > 0 ? 250 : 0);
         }
+        NavigationScreens.logo = null; // GC hint
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("console delay " + delay);
 //#endif

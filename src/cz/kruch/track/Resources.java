@@ -25,6 +25,16 @@ public final class Resources {
     public static final short CMD_CANCEL                        = 3;
     public static final short CMD_YES                           = 4;
     public static final short CMD_NO                            = 5;
+    /* vendor */
+//#ifdef __B2B__
+    public static final short VENDOR_INITIAL_SCREEN             = 100;
+    public static final short VENDOR_INITIAL_MAP                = 101;
+    public static final short VENDOR_INITIAL_DATADIR            = 102;
+    public static final short VENDOR_INITIAL_CHECKSUM           = 103;
+    public static final short VENDOR_INITIAL_NAVI_SOURCE        = 104;
+    public static final short VENDOR_INITIAL_NAVI_CMD           = 105;
+    public static final short VENDOR_CORRUPTED_MAP              = 106;
+//#endif    
     /* boot - messages */
     public static final short BOOT_CACHING_IMAGES               = 300;
     public static final short BOOT_LOADING_CFG                  = 301;
@@ -385,12 +395,20 @@ public final class Resources {
                 }
             } catch (Throwable t) {
                 // ignore
+//#ifdef __LOG__
+                t.printStackTrace();
+//#endif
             } finally {
                 try {
                     file.close();
                 } catch (Exception e) { // IOE or NPE
                     // ignore
                 }
+//#ifndef __B2B__
+                if (b2b_RejectRes(userIds)) {
+                    userIds = null;
+                }
+//#endif
             }
         }
 
@@ -399,7 +417,7 @@ public final class Resources {
         return result;
     }
 
-    static int keymap() throws IOException {
+    public static int keymap() throws IOException {
         int result = 0;
 
         if (Config.dataDirExists) {
@@ -541,4 +559,20 @@ public final class Resources {
         }
         return result;
     }
+
+//#ifndef __B2B__
+
+    private static boolean b2b_RejectRes(final int[] ids) {
+        if (ids != null) {
+            for (int i = ids.length; --i >= 0; ) {
+                if (100 == ((ids[i] >> 16) & 0x0000ffff)) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+//#endif
+
 }

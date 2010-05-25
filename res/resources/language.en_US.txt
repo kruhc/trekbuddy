@@ -6,6 +6,17 @@
 0004=Yes
 0005=No
 
+#0100=2
+#0101=file:///E:/TrekBuddy/maps/atlas-cr-dir/ct.tba?layer=shocart&map=18_Okoli_Prahy_sever
+#0102=file:///E:/TrekBuddy/
+#0103=ffeae97e
+#0104=0/Eigene.gpx
+#0105=NavigateTo
+0106=Illegal map modification
+0107=Load Guide
+0108=Select Guide
+0109=Load
+
 # boot messages
 0300=caching images...
 0301=loading config...
@@ -29,7 +40,8 @@
 1009=Exit
 1010=Refresh
 1011=Connect
-1012=Select
+1012=Open
+1013=Select
 
 # desktop messages
 1300=Failed to init location sharing

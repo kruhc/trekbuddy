@@ -304,11 +304,6 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
             // ignore
         }
 
-        // check DataDir access
-        if (File.isFs()) {
-            checkDataDirAccess();
-        }
-
         // trick to recognize map loaded upon start as default
         defaultMapPath = mapPath;
 
@@ -349,23 +344,6 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         sb.append(appPath);
 
         return sb.toString();
-    }
-
-    private static void checkDataDirAccess() {
-        File dir = null;
-        try {
-            dir = File.open(Config.dataDir);
-            dataDirAccess = true;
-            dataDirExists = dir.exists();
-        } catch (Exception e) { // IOE or SE
-            // ignore
-        } finally {
-            try {
-                dir.close();
-            } catch (Exception e) { // IOE or NPE
-                // ignore
-            }
-        }
     }
 
     private static void readMain(final DataInputStream din) throws IOException {
@@ -711,6 +689,23 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         }
     }
 
+    public static void checkDataDir() {
+        File dir = null;
+        try {
+            dir = File.open(Config.dataDir);
+            dataDirAccess = true;
+            dataDirExists = dir.exists();
+        } catch (Exception e) { // IOE or SE
+            // ignore
+        } finally {
+            try {
+                dir.close();
+            } catch (Exception e) { // IOE or NPE
+                // ignore
+            }
+        }
+    }
+
     public static void initDataDir(final Worker worker) {
         worker.enqueue(new Config());
     }
@@ -843,7 +838,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
 
     public static Datum currentDatum;
 
-    public static void initDatums(MIDlet midlet) {
+    public static void initDefaultDatums(MIDlet midlet) {
         // vars
         final char[] delims = { '{', '}', ',', '=' };
         final CharArrayTokenizer tokenizer = new CharArrayTokenizer();
@@ -853,25 +848,6 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
             initDatums(Config.class.getResourceAsStream("/resources/datums.txt"), tokenizer, delims);
         } catch (Throwable t) {
             // ignore
-        }
-
-        // next try user's
-        if (Config.dataDirExists/* && File.isFs()*/) {
-            File file = null;
-            try {
-                file = File.open(Config.getFolderURL(Config.FOLDER_RESOURCES) + "datums.txt");
-                if (file.exists()) {
-                    initDatums(file.openInputStream(), tokenizer, delims);
-                }
-            } catch (Throwable t) {
-                // ignore
-            } finally {
-                try {
-                    file.close();
-                } catch (Exception e) { // IOE or NPE
-                    // ignore
-                }
-            }
         }
 
         // lastly try JAD
@@ -889,6 +865,31 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
 
         // setup defaults
         useDatum(geoDatum);
+    }
+
+    public static void initUserDatums() {
+        // vars
+        final char[] delims = { '{', '}', ',', '=' };
+        final CharArrayTokenizer tokenizer = new CharArrayTokenizer();
+
+        // next try user's
+        if (Config.dataDirExists) {
+            File file = null;
+            try {
+                file = File.open(Config.getFolderURL(Config.FOLDER_RESOURCES) + "datums.txt");
+                if (file.exists()) {
+                    initDatums(file.openInputStream(), tokenizer, delims);
+                }
+            } catch (Throwable t) {
+                // ignore
+            } finally {
+                try {
+                    file.close();
+                } catch (Exception e) { // IOE or NPE
+                    // ignore
+                }
+            }
+        }
     }
 
     private static void initDatums(final InputStream in,

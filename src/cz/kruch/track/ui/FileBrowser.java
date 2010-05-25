@@ -214,12 +214,6 @@ public final class FileBrowser implements CommandListener, Runnable, Comparator 
             browse();
 //#ifdef __B2B__
         } else if (command == cmdDir) {
-//            try {
-//                file.setFileConnection(list.getString(list.getSelectedIndex()));
-//                quit(null);
-//            } catch (Throwable t) {
-//                quit(t);
-//            }
             path = list.getString(list.getSelectedIndex());
             quitDir = true;
             browse();

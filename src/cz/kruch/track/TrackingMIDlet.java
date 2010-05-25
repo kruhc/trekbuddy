@@ -2,6 +2,8 @@
 
 package cz.kruch.track;
 
+import api.file.File;
+
 import javax.microedition.midlet.MIDlet;
 import javax.microedition.midlet.MIDletStateChangeException;
 
@@ -172,6 +174,31 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         
         // init device control (also helps to detect other platforms)
         cz.kruch.track.ui.nokia.DeviceControl.initialize();
+
+        // setup environment
+        if (hasFlag("fs_skip_bug") || siemens /*|| symbian*/) {
+            cz.kruch.track.maps.Map.useSkip = false;
+        }
+        if (hasFlag("fs_no_reset") || sxg75 /*|| symbian*/) {
+            cz.kruch.track.maps.Map.useReset = false;
+        }
+        if (hasFlag("provider_o2_germany")) {
+            cz.kruch.track.configuration.Config.o2provider = true;
+        }
+        if (sxg75) {
+            cz.kruch.track.ui.NavigationScreens.useCondensed = 1;
+        }
+
+        // custom device handling
+        if (getAppProperty(JAD_GPS_CONNECTION_URL) != null) {
+            cz.kruch.track.configuration.Config.btServiceUrl = getAppProperty(JAD_GPS_CONNECTION_URL);
+        }
+        if (getAppProperty(JAD_GPS_DEVICE_NAME) != null) {
+            cz.kruch.track.configuration.Config.btDeviceName = getAppProperty(JAD_GPS_DEVICE_NAME);
+        }
+        if (getAppProperty(JAD_UI_RIGHT_KEY) != null) {
+            cz.kruch.track.configuration.Config.hideBarCmd = "...".equals(getAppProperty(JAD_UI_RIGHT_KEY));
+        }
     }
 
     private cz.kruch.track.ui.Desktop desktop;
@@ -218,15 +245,15 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         System.out.println("* run *");
 //#endif
         // fit static images into video memory
-        int imgcached;
+        int imaged;
         try {
             cz.kruch.track.ui.NavigationScreens.initialize();
-            imgcached = 1;
+            imaged = 1;
         } catch (Throwable t) {
 //#ifdef __LOG__
             t.printStackTrace();
 //#endif
-            imgcached = -1;
+            imaged = -1;
         }
 
         // initialize file API
@@ -247,105 +274,41 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
             configured = -1;
         }
 
-        // customize UI
-        int customized = 0;
-        if (cz.kruch.track.configuration.Config.dataDirExists) {
-            try {
-                customized = cz.kruch.track.ui.NavigationScreens.customize();
-            } catch (Throwable t) {
-//#ifdef __LOG__
-                t.printStackTrace();
-//#endif
-                customized = -1;
-            }
-        }
-
-        // localization
-        int localized;
+        // load default resources
+        int resourced;
         try {
-            localized = Resources.initialize();
+            Resources.initialize();
+            resourced = 1;
         } catch (Throwable t) {
 //#ifdef __LOG__
             t.printStackTrace();
 //#endif
-            localized = -1;
+            resourced = -1;
         }
 
-        // init helpers and 'singletons'
-        cz.kruch.track.configuration.Config.initDatums(this);
+        // load default datums
+        cz.kruch.track.configuration.Config.initDefaultDatums(this);
 
-        // setup environment
-        if (hasFlag("fs_skip_bug") || siemens /*|| symbian*/) {
-            cz.kruch.track.maps.Map.useSkip = false;
-        }
-        if (hasFlag("fs_no_reset") || sxg75 /*|| symbian*/) {
-            cz.kruch.track.maps.Map.useReset = false;
-        }
-        if (hasFlag("provider_o2_germany")) {
-            cz.kruch.track.configuration.Config.o2provider = true;
-        }
-        if (sxg75) {
-            cz.kruch.track.ui.NavigationScreens.useCondensed = 1;
+//#ifndef __B2B__
+
+        // check datadir access and existence
+        if (File.isFs()) {
+            cz.kruch.track.configuration.Config.checkDataDir();
         }
 
-        // custom device handling
-        if (getAppProperty(JAD_GPS_CONNECTION_URL) != null) {
-            cz.kruch.track.configuration.Config.btServiceUrl = getAppProperty(JAD_GPS_CONNECTION_URL);
-        }
-        if (getAppProperty(JAD_GPS_DEVICE_NAME) != null) {
-            cz.kruch.track.configuration.Config.btDeviceName = getAppProperty(JAD_GPS_DEVICE_NAME);
-        }
-        if (getAppProperty(JAD_UI_RIGHT_KEY) != null) {
-            cz.kruch.track.configuration.Config.hideBarCmd = "...".equals(getAppProperty(JAD_UI_RIGHT_KEY));
-        }
+//#else
 
-//#ifdef __B2B__
-        // b2b res init
-        b2b_resInit();
-//#endif        
+        // just assume it exists
+        cz.kruch.track.configuration.Config.dataDirAccess = true;
+        cz.kruch.track.configuration.Config.dataDirExists = true;
 
-        // cleanup after initialization?
-/* ugly UI effect 
-//#ifndef __RIM__
-        System.gc(); // unconditional!!! 
 //#endif
-*/
+
         // create and boot desktop
         desktop = new cz.kruch.track.ui.Desktop(this);
-        desktop.boot(imgcached, configured, customized, localized);
+        desktop.show();
+        desktop.boot(imaged, configured, resourced, true);
     }
-
-//#ifdef __B2B__
-
-    private void b2b_resInit() {
-        final int idx = Integer.parseInt(Resources.getString(Resources.VENDOR_INITIAL_SCREEN));
-        if (idx >= 0 && idx <= 2) {
-            cz.kruch.track.configuration.Config.startupScreen = idx;
-        }
-        final String map = Resources.getString(Resources.VENDOR_INITIAL_MAP);
-        if (!Integer.toString(Resources.VENDOR_INITIAL_MAP).equals(map)) {
-            cz.kruch.track.configuration.Config.mapPath = map;
-        }
-        final String checksum = Resources.getString(Resources.VENDOR_INITIAL_CHECKSUM);
-        if (!Integer.toString(Resources.VENDOR_INITIAL_CHECKSUM).equals(checksum)) {
-            cz.kruch.track.configuration.Config.vendorChecksumKnown = true;
-            cz.kruch.track.configuration.Config.vendorChecksum = (int) Long.parseLong(checksum, 16);
-        }
-        final String store = Resources.getString(Resources.VENDOR_INITIAL_NAVI_SOURCE);
-        if (!Integer.toString(Resources.VENDOR_INITIAL_NAVI_SOURCE).equals(store)) {
-            cz.kruch.track.configuration.Config.vendorNaviStore = store;
-        }
-        final String cmd = Resources.getString(Resources.VENDOR_INITIAL_NAVI_CMD);
-        if (!Integer.toString(Resources.VENDOR_INITIAL_NAVI_CMD).equals(cmd)) {
-            cz.kruch.track.configuration.Config.vendorNaviCmd = cmd;
-        }
-        final String datadir = Resources.getString(Resources.VENDOR_INITIAL_DATADIR);
-        if (!Integer.toString(Resources.VENDOR_INITIAL_DATADIR).equals(datadir)) {
-            cz.kruch.track.configuration.Config.dataDir = datadir;
-        }
-    }
-
-//#endif
 
     /*
      * Environment info.

@@ -3,13 +3,13 @@
 package cz.kruch.track.ui;
 
 import cz.kruch.track.Resources;
+import cz.kruch.track.configuration.Config;
 import cz.kruch.track.event.Callback;
 import cz.kruch.track.location.Waypoint;
 import cz.kruch.track.location.GpxTracklog;
 import cz.kruch.track.location.GroundspeakBean;
 import cz.kruch.track.location.ExtWaypoint;
 import cz.kruch.track.location.StampedWaypoint;
-import cz.kruch.track.configuration.Config;
 import cz.kruch.track.util.NakedVector;
 import cz.kruch.track.util.CharArrayTokenizer;
 
@@ -121,23 +121,6 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
     private static final int TAG_AU_HINTS       = 0x05eaf2cc; // "hints"
     private static final int TAG_AU_FINDER      = 0x41a84fc1; // "geocacher"
 
-    private static final String itemWptsStores = Resources.getString(Resources.NAV_ITEM_WAYPOINTS);
-    private static final String itemTracksStores = Resources.getString(Resources.NAV_ITEM_TRACKS);
-    private static final String itemAddNew = Resources.getString(Resources.NAV_ITEM_RECORD);
-    private static final String itemEnterCustom = Resources.getString(Resources.NAV_ITEM_ENTER);
-    private static final String itemFriendHere = Resources.getString(Resources.NAV_ITEM_SMS_IAH);
-    private static final String itemFriendThere = Resources.getString(Resources.NAV_ITEM_SMS_MYT);
-    private static final String itemStop = Resources.getString(Resources.NAV_ITEM_STOP);
-    private static final String itemFieldNotes = Resources.getString(Resources.NAV_ITEM_FIELD_NOTES);
-
-    private static final String actionListWpts = Resources.getString(Resources.NAV_ITEM_WAYPOINTS);
-    private static final String actionListTracks = Resources.getString(Resources.NAV_ITEM_TRACKS);
-    private static final String actionListTargets = Resources.getString(Resources.NAV_MSG_SELECT_STORE);
-    private static final String actionAddFieldNote = Resources.getString(Resources.NAV_CMD_NEW_NOTE);
-//#ifdef __B2B__
-    private static final String actionResourceNavi = new String(Resources.getString(Resources.NAV_ITEM_WAYPOINTS));
-//#endif
-
     private static final int INITIAL_LIST_SIZE = 128;
     private static final int INCREMENT_LIST_SIZE = 32;
 
@@ -154,19 +137,30 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
     private final Object[] idx;
     private int entry, depth, sort, cacheDiskHint;
 
-    private Command cmdBack, cmdCancel, cmdClose;
-    private Command cmdOpen, cmdNavigateTo, cmdNavigateAlong, cmdNavigateBack,
-                    cmdSetAsCurrent, cmdGoTo, cmdShowAll, cmdHideAll,
-                    cmdSortByOrder, cmdSortByName, cmdSortByDist;
+    private String itemWptsStores, itemTracksStores, itemAddNew, itemEnterCustom,
+                   itemFriendHere, itemFriendThere, itemStop, itemFieldNotes;
+    private String actionListWpts, actionListTracks, actionListTargets,
+                   actionAddFieldNote;
+//#ifdef __B2B__
+    private String actionResourceNavi;
+//#endif
+
+    private Command cmdBack, cmdCancel, cmdClose, cmdOpen;
+    private Command cmdActionNavigateTo, cmdActionNavigateAlong, cmdActionNavigateBack,
+                    cmdActionSetAsCurrent, cmdActionGoTo, cmdActionShowAll, cmdActionHideAll,
+                    cmdActionSortByOrder, cmdActionSortByName, cmdActionSortByDist;
 
     private static Waypoints instance;
 
     public static void initialize(/*Navigator*/final Desktop navigator) {
+//#ifdef __B2B__
+        instance = null; // gc hint
+//#endif
         instance = new Waypoints(navigator);
 //#ifdef __B2B__
         if (Config.vendorNaviStore != null && Config.vendorNaviStore.length() > 0) {
             instance.folder = Config.FOLDER_WPTS;
-            instance.onBackground(Config.vendorNaviStore, actionResourceNavi);
+            instance.onBackground(Config.vendorNaviStore, instance.actionResourceNavi);
         }
 //#endif
     }
@@ -179,7 +173,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
         return instance;
     }
 
-    private Waypoints(/*Navigator*/Desktop navigator) {
+    private Waypoints(/*Navigator*/final Desktop navigator) {
         this.navigator = navigator;
         this.backends = new Hashtable(4);
         this.stores = new Hashtable(4);
@@ -188,20 +182,39 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
         this.sort = Config.sort;
         this.cacheDiskHint = INITIAL_LIST_SIZE;
         this.notesFilename = "fieldnotes-" + GpxTracklog.dateToFileDate(System.currentTimeMillis()) + ".txt";
+
+        this.itemWptsStores = Resources.getString(Resources.NAV_ITEM_WAYPOINTS);
+        this.itemTracksStores = Resources.getString(Resources.NAV_ITEM_TRACKS);
+        this.itemAddNew = Resources.getString(Resources.NAV_ITEM_RECORD);
+        this.itemEnterCustom = Resources.getString(Resources.NAV_ITEM_ENTER);
+        this.itemFriendHere = Resources.getString(Resources.NAV_ITEM_SMS_IAH);
+        this.itemFriendThere = Resources.getString(Resources.NAV_ITEM_SMS_MYT);
+        this.itemStop = Resources.getString(Resources.NAV_ITEM_STOP);
+        this.itemFieldNotes = Resources.getString(Resources.NAV_ITEM_FIELD_NOTES);
+
+        this.actionListWpts = Resources.getString(Resources.NAV_ITEM_WAYPOINTS);
+        this.actionListTracks = Resources.getString(Resources.NAV_ITEM_TRACKS);
+        this.actionListTargets = Resources.getString(Resources.NAV_MSG_SELECT_STORE);
+        this.actionAddFieldNote = Resources.getString(Resources.NAV_CMD_NEW_NOTE);
+//#ifdef __B2B__
+        this.actionResourceNavi = new String(Resources.getString(Resources.NAV_ITEM_WAYPOINTS));
+//#endif
+
         this.cmdBack = new Command(Resources.getString(Resources.CMD_BACK), Desktop.BACK_CMD_TYPE, 1);
         this.cmdCancel = new Command(Resources.getString(Resources.CMD_CANCEL), Desktop.CANCEL_CMD_TYPE, 1);
         this.cmdClose = new Command(Resources.getString(Resources.CMD_CLOSE), Desktop.BACK_CMD_TYPE, 1);
-        this.cmdOpen = new Command(Resources.getString(Resources.DESKTOP_CMD_SELECT), Desktop.SELECT_CMD_TYPE, 0);
-        this.cmdNavigateTo = new ActionCommand(Resources.NAV_CMD_NAVIGATE_TO, Command.ITEM, 2);
-        this.cmdNavigateAlong = new ActionCommand(Resources.NAV_CMD_ROUTE_ALONG, Command.ITEM, 3);
-        this.cmdNavigateBack = new ActionCommand(Resources.NAV_CMD_ROUTE_BACK, Command.ITEM, 4);
-        this.cmdSetAsCurrent = new ActionCommand(Resources.NAV_CMD_SET_AS_ACTIVE, Command.ITEM, 2);
-        this.cmdShowAll = new ActionCommand(Resources.NAV_CMD_SHOW_ALL, Command.ITEM, 5);
-        this.cmdHideAll = new ActionCommand(Resources.NAV_CMD_HIDE_ALL, Command.ITEM, 5);
-        this.cmdGoTo = new ActionCommand(Resources.NAV_CMD_GO_TO, Command.ITEM, 6);
-        this.cmdSortByOrder = new ActionCommand(Resources.NAV_CMD_SORT_BYORDER, Command.ITEM, 7);
-        this.cmdSortByName = new ActionCommand(Resources.NAV_CMD_SORT_BYNAME, Command.ITEM, 8);
-        this.cmdSortByDist = new ActionCommand(Resources.NAV_CMD_SORT_BYDIST, Command.ITEM, 9);
+        this.cmdOpen = new Command(Resources.getString(Resources.DESKTOP_CMD_OPEN), Desktop.SELECT_CMD_TYPE, 0);
+        this.cmdActionNavigateTo = new ActionCommand(Resources.NAV_CMD_NAVIGATE_TO, Command.ITEM, 2);
+        this.cmdActionNavigateAlong = new ActionCommand(Resources.NAV_CMD_ROUTE_ALONG, Command.ITEM, 3);
+        this.cmdActionNavigateBack = new ActionCommand(Resources.NAV_CMD_ROUTE_BACK, Command.ITEM, 4);
+        this.cmdActionSetAsCurrent = new ActionCommand(Resources.NAV_CMD_SET_AS_ACTIVE, Command.ITEM, 2);
+        this.cmdActionShowAll = new ActionCommand(Resources.NAV_CMD_SHOW_ALL, Command.ITEM, 5);
+        this.cmdActionHideAll = new ActionCommand(Resources.NAV_CMD_HIDE_ALL, Command.ITEM, 5);
+        this.cmdActionGoTo = new ActionCommand(Resources.NAV_CMD_GO_TO, Command.ITEM, 6);
+        this.cmdActionSortByOrder = new ActionCommand(Resources.NAV_CMD_SORT_BYORDER, Command.ITEM, 7);
+        this.cmdActionSortByName = new ActionCommand(Resources.NAV_CMD_SORT_BYNAME, Command.ITEM, 8);
+        this.cmdActionSortByDist = new ActionCommand(Resources.NAV_CMD_SORT_BYDIST, Command.ITEM, 9);
+
         this.pane = new List(Resources.getString(Resources.DESKTOP_CMD_NAVIGATION), List.IMPLICIT);
         this.pane.setFitPolicy(Choice.TEXT_WRAP_OFF);
         this.pane.setCommandListener(this);
@@ -370,48 +383,63 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                                 (new WaypointForm(item, this, _distance,
                                                   isModifiable(), isCache())).show();
                             }
-                        } else if (cmdNavigateTo == command) {
-                            // remember idx
-                            idx[depth] = item;
-                            // same as action in waypoint form
-                            invoke(new Object[]{new Integer(Resources.NAV_CMD_NAVIGATE_TO), null}, null, this);
-                        } else if (cmdNavigateAlong == command) {
-                            // remember idx
-                            idx[depth] = item;
-                            // same as action in waypoint form
-                            invoke(new Object[]{new Integer(Resources.NAV_CMD_ROUTE_ALONG), null}, null, this);
-                        } else if (cmdNavigateBack == command) {
-                            // remember idx
-                            idx[depth] = item;
-                            // same as action in waypoint form
-                            invoke(new Object[]{new Integer(Resources.NAV_CMD_ROUTE_BACK), null}, null, this);
-                        } else if (cmdSetAsCurrent == command) {
-                            // remember idx
-                            idx[depth] = item;
-                            // same as action in waypoint form
-                            invoke(new Object[]{new Integer(Resources.NAV_CMD_SET_AS_ACTIVE), null}, null, this);
-                        } else if (cmdGoTo == command) {
-                            // same as action in waypoint form
-                            invoke(new Object[]{new Integer(Resources.NAV_CMD_GO_TO), null}, null, this);
-                        } else if (cmdShowAll == command) {
-                            // close nav UI
-                            close();
-                            // call navigator
-                            navigator.showWaypoints(currentWpts, currentName, true);
-                        } else if (cmdHideAll == command) {
-                            // close nav UI
-                            close();
-                            // call navigator
-                            navigator.showWaypoints(currentWpts, currentName, false);
-                        } else if (cmdSortByOrder == command) {
-                            // sort
-                            sortWaypoints((SmartList) list, SORT_BYORDER, false, currentWpts);
-                        } else if (cmdSortByName == command) {
-                            // sort
-                            sortWaypoints((SmartList) list, SORT_BYNAME, false, currentWpts);
-                        } else if (cmdSortByDist == command) {
-                            // sort
-                            sortWaypoints((SmartList) list, SORT_BYDIST, false, currentWpts);
+                        } else { // execute action
+                            // act accordingly
+                            final int action = ((ActionCommand) command).getAction();
+                            switch (action) {
+                                case Resources.NAV_CMD_ROUTE_ALONG: {
+                                    // remember idx
+                                    idx[depth] = item;
+                                    // same as action in waypoint form
+                                    invoke(new Object[]{new Integer(Resources.NAV_CMD_ROUTE_ALONG), null}, null, this);
+                                } break;
+                                case Resources.NAV_CMD_ROUTE_BACK: {
+                                    // remember idx
+                                    idx[depth] = item;
+                                    // same as action in waypoint form
+                                    invoke(new Object[]{new Integer(Resources.NAV_CMD_ROUTE_BACK), null}, null, this);
+                                } break;
+                                case Resources.NAV_CMD_NAVIGATE_TO: {
+                                    // remember idx
+                                    idx[depth] = item;
+                                    // same as action in waypoint form
+                                    invoke(new Object[]{new Integer(Resources.NAV_CMD_NAVIGATE_TO), null}, null, this);
+                                } break;
+                                case Resources.NAV_CMD_SET_AS_ACTIVE: {
+                                    // remember idx
+                                    idx[depth] = item;
+                                    // same as action in waypoint form
+                                    invoke(new Object[]{new Integer(Resources.NAV_CMD_SET_AS_ACTIVE), null}, null, this);
+                                } break;
+                                case Resources.NAV_CMD_GO_TO: {
+                                    // same as action in waypoint form
+                                    invoke(new Object[]{new Integer(Resources.NAV_CMD_GO_TO), null}, null, this);
+                                } break;
+                                case Resources.NAV_CMD_SHOW_ALL: {
+                                    // close nav UI
+                                    close();
+                                    // call navigator
+                                    navigator.showWaypoints(currentWpts, currentName, true);
+                                } break;
+                                case Resources.NAV_CMD_HIDE_ALL: {
+                                    // close nav UI
+                                    close();
+                                    // call navigator
+                                    navigator.showWaypoints(currentWpts, currentName, false);
+                                } break;
+                                case Resources.NAV_CMD_SORT_BYORDER: {
+                                    // sort
+                                    sortWaypoints((SmartList) list, SORT_BYORDER, false, currentWpts);
+                                } break;
+                                case Resources.NAV_CMD_SORT_BYNAME: {
+                                    // sort
+                                    sortWaypoints((SmartList) list, SORT_BYNAME, false, currentWpts);
+                                } break;
+                                case Resources.NAV_CMD_SORT_BYDIST: {
+                                    // sort
+                                    sortWaypoints((SmartList) list, SORT_BYDIST, false, currentWpts);
+                                } break;
+                            }
                         }
                     } break;
                 }
@@ -1648,26 +1676,26 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
         l.setSelectCommand(cmdOpen);
         if (Desktop.wpts == wpts) {
             if (Desktop.routeDir != 0) {
-                l.addCommand(cmdSetAsCurrent);
+                l.addCommand(cmdActionSetAsCurrent);
             } else {
-                l.addCommand(cmdNavigateTo);
+                l.addCommand(cmdActionNavigateTo);
                 if (sort == SORT_BYORDER) {
-                    l.addCommand(cmdNavigateAlong);
-                    l.addCommand(cmdNavigateBack);
+                    l.addCommand(cmdActionNavigateAlong);
+                    l.addCommand(cmdActionNavigateBack);
                 }
             }
             if (Desktop.showall) {
-                l.addCommand(cmdHideAll);
+                l.addCommand(cmdActionHideAll);
             } else if (Desktop.routeDir == 0) {
-                l.addCommand(cmdShowAll);
+                l.addCommand(cmdActionShowAll);
             }
         } else if (Desktop.wpts == null || Desktop.wptIdx == -1) /*if (Desktop.wpts == null)*/ {
-            l.addCommand(cmdNavigateTo);
+            l.addCommand(cmdActionNavigateTo);
             if (sort == SORT_BYORDER) {
-                l.addCommand(cmdNavigateAlong);
-                l.addCommand(cmdNavigateBack);
+                l.addCommand(cmdActionNavigateAlong);
+                l.addCommand(cmdActionNavigateBack);
             }
-            l.addCommand(cmdShowAll);
+            l.addCommand(cmdActionShowAll);
         }
 
 /*
@@ -1678,10 +1706,10 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
         }
 */
 
-        l.addCommand(cmdGoTo);
-        l.addCommand(cmdSortByOrder);
-        l.addCommand(cmdSortByName);
-        l.addCommand(cmdSortByDist);
+        l.addCommand(cmdActionGoTo);
+        l.addCommand(cmdActionSortByOrder);
+        l.addCommand(cmdActionSortByName);
+        l.addCommand(cmdActionSortByDist);
         l.addCommand(cmdBack);
         l.setCommandListener(this);
 
@@ -1729,8 +1757,8 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                     // copy refs from store
                     wpts.copyInto(sortedWpts.getData());
                     // route navigation avail
-                    list.addCommand(cmdNavigateAlong);
-                    list.addCommand(cmdNavigateBack);
+                    list.addCommand(cmdActionNavigateAlong);
+                    list.addCommand(cmdActionNavigateBack);
                 } break;
                 case SORT_BYNAME:
                 case SORT_BYDIST: {
@@ -1741,8 +1769,8 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                     // gc hint
                     _pointer = null;
                     // route navigation NOT avail
-                    list.removeCommand(cmdNavigateAlong);
-                    list.removeCommand(cmdNavigateBack);
+                    list.removeCommand(cmdActionNavigateAlong);
+                    list.removeCommand(cmdActionNavigateBack);
                 } break;
             }
 
@@ -1767,17 +1795,17 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
     private void b2b_Action() {
         if (currentWpts != null && currentWpts.size() > 0 && Config.vendorNaviCmd != null && Config.vendorNaviCmd.length() > 0) {
             final String cmd = Config.vendorNaviCmd;
-            if (cmd.equals(cmdNavigateTo.getLabel())) {
+            if (cmd.equals(cmdActionNavigateTo.getLabel())) {
                 // remember idx
                 idx[depth] = currentWpts.elementAt(0);
                 // call navigator
                 navigator.setNavigateTo(inUseWpts = currentWpts, inUseName = currentName, 0, 0);
-            } else if (cmd.equals(cmdNavigateAlong.getLabel())) {
+            } else if (cmd.equals(cmdActionNavigateAlong.getLabel())) {
                 // remember idx
                 idx[depth] = currentWpts.elementAt(0);
                 // call navigator
                 navigator.setNavigateTo(inUseWpts = currentWpts, inUseName = currentName, 0, -1);
-            } else if (cmd.equals(cmdShowAll.getLabel())) {
+            } else if (cmd.equals(cmdActionShowAll.getLabel())) {
                 // call navigator
                 navigator.showWaypoints(currentWpts, currentName, true);
             }

@@ -2,9 +2,8 @@
 
 package cz.kruch.track.fun;
 
-import cz.kruch.track.Resources;
-import cz.kruch.track.location.Waypoint;
-import cz.kruch.track.location.StampedWaypoint;
+import api.location.QualifiedCoordinates;
+
 import cz.kruch.track.ui.Desktop;
 import cz.kruch.track.ui.NavigationScreens;
 import cz.kruch.track.util.CharArrayTokenizer;
@@ -13,8 +12,6 @@ import javax.microedition.lcdui.Displayable;
 
 import java.io.IOException;
 import java.util.Date;
-
-import api.location.QualifiedCoordinates;
 
 public abstract class Friends {
     public static final String TYPE_IAH         = "IAH";
@@ -151,10 +148,10 @@ public abstract class Friends {
         String chat = null;
         if (TBSMS_IAH.equals(header)) {
             type = TYPE_IAH;
-            chat = headerify(Resources.getString(Resources.NAV_ITEM_SMS_IAH));
+            chat = headerify(cz.kruch.track.Resources.getString(cz.kruch.track.Resources.NAV_ITEM_SMS_IAH));
         } else if (TBSMS_MYT.equals(header)) {
             type = TYPE_MYT;
-            chat = headerify(Resources.getString(Resources.NAV_ITEM_SMS_MYT));
+            chat = headerify(cz.kruch.track.Resources.getString(cz.kruch.track.Resources.NAV_ITEM_SMS_MYT));
         }
         if (type != null) {
             // get tokens
@@ -173,12 +170,12 @@ public abstract class Friends {
             long time = Long.parseLong(times) * 1000;
             double lat = parseSentence(latv, lats);
             double lon = parseSentence(lonv, lons);
-            String xxx = (new Date(time)).toString();
-            Waypoint wpt = new StampedWaypoint(QualifiedCoordinates.newInstance(lat, lon),
-                                               null, chat, time);
+            String date = (new Date(time)).toString();
+            cz.kruch.track.location.StampedWaypoint wpt 
+                    = new cz.kruch.track.location.StampedWaypoint(QualifiedCoordinates.newInstance(lat, lon), null, chat, time);
 
         } else {
-            Desktop.showWarning(Resources.getString(Resources.DESKTOP_MSG_UNKNOWN_SMS) + " '" + text + "'", null, null);
+            Desktop.showWarning(cz.kruch.track.Resources.getString(cz.kruch.track.Resources.DESKTOP_MSG_UNKNOWN_SMS) + " '" + text + "'", null, null);
         }
     }
 //#endif

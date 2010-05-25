@@ -2,10 +2,11 @@
 
 package cz.kruch.track;
 
+import api.io.BufferedInputStream;
+
 import cz.kruch.track.configuration.Config;
 import cz.kruch.track.io.LineReader;
 import cz.kruch.track.util.CharArrayTokenizer;
-import api.io.BufferedInputStream;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -34,7 +35,10 @@ public final class Resources {
     public static final short VENDOR_INITIAL_NAVI_SOURCE        = 104;
     public static final short VENDOR_INITIAL_NAVI_CMD           = 105;
     public static final short VENDOR_CORRUPTED_MAP              = 106;
-//#endif    
+    public static final short VENDOR_CMD_LOAD_GUIDE             = 107;
+    public static final short VENDOR_MSG_SELECT_GUIDE           = 108;
+    public static final short VENDOR_CMD_OPEN_GUIDE             = 109;
+//#endif
     /* boot - messages */
     public static final short BOOT_CACHING_IMAGES               = 300;
     public static final short BOOT_LOADING_CFG                  = 301;
@@ -57,7 +61,8 @@ public final class Resources {
     public static final short DESKTOP_CMD_EXIT                  = 1009;
     public static final short DESKTOP_CMD_REFRESH               = 1010;
     public static final short DESKTOP_CMD_CONNECT               = 1011;
-    public static final short DESKTOP_CMD_SELECT                = 1012;
+    public static final short DESKTOP_CMD_OPEN                  = 1012;
+    public static final short DESKTOP_CMD_SELECT                = 1013;
     /* desktop - messages */
     public static final short DESKTOP_MSG_FRIENDS_FAILED        = 1300;
     public static final short DESKTOP_MSG_WANT_QUIT             = 1301;
@@ -369,98 +374,110 @@ public final class Resources {
     private Resources() {
     }
 
-    static int initialize() throws IOException {
-        int result = 0;
+    static void initialize() throws IOException {
         final Object[] holder = new Object[2];
 
-        // read default locale resources
+        // read default resources
         loadRes(Resources.class.getResourceAsStream("/resources/language.res"), holder);
         ids = (int[]) holder[0];
         value = (String) holder[1];
         values = new String[ids.length];
+    }
 
 //#ifdef __USERL10N__
 
-        // read user resources
-        if (Config.dataDirExists) {
-            api.file.File file = null;
-            try {
-                file = api.file.File.open(Config.getFolderURL(Config.FOLDER_RESOURCES) + "language.res");
-                if (file.exists()) {
-                    loadRes(file.openInputStream(), holder);
-                    userIds = (int[]) holder[0];
-                    userValue = (String) holder[1];
-                    userValues = new String[userIds.length];
-                    result++;
-                }
-            } catch (Throwable t) {
-                // ignore
-//#ifdef __LOG__
-                t.printStackTrace();
-//#endif
-            } finally {
-                try {
-                    file.close();
-                } catch (Exception e) { // IOE or NPE
-                    // ignore
-                }
-//#ifndef __B2B__
-                if (b2b_RejectRes(userIds)) {
-                    userIds = null;
-                }
-//#endif
-            }
-        }
+    public static int localize() throws IOException {
+        int result = 0;
+        final Object[] holder = new Object[2];
 
+        // reload-safe
+        userIds = null;
+        userValue = null;
+        userValues = null;
+
+        // read user resources
+        api.file.File file = null;
+        try {
+            file = api.file.File.open(Config.getFolderURL(Config.FOLDER_RESOURCES) + "language.res");
+            if (file.exists()) {
+                loadRes(file.openInputStream(), holder);
+                userIds = (int[]) holder[0];
+                userValue = (String) holder[1];
+                userValues = new String[userIds.length];
+                result++;
+            }
+        } catch (Throwable t) {
+            // ignore
+//#ifdef __LOG__
+            t.printStackTrace();
 //#endif
+        } finally {
+            try {
+                file.close();
+            } catch (Exception e) { // IOE or NPE
+                // ignore
+            }
+//#ifndef __B2B__
+            if (b2b_RejectRes(userIds)) {
+                userIds = null;
+                userValue = null;
+                userValues = null;
+            }
+//#endif
+        }
 
         return result;
     }
 
+//#endif
+
     public static int keymap() throws IOException {
         int result = 0;
 
-        if (Config.dataDirExists) {
-            api.file.File file = null;
-            try {
-                file = api.file.File.open(Config.getFolderURL(Config.FOLDER_RESOURCES) + "keymap.txt");
-                if (file.exists()) {
-                    LineReader reader = null;
-                    try {
-                        reader = new LineReader(file.openInputStream());
-                        keymap0 = new short[32];
-                        keymap1 = new short[32];
-                        final char[] delims = { '=' };
-                        final CharArrayTokenizer tokenizer = new CharArrayTokenizer();
-                        CharArrayTokenizer.Token token = reader.readToken(false);
-                        while (token != null && keymapSize < 32) {
-                            tokenizer.init(token, delims, false);
-                            keymap0[keymapSize] = (short) tokenizer.nextInt();
-                            keymap1[keymapSize] = (short) tokenizer.nextInt();
-                            keymapSize++;
-                            result++;
-                            token = null; // gc hint
-                            token = reader.readToken(false);
-                        }
-                    } finally {
-                        if (reader != null) {
-                            try {
-                                reader.close();
-                            } catch (IOException e) {
-                                // ignore
-                            }
+        // reload-safe
+        keymap0 = keymap1 = null;
+        keymapSize = 0;
+
+        // do
+        api.file.File file = null;
+        try {
+            file = api.file.File.open(Config.getFolderURL(Config.FOLDER_RESOURCES) + "keymap.txt");
+            if (file.exists()) {
+                LineReader reader = null;
+                try {
+                    reader = new LineReader(file.openInputStream());
+                    keymap0 = new short[32];
+                    keymap1 = new short[32];
+                    final char[] delims = { '=' };
+                    final CharArrayTokenizer tokenizer = new CharArrayTokenizer();
+                    CharArrayTokenizer.Token token = reader.readToken(false);
+                    while (token != null && keymapSize < 32) {
+                        tokenizer.init(token, delims, false);
+                        keymap0[keymapSize] = (short) tokenizer.nextInt();
+                        keymap1[keymapSize] = (short) tokenizer.nextInt();
+                        keymapSize++;
+                        result++;
+                        token = null; // gc hint
+                        token = reader.readToken(false);
+                    }
+                } finally {
+                    if (reader != null) {
+                        try {
+                            reader.close();
+                        } catch (IOException e) {
+                            // ignore
                         }
                     }
                 }
-            } finally {
-                try {
-                    file.close();
-                } catch (Exception e) { // IOE or NPE
-                    // ignore
-                }
+            }
+        } finally {
+            try {
+                file.close();
+            } catch (Exception e) { // IOE or NPE
+                // ignore
             }
         }
-        
+
         return result;
     }
 

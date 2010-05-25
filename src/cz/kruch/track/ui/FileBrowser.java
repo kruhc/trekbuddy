@@ -33,6 +33,9 @@ public final class FileBrowser implements CommandListener, Runnable, Comparator 
     private Displayable next;
 
     private Command cmdCancel, cmdBack, cmdSelect;
+//#ifdef __B2B__
+    private Command cmdDir;
+//#endif
 
     private volatile List list;
     private volatile File file;
@@ -40,9 +43,13 @@ public final class FileBrowser implements CommandListener, Runnable, Comparator 
     private volatile String[] filter;
     private volatile int depth;
     private volatile int history = -1;
+//#ifdef __B2B__
+    private boolean quitDir;
+//#endif
 
-    public FileBrowser(String title, Callback callback, Displayable next,
-                       String folder, String[] filter) {
+    public FileBrowser(final String title, final Callback callback,
+                       final Displayable next, final String folder,
+                       final String[] filter) {
         this.title = Resources.prefixed(title);
         this.callback = callback;
         this.next = next;
@@ -50,7 +57,12 @@ public final class FileBrowser implements CommandListener, Runnable, Comparator 
         this.filter = filter;
         this.cmdCancel = new Command(Resources.getString(Resources.CMD_CANCEL), Desktop.CANCEL_CMD_TYPE, 1);
         this.cmdBack = new Command(Resources.getString(Resources.CMD_BACK), Desktop.BACK_CMD_TYPE, 1);
-        this.cmdSelect = new Command(Resources.getString(Resources.DESKTOP_CMD_SELECT), Desktop.SELECT_CMD_TYPE, 0);
+        this.cmdSelect = new Command(Resources.getString(Resources.DESKTOP_CMD_OPEN), Desktop.SELECT_CMD_TYPE, 0);
+//#ifdef __B2B__
+        if (filter == null) {
+            this.cmdDir = new Command(Resources.getString(Resources.VENDOR_CMD_OPEN_GUIDE), Desktop.SELECT_CMD_TYPE, 1);
+        }
+//#endif
     }
 
     /* when used as filenames comparator */
@@ -170,7 +182,12 @@ public final class FileBrowser implements CommandListener, Runnable, Comparator 
 
                 // list dir content
                 if (isDir) {
-                    show(file);
+//#ifdef __B2B__
+                    if (quitDir)
+                        quit(null);
+                    if (!quitDir)
+//#endif                    
+                        show(file);
                 } else { // otherwise we got a file selected
                     quit(null);
                 }
@@ -186,7 +203,7 @@ public final class FileBrowser implements CommandListener, Runnable, Comparator 
     }
 
     public void commandAction(Command command, Displayable displayable) {
-        if (Desktop.SELECT_CMD_TYPE == command.getCommandType()) {
+        if (command == cmdSelect) {
             path = null; // gc hint
             path = list.getString(list.getSelectedIndex());
             if (File.PARENT_DIR.equals(path)) {
@@ -195,6 +212,18 @@ public final class FileBrowser implements CommandListener, Runnable, Comparator 
                 depth++;
             }
             browse();
+//#ifdef __B2B__
+        } else if (command == cmdDir) {
+//            try {
+//                file.setFileConnection(list.getString(list.getSelectedIndex()));
+//                quit(null);
+//            } catch (Throwable t) {
+//                quit(t);
+//            }
+            path = list.getString(list.getSelectedIndex());
+            quitDir = true;
+            browse();
+//#endif
         } else {
             depth--;
             if (depth < 0) {
@@ -227,6 +256,9 @@ public final class FileBrowser implements CommandListener, Runnable, Comparator 
             // add commands
             if (list.size() > 0) {
                 list.setSelectCommand(cmdSelect);
+//#ifdef __B2B__
+                list.addCommand(cmdDir);
+//#endif
             } else {
                 list.setSelectCommand(null);
             }

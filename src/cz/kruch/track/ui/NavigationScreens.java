@@ -184,7 +184,6 @@ public final class NavigationScreens {
             bulbSize = backlight.getHeight();
             i++;
         }
-        logo = loadImage(Config.FOLDER_RESOURCES, "logo.png");
 
         if (i > 0 && Config.forcedGc) {
             System.gc(); // conditional

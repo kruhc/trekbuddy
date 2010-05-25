@@ -58,13 +58,22 @@ final class MapView extends View {
         disposeRoute();
 
         // create navigation for new map
-        if (map != null && Desktop.wpts != null) {
+        if (map != null) {
 
-            // recalc route
-            prepareRoute(Desktop.wpts);
+            // update basic OSD
+            final QualifiedCoordinates qc = map.transform(mapViewer.getPosition());
+            setBasicOSD(qc, true);
+            QualifiedCoordinates.releaseInstance(qc);
 
-            // set route for new map
-            mapViewer.setRoute(route);
+            // setup navigation
+            if (Desktop.wpts != null) {
+
+                // recalc route
+                prepareRoute(Desktop.wpts);
+
+                // set route for new map
+                mapViewer.setRoute(route);
+            }
         }
     }
 
@@ -363,22 +372,6 @@ final class MapView extends View {
     }
 
     public void sizeChanged(int w, int h) {
-        // map ready but not set yet - situation after start
-        if (isMap() && !mapViewer.hasMap()) {
-
-            // var
-            final Map map = navigator.getMap();
-
-            // set map
-            mapViewer.setMap(map);
-
-            // update basic OSD
-            final QualifiedCoordinates qc = map.transform(mapViewer.getPosition());
-            setBasicOSD(qc, true);
-            QualifiedCoordinates.releaseInstance(qc);
-        }
-
-        // propagate further
         mapViewer.sizeChanged(w, h);
     }
 

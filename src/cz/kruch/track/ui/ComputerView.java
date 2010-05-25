@@ -335,6 +335,14 @@ final class ComputerView extends View
         this.rotate = true;
     }
 
+//#ifdef __B2B__
+
+    void b2b_reset() {
+        profiles = null;
+    }
+
+//#endif
+
     private void initialize() {
         // init calendars
         TIME_CALENDAR = new SimpleCalendar(Calendar.getInstance(TimeZone.getDefault()));
@@ -691,7 +699,7 @@ final class ComputerView extends View
             profiles = new Hashtable(4);
 
             // try to load profiles
-            if (Config.dataDirExists/* && File.isFs()*/) {
+            if (Config.dataDirExists) {
 
                 try {
 

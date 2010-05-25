@@ -41,9 +41,6 @@ import api.location.Datum;
  */
 final class WaypointForm implements CommandListener, ItemCommandListener, Callback {
 
-    private static final String CMD_TAKE = Resources.getString(Resources.NAV_CMD_TAKE);
-    private static final String CMD_HINT = Resources.getString(Resources.NAV_CMD_SHOW);
-
     private static final Calendar CALENDAR = Calendar.getInstance(TimeZone.getDefault());
 
     private static final String VALUE_SEE_MORE = ">>";
@@ -59,6 +56,9 @@ final class WaypointForm implements CommandListener, ItemCommandListener, Callba
     private TextField fieldZone, fieldLat, fieldLon, fieldAlt;
     private TextField fieldNumber, fieldMessage;
     private Object closure;
+
+    private String CMD_TAKE;
+    private String CMD_HINT;
 
     private String imagePath;
     private int previewItemIdx;
@@ -111,6 +111,7 @@ final class WaypointForm implements CommandListener, ItemCommandListener, Callba
 
         // Groundspeak
         if (wpt.getUserObject() instanceof GroundspeakBean) {
+            CMD_HINT = Resources.getString(Resources.NAV_CMD_SHOW);
             final GroundspeakBean bean = (GroundspeakBean) wpt.getUserObject();
             appendStringItem("GC " + Resources.getString(Resources.NAV_FLD_WPT_NAME), bean.getName());
             final String id = bean.getId();
@@ -127,22 +128,19 @@ final class WaypointForm implements CommandListener, ItemCommandListener, Callba
             if (longListing != null && longListing.length() != 0) {
                 final String related = Resources.getString(Resources.NAV_FLD_GS_LISTING_LONG);
                 final int idx = appendStringItem(related, VALUE_SEE_MORE, Item.HYPERLINK);
-                form.get(idx).setDefaultCommand(new Command(CMD_HINT + " " + related, Command.ITEM, 1));
-                form.get(idx).setItemCommandListener(this);
+                addHintCommand(form.get(idx), related);
             }
             final Vector logs = bean.getLogs();
             if (logs != null && logs.size() != 0) {
                 final String related = Resources.getString(Resources.NAV_FLD_GS_LOGS);
                 final int idx = appendStringItem(related, VALUE_SEE_MORE, Item.HYPERLINK);
-                form.get(idx).setDefaultCommand(new Command(CMD_HINT + " " + related, Command.ITEM, 1));
-                form.get(idx).setItemCommandListener(this);
+                addHintCommand(form.get(idx), related);
             }
             final String encodedHints = bean.getEncodedHints();
             if (encodedHints != null && encodedHints.length() != 0) {
                 final String related = Resources.getString(Resources.NAV_FLD_GS_HINT);
                 hintNum = appendStringItem(related, VALUE_SEE_MORE, Item.HYPERLINK);
-                form.get(hintNum).setDefaultCommand(new Command(CMD_HINT + " " + related, Command.ITEM, 1));
-                form.get(hintNum).setItemCommandListener(this);
+                addHintCommand(form.get(hintNum), related);
             }
         }
 
@@ -195,6 +193,7 @@ final class WaypointForm implements CommandListener, ItemCommandListener, Callba
 
         // form commands
         if (cz.kruch.track.TrackingMIDlet.supportsVideoCapture()) {
+            CMD_TAKE = Resources.getString(Resources.NAV_CMD_TAKE);
             final StringItem snapshot = new StringItem(Resources.getString(Resources.NAV_FLD_SNAPSHOT), CMD_TAKE, Item.BUTTON);
             snapshot.setFont(Desktop.fontStringItems);
             snapshot.setDefaultCommand(new Command(CMD_TAKE, Command.ITEM, 1));
@@ -276,6 +275,11 @@ final class WaypointForm implements CommandListener, ItemCommandListener, Callba
 
     public void setTracklogTime(long tracklogTime) {
         this.tracklogTime = tracklogTime;
+    }
+
+    private void addHintCommand(final Item item, final String related) {
+        item.setDefaultCommand(new Command(CMD_HINT + " " + related, Command.ITEM, 1));
+        item.setItemCommandListener(this);
     }
 
     private void populateEditableForm(final String name, final String comment,
@@ -405,7 +409,7 @@ final class WaypointForm implements CommandListener, ItemCommandListener, Callba
             } catch (Throwable t) {
                 Desktop.showError(Resources.getString(Resources.NAV_MSG_CAMERA_FAILED), t, form);
             }
-        } else /*if (CMD_HINT.equals(command.getLabel()))*/ {
+        } else /* if (CMD_HINT.equals(command.getLabel())) */ {
             final String label = item.getLabel();
             final GroundspeakBean bean = ((GroundspeakBean) waypoint.getUserObject());
             if (label.startsWith(Resources.getString(Resources.NAV_FLD_GS_LISTING_LONG))) {

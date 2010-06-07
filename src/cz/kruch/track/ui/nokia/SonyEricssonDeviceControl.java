@@ -16,7 +16,7 @@ final class SonyEricssonDeviceControl extends DeviceControl {
         this.lacProperty = "com.sonyericsson.net.lac";
         try {
             Class.forName("java.rmi.Remote");
-            this.name = "SonyEricsson JP6+";
+            this.name = "SonyEricsson/JP6+";
             this.jp6plus = true;
         } catch (Throwable t) {
             this.name = "SonyEricsson";

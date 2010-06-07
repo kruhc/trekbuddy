@@ -18,7 +18,8 @@ import cz.kruch.track.Resources;
  * @author Ales Pour <kruhc@seznam.cz>
  */
 abstract class View {
-    protected static final String MSG_NO_POSITION = Resources.getString(Resources.DESKTOP_MSG_NO_POSITION);
+    protected static String MSG_NO_POSITION = Resources.getString(Resources.DESKTOP_MSG_NO_POSITION);
+    protected static String MSG_NO_WAYPOINT = Resources.getString(Resources.DESKTOP_MSG_NO_WPT);
 
     protected final /*Navigator*/Desktop navigator;
 
@@ -83,7 +84,17 @@ abstract class View {
     public int orientationChanged(int heading) {
         return isVisible ? Desktop.MASK_SCREEN : Desktop.MASK_NONE;
     }
-    
+
     public abstract void render(Graphics g, Font f, int mask);
     public abstract int locationUpdated(Location l);
+
+//#ifdef __B2B__
+
+    static void b2b_init() {
+        MSG_NO_WAYPOINT = Resources.getString(Resources.DESKTOP_MSG_NO_WPT);
+        MSG_NO_POSITION = Resources.getString(Resources.DESKTOP_MSG_NO_POSITION);
+    }
+
+//#endif
+
 }

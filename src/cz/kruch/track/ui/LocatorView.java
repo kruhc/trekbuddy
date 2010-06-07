@@ -20,8 +20,6 @@ import javax.microedition.lcdui.Font;
  * @author kruhc@seznam.cz
  */
 final class LocatorView extends View {
-    private static final String MSG_NO_WAYPOINT = Resources.getString(Resources.DESKTOP_MSG_NO_WPT);
-
     private static final int[] RANGES = {
         1000, 500, 250, 100, 50, 25, 10, 5
     };
@@ -62,6 +60,7 @@ final class LocatorView extends View {
 
     LocatorView(/*Navigator*/Desktop navigator) {
         super(navigator);
+        this.MSG_NO_WAYPOINT = Resources.getString(Resources.DESKTOP_MSG_NO_WPT);
         this.locations = new Location[2][];
         this.locations[0] = new Location[HISTORY_DEPTH];
         this.locations[1] = new Location[HISTORY_DEPTH];

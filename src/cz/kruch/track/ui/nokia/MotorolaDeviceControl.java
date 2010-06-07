@@ -3,7 +3,7 @@
 package cz.kruch.track.ui.nokia;
 
 /**
- * Device control implementation for Siemens phones.
+ * Device control implementation for Motorola phones with multimedia.Lighting API.
  *
  * @author Ales Pour <kruhc@seznam.cz>
  */

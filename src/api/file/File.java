@@ -1,18 +1,4 @@
- /*
- * Copyright 2006-2007 Ales Pour <kruhc@seznam.cz>.
- * All Rights Reserved.
- * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
- *
- * This code is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License version 2 only, as
- * published by the Free Software Foundation.
- *
- * This code is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
- * version 2 for more details (a copy is included in the LICENSE file that
- * accompanied this code).
- */
+ // @LICENSE@
 
 package api.file;
 
@@ -140,6 +126,7 @@ public abstract class File {
 
     abstract Enumeration getRoots();
     public abstract Enumeration list() throws IOException;
+    /** @deprecated may not work on all platforms */   
     public abstract Enumeration list(String pattern, boolean hidden) throws IOException;
     public abstract void create() throws IOException;
     public abstract void delete() throws IOException;

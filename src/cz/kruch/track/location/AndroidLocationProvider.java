@@ -31,7 +31,7 @@ public final class AndroidLocationProvider
         try {
             manager = (android.location.LocationManager) org.microemu.android.MicroEmulator.context.getSystemService(android.content.Context.LOCATION_SERVICE);
             if (manager == null) {
-                throw new LocationException("Service not found");
+                throw new LocationException("Location Service not found");
             }
             if (!manager.isProviderEnabled(android.location.LocationManager.GPS_PROVIDER)) {
                 throw new LocationException("GPS disabled");

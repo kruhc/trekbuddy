@@ -204,6 +204,9 @@ public final class Jsr82LocationProvider extends SerialLocationProvider {
             // restore screen anyway
             Desktop.display.setCurrent(Desktop.screen);
 
+            // gc hint
+            device = null;
+
             // good to go or not
             if (ok) {
 
@@ -219,9 +222,13 @@ public final class Jsr82LocationProvider extends SerialLocationProvider {
                 // start
                 Jsr82LocationProvider.this.url = btspp;
                 final Thread thread = new Thread(Jsr82LocationProvider.this);
+//#ifdef __ALL__                
+/*
                 if (cz.kruch.track.TrackingMIDlet.samsung) {
                     thread.setPriority(Thread.MIN_PRIORITY);
                 }
+*/
+//#endif
                 thread.start();
 
             } else {
@@ -313,7 +320,7 @@ public final class Jsr82LocationProvider extends SerialLocationProvider {
                 final javax.bluetooth.RemoteDevice remoteDevice = ((javax.bluetooth.RemoteDevice) devices.elementAt(i));
                 String name = null;
                 try {
-                    name = remoteDevice.getFriendlyName(true);
+                    name = remoteDevice.getFriendlyName(false);
                 } catch (Throwable t) {
                     // ignore
                 }

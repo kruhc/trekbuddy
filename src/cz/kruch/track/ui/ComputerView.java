@@ -304,7 +304,7 @@ final class ComputerView extends View
 //#endif
 
     /* profiles and current profile */
-    private String status;
+    private String status, initialProfile;
     private Hashtable profiles;
     private String[] profilesNames; // TODO get rid of
     private int profileIdx;
@@ -339,6 +339,7 @@ final class ComputerView extends View
 
     void b2b_reset() {
         profiles = null;
+        initialProfile = null;
     }
 
 //#endif
@@ -752,7 +753,7 @@ final class ComputerView extends View
                             s = (String) profiles.keys().nextElement();
                         }
 
-                        // got default profile?
+                        // got some profile?
                         if (s != null) {
 
                             // finalize initialization
@@ -763,6 +764,9 @@ final class ComputerView extends View
 
                             // prepare profile
                             prepare(Config.dayNight);
+
+                            // this is initial profile
+                            initialProfile = s;
 
                             // autoswitch
                             if (Config.cmsCycle > 0) {
@@ -1443,8 +1447,10 @@ final class ComputerView extends View
             final short msgCode;
             if (profiles == null) {
                 msgCode = Resources.NAV_MSG_TICKER_LOADING;
-            } else {
+            } else if (profiles.size() == 0) {
                 msgCode = Resources.DESKTOP_MSG_NO_CMS_PROFILES;
+            } else {
+                msgCode = Resources.DESKTOP_MSG_LOAD_PROFILE_FAILED;
             }
             graphics.drawString(Resources.getString(msgCode), 0, 0, Graphics.TOP | Graphics.LEFT);
             if (status != null) {
@@ -1647,9 +1653,7 @@ final class ComputerView extends View
     }
 
     private boolean isUsable() {
-        return profiles != null && profiles.size() != 0 // got some profiles
-                && Config.cmsProfile != null && Config.cmsProfile.length() != 0 // got default profile
-                && valuesFloat != null; // and initialized
+        return profiles != null && profiles.size() != 0 && initialProfile != null;
     }
 
     private void reset() {
@@ -1715,7 +1719,7 @@ final class ComputerView extends View
             colors = (int[]) cached[1];
             units = (Integer) cached[2];
 
-        } else { // found
+        } else { // not found
 
 //#ifdef __LOG__
             if (log.isEnabled()) log.debug("load profile: " + filename);
@@ -1776,7 +1780,6 @@ final class ComputerView extends View
         } catch (Throwable t) {
             status = t.toString();
 //#ifdef __LOG__
-            if (log.isEnabled()) log.error("failed to load " + filename);
             t.printStackTrace();
 //#endif
         } finally {
@@ -1791,6 +1794,7 @@ final class ComputerView extends View
     }
 
     private void findProfiles() throws IOException {
+        // var
         File dir = null;
 
         try {
@@ -1800,19 +1804,19 @@ final class ComputerView extends View
             // list profiles
             if (dir.exists()) {
                 final Vector v = new Vector(8);
-                final String[] xmls = FileBrowser.sort2array(dir.list("*.xml", false), null, null);
-                for (int N = xmls.length, i = 0; i < N; i++) {
-                    if (xmls[i].startsWith("cms.")) {
-                        v.addElement(xmls[i]);
+                for (Enumeration e = dir.list(); e.hasMoreElements(); ) {
+                    final String name = (String) e.nextElement();
+                    final String candidate = name.toLowerCase();
+                    if (candidate.startsWith("cms.") && candidate.endsWith(".xml")) {
+                        v.addElement(name); // use original to preserve case
                     }
                 }
-                v.copyInto(profilesNames = new String[v.size()]);
+                profilesNames = FileBrowser.sort2array(v.elements(), null, null);
                 for (int N = profilesNames.length, i = 0; i < N; i++) {
-//#ifdef __LOG__
-                    if (log.isEnabled()) log.debug("found profile " + profilesNames[i]);
-//#endif
                     profiles.put(profilesNames[i], this/* hack: null not allowed */);
                 }
+            } else {
+                status = "Folder ui-profiles does not exist.";
             }
         } finally {
             // close dir
@@ -1825,7 +1829,7 @@ final class ComputerView extends View
     }
 
      private String loadProfile(final String filename, final InputStream in) throws IOException, XmlPullParserException {
-         // instantiate parser
+         // XML parser
          final HXmlParser parser = new HXmlParser();
 
          try {
@@ -2250,44 +2254,46 @@ final class ComputerView extends View
             if (dir.exists()) {
 
                 // locals
-                char[] buffer = new char[512];
-                StringBuffer sb = new StringBuffer(4096);
+                final char[] buffer = new char[512];
+                final StringBuffer sb = new StringBuffer(4096);
                 InputStreamReader reader = null;
 
                 // eval all scripts
-                for (Enumeration e = dir.list("*.hcl", false); e.hasMoreElements(); ) {
+                for (Enumeration e = dir.list(); e.hasMoreElements(); ) {
                     final String filename = (String) e.nextElement();
-                    try {
-                        // read script from file
-                        reader = new InputStreamReader(Connector.openInputStream(Config.getFolderURL(Config.FOLDER_PROFILES) + filename));
-                        int c = reader.read(buffer);
-                        while (c != -1) {
-                            sb.append(buffer, 0, c);
-                            c = reader.read(buffer);
-                        }
-                        String script = sb.toString();
-//#ifdef __LOG__
-                        if (log.isEnabled()) {
-                            log.debug("-- evaluate: \n");
-                            log.debug(script);
-                            log.debug("-- ~evaluate");
-                        }
-//#endif
-                        // register handlers
-                        interp.eval(new Thing(script));
-
-                    } finally {
-
-                        // cleanup
+                    if (filename.endsWith(".hcl") || filename.endsWith(".HCL")) {
                         try {
-                            reader.close();
-                        } catch (Exception ex) { // NPE or IOE or SE
-                            // ignore
-                        }
-                        reader = null;
+                            // read script from file
+                            reader = new InputStreamReader(Connector.openInputStream(Config.getFolderURL(Config.FOLDER_PROFILES) + filename));
+                            int c = reader.read(buffer);
+                            while (c != -1) {
+                                sb.append(buffer, 0, c);
+                                c = reader.read(buffer);
+                            }
+                            String script = sb.toString();
+//#ifdef __LOG__
+                            if (log.isEnabled()) {
+                                log.debug("-- evaluate: \n");
+                                log.debug(script);
+                                log.debug("-- ~evaluate");
+                            }
+//#endif
+                            // register handlers
+                            interp.eval(new Thing(script));
 
-                        // reset string buffer
-                        sb.delete(0, sb.length());
+                        } finally {
+
+                            // cleanup
+                            try {
+                                reader.close();
+                            } catch (Exception ex) { // NPE or IOE or SE
+                                // ignore
+                            }
+                            reader = null;
+
+                            // reset string buffer
+                            sb.delete(0, sb.length());
+                        }
                     }
                 }
             }

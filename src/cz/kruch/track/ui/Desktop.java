@@ -42,6 +42,7 @@ import api.location.LocationProvider;
 import api.location.LocationListener;
 import api.location.Location;
 import api.location.QualifiedCoordinates;
+import api.location.LocationException;
 
 /**
  * Main user interface and event handling.
@@ -568,10 +569,10 @@ public final class Desktop implements CommandListener,
         }
     }
 
-    /*private */synchronized void resetGui() {
+    synchronized boolean resetGui() {
         // that's it when booting
         if (boot) {
-            return;
+            return false;
         }
 
 //#ifdef __LOG__
@@ -582,7 +583,7 @@ public final class Desktop implements CommandListener,
         final int h = screen.getHeight();
 
         if (w == width && h == height) {
-            return; // no change, just quit
+            return false; // no change, just quit
         }
 
         // remember new size
@@ -651,6 +652,8 @@ public final class Desktop implements CommandListener,
 
         // UI is ready now
         views = v;
+
+        return true;
     }
 
     private void initDefaultMap() throws Throwable {
@@ -752,7 +755,8 @@ public final class Desktop implements CommandListener,
 
         // check DataDir structure
         if (Config.dataDirAccess) {
-            Config.initDataDir(getDiskWorker());
+            Config.worker = getDiskWorker();
+            Config.initDataDir();
         } else {
             showError("'DataDir' not accessible - please fix it and restart", null, null);
         }
@@ -1782,15 +1786,23 @@ public final class Desktop implements CommandListener,
             Class providerClass = null;
             switch (Config.locationProvider) {
                 case Config.LOCATION_PROVIDER_JSR179:
+//#ifdef __ANDROID__
                     if (cz.kruch.track.TrackingMIDlet.android) {
                         providerClass = Class.forName("cz.kruch.track.location.AndroidLocationProvider");
-                    } else {
-                        providerClass = Class.forName("cz.kruch.track.location.Jsr179LocationProvider");
                     }
+//#else
+                    providerClass = Class.forName("cz.kruch.track.location.Jsr179LocationProvider");
+//#endif
                     providerName = "Internal";
                 break;
                 case Config.LOCATION_PROVIDER_JSR82:
+//#ifdef __ANDROID__
+                    if (cz.kruch.track.TrackingMIDlet.android) {
+                        providerClass = Class.forName("cz.kruch.track.location.AndroidBluetoothLocationProvider");
+                    }
+//#else
                     providerClass = Class.forName("cz.kruch.track.location.Jsr82LocationProvider");
+//#endif
                     providerName = "Bluetooth";
                 break;
 //#ifdef __ALL__
@@ -1832,7 +1844,19 @@ public final class Desktop implements CommandListener,
 //#ifdef __LOG__
             if (log.isEnabled()) log.debug("provider started; state " + state);
 //#endif
+        } catch (LocationException e) {
+
+            // notify user
+            showError(e.getMessage(), null, null);
+
+            // cleanup
+            provider = null;
+
+			return false;
+
         } catch (Throwable t) {
+
+            // notify user
             showError(Resources.getString(Resources.DESKTOP_MSG_START_PROV_FAILED) + " [" + provider.getName() + "]", t, null);
 
             // cleanup
@@ -1867,7 +1891,11 @@ public final class Desktop implements CommandListener,
 
         // instantiate BT provider
         try {
+//#ifdef __ANDROID__
+            provider = (LocationProvider) Class.forName("cz.kruch.track.location.AndroidBluetoothLocationProvider").newInstance();
+//#else
             provider = (LocationProvider) Class.forName("cz.kruch.track.location.Jsr82LocationProvider").newInstance();
+//#endif
         } catch (Throwable t) {
             showError(Resources.getString(Resources.DESKTOP_MSG_CREATE_PROV_FAILED) + " [Bluetooth]", t, screen);
             return false;
@@ -1881,9 +1909,13 @@ public final class Desktop implements CommandListener,
 
         // (re)start BT provider
         final Thread thread = new Thread((Runnable) provider);
+//#ifdef __ALL__
+/* // set in gps() routine
         if (cz.kruch.track.TrackingMIDlet.samsung) {
             thread.setPriority(Thread.MIN_PRIORITY);
         }
+*/
+//#endif
         thread.start();
 
         // not browsing
@@ -1914,7 +1946,15 @@ public final class Desktop implements CommandListener,
         osd.setProviderStatus(LocationProvider._STARTING);
 
         // (re)start provider
-        (new Thread((Runnable) provider)).start();
+        final Thread thread = new Thread((Runnable) provider);
+//#ifdef __ALL__
+/*
+        if (cz.kruch.track.TrackingMIDlet.samsung) {
+            thread.setPriority(Thread.MIN_PRIORITY);
+        }
+*/
+//#endif
+        thread.start();
 
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("~restart tracking");
@@ -2491,6 +2531,8 @@ public final class Desktop implements CommandListener,
         cz.kruch.track.io.CrcInputStream.doReset();
         // reboot
         boot(imgcached, configured, resourced, false);
+        // common views setup
+        View.b2b_init(); // TODO ugly
         // show view
         views[VIEW_MAP].setVisible(false);
         views[VIEW_HPS].setVisible(false);

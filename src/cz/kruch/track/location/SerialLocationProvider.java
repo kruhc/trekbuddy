@@ -176,6 +176,12 @@ public class SerialLocationProvider
             // debug
             setStatus("stream opened");
 
+//#ifdef __ALL__
+            if (cz.kruch.track.TrackingMIDlet.samsung) {
+                thread.setPriority(Thread.MIN_PRIORITY);
+            }
+//#endif
+
             // start keep-alive
             startKeepAlive(connection);
 

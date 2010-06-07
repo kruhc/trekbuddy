@@ -2,8 +2,6 @@
 
 package cz.kruch.track.ui.nokia;
 
-import cz.kruch.track.ui.Desktop;
-
 import java.util.TimerTask;
 
 /**
@@ -55,6 +53,15 @@ public class DeviceControl extends TimerTask {
             try {
                 Class.forName("com.motorola.multimedia.Lighting");
                 instance = (DeviceControl) Class.forName("cz.kruch.track.ui.nokia.MotorolaDeviceControl").newInstance();
+                cz.kruch.track.TrackingMIDlet.motorola = true;
+            } catch (Throwable t) {
+                // ignore
+            }
+        }
+        if (instance == null) {
+            try {
+                Class.forName("com.motorola.funlight.FunLight");
+                instance = (DeviceControl) Class.forName("cz.kruch.track.ui.nokia.Motorola2DeviceControl").newInstance();
                 cz.kruch.track.TrackingMIDlet.motorola = true;
             } catch (Throwable t) {
                 // ignore
@@ -144,7 +151,7 @@ public class DeviceControl extends TimerTask {
 
     public static void flash() {
         if (instance.backlight == STATUS_OFF) {
-            Desktop.display.flashBacklight(1);
+            cz.kruch.track.ui.Desktop.display.flashBacklight(1);
         }
     }
 
@@ -167,6 +174,17 @@ public class DeviceControl extends TimerTask {
         return instance.backlight;
     }
 
+//#ifdef __RIM__
+
+    public static void loadAltDatadir() {
+        instance.loadDatadir();
+    }
+
+    public static void saveAltDatadir() {
+        instance.saveDatadir();
+    }
+
+//#endif
     //
     // implementation
     //
@@ -192,9 +210,7 @@ public class DeviceControl extends TimerTask {
     }
 
     void close() {
-        // restore original setting?
-        // ...
-        // cancel running task?
+        // cancel running task, if any
         if (task != null) {
             task.cancel();
             task = null;
@@ -222,7 +238,7 @@ public class DeviceControl extends TimerTask {
 
     void confirm() {
         if (!cz.kruch.track.configuration.Config.powerSave) {
-            Desktop.display.vibrate(100);
+            cz.kruch.track.ui.Desktop.display.vibrate(100);
         }
     }
 
@@ -231,11 +247,11 @@ public class DeviceControl extends TimerTask {
         if (backlight == STATUS_OFF) {
             backlight = STATUS_ON;
             if (isSchedulable()) {
-                Desktop.timer.scheduleAtFixedRate(task = new DeviceControl(), REFRESH_PERIOD, REFRESH_PERIOD);
+                cz.kruch.track.ui.Desktop.timer.scheduleAtFixedRate(task = new DeviceControl(), REFRESH_PERIOD, REFRESH_PERIOD);
             }
         } else {
             backlight = STATUS_OFF;
-            if (/*isSchedulable()*/task != null) {
+            if (task != null/*isSchedulable()*/) {
                 task.cancel();
                 task = null;
             }
@@ -272,6 +288,16 @@ public class DeviceControl extends TimerTask {
             ((javax.microedition.lcdui.Displayable) list).setTicker(null);
         }
     }
+
+//#ifdef __RIM__
+
+    void loadDatadir() {
+    }
+
+    void saveDatadir() {
+    }
+
+//#endif
 
     //
     // interface contract

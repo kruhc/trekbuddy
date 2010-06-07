@@ -145,7 +145,17 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         } catch (Throwable t) {
         }
 
-//#endif /* !__ANDROID__ */
+//#else /* __ANDROID__ */
+
+        // detect runtime capabilities
+        jsr179 = true;
+        try {
+            Class.forName("android.bluetooth.BluetoothDevice");
+            jsr82 = true;
+        } catch (Throwable t) {
+        }
+
+//#endif /* __ANDROID__ */
         
 //#ifdef __ALL__
 
@@ -256,17 +266,10 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
             imaged = -1;
         }
 
-        // initialize file API
-        api.file.File.initialize(sxg75 || android || hasFlag("fs_traverse_bug"));
-//#ifdef __LOG__
-        System.out.println("* FsType: " + api.file.File.fsType);
-//#endif
-
         // load configuration
         int configured;
         try {
-            cz.kruch.track.configuration.Config.initialize();
-            configured = 1;
+            configured = cz.kruch.track.configuration.Config.initialize();
         } catch (Throwable t) {
 //#ifdef __LOG__
             t.printStackTrace();
@@ -277,8 +280,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         // load default resources
         int resourced;
         try {
-            Resources.initialize();
-            resourced = 1;
+            resourced = Resources.initialize();
         } catch (Throwable t) {
 //#ifdef __LOG__
             t.printStackTrace();
@@ -289,11 +291,17 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         // load default datums
         cz.kruch.track.configuration.Config.initDefaultDatums(this);
 
+        // initialize file API
+        api.file.File.initialize(sxg75 || android || hasFlag("fs_traverse_bug"));
+//#ifdef __LOG__
+        System.out.println("* FsType: " + api.file.File.fsType);
+//#endif
+
 //#ifndef __B2B__
 
         // check datadir access and existence
         if (File.isFs()) {
-            cz.kruch.track.configuration.Config.checkDataDir();
+            cz.kruch.track.configuration.Config.checkDataDir(configured);
         }
 
 //#else
@@ -303,6 +311,11 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         cz.kruch.track.configuration.Config.dataDirExists = true;
 
 //#endif
+
+        // fallback to external configuration in case of trouble
+        if (configured == 0) {
+            cz.kruch.track.configuration.Config.fallback();
+        }
 
         // create and boot desktop
         desktop = new cz.kruch.track.ui.Desktop(this);

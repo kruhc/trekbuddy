@@ -611,6 +611,11 @@ public final class Map implements Runnable {
             if (idx == -1) {
                 return url;
             }
+//#ifdef __ANDROID__
+            if (cz.kruch.track.TrackingMIDlet.android) {
+                return url;
+            }
+//#endif
             final StringBuffer sb = new StringBuffer(64);
             int s0 = 0;
             while (idx > -1) {

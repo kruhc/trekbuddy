@@ -374,7 +374,7 @@ public final class Resources {
     private Resources() {
     }
 
-    static void initialize() throws IOException {
+    static int initialize() throws IOException {
         final Object[] holder = new Object[2];
 
         // read default resources
@@ -382,6 +382,8 @@ public final class Resources {
         ids = (int[]) holder[0];
         value = (String) holder[1];
         values = new String[ids.length];
+
+        return 1;
     }
 
 //#ifdef __USERL10N__

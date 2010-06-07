@@ -851,7 +851,7 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
             if (cz.kruch.track.TrackingMIDlet.jsr82) {
                 providers.addElement(new Integer(Config.LOCATION_PROVIDER_JSR82));
             }
-            if (cz.kruch.track.TrackingMIDlet.jsr179 || cz.kruch.track.TrackingMIDlet.android) {
+            if (cz.kruch.track.TrackingMIDlet.jsr179) {
                 providers.addElement(new Integer(Config.LOCATION_PROVIDER_JSR179));
             }
 //#ifdef __ALL__
@@ -884,7 +884,7 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
         choiceStream.setSelectedIndex(choiceStream.append(Resources.getString(Resources.CFG_TWEAKS_FLD_RELIABLE_INPUT), null), Config.reliableInput);
         if (provider == Config.LOCATION_PROVIDER_JSR82) {
             choiceStream.setSelectedIndex(choiceStream.append(Resources.getString(Resources.CFG_LOCATION_FLD_DO_SERVICE_SEARCH), null), Config.btDoServiceSearch);
-            choiceStream.setSelectedIndex(choiceStream.append(Resources.getString(Resources.CFG_LOCATION_FLD_TIME_FIX), null), Config.btAddressWorkaround);
+            choiceStream.setSelectedIndex(choiceStream.append(Resources.getString(Resources.CFG_LOCATION_FLD_ADDRESS_FIX), null), Config.btAddressWorkaround);
         }
         return choiceStream;
     }

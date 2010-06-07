@@ -251,7 +251,9 @@ public final class FileBrowser implements CommandListener, Runnable, Comparator 
             if (list.size() > 0) {
                 list.setSelectCommand(cmdSelect);
 //#ifdef __B2B__
-                list.addCommand(cmdDir);
+                if (cmdDir != null) {
+                    list.addCommand(cmdDir);
+                }
 //#endif
             } else {
                 list.setSelectCommand(null);

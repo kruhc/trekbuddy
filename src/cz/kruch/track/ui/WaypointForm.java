@@ -403,13 +403,14 @@ final class WaypointForm implements CommandListener, ItemCommandListener, Callba
     }
 
     public void commandAction(Command command, Item item) {
-        if (CMD_TAKE.equals(command.getLabel())) {
+        final String cmd = command.getLabel();
+        if (cmd.equals(CMD_TAKE)) {
             try {
                 Camera.show(form, this, tracklogTime);
             } catch (Throwable t) {
                 Desktop.showError(Resources.getString(Resources.NAV_MSG_CAMERA_FAILED), t, form);
             }
-        } else /* if (CMD_HINT.equals(command.getLabel())) */ {
+        } else /* if (cmd.startsWith(CMD_HINT)) */ {
             final String label = item.getLabel();
             final GroundspeakBean bean = ((GroundspeakBean) waypoint.getUserObject());
             if (label.startsWith(Resources.getString(Resources.NAV_FLD_GS_LISTING_LONG))) {

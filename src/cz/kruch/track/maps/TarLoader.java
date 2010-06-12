@@ -98,11 +98,12 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
             * test quality of File API
             */
 
-            Map.useReset = !cz.kruch.track.configuration.Config.lowmemIo;
             if (Map.useReset) {
                 if (in.markSupported()) {
                     try {
-                        in.mark((int) nativeFile.fileSize());
+                        if (!Config.lowmemIo) {
+                            in.mark((int) nativeFile.fileSize());
+                        }
                         nativeIn = in;
                         Map.fileInputStreamResetable = 1;
                     } catch (OutOfMemoryError e) {
@@ -213,7 +214,13 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
             if (nativeIn != null) {
 
                 // get ready for reuse
-                nativeIn.reset();
+                if (!Config.lowmemIo) {
+                    nativeIn.reset();
+                } else {
+                    nativeIn.close();
+                    nativeIn = null; // gc hint
+                    nativeIn = nativeFile.openInputStream();
+                }
                 buffered.setInputStream(nativeIn);
                 tarIn.setStreamOffset(0);
 
@@ -302,7 +309,13 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
 //#ifdef __LOG__
                         if (log.isEnabled()) log.debug("but reset it first");
 //#endif
-                        nativeIn.reset();
+                        if (!Config.lowmemIo) {
+                            nativeIn.reset();
+                        } else {
+                            nativeIn.close();
+                            nativeIn = null; // gc hint
+                            nativeIn = nativeFile.openInputStream();
+                        }
                         buffered.setInputStream(nativeIn);
                         tarIn.setStreamOffset(0);
                     }

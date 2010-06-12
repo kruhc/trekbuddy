@@ -85,7 +85,7 @@
 1338=No provider instance
 1339=No startup map. Use Options->Load Map/Atlas.
 1340=Paused
-1341=No profile(s) found
+1341=No profile(s) found.
 1342=Profiles
 1343=Incorrect file selected.\nTry again.
 1344=Failed to parse map projection
@@ -218,8 +218,8 @@
 2315=Enter landmarks filename:
 2316=Select destination:
 2400=Camera failed
-2401=\n<no preview>
-2402=No preview :-(
+2401=\n<no thumbnail>
+2402=No thumbnail :-(
 2403=Snapshot failed
 2404=No snapshot
 2405=Malformed coordinate:

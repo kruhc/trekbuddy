@@ -191,8 +191,12 @@ final class DeviceScreen extends GameCanvas implements Runnable {
         // release current graphics - probably will not work after size change (RIM, ANDROID)
         graphics = null;
 
-        // reset GUI
-        delegate.resetGui();
+        // reset and repaint UI
+        if (delegate.resetGui()) {
+            delegate.update(Desktop.MASK_ALL);
+        } else { // lightweight refresh
+            super.flushGraphics();
+        }
 
 //#ifdef __LOG__
         if (log.isEnabled()) log.info("~size changed");

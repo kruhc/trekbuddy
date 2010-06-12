@@ -23,6 +23,7 @@
     <property name="rim50.home" value="c:\J2ME\RIM\JDE 5.0"/>
     <property name="android15.home" value="c:\J2ME\android-sdk-windows\platforms\android-1.5"/>
     <property name="android16.home" value="c:\J2ME\android-sdk-windows\platforms\android-1.6"/>
+    <property name="android20.home" value="c:\J2ME\android-sdk-windows\platforms\android-2.0"/>
     <property name="microemu.home" value="z:\repository\microemu-google\microemulator"/>
     <property name="proguard.home" value="z:\apps\proguard3.11"/>
     <property name="proguard4.home" value="z:\apps\proguard4.4"/>
@@ -92,6 +93,14 @@
         <pathelement location="${microemu.home}\microemu-extensions\microemu-jsr-75\target\microemu-jsr-75-3.0.0-SNAPSHOT.jar"/>
         <pathelement location="${microemu.home}\microemu-android\microemu-android-idea.jar"/>
         <pathelement location="${android16.home}\android.jar"/>
+    </path>
+
+    <path id="bootclasspath.android20">
+        <pathelement location="${microemu.home}\microemu-cldc\target\microemu-cldc-3.0.0-SNAPSHOT.jar"/>
+        <pathelement location="${microemu.home}\microemu-midp\target\microemu-midp-3.0.0-SNAPSHOT.jar"/>
+        <pathelement location="${microemu.home}\microemu-extensions\microemu-jsr-75\target\microemu-jsr-75-3.0.0-SNAPSHOT.jar"/>
+        <pathelement location="${microemu.home}\microemu-android\microemu-android-idea.jar"/>
+        <pathelement location="${android20.home}\android.jar"/>
     </path>
 
     <path id="bootclasspath.rim41">
@@ -353,6 +362,86 @@
 			  tofile="dist/${vendor.dir}/${dist.dir}/trekbuddy_android16.apk"/>
     </target>
 
+    <target name="android20">
+        <property name="suffix" value="-android"/>
+        <property name="dist.dir" value="android20"/>
+        <property name="libraryjars" value="${microemu.home}\microemu-cldc\target\microemu-cldc-3.0.0-SNAPSHOT.jar;${microemu.home}\microemu-midp\target\microemu-midp-3.0.0-SNAPSHOT.jar;${microemu.home}\microemu-extensions\microemu-jsr-75\target\microemu-jsr-75-3.0.0-SNAPSHOT.jar;${android20.home}\android.jar"/>
+        <antcall target="clean"/>
+        <ant dir="${microemu.home}/microemu-android"
+             antfile="build-trekbuddy.xml" target="clean"
+             inheritAll="false" inheritRefs="false">
+			<property name="sdk.version" value="2.0"/>
+			<property name="api.level" value="5"/>
+			<property name="dist.dir" value="android20"/>
+		</ant>
+        <antcall target="a.pre.android"/>
+        <antcall target="compile.android20"/>
+        <antcall target="android.pack" inheritall="true"/>
+        <antcall target="obfuscate.android" inheritall="true"/>
+<!-- not needed, so rename the jar as if it happened
+        <antcall target="preverify" inheritall="true"/>
+-->
+        <move file="tmp/trekbuddy${suffix}-obfuscated.jar"
+              tofile="tmp/preverified/trekbuddy${suffix}-obfuscated.jar"/>
+        <antcall target="dist" inheritall="true"/>
+        <ant dir="${microemu.home}/microemu-android"
+             antfile="build-trekbuddy.xml" target="zipalign"
+             inheritAll="false" inheritRefs="false">
+			<property name="sdk.version" value="2.0"/>
+			<property name="api.level" value="5"/>
+			<property name="dist.dir" value="android20"/>
+<!--
+            <property name="javac.debug" value="true"/>
+            <property name="javac.debuglevel" value="source,lines"/>
+-->
+<!--
+            <property name="do.obfuscate" value="true"/>
+-->
+        </ant>
+        <copy file="${microemu.home}/microemu-android/bin/trekbuddy.apk"
+			  tofile="dist/${vendor.dir}/${dist.dir}/trekbuddy_android20.apk"/>
+    </target>
+
+    <target name="android">
+        <property name="suffix" value="-android"/>
+        <property name="dist.dir" value="android"/>
+        <property name="libraryjars" value="${microemu.home}\microemu-cldc\target\microemu-cldc-3.0.0-SNAPSHOT.jar;${microemu.home}\microemu-midp\target\microemu-midp-3.0.0-SNAPSHOT.jar;${microemu.home}\microemu-extensions\microemu-jsr-75\target\microemu-jsr-75-3.0.0-SNAPSHOT.jar;${android20.home}\android.jar"/>
+        <antcall target="clean"/>
+        <ant dir="${microemu.home}/microemu-android"
+             antfile="build-trekbuddy.xml" target="clean"
+             inheritAll="false" inheritRefs="false">
+			<property name="sdk.version" value="2.0"/>
+			<property name="api.level" value="3"/>
+			<property name="dist.dir" value="android"/>
+		</ant>
+        <antcall target="a.pre.android"/>
+        <antcall target="compile.android"/>
+        <antcall target="android.pack" inheritall="true"/>
+        <antcall target="obfuscate.android" inheritall="true"/>
+<!-- not needed, so rename the jar as if it happened
+        <antcall target="preverify" inheritall="true"/>
+-->
+        <move file="tmp/trekbuddy${suffix}-obfuscated.jar"
+              tofile="tmp/preverified/trekbuddy${suffix}-obfuscated.jar"/>
+        <antcall target="dist" inheritall="true"/>
+        <ant dir="${microemu.home}/microemu-android"
+             antfile="build-trekbuddy.xml" target="zipalign"
+             inheritAll="false" inheritRefs="false">
+			<property name="sdk.version" value="2.0"/>
+			<property name="api.level" value="3"/>
+			<property name="dist.dir" value="android"/>
+<!--
+            <property name="javac.debug" value="true"/>
+            <property name="javac.debuglevel" value="source,lines"/>
+-->
+<!--
+            <property name="do.obfuscate" value="true"/>
+-->
+        </ant>
+        <copy file="${microemu.home}/microemu-android/bin/trekbuddy.apk"
+			  tofile="dist/${vendor.dir}/${dist.dir}/trekbuddy.apk"/>
+    </target>
+
     <target name="emulator">
         <property name="suffix" value="-emulator"/>
         <property name="dist.dir" value="emulator"/>
@@ -556,6 +645,28 @@
                bootclasspathref="bootclasspath.android16"/>
     </target>
 
+    <target name="compile.android20" depends="remove.nonandroid.src,remove.rim.src">
+        <mkdir dir="tmp/build/classes"/>
+        <mkdir dir="tmp/ant"/>
+        <javac srcdir="tmp/src"
+               destdir="tmp/build/classes"
+               tempdir="tmp/ant"
+               fork="true"
+               target="1.5" source="1.3"
+               bootclasspathref="bootclasspath.android20"/>
+    </target>
+
+    <target name="compile.android" depends="remove.nonandroid.src,remove.rim.src">
+        <mkdir dir="tmp/build/classes"/>
+        <mkdir dir="tmp/ant"/>
+        <javac srcdir="tmp/src"
+               destdir="tmp/build/classes"
+               tempdir="tmp/ant"
+               fork="true"
+               target="1.5" source="1.5"
+               bootclasspathref="bootclasspath.android20"/>
+    </target>
+
     <target name="remove.nonstd.src" depends="remove.nonmidp.src,remove.android.src">
     </target>
 
@@ -565,6 +676,7 @@
         <delete file="tmp/src/api/file/SiemensFile.java"/>
         <delete file="tmp/src/cz/kruch/track/ui/nokia/NokiaDeviceControl.java"/>
         <delete file="tmp/src/cz/kruch/track/ui/nokia/MotorolaDeviceControl.java"/>
+        <delete file="tmp/src/cz/kruch/track/ui/nokia/Motorola2DeviceControl.java"/>
         <delete file="tmp/src/cz/kruch/track/ui/nokia/S60DeviceControl.java"/>
         <delete file="tmp/src/cz/kruch/track/ui/nokia/SiemensDeviceControl.java"/>
         <delete file="tmp/src/cz/kruch/track/ui/nokia/SonyEricssonDeviceControl.java"/>
@@ -578,6 +690,7 @@
         <delete file="tmp/src/api/file/Motorola1000File.java"/>
         <delete file="tmp/src/api/file/SiemensFile.java"/>
         <delete file="tmp/src/cz/kruch/track/ui/nokia/MotorolaDeviceControl.java"/>
+        <delete file="tmp/src/cz/kruch/track/ui/nokia/Motorola2DeviceControl.java"/>
         <delete file="tmp/src/cz/kruch/track/ui/nokia/SiemensDeviceControl.java"/>
         <delete file="tmp/src/cz/kruch/track/ui/nokia/SonyEricssonDeviceControl.java"/>
         <delete file="tmp/src/cz/kruch/track/ui/nokia/SamsungDeviceControl.java"/>
@@ -601,7 +714,7 @@
     <target name="remove.android.src">
         <delete file="tmp/src/cz/kruch/track/fun/AndroidCamera.java"/>
         <delete file="tmp/src/cz/kruch/track/location/AndroidLocationProvider.java"/>
-        <delete file="tmp/src/cz/kruch/track/location/AndroidExternalLocationProvider.java"/>
+        <delete file="tmp/src/cz/kruch/track/location/AndroidBluetoothLocationProvider.java"/>
         <delete file="tmp/src/cz/kruch/track/ui/nokia/AndroidDeviceControl.java"/>
     </target>
 
@@ -779,7 +892,7 @@
             <arg value="-overloadaggressively"/>
             <arg value="-allowaccessmodification"/>
             <arg value="-keep class * implements javax.microedition.midlet.MIDlet"/>
-            <arg value="-keepnames class cz.** extends java.lang.Exception"/>
+            <arg value="-keepnames class cz.** extends java.lang.Exception"/>       
             <arg value="-keepnames class api.** extends java.lang.Exception"/>
             <arg value="-keepnames class org.hecl.** extends java.lang.Exception"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.maps.io.FileInput"/>

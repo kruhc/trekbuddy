@@ -222,8 +222,8 @@ public final class Jsr82LocationProvider extends SerialLocationProvider {
                 // start
                 Jsr82LocationProvider.this.url = btspp;
                 final Thread thread = new Thread(Jsr82LocationProvider.this);
-//#ifdef __ALL__                
-/*
+//#ifdef __ALL__
+/* // set in gps() routine
                 if (cz.kruch.track.TrackingMIDlet.samsung) {
                     thread.setPriority(Thread.MIN_PRIORITY);
                 }

@@ -12,6 +12,7 @@ final class LgDeviceControl extends DeviceControl {
     LgDeviceControl() {
         this.name = "LG";
         this.cellIdProperty = "com.lge.net.cellid";
+        this.lacProperty = "com.lge.net.lac";
     }
 
     /** @overriden */

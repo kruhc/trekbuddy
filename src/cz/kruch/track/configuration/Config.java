@@ -10,15 +10,15 @@ import cz.kruch.track.ui.YesNoDialog;
 import javax.microedition.rms.RecordStore;
 import javax.microedition.midlet.MIDlet;
 import javax.microedition.io.Connector;
-import java.io.DataInputStream;
-import java.io.ByteArrayInputStream;
-import java.io.DataOutputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.InputStream;
 import java.util.Vector;
 import java.util.Hashtable;
 import java.util.Enumeration;
+import java.io.DataInputStream;
+import java.io.IOException;
+import java.io.DataOutputStream;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.InputStream;
 
 import api.location.Datum;
 import api.location.Ellipsoid;
@@ -235,22 +235,35 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
 
 //#endif
 
-    private Config() {
+    private static final int ACTION_INITDATADIR     = 0;
+    private static final int ACTION_PERSISTCFG      = 1;
+
+    public static Worker worker;
+
+    private int action;
+
+    private Config(int action) {
+        this.action = action;
     }
 
-    public static Throwable initialize() {
+    public static int initialize() {
 
 //#ifdef __RIM__
+
         /* default for Blackberry */
         dataDir = getDefaultDataDir("file:///SDCard/", "TrekBuddy/");
         commUrl = "btspp://000276fd79da:1";
         fullscreen = true;
         safeColors = true;
+
 //#elifdef __ANDROID__
+
         /* default for Android (MicroEmu) */
         dataDir = getDefaultDataDir("file:///sdcard/", "TrekBuddy/");
         listFont = 0x200010;
+
 //#else
+
         if (cz.kruch.track.TrackingMIDlet.sxg75) {
             dataDir = getDefaultDataDir("file:///fs/", "tb/");
             fullscreen = true;
@@ -284,19 +297,14 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         if (cz.kruch.track.TrackingMIDlet.symbian) {
             useNativeService = true; // !cz.kruch.track.TrackingMIDlet.s60rdfp2;
         }
-        if (cz.kruch.track.TrackingMIDlet.hasFlag("bt_service_search")) {
-            btDoServiceSearch = true;
-        }
-        if (cz.kruch.track.TrackingMIDlet.hasFlag("ui_no_softkey_menu")) {
-            uiNoCommands = true;
-        }
+
 //#endif
 
-        Throwable result = null;
+        int result;
         try {
-            initialize(CONFIG_090);
+            result = initialize(CONFIG_090);
         } catch (Throwable t) {
-            result = t;
+            result = -1;
         }
         try {
             initialize(VARS_090);
@@ -611,7 +619,39 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
 //#endif
     }
 
-    private static void initialize(final String rms) throws ConfigurationException {
+    private static void dump() {
+        File f = null;
+        DataOutputStream os = null;
+        try {
+            f = File.open(getFolderURL(FOLDER_RESOURCES) + "settings.dat", Connector.READ_WRITE);
+            if (f.exists()) {
+                f.delete();
+            }
+            f.create();
+            os = new DataOutputStream(f.openOutputStream());
+            writeMain(os);
+            os.flush();
+        } catch (Throwable t) {
+//#ifdef __LOG__
+            t.printStackTrace();
+//#endif
+        } finally {
+            try {
+                os.close();
+            } catch (Exception e) { // NPE or IOE
+                // ignore
+            }
+            try {
+                f.close();
+            } catch (Exception e) { // NPE or IOE
+                // ignore
+            }
+        }
+    }
+
+    private static int initialize(final String rms) throws ConfigurationException {
+        int result;
+
         RecordStore rs = null;
         DataInputStream din = null;
 
@@ -622,12 +662,8 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
                                              false);
 
             // new store? existing store? corrupted store?
-            final int numRecords = rs.getNumRecords();
-            if (numRecords == 0) {
-//#ifdef __LOG__
-                if (log.isEnabled()) log.info("new configuration (" + rms + ")");
-//#endif
-            } else {
+            result = rs.getNumRecords();
+            if (result > 0) {
                 din = new DataInputStream(new ByteArrayInputStream(rs.getRecord(1)));
                 if (CONFIG_090.equals(rms)) {
                     readMain(din);
@@ -647,6 +683,37 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
                 rs.closeRecordStore();
             } catch (Exception e) { // NPE or IOE
                 // ignore
+            }
+        }
+
+        return result;
+    }
+
+    public static void fallback() {
+        if (dataDirExists) {
+            File f = null;
+            DataInputStream in = null;
+            try {
+                f = File.open(getFolderURL(FOLDER_RESOURCES) + "settings.dat", Connector.READ);
+                if (f.exists()) {
+                    in = new DataInputStream(f.openInputStream());
+                    readMain(in);
+                }
+            } catch (Throwable t) {
+//#ifdef __LOG__
+                t.printStackTrace();
+//#endif
+            } finally {
+                try {
+                    in.close();
+                } catch (Exception e) { // NPE or IOE
+                    // ignore
+                }
+                try {
+                    f.close();
+                } catch (Exception e) { // NPE or IOE
+                    // ignore
+                }
             }
         }
     }
@@ -687,9 +754,23 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
                 // ignore
             }
         }
+
+        if (CONFIG_090.equals(rms)) {
+//#ifdef __RIM__
+            cz.kruch.track.ui.nokia.DeviceControl.saveAltDatadir();
+//#endif                
+            if (dataDirExists) {
+                worker.enqueue(new Config(ACTION_PERSISTCFG));
+            }
+        }
     }
 
-    public static void checkDataDir() {
+    public static void checkDataDir(final int configured) {
+//#ifdef __RIM__
+        if (configured == 0) {
+            cz.kruch.track.ui.nokia.DeviceControl.loadAltDatadir();
+        }
+//#endif
         File dir = null;
         try {
             dir = File.open(Config.dataDir);
@@ -706,21 +787,28 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         }
     }
 
-    public static void initDataDir(final Worker worker) {
-        worker.enqueue(new Config());
+    public static void initDataDir() {
+        worker.enqueue(new Config(ACTION_INITDATADIR));
     }
 
     public void run() {
 //#ifdef __LOG__
-        if (log.isEnabled()) log.info("init datadir");
+        if (log.isEnabled()) log.info("run; action = " + action);
 //#endif
 
-        if (dataDirExists) {
-            response(YesNoDialog.NO, null);
-        } else {
-            (new YesNoDialog(this, null,
-                             "DataDir '" + getDataDir().substring(8 /* "file:///".length() */) + "' does not exists. Create it?",
-                             null)).show();
+        switch (action) {
+            case ACTION_INITDATADIR: {
+                if (dataDirExists) {
+                    response(YesNoDialog.NO, null);
+                } else {
+                    (new YesNoDialog(this, null,
+                                     "DataDir '" + getDataDir().substring(8 /* "file:///".length() */) + "' does not exists. Create it?",
+                                     null)).show();
+                }
+            } break;
+            case ACTION_PERSISTCFG: {
+                dump();
+            } break;
         }
     }
 
@@ -778,13 +866,14 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
             File dir = null;
             try {
                 dir = File.open(Config.getFolderURL(Config.FOLDER_SOUNDS));
-                for (final Enumeration seq = dir.list("wpt.*", false); seq.hasMoreElements(); ) {
+                for (final Enumeration seq = dir.list(); seq.hasMoreElements(); ) {
                     final String name = (String) seq.nextElement();
-                    if (name.endsWith(".amr") || name.endsWith(".wav") || name.endsWith(".mp3") || name.endsWith(".aac")|| name.endsWith(".m4a")|| name.endsWith(".3gp")) {
+                    final String candidate = name.toLowerCase();
+                    if (candidate.startsWith("wpt.") && (candidate.endsWith(".amr") || candidate.endsWith(".wav") || candidate.endsWith(".mp3") || candidate.endsWith(".aac")|| candidate.endsWith(".m4a")|| candidate.endsWith(".3gp"))) {
 //#ifdef __LOG__
                         if (log.isEnabled()) log.info("found wpt sound file " + name);
 //#endif
-                        defaultWptSound = name; 
+                        defaultWptSound = name;
                         break;
                     }
                 }

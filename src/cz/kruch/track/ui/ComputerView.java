@@ -607,7 +607,7 @@ final class ComputerView extends View
             return Desktop.MASK_NONE;
         }
 
-        if (profilesNames.length > 1) {
+        if (profiles.size() > 1) {
             switch (action) {
                 case Canvas.UP: {
 //#ifdef __HECL__

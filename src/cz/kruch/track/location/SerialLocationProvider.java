@@ -178,7 +178,7 @@ public class SerialLocationProvider
 
 //#ifdef __ALL__
             if (cz.kruch.track.TrackingMIDlet.samsung) {
-                Thread.currentThread().setPriority(Thread.MIN_PRIORITY);
+                thread.setPriority(Thread.MIN_PRIORITY);
             }
 //#endif
 

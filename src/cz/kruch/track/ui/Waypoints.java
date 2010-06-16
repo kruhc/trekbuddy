@@ -950,16 +950,21 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
         final Vector wptsCached = (Vector) stores.get(storeName);
         if (wptsCached == null) { // no, load from file
 
-            // remove current store from cache IF IT IS NOT in use
-            if (currentName != null && !currentName.equals(inUseName)) {
-                stores.remove(currentName);
-            }
-            // no current store
-            currentWpts = null; // gc hint
-            currentName = null; // gc hint
+            // only foreground activity
+            if (uiAction == 2) {
+
+                // remove current store from cache IF IT IS NOT in use
+                if (currentName != null && !currentName.equals(inUseName)) {
+                    stores.remove(currentName);
+                }
+
+                // no current store
+                currentWpts = null; // gc hint
+                currentName = null; // gc hint
 //#ifndef __RIM__
-            System.gc(); // unconditional!!! 
+                System.gc(); // unconditional!!!
 //#endif
+            }
 
             // parse XML-based store
             File file = null;

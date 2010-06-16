@@ -213,7 +213,7 @@ abstract class StreamReadingLocationProvider extends LocationProvider {
                 // read from stream
                 final int n;
                 if (!cz.kruch.track.configuration.Config.reliableInput) {
-                    n = in.read(btline);
+                    n = in.read(btline, 0, btline.length);
                 } else {
                     final int available = in.available();
                     if (available > 0) {

@@ -144,7 +144,7 @@ final class InfoForm implements CommandListener {
                 .append("; uncaught: ").append(SmartRunnable.uncaught)
                 .append("; maxtasks: ").append(SmartRunnable.maxQT)
                 .append("; merged: ").append(SmartRunnable.mergedRT).append('/').append(SmartRunnable.mergedKT)
-                .append("; workers: ").append(desktop.getEventWorker().getQueueSize()).append('/').append(desktop.getDiskWorker().getQueueSize());
+                .append("; events: ").append(desktop.getEventWorker().getQueueSize()).append('/').append(desktop.getDiskWorker().getQueueSize());
         pane.append(newItem("Debug", sb.toString()));
     }
 

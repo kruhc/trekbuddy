@@ -27,11 +27,8 @@ cmd /c build %1 rim42 en_US
 echo Build version 'rim50' ...
 cmd /c build %1 rim50 en_US
 
-echo Build version 'android15' ...
-cmd /c build %1 android15 en_US
-
-echo Build version 'android16' ...
-cmd /c build %1 android16 en_US
+echo Build version 'android' ...
+cmd /c build %1 android en_US
 
 goto end
 

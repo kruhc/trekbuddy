@@ -75,6 +75,7 @@ final class DeviceScreen extends GameCanvas implements Runnable {
 
     /** @Override */
     protected void hideNotify() {
+        eventing.clear();
         eventing.setActive(active = false);
     }
 

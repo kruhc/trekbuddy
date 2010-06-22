@@ -27,11 +27,7 @@ class NokiaDeviceControl extends DeviceControl {
     /** @Override */
     void next() {
         if (presses++ == 0) {
-            if (last == 0) {
-                nextLevel();
-            } else {
-                invertLevel();
-            }
+            nextLevel();
             confirm();
         }
     }
@@ -39,18 +35,20 @@ class NokiaDeviceControl extends DeviceControl {
     /** @Override */
     void sync() {
         if (presses == 0) {
-            nextLevel();
-            confirm();
+            if (last != 0) {
+                invertLevel();
+                confirm();
+            }
         }
         presses = 0;
     }
 
     /** @Override */
     void nextLevel() {
-        last = ++backlight;
-        if (backlight == values.length) {
+        if (++backlight == values.length) {
             backlight = 0;
         }
+        last = backlight;
         setLights();
     }
 

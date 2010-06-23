@@ -227,6 +227,8 @@
 2407=Failed to update landmarks
 2408=No notes yet
 2409=Note added
+2410=<new file>
+2411=user-
 
 # settings commands
 3000=Apply

@@ -210,6 +210,8 @@ public final class Resources {
     public static final short NAV_MSG_STORE_UPDATE_FAILED       = 2407;
     public static final short NAV_MSG_NO_NOTES_YET              = 2408;
     public static final short NAV_MSG_NOTE_ADDED                = 2409;
+    public static final short NAV_MSG_NEW_FILE_ITEM             = 2410;
+    public static final short NAV_MSG_USER_FILE_PREFIX          = 2411;
     /* navigation - waypoint form */
     public static final short NAV_TITLE_WPT                     = 2200;
     public static final short NAV_FLD_WPT_NAME                  = 2201;

@@ -70,11 +70,11 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
 
     private static final String STORE_USER      = "<user>";
     private static final String STORE_FRIENDS   = "<sms>";
-    private static final String NEW_FILE_STORE  = "<new file>";
+    private /*static*/ final String NEW_FILE_STORE;
 
     private static final String SPECIAL_STORE_HEADING = "<";
 
-    private static final String PREFIX_USER     = "user-";
+    private /*static*/ final String PREFIX_USER;
     private static final String PREFIX_FRIENDS  = "sms-";
 
     private static final String SUFFIX_GPX      = ".gpx";
@@ -182,6 +182,9 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
         this.sort = Config.sort;
         this.cacheDiskHint = INITIAL_LIST_SIZE;
         this.notesFilename = "fieldnotes-" + GpxTracklog.dateToFileDate(System.currentTimeMillis()) + ".txt";
+
+        this.NEW_FILE_STORE = Resources.getString(Resources.NAV_MSG_NEW_FILE_ITEM);
+        this.PREFIX_USER = Resources.getString(Resources.NAV_MSG_USER_FILE_PREFIX);
 
         this.itemWptsStores = Resources.getString(Resources.NAV_ITEM_WAYPOINTS);
         this.itemTracksStores = Resources.getString(Resources.NAV_ITEM_TRACKS);
@@ -1215,7 +1218,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
 
         Object useKey = storeKey;
 
-        if (NEW_FILE_STORE.equals(name)) { // new store
+        if (name.equals(NEW_FILE_STORE)) { // new store
             stores.remove(storeKey);
             backends.remove(storeKey);
             cachedDisk = null; // force refresh of file list

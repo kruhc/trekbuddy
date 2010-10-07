@@ -24,8 +24,7 @@ public class AndroidBluetoothLocationProvider
         implements Runnable {
     private static final String SPP_UUID = "00001101-0000-1000-8000-00805F9B34FB";
 
-    private String url;
-    private long last;
+    private volatile String url;
 
     public AndroidBluetoothLocationProvider() throws LocationException {
         super("Bluetooth");
@@ -66,7 +65,7 @@ public class AndroidBluetoothLocationProvider
             url = Config.btServiceUrl;
         }
 
-        // reset last I/O stamp
+        // reset last I/O stamp // TODO move to common base
         setLastIO(System.currentTimeMillis());
 
         // let's roll
@@ -150,6 +149,9 @@ public class AndroidBluetoothLocationProvider
             // debug
             setStatus("stream opened");
 
+            // TODO keep-alive
+            // TODO watcher
+
             // clear throwable
             setThrowable(null);
 
@@ -208,7 +210,7 @@ public class AndroidBluetoothLocationProvider
                 }
 
                 // new location timestamp
-                _setLast(System.currentTimeMillis());
+                setLast(System.currentTimeMillis());
 
                 // send new location
                 notifyListener(location);
@@ -225,6 +227,9 @@ public class AndroidBluetoothLocationProvider
 
             // debug
             setStatus("stopping");
+
+            // TODO stop watcher
+            // TODO stop keep-alive
 
             // debug
             setStatus("closing stream and connection");
@@ -258,14 +263,6 @@ public class AndroidBluetoothLocationProvider
             setStatus("stream and connection closed");
 
         }
-    }
-
-    private synchronized long _getLast() {
-        return last;
-    }
-
-    private synchronized void _setLast(long last) {
-        this.last = last;
     }
 
     private final class Discoverer implements CommandListener, Runnable {

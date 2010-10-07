@@ -442,6 +442,29 @@ public final class Desktop implements CommandListener,
         if (!Integer.toString(Resources.VENDOR_INITIAL_DATADIR).equals(datadir)) {
             Config.dataDir = datadir;
         }
+        final String cms = Resources.getString(Resources.VENDOR_INITIAL_CMS);
+        if (!Integer.toString(Resources.VENDOR_INITIAL_CMS).equals(cms)) {
+            Config.cmsProfile = cms;
+        }
+        final String trailOpts = Resources.getString(Resources.VENDOR_TRAIL_OPTS);
+        if (!Integer.toString(Resources.VENDOR_TRAIL_OPTS).equals(trailOpts)) {
+            final char[] delims = { ',' };
+            final CharArrayTokenizer tokenizer = new CharArrayTokenizer();
+            tokenizer.init(trailOpts, delims, false);
+            Config.trailOn = "true".equals(tokenizer.next().toString());
+            Config.trailThick = tokenizer.nextInt();
+            Config.trailColor = tokenizer.nextInt();
+        }
+        final String routeOpts = Resources.getString(Resources.VENDOR_ROUTE_OPTS);
+        if (!Integer.toString(Resources.VENDOR_ROUTE_OPTS).equals(routeOpts)) {
+            final char[] delims = { ',' };
+            final CharArrayTokenizer tokenizer = new CharArrayTokenizer();
+            tokenizer.init(routeOpts, delims, false);
+            Config.routeLineStyle = "true".equals(tokenizer.next().toString());
+            Config.routePoiMarks = "true".equals(tokenizer.next().toString());
+            Config.routeThick = tokenizer.nextInt();
+            Config.routeColor = tokenizer.nextInt();
+        }
     }
 
 //#endif
@@ -2167,6 +2190,7 @@ public final class Desktop implements CommandListener,
             if (log.isEnabled()) log.debug("stopping NMEA tracklog");
 //#endif
             try {
+                trackLogNmea.flush();
                 trackLogNmea.close();
             } catch (Exception e) {
                 // ignore

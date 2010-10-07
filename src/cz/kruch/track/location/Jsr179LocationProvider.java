@@ -13,6 +13,7 @@ import api.location.LocationProvider;
 
 import java.io.OutputStream;
 import java.io.IOException;
+import java.util.Vector;
 
 /**
  * Internal (JSR-179) provider implementation.
@@ -49,7 +50,7 @@ public final class Jsr179LocationProvider
 
             // common criteria
             final javax.microedition.location.Criteria criteria = new javax.microedition.location.Criteria();
-            criteria.setAltitudeRequired(true);
+//            criteria.setAltitudeRequired(true); /* may delay getting valid location? */
             criteria.setSpeedAndCourseRequired(true);
             criteria.setPreferredPowerConsumption(Config.powerUsage);
             criteria.setCostAllowed(Config.assistedGps);
@@ -128,12 +129,16 @@ public final class Jsr179LocationProvider
     }
 
     private static final String APPLICATION_X_JSR179_LOCATION_NMEA = "application/X-jsr179-location-nmea";
+    private static final String APPLICATION_X_JAVA_LOCATION_NMEA   = "application/X-java-location-nmea";
 
     public void locationUpdated(javax.microedition.location.LocationProvider p,
                                 javax.microedition.location.Location l) {
 
         // get extra info
-        final String extra = l.getExtraInfo(APPLICATION_X_JSR179_LOCATION_NMEA);
+        String extra = l.getExtraInfo(APPLICATION_X_JSR179_LOCATION_NMEA);
+        if (extra == null) { // try fallback to older implementation
+            extra = l.getExtraInfo(APPLICATION_X_JAVA_LOCATION_NMEA);
+        }
 
         // valid location?
         if (l.isValid()) {

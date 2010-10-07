@@ -29,7 +29,7 @@ public abstract class LocationProvider {
     protected volatile Thread thread;
     protected volatile boolean go;
     
-    private volatile int lastState;
+    private int lastState;
 
     protected LocationProvider(String name) {
         this.name = name;
@@ -66,6 +66,10 @@ public abstract class LocationProvider {
 
     public synchronized int getLastState() {
         return lastState;
+    }
+
+    private synchronized int setLastState(int state) {
+        return lastState = state;
     }
 
     public synchronized boolean updateLastState(int state) {
@@ -114,7 +118,7 @@ public abstract class LocationProvider {
         thread = Thread.currentThread();
 
         // signal state change
-        notifyListener(lastState = _STARTING); // trick to start tracklog
+        notifyListener(setLastState(_STARTING)); // trick to start tracklog
 
         // try to catch up with UI
         Thread.yield();
@@ -130,7 +134,7 @@ public abstract class LocationProvider {
         }
 
         // signal state change
-        notifyListener(lastState = OUT_OF_SERVICE);
+        notifyListener(setLastState(OUT_OF_SERVICE));
     }
 
     protected final void die() {

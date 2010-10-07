@@ -38,6 +38,9 @@ public final class Resources {
     public static final short VENDOR_CMD_LOAD_GUIDE             = 107;
     public static final short VENDOR_MSG_SELECT_GUIDE           = 108;
     public static final short VENDOR_CMD_OPEN_GUIDE             = 109;
+    public static final short VENDOR_INITIAL_CMS                = 110;
+    public static final short VENDOR_TRAIL_OPTS                 = 111;
+    public static final short VENDOR_ROUTE_OPTS                 = 112;
 //#endif
     /* boot - messages */
     public static final short BOOT_CACHING_IMAGES               = 300;

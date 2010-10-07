@@ -32,7 +32,6 @@ public class SerialLocationProvider
     private TimerTask watcher;
     private InputStream stream;
     private StreamConnection connection;
-    private long last;
 
     public SerialLocationProvider() throws LocationException {
         this("Serial");
@@ -148,7 +147,7 @@ public class SerialLocationProvider
 
     private void gps() throws IOException {
         final boolean isHge100 = cz.kruch.track.TrackingMIDlet.sonyEricssonEx && url.indexOf("AT5") > -1;
-        final boolean rw = isHge100 || Config.btKeepAlive != 0;
+        final int rw = isHge100 || Config.btKeepAlive != 0 ? Connector.READ_WRITE : Connector.READ;
 
         // reset data
         reset();
@@ -158,7 +157,7 @@ public class SerialLocationProvider
             setStatus("opening connection");
 
             // open connection
-            connection = (StreamConnection) Connector.open(url, rw ? Connector.READ_WRITE : Connector.READ);
+            connection = (StreamConnection) Connector.open(url, rw, true);
 
             // debug
             setStatus("opening input stream");
@@ -246,7 +245,7 @@ public class SerialLocationProvider
                 }
 
                 // new location timestamp
-                _setLast(System.currentTimeMillis());
+                setLast(System.currentTimeMillis());
 
                 // send new location
                 notifyListener(location);
@@ -256,17 +255,6 @@ public class SerialLocationProvider
                 if (updateLastState(newState)) {
                     notifyListener(newState);
                 }
-
-/* yield in nextSentence isn't enough?
-                // free CPU on Samsung
-                if (cz.kruch.track.TrackingMIDlet.samsung) {
-                    try {
-                        Thread.sleep(5);
-                    } catch (InterruptedException e) {
-                        // ignore
-                    }
-                }
-*/
 
             } // for (; go ;)
 
@@ -311,24 +299,16 @@ public class SerialLocationProvider
             // debug
             setStatus("stream and connection closed");
 
-            /* native finalizers? */
 //#ifndef __RIM__
+            /* native finalizers? */
             System.gc(); // unconditional!!!
 //#endif            
         }
     }
 
-    private synchronized long _getLast() {
-        return last;
-    }
-
-    private synchronized void _setLast(long last) {
-        this.last = last;
-    }
-
     private final class UniversalSoldier extends TimerTask {
-        private static final int MODE_WATCHER       = 0;
-        private static final int MODE_KILLER        = 1;
+        private static final int MODE_WATCHER   = 0;
+        private static final int MODE_KILLER    = 1;
 
         private int mode;
 
@@ -347,8 +327,9 @@ public class SerialLocationProvider
                         if (notify) {
                             stalls++;
                         }
-                    } else if (now > (_getLast() + MAX_PARSE_PERIOD)) {
-                        if (getLastState() != _STARTING) {
+                        cancel(); // we're done, only one stall per lifecycle
+                    } else if (now > (getLast() + MAX_PARSE_PERIOD)) {
+                        if (getLastState() == AVAILABLE) {
                             notify = updateLastState(TEMPORARILY_UNAVAILABLE);
                         }
                     }
@@ -360,23 +341,23 @@ public class SerialLocationProvider
 
                 case MODE_KILLER: {
                     setStatus("forced stream close"); // debug
+
                     synchronized (SerialLocationProvider.this) {
-                        if (thread != null) {
-                            thread.interrupt();
-                        }
+
                         if (stream != null) {
                             try {
                                 stream.close(); // hopefully forces a thread blocked in read() to receive IOException
                             } catch (Exception e) {
                                 // ignore
                             }
-                            /* native finalizers?!? */
 //#ifndef __RIM__
+                            /* native finalizers?!? */
                             System.gc(); // unconditional!!!
 //#endif                            
                         }
+
                     }
-                    setStatus("stream closed"); // debug
+                    setStatus("stream forcibly closed"); // debug
                 } break;
             }
         }

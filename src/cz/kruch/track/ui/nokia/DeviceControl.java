@@ -87,9 +87,7 @@ public class DeviceControl extends TimerTask {
         if (instance == null) {
             try {
                 Class.forName("com.nokia.mid.ui.DeviceControl");
-                if (cz.kruch.track.TrackingMIDlet.jbed) {
-                    // do nothing
-                } else if (cz.kruch.track.TrackingMIDlet.sonyEricssonEx) {
+                if (cz.kruch.track.TrackingMIDlet.sonyEricssonEx) {
                     instance = (DeviceControl) Class.forName("cz.kruch.track.ui.nokia.SonyEricssonDeviceControl").newInstance();
                 } else {
                     instance = (DeviceControl) Class.forName("cz.kruch.track.ui.nokia.NokiaDeviceControl").newInstance();

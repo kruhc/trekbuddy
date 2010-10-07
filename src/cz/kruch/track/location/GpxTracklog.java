@@ -146,7 +146,6 @@ public final class GpxTracklog implements Runnable {
     private boolean force;
 
     private File file;
-    private OutputStream output;
     private HXmlSerializer serializer;
 
     private Thread thread;
@@ -256,7 +255,7 @@ public final class GpxTracklog implements Runnable {
         if (throwable == null) {
             try {
                 // output stream
-                output = new BufferedOutputStream(file.openOutputStream(), 4096);
+                final OutputStream output = new BufferedOutputStream(file.openOutputStream(), 4096);
 
                 // init serializer
                 final HXmlSerializer serializer = this.serializer = new HXmlSerializer();
@@ -315,6 +314,7 @@ public final class GpxTracklog implements Runnable {
                 }
                 s.endTag(DEFAULT_NAMESPACE, ELEMENT_GPX);
                 s.endDocument(); // includes writer flush
+                s.close();
 //#ifdef __LOG__
                 if (log.isEnabled()) log.debug("~done");
 //#endif
@@ -322,22 +322,6 @@ public final class GpxTracklog implements Runnable {
                 // ignore
             }
             serializer = null; // gc hint
-        }
-
-        // close output
-        if (output != null) {
-//#ifdef __LOG__
-            if (log.isEnabled()) log.debug("closing output");
-//#endif
-            try {
-                output.close();
-//#ifdef __LOG__
-                if (log.isEnabled()) log.debug("~done");
-//#endif
-            } catch (Exception e) {
-                // ignore
-            }
-            output = null; // gc hint
         }
 
         // close file

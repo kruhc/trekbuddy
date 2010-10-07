@@ -81,7 +81,7 @@ public final class MotorolaLocationProvider
 
             // wait for end (kinda stupid variant of gps() from Serial provider ;-) )
             synchronized (this) {
-                while (go) {
+                while (isGo()) {
                     try {
                         wait();
                     } catch (InterruptedException e) {

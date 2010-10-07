@@ -78,9 +78,9 @@ public final class O2GermanyLocationProvider
         try {
 
             // pop messages until end
-            while (go) {
+            while (isGo()) {
                 synchronized (this) {
-                    while (go && trigger == null) {
+                    while (isGo() && trigger == null) {
                         try {
                             wait();
                         } catch (InterruptedException e) {
@@ -90,7 +90,7 @@ public final class O2GermanyLocationProvider
                     trigger = null;
                 }
 
-                if (!go) break;
+                if (!isGo()) break;
 
                 // result
                 int state = TEMPORARILY_UNAVAILABLE;

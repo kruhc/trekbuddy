@@ -27,8 +27,8 @@ public abstract class LocationProvider {
 
     protected volatile OutputStream observer;
     protected volatile Thread thread;
-    protected volatile boolean go;
-    
+
+    private boolean go;
     private int lastState;
 
     protected LocationProvider(String name) {

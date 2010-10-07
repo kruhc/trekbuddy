@@ -36,7 +36,8 @@ abstract class StreamReadingLocationProvider extends LocationProvider {
     private boolean retry;
 
     // last I/O timestamp
-    private volatile long lastIO;
+    private long lastIO;
+    private long last;
 
     protected StreamReadingLocationProvider(String name) {
         super(name);
@@ -54,12 +55,20 @@ abstract class StreamReadingLocationProvider extends LocationProvider {
         retry = false;
     }
 
-    protected synchronized long getLastIO() {
+    synchronized long getLastIO() {
         return lastIO;
     }
 
-    protected synchronized void setLastIO(long lastIO) {
+    synchronized void setLastIO(long lastIO) {
         this.lastIO = lastIO;
+    }
+
+    synchronized long getLast() {
+        return last;
+    }
+
+    synchronized void setLast(long last) {
+        this.last = last;
     }
 
     protected final Location nextLocation(InputStream in, OutputStream observer) throws IOException, LocationException {
@@ -83,7 +92,7 @@ abstract class StreamReadingLocationProvider extends LocationProvider {
             }
                           
             // update last I/O timestamp
-            lastIO = System.currentTimeMillis();
+            setLastIO(System.currentTimeMillis());
 
             // checksum check
             if (NmeaParser.validate(line, l)) {

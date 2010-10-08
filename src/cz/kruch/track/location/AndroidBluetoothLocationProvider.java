@@ -48,6 +48,7 @@ public class AndroidBluetoothLocationProvider
             // debug
             setStatus("refresh");
 
+// TODO refresh after stall, alike in Serial provider?            
 //            // not so fast
 //            if (getLastState() == LocationProvider._STALLED) { // give hardware a while
 //                refresh();

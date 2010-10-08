@@ -21,14 +21,13 @@ public abstract class LocationProvider {
                       restarts, stalls, errors, pings, maxavail;
 
     private String name;
-    private LocationListener listener;
-    private Throwable throwable;
-    private Object status;
+    private volatile LocationListener listener;
+    private volatile Throwable throwable;
+    private volatile Object status;
 
     protected volatile OutputStream observer;
-    protected volatile Thread thread;
 
-    private boolean go;
+    protected boolean go;
     private int lastState;
 
     protected LocationProvider(String name) {
@@ -64,7 +63,7 @@ public abstract class LocationProvider {
         this.observer = observer;
     }
 
-    public synchronized int getLastState() {
+    protected synchronized int getLastState() {
         return lastState;
     }
 
@@ -72,7 +71,7 @@ public abstract class LocationProvider {
         return lastState = state;
     }
 
-    public synchronized boolean updateLastState(int state) {
+    protected synchronized boolean updateLastState(int state) {
         final boolean changed = lastState != state;
         lastState = state;
 
@@ -89,41 +88,34 @@ public abstract class LocationProvider {
         this.listener = listener;
     }
 
-    public final boolean isGo() {
-        synchronized (this) {
-            return go;
-        }
+    public final synchronized boolean isGo() {
+        return go;
     }
-    
+
+    /**
+     * Should only be called from provider thread, at the very beginning.
+     */
     protected final void baby() {
         // debug
         setStatus("starting");
         
-        // wait for previous thread to die... oh yeah, shit happens sometimes
-        if (thread != null) {
-            if (thread.isAlive()) {
-                setThrowable(new IllegalStateException("Previous connection still active"));
-                thread.interrupt();
-            }
-            try {
-                thread.join();
-            } catch (InterruptedException e) {
-                // ignore
-            }
-            thread = null; // gc hint
-        }
-
         // just about to start
-        go = true;
-        thread = Thread.currentThread();
+        synchronized (this) {
+            go = true;
+        }
 
         // signal state change
         notifyListener(setLastState(_STARTING)); // trick to start tracklog
 
+/* TODO dangerous?
         // try to catch up with UI
         Thread.yield();
+*/
     }
 
+    /**
+     * Should only be called from provider thread, at the very end.
+     */
     protected final void zombie() {
         // debug
         setStatus("zombie");

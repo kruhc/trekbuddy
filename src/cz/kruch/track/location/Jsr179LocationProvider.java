@@ -91,7 +91,7 @@ public final class Jsr179LocationProvider
             // status
             setStatus("running");
 
-            // wait for end (kinda stupid variant of gps() from Serial provider ;-) )
+            // wait for end
             synchronized (this) {
                 while (isGo()) {
                     try {

@@ -79,7 +79,7 @@ public final class MotorolaLocationProvider
             impl.addPositionListener(this);
             impl.generatePosition(accuracy, age, timeout);
 
-            // wait for end (kinda stupid variant of gps() from Serial provider ;-) )
+            // wait for end
             synchronized (this) {
                 while (isGo()) {
                     try {

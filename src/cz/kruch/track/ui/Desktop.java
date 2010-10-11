@@ -2190,7 +2190,6 @@ public final class Desktop implements CommandListener,
             if (log.isEnabled()) log.debug("stopping NMEA tracklog");
 //#endif
             try {
-                trackLogNmea.flush();
                 trackLogNmea.close();
             } catch (Exception e) {
                 // ignore
@@ -2200,7 +2199,7 @@ public final class Desktop implements CommandListener,
     }
 
     // TODO move to DeviceScreen???
-    private void drawPause(final Graphics g) {
+    private static void drawPause(final Graphics g) {
         final Font f = Font.getDefaultFont();
         final String s = Resources.getString(Resources.DESKTOP_MSG_PAUSED);
         final int sw = f.stringWidth(s);

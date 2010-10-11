@@ -36,7 +36,7 @@ public final class SimulatorLocationProvider
     private static final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("Simulator");
 //#endif
 
-    private File file;
+    private volatile File file;
     private int delay;
 
     public SimulatorLocationProvider() {
@@ -60,18 +60,19 @@ public final class SimulatorLocationProvider
         if (log.isEnabled()) log.debug("playback selection: " + result);
 //#endif
 
-        if (result != null) {
-            go = true;
-            file = (File) result;
-        } else {
-            go = false;
-            file = null;
+        synchronized (this) {
+            if (result != null) {
+                file = (File) result;
+            } else {
+                file = null;
+            }
         }
 
-        (thread = new Thread(this)).start();
+        (new Thread(this)).start();
     }
 
     public void run() {
+
         // yes, thread is always started
         if (file == null) {
 //#ifdef __LOG__
@@ -88,8 +89,8 @@ public final class SimulatorLocationProvider
         // statistics
         restarts++;
 
-        // for start gpx
-        notifyListener(LocationProvider._STARTING);
+        // just born
+        baby();
 
         InputStream in = null;
         try {
@@ -99,7 +100,7 @@ public final class SimulatorLocationProvider
 
             while (isGo()) {
 
-                Location location = null;
+                Location location;
 
                 // get next location
                 try {

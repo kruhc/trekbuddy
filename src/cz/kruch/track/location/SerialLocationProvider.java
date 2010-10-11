@@ -29,9 +29,9 @@ public class SerialLocationProvider
 
     protected volatile String url;
 
-    private TimerTask watcher;
-    private InputStream stream;
+    private volatile InputStream stream; // volatile because accessed from timer
     private StreamConnection connection;
+    private TimerTask watcher;
 
     public SerialLocationProvider() throws LocationException {
         this("Serial");
@@ -177,7 +177,7 @@ public class SerialLocationProvider
 
 //#ifdef __ALL__
             if (cz.kruch.track.TrackingMIDlet.samsung) {
-                thread.setPriority(Thread.MIN_PRIORITY);
+                Thread.currentThread().setPriority(Thread.MIN_PRIORITY);
             }
 //#endif
 
@@ -190,7 +190,7 @@ public class SerialLocationProvider
             // clear throwable
             setThrowable(null);
 
-            // read NMEA until error or stop request
+            // read data until error or stop request
             while (isGo()) {
 
                 Location location = null;
@@ -344,6 +344,7 @@ public class SerialLocationProvider
 
                     synchronized (SerialLocationProvider.this) {
 
+                        // forced close
                         if (stream != null) {
                             try {
                                 stream.close(); // hopefully forces a thread blocked in read() to receive IOException

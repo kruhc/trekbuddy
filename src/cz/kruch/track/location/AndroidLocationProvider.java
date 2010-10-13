@@ -19,12 +19,17 @@ public final class AndroidLocationProvider
 //#ifdef __LOG__
     private static final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("AndroidLocationProvider");
 //#endif
+    private static final String KEY_SATELLITES = "satellites";
 
     private android.location.LocationManager manager;
     private android.os.Looper looper;
 
+    private int sat, status;
+
     public AndroidLocationProvider() {
         super("Internal");
+        this.sat = -1;
+        this.status = -1;
     }
 
     public int start() throws LocationException {
@@ -122,7 +127,10 @@ public final class AndroidLocationProvider
         int sat = -1;
         final android.os.Bundle extras = l.getExtras();
         if (extras != null) {
-            sat = extras.getInt("satellites", -1);
+            sat = extras.getInt(KEY_SATELLITES, -1);
+        }
+        if (sat == -1 && this.sat != -1) { // fallback to value from onStatusChanged
+            sat = this.sat;
         }
         final Location location = Location.newInstance(qc, l.getTime(), 1, sat);
         if (l.hasBearing()) {
@@ -145,23 +153,29 @@ public final class AndroidLocationProvider
 //#endif
     }
 
-    public void onStatusChanged(String string, int i, android.os.Bundle bundle) {
+    public void onStatusChanged(String provider, int status, android.os.Bundle extras) {
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("onStatusChanged");
 //#endif
+
         if (isGo()) {
-            switch (i) {
+            switch (status) {
                 case android.location.LocationProvider.OUT_OF_SERVICE:
-                    i = OUT_OF_SERVICE;
+                    status = OUT_OF_SERVICE;
                 break;
                 case android.location.LocationProvider.TEMPORARILY_UNAVAILABLE:
-                    i = TEMPORARILY_UNAVAILABLE;
+                    status = TEMPORARILY_UNAVAILABLE;
                 break;
                 case android.location.LocationProvider.AVAILABLE:
-                    i = AVAILABLE;
+                    status = AVAILABLE;
                 break;
             }
-            notifyListener(i);
+            if (extras != null) {
+                this.sat = extras.getInt(KEY_SATELLITES, -1);
+            }
+            if (this.status != status) {
+                notifyListener(this.status = status);
+            }
         }
     }
 

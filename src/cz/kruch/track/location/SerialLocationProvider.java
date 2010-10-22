@@ -28,10 +28,12 @@ public class SerialLocationProvider
     private static final long MAX_STALL_PERIOD = 60 * 1000; // 1 min
 
     protected volatile String url;
+    protected StreamConnection connection;
 
-    private volatile InputStream stream; // volatile because accessed from timer
-    private StreamConnection connection;
+    private InputStream stream;
     private TimerTask watcher;
+
+    private final Object lock = new Object();
 
     public SerialLocationProvider() throws LocationException {
         this("Serial");
@@ -48,7 +50,7 @@ public class SerialLocationProvider
 
     protected String getKnownUrl() {
         if (Config.locationProvider == Config.LOCATION_PROVIDER_HGE100) {
-            return "comm:AT5;baudrate=9600";
+            return "comm:AT5";
         }
         return Config.commUrl;
     }
@@ -56,7 +58,7 @@ public class SerialLocationProvider
     protected void refresh() {
     }
 
-    protected void startKeepAlive(StreamConnection c) {
+    protected void startKeepAlive() {
     }
 
     protected void stopKeepAlive() {
@@ -117,7 +119,7 @@ public class SerialLocationProvider
     public int start() throws LocationException {
         // start thread
         (new Thread(this)).start();
-        
+
         return LocationProvider._STARTING;
     }
 
@@ -132,10 +134,8 @@ public class SerialLocationProvider
     }
 
     private void startWatcher() {
-        if (watcher == null) {
-            watcher = new UniversalSoldier(UniversalSoldier.MODE_WATCHER);
-            Desktop.timer.schedule(watcher, 20000, 5000); // delay = 20 sec, period = 5 sec
-        }
+        watcher = new UniversalSoldier(UniversalSoldier.MODE_WATCHER);
+        Desktop.timer.schedule(watcher, 20000, 5000); // delay = 20 sec, period = 5 sec
     }
 
     private void stopWatcher() {
@@ -148,6 +148,9 @@ public class SerialLocationProvider
     private void gps() throws IOException {
         final boolean isHge100 = cz.kruch.track.TrackingMIDlet.sonyEricssonEx && url.indexOf("AT5") > -1;
         final int rw = isHge100 || Config.btKeepAlive != 0 ? Connector.READ_WRITE : Connector.READ;
+
+        // write access
+        OutputStream os;
 
         // reset data
         reset();
@@ -163,26 +166,22 @@ public class SerialLocationProvider
             setStatus("opening input stream");
 
             // open stream for reading
-            stream = connection.openInputStream();
+            synchronized (lock) {
+                stream = connection.openInputStream();
+            }
 
-            // HGE-100 hack
+            // HGE-100 start
             if (isHge100) {
-                OutputStream os = connection.openOutputStream();
+                os = connection.openOutputStream();
                 os.write("$STA\r\n".getBytes());
-                os.close();
+                os.flush();
             }
 
             // debug
             setStatus("stream opened");
 
-//#ifdef __ALL__
-            if (cz.kruch.track.TrackingMIDlet.samsung) {
-                Thread.currentThread().setPriority(Thread.MIN_PRIORITY);
-            }
-//#endif
-
             // start keep-alive
-            startKeepAlive(connection);
+            startKeepAlive();
 
             // start watcher
             startWatcher();
@@ -205,9 +204,11 @@ public class SerialLocationProvider
                     e.printStackTrace();
 //#endif
 
-                    // record
-                    setStatus("I/O error");
-                    setThrowable(e);
+                    // record if happened unexpectedly
+                    if (isGo()) {
+                        setStatus("I/O error");
+                        setThrowable(e);
+                    }
 
                     /*
                      * location is null - loop ends
@@ -256,6 +257,12 @@ public class SerialLocationProvider
                     notifyListener(newState);
                 }
 
+//#ifdef __ALL__
+                // free CPU on Samsung
+                if (cz.kruch.track.TrackingMIDlet.samsung) {
+                    Thread.yield();
+                }
+//#endif
             } // for (; go ;)
 
         } finally {
@@ -263,6 +270,13 @@ public class SerialLocationProvider
             // debug
             setStatus("stopping");
 
+            // HGE-100 start
+            if (isHge100) {
+                os = connection.openOutputStream();
+                os.write("$STA\r\n".getBytes());
+                os.close();
+            }
+            
             // stop watcher
             stopWatcher();
 
@@ -272,10 +286,8 @@ public class SerialLocationProvider
             // debug
             setStatus("closing stream and connection");
 
-            // cleanup
-            synchronized (this) {
-
-                // close input stream
+            // close input stream
+            synchronized (lock) {
                 if (stream != null) {
                     try {
                         stream.close();
@@ -284,16 +296,16 @@ public class SerialLocationProvider
                     }
                     stream = null;
                 }
+            }
 
-                // close serial/bt connection
-                if (connection != null) {
-                    try {
-                        connection.close();
-                    } catch (Exception e) {
-                        // ignore
-                    }
-                    connection = null;
+            // close connection
+            if (connection != null) {
+                try {
+                    connection.close();
+                } catch (Exception e) {
+                    // ignore
                 }
+                connection = null;
             }
 
             // debug
@@ -340,25 +352,26 @@ public class SerialLocationProvider
                 } break;
 
                 case MODE_KILLER: {
-                    setStatus("forced stream close"); // debug
+                    // debug
+                    setStatus("forced stream close");
 
-                    synchronized (SerialLocationProvider.this) {
-
-                        // forced close
+                    // close stream
+                    synchronized (lock) {
                         if (stream != null) {
                             try {
                                 stream.close(); // hopefully forces a thread blocked in read() to receive IOException
                             } catch (Exception e) {
                                 // ignore
                             }
-//#ifndef __RIM__
-                            /* native finalizers?!? */
-                            System.gc(); // unconditional!!!
-//#endif                            
                         }
-
                     }
-                    setStatus("stream forcibly closed"); // debug
+
+                    // debug
+                    setStatus("stream forcibly closed");
+//#ifndef __RIM__
+                    /* native finalizers?!? */
+                    System.gc(); // unconditional!!!
+//#endif
                 } break;
             }
         }

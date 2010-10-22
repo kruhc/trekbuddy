@@ -527,6 +527,9 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
                     case Config.LOCATION_PROVIDER_O2GERMANY:
                         appendWithNewlineAfter(submenu, fieldO2Depth);
                     break;
+                    case Config.LOCATION_PROVIDER_HGE100:
+                        appendWithNewlineAfter(submenu, createStreamChoice(provider, providerName));
+                    break;
                 }
                 if (isFs) {
                     appendWithNewlineAfter(submenu, choiceTracklog);

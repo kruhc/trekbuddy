@@ -25,8 +25,10 @@
     <property name="android16.home" value="c:\J2ME\android-sdk-windows\platforms\android-1.6"/>
     <property name="android20.home" value="c:\J2ME\android-sdk-windows\platforms\android-2.0"/>
     <property name="microemu.home" value="z:\repository\microemu-google\microemulator"/>
-    <property name="proguard.home" value="z:\apps\proguard3.11"/>
-    <property name="proguard4.home" value="z:\apps\proguard4.4"/>
+    <property name="proguard3.home" value="z:\apps\proguard3.11"/>
+    <property name="proguard4.home" value="z:\apps\proguard4.5"/>
+
+    <property name="use.proguard" value="3"/>
 
 <!--
     <taskdef resource="antenna.properties" classpath="lib/antenna-bin-0.9.14.jar"/>
@@ -34,8 +36,6 @@
     <taskdef resource="antenna.properties" classpath="lib/antenna-bin-1.0.2.jar"/>
     <taskdef name="otaJad" classname="RimOtaJadSha" classpath="${basedir}/tools/classes"/>
     
-    <property name="classpath.proguard" value="${proguard.home}\lib\proguard.jar"/>
-
     <path id="bootclasspath.standard">
         <pathelement location="${wtk.home}\lib\cldcapi11.jar"/>
         <pathelement location="${wtk.home}\lib\midpapi20.jar"/>
@@ -118,13 +118,16 @@
     <target name="standard">
         <property name="suffix" value=""/>
         <property name="dist.dir" value="standard"/>
+<!-- good enough for proguard 3.x
         <property name="libraryjars" value="${wtk.home}\lib\cldcapi11.jar;${wtk.home}\lib\midpapi20.jar;${wtk.home}\lib\jsr75.jar;${wtk.home}\lib\jsr082.jar;${wtk.home}\lib\jsr179.jar;${wtk.home}\lib\jsr234.jar;${wtk.home}\lib\wma11.jar;lib\motorola-location.jar"/>
+-->
+        <property name="libraryjars" value="${wtk.home}\lib\cldcapi11.jar;${wtk.home}\lib\midpapi20.jar;${wtk.home}\lib\jsr75.jar;${wtk.home}\lib\jsr082.jar;${wtk.home}\lib\jsr179.jar;${wtk.home}\lib\jsr234.jar;${wtk.home}\lib\wma11.jar;${wtk.home}\lib\mmapi.jar;lib\lg-mmpp.jar;lib\motorola-ext.jar;lib\motorola-file.jar;lib\motorola-javaextensions.jar;lib\motorola-location.jar;lib\nokia-ui.jar;lib\siemens-file.jar;lib\siemens-game.jar;lib\samsung-apis.jar"/> <!-- same as bootclasspath -->
         <property name="classpath.preverify" value="${libraryjars}"/>
         <antcall target="clean"/>
         <antcall target="a.pre.standard"/>
         <antcall target="compile.standard"/>
         <antcall target="a.pack" inheritall="true"/>
-        <antcall target="obfuscate" inheritall="true"/>
+        <antcall target="obfuscate${use.proguard}" inheritall="true"/>
         <antcall target="preverify" inheritall="true"/>
         <antcall target="dist" inheritall="true"/>
         <antcall target="sign.and.update" inheritall="true"/>
@@ -139,7 +142,7 @@
         <antcall target="a.pre.standard-lite"/>
         <antcall target="compile.standard-lite"/>
         <antcall target="lite.pack" inheritall="true"/>
-        <antcall target="obfuscate" inheritall="true"/>
+        <antcall target="obfuscate${use.proguard}" inheritall="true"/>
         <antcall target="preverify" inheritall="true"/>
         <antcall target="dist" inheritall="true"/>
         <antcall target="sign.and.update" inheritall="true"/>
@@ -154,7 +157,7 @@
         <antcall target="a.pre.b2b-lite"/>
         <antcall target="compile.standard-lite"/>
         <antcall target="lite.pack" inheritall="true"/>
-        <antcall target="obfuscate" inheritall="true"/>
+        <antcall target="obfuscate${use.proguard}" inheritall="true"/>
         <antcall target="preverify" inheritall="true"/>
         <antcall target="dist" inheritall="true"/>
         <antcall target="sign.and.update" inheritall="true"/>
@@ -169,7 +172,7 @@
         <antcall target="a.pre.b2b-builder"/>
         <antcall target="compile.standard-lite"/>
         <antcall target="lite.pack" inheritall="true"/>
-        <antcall target="obfuscate" inheritall="true"/>
+        <antcall target="obfuscate${use.proguard}" inheritall="true"/>
         <antcall target="preverify" inheritall="true"/>
         <antcall target="dist" inheritall="true"/>
         <antcall target="sign.and.update" inheritall="true"/>
@@ -184,7 +187,7 @@
         <antcall target="a.pre.std"/>
         <antcall target="compile.std"/>
         <antcall target="a.pack" inheritall="true"/>
-        <antcall target="obfuscate" inheritall="true"/>
+        <antcall target="obfuscate${use.proguard}" inheritall="true"/>
         <antcall target="preverify" inheritall="true"/>
         <antcall target="dist" inheritall="true"/>
         <antcall target="sign.and.update" inheritall="true"/>
@@ -193,13 +196,16 @@
     <target name="symbian">
         <property name="suffix" value="-symbian"/>
         <property name="dist.dir" value="symbian"/>
+<!-- good enough for proguard 3.x
         <property name="libraryjars" value="${wtk.home}\lib\cldcapi11.jar;${wtk.home}\lib\midpapi20.jar;${wtk.home}\lib\jsr75.jar;${wtk.home}\lib\jsr082.jar;${wtk.home}\lib\jsr179.jar;${wtk.home}\lib\jsr234.jar;${wtk.home}\lib\wma11.jar"/>
+-->
+        <property name="libraryjars" value="${wtk.home}\lib\cldcapi11.jar;${wtk.home}\lib\midpapi20.jar;${wtk.home}\lib\jsr75.jar;${wtk.home}\lib\jsr082.jar;${wtk.home}\lib\jsr179.jar;${wtk.home}\lib\jsr234.jar;${wtk.home}\lib\wma11.jar;${wtk.home}\lib\mmapi.jar;lib\nokia-ui.jar"/>
         <property name="classpath.preverify" value="${libraryjars}"/>
         <antcall target="clean"/>
         <antcall target="a.pre.symbian"/>
         <antcall target="compile.symbian"/>
         <antcall target="a.pack" inheritall="true"/>
-        <antcall target="obfuscate" inheritall="true"/>
+        <antcall target="obfuscate${use.proguard}" inheritall="true"/>
         <antcall target="preverify" inheritall="true"/>
         <antcall target="dist" inheritall="true"/>
         <antcall target="sign.and.update" inheritall="true"/>
@@ -214,7 +220,7 @@
         <antcall target="a.pre.j9"/>
         <antcall target="compile.std"/>
         <antcall target="j9.pack" inheritall="true"/>
-        <antcall target="obfuscate" inheritall="true"/>
+        <antcall target="obfuscate${use.proguard}" inheritall="true"/>
         <antcall target="preverify" inheritall="true"/>
         <antcall target="dist" inheritall="true"/>
         <antcall target="sign.and.update" inheritall="true"/>
@@ -234,7 +240,7 @@
         <antcall target="a.pre.rim"/>
         <antcall target="compile.rim41"/>
         <antcall target="rim.pack" inheritall="true"/>
-        <antcall target="obfuscate.rim" inheritall="true"/>
+        <antcall target="obfuscate${use.proguard}.rim" inheritall="true"/>
         <antcall target="rim.preverify" inheritall="true"/>
         <antcall target="dist" inheritall="true"/>
         <antcall target="rim.rapc" inheritall="true"/>
@@ -254,7 +260,7 @@
         <antcall target="a.pre.rim"/>
         <antcall target="compile.rim42"/>
         <antcall target="rim.pack" inheritall="true"/>
-        <antcall target="obfuscate.rim" inheritall="true"/>
+        <antcall target="obfuscate${use.proguard}.rim" inheritall="true"/>
         <antcall target="rim.preverify" inheritall="true"/>
         <antcall target="dist" inheritall="true"/>
         <antcall target="rim.rapc" inheritall="true"/>
@@ -274,7 +280,7 @@
         <antcall target="a.pre.rim"/>
         <antcall target="compile.rim50"/>
         <antcall target="rim.pack" inheritall="true"/>
-        <antcall target="obfuscate.rim" inheritall="true"/>
+        <antcall target="obfuscate${use.proguard}.rim" inheritall="true"/>
         <antcall target="rim.preverify" inheritall="true"/>
         <antcall target="dist" inheritall="true"/>
         <antcall target="rim.rapc" inheritall="true"/>
@@ -297,7 +303,7 @@
         <antcall target="a.pre.android"/>
         <antcall target="compile.android15"/>
         <antcall target="android.pack" inheritall="true"/>
-        <antcall target="obfuscate.android" inheritall="true"/>
+        <antcall target="obfuscate${use.proguard}.android" inheritall="true"/>
 <!-- not needed, so rename the jar as if it happened
         <antcall target="preverify" inheritall="true"/>
 -->
@@ -337,7 +343,7 @@
         <antcall target="a.pre.android"/>
         <antcall target="compile.android16"/>
         <antcall target="android.pack" inheritall="true"/>
-        <antcall target="obfuscate.android" inheritall="true"/>
+        <antcall target="obfuscate${use.proguard}.android" inheritall="true"/>
 <!-- not needed, so rename the jar as if it happened
         <antcall target="preverify" inheritall="true"/>
 -->
@@ -377,7 +383,7 @@
         <antcall target="a.pre.android"/>
         <antcall target="compile.android20"/>
         <antcall target="android.pack" inheritall="true"/>
-        <antcall target="obfuscate.android" inheritall="true"/>
+        <antcall target="obfuscate${use.proguard}.android" inheritall="true"/>
 <!-- not needed, so rename the jar as if it happened
         <antcall target="preverify" inheritall="true"/>
 -->
@@ -417,7 +423,7 @@
         <antcall target="a.pre.android"/>
         <antcall target="compile.android"/>
         <antcall target="android.pack" inheritall="true"/>
-        <antcall target="obfuscate.android" inheritall="true"/>
+        <antcall target="obfuscate${use.proguard}.android" inheritall="true"/>
 <!-- not needed, so rename the jar as if it happened
         <antcall target="preverify" inheritall="true"/>
 -->
@@ -878,14 +884,11 @@
         </wtkpackage>
     </target>
 
-	<target name="obfuscate">
-	    <java jar="${proguard.home}\lib\proguard.jar" fork="true">
+	<target name="obfuscate3">
+	    <java jar="${proguard3.home}\lib\proguard.jar" fork="true">
             <arg value="-injars tmp/trekbuddy${suffix}.jar"/>
             <arg value="-outjars tmp/trekbuddy${suffix}-obfuscated.jar"/>
             <arg value="-libraryjars ${libraryjars}"/>
-<!-- 4.x 
-            <arg value="-dontpreverify"/>
--->
             <arg value="-dontusemixedcaseclassnames"/>
             <arg value="-dontskipnonpubliclibraryclasses"/>
             <arg value="-defaultpackage ''"/>
@@ -908,14 +911,40 @@
         </java>
     </target> 
 
-    <target name="obfuscate.rim">
-	    <java jar="${proguard.home}\lib\proguard.jar" fork="true">
+    <target name="obfuscate4">
+        <java jar="${proguard4.home}\lib\proguard.jar" fork="true">
+            <arg value="-injars tmp/trekbuddy${suffix}.jar"/>
+            <arg value="-outjars tmp/trekbuddy${suffix}-obfuscated.jar"/>
+            <arg value="-libraryjars ${libraryjars}"/>
+            <arg value="-dontpreverify"/> <!-- for 4.x; we do preverify -->
+            <arg value="-dontoptimize"/> <!-- for 4.x; breaks code -->
+            <arg value="-dontusemixedcaseclassnames"/>
+            <arg value="-dontskipnonpubliclibraryclasses"/>
+            <arg value="-defaultpackage ''"/>
+            <arg value="-overloadaggressively"/>
+            <arg value="-allowaccessmodification"/>
+            <arg value="-keep class * implements javax.microedition.midlet.MIDlet"/>
+            <arg value="-keepnames class cz.** extends java.lang.Exception"/>
+            <arg value="-keepnames class api.** extends java.lang.Exception"/>
+            <arg value="-keepnames class org.hecl.** extends java.lang.Exception"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.maps.io.FileInput"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.maps.io.LoaderIO"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.io.CrcInputStream"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.util.Logger"/>
+            <arg value="-whyareyoukeeping class api.io.BufferedOutputStream"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.hecl.ControlledInterp"/>
+            <arg value="-printmapping dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.map"/>
+            <arg value="-printseeds"/>
+            <arg value="-printusage dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.dco"/>
+            <arg value="-verbose"/>
+        </java>
+    </target>
+
+    <target name="obfuscate3.rim">
+	    <java jar="${proguard3.home}\lib\proguard.jar" fork="true">
             <arg value="-injars tmp/trekbuddy${suffix}.jar"/>
             <arg value="-outjars tmp/trekbuddy${suffix}-obfuscated.jar"/>
             <arg value="-libraryjars '${libraryjars}'"/>
-<!-- 4.x
-            <arg value="-dontpreverify"/>
--->
             <arg value="-dontskipnonpubliclibraryclasses"/>
             <arg value="-dontusemixedcaseclassnames"/>
             <arg value="-defaultpackage ''"/>
@@ -939,23 +968,46 @@
         </java>
     </target> 
 
-    <target name="obfuscate.android">
-	    <java jar="${proguard.home}\lib\proguard.jar" fork="true">
+    <target name="obfuscate4.rim">
+	    <java jar="${proguard4.home}\lib\proguard.jar" fork="true">
+            <arg value="-injars tmp/trekbuddy${suffix}.jar"/>
+            <arg value="-outjars tmp/trekbuddy${suffix}-obfuscated.jar"/>
+            <arg value="-libraryjars '${libraryjars}'"/>
+            <arg value="-dontpreverify"/> <!-- for 4.x; we do preverify -->
+            <arg value="-dontoptimize"/> <!-- for 4.x; breaks code -->
+            <arg value="-dontskipnonpubliclibraryclasses"/>
+            <arg value="-dontusemixedcaseclassnames"/>
+            <arg value="-defaultpackage ''"/>
+<!-- cannot be used with RIM
+            <arg value="-overloadaggressively"/>
+            <arg value="-allowaccessmodification"/>
+-->
+            <arg value="-keep class * implements javax.microedition.midlet.MIDlet"/>
+            <arg value="-keepnames class cz.** extends java.lang.Exception"/>
+            <arg value="-keepnames class api.** extends java.lang.Exception"/>
+            <arg value="-keepnames class org.hecl.** extends java.lang.Exception"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.maps.io.FileInput"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.maps.io.LoaderIO"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.io.CrcInputStream"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.util.Logger"/>
+            <arg value="-whyareyoukeeping class api.io.BufferedOutputStream"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.hecl.ControlledInterp"/>
+            <arg value="-printmapping dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.map"/>
+            <arg value="-printseeds"/>
+            <arg value="-verbose"/>
+        </java>
+    </target>
+
+    <target name="obfuscate3.android">
+	    <java jar="${proguard3.home}\lib\proguard.jar" fork="true">
             <arg value="-injars tmp/trekbuddy${suffix}.jar"/>
             <arg value="-outjars tmp/trekbuddy${suffix}-obfuscated.jar"/>
             <arg value="-libraryjars ${libraryjars}"/>
-<!-- 4.x
-            <arg value="-dontpreverify"/>
--->
-<!--
-            <arg value="-dontobfuscate"/>
--->
             <arg value="-dontusemixedcaseclassnames"/>
             <arg value="-dontskipnonpubliclibraryclasses"/>
 			<arg value="-defaultpackage ''"/>
             <arg value="-allowaccessmodification"/>
-<!-- !3.11
-
+<!-- leaving this optimization to dc?
             <arg value="-overloadaggressively"/>
 -->
             <arg value="-keep class * implements javax.microedition.midlet.MIDlet"/>
@@ -975,16 +1027,20 @@
         </java>
     </target>
 
-    <target name="obfuscate.android.4x">
+    <target name="obfuscate4.android">
 	    <java jar="${proguard4.home}\lib\proguard.jar" fork="true">
             <arg value="-injars tmp/trekbuddy${suffix}.jar"/>
             <arg value="-outjars tmp/trekbuddy${suffix}-obfuscated.jar"/>
             <arg value="-libraryjars ${libraryjars}"/>
+            <arg value="-dontpreverify"/> <!-- for 4.x; we do preverify -->
+            <arg value="-dontoptimize"/> <!-- for 4.x; breaks code -->
             <arg value="-dontusemixedcaseclassnames"/>
             <arg value="-dontskipnonpubliclibraryclasses"/>
             <arg value="-repackageclasses ''"/>
             <arg value="-allowaccessmodification"/>
+<!-- leaving this optimization to dc?
             <arg value="-overloadaggressively"/>
+-->
             <arg value="-optimizations !code/simplification/arithmetic"/>
             <arg value="-keep class * implements javax.microedition.midlet.MIDlet"/>
             <arg value="-keepnames class cz.** extends java.lang.Exception"/>
@@ -1003,13 +1059,10 @@
     </target>
 
     <target name="emulator.obfuscate">
-	    <java jar="${proguard.home}\lib\proguard.jar" fork="true">
+	    <java jar="${proguard3.home}\lib\proguard.jar" fork="true">
             <arg value="-injars tmp/trekbuddy${suffix}.jar"/>
             <arg value="-outjars tmp/trekbuddy${suffix}-obfuscated.jar"/>
             <arg value="-libraryjars ${libraryjars}"/>
-<!-- 4.x
-            <arg value="-dontpreverify"/>
--->
             <arg value="-dontobfuscate"/>
             <arg value="-keep class * implements javax.microedition.midlet.MIDlet"/>
             <arg value="-printmapping dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.map"/>

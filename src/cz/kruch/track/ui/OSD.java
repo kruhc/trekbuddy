@@ -1,18 +1,4 @@
-/*
- * Copyright 2006-2007 Ales Pour <kruhc@seznam.cz>.
- * All Rights Reserved.
- * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
- *
- * This code is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License version 2 only, as
- * published by the Free Software Foundation.
- *
- * This code is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
- * version 2 for more details (a copy is included in the LICENSE file that
- * accompanied this code).
- */
+// @LICENSE@
 
 package cz.kruch.track.ui;
 
@@ -33,7 +19,7 @@ final class OSD extends Bar {
     private static final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("OSD");
 //#endif
 
-    private static final String MM = "<>";
+    private static final char[] MM = { '<', '>' };
 
     int providerStatus;
 
@@ -107,9 +93,9 @@ final class OSD extends Bar {
         if (isExtInfo && cExtInfoLength > 0) {
             graphics.drawChars(cExtInfo, 0, cExtInfoLength, gx + BORDER, gy + (isBasicInfo ? bh : 0), 0);
             if (Desktop.browsing) {
-                graphics.drawString(MM,
-                                    width - BORDER - mmw,
-                                    gy + bh, Graphics.TOP | Graphics.LEFT);
+                graphics.drawChars(MM, 0, 2,
+                                   width - BORDER - mmw,
+                                   gy + bh, Graphics.TOP | Graphics.LEFT);
             } else {
                 final int sat = this.sat;
                 if (sat >= 3 && sat <= 12) {
@@ -145,7 +131,6 @@ final class OSD extends Bar {
     }
 
     public StringBuffer _getSb() {
-//        sb.setLength(0);
         return sb.delete(0, sb.length());
     }
 

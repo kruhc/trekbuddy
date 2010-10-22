@@ -24,7 +24,7 @@ public final class AndroidLocationProvider
     private android.location.LocationManager manager;
     private android.os.Looper looper;
 
-    private int sat, status;
+    private volatile int sat, status;
 
     public AndroidLocationProvider() {
         super("Internal");

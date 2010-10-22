@@ -77,36 +77,36 @@ public final class ExtraMath {
     private static final double LN10 = 2.3025850929940456840179914546844;
 
     public static double ln(double value) {
-        if (value < 0D) {
-            throw new IllegalArgumentException("ln(" + value + ")");
-        }
-
-        double fix = 0D;
-        while (value < 1D) {
-            value *= 10;
-            fix -= LN10;
-        }
-        while (value > 10D) {
-            value /= 10;
-            fix += LN10;
-        }
-
-        final double[] N = ExtraMath.N;
-        final double[] LN = ExtraMath.LN;
-        double result = ExtraMath.LN10;
-        double inter = value;
-
-        for (int n = N.length, i = 0; i < n; ) {
-            final double interi = inter * N[i];
-            if (interi > 10D) {
-                i++;
-            } else {
-                inter *= N[i];
-                result -= LN[i];
+        if (value >= 0D) {
+            double fix = 0D;
+            while (value < 1D) {
+                value *= 10;
+                fix -= LN10;
             }
+            while (value > 10D) {
+                value /= 10;
+                fix += LN10;
+            }
+
+            final double[] N = ExtraMath.N;
+            final double[] LN = ExtraMath.LN;
+            double result = ExtraMath.LN10;
+            double inter = value;
+
+            for (int n = N.length, i = 0; i < n; ) {
+                final double interi = inter * N[i];
+                if (interi > 10D) {
+                    i++;
+                } else {
+                    inter *= N[i];
+                    result -= LN[i];
+                }
+            }
+
+            return result + fix;
         }
 
-        return result + fix;
+        throw new IllegalArgumentException("ln(" + value + ")");
     }
 
     public static double pow(final double arg1, final double arg2) {

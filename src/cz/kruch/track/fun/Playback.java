@@ -27,12 +27,19 @@ final class Playback implements PlayerListener {
 
     Playback(InputStream in, String name) {
         this.in = in;
-        if (name.endsWith(".amr")) {
+        final String lcname = name.toLowerCase();
+        if (lcname.endsWith(".amr")) {
             contentType = "audio/amr";
-        } else if (name.endsWith(".wav")) {
+        } else if (lcname.endsWith(".wav")) {
             contentType = "audio/x-wav";
-        } else if (name.endsWith(".mp3")) {
+        } else if (lcname.endsWith(".mp3")) {
             contentType = "audio/mpeg";
+        } else if (lcname.endsWith(".aac")) {
+            contentType = "audio/aac";
+        } else if (lcname.endsWith(".m4a")) {
+            contentType = "audio/m4a";
+        } else if (lcname.endsWith(".3gp")) {
+            contentType = "audio/3gpp";
         }
     }
 

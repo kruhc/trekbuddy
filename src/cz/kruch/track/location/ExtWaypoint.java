@@ -50,7 +50,7 @@ public class ExtWaypoint extends StampedWaypoint {
                         }
                     } break;
                     case LINK_GENERIC_SOUND: {
-                        if (link.endsWith(".amr") || link.endsWith(".wav") || link.endsWith(".mp3")) {
+                        if (link.endsWith(".amr") || link.endsWith(".wav") || link.endsWith(".mp3") || link.endsWith(".aac") || link.endsWith(".m4a") || link.endsWith(".3gp")) {
                             return link;
                         }
                     } break;

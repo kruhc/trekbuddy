@@ -16,6 +16,9 @@
 0107=Load Guide
 0108=Select Guide
 0109=Load
+#0110=cms.kruch.xml
+#0111=true,2,7
+#0112=true,true,2,9
 
 # boot messages
 0300=caching images...

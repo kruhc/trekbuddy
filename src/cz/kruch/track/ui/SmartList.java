@@ -13,8 +13,12 @@ import javax.microedition.lcdui.Ticker;
 import javax.microedition.lcdui.Command;
 import java.util.Vector;
 
+/**
+ * Unlimited UI list.
+ */
 final class SmartList extends Canvas {
     private static final int HL_INSET = 2;
+    private static final int SHAKE_LIMIT = 10;
     private static final int colorSbBg = 0x00e6e6e6;
     private static final int colorSbHiBorder = 0x00666666;
     private static final int colorSbLoBorder = 0x00999999;
@@ -27,6 +31,7 @@ final class SmartList extends Canvas {
 
     private int top, selected, marked;
     private int visible;
+    private boolean dragged;
 
     private int width, height, sbY, sbWidth, sbHeight, pY;
     private int colorBackSel, colorBackUnsel, colorForeSel, colorForeUnsel;
@@ -88,15 +93,15 @@ final class SmartList extends Canvas {
         this.width = w;
         this.height = h;
         if (Desktop.screen.hasPointerEvents()) {
-            this.sbWidth = w / 10;
-            if (this.sbWidth > 20) {
+            this.sbWidth = (int) Math.ceil((float)w * .05);
+            if (this.sbWidth < 20) {
                 this.sbWidth = 20;
             }
         } else {
             this.sbWidth = 5;
         }
         final int v = h / getLineHeight();
-        this.sbHeight = (int) Math.ceil(h * ((float)v / size())); 
+        this.sbHeight = (int) Math.ceil(h * ((float)v / size()));
         setVisibleCount(v);
         makeSelectedVisible();
         repaint();
@@ -259,61 +264,91 @@ final class SmartList extends Canvas {
         final int count = items.size();
         final int h = height;
         final int lines = h / getLineHeight();
-        int line = y / getLineHeight();
-        if (line > lines) line--;
 
         if (count <= lines || x < width - sbWidth - 2 * HL_INSET) { // select wpt and open it
+            int line = y / getLineHeight();
+            if (line > lines) line--;
             if (line + top < count) {
                 setSelectedIndex(line + top, true);
                 makeSelectedVisible();
                 repaint();
                 serviceRepaints();
-                listener.commandAction(List.SELECT_COMMAND, this);
+                pY = y;
             }
         } else { // move scrollbar
             if (y < sbY || y > sbY + sbHeight) {
-//                pointerDragged(x, y);
+                // TODO quickjump
             } else {
                 pY = y;
             }
         }
+
+        dragged = false;
     }
 
     protected void pointerDragged(int x, int y) {
-		final int count = items.size();
-		final int lines = height / getLineHeight();
-		if (count > lines && x > width - sbWidth - HL_INSET) {
-            final int size = size();
-            final int dy = y - pY;
-            final int dl = cz.kruch.track.util.ExtraMath.round(size() * ((float) dy / height));
-            if (Math.abs(dl) > 0) {
-                pY = y;
-                top += dl;
-                if (dl > 0) {
-                    if (y > sbY + sbHeight) {
-                        top++;
+        final int count = items.size();
+        final int lines = height / getLineHeight();
+        final int dy = y - pY;
+
+        if (Math.abs(dy) > SHAKE_LIMIT && count > lines) {
+            if (x > width - sbWidth - 2 * HL_INSET) {
+                final int dl = cz.kruch.track.util.ExtraMath.round(count * ((float) dy / height));
+                if (Math.abs(dl) > 0) {
+                    pY = y;
+                    top += dl;
+                    if (dl > 0) {
+                        if (y > sbY + sbHeight) {
+                            top++;
+                        }
+                        if (top + visible > count) {
+                            top = count - visible;
+                        }
+                    } else {
+                        if (y < sbY) {
+                            top--;
+                        }
+                        if (top < 0) {
+                            top = 0;
+                        }
                     }
-                    if (top + visible > size) {
-                        top = size - visible;
-                    }
-                } else {
-                    if (y < sbY) {
-                        top--;
-                    }
-                    if (top < 0) {
+                    repaint();
+                }
+            } else {
+                final int dl = dy / getLineHeight();
+                if (Math.abs(dl) > 0) {
+                    pY = y - dy % getLineHeight();
+                    top -= dl;
+                    if (top >= 0) {
+                        if (top + visible > count) {
+                            top = count - visible;
+                        }
+                        repaint();
+                    } else {
                         top = 0;
                     }
                 }
-                repaint();
             }
+        }
+
+        if (Math.abs(dy) > SHAKE_LIMIT) { // filter shaking finger
+            dragged = true;
         }
     }
 
     protected void pointerReleased(int x, int y) {
 		final int count = items.size();
 		final int lines = height / getLineHeight();
-		if (lines < count && x > width - sbWidth - HL_INSET) {
+        
+        if (lines < count) {
             this.pY = y;
+        }
+        if (x < width - sbWidth - 2 * HL_INSET && !dragged) {
+            int line = y / getLineHeight();
+            if (line > lines) line--;
+            if (line + top < count) {
+                listener.commandAction(List.SELECT_COMMAND, this);
+            }
         }
     }
 

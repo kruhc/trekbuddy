@@ -41,14 +41,6 @@ public final class Jsr82LocationProvider extends SerialLocationProvider {
         }
     }
 
-    protected String getKnownUrl() {
-        return Config.btServiceUrl;
-    }
-
-    protected void refresh() {
-        (new Refresher()).run();
-    }
-
     protected void setThrowable(Throwable throwable) {
         if (throwable instanceof javax.bluetooth.BluetoothConnectionException) {
             javax.bluetooth.BluetoothConnectionException exception = (javax.bluetooth.BluetoothConnectionException) throwable;
@@ -59,11 +51,19 @@ public final class Jsr82LocationProvider extends SerialLocationProvider {
         super.setThrowable(throwable);
     }
 
-    protected void startKeepAlive(StreamConnection c) {
+    protected String getKnownUrl() {
+        return Config.btServiceUrl;
+    }
+
+    protected void refresh() {
+        (new Refresher()).run();
+    }
+
+    protected void startKeepAlive() {
         if (Config.btKeepAlive != 0) {
             try {
-                Desktop.timer.schedule(kar = new Refresher(c.openOutputStream()),
-                                       Config.btKeepAlive, Config.btKeepAlive);
+                kar = new Refresher(connection.openOutputStream());
+                Desktop.timer.schedule(kar, Config.btKeepAlive, Config.btKeepAlive);
             } catch (Exception e) {
                 // ignore
             }
@@ -223,11 +223,9 @@ public final class Jsr82LocationProvider extends SerialLocationProvider {
                 Jsr82LocationProvider.this.url = btspp;
                 final Thread thread = new Thread(Jsr82LocationProvider.this);
 //#ifdef __ALL__
-/* // set in gps() routine
                 if (cz.kruch.track.TrackingMIDlet.samsung) {
                     thread.setPriority(Thread.MIN_PRIORITY);
                 }
-*/
 //#endif
                 thread.start();
 

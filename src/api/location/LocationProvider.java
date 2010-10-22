@@ -68,13 +68,13 @@ public abstract class LocationProvider {
     }
 
     private synchronized int setLastState(int state) {
-        return lastState = state;
+        lastState = state;
+        return state;
     }
 
     protected synchronized boolean updateLastState(int state) {
         final boolean changed = lastState != state;
         lastState = state;
-
         return changed;
     }
 

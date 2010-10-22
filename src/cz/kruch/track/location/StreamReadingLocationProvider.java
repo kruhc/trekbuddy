@@ -23,9 +23,6 @@ abstract class StreamReadingLocationProvider extends LocationProvider {
     private static final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("Stream");
 //#endif
 
-    // max buffer available
-    private static final int MAX_INPUT_SIZE = 2048;
-
     // buffers
     private final byte[] btline;
     private final char[] line;
@@ -35,19 +32,16 @@ abstract class StreamReadingLocationProvider extends LocationProvider {
     private int hack_rmc_count;
     private NmeaParser.Record gsa;
 
-    /* broken streams hack */
-    private boolean retry;
-
     // last I/O timestamp
     private long lastIO;
     private long last;
 
     protected StreamReadingLocationProvider(String name) {
         super(name);
-        if (!cz.kruch.track.configuration.Config.reliableInput) {
-            this.btline = new byte[NmeaParser.MAX_SENTENCE_LENGTH];
+        if (cz.kruch.track.configuration.Config.reliableInput) {
+            this.btline = new byte[4096];
         } else {
-            this.btline = new byte[MAX_INPUT_SIZE];
+            this.btline = new byte[512];
         }
         this.line = new char[NmeaParser.MAX_SENTENCE_LENGTH];
     }
@@ -55,7 +49,6 @@ abstract class StreamReadingLocationProvider extends LocationProvider {
     protected void reset() {
         btlineOffset = btlineCount = hack_rmc_count = 0;
         gsa = null;
-        retry = false;
     }
 
     synchronized long getLastIO() {
@@ -213,6 +206,7 @@ abstract class StreamReadingLocationProvider extends LocationProvider {
 
         boolean nl = false;
         boolean match = false;
+        boolean retry = false;
 
         final char[] line = this.line;
         final byte[] btline = this.btline;
@@ -224,9 +218,7 @@ abstract class StreamReadingLocationProvider extends LocationProvider {
 
                 // read from stream
                 final int n;
-                if (!cz.kruch.track.configuration.Config.reliableInput) {
-                    n = in.read(btline);
-                } else {
+                if (cz.kruch.track.configuration.Config.reliableInput) {
                     final int available = in.available();
                     if (available > 0) {
                         n = in.read(btline, 0, Math.min(available, btline.length));
@@ -242,17 +234,25 @@ abstract class StreamReadingLocationProvider extends LocationProvider {
                             btline[0] = (byte)i;
                         }
                     }
+                } else {
+                    n = in.read(btline, 0, btline.length);
                 }
 
                 // end of stream?
                 if (n == -1) {
-                    if (retry || !isGo()) { // already tried once or provider being stopped
-                        c = -1;
-                        break;
-                    } else { // try read again
-                        retry = true;
-                        continue;
+                    // not expected?
+                    if (isGo()) {
+                        if (retry) { // already tried
+                            c = -1;
+                            break;
+                        } else { // try once again (helps on older Nokias)
+                            retry = true;
+                            continue;
+                        }
                     }
+                    // death wished
+                    c = -1;
+                    break;
                 }
 
                 // use count
@@ -260,9 +260,6 @@ abstract class StreamReadingLocationProvider extends LocationProvider {
 
                 // starting at the beginning
                 btlineOffset = 0;
-
-                // reset retry flag
-                retry = false;
 
 //#ifdef __ALL__
                 // free CPU on Samsung

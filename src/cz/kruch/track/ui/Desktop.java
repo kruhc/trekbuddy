@@ -815,10 +815,14 @@ public final class Desktop implements CommandListener,
             return;
         }
         if (command == cmdInfo) {
-            (new InfoForm()).show(this,
-                                  isTracking() ? provider.getThrowable() : providerError,
-                                  tracklogError, isTracking() ? provider.getStatus() : providerStatus,
-                                  map);
+            final InfoForm form = new InfoForm();
+            if (isTracking()) {
+                form.show(this, provider.getThrowable(), tracklogError,
+                          provider.getStatus(), map);
+            } else {
+                form.show(this, providerError, tracklogError,
+                          providerStatus, map);
+            }
         } else if (command == cmdSettings) {
             (new SettingsForm(new Event(Event.EVENT_CONFIGURATION_CHANGED))).show();
         } else if (command == cmdWaypoints) {
@@ -1549,7 +1553,7 @@ public final class Desktop implements CommandListener,
                 }
 
             } break;
-
+/* since v1 onKeyUp
             case Canvas.FIRE: {
 
                 // handle action (repeated is ignored)
@@ -1558,21 +1562,10 @@ public final class Desktop implements CommandListener,
                 }
 
             } break;
-
+*/
             default: { // no game action
 
                 switch (i) {
-                    
-                    case Canvas.KEY_POUND: { // change screen
-                        if (!repeated) {
-                            views[mode++].setVisible(false);
-                            if (mode >= views.length) {
-                                mode = 0;
-                            }
-                            views[mode].setVisible(true);
-                            mask = MASK_ALL;
-                        }
-                    } break;
 
                     case Canvas.KEY_NUM0: { // day/night switch
                         if (!repeated) {
@@ -1620,25 +1613,61 @@ public final class Desktop implements CommandListener,
     void handleKeyUp(final int i) {
 
         int mask = MASK_NONE;
+        int action = 0;
 
-        // handle events common to all screens
-        switch (i) {
+        try {
+            action = screen.getGameAction(i);
+        } catch (IllegalArgumentException e) {
+            // ignore
+        }
 
-            case Canvas.KEY_NUM0: { // day/night switch
-                if (mode == VIEW_MAP) { // TODO hack
-                    mask |= views[VIEW_MAP].handleKey(i, false);
+        // hacks
+        if (cz.kruch.track.TrackingMIDlet.uiq) {
+            switch (i) {
+                case Canvas.KEY_NUM0:
+                    action = 0;
+                break;
+            }
+        }
+
+        switch (action) {
+
+            case Canvas.FIRE: {
+
+                // handle action
+                mask = views[mode].handleAction(action, false);
+
+            } break;
+
+            default: { // handle events common to all screens
+
+                switch (i) {
+
+                    case Canvas.KEY_POUND: { // change screen
+                        views[mode++].setVisible(false);
+                        if (mode >= views.length) {
+                            mode = 0;
+                        }
+                        views[mode].setVisible(true);
+                        mask = MASK_ALL;
+                    } break;
+
+                    case Canvas.KEY_NUM0: { // day/night switch
+                        if (mode == VIEW_MAP) { // TODO hack
+                            mask |= views[VIEW_MAP].handleKey(i, false);
+                        }
+                    } break;
+
+                    case Canvas.KEY_NUM1: { // navigation
+                        Waypoints.getInstance().show();
+                    } break;
+
+                    case Canvas.KEY_NUM3: { // notify user
+                        cz.kruch.track.ui.nokia.DeviceControl.getBacklight();
+                        mask = MASK_ALL;
+                    } break;
                 }
-            } break;
-
-            case Canvas.KEY_NUM1: { // navigation
-                Waypoints.getInstance().show();
-            } break;
-
-            case Canvas.KEY_NUM3: { // notify user
-                cz.kruch.track.ui.nokia.DeviceControl.getBacklight();
-                mask = MASK_ALL;
-            } break;
-
+            }
         }
 
         // TODO hacky!!!!
@@ -1933,11 +1962,9 @@ public final class Desktop implements CommandListener,
         // (re)start BT provider
         final Thread thread = new Thread((Runnable) provider);
 //#ifdef __ALL__
-/* // set in gps() routine
         if (cz.kruch.track.TrackingMIDlet.samsung) {
             thread.setPriority(Thread.MIN_PRIORITY);
         }
-*/
 //#endif
         thread.start();
 

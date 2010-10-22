@@ -1,6 +1,6 @@
-Map Projection,Latitude/Longitude
-Point01,xy,0,0,in,deg,90,0,N,180,0,W,grid,,,,N
-Point02,xy,1599,0,in,deg,90,0,N,180,0,E,grid,,,,N
-Point03,xy,0,799,in,deg,90,0,S,180,0,W,grid,,,,N
-Point04,xy,1599,799,in,deg,90,0,S,180,0,E,grid,,,,N
-IWH,Map Image Width/Height,1600,800
+Map Projection,Mercator
+Point01,xy,0,0,in,deg,85,0,N,180,0,W,grid,,,,N
+Point02,xy,1239,0,in,deg,85,0,N,180,0,E,grid,,,,N
+Point03,xy,0,959,in,deg,70,0,S,180,0,W,grid,,,,N
+Point04,xy,1239,959,in,deg,70,0,S,180,0,E,grid,,,,N
+IWH,Map Image Width/Height,1240,960

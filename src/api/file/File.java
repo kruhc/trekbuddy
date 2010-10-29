@@ -115,12 +115,15 @@ public abstract class File {
 
     public void close() throws IOException {
         if (fc != null) {
-            fc.close();
-            fc = null;
+            try {
+                fc.close();
+            } finally {
+                fc = null;
+            }
         }
     }
 
-    public final boolean isBrokenTraversal() {
+    public static boolean isBrokenTraversal() {
         return fsType == FS_SXG75 || fsType == FS_MOTOROLA || fsType == FS_MOTOROLA1000;
     }
 

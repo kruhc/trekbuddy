@@ -169,7 +169,7 @@ public final class FileBrowser implements CommandListener, Runnable, Comparator 
 
                 // dir flag
                 final boolean isDir;
-                if (file.isBrokenTraversal()) {
+                if (File.isBrokenTraversal()) {
                     // we know special traversal code is used underneath
                     isDir = file.isDirectory();
                 } else {

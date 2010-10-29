@@ -1873,11 +1873,11 @@ public final class Desktop implements CommandListener,
                     providerClass = Class.forName("cz.kruch.track.location.MotorolaLocationProvider");
                     providerName = "Motorola";
                 break;
-//#endif
                 case Config.LOCATION_PROVIDER_O2GERMANY:
                     providerClass = Class.forName("cz.kruch.track.location.O2GermanyLocationProvider");
                     providerName = "O2 Germany";
                 break;
+//#endif
             }
             provider = (LocationProvider) providerClass.newInstance();
         } catch (Throwable t) {

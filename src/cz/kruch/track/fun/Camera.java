@@ -161,13 +161,15 @@ public abstract class Camera implements
 //#endif /* !__ANDROID__ */    
 
     private static Camera createPlayback() throws Exception {
-        Camera delegate;
+        Camera instance = null;
+//#ifdef __ANDROID__
         if (cz.kruch.track.TrackingMIDlet.android) {
-            delegate = (Camera) Class.forName("cz.kruch.track.fun.AndroidCamera").newInstance();
-        } else {
-            delegate = (Camera) Class.forName("cz.kruch.track.fun.Jsr135Camera").newInstance();
+            instance = (Camera) Class.forName("cz.kruch.track.fun.AndroidCamera").newInstance();
         }
-        return delegate;
+//#else
+        instance = (Camera) Class.forName("cz.kruch.track.fun.Jsr135Camera").newInstance();
+//#endif
+        return instance;
     }
 
 //#ifndef __ANDROID__

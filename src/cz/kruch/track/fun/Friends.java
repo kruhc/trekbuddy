@@ -27,11 +27,15 @@ public abstract class Friends {
     static final char SEPARATOR_CHAR = ',';
 
     public static Friends createInstance() throws Exception {
+        Friends instance = null;
+//#ifdef __ANDROID__
         if (cz.kruch.track.TrackingMIDlet.android) {
             throw new RuntimeException("Not supported");
-        } else {
-            return (Friends) Class.forName("cz.kruch.track.fun.Jsr120Friends").newInstance();
         }
+//#else
+        instance = (Friends) Class.forName("cz.kruch.track.fun.Jsr120Friends").newInstance();
+//#endif
+        return instance;
     }
 
     public abstract void start() throws IOException;

@@ -8,6 +8,7 @@ import java.util.Vector;
  * Buffered backend for Display.callserially(Runnable) with task merging support.
  * 
  * 2010-06-22: Added alternative thread-based executor.
+ * 2010-10-29: Removed.
  *
  * @author kruhc@seznam.cz
  */
@@ -18,22 +19,12 @@ final class SmartRunnable implements Runnable {
     // task queue
     private final Vector runnables;
 
-    // task executor
-    private final Thread executor;
-
     // state vars
     private boolean pending, active;
 
     SmartRunnable() {
         this.runnables = new Vector(16);
         this.active = true;
-        if (cz.kruch.track.TrackingMIDlet.hasFlag("thread_task_executor")) {
-            this.executor = new Executor();
-            this.executor.setPriority(Thread.MAX_PRIORITY);
-            this.executor.start();
-        } else {
-            this.executor = null;
-        }
     }
 
     void setActive(boolean active) {
@@ -41,19 +32,12 @@ final class SmartRunnable implements Runnable {
         final boolean fire;
 
         // avoid collision with run()
-        synchronized (runnables) {
+        synchronized (this) {
             this.active = active;
-            if (executor == null) {
-                if (active && !pending) {
-                    fire = pending = true;
-                } else {
-                    fire = false;
-                }
+            if (active && !pending) {
+                fire = pending = true;
             } else {
-                if (active) {
-                    runnables.notify();
-                }
-                return;
+                fire = false;
             }
         }
 
@@ -71,7 +55,7 @@ final class SmartRunnable implements Runnable {
         final boolean fire;
 
         // avoid collisino with run() or setActive()
-        synchronized (runnables) {
+        synchronized (this) {
 
             // try task merge first
             if (runnables.size() > 0) {
@@ -99,17 +83,10 @@ final class SmartRunnable implements Runnable {
             }
 
             // fire task if no task is running
-            if (executor == null) {
-                if (active && !pending) {
-                    fire = pending = true;
-                } else {
-                    fire = false;
-                }
+            if (active && !pending) {
+                fire = pending = true;
             } else {
-                if (active) {
-                    runnables.notify();
-                }
-                return;
+                fire = false;
             }
         }
 
@@ -120,7 +97,7 @@ final class SmartRunnable implements Runnable {
     }
 
     void clear() {
-        synchronized (runnables) {
+        synchronized (this) {
             runnables.removeAllElements();
         }
     }
@@ -130,7 +107,7 @@ final class SmartRunnable implements Runnable {
         final Runnable r;
 
         // pop task
-        synchronized (runnables) {
+        synchronized (this) {
             if (runnables.size() > 0) {
                 r = (Runnable) runnables.elementAt(0);
                 runnables.setElementAt(null, 0); // helps GC?
@@ -156,7 +133,7 @@ final class SmartRunnable implements Runnable {
         final boolean fire;
 
         // more work to do?
-        synchronized (runnables) {
+        synchronized (this) {
             if (active && runnables.size() > 0) {
                 fire = true;
             } else {
@@ -167,42 +144,6 @@ final class SmartRunnable implements Runnable {
         // better enqueue it out of synchronized block
         if (fire) {
             Desktop.display.callSerially(this);
-        }
-    }
-
-    private final class Executor extends Thread {
-
-        public Executor() {
-        }
-
-        public void run() {
-
-            while (true) {
-
-                final Vector runnables = SmartRunnable.this.runnables;
-                final Runnable r;
-
-                synchronized (runnables) {
-                    while (runnables.size() == 0) {
-                        try {
-                            runnables.wait();
-                        } catch (InterruptedException e) {
-                            // ignore
-                        }
-                    }
-                    r = (Runnable) runnables.elementAt(0);
-                    runnables.setElementAt(null, 0); // helps GC?
-                    runnables.removeElementAt(0);
-                }
-
-                if (r != null) {
-                    try {
-                        r.run();
-                    } catch (Throwable t) {
-                        uncaught++;
-                    }
-                }
-            }
         }
     }
 }

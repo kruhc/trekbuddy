@@ -69,6 +69,8 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         nokia = platform.startsWith("Nokia");
         s60nd = platform.startsWith("Nokia6630") || platform.startsWith("Nokia668") || platform.startsWith("NokiaN70") || platform.startsWith("NokiaN72");
         s60rdfp2 = platform.indexOf("sw_platform=S60") > -1;
+        sonyEricsson = System.getProperty("com.sonyericsson.imei") != null;
+        sonyEricssonEx = sonyEricsson || platform.startsWith("SonyEricsson");
         symbian = true;
 //#else
         nokia = platform.startsWith("Nokia");

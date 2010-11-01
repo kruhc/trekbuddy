@@ -179,13 +179,12 @@ public final class Desktop implements CommandListener,
         // platform-specific hacks
 //#ifdef __ALL__
         if (cz.kruch.track.TrackingMIDlet.uiq) {
-            CANCEL_CMD_TYPE = Command.BACK;
-        }
-        if (cz.kruch.track.TrackingMIDlet.sonyEricssonEx) {
-            CANCEL_CMD_TYPE = Command.BACK;
+            EXIT_CMD_TYPE = CANCEL_CMD_TYPE = Command.BACK;
+        } else if (cz.kruch.track.TrackingMIDlet.sonyEricssonEx) {
+            EXIT_CMD_TYPE = CANCEL_CMD_TYPE = Command.BACK;
         }
         if ("Exit".equals(midlet.getAppProperty(cz.kruch.track.TrackingMIDlet.JAD_UI_RIGHT_KEY))) {
-            EXIT_CMD_TYPE = Command.EXIT; 
+            EXIT_CMD_TYPE = Command.EXIT;
         }
 //#elifdef __J9__
         POSITIVE_CMD_TYPE = Command.ITEM;
@@ -227,6 +226,16 @@ public final class Desktop implements CommandListener,
     public Worker getDiskWorker() {
         if (diskWorker == null) {
             diskWorker = new Worker("Disk Worker");
+//#ifdef __ANDROID__
+/*
+            (new Thread(Thread.currentThread().getThreadGroup(),
+                        diskWorker, "Disk Worker", 16 * 1024)).start(); // default is 12 kB
+*/
+//#else
+/*
+            diskWorker.start();
+*/
+//#endif
             diskWorker.start();
         }
         return diskWorker;
@@ -1998,11 +2007,9 @@ public final class Desktop implements CommandListener,
         // (re)start provider
         final Thread thread = new Thread((Runnable) provider);
 //#ifdef __ALL__
-/*
         if (cz.kruch.track.TrackingMIDlet.samsung) {
             thread.setPriority(Thread.MIN_PRIORITY);
         }
-*/
 //#endif
         thread.start();
 

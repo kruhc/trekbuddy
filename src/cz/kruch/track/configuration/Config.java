@@ -671,8 +671,8 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
                     readVars(din);
                 }
             }
-        } catch (Exception e) {
-            throw new ConfigurationException(e);
+        } catch (Throwable t) {
+            throw new ConfigurationException(t);
         } finally {
             try {
                 din.close();

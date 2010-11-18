@@ -104,7 +104,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
 //#ifdef __LOG__
             System.out.println("* JSR-179");
 //#endif
-        } catch (Throwable t) {
+        } catch (ClassNotFoundException e) {
         }
         try {
             Class.forName("javax.bluetooth.DiscoveryAgent");
@@ -112,7 +112,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
 //#ifdef __LOG__
             System.out.println("* JSR-82");
 //#endif
-        } catch (Throwable t) {
+        } catch (ClassNotFoundException e) {
         }
         try {
             Class.forName("javax.wireless.messaging.TextMessage");
@@ -120,7 +120,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
 //#ifdef __LOG__
             System.out.println("* JSR-120");
 //#endif
-        } catch (Throwable t) {
+        } catch (ClassNotFoundException e) {
         }
         try {
             Class.forName("javax.microedition.media.control.VideoControl");
@@ -128,7 +128,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
 //#ifdef __LOG__
             System.out.println("* JSR-135");
 //#endif
-        } catch (Throwable t) {
+        } catch (ClassNotFoundException e) {
         }
         try {
             Class.forName("javax.microedition.amms.control.camera.CameraControl");
@@ -137,7 +137,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
 //#ifdef __LOG__
             System.out.println("* JSR-234");
 //#endif
-        } catch (Throwable t) {
+        } catch (ClassNotFoundException e) {
         }
         try {
             Class.forName("javax.microedition.io.CommConnection");
@@ -145,7 +145,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
 //#ifdef __LOG__
             System.out.println("* CommConnection");
 //#endif
-        } catch (Throwable t) {
+        } catch (ClassNotFoundException e) {
         }
 
 //#else /* __ANDROID__ */
@@ -155,7 +155,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         try {
             Class.forName("android.bluetooth.BluetoothDevice");
             jsr82 = true;
-        } catch (Throwable t) {
+        } catch (ClassNotFoundException e) {
         }
 
 //#endif /* __ANDROID__ */
@@ -166,7 +166,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         try {
             Class.forName("com.motorola.location.PositionSource");
             motorola179 = true;
-        } catch (Throwable throwable) {
+        } catch (ClassNotFoundException e) {
         }
 
         /* detect UIQ */
@@ -178,8 +178,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
             try {
                 Class.forName("com.jbed.io.CharConvUTF8");
                 jbed = true;
-            } catch (Throwable t) {
-                // ignore
+            } catch (ClassNotFoundException e) {
             }
         }
 
@@ -263,9 +262,6 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
             cz.kruch.track.ui.NavigationScreens.initialize();
             imaged = 1;
         } catch (Throwable t) {
-//#ifdef __LOG__
-            t.printStackTrace();
-//#endif
             imaged = -1;
         }
 
@@ -274,9 +270,6 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         try {
             configured = cz.kruch.track.configuration.Config.initialize();
         } catch (Throwable t) {
-//#ifdef __LOG__
-            t.printStackTrace();
-//#endif
             configured = -1;
         }
 
@@ -285,9 +278,6 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         try {
             resourced = Resources.initialize();
         } catch (Throwable t) {
-//#ifdef __LOG__
-            t.printStackTrace();
-//#endif
             resourced = -1;
         }
 

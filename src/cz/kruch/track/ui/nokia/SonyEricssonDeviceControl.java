@@ -18,7 +18,7 @@ final class SonyEricssonDeviceControl extends DeviceControl {
             Class.forName("java.rmi.Remote");
             this.name = "SonyEricsson/JP6+";
             this.jp6plus = true;
-        } catch (Throwable t) {
+        } catch (ClassNotFoundException e) {
             this.name = "SonyEricsson";
         }
     }

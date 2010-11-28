@@ -128,7 +128,7 @@ final class InfoForm implements CommandListener {
                 .append("; restarts=").append(api.location.LocationProvider.restarts)
                 .append("; syncs=").append(api.location.LocationProvider.syncs)
                 .append("; mismatches=").append(api.location.LocationProvider.mismatches)
-                .append("; checksums=").append(api.location.LocationProvider.checksums)
+                .append("; malformations=").append(api.location.LocationProvider.checksums)
                 .append("; errors=").append(api.location.LocationProvider.errors)
                 .append("; pings=").append(api.location.LocationProvider.pings)
                 .append("; maxavail=").append(api.location.LocationProvider.maxavail);

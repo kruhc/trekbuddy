@@ -44,6 +44,7 @@ public final class NmeaParser {
     public static float pdop = Float.NaN;
     public static float hdop = Float.NaN;
     public static float vdop = Float.NaN;
+    public static float geoidh = Float.NaN;
     public static int satv, sata;
     
     public static final Hashtable xdr = new Hashtable(4);
@@ -128,7 +129,7 @@ public final class NmeaParser {
 
         // process
         int index = 0;
-        while ((index < 10) && tokenizer.hasMoreTokens()) {
+        while (index < 12 && tokenizer.hasMoreTokens()) {
             final CharArrayTokenizer.Token token = tokenizer.next();
             if (!token.isEmpty()) {
                 switch (index) {
@@ -167,9 +168,10 @@ public final class NmeaParser {
                     case 10: // 'm'
                         break;
                     case 11: {
-/* unused
-                        record.geoidh = parseFloat(token);
+/* global
+                        record.geoidh = CharArrayTokenizer.parseFloat(token);
 */
+                        geoidh = CharArrayTokenizer.parseFloat(token);
                     } break;
                     case 12: // 'm'
                         break;
@@ -207,7 +209,7 @@ public final class NmeaParser {
 
         // process
         int index = 0;
-        while ((index < 18) && tokenizer.hasMoreTokens()) {
+        while (index < 18 && tokenizer.hasMoreTokens()) {
             final CharArrayTokenizer.Token token = tokenizer.next();
             /* no token empty check here */
             switch (index) {
@@ -281,7 +283,7 @@ public final class NmeaParser {
 
         // process
         int index = 0;
-        while ((index < maxi) && tokenizer.hasMoreTokens()) {
+        while (index < maxi && tokenizer.hasMoreTokens()) {
             final CharArrayTokenizer.Token token = tokenizer.next();
             /* no token empty check here */
             switch (index) {
@@ -349,7 +351,7 @@ public final class NmeaParser {
 
         // process
         int index = 0;
-        while ((index < 10) && tokenizer.hasMoreTokens()) {
+        while (index < 10 && tokenizer.hasMoreTokens()) {
             final CharArrayTokenizer.Token token = tokenizer.next();
             if (!token.isEmpty()) {
                 switch (index) {
@@ -378,10 +380,7 @@ public final class NmeaParser {
                         }
                     } break;
                     case 7: {
-                        record.speed = CharArrayTokenizer.parseFloat(token);
-                        if (record.speed > 0F) {
-                            record.speed *= 1.852F / 3.6F;
-                        }
+                        record.speed = CharArrayTokenizer.parseFloat(token) * (1.852F / 3.6F);
                     } break;
                     case 8: {
                         record.course = CharArrayTokenizer.parseFloat(token);
@@ -413,7 +412,7 @@ public final class NmeaParser {
 
         // process
         int index = 0;
-        while ((index < 17 /* 4 measurements max */) && tokenizer.hasMoreTokens()) {
+        while (index < 17 /* 4 measurements max */ && tokenizer.hasMoreTokens()) {
             final CharArrayTokenizer.Token token = tokenizer.next();
             /* no token empty check here */
             switch (index) {
@@ -507,8 +506,10 @@ public final class NmeaParser {
         public float pdop, hdop, vdop;
 */
         public float altitude;
-/* unused
+/* global
         public float geoidh;
+*/
+/* unused
         public int dgpst;
         public String dgpsid;
 */
@@ -524,9 +525,8 @@ public final class NmeaParser {
 
         private void invalidate(final int type) {
             this.type = type;
-            this.timestamp = -1;
+            this.timestamp = this.fix = this.sat = -1;
             this.lat = this.lon = Double.NaN;
-            this.fix = this.sat = -1;
             this.altitude = this.speed = this.course = Float.NaN;
             this.status = '?';
         }

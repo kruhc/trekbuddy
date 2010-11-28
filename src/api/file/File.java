@@ -40,7 +40,7 @@ public abstract class File {
             Class.forName("javax.microedition.io.file.FileConnection");
             factory = Class.forName("api.file.Jsr75File");
             fsType = traverseBug ? FS_SXG75 : FS_JSR75;
-        } catch (ClassNotFoundException e) {
+        } catch (Throwable t) {
         }
 //#ifdef __ALL__
         if (factory == null) {
@@ -48,7 +48,7 @@ public abstract class File {
                 Class.forName("com.siemens.mp.io.file.FileConnection");
                 factory = Class.forName("api.file.SiemensFile");
                 fsType = FS_SIEMENS;
-            } catch (ClassNotFoundException e) {
+            } catch (Throwable t) {
             }
         }
         if (factory == null) {
@@ -56,7 +56,7 @@ public abstract class File {
                 Class.forName("com.motorola.io.FileConnection");
                 factory = Class.forName("api.file.MotorolaFile");
                 fsType = FS_MOTOROLA;
-            } catch (ClassNotFoundException e) {
+            } catch (Throwable t) {
             }
         }
         if (factory == null) {
@@ -64,7 +64,7 @@ public abstract class File {
                 Class.forName("com.motorola.io.file.FileConnection");
                 factory = Class.forName("api.file.Motorola1000File");
                 fsType = FS_MOTOROLA1000;
-            } catch (ClassNotFoundException e) {
+            } catch (Throwable t) {
             }
         }
 //#endif

@@ -104,7 +104,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
 //#ifdef __LOG__
             System.out.println("* JSR-179");
 //#endif
-        } catch (ClassNotFoundException e) {
+        } catch (Throwable t) {
         }
         try {
             Class.forName("javax.bluetooth.DiscoveryAgent");
@@ -112,7 +112,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
 //#ifdef __LOG__
             System.out.println("* JSR-82");
 //#endif
-        } catch (ClassNotFoundException e) {
+        } catch (Throwable t) {
         }
         try {
             Class.forName("javax.wireless.messaging.TextMessage");
@@ -120,7 +120,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
 //#ifdef __LOG__
             System.out.println("* JSR-120");
 //#endif
-        } catch (ClassNotFoundException e) {
+        } catch (Throwable t) {
         }
         try {
             Class.forName("javax.microedition.media.control.VideoControl");
@@ -128,7 +128,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
 //#ifdef __LOG__
             System.out.println("* JSR-135");
 //#endif
-        } catch (ClassNotFoundException e) {
+        } catch (Throwable t) {
         }
         try {
             Class.forName("javax.microedition.amms.control.camera.CameraControl");
@@ -137,7 +137,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
 //#ifdef __LOG__
             System.out.println("* JSR-234");
 //#endif
-        } catch (ClassNotFoundException e) {
+        } catch (Throwable t) {
         }
         try {
             Class.forName("javax.microedition.io.CommConnection");
@@ -145,7 +145,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
 //#ifdef __LOG__
             System.out.println("* CommConnection");
 //#endif
-        } catch (ClassNotFoundException e) {
+        } catch (Throwable t) {
         }
 
 //#else /* __ANDROID__ */
@@ -155,7 +155,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         try {
             Class.forName("android.bluetooth.BluetoothDevice");
             jsr82 = true;
-        } catch (ClassNotFoundException e) {
+        } catch (Throwable t) {
         }
 
 //#endif /* __ANDROID__ */
@@ -166,7 +166,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         try {
             Class.forName("com.motorola.location.PositionSource");
             motorola179 = true;
-        } catch (ClassNotFoundException e) {
+        } catch (Throwable t) {
         }
 
         /* detect UIQ */
@@ -178,7 +178,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
             try {
                 Class.forName("com.jbed.io.CharConvUTF8");
                 jbed = true;
-            } catch (ClassNotFoundException e) {
+            } catch (Throwable t) {
             }
         }
 
@@ -282,7 +282,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         }
 
         // load default datums
-        cz.kruch.track.configuration.Config.initDefaultDatums(this);
+        cz.kruch.track.configuration.Config.initDefaultDatums();
 
         // initialize file API
         api.file.File.initialize(sxg75 || android || hasFlag("fs_traverse_bug"));

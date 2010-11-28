@@ -28,6 +28,7 @@ import javax.microedition.lcdui.Item;
 import javax.microedition.lcdui.ItemCommandListener;
 import javax.microedition.lcdui.List;
 import javax.microedition.lcdui.Choice;
+import javax.microedition.lcdui.Screen;
 
 import api.location.Location;
 import api.location.QualifiedCoordinates;
@@ -415,10 +416,18 @@ final class WaypointForm implements CommandListener, ItemCommandListener, Callba
             final GroundspeakBean bean = ((GroundspeakBean) waypoint.getUserObject());
             if (label.startsWith(Resources.getString(Resources.NAV_FLD_GS_LISTING_LONG))) {
                 final String text = convertHtmlSnippet(bean.getLongListing());
-                final Form box = new Form(label);
-                final StringItem content = new StringItem(null, text);
-                content.setFont(Desktop.fontStringItems);
-                box.append(content);
+                final Screen box;
+//#ifdef __SYMBIAN__
+                if (cz.kruch.track.TrackingMIDlet.uiq) {
+                    box = new javax.microedition.lcdui.TextBox(label, text, text.length(), TextField.UNEDITABLE);
+                } else
+//#endif
+                {
+                    box = new Form(label);
+                    final StringItem content = new StringItem(null, text);
+                    content.setFont(Desktop.fontStringItems);
+                    ((Form) box).append(content);
+                }
                 box.addCommand(new Command(Resources.getString(Resources.CMD_CLOSE), Desktop.BACK_CMD_TYPE, 1));
                 box.setCommandListener(this);
                 Desktop.display.setCurrent(box);

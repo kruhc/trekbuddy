@@ -86,7 +86,7 @@ abstract class StreamReadingLocationProvider extends LocationProvider {
 //#endif
                 return null;
             }
-                          
+
             // update last I/O timestamp
             setLastIO(System.currentTimeMillis());
 
@@ -221,10 +221,10 @@ abstract class StreamReadingLocationProvider extends LocationProvider {
                 if (cz.kruch.track.configuration.Config.reliableInput) {
                     final int available = in.available();
                     if (available > 0) {
-                        n = in.read(btline, 0, Math.min(available, btline.length));
-                        if (available > maxavail) {
+                        if (available > maxavail) { // just for statistics
                             maxavail = available;
                         }
+                        n = in.read(btline, 0, Math.min(available, btline.length));
                     } else {
                         final int i = in.read();
                         if (i == -1) {
@@ -240,9 +240,8 @@ abstract class StreamReadingLocationProvider extends LocationProvider {
 
                 // end of stream?
                 if (n == -1) {
-                    // not expected?
-                    if (isGo()) {
-                        if (retry) { // already tried
+                    if (isGo()) { // not expected?
+                        if (retry) { // already retried
                             c = -1;
                             break;
                         } else { // try once again (helps on older Nokias)
@@ -300,8 +299,8 @@ abstract class StreamReadingLocationProvider extends LocationProvider {
                 // weird content check
                 if (pos >= NmeaParser.MAX_SENTENCE_LENGTH) {
 
-                    // record state
-                    setThrowable(new LocationException("NMEA sentence too long"));
+                    // record malformation
+                    checksums++;
 
                     // reset
                     pos = 0;

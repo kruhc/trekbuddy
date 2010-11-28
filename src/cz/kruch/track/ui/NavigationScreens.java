@@ -34,13 +34,7 @@ public final class NavigationScreens {
      * public constants
      */
 
-    public static final String[] nStr = {
-        "3*", "4*", "5*", "6*", "7*", "8*", "9*", "10*", "11*", "12*"
-    };
-
-    private static final char[] digits = {
-	    '0' , '1' , '2' , '3' , '4' , '5' , '6' , '7' , '8' , '9'
-    };
+    private static final char[] digits;
 
     public static final char[] DIST_STR_M      = { ' ', 'm', ' ' };
     public static final char[] DIST_STR_KM     = { ' ', 'k', 'm', ' ' };
@@ -67,6 +61,10 @@ public final class NavigationScreens {
     private static final char[] STR_KMH = { ' ', 'k', 'm', '/', 'h', ' ' };
     private static final char[] STR_M   = { ' ', 'm' };
     private static final char[] STR_FT  = { ' ', 'f', 't' };
+
+    static {
+	    digits = "0123456789".toCharArray();
+    }
 
     /*
      * image cache

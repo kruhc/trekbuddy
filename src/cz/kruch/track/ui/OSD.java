@@ -20,6 +20,10 @@ final class OSD extends Bar {
 //#endif
 
     private static final char[] MM = { '<', '>' };
+    private static final char[] NSAT;
+    static {
+        NSAT = "3*4*5*6*7*8*9*10*11*12*".toCharArray();
+    }
 
     int providerStatus;
 
@@ -30,7 +34,7 @@ final class OSD extends Bar {
     int semaforX, semaforY;
 
     private final StringBuffer sb;
-    private final int rw, mmw, str1w, str2w;
+    private final int rw, mmw, nsatw, nsatw2;
 
     private final char[] cInfo, cExtInfo;
     private int cInfoLength, cExtInfoLength;
@@ -40,8 +44,8 @@ final class OSD extends Bar {
         this.providerStatus = LocationProvider.OUT_OF_SERVICE;
         this.rw = Desktop.font.charWidth('R');
         this.mmw = Desktop.font.stringWidth("<>");
-        this.str1w = Desktop.font.stringWidth("4*");
-        this.str2w = Desktop.font.stringWidth("44*");
+        this.nsatw = Desktop.font.stringWidth("4*");
+        this.nsatw2 = Desktop.font.stringWidth("12*");
 /*
         this.clip = new int[]{ gx, gy, -1, -1 };
 */
@@ -98,10 +102,16 @@ final class OSD extends Bar {
                                    gy + bh, Graphics.TOP | Graphics.LEFT);
             } else {
                 final int sat = this.sat;
-                if (sat >= 3 && sat <= 12) {
-                    graphics.drawString(NavigationScreens.nStr[sat - 3],
-                                        width - BORDER - (sat < 10 ? str1w : str2w),
-                                        gy + bh, Graphics.TOP | Graphics.LEFT);
+                if (sat >= 3) {
+                    if (sat < 10) {
+                        graphics.drawChars(NSAT, (sat - 3) * 2, 2,
+                                           width - BORDER - nsatw,
+                                           gy + bh, Graphics.TOP | Graphics.LEFT);
+                    } else if (sat <= 12) {
+                        graphics.drawChars(NSAT, 14 + (sat - 10) * 3, 3,
+                                           width - BORDER - nsatw2,
+                                           gy + bh, Graphics.TOP | Graphics.LEFT);
+                    }
                 }
             }
         }

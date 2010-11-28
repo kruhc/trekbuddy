@@ -630,10 +630,9 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
             f.create();
             os = new DataOutputStream(f.openOutputStream());
             writeMain(os);
-            os.flush();
-        } catch (Throwable t) {
+        } catch (Exception e) {
 //#ifdef __LOG__
-            t.printStackTrace();
+            e.printStackTrace();
 //#endif
         } finally {
             try {
@@ -699,9 +698,9 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
                     in = new DataInputStream(f.openInputStream());
                     readMain(in);
                 }
-            } catch (Throwable t) {
+            } catch (Exception e) {
 //#ifdef __LOG__
-                t.printStackTrace();
+                e.printStackTrace();
 //#endif
             } finally {
                 try {
@@ -927,7 +926,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
 
     public static Datum currentDatum;
 
-    public static void initDefaultDatums(MIDlet midlet) {
+    public static void initDefaultDatums() {
         // vars
         final char[] delims = { '{', '}', ',', '=' };
         final CharArrayTokenizer tokenizer = new CharArrayTokenizer();
@@ -939,16 +938,6 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
             // ignore
         }
 
-        // lastly try JAD
-        int idx = 1;
-        CharArrayTokenizer.Token token = new CharArrayTokenizer.Token();
-        String s = midlet.getAppProperty("Datum-" + Integer.toString(idx++));
-        while (s != null) {
-            token.init(s.toCharArray(), 0, s.length());
-            initDatum(tokenizer, token, delims);
-            s = midlet.getAppProperty("Datum-" + Integer.toString(idx++));
-        }
-
         // inject the very basic datum
         Datum.WGS_84 = (Datum) datumMappings.get("map:WGS 84");
 
@@ -957,17 +946,12 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
     }
 
     public static void initUserDatums() {
-        // vars
-        final char[] delims = { '{', '}', ',', '=' };
-        final CharArrayTokenizer tokenizer = new CharArrayTokenizer();
-
-        // next try user's
-        if (Config.dataDirExists) {
+        if (dataDirExists) {
             File file = null;
             try {
                 file = File.open(Config.getFolderURL(Config.FOLDER_RESOURCES) + "datums.txt");
                 if (file.exists()) {
-                    initDatums(file.openInputStream(), tokenizer, delims);
+                    initDatums(file.openInputStream(), new CharArrayTokenizer(), new char[]{ '{', '}', ',', '=' });
                 }
             } catch (Throwable t) {
                 // ignore

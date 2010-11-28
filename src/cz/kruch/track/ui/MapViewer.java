@@ -333,21 +333,25 @@ final class MapViewer {
                 }
             }
 
-            // next try map
-            if (slice == null) {
-                slice = this.map.getSlice(px, py);
-            }
+            // next try map (we may have no map on start, so be careful)
+            if (slice == null && this.map != null) {
 
-            // something is wrong
-            if (slice == null) {
-                throw new IllegalStateException("No slice for position " + p);
+                // find slice
+                slice = this.map.getSlice(px, py);
+
+                // something is wrong
+                if (slice == null) {
+                    throw new IllegalStateException("No slice for position " + p);
+                }
             }
 
             // adjust boundaries for 1-tile scrolling
-            mWidth = slice.getWidth();
-            mHeight = slice.getHeight();
-            x0 = slice.getX();
-            y0 = slice.getY();
+            if (slice != null) {
+                mWidth = slice.getWidth();
+                mHeight = slice.getHeight();
+                x0 = slice.getX();
+                y0 = slice.getY();
+            }
         }
 
         final int dWidth = Desktop.width;

@@ -71,6 +71,7 @@ public final class GpxTracklog implements Runnable {
     private static final String ELEMENT_FIX             = "fix";
     private static final String ELEMENT_SAT             = "sat";
     private static final String ELEMENT_WPT             = "wpt";
+    private static final String ELEMENT_GEOIDH          = "geoidheight";
     private static final String ELEMENT_NAME            = "name";
     private static final String ELEMENT_CMT             = "cmt";
     private static final String ELEMENT_SYM             = "sym";
@@ -457,12 +458,19 @@ public final class GpxTracklog implements Runnable {
 
     private void serializeTrkpt(final Location l) throws IOException {
         final HXmlSerializer serializer = this.serializer;
+        final char[] sbChars = this.sbChars;
         serializer.startTag(DEFAULT_NAMESPACE, ELEMENT_TRKPT);
         serializePt(l.getQualifiedCoordinates());
         serializer.startTag(DEFAULT_NAMESPACE, ELEMENT_TIME);
         int i = dateToXsdDate(l.getTimestamp());
         serializer.text(sbChars, 0, i);
         serializer.endTag(DEFAULT_NAMESPACE, ELEMENT_TIME);
+        if (!Float.isNaN(NmeaParser.geoidh)) {
+            serializer.startTag(DEFAULT_NAMESPACE, ELEMENT_GEOIDH);
+            i = doubleToChars(NmeaParser.geoidh, 1);
+            serializer.text(sbChars, 0, i);
+            serializer.endTag(DEFAULT_NAMESPACE, ELEMENT_GEOIDH);
+        }
         serializer.startTag(DEFAULT_NAMESPACE, ELEMENT_FIX);
         switch (l.getFix()) {
             case 0: {
@@ -614,6 +622,7 @@ public final class GpxTracklog implements Runnable {
 
     private void serializeWpt(final Waypoint wpt) throws IOException {
         final HXmlSerializer serializer = this.serializer;
+        final char[] sbChars = this.sbChars;
         serializer.startTag(DEFAULT_NAMESPACE, ELEMENT_WPT);
         serializePt(wpt.getQualifiedCoordinates());
         if (wpt.getTimestamp() != 0) {
@@ -621,6 +630,12 @@ public final class GpxTracklog implements Runnable {
             final int i = dateToXsdDate(wpt.getTimestamp());
             serializer.text(sbChars, 0, i);
             serializer.endTag(DEFAULT_NAMESPACE, ELEMENT_TIME);
+        }
+        if (!Float.isNaN(NmeaParser.geoidh)) {
+            serializer.startTag(DEFAULT_NAMESPACE, ELEMENT_GEOIDH);
+            final int i = doubleToChars(NmeaParser.geoidh, 1);
+            serializer.text(sbChars, 0, i);
+            serializer.endTag(DEFAULT_NAMESPACE, ELEMENT_GEOIDH);
         }
         serializeElement(serializer, wpt.getName(), DEFAULT_NAMESPACE, ELEMENT_NAME);
         serializeElement(serializer, wpt.getComment(), DEFAULT_NAMESPACE, ELEMENT_CMT);
@@ -717,16 +732,16 @@ public final class GpxTracklog implements Runnable {
         }
     }
 
-    public Location check(final Location location) {
-
-        if (Config.gpxDt == 0) { // 'raw'
-            return location;
-        }
+    private Location check(final Location location) {
 
         final int fix = location.getFix();
 
         if (fix <= 0 && Config.gpxOnlyValid) {
             return null;
+        }
+
+        if (Config.gpxDt == 0) { // 'raw'
+            return location;
         }
 
         boolean bLog = false;

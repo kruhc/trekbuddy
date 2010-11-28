@@ -86,7 +86,7 @@ public final class Location {
         return l;
     }
 
-    private Location(QualifiedCoordinates coordinates,
+    private Location(final QualifiedCoordinates coordinates,
                      final long timestamp, final int fix, final int sat) {
         this.coordinates = coordinates;
         this.timestamp = timestamp;
@@ -149,7 +149,7 @@ public final class Location {
     }
 
     public boolean isSpeedValid() {
-        final float accuracy = getQualifiedCoordinates().getHorizontalAccuracy();
+        final float accuracy = this.coordinates.getHorizontalAccuracy();
         final float speed = this.speed;
         if (!Float.isNaN(accuracy) && !Float.isNaN(speed)) {
             if (speed > (accuracy / 10)) {
@@ -157,5 +157,12 @@ public final class Location {
             }
         }
         return false;
+    }
+
+    public void validateEx() {
+        final QualifiedCoordinates qc = this.coordinates;
+        if (qc.getLat() == 0D || qc.getLon() == 0D) {
+            fixsat &= 0x00ff00ff; // preserve MASKs and number of sats
+        }
     }
 }

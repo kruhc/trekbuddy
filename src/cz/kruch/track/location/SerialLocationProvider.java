@@ -135,7 +135,7 @@ public class SerialLocationProvider
 
     private void startWatcher() {
         watcher = new UniversalSoldier(UniversalSoldier.MODE_WATCHER);
-        Desktop.timer.schedule(watcher, 20000, 5000); // delay = 20 sec, period = 5 sec
+        Desktop.timer.schedule(watcher, 15000, 5000); // delay = 15 sec, period = 5 sec
     }
 
     private void stopWatcher() {
@@ -146,7 +146,7 @@ public class SerialLocationProvider
     }
 
     private void gps() throws IOException {
-        final boolean isHge100 = cz.kruch.track.TrackingMIDlet.sonyEricssonEx && url.indexOf("AT5") > -1;
+        final boolean isHge100 = Config.locationProvider == Config.LOCATION_PROVIDER_HGE100;
         final int rw = isHge100 || Config.btKeepAlive != 0 ? Connector.READ_WRITE : Connector.READ;
 
         // write access
@@ -160,7 +160,7 @@ public class SerialLocationProvider
             setStatus("opening connection");
 
             // open connection
-            connection = (StreamConnection) Connector.open(url, rw, true);
+            connection = (StreamConnection) Connector.open(url, rw);
 
             // debug
             setStatus("opening input stream");

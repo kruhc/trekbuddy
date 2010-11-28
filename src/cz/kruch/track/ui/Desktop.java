@@ -178,10 +178,8 @@ public final class Desktop implements CommandListener,
 
         // platform-specific hacks
 //#ifdef __ALL__
-        if (cz.kruch.track.TrackingMIDlet.uiq) {
-            EXIT_CMD_TYPE = CANCEL_CMD_TYPE = Command.BACK;
-        } else if (cz.kruch.track.TrackingMIDlet.sonyEricssonEx) {
-            EXIT_CMD_TYPE = CANCEL_CMD_TYPE = Command.BACK;
+        if (cz.kruch.track.TrackingMIDlet.sonyEricssonEx) {
+            CANCEL_CMD_TYPE = Command.BACK;
         }
         if ("Exit".equals(midlet.getAppProperty(cz.kruch.track.TrackingMIDlet.JAD_UI_RIGHT_KEY))) {
             EXIT_CMD_TYPE = Command.EXIT;
@@ -3328,6 +3326,9 @@ public final class Desktop implements CommandListener,
             if (l == null) {
                 throw new IllegalStateException("Location is null");
             }
+
+            // extra validation
+            l.validateEx();
 
             // update tracklog
             if (Desktop.this.tracklogGpx != null) {

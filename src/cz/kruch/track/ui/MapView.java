@@ -51,6 +51,7 @@ final class MapView extends View {
      * @deprecated hack
      */
     void setMap(Map map) {
+
         // setup map viewer
         mapViewer.setMap(map);
 

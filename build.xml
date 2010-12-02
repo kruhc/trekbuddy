@@ -288,130 +288,10 @@
         <antcall target="rim.ota" inheritall="true"/>
     </target>
 
-    <target name="android15">
-        <property name="suffix" value="-android"/>
-        <property name="dist.dir" value="android15"/>
-        <property name="libraryjars" value="${microemu.home}\microemu-cldc\target\microemu-cldc-3.0.0-SNAPSHOT.jar;${microemu.home}\microemu-midp\target\microemu-midp-3.0.0-SNAPSHOT.jar;${microemu.home}\microemu-extensions\microemu-jsr-75\target\microemu-jsr-75-3.0.0-SNAPSHOT.jar;${android15.home}\android.jar"/>
-        <antcall target="clean"/>
-        <ant dir="${microemu.home}/microemu-android"
-             antfile="build-trekbuddy.xml" target="clean"
-             inheritAll="false" inheritRefs="false">
-			<property name="sdk.version" value="1.5"/>
-			<property name="api.level" value="3"/>
-			<property name="dist.dir" value="android15"/>
-		</ant>
-        <antcall target="a.pre.android"/>
-        <antcall target="compile.android15"/>
-        <antcall target="android.pack" inheritall="true"/>
-        <antcall target="obfuscate${use.proguard}.android" inheritall="true"/>
-<!-- not needed, so rename the jar as if it happened
-        <antcall target="preverify" inheritall="true"/>
--->
-        <move file="tmp/trekbuddy${suffix}-obfuscated.jar"
-              tofile="tmp/preverified/trekbuddy${suffix}-obfuscated.jar"/>
-        <antcall target="dist" inheritall="true"/>
-        <ant dir="${microemu.home}/microemu-android"
-             antfile="build-trekbuddy.xml" target="zipalign"
-             inheritAll="false" inheritRefs="false">
-			<property name="sdk.version" value="1.5"/>
-			<property name="api.level" value="3"/>
-			<property name="dist.dir" value="android15"/>
-<!--
-            <property name="javac.debug" value="true"/>
-            <property name="javac.debuglevel" value="source,lines"/>
--->
-<!--
-            <property name="do.obfuscate" value="true"/>
--->
-        </ant>
-        <copy file="${microemu.home}/microemu-android/bin/trekbuddy.apk"
-              tofile="dist/${vendor.dir}/${dist.dir}/trekbuddy_android15.apk"/>
-    </target>
-
-    <target name="android16">
-        <property name="suffix" value="-android"/>
-        <property name="dist.dir" value="android16"/>
-        <property name="libraryjars" value="${microemu.home}\microemu-cldc\target\microemu-cldc-3.0.0-SNAPSHOT.jar;${microemu.home}\microemu-midp\target\microemu-midp-3.0.0-SNAPSHOT.jar;${microemu.home}\microemu-extensions\microemu-jsr-75\target\microemu-jsr-75-3.0.0-SNAPSHOT.jar;${android16.home}\android.jar"/>
-        <antcall target="clean"/>
-        <ant dir="${microemu.home}/microemu-android"
-             antfile="build-trekbuddy.xml" target="clean"
-             inheritAll="false" inheritRefs="false">
-			<property name="sdk.version" value="1.6"/>
-			<property name="api.level" value="4"/>
-			<property name="dist.dir" value="android16"/>
-		</ant>
-        <antcall target="a.pre.android"/>
-        <antcall target="compile.android16"/>
-        <antcall target="android.pack" inheritall="true"/>
-        <antcall target="obfuscate${use.proguard}.android" inheritall="true"/>
-<!-- not needed, so rename the jar as if it happened
-        <antcall target="preverify" inheritall="true"/>
--->
-        <move file="tmp/trekbuddy${suffix}-obfuscated.jar"
-              tofile="tmp/preverified/trekbuddy${suffix}-obfuscated.jar"/>
-        <antcall target="dist" inheritall="true"/>
-        <ant dir="${microemu.home}/microemu-android"
-             antfile="build-trekbuddy.xml" target="zipalign"
-             inheritAll="false" inheritRefs="false">
-			<property name="sdk.version" value="1.6"/>
-			<property name="api.level" value="4"/>
-			<property name="dist.dir" value="android16"/>
-<!--
-            <property name="javac.debug" value="true"/>
-            <property name="javac.debuglevel" value="source,lines"/>
--->
-<!--
-            <property name="do.obfuscate" value="true"/>
--->
-        </ant>
-        <copy file="${microemu.home}/microemu-android/bin/trekbuddy.apk"
-			  tofile="dist/${vendor.dir}/${dist.dir}/trekbuddy_android16.apk"/>
-    </target>
-
-    <target name="android20">
-        <property name="suffix" value="-android"/>
-        <property name="dist.dir" value="android20"/>
-        <property name="libraryjars" value="${microemu.home}\microemu-cldc\target\microemu-cldc-3.0.0-SNAPSHOT.jar;${microemu.home}\microemu-midp\target\microemu-midp-3.0.0-SNAPSHOT.jar;${microemu.home}\microemu-extensions\microemu-jsr-75\target\microemu-jsr-75-3.0.0-SNAPSHOT.jar;${android20.home}\android.jar"/>
-        <antcall target="clean"/>
-        <ant dir="${microemu.home}/microemu-android"
-             antfile="build-trekbuddy.xml" target="clean"
-             inheritAll="false" inheritRefs="false">
-			<property name="sdk.version" value="2.0"/>
-			<property name="api.level" value="5"/>
-			<property name="dist.dir" value="android20"/>
-		</ant>
-        <antcall target="a.pre.android"/>
-        <antcall target="compile.android20"/>
-        <antcall target="android.pack" inheritall="true"/>
-        <antcall target="obfuscate${use.proguard}.android" inheritall="true"/>
-<!-- not needed, so rename the jar as if it happened
-        <antcall target="preverify" inheritall="true"/>
--->
-        <move file="tmp/trekbuddy${suffix}-obfuscated.jar"
-              tofile="tmp/preverified/trekbuddy${suffix}-obfuscated.jar"/>
-        <antcall target="dist" inheritall="true"/>
-        <ant dir="${microemu.home}/microemu-android"
-             antfile="build-trekbuddy.xml" target="zipalign"
-             inheritAll="false" inheritRefs="false">
-			<property name="sdk.version" value="2.0"/>
-			<property name="api.level" value="5"/>
-			<property name="dist.dir" value="android20"/>
-<!--
-            <property name="javac.debug" value="true"/>
-            <property name="javac.debuglevel" value="source,lines"/>
--->
-<!--
-            <property name="do.obfuscate" value="true"/>
--->
-        </ant>
-        <copy file="${microemu.home}/microemu-android/bin/trekbuddy.apk"
-			  tofile="dist/${vendor.dir}/${dist.dir}/trekbuddy_android20.apk"/>
-    </target>
-
     <target name="android">
         <property name="suffix" value="-android"/>
         <property name="dist.dir" value="android"/>
-        <property name="libraryjars" value="${microemu.home}\microemu-cldc\target\microemu-cldc-3.0.0-SNAPSHOT.jar;${microemu.home}\microemu-midp\target\microemu-midp-3.0.0-SNAPSHOT.jar;${microemu.home}\microemu-extensions\microemu-jsr-75\target\microemu-jsr-75-3.0.0-SNAPSHOT.jar;${android20.home}\android.jar"/>
+        <property name="libraryjars" value="${microemu.home}\microemu-cldc\target\microemu-cldc-3.0.0-SNAPSHOT.jar;${microemu.home}\microemu-midp\target\microemu-midp-3.0.0-SNAPSHOT.jar;${microemu.home}\microemu-extensions\microemu-jsr-75\target\microemu-jsr-75-3.0.0-SNAPSHOT.jar;${android20.home}\android.jar;${microemu.home}\microemu-android\microemu-android-idea.jar"/>
         <antcall target="clean"/>
         <ant dir="${microemu.home}/microemu-android"
              antfile="build-trekbuddy.xml" target="clean"
@@ -423,7 +303,7 @@
         <antcall target="a.pre.android"/>
         <antcall target="compile.android"/>
         <antcall target="android.pack" inheritall="true"/>
-        <antcall target="obfuscate${use.proguard}.android" inheritall="true"/>
+        <antcall target="obfuscate4.android" inheritall="true"/>
 <!-- not needed, so rename the jar as if it happened
         <antcall target="preverify" inheritall="true"/>
 -->
@@ -898,6 +778,7 @@
             <arg value="-keepnames class cz.** extends java.lang.Exception"/>       
             <arg value="-keepnames class api.** extends java.lang.Exception"/>
             <arg value="-keepnames class org.hecl.** extends java.lang.Exception"/>
+            <arg value="-keepnames class org.xmlpull.** extends java.lang.Exception"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.maps.io.FileInput"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.maps.io.LoaderIO"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.io.CrcInputStream"/>
@@ -916,17 +797,17 @@
             <arg value="-injars tmp/trekbuddy${suffix}.jar"/>
             <arg value="-outjars tmp/trekbuddy${suffix}-obfuscated.jar"/>
             <arg value="-libraryjars ${libraryjars}"/>
-            <arg value="-dontpreverify"/> <!-- for 4.x; we do preverify -->
-            <arg value="-dontoptimize"/> <!-- for 4.x; breaks code -->
+            <arg value="-dontpreverify"/> <!-- preverified elsewhere -->
             <arg value="-dontusemixedcaseclassnames"/>
             <arg value="-dontskipnonpubliclibraryclasses"/>
-            <arg value="-defaultpackage ''"/>
+            <arg value="-repackageclasses ''"/>
             <arg value="-overloadaggressively"/>
             <arg value="-allowaccessmodification"/>
             <arg value="-keep class * implements javax.microedition.midlet.MIDlet"/>
             <arg value="-keepnames class cz.** extends java.lang.Exception"/>
             <arg value="-keepnames class api.** extends java.lang.Exception"/>
             <arg value="-keepnames class org.hecl.** extends java.lang.Exception"/>
+            <arg value="-keepnames class org.xmlpull.** extends java.lang.Exception"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.maps.io.FileInput"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.maps.io.LoaderIO"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.io.CrcInputStream"/>
@@ -956,6 +837,7 @@
             <arg value="-keepnames class cz.** extends java.lang.Exception"/>
             <arg value="-keepnames class api.** extends java.lang.Exception"/>
             <arg value="-keepnames class org.hecl.** extends java.lang.Exception"/>
+            <arg value="-keepnames class org.xmlpull.** extends java.lang.Exception"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.maps.io.FileInput"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.maps.io.LoaderIO"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.io.CrcInputStream"/>
@@ -973,11 +855,11 @@
             <arg value="-injars tmp/trekbuddy${suffix}.jar"/>
             <arg value="-outjars tmp/trekbuddy${suffix}-obfuscated.jar"/>
             <arg value="-libraryjars '${libraryjars}'"/>
-            <arg value="-dontpreverify"/> <!-- for 4.x; we do preverify -->
-            <arg value="-dontoptimize"/> <!-- for 4.x; breaks code -->
+            <arg value="-dontpreverify"/> <!-- preverified elsewhere -->
+            <arg value="-dontoptimize"/> <!-- breaks code on RIM -->
             <arg value="-dontskipnonpubliclibraryclasses"/>
             <arg value="-dontusemixedcaseclassnames"/>
-            <arg value="-defaultpackage ''"/>
+            <arg value="-repackageclasses ''"/>
 <!-- cannot be used with RIM
             <arg value="-overloadaggressively"/>
             <arg value="-allowaccessmodification"/>
@@ -986,6 +868,7 @@
             <arg value="-keepnames class cz.** extends java.lang.Exception"/>
             <arg value="-keepnames class api.** extends java.lang.Exception"/>
             <arg value="-keepnames class org.hecl.** extends java.lang.Exception"/>
+            <arg value="-keepnames class org.xmlpull.** extends java.lang.Exception"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.maps.io.FileInput"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.maps.io.LoaderIO"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.io.CrcInputStream"/>
@@ -1014,6 +897,7 @@
             <arg value="-keepnames class cz.** extends java.lang.Exception"/>
             <arg value="-keepnames class api.** extends java.lang.Exception"/>
             <arg value="-keepnames class org.hecl.** extends java.lang.Exception"/>
+            <arg value="-keepnames class org.xmlpull.** extends java.lang.Exception"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.maps.io.FileInput"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.maps.io.LoaderIO"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.io.CrcInputStream"/>
@@ -1032,20 +916,24 @@
             <arg value="-injars tmp/trekbuddy${suffix}.jar"/>
             <arg value="-outjars tmp/trekbuddy${suffix}-obfuscated.jar"/>
             <arg value="-libraryjars ${libraryjars}"/>
-            <arg value="-dontpreverify"/> <!-- for 4.x; we do preverify -->
-            <arg value="-dontoptimize"/> <!-- for 4.x; breaks code -->
+            <arg value="-dontpreverify"/>
+            <!-- let dx optimize -->
+            <arg value="-dontoptimize"/>
+            <!--<arg value="-optimizations !code/simplification/arithmetic"/>--> <!-- dalvik 1.5 issue workaround -->
             <arg value="-dontusemixedcaseclassnames"/>
             <arg value="-dontskipnonpubliclibraryclasses"/>
             <arg value="-repackageclasses ''"/>
             <arg value="-allowaccessmodification"/>
-<!-- leaving this optimization to dc?
+<!-- leaving this optimization to dx?
             <arg value="-overloadaggressively"/>
 -->
-            <arg value="-optimizations !code/simplification/arithmetic"/>
+            <arg value="-renamesourcefileattribute SourceFile"/>
+            <arg value="-keepattributes SourceFile,LineNumberTable"/>
             <arg value="-keep class * implements javax.microedition.midlet.MIDlet"/>
             <arg value="-keepnames class cz.** extends java.lang.Exception"/>
             <arg value="-keepnames class api.** extends java.lang.Exception"/>
             <arg value="-keepnames class org.hecl.** extends java.lang.Exception"/>
+            <arg value="-keepnames class org.xmlpull.** extends java.lang.Exception"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.maps.io.FileInput"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.io.CrcInputStream"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.util.Logger"/>

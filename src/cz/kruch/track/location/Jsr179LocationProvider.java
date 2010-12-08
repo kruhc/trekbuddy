@@ -50,7 +50,7 @@ public final class Jsr179LocationProvider
 
             // common criteria
             final javax.microedition.location.Criteria criteria = new javax.microedition.location.Criteria();
-//            criteria.setAltitudeRequired(true); /* may delay getting valid location? */
+            criteria.setAltitudeRequired(true); /* may delay getting valid location? */
             criteria.setSpeedAndCourseRequired(true);
             criteria.setPreferredPowerConsumption(Config.powerUsage);
             criteria.setCostAllowed(Config.assistedGps);

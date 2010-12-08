@@ -41,13 +41,17 @@ public final class NmeaParser {
     public static final byte[] snrs  = new byte[MAX_SATS];
     public static final byte[] prns = new byte[MAX_SATS];
 
-    public static float pdop = Float.NaN;
-    public static float hdop = Float.NaN;
-    public static float vdop = Float.NaN;
-    public static float geoidh = Float.NaN;
+    public static float pdop;
+    public static float hdop;
+    public static float vdop;
+    public static float geoidh;
     public static int satv, sata;
     
     public static final Hashtable xdr = new Hashtable(4);
+
+    public static void reset() {
+        pdop = hdop = vdop = geoidh = Float.NaN;
+    }
 
     public static boolean validate(final char[] raw, final int length) {
         int result = 0;

@@ -615,8 +615,12 @@ final class WaypointForm implements CommandListener, ItemCommandListener, Callba
     }
 
     private void parseAlt(final QualifiedCoordinates qc) {
-        final String altStr = fieldAlt.getString();
-        if (altStr != null && altStr.length() > 0 && altStr.indexOf("?") == -1) {
+        String altStr = fieldAlt.getString().trim();
+        if (altStr != null && altStr.length() > 0 && altStr.indexOf('?') == -1) {
+            final int spaceIdx = altStr.indexOf(' ');
+            if (spaceIdx > -1) {
+                altStr = altStr.substring(0, spaceIdx);
+            }
             float alt = Float.parseFloat(altStr);
             switch (Config.units) {
                 case Config.UNITS_IMPERIAL: {

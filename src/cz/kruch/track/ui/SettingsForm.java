@@ -513,8 +513,8 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
                         /* different timings for Motorola and others, hence update... */
                         fieldLocationTimings.setString(Config.getLocationTimings(provider));
                         appendWithNewlineAfter(submenu, fieldLocationTimings);
-                        appendWithNewlineAfter(submenu, fieldAltCorrection);
 //#endif
+                        appendWithNewlineAfter(submenu, fieldAltCorrection);
                     break;
                     case Config.LOCATION_PROVIDER_SERIAL:
                         appendWithNewlineAfter(submenu, createStreamChoice(provider, providerName));
@@ -677,8 +677,8 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
 //#ifndef __ANDROID__
                     Config.powerUsage = choicePower.getSelectedIndex();
                     Config.setLocationTimings(fieldLocationTimings.getString());
-                    Config.altCorrection = Integer.parseInt(fieldAltCorrection.getString());
 //#endif
+                    Config.altCorrection = Integer.parseInt(fieldAltCorrection.getString());
                 }
                 if (fieldBtKeepalive != null) {
                     Config.btKeepAlive = Integer.parseInt(fieldBtKeepalive.getString());

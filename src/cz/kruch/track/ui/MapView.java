@@ -25,7 +25,7 @@ final class MapView extends View {
     // for faster movement
     static volatile int scrolls; // TODO fix visibility
 
-    // current location
+    // local copy of current location
     private Location location;
 
     // map viewer
@@ -384,6 +384,8 @@ final class MapView extends View {
     public void trackingStopped() {
         // set mode
         browsingOn(true);
+        // local reset
+        location = null;
     }
 
     public int locationUpdated(Location l) {

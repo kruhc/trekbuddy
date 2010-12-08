@@ -98,7 +98,10 @@ public abstract class LocationProvider {
     protected final void baby() {
         // debug
         setStatus("starting");
-        
+
+        // reset
+        cz.kruch.track.util.NmeaParser.reset();
+
         // just about to start
         synchronized (this) {
             go = true;

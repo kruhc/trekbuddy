@@ -15,13 +15,15 @@ import api.location.Location;
 
 public final class AndroidLocationProvider
         extends api.location.LocationProvider
-        implements android.location.LocationListener, Runnable {
+        implements android.location.LocationListener,
+                   android.location.GpsStatus.Listener, Runnable {
 //#ifdef __LOG__
     private static final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("AndroidLocationProvider");
 //#endif
     private static final String KEY_SATELLITES = "satellites";
 
     private android.location.LocationManager manager;
+    private android.location.GpsStatus gpsStatus;
     private android.os.Looper looper;
 
     private volatile int sat, status;
@@ -66,6 +68,7 @@ public final class AndroidLocationProvider
             looper = android.os.Looper.myLooper();
             manager.requestLocationUpdates(android.location.LocationManager.GPS_PROVIDER,
                                            0, 0, this, looper);
+            manager.addGpsStatusListener(this);
 
             // status
             setStatus("running");
@@ -86,6 +89,7 @@ public final class AndroidLocationProvider
 
             // remove listener and gc-free native provider
             try {
+                manager.removeGpsStatusListener(this);
                 manager.removeUpdates(this);
             } catch (Exception e) {
                 // ignore
@@ -129,7 +133,7 @@ public final class AndroidLocationProvider
         if (extras != null) {
             sat = extras.getInt(KEY_SATELLITES, -1);
         }
-        if (sat == -1 && this.sat != -1) { // fallback to value from onStatusChanged
+        if (sat == -1 && this.sat != -1) { // fallback to value from onStatusChanged or onGpsStatusChanged 
             sat = this.sat;
         }
         final Location location = Location.newInstance(qc, l.getTime(), 1, sat);
@@ -171,7 +175,10 @@ public final class AndroidLocationProvider
                 break;
             }
             if (extras != null) {
-                this.sat = extras.getInt(KEY_SATELLITES, -1);
+                final int cnt = extras.getInt(KEY_SATELLITES, -1);
+                if (cnt > 0) {
+                    this.sat = cnt;
+                }
             }
             if (this.status != status) {
                 notifyListener(this.status = status);
@@ -191,5 +198,25 @@ public final class AndroidLocationProvider
         if (log.isEnabled()) log.debug("onProviderDisabled");
 //#endif
         // TODO
+    }
+
+    public void onGpsStatusChanged(int event) {
+//#ifdef __LOG__
+        if (log.isEnabled()) log.debug("onGpsStatusChanged");
+//#endif
+        switch (event) {
+            case android.location.GpsStatus.GPS_EVENT_SATELLITE_STATUS: {
+                gpsStatus = manager.getGpsStatus(gpsStatus);
+                if (gpsStatus != null) {
+                    int cnt = 0;
+                    for (android.location.GpsSatellite satellite : gpsStatus.getSatellites()) {
+                        cnt++;
+                    }
+                    if (cnt > 0) {
+                        this.sat = cnt;
+                    }
+                }
+            } break;
+        }
     }
 }

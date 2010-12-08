@@ -1419,7 +1419,7 @@ final class MapViewer {
             QualifiedCoordinates.releaseInstance(qc1);
 
             // valid scale?
-            if (scale > 1F) {
+            if (scale > 0F) { // this always true now, isn't it?
                 char[] uc = null;
                 switch (Config.units) {
                     case Config.UNITS_METRIC: {

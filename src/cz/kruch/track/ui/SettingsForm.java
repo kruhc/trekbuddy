@@ -449,7 +449,7 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
                 choicePower.setSelectedIndex(Config.powerUsage, true);
                 fieldLocationTimings = new TextField(Resources.getString(Resources.CFG_LOCATION_FLD_LOCATION_TIMINGS), Config.getLocationTimings(Config.locationProvider), 12, TextField.ANY);
 //#endif
-                fieldAltCorrection = new TextField(Resources.getString(Resources.CFG_LOCATION_FLD_ALT_CORRECTION), Integer.toString(Config.altCorrection), 5, TextField.ANY/*TextField.NUMERIC*/);
+                fieldAltCorrection = new TextField(Resources.getString(Resources.CFG_LOCATION_FLD_ALT_CORRECTION), Float.toString(Config.altCorrection), 5, TextField.ANY/*TextField.NUMERIC*/);
             }
             if (cz.kruch.track.TrackingMIDlet.hasFlag("provider_o2_germany")) {
                 fieldO2Depth = new TextField(Resources.getString(Resources.CFG_LOCATION_FLD_FILTER_DEPTH), Integer.toString(Config.o2Depth), 2, TextField.NUMERIC);
@@ -678,7 +678,7 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
                     Config.powerUsage = choicePower.getSelectedIndex();
                     Config.setLocationTimings(fieldLocationTimings.getString());
 //#endif
-                    Config.altCorrection = Integer.parseInt(fieldAltCorrection.getString());
+                    Config.altCorrection = Float.parseFloat(fieldAltCorrection.getString());
                 }
                 if (fieldBtKeepalive != null) {
                     Config.btKeepAlive = Integer.parseInt(fieldBtKeepalive.getString());

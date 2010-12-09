@@ -123,7 +123,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
 
     // group [Internal provider options]
     private static String locationTimings       = EMPTY_STRING;
-    public static int altCorrection;
+    public static float altCorrection;
     public static int powerUsage                = 2;
     public static boolean assistedGps;
     public static boolean timeFix;
@@ -267,10 +267,10 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         if (cz.kruch.track.TrackingMIDlet.sxg75) {
             dataDir = getDefaultDataDir("file:///fs/", "tb/");
             fullscreen = true;
-            altCorrection = -540;
+            altCorrection = -540F;
         } else if (cz.kruch.track.TrackingMIDlet.brew) {
             dataDir = getDefaultDataDir("file:///fs/", "tb/");
-            altCorrection = -540;
+            altCorrection = -540F;
         } else if (cz.kruch.track.TrackingMIDlet.siemens) {
             dataDir = getDefaultDataDir("file:///4:/", "TrekBuddy/");
             fullscreen = true;
@@ -497,6 +497,9 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
             lowmemIo = din.readBoolean();
             timeFix = din.readBoolean();
 
+            // 1.0.2 change
+            altCorrection = din.readFloat();
+
         } catch (Exception e) {
         }
 
@@ -589,7 +592,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         /* since 0.9.86 */
         dout.writeInt(listFont);
         /* since 0.9.88 */
-        dout.writeInt(altCorrection);
+        dout.writeInt(0/*altCorrection*/);
         dout.writeBoolean(gpxSecsDecimal);
         /* since 0.9.91 */
         dout.writeBoolean(negativeAltFix);
@@ -613,6 +616,8 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         dout.writeBoolean(btAddressWorkaround);
         dout.writeBoolean(lowmemIo);
         dout.writeBoolean(timeFix);
+        /* since 1.0.2 */
+        dout.writeFloat(altCorrection);
 
 //#ifdef __LOG__
         if (log.isEnabled()) log.info("configuration updated");

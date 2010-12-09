@@ -123,7 +123,7 @@ public final class AndroidLocationProvider
         final QualifiedCoordinates qc = QualifiedCoordinates.newInstance(l.getLatitude(),
                                                                          l.getLongitude());
         if (l.hasAltitude()) {
-            qc.setAlt((float) l.getAltitude());
+            qc.setAlt((float) l.getAltitude() + cz.kruch.track.configuration.Config.altCorrection);
         }
         if (l.hasAccuracy()) {
             qc.setHorizontalAccuracy(l.getAccuracy());

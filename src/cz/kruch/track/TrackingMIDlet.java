@@ -153,7 +153,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         // detect runtime capabilities
         jsr179 = true;
         try {
-            Class.forName("android.bluetooth.BluetoothDevice");
+            Class.forName("android.bluetooth.BluetoothSocket");
             jsr82 = true;
         } catch (Throwable t) {
         }

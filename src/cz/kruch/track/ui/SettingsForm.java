@@ -45,7 +45,7 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
     private final String menuNavigation;
     private final String menuMisc;
 
-    private final Callback callback;
+    private final Desktop.Event event;
 
     private TextField fieldMapPath;
     private ChoiceGroup choiceMapDatum;
@@ -93,8 +93,8 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
 
     private boolean changed;
 
-    SettingsForm(Callback callback) {
-        this.callback = callback;
+    SettingsForm(Desktop.Event event) {
+        this.event = event;
         this.menuBasic = Resources.getString(Resources.CFG_ITEM_BASIC);
         this.menuDesktop = Resources.getString(Resources.CFG_ITEM_DESKTOP);
         this.menuLocation = Resources.getString(Resources.CFG_ITEM_LOCATION);
@@ -600,8 +600,7 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
                 }
             } else {
                 // restore desktop
-                displayable.setCommandListener(null);
-                Desktop.display.setCurrent(Desktop.screen);
+                Desktop.restore(displayable);
 
                 // main menu action
                 mainMenuCommandAction(command);
@@ -835,7 +834,7 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
         }
 
         // notify that we are done
-        callback.invoke(new Boolean(changed), null, this);
+        event.invoke(new Boolean(changed), null, this);
     }
 
     private static int appendWithNewlineAfter(Form form, Item item) {

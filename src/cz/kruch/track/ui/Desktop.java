@@ -160,7 +160,7 @@ public final class Desktop implements CommandListener,
     private final Object renderLock;
 
 	// workers
-	private Worker diskWorker, eventWorker;
+	private static Worker diskWorker, eventWorker;
 
 	/**
      * Desktop constructor.
@@ -198,8 +198,8 @@ public final class Desktop implements CommandListener,
 
         // init static members
         timer = new Timer();
-        screen = new DeviceScreen(this, midlet);
         display = Display.getDisplay(midlet);
+        screen = new DeviceScreen(this, midlet);
         browsing = true;
 
         // init basic members
@@ -221,7 +221,7 @@ public final class Desktop implements CommandListener,
         this.wptHeightDiff = Float.NaN;
     }
 
-    public Worker getDiskWorker() {
+    public static Worker getDiskWorker() {
         if (diskWorker == null) {
             diskWorker = new Worker("Disk Worker");
 //#ifdef __ANDROID__
@@ -239,7 +239,7 @@ public final class Desktop implements CommandListener,
         return diskWorker;
     }
 
-    public Worker getEventWorker() {
+    public static Worker getEventWorker() {
         if (eventWorker == null) {
             eventWorker = new Worker("Event Worker");
             eventWorker.setPriority(Thread.MAX_PRIORITY);
@@ -823,13 +823,13 @@ public final class Desktop implements CommandListener,
         }
         if (command == cmdInfo) {
             final InfoForm form = new InfoForm();
+            final Object[] extras;
             if (isTracking()) {
-                form.show(this, provider.getThrowable(), tracklogError,
-                          provider.getStatus(), map);
+                extras = new Object[]{ provider.getStatus(), provider.getThrowable(), tracklogError };
             } else {
-                form.show(this, providerError, tracklogError,
-                          providerStatus, map);
+                extras = new Object[]{ providerStatus, providerError, tracklogError };
             }
+            form.show(this, map, extras);
         } else if (command == cmdSettings) {
             (new SettingsForm(new Event(Event.EVENT_CONFIGURATION_CHANGED))).show();
         } else if (command == cmdWaypoints) {
@@ -1746,6 +1746,15 @@ public final class Desktop implements CommandListener,
             if (log.isEnabled()) log.debug("update with mask 0");
         }
 //#endif
+    }
+
+    static void restore(final Displayable displayable) {
+        showNext(displayable, screen);
+    }
+
+    static void showNext(final Displayable displayable, final Displayable next) {
+        displayable.setCommandListener(null);
+        display.setCurrent(next);
     }
 
     public static void showWaitScreen(String title, String message) {
@@ -2694,7 +2703,7 @@ public final class Desktop implements CommandListener,
             this.release = false;
 
             // enqueu for execution
-            Desktop.this.getEventWorker().enqueue(this);
+            Desktop.getEventWorker().enqueue(this);
         }
 
         /**

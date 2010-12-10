@@ -622,7 +622,7 @@ final class ComputerView extends View
                         }
                         _profileName = profilesNames[profileIdx];
                     }
-                    navigator.getDiskWorker().enqueue(this);
+                    Desktop.getDiskWorker().enqueue(this);
                 } break;
                 case Canvas.RIGHT: {
                     synchronized (this) {
@@ -631,7 +631,7 @@ final class ComputerView extends View
                         }
                         _profileName = profilesNames[profileIdx];
                     }
-                    navigator.getDiskWorker().enqueue(this);
+                    Desktop.getDiskWorker().enqueue(this);
                 } break;
                 case Canvas.DOWN: {
                     final List list = new List(Resources.getString(Resources.DESKTOP_MSG_PROFILES), List.IMPLICIT);
@@ -911,12 +911,11 @@ final class ComputerView extends View
         }
 
         // restore desktop
-        displayable.setCommandListener(null);
-        Desktop.display.setCurrent(Desktop.screen);
+        Desktop.restore(displayable);
 
         // enqueue load task
         if (load) {
-            navigator.getDiskWorker().enqueue(this);
+            Desktop.getDiskWorker().enqueue(this);
         }
     }
 

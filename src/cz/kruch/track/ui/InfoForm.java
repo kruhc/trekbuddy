@@ -23,22 +23,16 @@ import api.file.File;
  */
 final class InfoForm implements CommandListener {
 
-    private Desktop desktop;
-    private Throwable le, te;
-    private Object ps;
+    private Object[] extras;
     private Map map;
 
     InfoForm() {
     }
 
-    public void show(Desktop desktop, Throwable le, Throwable te,
-                     Object ps, Map map) {
+    public void show(Desktop desktop, Map map, Object[] extras) {
         // members
-        this.desktop = desktop;
-        this.le = le;
-        this.te = te;
-        this.ps = ps;
         this.map = map;
+        this.extras = extras;
 
         // items
         final Form pane = new Form(Resources.prefixed(Resources.getString(Resources.DESKTOP_CMD_INFO)));
@@ -123,7 +117,7 @@ final class InfoForm implements CommandListener {
 //#endif
             pane.append(newItem("Map", sb.toString()));
         }
-        sb.delete(0, sb.length()).append((ps == null ? "" : ps.toString()))
+        sb.delete(0, sb.length()).append((extras[0] == null ? "" : extras[0].toString()))
                 .append("; stalls=").append(api.location.LocationProvider.stalls)
                 .append("; restarts=").append(api.location.LocationProvider.restarts)
                 .append("; syncs=").append(api.location.LocationProvider.syncs)
@@ -133,32 +127,28 @@ final class InfoForm implements CommandListener {
                 .append("; pings=").append(api.location.LocationProvider.pings)
                 .append("; maxavail=").append(api.location.LocationProvider.maxavail);
         pane.append(newItem("ProviderStatus", sb.toString()));
-        if (le != null) {
-            pane.append(newItem("ProviderError", le.toString()));
+        if (extras[1] != null) {
+            pane.append(newItem("ProviderError", extras[1].toString()));
         }
-        if (te != null) {
-            pane.append(newItem("TracklogError", te.toString()));
+        if (extras[2] != null) {
+            pane.append(newItem("TracklogError", extras[2].toString()));
         }
         sb.delete(0, sb.length());
         sb.append("pauses: ").append(cz.kruch.track.TrackingMIDlet.pauses)
                 .append("; uncaught: ").append(SmartRunnable.uncaught)
                 .append("; maxtasks: ").append(SmartRunnable.maxQT)
                 .append("; merged: ").append(SmartRunnable.mergedRT).append('/').append(SmartRunnable.mergedKT)
-                .append("; events: ").append(desktop.getEventWorker().getQueueSize()).append('/').append(desktop.getDiskWorker().getQueueSize());
+                .append("; events: ").append(Desktop.getEventWorker().getQueueSize()).append('/').append(Desktop.getDiskWorker().getQueueSize());
         pane.append(newItem("Debug", sb.toString()));
     }
 
     public void commandAction(Command command, Displayable displayable) {
         if (command.getCommandType() == Desktop.BACK_CMD_TYPE) {
-            // gc hint
-            this.desktop = null;
-            this.le = null;
-            this.te = null;
-            this.ps = null;
+            // gc hints
             this.map = null;
+            this.extras = null;
             // restore desktop UI
-            displayable.setCommandListener(null);
-            Desktop.display.setCurrent(Desktop.screen);
+            Desktop.restore(displayable);
         } else {
             // form
             final Form pane = (Form) displayable;

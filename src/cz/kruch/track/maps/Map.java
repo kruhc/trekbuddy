@@ -226,7 +226,7 @@ public final class Map implements Runnable {
 //#endif
 
         // open map in background
-        listener.getDiskWorker().enqueue(this);
+        Desktop.getDiskWorker().enqueue(this);
 
         return true;
     }
@@ -269,7 +269,7 @@ public final class Map implements Runnable {
         listener.slicesLoading(null, null);
 
         // load images at background
-        listener.getDiskWorker().enqueue(loader.use(list));
+        Desktop.getDiskWorker().enqueue(loader.use(list));
 
         return true;
     }

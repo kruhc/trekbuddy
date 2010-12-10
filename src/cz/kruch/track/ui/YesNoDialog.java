@@ -70,8 +70,7 @@ public final class YesNoDialog implements CommandListener {
         }
 
         // advance to next screen
-        displayable.setCommandListener(null);
-        Desktop.display.setCurrent(next);
+        Desktop.showNext(displayable, next);
 
         // return response code
         callback.response(command.getCommandType() == Command.OK ? YES : NO, closure);

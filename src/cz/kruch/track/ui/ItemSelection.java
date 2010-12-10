@@ -55,8 +55,7 @@ final class ItemSelection implements CommandListener {
         }
 
         // close selection
-        displayable.setCommandListener(null);
-        Desktop.display.setCurrent(next);
+        Desktop.showNext(displayable, next);
 
         // invoke callback
         callback.invoke(selected, null, this);

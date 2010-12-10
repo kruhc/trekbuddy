@@ -120,8 +120,7 @@ final class FieldNoteForm implements CommandListener {
         }
 
         // show next
-        form.setCommandListener(null);
-        Desktop.display.setCurrent(next);
+        Desktop.showNext(form, next);
 
         // callback
         if (fire) {

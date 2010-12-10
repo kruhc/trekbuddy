@@ -380,7 +380,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                             if (item.getUserObject() instanceof GroundspeakBean && !((GroundspeakBean) item.getUserObject()).isParsed()) {
                                 // fully parse bean and show wpt details
                                 _parseWpt = item;
-                                navigator.getDiskWorker().enqueue(this);
+                                Desktop.getDiskWorker().enqueue(this);
                             } else {
                                 // open waypoint form
                                 (new WaypointForm(item, this, _distance,
@@ -552,7 +552,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
             // persist changes
             _storeName = notesFilename;
             _listingTitle = actionAddFieldNote;
-            navigator.getDiskWorker().enqueue(this);
+            Desktop.getDiskWorker().enqueue(this);
 
 //#ifndef __ANDROID__
         } else if (source instanceof cz.kruch.track.fun.Friends) { // SMS received
@@ -819,7 +819,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
         if (listingTitle != null) {
             this._listingTitle = listingTitle;
         }
-        navigator.getDiskWorker().enqueue(this);
+        Desktop.getDiskWorker().enqueue(this);
     }
 
     /**
@@ -1566,7 +1566,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
         _listingTitle = actionListWpts;
 
         // do the rest on background
-        navigator.getDiskWorker().enqueue(this);
+        Desktop.getDiskWorker().enqueue(this);
     }
 
     private void listWptFiles(final String path, final Vector v,

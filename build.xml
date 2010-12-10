@@ -924,7 +924,7 @@
             <arg value="-dontskipnonpubliclibraryclasses"/>
             <arg value="-repackageclasses ''"/>
             <arg value="-allowaccessmodification"/>
-<!-- leaving this optimization to dx?
+<!-- leaving this optimization to dx? "Dalvik VM also can't handle aggressive overloading" (ProGuard Manual)
             <arg value="-overloadaggressively"/>
 -->
             <arg value="-renamesourcefileattribute SourceFile"/>

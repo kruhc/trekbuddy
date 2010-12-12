@@ -2866,6 +2866,7 @@ public final class Desktop implements CommandListener,
 
                 // cast to file connection
                 final api.file.File file = (api.file.File) result;
+                final String name = file.getName();
                 final String url = file.getURL();
 
                 // close file connection
@@ -2901,7 +2902,7 @@ public final class Desktop implements CommandListener,
                     Desktop.this.startOpenAtlas(url);
                 } else if ("map".equals(closure)) {
                     Desktop.this._target = "map";
-                    Desktop.this.startOpenMap(url, null);
+                    Desktop.this.startOpenMap(url, name);
                 }
 //#ifdef __B2B__
                   else if ("guide".equals(closure)) {

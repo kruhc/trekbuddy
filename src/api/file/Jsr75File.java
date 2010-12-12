@@ -61,6 +61,10 @@ final class Jsr75File extends File {
         return ((FileConnection) fc).getURL();
     }
 
+    public String getName() {
+        return ((FileConnection) fc).getName();
+    }
+
     public String getPath() {
         return ((FileConnection) fc).getPath();
     }

@@ -139,6 +139,7 @@ public abstract class File {
     public abstract boolean exists();
     public abstract boolean isDirectory();
     public abstract String getURL();
+    public abstract String getName();
     public abstract String getPath();
     public abstract void setFileConnection(String path) throws IOException;
 

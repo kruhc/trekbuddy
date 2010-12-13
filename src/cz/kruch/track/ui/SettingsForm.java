@@ -5,7 +5,6 @@ package cz.kruch.track.ui;
 import cz.kruch.track.Resources;
 import cz.kruch.track.configuration.Config;
 import cz.kruch.track.configuration.ConfigurationException;
-import cz.kruch.track.event.Callback;
 import cz.kruch.track.fun.Camera;
 
 import api.file.File;
@@ -93,6 +92,8 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
 
     private boolean changed;
 
+    private final int NUMERIC;
+
     SettingsForm(Desktop.Event event) {
         this.event = event;
         this.menuBasic = Resources.getString(Resources.CFG_ITEM_BASIC);
@@ -100,6 +101,11 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
         this.menuLocation = Resources.getString(Resources.CFG_ITEM_LOCATION);
         this.menuNavigation = Resources.getString(Resources.CFG_ITEM_NAVIGATION);
         this.menuMisc = Resources.getString(Resources.CFG_ITEM_MISC);
+        if (Config.numericInputHack) {
+            NUMERIC = TextField.ANY;
+        } else {
+            NUMERIC = TextField.NUMERIC;
+        }
     }
 
     public void show() {
@@ -235,7 +241,7 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
             submenu.append(fieldListFont = new TextField(Resources.getString(Resources.CFG_DESKTOP_FLD_LIST_FONT), hexstr.toString(), 10, TextField.ANY));
             
             // CMS cycling
-            submenu.append(fieldCmsCycle = new TextField(Resources.getString(Resources.CFG_DESKTOP_FLD_CMS_CYCLE), Integer.toString(Config.cmsCycle), 4, TextField.NUMERIC));
+            submenu.append(fieldCmsCycle = new TextField(Resources.getString(Resources.CFG_DESKTOP_FLD_CMS_CYCLE), Integer.toString(Config.cmsCycle), 4, /*TextField.*/NUMERIC));
 
             // trail line
             submenu.append(itemLineCfg = createLineCfgItem(Resources.getString(Resources.CFG_DESKTOP_FLD_TRAIL_PREVIEW),
@@ -245,8 +251,8 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
         } else if (menuNavigation.equals(section)) {
 
             // proximity
-            submenu.append(fieldWptProximity = new TextField(Resources.getString(Resources.CFG_NAVIGATION_FLD_WPT_PROXIMITY), Integer.toString(Config.wptProximity), 5, TextField.NUMERIC));
-            /*append(*/fieldPoiProximity = new TextField(Resources.getString(Resources.CFG_NAVIGATION_FLD_POI_PROXIMITY), Integer.toString(Config.poiProximity), 5, TextField.NUMERIC)/*)*/;
+            submenu.append(fieldWptProximity = new TextField(Resources.getString(Resources.CFG_NAVIGATION_FLD_WPT_PROXIMITY), Integer.toString(Config.wptProximity), 5, /*TextField.*/NUMERIC));
+            /*append(*/fieldPoiProximity = new TextField(Resources.getString(Resources.CFG_NAVIGATION_FLD_POI_PROXIMITY), Integer.toString(Config.poiProximity), 5, /*TextField.*/NUMERIC)/*)*/;
 
             // route line
             choiceRouteLine = new ChoiceGroup(Resources.getString(Resources.CFG_NAVIGATION_GROUP_ROUTE_LINE), ChoiceGroup.MULTIPLE);
@@ -308,6 +314,7 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
             choicePerformance.append(Resources.getString(Resources.CFG_TWEAKS_FLD_1TILE_SCROLL), null);
             choicePerformance.append(Resources.getString(Resources.CFG_TWEAKS_FLD_LARGE_ATLASES), null);
             choicePerformance.append(Resources.getString(Resources.CFG_TWEAKS_FLD_LAZY_GPX), null);
+            choicePerformance.append(Resources.getString(Resources.CFG_TWEAKS_FLD_NUMERIC_INPUT_HACK), null);
             choicePerformance.setSelectedFlags(new boolean[] {
                 Config.siemensIo,
                 Config.lowmemIo,
@@ -316,7 +323,8 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
                 Config.powerSave,
                 Config.oneTileScroll,
                 Config.largeAtlases,
-                Config.lazyGpxParsing
+                Config.lazyGpxParsing,
+                Config.numericInputHack
             });
             if (cz.kruch.track.TrackingMIDlet.symbian) {
                 choicePerformance.setSelectedIndex(choicePerformance.append(Resources.getString(Resources.CFG_TWEAKS_FLD_USE_TBSVC), null),
@@ -406,8 +414,8 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
                     Config.gpxSecsDecimal
                 });
 
-                fieldGpxDt = new TextField("GPX dt (s)", Integer.toString(Config.gpxDt), 5, TextField.NUMERIC);
-                fieldGpxDs = new TextField("GPX ds (m)", Integer.toString(Config.gpxDs), 5, TextField.NUMERIC);
+                fieldGpxDt = new TextField("GPX dt (s)", Integer.toString(Config.gpxDt), 5, /*TextField.*/NUMERIC);
+                fieldGpxDs = new TextField("GPX ds (m)", Integer.toString(Config.gpxDs), 5, /*TextField.*/NUMERIC);
             }
 
             // provider specific
@@ -415,10 +423,10 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
                 fieldCommUrl = new TextField(Resources.getString(Resources.CFG_LOCATION_FLD_CONN_URL), Config.commUrl, 64, TextField.ANY);
             }
             if (File.isFs()) {
-                fieldSimulatorDelay = new TextField(Resources.getString(Resources.CFG_LOCATION_FLD_SIMULATOR_DELAY), Integer.toString(Config.simulatorDelay), 8, TextField.NUMERIC);
+                fieldSimulatorDelay = new TextField(Resources.getString(Resources.CFG_LOCATION_FLD_SIMULATOR_DELAY), Integer.toString(Config.simulatorDelay), 8, /*TextField.*/NUMERIC);
             }
             if (cz.kruch.track.TrackingMIDlet.jsr82) {
-                fieldBtKeepalive = new TextField(Resources.getString(Resources.CFG_LOCATION_FLD_BT_KEEP_ALIVE), Integer.toString(Config.btKeepAlive), 6, TextField.NUMERIC);
+                fieldBtKeepalive = new TextField(Resources.getString(Resources.CFG_LOCATION_FLD_BT_KEEP_ALIVE), Integer.toString(Config.btKeepAlive), 6, /*TextField.*/NUMERIC);
             }
             if (cz.kruch.track.TrackingMIDlet.jsr179 || cz.kruch.track.TrackingMIDlet.motorola179) {
 //#ifdef __RIM__
@@ -452,7 +460,7 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
                 fieldAltCorrection = new TextField(Resources.getString(Resources.CFG_LOCATION_FLD_ALT_CORRECTION), Float.toString(Config.altCorrection), 5, TextField.ANY/*TextField.NUMERIC*/);
             }
             if (cz.kruch.track.TrackingMIDlet.hasFlag("provider_o2_germany")) {
-                fieldO2Depth = new TextField(Resources.getString(Resources.CFG_LOCATION_FLD_FILTER_DEPTH), Integer.toString(Config.o2Depth), 2, TextField.NUMERIC);
+                fieldO2Depth = new TextField(Resources.getString(Resources.CFG_LOCATION_FLD_FILTER_DEPTH), Integer.toString(Config.o2Depth), 2, /*TextField.*/NUMERIC);
             }
 
             // show current provider and tracklog specific options
@@ -790,10 +798,11 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
                 Config.oneTileScroll = perf[5];
                 Config.largeAtlases = perf[6];
                 Config.lazyGpxParsing = perf[7];
+                Config.numericInputHack = perf[8];
                 if (cz.kruch.track.TrackingMIDlet.symbian) {
-                    Config.useNativeService = perf[8];
+                    Config.useNativeService = perf[9];
                 } else if (cz.kruch.track.TrackingMIDlet.sonyEricssonEx) {
-                    Config.hideBarCmd = perf[8];
+                    Config.hideBarCmd = perf[9];
                 }
 
                 // multimedia

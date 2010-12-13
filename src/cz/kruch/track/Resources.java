@@ -361,6 +361,7 @@ public final class Resources {
     public static final short CFG_TWEAKS_FLD_USE_TBSVC          = 3809;
     public static final short CFG_TWEAKS_FLD_LAZY_GPX           = 3810;
     public static final short CFG_TWEAKS_FLD_LOWMEM_IO          = 3811;
+    public static final short CFG_TWEAKS_FLD_NUMERIC_INPUT_HACK = 3812;
     /* info - commands */
     public static final short INFO_CMD_DETAILS                  = 4000;
     /* info - items */

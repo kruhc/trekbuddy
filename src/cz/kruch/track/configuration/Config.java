@@ -181,6 +181,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
     public static boolean useNativeService;
     public static boolean lazyGpxParsing;
     public static boolean lowmemIo;
+    public static boolean numericInputHack;
 
     // group [GPX options]
     public static int gpxDt                     = 60; // 1 min
@@ -500,6 +501,9 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
             // 1.0.2 change
             altCorrection = din.readFloat();
 
+            // 1.0.4 change
+            numericInputHack = din.readBoolean();
+
         } catch (Exception e) {
         }
 
@@ -618,6 +622,8 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         dout.writeBoolean(timeFix);
         /* since 1.0.2 */
         dout.writeFloat(altCorrection);
+        /* since 1.0.4 */
+        dout.writeBoolean(numericInputHack);
 
 //#ifdef __LOG__
         if (log.isEnabled()) log.info("configuration updated");

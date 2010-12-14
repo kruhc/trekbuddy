@@ -8,7 +8,6 @@ import cz.kruch.track.io.LineReader;
 import cz.kruch.track.ui.YesNoDialog;
 
 import javax.microedition.rms.RecordStore;
-import javax.microedition.midlet.MIDlet;
 import javax.microedition.io.Connector;
 import java.util.Vector;
 import java.util.Hashtable;

@@ -148,23 +148,19 @@ public final class NmeaParser {
                     case 5: // lon sign - use RMC
                         break;
                     case 6: {
-                        record.fix = CharArrayTokenizer.parseInt(token);
-                        switch (record.fix) {
-                            case 0:
-                            case 6: // dead reckoning -> ignore
-                                record.fix = 0;
-                                index = 666; // breaks 'while' cycle
-                                break;
+                        record.fix = CharArrayTokenizer.parseInt(token); // should not be empty
+                        if (record.fix == 0 || record.fix == 6) { // invalid fix or dead reckoning
+                            record.fix = 0;
+                            index = Integer.MAX_VALUE; // break cycle
                         }
                     } break;
                     case 7: {
                         record.sat = CharArrayTokenizer.parseInt(token);
                     } break;
                     case 8: {
-/* global
-                        record.hdop = CharArrayTokenizer.parseFloat(token);
-*/
-                        hdop = CharArrayTokenizer.parseFloat(token);
+                        if (!token.isEmpty()) {
+                            hdop = CharArrayTokenizer.parseFloat(token);
+                        }
                     } break;
                     case 9: {
                         record.altitude = CharArrayTokenizer.parseFloat(token);
@@ -172,22 +168,9 @@ public final class NmeaParser {
                     case 10: // 'm'
                         break;
                     case 11: {
-/* global
-                        record.geoidh = CharArrayTokenizer.parseFloat(token);
-*/
-                        geoidh = CharArrayTokenizer.parseFloat(token);
-                    } break;
-                    case 12: // 'm'
-                        break;
-                    case 13: {
-/* unused
-                        record.dgpst = parseInt(token);
-*/
-                    } break;
-                    case 14: {
-/* unused
-                        record.dgpsid = token.toString();
-*/
+                        if (!token.isEmpty()) {
+                            geoidh = CharArrayTokenizer.parseFloat(token);
+                        }
                     } break;
                 }
             }
@@ -224,7 +207,7 @@ public final class NmeaParser {
                 case 2: {
                     record.fix = CharArrayTokenizer.parseInt(token); // should not be empty
                     if (record.fix == 1) { // no fix
-                        index = 666; // break cycle
+                        index = Integer.MAX_VALUE; // break cycle
                     }
                 } break;
                 case 3:
@@ -500,23 +483,12 @@ public final class NmeaParser {
         // NMEA COMMON
         public int timestamp;
         public double lat, lon;
-/* unused
-        public String checksum;
-*/
+
         // GGA/GSA
         public int fix;
         public int sat;
-/* global
-        public float pdop, hdop, vdop;
-*/
         public float altitude;
-/* global
-        public float geoidh;
-*/
-/* unused
-        public int dgpst;
-        public String dgpsid;
-*/
+
         // RMC
         public char status;
         public float speed;
@@ -538,15 +510,6 @@ public final class NmeaParser {
         public static Record copyGsaIntoGga(final Record gsa) {
             gga.invalidate(HEADER_GGA);
             gga.sat = gsa.sat;
-            switch (gsa.fix) {
-                case 1:
-                    gga.fix = 0;
-                break;
-                case 2:
-                case 3:
-                    gga.fix = 1;
-                break;
-            }
 
             return gga;
         }

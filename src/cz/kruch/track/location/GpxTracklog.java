@@ -119,8 +119,6 @@ public final class GpxTracklog implements Runnable {
     private static final String FIX_NONE    = "none";
     private static final String FIX_3D      = "3d";
     private static final String FIX_2D      = "2d";
-    private static final String FIX_DGPS    = "dgps";
-    private static final String FIX_PPS     = "pps";
 
     private final Calendar calendar;
     private final Date date;
@@ -471,29 +469,23 @@ public final class GpxTracklog implements Runnable {
             serializer.text(sbChars, 0, i);
             serializer.endTag(DEFAULT_NAMESPACE, ELEMENT_GEOIDH);
         }
-        serializer.startTag(DEFAULT_NAMESPACE, ELEMENT_FIX);
         switch (l.getFix()) {
             case 0: {
+                serializer.startTag(DEFAULT_NAMESPACE, ELEMENT_FIX);
                 serializer.text(FIX_NONE);
+                serializer.endTag(DEFAULT_NAMESPACE, ELEMENT_FIX);
             } break;
-            case 1:
-                if (l.isFix3d()) {
-                    serializer.text(FIX_3D);
-                } else {
-                    serializer.text(FIX_2D);
-                }
-                break;
             case 2: {
-                serializer.text(FIX_DGPS);
+                serializer.startTag(DEFAULT_NAMESPACE, ELEMENT_FIX);
+                serializer.text(FIX_2D);
+                serializer.endTag(DEFAULT_NAMESPACE, ELEMENT_FIX);
             } break;
             case 3: {
-                serializer.text(FIX_PPS);
+                serializer.startTag(DEFAULT_NAMESPACE, ELEMENT_FIX);
+                serializer.text(FIX_3D);
+                serializer.endTag(DEFAULT_NAMESPACE, ELEMENT_FIX);
             } break;
-            default: {
-                serializer.text(Integer.toString(l.getFix()));
-            }
         }
-        serializer.endTag(DEFAULT_NAMESPACE, ELEMENT_FIX);
         final int sat = l.getSat();
         if (sat > 0) {
             serializer.startTag(DEFAULT_NAMESPACE, ELEMENT_SAT);
@@ -754,7 +746,7 @@ public final class GpxTracklog implements Runnable {
             bLog = true;
         }
 
-        final boolean bTimeDiff = (location.getTimestamp() - refLocation.getTimestamp()) > (Config.gpxDt * 1000);
+        final boolean bTimeDiff = (location.getTimestamp() - refLocation.getTimestamp()) >= (Config.gpxDt * 1000);
 
         if (bTimeDiff) {
             bLog = true;

@@ -35,7 +35,6 @@ public final class Jsr179LocationProvider
     public Jsr179LocationProvider() {
         super("Internal");
         this.raw = new char[NmeaParser.MAX_SENTENCE_LENGTH];
-        this.extraSat = this.extraFix = -1;
     }
 
     public int start() throws LocationException {
@@ -146,7 +145,7 @@ public final class Jsr179LocationProvider
             // enhance with raw NMEA
             int sat = -1;
             if (extra != null) {
-                extraSat = extraFix = -1;
+                extraSat = extraFix = 0;
                 try {
                     parseNmea(raw, extra);
                     if (extraSat > 0) {
@@ -185,7 +184,7 @@ public final class Jsr179LocationProvider
             final Location location = Location.newInstance(qc, timestamp, 1, sat);
             location.setCourse(l.getCourse());
             location.setSpeed(l.getSpeed());
-            location.setFix3d(extraFix == 3);
+            location.updateFix(extraFix);
 
             // signal state change
             if (updateLastState(AVAILABLE)) {

@@ -352,6 +352,7 @@
 3809=use native service
 3810=lazy GPX parsing
 3811=lowmem I/O
+3812=numeric input hack
 
 # info commands
 4000=Technical

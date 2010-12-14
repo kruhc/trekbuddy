@@ -1,28 +1,13 @@
-/*
- * Copyright 2006-2007 Ales Pour <kruhc@seznam.cz>.
- * All Rights Reserved.
- * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
- *
- * This code is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License version 2 only, as
- * published by the Free Software Foundation.
- *
- * This code is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
- * version 2 for more details (a copy is included in the LICENSE file that
- * accompanied this code).
- */
+// @LICENSE@
 
 package api.location;
 
 /**
- * Represents a set of basic location information.
+ * Represents basic location information.
  * 
  * @author Ales Pour <kruhc@seznam.cz>
  */
 public final class Location {
-    private static final int FIX3D_MASK = 0x00800000;
     private static final int XDR_MASK   = 0x00400000;
 
     private QualifiedCoordinates coordinates;
@@ -89,7 +74,9 @@ public final class Location {
     }
 
     private Location(final QualifiedCoordinates coordinates,
-                     final long timestamp, final int fix, final int sat) {
+                     final long timestamp,
+                     final int fix,
+                     final int sat) {
         this.coordinates = coordinates;
         this.timestamp = timestamp;
         this.fixsat = ((fix << 8) & 0x0000ff00) | (sat & 0x000000ff);
@@ -128,15 +115,10 @@ public final class Location {
         this.course = course;
     }
 
-    public boolean isFix3d() {
-        return (this.fixsat & FIX3D_MASK) != 0;
-    }
-
-    public void setFix3d(boolean fix3d) {
-        if (fix3d)
-            this.fixsat |= FIX3D_MASK;
-        else
-            this.fixsat &= ~FIX3D_MASK;
+    public void updateFix(int fix) {
+        if (fix == 2 || fix == 3) {
+            this.fixsat = ((fix << 8) & 0x0000ff00) | (this.fixsat & 0xffff00ff);
+        }
     }
 
     public boolean isXdrBound() {

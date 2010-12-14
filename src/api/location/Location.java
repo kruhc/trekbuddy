@@ -39,12 +39,14 @@ public final class Location {
     private static int countFree;
 
     public static Location newInstance(final QualifiedCoordinates coordinates,
-                                       final long timestamp, final int fix) {
+                                       final long timestamp,
+                                       final int fix) {
         return newInstance(coordinates, timestamp, fix, -1);
     }
 
     public static synchronized Location newInstance(final QualifiedCoordinates coordinates,
-                                                    final long timestamp, final int fix,
+                                                    final long timestamp,
+                                                    final int fix,
                                                     final int sat) {
         final Location result;
 

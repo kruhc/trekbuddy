@@ -372,6 +372,7 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
                     case Config.LOCATION_PROVIDER_SIMULATOR:
                         resourceId = Resources.CFG_LOCATION_FLD_PROV_SIMULATOR;
                     break;
+//#ifdef __ALL__
                     case Config.LOCATION_PROVIDER_MOTOROLA:
                         resourceId = Resources.CFG_LOCATION_FLD_PROV_MOTOROLA;
                     break;
@@ -381,6 +382,7 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
                     case Config.LOCATION_PROVIDER_HGE100:
                         resourceId = Resources.CFG_LOCATION_FLD_PROV_HGE100;
                     break;
+//#endif                    
                 }
                 final int idx = choiceProvider.append(Resources.getString(resourceId), null);
                 if (Config.locationProvider == provider) {
@@ -459,9 +461,11 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
 //#endif
                 fieldAltCorrection = new TextField(Resources.getString(Resources.CFG_LOCATION_FLD_ALT_CORRECTION), Float.toString(Config.altCorrection), 5, TextField.ANY/*TextField.NUMERIC*/);
             }
+//#ifdef __ALL__
             if (cz.kruch.track.TrackingMIDlet.hasFlag("provider_o2_germany")) {
                 fieldO2Depth = new TextField(Resources.getString(Resources.CFG_LOCATION_FLD_FILTER_DEPTH), Integer.toString(Config.o2Depth), 2, /*TextField.*/NUMERIC);
             }
+//#endif            
 
             // show current provider and tracklog specific options
             itemStateChanged(choiceProvider);
@@ -514,7 +518,9 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
                         appendWithNewlineAfter(submenu, fieldBtKeepalive);
                     break;
                     case Config.LOCATION_PROVIDER_JSR179:
+//#ifdef __ALL__
                     case Config.LOCATION_PROVIDER_MOTOROLA:
+//#endif
 //#ifndef __ANDROID__
                         appendWithNewlineAfter(submenu, choiceInternal);
                         appendWithNewlineAfter(submenu, choicePower);
@@ -532,12 +538,14 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
                         appendWithNewlineAfter(submenu, createStreamChoice(provider, providerName));
                         appendWithNewlineAfter(submenu, fieldSimulatorDelay);
                     break;
+//#ifdef __ALL__
                     case Config.LOCATION_PROVIDER_O2GERMANY:
                         appendWithNewlineAfter(submenu, fieldO2Depth);
                     break;
                     case Config.LOCATION_PROVIDER_HGE100:
                         appendWithNewlineAfter(submenu, createStreamChoice(provider, providerName));
                     break;
+//#endif
                 }
                 if (isFs) {
                     appendWithNewlineAfter(submenu, choiceTracklog);
@@ -546,7 +554,9 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
                             case Config.LOCATION_PROVIDER_JSR82:
                             case Config.LOCATION_PROVIDER_JSR179:
                             case Config.LOCATION_PROVIDER_SERIAL:
+//#ifdef __ALL__
                             case Config.LOCATION_PROVIDER_HGE100:
+//#endif
                                 appendWithNewlineAfter(submenu, choiceTracklogFormat);
                             break;
                         }
@@ -565,7 +575,9 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
                         case Config.LOCATION_PROVIDER_JSR82:
                         case Config.LOCATION_PROVIDER_JSR179:
                         case Config.LOCATION_PROVIDER_SERIAL:
+//#ifdef __ALL__
                         case Config.LOCATION_PROVIDER_HGE100:
+//#endif                            
                             appendWithNewlineAfter(submenu, choiceTracklogFormat);
                         break;
                     }
@@ -602,9 +614,7 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
                 try {
                     show(section = pane.getString(pane.getSelectedIndex()));
                 } catch (Throwable t) {
-//#ifdef __RIM__                    
-                    t.printStackTrace(); /* stack trace will go to Event Log in Blackberry*/
-//#endif
+                    Desktop.showError("Show menu error", t, null);
                 }
             } else {
                 // restore desktop
@@ -696,9 +706,11 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
                 if (fieldCommUrl != null) {
                     Config.commUrl = fieldCommUrl.getString();
                 }
+//#ifdef __ALL__
                 if (fieldO2Depth != null) {
                     Config.o2Depth = Integer.parseInt(fieldO2Depth.getString());
                 }
+//#endif                
 
                 // stream options
                 if (choiceStream != null)  {
@@ -880,10 +892,10 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
             if (cz.kruch.track.TrackingMIDlet.motorola179) {
                 providers.addElement(new Integer(Config.LOCATION_PROVIDER_MOTOROLA));
             }
-//#endif
             if (cz.kruch.track.TrackingMIDlet.hasFlag("provider_o2_germany")) {
                 providers.addElement(new Integer(Config.LOCATION_PROVIDER_O2GERMANY));
             }
+//#endif
         }
 
         return providers;

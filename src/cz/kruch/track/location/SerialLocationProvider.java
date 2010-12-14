@@ -49,9 +49,11 @@ public class SerialLocationProvider
     }
 
     protected String getKnownUrl() {
+//#ifdef __ALL__
         if (Config.locationProvider == Config.LOCATION_PROVIDER_HGE100) {
             return "comm:AT5";
         }
+//#endif
         return Config.commUrl;
     }
 
@@ -170,12 +172,14 @@ public class SerialLocationProvider
                 stream = connection.openInputStream();
             }
 
+//#ifdef __ALL__
             // HGE-100 start
             if (isHge100) {
                 os = connection.openOutputStream();
                 os.write("$STA\r\n".getBytes());
                 os.flush();
             }
+//#endif
 
             // debug
             setStatus("stream opened");
@@ -270,12 +274,14 @@ public class SerialLocationProvider
             // debug
             setStatus("stopping");
 
+//#ifdef __ALL__
             // HGE-100 start
             if (isHge100) {
                 os = connection.openOutputStream();
                 os.write("$STA\r\n".getBytes());
                 os.close();
             }
+//#endif            
             
             // stop watcher
             stopWatcher();

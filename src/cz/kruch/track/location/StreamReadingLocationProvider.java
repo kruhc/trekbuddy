@@ -114,7 +114,13 @@ abstract class StreamReadingLocationProvider extends LocationProvider {
                         if (log.isEnabled()) log.info("got RMC");
 //#endif
                         rmc = record;
-                        hack_rmc_count++;
+                        if (hack_rmc_count++ >= 3) { // use GSA as GGA (alt missing, though)
+                            if (gsa != null) {
+                                gga = NmeaParser.Record.copyGsaIntoGga(gsa);
+                                gga.timestamp = rmc.timestamp;
+                            }
+                        }
+
                     } break;
                     case NmeaParser.HEADER_XDR: {
 //#ifdef __LOG__
@@ -133,16 +139,6 @@ abstract class StreamReadingLocationProvider extends LocationProvider {
                     checksums++;
                 }
                 continue;
-            }
-
-            // hack
-            if (gsa != null) {
-                if (hack_rmc_count >= 3) { // use GSA as GGA (alt missing, though)
-                    gga = NmeaParser.Record.copyGsaIntoGga(gsa);
-                    if (rmc != null) {
-                        gga.timestamp = rmc.timestamp;
-                    }
-                }
             }
 
             // sync
@@ -164,14 +160,21 @@ abstract class StreamReadingLocationProvider extends LocationProvider {
             }
         }
 
-        // alt correction
+        // fix type
+        final int fix;
+        if (rmc.status != 'A') {
+            fix = 0; // no fix (matches GGA::invalid fix type)
+        } else if (gsa != null) {
+            fix = gsa.fix; // 2 or 3, ie. 2D or 3D
+        } else {
+            fix = 1; // unspecified fix type (matches GGA::GPS fix type)
+        }
+
+        // corrections
         if (gsa != null) {
             if (gsa.fix != 3) { // not 3D fix - altitude is invalid
                 gga.altitude = Float.NaN;
             }
-/* global
-            gga.vdop = gsa.vdop;
-*/
         }
 
         // new location
@@ -179,20 +182,16 @@ abstract class StreamReadingLocationProvider extends LocationProvider {
         
         // combine
         final long datetime = rmc.date + rmc.timestamp;
-        if (rmc.timestamp == gga.timestamp) {
+        if (rmc.timestamp == gga.timestamp && fix > 0) {
             final QualifiedCoordinates qc = QualifiedCoordinates.newInstance(rmc.lat, rmc.lon, gga.altitude);
-            qc.setHorizontalAccuracy(/*gga.hdop*/NmeaParser.hdop * 5);
-//            qc.setVerticalAccuracy(/*gga.vdop*/NmeaParser.vdop * 5);
-            location = Location.newInstance(qc, datetime, rmc.status == 'A' ? gga.fix : 0, gga.sat);
-        } else {
-//#ifdef __LOG__
-            if (log.isEnabled()) log.warn("unpaired sentences");
-//#endif
+            qc.setHorizontalAccuracy(NmeaParser.hdop * 5);
+//            qc.setVerticalAccuracy(NmeaParser.vdop * 5);
+            location = Location.newInstance(qc, datetime, fix, gga.sat);
+        } else { // "unpaired sentences"
             location = Location.newInstance(QualifiedCoordinates.newInstance(rmc.lat, rmc.lon),
-                                            datetime, rmc.status == 'A' ? 1 : 0);
+                                            datetime, fix);
             mismatches++;
         }
-        location.setFix3d(gsa != null && gsa.fix == 3);
         location.setXdrBound(xdr);
         location.setCourse(rmc.course);
         location.setSpeed(rmc.speed);

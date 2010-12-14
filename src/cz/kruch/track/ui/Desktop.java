@@ -1853,16 +1853,6 @@ public final class Desktop implements CommandListener,
         try {
             Class providerClass = null;
             switch (Config.locationProvider) {
-                case Config.LOCATION_PROVIDER_JSR179:
-//#ifdef __ANDROID__
-                    if (cz.kruch.track.TrackingMIDlet.android) {
-                        providerClass = Class.forName("cz.kruch.track.location.AndroidLocationProvider");
-                    }
-//#else
-                    providerClass = Class.forName("cz.kruch.track.location.Jsr179LocationProvider");
-//#endif
-                    providerName = "Internal";
-                break;
                 case Config.LOCATION_PROVIDER_JSR82:
 //#ifdef __ANDROID__
                     if (cz.kruch.track.TrackingMIDlet.android) {
@@ -1873,9 +1863,16 @@ public final class Desktop implements CommandListener,
 //#endif
                     providerName = "Bluetooth";
                 break;
-//#ifdef __ALL__
-                case Config.LOCATION_PROVIDER_HGE100:
+                case Config.LOCATION_PROVIDER_JSR179:
+//#ifdef __ANDROID__
+                    if (cz.kruch.track.TrackingMIDlet.android) {
+                        providerClass = Class.forName("cz.kruch.track.location.AndroidLocationProvider");
+                    }
+//#else
+                    providerClass = Class.forName("cz.kruch.track.location.Jsr179LocationProvider");
 //#endif
+                    providerName = "Internal";
+                break;
                 case Config.LOCATION_PROVIDER_SERIAL:
                     providerClass = Class.forName("cz.kruch.track.location.SerialLocationProvider");
                     providerName = "Serial";
@@ -1892,6 +1889,10 @@ public final class Desktop implements CommandListener,
                 case Config.LOCATION_PROVIDER_O2GERMANY:
                     providerClass = Class.forName("cz.kruch.track.location.O2GermanyLocationProvider");
                     providerName = "O2 Germany";
+                break;
+                case Config.LOCATION_PROVIDER_HGE100:
+                    providerClass = Class.forName("cz.kruch.track.location.SerialLocationProvider");
+                    providerName = "HGE-100";
                 break;
 //#endif
             }

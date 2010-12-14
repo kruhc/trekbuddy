@@ -318,7 +318,6 @@ final class ComputerView extends View
     private volatile long timestamp, starttime, /*snreftime,*/ timetauto;
     private volatile float altLast, altDiff;
     private volatile int counter, sat, fix;
-    private volatile boolean fix3d;
     private float[] valuesFloat;
 
     /* short term avg speed */
@@ -440,9 +439,6 @@ final class ComputerView extends View
             // everything else needs fix
             fix = l.getFix();
             if (fix > 0) {
-
-                // fix3d
-                fix3d = l.isFix3d();
 
                 // sat
                 sat = l.getSat();
@@ -1080,18 +1076,7 @@ final class ComputerView extends View
                                         NavigationScreens.append(sb, sat);
                                     } break;
                                     case VALUE_FIX: {
-                                        final char c;
-                                        switch (fix) {
-                                            case 1:
-                                                c = fix3d ? '3' : '2';
-                                            break;
-                                            case 2:
-                                                c = 'D';
-                                            break;
-                                            default:
-                                                c = (char) ('0' + fix);
-                                        }
-                                        sb.append(c);
+                                        sb.append((char) ('0' + fix));
                                     } break;
                                     case VALUE_PDOP: {
                                         NavigationScreens.append(sb, NmeaParser.pdop, 1);
@@ -1665,7 +1650,6 @@ final class ComputerView extends View
         timestamp = starttime = timetauto = 0;
         altLast = altDiff = Float.NaN;
         counter = sat = fix = 0;
-        fix3d = false;
 /*
         altLast = Float.NaN;
         altDiff = 0F;

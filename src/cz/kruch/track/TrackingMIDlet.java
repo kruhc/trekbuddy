@@ -23,7 +23,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
 
     public static String version;
     public static boolean jsr82, jsr120, jsr135, jsr179, jsr234, motorola179, comm;
-    public static boolean sonyEricsson, sonyEricssonEx, nokia, siemens, lg, motorola, samsung;
+    public static boolean sonyEricsson, sonyEricssonEx, nokia, siemens, lg, motorola, samsung, sonim;
     public static boolean j9, jbed, intent, palm, rim, symbian, s60nd, s60rdfp2, uiq, brew, android;
     public static boolean sxg75, a780, s65;
 
@@ -88,6 +88,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         brew = sxg75 || "BENQ-M7".equals(platform);
         a780 = "j2me".equals(platform);
         s65 = "S65".equals(platform);
+        sonim = platform.startsWith("Sonim");
         // for IntelliJ IDEA; all should resolve to false
         rim = false;
         android = false;

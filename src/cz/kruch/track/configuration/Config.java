@@ -290,6 +290,8 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         } else if (cz.kruch.track.TrackingMIDlet.uiq) {
             dataDir = getDefaultDataDir("file:///Ms/", "Other/TrekBuddy/");
             fullscreen = true;
+        } else if (cz.kruch.track.TrackingMIDlet.sonim) {
+            dataDir = getDefaultDataDir("file:///TFCard/", "Trekbuddy/");
         } else { // Nokia, SonyEricsson, ...
             dataDir = getDefaultDataDir("file:///E:/", "TrekBuddy/"); // pstros: "file:///SDCard/TrekBuddy/"
             fullscreen = cz.kruch.track.TrackingMIDlet.nokia || cz.kruch.track.TrackingMIDlet.sonyEricsson || cz.kruch.track.TrackingMIDlet.symbian;

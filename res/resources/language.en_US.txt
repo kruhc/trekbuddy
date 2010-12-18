@@ -353,6 +353,7 @@
 3810=lazy GPX parsing
 3811=lowmem I/O
 3812=numeric input hack
+3813=draw main menu
 
 # info commands
 4000=Technical

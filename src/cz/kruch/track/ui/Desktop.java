@@ -1534,12 +1534,17 @@ public final class Desktop implements CommandListener,
         }
 
         // hacks
-        if (cz.kruch.track.TrackingMIDlet.uiq) {
-            switch (i) {
-                case Canvas.KEY_NUM0:
+        switch (i) {
+//#ifdef __SYMBIAN__
+            case Canvas.KEY_NUM0:
+                if (cz.kruch.track.TrackingMIDlet.uiq) {
                     action = 0;
-                break;
-            }
+                }
+            break;
+//#endif
+            case Canvas.KEY_NUM5:
+                action = 0;
+            break;
         }
 
         switch (action) {
@@ -1560,7 +1565,7 @@ public final class Desktop implements CommandListener,
                 }
 
             } break;
-/* since v1 onKeyUp
+
             case Canvas.FIRE: {
 
                 // handle action (repeated is ignored)
@@ -1569,7 +1574,7 @@ public final class Desktop implements CommandListener,
                 }
 
             } break;
-*/
+
             default: { // no game action
 
                 switch (i) {
@@ -1603,12 +1608,6 @@ public final class Desktop implements CommandListener,
                             mask = MASK_ALL;
                         }
                     } break;
-
-                    default: {
-                        if (!repeated) { // TODO let view decide
-                            mask = views[mode].handleKey(i, false);
-                        }
-                    }
                 }
             }
         }
@@ -1629,22 +1628,27 @@ public final class Desktop implements CommandListener,
         }
 
         // hacks
-        if (cz.kruch.track.TrackingMIDlet.uiq) {
-            switch (i) {
-                case Canvas.KEY_NUM0:
+        switch (i) {
+//#ifdef __SYMBIAN__
+            case Canvas.KEY_NUM0:
+                if (cz.kruch.track.TrackingMIDlet.uiq) {
                     action = 0;
-                break;
-            }
+                }
+            break;
+//#endif
+            case Canvas.KEY_NUM5:
+                action = 0;
+            break;
         }
 
         switch (action) {
 
-            case Canvas.FIRE: {
-
-                // handle action
-                mask = views[mode].handleAction(action, false);
-
-            } break;
+            case Canvas.UP:
+            case Canvas.LEFT:
+            case Canvas.RIGHT:
+            case Canvas.DOWN:
+            case Canvas.FIRE:
+                break;
 
             default: { // handle events common to all screens
 
@@ -1673,6 +1677,10 @@ public final class Desktop implements CommandListener,
                         cz.kruch.track.ui.nokia.DeviceControl.getBacklight();
                         mask = MASK_ALL;
                     } break;
+
+                    default: {
+                        mask = views[mode].handleKey(i, false);
+                    }
                 }
             }
         }

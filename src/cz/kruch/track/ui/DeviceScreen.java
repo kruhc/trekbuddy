@@ -602,7 +602,7 @@ final class DeviceScreen extends GameCanvas implements Runnable {
                     case 1:
                     case 2:
                     case 3:
-                        key = getKeyCode(Canvas.FIRE);
+                        key = Canvas.KEY_NUM5; // getKeyCode(Canvas.FIRE);
                         break;
                     case 4:
                         key = getKeyCode(Canvas.RIGHT);

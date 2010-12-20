@@ -1543,10 +1543,12 @@ public final class Desktop implements CommandListener,
             break;
 //#endif
             case Canvas.KEY_NUM5:
-                action = 0;
+                if (mode == VIEW_MAP) {
+                    action = 0;
+                }
             break;
         }
-
+        
         switch (action) {
 
             case Canvas.UP:
@@ -1637,7 +1639,9 @@ public final class Desktop implements CommandListener,
             break;
 //#endif
             case Canvas.KEY_NUM5:
-                action = 0;
+                if (mode == VIEW_MAP) {
+                    action = 0;
+                }
             break;
         }
 

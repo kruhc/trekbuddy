@@ -288,12 +288,14 @@ public final class FileBrowser implements CommandListener, Runnable, Comparator 
 
     /**
      * Sorts enumeration of strings and creates array.
-     * TODO optimize - how to find out size of enumeration???
+     *
      * @param items enumeration of strings
      * @param head first entry; can be <tt>null</tt>
+     * @param allowed array of allowed extensions
      * @return list
      */
-    public static String[] sort2array(final Enumeration items, final String head,
+    public static String[] sort2array(final Enumeration items,
+                                      final String head,
                                       final String[] allowed) {
         // enum to list
         Vector v = new Vector(64, 64);
@@ -307,9 +309,6 @@ public final class FileBrowser implements CommandListener, Runnable, Comparator 
             } else if (allowed != null) {
                 final String itemlc = item.toLowerCase();
                 for (int i = allowed.length; --i >= 0; ) {
-//#ifdef __LOG__
-                    if (log.isEnabled()) log.debug("apply filter [" + allowed[i] + "] to " + itemlc);
-//#endif
                     if (itemlc.endsWith(allowed[i])) {
                         v.addElement(item);
                     }

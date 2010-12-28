@@ -181,6 +181,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
     public static boolean lazyGpxParsing;
     public static boolean lowmemIo;
     public static boolean numericInputHack;
+    public static boolean externalConfigBackup;
 
     // group [GPX options]
     public static int gpxDt                     = 60; // 1 min
@@ -255,6 +256,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         commUrl = "btspp://000276fd79da:1";
         fullscreen = true;
         safeColors = true;
+        externalConfigBackup = true;
 
 //#elifdef __ANDROID__
 
@@ -701,7 +703,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
     }
 
     public static void fallback() {
-        if (dataDirExists) {
+        if (externalConfigBackup && dataDirExists) {
             File f = null;
             DataInputStream in = null;
             try {
@@ -766,13 +768,11 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
             }
         }
 
-        if (CONFIG_090.equals(rms)) {
+        if (CONFIG_090.equals(rms) && externalConfigBackup && dataDirExists) {
 //#ifdef __RIM__
             cz.kruch.track.ui.nokia.DeviceControl.saveAltDatadir();
-//#endif                
-            if (dataDirExists) {
-                worker.enqueue(new Config(ACTION_PERSISTCFG));
-            }
+//#endif
+            worker.enqueue(new Config(ACTION_PERSISTCFG));
         }
     }
 

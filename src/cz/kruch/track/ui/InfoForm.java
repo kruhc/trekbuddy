@@ -88,7 +88,8 @@ final class InfoForm implements CommandListener {
         pane.append(newItem("Fs", sb.toString()));
         sb.delete(0, sb.length()).append(cz.kruch.track.ui.nokia.DeviceControl.getName())
                 .append(' ').append(cz.kruch.track.ui.nokia.DeviceControl.getGsmCellId())
-                .append('/').append(cz.kruch.track.ui.nokia.DeviceControl.getGsmLac());
+                .append('/').append(cz.kruch.track.ui.nokia.DeviceControl.getGsmLac())
+                .append(' ').append(System.getProperty("com.nokia.mid.ui.version"));
         pane.append(newItem("DeviceCtrl", sb.toString()));
         sb.delete(0, sb.length()).append(cz.kruch.track.fun.Camera.type)
                 .append("; resolutions: ").append(System.getProperty("camera.resolutions"));
@@ -123,7 +124,7 @@ final class InfoForm implements CommandListener {
                 .append("; restarts=").append(api.location.LocationProvider.restarts)
                 .append("; syncs=").append(api.location.LocationProvider.syncs)
                 .append("; mismatches=").append(api.location.LocationProvider.mismatches)
-                .append("; malformations=").append(api.location.LocationProvider.checksums)
+                .append("; malformed=").append(api.location.LocationProvider.checksums)
                 .append("; errors=").append(api.location.LocationProvider.errors)
                 .append("; pings=").append(api.location.LocationProvider.pings)
                 .append("; maxavail=").append(api.location.LocationProvider.maxavail);

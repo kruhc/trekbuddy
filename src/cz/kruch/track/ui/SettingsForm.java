@@ -315,6 +315,7 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
             choicePerformance.append(Resources.getString(Resources.CFG_TWEAKS_FLD_LARGE_ATLASES), null);
             choicePerformance.append(Resources.getString(Resources.CFG_TWEAKS_FLD_LAZY_GPX), null);
             choicePerformance.append(Resources.getString(Resources.CFG_TWEAKS_FLD_NUMERIC_INPUT_HACK), null);
+            choicePerformance.append(Resources.getString(Resources.CFG_TWEAKS_FLD_EXTERNAL_CFG_BACKUP), null);
             choicePerformance.setSelectedFlags(new boolean[] {
                 Config.siemensIo,
                 Config.lowmemIo,
@@ -324,7 +325,8 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
                 Config.oneTileScroll,
                 Config.largeAtlases,
                 Config.lazyGpxParsing,
-                Config.numericInputHack
+                Config.numericInputHack,
+                Config.externalConfigBackup
             });
             if (cz.kruch.track.TrackingMIDlet.symbian) {
                 choicePerformance.setSelectedIndex(choicePerformance.append(Resources.getString(Resources.CFG_TWEAKS_FLD_USE_TBSVC), null),
@@ -811,10 +813,11 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
                 Config.largeAtlases = perf[6];
                 Config.lazyGpxParsing = perf[7];
                 Config.numericInputHack = perf[8];
+                Config.externalConfigBackup = perf[9];
                 if (cz.kruch.track.TrackingMIDlet.symbian) {
-                    Config.useNativeService = perf[9];
+                    Config.useNativeService = perf[10];
                 } else if (cz.kruch.track.TrackingMIDlet.sonyEricssonEx) {
-                    Config.hideBarCmd = perf[9];
+                    Config.hideBarCmd = perf[10];
                 }
 
                 // multimedia

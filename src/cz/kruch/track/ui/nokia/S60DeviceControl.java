@@ -2,8 +2,6 @@
 
 package cz.kruch.track.ui.nokia;
 
-import java.io.IOException;
-
 /**
  * Device control implementation for S60/UIQ phones.
  *
@@ -14,7 +12,7 @@ final class S60DeviceControl extends NokiaDeviceControl {
     private cz.kruch.track.device.SymbianService.Inactivity inactivity;
     private String lastError;
 
-    S60DeviceControl() throws IOException {
+    S60DeviceControl() {
         if (cz.kruch.track.TrackingMIDlet.uiq) {
             this.name = "UIQ";
         } else {
@@ -37,7 +35,7 @@ final class S60DeviceControl extends NokiaDeviceControl {
         if (inactivity != null) {
             try {
                 inactivity.setLights(values[backlight]);
-            } catch (IOException e) {
+            } catch (Exception e) { // IOE or SE
                 lastError = "Service not accessible. " + e.toString();
             }
         }

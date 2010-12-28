@@ -363,6 +363,7 @@ public final class Resources {
     public static final short CFG_TWEAKS_FLD_LOWMEM_IO          = 3811;
     public static final short CFG_TWEAKS_FLD_NUMERIC_INPUT_HACK = 3812;
     public static final short CFG_TWEAKS_FLD_DRAW_MAIN_MENU     = 3813;
+    public static final short CFG_TWEAKS_FLD_EXTERNAL_CFG_BACKUP = 3814;
     /* info - commands */
     public static final short INFO_CMD_DETAILS                  = 4000;
     /* info - items */

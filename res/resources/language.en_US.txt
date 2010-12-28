@@ -354,6 +354,7 @@
 3811=lowmem I/O
 3812=numeric input hack
 3813=draw main menu
+3814=external cfg backup 
 
 # info commands
 4000=Technical

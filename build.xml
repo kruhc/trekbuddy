@@ -26,7 +26,7 @@
     <property name="android20.home" value="c:\J2ME\android-sdk-windows\platforms\android-2.0"/>
     <property name="microemu.home" value="z:\repository\microemu-google\microemulator"/>
     <property name="proguard3.home" value="z:\apps\proguard3.11"/>
-    <property name="proguard4.home" value="z:\apps\proguard4.5"/>
+    <property name="proguard4.home" value="z:\apps\proguard4.5.1"/>
 
     <property name="use.proguard" value="3"/>
 
@@ -50,7 +50,7 @@
         <pathelement location="lib\motorola-file.jar"/>
         <pathelement location="lib\motorola-location.jar"/>
         <pathelement location="lib\motorola-javaextensions.jar"/>
-        <pathelement location="lib\nokia-ui.jar"/>
+        <pathelement location="lib\nokia-ui-devicecontrol.jar"/>
         <pathelement location="lib\siemens-file.jar"/>
         <pathelement location="lib\siemens-game.jar"/>
         <pathelement location="lib\samsung-apis.jar"/>
@@ -65,7 +65,7 @@
         <pathelement location="${wtk.home}\lib\jsr234.jar"/>
         <pathelement location="${wtk.home}\lib\wma11.jar"/>
         <pathelement location="${wtk.home}\lib\mmapi.jar"/>
-        <pathelement location="lib\nokia-ui.jar"/>
+        <pathelement location="lib\nokia-ui-devicecontrol.jar"/>
     </path>
 
     <path id="bootclasspath.std">
@@ -118,10 +118,7 @@
     <target name="standard">
         <property name="suffix" value=""/>
         <property name="dist.dir" value="standard"/>
-<!-- good enough for proguard 3.x
-        <property name="libraryjars" value="${wtk.home}\lib\cldcapi11.jar;${wtk.home}\lib\midpapi20.jar;${wtk.home}\lib\jsr75.jar;${wtk.home}\lib\jsr082.jar;${wtk.home}\lib\jsr179.jar;${wtk.home}\lib\jsr234.jar;${wtk.home}\lib\wma11.jar;lib\motorola-location.jar"/>
--->
-        <property name="libraryjars" value="${wtk.home}\lib\cldcapi11.jar;${wtk.home}\lib\midpapi20.jar;${wtk.home}\lib\jsr75.jar;${wtk.home}\lib\jsr082.jar;${wtk.home}\lib\jsr179.jar;${wtk.home}\lib\jsr234.jar;${wtk.home}\lib\wma11.jar;${wtk.home}\lib\mmapi.jar;lib\lg-mmpp.jar;lib\motorola-ext.jar;lib\motorola-file.jar;lib\motorola-javaextensions.jar;lib\motorola-location.jar;lib\nokia-ui.jar;lib\siemens-file.jar;lib\siemens-game.jar;lib\samsung-apis.jar"/> <!-- same as bootclasspath -->
+        <property name="libraryjars" value="${wtk.home}\lib\cldcapi11.jar;${wtk.home}\lib\midpapi20.jar;${wtk.home}\lib\jsr75.jar;${wtk.home}\lib\jsr082.jar;${wtk.home}\lib\jsr179.jar;${wtk.home}\lib\jsr234.jar;${wtk.home}\lib\wma11.jar;${wtk.home}\lib\mmapi.jar;lib\lg-mmpp.jar;lib\motorola-ext.jar;lib\motorola-file.jar;lib\motorola-javaextensions.jar;lib\motorola-location.jar;lib\nokia-ui-devicecontrol.jar;lib\siemens-file.jar;lib\siemens-game.jar;lib\samsung-apis.jar"/> <!-- same as bootclasspath -->
         <property name="classpath.preverify" value="${libraryjars}"/>
         <antcall target="clean"/>
         <antcall target="a.pre.standard"/>
@@ -196,10 +193,7 @@
     <target name="symbian">
         <property name="suffix" value="-symbian"/>
         <property name="dist.dir" value="symbian"/>
-<!-- good enough for proguard 3.x
-        <property name="libraryjars" value="${wtk.home}\lib\cldcapi11.jar;${wtk.home}\lib\midpapi20.jar;${wtk.home}\lib\jsr75.jar;${wtk.home}\lib\jsr082.jar;${wtk.home}\lib\jsr179.jar;${wtk.home}\lib\jsr234.jar;${wtk.home}\lib\wma11.jar"/>
--->
-        <property name="libraryjars" value="${wtk.home}\lib\cldcapi11.jar;${wtk.home}\lib\midpapi20.jar;${wtk.home}\lib\jsr75.jar;${wtk.home}\lib\jsr082.jar;${wtk.home}\lib\jsr179.jar;${wtk.home}\lib\jsr234.jar;${wtk.home}\lib\wma11.jar;${wtk.home}\lib\mmapi.jar;lib\nokia-ui.jar"/>
+        <property name="libraryjars" value="${wtk.home}\lib\cldcapi11.jar;${wtk.home}\lib\midpapi20.jar;${wtk.home}\lib\jsr75.jar;${wtk.home}\lib\jsr082.jar;${wtk.home}\lib\jsr179.jar;${wtk.home}\lib\jsr234.jar;${wtk.home}\lib\wma11.jar;${wtk.home}\lib\mmapi.jar;lib\nokia-ui-devicecontrol.jar"/>
         <property name="classpath.preverify" value="${libraryjars}"/>
         <antcall target="clean"/>
         <antcall target="a.pre.symbian"/>
@@ -363,7 +357,6 @@
         <echo>*** Locale:       ${locale}</echo>
         <echo>************************************************************</echo>
         <echo/>
-        <sleep seconds="5"/>
     </target>
 
     <target name="a.pre.hecl">
@@ -561,6 +554,7 @@
         <delete file="tmp/src/api/file/Motorola1000File.java"/>
         <delete file="tmp/src/api/file/SiemensFile.java"/>
         <delete file="tmp/src/cz/kruch/track/ui/nokia/NokiaDeviceControl.java"/>
+        <delete file="tmp/src/cz/kruch/track/ui/nokia/NokiaUi14DeviceControl.java"/>
         <delete file="tmp/src/cz/kruch/track/ui/nokia/MotorolaDeviceControl.java"/>
         <delete file="tmp/src/cz/kruch/track/ui/nokia/Motorola2DeviceControl.java"/>
         <delete file="tmp/src/cz/kruch/track/ui/nokia/S60DeviceControl.java"/>
@@ -654,6 +648,7 @@
             <attribute name="Nokia-MIDlet-No-Exit" value="true"/>
             <attribute name="Nokia-MIDlet-S60-Selection-Key-Compatibility" value="true"/>
             <attribute name="Nokia-MIDlet-On-Screen-Keypad" value="no"/>
+            <attribute name="Nokia-Scalable-Icon-MIDlet-1" value="/resources/icon.svg"/>
             <midlet name="${name}" class="cz.kruch.track.TrackingMIDlet" icon="/resources/icon.png"/>
         </wtkjad>
         <fixcrlf srcdir="tmp" eol="crlf" eof="remove" encoding="UTF-8" includes="trekbuddy${suffix}.jad"/>
@@ -670,11 +665,12 @@
                 <include name="**/datums.txt"/>
                 <include name="**/language.res"/>
                 <include name="**/*.png"/>
+                <include name="**/*.svg"/>
                 <exclude name="**/icon.store.*.png"/>
                 <include name="**/world.*"/>
                 <include name="**/set/**"/>
             </fileset>
-            <exclude_from_manifest list="Nokia-MIDlet-Category,Nokia-MIDlet-No-Exit,Nokia-MIDlet-S60-Selection-Key-Compatibility,Nokia-MIDlet-On-Screen-Keypad,Content-Folder"/>
+            <exclude_from_manifest list="Nokia-MIDlet-Category,Nokia-MIDlet-No-Exit,Nokia-MIDlet-S60-Selection-Key-Compatibility,Nokia-MIDlet-On-Screen-Keypad,Content-Folder,Nokia-Scalable-Icon-MIDlet-1"/>
             <manifest>
                 <attribute name="Built-By" value="kruhc@seznam.cz"/>
             </manifest>
@@ -694,7 +690,7 @@
                 <exclude name="**/icon.store.*.png"/>
                 <exclude name="**/set/*.png"/>
             </fileset>
-            <exclude_from_manifest list="Nokia-MIDlet-Category,Nokia-MIDlet-No-Exit,Nokia-MIDlet-S60-Selection-Key-Compatibility,Nokia-MIDlet-On-Screen-Keypad,Content-Folder"/>
+            <exclude_from_manifest list="Nokia-MIDlet-Category,Nokia-MIDlet-No-Exit,Nokia-MIDlet-S60-Selection-Key-Compatibility,Nokia-MIDlet-On-Screen-Keypad,Content-Folder,Nokia-Scalable-Icon-MIDlet-1"/>
             <manifest>
                 <attribute name="Built-By" value="kruhc@seznam.cz"/>
             </manifest>
@@ -749,8 +745,9 @@
                     config="CLDC-${wtk.cldc.version}"
                     profile="MIDP-${wtk.midp.version}">
             <fileset dir="tmp/build/classes"/>
-            <fileset dir="res-RIM">
+            <fileset dir="res-RIM"> <!-- same PNG graphics as Blackberry -->
                 <exclude name="**/icon.store.*.png"/>
+                <exclude name="**/icon.png"/>
             </fileset>
             <fileset dir="res">
                 <include name="**/datums.txt"/>
@@ -785,6 +782,8 @@
             <arg value="-whyareyoukeeping class cz.kruch.track.util.Logger"/>
             <arg value="-whyareyoukeeping class api.io.BufferedOutputStream"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.hecl.ControlledInterp"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.ui.nokia.NokiaUi14DeviceControl"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.ui.nokia.S60DeviceControl"/>
             <arg value="-printmapping dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.map"/>
             <arg value="-printseeds"/>
             <arg value="-printusage dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.dco"/>
@@ -814,6 +813,8 @@
             <arg value="-whyareyoukeeping class cz.kruch.track.util.Logger"/>
             <arg value="-whyareyoukeeping class api.io.BufferedOutputStream"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.hecl.ControlledInterp"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.ui.nokia.NokiaUi14DeviceControl"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.ui.nokia.S60DeviceControl"/>
             <arg value="-printmapping dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.map"/>
             <arg value="-printseeds"/>
             <arg value="-printusage dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.dco"/>
@@ -998,6 +999,7 @@
             <attribute name="Nokia-MIDlet-No-Exit" value="true"/>
             <attribute name="Nokia-MIDlet-S60-Selection-Key-Compatibility" value="true"/>
             <attribute name="Nokia-MIDlet-On-Screen-Keypad" value="no"/>
+            <attribute name="Nokia-Scalable-Icon-MIDlet-1" value="/resources/icon.svg"/>
             <midlet name="${name}" class="cz.kruch.track.TrackingMIDlet" icon="/resources/icon.png"/>
         </wtkjad>
         <fixcrlf srcdir="dist/${vendor.dir}/${dist.dir}"
@@ -1007,16 +1009,16 @@
 
     <target name="sign.and.update">
         <java jar="${wtk.home}\bin\JadTool.jar" fork="true">
-            <arg line="-addcert -certnum 1 -alias 'trekbuddy2010' -keystore keystores\trekbuddy2010.jks -inputjad dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad -outputjad dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad"/>
+            <arg line="-addcert -certnum 1 -alias 'trekbuddy2011' -keystore keystores\trekbuddy2011.jks -inputjad dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad -outputjad dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad"/>
         </java>
         <java jar="${wtk.home}\bin\JadTool.jar" fork="true">
-            <arg line="-addcert -certnum 2 -alias 'trekbuddy2010' -keystore keystores\trekbuddy2010.jks -inputjad dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad -outputjad dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad"/>
+            <arg line="-addcert -certnum 2 -alias 'trekbuddy2011' -keystore keystores\trekbuddy2011.jks -inputjad dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad -outputjad dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad"/>
         </java>
         <java jar="${wtk.home}\bin\JadTool.jar" fork="true">
-            <arg line="-addcert -certnum 3 -alias 'trekbuddy2010' -keystore keystores\trekbuddy2010.jks -inputjad dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad -outputjad dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad"/>
+            <arg line="-addcert -certnum 3 -alias 'trekbuddy2011' -keystore keystores\trekbuddy2011.jks -inputjad dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad -outputjad dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad"/>
         </java>
         <java jar="${wtk.home}\bin\JadTool.jar" fork="true">
-            <arg line="-addjarsig -alias 'trekbuddy2010' -keystore keystores\trekbuddy2010.jks -keypass changeit -jarfile dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jar -inputjad dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad -outputjad dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad"/>
+            <arg line="-addjarsig -alias 'trekbuddy2011' -keystore keystores\trekbuddy2011.jks -keypass changeit -jarfile dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jar -inputjad dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad -outputjad dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad"/>
         </java>
         <fixcrlf srcdir="dist/${vendor.dir}/${dist.dir}"
                  eol="crlf" eof="remove" encoding="UTF-8"
@@ -1107,10 +1109,13 @@
 
     <target name="jad2prc">
         <echo>Using garnet.home=${garnet.home}</echo>
+        <echo>TODO</echo>
+        <!--
         <exec dir="${basedir}" newenvironment="true" executable="${garnet.home}\bin\jad2prc.exe">
             <env key="JAVA_HOME" value="${garnet.home}"/>
             <arg line="-keystore keystores\j2me-manufacturer2010.keystore -vmOption -Xmx4M -o ${basedir}\dist/${vendor.dir}\palm\trekbuddy.prc ${basedir}\dist/${vendor.dir}\${dist.dir}\trekbuddy${suffix}.jad"/>
         </exec>
+        -->
     </target>
 
 </project>

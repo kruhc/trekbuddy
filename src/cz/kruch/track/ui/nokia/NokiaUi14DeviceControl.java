@@ -14,8 +14,22 @@ final class NokiaUi14DeviceControl extends NokiaDeviceControl {
     }
 
     /** @Override */
-    boolean isSchedulable() {
-        return true;
+    protected void setLights() {
+
+        // set required lights
+        super.setLights();
+
+        // prevent screensaver
+        if (backlight == 0) {
+            if (task != null) {
+                task.cancel();
+                task = null;
+            }
+        } else {
+            if (task == null) {
+                cz.kruch.track.ui.Desktop.timer.scheduleAtFixedRate(task = new DeviceControl(), REFRESH_PERIOD, REFRESH_PERIOD);
+            }
+        }
     }
 
     /** @Override */

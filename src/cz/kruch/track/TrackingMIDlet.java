@@ -22,7 +22,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
     private static String platform, flags;
 
     public static String version;
-    public static boolean jsr82, jsr120, jsr135, jsr179, jsr234, motorola179, comm;
+    public static boolean jsr82, jsr120, jsr135, jsr179, jsr234, motorola179, comm, nokiaui14;
     public static boolean sonyEricsson, sonyEricssonEx, nokia, siemens, lg, motorola, samsung, sonim;
     public static boolean j9, jbed, intent, palm, rim, symbian, s60nd, s60rdfp2, uiq, brew, android;
     public static boolean sxg75, a780, s65;
@@ -163,22 +163,26 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         
 //#ifdef __ALL__
 
-        /* try Motorola-specific Location API */
-        try {
-            Class.forName("com.motorola.location.PositionSource");
-            motorola179 = true;
-        } catch (Throwable t) {
-        }
-
-        /* detect UIQ */
-        if (sonyEricssonEx) {
+        if (nokia) { /* Nokia UI API 1.4+ */
+            try {
+                nokiaui14 = Float.parseFloat(System.getProperty("com.nokia.mid.ui.version")) >= 1.4F;
+            } catch (Throwable t) {
+            }
+        } else if (sonyEricssonEx) { /* detect UIQ */
             if (symbian) {
                 uiq = true;
             }
-        } else { /* detect Jbed */
+        } else {
+            /* detect Jbed */
             try {
                 Class.forName("com.jbed.io.CharConvUTF8");
                 jbed = true;
+            } catch (Throwable t) {
+            }
+            /* detect Motorola-specific Location API */
+            try {
+                Class.forName("com.motorola.location.PositionSource");
+                motorola179 = true;
             } catch (Throwable t) {
             }
         }

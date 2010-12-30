@@ -128,6 +128,7 @@ public abstract class File {
     }
 
     abstract Enumeration getRoots();
+     
     public abstract Enumeration list() throws IOException;
     /** @deprecated may not work on all platforms */   
     public abstract Enumeration list(String pattern, boolean hidden) throws IOException;

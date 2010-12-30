@@ -22,6 +22,12 @@ final class Jsr75File extends File {
     }
 
     public Enumeration list() throws IOException {
+//#ifdef __ALL__
+        final Enumeration result = ((FileConnection) fc).list("*", true);
+        if (result.hasMoreElements()) {
+            return result;
+        }
+//#endif        
         return ((FileConnection) fc).list();
     }
 

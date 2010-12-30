@@ -507,6 +507,9 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
             // 1.0.4 change
             numericInputHack = din.readBoolean();
 
+            // 1.0.5 change
+            externalConfigBackup = din.readBoolean();
+
         } catch (Exception e) {
         }
 
@@ -627,6 +630,8 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         dout.writeFloat(altCorrection);
         /* since 1.0.4 */
         dout.writeBoolean(numericInputHack);
+        /* since 1.0.5 */
+        dout.writeBoolean(externalConfigBackup);
 
 //#ifdef __LOG__
         if (log.isEnabled()) log.info("configuration updated");

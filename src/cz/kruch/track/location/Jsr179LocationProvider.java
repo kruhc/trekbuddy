@@ -39,33 +39,12 @@ public final class Jsr179LocationProvider
 
     public int start() throws LocationException {
         try {
-            // prepare criteria
+            // get listener params
             CharArrayTokenizer tokenizer = new CharArrayTokenizer();
             tokenizer.init(Config.getLocationTimings(Config.LOCATION_PROVIDER_JSR179), false);
             interval = tokenizer.nextInt();
             timeout = tokenizer.nextInt();
             maxage = tokenizer.nextInt();
-            tokenizer = null; // gc hint
-
-            // common criteria
-            final javax.microedition.location.Criteria criteria = new javax.microedition.location.Criteria();
-            criteria.setAltitudeRequired(true); /* may delay getting valid location? */
-            criteria.setSpeedAndCourseRequired(true);
-            criteria.setPreferredPowerConsumption(Config.powerUsage);
-            criteria.setCostAllowed(Config.assistedGps);
-
-            // init provider
-            impl = javax.microedition.location.LocationProvider.getInstance(criteria);
-            if (impl == null) {
-                impl = javax.microedition.location.LocationProvider.getInstance(null);
-                setThrowable(new LocationException("Default criteria used"));
-            }
-            if (impl == null) {
-                throw new LocationException(Resources.getString(Resources.DESKTOP_MSG_NO_PROVIDER_INSTANCE));
-            }
-
-        } catch (LocationException e) {
-            throw e;
         } catch (Exception e) {
             throw new LocationException(e);
         }
@@ -84,6 +63,23 @@ public final class Jsr179LocationProvider
         baby();
 
         try {
+            // common criteria
+            final javax.microedition.location.Criteria criteria = new javax.microedition.location.Criteria();
+            criteria.setAltitudeRequired(true); /* may delay getting valid location? */
+            criteria.setSpeedAndCourseRequired(true);
+            criteria.setPreferredPowerConsumption(Config.powerUsage);
+            criteria.setCostAllowed(Config.assistedGps);
+
+            // init provider
+            impl = javax.microedition.location.LocationProvider.getInstance(criteria);
+            if (impl == null) {
+                impl = javax.microedition.location.LocationProvider.getInstance(null);
+                setThrowable(new LocationException("Default criteria used"));
+            }
+            if (impl == null) {
+                throw new LocationException(Resources.getString(Resources.DESKTOP_MSG_NO_PROVIDER_INSTANCE));
+            }
+
             // set listener
             impl.setLocationListener(this, interval, timeout, maxage);
 
@@ -147,7 +143,7 @@ public final class Jsr179LocationProvider
             if (extra != null) {
                 extraSat = extraFix = 0;
                 try {
-                    parseNmea(raw, extra);
+                    parseNmea(extra);
                     if (extraSat > 0) {
                         sat = extraSat;
                     } else {
@@ -218,7 +214,8 @@ public final class Jsr179LocationProvider
         }
     }
 
-    private void parseNmea(final char[] line, final String extra) throws Exception {
+    private void parseNmea(final String extra) throws Exception {
+        final char[] line = raw;
         final int length = extra.length();
         int start = 0;
         int idx = extra.indexOf("$GP");

@@ -2412,7 +2412,7 @@ public final class Desktop implements CommandListener,
 
                 // paused?
                 if (Desktop.paused) {
-                    Desktop.this.drawPause(g);
+                    Desktop.drawPause(g);
                 }
 
                 // flush offscreen buffer

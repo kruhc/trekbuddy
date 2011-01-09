@@ -169,7 +169,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
             } catch (Throwable t) {
             }
         } else if (sonyEricssonEx) { /* detect UIQ */
-            if (symbian) {
+            if (symbian && !s60rdfp2) {
                 uiq = true;
             }
         } else {

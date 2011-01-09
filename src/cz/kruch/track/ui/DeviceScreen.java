@@ -10,6 +10,8 @@ import javax.microedition.lcdui.Graphics;
 import javax.microedition.lcdui.Canvas;
 import javax.microedition.lcdui.Command;
 import javax.microedition.lcdui.CommandListener;
+import javax.microedition.lcdui.Font;
+import javax.microedition.lcdui.Display;
 import javax.microedition.midlet.MIDlet;
 
 import java.util.TimerTask;
@@ -52,6 +54,21 @@ final class DeviceScreen extends GameCanvas implements Runnable {
     // touch ops
     private volatile boolean touchMenuActive, cmdExec;
 
+//#ifdef __ALL__
+
+    // soft menu
+    private volatile boolean softMenuActive;
+    private Command[] commands;
+    private int selectedOptionIndex;
+    private int colorBackSel, colorBackUnsel, colorForeSel, colorForeUnsel;
+    private final int PADDING_X = 8;
+    private final int PADDING_Y = 2;
+    private final int BORDER = 0;
+    private final int LEFT_SOFTKEY_CODE = -6;
+    private final int RIGHT_SOFTKEY_CODE = -7;
+
+//#endif
+
     // movement filter
     private int gx, gy;
     private boolean inMove;
@@ -71,6 +88,22 @@ final class DeviceScreen extends GameCanvas implements Runnable {
         } else {
             this.hasRepeatEvents = super.hasRepeatEvents();
         }
+//#ifdef __ALL__
+        if (Config.uiNoCommands) {
+            this.commands = new Command[10];
+            if (Config.safeColors) {
+                this.colorBackSel = 0x000000ff;
+                this.colorBackUnsel = 0x00ffffff;
+                this.colorForeSel = 0x00ffffff;
+                this.colorForeUnsel = 0x0;
+            } else {
+                this.colorBackSel = Desktop.display.getColor(Display.COLOR_HIGHLIGHTED_BACKGROUND);
+                this.colorBackUnsel = Desktop.display.getColor(Display.COLOR_BACKGROUND);
+                this.colorForeSel = Desktop.display.getColor(Display.COLOR_HIGHLIGHTED_FOREGROUND);
+                this.colorForeUnsel = Desktop.display.getColor(Display.COLOR_FOREGROUND);
+            }
+        }
+//#endif
     }
 
     /** @Override */
@@ -91,14 +124,6 @@ final class DeviceScreen extends GameCanvas implements Runnable {
             graphics = super.getGraphics();
         }
         return graphics;
-    }
-
-    /** @Override for touch menu hook */
-    public void flushGraphics() {
-        if (touchMenuActive) {
-            drawTouchMenu();
-        }
-        super.flushGraphics();
     }
 
     /** @Override for broken device handling */
@@ -124,18 +149,26 @@ final class DeviceScreen extends GameCanvas implements Runnable {
 
     /** @Override */
     public void addCommand(Command command) {
-        if (!Config.uiNoCommands) {
-            if (command != null) {
+        if (command != null) {
+            if (!Config.uiNoCommands) {
                 super.addCommand(command);
+//#ifdef __ALL__
+            } else if (commands != null) {
+                commands[command.getPriority()] = command;
+//#endif
             }
         }
     }
 
     /** @Override */
     public void removeCommand(Command command) {
-        if (!Config.uiNoCommands) {
-            if (command != null) {
+        if (command != null) {
+            if (!Config.uiNoCommands) {
                 super.removeCommand(command);
+//#ifdef __ALL__
+            } else if (commands != null) {
+                commands[command.getPriority()] = null;
+//#endif
             }
         }
     }
@@ -225,16 +258,16 @@ final class DeviceScreen extends GameCanvas implements Runnable {
             touchMenuActive = false;
             cmdExec = true;
 
+            // update screen anyway
+            delegate.update(Desktop.MASK_SCREEN);
+
             // find simulated command
             final Command cmd = pointerToCmd(x, y);
             
             // run the command
             if (cmd != null) {
-                delegate.commandAction(cmd, this);
+                callSerially(new CommandTask(cmd));
             }
-
-            // update screen anyway
-            delegate.update(Desktop.MASK_SCREEN);
 
         } else { // no, detect action
 
@@ -272,13 +305,6 @@ final class DeviceScreen extends GameCanvas implements Runnable {
             return;
         }
 
-        // end of drag?
-        if (_getInMove()) {
-            _setInMove(false);
-            delegate.handleStall(x, y);
-            return;
-        }
-
         // detect action
         final int key = pointerToKey(x, y);
 
@@ -293,8 +319,8 @@ final class DeviceScreen extends GameCanvas implements Runnable {
                 // set "touch menu on" flag
                 touchMenuActive = true;
 
-                // repaint
-                flushGraphics();
+                // show the menu
+                drawTouchMenu();
 
             } else {
 
@@ -305,9 +331,14 @@ final class DeviceScreen extends GameCanvas implements Runnable {
 
         } else {
 
-            // usual handling
-            keyReleased(key);
-
+            // end of drag?
+            if (_getInMove()) {
+                _setInMove(false);
+                delegate.handleStall(x, y);
+            } else {
+                // usual handling
+                keyReleased(key);
+            }
         }
     }
 
@@ -342,7 +373,87 @@ final class DeviceScreen extends GameCanvas implements Runnable {
         if (log.isEnabled()) log.info("keyPressed");
 //#endif
 
+//#ifdef __ALL__
+
+        // using soft menu?
+        if (commands != null) {
+
+            // handle soft menu action
+            if (softMenuActive) {
+
+                // hide menu
+                if (i == RIGHT_SOFTKEY_CODE) {
+
+                    // repaint view
+                    softMenuActive = false;
+                    delegate.update(Desktop.MASK_SCREEN);
+
+                } else {
+
+                    // get game action
+                    int action = 0;
+                    try {
+                        action = getGameAction(i);
+                    } catch (IllegalArgumentException e) {
+                        // ignore
+                    }
+
+                    // handle action
+                    switch (action) {
+                        case UP: {
+                            // go up
+                            selectedOptionIndex--;
+                            if (selectedOptionIndex < 0) {
+                                selectedOptionIndex = getCommandsCount() - 1;
+                            }
+                            // repaint
+                            drawSoftMenu();
+                        } break;
+                        case DOWN: {
+                            // go down
+                            selectedOptionIndex++;
+                            if (selectedOptionIndex >= getCommandsCount()) {
+                                selectedOptionIndex = 0;
+                            }
+                            // repaint
+                            drawSoftMenu();
+                        } break;
+                        case FIRE: {
+                            // hide menu
+                            softMenuActive = false;
+                            // update screen
+                            delegate.update(Desktop.MASK_SCREEN);
+                            // get selected
+                            final Command cmd = indexToCmd();
+                            // run the command
+                            if (cmd != null) {
+                                callSerially(new CommandTask(cmd));
+                            }
+                        } break;
+                    }
+                }
+
+                return;
+
+            } else {
+
+                // open soft menu
+                if (i == LEFT_SOFTKEY_CODE) {
+
+                    // show the menu
+                    selectedOptionIndex = 0;
+                    softMenuActive = true;
+                    drawSoftMenu(); // TODO if (commands != null && commandsCount != 0) { ... }
+
+                    return;
+                }
+            }
+        }
+
+//#endif
+
 //#ifdef __RIM__
+
         /* trackball rolling? */
         if (i == Canvas.UP || i == Canvas.DOWN || i == Canvas.LEFT || i == Canvas.RIGHT) {
             final int now = _getInKey();
@@ -354,6 +465,7 @@ final class DeviceScreen extends GameCanvas implements Runnable {
             }
             return;
         }
+
 //#endif
 
         // save key
@@ -468,11 +580,118 @@ final class DeviceScreen extends GameCanvas implements Runnable {
         }
     }
 
+//#ifdef __ALL__
+
+    private int getCommandsCount() {
+        int count = 0;
+        final Command[] commands = this.commands;
+        for (int N = commands.length, i = 0; i < N; i++) {
+            if (commands[i] != null) {
+                count++;
+            }
+        }
+        return count;
+    }
+
+    private Command indexToCmd() {
+        int count = selectedOptionIndex;
+        final Command[] commands = this.commands;
+        for (int N = commands.length, i = 0; i < N; i++) {
+            if (commands[i] != null) {
+                if (count == 0) {
+                    return commands[i];
+                }
+                count--;
+            }
+        }
+        throw new IllegalArgumentException("Invalid index: " + selectedOptionIndex);
+    }
+
+    private void drawSoftMenu() {
+        // get dimensions
+        final Font defaultFont = Font.getDefaultFont();
+        final Font barFont = Font.getFont(Font.FACE_SYSTEM, Font.STYLE_PLAIN, Font.SIZE_SMALL);
+        final Font barBoldFont = Font.getFont(Font.FACE_SYSTEM, Font.STYLE_BOLD, Font.SIZE_MEDIUM);
+        final Font itemFont = Font.getFont(defaultFont.getFace(), Font.STYLE_PLAIN, Font.SIZE_LARGE);
+        final int barHeight = barBoldFont.getHeight() + 2 * PADDING_Y;
+        final int fontHeight = itemFont.getHeight();
+        final int lineHeight = fontHeight + 2 * PADDING_Y;
+        final int width = getWidth();
+        final int height = getHeight();
+
+        // draw menu bar
+        final Graphics g = getGraphics();
+        g.setColor(colorBackUnsel);
+        g.fillRect(0, height - barHeight, width, barHeight);
+        g.setColor(colorForeUnsel);
+        g.setFont(barBoldFont);
+        final String selectLabel = Resources.getString(Resources.DESKTOP_CMD_SELECT);
+        g.drawString(selectLabel,
+                     (width - barBoldFont.stringWidth(selectLabel)) / 2, height - barHeight + PADDING_Y,
+                     Graphics.LEFT | Graphics.TOP);
+        g.setFont(barFont);
+        g.drawString(Resources.getString(Resources.CMD_CANCEL),
+                     width - PADDING_X, height - PADDING_Y,
+                     Graphics.RIGHT | Graphics.BOTTOM);
+
+        // local ref
+        final Command[] commands = this.commands;
+
+        // check out the max width of a menu (for the specified menu font)
+        int menuMaxWidth = 0;
+        int menuMaxHeight = 0;
+
+        // we'll simply check each option and find the maximal width
+        for (int N = commands.length, i = 0; i < N; i++) {
+            if (commands[i] != null) {
+                final int currentWidth = itemFont.stringWidth(commands[i].getLabel());
+                if (currentWidth > menuMaxWidth) {
+                    menuMaxWidth = currentWidth;
+                }
+                menuMaxHeight += lineHeight;
+            }
+        }
+        menuMaxWidth += 2 * PADDING_X;
+
+        // draw menu items
+        int active = 0;
+        int menuOptionX = BORDER + PADDING_X;
+        int menuOptionY = height - menuMaxHeight - barHeight;
+        g.setColor(colorBackUnsel);
+        g.fillRect(BORDER, menuOptionY, menuMaxWidth, menuMaxHeight);
+        g.setFont(itemFont);
+        for (int N = commands.length, i = 0; i < N; i++) {
+            if (commands[i] != null) {
+                final int fgColor;
+                if (active != selectedOptionIndex) {
+                    fgColor = colorForeUnsel;
+                } else {
+                    g.setColor(colorBackSel);
+                    g.fillRoundRect(BORDER + 2, menuOptionY + 2, menuMaxWidth - 2 - 2, lineHeight - 2, 7, 7);
+                    fgColor = colorForeSel;
+                }
+                g.setColor(fgColor);
+                g.drawString(commands[i].getLabel(),
+                             menuOptionX, menuOptionY + PADDING_Y,
+                             Graphics.LEFT | Graphics.TOP);
+                menuOptionY += lineHeight;
+                active++;
+            }
+        }
+
+        // paint
+        flushGraphics();
+    }
+
+//#endif    
+
     private void drawTouchMenu() {
+        // paint buttons
         final int dy = getHeight() / 17;
         final int bh = 3 * dy;
         final int bw = (getWidth() - 3 * dy) / 2;
         final Graphics g = getGraphics();
+        final Desktop delegate = this.delegate;
         final int c = g.getColor();
         g.setFont(Desktop.fontBtns);
         if (delegate.isTracking()) {
@@ -494,6 +713,9 @@ final class DeviceScreen extends GameCanvas implements Runnable {
         drawButton(g, delegate.cmdInfo, dy + bw + dy, 3 * dy + 2 * bh, bw, bh);
         drawButton(g, delegate.cmdExit, dy + bw + dy, 4 * dy + 3 * bh, bw, bh);
         g.setColor(c);
+
+        // paint
+        flushGraphics();
     }
 
     private void drawButton(final Graphics g, final Command cmd,
@@ -512,6 +734,7 @@ final class DeviceScreen extends GameCanvas implements Runnable {
     private Command pointerToCmd(final int x, final int y) {
         final int i = y / (getHeight() / 17);
         final int w = getWidth();
+        final Desktop delegate = this.delegate;
 
         Command cmd = null;
 
@@ -670,6 +893,19 @@ final class DeviceScreen extends GameCanvas implements Runnable {
     private void _setInMove(final boolean b) {
         synchronized (this) {
             inMove = b;
+        }
+    }
+
+    private final class CommandTask implements Runnable {
+
+        private Command cmd;
+
+        public CommandTask(Command cmd) {
+            this.cmd = cmd;
+        }
+
+        public void run() {
+            DeviceScreen.this.delegate.commandAction(cmd, DeviceScreen.this);
         }
     }
 }

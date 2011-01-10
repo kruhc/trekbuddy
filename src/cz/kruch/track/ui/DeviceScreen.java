@@ -117,6 +117,18 @@ final class DeviceScreen extends GameCanvas implements Runnable {
         eventing.setActive(active = true);
     }
 
+    /** @Override */
+    public final void flushGraphics() {
+        if (touchMenuActive) {
+            drawTouchMenu();
+//#ifdef __ALL__
+        } else if (softMenuActive) {
+            drawSoftMenu();
+//#endif            
+        }
+        super.flushGraphics();
+    }
+
     /** @Override to make <code>Graphics</code> publicly accessible and handle weird states */
     public Graphics getGraphics() {
         if (graphics == null || cz.kruch.track.TrackingMIDlet.s65) {
@@ -320,7 +332,7 @@ final class DeviceScreen extends GameCanvas implements Runnable {
                 touchMenuActive = true;
 
                 // show the menu
-                drawTouchMenu();
+                flushGraphics();
 
             } else {
 
@@ -407,7 +419,7 @@ final class DeviceScreen extends GameCanvas implements Runnable {
                                 selectedOptionIndex = getCommandsCount() - 1;
                             }
                             // repaint
-                            drawSoftMenu();
+                            flushGraphics();
                         } break;
                         case DOWN: {
                             // go down
@@ -416,7 +428,7 @@ final class DeviceScreen extends GameCanvas implements Runnable {
                                 selectedOptionIndex = 0;
                             }
                             // repaint
-                            drawSoftMenu();
+                            flushGraphics();
                         } break;
                         case FIRE: {
                             // hide menu
@@ -443,7 +455,7 @@ final class DeviceScreen extends GameCanvas implements Runnable {
                     // show the menu
                     selectedOptionIndex = 0;
                     softMenuActive = true;
-                    drawSoftMenu(); // TODO if (commands != null && commandsCount != 0) { ... }
+                    flushGraphics();
 
                     return;
                 }
@@ -486,6 +498,46 @@ final class DeviceScreen extends GameCanvas implements Runnable {
     protected void keyRepeated(int i) {
 //#ifdef __LOG__
         if (log.isEnabled()) log.info("keyRepeated");
+//#endif
+
+//#ifdef __ALL__
+
+        // fast movement in menu?
+        if (softMenuActive) {
+
+            // get game action
+            int action = 0;
+            try {
+                action = getGameAction(i);
+            } catch (IllegalArgumentException e) {
+                // ignore
+            }
+
+            // handle action
+            switch (action) {
+                case UP: {
+                    // go up
+                    selectedOptionIndex--;
+                    if (selectedOptionIndex < 0) {
+                        selectedOptionIndex = getCommandsCount() - 1;
+                    }
+                    // repaint
+                    flushGraphics();
+                } break;
+                case DOWN: {
+                    // go down
+                    selectedOptionIndex++;
+                    if (selectedOptionIndex >= getCommandsCount()) {
+                        selectedOptionIndex = 0;
+                    }
+                    // repaint
+                    flushGraphics();
+                } break;
+            }
+
+            return;
+        }
+
 //#endif
 
         // keymap
@@ -678,9 +730,6 @@ final class DeviceScreen extends GameCanvas implements Runnable {
                 active++;
             }
         }
-
-        // paint
-        flushGraphics();
     }
 
 //#endif    
@@ -713,9 +762,6 @@ final class DeviceScreen extends GameCanvas implements Runnable {
         drawButton(g, delegate.cmdInfo, dy + bw + dy, 3 * dy + 2 * bh, bw, bh);
         drawButton(g, delegate.cmdExit, dy + bw + dy, 4 * dy + 3 * bh, bw, bh);
         g.setColor(c);
-
-        // paint
-        flushGraphics();
     }
 
     private void drawButton(final Graphics g, final Command cmd,

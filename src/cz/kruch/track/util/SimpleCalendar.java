@@ -34,13 +34,13 @@ public final class SimpleCalendar {
     public void setTime(long millis) {
         if (date != null) {
             final int dt = (int) (millis - last) / 1000;
+            final int h = dt / 3600;
+            final int m = (dt % 3600) / 60;
+            final int s = (dt % 3600) % 60;
+            int hour = fieldHour;
+            int minute = fieldMin;
+            int second = fieldSec;
             if (dt > 0) {
-                final int h = dt / 3600;
-                final int m = (dt % 3600) / 60;
-                final int s = (dt % 3600) % 60;
-                int hour = fieldHour;
-                int minute = fieldMin;
-                int second = fieldSec;
                 second += s;
                 if (second > 59) {
                     second -= 60;
@@ -57,19 +57,35 @@ public final class SimpleCalendar {
                     setTime(millis);
                     return;
                 }
-                fieldHour = hour;
-                fieldMin = minute;
-                fieldSec = second;
-                last += (h * 3600 + m * 60 + s) * 1000;
+            } else if (dt < 0) {
+                second += s;
+                if (second < 0) {
+                    second += 60;
+                    minute--;
+                }
+                minute += m;
+                if (minute < 0) {
+                    minute += 60;
+                    hour--;
+                }
+                hour += h;
+                if (hour < 0) {
+                    date = null;
+                    setTime(millis);
+                    return;
+                }
             }
+            fieldHour = hour;
+            fieldMin = minute;
+            fieldSec = second;
         } else {
             date = new Date(millis);
             calendar.setTime(date);
             fieldHour = calendar.get(Calendar.HOUR_OF_DAY);
             fieldMin = calendar.get(Calendar.MINUTE);
             fieldSec = calendar.get(Calendar.SECOND);
-            last = (millis / 1000) * 1000;
         }
+        last = (millis / 1000) * 1000; // TODO why round?
     }
 
     public int get(final int field) {

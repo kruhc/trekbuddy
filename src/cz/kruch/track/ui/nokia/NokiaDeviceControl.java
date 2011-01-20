@@ -11,7 +11,7 @@ class NokiaDeviceControl extends DeviceControl {
 
     protected final int[] values;
 
-    private int last;
+    protected int last;
 
     NokiaDeviceControl() {
         this.name = "Nokia";
@@ -52,16 +52,20 @@ class NokiaDeviceControl extends DeviceControl {
         setLights();
     }
 
-    protected void setLights() {
-        com.nokia.mid.ui.DeviceControl.setLights(0, values[backlight]);
-    }
-
     private void invertLevel() {
         if (backlight == 0) {
             backlight = last;
         } else {
             backlight = 0;
         }
+        handleInvert();
+    }
+
+    protected void setLights() {
+        com.nokia.mid.ui.DeviceControl.setLights(0, values[backlight]);
+    }
+
+    protected void handleInvert() {
         setLights();
     }
 }

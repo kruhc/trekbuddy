@@ -1151,7 +1151,12 @@ final class ComputerView extends View
                                                 final double vmg = spdavgShort/*valuesFloat[VALUE_SPD]*/ * (Math.cos(Math.toRadians(valuesFloat[VALUE_COURSE] - azi)));
                                                 if (vmg > 0F) {
                                                     final long dt = (long) (1000 * (dist / (vmg / 3.6F)));
-                                                    final long eta = timestamp + (dt < 0F ? 2 * -dt : dt);
+                                                    final long eta;
+                                                    if (dt >= 0F) {
+                                                        eta = timestamp + dt;
+                                                    } else {
+                                                        eta = timestamp + 2 * -dt;
+                                                    }
                                                     ETA_CALENDAR.setTime(eta);
                                                     printTime(sb, ETA_CALENDAR, units);
                                                 } else {

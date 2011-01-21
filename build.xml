@@ -201,7 +201,7 @@
         <antcall target="a.pack" inheritall="true"/>
         <antcall target="obfuscate${use.proguard}" inheritall="true"/>
         <antcall target="preverify" inheritall="true"/>
-        <antcall target="dist" inheritall="true"/>
+        <antcall target="dist.symbian" inheritall="true"/>
         <antcall target="sign.and.update" inheritall="true"/>
     </target>
 
@@ -995,6 +995,35 @@
             <attribute name="MIDlet-Icon" value="/resources/icon.png"/>
             <attribute name="${permission.attribute}" value="javax.microedition.io.Connector.file.read,javax.microedition.io.Connector.file.write,javax.microedition.io.Connector.bluetooth.client,javax.microedition.location.Location,javax.microedition.media.control.VideoControl.getSnapshot,javax.microedition.io.Connector.sms,javax.wireless.messaging.sms.receive,javax.wireless.messaging.sms.send,javax.microedition.io.Connector.comm,javax.microedition.io.Connector.cbs,javax.wireless.messaging.cbs.receive,javax.microedition.io.Connector.socket,javax.microedition.io.PushRegistry"/>
             <attribute name="Content-Folder" value="Applications"/>
+            <midlet name="${name}" class="cz.kruch.track.TrackingMIDlet" icon="/resources/icon.png"/>
+        </wtkjad>
+        <fixcrlf srcdir="dist/${vendor.dir}/${dist.dir}"
+                 eol="crlf" eof="remove" encoding="UTF-8" 
+                 includes="trekbuddy${suffix}.jad"/>
+    </target>
+
+    <target name="dist.symbian">
+        <delete>
+            <fileset dir="dist/${vendor.dir}/${dist.dir}" includes="**/*.jar,**/*.jad"/>
+        </delete>
+        <copy file="tmp/preverified/trekbuddy${suffix}-obfuscated.jar"
+              tofile="dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jar"
+              verbose="true"/>
+        <wtkjad jadfile="dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad"
+                jarfile="dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jar"
+                config="CLDC-${wtk.cldc.version}"
+                profile="MIDP-${wtk.midp.version}"
+                name="${name}"
+                vendor="${vendor}"
+                version="${version}">
+            <attribute name="MicroEdition-Configuration" value="CLDC-${wtk.cldc.version}"/>
+            <attribute name="MicroEdition-Profile" value="MIDP-${wtk.midp.version}"/>
+            <attribute name="MIDlet-Data-Size" value="4096"/>
+            <attribute name="MIDlet-Description" value="${description}"/>
+            <attribute name="MIDlet-Info-URL" value="http://www.trekbuddy.net"/>
+            <attribute name="MIDlet-Icon" value="/resources/icon.png"/>
+            <attribute name="${permission.attribute}" value="javax.microedition.io.Connector.file.read,javax.microedition.io.Connector.file.write,javax.microedition.io.Connector.bluetooth.client,javax.microedition.location.Location,javax.microedition.media.control.VideoControl.getSnapshot,javax.microedition.io.Connector.sms,javax.wireless.messaging.sms.receive,javax.wireless.messaging.sms.send,javax.microedition.io.Connector.comm,javax.microedition.io.Connector.cbs,javax.wireless.messaging.cbs.receive,javax.microedition.io.Connector.socket,javax.microedition.io.PushRegistry"/>
+            <attribute name="Content-Folder" value="Applications"/>
             <attribute name="Nokia-MIDlet-Category" value="Application"/>
             <attribute name="Nokia-MIDlet-No-Exit" value="true"/>
             <attribute name="Nokia-MIDlet-S60-Selection-Key-Compatibility" value="true"/>
@@ -1003,7 +1032,7 @@
             <midlet name="${name}" class="cz.kruch.track.TrackingMIDlet" icon="/resources/icon.png"/>
         </wtkjad>
         <fixcrlf srcdir="dist/${vendor.dir}/${dist.dir}"
-                 eol="crlf" eof="remove" encoding="UTF-8" 
+                 eol="crlf" eof="remove" encoding="UTF-8"
                  includes="trekbuddy${suffix}.jad"/>
     </target>
 

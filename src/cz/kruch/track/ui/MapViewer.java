@@ -1239,20 +1239,15 @@ final class MapViewer {
     }
 
     int nextCrosshair() {
-        final int mask;
-
         if (star % 2 == 0) {
+            li++;
+        } else {
             ci++;
             if ((ci * crosshairSize) == NavigationScreens.crosshairs.getWidth()) {
                 ci = 0;
             }
-            mask = Desktop.MASK_OSD | (cz.kruch.track.TrackingMIDlet.nokia ? Desktop.MASK_CROSSHAIR : Desktop.MASK_SCREEN);
-        } else {
-            li++;
-            mask = Desktop.MASK_OSD | Desktop.MASK_MAP;
         }
-
-        return mask;
+        return Desktop.MASK_SCREEN;
     }
 
 /*

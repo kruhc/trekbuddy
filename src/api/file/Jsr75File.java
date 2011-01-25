@@ -82,4 +82,8 @@ final class Jsr75File extends File {
             traverse(path);
         }
     }
+
+    public void setHidden(boolean hidden) throws IOException {
+        ((FileConnection) fc).setHidden(hidden);
+    }
 }

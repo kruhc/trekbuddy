@@ -123,6 +123,10 @@ public abstract class File {
         }
     }
 
+    public void setHidden(boolean hidden)throws IOException {
+        // support only in JSR-75 impl
+    }
+
     public static boolean isBrokenTraversal() {
         return fsType == FS_SXG75 || fsType == FS_MOTOROLA || fsType == FS_MOTOROLA1000;
     }

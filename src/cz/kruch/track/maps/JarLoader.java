@@ -1,18 +1,4 @@
-/*
- * Copyright 2006-2007 Ales Pour <kruhc@seznam.cz>.
- * All Rights Reserved.
- * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
- *
- * This code is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License version 2 only, as
- * published by the Free Software Foundation.
- *
- * This code is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
- * version 2 for more details (a copy is included in the LICENSE file that
- * accompanied this code).
- */
+// @LICENSE@
 
 package cz.kruch.track.maps;
 
@@ -30,7 +16,10 @@ final class JarLoader extends Map.Loader /*implements Atlas.Loader*/ {
     private static final String RESOURCES_SET_DIR = "/resources/set/";
     private static final String RESOURCES_SET_FILE = "/resources/world.set";
 
+    private final StringBuffer snsb;
+
     JarLoader() {
+        this.snsb = new StringBuffer(64);
     }
 
     void loadMeta() throws IOException {
@@ -60,7 +49,7 @@ final class JarLoader extends Map.Loader /*implements Atlas.Loader*/ {
             } catch (InvalidMapException e) {
                 throw e;
             } catch (IOException e) {
-                throw new InvalidMapException("Resource '/resources/world.gmi': " + e.toString());
+                throw new InvalidMapException("Corrupted built-in map: " + e.toString());
             }
 
 //#ifdef __LOG__
@@ -80,27 +69,17 @@ final class JarLoader extends Map.Loader /*implements Atlas.Loader*/ {
 //#endif
         } finally {
 
-            // close stream
-            if (in != null) {
-                // check for Palm - it resets it :-(
-                if (!cz.kruch.track.TrackingMIDlet.palm) {
-                    try {
-                        in.close();
-                    } catch (IOException e) {
-                        // ignore
-                    }
+            // check for Palm - it resets it :-(
+            if (!cz.kruch.track.TrackingMIDlet.palm) {
+                try {
+                    in.close();
+                } catch (Exception e) { // NPE or IOE
+                    // ignore
                 }
-            }
-
-            // close reader (closes the stream)
-            if (reader != null) {
-                // check for Palm - it resets it :-(
-                if (!cz.kruch.track.TrackingMIDlet.palm) {
-                    try {
-                        reader.close();
-                    } catch (IOException e) {
-                        // ignore
-                    }
+                try {
+                    reader.close();
+                } catch (Exception e) { // NPE or IOE
+                    // ignore
                 }
             }
         }
@@ -108,7 +87,7 @@ final class JarLoader extends Map.Loader /*implements Atlas.Loader*/ {
 
     void loadSlice(final Slice slice) throws IOException {
         // path sb
-        final StringBuffer sb = new StringBuffer(32);
+        final StringBuffer sb = snsb.delete(0, snsb.length());
 
         // construct slice path
         sb.append(RESOURCES_SET_DIR).append(basename);
@@ -136,7 +115,7 @@ final class JarLoader extends Map.Loader /*implements Atlas.Loader*/ {
             if (!cz.kruch.track.TrackingMIDlet.palm) {
                 try {
                     buffered.close();
-                } catch (IOException e) {
+                } catch (Exception e) {
                     // ignore
                 }
             }

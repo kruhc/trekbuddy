@@ -789,9 +789,12 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
 //#endif
         File dir = null;
         try {
-            dir = File.open(Config.dataDir);
+            dir = File.open(Config.dataDir, Connector.READ_WRITE);
             dataDirAccess = true;
             dataDirExists = dir.exists();
+            if (dataDirExists) {
+                dir.setHidden(true);
+            }
         } catch (Exception e) { // IOE or SE
             // ignore
         } finally {
@@ -837,6 +840,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
             try {
                 datadir = File.open(getDataDir(), Connector.WRITE);
                 datadir.mkdir();
+                datadir.setHidden(true);
                 dataDirExists = true;
             } catch (Exception e) {
                 cz.kruch.track.ui.Desktop.showError("Failed to create " + getDataDir().substring(8 /* "file:///".length() */),

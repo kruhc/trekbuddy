@@ -61,11 +61,11 @@ final class DeviceScreen extends GameCanvas implements Runnable {
     private Command[] commands;
     private int selectedOptionIndex;
     private int colorBackSel, colorBackUnsel, colorForeSel, colorForeUnsel;
-    private final int PADDING_X = 8;
-    private final int PADDING_Y = 2;
-    private final int BORDER = 0;
-    private final int LEFT_SOFTKEY_CODE = -6;
-    private final int RIGHT_SOFTKEY_CODE = -7;
+    private static final int PADDING_X = 8;
+    private static final int PADDING_Y = 2;
+    private static final int BORDER = 0;
+    private static final int LEFT_SOFTKEY_CODE = -6;
+    private static final int RIGHT_SOFTKEY_CODE = -7;
 
 //#endif
 

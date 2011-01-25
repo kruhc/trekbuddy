@@ -284,7 +284,7 @@ public final class Desktop implements CommandListener,
         consoleInit(g);
 
         // show copyright(s)
-        consoleShow(g, lineY, "TrekBuddy \u00a9 2010 KrUcH");
+        consoleShow(g, lineY, "TrekBuddy \u00a9 2011 KrUcH");
         lineY += lineHeight;
         final String lc = Resources.getString(Resources.BOOT_LOCAL_COPY);
         if (lc != null && lc.length() > 0) {

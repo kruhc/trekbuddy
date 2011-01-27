@@ -99,16 +99,16 @@ public final class NavigationScreens {
 
     public static void initialize() throws IOException {
         // init image cache
-        crosshairs = createImage("/resources/crosshairs.png");
+        crosshairs = Image.createImage("/resources/crosshairs.png");
         arrows = new Image[] {
-            createImage("/resources/arrows.png"),
-            createImage("/resources/naviws.png")
+            Image.createImage("/resources/arrows.png"),
+            Image.createImage("/resources/naviws.png")
         };
-        pois = createImage("/resources/pois.png");
-        waypoint = createImage("/resources/wpt.png");
-        providers = createImage("/resources/bullets.png");
-        nlock = createImage("/resources/nlock.png");
-        backlight = createImage("/resources/bulb.png");
+        pois = Image.createImage("/resources/pois.png");
+        waypoint = Image.createImage("/resources/wpt.png");
+        providers = Image.createImage("/resources/bullets.png");
+        nlock = Image.createImage("/resources/nlock.png");
+        backlight = Image.createImage("/resources/bulb.png");
 /*
         stores = new Image[] {
             createImage("/resources/icon.store.xml.png"),
@@ -225,42 +225,6 @@ public final class NavigationScreens {
             } catch (Exception e) { // IOE or NPE
                 // ignore
             }
-        }
-
-        return image;
-    }
-
-    public static Image createImage(final InputStream in) throws IOException {
-        if (in != null) {
-            final Image image = Image.createImage(in);
-            if (Config.forcedGc) {
-                System.gc(); // conditional
-            }
-
-            return image;
-        }
-
-        throw new IllegalArgumentException("Image stream is null");
-    }
-
-    private static Image createImage(final String res) throws IOException {
-        InputStream in = null;
-        final Image image;
-
-        try {
-            image = Image.createImage(in = NavigationScreens.class.getResourceAsStream(res));
-        } finally {
-            if (in != null) {
-                try {
-                    in.close();
-                } catch (IOException e) {
-                    // ignore
-                }
-            }
-        }
-
-        if (Config.forcedGc) {
-            System.gc(); // conditional
         }
 
         return image;

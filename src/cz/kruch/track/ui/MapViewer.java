@@ -471,12 +471,6 @@ final class MapViewer {
         return dirty;
     }
 
-    void starTick() {
-        if (wptPositions != null) {
-            star++;
-        }
-    }
-
     void initRoute(Position[] positions) {
         /* synchronized to avoid race condition with render() */
         synchronized (this) {
@@ -1240,7 +1234,9 @@ final class MapViewer {
 
     int nextCrosshair() {
         if (star % 2 == 0) {
-            li++;
+            if (wptPositions != null) {
+                li++;
+            }
         } else {
             ci++;
             if ((ci * crosshairSize) == NavigationScreens.crosshairs.getWidth()) {
@@ -1248,6 +1244,10 @@ final class MapViewer {
             }
         }
         return Desktop.MASK_SCREEN;
+    }
+
+    void starTick() {
+        star++;
     }
 
 /*

@@ -16,6 +16,8 @@ import cz.kruch.track.io.LineReader;
 import cz.kruch.track.ui.NavigationScreens;
 import cz.kruch.track.util.CharArrayTokenizer;
 
+import javax.microedition.lcdui.Image;
+
 /**
  * Packed map and atlas support.
  *
@@ -334,7 +336,7 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
                 tarIn.getNextEntry();
 
                 // read image
-                slice.setImage(NavigationScreens.createImage(tarIn));
+                slice.setImage(Image.createImage(tarIn));
 
             } finally {
 

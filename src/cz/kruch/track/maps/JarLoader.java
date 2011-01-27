@@ -7,6 +7,7 @@ import cz.kruch.track.Resources;
 import cz.kruch.track.util.CharArrayTokenizer;
 import cz.kruch.track.ui.NavigationScreens;
 
+import javax.microedition.lcdui.Image;
 import java.io.IOException;
 import java.io.InputStream;
 
@@ -107,7 +108,7 @@ final class JarLoader extends Map.Loader /*implements Atlas.Loader*/ {
         try {
 
             // read image
-            slice.setImage(NavigationScreens.createImage(buffered.setInputStream(JarLoader.class.getResourceAsStream(url))));
+            slice.setImage(Image.createImage(buffered.setInputStream(JarLoader.class.getResourceAsStream(url))));
 
         } finally {
 

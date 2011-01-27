@@ -329,7 +329,7 @@
         <property name="classpath.preverify" value="${libraryjars}"/>
         <antcall target="clean"/>
         <antcall target="a.pre.emulator"/>
-        <antcall target="compile.standard"/>
+        <antcall target="compile.emulator"/>
         <antcall target="a.pack" inheritall="true"/>
         <antcall target="emulator.obfuscate" inheritall="true"/>
         <move file="tmp/trekbuddy${suffix}.jar"
@@ -502,39 +502,6 @@
                bootclasspathref="bootclasspath.rim50"/>
     </target>
 
-    <target name="compile.android15" depends="remove.nonandroid.src,remove.rim.src">
-        <mkdir dir="tmp/build/classes"/>
-        <mkdir dir="tmp/ant"/>
-        <javac srcdir="tmp/src"
-               destdir="tmp/build/classes"
-               tempdir="tmp/ant"
-               fork="true"
-               target="1.5" source="1.3"
-               bootclasspathref="bootclasspath.android15"/>
-    </target>
-
-    <target name="compile.android16" depends="remove.nonandroid.src,remove.rim.src">
-        <mkdir dir="tmp/build/classes"/>
-        <mkdir dir="tmp/ant"/>
-        <javac srcdir="tmp/src"
-               destdir="tmp/build/classes"
-               tempdir="tmp/ant"
-               fork="true"
-               target="1.5" source="1.3"
-               bootclasspathref="bootclasspath.android16"/>
-    </target>
-
-    <target name="compile.android20" depends="remove.nonandroid.src,remove.rim.src">
-        <mkdir dir="tmp/build/classes"/>
-        <mkdir dir="tmp/ant"/>
-        <javac srcdir="tmp/src"
-               destdir="tmp/build/classes"
-               tempdir="tmp/ant"
-               fork="true"
-               target="1.5" source="1.3"
-               bootclasspathref="bootclasspath.android20"/>
-    </target>
-
     <target name="compile.android" depends="remove.nonandroid.src,remove.rim.src">
         <mkdir dir="tmp/build/classes"/>
         <mkdir dir="tmp/ant"/>
@@ -544,6 +511,17 @@
                fork="true"
                target="1.5" source="1.5"
                bootclasspathref="bootclasspath.android20"/>
+    </target>
+
+    <target name="compile.emulator" depends="remove.symbian.src,remove.rim.src,remove.android.src">
+        <mkdir dir="tmp/build/classes"/>
+        <mkdir dir="tmp/ant"/>
+        <javac srcdir="tmp/src"
+               destdir="tmp/build/classes"
+               tempdir="tmp/ant"
+               fork="true"
+               target="1.1" source="1.3" debug="true"
+               bootclasspathref="bootclasspath.standard"/>
     </target>
 
     <target name="remove.nonstd.src" depends="remove.nonmidp.src,remove.android.src">

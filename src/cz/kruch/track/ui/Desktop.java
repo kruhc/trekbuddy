@@ -155,7 +155,7 @@ public final class Desktop implements CommandListener,
     /*private */volatile int wptAzimuth;
     /*private */volatile int wptsId, wptsSize;
 
-	// sync objects
+    // sync objects
     private final Object loadingLock;
     private final Object renderLock;
 
@@ -491,7 +491,9 @@ public final class Desktop implements CommandListener,
         if (cz.kruch.track.TrackingMIDlet.getPlatform().startsWith("NokiaE61")) {
             screen.addCommand(this.cmdWaypoints = new Command(Resources.getString(Resources.DESKTOP_CMD_NAVIGATION), POSITIVE_CMD_TYPE, 3));
         }
-//#ifndef __B2B__
+//#ifdef __B2B__
+        screen.addCommand(this.cmdLoadGuide = new Command(Resources.getString(Resources.VENDOR_CMD_LOAD_GUIDE), POSITIVE_CMD_TYPE, 5));
+//#else
         if (File.isFs()) {
             screen.addCommand(this.cmdLoadMap = new Command(Resources.getString(Resources.DESKTOP_CMD_LOAD_MAP), POSITIVE_CMD_TYPE, 4));
             screen.addCommand(this.cmdLoadAtlas = new Command(Resources.getString(Resources.DESKTOP_CMD_LOAD_ATLAS), POSITIVE_CMD_TYPE, 5));
@@ -499,8 +501,6 @@ public final class Desktop implements CommandListener,
             screen.addCommand(this.cmdLoad = new Command(Resources.getString(Resources.DESKTOP_CMD_LOAD_MAP), POSITIVE_CMD_TYPE, 5));
 */
         }
-//#else
-        screen.addCommand(this.cmdLoadGuide = new Command(Resources.getString(Resources.VENDOR_CMD_LOAD_GUIDE), POSITIVE_CMD_TYPE, 5));
 //#endif
         screen.addCommand(this.cmdSettings = new Command(Resources.getString(Resources.DESKTOP_CMD_SETTINGS), POSITIVE_CMD_TYPE, 6));
         screen.addCommand(this.cmdInfo = new Command(Resources.getString(Resources.DESKTOP_CMD_INFO), POSITIVE_CMD_TYPE, 7));
@@ -565,9 +565,6 @@ public final class Desktop implements CommandListener,
         bar = null; // gc hint
         bar = Image.createRGBImage(shadow, w, h, true);
         shadow = null; // gc hint
-        if (Config.forcedGc) {
-            System.gc(); // conditional
-        }
 
         // wpt label bar
         color = alpha << 24 | 0x00ffff00;
@@ -579,9 +576,6 @@ public final class Desktop implements CommandListener,
         barWpt = null; // gc hint
         barWpt = Image.createRGBImage(shadow, w, h, true);
         shadow = null; // gc hint
-        if (Config.forcedGc) {
-            System.gc(); // conditional
-        }
 
         // scale bar
         color = alpha << 24 | 0x00ffffff;
@@ -594,6 +588,7 @@ public final class Desktop implements CommandListener,
         barScale = null; // gc hint
         barScale = Image.createRGBImage(shadow, w, h, true);
         shadow = null; // gc hint
+
         if (Config.forcedGc) {
             System.gc(); // conditional
         }
@@ -1518,11 +1513,6 @@ public final class Desktop implements CommandListener,
     */
 
     void handleKeyDown(final int i, final boolean repeated) {
-        final View[] views = this.views;
-
-        if (views == null) {
-            return;
-        }
 
         int mask = MASK_NONE;
         int action = 0;
@@ -1548,7 +1538,9 @@ public final class Desktop implements CommandListener,
                 }
             break;
         }
-        
+
+        final View[] views = this.views;
+
         switch (action) {
 
             case Canvas.UP:
@@ -1610,6 +1602,20 @@ public final class Desktop implements CommandListener,
                             mask = MASK_ALL;
                         }
                     } break;
+
+                    case Canvas.KEY_NUM7: { // change layer
+                        if (repeated && mode == VIEW_MAP) {
+                            MapView.scrolls = 0;
+                            changeLayer();
+                        }
+                    } break;
+
+                    case Canvas.KEY_NUM9: { // chaneg map
+                        if (repeated && mode == VIEW_MAP) {
+                            MapView.scrolls = 0;
+                            changeMap();
+                        }
+                    } break;
                 }
             }
         }
@@ -1644,6 +1650,8 @@ public final class Desktop implements CommandListener,
                 }
             break;
         }
+
+        final View[] views = this.views;
 
         switch (action) {
 
@@ -1682,23 +1690,30 @@ public final class Desktop implements CommandListener,
                         mask = MASK_ALL;
                     } break;
 
+//#ifdef __ALL__
+                    case -36: // SE
+//#endif
+                    case Canvas.KEY_NUM7: { // layer switch
+                        if (mode == VIEW_MAP) {
+                            MapView.scrolls = 0;
+                            zoom(1);
+                        }
+                    } break;
+
+//#ifdef __ALL__
+                    case -37: // SE
+//#endif
+                    case Canvas.KEY_NUM9: { // map switch
+                        if (mode == VIEW_MAP) {
+                            MapView.scrolls = 0;
+                            zoom(-1);
+                        }
+                    } break;
+
                     default: {
                         mask = views[mode].handleKey(i, false);
                     }
                 }
-            }
-        }
-
-        // TODO hacky!!!!
-        if (mode == VIEW_MAP) {
-            MapView.scrolls = 0;
-            switch (i) {
-                case Canvas.KEY_NUM7: { // layer switch
-                    changeLayer();
-                } break;
-                case Canvas.KEY_NUM9: { // map switch
-                    changeMap();
-                } break;
             }
         }
 
@@ -1708,18 +1723,16 @@ public final class Desktop implements CommandListener,
 
     // TODO hacky!!!!
     void handleMove(int x, int y) {
-        int mask = MASK_NONE;
         if (mode == VIEW_MAP) {
             Desktop.browsing = true;
-            mask = ((MapView) views[mode]).moveTo(x, y);
+            update(((MapView) views[mode]).moveTo(x, y));
         }
-        update(mask);
     }
 
     // TODO hacky!!!!
     void handleStall(int x, int y) {
         if (mode == VIEW_MAP) {
-            ((MapView) views[mode]).moveTo(-1, -1);
+            update(((MapView) views[mode]).moveTo(-1, -1));
         }
     }
 
@@ -2462,6 +2475,30 @@ public final class Desktop implements CommandListener,
                                    new Event(Event.EVENT_MAP_SELECTION_FINISHED, "switch"))).show(e, map.getName());
             } else {
                 showInfo(Resources.getString(Resources.DESKTOP_MSG_NO_MAPS), screen);
+            }
+        }
+    }
+
+    private void zoom(int direction) {
+        if (atlas != null) {
+            final Enumeration e = atlas.getLayers();
+            if (e.hasMoreElements()) {
+                final String[] layers = FileBrowser.sort2array(e, null, null);
+                final String layer = atlas.getLayer();
+                for (int N = layers.length, i = 0; i < N; i++) {
+                    if (layer.equals(layers[i])) {
+                        String selected = null;
+                        if (direction == 1 && (i + 1) < N) {
+                            selected = layers[i + 1];
+                        } else if (direction == -1 && i > 0) {
+                            selected = layers[i - 1];
+                        }
+                        if (selected != null) {
+                            (new Event(Event.EVENT_LAYER_SELECTION_FINISHED, "switch")).invoke(selected, null, this);
+                        }
+                        break;
+                    }
+                }
             }
         }
     }

@@ -648,13 +648,17 @@ final class ComputerView extends View
         return Desktop.MASK_NONE;
     }
 
-    public int handleKey(int keycode, boolean repeated) {
+    public int handleKey(final int keycode, final boolean repeated) {
         switch (keycode) {
             case Canvas.KEY_NUM7: {
-                navigator.previousWpt();
+                if (!repeated) {
+                    navigator.previousWpt();
+                }
             } break;
             case Canvas.KEY_NUM9: {
-                navigator.nextWpt();
+                if (!repeated) {
+                    navigator.nextWpt();
+                }
             } break;
         }
 

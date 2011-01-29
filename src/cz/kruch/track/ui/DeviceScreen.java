@@ -70,7 +70,7 @@ final class DeviceScreen extends GameCanvas implements Runnable {
 //#endif
 
     // movement filter
-    private int gx, gy;
+    private int gx, gy, gdiff;
     private boolean inMove;
 
     // status
@@ -237,6 +237,9 @@ final class DeviceScreen extends GameCanvas implements Runnable {
         // release current graphics - probably will not work after size change (RIM, ANDROID)
         graphics = null;
 
+        // recalc touch threshold
+        gdiff = Math.min(w / 15, h / 15);
+
         // reset and repaint UI
         if (delegate.resetGui()) {
             delegate.update(Desktop.MASK_ALL);
@@ -369,11 +372,15 @@ final class DeviceScreen extends GameCanvas implements Runnable {
             return;
         }
 
-        final int dx = x - gx;
-        final int dy = y - gy;
-        final int adx = Math.abs(dx);
-        final int ady = Math.abs(dy);
-        if (adx >= 15 || ady >= 15 || _getInMove()) {
+        // difference
+        final int adx = Math.abs(x - gx);
+        final int ady = Math.abs(y - gy);
+
+        // handle gestures
+        // TODO
+
+        // usual drag
+        if (adx >= gdiff || ady >= gdiff || _getInMove()) {
             _setInKey(0);
             _setInMove(true);
             delegate.handleMove(x, y);
@@ -489,9 +496,14 @@ final class DeviceScreen extends GameCanvas implements Runnable {
         // keymap
         i = Resources.remap(i);
 
+        // handle specials
+        if (Canvas.KEY_STAR == i) {
+            return;
+        }
+
         // handle key
         if (!keylock) {
-            delegate.handleKeyDown(i, false);
+            delegate.handleKeyDown(i, 0);
         }
     }
 
@@ -540,23 +552,24 @@ final class DeviceScreen extends GameCanvas implements Runnable {
 
 //#endif
 
+        // increment counter
+        keyRepeatedCount++;
+        
         // keymap
         i = Resources.remap(i);
 
-        // handle keylock
+        // handle specials
         if (Canvas.KEY_STAR == i) {
-            if (++keyRepeatedCount == 1) {
+            if (keyRepeatedCount == 1) {
                 keylock = !keylock;
-                if (!Config.powerSave) {
-                    Desktop.display.vibrate(500);
-                }
+                Desktop.display.vibrate(100);
             }
             return;
         }
 
         // handle key event is not locked
         if (!keylock) {
-            delegate.handleKeyDown(i, true);
+            delegate.handleKeyDown(i, keyRepeatedCount);
         }
     }
 
@@ -580,18 +593,22 @@ final class DeviceScreen extends GameCanvas implements Runnable {
             }
         }
 
+        // clear counter
+        final boolean wasRepeated = keyRepeatedCount != 0;
+        keyRepeatedCount = 0;
+
         // no key pressed anymore
         _setInKey(0);
 
         // keymap
         i = Resources.remap(i);
 
-        // handle keylock
+        // handle specials
         if (Canvas.KEY_STAR == i) {
-            if (keyRepeatedCount != 0) {
-                keyRepeatedCount = 0;
+            if (wasRepeated) {
                 Desktop.showConfirmation(keylock ? Resources.getString(Resources.DESKTOP_MSG_KEYS_LOCKED) : Resources.getString(Resources.DESKTOP_MSG_KEYS_UNLOCKED), null);
             }
+            return;
         }
 
         // handle key

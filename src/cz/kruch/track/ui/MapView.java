@@ -23,7 +23,10 @@ final class MapView extends View {
 //#endif
 
     // for faster movement
-    static volatile int scrolls; // TODO fix visibility
+    private volatile int scrolls;
+
+    // toggle flag
+    private volatile boolean toggle;
 
     // local copy of current location
     private Location location;
@@ -331,40 +334,64 @@ final class MapView extends View {
         // local refs
         final Desktop navigator = this.navigator;
         final MapViewer mapViewer = this.mapViewer;
-        
+
+        // result repaint mask
         int mask = Desktop.MASK_NONE;
 
+        // handle key
         switch (keycode) {
             
             case Canvas.KEY_NUM0: {
-                if (mapViewer.hasMap()) {
-
-                    // cycle crosshair
-                    mask = mapViewer.nextCrosshair();
+                if (!repeated) {
+                    if (!toggle) {
+                        mask = mapViewer.nextCrosshair();
+                    }
+                } else {
+                    mapViewer.starTick();
+                    Desktop.display.vibrate(100);
                 }
+                toggle = repeated;
             }
             break;
 
             case Canvas.KEY_NUM5: {
-                if (mapViewer.hasMap()) {
-
-                    // mode flags
-                    Desktop.browsing = false;
-                    Desktop.navigating = !Desktop.navigating;
-
-                    // trick
-                    if (navigator.isTracking() && isLocation()) {
-                        mask |= updatedTrick();
+                if (!repeated) {
+                    if (mapViewer.hasMap()) {
+                        Desktop.browsing = false;
+                        Desktop.navigating = !Desktop.navigating;
+                        if (navigator.isTracking() && isLocation()) {
+                            mask |= updatedTrick();
+                        }
+                    } else if (navigator.isTracking()) {
+                        Desktop.showWarning(navigator._getLoadingResultText(), null, Desktop.screen);
                     }
-
-                } else if (navigator.isTracking()) {
-                    Desktop.showWarning(navigator._getLoadingResultText(), null, Desktop.screen);
                 }
             }
             break;
 
-            case Canvas.KEY_STAR: {
-                mapViewer.starTick();
+//#ifdef __ALL__
+            case -36: // SE
+//#endif
+            case Canvas.KEY_NUM7: {
+                scrolls = 0;
+                if (!repeated) {
+                    navigator.zoom(1);
+                } else {
+                    navigator.changeLayer();
+                }
+            }
+            break;
+
+//#ifdef __ALL__
+            case -37: // SE
+//#endif
+            case Canvas.KEY_NUM9: {
+                scrolls = 0;
+                if (!repeated) {
+                    navigator.zoom(-1);
+                } else {
+                    navigator.changeMap();
+                }
             }
             break;
         }

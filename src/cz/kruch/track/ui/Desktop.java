@@ -1512,7 +1512,7 @@ public final class Desktop implements CommandListener,
     * ~end
     */
 
-    void handleKeyDown(final int i, final boolean repeated) {
+    void handleKeyDown(final int i, final int c) {
 
         int mask = MASK_NONE;
         int action = 0;
@@ -1540,6 +1540,7 @@ public final class Desktop implements CommandListener,
         }
 
         final View[] views = this.views;
+        final boolean repeated = c != 0;
 
         switch (action) {
 
@@ -1574,7 +1575,7 @@ public final class Desktop implements CommandListener,
                 switch (i) {
 
                     case Canvas.KEY_NUM0: { // day/night switch
-                        if (!repeated) {
+                        if (c == 0) {
                             if (mode != VIEW_MAP) {
                                 Config.dayNight++;
                                 if (Config.dayNight == 2) {
@@ -1587,35 +1588,29 @@ public final class Desktop implements CommandListener,
                                     }
                                 }
                             }
+                        } else if (c == 1) {
+                            mask = views[mode].handleKey(i, repeated);
                         }
                     } break;
 
                     case Canvas.KEY_NUM1: { // navigation
-                        if (repeated) {
+                        if (c == 1) {
                             Waypoints.getInstance().showCurrent();
                         }
                     } break;
 
                     case Canvas.KEY_NUM3: { // notify device control
-                        if (repeated) {
+                        if (c == 1) {
                             cz.kruch.track.ui.nokia.DeviceControl.setBacklight();
                             mask = MASK_ALL;
                         }
                     } break;
 
-                    case Canvas.KEY_NUM7: { // change layer
-                        if (repeated && mode == VIEW_MAP) {
-                            MapView.scrolls = 0;
-                            changeLayer();
+                    default: {
+                        if (c == 1) { // only repeated passed along
+                            mask = views[mode].handleKey(i, repeated);
                         }
-                    } break;
-
-                    case Canvas.KEY_NUM9: { // chaneg map
-                        if (repeated && mode == VIEW_MAP) {
-                            MapView.scrolls = 0;
-                            changeMap();
-                        }
-                    } break;
+                    }
                 }
             }
         }
@@ -1675,12 +1670,6 @@ public final class Desktop implements CommandListener,
                         mask = MASK_ALL;
                     } break;
 
-                    case Canvas.KEY_NUM0: { // day/night switch
-                        if (mode == VIEW_MAP) { // TODO hack
-                            mask |= views[VIEW_MAP].handleKey(i, false);
-                        }
-                    } break;
-
                     case Canvas.KEY_NUM1: { // navigation
                         Waypoints.getInstance().show();
                     } break;
@@ -1688,26 +1677,6 @@ public final class Desktop implements CommandListener,
                     case Canvas.KEY_NUM3: { // notify user
                         cz.kruch.track.ui.nokia.DeviceControl.getBacklight();
                         mask = MASK_ALL;
-                    } break;
-
-//#ifdef __ALL__
-                    case -36: // SE
-//#endif
-                    case Canvas.KEY_NUM7: { // layer switch
-                        if (mode == VIEW_MAP) {
-                            MapView.scrolls = 0;
-                            zoom(1);
-                        }
-                    } break;
-
-//#ifdef __ALL__
-                    case -37: // SE
-//#endif
-                    case Canvas.KEY_NUM9: { // map switch
-                        if (mode == VIEW_MAP) {
-                            MapView.scrolls = 0;
-                            zoom(-1);
-                        }
                     } break;
 
                     default: {
@@ -2455,7 +2424,7 @@ public final class Desktop implements CommandListener,
     private volatile boolean _switch;
     private volatile boolean _osd;
 
-    private void changeLayer() {
+    void changeLayer() {
         if (atlas != null) {
             final Enumeration e = atlas.getLayers();
             if (e.hasMoreElements()) {
@@ -2467,7 +2436,7 @@ public final class Desktop implements CommandListener,
         }
     }
 
-    private void changeMap() {
+    void changeMap() {
         if (atlas != null) {
             final Enumeration e = atlas.getMapNames();
             if (e.hasMoreElements()) {
@@ -2479,7 +2448,7 @@ public final class Desktop implements CommandListener,
         }
     }
 
-    private void zoom(int direction) {
+    void zoom(int direction) {
         if (atlas != null) {
             final Enumeration e = atlas.getLayers();
             if (e.hasMoreElements()) {

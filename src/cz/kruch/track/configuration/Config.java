@@ -62,6 +62,11 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
     public static final int UNITS_IMPERIAL          = 1;
     public static final int UNITS_NAUTICAL          = 2;
 
+    /* easyzoom */
+    public static final int EASYZOOM_OFF            = 0;
+    public static final int EASYZOOM_LAYERS         = 1;
+    public static final int EASYZOOM_MAPS           = 2;
+
     /* datadir folders */
     public static final String FOLDER_MAPS         = "maps/";
     public static final String FOLDER_NMEA         = "tracks-nmea/";
@@ -157,6 +162,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
     public static boolean safeColors;
     public static boolean noQuestions;
     public static boolean uiNoCommands;
+    public static boolean easyZoomVolumeKeys;
     public static int desktopFontSize;
     public static int osdAlpha                  = 0x80;
     public static int cmsCycle;
@@ -167,6 +173,9 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
 
     // [Coordinates]
     public static int cfmt;
+
+    // group [Easyzoom]
+    public static int easyZoomMode;
 
     // group [Tweaks]
     public static boolean siemensIo;
@@ -510,6 +519,12 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
             // 1.0.5 change
             externalConfigBackup = din.readBoolean();
 
+            // 1.0.10 change
+            easyZoomMode = din.readInt();
+
+            // 1.0.11 change
+            easyZoomVolumeKeys = din.readBoolean();
+
         } catch (Exception e) {
         }
 
@@ -632,6 +647,10 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         dout.writeBoolean(numericInputHack);
         /* since 1.0.5 */
         dout.writeBoolean(externalConfigBackup);
+        /* since 1.0.10 */
+        dout.writeInt(easyZoomMode);
+        /* since 1.0.11 */
+        dout.writeBoolean(easyZoomVolumeKeys);
 
 //#ifdef __LOG__
         if (log.isEnabled()) log.info("configuration updated");

@@ -286,6 +286,11 @@
 3521=no questions
 3522=Font size
 3523=no softkey menu
+3524=Easyzoom
+3525=layers
+3526=maps
+3527=off
+3528=easyzoom with volume keys
 
 # settings forms/fields/values (Location)
 3600=Provider

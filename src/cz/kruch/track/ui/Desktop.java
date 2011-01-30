@@ -224,22 +224,12 @@ public final class Desktop implements CommandListener,
     public static Worker getDiskWorker() {
         if (diskWorker == null) {
             diskWorker = new Worker("Disk Worker");
-//#ifdef __ANDROID__
-/*
-            (new Thread(Thread.currentThread().getThreadGroup(),
-                        diskWorker, "Disk Worker", 16 * 1024)).start(); // default is 12 kB
-*/
-//#else
-/*
-            diskWorker.start();
-*/
-//#endif
             diskWorker.start();
         }
         return diskWorker;
     }
 
-    public static Worker getEventWorker() {
+    static Worker getEventWorker() {
         if (eventWorker == null) {
             eventWorker = new Worker("Event Worker");
             eventWorker.setPriority(Thread.MAX_PRIORITY);

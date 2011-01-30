@@ -371,26 +371,54 @@ final class MapView extends View {
 
 //#ifdef __ALL__
             case -36: // SE
+                if (!Config.easyZoomVolumeKeys)
+                    break;
 //#endif
             case Canvas.KEY_NUM7: {
                 scrolls = 0;
-                if (!repeated) {
-                    navigator.zoom(1);
-                } else {
-                    navigator.changeLayer();
+                switch (Config.easyZoomMode) {
+                    case Config.EASYZOOM_OFF: {
+                        if (!repeated) {
+                            navigator.changeLayer();
+                        }
+                    } break;
+                    case Config.EASYZOOM_LAYERS: {
+                        if (!repeated) {
+                            navigator.zoom(1);
+                        } else {
+                            navigator.changeLayer();
+                        }
+                    } break;
+                    case Config.EASYZOOM_MAPS: {
+                        // TODO
+                    } break;
                 }
             }
             break;
 
 //#ifdef __ALL__
             case -37: // SE
+                if (!Config.easyZoomVolumeKeys)
+                    break;
 //#endif
             case Canvas.KEY_NUM9: {
                 scrolls = 0;
-                if (!repeated) {
-                    navigator.zoom(-1);
-                } else {
-                    navigator.changeMap();
+                switch (Config.easyZoomMode) {
+                    case Config.EASYZOOM_OFF: {
+                        if (!repeated) {
+                            navigator.changeMap();
+                        }
+                    } break;
+                    case Config.EASYZOOM_LAYERS: {
+                        if (!repeated) {
+                            navigator.zoom(-1);
+                        } else {
+                            navigator.changeMap();
+                        }
+                    } break;
+                    case Config.EASYZOOM_MAPS: {
+                        // TODO
+                    } break;
                 }
             }
             break;

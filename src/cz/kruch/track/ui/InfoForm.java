@@ -56,6 +56,9 @@ final class InfoForm implements CommandListener {
 
         // items
         pane.append(newItem("Platform", cz.kruch.track.TrackingMIDlet.getPlatform()));
+//#ifdef __ANDROID__
+        pane.append(newItem("Build", android.os.Build.MANUFACTURER + "|" + android.os.Build.MODEL + "|" + android.os.Build.PRODUCT));
+//#endif
         final StringBuffer sb = new StringBuffer(32);
         sb.append(totalMemory).append('/').append(freeMemory);
         pane.append(newItem("Memory", sb.toString()));

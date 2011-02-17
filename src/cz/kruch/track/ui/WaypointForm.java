@@ -128,19 +128,31 @@ final class WaypointForm implements CommandListener, ItemCommandListener, Callba
             final String longListing = bean.getLongListing();
             if (longListing != null && longListing.length() != 0) {
                 final String related = Resources.getString(Resources.NAV_FLD_GS_LISTING_LONG);
+//#ifdef __RIM__
+                final int idx = appendStringItem(related, VALUE_SEE_MORE, Item.BUTTON);
+//#else
                 final int idx = appendStringItem(related, VALUE_SEE_MORE, Item.HYPERLINK);
+//#endif
                 addHintCommand(form.get(idx), related);
             }
             final Vector logs = bean.getLogs();
             if (logs != null && logs.size() != 0) {
                 final String related = Resources.getString(Resources.NAV_FLD_GS_LOGS);
+//#ifdef __RIM__
+                final int idx = appendStringItem(related, VALUE_SEE_MORE, Item.BUTTON);
+//#else
                 final int idx = appendStringItem(related, VALUE_SEE_MORE, Item.HYPERLINK);
+//#endif
                 addHintCommand(form.get(idx), related);
             }
             final String encodedHints = bean.getEncodedHints();
             if (encodedHints != null && encodedHints.length() != 0) {
                 final String related = Resources.getString(Resources.NAV_FLD_GS_HINT);
+//#ifdef __RIM__
+                hintNum = appendStringItem(related, VALUE_SEE_MORE, Item.BUTTON);
+//#else
                 hintNum = appendStringItem(related, VALUE_SEE_MORE, Item.HYPERLINK);
+//#endif
                 addHintCommand(form.get(hintNum), related);
             }
         }

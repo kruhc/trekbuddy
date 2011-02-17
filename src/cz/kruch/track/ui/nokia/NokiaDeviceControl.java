@@ -2,6 +2,8 @@
 
 package cz.kruch.track.ui.nokia;
 
+import cz.kruch.track.configuration.ConfigurationException;
+
 /**
  * Device control implementation for Nokia phones.
  *
@@ -11,7 +13,7 @@ class NokiaDeviceControl extends DeviceControl {
 
     protected final int[] values;
 
-    protected int last;
+//    protected int last;
 
     NokiaDeviceControl() {
         this.name = "Nokia";
@@ -35,7 +37,7 @@ class NokiaDeviceControl extends DeviceControl {
     /** @Override */
     void sync() {
         if (presses == 0) {
-            if (last != 0) {
+            if (cz.kruch.track.configuration.Config.nokiaBacklightLast != 0) {
                 invertLevel();
                 confirm();
             }
@@ -48,13 +50,18 @@ class NokiaDeviceControl extends DeviceControl {
         if (++backlight == values.length) {
             backlight = 0;
         }
-        last = backlight;
         setLights();
+        cz.kruch.track.configuration.Config.nokiaBacklightLast = backlight;
+        try {
+            cz.kruch.track.configuration.Config.update(cz.kruch.track.configuration.Config.VARS_090);
+        } catch (ConfigurationException e) {
+            // ignore
+        }
     }
 
     private void invertLevel() {
         if (backlight == 0) {
-            backlight = last;
+            backlight = cz.kruch.track.configuration.Config.nokiaBacklightLast;
         } else {
             backlight = 0;
         }

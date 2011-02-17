@@ -70,16 +70,17 @@ public final class NavigationScreens {
      * image cache
      */
 
-    public static Image logo;  // TODO fix visibility
-    public static Image crosshairs; // TODO fix visibility
-    public static Image nlock; // TODO fix visibility
-    public static Image backlight; // TODO fix visibility
-/*
-    public static Image[] stores;   // TODO fix visibility
-*/
+    static Image logo;  // FIXME visibility
+    static Image crosshairs; // FIXME visibility
+    static Image nlock; // FIXME visibility
+    private static Image symbols;
+    private static Image touchs;
     private static Image waypoint, pois;
     private static Image providers;
     private static Image[] arrows;
+/*
+    public static Image[] stores;   // FIXME visibility
+*/
 
     // number formatter buffer
     private static final char[] print = new char[64];
@@ -90,7 +91,8 @@ public final class NavigationScreens {
     private static boolean[] arrowsFull;
     private static int wptSize2;
     private static int poiSize;
-    private static int bulbSize;
+    private static int symbolSize;
+    private static int touchSize;
 
     // public (???) vars
     public static int bulletSize;
@@ -108,7 +110,8 @@ public final class NavigationScreens {
         waypoint = Image.createImage("/resources/wpt.png");
         providers = Image.createImage("/resources/bullets.png");
         nlock = Image.createImage("/resources/nlock.png");
-        backlight = Image.createImage("/resources/bulb.png");
+        symbols = Image.createImage("/resources/symbols.png");
+        touchs = Image.createImage("/resources/touches.png");
 /*
         stores = new Image[] {
             createImage("/resources/icon.store.xml.png"),
@@ -128,10 +131,11 @@ public final class NavigationScreens {
         bulletSize = providers.getHeight();
         poiSize = pois.getHeight();
         nlockSize2 = nlock.getHeight() >> 1;
-        bulbSize = backlight.getHeight();
+        symbolSize = symbols.getHeight();
+        touchSize = touchs.getHeight();
     }
 
-    public static int customize() throws IOException {
+    static int customize() throws IOException {
         int i = 0;
 
         Image image = loadImage(Config.FOLDER_RESOURCES, "crosshairs.png");
@@ -175,11 +179,18 @@ public final class NavigationScreens {
             nlockSize2 = nlock.getHeight() >> 1;
             i++;
         }
-        image = loadImage(Config.FOLDER_RESOURCES, "bulb.png");
+        image = loadImage(Config.FOLDER_RESOURCES, "symbols.png");
         if (image != null) {
-            backlight = null;
-            backlight = image;
-            bulbSize = backlight.getHeight();
+            symbols = null;
+            symbols = image;
+            symbolSize = symbols.getHeight();
+            i++;
+        }
+        image = loadImage(Config.FOLDER_RESOURCES, "touches.png");
+        if (image != null) {
+            touchs = null;
+            touchs = image;
+            touchSize = touchs.getHeight();
             i++;
         }
 
@@ -199,7 +210,7 @@ public final class NavigationScreens {
         arrowSize2[idx] = arrowSize[idx] >> 1;
     }
 
-    public static Image loadImage(final String folder, final String name) throws IOException {
+    static Image loadImage(final String folder, final String name) throws IOException {
         Image image = null;
         File file = null;
 
@@ -230,9 +241,8 @@ public final class NavigationScreens {
         return image;
     }
 
-    public static void drawArrow(final int type,
-                                 final Graphics graphics, final float course,
-                                 final int x, final int y, final int anchor) {
+    static void drawArrow(final int type, final Graphics graphics, final float course,
+                          final int x, final int y, final int anchor) {
         final Image image = arrows[type];
         final int size = arrowSize[type];
         final int size2 = arrowSize2[type];
@@ -297,54 +307,87 @@ public final class NavigationScreens {
         }
     }
 
-    public static void drawWaypoint(final Graphics graphics, final int x, final int y,
-                                    final int anchor) {
+    static void drawWaypoint(final Graphics graphics, final int x, final int y,
+                             final int anchor) {
         graphics.drawImage(waypoint, x - wptSize2, y - wptSize2, anchor);
     }
 
-    public static void drawPOI(final Graphics graphics, final int status,
-                               final int x, final int y, final int anchor) {
+    static void drawPOI(final Graphics graphics, final int status,
+                        final int x, final int y, final int anchor) {
         final int poiSize = NavigationScreens.poiSize;
         final int poiSize2 = poiSize >> 1;
 
+//#ifdef __ALT_RENDERER__
         if (Config.S60renderer) {
+//#endif
             graphics.setClip(x - poiSize2, y - poiSize2, poiSize, poiSize);
             graphics.drawImage(pois,
                                x - status * poiSize - poiSize2, y - poiSize2,
                                anchor);
             graphics.setClip(0, 0, Desktop.width, Desktop.height);
+//#ifdef __ALT_RENDERER__
         } else {
             graphics.drawRegion(pois,
                                 status * poiSize, 0, poiSize, poiSize,
                                 Sprite.TRANS_NONE, x - poiSize2, y - poiSize2, anchor);
         }
+//#endif        
     }
 
-    public static void drawProviderStatus(final Graphics graphics, final int status,
-                                          final int x, final int y, final int anchor) {
+    static void drawProviderStatus(final Graphics graphics, final int status,
+                                   final int x, final int y, final int anchor) {
         final int bulletSize = NavigationScreens.bulletSize;
         final int ci = status & 0x0000000f;
 
+//#ifdef __ALT_RENDERER__
         if (Config.S60renderer) {
+//#endif
             graphics.setClip(x, y, bulletSize, bulletSize);
             graphics.drawImage(providers,
                                x - ci * bulletSize, y,
                                anchor);
             graphics.setClip(0, 0, Desktop.width, Desktop.height);
+//#ifdef __ALT_RENDERER__
         } else {
             graphics.drawRegion(providers,
                                 ci * bulletSize, 0, bulletSize, bulletSize,
                                 Sprite.TRANS_NONE, x, y, anchor);
         }
+//#endif        
     }
 
-    public static void drawBacklightStatus(final Graphics graphics) {
-        graphics.drawImage(backlight,
-                           Desktop.width - bulbSize, Desktop.height - bulbSize,
+    static void drawBacklightStatus(final Graphics graphics) {
+        /* no need to set clip - we draw at the bottom-right corner */
+        graphics.drawImage(symbols,
+                           Desktop.width - symbolSize, Desktop.height - symbolSize,
                            Graphics.TOP | Graphics.LEFT);
     }
 
-    public static StringBuffer toStringBuffer(final Location l, final StringBuffer sb) {
+    static void drawKeylockStatus(final Graphics graphics) {
+        /* no need to set clip - we draw at the bottom-left corner */
+        if (symbols.getWidth() >= symbolSize << 1) {
+            graphics.drawImage(symbols,
+                               0 - symbolSize, Desktop.height - symbolSize,
+                               Graphics.TOP | Graphics.LEFT);
+        }
+    }
+
+    static void drawVisualSpots(final Graphics graphics) {
+        final int touchSize = NavigationScreens.touchSize;
+        final int j = Desktop.width / 5;
+        final int i = Desktop.height / 10;
+        final int insx = (j - touchSize) / 2;
+        final int insy = (i - touchSize) / 2;
+        final int i8y = i * 8 + insy;
+        final int j4x = j * 4 + insx;
+        graphics.setClip(insx, i8y, touchSize, touchSize);
+        graphics.drawImage(touchs, insx, i8y, Graphics.TOP | Graphics.LEFT);
+        graphics.setClip(j4x, i8y, touchSize, touchSize);
+        graphics.drawImage(touchs, j4x - touchSize, i8y, Graphics.TOP | Graphics.LEFT);
+        graphics.setClip(0, 0, Desktop.width, Desktop.height);
+    }
+
+    static StringBuffer toStringBuffer(final Location l, final StringBuffer sb) {
 /*
         DATE.setTime(timestamp);
         CALENDAR.setTime(DATE);
@@ -399,11 +442,11 @@ public final class NavigationScreens {
         return sb;
     }
 
-    public static boolean isGrid() {
+    static boolean isGrid() {
         return ProjectionSetup.contextProjection.isCartesian() && ProjectionSetup.contextProjection.code != api.location.ProjectionSetup.PROJECTION_MERCATOR;
     }
 
-    public static StringBuffer printTo(final QualifiedCoordinates qc, final StringBuffer sb) {
+    static StringBuffer printTo(final QualifiedCoordinates qc, final StringBuffer sb) {
         switch (Config.cfmt) {
             case Config.COORDS_MAP_GRID: {
                 if (isGrid()) {
@@ -604,8 +647,8 @@ public final class NavigationScreens {
         return sb;
     }
 
-    public static StringBuffer printTo(final StringBuffer sb, final QualifiedCoordinates qc,
-                                       final int mask, final boolean decimalPrecision) {
+    static StringBuffer printTo(final StringBuffer sb, final QualifiedCoordinates qc,
+                                final int mask, final boolean decimalPrecision) {
         // local coords
         final QualifiedCoordinates localQc = Datum.contextDatum.toLocal(qc);
 
@@ -660,7 +703,7 @@ public final class NavigationScreens {
         return sb;
     }
 
-    public static StringBuffer append(final StringBuffer sb, final int index, final int grade) {
+    static StringBuffer append(final StringBuffer sb, final int index, final int grade) {
         zeros(sb, index, grade);
         append(sb, (long) index);
 
@@ -740,7 +783,7 @@ public final class NavigationScreens {
         return sb;
     }
 
-    public static StringBuffer printDistance(final StringBuffer sb, final float distance) {
+    static StringBuffer printDistance(final StringBuffer sb, final float distance) {
         if (!Float.isNaN(distance)) {
             switch (Config.units) {
                 case Config.UNITS_METRIC: {
@@ -766,7 +809,7 @@ public final class NavigationScreens {
         return sb;
     }
 
-    public static StringBuffer printAltitude(final StringBuffer sb, final float altitude) {
+    static StringBuffer printAltitude(final StringBuffer sb, final float altitude) {
         if (!Float.isNaN(altitude)) {
             switch (Config.units) {
                 case Config.UNITS_METRIC: {

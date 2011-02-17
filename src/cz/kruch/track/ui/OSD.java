@@ -138,6 +138,16 @@ final class OSD extends Bar {
         if (cz.kruch.track.ui.nokia.DeviceControl.getBacklightStatus() != 0) {
             NavigationScreens.drawBacklightStatus(graphics);
         }
+
+        // draw keylock status
+        if (Desktop.screen.isKeylock()) {
+            NavigationScreens.drawKeylockStatus(graphics);
+        }
+
+        // draw visual guides
+        if (Config.showVisualSpots.booleanValue()) {
+            NavigationScreens.drawVisualSpots(graphics);
+        }
     }
 
     public StringBuffer _getSb() {

@@ -19,6 +19,12 @@ import cz.kruch.track.configuration.Config;
 import cz.kruch.track.configuration.ConfigurationException;
 import cz.kruch.track.ui.Desktop;
 
+//#ifdef __BACKPORT__
+import backport.android.bluetooth.*;
+//#else
+import android.bluetooth.*;
+//#endif
+
 public class AndroidBluetoothLocationProvider
         extends StreamReadingLocationProvider
         implements Runnable {
@@ -103,7 +109,7 @@ public class AndroidBluetoothLocationProvider
         reset();
 
         // inputs
-        android.bluetooth.BluetoothSocket socket = null;
+        BluetoothSocket socket = null;
         InputStream stream = null;
 
         try {
@@ -111,7 +117,7 @@ public class AndroidBluetoothLocationProvider
             setStatus("check Bluetooth status");
 
             // BT on?
-            final android.bluetooth.BluetoothAdapter adapter = android.bluetooth.BluetoothAdapter.getDefaultAdapter();
+            final BluetoothAdapter adapter = BluetoothAdapter.getDefaultAdapter();
             if (adapter == null || !adapter.isEnabled()) {
 
                 // no restart
@@ -128,9 +134,9 @@ public class AndroidBluetoothLocationProvider
             setStatus("opening connection");
 
             // get device, create socket, connect
-            final android.bluetooth.BluetoothDevice device = android.bluetooth.BluetoothAdapter.getDefaultAdapter().getRemoteDevice(url);
+            final BluetoothDevice device = BluetoothAdapter.getDefaultAdapter().getRemoteDevice(url);
             try {
-                socket = (android.bluetooth.BluetoothSocket) device.getClass().getMethod("createRfcommSocket", new Class[]{ int.class }).invoke(device, Integer.valueOf(1));
+                socket = (BluetoothSocket) device.getClass().getMethod("createRfcommSocket", new Class[]{ int.class }).invoke(device, Integer.valueOf(1));
             } catch (Exception e) {
 //#ifdef __LOG__
                 e.printStackTrace();
@@ -295,7 +301,7 @@ public class AndroidBluetoothLocationProvider
             android.os.Looper.prepare();
 
             // BT supported and turned on check
-            android.bluetooth.BluetoothAdapter adapter = android.bluetooth.BluetoothAdapter.getDefaultAdapter();
+            BluetoothAdapter adapter = BluetoothAdapter.getDefaultAdapter();
             if (adapter == null || !adapter.isEnabled()) {
 
                 // notify user
@@ -304,10 +310,10 @@ public class AndroidBluetoothLocationProvider
             } else {
 
                 // find paired devices
-                java.util.Set paired = android.bluetooth.BluetoothAdapter.getDefaultAdapter().getBondedDevices();
+                java.util.Set paired = BluetoothAdapter.getDefaultAdapter().getBondedDevices();
                 if (paired.size() > 0) {
                     for (java.util.Iterator it = paired.iterator(); it.hasNext(); ) {
-                        final android.bluetooth.BluetoothDevice device = (android.bluetooth.BluetoothDevice) it.next();
+                        final BluetoothDevice device = (BluetoothDevice) it.next();
                         devices.addElement(device);
                         pane.append(device.getName(), null);
                     }
@@ -366,7 +372,7 @@ public class AndroidBluetoothLocationProvider
             final int type = command.getCommandType();
             if (type == Command.SCREEN) {
                 btname = pane.getString(pane.getSelectedIndex());
-                btaddres = ((android.bluetooth.BluetoothDevice) devices.elementAt(pane.getSelectedIndex())).getAddress();
+                btaddres = ((BluetoothDevice) devices.elementAt(pane.getSelectedIndex())).getAddress();
                 letsGo(true);
             } else if (type == Desktop.CANCEL_CMD_TYPE)  {
                 letsGo(false);

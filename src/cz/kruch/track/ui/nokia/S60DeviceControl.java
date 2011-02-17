@@ -25,17 +25,8 @@ final class S60DeviceControl extends NokiaDeviceControl {
 
     /** @Override */
     protected void setLights() {
-        if (!initialized) {
-            try {
-                this.inactivity = cz.kruch.track.device.SymbianService.openInactivity();
-            } catch (Exception e) { // IOE or SE
-                this.lastError = "Service not accessible.\nDetail: " + e.toString();
-                this.name += " (-)";
-                this.values[0] = 10; // min backlight
-            } finally {
-                initialized = true;
-            }
-        }
+
+        ensureInitialized();
 
         /*
          * Either use service or try priodically calling setLights
@@ -48,7 +39,6 @@ final class S60DeviceControl extends NokiaDeviceControl {
                 lastError = "Service not accessible. " + e.toString();
             }
         } else {
-            super.setLights();
             handleInvert();
         }
     }
@@ -61,6 +51,8 @@ final class S60DeviceControl extends NokiaDeviceControl {
                 task = null;
             }
         } else {
+            ensureInitialized();
+            super.setLights();
             if (task == null) {
                 cz.kruch.track.ui.Desktop.timer.scheduleAtFixedRate(task = new DeviceControl(), REFRESH_PERIOD, REFRESH_PERIOD);
             }
@@ -89,5 +81,20 @@ final class S60DeviceControl extends NokiaDeviceControl {
     /** @Override */
     void turnOn() {
         super.setLights();
+    }
+
+    private void ensureInitialized() {
+        if (!initialized) {
+            if (cz.kruch.track.configuration.Config.useNativeService) {
+                try {
+                    this.inactivity = cz.kruch.track.device.SymbianService.openInactivity();
+                } catch (Throwable t) { // IOE or SE
+                    this.lastError = "Service not accessible.\nDetail: " + t.toString();
+                    this.name += " (-)";
+                    this.values[0] = 10; // min backlight
+                }
+            }
+            initialized = true;
+        }
     }
 }

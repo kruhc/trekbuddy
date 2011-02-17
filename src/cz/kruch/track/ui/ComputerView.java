@@ -1573,7 +1573,9 @@ final class ComputerView extends View
         final int ch = area.ch;
         final char[] charset = CHARSET;
         final int N = charset.length;
+//#ifdef __ALT_RENDERER__
         final boolean S60renderer = Config.S60renderer;
+//#endif
         int xoff = 0;
         int invalids = 0;
 
@@ -1587,17 +1589,21 @@ final class ComputerView extends View
             }
             if (j < N && invalids <= 1) {
                 final int z = c == '.' || c == ':' ? (int) (cw / 3) : 0;
+//#ifdef __ALT_RENDERER__
                 if (S60renderer) {
+//#endif
                     graphics.setClip(x + (int) (i * cw), y, icw - 2 * z, ch);
                     graphics.drawImage(image,
                                        x + (int) ((i - j) * cw) - z, y,
                                        Graphics.LEFT | Graphics.TOP);
                     graphics.setClip(area.x, area.y, area.w, area.h);
+//#ifdef __ALT_RENDERER__
                 } else {
                     graphics.drawRegion(image, (int) (j * cw) + z, 0, icw - 2 * z, ch,
                                         Sprite.TRANS_NONE, x + (int) (i * cw), y,
                                         Graphics.LEFT | Graphics.TOP);
                 }
+//#endif
                 if (c == ' ') {
                     x -= scw;
                 } else {

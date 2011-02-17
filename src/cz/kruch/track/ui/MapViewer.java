@@ -718,18 +718,22 @@ final class MapViewer {
         }
 
         // paint crosshair
+//#ifdef __ALT_RENDERER__
         if (Config.S60renderer) { // S60 renderer
+//#endif
             graphics.setClip(chx, chy, crosshairSize, crosshairSize);
             graphics.drawImage(NavigationScreens.crosshairs,
                                chx - ci * crosshairSize, chy,
                                Graphics.TOP | Graphics.LEFT);
             graphics.setClip(0, 0, Desktop.width, Desktop.height);
+//#ifdef __ALT_RENDERER__
         } else {
             graphics.drawRegion(NavigationScreens.crosshairs,
                                 ci * crosshairSize, 0, crosshairSize, crosshairSize,
                                 Sprite.TRANS_NONE,
                                 chx, chy, Graphics.TOP | Graphics.LEFT);
         }
+//#endif        
 
         // paint course
         if (!Float.isNaN(course)) {
@@ -980,11 +984,14 @@ final class MapViewer {
 
         if (w > 0 && h > 0) {
             if (img != Slice.NO_IMAGE) {
+//#ifdef __ALT_RENDERER__
                 if (Config.S60renderer) { // S60 renderer
+//#endif
                     graphics.drawImage(img,
                                        - x_src + x_dest,
                                        - y_src + y_dest,
                                        Graphics.TOP | Graphics.LEFT);
+//#ifdef __ALT_RENDERER__
                 } else {
                     graphics.drawRegion(img,
                                         x_src, y_src, w, h,
@@ -992,6 +999,7 @@ final class MapViewer {
                                         x_dest, y_dest,
                                         Graphics.TOP | Graphics.LEFT);
                 }
+//#endif                
             } else {
                 graphics.setColor(0x0);
                 graphics.fillRect(x_dest, y_dest, w, h);

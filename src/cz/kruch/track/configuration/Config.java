@@ -163,6 +163,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
     public static boolean noQuestions;
     public static boolean uiNoCommands;
     public static boolean easyZoomVolumeKeys;
+    public static Boolean showVisualSpots;
     public static int desktopFontSize;
     public static int osdAlpha                  = 0x80;
     public static int cmsCycle;
@@ -224,6 +225,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
     public static int dayNight;
     public static String cmsProfile     = EMPTY_STRING;
     public static boolean o2provider;
+    public static int nokiaBacklightLast = 1; // first backlight level, see NokiaDeviceControl
 
     // runtime (not persisted)
     public static boolean dataDirAccess, dataDirExists;
@@ -524,6 +526,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
 
             // 1.0.11 change
             easyZoomVolumeKeys = din.readBoolean();
+            showVisualSpots = new Boolean(din.readBoolean());
 
         } catch (Exception e) {
         }
@@ -651,6 +654,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         dout.writeInt(easyZoomMode);
         /* since 1.0.11 */
         dout.writeBoolean(easyZoomVolumeKeys);
+        dout.writeBoolean(showVisualSpots.booleanValue());
 
 //#ifdef __LOG__
         if (log.isEnabled()) log.info("configuration updated");
@@ -936,6 +940,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         dayNight = din.readInt();
         cmsProfile = din.readUTF();
         o2provider = din.readBoolean();
+        nokiaBacklightLast = din.readInt();
 
 //#ifdef __LOG__
         if (log.isEnabled()) log.info("vars read");
@@ -951,6 +956,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         dout.writeInt(dayNight);
         dout.writeUTF(cmsProfile);
         dout.writeBoolean(o2provider);
+        dout.writeInt(nokiaBacklightLast);
 
 //#ifdef __LOG__
         if (log.isEnabled()) log.info("vars updated");

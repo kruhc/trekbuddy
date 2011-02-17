@@ -196,13 +196,11 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
             choiceMisc.append(Resources.getString(Resources.CFG_DESKTOP_FLD_DEC_PRECISION), null);
             choiceMisc.append(Resources.getString(Resources.CFG_DESKTOP_FLD_HPS_WPT_TRUE_AZI), null);
             choiceMisc.append(Resources.getString(Resources.CFG_DESKTOP_FLD_EASYZOOM_VOLUME), null);
+            choiceMisc.append(Resources.getString(Resources.CFG_DESKTOP_FLD_SHOW_VISUAL_SPOTS), null);
             choiceMisc.append(Resources.getString(Resources.CFG_DESKTOP_FLD_OSD_BASIC), null);
             choiceMisc.append(Resources.getString(Resources.CFG_DESKTOP_FLD_OSD_EXT), null);
             choiceMisc.append(Resources.getString(Resources.CFG_DESKTOP_FLD_OSD_SCALE), null);
             choiceMisc.append(Resources.getString(Resources.CFG_DESKTOP_FLD_OSD_NO_BG), null);
-/* obsoleted in 0.9.92
-            choiceMisc.append(Resources.getString(Resources.CFG_DESKTOP_FLD_OSD_MED_FONT), null);
-*/
             choiceMisc.append(Resources.getString(Resources.CFG_DESKTOP_FLD_OSD_BOLD_FONT), null);
             choiceMisc.append(Resources.getString(Resources.CFG_DESKTOP_FLD_OSD_BLACK), null);
             choiceMisc.setSelectedFlags(new boolean[] {
@@ -215,6 +213,7 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
                 Config.decimalPrecision,
                 Config.hpsWptTrueAzimuth,
                 Config.easyZoomVolumeKeys,
+                Config.showVisualSpots.booleanValue(),
                 Config.osdBasic,
                 Config.osdExtended,
                 Config.osdScale,
@@ -252,7 +251,7 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
             submenu.append(new Spacer(submenu.getWidth(), 1));
 
             // easyzoom
-            choiceEasyzoom = new ChoiceGroup(Resources.getString(Resources.CFG_DESKTOP_GROUP_EASYZOOM), ChoiceGroup.EXCLUSIVE);
+            choiceEasyzoom = new ChoiceGroup(Resources.getString(Resources.CFG_DESKTOP_GROUP_EASYZOOM), ChoiceGroup.POPUP);
             choiceEasyzoom.append(Resources.getString(Resources.CFG_DESKTOP_FLD_EASYZOOM_OFF), null);
             choiceEasyzoom.append(Resources.getString(Resources.CFG_DESKTOP_FLD_EASYZOOM_LAYERS), null);
 //            choiceEasyzoom.append(Resources.getString(Resources.CFG_DESKTOP_FLD_EASYZOOM_MAPS), null);
@@ -797,12 +796,13 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
                 Config.decimalPrecision = misc[6];
                 Config.hpsWptTrueAzimuth = misc[7];
                 Config.easyZoomVolumeKeys = misc[8];
-                Config.osdBasic = misc[9];
-                Config.osdExtended = misc[10];
-                Config.osdScale = misc[11];
-                Config.osdNoBackground = misc[12];
-                Config.osdBoldFont = misc[13];
-                Config.osdBlackColor = misc[14];
+                Config.showVisualSpots = new Boolean(misc[9]);
+                Config.osdBasic = misc[10];
+                Config.osdExtended = misc[11];
+                Config.osdScale = misc[12];
+                Config.osdNoBackground = misc[13];
+                Config.osdBoldFont = misc[14];
+                Config.osdBlackColor = misc[15];
                 Config.desktopFontSize = gaugeDesktopFont.getValue();
                 Config.osdAlpha = gaugeOsdAlpha.getValue() * gaugeAlphaScale;
                 Config.cmsCycle = Integer.parseInt(fieldCmsCycle.getString());

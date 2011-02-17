@@ -54,7 +54,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         version = System.getProperty("MIDlet-Version");
 //#else
         version = getAppProperty("MIDlet-Version");
-//#endif		
+//#endif
 //#ifdef __LOG__
         logEnabled = hasFlag("log_enable");
         System.out.println("* platform is " + platform);
@@ -154,7 +154,11 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         // detect runtime capabilities
         jsr179 = true;
         try {
+//#ifdef __BACKPORT__
+            Class.forName("backport.android.bluetooth.BluetoothSocket");
+//#else
             Class.forName("android.bluetooth.BluetoothSocket");
+//#endif
             jsr82 = true;
         } catch (Throwable t) {
         }

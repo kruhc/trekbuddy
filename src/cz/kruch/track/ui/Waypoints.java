@@ -666,9 +666,11 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                         // remove selected wpt
                         currentWpts.removeElementAt(idxSelected);
                         sortedWpts.removeElementAt(idxSelected);
-                        if (idxSelected > 0) {
-                            ((SmartList) list).setSelectedIndex(idxSelected - 1, true);
+                        int nextSelected = idxSelected;
+                        if (idxSelected >= ((SmartList) list).size()) {
+                            nextSelected--;
                         }
+                        ((SmartList) list).setSelectedIndex(nextSelected, true);
 
                         // update current store
                         updateStore(currentName, currentWpts);
@@ -1038,7 +1040,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                 if (parseException == null) {
                     Desktop.showWarning(Resources.getString(Resources.NAV_MSG_NO_WPTS_FOUND_IN) + " " + storeName, null, list);
                 } else {
-                    Desktop.showError(Resources.getString(Resources.NAV_MSG_LIST_STORE_FAILED), parseException, list);
+                    Desktop.showError("Failed to parse landmarks", parseException, list);
                 }
             }
 
@@ -1080,7 +1082,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                 t.printStackTrace();
 //#endif
                 if (uiAction == 2) { // UI interaction allowed?
-                    Desktop.showError(Resources.getString(Resources.NAV_MSG_LIST_STORE_FAILED), t, list);
+                    Desktop.showError("Failed to list landmarks", t, list);
                 }
             }
         }

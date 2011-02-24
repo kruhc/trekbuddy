@@ -117,8 +117,9 @@ public final class GpxTracklog implements Runnable {
     private static final String ATTRIBUTE_AVAILABLE     = "available";
 
     private static final String FIX_NONE    = "none";
-    private static final String FIX_3D      = "3d";
     private static final String FIX_2D      = "2d";
+    private static final String FIX_3D      = "3d";
+    private static final String FIX_DGPS    = "dgps";
 
     private final Calendar calendar;
     private final Date date;

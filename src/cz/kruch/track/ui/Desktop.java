@@ -594,8 +594,14 @@ public final class Desktop implements CommandListener,
         if (log.isEnabled()) log.debug("GUI reset");
 //#endif
 
-        final int w = screen.getWidth();
-        final int h = screen.getHeight();
+        int w = screen.getWidth();
+        int h = screen.getHeight();
+
+//#ifdef __ANDROID__
+        if ("archos".equals(android.os.Build.MANUFACTURER)) {
+            h -= 20;
+        }
+//#endif
 
         if (w == width && h == height) {
             return false; // no change, just quit
@@ -772,8 +778,10 @@ public final class Desktop implements CommandListener,
         if (Config.dataDirAccess) {
             Config.worker = getDiskWorker();
             Config.initDataDir();
+        } else if (File.isFs()) {
+            showError("DataDir [" + Config.dataDir + "] not accessible - please fix it and restart", null, null);
         } else {
-            showError("'DataDir' not accessible - please fix it and restart", null, null);
+            showWarning("FileConnection API (JSR-75) not supported", null, null);
         }
 
         // initialize waypoints
@@ -1257,9 +1265,6 @@ public final class Desktop implements CommandListener,
 
                 // notify map view // TODO this is ugly
                 views[VIEW_MAP].routeChanged(wpts);
-                ((MapView) views[VIEW_MAP]).mapViewer.starTick();
-                ((MapView) views[VIEW_MAP]).mapViewer.nextCrosshair();
-                ((MapView) views[VIEW_MAP]).mapViewer.starTick();
 
             } else if (Desktop.wpts == wpts && Desktop.showall == false) {
 
@@ -2446,14 +2451,25 @@ public final class Desktop implements CommandListener,
                 final String layer = atlas.getLayer();
                 for (int N = layers.length, i = 0; i < N; i++) {
                     if (layer.equals(layers[i])) {
-                        String selected = null;
+                        final QualifiedCoordinates qc = getPointer();
+                        String nextLayer = null;
                         if (direction == 1 && (i + 1) < N) {
-                            selected = layers[i + 1];
+                            for (i = i + 1; i < N; i++) {
+                                if (atlas.getMapURL(layers[i], qc) != null) {
+                                    nextLayer = layers[i];
+                                    break;
+                                }
+                            }
                         } else if (direction == -1 && i > 0) {
-                            selected = layers[i - 1];
+                            for (i = i - 1; i >= 0; i--) {
+                                if (atlas.getMapURL(layers[i], qc) != null) {
+                                    nextLayer = layers[i];
+                                    break;
+                                }
+                            }
                         }
-                        if (selected != null) {
-                            (new Event(Event.EVENT_LAYER_SELECTION_FINISHED, "switch")).invoke(selected, null, this);
+                        if (nextLayer != null) {
+                            (new Event(Event.EVENT_LAYER_SELECTION_FINISHED, "switch")).invoke(nextLayer, null, this);
                         }
                         break;
                     }

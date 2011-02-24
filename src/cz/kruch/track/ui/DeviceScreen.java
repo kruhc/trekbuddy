@@ -57,7 +57,7 @@ final class DeviceScreen extends GameCanvas implements Runnable {
 //#ifdef __ALL__
 
     // soft menu
-    private volatile boolean softMenuActive;
+    private volatile boolean softMenuActive, softMenuGone;
     private Command[] commands;
     private int selectedOptionIndex;
     private int colorBackSel, colorBackUnsel, colorForeSel, colorForeUnsel;
@@ -76,7 +76,7 @@ final class DeviceScreen extends GameCanvas implements Runnable {
     // status
     private boolean active;
 
-    public DeviceScreen(Desktop delegate, MIDlet midlet) {
+    DeviceScreen(Desktop delegate, MIDlet midlet) {
         super(false);
         this.delegate = delegate;
         this.eventing = new SmartRunnable();
@@ -87,6 +87,9 @@ final class DeviceScreen extends GameCanvas implements Runnable {
             this.hasRepeatEvents = "true".equals(midlet.getAppProperty(cz.kruch.track.TrackingMIDlet.JAD_UI_HAS_REPEAT_EVENTS));
         } else {
             this.hasRepeatEvents = super.hasRepeatEvents();
+        }
+        if (Config.showVisualSpots == null) {
+            Config.showVisualSpots = new Boolean(super.hasPointerEvents());
         }
 //#ifdef __ALL__
         if (Config.uiNoCommands) {
@@ -405,6 +408,7 @@ final class DeviceScreen extends GameCanvas implements Runnable {
 
                     // repaint view
                     softMenuActive = false;
+                    softMenuGone = true;
                     delegate.update(Desktop.MASK_SCREEN);
 
                 } else {
@@ -440,6 +444,7 @@ final class DeviceScreen extends GameCanvas implements Runnable {
                         case FIRE: {
                             // hide menu
                             softMenuActive = false;
+                            softMenuGone = true;
                             // update screen
                             delegate.update(Desktop.MASK_SCREEN);
                             // get selected
@@ -465,6 +470,7 @@ final class DeviceScreen extends GameCanvas implements Runnable {
                     flushGraphics();
 
                     return;
+
                 }
             }
         }
@@ -562,6 +568,7 @@ final class DeviceScreen extends GameCanvas implements Runnable {
         if (Canvas.KEY_STAR == i) {
             if (keyRepeatedCount == 1) {
                 keylock = !keylock;
+                delegate.update(Desktop.MASK_OSD);
                 Desktop.display.vibrate(100);
             }
             return;
@@ -594,8 +601,20 @@ final class DeviceScreen extends GameCanvas implements Runnable {
         }
 
         // clear counter
-        final boolean wasRepeated = keyRepeatedCount != 0;
         keyRepeatedCount = 0;
+
+//#ifdef __ALL__
+
+        // soft keys hack
+        if (i == RIGHT_SOFTKEY_CODE) {
+            if (softMenuGone) {
+                softMenuGone = false;
+            } else {
+                i = KEY_POUND;
+            }
+        }
+
+//#endif
 
         // no key pressed anymore
         _setInKey(0);
@@ -605,9 +624,6 @@ final class DeviceScreen extends GameCanvas implements Runnable {
 
         // handle specials
         if (Canvas.KEY_STAR == i) {
-            if (wasRepeated) {
-                Desktop.showConfirmation(keylock ? Resources.getString(Resources.DESKTOP_MSG_KEYS_LOCKED) : Resources.getString(Resources.DESKTOP_MSG_KEYS_UNLOCKED), null);
-            }
             return;
         }
 

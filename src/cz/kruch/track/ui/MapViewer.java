@@ -481,7 +481,7 @@ final class MapViewer {
                 this.wptStatuses = new byte[positions.length];
             }
         }
-        this.star = this.ci = this.li = 0;
+        this.star = this.li = 0;
     }
 
     void setRoute(Position[] positions) {

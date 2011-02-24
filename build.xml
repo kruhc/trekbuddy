@@ -79,12 +79,12 @@
         <pathelement location="${wtk.home}\lib\mmapi.jar"/>
     </path>
 
-    <path id="bootclasspath.android15">
+    <path id="bootclasspath.android20">
         <pathelement location="${microemu.home}\microemu-cldc\target\microemu-cldc-3.0.0-SNAPSHOT.jar"/>
         <pathelement location="${microemu.home}\microemu-midp\target\microemu-midp-3.0.0-SNAPSHOT.jar"/>
         <pathelement location="${microemu.home}\microemu-extensions\microemu-jsr-75\target\microemu-jsr-75-3.0.0-SNAPSHOT.jar"/>
         <pathelement location="${microemu.home}\microemu-android\microemu-android-idea.jar"/>
-        <pathelement location="${android15.home}\android.jar"/>
+        <pathelement location="${android20.home}\android.jar"/>
     </path>
 
     <path id="bootclasspath.android16">
@@ -93,14 +93,7 @@
         <pathelement location="${microemu.home}\microemu-extensions\microemu-jsr-75\target\microemu-jsr-75-3.0.0-SNAPSHOT.jar"/>
         <pathelement location="${microemu.home}\microemu-android\microemu-android-idea.jar"/>
         <pathelement location="${android16.home}\android.jar"/>
-    </path>
-
-    <path id="bootclasspath.android20">
-        <pathelement location="${microemu.home}\microemu-cldc\target\microemu-cldc-3.0.0-SNAPSHOT.jar"/>
-        <pathelement location="${microemu.home}\microemu-midp\target\microemu-midp-3.0.0-SNAPSHOT.jar"/>
-        <pathelement location="${microemu.home}\microemu-extensions\microemu-jsr-75\target\microemu-jsr-75-3.0.0-SNAPSHOT.jar"/>
-        <pathelement location="${microemu.home}\microemu-android\microemu-android-idea.jar"/>
-        <pathelement location="${android20.home}\android.jar"/>
+        <pathelement location="${microemu.home}\microemu-android\lib\backport-android-bluetooth2.jar"/>
     </path>
 
     <path id="bootclasspath.rim41">
@@ -290,6 +283,7 @@
         <ant dir="${microemu.home}/microemu-android"
              antfile="build-trekbuddy.xml" target="clean"
              inheritAll="false" inheritRefs="false">
+            <property name="target.version" value="any"/>
 			<property name="sdk.version" value="2.0"/>
 			<property name="api.level" value="3"/>
 			<property name="dist.dir" value="android"/>
@@ -307,6 +301,7 @@
         <ant dir="${microemu.home}/microemu-android"
              antfile="build-trekbuddy.xml" target="zipalign"
              inheritAll="false" inheritRefs="false">
+            <property name="target.version" value="any"/>
 			<property name="sdk.version" value="2.0"/>
 			<property name="api.level" value="3"/>
 			<property name="dist.dir" value="android"/>
@@ -320,6 +315,48 @@
         </ant>
         <copy file="${microemu.home}/microemu-android/bin/trekbuddy.apk"
 			  tofile="dist/${vendor.dir}/${dist.dir}/trekbuddy.apk"/>
+    </target>
+
+    <target name="android-backport">
+        <property name="suffix" value="-android"/>
+        <property name="dist.dir" value="android-backport"/>
+        <property name="libraryjars" value="${microemu.home}\microemu-cldc\target\microemu-cldc-3.0.0-SNAPSHOT.jar;${microemu.home}\microemu-midp\target\microemu-midp-3.0.0-SNAPSHOT.jar;${microemu.home}\microemu-extensions\microemu-jsr-75\target\microemu-jsr-75-3.0.0-SNAPSHOT.jar;${android20.home}\android.jar;${microemu.home}\microemu-android\lib\backport-android-bluetooth2.jar;${microemu.home}\microemu-android\microemu-android-idea.jar"/>
+        <antcall target="clean"/>
+        <ant dir="${microemu.home}/microemu-android"
+             antfile="build-trekbuddy.xml" target="clean"
+             inheritAll="false" inheritRefs="false">
+            <property name="target.version" value="backport"/>
+			<property name="sdk.version" value="1.6"/>
+			<property name="api.level" value="3"/>
+			<property name="dist.dir" value="android-backport"/>
+		</ant>
+        <antcall target="a.pre.android-backport"/>
+        <antcall target="compile.android-backport"/>
+        <antcall target="android.pack" inheritall="true"/>
+        <antcall target="obfuscate4.android" inheritall="true"/>
+<!-- not needed, so rename the jar as if it happened
+        <antcall target="preverify" inheritall="true"/>
+-->
+        <move file="tmp/trekbuddy${suffix}-obfuscated.jar"
+              tofile="tmp/preverified/trekbuddy${suffix}-obfuscated.jar"/>
+        <antcall target="dist" inheritall="true"/>
+        <ant dir="${microemu.home}/microemu-android"
+             antfile="build-trekbuddy.xml" target="zipalign"
+             inheritAll="false" inheritRefs="false">
+            <property name="target.version" value="backport"/>
+			<property name="sdk.version" value="1.6"/>
+			<property name="api.level" value="3"/>
+			<property name="dist.dir" value="android-backport"/>
+<!--
+            <property name="javac.debug" value="true"/>
+            <property name="javac.debuglevel" value="source,lines"/>
+-->
+<!--
+            <property name="do.obfuscate" value="true"/>
+-->
+        </ant>
+        <copy file="${microemu.home}/microemu-android/bin/trekbuddy.apk"
+			  tofile="dist/${vendor.dir}/${dist.dir}/trekbuddy-backport.apk"/>
     </target>
 
     <target name="emulator">
@@ -417,6 +454,12 @@
                        symbols="__HECL__,__ANDROID__,${pre.extra}"/>
     </target>
 
+    <target name="a.pre.android-backport" depends="a.pre.hecl">
+        <mkdir dir="tmp/src"/>
+        <wtkpreprocess srcdir="src" destdir="tmp/src" version="1"
+                       symbols="__HECL__,__ANDROID__,__BACKPORT__,${pre.extra}"/>
+    </target>
+
     <target name="a.pre.emulator" depends="a.pre.hecl">
         <mkdir dir="tmp/src"/>
         <wtkpreprocess srcdir="src" destdir="tmp/src" version="1"
@@ -511,6 +554,17 @@
                fork="true"
                target="1.5" source="1.5"
                bootclasspathref="bootclasspath.android20"/>
+    </target>
+
+    <target name="compile.android-backport" depends="remove.nonandroid.src,remove.rim.src">
+        <mkdir dir="tmp/build/classes"/>
+        <mkdir dir="tmp/ant"/>
+        <javac srcdir="tmp/src"
+               destdir="tmp/build/classes"
+               tempdir="tmp/ant"
+               fork="true"
+               target="1.5" source="1.5"
+               bootclasspathref="bootclasspath.android16"/>
     </target>
 
     <target name="compile.emulator" depends="remove.symbian.src,remove.rim.src,remove.android.src">

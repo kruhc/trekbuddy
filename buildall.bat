@@ -30,6 +30,9 @@ cmd /c build %1 rim50 en_US
 echo Build version 'android' ...
 cmd /c build %1 android en_US
 
+echo Build version 'android-backport' ...
+cmd /c build %1 android-backport en_US
+
 goto end
 
 :vendor

@@ -370,12 +370,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                                 idx[depth] = item;
                             }
                             // calculate distance
-                            QualifiedCoordinates qc = navigator.getPointer();
-                            if (qc != null) {
-                                _distance = qc.distance(item.getQualifiedCoordinates());
-                            } else {
-                                _distance = Float.NaN;
-                            }
+                            _distance = item.getQualifiedCoordinates().distance(navigator.getRelQc());
                             // check parsing status
                             if (item.getUserObject() instanceof GroundspeakBean && !((GroundspeakBean) item.getUserObject()).isParsed()) {
                                 // fully parse bean and show wpt details
@@ -1773,7 +1768,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                 case SORT_BYNAME:
                 case SORT_BYDIST: {
                     // grab map position (used in by-dist sorting)
-                    _pointer = navigator.getPointer();
+                    _pointer = navigator.getRelQc();
                     // sort
                     FileBrowser.quicksort(sortedWpts.getData(), this, 0, sortedWpts.size() - 1);
                     // gc hint

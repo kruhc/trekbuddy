@@ -1193,6 +1193,19 @@ public final class Desktop implements CommandListener,
     }
 
     /**
+     * Gets current coordinates (WGS-84).
+     * Called by {@link Waypoints} only.
+     *
+     * @return current coordinates
+     */
+    QualifiedCoordinates getRelQc() {
+        if (!browsing && isTracking() && isLocation()) {
+            return getLocation().getQualifiedCoordinates();
+        }
+        return getPointer();
+    }
+
+    /**
      * @deprecated redesign
      */
     void saveLocation(Location l) {

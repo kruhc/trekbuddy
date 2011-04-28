@@ -665,8 +665,8 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                     case Resources.NAV_CMD_DELETE: {
                         // remove selected wpt
                         currentWpts.removeElementAt(idxSelected);
-                        sortedWpts.removeElementAt(idxSelected);
-                        int nextSelected = idxSelected;
+                        int nextSelected = ((SmartList) list).getSelectedIndex();
+                        sortedWpts.removeElementAt(nextSelected);
                         if (idxSelected >= ((SmartList) list).size()) {
                             nextSelected--;
                         }

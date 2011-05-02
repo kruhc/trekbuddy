@@ -603,14 +603,15 @@ final class ComputerView extends View
             return Desktop.MASK_NONE;
         }
 
-        if (profiles.size() > 1) {
+        final int nprofiles = profiles.size();
+        if (nprofiles > 1) {
             switch (action) {
-                case Canvas.UP: {
 //#ifdef __HECL__
+                case Canvas.UP: {
                     ((IntThing) heclArgvOnKey[1].getVal()).set(action);
                     invokeHandlers(interp, heclOnKey, heclArgvOnKey);
-//#endif
                 } break;
+//#endif
                 case Canvas.LEFT: {
                     synchronized (this) {
                         if (--profileIdx < 0) {
@@ -644,6 +645,12 @@ final class ComputerView extends View
                 } break;
             }
         }
+//#ifdef __HECL__
+          else if (nprofiles > 0 && action == Canvas.UP) {
+            ((IntThing) heclArgvOnKey[1].getVal()).set(action);
+            invokeHandlers(interp, heclOnKey, heclArgvOnKey);
+        }
+//#endif
         
         return Desktop.MASK_NONE;
     }

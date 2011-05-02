@@ -364,11 +364,18 @@ public final class NavigationScreens {
     }
 
     static void drawKeylockStatus(final Graphics graphics) {
-        /* no need to set clip - we draw at the bottom-left corner */
-        if (symbols.getWidth() >= symbolSize << 1) {
+        final int symbolSize = NavigationScreens.symbolSize;
+        if (symbols.getWidth() >= symbolSize << 1) { // complete status icon
+            /* no need to set clip - we draw at the bottom-left corner */
+//            graphics.drawImage(symbols,
+//                               0 - symbolSize, Desktop.height - symbolSize,
+//                               Graphics.TOP | Graphics.LEFT);
+            graphics.setClip(Desktop.width - (symbolSize << 1), Desktop.height - symbolSize,
+                             symbolSize, symbolSize);
             graphics.drawImage(symbols,
-                               0 - symbolSize, Desktop.height - symbolSize,
+                               Desktop.width - ((symbolSize << 1) + symbolSize), Desktop.height - symbolSize,
                                Graphics.TOP | Graphics.LEFT);
+            graphics.setClip(0, 0, Desktop.width, Desktop.height);
         }
     }
 

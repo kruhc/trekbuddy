@@ -479,8 +479,8 @@ final class WaypointForm implements CommandListener, ItemCommandListener, Callba
                     case Resources.NAV_CMD_ADD: {
                         try {
                             final Waypoint wpt = new StampedWaypoint(parseCoordinates(),
-                                                                     fieldName.getString(),
-                                                                     fieldComment.getString(),
+                                                                     trimToNull(fieldName.getString()),
+                                                                     trimToNull(fieldComment.getString()),
                                                                      System.currentTimeMillis());
                             callback.invoke(new Object[]{ actionObject, wpt }, null, this);
                             cnt++;
@@ -490,8 +490,8 @@ final class WaypointForm implements CommandListener, ItemCommandListener, Callba
                     } break;
                     case Resources.NAV_CMD_SAVE: {
                         final ExtWaypoint wpt = new ExtWaypoint(coordinates,
-                                                                fieldName.getString(),
-                                                                fieldComment.getString(),
+                                                                trimToNull(fieldName.getString()),
+                                                                trimToNull(fieldComment.getString()),
                                                                 timestamp);
                         if (imagePath != null) {
                             wpt.addLink(imagePath);
@@ -517,8 +517,8 @@ final class WaypointForm implements CommandListener, ItemCommandListener, Callba
                             } else { // partial update
                                 parseAlt(wpt.getQualifiedCoordinates());
                             }
-                            wpt.setName(fieldName.getString());
-                            wpt.setComment(fieldComment.getString());
+                            wpt.setName(trimToNull(fieldName.getString()));
+                            wpt.setComment(trimToNull(fieldComment.getString()));
                             callback.invoke(new Object[]{ actionObject, wpt }, null, this);
                         } catch (IllegalArgumentException e) {
                             Desktop.showWarning(null, e, null);
@@ -713,6 +713,14 @@ final class WaypointForm implements CommandListener, ItemCommandListener, Callba
         s = s.trim();
         if (!Character.isDigit(s.charAt(s.length() - 1))) {
             s = s.substring(0, s.length() - 1);
+        }
+        return s;
+    }
+
+    private static String trimToNull(String s) {
+        s = s.trim();
+        if (s.length() == 0) {
+            s = null;
         }
         return s;
     }

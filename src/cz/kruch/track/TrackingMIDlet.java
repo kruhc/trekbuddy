@@ -140,6 +140,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
 //#endif
         } catch (Throwable t) {
         }
+/*
         try {
             Class.forName("javax.microedition.sensor.SensorManager");
             jsr256 = true;
@@ -148,6 +149,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
 //#endif
         } catch (Throwable t) {
         }
+*/
         try {
             Class.forName("javax.microedition.io.CommConnection");
             comm = true;

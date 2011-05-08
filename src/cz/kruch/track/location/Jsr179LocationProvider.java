@@ -13,7 +13,6 @@ import api.location.LocationProvider;
 
 import java.io.OutputStream;
 import java.io.IOException;
-import java.util.Vector;
 
 /**
  * Internal (JSR-179) provider implementation.

@@ -114,7 +114,7 @@ final class LocatorView extends View {
 
     public int orientationChanged(int heading) {
         // remember
-        this.orientation = heading;
+        orientation = heading;
 
         return Desktop.MASK_SCREEN;
     }
@@ -122,6 +122,7 @@ final class LocatorView extends View {
     /** @Override */
     void setVisible(final boolean b) {
         super.setVisible(b);
+        orientation = -1;
         if (b) {
             cz.kruch.track.ui.nokia.DeviceControl.senseOn(navigator);
         } else {

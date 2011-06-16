@@ -10,10 +10,11 @@
             destdir="tools/classes" 
             srcdir="tools/src" 
             includes="ResourceCompilerNG.java"/>
+        <copy file="tools/src/ignored.properties" todir="tools/classes"/>
         <jar 
             destfile="tools/dist/rc-ng.jar"
             basedir="tools/classes"
-            includes="ResourceCompilerNG.class">
+            includes="ResourceCompilerNG.class,ignored.properties">
           <manifest>
             <attribute name="Main-Class" value="ResourceCompilerNG"/>
           </manifest>

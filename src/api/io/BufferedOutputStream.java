@@ -15,6 +15,8 @@ public final class BufferedOutputStream extends OutputStream {
     private byte[] buffer;
     /** number of bytes in the buffer */
     private int count;
+    /** autoflush */
+    private boolean autoflush;
 
     /**
      * Constructor.
@@ -29,6 +31,18 @@ public final class BufferedOutputStream extends OutputStream {
         }
         this.out = out;
         this.buffer = new byte[size];
+    }
+
+    /**
+     * Constructor.
+     *
+     * @param out underlying output stream
+     * @param size buffer size
+     * @param autoflush
+     */
+    public BufferedOutputStream(OutputStream out, int size, boolean autoflush) {
+        this(out, size);
+        this.autoflush = autoflush;
     }
 
     /*
@@ -78,6 +92,9 @@ public final class BufferedOutputStream extends OutputStream {
         if (count > 0) {
             out.write(buffer, 0, count);
             count = 0;
+            if (autoflush) {
+                out.flush();
+            }
         }
     }
 }

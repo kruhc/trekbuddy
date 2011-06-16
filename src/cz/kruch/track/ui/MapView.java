@@ -36,6 +36,7 @@ final class MapView extends View {
 
     // navigation
     private Position[] route;
+    private int lastRouteId;
 
     MapView(/*Navigator*/Desktop navigator) {
         super(navigator);
@@ -114,8 +115,11 @@ final class MapView extends View {
     }
 
     public int routeChanged(Vector wpts) {
-        // release old route; also resets map viewer
+        // release old route
         disposeRoute();
+
+        // mapviewer reset
+        boolean reset = false;
 
         // routing starts
         if (wpts != null) {
@@ -123,15 +127,24 @@ final class MapView extends View {
             // prepare route
             prepareRoute(wpts);
 
-            // init route
-            mapViewer.initRoute(route);
+            // detect significant change
+            reset = lastRouteId != wpts.hashCode();
+            lastRouteId = wpts.hashCode();
+
+        } else {
+
+            // stop
+            lastRouteId = 0;
         }
+
+        // init or clear route
+        mapViewer.initRoute(route, reset); // route is null when navigation stopped
 
         return super.routeChanged(wpts);
     }
 
     public int routeExpanded(Vector wpts) {
-        // release old route; also resets map viewer
+        // release old route
         disposeRoute();
 
         // prepare route
@@ -203,9 +216,8 @@ final class MapView extends View {
                     Position.releaseInstance(route[i]);
                     route[i] = null; // gc hint
                 }
-                this.route = null; // gc hint
-                this.mapViewer.setRoute(null);
             }
+            this.route = null; // gc hint
         }
     }
 

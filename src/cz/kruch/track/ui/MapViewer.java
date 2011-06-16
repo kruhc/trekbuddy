@@ -471,7 +471,7 @@ final class MapViewer {
         return dirty;
     }
 
-    void initRoute(Position[] positions) {
+    void initRoute(final Position[] positions, final boolean reset) {
         /* synchronized to avoid race condition with render() */
         synchronized (this) {
             this.wptPositions = null;
@@ -481,7 +481,9 @@ final class MapViewer {
                 this.wptStatuses = new byte[positions.length];
             }
         }
-        this.star = this.li = 0;
+        if (reset) {
+            this.star = this.li = 0;
+        }
     }
 
     void setRoute(Position[] positions) {
@@ -898,7 +900,6 @@ final class MapViewer {
         if (x > 0 && x < Desktop.width && y > 0 && y < Desktop.height) {
 
             final boolean current = status == WPT_STATUS_CURRENT;
-            final boolean showtext = current || (li % 2 > 0/* && Desktop.scrolls < 5*/);
 
             // draw point
             if (current) {
@@ -909,17 +910,43 @@ final class MapViewer {
                                           Graphics.TOP | Graphics.LEFT);
             }
 
-            // draw text (either label or comment/description)
-            if (showtext) {
+            int showtext = 0;
+            if ((Desktop.routeDir != 0) || (Desktop.wptIdx > -1 && Desktop.showall)) {
+                switch (li % 5) {
+                    case 0:
+                        if (current) showtext = 1;
+                    break;
+                    case 1:
+                        showtext = 1;
+                    break;
+                    case 2:
+                        if (current) showtext = 2;
+                    break;
+                    case 3:
+                        showtext = 2;
+                    break;
+                }
+            } else if (current || Desktop.showall) {
+                if (li % 3 == 0) {
+                    showtext = 1;
+                } else if (li % 3 == 1) {
+                    showtext = 2;
+                }
+            }
+
+            // draw POI text
+            if (showtext != 0) {
                 final Waypoint wpt = (Waypoint) Desktop.wpts.elementAt(idx);
                 String text;
-                if (li % 4 < 2) {
+                if (showtext == 1) {
                     text = wpt.toString(); // either GPX or GC name
-                } else {
+                } else { // showtext == 2
                     text = wpt.getComment();
-                    if (text == null) {
+/*
+                    if (text == null || text.length() == 0) {
                         text = wpt.toString(); // either GPX or GC name 
                     }
+*/
                 }
                 if (text != null) {
                     final int fh = Desktop.barWpt.getHeight();
@@ -928,10 +955,20 @@ final class MapViewer {
                     if (bw > bwMax) {
                         bw = bwMax;
                     }
-                    // TODO S60 renderer path
-                    graphics.drawRegion(Desktop.barWpt, 0, 0, bw, fh,
-                                        Sprite.TRANS_NONE, x + 3, y - fh - 3,
-                                        Graphics.TOP | Graphics.LEFT);
+//#ifdef __ALT_RENDERER__
+                    if (Config.S60renderer) { // S60 renderer
+//#endif
+                        graphics.setClip(x + 3, y - fh - 3, bw, fh);
+                        graphics.drawImage(Desktop.barWpt, x + 3, y - fh - 3,
+                                           Graphics.TOP | Graphics.LEFT);
+                        graphics.setClip(0, 0, Desktop.width, Desktop.height);
+//#ifdef __ALT_RENDERER__
+                    } else {
+                        graphics.drawRegion(Desktop.barWpt, 0, 0, bw, fh,
+                                            Sprite.TRANS_NONE, x + 3, y - fh - 3,
+                                            Graphics.TOP | Graphics.LEFT);
+                    }
+//#endif
                     graphics.drawString(text, x + 3 + 1, y - fh - 3 - 1,
                                         Graphics.TOP | Graphics.LEFT);
                 }

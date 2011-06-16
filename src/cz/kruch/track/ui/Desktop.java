@@ -246,6 +246,13 @@ public final class Desktop implements CommandListener,
         screen.setFullScreenMode(Config.fullscreen);
         screen.setTitle(null);
         Desktop.display.setCurrent(screen);
+//#ifdef __ANDROID__
+        try {
+            Thread.sleep(50);
+        } catch (InterruptedException e) {
+            // ignore
+        }
+//#endif
     }
 
     public void boot(final int imgcached, final int configured,
@@ -478,9 +485,7 @@ public final class Desktop implements CommandListener,
             }
         }
         screen.addCommand(this.cmdRun = new Command(Resources.getString(Resources.DESKTOP_CMD_START), POSITIVE_CMD_TYPE, 2));
-        if (cz.kruch.track.TrackingMIDlet.getPlatform().startsWith("NokiaE61")) {
-            screen.addCommand(this.cmdWaypoints = new Command(Resources.getString(Resources.DESKTOP_CMD_NAVIGATION), POSITIVE_CMD_TYPE, 3));
-        }
+        screen.addCommand(this.cmdWaypoints = new Command(Resources.getString(Resources.DESKTOP_CMD_NAVIGATION), POSITIVE_CMD_TYPE, 3));
 //#ifdef __B2B__
         screen.addCommand(this.cmdLoadGuide = new Command(Resources.getString(Resources.VENDOR_CMD_LOAD_GUIDE), POSITIVE_CMD_TYPE, 5));
 //#else
@@ -1281,7 +1286,7 @@ public final class Desktop implements CommandListener,
 
             } else if (Desktop.wpts == wpts && Desktop.showall == false) {
 
-                // this is ok state
+                // this is ok state - navigation to one, then user selected ShowAll
 
             } else {
 
@@ -1343,10 +1348,12 @@ public final class Desktop implements CommandListener,
                 Desktop.wptIdx = fromIndex;
                 Desktop.wptEndIdx = toIndex;
                 Desktop.routeDir = 1;
+                Desktop.showall = false;
             } else if (fromIndex < 0) { // backward routing
                 Desktop.wptIdx = toIndex;
                 Desktop.wptEndIdx = fromIndex;
                 Desktop.routeDir = -1;
+                Desktop.showall = false;
             } else { // single wpt navigation
                 Desktop.wptIdx = toIndex;
                 Desktop.wptEndIdx = fromIndex;
@@ -2185,7 +2192,7 @@ public final class Desktop implements CommandListener,
                         }
 
                         // create output
-                        trackLogNmea = new BufferedOutputStream(file.openOutputStream(), 4096);
+                        trackLogNmea = new BufferedOutputStream(file.openOutputStream(), 4096, true);
 
                         // inject provider
                         provider.setObserver(trackLogNmea);
@@ -3520,36 +3527,38 @@ public final class Desktop implements CommandListener,
     }
 
     private void consoleShow(final Graphics g, final int y, final String text) {
-        if (NavigationScreens.logo != null) {
-            return;
+        if (NavigationScreens.logo == null) {
+            if (text != null) {
+                g.setColor(0x00FFFFFF);
+                g.drawString(text, 2, y, Graphics.TOP | Graphics.LEFT);
+                screen.flushGraphics();
+            }
         }
-        if (text == null) {
-            return;
+//#ifdef __ANDROID__
+          else {
+            screen.flushGraphics();
         }
-        g.setColor(0x00FFFFFF);
-        g.drawString(text, 2, y, Graphics.TOP | Graphics.LEFT);
-        screen.flushGraphics();
+//#endif
     }
 
     private void consoleResult(final Graphics g, final int y, final int code) {
-        if (NavigationScreens.logo != null) {
-            return;
+        if (NavigationScreens.logo == null) {
+            final int x = screen.getWidth() - 2 - g.getFont().charWidth('*');
+            switch (code) {
+                case -1:
+                    g.setColor(0x00FF0000);
+                    consoleErrors++;
+                break;
+                case 0:
+                    g.setColor(0x00FFB900);
+                    consoleSkips++;
+                break;
+                default:
+                    g.setColor(0x0000FF00);
+            }
+            g.drawChar('*', x, y, Graphics.TOP | Graphics.LEFT);
+            screen.flushGraphics();
         }
-        final int x = screen.getWidth() - 2 - g.getFont().charWidth('*');
-        switch (code) {
-            case -1:
-                g.setColor(0x00FF0000);
-                consoleErrors++;
-            break;
-            case 0:
-                g.setColor(0x00FFB900);
-                consoleSkips++;
-            break;
-            default:
-                g.setColor(0x0000FF00);
-        }
-        g.drawChar('*', x, y, Graphics.TOP | Graphics.LEFT);
-        screen.flushGraphics();
     }
 
     private void consoleDelay(final long tStart) {

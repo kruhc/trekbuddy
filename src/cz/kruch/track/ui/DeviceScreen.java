@@ -793,6 +793,7 @@ final class DeviceScreen extends GameCanvas implements Runnable {
 //#endif        
         drawButton(g, delegate.cmdSettings, dy, 3 * dy + 2 * bh, bw, bh);
         drawButton(g, delegate.cmdInfo, dy + bw + dy, 3 * dy + 2 * bh, bw, bh);
+        drawButton(g, delegate.cmdWaypoints, dy, 4 * dy + 3 * bh, bw, bh);
         drawButton(g, delegate.cmdExit, dy + bw + dy, 4 * dy + 3 * bh, bw, bh);
         g.setColor(c);
     }
@@ -860,7 +861,9 @@ final class DeviceScreen extends GameCanvas implements Runnable {
             case 13:
             case 14:
             case 15: {
-                if (x > w / 2 + i && x < w - i) {
+                if (x > i && x < w / 2 - i) {
+                    cmd = delegate.cmdWaypoints;
+                } else if (x > w / 2 + i && x < w - i) {
                     cmd = delegate.cmdExit;
                 }
             } break;

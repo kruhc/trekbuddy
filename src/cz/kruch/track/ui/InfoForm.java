@@ -75,8 +75,10 @@ final class InfoForm implements CommandListener {
             sb.append("179 ");
         if (cz.kruch.track.TrackingMIDlet.jsr234)
             sb.append("234 ");
+/*
         if (cz.kruch.track.TrackingMIDlet.jsr256)
             sb.append("256 ");
+*/
         pane.append(newItem("ExtraJsr", sb.toString()));
         if (cz.kruch.track.TrackingMIDlet.getFlags() != null) {
             pane.append(newItem("AppFlags", cz.kruch.track.TrackingMIDlet.getFlags()));

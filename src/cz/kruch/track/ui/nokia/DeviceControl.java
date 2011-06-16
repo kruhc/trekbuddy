@@ -2,6 +2,8 @@
 
 package cz.kruch.track.ui.nokia;
 
+import cz.kruch.track.event.Callback;
+
 import java.util.TimerTask;
 
 /**
@@ -198,13 +200,27 @@ public class DeviceControl extends TimerTask {
 //#endif
     
     //
-    // implementation
+    // default implementation
     //
 
+    private cz.kruch.track.event.Callback sensor;
+
     void sense(api.location.LocationListener listener) {
+        if (cz.kruch.track.TrackingMIDlet.jsr179) {
+            try {
+                sensor = (Callback) Class.forName("cz.kruch.track.location.Jsr179OrientationProvider").newInstance();
+                sensor.invoke(new Integer(0), null, listener);
+            } catch (Throwable t) {
+                // ignore
+            }
+        }
     }
 
     void nonsense(api.location.LocationListener listener) {
+        if (sensor != null) {
+            sensor.invoke(new Integer(1), null, null);
+            sensor = null; // gc hint
+        }
     }
 
     String getCellId() {

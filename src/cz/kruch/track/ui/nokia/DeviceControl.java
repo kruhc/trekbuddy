@@ -203,9 +203,12 @@ public class DeviceControl extends TimerTask {
     // default implementation
     //
 
+//#ifndef __ANDROID__
     private cz.kruch.track.event.Callback sensor;
+//#endif
 
     void sense(api.location.LocationListener listener) {
+//#ifndef __ANDROID__
         if (cz.kruch.track.TrackingMIDlet.jsr179) {
             try {
                 sensor = (Callback) Class.forName("cz.kruch.track.location.Jsr179OrientationProvider").newInstance();
@@ -214,13 +217,16 @@ public class DeviceControl extends TimerTask {
                 // ignore
             }
         }
+//#endif
     }
 
     void nonsense(api.location.LocationListener listener) {
+//#ifndef __ANDROID__
         if (sensor != null) {
             sensor.invoke(new Integer(1), null, null);
             sensor = null; // gc hint
         }
+//#endif
     }
 
     String getCellId() {

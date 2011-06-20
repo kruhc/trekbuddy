@@ -1624,25 +1624,21 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
 
     private Displayable listStores(final Vector stores, final String title) {
         // create UI list
-        Displayable l = null;
+        Displayable l;
 //#ifndef __ANDROID__
         l = new SmartList(title);
         ((SmartList) l).setData(stores);
 //#else
-        if (cz.kruch.track.TrackingMIDlet.android) { // always true when built; IDEA hack!
-            final String[] strings = new String[stores.size()];
-            stores.copyInto(strings);
-            l = new List(title, List.IMPLICIT, strings, null);
-        }
+        final String[] strings = new String[stores.size()];
+        stores.copyInto(strings);
+        l = new List(title, List.IMPLICIT, strings, null);
 //#endif
 
         // add commands
 //#ifndef __ANDROID__
         ((SmartList) l).setSelectCommand(cmdOpen);
 //#else
-        if (cz.kruch.track.TrackingMIDlet.android) { // always true when built; IDEA hack!
-            ((List) l).setSelectCommand(cmdOpen);
-        }
+        ((List) l).setSelectCommand(cmdOpen);
 //#endif
         if (title == actionListWpts || title == actionListTracks) { // == is OK
             l.addCommand(cmdBack);

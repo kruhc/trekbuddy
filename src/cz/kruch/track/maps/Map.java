@@ -612,10 +612,8 @@ public final class Map implements Runnable {
                 return url;
             }
 //#ifdef __ANDROID__
-            if (cz.kruch.track.TrackingMIDlet.android) {
-                return url;
-            }
-//#endif
+            return url;
+//#else
             final StringBuffer sb = new StringBuffer(64);
             int s0 = 0;
             while (idx > -1) {
@@ -628,6 +626,7 @@ public final class Map implements Runnable {
                 sb.append(url.substring(s0));
             }
             return sb.toString();
+//#endif
         }
     }
 

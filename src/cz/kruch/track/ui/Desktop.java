@@ -1864,9 +1864,7 @@ public final class Desktop implements CommandListener,
             switch (Config.locationProvider) {
                 case Config.LOCATION_PROVIDER_JSR82:
 //#ifdef __ANDROID__
-                    if (cz.kruch.track.TrackingMIDlet.android) {
-                        providerClass = Class.forName("cz.kruch.track.location.AndroidBluetoothLocationProvider");
-                    }
+                    providerClass = Class.forName("cz.kruch.track.location.AndroidBluetoothLocationProvider");
 //#else
                     providerClass = Class.forName("cz.kruch.track.location.Jsr82LocationProvider");
 //#endif
@@ -1874,9 +1872,7 @@ public final class Desktop implements CommandListener,
                 break;
                 case Config.LOCATION_PROVIDER_JSR179:
 //#ifdef __ANDROID__
-                    if (cz.kruch.track.TrackingMIDlet.android) {
-                        providerClass = Class.forName("cz.kruch.track.location.AndroidLocationProvider");
-                    }
+                    providerClass = Class.forName("cz.kruch.track.location.AndroidLocationProvider");
 //#else
                     providerClass = Class.forName("cz.kruch.track.location.Jsr179LocationProvider");
 //#endif

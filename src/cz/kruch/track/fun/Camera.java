@@ -161,11 +161,9 @@ public abstract class Camera implements
 //#endif /* !__ANDROID__ */    
 
     private static Camera createPlayback() throws Exception {
-        Camera instance = null;
+        Camera instance;
 //#ifdef __ANDROID__
-        if (cz.kruch.track.TrackingMIDlet.android) {
-            instance = (Camera) Class.forName("cz.kruch.track.fun.AndroidCamera").newInstance();
-        }
+        instance = (Camera) Class.forName("cz.kruch.track.fun.AndroidCamera").newInstance();
 //#else
         instance = (Camera) Class.forName("cz.kruch.track.fun.Jsr135Camera").newInstance();
 //#endif

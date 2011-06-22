@@ -98,6 +98,9 @@ final class InfoForm implements CommandListener {
                 .append('/').append(cz.kruch.track.ui.nokia.DeviceControl.getGsmLac())
                 .append(' ').append(System.getProperty("com.nokia.mid.ui.version"));
         pane.append(newItem("DeviceCtrl", sb.toString()));
+//#ifndef __ANDROID__
+        pane.append(newItem("Orientation", cz.kruch.track.ui.nokia.DeviceControl.getSensorStatus()));
+//#endif
         sb.delete(0, sb.length()).append(cz.kruch.track.fun.Camera.type)
                 .append("; resolutions: ").append(System.getProperty("camera.resolutions"));
         pane.append(newItem("Camera", sb.toString()));

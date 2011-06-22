@@ -678,15 +678,19 @@ final class ComputerView extends View
         // regular run?
         if (profiles != null) {
 
-            // copy name and clear
-            final String name = _profileName;
-            _profileName = null;
+            // shit happens sometimes TODO but why?!?
+            if (_profileName == null) {
+//#ifdef __ANDROID__
+                android.util.Log.e("TrekBuddy", "profileName is null");
+//#endif
+                return;
+            }
 
             // try to load new profile
             try {
 
                 // load new profile
-                loadViaCache(name);
+                loadViaCache(_profileName);
 
                 // prepare profile
                 prepare(Config.dayNight);
@@ -699,6 +703,8 @@ final class ComputerView extends View
                 t.printStackTrace();
 //#endif
                 Desktop.showError(Resources.getString(Resources.DESKTOP_MSG_LOAD_PROFILE_FAILED), t, Desktop.screen);
+            } finally {
+                _profileName = null;
             }
             
         } else {
@@ -903,7 +909,7 @@ final class ComputerView extends View
         }
     }
 
-    private volatile String _profileName;
+    private String _profileName;
 
     public void commandAction(Command command, Displayable displayable) {
         // load new profile if selected

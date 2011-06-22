@@ -392,7 +392,11 @@ public final class Resources {
         final Object[] holder = new Object[2];
 
         // read default resources
-        loadRes(Resources.class.getResourceAsStream("/resources/language.res"), holder);
+        InputStream is = Resources.class.getResourceAsStream("/resources/language." + System.getProperty("microedition.locale") + ".res");
+        if (is == null) {
+            is = Resources.class.getResourceAsStream("/resources/language.en_US.res");
+        }
+        loadRes(is, holder);
         ids = (int[]) holder[0];
         value = (String) holder[1];
         values = new String[ids.length];

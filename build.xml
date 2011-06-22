@@ -26,7 +26,7 @@
     <property name="android20.home" value="c:\J2ME\android-sdk-windows\platforms\android-2.0"/>
     <property name="microemu.home" value="z:\repository\microemu-google\microemulator"/>
     <property name="proguard3.home" value="z:\apps\proguard3.11"/>
-    <property name="proguard4.home" value="z:\apps\proguard4.5.1"/>
+    <property name="proguard4.home" value="z:\apps\proguard4.6"/>
 
     <property name="use.proguard" value="3"/>
 
@@ -305,10 +305,8 @@
 			<property name="sdk.version" value="2.0"/>
 			<property name="api.level" value="3"/>
 			<property name="dist.dir" value="android"/>
-<!--
             <property name="javac.debug" value="true"/>
             <property name="javac.debuglevel" value="source,lines"/>
--->
 <!--
             <property name="do.obfuscate" value="true"/>
 -->
@@ -463,7 +461,7 @@
     <target name="a.pre.emulator" depends="a.pre.hecl">
         <mkdir dir="tmp/src"/>
         <wtkpreprocess srcdir="src" destdir="tmp/src" version="1"
-                       symbols="__HECL__,__ALL__,__LOG__,${pre.extra}"/>
+                       symbols="__HECL__,__ALL__,__LOG__,__EMULATOR__,${pre.extra}"/>
     </target>
 
     <target name="compile.standard" depends="remove.symbian.src,remove.rim.src,remove.android.src">
@@ -552,7 +550,7 @@
                destdir="tmp/build/classes"
                tempdir="tmp/ant"
                fork="true"
-               target="1.5" source="1.5"
+               target="1.5" source="1.5" debug="true" debuglevel="source,lines"
                bootclasspathref="bootclasspath.android20"/>
     </target>
 
@@ -675,7 +673,7 @@
             <attribute name="MIDlet-Description" value="${description}"/>
             <attribute name="MIDlet-Info-URL" value="http://www.trekbuddy.net"/>
             <attribute name="MIDlet-Icon" value="/resources/icon.png"/>
-            <attribute name="${permission.attribute}" value="javax.microedition.io.Connector.file.read,javax.microedition.io.Connector.file.write,javax.microedition.io.Connector.bluetooth.client,javax.microedition.location.Location,javax.microedition.media.control.VideoControl.getSnapshot,javax.microedition.io.Connector.sms,javax.wireless.messaging.sms.receive,javax.wireless.messaging.sms.send,javax.microedition.io.Connector.comm,javax.microedition.io.Connector.cbs,javax.wireless.messaging.cbs.receive,javax.microedition.io.Connector.socket,javax.microedition.io.PushRegistry"/>
+            <attribute name="${permission.attribute}" value="javax.microedition.io.Connector.file.read,javax.microedition.io.Connector.file.write,javax.microedition.io.Connector.bluetooth.client,javax.microedition.location.Location,javax.microedition.media.control.VideoControl.getSnapshot,javax.microedition.io.Connector.sms,javax.wireless.messaging.sms.receive,javax.wireless.messaging.sms.send,javax.microedition.io.Connector.comm,javax.microedition.io.Connector.cbs,javax.wireless.messaging.cbs.receive,javax.microedition.io.Connector.socket,javax.microedition.io.PushRegistry,javax.microedition.location.Orientation"/>
             <attribute name="Content-Folder" value="Applications"/>
             <attribute name="Nokia-MIDlet-Category" value="Application"/>
             <attribute name="Nokia-MIDlet-No-Exit" value="true"/>
@@ -685,7 +683,9 @@
             <midlet name="${name}" class="cz.kruch.track.TrackingMIDlet" icon="/resources/icon.png"/>
         </wtkjad>
         <fixcrlf srcdir="tmp" eol="crlf" eof="remove" encoding="UTF-8" includes="trekbuddy${suffix}.jad"/>
+<!--
         <copy file="res/resources/language.${locale}.res" tofile="res/resources/language.res" overwrite="true"/>
+-->
     </target>
 
     <target name="a.pack" depends="create.tmp.jad">
@@ -696,7 +696,7 @@
             <fileset dir="tmp/build/classes"/>
             <fileset dir="res">
                 <include name="**/datums.txt"/>
-                <include name="**/language.res"/>
+                <include name="**/language.en_US.res"/>
                 <include name="**/*.png"/>
                 <include name="**/*.svg"/>
                 <exclude name="**/icon.store.*.png"/>
@@ -718,7 +718,7 @@
             <fileset dir="tmp/build/classes"/>
             <fileset dir="res">
                 <include name="**/datums.txt"/>
-                <include name="**/language.res"/>
+                <include name="**/language.en_US.res"/>
                 <include name="**/*.png"/>
                 <exclude name="**/icon.store.*.png"/>
                 <exclude name="**/set/*.png"/>
@@ -741,7 +741,7 @@
             </fileset>
             <fileset dir="res">
                 <include name="**/datums.txt"/>
-                <include name="**/language.res"/>
+                <include name="**/language.en_US.res"/>
                 <include name="**/world.*"/>
                 <include name="**/set/**"/>
             </fileset>
@@ -762,7 +762,7 @@
             </fileset>
             <fileset dir="res">
                 <include name="**/datums.txt"/>
-                <include name="**/language.res"/>
+                <include name="**/language.en_US.res"/>
                 <include name="**/world.*"/>
                 <include name="**/set/**"/>
             </fileset>
@@ -778,15 +778,17 @@
                     config="CLDC-${wtk.cldc.version}"
                     profile="MIDP-${wtk.midp.version}">
             <fileset dir="tmp/build/classes"/>
-            <fileset dir="res-RIM"> <!-- same PNG graphics as Blackberry -->
-                <exclude name="**/icon.store.*.png"/>
-                <exclude name="**/icon.png"/>
-            </fileset>
             <fileset dir="res">
                 <include name="**/datums.txt"/>
-                <include name="**/language.res"/>
+                <include name="**/language.en_US.res"/>
+                <include name="**/*.png"/>
+                <exclude name="**/icon.store.*.png"/>
+                <exclude name="**/icon.png"/>
                 <include name="**/world.*"/>
                 <include name="**/set/**"/>
+            </fileset>
+            <fileset dir="res-android">
+                <include name="resources/language.*.res"/>
             </fileset>
             <manifest>
                 <attribute name="Built-By" value="kruhc@seznam.cz"/>
@@ -952,8 +954,10 @@
             <arg value="-libraryjars ${libraryjars}"/>
             <arg value="-dontpreverify"/>
             <!-- let dx optimize -->
+<!--
             <arg value="-dontoptimize"/>
-            <!--<arg value="-optimizations !code/simplification/arithmetic"/>--> <!-- dalvik 1.5 issue workaround -->
+-->
+            <arg value="-optimizations !code/simplification/arithmetic"/> <!-- dalvik 1.0/1.5 issue workaround -->
             <arg value="-dontusemixedcaseclassnames"/>
             <arg value="-dontskipnonpubliclibraryclasses"/>
             <arg value="-repackageclasses ''"/>
@@ -961,7 +965,7 @@
 <!-- leaving this optimization to dx? "Dalvik VM also can't handle aggressive overloading" (ProGuard Manual)
             <arg value="-overloadaggressively"/>
 -->
-            <arg value="-renamesourcefileattribute SourceFile"/>
+            <arg value="-renamesourcefileattribute TrekBuddy"/>
             <arg value="-keepattributes SourceFile,LineNumberTable"/>
             <arg value="-keep class * implements javax.microedition.midlet.MIDlet"/>
             <arg value="-keepnames class cz.** extends java.lang.Exception"/>
@@ -1026,7 +1030,7 @@
             <attribute name="MIDlet-Description" value="${description}"/>
             <attribute name="MIDlet-Info-URL" value="http://www.trekbuddy.net"/>
             <attribute name="MIDlet-Icon" value="/resources/icon.png"/>
-            <attribute name="${permission.attribute}" value="javax.microedition.io.Connector.file.read,javax.microedition.io.Connector.file.write,javax.microedition.io.Connector.bluetooth.client,javax.microedition.location.Location,javax.microedition.media.control.VideoControl.getSnapshot,javax.microedition.io.Connector.sms,javax.wireless.messaging.sms.receive,javax.wireless.messaging.sms.send,javax.microedition.io.Connector.comm,javax.microedition.io.Connector.cbs,javax.wireless.messaging.cbs.receive,javax.microedition.io.Connector.socket,javax.microedition.io.PushRegistry"/>
+            <attribute name="${permission.attribute}" value="javax.microedition.io.Connector.file.read,javax.microedition.io.Connector.file.write,javax.microedition.io.Connector.bluetooth.client,javax.microedition.location.Location,javax.microedition.media.control.VideoControl.getSnapshot,javax.microedition.io.Connector.sms,javax.wireless.messaging.sms.receive,javax.wireless.messaging.sms.send,javax.microedition.io.Connector.comm,javax.microedition.io.Connector.cbs,javax.wireless.messaging.cbs.receive,javax.microedition.io.Connector.socket,javax.microedition.io.PushRegistry,javax.microedition.location.Orientation"/>
             <attribute name="Content-Folder" value="Applications"/>
             <midlet name="${name}" class="cz.kruch.track.TrackingMIDlet" icon="/resources/icon.png"/>
         </wtkjad>
@@ -1055,7 +1059,7 @@
             <attribute name="MIDlet-Description" value="${description}"/>
             <attribute name="MIDlet-Info-URL" value="http://www.trekbuddy.net"/>
             <attribute name="MIDlet-Icon" value="/resources/icon.png"/>
-            <attribute name="${permission.attribute}" value="javax.microedition.io.Connector.file.read,javax.microedition.io.Connector.file.write,javax.microedition.io.Connector.bluetooth.client,javax.microedition.location.Location,javax.microedition.media.control.VideoControl.getSnapshot,javax.microedition.io.Connector.sms,javax.wireless.messaging.sms.receive,javax.wireless.messaging.sms.send,javax.microedition.io.Connector.comm,javax.microedition.io.Connector.cbs,javax.wireless.messaging.cbs.receive,javax.microedition.io.Connector.socket,javax.microedition.io.PushRegistry"/>
+            <attribute name="${permission.attribute}" value="javax.microedition.io.Connector.file.read,javax.microedition.io.Connector.file.write,javax.microedition.io.Connector.bluetooth.client,javax.microedition.location.Location,javax.microedition.media.control.VideoControl.getSnapshot,javax.microedition.io.Connector.sms,javax.wireless.messaging.sms.receive,javax.wireless.messaging.sms.send,javax.microedition.io.Connector.comm,javax.microedition.io.Connector.cbs,javax.wireless.messaging.cbs.receive,javax.microedition.io.Connector.socket,javax.microedition.io.PushRegistry,javax.microedition.location.Orientation"/>
             <attribute name="Content-Folder" value="Applications"/>
             <attribute name="Nokia-MIDlet-Category" value="Application"/>
             <attribute name="Nokia-MIDlet-No-Exit" value="true"/>
@@ -1147,7 +1151,7 @@
             <attribute name="MIDlet-Description" value="${description}"/>
             <attribute name="MIDlet-Info-URL" value="http://www.trekbuddy.net"/>
             <attribute name="MIDlet-Icon" value="/resources/icon.png"/>
-            <attribute name="${permission.attribute}" value="javax.microedition.io.Connector.file.read,javax.microedition.io.Connector.file.write,javax.microedition.io.Connector.bluetooth.client,javax.microedition.location.Location,javax.microedition.media.control.VideoControl.getSnapshot,javax.microedition.io.Connector.sms,javax.wireless.messaging.sms.receive,javax.wireless.messaging.sms.send,javax.microedition.io.Connector.comm,javax.microedition.io.Connector.cbs,javax.wireless.messaging.cbs.receive,javax.microedition.io.Connector.socket,javax.microedition.io.PushRegistry"/>
+            <attribute name="${permission.attribute}" value="javax.microedition.io.Connector.file.read,javax.microedition.io.Connector.file.write,javax.microedition.io.Connector.bluetooth.client,javax.microedition.location.Location,javax.microedition.media.control.VideoControl.getSnapshot,javax.microedition.io.Connector.sms,javax.wireless.messaging.sms.receive,javax.wireless.messaging.sms.send,javax.microedition.io.Connector.comm,javax.microedition.io.Connector.cbs,javax.wireless.messaging.cbs.receive,javax.microedition.io.Connector.socket,javax.microedition.io.PushRegistry,javax.microedition.location.Orientation"/>
             <attribute name="Content-Folder" value="Applications"/>
             <attribute name="RIM-COD-Creation-Time" value="${rim.cod.modified}"/>
             <attribute name="RIM-COD-Module-Name" value="trekbuddy${suffix}"/>

@@ -1555,6 +1555,7 @@ public final class Desktop implements CommandListener,
         }
 
         final View[] views = this.views;
+        if (views == null) return; // too early invocation
         final boolean repeated = c != 0;
 
         switch (action) {
@@ -1662,6 +1663,7 @@ public final class Desktop implements CommandListener,
         }
 
         final View[] views = this.views;
+        if (views == null) return; // too early invocation
 
         switch (action) {
 
@@ -1707,6 +1709,7 @@ public final class Desktop implements CommandListener,
 
     // TODO hacky!!!!
     void handleMove(int x, int y) {
+        if (views == null) return; // too early invocation
         if (mode == VIEW_MAP) {
             Desktop.browsing = true;
             update(((MapView) views[mode]).moveTo(x, y));
@@ -1715,6 +1718,7 @@ public final class Desktop implements CommandListener,
 
     // TODO hacky!!!!
     void handleStall(int x, int y) {
+        if (views == null) return; // too early invocation
         if (mode == VIEW_MAP) {
             update(((MapView) views[mode]).moveTo(-1, -1));
         }
@@ -1793,8 +1797,10 @@ public final class Desktop implements CommandListener,
             message = "";
         }
         if (t != null) {
-            if (message.length() > 0) message += " ";
-            message += t.toString();
+            final StringBuffer sb = new StringBuffer(message);
+            if (sb.length() > 0) sb.append(' ');
+            sb.append(t.toString());
+            message = sb.toString();
         }
         showAlert(AlertType.WARNING, message, WARN_DIALOG_TIMEOUT, nextDisplayable);
     }
@@ -1804,8 +1810,20 @@ public final class Desktop implements CommandListener,
             message = "";
         }
         if (t != null) {
-            if (message.length() > 0) message += ": ";
-            message += t.toString();
+//#ifdef __ANDROID__
+            android.util.Log.e("TrekBuddy", message, t);
+//#elifdef __SYMBIAN__
+            System.err.println("[TrekBuddy] " + message);
+            t.printStackTrace();
+//#endif
+            final StringBuffer sb = new StringBuffer(message);
+            if (sb.length() > 0) sb.append(": ");
+            sb.append(t.toString());
+            if (t instanceof api.lang.RuntimeException) {
+                if (((api.lang.RuntimeException) t).getCause() != null)
+                sb.append(" Caused by: ").append(((api.lang.RuntimeException) t).getCause().toString());
+            }
+            message = sb.toString();
         }
         showAlert(AlertType.ERROR, message, Alert.FOREVER, nextDisplayable);
     }
@@ -2888,7 +2906,7 @@ public final class Desktop implements CommandListener,
 //#ifdef __LOG__
                     e.printStackTrace();
 //#endif
-                    throw new RuntimeException("Exception [config changed] in view #" + i + ": " + e.toString());
+                    throw new api.lang.RuntimeException("Error in [config changed] in view #" + i, e);
                 }
             }
 
@@ -3396,7 +3414,7 @@ public final class Desktop implements CommandListener,
 //#ifdef __LOG__
                     e.printStackTrace();
 //#endif
-                    throw new RuntimeException("Exception [navigation update]" + ": " + e.toString());
+                    throw new api.lang.RuntimeException("Error in [navigation update]", e);
                 }
 
                 // update route navigation
@@ -3406,7 +3424,7 @@ public final class Desktop implements CommandListener,
 //#ifdef __LOG__
                     e.printStackTrace();
 //#endif
-                    throw new RuntimeException("Exception [routing update]" + ": " + e.toString());
+                    throw new api.lang.RuntimeException("Error in [routing update]", e);
                 }
             }
 
@@ -3423,7 +3441,7 @@ public final class Desktop implements CommandListener,
 //#ifdef __LOG__
                     e.printStackTrace();
 //#endif
-                    throw new RuntimeException("Exception [location updated] in view #" + i + ": " + e.toString());
+                    throw new api.lang.RuntimeException("Error in [location updated] in view #" + i, e);
                 }
             }
 
@@ -3453,7 +3471,7 @@ public final class Desktop implements CommandListener,
 //#ifdef __LOG__
                     e.printStackTrace();
 //#endif
-                    throw new RuntimeException("Exception [orientation changed] in view #" + i + ": " + e.toString());
+                    throw new api.lang.RuntimeException("Error in [orientation changed] in view #" + i, e);
                 }
             }
 

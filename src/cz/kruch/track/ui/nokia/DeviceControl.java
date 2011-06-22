@@ -18,6 +18,7 @@ public class DeviceControl extends TimerTask {
     protected static final int STATUS_ON  = 1;
 
     private static DeviceControl instance;
+    private static String sensorStatus;
 
     protected int backlight, presses;
 
@@ -187,6 +188,10 @@ public class DeviceControl extends TimerTask {
         return instance.backlight;
     }
 
+    public static String getSensorStatus() {
+        return sensorStatus;
+    }
+
 //#ifdef __RIM__
 
     public static void loadAltDatadir() {
@@ -212,6 +217,9 @@ public class DeviceControl extends TimerTask {
         if (cz.kruch.track.TrackingMIDlet.jsr179) {
             try {
                 sensor = (Callback) Class.forName("cz.kruch.track.location.Jsr179OrientationProvider").newInstance();
+                final String[] status = new String[1];
+                sensor.invoke(new Integer(2), null, status);
+                sensorStatus = status[0];
                 sensor.invoke(new Integer(0), null, listener);
             } catch (Throwable t) {
                 // ignore

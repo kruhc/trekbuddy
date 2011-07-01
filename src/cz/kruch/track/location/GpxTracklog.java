@@ -181,6 +181,10 @@ public final class GpxTracklog implements Runnable {
         return fileName;
     }
 
+    public String getURL() {
+        return url;
+    }
+
     public void setFilePrefix(String filePrefix) {
         this.filePrefix = filePrefix;
     }
@@ -236,26 +240,20 @@ public final class GpxTracklog implements Runnable {
 //#ifdef __LOG__
             if (log.isEnabled()) log.debug("file created");
 //#endif
-        } catch (Throwable t) {
-            throwable = t;
+        } catch (Exception e) {
+            throwable = e;
 //#ifdef __LOG__
-            if (log.isEnabled()) log.error("failed to open file: " + t);
+            if (log.isEnabled()) log.error("failed to open file: " + e);
 //#endif
-            if (file != null) {
-                try {
-                    file.close();
-                } catch (IOException e) {
-                    // ignore
-                }
-                file = null; // gc hint
-            }
+            // cleanup - safe operation
+            close();
         }
 
         // file ready?
         if (throwable == null) {
             try {
                 // output stream
-                final OutputStream output = new BufferedOutputStream(file.openOutputStream(), 4096);
+                final OutputStream output = new BufferedOutputStream(file.openOutputStream(), 4096, true);
 
                 // init serializer
                 final HXmlSerializer serializer = this.serializer = new HXmlSerializer();
@@ -286,12 +284,12 @@ public final class GpxTracklog implements Runnable {
 //#ifdef __LOG__
                 if (log.isEnabled()) log.debug("output ready...");
 //#endif
-            } catch (Throwable t) {
-                throwable = t;
+            } catch (Exception e) {
+                throwable = e;
 //#ifdef __LOG__
-                if (log.isEnabled()) log.debug("open failed: " + t);
+                if (log.isEnabled()) log.debug("write prolog failed: " + e);
 //#endif
-                // cleanup
+                // cleanup - safe operation
                 close();
             }
         }
@@ -346,7 +344,7 @@ public final class GpxTracklog implements Runnable {
 //#ifdef __LOG__
                 if (log.isEnabled()) log.debug("starting flusher");
 //#endif
-                cz.kruch.track.ui.Desktop.timer.schedule(flusher = new Flusher(this), 60000L, 60000L);
+                cz.kruch.track.ui.Desktop.schedule(flusher = new Flusher(this), 60000L, 60000L);
             }
 
 //#ifdef __LOG__

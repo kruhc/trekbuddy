@@ -29,7 +29,7 @@ public final class Jsr179LocationProvider
     private int interval, timeout, maxage;
 
     private final char[] raw;
-    private int extraSat, extraFix;
+    private int extraSat, extraFix, extraFixQuality;
 
     public Jsr179LocationProvider() {
         super("Internal");
@@ -140,7 +140,7 @@ public final class Jsr179LocationProvider
             // enhance with raw NMEA
             int sat = -1;
             if (extra != null) {
-                extraSat = extraFix = 0;
+                extraSat = extraFix = extraFixQuality = 0;
                 try {
                     parseNmea(extra);
                     if (extraSat > 0) {
@@ -170,16 +170,15 @@ public final class Jsr179LocationProvider
 //#endif
 
             // create up-to-date coordinates
-            QualifiedCoordinates qc = QualifiedCoordinates.newInstance(xc.getLatitude(),
-                                                                       xc.getLongitude(),
-                                                                       alt);
-            qc.setHorizontalAccuracy(xc.getHorizontalAccuracy());
+            QualifiedCoordinates qc = QualifiedCoordinates.newInstance(xc.getLatitude(), xc.getLongitude(), alt,
+                                                                       xc.getHorizontalAccuracy(), xc.getVerticalAccuracy());
 
             // create location
             final Location location = Location.newInstance(qc, timestamp, 1, sat);
             location.setCourse(l.getCourse());
             location.setSpeed(l.getSpeed());
             location.updateFix(extraFix);
+            location.updateFixQuality(extraFixQuality);
 
             // signal state change
             if (updateLastState(AVAILABLE)) {
@@ -226,6 +225,7 @@ public final class Jsr179LocationProvider
                     switch (rec.type) {
                         case NmeaParser.HEADER_GGA: {
                             extraSat = rec.sat;
+                            extraFixQuality = rec.fix;
                         } break;
                         case NmeaParser.HEADER_GSA: {
                             extraFix = rec.fix;

@@ -219,14 +219,8 @@ public class AndroidBluetoothLocationProvider
                 // new location timestamp
                 setLast(System.currentTimeMillis());
 
-                // send new location
-                notifyListener(location);
-
-                // state change?
-                final int newState = location.getFix() > 0 ? AVAILABLE : TEMPORARILY_UNAVAILABLE;
-                if (updateLastState(newState)) {
-                    notifyListener(newState);
-                }
+                // notify listener
+                notifyListener2(location);
 
             } // for (; go ;)
 

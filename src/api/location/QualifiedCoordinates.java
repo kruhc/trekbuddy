@@ -15,7 +15,7 @@ public final class QualifiedCoordinates implements GeodeticPosition {
 
     private double lat, lon;
     private float alt;
-    private float hAccuracy/*, vAccuracy*/;
+    private float hAccuracy, vAccuracy;
 
     /*
      * POOL
@@ -25,24 +25,30 @@ public final class QualifiedCoordinates implements GeodeticPosition {
     private static int countFree;
 
     public static QualifiedCoordinates newInstance(final double lat, final double lon) {
-        return newInstance(lat, lon, Float.NaN);
+        return newInstance(lat, lon, Float.NaN, Float.NaN, Float.NaN);
+    }
+
+    public static QualifiedCoordinates newInstance(final double lat, final double lon, final float alt) {
+        return newInstance(lat, lon, alt, Float.NaN, Float.NaN);
     }
 
     public static synchronized QualifiedCoordinates newInstance(final double lat,
                                                                 final double lon,
-                                                                final float alt) {
+                                                                final float alt,
+                                                                final float hAccuracy,
+                                                                final float vAccuracy) {
         QualifiedCoordinates result;
-
         if (countFree == 0) {
-            result = new QualifiedCoordinates(lat, lon, alt);
+            result = new QualifiedCoordinates();
         } else {
             result = pool[--countFree];
             pool[countFree] = null;
-            result.lat = lat;
-            result.lon = lon;
-            result.alt = alt;
-            result.hAccuracy = /*result.vAccuracy =*/ Float.NaN;
         }
+        result.lat = lat;
+        result.lon = lon;
+        result.alt = alt;
+        result.hAccuracy = hAccuracy;
+        result.vAccuracy = vAccuracy;
 
         return result;
     }
@@ -59,21 +65,11 @@ public final class QualifiedCoordinates implements GeodeticPosition {
      * ~POOL
      */
 
-    public QualifiedCoordinates _clone() {
-        QualifiedCoordinates clone = newInstance(lat, lon, alt);
-        clone.hAccuracy = this.hAccuracy;
-/*
-        clone.vAccuracy = this.vAccuracy;
-*/
-        return clone;
+    private QualifiedCoordinates() {
     }
 
-    private QualifiedCoordinates(final double lat, final double lon,
-                                 final float alt) {
-        this.lat = lat;
-        this.lon = lon;
-        this.alt = alt;
-        this.hAccuracy = /*this.vAccuracy =*/ Float.NaN;
+    public QualifiedCoordinates _clone() {
+        return newInstance(lat, lon, alt, hAccuracy, vAccuracy);
     }
 
     public double getH() {
@@ -108,7 +104,6 @@ public final class QualifiedCoordinates implements GeodeticPosition {
         this.hAccuracy = accuracy;
     }
 
-/*
     public float getVerticalAccuracy() {
         return vAccuracy;
     }
@@ -116,7 +111,6 @@ public final class QualifiedCoordinates implements GeodeticPosition {
     public void setVerticalAccuracy(float accuracy) {
         this.vAccuracy = accuracy;
     }
-*/
 
     public float distance(QualifiedCoordinates neighbour) {
         return distance(lat, lon, neighbour.lat, neighbour.lon);

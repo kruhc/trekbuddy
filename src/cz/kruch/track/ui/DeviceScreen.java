@@ -155,6 +155,15 @@ final class DeviceScreen extends GameCanvas implements Runnable {
         return hasRepeatEvents;
     }
 
+    /** @Override for more control */
+    public boolean hasPointerEvents() {
+//#ifdef __ANDROID__
+        return true;
+//#else
+        return super.hasPointerEvents();
+//#endif
+    }
+
     /** @Override */
     public void setCommandListener(CommandListener commandListener) {
         if (!Config.uiNoCommands) {
@@ -469,8 +478,8 @@ final class DeviceScreen extends GameCanvas implements Runnable {
                     softMenuActive = true;
                     flushGraphics();
 
+                    // no more processing
                     return;
-
                 }
             }
         }
@@ -492,6 +501,24 @@ final class DeviceScreen extends GameCanvas implements Runnable {
         }
 
 //#endif
+
+        // back key?
+        if ((i == +4 && cz.kruch.track.TrackingMIDlet.android) ||
+            (i == -11 && cz.kruch.track.TrackingMIDlet.sonyEricssonEx)) { // Android: -4, SE: -11
+            // menu shown?
+            if (touchMenuActive) {
+
+                // ops flags
+                touchMenuActive = false;
+                cmdExec = true;
+
+                // repaint screen
+                delegate.update(Desktop.MASK_SCREEN);
+            }
+
+            // no more processing
+            return;
+        }
 
         // save key
         _setInKey(i);
@@ -558,6 +585,12 @@ final class DeviceScreen extends GameCanvas implements Runnable {
 
 //#endif
 
+        // back key?
+        if ((i == +4 && cz.kruch.track.TrackingMIDlet.android) ||
+            (i == -11 && cz.kruch.track.TrackingMIDlet.sonyEricssonEx)) { // Android: -4, SE: -11
+            return;
+        }
+
         // increment counter
         keyRepeatedCount++;
         
@@ -591,6 +624,12 @@ final class DeviceScreen extends GameCanvas implements Runnable {
             return;
         }
 //#endif
+
+        // back key?
+        if ((i == +4 && cz.kruch.track.TrackingMIDlet.android) ||
+            (i == -11 && cz.kruch.track.TrackingMIDlet.sonyEricssonEx)) { // Android: -4, SE: -11
+            return;
+        }
 
         // stop key checker
         synchronized (this) {
@@ -654,7 +693,7 @@ final class DeviceScreen extends GameCanvas implements Runnable {
     void emulateKeyRepeated(final int keyCode) {
         synchronized (this) {
             if (repeatedKeyCheck == null) {
-                Desktop.timer.schedule(repeatedKeyCheck = new KeyCheckTimerTask(), 750L);
+                Desktop.schedule(repeatedKeyCheck = new KeyCheckTimerTask(), 750L);
             }
         }
     }

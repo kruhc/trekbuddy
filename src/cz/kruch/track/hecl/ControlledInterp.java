@@ -24,15 +24,11 @@ public final class ControlledInterp extends Interp {
     }
 
     private Lookup fallback;
-/*
     private Hashtable codes;
-*/
 
     public ControlledInterp(boolean background) throws HeclException {
         super();
-/*
         codes = new Hashtable(16);
-*/
 
         // internal commands
         addCommand("var", new VarCmd()); // stateful variables support
@@ -82,22 +78,20 @@ public final class ControlledInterp extends Interp {
     }
 
     /* @overriden */
-/*
     public synchronized Thing eval(Thing in) throws HeclException {
         CodeThing thing = (CodeThing) codes.get(in);
         if (thing == null) {
             codes.put(in ,thing = CodeThing.get(this, in));
-            System.out.println("cached; " + codes.size());
         }
         return thing.run(this);
     }
-*/
 
     /* @overriden */
     public synchronized Thing getVar(String varname, int level) throws HeclException {
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("interp get var: " + varname);
 //#endif
+        
         if (fallback != null) {
             final Thing res = fallback.get(varname);
             if (res != null) {
@@ -188,6 +182,10 @@ public final class ControlledInterp extends Interp {
 */
     }
 
+    public synchronized Thing resolveVar(String varname) throws HeclException {
+        return super.getVar(varname, 0);
+    }
+
     private static final class VarCmd implements org.hecl.Command {
 //#ifdef __LOG__
         private static final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("ControlledInterp");
@@ -208,7 +206,6 @@ public final class ControlledInterp extends Interp {
                 if (log.isEnabled()) log.debug("varcmd " + var + " being declared");
 //#endif
                 interp.setVar(var, argv[2], 0);
-//                interp.setVar(var, Interp.GLOBALREFTHING, -1);
             }
             return null;
         }

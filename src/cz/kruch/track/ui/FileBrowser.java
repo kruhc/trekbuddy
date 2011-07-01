@@ -32,7 +32,7 @@ public final class FileBrowser implements CommandListener, Runnable, Comparator 
     private Callback callback;
     private Displayable next;
 
-    private Command cmdCancel, cmdBack, cmdSelect;
+    private Command cmdClose, cmdBack, cmdSelect;
 //#ifdef __B2B__
     private Command cmdDir;
 //#endif
@@ -55,7 +55,7 @@ public final class FileBrowser implements CommandListener, Runnable, Comparator 
         this.next = next;
         this.folder = folder;
         this.filter = filter;
-        this.cmdCancel = new Command(Resources.getString(Resources.CMD_CANCEL), Desktop.CANCEL_CMD_TYPE, 1);
+        this.cmdClose = new Command(Resources.getString(Resources.CMD_CLOSE), Desktop.BACK_CMD_TYPE, 1);
         this.cmdBack = new Command(Resources.getString(Resources.CMD_BACK), Desktop.BACK_CMD_TYPE, 1);
         this.cmdSelect = new Command(Resources.getString(Resources.DESKTOP_CMD_OPEN), Desktop.SELECT_CMD_TYPE, 0);
 //#ifdef __B2B__
@@ -258,7 +258,7 @@ public final class FileBrowser implements CommandListener, Runnable, Comparator 
             } else {
                 list.setSelectCommand(null);
             }
-            list.addCommand(depth == 0 ? cmdCancel : cmdBack);
+            list.addCommand(depth == 0 ? cmdClose : cmdBack);
             list.setCommandListener(this);
 
             // show

@@ -304,6 +304,7 @@ public final class Resources {
     public static final short CFG_DESKTOP_FLD_EASYZOOM_OFF      = 3527;
     public static final short CFG_DESKTOP_FLD_EASYZOOM_VOLUME   = 3528;
     public static final short CFG_DESKTOP_FLD_SHOW_VISUAL_SPOTS = 3529;
+    public static final short CFG_DESKTOP_FLD_NO_ITEM_COMMANDS  = 3530;
     /* settings - Location */
     public static final short CFG_LOCATION_GROUP_PROVIDER       = 3600;
     public static final short CFG_LOCATION_GROUP_TRACKLOG       = 3601;

@@ -41,16 +41,14 @@ public final class NmeaParser {
     public static final byte[] snrs  = new byte[MAX_SATS];
     public static final byte[] prns = new byte[MAX_SATS];
 
-    public static float pdop;
-    public static float hdop;
-    public static float vdop;
+    public static float /*pdop, */hdop, vdop;
     public static float geoidh;
     public static int satv, sata;
     
     public static final Hashtable xdr = new Hashtable(4);
 
     public static void reset() {
-        pdop = hdop = vdop = geoidh = Float.NaN;
+        /*pdop = */hdop = vdop = geoidh = Float.NaN;
     }
 
     public static boolean validate(final char[] raw, final int length) {
@@ -228,9 +226,11 @@ public final class NmeaParser {
                     } 
                 } break;
                 case 15:
+/*
                     if (!token.isEmpty()) {
                         pdop = CharArrayTokenizer.parseFloat(token);
                     }
+*/
                     break;
                 case 16: {
                     if (!token.isEmpty()) {
@@ -501,7 +501,7 @@ public final class NmeaParser {
 
         private void invalidate(final int type) {
             this.type = type;
-            this.timestamp = this.fix = this.sat = -1;
+            this.timestamp = this.fix = this.sat = 0;
             this.lat = this.lon = Double.NaN;
             this.altitude = this.speed = this.course = Float.NaN;
             this.status = '?';

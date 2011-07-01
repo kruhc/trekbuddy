@@ -250,7 +250,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
 
     protected void pauseApp() {
 //#ifdef __LOG__
-		System.out.println("* pauseApp *");
+        System.out.println("* pauseApp *");
 //#endif
         // diagnostics
         pauses++;

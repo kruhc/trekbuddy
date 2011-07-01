@@ -8,7 +8,7 @@ package api.location;
  * @author Ales Pour <kruhc@seznam.cz>
  */
 public final class Location {
-    private static final int XDR_MASK   = 0x00400000;
+    private static final int XDR_MASK   = 0x40000000;
 
     private QualifiedCoordinates coordinates;
     private long timestamp;
@@ -26,25 +26,24 @@ public final class Location {
     public static Location newInstance(final QualifiedCoordinates coordinates,
                                        final long timestamp,
                                        final int fix) {
-        return newInstance(coordinates, timestamp, fix, -1);
+        return newInstance(coordinates, timestamp, fix, 0);
     }
 
     public static synchronized Location newInstance(final QualifiedCoordinates coordinates,
                                                     final long timestamp,
-                                                    final int fix,
-                                                    final int sat) {
+                                                    final int fix, final int sat) {
         final Location result;
 
         if (countFree == 0) {
-            result = new Location(coordinates, timestamp, fix, sat);
+            result = new Location();
         } else {
             result = pool[--countFree];
             pool[countFree] = null;
-            result.coordinates = coordinates;
-            result.timestamp = timestamp;
-            result.fixsat = ((fix << 8) & 0x0000ff00) | (sat & 0x000000ff);
-            result.speed = result.course = Float.NaN;
         }
+        result.coordinates = coordinates;
+        result.timestamp = timestamp;
+        result.speed = result.course = Float.NaN;
+        result.fixsat = ((fix << 8) & 0x0000ff00) | (sat & 0x000000ff);
 
         return result;
     }
@@ -63,24 +62,15 @@ public final class Location {
      * ~POOL
      */
 
-    public Location _clone() {
-        final Location l = newInstance(coordinates._clone(), timestamp,
-                                       getFix(), getSat());
-        l.course = course;
-        l.speed = speed;
-        l.fixsat = fixsat;
-        
-        return l;
+    private Location() {
     }
 
-    private Location(final QualifiedCoordinates coordinates,
-                     final long timestamp,
-                     final int fix,
-                     final int sat) {
-        this.coordinates = coordinates;
-        this.timestamp = timestamp;
-        this.fixsat = ((fix << 8) & 0x0000ff00) | (sat & 0x000000ff);
-        this.speed = this.course = Float.NaN;
+    public Location _clone() {
+        final Location l = newInstance(coordinates._clone(), timestamp, 0);
+        l.speed = speed;
+        l.course = course;
+        l.fixsat = fixsat;
+        return l;
     }
 
     public QualifiedCoordinates getQualifiedCoordinates() {
@@ -93,6 +83,10 @@ public final class Location {
 
     public int getFix() {
         return (byte) ((fixsat >> 8) & 0x000000ff);
+    }
+
+    public int getFixQuality() {
+        return (byte) ((fixsat >> 16) & 0x000000ff);
     }
 
     public int getSat() {
@@ -121,6 +115,12 @@ public final class Location {
         }
     }
 
+    public void updateFixQuality(int quality) {
+        if (quality == 1 || quality == 2) {
+            this.fixsat = ((quality << 16) & 0x00ff0000) | (this.fixsat & 0xff00ffff);
+        }
+    }
+
     public boolean isXdrBound() {
         return (this.fixsat & XDR_MASK) != 0;
     }
@@ -146,7 +146,7 @@ public final class Location {
     public void validateEx() {
         final QualifiedCoordinates qc = this.coordinates;
         if (qc.getLat() == 0D || qc.getLon() == 0D) {
-            fixsat &= 0x00ff00ff; // preserve MASKs and number of sats
+            fixsat &= 0xff0000ff; // preserve MASKs and number of sats, clear fix type and quality
         }
     }
 }

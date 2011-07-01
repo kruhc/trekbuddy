@@ -167,7 +167,8 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
     public static int desktopFontSize;
     public static int osdAlpha                  = 0x80;
     public static int cmsCycle;
-    public static int listFont                  = 0x200008;
+    public static int listFont                  = 0x200000;
+    public static boolean uiNoItemCommands;
 
     // [Units]
     public static int units;
@@ -342,6 +343,11 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
                 locationProvider = Config.LOCATION_PROVIDER_SIMULATOR;
             }
         }
+
+//#ifdef __EMULATOR__
+        locationProvider = Config.LOCATION_PROVIDER_SIMULATOR;
+        simulatorDelay = 1000;
+//#endif        
 
         return result;
     }
@@ -528,6 +534,9 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
             easyZoomVolumeKeys = din.readBoolean();
             showVisualSpots = new Boolean(din.readBoolean());
 
+            // 1.0.14 change
+            uiNoItemCommands = din.readBoolean();
+
         } catch (Exception e) {
         }
 
@@ -655,6 +664,8 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         /* since 1.0.11 */
         dout.writeBoolean(easyZoomVolumeKeys);
         dout.writeBoolean(showVisualSpots.booleanValue());
+        /* since 1.0.14 */
+        dout.writeBoolean(uiNoItemCommands);
 
 //#ifdef __LOG__
         if (log.isEnabled()) log.info("configuration updated");
@@ -1087,13 +1098,27 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
     }
 
     public static String getDataDir() {
-        if (!File.isDir(dataDir)) { // make sure it ends with '/'
-            dataDir += File.PATH_SEPARATOR;
+        if (dataDir != null) {
+            if (!dataDir.endsWith(File.PATH_SEPARATOR)) {
+                dataDir += File.PATH_SEPARATOR; 
+            }
         }
         return dataDir;
     }
 
     public static void setDataDir(String dir) {
+        if (dir != null) {
+//#ifdef __SYMBIAN__
+//            if (cz.kruch.track.TrackingMIDlet.uiq) {
+//                try {
+//                    dir = new String(dir.getBytes("US-ASCII"));
+//                } catch (java.io.UnsupportedEncodingException e) {
+//                    // ignore
+//                }
+//            }
+//#endif
+            dir = dir.trim();
+        }
         dataDir = dir;
     }
 

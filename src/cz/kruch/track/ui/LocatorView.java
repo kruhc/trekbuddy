@@ -8,7 +8,6 @@ import api.location.Location;
 import cz.kruch.track.configuration.Config;
 import cz.kruch.track.location.Waypoint;
 import cz.kruch.track.util.ExtraMath;
-import cz.kruch.track.Resources;
 
 import javax.microedition.lcdui.Canvas;
 import javax.microedition.lcdui.Graphics;
@@ -60,7 +59,6 @@ final class LocatorView extends View {
 
     LocatorView(/*Navigator*/Desktop navigator) {
         super(navigator);
-        this.MSG_NO_WAYPOINT = Resources.getString(Resources.DESKTOP_MSG_NO_WPT);
         this.locations = new Location[2][];
         this.locations[0] = new Location[HISTORY_DEPTH];
         this.locations[1] = new Location[HISTORY_DEPTH];
@@ -424,9 +422,6 @@ final class LocatorView extends View {
                     }
                     graphics.drawArc(xy[0]/* - 4*/, xy[1]/* - 4*/, 9, 9, 0, 360);
                     color += cstep;
-
-                    // gc hints
-                    l = null;
                 }
             }
 

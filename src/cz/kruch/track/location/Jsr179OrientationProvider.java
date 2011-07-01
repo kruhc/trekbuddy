@@ -28,7 +28,7 @@ public final class Jsr179OrientationProvider
         switch (((Integer) action).intValue()) {
             case 0: { // start
                 this.listener = (LocationListener) param;
-                cz.kruch.track.ui.Desktop.timer.scheduleAtFixedRate(this, 1000, 1000);
+                cz.kruch.track.ui.Desktop.schedule(this, 1000, 1000);
             } break;
             case 1: { // stop
                 cancel();
@@ -57,6 +57,12 @@ public final class Jsr179OrientationProvider
                 inout[0] = "not calibrated";
             } else {
                 inout[0] = "supported";
+            }
+        } catch (javax.microedition.location.LocationException e) {
+            if (e.getMessage() != null) {
+                inout[0] = e.getMessage();
+            } else {
+                inout[0] = "not supported";
             }
         } catch (Throwable t) {
             inout[0] = t.toString();

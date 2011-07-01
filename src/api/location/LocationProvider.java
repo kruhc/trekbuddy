@@ -153,6 +153,19 @@ public abstract class LocationProvider {
         }
     }
 
+    protected final void notifyListener2(final Location location) {
+        if (location.getFix() > 0) {
+            if (updateLastState(AVAILABLE)) {
+                notifyListener(AVAILABLE);
+            }
+            notifyListener(location);
+        } else {
+            if (updateLastState(TEMPORARILY_UNAVAILABLE)) {
+                notifyListener(TEMPORARILY_UNAVAILABLE);
+            }
+        }
+    }
+
     protected final void notifyListener(final boolean isRecording) {
         if (listener != null) {
             try {

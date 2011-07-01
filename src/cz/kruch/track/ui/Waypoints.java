@@ -221,7 +221,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
         this.pane = new List(Resources.getString(Resources.DESKTOP_CMD_NAVIGATION), List.IMPLICIT);
         this.pane.setFitPolicy(Choice.TEXT_WRAP_OFF);
         this.pane.setCommandListener(this);
-        this.pane.addCommand(new Command(Resources.getString(Resources.CMD_CLOSE), Desktop.BACK_CMD_TYPE, 1));
+        this.pane.addCommand(cmdClose);
     }
 
     public void show() {
@@ -1094,6 +1094,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
 
         // execution status
         Throwable status = null;
+        String url = null;
 
         // wait screen
         if (!onBackround) {
@@ -1170,6 +1171,8 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                     } finally {
                         _storeUpdate.close(); // safe operation
                     }
+                } else {
+                    url = _storeUpdate.getURL();
                 }
             }
         } catch (Throwable t) {
@@ -1200,8 +1203,11 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                     Desktop.showConfirmation(Resources.getString(Resources.NAV_MSG_STORE_UPDATED),
                             next);
                 } else {
-                    Desktop.showError(Resources.getString(Resources.NAV_MSG_STORE_UPDATE_FAILED),
-                            status, next);
+                    String message = Resources.getString(Resources.NAV_MSG_STORE_UPDATE_FAILED);
+                    if (url != null) {
+                        message += " [" + url + "]";
+                    }
+                    Desktop.showError(message, status, next);
                 }
             }
         }
@@ -1330,7 +1336,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
 
             try {
                 // open output
-                out = new BufferedOutputStream(file.openOutputStream(), 512);
+                out = new BufferedOutputStream(file.openOutputStream(), 512, false);
 
                 // write BOM
                 out.write((byte) 0xEF);
@@ -1624,22 +1630,27 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
 
     private Displayable listStores(final Vector stores, final String title) {
         // create UI list
-        Displayable l;
-//#ifndef __ANDROID__
-        l = new SmartList(title);
-        ((SmartList) l).setData(stores);
-//#else
-        final String[] strings = new String[stores.size()];
-        stores.copyInto(strings);
-        l = new List(title, List.IMPLICIT, strings, null);
-//#endif
+        Displayable l = null;
+        if (Desktop.screen.hasPointerEvents()) { // prefer native lists on phones w/ touchscreen
+            final String[] strings = new String[stores.size()];
+            stores.copyInto(strings);
+            try {
+                l = new List(title, List.IMPLICIT, strings, null);
+            } catch (Throwable t) {
+                // ignore - can be IllegalArgumentException due to 255 limit etc
+            }
+        }
+        if (l == null) {
+            l = new SmartList(title);
+            ((SmartList) l).setData(stores);
+        }
 
         // add commands
-//#ifndef __ANDROID__
-        ((SmartList) l).setSelectCommand(cmdOpen);
-//#else
-        ((List) l).setSelectCommand(cmdOpen);
-//#endif
+        if (l instanceof List) {
+            ((List) l).setSelectCommand(cmdOpen);
+        } else {
+            ((SmartList) l).setSelectCommand(cmdOpen);
+        }
         if (title == actionListWpts || title == actionListTracks) { // == is OK
             l.addCommand(cmdBack);
         } else if (title == actionListTargets) { // == is OK

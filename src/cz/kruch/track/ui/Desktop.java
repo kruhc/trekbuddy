@@ -35,6 +35,7 @@ import java.util.Date;
 import java.util.Enumeration;
 import java.util.Timer;
 import java.util.Vector;
+import java.util.TimerTask;
 
 import api.file.File;
 import api.io.BufferedOutputStream;
@@ -82,7 +83,7 @@ public final class Desktop implements CommandListener,
     static volatile boolean showall;
 
     // all-purpose timer
-    public static Timer timer;
+    private static Timer timer;
 
     // application
     private MIDlet midlet;
@@ -140,7 +141,8 @@ public final class Desktop implements CommandListener,
 
     // logs
     private GpxTracklog tracklogGpx;
-    private OutputStream trackLogNmea;
+    private File tracklogNmea;
+    private OutputStream nmeaOut;
     private long trackstart;
     private boolean tracklog;
 
@@ -181,6 +183,9 @@ public final class Desktop implements CommandListener,
         if (cz.kruch.track.TrackingMIDlet.sonyEricssonEx) {
             CANCEL_CMD_TYPE = Command.BACK;
         }
+        if (cz.kruch.track.TrackingMIDlet.uiq) {
+            BACK_CMD_TYPE = Command.EXIT;
+        }
         if ("Exit".equals(midlet.getAppProperty(cz.kruch.track.TrackingMIDlet.JAD_UI_RIGHT_KEY))) {
             EXIT_CMD_TYPE = Command.EXIT;
         }
@@ -197,7 +202,6 @@ public final class Desktop implements CommandListener,
 //#endif
 
         // init static members
-        timer = new Timer();
         display = Display.getDisplay(midlet);
         screen = new DeviceScreen(this, midlet);
         browsing = true;
@@ -221,7 +225,28 @@ public final class Desktop implements CommandListener,
         this.wptHeightDiff = Float.NaN;
     }
 
-    public static Worker getDiskWorker() {
+    public static void schedule(TimerTask task, long delay) {
+        if (timer == null) {
+            timer = new Timer();
+        }
+        timer.schedule(task, delay);
+    }
+
+    public static void schedule(TimerTask task, long delay, long period) {
+        if (timer == null) {
+            timer = new Timer();
+        }
+        timer.schedule(task, delay, period);
+    }
+
+    public static void scheduleAtFixedRate(TimerTask task, long delay, long period) {
+        if (timer == null) {
+            timer = new Timer();
+        }
+        timer.scheduleAtFixedRate(task, delay, period);
+    }
+
+    public static Worker getDiskWorker() { // it is more I/O worker than just disk worker
         if (diskWorker == null) {
             diskWorker = new Worker("Disk Worker");
             diskWorker.start();
@@ -270,7 +295,7 @@ public final class Desktop implements CommandListener,
 
         // get graphics
         final Graphics g = screen.getGraphics();
-        g.setFont(Font.getFont(Font.FACE_MONOSPACE, Font.STYLE_PLAIN, Font.SIZE_SMALL));
+        g.setFont(Font.getFont(Font.FACE_MONOSPACE, Font.STYLE_PLAIN, Font.getDefaultFont().getSize()));
 
         // console text position
         short lineY = 0;
@@ -516,6 +541,7 @@ public final class Desktop implements CommandListener,
     }
 
     private static void resetFont() {
+        final Font df = Font.getDefaultFont();
         font = null; // gc hint
         font = Font.getFont(Font.FACE_MONOSPACE,
                             Config.osdBoldFont ? Font.STYLE_BOLD : Font.STYLE_PLAIN,
@@ -531,15 +557,18 @@ public final class Desktop implements CommandListener,
                                      (Config.listFont >> 8) & 0x000000ff,
                                      Config.listFont & 0x000000ff);
         } catch (IllegalArgumentException e) {
-            fontLists = Font.getDefaultFont();
+            fontLists = df;
         }
         fontBtns = null; // gc hint
-        fontBtns = Font.getFont(Font.getDefaultFont().getFace(),
-                                Font.STYLE_BOLD/*Font.getDefaultFont().getStyle()*/,
-                                Font.SIZE_MEDIUM);
+        fontBtns = Font.getFont(df.getFace(), Font.STYLE_BOLD, Font.SIZE_MEDIUM);
         fontStringItems = null;
-        final Font df = Font.getDefaultFont();
-        Desktop.fontStringItems = Font.getFont(df.getFace(), df.getStyle(), Font.SIZE_SMALL);
+        final int size;
+        if (screen.getHeight() > 320 || screen.getWidth() > 320) { // hi-res display
+            size = Font.SIZE_MEDIUM;
+        } else {
+            size = Font.SIZE_SMALL;
+        }
+        Desktop.fontStringItems = Font.getFont(df.getFace(), df.getStyle(), size);
     }
 
     private static void resetBar() {
@@ -606,6 +635,7 @@ public final class Desktop implements CommandListener,
         if ("archos".equals(android.os.Build.MANUFACTURER)) {
             h -= 20;
         }
+        org.microemu.android.MicroEmulator.ignoreVolumeKeys = !Config.easyZoomVolumeKeys;
 //#endif
 
         if (w == width && h == height) {
@@ -784,7 +814,7 @@ public final class Desktop implements CommandListener,
             Config.worker = getDiskWorker();
             Config.initDataDir();
         } else if (File.isFs()) {
-            showError("DataDir [" + Config.dataDir + "] not accessible - please fix it and restart", null, null);
+            showError("DataDir [" + Config.getDataDir() + "] not accessible - please fix it and restart", null, null);
         } else {
             showWarning("FileConnection API (JSR-75) not supported", null, null);
         }
@@ -909,7 +939,9 @@ public final class Desktop implements CommandListener,
                 screen.hideNotify();
 
                 // stop timer
-                timer.cancel();
+                if (timer != null) {
+                    timer.cancel();
+                }
 
                 // stop tracklog and tracking
                 stopTracking();
@@ -2195,38 +2227,28 @@ public final class Desktop implements CommandListener,
 
                 } else {
 
-                    // output file
-                    File file = null;
-
                     try {
                         // create file
-                        file = File.open(Config.getFolderURL(Config.FOLDER_NMEA) + GpxTracklog.dateToFileDate(trackstart) + ".nmea", Connector.READ_WRITE);
-                        if (!file.exists()) {
-                            file.create();
+                        tracklogNmea = File.open(Config.getFolderURL(Config.FOLDER_NMEA) + GpxTracklog.dateToFileDate(trackstart) + ".nmea", Connector.READ_WRITE);
+                        if (tracklogNmea.exists()) {
+                            tracklogNmea.delete();
                         }
+                        tracklogNmea.create();
 
                         // create output
-                        trackLogNmea = new BufferedOutputStream(file.openOutputStream(), 4096, true);
+                        nmeaOut = new BufferedOutputStream(tracklogNmea.openOutputStream(), 4096, true);
 
-                        // inject provider
-                        provider.setObserver(trackLogNmea);
+                        // inject observer
+                        provider.setObserver(nmeaOut);
 
                         // notify itself ;-)
                         (new Event(Event.EVENT_TRACKLOG)).invoke(new Integer(GpxTracklog.CODE_RECORDING_START), null, this);
 
-                    } catch (IOException e) {
+                    } catch (Exception e) {
 
                         // notify itself ;-)
                         (new Event(Event.EVENT_TRACKLOG)).invoke(null, e, this);
 
-                    } finally {
-
-                        // close file
-                        try {
-                            file.close();
-                        } catch (Exception e) { // IOE or NPE
-                            // ignore
-                        }
                     }
                 }
             }
@@ -2250,16 +2272,22 @@ public final class Desktop implements CommandListener,
                 // ignore - should not happen
             }
             tracklogGpx = null; // GC hint
-        } else if (trackLogNmea != null) {
+        } else if (tracklogNmea != null) {
 //#ifdef __LOG__
             if (log.isEnabled()) log.debug("stopping NMEA tracklog");
 //#endif
             try {
-                trackLogNmea.close();
+                nmeaOut.close();
             } catch (Exception e) {
                 // ignore
             }
-            trackLogNmea = null;
+            nmeaOut = null;
+            try {
+                tracklogNmea.close();
+            } catch (Exception e) {
+                // ignore
+            }
+            tracklogNmea = null;
         }
     }
 
@@ -2883,6 +2911,10 @@ public final class Desktop implements CommandListener,
             Config.useDatum(Config.geoDatum);
             resetFont();
             resetBar();
+
+//#ifdef __ANDROID__
+            org.microemu.android.MicroEmulator.ignoreVolumeKeys = !Config.easyZoomVolumeKeys;
+//#endif
 
             // runtime ops
             if (Desktop.this.friends != null) {

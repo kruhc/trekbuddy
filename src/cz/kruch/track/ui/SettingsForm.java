@@ -121,7 +121,7 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
 
         // add command and handling
         pane.addCommand(new Command(Resources.getString(Resources.CFG_CMD_SAVE), Command.SCREEN, 1));
-        pane.addCommand(new Command(Resources.getString(Resources.CMD_CLOSE), Desktop.BACK_CMD_TYPE, 1));
+        pane.addCommand(new Command(Resources.getString(Resources.CMD_CANCEL), Desktop.BACK_CMD_TYPE, 1));
         /* default SELECT command is of SCREEN type */
         pane.setCommandListener(this);
 
@@ -180,7 +180,8 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
 
             // datadir
             if (File.isFs()) {
-                submenu.append(fieldDataDir = new TextField(Resources.getString(Resources.CFG_BASIC_FLD_DATA_DIR), Config.getDataDir(), MAX_URL_LENGTH, TextField.URL));
+                submenu.append(fieldDataDir = new TextField(Resources.getString(Resources.CFG_BASIC_FLD_DATA_DIR),
+                               Config.getDataDir(), MAX_URL_LENGTH, TextField.URL));
             }
 
         } else if (menuDesktop.equals(section)) {
@@ -192,6 +193,7 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
             choiceMisc.append(Resources.getString(Resources.CFG_DESKTOP_FLD_NO_SOUNDS), null);
             choiceMisc.append(Resources.getString(Resources.CFG_DESKTOP_FLD_NO_QUESTIONS), null);
             choiceMisc.append(Resources.getString(Resources.CFG_DESKTOP_FLD_NO_COMMANDS), null);
+            choiceMisc.append(Resources.getString(Resources.CFG_DESKTOP_FLD_NO_ITEM_COMMANDS), null);
             choiceMisc.append(Resources.getString(Resources.CFG_DESKTOP_FLD_TRAJECTORY), null);
             choiceMisc.append(Resources.getString(Resources.CFG_DESKTOP_FLD_DEC_PRECISION), null);
             choiceMisc.append(Resources.getString(Resources.CFG_DESKTOP_FLD_HPS_WPT_TRUE_AZI), null);
@@ -209,6 +211,7 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
                 Config.noSounds,
                 Config.noQuestions,
                 Config.uiNoCommands,
+                Config.uiNoItemCommands,
                 Config.trailOn,
                 Config.decimalPrecision,
                 Config.hpsWptTrueAzimuth,
@@ -486,7 +489,7 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
 
         // add command and handling
         submenu.addCommand(new Command(Resources.getString(Resources.CMD_OK), Desktop.POSITIVE_CMD_TYPE, 0));
-        submenu.addCommand(new Command(Resources.getString(Resources.CMD_CANCEL), Desktop.CANCEL_CMD_TYPE, 1));
+        submenu.addCommand(new Command(Resources.getString(Resources.CMD_BACK), Desktop.BACK_CMD_TYPE, 1));
         submenu.setCommandListener(this);
 
         // show
@@ -792,17 +795,18 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
                 Config.noSounds = misc[2];
                 Config.noQuestions = misc[3];
                 Config.uiNoCommands = misc[4];
-                Config.trailOn = misc[5];
-                Config.decimalPrecision = misc[6];
-                Config.hpsWptTrueAzimuth = misc[7];
-                Config.easyZoomVolumeKeys = misc[8];
-                Config.showVisualSpots = new Boolean(misc[9]);
-                Config.osdBasic = misc[10];
-                Config.osdExtended = misc[11];
-                Config.osdScale = misc[12];
-                Config.osdNoBackground = misc[13];
-                Config.osdBoldFont = misc[14];
-                Config.osdBlackColor = misc[15];
+                Config.uiNoItemCommands = misc[5];
+                Config.trailOn = misc[6];
+                Config.decimalPrecision = misc[7];
+                Config.hpsWptTrueAzimuth = misc[8];
+                Config.easyZoomVolumeKeys = misc[9];
+                Config.showVisualSpots = new Boolean(misc[10]);
+                Config.osdBasic = misc[11];
+                Config.osdExtended = misc[12];
+                Config.osdScale = misc[13];
+                Config.osdNoBackground = misc[14];
+                Config.osdBoldFont = misc[15];
+                Config.osdBlackColor = misc[16];
                 Config.desktopFontSize = gaugeDesktopFont.getValue();
                 Config.osdAlpha = gaugeOsdAlpha.getValue() * gaugeAlphaScale;
                 Config.cmsCycle = Integer.parseInt(fieldCmsCycle.getString());

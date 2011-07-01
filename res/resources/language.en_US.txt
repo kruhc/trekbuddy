@@ -292,6 +292,7 @@
 3527=off
 3528=easyzoom with volume keys
 3529=show touchspots
+3530=no item commands
 
 # settings forms/fields/values (Location)
 3600=Provider

@@ -18,6 +18,7 @@ import java.util.Vector;
  */
 final class SmartList extends Canvas {
     private static final int HL_INSET = 2;
+    private static final int VL_INSET = 2;
     private static final int SHAKE_LIMIT = 10;
     private static final int colorSbBg = 0x00e6e6e6;
     private static final int colorSbHiBorder = 0x00666666;
@@ -358,8 +359,10 @@ final class SmartList extends Canvas {
         final int selected = this.selected;
         final int marked = this.marked;
         final int count = this.items.size();
-        final int lines = h / getLineHeight();
         final int lh = getLineHeight();
+        final int lines = h / lh;
+        final int sbWidth = this.sbWidth;
+        final int sbHeight = this.sbHeight;
         final Object[] items = ((NakedVector) this.items).getData();
         
         int curr = top;
@@ -379,9 +382,9 @@ final class SmartList extends Canvas {
             }
             final String s = items[curr].toString();
             if (curr != marked) {
-                g.drawString(s, HL_INSET, y, Graphics.TOP | Graphics.LEFT);
+                g.drawString(s, HL_INSET, y + VL_INSET, Graphics.TOP | Graphics.LEFT);
             } else {
-                g.drawString("(*) " + s, HL_INSET, y, Graphics.TOP | Graphics.LEFT);
+                g.drawString("(*) " + s, HL_INSET, y + VL_INSET, Graphics.TOP | Graphics.LEFT);
             }
             if (curr == selected) { // restore color
                 g.setColor(colorForeUnsel);
@@ -472,7 +475,7 @@ final class SmartList extends Canvas {
     }
 
     private static int getLineHeight() {
-        return Desktop.fontLists.getHeight();
+        return Desktop.fontLists.getHeight() + 2 * VL_INSET;
     }
 
     private void makeSelectedVisible() {

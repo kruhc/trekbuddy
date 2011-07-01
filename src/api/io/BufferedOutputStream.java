@@ -23,25 +23,15 @@ public final class BufferedOutputStream extends OutputStream {
      *
      * @param out underlying output stream
      * @param size buffer size
+     * @param autoflush
      * @throws IllegalArgumentException if size <= 0.
      */
-    public BufferedOutputStream(OutputStream out, int size) {
+    public BufferedOutputStream(OutputStream out, int size, boolean autoflush) {
         if (size <= 0) {
             throw new IllegalArgumentException("Buffer size <= 0");
         }
         this.out = out;
         this.buffer = new byte[size];
-    }
-
-    /**
-     * Constructor.
-     *
-     * @param out underlying output stream
-     * @param size buffer size
-     * @param autoflush
-     */
-    public BufferedOutputStream(OutputStream out, int size, boolean autoflush) {
-        this(out, size);
         this.autoflush = autoflush;
     }
 

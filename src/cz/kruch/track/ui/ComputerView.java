@@ -155,7 +155,8 @@ final class ComputerView extends View
         "pdop",
         "hdop",
         "vdop",
-        "satv"
+        "satv",
+        "dgps"
     };
 
     // numeric values indexes
@@ -187,6 +188,7 @@ final class ComputerView extends View
     private static final int VALUE_HDOP         = 25;
     private static final int VALUE_VDOP         = 26;
     private static final int VALUE_SATV         = 27;
+    private static final int VALUE_DGPS         = 28;
 
     // special values indexes
     private static final int VALUE_COORDS       = 1000;
@@ -240,8 +242,7 @@ final class ComputerView extends View
 
     private static final float AUTO_MIN         = 2.4F;
     private static final int SHORT_AVG_DEPTH    = 30; // 30 sec (for 1 Hz NMEA)
-
-    private static final int MAX_TEXT_LENGTH = 128;
+    private static final int MAX_TEXT_LENGTH    = 128;
 
 
 /*
@@ -268,8 +269,10 @@ final class ComputerView extends View
         public char[] value;
 //#ifdef __HECL__
         public CodeThing scriptlet;
+        public String scriptvar;
 //#endif
-        public boolean ralign;        public float cw;
+        public boolean ralign;
+        public float cw;
         public short ch;
         public short index = -1;
 
@@ -317,7 +320,7 @@ final class ComputerView extends View
     private volatile QualifiedCoordinates valueCoords, snrefCoords;
     private volatile long timestamp, starttime, /*snreftime,*/ timetauto;
     private volatile float altLast, altDiff;
-    private volatile int counter, sat, fix;
+    private volatile int counter, sat, fix, dgps;
     private float[] valuesFloat;
 
     /* short term avg speed */
@@ -433,27 +436,25 @@ final class ComputerView extends View
                 ETA_CALENDAR.setTimeSafe(t);
             }
 
-            // time since start
-            final long tt = t - starttime;
-
             // everything else needs fix
             fix = l.getFix();
             if (fix > 0) {
 
-                // sat
+                // sat, dgps
                 sat = l.getSat();
+                dgps = l.getFixQuality();
+
+                // coords
+                final QualifiedCoordinates qc = l.getQualifiedCoordinates();
 
                 // accuracy
-                final float hAccuracy = l.getQualifiedCoordinates().getHorizontalAccuracy();
-//                final float vAccuracy = l.getQualifiedCoordinates().getVerticalAccuracy();
+                final float hAccuracy = qc.getHorizontalAccuracy();
+                final float vAccuracy = qc.getVerticalAccuracy();
 
                 // calculate distance - emulate static navigation
                 float ds = 0F;
-                if (snrefCoords == null) {
-                    snrefCoords = l.getQualifiedCoordinates()._clone();
-                    /*snreftime = timestamp;*/
-                } else {
-                    ds = snrefCoords.distance(l.getQualifiedCoordinates());
+                if (snrefCoords != null) {
+                    ds = snrefCoords.distance(qc);
                     if (Float.isNaN(hAccuracy)) {
                         if (ds < 50) {
                             ds = 0F;
@@ -463,26 +464,33 @@ final class ComputerView extends View
                     } else {
                         QualifiedCoordinates.releaseInstance(snrefCoords);
                         snrefCoords = null;
-                        snrefCoords = l.getQualifiedCoordinates()._clone();
+                        snrefCoords = qc._clone();
                         /*snreftime = timestamp;*/
                     }
+                } else {
+                    snrefCoords = qc._clone();
+                    /*snreftime = timestamp;*/
                 }
 
                 // update coords
                 QualifiedCoordinates.releaseInstance(valueCoords);
                 valueCoords = null;
-                valueCoords = l.getQualifiedCoordinates()._clone();
+                valueCoords = qc._clone();
 
                 // local ref for faster access
                 final float[] valuesFloat = this.valuesFloat;
 
+                // *dop
+                valuesFloat[VALUE_HDOP] = hAccuracy / 5;
+                valuesFloat[VALUE_VDOP] = vAccuracy / 5;
+
                 // alt, alt-d
-                final float alt = valueCoords.getAlt();
+                final float alt = qc.getAlt();
                 if (!Float.isNaN(alt)) {
 
                     // vertical speed
                     final float da = alt - valuesFloat[VALUE_ALT];
-                    if (dt > 0) {
+                    if (dt >= 1000) {
                         valuesFloat[VALUE_ALT_D] = da / (dt / 1000);
                     }
 
@@ -514,51 +522,45 @@ final class ComputerView extends View
                 valuesFloat[VALUE_DIST_T] += ds / 1000F;
 
                 // spd, spd-d
-                float f = l.getSpeed();
-                if (!Float.isNaN(f)) {
+                float speed = l.getSpeed();
+                if (!Float.isNaN(speed)) {
                     
                     // to km/h
-                    f *= 3.6F;
+                    speed *= 3.6F;
 
-                    // 'auto' time and spd-avg - when speed over ~1.8 km/h
-                    if (f > AUTO_MIN) {
+                    // 'auto' time and spd-avg - when speed over %AUTO_MIN% km/h
+                    if (speed > AUTO_MIN && dt >= 1000) {
                         timetauto += dt;
-                        if (valuesFloat[VALUE_DIST_T] > 0.5F || tt > 30000) {
+                        if (valuesFloat[VALUE_DIST_T] > 0.5F || (t - starttime) > 30000) {
                             valuesFloat[VALUE_SPD_AVG_AUTO] = valuesFloat[VALUE_DIST_T] / ((float) timetauto / (1000 * 3600));
                         }
                     }
 
                     // spd, spd-d
-                    if (dt > 0) {
-                        valuesFloat[VALUE_SPD_D] = ((f - valuesFloat[VALUE_SPD]) / 3.6F) / (dt / 1000);
+                    if (dt >= 1000) {
+                        valuesFloat[VALUE_SPD_D] = ((speed - valuesFloat[VALUE_SPD]) / 3.6F) / (dt / 1000);
                     }
-                    valuesFloat[VALUE_SPD] = f;
+                    valuesFloat[VALUE_SPD] = speed;
 
-                    // spd-avg
-                    valuesFloat[VALUE_SPD_AVG] = (valuesFloat[VALUE_SPD_AVG] * counter + f) / ++counter;
+                    // spd-avg // TODO check this looks really weird
+                    valuesFloat[VALUE_SPD_AVG] = (valuesFloat[VALUE_SPD_AVG] * counter + speed) / ++counter;
 
                     // spd-max
-                    if (f > valuesFloat[VALUE_SPD_MAX]) {
-                        valuesFloat[VALUE_SPD_MAX] = f;
+                    if (speed > valuesFloat[VALUE_SPD_MAX]) {
+                        valuesFloat[VALUE_SPD_MAX] = speed;
                     }
 
                     // spd-avg short
-                    {
+                    if (dt >= 1000) {
                         final float[] spdavgFloat = this.spdavgFloat;
-                        spdavgFloat[spdavgIndex++] = f;
-                        if (spdavgIndex >= spdavgFloat.length) {
-                            spdavgIndex = 0;
+                        final int N = spdavgFloat.length;
+                        spdavgFloat[spdavgIndex++ % N] = speed;
+                        final int C = Math.min(spdavgIndex, N);
+                        float sas = 0F;
+                        for (int i = C; i-- > 0; ) {
+                            sas += spdavgFloat[i];
                         }
-                        int c = 0;
-                        spdavgShort = 0F;
-                        for (int i = spdavgFloat.length; i-- > 0; ) {
-                            float v = spdavgFloat[i];
-                            if (v > -1F) {
-                                spdavgShort += v;
-                                c++;
-                            }
-                        }
-                        spdavgShort /= c;
+                        spdavgShort = sas / C;
                     }
                 }
 
@@ -590,9 +592,7 @@ final class ComputerView extends View
             rotator = null;
         }
         if (Config.cmsCycle > 0) {
-            Desktop.timer.schedule(rotator = new Rotator(),
-                                   Config.cmsCycle * 1000,
-                                   Config.cmsCycle * 1000);
+            Desktop.schedule(rotator = new Rotator(), Config.cmsCycle * 1000, Config.cmsCycle * 1000);
         }
 
         return super.configChanged();
@@ -783,9 +783,8 @@ final class ComputerView extends View
 
                             // autoswitch
                             if (Config.cmsCycle > 0) {
-                                Desktop.timer.schedule(rotator = new Rotator(),
-                                                       Config.cmsCycle * 1000,
-                                                       Config.cmsCycle * 1000);
+                                Desktop.schedule(rotator = new Rotator(),
+                                                 Config.cmsCycle * 1000, Config.cmsCycle * 1000);
                             }
                         }
 
@@ -1095,17 +1094,16 @@ final class ComputerView extends View
                                     case VALUE_FIX: {
                                         sb.append((char) ('0' + fix));
                                     } break;
-                                    case VALUE_PDOP: {
-                                        NavigationScreens.append(sb, NmeaParser.pdop, 1);
-                                    } break;
-                                    case VALUE_HDOP: {
-                                        NavigationScreens.append(sb, NmeaParser.hdop, 1);
-                                    } break;
+                                    case VALUE_PDOP:
+                                    case VALUE_HDOP:
                                     case VALUE_VDOP: {
-                                        NavigationScreens.append(sb, NmeaParser.vdop, 1);
+                                        NavigationScreens.append(sb, valuesFloat[idx], 1);
                                     } break;
                                     case VALUE_SATV: {
                                         NavigationScreens.append(sb, NmeaParser.satv);
+                                    } break;
+                                    case VALUE_DGPS: {
+                                        sb.append((char) ('0' + dgps));
                                     } break;
                                     case VALUE_COORDS: {
                                         if (valueCoords == null) {
@@ -1382,14 +1380,29 @@ final class ComputerView extends View
 //#ifdef __HECL__
                                     case VALUE_HECL: {
                                         try {
-                                            area.scriptlet.run(interp);
-//                                            interp.eval(area.scriptlet);
+                                            if (area.scriptlet != null) {
+                                                area.scriptlet.run(interp);
+                                            } else if (interp.existsVar(area.scriptvar, 0)) {
+                                                final Thing thing = interp.resolveVar(area.scriptvar);
+                                                if (thing.getVal() instanceof NumberThing) {
+                                                    final NumberThing number = (NumberThing) thing.getVal();
+                                                    if (number.isIntegral()) {
+                                                        NavigationScreens.append(sb, number.longValue());
+                                                    } else {
+                                                        NavigationScreens.append(sb, number.doubleValue(), 0);
+                                                    }
+                                                } else {
+                                                    sb.append(thing);
+                                                }
+                                            } else {
+                                                sb.append('?');
+                                            }
                                         } catch (Throwable t) {
 //#ifdef __LOG__
                                             t.printStackTrace();
-                                            if (log.isEnabled()) log.debug("interp script eval failed: " + area.scriptlet);
+                                            if (log.isEnabled()) log.debug("resolve var failed: " + area.scriptvar);
 //#endif
-                                            sb.append(t.toString());
+                                            sb.append('!').append(t.toString());
                                         }
                                     } break;
 //#endif
@@ -1412,16 +1425,15 @@ final class ComputerView extends View
                     // eval script
                     try {
                         area.scriptlet.run(interp);
-//                        interp.eval(area.scriptlet);
                     } catch (Throwable t) {
 //#ifdef __LOG__
                         t.printStackTrace();
                         if (log.isEnabled()) log.debug("interp script eval failed: " + area.scriptlet);
 //#endif
-                        sb.append(t.toString());
+                        sb.append('!').append(t.toString());
                     }
 
-//#endif /* __HECL__ */                    
+//#endif /* __HECL__ */
 
                 }
 
@@ -1536,8 +1548,12 @@ final class ComputerView extends View
 //#ifdef __HECL__
             } else if (token.startsWith('$')) {
                 try {
-                    area.scriptlet = CodeThing.get(interp, new Thing("print " + token.toString()));
-//                    area.scriptlet = new Thing("print " + token.toString());
+                    final String ts = token.toString().trim();
+                    if (ts.indexOf(' ') > -1) { // precision explicitly set
+                        area.scriptlet = CodeThing.get(interp, new Thing("print " + ts));
+                    } else {
+                        area.scriptvar = token.toString().substring(1);
+                    }
                     area.index = VALUE_HECL;
                 } catch (HeclException e) {
                     area.value = e.toString().toCharArray();
@@ -1677,18 +1693,14 @@ final class ComputerView extends View
         valueCoords = snrefCoords = null;
         timestamp = starttime = timetauto = 0;
         altLast = altDiff = Float.NaN;
-        counter = sat = fix = 0;
-/*
-        altLast = Float.NaN;
-        altDiff = 0F;
-*/
+        counter = sat = fix = dgps = 0;
         final float[] valuesFloat = this.valuesFloat;
         for (int i = valuesFloat.length; --i >= 0; ) {
             valuesFloat[i] = 0F;
         }
         final float[] spdavgFloat = this.spdavgFloat;
         for (int i = spdavgFloat.length; --i >= 0; ) {
-            spdavgFloat[i] = -1F;
+            spdavgFloat[i] = 0F;
         }
         spdavgIndex = 0;
         spdavgShort = 0F;
@@ -1888,7 +1900,6 @@ final class ComputerView extends View
                          } else if (TAG_SCRIPT.equals(tag)) {
                              try {
                                  area.scriptlet = CodeThing.get(interp, new Thing(parser.nextText()));
-//                                 area.scriptlet = new Thing(parser.nextText());
                              } catch (HeclException e) {
                                  area.value = e.toString().toCharArray();
                              }
@@ -2328,27 +2339,31 @@ final class ComputerView extends View
         
         final Object[] items = handlers.getData();
         for (int i = handlers.size(); --i >= 0; ) {
+            final String handlerName = items[i].toString();
+            String result;
 //#ifdef __LOG__
             if (log.isEnabled()) log.debug("invoking handler " + items[i]);
 //#endif
             try {
                 ((org.hecl.Command) items[i]).cmdCode(interp, argv);
-                heclResults.put(items[i].toString(), "{SUCCESS}");
+                result = "{SUCCESS}";
             } catch (Throwable t) {
 //#ifdef __LOG__
                 if (log.isEnabled()) log.debug("handler failed: " + t);
 //#endif
-                heclResults.put(items[i].toString(), t.toString());
+                result = t.toString();
             }
+            heclResults.put(handlerName, result);
         }
     }
 
-    private static final int HASH_ALT           = 0x179a9;      // 96681
-    private static final int HASH_FIX           = 0x18c15;      // 101397
-    private static final int HASH_LAT	        = 0x1a19f;      // 106911
-    private static final int HASH_LON	        = 0x1a34b;      // 107339
+    private static final int HASH_ALT           = 0x179a9; // array     // 96681
+    private static final int HASH_FIX           = 0x18c15; // specs     // 101397
+    private static final int HASH_LAT	        = 0x1a19f; // specs     // 106911
+    private static final int HASH_LON	        = 0x1a34b; // specs     // 107339
     private static final int HASH_SAT           = 0x1bbe6;      // 113638
     private static final int HASH_SPD           = 0x1bda7;      // 114087
+    private static final int HASH_DGPS          = 0x2f05c6;     // 3081670
     private static final int HASH_HDOP          = 0x30cbdd;     // 3197917
     private static final int HASH_PDOP          = 0x346ed5;     // 3436245
     private static final int HASH_SATV          = 0x35c150;     // 3522896
@@ -2361,6 +2376,8 @@ final class ComputerView extends View
     private static final int HASH_WPT_DIST	    = 0x37011f78;   // 922820472
     private static final int HASH_WPT_ALT	    = 0x5c9ce597;   // 1553786263
     private static final int HASH_WPT_AZI	    = 0x5c9ce73e;   // 1553786686
+    private static final int HASH_WPT_LAT	    = 0x5c9d0d8d;   // 1553796493
+    private static final int HASH_WPT_LON	    = 0x5c9d0f39;   // 1553796921
     private static final int HASH_SPD_AVG_AUTO  = 0x866fa930;   // -2039502544
     private static final int HASH_SPD_AVG       = 0x882281ac;   // -2011004500
     private static final int HASH_SPD_MAX       = 0x8822ac3e;   // -2010993602
@@ -2371,6 +2388,7 @@ final class ComputerView extends View
     private static final int HASH_PROFILE       = 0xed8e89a9;   // -309425751
     private static final int HASH_WPT_ALT_DIFF	= 0xeeff2e7b;   // -285266309
 
+//    private static final int HASH_PACE	      = 0x346213;     // 3432979
 //    private static final int HASH_SPD_D         = 0x688f5be;    // 109639102
 //    private static final int HASH_SPD_DAVG      = 0x7c2ec454;   // 2083439700
 //    private static final int HASH_SPD_DMAX      = 0x7c2eeee6;   // 2083450598
@@ -2380,13 +2398,10 @@ final class ComputerView extends View
 //    private static final int HASH_TIME_T_AUTO	= 0xdbccee68; // -607326616
 //    private static final int HASH_PRN	        = 0x1b2ac; // 111276
 //    private static final int HASH_SNR	        = 0x1bd77; // 114039
-//    private static final int HASH_PACE	        = 0x346213; // 3432979
 //    private static final int HASH_WPT_NAME	    = 0x37058c5d; // 923110493
 //    private static final int HASH_WPT_CMT	    = 0x5c9ced38; // 1553788216
 //    private static final int HASH_WPT_ETA	    = 0x5c9cf580; // 1553790336
 //    private static final int HASH_WPT_IMG	    = 0x5c9d03b1; // 1553793969
-//    private static final int HASH_WPT_LAT	    = 0x5c9d0d8d; // 1553796493
-//    private static final int HASH_WPT_LON	    = 0x5c9d0f39; // 1553796921
 //    private static final int HASH_WPT_SYM	    = 0x5c9d2ab5; // 1553803957
 //    private static final int HASH_WPT_VMG	    = 0x5c9d347e; // 1553806462
 //    private static final int HASH_WPT_COORDS	= 0x79d50970; // 2044004720
@@ -2400,61 +2415,21 @@ final class ComputerView extends View
         if (varname.startsWith("cms::")) {
             final int hash = hash(varname, 5);
             final int units = this.units.intValue();
+            boolean fromKmh = false;
 //#ifdef __LOG__
             if (log.isEnabled()) log.debug("var hash: " + Integer.toHexString(hash));
 //#endif
             int idx = -1;
             switch (hash) {
-                case HASH_SPD_AVG_AUTO: {
-//                    idx = VALUE_SPD_AVG_AUTO;
-                    result = FloatThing.create(fromKmh(units, valuesFloat[VALUE_SPD_AVG_AUTO]));
-                } break;
-                case HASH_SPD_AVG: {
-//                    idx = VALUE_SPD_AVG;
-                    result = FloatThing.create(fromKmh(units, valuesFloat[VALUE_SPD_AVG]));
-                } break;
-                case HASH_SPD_MAX: {
-//                    idx = VALUE_SPD_MAX;
-                    result = FloatThing.create(fromKmh(units, valuesFloat[VALUE_SPD_MAX]));
-                } break;
-                case HASH_COURSE: {
-//                    idx = VALUE_COURSE;
-                    result = IntThing.create((int) valuesFloat[VALUE_COURSE]);
-                } break;
-                case HASH_DESC_T: {
-                    idx = VALUE_DESC_T;
-                } break;
-                case HASH_DIST_T: {
-//                    idx = VALUE_DIST_T;
-                    result = FloatThing.create(fromKmh(units, valuesFloat[VALUE_DIST_T]));
-                } break;
-                case HASH_COURSE_D: {
-                    idx = VALUE_COURSE_D;
-                } break;
-                case HASH_PROFILE: {
-                    result = StringThing.create(Config.cmsProfile);
-                } break;
                 case HASH_ALT: {
                     idx = VALUE_ALT;
                 } break;
-                case HASH_FIX: {
-                    idx = VALUE_FIX;
-                } break;
-                case HASH_SAT: {
-                    idx = VALUE_SAT;
-                } break;
                 case HASH_SPD: {
-//                    idx = VALUE_SPD;
-                    result = FloatThing.create(fromKmh(units, valuesFloat[VALUE_SPD]));
+                    idx = VALUE_SPD;
+                    fromKmh = true;
                 } break;
                 case HASH_HDOP: {
                     idx = VALUE_HDOP;
-                } break;
-                case HASH_PDOP: {
-                    idx = VALUE_PDOP;
-                } break;
-                case HASH_SATV: {
-                    idx = VALUE_SATV;
                 } break;
                 case HASH_VDOP: {
                     idx = VALUE_VDOP;
@@ -2465,21 +2440,67 @@ final class ComputerView extends View
                 case HASH_ASC_T: {
                     idx = VALUE_ASC_T;
                 } break;
+                case HASH_SPD_AVG_AUTO: {
+                    idx = VALUE_SPD_AVG_AUTO;
+                    fromKmh = true;
+                } break;
+                case HASH_SPD_AVG: {
+                    idx = VALUE_SPD_AVG;
+                    fromKmh = true;
+                } break;
+                case HASH_SPD_MAX: {
+                    idx = VALUE_SPD_MAX;
+                    fromKmh = true;
+                } break;
+                case HASH_COURSE: {
+//                    idx = VALUE_COURSE;
+                    result = IntThing.create((int) valuesFloat[VALUE_COURSE]);
+                } break;
+                case HASH_DESC_T: {
+                    idx = VALUE_DESC_T;
+                } break;
+                case HASH_DIST_T: {
+                    idx = VALUE_DIST_T;
+                    fromKmh = true;
+                } break;
+                case HASH_COURSE_D: {
+                    idx = VALUE_COURSE_D;
+                } break;
+                case HASH_PROFILE: {
+                    result = StringThing.create(Config.cmsProfile);
+                } break;
             }
-            if (idx > -1) {
+
+            if (idx != -1) {
 //#ifdef __LOG__
                 if (log.isEnabled()) log.debug("var " + varname + " resolved as float, idx = " + idx + ", value = " + valuesFloat[idx]);
 //#endif
-                result = FloatThing.create(valuesFloat[idx]);
+                float v = valuesFloat[idx];
+                if (fromKmh) {
+                    v = fromKmh(units, v);
+                }
+                result = FloatThing.create(v);
 
             } else if (result == null) {
 
                 switch (hash) {
+                    case HASH_FIX: {
+                        result = IntThing.create(fix);
+                    } break;
                     case HASH_LAT: {
                         result = DoubleThing.create(valueCoords != null ? valueCoords.getLat() : 0D);
                     } break;
                     case HASH_LON: {
                         result = DoubleThing.create(valueCoords != null ? valueCoords.getLon() : 0D);
+                    } break;
+                    case HASH_SAT: {
+                        result = IntThing.create(sat);
+                    } break;
+                    case HASH_DGPS: {
+                        result = IntThing.create(dgps);
+                    } break;
+                    case HASH_SATV: {
+                        result = IntThing.create(NmeaParser.satv);
                     } break;
                     case HASH_TIME: {
                         result = LongThing.create(timestamp);
@@ -2516,7 +2537,7 @@ final class ComputerView extends View
                         result = FloatThing.create(dist);
                     } break;
                     case HASH_WPT_ALT: {
-                        float alt = 0;
+                        float alt = 0F;
                         final Waypoint wpt = navigator.getWpt();
                         if (wpt != null) {
                             alt = wpt.getQualifiedCoordinates().getAlt();
@@ -2529,6 +2550,23 @@ final class ComputerView extends View
                     case HASH_WPT_AZI: {
                         result = IntThing.create(navigator.getWptAzimuth());
                     } break;
+                    case HASH_WPT_LAT: {
+                        double lat = 0D;
+                        final Waypoint wpt = navigator.getWpt();
+                        if (wpt != null) {
+                            lat = wpt.getQualifiedCoordinates().getLat();
+                        }
+                        result = DoubleThing.create(lat);
+                    } break;
+                    case HASH_WPT_LON: {
+                        double lat = 0D;
+                        final Waypoint wpt = navigator.getWpt();
+                        if (wpt != null) {
+                            lat = wpt.getQualifiedCoordinates().getLon();
+                        }
+                        result = DoubleThing.create(lat);
+                    } break;
+
 					case HASH_WPT_ALT_DIFF: {
 						float diff = navigator.getWptAltDiff();
 						if (!Float.isNaN(diff)) {

@@ -67,7 +67,7 @@ public abstract class File {
             } catch (Throwable t) {
             }
         }
-//#endif
+//#endif /* __ALL__ */
     }
 
     public static boolean isFs() {

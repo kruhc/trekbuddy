@@ -381,7 +381,9 @@ final class MapView extends View {
             }
             break;
 
-//#ifdef __ALL__
+//#ifdef __ANDROID__
+            case -24:
+//#elifdef __ALL__
             case -36: // SE
                 if (!Config.easyZoomVolumeKeys)
                     break;
@@ -396,7 +398,7 @@ final class MapView extends View {
                     } break;
                     case Config.EASYZOOM_LAYERS: {
                         if (!repeated) {
-                            navigator.zoom(1);
+                            navigator.zoom(-1);
                         } else {
                             navigator.changeLayer();
                         }
@@ -408,7 +410,9 @@ final class MapView extends View {
             }
             break;
 
-//#ifdef __ALL__
+//#ifdef __ANDROID__
+            case -25:
+//#elifdef __ALL__
             case -37: // SE
                 if (!Config.easyZoomVolumeKeys)
                     break;
@@ -423,7 +427,7 @@ final class MapView extends View {
                     } break;
                     case Config.EASYZOOM_LAYERS: {
                         if (!repeated) {
-                            navigator.zoom(-1);
+                            navigator.zoom(1);
                         } else {
                             navigator.changeMap();
                         }

@@ -2,8 +2,6 @@
 
 package cz.kruch.track.ui.nokia;
 
-import cz.kruch.track.event.Callback;
-
 import java.util.TimerTask;
 
 /**
@@ -216,11 +214,8 @@ public class DeviceControl extends TimerTask {
 //#ifndef __ANDROID__
         if (cz.kruch.track.TrackingMIDlet.jsr179) {
             try {
-                sensor = (Callback) Class.forName("cz.kruch.track.location.Jsr179OrientationProvider").newInstance();
-                final String[] status = new String[1];
-                sensor.invoke(new Integer(2), null, status);
-                sensorStatus = status[0];
-                sensor.invoke(new Integer(0), null, listener);
+                sensor = (cz.kruch.track.event.Callback) Class.forName("cz.kruch.track.location.Jsr179OrientationProvider").newInstance();
+                SensorAction.exec(SensorAction.ACTION_START, sensor, listener);
             } catch (Throwable t) {
                 // ignore
             }
@@ -231,7 +226,7 @@ public class DeviceControl extends TimerTask {
     void nonsense(api.location.LocationListener listener) {
 //#ifndef __ANDROID__
         if (sensor != null) {
-            sensor.invoke(new Integer(1), null, null);
+            SensorAction.exec(SensorAction.ACTION_STOP, sensor, listener);
             sensor = null; // gc hint
         }
 //#endif
@@ -289,7 +284,8 @@ public class DeviceControl extends TimerTask {
         if (backlight == STATUS_OFF) {
             backlight = STATUS_ON;
             if (isSchedulable()) {
-                cz.kruch.track.ui.Desktop.timer.scheduleAtFixedRate(task = new DeviceControl(), REFRESH_PERIOD, REFRESH_PERIOD);
+                cz.kruch.track.ui.Desktop.scheduleAtFixedRate(task = new DeviceControl(),
+                                                              REFRESH_PERIOD, REFRESH_PERIOD);
             }
         } else {
             backlight = STATUS_OFF;
@@ -350,4 +346,54 @@ public class DeviceControl extends TimerTask {
             instance.turnOn();
         }
     }
+
+    //
+    // sensor helper
+    //
+
+//#ifndef __ANDROID__
+
+    private static class SensorAction implements Runnable {
+        static final int ACTION_START = 0;
+        static final int ACTION_STOP  = 1;
+
+        private int action;
+        private cz.kruch.track.event.Callback callback;
+        private api.location.LocationListener listener;
+
+        static void exec(final int action,
+                         final cz.kruch.track.event.Callback callback,
+                         final api.location.LocationListener listener) {
+            cz.kruch.track.ui.Desktop.getDiskWorker().enqueue(new SensorAction(action, callback, listener));
+        }
+
+        private SensorAction(int action,
+                             cz.kruch.track.event.Callback callback,
+                             api.location.LocationListener listener) {
+            this.action = action;
+            this.callback = callback;
+            this.listener = listener;
+        }
+
+        public void run() {
+            switch (action) {
+                case ACTION_START: {
+                    try {
+                        final String[] status = new String[1];
+                        callback.invoke(new Integer(2), null, status);
+                        sensorStatus = status[0];
+                        callback.invoke(new Integer(0), null, listener);
+                    } catch (Throwable t) {
+                        // ignore
+                    }
+                } break;
+                case ACTION_STOP: {
+                    callback.invoke(new Integer(1), null, null);
+                } break;
+            }
+        }
+    }
+
+//#endif
+
 }

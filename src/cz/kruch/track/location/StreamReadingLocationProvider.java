@@ -183,10 +183,10 @@ abstract class StreamReadingLocationProvider extends LocationProvider {
         // combine
         final long datetime = rmc.date + rmc.timestamp;
         if (rmc.timestamp == gga.timestamp && fix > 0) {
-            final QualifiedCoordinates qc = QualifiedCoordinates.newInstance(rmc.lat, rmc.lon, gga.altitude);
-            qc.setHorizontalAccuracy(NmeaParser.hdop * 5);
-//            qc.setVerticalAccuracy(NmeaParser.vdop * 5);
+            final QualifiedCoordinates qc = QualifiedCoordinates.newInstance(rmc.lat, rmc.lon, gga.altitude,
+                                                                             NmeaParser.hdop * 5, NmeaParser.vdop * 5);
             location = Location.newInstance(qc, datetime, fix, gga.sat);
+            location.updateFixQuality(gga.fix);
         } else { // "unpaired sentences"
             location = Location.newInstance(QualifiedCoordinates.newInstance(rmc.lat, rmc.lon),
                                             datetime, fix);

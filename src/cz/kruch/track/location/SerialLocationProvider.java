@@ -118,6 +118,7 @@ public class SerialLocationProvider
         }
     }
 
+    /** @overriden */
     public int start() throws LocationException {
         // start thread
         (new Thread(this)).start();
@@ -129,15 +130,15 @@ public class SerialLocationProvider
     public void stop() throws LocationException {
 
         // die gracefully... unlikely :-(
-        die();
+        super.stop();
 
         // non-blocking forcible kill
-        (new Thread(new UniversalSoldier(UniversalSoldier.MODE_KILLER))).start();
+        Desktop.getDiskWorker().enqueue(new UniversalSoldier(UniversalSoldier.MODE_KILLER));
     }
 
     private void startWatcher() {
-        watcher = new UniversalSoldier(UniversalSoldier.MODE_WATCHER);
-        Desktop.timer.schedule(watcher, 15000, 5000); // delay = 15 sec, period = 5 sec
+        Desktop.schedule(watcher = new UniversalSoldier(UniversalSoldier.MODE_WATCHER),
+                         15000, 5000); // delay = 15 sec, period = 5 sec
     }
 
     private void stopWatcher() {
@@ -151,8 +152,9 @@ public class SerialLocationProvider
         final boolean isHge100 = Config.locationProvider == Config.LOCATION_PROVIDER_HGE100;
         final int rw = isHge100 || Config.btKeepAlive != 0 ? Connector.READ_WRITE : Connector.READ;
 
-        // write access
-        OutputStream os;
+//#ifdef __ALL__
+        OutputStream hge = null;
+//#endif
 
         // reset data
         reset();
@@ -175,9 +177,11 @@ public class SerialLocationProvider
 //#ifdef __ALL__
             // HGE-100 start
             if (isHge100) {
-                os = connection.openOutputStream();
-                os.write("$STA\r\n".getBytes());
-                os.flush();
+                synchronized (lock) {
+                    hge = connection.openOutputStream();
+                    hge.write("$STA\r\n".getBytes());
+                    hge.flush();
+                }
             }
 //#endif
 
@@ -252,14 +256,8 @@ public class SerialLocationProvider
                 // new location timestamp
                 setLast(System.currentTimeMillis());
 
-                // send new location
-                notifyListener(location);
-
-                // state change?
-                final int newState = location.getFix() > 0 ? AVAILABLE : TEMPORARILY_UNAVAILABLE;
-                if (updateLastState(newState)) {
-                    notifyListener(newState);
-                }
+                // notify listener
+                notifyListener2(location);
 
 //#ifdef __ALL__
                 // free CPU on Samsung
@@ -275,11 +273,16 @@ public class SerialLocationProvider
             setStatus("stopping");
 
 //#ifdef __ALL__
-            // HGE-100 start
-            if (isHge100) {
-                os = connection.openOutputStream();
-                os.write("$STA\r\n".getBytes());
-                os.close();
+            // HGE-100 stop
+            synchronized (lock) {
+                if (hge != null) {
+                    try {
+                        hge.write("$STO\r\n".getBytes());
+                        hge.close();
+                    } catch (Exception e) {
+                        // ignore
+                    }
+                }
             }
 //#endif            
             

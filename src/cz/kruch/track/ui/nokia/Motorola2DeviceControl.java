@@ -24,7 +24,7 @@ final class Motorola2DeviceControl extends DeviceControl {
         } else {
             hasControl = true;
             com.motorola.funlight.FunLight.getControl();
-            cz.kruch.track.ui.Desktop.timer.scheduleAtFixedRate(this, 0, 100);
+            cz.kruch.track.ui.Desktop.scheduleAtFixedRate(this, 0, 100);
         }
     }
 

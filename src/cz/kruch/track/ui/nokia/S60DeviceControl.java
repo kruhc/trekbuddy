@@ -54,7 +54,8 @@ final class S60DeviceControl extends NokiaDeviceControl {
             ensureInitialized();
             super.setLights();
             if (task == null) {
-                cz.kruch.track.ui.Desktop.timer.scheduleAtFixedRate(task = new DeviceControl(), REFRESH_PERIOD, REFRESH_PERIOD);
+                cz.kruch.track.ui.Desktop.scheduleAtFixedRate(task = new DeviceControl(),
+                                                              REFRESH_PERIOD, REFRESH_PERIOD);
             }
         }
     }

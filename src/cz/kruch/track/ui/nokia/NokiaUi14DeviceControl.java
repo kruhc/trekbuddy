@@ -27,7 +27,7 @@ final class NokiaUi14DeviceControl extends NokiaDeviceControl {
             }
         } else {
             if (task == null) {
-                cz.kruch.track.ui.Desktop.timer.scheduleAtFixedRate(task = new DeviceControl(), REFRESH_PERIOD, REFRESH_PERIOD);
+                cz.kruch.track.ui.Desktop.scheduleAtFixedRate(task = new DeviceControl(), REFRESH_PERIOD, REFRESH_PERIOD);
             }
         }
     }

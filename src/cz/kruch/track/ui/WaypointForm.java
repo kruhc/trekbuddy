@@ -110,6 +110,9 @@ final class WaypointForm implements CommandListener, ItemCommandListener, Callba
         NavigationScreens.printDistance(sb, distance);
         appendStringItem(Resources.getString(Resources.NAV_FLD_DISTANCE), sb.toString());
 
+        // extra commands
+        boolean showLongListing = false, showLogs = false, showHints = false;
+
         // Groundspeak
         if (wpt.getUserObject() instanceof GroundspeakBean) {
             CMD_HINT = Resources.getString(Resources.NAV_CMD_SHOW);
@@ -126,49 +129,70 @@ final class WaypointForm implements CommandListener, ItemCommandListener, Callba
                                  convertHtmlSnippet(shortListing));
             }
             final String longListing = bean.getLongListing();
-            if (longListing != null && longListing.length() != 0) {
+            showLongListing = longListing != null && longListing.length() != 0;
+            if (showLongListing) {
                 final String related = Resources.getString(Resources.NAV_FLD_GS_LISTING_LONG);
 //#ifdef __RIM__
                 final int idx = appendStringItem(related, VALUE_SEE_MORE, Item.BUTTON);
 //#else
                 final int idx = appendStringItem(related, VALUE_SEE_MORE, Item.HYPERLINK);
 //#endif
-                addHintCommand(form.get(idx), related);
+                if (!Config.uiNoItemCommands) {
+                    addHintCommand(form.get(idx), Resources.NAV_FLD_GS_LISTING_LONG);
+                }
             }
             final Vector logs = bean.getLogs();
-            if (logs != null && logs.size() != 0) {
+            showLogs = logs != null && logs.size() != 0;
+            if (showLogs) {
                 final String related = Resources.getString(Resources.NAV_FLD_GS_LOGS);
 //#ifdef __RIM__
                 final int idx = appendStringItem(related, VALUE_SEE_MORE, Item.BUTTON);
 //#else
                 final int idx = appendStringItem(related, VALUE_SEE_MORE, Item.HYPERLINK);
 //#endif
-                addHintCommand(form.get(idx), related);
+                if (!Config.uiNoItemCommands) {
+                    addHintCommand(form.get(idx), Resources.NAV_FLD_GS_LOGS);
+                }
             }
             final String encodedHints = bean.getEncodedHints();
-            if (encodedHints != null && encodedHints.length() != 0) {
+            showHints = encodedHints != null && encodedHints.length() != 0;
+            if (showHints) {
                 final String related = Resources.getString(Resources.NAV_FLD_GS_HINT);
 //#ifdef __RIM__
                 hintNum = appendStringItem(related, VALUE_SEE_MORE, Item.BUTTON);
 //#else
                 hintNum = appendStringItem(related, VALUE_SEE_MORE, Item.HYPERLINK);
 //#endif
-                addHintCommand(form.get(hintNum), related);
+                if (!Config.uiNoItemCommands) {
+                    addHintCommand(form.get(hintNum), Resources.NAV_FLD_GS_HINT);
+                }
             }
         }
 
         // form command
+        final int POSITIVE_CMD_TYPE = Desktop.POSITIVE_CMD_TYPE;
         form.addCommand(new Command(Resources.getString(Resources.CMD_CLOSE), Desktop.BACK_CMD_TYPE, 1));
-        form.addCommand(new ActionCommand(Resources.NAV_CMD_NAVIGATE_TO, Desktop.POSITIVE_CMD_TYPE, 1));
-        form.addCommand(new ActionCommand(Resources.NAV_CMD_ROUTE_ALONG, Desktop.POSITIVE_CMD_TYPE, 2));
-        form.addCommand(new ActionCommand(Resources.NAV_CMD_ROUTE_BACK, Desktop.POSITIVE_CMD_TYPE, 3));
-        form.addCommand(new ActionCommand(Resources.NAV_CMD_GO_TO, Desktop.POSITIVE_CMD_TYPE, 4));
+        form.addCommand(new ActionCommand(Resources.NAV_CMD_NAVIGATE_TO, POSITIVE_CMD_TYPE, 1));
+        form.addCommand(new ActionCommand(Resources.NAV_CMD_ROUTE_ALONG, POSITIVE_CMD_TYPE, 2));
+        form.addCommand(new ActionCommand(Resources.NAV_CMD_ROUTE_BACK, POSITIVE_CMD_TYPE, 3));
+        form.addCommand(new ActionCommand(Resources.NAV_CMD_GO_TO, POSITIVE_CMD_TYPE, 4));
         if (modifiable) {
-            form.addCommand(new ActionCommand(Resources.NAV_CMD_EDIT, Desktop.POSITIVE_CMD_TYPE, 5));
-            form.addCommand(new ActionCommand(Resources.NAV_CMD_DELETE, Desktop.POSITIVE_CMD_TYPE, 6));
+            form.addCommand(new ActionCommand(Resources.NAV_CMD_EDIT, POSITIVE_CMD_TYPE, 5));
+            form.addCommand(new ActionCommand(Resources.NAV_CMD_DELETE, POSITIVE_CMD_TYPE, 6));
         }
         if (cache) {
-            form.addCommand(new ActionCommand(Resources.NAV_CMD_NEW_NOTE, Desktop.POSITIVE_CMD_TYPE, 7));
+            form.addCommand(new ActionCommand(Resources.NAV_CMD_NEW_NOTE, POSITIVE_CMD_TYPE, 7));
+        }
+        if (Config.uiNoItemCommands) {
+            if (showLongListing) {
+                form.addCommand(new ActionCommand(CMD_HINT, Resources.NAV_FLD_GS_LISTING_LONG, POSITIVE_CMD_TYPE, 8));
+            }
+            if (showLogs) {
+                form.addCommand(new ActionCommand(CMD_HINT, Resources.NAV_FLD_GS_LOGS, POSITIVE_CMD_TYPE, 9));
+            }
+            if (showHints) {
+                form.addCommand(new ActionCommand(CMD_HINT, Resources.NAV_FLD_GS_HINT, POSITIVE_CMD_TYPE, 10));
+            }
         }
     }
 
@@ -290,9 +314,11 @@ final class WaypointForm implements CommandListener, ItemCommandListener, Callba
         this.tracklogTime = tracklogTime;
     }
 
-    private void addHintCommand(final Item item, final String related) {
-        item.setDefaultCommand(new Command(CMD_HINT + " " + related, Command.ITEM, 1));
+    private Command addHintCommand(final Item item, final int action) {
+        final ActionCommand command = new ActionCommand(CMD_HINT, action, Command.ITEM, 1);
+        item.setDefaultCommand(command);
         item.setItemCommandListener(this);
+        return command;
     }
 
     private void populateEditableForm(final String name, final String comment,
@@ -423,43 +449,46 @@ final class WaypointForm implements CommandListener, ItemCommandListener, Callba
             } catch (Throwable t) {
                 Desktop.showError(Resources.getString(Resources.NAV_MSG_CAMERA_FAILED), t, form);
             }
-        } else /* if (cmd.startsWith(CMD_HINT)) */ {
-            final String label = item.getLabel();
+        } else if (command instanceof ActionCommand) {
+            final int action = ((ActionCommand) command).getAction();
+            final String label = Resources.getString((short) action);
             final GroundspeakBean bean = ((GroundspeakBean) waypoint.getUserObject());
-            if (label.startsWith(Resources.getString(Resources.NAV_FLD_GS_LISTING_LONG))) {
-                final String text = convertHtmlSnippet(bean.getLongListing());
-                final Screen box;
+            switch (action) {
+                case Resources.NAV_FLD_GS_LISTING_LONG: {
+                    final String text = convertHtmlSnippet(bean.getLongListing());
+                    final Screen box;
 //#ifdef __SYMBIAN__
-                if (cz.kruch.track.TrackingMIDlet.uiq) {
-                    box = new javax.microedition.lcdui.TextBox(label, text, text.length(), TextField.UNEDITABLE);
-                } else
+                    if (cz.kruch.track.TrackingMIDlet.uiq) {
+                        box = new javax.microedition.lcdui.TextBox(label, text, text.length(), TextField.UNEDITABLE);
+                    } else
 //#endif
-                {
-                    box = new Form(label);
-                    final StringItem content = new StringItem(null, text);
-                    content.setFont(Desktop.fontStringItems);
-                    ((Form) box).append(content);
-                }
-                box.addCommand(new Command(Resources.getString(Resources.CMD_CLOSE), Desktop.BACK_CMD_TYPE, 1));
-                box.setCommandListener(this);
-                Desktop.display.setCurrent(box);
-            } else if (label.startsWith(Resources.getString(Resources.NAV_FLD_GS_LOGS))) {
-                final Vector logs = bean.getLogs();
-                final List l = list = new List(label, List.IMPLICIT);
-                l.setFitPolicy(Choice.TEXT_WRAP_OFF);
-                for (int N = logs.size(), i = 0; i < N; i++) {
-                    l.append(((GroundspeakBean.Log) logs.elementAt(i)).getDate(), null);
-                }
-                for (int N = l.size(), i = 0; i < N; i++) {
-                    l.setFont(i, Desktop.fontStringItems);
-                }
-                l.addCommand(new Command(Resources.getString(Resources.CMD_CLOSE), Desktop.BACK_CMD_TYPE, 1));
-                l.setCommandListener(this);
-                Desktop.display.setCurrent(l);
-            } else if (label.startsWith(Resources.getString(Resources.NAV_FLD_GS_HINT))) {
-                form.delete(hintNum);
-                hintNum = appendStringItem(Resources.getString(Resources.NAV_FLD_GS_HINT), bean.getEncodedHints());
-                Desktop.display.setCurrentItem(form.get(hintNum));
+                    {
+                        box = new Form(label);
+                        final StringItem content = new StringItem(null, text);
+                        content.setFont(Desktop.fontStringItems);
+                        ((Form) box).append(content);
+                    }
+                    box.addCommand(new Command(Resources.getString(Resources.CMD_CLOSE), Desktop.BACK_CMD_TYPE, 1));
+                    box.setCommandListener(this);
+                    Desktop.display.setCurrent(box);
+                } break;
+                case Resources.NAV_FLD_GS_LOGS: {
+                    final Vector logs = bean.getLogs();
+                    final List l = list = new List(label, List.IMPLICIT);
+                    l.setFitPolicy(Choice.TEXT_WRAP_OFF);
+                    for (int N = logs.size(), i = 0; i < N; i++) {
+                        l.setFont(l.append(((GroundspeakBean.Log) logs.elementAt(i)).getDate(), null),
+                                  Desktop.fontStringItems);
+                    }
+                    l.addCommand(new Command(Resources.getString(Resources.CMD_CLOSE), Desktop.BACK_CMD_TYPE, 1));
+                    l.setCommandListener(this);
+                    Desktop.display.setCurrent(l);
+                } break;
+                case Resources.NAV_FLD_GS_HINT: {
+                    form.delete(hintNum);
+                    hintNum = appendStringItem(Resources.getString(Resources.NAV_FLD_GS_HINT), bean.getEncodedHints());
+                    Desktop.display.setCurrentItem(form.get(hintNum));
+                } break;
             }
         }
     }
@@ -530,6 +559,11 @@ final class WaypointForm implements CommandListener, ItemCommandListener, Callba
                     case Resources.NAV_CMD_NEW_NOTE: {
                         (new FieldNoteForm(waypoint, displayable, this)).show();
                     } break;
+                    case Resources.NAV_FLD_GS_LISTING_LONG:
+                    case Resources.NAV_FLD_GS_HINT:
+                    case Resources.NAV_FLD_GS_LOGS: {
+                        commandAction(command, (Item)null);
+                    } break;
                     default:
                         Desktop.showWarning("Internal error", new IllegalStateException("Unknown wpt action: " + action), null);
                 }
@@ -548,7 +582,8 @@ final class WaypointForm implements CommandListener, ItemCommandListener, Callba
                 appendStringItem(Resources.getString(Resources.NAV_FLD_DATE), gclog.getDate());
                 appendStringItem(Resources.getString(Resources.NAV_FLD_TYPE), gclog.getType());
                 appendStringItem(Resources.getString(Resources.NAV_FLD_FINDER), gclog.getFinder());
-                appendStringItem(Resources.getString(Resources.NAV_FLD_TEXT), gclog.getText());
+                appendStringItem(Resources.getString(Resources.NAV_FLD_TEXT),
+                                 convertHtmlSnippet(gclog.getText()));
                 // hack: restore main form member
                 form = main;
                 // show gc log details

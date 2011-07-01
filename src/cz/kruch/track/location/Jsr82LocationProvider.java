@@ -15,7 +15,6 @@ import javax.microedition.lcdui.List;
 import javax.microedition.lcdui.CommandListener;
 import javax.microedition.lcdui.Command;
 import javax.microedition.lcdui.Ticker;
-import javax.microedition.io.StreamConnection;
 import java.util.Vector;
 import java.util.TimerTask;
 import java.io.IOException;
@@ -62,8 +61,8 @@ public final class Jsr82LocationProvider extends SerialLocationProvider {
     protected void startKeepAlive() {
         if (Config.btKeepAlive != 0) {
             try {
-                kar = new Refresher(connection.openOutputStream());
-                Desktop.timer.schedule(kar, Config.btKeepAlive, Config.btKeepAlive);
+                Desktop.schedule(kar = new Refresher(connection.openOutputStream()),
+                                 Config.btKeepAlive, Config.btKeepAlive);
             } catch (Exception e) {
                 // ignore
             }

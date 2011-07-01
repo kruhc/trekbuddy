@@ -125,8 +125,8 @@ public final class MotorolaLocationProvider
                 final float alt = aggregatePosition.hasAltitude() ? aggregatePosition.getAltitude() : Float.NaN;
 
                 // create up-to-date location
-                final QualifiedCoordinates qc = QualifiedCoordinates.newInstance(lat / 60 * 0.00001, lon / 60 * 0.00001, alt);
-                qc.setHorizontalAccuracy(aggregatePosition.getLatLonAccuracy());
+                final QualifiedCoordinates qc = QualifiedCoordinates.newInstance(lat / 60 * 0.00001, lon / 60 * 0.00001, alt,
+                                                                                 aggregatePosition.getLatLonAccuracy(), Float.NaN);
                 final Location location = Location.newInstance(qc, aggregatePosition.getTimeStamp(), 1);
                 if (aggregatePosition.hasTravelDirection()) {
                     location.setCourse(aggregatePosition.getTravelDirection());

@@ -20,7 +20,7 @@ final class Midp2DeviceControl extends DeviceControl {
 
     /** @overriden */
     void turnOn() {
-        cz.kruch.track.ui.Desktop.display.flashBacklight(REFRESH_PERIOD);
+        cz.kruch.track.ui.Desktop.display.flashBacklight(5000); // 5 sec
     }
 
     /** @overriden */

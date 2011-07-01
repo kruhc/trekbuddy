@@ -48,9 +48,17 @@ public final class SimulatorLocationProvider
     }
 
     public int start() throws LocationException {
+//#ifndef __EMULATOR__
         (new FileBrowser(Resources.getString(Resources.DESKTOP_MSG_NMEA_PLAYBACK),
                          this, Desktop.screen, Config.FOLDER_NMEA,
                          new String[]{ ".nmea" })).show();
+//#else
+        try {
+            invoke(File.open("file:///mmc/trekbuddy/tracks-nmea/track.nmea"), null, null);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+//#endif
 
         return LocationProvider._STARTING;
     }
@@ -131,14 +139,8 @@ public final class SimulatorLocationProvider
                     break;
                 }
 
-                // send the location
-                notifyListener(location);
-
-                // state change?
-                final int newState = location.getFix() > 0 ? AVAILABLE : TEMPORARILY_UNAVAILABLE;
-                if (updateLastState(newState)) {
-                    notifyListener(newState);
-                }
+                // notify listener
+                notifyListener2(location);
 
                 // interval elapse
                 try {

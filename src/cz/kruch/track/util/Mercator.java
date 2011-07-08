@@ -13,7 +13,7 @@ import java.util.Vector;
 import cz.kruch.track.configuration.Config;
 
 /**
- * Helper for spherical <-> cartesian transformations, grids etc.
+ * Helper for ellipsoidal <-> cartesian transformations, grids etc.
  *
  * @author kruhc@seznam.cz
  */
@@ -709,112 +709,4 @@ public final class Mercator {
         }
         return ntf;
     }
-
-/*
-    private static final double[] EXTRA_MATH_N = {
-            2,
-            1.1,
-            1.01,
-            1.001,
-            1.0001,
-            1.00001,
-            1.000001,
-            1.0000001,
-            1.00000001,
-            1.000000001,
-            1.0000000001,
-            1.00000000001,
-            1.000000000001,
-            1.0000000000001
-    };
-    private static final double[] EXTRA_MATH_LN = {
-            0.69314718055994531941723212145818,
-            0.095310179804324860043952123280765,
-            0.0099503308531680828482153575442607,
-            9.9950033308353316680939892053501e-4,
-            9.9995000333308335333166680951131e-5,
-            9.9999500003333308333533331666681e-6,
-            9.9999950000033333308333353333317e-7,
-            9.9999995000000333333308333335333e-8,
-            9.9999999500000003333333308333334e-9,
-            9.9999999950000000033333333308333e-10,
-            9.9999999995000000000333333333308e-11,
-            9.9999999999500000000003333333333e-12,
-            9.9999999999950000000000033333333e-13,
-            9.9999999999995000000000000333333e-14
-        };
-    private static final double EXTRA_MATH_LN10 = 2.3025850929940456840179914546844;
-
-    public static double ln(double value) {
-        if (value < 0D) {
-            throw new IllegalArgumentException("ln(" + value + ")");
-        }
-
-        double fix = 0D;
-        while (value < 1D) {
-            value *= 10;
-            fix -= EXTRA_MATH_LN10;
-        }
-        while (value > 10D) {
-            value /= 10;
-            fix += EXTRA_MATH_LN10;
-        }
-
-        final double[] N = EXTRA_MATH_N;
-        final double[] LN = EXTRA_MATH_LN;
-        double result = EXTRA_MATH_LN10;
-        double inter = value;
-
-        for (int n = N.length, i = 0; i < n; ) {
-            double interi = inter * N[i];
-            if (interi > 10D) {
-                i++;
-            } else {
-                inter *= N[i];
-                result -= LN[i];
-            }
-        }
-
-        return result + fix;
-    }
-
-    public static double pow(final double arg1, final double arg2) {
-        if (arg1 == 0D) {
-            return 0D;
-        }
-        if (arg2 == 0D) {
-            return 1D;
-        }
-
-        final double[] N = EXTRA_MATH_N;
-        final double[] LN = EXTRA_MATH_LN;
-        double lnresult = arg2 * ln(arg1);
-        double result = 1D;
-        double inter = lnresult;
-
-        if (lnresult < 0D) {
-            for (int n = N.length, i = 1; i < n; ) {
-                double interi = inter + LN[i];
-                if (interi > 0D) {
-                    i++;
-                } else {
-                    inter += LN[i];
-                    result /= N[i];
-                }
-            }
-        } else {
-            for (int n = N.length, i = 1; i < n; ) {
-                double interi = inter - LN[i];
-                if (interi < 0D) {
-                    i++;
-                } else {
-                    inter -= LN[i];
-                    result *= N[i];
-                }
-            }
-        }
-
-        return result;
-    }
-*/
 }

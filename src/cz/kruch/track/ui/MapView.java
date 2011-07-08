@@ -5,8 +5,10 @@ package cz.kruch.track.ui;
 import api.location.Location;
 import api.location.QualifiedCoordinates;
 import cz.kruch.track.maps.Map;
+import cz.kruch.track.maps.Atlas;
 import cz.kruch.track.Resources;
 import cz.kruch.track.configuration.Config;
+import cz.kruch.track.configuration.ConfigurationException;
 import cz.kruch.track.location.Waypoint;
 
 import javax.microedition.lcdui.Canvas;
@@ -50,14 +52,13 @@ final class MapView extends View {
         return mapViewer.hasMap() && mapViewer.ensureSlices();
     }
 
-
     /**
      * @deprecated hack
      */
     void setMap(Map map) {
 
         // setup map viewer
-        mapViewer.setMap(map);
+        injectMap(map);
 
         // forget old route; also resets map viewer
         disposeRoute();
@@ -111,7 +112,7 @@ final class MapView extends View {
     }
 
     public void close() {
-        mapViewer.setMap(null); // saves crosshair position
+        injectMap(null); // may save position in default map/atlas
     }
 
     public int routeChanged(Vector wpts) {
@@ -179,12 +180,43 @@ final class MapView extends View {
         return super.navigationChanged(wpts, idx, silent);
     }
 
-    private boolean isAtlas() {
-        return navigator.getAtlas() != null;
-    }
+    private void injectMap(final Map map) {
+        // store position
+        final Map currentMap = mapViewer.getMap();
+        if (currentMap != null) {
+            QualifiedCoordinates qc = currentMap.transform(mapViewer.getPosition());
+            Config.latAny = qc.getLat();
+            Config.lonAny = qc.getLon();
+            if (isDefault(currentMap)) {
+                Config.lat = qc.getLat();
+                Config.lon = qc.getLon();
+            }
+            QualifiedCoordinates.releaseInstance(qc);
+            try {
+                Config.update(Config.VARS_090);
+            } catch (ConfigurationException e) {
+                // ignore
+            }
+        }
 
-    private boolean isMap() {
-        return navigator.getMap() != null;
+        // set the map
+        mapViewer.setMap(map);
+
+        // restore position on map
+//        if (isDefault(map)) {
+        if (map != null) {
+            QualifiedCoordinates qc = QualifiedCoordinates.newInstance(Config.latAny, Config.lonAny);
+            if (map.isWithin(qc)) {
+                setPosition(map.transform(qc));
+            } else {
+                QualifiedCoordinates.releaseInstance(qc);
+                qc = QualifiedCoordinates.newInstance(Config.lat, Config.lon);
+                if (map.isWithin(qc)) {
+                    setPosition(map.transform(qc));
+                }
+                QualifiedCoordinates.releaseInstance(qc);
+            }
+        }
     }
 
     /*private */void browsingOn(boolean reason) { // TODO fix visibility
@@ -299,7 +331,7 @@ final class MapView extends View {
                 } else if (steps > 0) { // no scroll? out of current map? find sibling map
 
                     // find sibling in atlas
-                    if (isAtlas() && !navigator._getInitializingMap() && !navigator._getLoadingSlices()) {
+                    if (navigator.isAtlas() && !navigator._getInitializingMap() && !navigator._getLoadingSlices()) {
 
                         // bounds hit?
                         final char neighbour = mapViewer.boundsHit();
@@ -382,9 +414,9 @@ final class MapView extends View {
             break;
 
 //#ifdef __ANDROID__
-            case -24:
+            case -25:
 //#elifdef __ALL__
-            case -36: // SE
+            case -37: // SE
                 if (!Config.easyZoomVolumeKeys)
                     break;
 //#endif
@@ -411,9 +443,9 @@ final class MapView extends View {
             break;
 
 //#ifdef __ANDROID__
-            case -25:
+            case -24:
 //#elifdef __ALL__
-            case -37: // SE
+            case -36: // SE
                 if (!Config.easyZoomVolumeKeys)
                     break;
 //#endif
@@ -460,18 +492,24 @@ final class MapView extends View {
     }
 
     public int locationUpdated(Location l) {
-        // make a copy of last known WGS-84 position
-        synchronized (this) {
-            Location.releaseInstance(location);
-            location = null; // gc hint
-            location = l._clone();
+        // only valid location
+        if (l.getFix() > 0) {
+            
+            // make a copy of last known WGS-84 position
+            synchronized (this) {
+                Location.releaseInstance(location);
+                location = null; // gc hint
+                location = l._clone();
+            }
+
+            // pass event
+            mapViewer.locationUpdated(l);
+
+            // update
+            return updatedTrick();
         }
 
-        // pass event
-        mapViewer.locationUpdated(l);
-
-        // update
-        return updatedTrick();
+        return Desktop.MASK_SCREEN;
     }
 
     private int updatedTrick() {
@@ -555,7 +593,7 @@ final class MapView extends View {
                     } else { // off current map
 
                         // load sibling map, if exists
-                        if (isAtlas() && !navigator._getInitializingMap() && !navigator._getLoadingSlices()) {
+                        if (navigator.isAtlas() && !navigator._getInitializingMap() && !navigator._getLoadingSlices()) {
 
                             // switch alternate map
                             navigator.startAlternateMap(navigator.getAtlas().getLayer(), qc, null);
@@ -773,6 +811,28 @@ final class MapView extends View {
         }
 
         return false;
+    }
+
+    private static boolean isDefault(final Map map) {
+        // no map
+        if (map == null) {
+            return false;
+        }
+
+        // default map?
+        final String startupURL = Config.mapURL;
+        if (startupURL == null || startupURL.length() == 0) {
+            return Desktop.DEFAULT_MAP_NAME == map.getName(); // '==' is OK
+        }
+
+        // atlas
+        final String mapPath = map.getPath();
+        if (startupURL.indexOf('?') > -1) {
+            final String s = Atlas.atlasURLtoFileURL(startupURL);
+            return mapPath.startsWith(s);
+        } else { // single map
+            return mapPath.equals(startupURL);
+        }
     }
 }
 

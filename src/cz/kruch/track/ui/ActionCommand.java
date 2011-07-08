@@ -14,7 +14,12 @@ final class ActionCommand extends Command {
         this.action = action;
     }
 
-    public ActionCommand(String prefix, int action, int commandType, int priority) {
+    public ActionCommand(int action, int commandType, int priority, int uiaction) {
+        super(Resources.getString((short) uiaction), commandType, priority);
+        this.action = action;
+    }
+
+    public ActionCommand(int action, int commandType, int priority, String prefix) {
         super(prefix  + " " + Resources.getString((short) action), commandType, priority);
         this.action = action;
     }

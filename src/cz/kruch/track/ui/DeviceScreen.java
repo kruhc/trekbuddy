@@ -503,8 +503,8 @@ final class DeviceScreen extends GameCanvas implements Runnable {
 //#endif
 
         // back key?
-        if ((i == +4 && cz.kruch.track.TrackingMIDlet.android) ||
-            (i == -11 && cz.kruch.track.TrackingMIDlet.sonyEricssonEx)) { // Android: -4, SE: -11
+        if (isBackKey(i)) {
+
             // menu shown?
             if (touchMenuActive) {
 
@@ -586,8 +586,7 @@ final class DeviceScreen extends GameCanvas implements Runnable {
 //#endif
 
         // back key?
-        if ((i == +4 && cz.kruch.track.TrackingMIDlet.android) ||
-            (i == -11 && cz.kruch.track.TrackingMIDlet.sonyEricssonEx)) { // Android: -4, SE: -11
+        if (isBackKey(i)) {
             return;
         }
 
@@ -626,8 +625,7 @@ final class DeviceScreen extends GameCanvas implements Runnable {
 //#endif
 
         // back key?
-        if ((i == +4 && cz.kruch.track.TrackingMIDlet.android) ||
-            (i == -11 && cz.kruch.track.TrackingMIDlet.sonyEricssonEx)) { // Android: -4, SE: -11
+        if (isBackKey(i)) {
             return;
         }
 
@@ -1015,6 +1013,19 @@ final class DeviceScreen extends GameCanvas implements Runnable {
         synchronized (this) {
             inMove = b;
         }
+    }
+
+    private static boolean isBackKey(final int i) {
+//#ifdef __ANDROID__
+        return  i == +4;
+//#elifdef __RIM__
+        return false;
+//#elifdef __J9__
+        return false;
+//#else
+        return (i == -7 && cz.kruch.track.TrackingMIDlet.samsung) ||
+               (i == -11 && cz.kruch.track.TrackingMIDlet.sonyEricssonEx);
+//#endif
     }
 
     private final class CommandTask implements Runnable {

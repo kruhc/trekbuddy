@@ -178,13 +178,14 @@ public final class Resources {
     public static final short NAV_CMD_NEW_NOTE                  = 2018;
     /* navigation - menu */
     public static final short NAV_ITEM_WAYPOINTS                = 2100;
-    public static final short NAV_ITEM_RECORD                   = 2101;
-    public static final short NAV_ITEM_ENTER                    = 2102;
+    public static final short NAV_ITEM_RECORD_CURRENT           = 2101;
+    public static final short NAV_ITEM_ENTER_CUSTOM             = 2102;
     public static final short NAV_ITEM_SMS_IAH                  = 2103;
     public static final short NAV_ITEM_SMS_MYT                  = 2104;
     public static final short NAV_ITEM_STOP                     = 2105;
     public static final short NAV_ITEM_TRACKS                   = 2106;
     public static final short NAV_ITEM_FIELD_NOTES              = 2107;
+    public static final short NAV_ITEM_PROJECT_NEW              = 2108;
     /* navigation - messages */
     public static final short NAV_MSG_LOAD_INJAR_FAILED         = 2300;
     public static final short NAV_MSG_LIST_STORES_FAILED        = 2301;
@@ -248,6 +249,7 @@ public final class Resources {
     public static final short NAV_FLD_FINDER                    = 2229;
     public static final short NAV_FLD_TEXT                      = 2230;
     public static final short NAV_TITLE_FIELD_NOTE              = 2231;
+    public static final short NAV_FLD_COURSE                    = 2232;
     /* settings - commands */
     public static final short CFG_CMD_APPLY                     = 3000;
     public static final short CFG_CMD_SAVE                      = 3001;
@@ -393,9 +395,19 @@ public final class Resources {
         final Object[] holder = new Object[2];
 
         // read default resources
-        InputStream is = Resources.class.getResourceAsStream("/resources/language." + System.getProperty("microedition.locale") + ".res");
+        String locale = System.getProperty("microedition.locale");
+        if (locale != null && locale.length() != 0) { // locale not empty
+            locale = locale.replace('-', '_');
+            final int vidx = locale.indexOf('_');
+            if (vidx > -1) {
+                locale = locale.substring(0, vidx);
+            }
+        } else {
+            locale = "en"; // default is english
+        }
+        InputStream is = Resources.class.getResourceAsStream("/resources/language." + locale + ".res");
         if (is == null) {
-            is = Resources.class.getResourceAsStream("/resources/language.en_US.res");
+            is = Resources.class.getResourceAsStream("/resources/language.en.res");
         }
         loadRes(is, holder);
         ids = (int[]) holder[0];

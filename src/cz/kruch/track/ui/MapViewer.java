@@ -7,7 +7,6 @@ import cz.kruch.track.maps.Map;
 import cz.kruch.track.util.ExtraMath;
 import cz.kruch.track.location.Waypoint;
 import cz.kruch.track.configuration.Config;
-import cz.kruch.track.configuration.ConfigurationException;
 
 import javax.microedition.lcdui.Graphics;
 import javax.microedition.lcdui.Canvas;
@@ -130,18 +129,6 @@ final class MapViewer {
         if (log.isEnabled()) log.debug("set map " + map);
 //#endif
 
-        // store position on map
-        if (isDefaultMap(this.map)) {
-            final Position p = getPosition();
-            Config.x = p.getX();
-            Config.y = p.getY();
-            try {
-                Config.update(Config.VARS_090);
-            } catch (ConfigurationException e) {
-                // ignore
-            }
-        }
-
         /* synchronized to avoid race condition with render() */
         synchronized (this) {
 
@@ -172,16 +159,6 @@ final class MapViewer {
             if (Config.oneTileScroll) {
                 this.chx = 0 - crosshairSize2;
                 this.chy = 0 - crosshairSize2;
-            }
-            // ~
-
-            // restore position on map
-            if (isDefaultMap(map)) {
-                final int x = Config.x;
-                final int y = Config.y;
-                if (x > -1 && y > -1 && x < mWidth && y < mHeight) {
-                    setPosition(new Position(x, y));
-                }
             }
 
             // update scale
@@ -759,26 +736,6 @@ final class MapViewer {
         if (Config.osdScale && sInfoLength > 0) {
             drawScale(graphics);
         }
-    }
-
-    private static boolean isDefaultMap(final Map map) {
-        if (map == null) {
-            return false;
-        }
-
-        final String mapPath = Config.mapPath;
-        if (mapPath.equals(Config.defaultMapPath)) {
-            final String mapName = map.getName();
-            if (mapName == null) {
-                return mapPath.equals(map.getPath());
-            } else if (mapPath.length() == 0) {
-                return "Default".equals(mapName);
-            } else {
-                return mapPath.endsWith(mapName);
-            }
-        }
-
-        return false;
     }
 
     private void drawNavigation(final Graphics graphics) {
@@ -1465,10 +1422,7 @@ final class MapViewer {
                     case Config.UNITS_METRIC: {
                         uc = NavigationScreens.DIST_STR_M;
                     } break;
-                    case Config.UNITS_IMPERIAL: {
-                        uc = NavigationScreens.DIST_STR_FT;
-                        scale /= 0.3048F;
-                    } break;
+                    case Config.UNITS_IMPERIAL:
                     case Config.UNITS_NAUTICAL: {
                         uc = NavigationScreens.DIST_STR_FT;
                         scale /= 0.3048F;

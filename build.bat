@@ -1,11 +1,15 @@
 @echo off
 
+setlocal
+
 if "%1"=="" goto help
 if "%2"=="" goto help
 if "%3"=="" goto help
 if not exist properties\build-%1.properties goto vendor
 
-cmd /c ant -Dinclude.properties=properties\build-%1.properties -Dlocale=%3 -l dist\%1\%2\build.log -f build.xml %2
+if "%ANT_HOME%"=="" set ANT_HOME=z:\apps\apache-ant-1.8.2
+
+cmd /c %ANT_HOME%\bin\ant -Dinclude.properties=properties\build-%1.properties -Dlocale=%3 -l dist\%1\%2\build.log -f build.xml %2
 goto end
 
 :vendor

@@ -240,7 +240,8 @@ final class ComputerView extends View
     private static final String NO_TIME         = "--:--:--";
     private static final String INF_TIME        = "99:99:99";
 
-    private static final float AUTO_MIN         = 2.4F;
+    private static final float AUTO_MIN_SPD     = 2.4F;
+    private static final long AUTO_MIN_T        = 30000;
     private static final int SHORT_AVG_DEPTH    = 30; // 30 sec (for 1 Hz NMEA)
     private static final int MAX_TEXT_LENGTH    = 128;
 
@@ -484,36 +485,31 @@ final class ComputerView extends View
                 valuesFloat[VALUE_HDOP] = hAccuracy / 5;
                 valuesFloat[VALUE_VDOP] = vAccuracy / 5;
 
-                // alt, alt-d
+                // alt, alt-d, altdiff
                 final float alt = qc.getAlt();
-                if (!Float.isNaN(alt)) {
+                if (!Float.isNaN(alt) && dt >= 1000) {
 
-                    // vertical speed
-                    final float da = alt - valuesFloat[VALUE_ALT];
-                    if (dt >= 1000) {
-                        valuesFloat[VALUE_ALT_D] = da / (dt / 1000);
-                    }
-
-                    // alt
+                    // vertical speed (alt-d), alt
+                    valuesFloat[VALUE_ALT_D] = (alt - valuesFloat[VALUE_ALT]) / (dt / 1000);
                     valuesFloat[VALUE_ALT] = alt;
 
                     // asc-t/desc-t
-                    if (true/*fix3d && vAccuracy < 15F &&*/) {
-                        altDiff += (alt - altLast);
-                        if (altDiff >= 50F) {
-                            valuesFloat[VALUE_ASC_T] += altDiff;
-                            altDiff = 0F;
-                        } else if (altDiff <= -50F) {
-                            valuesFloat[VALUE_DESC_T] += altDiff;
-                            altDiff = 0F;
-                        }
-                        altLast = alt;
+                    altDiff += (alt - altLast);
+                    if (altDiff >= 50F) {
+                        valuesFloat[VALUE_ASC_T] += altDiff;
+                        altDiff = 0F;
+                    } else if (altDiff <= -50F) {
+                        valuesFloat[VALUE_DESC_T] += altDiff;
+                        altDiff = 0F;
                     }
+                    altLast = alt;
                 }
 
-                // course, course-d
+                // course-d, course
                 final float course = l.getCourse();
-                if (!Float.isNaN(course)) {
+                if (!Float.isNaN(course) && dt >= 1000) {
+
+                    // course-d, course
                     valuesFloat[VALUE_COURSE_D] = course - valuesFloat[VALUE_COURSE];
                     valuesFloat[VALUE_COURSE] = course;
                 }
@@ -529,9 +525,9 @@ final class ComputerView extends View
                     speed *= 3.6F;
 
                     // 'auto' time and spd-avg - when speed over %AUTO_MIN% km/h
-                    if (speed > AUTO_MIN && dt >= 1000) {
+                    if (speed > AUTO_MIN_SPD && dt >= 1000) {
                         timetauto += dt;
-                        if (valuesFloat[VALUE_DIST_T] > 0.5F || (t - starttime) > 30000) {
+                        if (valuesFloat[VALUE_DIST_T] > 0.5F || (t - starttime) > AUTO_MIN_T) {
                             valuesFloat[VALUE_SPD_AVG_AUTO] = valuesFloat[VALUE_DIST_T] / ((float) timetauto / (1000 * 3600));
                         }
                     }
@@ -539,8 +535,8 @@ final class ComputerView extends View
                     // spd, spd-d
                     if (dt >= 1000) {
                         valuesFloat[VALUE_SPD_D] = ((speed - valuesFloat[VALUE_SPD]) / 3.6F) / (dt / 1000);
+                        valuesFloat[VALUE_SPD] = speed;
                     }
-                    valuesFloat[VALUE_SPD] = speed;
 
                     // spd-avg // TODO check this looks really weird
                     valuesFloat[VALUE_SPD_AVG] = (valuesFloat[VALUE_SPD_AVG] * counter + speed) / ++counter;
@@ -552,15 +548,7 @@ final class ComputerView extends View
 
                     // spd-avg short
                     if (dt >= 1000) {
-                        final float[] spdavgFloat = this.spdavgFloat;
-                        final int N = spdavgFloat.length;
-                        spdavgFloat[spdavgIndex++ % N] = speed;
-                        final int C = Math.min(spdavgIndex, N);
-                        float sas = 0F;
-                        for (int i = C; i-- > 0; ) {
-                            sas += spdavgFloat[i];
-                        }
-                        spdavgShort = sas / C;
+                        calcSpdAvgShort(speed);
                     }
                 }
 
@@ -570,6 +558,13 @@ final class ComputerView extends View
                     valuesFloat[VALUE_SPD_AVG] = valuesFloat[VALUE_DIST_T] / ((float) tt / (1000 * 3600));
                 }
 */
+            } else {
+                
+                // spg-avg short
+                if (dt >= 1000) {
+                    calcSpdAvgShort(0F);
+                }
+
             }
 
 //#ifdef __HECL__
@@ -1711,6 +1706,18 @@ final class ComputerView extends View
 //#endif
     }
 
+    private void calcSpdAvgShort(final float speed) {
+        final float[] spdavgFloat = this.spdavgFloat;
+        final int N = spdavgFloat.length;
+        spdavgFloat[spdavgIndex++ % N] = speed;
+        final int C = Math.min(spdavgIndex, N);
+        float sas = 0F;
+        for (int i = C; i-- > 0; ) {
+            sas += spdavgFloat[i];
+        }
+        spdavgShort = sas / C;
+    }
+
     private String loadViaCache(final String filename) {
 
         // release current profile bitmap fonts
@@ -2256,6 +2263,7 @@ final class ComputerView extends View
     private static float asAltitude(final int units, float value) {
         switch (units) {
             case Config.UNITS_IMPERIAL:
+            case Config.UNITS_NAUTICAL:
                 value /= 0.3048F;
             break;
         }

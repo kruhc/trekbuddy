@@ -19,7 +19,7 @@ public final class Worker extends Thread {
 
     public Worker(String name) {
         super(name);
-		this.tasks = new Vector(16);
+        this.tasks = new Vector(16);
         this.go = true;
     }
 

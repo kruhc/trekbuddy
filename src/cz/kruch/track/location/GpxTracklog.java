@@ -462,7 +462,7 @@ public final class GpxTracklog implements Runnable {
         int i = dateToXsdDate(l.getTimestamp());
         serializer.text(sbChars, 0, i);
         serializer.endTag(DEFAULT_NAMESPACE, ELEMENT_TIME);
-        if (!Float.isNaN(NmeaParser.geoidh)) {
+        if (!Float.isNaN(NmeaParser.geoidh) && NmeaParser.geoidh != 0D) {
             serializer.startTag(DEFAULT_NAMESPACE, ELEMENT_GEOIDH);
             i = doubleToChars(NmeaParser.geoidh, 1);
             serializer.text(sbChars, 0, i);
@@ -622,7 +622,7 @@ public final class GpxTracklog implements Runnable {
             serializer.text(sbChars, 0, i);
             serializer.endTag(DEFAULT_NAMESPACE, ELEMENT_TIME);
         }
-        if (!Float.isNaN(NmeaParser.geoidh)) {
+        if (!Float.isNaN(NmeaParser.geoidh) && NmeaParser.geoidh != 0D) {
             serializer.startTag(DEFAULT_NAMESPACE, ELEMENT_GEOIDH);
             final int i = doubleToChars(NmeaParser.geoidh, 1);
             serializer.text(sbChars, 0, i);

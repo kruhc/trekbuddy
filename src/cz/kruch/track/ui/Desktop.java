@@ -67,6 +67,8 @@ public final class Desktop implements CommandListener,
     private static final int VIEW_HPS               = 1;
     private static final int VIEW_CMS               = 2;
 
+    public static final String DEFAULT_MAP_NAME     = "Default";
+
     // UI
     public static int POSITIVE_CMD_TYPE, EXIT_CMD_TYPE, SELECT_CMD_TYPE,
                       BACK_CMD_TYPE, CANCEL_CMD_TYPE, CHOICE_POPUP_TYPE;
@@ -164,7 +166,7 @@ public final class Desktop implements CommandListener,
 	// workers
 	private static Worker diskWorker, eventWorker;
 
-	/**
+    /**
      * Desktop constructor.
      * 
      * @param midlet midlet instance
@@ -226,29 +228,20 @@ public final class Desktop implements CommandListener,
     }
 
     public static void schedule(TimerTask task, long delay) {
-        if (timer == null) {
-            timer = new Timer();
-        }
-        timer.schedule(task, delay);
+        getTimer().schedule(task, delay);
     }
 
     public static void schedule(TimerTask task, long delay, long period) {
-        if (timer == null) {
-            timer = new Timer();
-        }
-        timer.schedule(task, delay, period);
+        getTimer().schedule(task, delay, period);
     }
 
     public static void scheduleAtFixedRate(TimerTask task, long delay, long period) {
-        if (timer == null) {
-            timer = new Timer();
-        }
-        timer.scheduleAtFixedRate(task, delay, period);
+        getTimer().scheduleAtFixedRate(task, delay, period);
     }
 
     public static Worker getDiskWorker() { // it is more I/O worker than just disk worker
         if (diskWorker == null) {
-            diskWorker = new Worker("Disk Worker");
+            diskWorker = new Worker("TrekBuddy [Disk Worker]");
             diskWorker.start();
         }
         return diskWorker;
@@ -256,7 +249,7 @@ public final class Desktop implements CommandListener,
 
     static Worker getEventWorker() {
         if (eventWorker == null) {
-            eventWorker = new Worker("Event Worker");
+            eventWorker = new Worker("TrekBuddy [Event Worker]");
             eventWorker.setPriority(Thread.MAX_PRIORITY);
             eventWorker.start();
         }
@@ -386,12 +379,16 @@ public final class Desktop implements CommandListener,
         // show load map
         consoleShow(g, lineY, Resources.getString(Resources.BOOT_LOADING_MAP));
         try {
-            if (Config.EMPTY_STRING.equals(Config.mapPath)) {
+            if (Config.EMPTY_STRING.equals(Config.mapURL)) {
                 initDefaultMap();
                 consoleResult(g, lineY, 0);
             } else {
-                initMap();
-                consoleResult(g, lineY, 1);
+                if (!initMap()) {
+                    initDefaultMap();
+                    consoleResult(g, lineY, -1);
+                } else {
+                    consoleResult(g, lineY, 1);
+                }
             }
         } catch (Throwable t) {
 //#ifdef __LOG__
@@ -452,7 +449,7 @@ public final class Desktop implements CommandListener,
         }
         final String map = Resources.getString(Resources.VENDOR_INITIAL_MAP);
         if (!Integer.toString(Resources.VENDOR_INITIAL_MAP).equals(map)) {
-            Config.mapPath = map;
+            Config.mapURL = map;
         }
         final String checksum = Resources.getString(Resources.VENDOR_INITIAL_CHECKSUM);
         if (!Integer.toString(Resources.VENDOR_INITIAL_CHECKSUM).equals(checksum)) {
@@ -538,6 +535,17 @@ public final class Desktop implements CommandListener,
 
     int getMode() {
         return mode;
+    }
+
+    private static Timer getTimer() {
+        if (timer == null) {
+//#ifdef __ANDROID__
+            timer = new Timer("TrekBuddy [Timer]");
+//#else
+            timer = new Timer();
+//#endif
+        }
+        return timer;
     }
 
     private static void resetFont() {
@@ -718,7 +726,11 @@ public final class Desktop implements CommandListener,
 //#endif
 
         // in-jar map
-        map = Map.defaultMap(this);
+        map = new Map("trekbuddy.jar", DEFAULT_MAP_NAME, this);
+        final Throwable t = map.loadMap();
+        if (t != null) {
+            throw t;
+        }
 
         // we are done
         _setInitializingMap(false);
@@ -729,32 +741,30 @@ public final class Desktop implements CommandListener,
     }
 
     /* hack - call blocking method to show result in boot console */
-    private void initMap() throws Throwable {
+    private boolean initMap() throws Throwable {
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("init map");
 //#endif
 
-        String mapPath = Config.mapPath;
+        String mapURL = Config.mapURL;
         String mapName = null;
         Atlas _atlas = null;
 
 //#ifdef __LOG__
-        if (log.isEnabled()) log.debug("startup map: " + mapPath);
+        if (log.isEnabled()) log.debug("startup map: " + mapURL);
 //#endif
 
         // load atlas first
-        if (mapPath.indexOf('?') > -1) {
+        if (mapURL.indexOf('?') > -1) {
 //#ifdef __LOG__
             if (log.isEnabled()) log.debug("loading atlas");
 //#endif
 
             // get atlas index path
-            final CharArrayTokenizer tokenizer = new CharArrayTokenizer();
-            tokenizer.init(mapPath, new char[]{ '?', '&','=' }, false);
-            String token = tokenizer.next().toString();
+            final String[] parts = Atlas.parseURL(mapURL);
 
             // load atlas
-            _atlas = new Atlas(token, this);
+            _atlas = new Atlas(parts[0], this);
             final Throwable t = _atlas.loadAtlas();
             if (t != null) {
                 throw t;
@@ -763,13 +773,14 @@ public final class Desktop implements CommandListener,
             if (log.isEnabled()) log.debug("atlas loaded");
 //#endif
 
-            // get layer and map name
-            tokenizer.next(); // layer
-            token = tokenizer.next().toString();
-            _atlas.setLayer(token);
-            tokenizer.next(); // map
-            mapName = tokenizer.next().toString();
-            mapPath = _atlas.getMapURL(mapName);
+            // get layer and map name and path
+            try {
+                _atlas.setLayer(File.decode(parts[1]));
+                mapName = File.decode(parts[2]);
+                mapURL = _atlas.getFileURL(mapName);
+            } catch (NullPointerException e) { // map probably removed by user
+                return false;
+            }
         }
 
 //#ifdef __LOG__
@@ -777,7 +788,7 @@ public final class Desktop implements CommandListener,
 //#endif
 
         // load map now
-        final Map _map = new Map(mapPath, mapName, this);
+        final Map _map = new Map(mapURL, mapName, this);
         if (_atlas != null) { // calibration may already be available
             _map.setCalibration(_atlas.getMapCalibration(mapName));
         }
@@ -802,6 +813,8 @@ public final class Desktop implements CommandListener,
 //#ifdef __LOG__
         if (log.isEnabled()) log.info("~init map");
 //#endif
+
+        return true;
     }
 
     private void postInit() {
@@ -1099,7 +1112,11 @@ public final class Desktop implements CommandListener,
     }
 
     boolean isLocation() {
-        return ((MapView) views[VIEW_MAP]).isLocation();
+        return ((MapView) views[VIEW_MAP]).isLocation(); // TODO navigator should now better?
+    }
+
+    boolean isAtlas() {
+        return this.atlas != null;
     }
 
     Atlas getAtlas() {
@@ -1124,7 +1141,7 @@ public final class Desktop implements CommandListener,
 
             // calculate distance, azimuth and height diff
             wptDistance = from.distance(qc);
-            wptAzimuth = (int) from.azimuthTo(qc, wptDistance);
+            wptAzimuth = (int) from.azimuthTo(qc);
             if (!Float.isNaN(qc.getAlt()) && !Float.isNaN(from.getAlt())) {
                 wptHeightDiff = qc.getAlt() - from.getAlt();
             } else {
@@ -1226,7 +1243,10 @@ public final class Desktop implements CommandListener,
      * @return current pointer coordinates
      */
     QualifiedCoordinates getPointer() {
-        return views[VIEW_MAP].getPointer();
+        if (getMap() != null) {
+            return views[VIEW_MAP].getPointer();
+        }
+        return null;
     }
 
     /**
@@ -2517,14 +2537,14 @@ public final class Desktop implements CommandListener,
                         String nextLayer = null;
                         if (direction == 1 && (i + 1) < N) {
                             for (i = i + 1; i < N; i++) {
-                                if (atlas.getMapURL(layers[i], qc) != null) {
+                                if (atlas.getFileURL(layers[i], qc) != null) {
                                     nextLayer = layers[i];
                                     break;
                                 }
                             }
                         } else if (direction == -1 && i > 0) {
                             for (i = i - 1; i >= 0; i--) {
-                                if (atlas.getMapURL(layers[i], qc) != null) {
+                                if (atlas.getFileURL(layers[i], qc) != null) {
                                     nextLayer = layers[i];
                                     break;
                                 }
@@ -2554,7 +2574,7 @@ public final class Desktop implements CommandListener,
             }
 
             // find map for given coords
-            final String mapUrl = atlas.getMapURL(layerName, qc);
+            final String mapUrl = atlas.getFileURL(layerName, qc);
             final String mapName = atlas.getMapName(layerName, qc);
 
             // got map for given coordinates?
@@ -2630,9 +2650,6 @@ public final class Desktop implements CommandListener,
 
         // message for the screen
         _updateLoadingResult(Resources.getString(Resources.DESKTOP_MSG_LOADING_ATLAS), url);
-
-        // hide map viewer and OSD // TODO hackish
-        ((MapView) views[VIEW_MAP]).setMap(null);
 
         // hide OSD
         osd.setVisible(false);
@@ -2805,11 +2822,11 @@ public final class Desktop implements CommandListener,
             if (answer == YesNoDialog.YES) {
                 try {
                     if (Desktop.this.atlas == null) {
-                        Config.mapPath = Desktop.this.map.getPath();
+                        Config.mapURL = Desktop.this.map.getPath();
                     } else {
-                        Config.mapPath = Desktop.this.atlas.getURL(Desktop.this.map.getName());
+                        Config.mapURL = Desktop.this.atlas.getMapURL(Desktop.this.map.getPath(),
+                                                                     Desktop.this.map.getName());
                     }
-                    Config.defaultMapPath = Config.mapPath;
                     Config.update(Config.CONFIG_090);
 
                     // let the user know
@@ -2972,6 +2989,9 @@ public final class Desktop implements CommandListener,
                     Desktop.this._qc = getPointer();
                 }
 
+                // hide map viewer and OSD // TODO hackish, and conflicts with _qc just above 
+                ((MapView) views[VIEW_MAP]).setMap(null);
+
                 // release current data
                 if (Desktop.this.atlas != null) {
                     Desktop.this.atlas.close();
@@ -3132,7 +3152,7 @@ public final class Desktop implements CommandListener,
                 }
 
                 // background task
-                Desktop.this.startOpenMap(Desktop.this.atlas.getMapURL(name), name);
+                Desktop.this.startOpenMap(Desktop.this.atlas.getFileURL(name), name);
 
             } else { // cancelled
 
@@ -3178,24 +3198,25 @@ public final class Desktop implements CommandListener,
                     if (Desktop.this._qc != null) {
                         try {
                             QualifiedCoordinates _qc = Desktop.this._qc;
+                            Map map = Desktop.this.map;
                             // handle fake qc when browsing across map boundary
                             if (_qc.getLat() == 90D) {
                                 _qc = null; // gc hint
-                                _qc = QualifiedCoordinates.newInstance(Desktop.this.map.getRange(2), _qc.getLon());
+                                _qc = QualifiedCoordinates.newInstance(map.getRange(2), _qc.getLon());
                             } else if (_qc.getLat() == -90D) {
                                 _qc = null; // gc hint
-                                _qc = QualifiedCoordinates.newInstance(Desktop.this.map.getRange(0), _qc.getLon());
+                                _qc = QualifiedCoordinates.newInstance(map.getRange(0), _qc.getLon());
                             } else if (_qc.getLon() == 180D) {
                                 _qc = null; // gc hint
-                                _qc = QualifiedCoordinates.newInstance(_qc.getLat(), Desktop.this.map.getRange(1));
+                                _qc = QualifiedCoordinates.newInstance(_qc.getLat(), map.getRange(1));
                             } else if (_qc.getLon() == -180D) {
                                 _qc = null; // gc hint
-                                _qc = QualifiedCoordinates.newInstance(_qc.getLat(), Desktop.this.map.getRange(3));
+                                _qc = QualifiedCoordinates.newInstance(_qc.getLat(), map.getRange(3));
                             }
-
+                            
                             // move to position
-                            if (Desktop.this.map.isWithin(_qc)) {
-                                mapView.setPosition(Desktop.this.map.transform(_qc));
+                            if (map.isWithin(_qc)) {
+                                mapView.setPosition(map.transform(_qc));
                             }
 
                         } finally {
@@ -3482,7 +3503,6 @@ public final class Desktop implements CommandListener,
 
             // update screen
             Desktop.this.update(mask);
-
         }
 
         private void execOrientationChanged() {

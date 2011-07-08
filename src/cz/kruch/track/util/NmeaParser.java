@@ -158,6 +158,8 @@ public final class NmeaParser {
                     case 8: {
                         if (!token.isEmpty()) {
                             hdop = CharArrayTokenizer.parseFloat(token);
+                        } else {
+                            hdop = Float.NaN;
                         }
                     } break;
                     case 9: {
@@ -168,6 +170,8 @@ public final class NmeaParser {
                     case 11: {
                         if (!token.isEmpty()) {
                             geoidh = CharArrayTokenizer.parseFloat(token);
+                        } else {
+                            geoidh = Float.NaN;
                         }
                     } break;
                 }
@@ -235,11 +239,15 @@ public final class NmeaParser {
                 case 16: {
                     if (!token.isEmpty()) {
                         hdop = CharArrayTokenizer.parseFloat(token);
+                    } else {
+                        hdop = Float.NaN;
                     }
                 } break;
                 case 17: {
                     if (!token.isEmpty()) {
                         vdop = CharArrayTokenizer.parseFloat(token);
+                    } else {
+                        vdop = Float.NaN;
                     }
                 } break;
             }

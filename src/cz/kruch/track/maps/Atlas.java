@@ -1,36 +1,22 @@
-/*
- * Copyright 2006-2007 Ales Pour <kruhc@seznam.cz>.
- * All Rights Reserved.
- * DO NOT ALTER OR REMOVE COPYRIGHT NOTICES OR THIS FILE HEADER.
- *
- * This code is free software; you can redistribute it and/or modify it
- * under the terms of the GNU General Public License version 2 only, as
- * published by the Free Software Foundation.
- *
- * This code is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License
- * version 2 for more details (a copy is included in the LICENSE file that
- * accompanied this code).
- */
+// @LICENSE@
 
 package cz.kruch.track.maps;
 
 import cz.kruch.track.Resources;
+import cz.kruch.track.util.CharArrayTokenizer;
 import cz.kruch.track.ui.Desktop;
-import cz.kruch.track.maps.io.LoaderIO;
 
 import java.io.IOException;
 import java.util.Enumeration;
 import java.util.Hashtable;
 
-import api.location.QualifiedCoordinates;
 import api.file.File;
+import api.location.QualifiedCoordinates;
 
 /**
  * Atlas representation and handling.
  *
- * @author Ales Pour <kruhc@seznam.cz>
+ * @author kruhc@seznam.cz
  */
 public final class Atlas implements Runnable {
 //#ifdef __LOG__
@@ -77,16 +63,27 @@ public final class Atlas implements Runnable {
         return ((Hashtable) layers.get(layer)).keys();
     }
 
-    public String getMapURL(final String name) {
-        return ((Calibration) (((Hashtable) layers.get(current)).get(name))).getPath();
+    public Calibration getMapCalibration(final String mapName) {
+        return (Calibration) (((Hashtable) layers.get(current)).get(mapName));
     }
 
-    public Calibration getMapCalibration(final String name) {
-        return (Calibration) (((Hashtable) layers.get(current)).get(name));
+    public String getMapURL(final String mapPath, final String mapName) {
+        final StringBuffer sb = new StringBuffer(64);
+        sb.append(url);
+        if (mapPath.indexOf("%20") > -1) { // platform is encoding spaces
+            sb.append("?layer=").append(File.encode(current)).append("&map=").append(File.encode(mapName));
+        } else { // not encoding or nor spaces at all
+            sb.append("?layer=").append(current).append("&map=").append(mapName);
+        }
+        return sb.toString();
+    }
+
+    public String getFileURL(final String mapName) {
+        return ((Calibration) (((Hashtable) layers.get(current)).get(mapName))).getPath();
     }
 
     // TODO qc are NOT map local!!!
-    public String getMapURL(final String layerName, final QualifiedCoordinates qc) {
+    public String getFileURL(final String layerName, final QualifiedCoordinates qc) {
         final Hashtable layer = (Hashtable) layers.get(layerName);
         if (layer == null) {
             throw new IllegalArgumentException("Nonexistent layer");
@@ -119,12 +116,28 @@ public final class Atlas implements Runnable {
         return null;
     }
 
-    public String getURL(String name) {
-        return (new StringBuffer(32)).append(url).append("?layer=").append(current).append("&map=").append(name).toString();
-    }
-
     public Hashtable getMaps() {
         return maps;
+    }
+
+    public static String atlasURLtoFileURL(String url) {
+        final String[] parts = parseURL(url);
+        final StringBuffer sb = new StringBuffer(64);
+        sb.append(parts[0].substring(0, parts[0].lastIndexOf(File.PATH_SEPCHAR) + 1));
+        sb.append(parts[1]).append(api.file.File.PATH_SEPCHAR);
+        sb.append(parts[2]).append(api.file.File.PATH_SEPCHAR);
+        return sb.toString();
+    }
+
+    public static String[] parseURL(String url) {
+        final CharArrayTokenizer tokenizer = new CharArrayTokenizer();
+        tokenizer.init(url, new char[]{ '?', '&','=' }, false);
+        final String atlasURL = tokenizer.next().toString();
+        tokenizer.next(); // layer
+        final String layerName = tokenizer.next().toString();
+        tokenizer.next(); // map
+        final String mapName = tokenizer.next().toString();
+        return new String[]{ atlasURL, layerName, mapName };
     }
 
     /**

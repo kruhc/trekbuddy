@@ -822,15 +822,11 @@ public final class NavigationScreens {
                 case Config.UNITS_METRIC: {
                     append(sb, (int) altitude).append(DIST_STR_M);
                 } break;
-                case Config.UNITS_IMPERIAL: {
+                case Config.UNITS_IMPERIAL:
+                case Config.UNITS_NAUTICAL: {
                     append(sb, altitude / 0.3048F, 0).append(DIST_STR_FT);
                 } break;
-                case Config.UNITS_NAUTICAL: {
-                    append(sb, (int) altitude).append(DIST_STR_M);
-                } break;
             }
-        } else {
-            sb.append('?');
         }
 
         return sb;

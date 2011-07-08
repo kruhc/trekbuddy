@@ -121,7 +121,7 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
 
         // add command and handling
         pane.addCommand(new Command(Resources.getString(Resources.CFG_CMD_SAVE), Command.SCREEN, 1));
-        pane.addCommand(new Command(Resources.getString(Resources.CMD_CANCEL), Desktop.BACK_CMD_TYPE, 1));
+        pane.addCommand(new Command(Resources.getString(Resources.CMD_CLOSE), Desktop.BACK_CMD_TYPE, 1));
         /* default SELECT command is of SCREEN type */
         pane.setCommandListener(this);
 
@@ -137,7 +137,8 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
 
             // default map path field
             if (File.isFs()) {
-                submenu.append(fieldMapPath = new TextField(Resources.getString(Resources.CFG_BASIC_FLD_START_MAP), Config.mapPath, MAX_URL_LENGTH, TextField.URL));
+                submenu.append(fieldMapPath = new TextField(Resources.getString(Resources.CFG_BASIC_FLD_START_MAP),
+                                                            Config.mapURL, MAX_URL_LENGTH, TextField.URL));
             }
 
             // map datum
@@ -523,7 +524,7 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
             final int provider = ((Integer) providers.elementAt(choiceProvider.getSelectedIndex())).intValue();
             final boolean isFs = File.isFs();
             final boolean isTracklog = isFs && choiceTracklog.getSelectedIndex() > Config.TRACKLOG_NEVER;
-            final boolean isTracklogGpx = isTracklog && Config.TRACKLOG_FORMAT_GPX.equals(choiceTracklogFormat.getString(choiceTracklogFormat.getSelectedIndex()));
+            boolean isTracklogGpx = isTracklog && Config.TRACKLOG_FORMAT_GPX.equals(choiceTracklogFormat.getString(choiceTracklogFormat.getSelectedIndex()));
 
             if (choiceProvider == affected) {
                 final String providerName = choiceProvider.getString(choiceProvider.getSelectedIndex());
@@ -565,50 +566,20 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
                 if (isFs) {
                     appendWithNewlineAfter(submenu, choiceTracklog);
                     if (isTracklog) {
-                        switch (provider) {
-                            case Config.LOCATION_PROVIDER_JSR82:
-                            case Config.LOCATION_PROVIDER_JSR179:
-                            case Config.LOCATION_PROVIDER_SERIAL:
-//#ifdef __ALL__
-                            case Config.LOCATION_PROVIDER_HGE100:
-//#endif
-                                appendWithNewlineAfter(submenu, choiceTracklogFormat);
-                            break;
-                        }
-                        if (isTracklogGpx) {
-                            appendWithNewlineAfter(submenu, choiceGpx);
-                            appendShrinked(submenu, fieldGpxDt);
-                            appendWithNewlineAfter(submenu, fieldGpxDs);
-                        }
+                        tracklogStateChanged(provider, isTracklogGpx);
                     }
                 }
             }
 
             if (choiceTracklog == affected) {
                 if (isTracklog) {
-                    switch (provider) {
-                        case Config.LOCATION_PROVIDER_JSR82:
-                        case Config.LOCATION_PROVIDER_JSR179:
-                        case Config.LOCATION_PROVIDER_SERIAL:
-//#ifdef __ALL__
-                        case Config.LOCATION_PROVIDER_HGE100:
-//#endif                            
-                            appendWithNewlineAfter(submenu, choiceTracklogFormat);
-                        break;
-                    }
-                    if (isTracklogGpx) {
-                        appendWithNewlineAfter(submenu, choiceGpx);
-                        appendShrinked(submenu, fieldGpxDt);
-                        appendWithNewlineAfter(submenu, fieldGpxDs);
-                    }
+                    tracklogStateChanged(provider, isTracklogGpx);
                 }
             }
 
             if (choiceTracklogFormat == affected) {
                 if (isTracklogGpx) {
-                    appendWithNewlineAfter(submenu, choiceGpx);
-                    appendShrinked(submenu, fieldGpxDt);
-                    appendWithNewlineAfter(submenu, fieldGpxDs);
+                    appendTracklogGpxOptions();
                 }
             }
 
@@ -652,16 +623,40 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
         (new LineCfgForm()).show();
     }
 
+    private void tracklogStateChanged(final int provider, boolean isTracklogGpx) {
+        switch (provider) {
+            case Config.LOCATION_PROVIDER_JSR82:
+            case Config.LOCATION_PROVIDER_JSR179:
+            case Config.LOCATION_PROVIDER_SERIAL:
+//#ifdef __ALL__
+            case Config.LOCATION_PROVIDER_HGE100:
+//#endif
+                appendWithNewlineAfter(submenu, choiceTracklogFormat);
+            break;
+            default: // GPX always avaialable
+                isTracklogGpx = true;
+        }
+        if (isTracklogGpx) {
+            appendTracklogGpxOptions();
+        }
+    }
+
+    private void appendTracklogGpxOptions() {
+        appendWithNewlineAfter(submenu, choiceGpx);
+        appendShrinked(submenu, fieldGpxDt);
+        appendWithNewlineAfter(submenu, fieldGpxDs);
+    }
+
     private void subMenuCommandAction(Command command) {
 
         // grab values on OK
-        if (command.getCommandType() != Desktop.CANCEL_CMD_TYPE) {
+        if (command.getCommandType() != Desktop.BACK_CMD_TYPE) {
 
             if (menuBasic.equals(section)) {
 
                 // map path
                 if (File.isFs()) {
-                    Config.mapPath = fieldMapPath.getString();
+                    Config.mapURL = fieldMapPath.getString();
                 }
 
                 // datum
@@ -953,7 +948,7 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
 //#else
         itemLineCfg = new ImageItem(label, itemLineImage, Item.LAYOUT_DEFAULT, "<no preview>", Item.BUTTON);
 //#endif
-        itemLineCfg.setDefaultCommand(new Command(Resources.getString(Resources.NAV_CMD_EDIT), Command.ITEM, 1));
+        itemLineCfg.setDefaultCommand(new Command("Edit", Command.ITEM, 1));
         itemLineCfg.setItemCommandListener(this);
         return itemLineCfg;
     }

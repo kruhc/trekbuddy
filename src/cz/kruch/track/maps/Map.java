@@ -5,26 +5,21 @@ package cz.kruch.track.maps;
 import java.io.IOException;
 import java.util.Vector;
 
-import api.io.BufferedInputStream;
-
 import cz.kruch.track.configuration.Config;
-import cz.kruch.track.maps.io.LoaderIO;
 import cz.kruch.track.ui.Position;
 import cz.kruch.track.ui.Desktop;
 import cz.kruch.track.util.CharArrayTokenizer;
-import cz.kruch.track.util.NakedVector;
 import cz.kruch.track.Resources;
 
+import api.io.BufferedInputStream;
 import api.location.QualifiedCoordinates;
 import api.location.Datum;
 import api.location.ProjectionSetup;
 
-import javax.microedition.lcdui.Image;
-
 /**
  * Map representation and handling.
  *  
- * @author Ales Pour <kruhc@seznam.cz>
+ * @author kruhc@seznam.cz
  */
 public final class Map implements Runnable {
 //#ifdef __LOG__
@@ -323,23 +318,6 @@ public final class Map implements Runnable {
         }
 
         return null;
-    }
-
-    /**
-     * Creates default map from embedded resources.
-     *
-     * @param listener application desktop
-     * @return map
-     * @throws Throwable if anything goes wrong
-     */
-    public static Map defaultMap(/*StateListener*/final Desktop listener) throws Throwable {
-        final Map map = new Map("trekbuddy.jar", "Default", listener);
-        final Throwable t = map.loadMap();
-        if (t != null) {
-            throw t;
-        }
-
-        return map;
     }
 
     /**

@@ -96,7 +96,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
      */
 
     // group [Map]
-    public static String mapPath            = EMPTY_STRING;
+    public static String mapURL             = EMPTY_STRING;
 
     // group [Map datum]
     public static String geoDatum           = "WGS 84";
@@ -227,6 +227,8 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
     public static String cmsProfile     = EMPTY_STRING;
     public static boolean o2provider;
     public static int nokiaBacklightLast = 1; // first backlight level, see NokiaDeviceControl
+    public static double lat, lon;
+    public static double latAny, lonAny;
 
     // runtime (not persisted)
     public static boolean dataDirAccess, dataDirExists;
@@ -274,6 +276,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
 
         /* default for Android (MicroEmu) */
         dataDir = getDefaultDataDir("file:///sdcard/", "TrekBuddy/");
+        desktopFontSize = 1;
         listFont = 0x200010;
 
 //#else
@@ -285,6 +288,11 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         } else if (cz.kruch.track.TrackingMIDlet.brew) {
             dataDir = getDefaultDataDir("file:///fs/", "tb/");
             altCorrection = -540F;
+        } else if (cz.kruch.track.TrackingMIDlet.j9 || cz.kruch.track.TrackingMIDlet.wm) {
+            dataDir = getDefaultDataDir("file:///Storage Card/", "TrekBuddy/");
+            if (cz.kruch.track.TrackingMIDlet.wm) {
+                commUrl = "socket://localhost:20175";
+            }
         } else if (cz.kruch.track.TrackingMIDlet.siemens) {
             dataDir = getDefaultDataDir("file:///4:/", "TrekBuddy/");
             fullscreen = true;
@@ -296,11 +304,6 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
             forcedGc = true;
         } else if (cz.kruch.track.TrackingMIDlet.samsung) {
             dataDir = getDefaultDataDir("file:///mmc/", "trekbuddy/");
-        } else if (cz.kruch.track.TrackingMIDlet.j9 || cz.kruch.track.TrackingMIDlet.jbed || cz.kruch.track.TrackingMIDlet.intent /*|| cz.kruch.track.TrackingMIDlet.phoneme*/) {
-            dataDir = getDefaultDataDir("file:///Storage Card/", "TrekBuddy/");
-            if (cz.kruch.track.TrackingMIDlet.jbed || cz.kruch.track.TrackingMIDlet.intent) {
-                commUrl = "socket://localhost:20175";
-            }
         } else if (cz.kruch.track.TrackingMIDlet.uiq) {
             dataDir = getDefaultDataDir("file:///Ms/", "Other/TrekBuddy/");
             fullscreen = true;
@@ -327,9 +330,6 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         } catch (Throwable t) {
             // ignore
         }
-
-        // trick to recognize map loaded upon start as default
-        defaultMapPath = mapPath;
 
         // correct initial values
         if (locationProvider == -1) {
@@ -376,7 +376,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
     }
 
     private static void readMain(final DataInputStream din) throws IOException {
-        mapPath = din.readUTF();
+        mapURL = din.readUTF();
         /*String _locationProvider = */din.readUTF();
         /*timeZone = */din.readUTF();
         geoDatum = din.readUTF();
@@ -546,7 +546,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
     }
 
     private static void writeMain(final DataOutputStream dout) throws IOException {
-        dout.writeUTF(mapPath);
+        dout.writeUTF(mapURL);
         dout.writeUTF(EMPTY_STRING/*locationProvider*/);
         dout.writeUTF(EMPTY_STRING/*timeZone*/);
         dout.writeUTF(geoDatum);
@@ -952,6 +952,10 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         cmsProfile = din.readUTF();
         o2provider = din.readBoolean();
         nokiaBacklightLast = din.readInt();
+        lat = din.readDouble();
+        lon = din.readDouble();
+        latAny = din.readDouble();
+        lonAny = din.readDouble();
 
 //#ifdef __LOG__
         if (log.isEnabled()) log.info("vars read");
@@ -968,6 +972,10 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         dout.writeUTF(cmsProfile);
         dout.writeBoolean(o2provider);
         dout.writeInt(nokiaBacklightLast);
+        dout.writeDouble(lat);
+        dout.writeDouble(lon);
+        dout.writeDouble(latAny);
+        dout.writeDouble(lonAny);
 
 //#ifdef __LOG__
         if (log.isEnabled()) log.info("vars updated");

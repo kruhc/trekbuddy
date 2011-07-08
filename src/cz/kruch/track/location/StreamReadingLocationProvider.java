@@ -34,7 +34,6 @@ abstract class StreamReadingLocationProvider extends LocationProvider {
 
     // last I/O timestamp
     private long lastIO;
-    private long last;
 
     protected StreamReadingLocationProvider(String name) {
         super(name);
@@ -57,14 +56,6 @@ abstract class StreamReadingLocationProvider extends LocationProvider {
 
     synchronized void setLastIO(long lastIO) {
         this.lastIO = lastIO;
-    }
-
-    synchronized long getLast() {
-        return last;
-    }
-
-    synchronized void setLast(long last) {
-        this.last = last;
     }
 
     protected final Location nextLocation(InputStream in, OutputStream observer) throws IOException, LocationException {
@@ -182,7 +173,7 @@ abstract class StreamReadingLocationProvider extends LocationProvider {
         
         // combine
         final long datetime = rmc.date + rmc.timestamp;
-        if (rmc.timestamp == gga.timestamp && fix > 0) {
+        if (rmc.timestamp == gga.timestamp) { // good GPS unit
             final QualifiedCoordinates qc = QualifiedCoordinates.newInstance(rmc.lat, rmc.lon, gga.altitude,
                                                                              NmeaParser.hdop * 5, NmeaParser.vdop * 5);
             location = Location.newInstance(qc, datetime, fix, gga.sat);

@@ -184,4 +184,36 @@ public abstract class File {
     public static boolean isDir(final String path) {
         return File.PATH_SEPCHAR == path.charAt(path.length() - 1) || File.PARENT_DIR.equals(path);
     }
+
+    public static String encode(String path) {
+        int idx = path.indexOf(' ');
+        if (idx > -1) {
+            final StringBuffer sb = new StringBuffer(path.length());
+            int mark = 0;
+            while (idx > -1) {
+                sb.append(path.substring(mark, idx)).append("%20");
+                mark = idx + 1;
+                idx = path.indexOf(' ', mark);
+            }
+            sb.append(path.substring(mark));
+            path = sb.toString();
+        }
+        return path;
+    }
+
+    public static String decode(String path) {
+        int idx = path.indexOf("%20");
+        if (idx > -1) {
+            final StringBuffer sb = new StringBuffer(path.length());
+            int mark = 0;
+            while (idx > -1) {
+                sb.append(path.substring(mark, idx)).append(' ');
+                mark = idx + 3;
+                idx = path.indexOf("%20", mark);
+            }
+            sb.append(path.substring(mark));
+            path = sb.toString();
+        }
+        return path;
+    }
 }

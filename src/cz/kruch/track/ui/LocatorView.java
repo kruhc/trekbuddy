@@ -502,7 +502,7 @@ final class LocatorView extends View {
                 final float distance = coordsAvg.distance(qc);
 
                 // calculate bearing
-                float bearing = coordsAvg.azimuthTo(qc, distance);
+                float bearing = coordsAvg.azimuthTo(qc);
                 float arrowa;
                 if (course > 0F && mode % 2 == 0) { // relative to top (moving direction)
                     arrowa = bearing + 360 - course;

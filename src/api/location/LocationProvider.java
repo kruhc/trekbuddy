@@ -29,6 +29,7 @@ public abstract class LocationProvider {
 
     private boolean go;
     private int lastState;
+    private long last;
 
     protected LocationProvider(String name) {
         this.name = name;
@@ -53,6 +54,14 @@ public abstract class LocationProvider {
 
     protected void setStatus(Object status) {
         this.status = status;
+    }
+
+    protected synchronized long getLast() {
+        return last;
+    }
+
+    protected synchronized void setLast(long last) {
+        this.last = last;
     }
 
     public boolean isRestartable() {
@@ -101,6 +110,7 @@ public abstract class LocationProvider {
 
         // reset
         cz.kruch.track.util.NmeaParser.reset();
+        setLast(0L);
 
         // just about to start
         synchronized (this) {
@@ -158,12 +168,12 @@ public abstract class LocationProvider {
             if (updateLastState(AVAILABLE)) {
                 notifyListener(AVAILABLE);
             }
-            notifyListener(location);
         } else {
             if (updateLastState(TEMPORARILY_UNAVAILABLE)) {
                 notifyListener(TEMPORARILY_UNAVAILABLE);
             }
         }
+        notifyListener(location);
     }
 
     protected final void notifyListener(final boolean isRecording) {

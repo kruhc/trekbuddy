@@ -134,11 +134,28 @@ public final class Jsr179LocationProvider
             extra = l.getExtraInfo(APPLICATION_X_JAVA_LOCATION_NMEA);
         }
 
+        // result
+        final Location location;
+
         // valid location?
         if (l.isValid()) {
 
+            // fixable vars
+            final javax.microedition.location.QualifiedCoordinates xc = l.getQualifiedCoordinates();
+            long timestamp = l.getTimestamp();
+            float alt = xc.getAltitude() + Config.altCorrection;
+//#ifdef __RIM__
+            if (Config.negativeAltFix) {
+                alt *= -1;
+            }
+//#else
+            if (timestamp == 0 && Config.timeFix) { // TODO what devices?
+                timestamp = System.currentTimeMillis();
+            }
+//#endif
+
             // enhance with raw NMEA
-            int sat = -1;
+            int sat = 0;
             if (extra != null) {
                 extraSat = extraFix = extraFixQuality = 0;
                 try {
@@ -155,46 +172,39 @@ public final class Jsr179LocationProvider
                 }
             }
 
-            // fixable vars
-            final javax.microedition.location.QualifiedCoordinates xc = l.getQualifiedCoordinates();
-            long timestamp = l.getTimestamp();
-            float alt = xc.getAltitude() + Config.altCorrection;
-//#ifdef __RIM__
-            if (Config.negativeAltFix) {
-                alt *= -1;
-            }
-//#else
-            if (timestamp == 0 && Config.timeFix) {
-                timestamp = System.currentTimeMillis();
-            }
-//#endif
-
             // create up-to-date coordinates
-            QualifiedCoordinates qc = QualifiedCoordinates.newInstance(xc.getLatitude(), xc.getLongitude(), alt,
-                                                                       xc.getHorizontalAccuracy(), xc.getVerticalAccuracy());
+            final QualifiedCoordinates qc = QualifiedCoordinates.newInstance(xc.getLatitude(),
+                                                                             xc.getLongitude(),
+                                                                             alt,
+                                                                             xc.getHorizontalAccuracy(),
+                                                                             xc.getVerticalAccuracy());
 
             // create location
-            final Location location = Location.newInstance(qc, timestamp, 1, sat);
+            location = Location.newInstance(qc, timestamp, 1, sat);
             location.setCourse(l.getCourse());
             location.setSpeed(l.getSpeed());
             location.updateFix(extraFix);
             location.updateFixQuality(extraFixQuality);
 
-            // signal state change
-            if (updateLastState(AVAILABLE)) {
-                notifyListener(AVAILABLE);
-            }
-
-            // notify
-            notifyListener(location);
-
         } else {
 
-            // signal state change
-            if (updateLastState(TEMPORARILY_UNAVAILABLE)) {
-                notifyListener(TEMPORARILY_UNAVAILABLE);
+            // fixable vars
+            long timestamp = l.getTimestamp();
+//#ifdef __RIM__
+            // nothing to do
+//#else
+            if (timestamp == 0 && Config.timeFix) { // TODO what devices?
+                timestamp = System.currentTimeMillis();
             }
+//#endif
+
+            // create invalid location
+            location = Location.newInstance(QualifiedCoordinates.INVALID, timestamp, 0);
+
         }
+
+        // notify listener
+        notifyListener2(location);
 
         // NMEA logging
         if (extra != null && observer != null) {

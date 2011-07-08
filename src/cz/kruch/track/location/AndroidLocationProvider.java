@@ -6,6 +6,12 @@ import api.location.LocationProvider;
 import api.location.LocationException;
 import api.location.QualifiedCoordinates;
 import api.location.Location;
+import cz.kruch.track.event.Callback;
+import cz.kruch.track.util.NmeaParser;
+
+import java.io.OutputStream;
+import java.io.IOException;
+import java.util.TimerTask;
 
 /**
  * Android provider implementation.
@@ -16,22 +22,29 @@ import api.location.Location;
 public final class AndroidLocationProvider
         extends api.location.LocationProvider
         implements android.location.LocationListener,
-                   android.location.GpsStatus.Listener, Runnable {
+                   android.location.GpsStatus.Listener,
+                   Runnable {
 //#ifdef __LOG__
     private static final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("AndroidLocationProvider");
 //#endif
     private static final String KEY_SATELLITES = "satellites";
+    private static final byte[] CRLF = { '\r', '\n' };
 
     private android.location.LocationManager manager;
     private android.location.GpsStatus gpsStatus;
     private android.os.Looper looper;
+    private cz.kruch.track.event.Callback nmeaer;
+    private TimerTask watcher;
 
     private volatile int sat, status;
 
+    private final char[] raw;
+    private int extraSat, extraFix, extraFixQuality;
+
     public AndroidLocationProvider() {
         super("Internal");
-        this.sat = -1;
-        this.status = -1;
+        this.status = android.location.LocationProvider.OUT_OF_SERVICE;
+        this.raw = new char[NmeaParser.MAX_SENTENCE_LENGTH];        
     }
 
     public int start() throws LocationException {
@@ -69,6 +82,21 @@ public final class AndroidLocationProvider
             manager.requestLocationUpdates(android.location.LocationManager.GPS_PROVIDER,
                                            0, 0, this, looper);
             manager.addGpsStatusListener(this);
+            try {
+                nmeaer = (Callback) Class.forName("cz.kruch.track.location.AndroidNmeaListener").newInstance();
+                nmeaer.invoke(new Integer(1), null, new Object[]{ this, manager });
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+
+            // start watcher
+            cz.kruch.track.ui.Desktop.schedule(watcher = new TimerTask() {
+                public void run() {
+                    if (getLast() > 0 && System.currentTimeMillis() > (getLast() + 5000)) {
+                        notifyListener2(Location.newInstance(QualifiedCoordinates.INVALID, 0, 0));
+                    }
+                }
+            }, 15000, 1000);
 
             // status
             setStatus("running");
@@ -87,8 +115,19 @@ public final class AndroidLocationProvider
 
         } finally {
 
+            // destroy watcher
+            if (watcher != null) {
+                watcher.cancel();
+                watcher = null;
+            }
+
             // remove listener and gc-free native provider
             try {
+                try {
+                    nmeaer.invoke(new Integer(0), null, manager);
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
                 manager.removeGpsStatusListener(this);
                 manager.removeUpdates(this);
             } catch (Exception e) {
@@ -119,6 +158,7 @@ public final class AndroidLocationProvider
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("onLocationChanged");
 //#endif
+
         // create up-to-date location
         final QualifiedCoordinates qc = QualifiedCoordinates.newInstance(l.getLatitude(),
                                                                          l.getLongitude());
@@ -128,12 +168,12 @@ public final class AndroidLocationProvider
         if (l.hasAccuracy()) {
             qc.setHorizontalAccuracy(l.getAccuracy());
         }
-        int sat = -1;
+        int sat = 0;
         final android.os.Bundle extras = l.getExtras();
         if (extras != null) {
-            sat = extras.getInt(KEY_SATELLITES, -1);
+            sat = extras.getInt(KEY_SATELLITES, 0);
         }
-        if (sat == -1 && this.sat != -1) { // fallback to value from onStatusChanged or onGpsStatusChanged 
+        if (sat == 0) { // fallback to value from onStatusChanged/onGpsStatusChanged/onNmeaReceived 
             sat = this.sat;
         }
         final Location location = Location.newInstance(qc, l.getTime(), 1, sat);
@@ -143,14 +183,14 @@ public final class AndroidLocationProvider
         if (l.hasSpeed()) {
             location.setSpeed(l.getSpeed());
         }
+        location.updateFix(extraFix);
+        location.updateFixQuality(extraFixQuality);
 
-        // signal state change
-        if (updateLastState(AVAILABLE)) {
-            notifyListener(AVAILABLE);
-        }
+        // new location timestamp
+        setLast(System.currentTimeMillis());
 
         // notify
-        notifyListener(location);
+        notifyListener2(location);
 
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("~onLocationUpdated");
@@ -175,7 +215,7 @@ public final class AndroidLocationProvider
                 break;
             }
             if (extras != null) {
-                final int cnt = extras.getInt(KEY_SATELLITES, -1);
+                final int cnt = extras.getInt(KEY_SATELLITES, 0);
                 if (cnt > 0) {
                     this.sat = cnt;
                 }
@@ -204,6 +244,7 @@ public final class AndroidLocationProvider
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("onGpsStatusChanged");
 //#endif
+
         switch (event) {
             case android.location.GpsStatus.GPS_EVENT_SATELLITE_STATUS: {
                 gpsStatus = manager.getGpsStatus(gpsStatus);
@@ -217,6 +258,110 @@ public final class AndroidLocationProvider
                     }
                 }
             } break;
+        }
+    }
+
+    public void onNmeaReceived(long timestamp, String nmea) {
+//#ifdef __LOG__
+        if (log.isEnabled()) log.debug("onNmeaReceived");
+//#endif
+
+        // enhance with raw NMEA
+        int sat = 0;
+        if (nmea != null) {
+            extraSat = extraFix = extraFixQuality = 0;
+            try {
+                parseNmea(nmea);
+                if (extraSat > 0) {
+                    sat = extraSat;
+                } else {
+                    if (NmeaParser.sata != 0) {
+                        sat = NmeaParser.sata;
+                    }
+                }
+                if (sat > 0) {
+                    this.sat = sat;
+                }
+            } catch (Exception e) {
+                setThrowable(e);
+            }
+        }
+
+        // NMEA logging
+        if (nmea != null && observer != null) {
+            try {
+                logNmea(observer, nmea);
+            } catch (Exception e) {
+                setThrowable(e);
+            }
+        }
+    }
+
+    private void parseNmea(final String extra) throws Exception {
+        final char[] line = raw;
+        final int length = extra.length();
+        int start = 0;
+        int idx = extra.indexOf("$GP");
+        while (idx != -1) {
+            if (idx != 0) {
+                if (idx - start < NmeaParser.MAX_SENTENCE_LENGTH) {
+                    extra.getChars(start, idx, line, 0);
+                    final NmeaParser.Record rec = NmeaParser.parse(line, idx - start);
+                    switch (rec.type) {
+                        case NmeaParser.HEADER_GGA: {
+                            extraSat = rec.sat;
+                            extraFixQuality = rec.fix;
+                        } break;
+                        case NmeaParser.HEADER_GSA: {
+                            extraFix = rec.fix;
+                        } break;
+                    }
+                }
+            }
+            start = idx;
+            if (start < length) {
+                idx = extra.indexOf("$GP", start + 3);
+                if (idx == -1) {
+                    idx = length;
+                }
+            } else {
+                break;
+            }
+        }
+    }
+
+
+    private static void logNmea(final OutputStream out,
+                                final String extra) throws IOException {
+        final byte[] bytes = extra.getBytes();
+        final int N = bytes.length;
+        int offset = 0;
+        boolean crlf = false;
+        for (int i = 0; i < N; i++) {
+            final byte b = bytes[i];
+            switch (b) {
+                case '$': {
+                    if (i != 0) {
+                        out.write(bytes, offset, i - offset);
+                        offset = i;
+                        if (!crlf) {
+                            out.write(CRLF);
+                        } else {
+                            crlf = false;
+                        }
+                    }
+                } break;
+                case '\r':
+                case '\n': {
+                    crlf = true;
+                } break;
+            }
+        }
+        if (offset < bytes.length) { // always true
+            out.write(bytes, offset, bytes.length - offset);
+            if (!crlf)  {
+                out.write(CRLF);
+            }
         }
     }
 }

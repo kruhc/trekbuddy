@@ -137,7 +137,8 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
     private final Object[] idx;
     private int entry, depth, sort, cacheDiskHint;
 
-    private String itemWptsStores, itemTracksStores, itemAddNew, itemEnterCustom,
+    private String itemWptsStores, itemTracksStores,
+                   itemRecordCurrent, itemEnterCustom, itemProjectNew,
                    itemFriendHere, itemFriendThere, itemStop, itemFieldNotes;
     private String actionListWpts, actionListTracks, actionListTargets,
                    actionAddFieldNote;
@@ -188,8 +189,9 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
 
         this.itemWptsStores = Resources.getString(Resources.NAV_ITEM_WAYPOINTS);
         this.itemTracksStores = Resources.getString(Resources.NAV_ITEM_TRACKS);
-        this.itemAddNew = Resources.getString(Resources.NAV_ITEM_RECORD);
-        this.itemEnterCustom = Resources.getString(Resources.NAV_ITEM_ENTER);
+        this.itemRecordCurrent = Resources.getString(Resources.NAV_ITEM_RECORD_CURRENT);
+        this.itemEnterCustom = Resources.getString(Resources.NAV_ITEM_ENTER_CUSTOM);
+        this.itemProjectNew = Resources.getString(Resources.NAV_ITEM_PROJECT_NEW);
         this.itemFriendHere = Resources.getString(Resources.NAV_ITEM_SMS_IAH);
         this.itemFriendThere = Resources.getString(Resources.NAV_ITEM_SMS_MYT);
         this.itemStop = Resources.getString(Resources.NAV_ITEM_STOP);
@@ -257,8 +259,9 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                 if (fieldNotes.size() > 0) {
                     pane.append(itemFieldNotes, null);
                 }
-                pane.append(itemAddNew, null);
+                pane.append(itemRecordCurrent, null);
                 pane.append(itemEnterCustom, null);
+                pane.append(itemProjectNew, null);
                 if (cz.kruch.track.TrackingMIDlet.jsr120) {
                     if (navigator.isTracking()) {
                         pane.append(itemFriendHere, null);
@@ -378,7 +381,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                                 Desktop.getDiskWorker().enqueue(this);
                             } else {
                                 // open waypoint form
-                                (new WaypointForm(item, this, _distance,
+                                (new WaypointForm(this, item, _distance,
                                                   isModifiable(), isCache())).show();
                             }
                         } else { // execute action
@@ -466,7 +469,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
             } else {
                 Desktop.showInfo(Resources.getString(Resources.NAV_MSG_NO_NOTES_YET), null);
             }
-        } else if (itemAddNew.equals(item)) {
+        } else if (itemRecordCurrent.equals(item)) {
             // only when tracking
             if (navigator.isTracking()) {
                 // got location?
@@ -475,7 +478,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                     // force location to be gpx-logged
                     navigator.saveLocation(location);
                     // open form with current location
-                    (new WaypointForm(location, this)).show().setTracklogTime(navigator.getTracklogTime());
+                    (new WaypointForm(this, location)).show().setTracklogTime(navigator.getTracklogTime());
                 } else {
                     Desktop.showInfo(Resources.getString(Resources.NAV_MSG_NO_POS_YET), pane);
                 }
@@ -488,7 +491,15 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
             if (pointer == null) {
                 Desktop.showInfo(Resources.getString(Resources.NAV_MSG_NO_POS_YET), pane);
             } else {
-                (new WaypointForm(this, pointer)).show();
+                (new WaypointForm(this, pointer, Resources.NAV_ITEM_ENTER_CUSTOM)).show();
+            }
+        } else if (itemProjectNew.equals(item)) {
+            // got position?
+            final QualifiedCoordinates qc = navigator.getRelQc();
+            if (qc == null) {
+                Desktop.showInfo(Resources.getString(Resources.NAV_MSG_NO_POS_YET), pane);
+            } else {
+                (new WaypointForm(this, qc, Resources.NAV_ITEM_PROJECT_NEW)).show();
             }
 //#ifndef __ANDROID__
         } else if (itemFriendHere.equals(item)) {
@@ -642,16 +653,6 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                         navigator.goTo((Waypoint) currentWpts.elementAt(idxSelected));
                     } break;
 
-                    case Resources.NAV_CMD_ADD: {
-                        // add waypoint, possibly save
-                        addToPrefferedStore(/*USER_CUSTOM_STORE*/STORE_USER, (Waypoint) ret[1]);
-                    } break;
-
-                    case Resources.NAV_CMD_SAVE: {
-                        // add waypoint to memory store
-                        addToPrefferedStore(/*USER_RECORDED_STORE*/STORE_USER, (Waypoint) ret[1]);
-                    } break;
-
                     case Resources.NAV_CMD_UPDATE: {
                         // update current store
                         updateStore(currentName, currentWpts);
@@ -693,6 +694,13 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                         navigator.getFriends().send((String) ret[1], type, (String) ret[2], qc, time);
                     } break;
 //#endif
+                    case Resources.NAV_ITEM_ENTER_CUSTOM:
+                    case Resources.NAV_ITEM_RECORD_CURRENT:
+                    case Resources.NAV_ITEM_PROJECT_NEW: {
+                        // add waypoint to memory store
+                        addToPrefferedStore(STORE_USER, (Waypoint) ret[1]);
+                    } break;
+
                     default:
                         throw new IllegalArgumentException("Unknown wpt action: " + action);
                 }
@@ -1283,8 +1291,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                 parseBean(parser, bean, 1, false);
 
                 // open waypoint form
-                (new WaypointForm(wpt, this, _distance,
-                                  isModifiable(), isCache())).show();
+                (new WaypointForm(this, wpt, _distance, isModifiable(), isCache())).show();
 
             } finally {
                 try {
@@ -1631,7 +1638,8 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
     private Displayable listStores(final Vector stores, final String title) {
         // create UI list
         Displayable l = null;
-        if (Desktop.screen.hasPointerEvents()) { // prefer native lists on phones w/ touchscreen
+        if (Desktop.screen.hasPointerEvents()
+                && !cz.kruch.track.TrackingMIDlet.wm) { // prefer native lists on phones w/ touchscreen, except WM
             final String[] strings = new String[stores.size()];
             stores.copyInto(strings);
             try {

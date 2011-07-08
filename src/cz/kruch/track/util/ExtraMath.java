@@ -42,6 +42,18 @@ public final class ExtraMath {
      *               ln, pow                *
      ****************************************/
 
+//#ifdef __ANDROID__
+
+    public static double ln(double value) {
+        return Math.log(value);
+    }
+
+    public static double pow(final double arg1, final double arg2) {
+        return Math.pow(arg1, arg2);
+    }
+
+//#else
+
     private static final double[] N = {
             2,
             1.1,
@@ -148,9 +160,44 @@ public final class ExtraMath {
         return result;
     }
 
+//#endif
+
+    public static double powi(double num, int exp) {
+        double result = 1D;
+
+        while (exp > 0) {
+            if (exp % 2 == 1)
+                result *= num;
+            exp >>= 1;
+            num *= num;
+        }
+
+        return result;
+    }
+
     /****************************************
      *          asin, acos, atan, ...       *
      ****************************************/
+
+//#ifdef __ANDROID__
+
+    public static double atan(final double arg) {
+        return Math.atan(arg);
+    }
+
+    public static double atan2(double arg1, final double arg2) {
+        return Math.atan2(arg1, arg2);
+    }
+
+    public static double asin(double arg) {
+        return Math.asin(arg);
+    }
+
+    public static double acos(final double arg) {
+        return Math.acos(arg);
+    }
+
+//#else
 
     // constants
     private static final double sq2p1 = 2.414213562373095048802e0;
@@ -167,6 +214,7 @@ public final class ExtraMath {
     private static final double q0 = 0.89678597403663861962481162e3;
     private static final double PIO2 = Math.PI / 2;
     private static final double V2   = 1D / Math.sqrt(2D);
+
 
     // implementation of atan
     public static double atan(final double arg) {
@@ -244,4 +292,7 @@ public final class ExtraMath {
 
         return PIO2 / 2 + mxatan((arg - 1) / (arg + 1));
     }
+
+//#endif
+    
 }

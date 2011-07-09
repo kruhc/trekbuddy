@@ -220,7 +220,6 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
     // hidden
     public static String btDeviceName   = EMPTY_STRING;
     public static String btServiceUrl   = EMPTY_STRING;
-    public static String defaultMapPath = EMPTY_STRING;
     public static int x = -1;
     public static int y = -1;
     public static int dayNight;
@@ -945,7 +944,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
     private static void readVars(DataInputStream din) throws IOException {
         btDeviceName = din.readUTF();
         btServiceUrl = din.readUTF();
-        defaultMapPath = din.readUTF();
+        /*defaultMapPath = */din.readUTF();
         x = din.readInt();
         y = din.readInt();
         dayNight = din.readInt();
@@ -965,7 +964,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
     private static void writeVars(DataOutputStream dout) throws IOException {
         dout.writeUTF(btDeviceName);
         dout.writeUTF(btServiceUrl);
-        dout.writeUTF(defaultMapPath);
+        dout.writeUTF(EMPTY_STRING/*defaultMapPath*/);
         dout.writeInt(x);
         dout.writeInt(y);
         dout.writeInt(dayNight);

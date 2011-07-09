@@ -601,36 +601,33 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                         // close nav UI
                         close();
 
+                        // use current store
+                        useCurrent();
+
                         // call navigator
                         navigator.setNavigateTo(currentWpts, currentName, idxSelected, -1);
-
-                        // remember current store
-                        inUseName = currentName;
-                        inUseWpts = currentWpts;
                     } break;
 
                     case Resources.NAV_CMD_ROUTE_BACK: {
                         // close nav UI
                         close();
 
+                        // use current store
+                        useCurrent();
+
                         // call navigator
                         navigator.setNavigateTo(currentWpts, currentName, -1, idxSelected);
-
-                        // remember current store
-                        inUseName = currentName;
-                        inUseWpts = currentWpts;
                     } break;
 
                     case Resources.NAV_CMD_NAVIGATE_TO: {
                         // close nav UI
                         close();
 
+                        // use current store
+                        useCurrent();
+
                         // call navigator
                         navigator.setNavigateTo(currentWpts, currentName, idxSelected, idxSelected);
-
-                        // remember current store
-                        inUseName = currentName;
-                        inUseWpts = currentWpts;
                     } break;
 
                     case Resources.NAV_CMD_SET_AS_ACTIVE: {
@@ -969,7 +966,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                 // no current store
                 currentWpts = null; // gc hint
                 currentName = null; // gc hint
-//#ifndef __RIM__
+//#if !__RIM__ && !__ANDROID__ && !__J9__
                 System.gc(); // unconditional!!!
 //#endif
             }
@@ -1808,6 +1805,15 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
             // redraw list
             list.repaint();
         }
+    }
+
+    private void useCurrent() {
+        if (inUseName != null) {
+            stores.remove(inUseName);
+        }
+        inUseName = currentName;
+        inUseWpts = null; // gc hint
+        inUseWpts = currentWpts;
     }
 
 //#ifdef __B2B__

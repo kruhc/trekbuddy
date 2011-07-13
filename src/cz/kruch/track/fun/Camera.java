@@ -19,7 +19,12 @@ import javax.microedition.lcdui.CommandListener;
 import javax.microedition.lcdui.Displayable;
 import javax.microedition.lcdui.Command;
 import javax.microedition.lcdui.Form;
+import javax.microedition.lcdui.Image;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.OutputStream;
+import java.io.ByteArrayInputStream;
 import java.util.Vector;
 
 import api.file.File;
@@ -27,7 +32,7 @@ import api.file.File;
 /**
  * Camera for taking snapshots. Also plays sound.
  *
- * @author Ales Pour <kruhc@seznam.cz>
+ * @author kruhc@seznam.cz
  */
 public abstract class Camera implements
 //#ifndef __ANDROID__
@@ -122,11 +127,7 @@ public abstract class Camera implements
 
     public void commandAction(Command c, Displayable d) {
         if (c.getCommandType() == Command.SCREEN) {
-            if (cz.kruch.track.TrackingMIDlet.jsr234) {
-                worker.enqueue(this);
-            } else {
-                run();
-            }
+            worker.enqueue(this);
         } else {
             shutdown();
         }
@@ -297,76 +298,105 @@ public abstract class Camera implements
         return result;
     }
 
-    public static int[] getThumbnail(byte[] jpg) {
-        final int N = jpg.length;
+    public static Object getThumbnail(String url) {
+        InputStream is = null;
+        Image thumbnail = null;
+        try {
+            is = Connector.openInputStream(url);
+            thumbnail = Image.createImage(new ByteArrayInputStream(getThumbnail(is)));
+        } catch (Throwable t) { // could be OOM?
+            return t;
+        } finally {
+            try {
+                is.close();
+            } catch (Exception e) { // NPE or IOE or other
+                // ignore
+            }
+        }
+
+        return thumbnail;
+    }
+
+    public static byte[] getThumbnail(InputStream is) throws IOException {
         int offset = 0;
+        ByteArrayOutputStream raw = new ByteArrayOutputStream(4096);
 
         // JPEG check
-        final byte header0 = (byte) (jpg[offset++] & 0xFF);
-        final byte header1 = (byte) (jpg[offset++] & 0xFF);
+        final byte header0 = (byte) (pop(is, offset++) & 0xFF);
+        final byte header1 = (byte) (pop(is, offset++) & 0xFF);
         if ((header0 & 0xFF) == 0xFF && (header1 & 0xFF) == 0xD8) {
             do { // look for APP1
 
                 // marker
-                final byte marker0 = (byte)(jpg[offset++] & 0xFF);
-                final byte marker1 = (byte)(jpg[offset++] & 0xFF);
+                final byte marker0 = (byte)(pop(is, offset++) & 0xFF);
+                final byte marker1 = (byte)(pop(is, offset++) & 0xFF);
 
                 // segment size [high-byte] [low-byte], includes size bytes
-                final int length = (((byte)(jpg[offset++] & 0xFF) << 8) & 0xFF00) | ((byte)(jpg[offset++] & 0xFF) & 0xFF) - 2;
+                final int length = (((byte)(pop(is, offset++) & 0xFF) << 8) & 0xFF00) | ((byte)(pop(is, offset++) & 0xFF) & 0xFF) - 2;
 
                 // APP1?
                 if ((marker0 & 0xFF) == 0xFF && (marker1 & 0xFF) == 0xE1) {
 
                     // find SOI
-                    int skipped = goTo(jpg, offset, (byte)0xD8);
+                    int skipped = skipTo(is, null, (byte)0xD8);
                     if (skipped == -1) {
                         return null;
                     }
-                    final int start = offset + skipped - 2;
-                    offset += skipped;
+
+                    // start saving thumb data
+                    raw.write((byte)0xFF);
+                    raw.write((byte)0xD8);
 
                     // find EOI
-                    skipped = goTo(jpg, offset, (byte)0xD9);
+                    skipped = skipTo(is, raw, (byte)0xD9);
                     if (skipped == -1) {
                         return null;
                     }
-                    final int end = offset + skipped;
 
                     // result
-                    return new int[]{ start, end };
+                    return raw.toByteArray();
 
                 } else {
 
                     // skip segment
-                    offset += length;
+                    offset += skip(is, length);
 
                 }
 
-            } while (offset < N);
+            } while (true);
         }
 
         return null;
     }
 
-    private static int goTo(byte[] jpg, final int offset, final byte marker) {
-        final int length = jpg.length;
-        int position = offset;
+    private static byte pop(InputStream is, int ignored) throws IOException {
+        return (byte) is.read();
+    }
 
-        while (position < length) {
-            int b = jpg[position++] & 0xFF;
+    private static long skip(InputStream is, int length) throws IOException {
+        return is.skip(length);
+    }
+
+    private static int skipTo(InputStream is, OutputStream os, final byte marker) throws IOException {
+        int c = 0;
+
+        while (true) {
+            int b = pop(is, c++) & 0xFF;
+            if (os != null) {
+                os.write(b);
+            }
             if ((byte) (b & 0xFF) == BYTE_FF) {
-                b = jpg[position++] & 0xFF;
+                b = pop(is, c++) & 0xFF;
+                if (os != null) {
+                    os.write(b);
+                }
                 if (marker == (byte) (b & 0xFF)) {
                     break;
                 }
             }
         }
 
-        if (position >= length) {
-            return -1;
-        }
-
-        return position - offset;
+        return c;
     }
 
 //#endif /* !__ANDROID__ */

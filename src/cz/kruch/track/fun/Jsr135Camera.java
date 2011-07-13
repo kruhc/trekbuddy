@@ -56,8 +56,7 @@ final class Jsr135Camera extends Camera {
 		return sound(url);
 	}
 
-	public void run() {
-        /*byte[] result = null;*/
+    public void run() {
         String result = null;
         Throwable throwable = null;
 
@@ -74,7 +73,6 @@ final class Jsr135Camera extends Camera {
 //#endif
 
             // take the snapshot
-            /*result = ((VideoControl) video).getSnapshot(format);*/
             result = saveImage(((VideoControl) control).getSnapshot(format));
 
         } catch (Throwable t) {

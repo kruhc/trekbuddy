@@ -76,18 +76,22 @@ public final class AndroidLocationProvider
         baby();
 
         try {
-            // set listener
+            // create looper
             android.os.Looper.prepare();
             looper = android.os.Looper.myLooper();
-            manager.requestLocationUpdates(android.location.LocationManager.GPS_PROVIDER,
-                                           0, 0, this, looper);
+
+            // add listeners
             manager.addGpsStatusListener(this);
             try {
                 nmeaer = (Callback) Class.forName("cz.kruch.track.location.AndroidNmeaListener").newInstance();
                 nmeaer.invoke(new Integer(1), null, new Object[]{ this, manager });
             } catch (Exception e) {
-                e.printStackTrace();
+                // ignore
             }
+
+            // start location updates
+            manager.requestLocationUpdates(android.location.LocationManager.GPS_PROVIDER,
+                                           0, 0, this, looper);
 
             // start watcher
             cz.kruch.track.ui.Desktop.schedule(watcher = new TimerTask() {
@@ -121,18 +125,14 @@ public final class AndroidLocationProvider
                 watcher = null;
             }
 
-            // remove listener and gc-free native provider
+            // remove listeners and cancel updated
+            manager.removeGpsStatusListener(this);
             try {
-                try {
-                    nmeaer.invoke(new Integer(0), null, manager);
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-                manager.removeGpsStatusListener(this);
-                manager.removeUpdates(this);
+                nmeaer.invoke(new Integer(0), null, manager);
             } catch (Exception e) {
                 // ignore
             }
+            manager.removeUpdates(this);
             manager = null;
 
             // almost dead

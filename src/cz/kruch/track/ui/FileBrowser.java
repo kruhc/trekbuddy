@@ -65,7 +65,7 @@ public final class FileBrowser implements CommandListener, Runnable, Comparator 
 //#endif
     }
 
-    /* when used as filenames comparator */
+    /* when used as Comparer */
     private FileBrowser() {
     }
 
@@ -327,7 +327,7 @@ public final class FileBrowser implements CommandListener, Runnable, Comparator 
         v = null;
 
         // sort array
-        quicksort(array, 0, array.length - 1);
+        sort(array, 0, array.length - 1);
 
         // result
         return array;
@@ -337,11 +337,11 @@ public final class FileBrowser implements CommandListener, Runnable, Comparator 
      * Array sorting - in-place quicksort. See http://en.wikipedia.org/wiki/Quicksort.
      *
      * @param array array of objects
-     * @param left left boundary
-     * @param right right boundary
+     * @param lo left boundary
+     * @param hi right boundary
      */
-    public static void quicksort(final Object[] array, final int left, final int right) {
-        quicksort(array, new FileBrowser(), left, right);
+    public static void sort(final Object[] array, final int lo, final int hi) {
+        sort(array, new FileBrowser(), lo, hi);
     }
 
     /**
@@ -349,57 +349,50 @@ public final class FileBrowser implements CommandListener, Runnable, Comparator 
      *
      * @param array array of objects
      * @param comparator comparator
-     * @param left left boundary
-     * @param right right boundary
+     * @param lo left boundary
+     * @param hi right boundary
      */
-    public static void quicksort(final Object[] array, final Comparator comparator,
-                                 final int left, final int right) {
-        if (right > left) {
-            final int pivotIndex = left;
-            final int pivotNewIndex = partition(array, comparator, left, right, pivotIndex);
-            quicksort(array, comparator, left, pivotNewIndex - 1);
-            quicksort(array, comparator, pivotNewIndex + 1, right);
+    public static void sort(final Object[] array, final Comparator comparator,
+                            final int lo, final int hi) {
+        if (hi > lo) {
+            final int j = partition(array, comparator, lo, hi);
+            sort(array, comparator, lo, j - 1);
+            sort(array, comparator, j + 1, hi);
         }
     }
 
-    private static int partition(final Object[] array, final Comparator comparator,
-                                 final int left, final int right, final int pivotIndex) {
-        final Object pivotValue = array[pivotIndex];
-/*
-        // swap inlined
-        Object _o = array[pivotIndex];
-        array[pivotIndex] = array[right];
-        array[right] = _o;
-        // ~swap
-*/      swap(array, pivotIndex, right);
-        int storeIndex = left;
-        for (int i = left; i < right; i++) { // left ? i < right
-            final int cmp = comparator.compare(array[i], pivotValue);
-            if (cmp < 0) {
-/*
-                // swap
-                _o = array[i];
-                array[i] = array[storeIndex];
-                array[storeIndex] = _o;
-                // ~swap
-*/              swap(array, i, storeIndex);
-                storeIndex++;
-            }
+    private static int partition(final Object[] a, final Comparator comparator,
+                                 int lo, int hi) {
+        final Object v = a[lo];
+        int i = lo;
+        int j = hi + 1;
+        while (true) {
+
+            // find item on lo to swap
+            while (comparator.compare(a[++i], v) < 0)
+                if (i == hi) break;
+
+            // find item on hi to swap
+            while (comparator.compare(v, a[--j]) < 0)
+                if (j == lo) break;
+
+            // check if pointers cross
+            if (i >= j) break;
+
+            exch(a, i, j);
         }
-/*
-        // swap
-        _o = array[storeIndex];
-        array[storeIndex] = array[right];
-        array[right] = _o;
-        // ~swap
-*/      swap(array, storeIndex, right);
-        return storeIndex;
+
+        // put v = a[j] into position
+        exch(a, lo, j);
+
+        // with a[lo .. j-1] <= a[j] <= a[j+1 .. hi]
+        return j;
     }
 
-    private static void swap(final Object array[], final int a, final int b) {
-        final Object o = array[a];
-        array[a] = array[b];
-        array[b] = o;
+    private static void exch(final Object[] a, final int i, final int j) {
+        final Object swap = a[i];
+        a[i] = a[j];
+        a[j] = swap;
     }
 
     /**

@@ -3,8 +3,10 @@
 
     <target name="rescompile">
         <echo>Compiling resources for locale '${locale}', short locale is '${short}'</echo>
-        <exec dir="${basedir}" executable="${java.home}/../bin/native2ascii.exe" failonerror="true">
-            <arg line="res-lang/resources/language.${locale}.txt tmp/language.ASCII.txt"/>
+        <property environment="env"/>
+        <echo>JAVA_HOME: ${env.JAVA_HOME}</echo>
+        <exec dir="${basedir}" executable="${env.JAVA_HOME}\bin\native2ascii.exe" failonerror="true">
+            <arg line="res-lang\resources\language.${locale}.txt tmp\language.ASCII.txt"/>
         </exec>
         <javac 
             destdir="tools/classes" 

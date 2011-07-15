@@ -26,6 +26,8 @@ import java.io.OutputStream;
  * @author Ales Pour <kruhc@seznam.cz>
  */
 public final class Jsr82LocationProvider extends SerialLocationProvider {
+    
+    private static final String BLUETOOTH_ERROR_MSG = "Bluetooth error: ";
 
     private Refresher kar;
 
@@ -275,7 +277,7 @@ public final class Jsr82LocationProvider extends SerialLocationProvider {
             try {
                 transactionID = agent.searchServices(null, uuidSet, device, this);
             } catch (javax.bluetooth.BluetoothStateException e) {
-                Desktop.showError(Resources.getString(Resources.DESKTOP_MSG_SERVICE_SEARCH_FAILED), e, null);
+                Desktop.showError(BLUETOOTH_ERROR_MSG + "Service search failed", e, null);
                 showDevices();
             }
         }
@@ -372,9 +374,12 @@ public final class Jsr82LocationProvider extends SerialLocationProvider {
                         respMsg = "UNKNOWN";
                 }
 
+                // something is wrong
                 if (respCode != SERVICE_SEARCH_TERMINATED) {
-                    Desktop.showWarning(Resources.getString(Resources.DESKTOP_MSG_SERVICE_NOT_FOUND) + " (" + respMsg + ").",
-                                        null, null);
+
+                    // notify user
+                    Desktop.showWarning(BLUETOOTH_ERROR_MSG + respMsg, null, null);
+
                     // update UI
                     pane.setTicker(null);
 
@@ -469,7 +474,7 @@ public final class Jsr82LocationProvider extends SerialLocationProvider {
                 try {
                     goDevices();
                 } catch (LocationException e) {
-                    Desktop.showError(Resources.getString(Resources.DESKTOP_MSG_DISC_RESTART_FAILED), e, null);
+                    Desktop.showError(BLUETOOTH_ERROR_MSG + "Discovery restart failed", e, null);
                 }
             }
         }

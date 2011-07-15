@@ -22,7 +22,7 @@ import api.location.ProjectionSetup;
 /**
  * Map viewer.
  *
- * @author Ales Pour <kruhc@seznam.cz>
+ * @author kruhc@seznam.cz
  */
 final class MapViewer {
 //#ifdef __LOG__
@@ -95,17 +95,18 @@ final class MapViewer {
         if (log.isEnabled()) log.debug("size changed");
 //#endif
 
+        // reset vars
         Position p = getPosition()._clone();
         this.chx0 = this.chx = (w - crosshairSize) >> 1;
         this.chy0 = this.chy = (h - crosshairSize) >> 1;
         this.x = this.y = 0;
         this.gx = this.gy = 0;
-        // ??? ... start scrolling at left-top corner ... ???
         if (Config.oneTileScroll) {
-            this.chx = 0 - crosshairSize2/* - 1*/;
-            this.chy = 0 - crosshairSize2/* - 1*/;
+            this.chx = 0 - crosshairSize2;
+            this.chy = 0 - crosshairSize2;
         }
-        // ~
+
+        // restore position
         setPosition(p);
 
         // scale drawing x offset (same as in HPS)
@@ -182,62 +183,9 @@ final class MapViewer {
      */
     Position getPosition() {
         position.setXy(x + chx + crosshairSize2, y + chy + crosshairSize2);
-//        Position p = new Position(x + chx + crosshairSize2, y + chy + crosshairSize2);
 
-//#ifdef __LOG__
-//        if (log.isEnabled()) log.debug(p.toString());
-//#endif
-
-//        return p;
         return position;
     }
-
-/*
-    public boolean _setPosition(Position p) {
-//#ifdef __LOG__
-        if (log.isEnabled()) log.debug("move to " + p + ", current position is " + getPosition());
-//#endif
-
-        boolean dirty = false;
-        int x = p.getX();
-        int y = p.getY();
-
-        int direction;
-
-        int dx = x - (Desktop.width >> 1) - this.x;
-        if (dx > 0) {
-            direction = Canvas.RIGHT;
-        } else {
-            direction = Canvas.LEFT;
-        }
-
-        int absDx = Math.abs(dx);
-        for (int i = absDx; --i >= 0; ) {
-            dirty |= scroll(direction);
-        }
-
-        int dy = y - (Desktop.height >> 1) - this.y;
-        if (dy > 0) {
-            direction = Canvas.DOWN;
-        } else {
-            direction = Canvas.UP;
-        }
-
-        int absDy = Math.abs(dy);
-        for (int i = absDy; --i >= 0; ) {
-            dirty |= scroll(direction);
-        }
-
-        chx = x - this.x - crosshairSize2;
-        chy = y - this.y - crosshairSize2;
-
-//#ifdef __LOG__
-        if (log.isEnabled()) log.debug("move made, dirty? " + dirty + ";current position " + this.x + "," + this.y + "; dirty = " + dirty + "; crosshair requested at " + x + "-" + y + " -> screen position at " + chx + "-" + chy);
-//#endif
-
-        return dirty;
-    }
-*/
 
     boolean setPosition(Position p) {
 //#ifdef __LOG__
@@ -256,10 +204,6 @@ final class MapViewer {
         } else {
             direction = Canvas.LEFT;
         }
-
-//        for (int i = Math.abs(dx); --i >= 0; ) {
-//            dirty |= scroll(direction);
-//        }
         dirty = scroll(direction, Math.abs(dx)) || dirty;
 
         int dy = y - getPosition().getY();
@@ -268,10 +212,6 @@ final class MapViewer {
         } else {
             direction = Canvas.UP;
         }
-
-//        for (int i = Math.abs(dy); --i >= 0; ) {
-//            dirty |= scroll(direction);
-//        }
         dirty = scroll(direction, Math.abs(dy)) || dirty;
 
 //#ifdef __LOG__
@@ -281,63 +221,113 @@ final class MapViewer {
         return dirty;
     }
 
-    boolean scroll(final int direction, final int steps) {
-        int mHeight = this.mHeight;
-        int mWidth = this.mWidth;
-        int x0 = 0;
-        int y0 = 0;
-
+    boolean scroll(final int direction, int steps) {
+        final int dWidth = Desktop.width;
+        final int dHeight = Desktop.height;
+        final int crosshairSize2 = this.crosshairSize2;
         final boolean ots = Config.oneTileScroll;
 
-        // 1-tile scrolling?
-        if (ots) {
+        int mHeight = this.mHeight;
+        int mWidth = this.mWidth;
+        final int x0;
+        final int y0;
+        boolean dirty = false;
+
+        // scrolling-specific init
+        if (!ots) {
+
+            // absolute base
+            x0 = 0;
+            y0 = 0;
+
+        } else {
 
             // locals
-            Slice slice = null;
             final Position p = getPosition();
-            final int px = p.getX();
-            final int py = p.getY();
-            
-            // first look in current set
-            if (slice == null) {
-                final Vector slices = this.slices;
-                for (int i = slices.size(); --i >= 0; ) {
-                    final Slice s = (Slice) slices.elementAt(i);
-                    if (s.isWithin(px, py)) {
-                        slice = s;
-                        break;
+            int px = p.getX();
+            int py = p.getY();
+
+            // calculate target position
+            switch (direction) {
+                case Canvas.UP:
+                    py -= steps;
+                    if (py < 0) {
+                        steps += py;
+                        py = 0;
                     }
-                }
+                break;
+                case Canvas.LEFT:
+                    px -= steps;
+                    if (px < 0) {
+                        steps += px;
+                        px = 0;
+                    }
+                break;
+                case Canvas.RIGHT:
+                    px += steps;
+                    if (mWidth > 0 && px >= mWidth) {
+                        steps = mWidth - 1 - p.getX();
+                        px = mWidth - 1;
+                    }
+                break;
+                case Canvas.DOWN:
+                    py += steps;
+                    if (mHeight > 0 && py >= mHeight) {
+                        steps = mHeight - 1 - p.getY();
+                        py = mHeight - 1;
+                    }
+                break;
             }
 
-            // next try map (we may have no map on start, so be careful)
-            if (slice == null && this.map != null) {
+            // get slice
+            final Slice slice = getSliceFor(px, py);
 
-                // find slice
-                slice = this.map.getSlice(px, py);
-
-                // something is wrong
-                if (slice == null) {
-                    throw new IllegalStateException("No slice for position " + p);
-                }
-            }
-
-            // adjust boundaries for 1-tile scrolling
+            // adjust boundaries and reposition crosshair on tile change
             if (slice != null) {
                 mWidth = slice.getWidth();
                 mHeight = slice.getHeight();
                 x0 = slice.getX();
                 y0 = slice.getY();
+                switch (direction) {
+                    case Canvas.UP:
+                        if (y0 < y) {
+                            y = y0;
+                            chy = dHeight - crosshairSize2 /*- 1*/;
+                            steps = mHeight - (py - y0);
+                            dirty = true;
+                        }
+                    break;
+                    case Canvas.DOWN:
+                        if (y0 > y) {
+                            y = y0;
+                            chy = 0 - crosshairSize2;
+                            steps = py - y0;
+                            dirty = true;
+                        }
+                    break;
+                    case Canvas.LEFT:
+                        if (x0 < x) {
+                            x = x0;
+                            chx = dWidth - crosshairSize2 /*- 1*/;
+                            steps = mWidth - (px - x0);
+                            dirty = true;
+                        }
+                    break;
+                    case Canvas.RIGHT:
+                        if (x0 > x) {
+                            x = x0;
+                            chx = 0 - crosshairSize2;
+                            steps = px - x0;
+                            dirty = true;
+                        }
+                    break;
+                }
+            } else {
+                return false;
             }
         }
 
-        final int dWidth = Desktop.width;
-        final int dHeight = Desktop.height;
-        final int crosshairSize2 = this.crosshairSize2;
-
-        boolean dirty = false;
-
-        for (int i = steps; i-- > 0; ) 
+        for (int i = steps; i-- > 0; )
 
         switch (direction) {
             case Canvas.UP:
@@ -385,7 +375,7 @@ final class MapViewer {
                 } else if (x - x0 + dWidth < mWidth - 1) {
                     x++;
                     dirty = true;
-                } else if (chx < dWidth - 1 - crosshairSize2 - 1) {
+                } else if (chx < dWidth /*- 1*/ - crosshairSize2 - 1) {
                     chx++;
                     dirty = true;
                 } else if (ots) {
@@ -403,7 +393,7 @@ final class MapViewer {
                 } else if (y - y0 + dHeight < mHeight - 1) {
                     y++;
                     dirty = true;
-                } else if (chy < dHeight - 1 - crosshairSize2 - 1) {
+                } else if (chy < dHeight /*- 1*/ - crosshairSize2 - 1) {
                     chy++;
                     dirty = true;
                 } else if (ots) {
@@ -483,17 +473,24 @@ final class MapViewer {
         wptStatuses[idx] = status;
     }
 
-    char boundsHit() {
-        final int crosshairSize2 = this.crosshairSize2;
+    char boundsHit(final int direction) {
         char result = ' ';
-        if (chx + crosshairSize2 == 0) {
-            result = 'W';
-        } else if (chx + crosshairSize2 >= Desktop.width - 2) {
-            result = 'E';
-        } else if (chy + crosshairSize2 == 0) {
-            result = 'N';
-        } else if (chy + crosshairSize2 >= Desktop.height - 2) {
-            result = 'S';
+        if (map != null) {
+            final Position p = getPosition();
+            switch (direction) {
+                case Canvas.UP:
+                    if (p.getY() == 0) result = 'N';
+                break;
+                case Canvas.LEFT:
+                    if (p.getX() == 0) result = 'W';
+                break;
+                case Canvas.RIGHT:
+                    if (p.getX() >= map.getWidth() - 1) result = 'E';
+                break;
+                case Canvas.DOWN:
+                    if (p.getY() >= map.getHeight() - 1) result = 'S';
+                break;
+            }
         }
 
         return result;
@@ -510,7 +507,7 @@ final class MapViewer {
     void locationUpdated(Location location) {
 
         // got fix?
-        if (location.getFix() > 0) {
+        if (location.getFix() > 0) { // TODO && dt >= 1000
 
             final QualifiedCoordinates coords = location.getQualifiedCoordinates();
             QualifiedCoordinates qc = null;
@@ -672,6 +669,12 @@ final class MapViewer {
         // local refs
         final int crosshairSize = this.crosshairSize;
         final int crosshairSize2 = this.crosshairSize2;
+
+        // clear bg
+        if (Config.oneTileScroll) {
+            graphics.setColor(0x0);
+            graphics.fillRect(0, 0, Desktop.width, Desktop.height);
+        }
 
         /* synchronized to avoid race condition with ensureSlices() */
         synchronized (this) {
@@ -1542,5 +1545,29 @@ final class MapViewer {
         flags |= (short) (ExtraMath.round(w) << 8);
 
         return flags;
+    }
+
+    private Slice getSliceFor(final int px, final int py) {
+        // first look in current set
+        final Vector slices = this.slices;
+        for (int i = slices.size(); --i >= 0; ) {
+            final Slice s = (Slice) slices.elementAt(i);
+            if (s.isWithin(px, py)) {
+                return s;
+            }
+        }
+
+        // next try map (we may have no map on start, so be careful)
+        final Slice s;
+        if (map != null) {
+            s = map.getSlice(px, py);
+            if (s == null) {
+                throw new IllegalStateException("No slice for position " + new Position(px, py));
+            }
+        } else {
+            s = null;
+        }
+
+        return s;
     }
 }

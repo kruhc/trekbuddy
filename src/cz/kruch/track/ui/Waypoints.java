@@ -724,7 +724,13 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                 if (qc != null) {
                     final float d1 = qc.distance(wpt1.getQualifiedCoordinates());
                     final float d2 = qc.distance(wpt2.getQualifiedCoordinates());
-                    cmp = d1 < d2 ? -1 : 1;
+                    if (d1 < d2) {
+                        cmp = -1;
+                    } else if (d1 > d2) {
+                        cmp = 1;
+                    } else {
+                        cmp = 0;
+                    }
                 }
             } break;
             default:
@@ -916,7 +922,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
         } else {
 
             // sort file stores (leaves memory stores at the beginning)
-            FileBrowser.quicksort(v.getData(), left, v.size() - 1);
+            FileBrowser.sort(v.getData(), left, v.size() - 1);
 
             // setup icons for stores
 /* // TODO support icons in SmartList
@@ -999,6 +1005,9 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                 }
 
             } catch (Throwable t) {
+//#ifdef __ANDROID__
+                android.util.Log.e("TrekBuddy", "Failed to parse " + storeName, t);
+//#endif
 //#ifdef __LOG__
                 t.printStackTrace();
 //#endif
@@ -1078,6 +1087,9 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                 }
 
             } catch (Throwable t) {
+//#ifdef __ANDROID__
+                android.util.Log.e("TrekBuddy", "Failed to list " + storeName, t);
+//#endif
 //#ifdef __LOG__
                 t.printStackTrace();
 //#endif
@@ -1779,12 +1791,19 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                 } break;
                 case SORT_BYNAME:
                 case SORT_BYDIST: {
-                    // grab map position (used in by-dist sorting)
-                    _pointer = navigator.getRelQc();
-                    // sort
-                    FileBrowser.quicksort(sortedWpts.getData(), this, 0, sortedWpts.size() - 1);
-                    // gc hint
-                    _pointer = null;
+                    try {
+                        // may take some time - start ticker
+                        cz.kruch.track.ui.nokia.DeviceControl.setTicker(list, Resources.getString(Resources.NAV_MSG_TICKER_LISTING));
+                        // grab map position (used in by-dist sorting)
+                        _pointer = navigator.getRelQc();
+                        // sort
+                        FileBrowser.sort(sortedWpts.getData(), this, 0, sortedWpts.size() - 1);
+                        // gc hint
+                        _pointer = null;
+                    } finally {
+                        // may take some time - start ticker
+                        cz.kruch.track.ui.nokia.DeviceControl.setTicker(list, null);
+                    }
                     // route navigation NOT avail
                     list.removeCommand(cmdActionNavigateAlong);
                     list.removeCommand(cmdActionNavigateBack);

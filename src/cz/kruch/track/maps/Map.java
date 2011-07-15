@@ -416,8 +416,8 @@ public final class Map implements Runnable {
             final int th = tileHeight;
             final int sx = (x / tw) * tw;
             final int sy = (y / th) * th;
-            final int sw = sx + tw <= mw ? tw : mw - (sx + tw);
-            final int sh = sy + th <= mh ? th : mh - (sy + th);
+            final int sw = sx + tw <= mw ? tw : mw - sx;
+            final int sh = sy + th <= mh ? th : mh - sy;
             slice.setRect(sx, sy, sw, sh);
 //#ifdef __LOG__
             if (log.isEnabled()) log.debug("slice for " + x + "-" + y + " is " + slice);

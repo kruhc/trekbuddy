@@ -241,7 +241,7 @@ public final class Desktop implements CommandListener,
 
     public static Worker getDiskWorker() { // it is more I/O worker than just disk worker
         if (diskWorker == null) {
-            diskWorker = new Worker("TrekBuddy [Disk Worker]");
+            diskWorker = new Worker("TrekBuddy [DiskWorker]");
             diskWorker.start();
         }
         return diskWorker;
@@ -249,7 +249,7 @@ public final class Desktop implements CommandListener,
 
     static Worker getEventWorker() {
         if (eventWorker == null) {
-            eventWorker = new Worker("TrekBuddy [Event Worker]");
+            eventWorker = new Worker("TrekBuddy [EventWorker]");
             eventWorker.setPriority(Thread.MAX_PRIORITY);
             eventWorker.start();
         }
@@ -568,10 +568,15 @@ public final class Desktop implements CommandListener,
             fontLists = df;
         }
         fontBtns = null; // gc hint
-        fontBtns = Font.getFont(df.getFace(), Font.STYLE_BOLD, Font.SIZE_MEDIUM);
+        fontBtns = Font.getFont(df.getFace(), Font.STYLE_PLAIN, Font.SIZE_MEDIUM);
         fontStringItems = null;
         final int size;
-        if (screen.getHeight() > 320 || screen.getWidth() > 320) { // hi-res display
+//#ifdef __ANDROID__
+        if (screen.getHeight() > 320 || screen.getWidth() > 320)
+//#else
+        if (screen.getHeight() > 480 || screen.getWidth() > 480)
+//#endif
+        { // hi-res display
             size = Font.SIZE_MEDIUM;
         } else {
             size = Font.SIZE_SMALL;
@@ -767,7 +772,8 @@ public final class Desktop implements CommandListener,
             _atlas = new Atlas(parts[0], this);
             final Throwable t = _atlas.loadAtlas();
             if (t != null) {
-                throw t;
+//                throw t;
+                return false;
             }
 //#ifdef __LOG__
             if (log.isEnabled()) log.debug("atlas loaded");
@@ -794,7 +800,8 @@ public final class Desktop implements CommandListener,
         }
         final Throwable t = _map.loadMap();
         if (t != null) {
-            throw t;
+//            throw t;
+            return false;
         }
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("map loaded");
@@ -1301,10 +1308,12 @@ public final class Desktop implements CommandListener,
         } else if (atlas != null) {
 
             // try to find alternate map
-            if (startAlternateMap(atlas.getLayer(), qc,
-                                  Resources.getString(Resources.DESKTOP_MSG_WPT_OFF_LAYER))) {
-                // also set browsing mode
+            if (startAlternateMap(atlas.getLayer(), qc)) {
+                // set browsing mode // TODO why?
                 browsing = true;
+            } else {
+                // warn user
+                showWarning(Resources.getString(Resources.DESKTOP_MSG_WPT_OFF_LAYER), null, Desktop.screen);
             }
 
         } else {
@@ -2560,8 +2569,7 @@ public final class Desktop implements CommandListener,
         }
     }
 
-    boolean startAlternateMap(final String layerName, final QualifiedCoordinates qc,
-                              final String notFoundMsg) {
+    boolean startAlternateMap(final String layerName, final QualifiedCoordinates qc) {
 
         synchronized (loadingLock) {
 
@@ -2570,7 +2578,7 @@ public final class Desktop implements CommandListener,
 //#ifdef __LOG__
                 if (log.isEnabled()) log.debug("some alternate map being loaded");
 //#endif
-                return false;
+                return true;
             }
 
             // find map for given coords
@@ -2593,9 +2601,6 @@ public final class Desktop implements CommandListener,
 
                 // start loading task
                 startOpenMap(mapUrl, mapName);
-
-            } else if (notFoundMsg != null) {
-                showWarning(notFoundMsg, null, Desktop.screen);
             }
 
             return mapUrl != null;
@@ -3112,11 +3117,13 @@ public final class Desktop implements CommandListener,
                     } else { // layer switch
 
                         // switch match
-                        if (!Desktop.this.startAlternateMap(layerName, getPointer(),
-                                                            Resources.getString(Resources.DESKTOP_MSG_NO_MAP_FOR_POS) + " '" + layerName + "'.")) {
+                        if (!Desktop.this.startAlternateMap(layerName, getPointer())) {
                             // let user to select any map
-                            (new ItemSelection(Desktop.screen, Resources.getString(Resources.DESKTOP_MSG_SELECT_MAP),
-                                               new Event(Event.EVENT_MAP_SELECTION_FINISHED, layerName))).show(Desktop.this.atlas.getMapNames(layerName), null);
+                            final Displayable next = (new ItemSelection(Desktop.screen, Resources.getString(Resources.DESKTOP_MSG_SELECT_MAP),
+                                                                        new Event(Event.EVENT_MAP_SELECTION_FINISHED, layerName))).show(Desktop.this.atlas.getMapNames(layerName), null);
+                            // warn user (in overlay dialog??)
+                            showWarning(Resources.getString(Resources.DESKTOP_MSG_NO_MAP_FOR_POS) + " '" + layerName + "'.",
+                                        null, next);                            
                         }
                     }
                 }

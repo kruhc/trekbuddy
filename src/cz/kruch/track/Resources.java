@@ -99,10 +99,6 @@ public final class Resources {
     public static final short DESKTOP_MSG_SMS_SENT              = 1329;
     public static final short DESKTOP_MSG_SMS_SEND_FAILED       = 1330;
     public static final short DESKTOP_MSG_SMS_RECEIVE_FAILED    = 1331;
-    public static final short DESKTOP_MSG_SERVICE_NOT_FOUND     = 1332;
-    public static final short DESKTOP_MSG_SERVICE_SEARCH_FAILED = 1333;
-    public static final short DESKTOP_MSG_NO_SERVICES_FOUND     = 1334;
-    public static final short DESKTOP_MSG_DISC_RESTART_FAILED   = 1335;
     public static final short DESKTOP_MSG_START_TRACKLOG_FAILED = 1336;
     public static final short DESKTOP_MSG_LOAD_PROFILE_FAILED   = 1337;
     public static final short DESKTOP_MSG_NO_PROVIDER_INSTANCE  = 1338;
@@ -156,6 +152,7 @@ public final class Resources {
     public static final short DESKTOP_MSG_PROV_STARTING         = 1387;
     public static final short DESKTOP_MSG_IN_PROGRESS           = 1388;
     public static final short DESKTOP_MSG_PUSH_SMS_FAILED       = 1389;
+    public static final short DESKTOP_MSG_INVALID_INPUT         = 1390;
     /* navigation - commands */
     public static final short NAV_CMD_ROUTE_ALONG               = 2000;
     public static final short NAV_CMD_ROUTE_BACK                = 2001;
@@ -250,6 +247,8 @@ public final class Resources {
     public static final short NAV_FLD_TEXT                      = 2230;
     public static final short NAV_TITLE_FIELD_NOTE              = 2231;
     public static final short NAV_FLD_COURSE                    = 2232;
+    public static final short NAV_FLD_SOURCE                    = 2233;
+    public static final short NAV_FLD_TARGET                    = 2234;
     /* settings - commands */
     public static final short CFG_CMD_APPLY                     = 3000;
     public static final short CFG_CMD_SAVE                      = 3001;
@@ -366,7 +365,6 @@ public final class Resources {
     public static final short CFG_TWEAKS_FLD_LARGE_ATLASES      = 3805;
     public static final short CFG_TWEAKS_FLD_POWER_SAVE         = 3806;
     public static final short CFG_TWEAKS_FLD_RELIABLE_INPUT     = 3807;
-    public static final short CFG_TWEAKS_FLD_HIDEBAR_CMD        = 3808;
     public static final short CFG_TWEAKS_FLD_USE_TBSVC          = 3809;
     public static final short CFG_TWEAKS_FLD_LAZY_GPX           = 3810;
     public static final short CFG_TWEAKS_FLD_LOWMEM_IO          = 3811;

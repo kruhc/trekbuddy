@@ -61,7 +61,7 @@
 1311=Waypoint set on map
 1312=No layers in current atlas
 1313=No maps in current layer
-1314=No map for current position in layer
+1314=No map for current position in the layer
 1315=Loading map
 1316=Init map
 1317=Loading atlas
@@ -79,10 +79,10 @@
 1329=Location SMS sent
 1330=Failed to send SMS
 1331=Failed to receive SMS
-1332=Service not found
-1333=Service search failed
-1334=No services found
-1335=Failed to restart discovery
+#REMOVED 1332=Service not found
+#REMOVED 1333=Service search failed
+#REMOVED 1334=No services found
+#REMOVED 1335=Failed to restart discovery
 1336=Failed to start tracklog
 1337=Failed to load profile
 1338=No provider instance
@@ -136,6 +136,7 @@
 1387=Provider starting
 1388=Operation in progress...
 1389=Registration for SMS push failed
+1390=Invalid input
 
 # navigation commands
 2000=RouteAlong
@@ -177,7 +178,7 @@
 2204=Lon (WGS-84)
 2205=Time
 2206=Location
-2207=Snapshot
+2207=Picture
 2208=Recipient
 2209=Message
 2210=Camera
@@ -199,7 +200,7 @@
 2226=GC Log
 2227=Date
 2228=Type
-2229=Finder
+2229=Viewfinder
 2230=Text
 2231=Field Note
 2232=Bearing
@@ -227,8 +228,8 @@
 2400=Camera failed
 2401=\n<no thumbnail>
 2402=No thumbnail :-(
-2403=Snapshot failed
-2404=No snapshot
+2403=Camera failed
+2404=No picture
 2405=Malformed coordinate:
 2406=Landmarks updated
 2407=Failed to update landmarks
@@ -359,7 +360,7 @@
 3805=large atlases
 3806=power save
 3807=reliable input
-#XXX 3808=hide menubar cmd 
+#REMOVED 3808=hide menubar cmd 
 3809=use native service
 3810=lazy GPX parsing
 3811=lowmem I/O
@@ -375,6 +376,6 @@
 4201=www.trekbuddy.net
 4202=Version
 4203=Keys
-4204=0 - crosshairs, 1 - navigation (hold for quick active wpts list access), 3 - backlight, 5/FIRE - tracking/navigation OSD info, 2-4-6-8/JOY - map scroll, 7 - layers (atlas), 9 - maps (atlas), # - screens, * - keylock (hold; press shortly then 0 for wpts names display)
-4205=0 - day/night, 1 - navigation (hold for quick active wpts list access), 3 - backlight, 2-8/JOY UP-DOWN - location averaging, 4-6/JOY LEFT-RIGHT - scale, # - screens, * - keylock (hold)
-4206=0 - day/night, 1 - navigation (hold for quick active wpts list access), 3 - backlight, 8/JOY DOWN - profiles, # - screens, * - keylock (hold)
+4204=0 - POI/crosshairs, 1 - navigation, 3 - backlight, 5/FIRE - tracking/OSD info, 2-4-6-8/JOY - map scroll, 7 - layers (atlas), 9 - maps (atlas), # - screens, * - keylock (hold)
+4205=0 - day/night, 1 - navigation, 3 - backlight, 2-8/JOY UP-DOWN - location averaging, 4-6/JOY LEFT-RIGHT - scale, # - screens, * - keylock (hold)
+4206=0 - day/night, 1 - navigation, 3 - backlight, 8/JOY DOWN - profiles, # - screens, * - keylock (hold)

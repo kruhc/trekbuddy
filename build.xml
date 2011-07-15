@@ -697,7 +697,9 @@
                 <include name="**/*.svg"/>
                 <include name="**/world.*"/>
                 <include name="**/set/**"/>
-                <exclude name="**/icon.store.*.png"/>
+            </fileset>
+            <fileset dir="res-extra">
+                <include name="**/*.png"/>
             </fileset>
             <fileset dir="res-lang">
                 <include name="resources/language.en.res"/>
@@ -725,8 +727,10 @@
             <fileset dir="res">
                 <include name="**/datums.txt"/>
                 <include name="**/*.png"/>
-                <exclude name="**/icon.store.*.png"/>
                 <exclude name="**/set/*.png"/>
+            </fileset>
+            <fileset dir="res-extra">
+                <include name="**/*.png"/>
             </fileset>
             <fileset dir="res-lang">
                 <include name="resources/language.en.res"/>
@@ -752,12 +756,14 @@
                     profile="MIDP-${wtk.midp.version}">
             <fileset dir="tmp/build/classes"/>
             <fileset dir="res-J9">
-                <exclude name="**/icon.store.*.png"/>
             </fileset>
             <fileset dir="res">
                 <include name="**/datums.txt"/>
                 <include name="**/world.*"/>
                 <include name="**/set/**"/>
+            </fileset>
+            <fileset dir="res-extra">
+                <include name="**/*.png"/>
             </fileset>
             <fileset dir="res-lang">
                 <include name="resources/language.en.res"/>
@@ -776,12 +782,14 @@
                     profile="MIDP-${wtk.midp.version}">
             <fileset dir="tmp/build/classes"/>
             <fileset dir="res-RIM">
-                <exclude name="**/icon.store.*.png"/>
             </fileset>
             <fileset dir="res">
                 <include name="**/datums.txt"/>
                 <include name="**/world.*"/>
                 <include name="**/set/**"/>
+            </fileset>
+            <fileset dir="res-extra">
+                <include name="**/*.png"/>
             </fileset>
             <fileset dir="res-lang">
                 <include name="resources/language.en.res"/>
@@ -802,10 +810,12 @@
             <fileset dir="res">
                 <include name="**/datums.txt"/>
                 <include name="**/*.png"/>
-                <exclude name="**/icon.store.*.png"/>
-                <exclude name="**/icon.png"/>
                 <include name="**/world.*"/>
                 <include name="**/set/**"/>
+                <exclude name="**/icon.png"/>
+            </fileset>
+            <fileset dir="res-extra">
+                <include name="**/*.png"/>
             </fileset>
             <fileset dir="res-lang">
                 <include name="resources/language.*.res"/>

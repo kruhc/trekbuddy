@@ -203,7 +203,6 @@ final class MapView extends View {
         mapViewer.setMap(map);
 
         // restore position on map
-//        if (isDefault(map)) {
         if (map != null) {
             QualifiedCoordinates qc = QualifiedCoordinates.newInstance(Config.latAny, Config.lonAny);
             if (map.isWithin(qc)) {
@@ -257,23 +256,27 @@ final class MapView extends View {
         // local ref
         final Map map = this.mapViewer.getMap();
 
-        // allocate new array
-        final Position[] route = new Position[wpts.size()];
+        // NPE reported on AM // TODO how can this happen??
+        if (map != null) {
 
-        // create
-        for (int N = wpts.size(), c = 0, i = 0; i < N; i++) {
+            // allocate new array
+            final Position[] route = new Position[wpts.size()];
 
-            // get position on map
-            final Waypoint wpt = (Waypoint) wpts.elementAt(i);
-            final QualifiedCoordinates qc = wpt.getQualifiedCoordinates();
-            final Position position = map.transform(qc);
+            // create
+            for (int N = wpts.size(), c = 0, i = 0; i < N; i++) {
 
-            // add to route
-            route[c++] = position._clone();
+                // get position on map
+                final Waypoint wpt = (Waypoint) wpts.elementAt(i);
+                final QualifiedCoordinates qc = wpt.getQualifiedCoordinates();
+                final Position position = map.transform(qc);
+
+                // add to route
+                route[c++] = position._clone();
+            }
+
+            // set
+            this.route = route;
         }
-
-        // set
-        this.route = route;
     }
 
     public int handleAction(final int action, final boolean repeated) {
@@ -334,7 +337,7 @@ final class MapView extends View {
                     if (navigator.isAtlas() && !navigator._getInitializingMap() && !navigator._getLoadingSlices()) {
 
                         // bounds hit?
-                        final char neighbour = mapViewer.boundsHit();
+                        final char neighbour = mapViewer.boundsHit(action);
 //#ifdef __LOG__
                         if (log.isEnabled()) log.debug("bounds hit? sibling is " + neighbour);
 //#endif
@@ -348,23 +351,22 @@ final class MapView extends View {
                             // calculate coords that lies in the sibling map
                             QualifiedCoordinates newQc = null;
                             switch (neighbour) {
-                                case'N':
-                                    newQc = QualifiedCoordinates.newInstance(lat + 5 * map.getStep(neighbour), lon);
-                                    break;
-                                case'S':
-                                    newQc = QualifiedCoordinates.newInstance(lat + 5 * map.getStep(neighbour), lon);
-                                    break;
-                                case'E':
+                                case 'E':
                                     newQc = QualifiedCoordinates.newInstance(lat, lon + 5 * map.getStep(neighbour));
                                     break;
-                                case'W':
+                                case 'N':
+                                    newQc = QualifiedCoordinates.newInstance(lat + 5 * map.getStep(neighbour), lon);
+                                    break;
+                                case 'S':
+                                    newQc = QualifiedCoordinates.newInstance(lat + 5 * map.getStep(neighbour), lon);
+                                    break;
+                                case 'W':
                                     newQc = QualifiedCoordinates.newInstance(lat, lon + 5 * map.getStep(neighbour));
                                     break;
                             }
 
                             // switch alternate map
-                            navigator.startAlternateMap(navigator.getAtlas().getLayer(),
-                                                        newQc, null);
+                            navigator.startAlternateMap(navigator.getAtlas().getLayer(), newQc);
                         }
                     }
                 }
@@ -596,7 +598,7 @@ final class MapView extends View {
                         if (navigator.isAtlas() && !navigator._getInitializingMap() && !navigator._getLoadingSlices()) {
 
                             // switch alternate map
-                            navigator.startAlternateMap(navigator.getAtlas().getLayer(), qc, null);
+                            navigator.startAlternateMap(navigator.getAtlas().getLayer(), qc);
                         }
                     }
 

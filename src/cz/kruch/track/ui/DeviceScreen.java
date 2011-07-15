@@ -26,9 +26,12 @@ final class DeviceScreen extends GameCanvas implements Runnable {
     private static final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("DeviceScreen");
 //#endif
 
+    private static final int VROWS  = 15;
+
     static final int BTN_ARC        = 10;
-    static final int BTN_COLOR      = 0x005b87ce;
-    static final int BTN_HICOLOR    = 0x000a2468;
+    static final int BTN_COLOR      = 0x00424242; // 0x005b87ce;
+    static final int BTN_HICOLOR    = 0x00ffffff; // 0x000a2468;
+    static final int BTN_TXTCOLOR   = 0x00ffffff; // 0x00ffffff;
 
     // main application
     private final Desktop delegate;
@@ -629,6 +632,9 @@ final class DeviceScreen extends GameCanvas implements Runnable {
             return;
         }
 
+        // no key pressed anymore
+        _setInKey(0);
+
         // stop key checker
         synchronized (this) {
             if (repeatedKeyCheck != null) {
@@ -652,9 +658,6 @@ final class DeviceScreen extends GameCanvas implements Runnable {
         }
 
 //#endif
-
-        // no key pressed anymore
-        _setInKey(0);
 
         // keymap
         i = Resources.remap(i);
@@ -805,10 +808,20 @@ final class DeviceScreen extends GameCanvas implements Runnable {
 //#endif    
 
     private void drawTouchMenu() {
+        // calculate spacing and button size
+        final int w = getWidth();
+        final int h = getHeight();
+        final int dy, bh, bw;
+//        if (w < h) { // portrait
+            dy = h / VROWS;
+            bh = 2 * dy;
+            bw = (w - 3 * dy) / 2;
+//        } else { // landscape
+//            dy = getHeight() / 15;
+//            bh = 2 * dy;
+//            bw = (getWidth() - 3 * dy) / 2;
+//        }
         // paint buttons
-        final int dy = getHeight() / 17;
-        final int bh = 3 * dy;
-        final int bw = (getWidth() - 3 * dy) / 2;
         final Graphics g = getGraphics();
         final Desktop delegate = this.delegate;
         final int c = g.getColor();
@@ -844,67 +857,69 @@ final class DeviceScreen extends GameCanvas implements Runnable {
         final String label = cmd.getLabel();
         final int fh = Desktop.fontBtns.getHeight();
         final int sw = Desktop.fontBtns.stringWidth(label);
-        g.setColor(0x00ffffff);
+        g.setColor(BTN_TXTCOLOR);
         g.drawString(label, x + (bw - sw) / 2, y + (bh - fh) / 2, Graphics.LEFT | Graphics.TOP);
     }
 
     private Command pointerToCmd(final int x, final int y) {
-        final int i = y / (getHeight() / 17);
+        final int h = getHeight();
+        final int i = y / (h / VROWS);
         final int w = getWidth();
         final Desktop delegate = this.delegate;
 
         Command cmd = null;
 
+//        if (w < h) { // portrait
+        final boolean xL = x > i && x < w / 2 - i;
+        final boolean xR = x > w / 2 + i && x < w - i;
         switch (i) {
-            case 1:
-            case 2:
-            case 3: {
-                if (delegate.isTracking()) {
-                    if (x > i && x < w / 2 - i) {
-                        cmd = delegate.cmdStop;
-                    } else if (x > w / 2 + i && x < w - i) {
-                        cmd = Desktop.paused ? delegate.cmdContinue : delegate.cmdPause;
+                case 1:
+                case 2: {
+                    if (delegate.isTracking()) {
+                        if (xL) {
+                            cmd = delegate.cmdStop;
+                        } else if (xR) {
+                            cmd = Desktop.paused ? delegate.cmdContinue : delegate.cmdPause;
+                        }
+                    } else {
+                        if (xL) {
+                            cmd = delegate.cmdRun;
+                        } else if (xR) {
+                            cmd = Config.locationProvider == Config.LOCATION_PROVIDER_JSR82 && delegate.cmdRunLast != null ? delegate.cmdRunLast : null;
+                        }
                     }
-                } else {
-                    if (x > i && x < w / 2 - i) {
-                        cmd = delegate.cmdRun;
-                    } else if (x > w / 2 + i && x < w - i) {
-                        cmd = Config.locationProvider == Config.LOCATION_PROVIDER_JSR82 && delegate.cmdRunLast != null ? delegate.cmdRunLast : null;
-                    }
-                }
-            } break;
-            case 5:
-            case 6:
-            case 7: {
+                } break;
+                case 4:
+                case 5: {
 //#ifndef __B2B__
-                if (api.file.File.isFs()) {
-                    if (x > i && x < w / 2 - i) {
-                        cmd = delegate.cmdLoadMap;
-                    } else if (x > w / 2 + i && x < w - i) {
-                        cmd = delegate.cmdLoadAtlas;
+                    if (api.file.File.isFs()) {
+                        if (xL) {
+                            cmd = delegate.cmdLoadMap;
+                        } else if (xR) {
+                            cmd = delegate.cmdLoadAtlas;
+                        }
                     }
-                }
-//#endif                
-            } break;
-            case 9:
-            case 10:
-            case 11: {
-                if (x > i && x < w / 2 - i) {
-                    cmd = delegate.cmdSettings;
-                } else if (x > w / 2 + i && x < w - i) {
-                    cmd = delegate.cmdInfo;
-                }
-            } break;
-            case 13:
-            case 14:
-            case 15: {
-                if (x > i && x < w / 2 - i) {
-                    cmd = delegate.cmdWaypoints;
-                } else if (x > w / 2 + i && x < w - i) {
-                    cmd = delegate.cmdExit;
-                }
-            } break;
-        }
+//#endif
+                } break;
+                case 7:
+                case 8: {
+                    if (xL) {
+                        cmd = delegate.cmdSettings;
+                    } else if (xR) {
+                        cmd = delegate.cmdInfo;
+                    }
+                } break;
+                case 10:
+                case 11: {
+                    if (xL) {
+                        cmd = delegate.cmdWaypoints;
+                    } else if (xR) {
+                        cmd = delegate.cmdExit;
+                    }
+                } break;
+            }
+//        } else { // landscape
+//        }
 
         return cmd;
     }
@@ -1023,7 +1038,7 @@ final class DeviceScreen extends GameCanvas implements Runnable {
 //#elifdef __J9__
         return false;
 //#else
-        return (i == -7 && cz.kruch.track.TrackingMIDlet.samsung) ||
+        return /*(i == -7 && cz.kruch.track.TrackingMIDlet.samsung) ||*/
                (i == -11 && cz.kruch.track.TrackingMIDlet.sonyEricssonEx);
 //#endif
     }

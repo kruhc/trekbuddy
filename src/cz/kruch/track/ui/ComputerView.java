@@ -431,7 +431,9 @@ final class ComputerView extends View
             final float dt = timestamp == 0 ? 0 : (t - timestamp);
 
             // update times
-            timestamp = t;
+            if (timestamp == 0 || dt >= 1000) {
+                timestamp = t;
+            }
             if (starttime == 0) { // first record
                 starttime = t;
                 ETA_CALENDAR.setTimeSafe(t);

@@ -213,12 +213,33 @@ public final class GroundspeakBean {
     }
 
     public static class Log {
+        public static final String[] TYPES = { "Found it", "Didn't find it", "Write note", "Needs Maintenance", "Owner Maintenance" };
+        public static final javax.microedition.lcdui.Image[] ICONS = new javax.microedition.lcdui.Image[TYPES.length];
+        public static javax.microedition.lcdui.Image UNKNOWN = null;
+
+        static {
+            try {
+                ICONS[0] = javax.microedition.lcdui.Image.createImage("/resources/log.foundit.png");
+                ICONS[1] = javax.microedition.lcdui.Image.createImage("/resources/log.dnf.png");
+                ICONS[2] = javax.microedition.lcdui.Image.createImage("/resources/log.wn.png");
+                ICONS[3] = javax.microedition.lcdui.Image.createImage("/resources/log.nm.png");
+                ICONS[4] = javax.microedition.lcdui.Image.createImage("/resources/log.om.png");
+                UNKNOWN = javax.microedition.lcdui.Image.createImage("/resources/log.any.png");
+            } catch (Exception e) {
+//#ifdef __ANDROID__
+                android.util.Log.w("TrekBuddy", "Failed to load GC icon", e);
+//#endif
+            }
+        }
+
         private String id;
         private String date, type, finder;
         private String text;
+        private javax.microedition.lcdui.Image icon;
 
         public Log(String id) {
             this.id = id;
+            this.icon = UNKNOWN;
         }
 
         public String getId() {
@@ -230,6 +251,12 @@ public final class GroundspeakBean {
         }
 
         public void setDate(String date) {
+            if (date != null) {
+                final int idx = date.indexOf("T00:00:00");
+                if (idx > -1) {
+                    date = date.substring(0, idx);
+                }
+            }
             this.date = date;
         }
 
@@ -254,7 +281,25 @@ public final class GroundspeakBean {
         }
 
         public void setType(String type) {
+            javax.microedition.lcdui.Image icon = UNKNOWN;
+            final String[] types = TYPES;
+            for (int i = types.length; --i >= 0; ) {
+                if (types[i].equals(type)) {
+                    type = types[i];
+                    icon = ICONS[i];
+                    break;
+                }
+            }
             this.type = type;
+            this.icon = icon;
+        }
+
+        public javax.microedition.lcdui.Image getIcon() {
+            return icon;
+        }
+
+        public String toString() {
+            return date;
         }
     }
 }

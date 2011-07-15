@@ -87,7 +87,7 @@ final class FieldNoteForm implements CommandListener {
         form.append(timeField = new TextField(Resources.getString(Resources.NAV_FLD_TIME), note[1], 24, TextField.ANY));
         form.append(createStringItem(Resources.getString(Resources.NAV_FLD_TIME), note[1]));
         typeChoice = new ChoiceGroup(Resources.getString(Resources.NAV_FLD_TYPE), Desktop.CHOICE_POPUP_TYPE,
-                                     new String[]{ "Found it", "Didn't find it", "Write note", "Needs Archived", "Needs Maintenance" }, null);
+                                     GroundspeakBean.Log.TYPES, null);
         if (note[2] != null) {
             for (int N = typeChoice.size(), i = 0; i < N; i++) {
                 typeChoice.setSelectedIndex(i, note[2].equals(typeChoice.getString(i)));

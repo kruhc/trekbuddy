@@ -18,7 +18,7 @@ import java.util.Vector;
  */
 final class SmartList extends Canvas {
     private static final int HL_INSET = 2;
-    private static final int VL_INSET = 2;
+    private static final int VL_INSET = 3;
     private static final int SHAKE_LIMIT = 10;
     private static final int colorSbBg = 0x00e6e6e6;
     private static final int colorSbHiBorder = 0x00666666;

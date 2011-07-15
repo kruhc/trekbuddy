@@ -27,7 +27,7 @@ final class ItemSelection implements CommandListener {
         this.title = Resources.prefixed(title);
     }
 
-    public void show(final Enumeration items, final String currentItem) {
+    public Displayable show(final Enumeration items, final String currentItem) {
         // add items and commands
         final List list = new List(title, List.IMPLICIT, FileBrowser.sort2array(items, null, null), null);
         if (currentItem != null) {
@@ -44,6 +44,8 @@ final class ItemSelection implements CommandListener {
 
         // show selection
         Desktop.display.setCurrent(list);
+
+        return list;
     }
 
     public void commandAction(Command command, Displayable displayable) {

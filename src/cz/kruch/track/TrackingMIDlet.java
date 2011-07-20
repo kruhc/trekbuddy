@@ -245,10 +245,12 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         if (state == 0) {
             state = 1;
             (new Thread(this)).start();
+        } else { // resumed from background
+            state = 1;
+//#ifdef __ANDROID__
+            desktop.onForeground();
+//#endif
         }
-
-        // update state
-        state = 1;
     }
 
     protected void pauseApp() {
@@ -260,6 +262,11 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
 
         // update state
         state = 2;
+
+        // minimize
+//#ifdef __ANDROID__
+        desktop.onBackground();
+//#endif        
     }
 
     protected void destroyApp(boolean unconditional) throws MIDletStateChangeException {

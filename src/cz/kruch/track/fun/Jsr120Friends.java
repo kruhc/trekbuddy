@@ -42,9 +42,7 @@ final class Jsr120Friends extends Friends implements MessageListener, Runnable {
     }
 
     public void start() throws IOException {
-        if (Config.locationSharing) {
-            open();
-        }
+        open();
     }
 
     public void destroy() {

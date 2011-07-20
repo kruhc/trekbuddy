@@ -55,6 +55,10 @@ final class Jsr75File extends File {
         return ((FileConnection) fc).fileSize();
     }
 
+    public long directorySize(boolean includeSubDirs) throws IOException {
+        return ((FileConnection) fc).directorySize(includeSubDirs);
+    }
+
     public boolean exists() {
         return ((FileConnection) fc).exists();
     }

@@ -47,6 +47,10 @@ final class Motorola1000File extends File {
         return ((com.motorola.io.file.FileConnection) fc).fileSize();
     }
 
+    public long directorySize(boolean includeSubDirs) throws IOException {
+        return ((com.motorola.io.file.FileConnection) fc).directorySize(includeSubDirs);
+    }
+
     public boolean exists() {
         return ((com.motorola.io.file.FileConnection) fc).exists();
     }

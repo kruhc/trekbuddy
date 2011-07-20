@@ -47,6 +47,10 @@ final class SiemensFile extends File {
         return ((com.siemens.mp.io.file.FileConnection) fc).fileSize();
     }
 
+    public long directorySize(boolean includeSubDirs) throws IOException {
+        return ((com.siemens.mp.io.file.FileConnection) fc).directorySize(includeSubDirs);
+    }
+
     public boolean exists() {
         return ((com.siemens.mp.io.file.FileConnection) fc).exists();
     }

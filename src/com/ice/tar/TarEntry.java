@@ -222,7 +222,7 @@ public final class TarEntry {
      * @throws InvalidHeaderException when something goes wrong
      */
     public void init(final byte[] headerBuf, final long position) throws InvalidHeaderException {
-        this.parseHeader(headerBuf);
+        this.parseHeader(headerBuf, position);
         this.position = position;
     }
 
@@ -268,7 +268,7 @@ public final class TarEntry {
      * @param headerBuf header bytes
      * @throws InvalidHeaderException when something goes wrong
      */
-    private void parseHeader(final byte[] headerBuf) throws InvalidHeaderException {
+    private void parseHeader(final byte[] headerBuf, final long streampos) throws InvalidHeaderException {
         if (headerBuf[257] == 'u'
                 && headerBuf[258] == 's'
                 && headerBuf[259] == 't'
@@ -298,6 +298,7 @@ public final class TarEntry {
             sb.append(Integer.toHexString(headerBuf[262] & 0xff)).append(' ');
             sb.append(Integer.toHexString(headerBuf[263] & 0xff));
             sb.append('\'');
+            sb.append(" at offset ").append(streampos);
 
             throw new InvalidHeaderException(sb.toString());
         }

@@ -12,6 +12,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.DataInputStream;
 import java.io.EOFException;
+import java.util.Vector;
 
 /**
  * Resource helper (L10n).
@@ -380,6 +381,9 @@ public final class Resources {
     public static final short INFO_ITEM_KEYS                    = 4203;
     public static final short INFO_ITEM_KEYS_MS                 = 4204;
 
+    private static final String LANGUAGE_FILE   = "language.res";
+    private static final String KEYMAP_FILE     = "keymap.txt";
+
     private static String[] values, userValues;
     private static String value, userValue;
     private static int[] ids, userIds;
@@ -417,44 +421,46 @@ public final class Resources {
 
 //#ifdef __USERL10N__
 
-    public static int localize() throws IOException {
+    public static int localize(final Vector resources) throws IOException {
         int result = 0;
-        final Object[] holder = new Object[2];
 
         // reload-safe
         userIds = null;
         userValue = null;
         userValues = null;
 
-        // read user resources
-        api.file.File file = null;
-        try {
-            file = api.file.File.open(Config.getFolderURL(Config.FOLDER_RESOURCES) + "language.res");
-            if (file.exists()) {
-                loadRes(file.openInputStream(), holder);
-                userIds = (int[]) holder[0];
-                userValue = (String) holder[1];
-                userValues = new String[userIds.length];
-                result++;
-            }
-        } catch (Throwable t) {
-            // ignore
-//#ifdef __LOG__
-            t.printStackTrace();
-//#endif
-        } finally {
+        // read localization
+        if (Config.resourceExist(resources, LANGUAGE_FILE)) {
+            api.file.File file = null;
             try {
-                file.close();
-            } catch (Exception e) { // IOE or NPE
+                file = api.file.File.open(Config.getFolderURL(Config.FOLDER_RESOURCES) + LANGUAGE_FILE);
+                if (file.exists()) {
+                    final Object[] holder = new Object[2];
+                    loadRes(file.openInputStream(), holder);
+                    userIds = (int[]) holder[0];
+                    userValue = (String) holder[1];
+                    userValues = new String[userIds.length];
+                    result++;
+                }
+            } catch (Throwable t) {
                 // ignore
-            }
-//#ifndef __B2B__
-            if (b2b_RejectRes(userIds)) {
-                userIds = null;
-                userValue = null;
-                userValues = null;
-            }
+//#ifdef __LOG__
+                t.printStackTrace();
 //#endif
+            } finally {
+                try {
+                    file.close();
+                } catch (Exception e) { // IOE or NPE
+                    // ignore
+                }
+//#ifndef __B2B__
+                if (b2b_RejectRes(userIds)) {
+                    userIds = null;
+                    userValue = null;
+                    userValues = null;
+                }
+//#endif
+            }
         }
 
         return result;
@@ -462,50 +468,51 @@ public final class Resources {
 
 //#endif
 
-    public static int keymap() throws IOException {
+    public static int keymap(final Vector resources) throws IOException {
         int result = 0;
 
         // reload-safe
         keymap0 = keymap1 = null;
         keymapSize = 0;
 
-        // do
-        api.file.File file = null;
-        try {
-            file = api.file.File.open(Config.getFolderURL(Config.FOLDER_RESOURCES) + "keymap.txt");
-            if (file.exists()) {
-                LineReader reader = null;
-                try {
-                    reader = new LineReader(file.openInputStream());
-                    keymap0 = new short[32];
-                    keymap1 = new short[32];
-                    final char[] delims = { '=' };
-                    final CharArrayTokenizer tokenizer = new CharArrayTokenizer();
-                    CharArrayTokenizer.Token token = reader.readToken(false);
-                    while (token != null && keymapSize < 32) {
-                        tokenizer.init(token, delims, false);
-                        keymap0[keymapSize] = (short) tokenizer.nextInt();
-                        keymap1[keymapSize] = (short) tokenizer.nextInt();
-                        keymapSize++;
-                        result++;
-                        token = null; // gc hint
-                        token = reader.readToken(false);
-                    }
-                } finally {
-                    if (reader != null) {
-                        try {
-                            reader.close();
-                        } catch (IOException e) {
-                            // ignore
+        // load user key mapping
+        if (Config.resourceExist(resources, LANGUAGE_FILE)) {
+            api.file.File file = null;
+            try {
+                file = api.file.File.open(Config.getFolderURL(Config.FOLDER_RESOURCES) + KEYMAP_FILE);
+                if (file.exists()) {
+                    LineReader reader = null;
+                    try {
+                        reader = new LineReader(file.openInputStream());
+                        keymap0 = new short[32];
+                        keymap1 = new short[32];
+                        final char[] delims = { '=' };
+                        final CharArrayTokenizer tokenizer = new CharArrayTokenizer();
+                        CharArrayTokenizer.Token token = reader.readToken(false);
+                        while (token != null && keymapSize < 32) {
+                            tokenizer.init(token, delims, false);
+                            keymap0[keymapSize] = (short) tokenizer.nextInt();
+                            keymap1[keymapSize] = (short) tokenizer.nextInt();
+                            keymapSize++;
+                            result++;
+                            token = reader.readToken(false);
+                        }
+                    } finally {
+                        if (reader != null) {
+                            try {
+                                reader.close();
+                            } catch (IOException e) {
+                                // ignore
+                            }
                         }
                     }
                 }
-            }
-        } finally {
-            try {
-                file.close();
-            } catch (Exception e) { // IOE or NPE
-                // ignore
+            } finally {
+                try {
+                    file.close();
+                } catch (Exception e) { // IOE or NPE
+                    // ignore
+                }
             }
         }
 
@@ -586,8 +593,8 @@ public final class Resources {
         }
     }
 
-    public static String get(final short id, final int[] ids,
-                             final String[] values, final String value) {
+    private static String get(final short id, final int[] ids,
+                              final String[] values, final String value) {
         String result = null;
         for (int i = ids.length; --i >= 0; ) {
             if (id == ((ids[i] >> 16) & 0x0000ffff)) {

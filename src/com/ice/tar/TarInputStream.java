@@ -29,7 +29,7 @@ import java.io.IOException;
  *
  * @author Timothy Gerard Endres, <time@gjt.org>
  * @version $Revision$
- * @modified by Ales Pour <kruhc@seznam.cz>
+ * @modified by kruhc@seznam.cz
  */
 public final class TarInputStream extends InputStream {
 
@@ -48,6 +48,10 @@ public final class TarInputStream extends InputStream {
 
     /* rewind/skip support */
     private long streamOffset;
+    /** current mark limit */
+    private int marklimit;
+    /** currently marked position */
+    private int markpos;
 
     /**
      * Creates tar input stream.
@@ -58,6 +62,7 @@ public final class TarInputStream extends InputStream {
         this.in = in;
         this.headerBuffer = new byte[DEFAULT_RCDSIZE];
         this.currEntry = new TarEntry();
+        this.markpos = -1;
     }
 
     /**
@@ -70,10 +75,13 @@ public final class TarInputStream extends InputStream {
         this.in = in;
         this.hasHitEOF = false;
         this.entryOffset = this.entrySize = 0;
+        this.markpos = -1;
     }
 
     /**
-     * Closes this stream. Closing underlying stream had to be commented out,
+     * Closes this stream.
+     *
+     * Closing underlying stream had to be commented out,
      * because Image.createImage() on SE phones closes the stream,
      * which is something we do not want to happen.
      */
@@ -146,6 +154,7 @@ public final class TarInputStream extends InputStream {
         }
 
         this.streamOffset += (n - num);
+        this.entryOffset += (n - num); 
 
         return (n - num);
     }
@@ -166,6 +175,45 @@ public final class TarInputStream extends InputStream {
      */
     public void setStreamOffset(long streamOffset) {
         this.streamOffset = streamOffset;
+    }
+
+    /**
+     * Tests if this input stream supports the <code>mark</code>
+     * and <code>reset</code> methods.
+     *
+     * @return  boolean
+     */
+    public boolean markSupported() {
+        return in.markSupported();
+    }
+
+    /**
+     * Resets to mark if set, throws IOException otherwise.
+     *
+     * @throws IOException
+     */
+    public void reset() throws IOException {
+        if (markpos < 0) {
+            throw new IOException("Resetting to invalid mark");
+        }
+        try {
+            in.reset();
+            streamOffset -= (entryOffset - markpos);
+            entryOffset = markpos;
+        } catch (IOException e) {
+            markpos = -1;
+        }
+    }
+
+    /**
+     * Sets the mark.
+     *
+     * @param readlimit
+     */
+    public void mark(int readlimit) {
+        in.mark(readlimit); // TODO 1. not sure about this 2. catch Throwable and invalidate mark and limit?
+        marklimit = readlimit;
+        markpos = (int) entryOffset;
     }
 
     /**
@@ -210,12 +258,12 @@ public final class TarInputStream extends InputStream {
                 this.currEntry.init(headerBuf, entryPosition);
                 this.entryOffset = 0;
                 this.entrySize = this.currEntry.getSize();
-                return this.currEntry;
             } catch (InvalidHeaderException e) {
                 this.entryOffset = 0;
                 this.entrySize = 0;
                 throw e;
             }
+            return this.currEntry;
         }
 
         return null;
@@ -313,7 +361,7 @@ public final class TarInputStream extends InputStream {
      * @return <code>true</code> if block is end of archive; <code>false</code> otherwise
      */
     private static boolean isEOFBlock(final byte[] block) {
-        for (int i = DEFAULT_RCDSIZE; --i >= 0; ) {
+        for (int i = 0; i < DEFAULT_RCDSIZE; i++) {            
             if (block[i] != 0) {
                 return false;
             }

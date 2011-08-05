@@ -48,10 +48,12 @@ public final class TarInputStream extends InputStream {
 
     /* rewind/skip support */
     private long streamOffset;
+//#ifdef __MARKSUPPORT__
     /** current mark limit */
     private int marklimit;
     /** currently marked position */
     private int markpos;
+//#endif
 
     /**
      * Creates tar input stream.
@@ -62,7 +64,9 @@ public final class TarInputStream extends InputStream {
         this.in = in;
         this.headerBuffer = new byte[DEFAULT_RCDSIZE];
         this.currEntry = new TarEntry();
+//#ifdef __MARKSUPPORT__
         this.markpos = -1;
+//#endif
     }
 
     /**
@@ -75,7 +79,9 @@ public final class TarInputStream extends InputStream {
         this.in = in;
         this.hasHitEOF = false;
         this.entryOffset = this.entrySize = 0;
+//#ifdef __MARKSUPPORT__
         this.markpos = -1;
+//#endif        
     }
 
     /**
@@ -177,6 +183,8 @@ public final class TarInputStream extends InputStream {
         this.streamOffset = streamOffset;
     }
 
+//#ifdef __MARKSUPPORT__
+
     /**
      * Tests if this input stream supports the <code>mark</code>
      * and <code>reset</code> methods.
@@ -215,6 +223,8 @@ public final class TarInputStream extends InputStream {
         marklimit = readlimit;
         markpos = (int) entryOffset;
     }
+
+//#endif /*__MARKSUPPORT__*/
 
     /**
      * Get the next entry in this tar archive. This will skip

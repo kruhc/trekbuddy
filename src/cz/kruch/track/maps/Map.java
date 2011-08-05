@@ -3,6 +3,7 @@
 package cz.kruch.track.maps;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.Vector;
 
 import cz.kruch.track.configuration.Config;
@@ -288,19 +289,22 @@ public final class Map implements Runnable {
 
             // loads whatever is needed
             loader.loadMeta();
+
+            // check map for consistency
+            if (calibration == null) {
+                throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_NO_CALIBRATION), getName());
+            }
+            if (loader.hasSlices() == false) {
+                throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_NO_SLICES), getName());
+            }
+
+            // fix tile info
             loader.fix();
 
 //#ifdef __LOG__
             if (log.isEnabled()) log.debug("map opened");
 //#endif
             
-            // check map for consistency
-            if (calibration == null) {
-                throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_NO_CALIBRATION));
-            }
-            if (loader.hasSlices() == false) {
-                throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_NO_SLICES));
-            }
 
         } catch (Throwable t) {
 
@@ -312,6 +316,11 @@ public final class Map implements Runnable {
                     // ignore
                 }
                 loader = null; // gc hint
+            }
+
+            // propagate map name
+            if (t instanceof InvalidMapException) {
+                ((InvalidMapException) t).setName(getName());
             }
 
             return t;
@@ -331,7 +340,7 @@ public final class Map implements Runnable {
         protected static final char[] EXT_PNG = { '.', 'p', 'n', 'g' };
         protected static final char[] EXT_JPG = { '.', 'j', 'p', 'g' };
         
-        protected static final BufferedInputStream buffered = new BufferedInputStream(null, 4096);
+        private static final BufferedInputStream buffin = new BufferedInputStream(null, 8192);
 
         protected Map map;
         protected String basename;
@@ -347,6 +356,7 @@ public final class Map implements Runnable {
 
         Loader() {
             this.tileWidth = this.tileHeight = Integer.MAX_VALUE;
+            ((api.io.BufferedInputStream) bufferef()).setAutofill(true);
         }
 
         void init(final Map map, final String url) throws IOException {
@@ -535,12 +545,13 @@ public final class Map implements Runnable {
 
             // load images for given slices
             try {
+                final StringBuffer sb = new StringBuffer(64);
                 for (int N = slices.size(), i = 0; i < N; i++) {
                     final Slice slice = (Slice) slices.elementAt(i);
                     if (slice.getImage() == null) {
 
                         // notify
-                        map.listener.loadingChanged("Loading " + slice.toString(), null);
+                        map.listener.loadingChanged(slice.appendInfo(sb.delete(0, sb.length()).append("Loading ")).toString(), null);
 
                         try {
                             // load image
@@ -584,7 +595,19 @@ public final class Map implements Runnable {
             return null;
         }
 
-        protected static String escape(final String url) {
+        static InputStream bufferef() {
+            return buffin;
+        }
+
+        static InputStream buffered(final InputStream in) {
+            return buffin.setInputStream(in);
+        }
+
+        static void bufferel() throws IOException {
+            buffin.close();
+        }
+
+        static String escape(final String url) {
             int idx = url.indexOf(' ');
             if (idx == -1) {
                 return url;

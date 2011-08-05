@@ -128,6 +128,8 @@ abstract class StreamReadingLocationProvider extends LocationProvider {
 //#endif
                 if (NmeaParser.getType(line, l) != -1) {
                     checksums++;
+                } else {
+                    invalids++;
                 }
                 continue;
             }

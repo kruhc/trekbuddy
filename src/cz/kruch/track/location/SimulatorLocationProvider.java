@@ -130,6 +130,9 @@ public final class SimulatorLocationProvider
                         setThrowable(t);
                     }
 
+                    // counter
+                    errors++;
+                    
                     // ignore
                     continue;
                 }

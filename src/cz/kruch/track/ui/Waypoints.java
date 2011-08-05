@@ -61,13 +61,6 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
 
     private static final int SUFFIX_LENGTH = 4;
 
-/*
-    private static final int FRAME_XML  = 0;
-    private static final int FRAME_XMLA = 1;
-    private static final int FRAME_MEM  = 2;
-    private static final int FRAME_MEMA = 3;
-*/
-
     private static final String STORE_USER      = "<user>";
     private static final String STORE_FRIENDS   = "<sms>";
     private /*static*/ final String NEW_FILE_STORE;
@@ -79,6 +72,9 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
 
     private static final String SUFFIX_GPX      = ".gpx";
     private static final String SUFFIX_LOC      = ".loc";
+//#ifdef __RIM__
+    private static final String SUFFIX_GPX_REM  = ".gpx.rem";
+//#endif
 
     private static final int TAG_RTEPT          = 0x067cbba7; // "rtept"
     private static final int TAG_WPT            = 0x0001ccbb; // "wpt"
@@ -924,18 +920,6 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
             // sort file stores (leaves memory stores at the beginning)
             FileBrowser.sort(v.getData(), left, v.size() - 1);
 
-            // setup icons for stores
-/* // TODO support icons in SmartList
-            for (int i = strs.length; --i >= 0; ) {
-                final String store = strs[i];
-                if (i >= left) {
-                    imgs[i] = store.equals(inUseName) ? NavigationScreens.stores[FRAME_XMLA] : NavigationScreens.stores[FRAME_XML];
-                } else {
-                    imgs[i] = store.equals(inUseName) ? NavigationScreens.stores[FRAME_MEMA] : NavigationScreens.stores[FRAME_MEM];
-                }
-            }
-
-*/
             // create UI list
             use(listStores(v, title));
 
@@ -1610,13 +1594,24 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                     final int i = name.lastIndexOf('.');
                     if (i > -1) {
                         final String lcname = name.toLowerCase();
-                        if (lcname.endsWith(SUFFIX_GPX) || lcname.endsWith(SUFFIX_LOC)) {
+                        if (lcname.endsWith(SUFFIX_GPX)
+                                || lcname.endsWith(SUFFIX_LOC)) {
                             if (recursive) {
                                 v.addElement(name);
                             } else {
                                 v.addElement(path + name);
                             }
                         }
+//#ifdef __RIM__
+                          else if (lcname.endsWith(SUFFIX_GPX_REM)) {
+                            final String rem = name.substring(0, name.length() - 4); // ".rem".length()
+                            if (recursive) {
+                                v.addElement(rem);
+                            } else {
+                                v.addElement(path + rem);
+                            }
+                        }
+//#endif
                     } else if (recursive) { // is subfolder?
                         if (/* isDir: */name.endsWith(File.PATH_SEPARATOR) && !name.startsWith("images-")) {
                             listWptFiles(name, v, false);
@@ -1780,7 +1775,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
             // remember criterium
             sort = by;
 
-            //sort
+            // sort
             switch (sort) {
                 case SORT_BYORDER: {
                     // copy refs from store
@@ -1881,7 +1876,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
 
         try {
             // open input
-            in = new BufferedInputStream(file.openInputStream(), 4096);
+            in = new BufferedInputStream(file.openInputStream(), 8192);
 
             // create parser
             parser = new HXmlParser();

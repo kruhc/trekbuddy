@@ -5,11 +5,13 @@ package cz.kruch.track.ui;
 import cz.kruch.track.Resources;
 import cz.kruch.track.configuration.Config;
 import cz.kruch.track.location.Waypoint;
+import cz.kruch.track.location.TripStatistics;
 import cz.kruch.track.util.CharArrayTokenizer;
 import cz.kruch.track.util.SimpleCalendar;
 import cz.kruch.track.util.NmeaParser;
 import cz.kruch.track.util.NakedVector;
 import cz.kruch.track.util.Mercator;
+import cz.kruch.track.util.ExtraMath;
 
 import javax.microedition.lcdui.Graphics;
 import javax.microedition.lcdui.Image;
@@ -243,6 +245,7 @@ final class ComputerView extends View
     private static final float AUTO_MIN_SPD     = 2.4F;
     private static final long AUTO_MIN_T        = 30000;
     private static final int SHORT_AVG_DEPTH    = 30; // 30 sec (for 1 Hz NMEA)
+    private static final int SHORT_AVG_DEPTH_MIN = 15; // SHORT_AVG_DEPTH / 2 
     private static final int MAX_TEXT_LENGTH    = 128;
 
 
@@ -325,6 +328,7 @@ final class ComputerView extends View
     private float[] valuesFloat;
 
     /* short term avg speed */
+    private long[] spdavgLong;
     private float[] spdavgFloat;
     private volatile int spdavgIndex;
     private volatile float spdavgShort;
@@ -377,6 +381,7 @@ final class ComputerView extends View
         // trip values
         this.valuesFloat = new float[TOKENS_float.length];
         this.spdavgFloat = new float[SHORT_AVG_DEPTH];
+        this.spdavgLong = new long[SHORT_AVG_DEPTH];
 
         // reset trip values
         reset();
@@ -455,24 +460,40 @@ final class ComputerView extends View
                 final float vAccuracy = qc.getVerticalAccuracy();
 
                 // calculate distance - emulate static navigation
-                float ds = 0F;
-                if (snrefCoords != null) {
-                    ds = snrefCoords.distance(qc);
-                    if (Float.isNaN(hAccuracy)) {
-                        if (ds < 50) {
+                float ds = 0F, dsn = 0F;
+//                if (snrefCoords != null) {
+//                    ds = snrefCoords.distance(qc);
+//                    if (Float.isNaN(hAccuracy)) {
+//                        if (ds < 50) {
+//                            ds = 0F;
+//                        }
+//                    } else if (ds < (3 * hAccuracy + 5)) {
+//                        ds = 0F;
+//                    } else {
+//                        QualifiedCoordinates.releaseInstance(snrefCoords);
+//                        snrefCoords = null;
+//                        snrefCoords = qc._clone();
+//                        /*snreftime = timestamp;*/
+//                    }
+//                } else {
+//                    snrefCoords = qc._clone();
+//                    /*snreftime = timestamp;*/
+//                }
+                final Location avgLoc = TripStatistics.getLast(TripStatistics.TERM_LONG);
+                if (avgLoc != null) {
+                    final QualifiedCoordinates avgQc = avgLoc.getQualifiedCoordinates();
+                    if (snrefCoords != null) {
+                        ds = dsn = snrefCoords.distance(avgQc);
+                        if (ds < 25) {
                             ds = 0F;
+                        } else {
+                            QualifiedCoordinates.releaseInstance(snrefCoords);
+                            snrefCoords = null;
+                            snrefCoords = avgQc._clone();
                         }
-                    } else if (ds < (3 * hAccuracy + 5)) {
-                        ds = 0F;
                     } else {
-                        QualifiedCoordinates.releaseInstance(snrefCoords);
-                        snrefCoords = null;
-                        snrefCoords = qc._clone();
-                        /*snreftime = timestamp;*/
+                        snrefCoords = avgQc._clone();
                     }
-                } else {
-                    snrefCoords = qc._clone();
-                    /*snreftime = timestamp;*/
                 }
 
                 // update coords
@@ -484,8 +505,19 @@ final class ComputerView extends View
                 final float[] valuesFloat = this.valuesFloat;
 
                 // *dop
-                valuesFloat[VALUE_HDOP] = hAccuracy / 5;
-                valuesFloat[VALUE_VDOP] = vAccuracy / 5;
+                if (!Float.isNaN(NmeaParser.pdop)) {
+                    valuesFloat[VALUE_PDOP] = NmeaParser.pdop;
+                } // no way to get it otherwise
+                if (!Float.isNaN(NmeaParser.hdop)) {
+                    valuesFloat[VALUE_HDOP] = NmeaParser.hdop;
+                } else { // use stupid formula
+                    valuesFloat[VALUE_HDOP] = hAccuracy / 5;
+                }
+                if (!Float.isNaN(NmeaParser.vdop)) {
+                    valuesFloat[VALUE_VDOP] = NmeaParser.vdop;
+                } else { // use stupid formula
+                    valuesFloat[VALUE_VDOP] = vAccuracy / 5;
+                }
 
                 // alt, alt-d, altdiff
                 final float alt = qc.getAlt();
@@ -519,6 +551,12 @@ final class ComputerView extends View
                 // dist-t
                 valuesFloat[VALUE_DIST_T] += ds / 1000F;
 
+                // spd-avg
+                final float dtt = t - starttime;
+                if (dtt > 0) {
+                    valuesFloat[VALUE_SPD_AVG] = (valuesFloat[VALUE_DIST_T] * 1000) / (dtt / 1000) * 3.6F;
+                }
+
                 // spd, spd-d
                 float speed = l.getSpeed();
                 if (!Float.isNaN(speed)) {
@@ -541,7 +579,7 @@ final class ComputerView extends View
                     }
 
                     // spd-avg // TODO check this looks really weird
-                    valuesFloat[VALUE_SPD_AVG] = (valuesFloat[VALUE_SPD_AVG] * counter + speed) / ++counter;
+//                    valuesFloat[VALUE_SPD_AVG] = (valuesFloat[VALUE_SPD_AVG] * counter + speed) / ++counter;
 
                     // spd-max
                     if (speed > valuesFloat[VALUE_SPD_MAX]) {
@@ -550,7 +588,7 @@ final class ComputerView extends View
 
                     // spd-avg short
                     if (dt >= 1000) {
-                        calcSpdAvgShort(speed);
+                        calcSpdAvgShort(speed, dsn < 25 ? 0 : dsn, t);
                     }
                 }
 
@@ -564,7 +602,7 @@ final class ComputerView extends View
                 
                 // spg-avg short
                 if (dt >= 1000) {
-                    calcSpdAvgShort(0F);
+                    calcSpdAvgShort(0F, 0F, t);
                 }
 
             }
@@ -1137,7 +1175,7 @@ final class ComputerView extends View
                                     } break;
                                     case VALUE_WPT_AZI: {
                                         final int azi = navigator.getWptAzimuth();
-                                        if (azi < 0F) {
+                                        if (azi < 0) {
                                             sb.append('?');
                                         } else {
                                             NavigationScreens.append(sb, azi);
@@ -1156,7 +1194,7 @@ final class ComputerView extends View
                                     case VALUE_WPT_ETA: {
                                         final int azi = navigator.getWptAzimuth();
                                         final float dist = navigator.getWptDistance();
-                                        if (azi < 0F || dist < 0F || timestamp == 0) {
+                                        if (azi < 0 || dist < 0F || timestamp == 0) {
                                             sb.append(NO_TIME);
                                         } else {
                                             if (dist > Config.wptProximity) {
@@ -1183,7 +1221,7 @@ final class ComputerView extends View
                                     } break;
                                     case VALUE_WPT_VMG: {
                                         final int azi = navigator.getWptAzimuth();
-                                        if (azi < 0F) {
+                                        if (azi < 0) {
                                             sb.append('?');
                                         } else {
                                             double vmg = fromKmh(units, spdavgShort/*valuesFloat[VALUE_SPD]*/ * (float)(Math.cos(Math.toRadians(valuesFloat[VALUE_COURSE] - azi))));
@@ -1309,7 +1347,7 @@ final class ComputerView extends View
                                         }
                                     } break;
                                     case VALUE_PACE: {
-                                        float value = fromKmh(units, /*spdavgShort*/valuesFloat[VALUE_SPD_AVG]);
+                                        float value = fromKmh(units, spdavgShort/*valuesFloat[VALUE_SPD_AVG]*/);
                                         value = 60 / value;
                                         if (value < 100F) {
                                             final int mins = (int) value;
@@ -1327,7 +1365,7 @@ final class ComputerView extends View
                                     } // break;
                                     case VALUE_WPT_AZI_SLIDING: {
                                         final int azi = navigator.getWptAzimuth();
-                                        if (azi < 0F) {
+                                        if (azi < 0) {
                                             // what to do?
                                         } else {
                                             drawSlider(graphics, azi, area);
@@ -1663,13 +1701,13 @@ final class ComputerView extends View
         final Image image = (Image) area.fontImpl;
         if (image != null) {
             final int iw = image.getWidth();
-            final int x0 = value - area.w / 2;
-            final int x1 = value + area.w / 2;
+            final int x0 = value - (area.w >> 1);
+            final int x1 = value + (area.w >> 1);
             graphics.setClip(area.x, area.y, area.w, area.h);
             if (x0 < 0) {
                 graphics.drawImage(image, area.x - (iw + x0), area.y, Graphics.LEFT | Graphics.TOP);
             }
-            graphics.drawImage(image, area.x + area.w / 2 - value, area.y, Graphics.LEFT | Graphics.TOP);
+            graphics.drawImage(image, area.x + (area.w >> 1) - value, area.y, Graphics.LEFT | Graphics.TOP);
             if (x1 > iw) {
                 graphics.drawImage(image, area.x + area.w + (iw - x1), area.y, Graphics.LEFT | Graphics.TOP);
             }
@@ -1696,28 +1734,68 @@ final class ComputerView extends View
             valuesFloat[i] = 0F;
         }
         final float[] spdavgFloat = this.spdavgFloat;
-        for (int i = spdavgFloat.length; --i >= 0; ) {
+        final long[] spdavgLong = this.spdavgLong;
+        for (int i = SHORT_AVG_DEPTH; --i >= 0; ) {
             spdavgFloat[i] = 0F;
+            spdavgLong[i] = 0L;
         }
         spdavgIndex = 0;
         spdavgShort = 0F;
 
 //#ifdef __HECL__
         // invalidate vars
-        interp.cacheversion++;
+        interp.cacheversion = 0;
 //#endif
     }
 
-    private void calcSpdAvgShort(final float speed) {
+    private void calcSpdAvgShort(final float speed, final float ds, final long t) {
         final float[] spdavgFloat = this.spdavgFloat;
-        final int N = spdavgFloat.length;
-        spdavgFloat[spdavgIndex++ % N] = speed;
-        final int C = Math.min(spdavgIndex, N);
-        float sas = 0F;
-        for (int i = C; i-- > 0; ) {
-            sas += spdavgFloat[i];
+        spdavgFloat[spdavgIndex++ % SHORT_AVG_DEPTH] = speed;
+        int N = 0;
+        if (spdavgIndex > SHORT_AVG_DEPTH) {
+            N = SHORT_AVG_DEPTH;
+        } else if (spdavgIndex > SHORT_AVG_DEPTH_MIN) {
+            N = spdavgIndex;
         }
-        spdavgShort = sas / C;
+        if (N > 0) {
+            float smin = Float.MAX_VALUE, smax = 0F, sas = 0F;
+            for (int i = N; i-- > 0; ) {
+                final float v = spdavgFloat[i];
+                sas += v;
+                if (v < smin) smin = v;
+                if (v > smax) smax = v;
+            }
+            sas -= smin;
+            sas -= smax;
+            spdavgShort = sas / (N - 2);
+        }
+/*
+        final float[] spdavgFloat = this.spdavgFloat;
+        final long[] spdavgLong = this.spdavgLong;
+        final int idx = spdavgIndex % SHORT_AVG_DEPTH;
+        final long t0 = spdavgLong[idx];
+        spdavgLong[idx] = t;
+        spdavgFloat[idx] = ds;
+        spdavgIndex++;
+        if (spdavgIndex > SHORT_AVG_DEPTH) {
+            float sas = 0F;
+            for (int i = SHORT_AVG_DEPTH; i-- > 0; ) {
+                sas += spdavgFloat[i];
+            }
+            final float dtt = t - t0;
+            spdavgShort = sas / (dtt / 1000) * 3.6F;
+//            System.out.println("sas: " + sas + " / " + (dtt / 1000) + " idx: " + idx +  " t=" + t + " t0=" + t0);
+        } else if (spdavgIndex > 1) {
+            float sas = 0F;
+            for (int i = spdavgIndex; i-- > 0; ) {
+                sas += spdavgFloat[i];
+            }
+            final float dtt = t - spdavgLong[0];
+            spdavgShort = sas / (dtt / 1000) * 3.6F;
+//            System.out.println("sas: " + sas + " / " + (dtt / 1000) + " idx: " + idx + " t=" + t + " [0]=" + spdavgLong[0]);
+        }
+        System.out.println("spd-avg-short: " + spdavgShort);
+*/
     }
 
     private String loadViaCache(final String filename) {
@@ -2296,7 +2374,7 @@ final class ComputerView extends View
                     if (filename.endsWith(".hcl") || filename.endsWith(".HCL")) {
                         try {
                             // read script from file
-                            reader = new InputStreamReader(Connector.openInputStream(Config.getFolderURL(Config.FOLDER_PROFILES) + filename));
+                            reader = new InputStreamReader(new BufferedInputStream(Connector.openInputStream(Config.getFolderURL(Config.FOLDER_PROFILES) + filename), 4096));
                             int c = reader.read(buffer);
                             while (c != -1) {
                                 sb.append(buffer, 0, c);
@@ -2311,7 +2389,7 @@ final class ComputerView extends View
                             }
 //#endif
                             // register handlers
-                            interp.eval(new Thing(script));
+                            interp.evalNoncaching(new Thing(script));
 
                         } finally {
 
@@ -2375,6 +2453,7 @@ final class ComputerView extends View
     private static final int HASH_SPD           = 0x1bda7;      // 114087
     private static final int HASH_DGPS          = 0x2f05c6;     // 3081670
     private static final int HASH_HDOP          = 0x30cbdd;     // 3197917
+    private static final int HASH_PACE	        = 0x346213;     // 3432979
     private static final int HASH_PDOP          = 0x346ed5;     // 3436245
     private static final int HASH_SATV          = 0x35c150;     // 3522896
     private static final int HASH_TIME	        = 0x3652cd;     // 3560141
@@ -2386,34 +2465,33 @@ final class ComputerView extends View
     private static final int HASH_WPT_DIST	    = 0x37011f78;   // 922820472
     private static final int HASH_WPT_ALT	    = 0x5c9ce597;   // 1553786263
     private static final int HASH_WPT_AZI	    = 0x5c9ce73e;   // 1553786686
+    private static final int HASH_WPT_ETA	    = 0x5c9cf580;   // 1553790336
     private static final int HASH_WPT_LAT	    = 0x5c9d0d8d;   // 1553796493
     private static final int HASH_WPT_LON	    = 0x5c9d0f39;   // 1553796921
+    private static final int HASH_WPT_SYM	    = 0x5c9d2ab5;   // 1553803957
+    private static final int HASH_WPT_VMG	    = 0x5c9d347e;   // 1553806462
     private static final int HASH_SPD_AVG_AUTO  = 0x866fa930;   // -2039502544
     private static final int HASH_SPD_AVG       = 0x882281ac;   // -2011004500
     private static final int HASH_SPD_MAX       = 0x8822ac3e;   // -2010993602
     private static final int HASH_COURSE        = 0xaf42e01b;   // -1354571749
     private static final int HASH_DESC_T        = 0xb069a438;   // -1335253960
     private static final int HASH_DIST_T        = 0xb0a2420d;   // -1331543539
+    private static final int HASH_TIME_T	    = 0xcbecd974;   // -873670284
     private static final int HASH_COURSE_D      = 0xea0b4b32;   // -368358606
     private static final int HASH_PROFILE       = 0xed8e89a9;   // -309425751
     private static final int HASH_WPT_ALT_DIFF	= 0xeeff2e7b;   // -285266309
 
-//    private static final int HASH_PACE	      = 0x346213;     // 3432979
 //    private static final int HASH_SPD_D         = 0x688f5be;    // 109639102
 //    private static final int HASH_SPD_DAVG      = 0x7c2ec454;   // 2083439700
 //    private static final int HASH_SPD_DMAX      = 0x7c2eeee6;   // 2083450598
 //    private static final int HASH_COORDS	    = 0xaf40241e; // -1354750946
 //    private static final int HASH_STATUS	    = 0xcacdcff2; // -892481550
-//    private static final int HASH_TIME_T	    = 0xcbecd974; // -873670284
 //    private static final int HASH_TIME_T_AUTO	= 0xdbccee68; // -607326616
 //    private static final int HASH_PRN	        = 0x1b2ac; // 111276
 //    private static final int HASH_SNR	        = 0x1bd77; // 114039
 //    private static final int HASH_WPT_NAME	    = 0x37058c5d; // 923110493
 //    private static final int HASH_WPT_CMT	    = 0x5c9ced38; // 1553788216
-//    private static final int HASH_WPT_ETA	    = 0x5c9cf580; // 1553790336
 //    private static final int HASH_WPT_IMG	    = 0x5c9d03b1; // 1553793969
-//    private static final int HASH_WPT_SYM	    = 0x5c9d2ab5; // 1553803957
-//    private static final int HASH_WPT_VMG	    = 0x5c9d347e; // 1553806462
 //    private static final int HASH_WPT_COORDS	= 0x79d50970; // 2044004720
 
     public Thing get(String varname) {
@@ -2425,7 +2503,7 @@ final class ComputerView extends View
         if (varname.startsWith("cms::")) {
             final int hash = hash(varname, 5);
             final int units = this.units.intValue();
-            boolean fromKmh = false;
+            boolean fromKmh = false, toFeets = false;
 //#ifdef __LOG__
             if (log.isEnabled()) log.debug("var hash: " + Integer.toHexString(hash));
 //#endif
@@ -2433,6 +2511,7 @@ final class ComputerView extends View
             switch (hash) {
                 case HASH_ALT: {
                     idx = VALUE_ALT;
+                    toFeets = true;
                 } break;
                 case HASH_SPD: {
                     idx = VALUE_SPD;
@@ -2476,9 +2555,6 @@ final class ComputerView extends View
                 case HASH_COURSE_D: {
                     idx = VALUE_COURSE_D;
                 } break;
-                case HASH_PROFILE: {
-                    result = StringThing.create(Config.cmsProfile);
-                } break;
             }
 
             if (idx != -1) {
@@ -2488,6 +2564,8 @@ final class ComputerView extends View
                 float v = valuesFloat[idx];
                 if (fromKmh) {
                     v = fromKmh(units, v);
+                } else if (toFeets) {
+                    v = asAltitude(units, v);
                 }
                 result = FloatThing.create(v);
 
@@ -2508,6 +2586,13 @@ final class ComputerView extends View
                     } break;
                     case HASH_DGPS: {
                         result = IntThing.create(dgps);
+                    } break;
+                    case HASH_PACE: {
+                        float value = 0F;
+                        if (spdavgShort > 0F) {
+                            value = 60F / fromKmh(units, spdavgShort/*valuesFloat[VALUE_SPD_AVG]*/);
+                        }
+                        result = IntThing.create((int)(60 * value));
                     } break;
                     case HASH_SATV: {
                         result = IntThing.create(NmeaParser.satv);
@@ -2560,6 +2645,31 @@ final class ComputerView extends View
                     case HASH_WPT_AZI: {
                         result = IntThing.create(navigator.getWptAzimuth());
                     } break;
+                    case HASH_WPT_ETA: {
+                        final int azi = navigator.getWptAzimuth();
+                        final float dist = navigator.getWptDistance();
+                        long eta;
+                        if (azi < 0 || dist < 0F || timestamp == 0) {
+                           eta = -1;
+                        } else {
+                            if (dist > Config.wptProximity) {
+                                final double vmg = spdavgShort/*valuesFloat[VALUE_SPD]*/ * (Math.cos(Math.toRadians(valuesFloat[VALUE_COURSE] - azi)));
+                                if (vmg > 0F) {
+                                    final long dt = (long) (1000 * (dist / (vmg / 3.6F)));
+                                    if (dt >= 0F) {
+                                        eta = timestamp + dt;
+                                    } else {
+                                        eta = timestamp + 2 * -dt;
+                                    }
+                                } else {
+                                    eta = -1;
+                                }
+                            } else {
+                                eta = 0;
+                            }
+                        }
+                        result = LongThing.create(eta);
+                    } break;
                     case HASH_WPT_LAT: {
                         double lat = 0D;
                         final Waypoint wpt = navigator.getWpt();
@@ -2576,8 +2686,36 @@ final class ComputerView extends View
                         }
                         result = DoubleThing.create(lat);
                     } break;
-
-					case HASH_WPT_ALT_DIFF: {
+                    case HASH_WPT_SYM: {
+                        final Waypoint wpt = navigator.getWpt();
+                        if (wpt != null) {
+                            final String s = wpt.getSym();
+                            if (s != null){
+                                result = StringThing.create(s);
+                            }
+                        }
+                    } break;
+                    case HASH_WPT_VMG: {
+                        double vmg = 0D;
+                        final int azi = navigator.getWptAzimuth();
+                        if (azi >= 0) {
+                            vmg = fromKmh(units, spdavgShort/*valuesFloat[VALUE_SPD]*/ * (float)(Math.cos(Math.toRadians(valuesFloat[VALUE_COURSE] - azi))));
+                        }
+                        result = DoubleThing.create(vmg);
+                    } break;
+                    case HASH_TIME_T: {
+                        long dt;
+                        if (timestamp > 0 && starttime > 0) {
+                            dt = (timestamp - starttime) / 1000;
+                        } else {
+                            dt = 0;
+                        }
+                        result = LongThing.create(dt);
+                    } break;
+                    case HASH_PROFILE: {
+                        result = StringThing.create(Config.cmsProfile);
+                    } break;
+                    case HASH_WPT_ALT_DIFF: { // TODO obsolete
 						float diff = navigator.getWptAltDiff();
 						if (!Float.isNaN(diff)) {
 							diff = asAltitude(units, diff);

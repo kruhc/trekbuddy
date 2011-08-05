@@ -57,6 +57,10 @@ final class DeviceScreen extends GameCanvas implements Runnable {
     // touch ops
     private volatile boolean touchMenuActive, cmdExec;
 
+    // menu appearance
+    volatile boolean beenPressed;
+    private volatile TimerTask delayedRepaint;
+
 //#ifdef __ALL__
 
     // soft menu
@@ -91,9 +95,7 @@ final class DeviceScreen extends GameCanvas implements Runnable {
         } else {
             this.hasRepeatEvents = super.hasRepeatEvents();
         }
-        if (Config.showVisualSpots == null) {
-            Config.showVisualSpots = new Boolean(super.hasPointerEvents());
-        }
+        splash();
 //#ifdef __ALL__
         if (Config.uiNoCommands) {
             this.commands = new Command[10];
@@ -200,6 +202,24 @@ final class DeviceScreen extends GameCanvas implements Runnable {
         }
     }
 
+    public void splash() {
+        if (Config.guideSpotsMode > 0 || Config.zoomSpotsMode > 0) {
+            beenPressed = true;
+        }
+    }
+
+    public void autohide() {
+        if (beenPressed && (Config.guideSpotsMode > 1 || Config.zoomSpotsMode > 1)) {
+            if (delayedRepaint == null) {
+                Desktop.schedule(delayedRepaint = new RepaintTask(), 3000);
+            }
+        }
+    }
+    
+    public boolean iconBarVisible() {
+        return Config.guideSpotsMode == 1 || (Config.guideSpotsMode == 2 && beenPressed);
+    }
+
     /**
      * Used for key repetition emulation
      */
@@ -281,12 +301,19 @@ final class DeviceScreen extends GameCanvas implements Runnable {
 		gx = x;
 		gy = y;
 
-		// menu shown?
+        // cancel repainter
+        if (delayedRepaint != null) {
+            delayedRepaint.cancel();
+            delayedRepaint = null;
+        }
+
+        // menu shown?
         if (touchMenuActive) {
 
             // ops flags
             touchMenuActive = false;
             cmdExec = true;
+            beenPressed = false;
 
             // update screen anyway
             delegate.update(Desktop.MASK_SCREEN);
@@ -303,6 +330,7 @@ final class DeviceScreen extends GameCanvas implements Runnable {
 
             // ops flags
             cmdExec = false;
+            beenPressed = true;
 
             // resolve coordinates to keypress
             final int key = pointerToKey(x, y);
@@ -313,6 +341,13 @@ final class DeviceScreen extends GameCanvas implements Runnable {
 
                 // help repetition
                 emulateKeyRepeated(key);
+            }
+
+            // show bar on keylock or center hit - update not invoked
+            if (keylock || key == Canvas.KEY_NUM5) {
+
+                // repaint screen to show icon bar
+                delegate.update(Desktop.MASK_SCREEN);
             }
         }
     }
@@ -329,7 +364,10 @@ final class DeviceScreen extends GameCanvas implements Runnable {
 
         // clear helpers
 		gx = gy = 0;
-        
+
+        // delayed repaint for menu autohide
+        autohide();
+
         // ignore the event when menu was on
         if (cmdExec) {
             return;
@@ -738,9 +776,9 @@ final class DeviceScreen extends GameCanvas implements Runnable {
         final Font barFont = Font.getFont(Font.FACE_SYSTEM, Font.STYLE_PLAIN, Font.SIZE_SMALL);
         final Font barBoldFont = Font.getFont(Font.FACE_SYSTEM, Font.STYLE_BOLD, Font.SIZE_MEDIUM);
         final Font itemFont = Font.getFont(defaultFont.getFace(), Font.STYLE_PLAIN, Font.SIZE_LARGE);
-        final int barHeight = barBoldFont.getHeight() + 2 * PADDING_Y;
+        final int barHeight = barBoldFont.getHeight() + (PADDING_Y << 1);
         final int fontHeight = itemFont.getHeight();
-        final int lineHeight = fontHeight + 2 * PADDING_Y;
+        final int lineHeight = fontHeight + (PADDING_Y << 1);
         final int width = getWidth();
         final int height = getHeight();
 
@@ -752,7 +790,7 @@ final class DeviceScreen extends GameCanvas implements Runnable {
         g.setFont(barBoldFont);
         final String selectLabel = Resources.getString(Resources.DESKTOP_CMD_SELECT);
         g.drawString(selectLabel,
-                     (width - barBoldFont.stringWidth(selectLabel)) / 2, height - barHeight + PADDING_Y,
+                     (width - barBoldFont.stringWidth(selectLabel)) >> 1, height - barHeight + PADDING_Y,
                      Graphics.LEFT | Graphics.TOP);
         g.setFont(barFont);
         g.drawString(Resources.getString(Resources.CMD_CANCEL),
@@ -776,7 +814,7 @@ final class DeviceScreen extends GameCanvas implements Runnable {
                 menuMaxHeight += lineHeight;
             }
         }
-        menuMaxWidth += 2 * PADDING_X;
+        menuMaxWidth += PADDING_X << 1;
 
         // draw menu items
         int active = 0;
@@ -811,40 +849,41 @@ final class DeviceScreen extends GameCanvas implements Runnable {
         // calculate spacing and button size
         final int w = getWidth();
         final int h = getHeight();
-        final int dy, bh, bw;
-//        if (w < h) { // portrait
+        final int dx, dy, bh, bw;
+        if (w <= h) { // portrait
+            dx = Desktop.fontBtns.getHeight();
             dy = h / VROWS;
-            bh = 2 * dy;
-            bw = (w - 3 * dy) / 2;
-//        } else { // landscape
-//            dy = getHeight() / 15;
-//            bh = 2 * dy;
-//            bw = (getWidth() - 3 * dy) / 2;
-//        }
+            bh = dy << 1;
+            bw = (w - 3 * dx) >> 1;
+        } else { // landscape (= old portrait layout)
+            dx = dy = h / VROWS;
+            bh = dy << 1;
+            bw = (w - 3 * dx) >> 1;
+        }
         // paint buttons
         final Graphics g = getGraphics();
         final Desktop delegate = this.delegate;
         final int c = g.getColor();
         g.setFont(Desktop.fontBtns);
         if (delegate.isTracking()) {
-            drawButton(g, delegate.cmdStop, dy, dy, bw, bh);
-            drawButton(g, Desktop.paused ? delegate.cmdContinue : delegate.cmdPause, dy + bw + dy, dy, bw, bh);
+            drawButton(g, delegate.cmdStop, dx, dy, bw, bh);
+            drawButton(g, Desktop.paused ? delegate.cmdContinue : delegate.cmdPause, dx + bw + dx, dy, bw, bh);
         } else {
-            drawButton(g, delegate.cmdRun, dy, dy, bw, bh);
+            drawButton(g, delegate.cmdRun, dx, dy, bw, bh);
             if (Config.locationProvider == Config.LOCATION_PROVIDER_JSR82 && delegate.cmdRunLast != null) {
-                drawButton(g, delegate.cmdRunLast, dy + bw + dy, dy, bw, bh);
+                drawButton(g, delegate.cmdRunLast, dx + bw + dx, dy, bw, bh);
             }
         }
 //#ifndef __B2B__
         if (api.file.File.isFs()) {
-            drawButton(g, delegate.cmdLoadMap, dy, 2 * dy + bh, bw, bh);
-            drawButton(g, delegate.cmdLoadAtlas, dy + bw + dy, 2 * dy + bh, bw, bh);
+            drawButton(g, delegate.cmdLoadMap, dx, (dy << 1) + bh, bw, bh);
+            drawButton(g, delegate.cmdLoadAtlas, dx + bw + dx, (dy << 1) + bh, bw, bh);
         }
 //#endif        
-        drawButton(g, delegate.cmdSettings, dy, 3 * dy + 2 * bh, bw, bh);
-        drawButton(g, delegate.cmdInfo, dy + bw + dy, 3 * dy + 2 * bh, bw, bh);
-        drawButton(g, delegate.cmdWaypoints, dy, 4 * dy + 3 * bh, bw, bh);
-        drawButton(g, delegate.cmdExit, dy + bw + dy, 4 * dy + 3 * bh, bw, bh);
+        drawButton(g, delegate.cmdSettings, dx, 3 * dy + (bh << 1), bw, bh);
+        drawButton(g, delegate.cmdInfo, dx + bw + dx, 3 * dy + (bh << 1), bw, bh);
+        drawButton(g, delegate.cmdWaypoints, dx, (dy << 2) + 3 * bh, bw, bh);
+        drawButton(g, delegate.cmdExit, dx + bw + dx, (dy << 2) + 3 * bh, bw, bh);
         g.setColor(c);
     }
 
@@ -858,7 +897,7 @@ final class DeviceScreen extends GameCanvas implements Runnable {
         final int fh = Desktop.fontBtns.getHeight();
         final int sw = Desktop.fontBtns.stringWidth(label);
         g.setColor(BTN_TXTCOLOR);
-        g.drawString(label, x + (bw - sw) / 2, y + (bh - fh) / 2, Graphics.LEFT | Graphics.TOP);
+        g.drawString(label, x + ((bw - sw) >> 1), y + ((bh - fh) >> 1), Graphics.LEFT | Graphics.TOP);
     }
 
     private Command pointerToCmd(final int x, final int y) {
@@ -870,8 +909,8 @@ final class DeviceScreen extends GameCanvas implements Runnable {
         Command cmd = null;
 
 //        if (w < h) { // portrait
-        final boolean xL = x > i && x < w / 2 - i;
-        final boolean xR = x > w / 2 + i && x < w - i;
+        final boolean xL = x > i && x < (w >> 1) - i;
+        final boolean xR = x > (w >> 1) + i && x < w - i;
         switch (i) {
                 case 1:
                 case 2: {
@@ -930,8 +969,7 @@ final class DeviceScreen extends GameCanvas implements Runnable {
         int key = 0;
 
         switch (i) {
-            case 0:
-            case 1: {
+            case 0: {
                 switch (j) {
                     case 0:
                         key = Canvas.KEY_NUM1;
@@ -945,13 +983,20 @@ final class DeviceScreen extends GameCanvas implements Runnable {
                         key = Canvas.KEY_NUM3;
                         break;
                 }
-            }
-            break;
+            } break;
+            case 1: {
+                switch (j) {
+                    case 1:
+                    case 2:
+                    case 3:
+                        key = getKeyCode(Canvas.UP);
+                        break;
+                }
+            } break;
             case 2:
             case 3:
             case 4:
-            case 5:
-            case 6: {
+            case 5: {
                 switch (j) {
                     case 0:
                         key = getKeyCode(Canvas.LEFT);
@@ -965,10 +1010,17 @@ final class DeviceScreen extends GameCanvas implements Runnable {
                         key = getKeyCode(Canvas.RIGHT);
                         break;
                 }
-            }
-            break;
-            case 7:
-            case 8: {
+            } break;
+            case 6: {
+                switch (j) {
+                    case 1:
+                    case 2:
+                    case 3:
+                        key = getKeyCode(Canvas.DOWN);
+                        break;
+                }
+            } break;
+            case 7: {
                 switch (j) {
                     case 0:
                         key = Canvas.KEY_NUM7;
@@ -982,8 +1034,10 @@ final class DeviceScreen extends GameCanvas implements Runnable {
                         key = Canvas.KEY_NUM9;
                         break;
                 }
-            }
-            break;
+            } break;
+            case 8:
+                // space!!!
+                break;
             case 9:
             case 10: {
                 switch (j) {
@@ -991,16 +1045,27 @@ final class DeviceScreen extends GameCanvas implements Runnable {
                         key = Canvas.KEY_STAR;
                         break;
                     case 1:
+                        if (Config.guideSpotsMode > 0) {
+                            key = Canvas.KEY_NUM1;
+                        } else {
+                            key = Canvas.KEY_NUM0;
+                        }
+                        break;
                     case 2:
-                    case 3:
                         key = Canvas.KEY_NUM0;
+                        break;
+                    case 3:
+                        if (Config.guideSpotsMode > 0) {
+                            key = Canvas.KEY_NUM3;
+                        } else {
+                            key = Canvas.KEY_NUM0;
+                        }
                         break;
                     case 4:
                         key = Canvas.KEY_POUND;
                         break;
                 }
-            }
-            break;
+            } break;
         }
 
         return key;
@@ -1053,6 +1118,30 @@ final class DeviceScreen extends GameCanvas implements Runnable {
 
         public void run() {
             DeviceScreen.this.delegate.commandAction(cmd, DeviceScreen.this);
+        }
+    }
+
+    private final class RepaintTask extends TimerTask {
+        public void run() {
+            if (Config.guideSpotsMode > 1) {
+                final int dy = (NavigationScreens.guideSize + 2 * 3) / 10;
+                try {
+                    NavigationScreens.gdOffset = 0;
+                    for (int i = 0; i < 9; i++) {
+                        NavigationScreens.gdOffset += dy;
+                        delegate.update(Desktop.MASK_SCREEN);
+                        try {
+                            Thread.sleep(25 - i);
+                        } catch (InterruptedException e) {
+                            // ignore
+                        }
+                    }
+                } finally {
+                    NavigationScreens.gdOffset = 0;
+                }
+            }
+            beenPressed = false;
+            delegate.update(Desktop.MASK_SCREEN);
         }
     }
 }

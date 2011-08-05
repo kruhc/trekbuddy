@@ -11,6 +11,7 @@ import cz.kruch.track.util.NakedVector;
 import cz.kruch.track.fun.Camera;
 import cz.kruch.track.configuration.Config;
 import api.location.QualifiedCoordinates;
+import api.lang.Int;
 
 import javax.microedition.lcdui.AlertType;
 
@@ -25,10 +26,12 @@ public final class ControlledInterp extends Interp {
 
     private Lookup fallback;
     private Hashtable codes;
+    private Int key;
 
     public ControlledInterp(boolean background) throws HeclException {
         super();
-        codes = new Hashtable(16);
+        this.codes = new Hashtable(16);
+        this.key = new Int(0);
 
         // internal commands
         addCommand("var", new VarCmd()); // stateful variables support
@@ -79,9 +82,10 @@ public final class ControlledInterp extends Interp {
 
     /* @overriden */
     public synchronized Thing eval(Thing in) throws HeclException {
-        CodeThing thing = (CodeThing) codes.get(in);
+        key.setValue(in.hashCode());
+        CodeThing thing = (CodeThing) codes.get(key);
         if (thing == null) {
-            codes.put(in ,thing = CodeThing.get(this, in));
+            codes.put(key._clone() ,thing = CodeThing.get(this, in));
         }
         return thing.run(this);
     }
@@ -184,6 +188,10 @@ public final class ControlledInterp extends Interp {
 
     public synchronized Thing resolveVar(String varname) throws HeclException {
         return super.getVar(varname, 0);
+    }
+
+    public synchronized Thing evalNoncaching(Thing in) throws HeclException {
+        return super.eval(in);
     }
 
     private static final class VarCmd implements org.hecl.Command {

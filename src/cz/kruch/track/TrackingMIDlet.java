@@ -289,6 +289,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         int imaged;
         try {
             cz.kruch.track.ui.NavigationScreens.initialize();
+            cz.kruch.track.ui.NavigationScreens.initialize2();
             imaged = 1;
         } catch (Throwable t) {
             imaged = -1;

@@ -295,7 +295,7 @@
 -->
         <move file="tmp/trekbuddy${suffix}-obfuscated.jar"
               tofile="tmp/preverified/trekbuddy${suffix}-obfuscated.jar"/>
-        <antcall target="dist" inheritall="true"/>
+        <antcall target="dist.android" inheritall="true"/>
         <ant dir="${microemu.home}/microemu-android"
              antfile="build-trekbuddy.xml" target="zipalign"
              inheritAll="false" inheritRefs="false">
@@ -314,7 +314,7 @@
     </target>
 
     <target name="android-backport">
-        <property name="suffix" value="-android-backport"/>
+        <property name="suffix" value="-android"/>
         <property name="dist.dir" value="android-backport"/>
         <property name="libraryjars" value="${microemu.home}\microemu-cldc\target\microemu-cldc-3.0.0-SNAPSHOT.jar;${microemu.home}\microemu-midp\target\microemu-midp-3.0.0-SNAPSHOT.jar;${microemu.home}\microemu-extensions\microemu-jsr-75\target\microemu-jsr-75-3.0.0-SNAPSHOT.jar;${android20.home}\android.jar;${microemu.home}\microemu-android\lib\backport-android-bluetooth2.jar;${microemu.home}\microemu-android\microemu-android-idea.jar"/>
         <antcall target="clean"/>
@@ -393,7 +393,13 @@
     </target>
 
     <target name="a.pre.hecl">
+<!--
         <ant antfile="hecl.xml" target="compile"/>
+-->
+        <wtkpreprocess srcdir="hecl-core" destdir="tmp/src" version="2"
+                       symbols="j2me=1,cldc=${wtk.cldc.version},midp=${wtk.midp.version},javaversion=1.2"/>
+        <delete file="tmp/src/org/hecl/PrintThing.java" verbose="true"/>
+        <delete file="tmp/src/org/hecl/PutsCmd.java" verbose="true"/>
     </target>
 
     <target name="a.pre.standard" depends="a.pre.hecl">
@@ -707,11 +713,9 @@
             <manifest>
                 <attribute name="Built-By" value="kruhc@seznam.cz"/>
                 <attribute name="Content-Folder" value="Applications"/>
+                <attribute name="Nokia-Scalable-Icon-MIDlet-1" value="/resources/icon.svg"/>
                 <attribute name="Nokia-MIDlet-Category" value="Application"/>
                 <attribute name="Nokia-MIDlet-No-Exit" value="true"/>
-                <attribute name="Nokia-MIDlet-S60-Selection-Key-Compatibility" value="true"/>
-                <attribute name="Nokia-MIDlet-On-Screen-Keypad" value="no"/>
-                <attribute name="Nokia-Scalable-Icon-MIDlet-1" value="/resources/icon.svg"/>
                 <attribute name="LGE-MIDlet-Display-Nav-Keypad" value="no"/>
                 <attribute name="LGE-MIDlet-Display-Indicator" value="HIDE"/>
             </manifest>
@@ -738,11 +742,9 @@
             <manifest>
                 <attribute name="Built-By" value="kruhc@seznam.cz"/>
                 <attribute name="Content-Folder" value="Applications"/>
+                <attribute name="Nokia-Scalable-Icon-MIDlet-1" value="/resources/icon.svg"/>
                 <attribute name="Nokia-MIDlet-Category" value="Application"/>
                 <attribute name="Nokia-MIDlet-No-Exit" value="true"/>
-                <attribute name="Nokia-MIDlet-S60-Selection-Key-Compatibility" value="true"/>
-                <attribute name="Nokia-MIDlet-On-Screen-Keypad" value="no"/>
-                <attribute name="Nokia-Scalable-Icon-MIDlet-1" value="/resources/icon.svg"/>
                 <attribute name="LGE-MIDlet-Display-Nav-Keypad" value="no"/>
                 <attribute name="LGE-MIDlet-Display-Indicator" value="HIDE"/>
             </manifest>
@@ -839,8 +841,7 @@
             <arg value="-keep class * implements javax.microedition.midlet.MIDlet"/>
             <arg value="-keepnames class cz.** extends java.lang.Exception"/>       
             <arg value="-keepnames class api.** extends java.lang.Exception"/>
-            <arg value="-keepnames class org.hecl.** extends java.lang.Exception"/>
-            <arg value="-keepnames class org.xmlpull.** extends java.lang.Exception"/>
+            <arg value="-keepnames class org.** extends java.lang.Exception"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.maps.io.FileInput"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.maps.io.LoaderIO"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.io.CrcInputStream"/>
@@ -870,8 +871,7 @@
             <arg value="-keep class * implements javax.microedition.midlet.MIDlet"/>
             <arg value="-keepnames class cz.** extends java.lang.Exception"/>
             <arg value="-keepnames class api.** extends java.lang.Exception"/>
-            <arg value="-keepnames class org.hecl.** extends java.lang.Exception"/>
-            <arg value="-keepnames class org.xmlpull.** extends java.lang.Exception"/>
+            <arg value="-keepnames class org.** extends java.lang.Exception"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.maps.io.FileInput"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.maps.io.LoaderIO"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.io.CrcInputStream"/>
@@ -902,8 +902,7 @@
             <arg value="-keep class * implements javax.microedition.midlet.MIDlet"/>
             <arg value="-keepnames class cz.** extends java.lang.Exception"/>
             <arg value="-keepnames class api.** extends java.lang.Exception"/>
-            <arg value="-keepnames class org.hecl.** extends java.lang.Exception"/>
-            <arg value="-keepnames class org.xmlpull.** extends java.lang.Exception"/>
+            <arg value="-keepnames class org.** extends java.lang.Exception"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.maps.io.FileInput"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.maps.io.LoaderIO"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.io.CrcInputStream"/>
@@ -933,8 +932,7 @@
             <arg value="-keep class * implements javax.microedition.midlet.MIDlet"/>
             <arg value="-keepnames class cz.** extends java.lang.Exception"/>
             <arg value="-keepnames class api.** extends java.lang.Exception"/>
-            <arg value="-keepnames class org.hecl.** extends java.lang.Exception"/>
-            <arg value="-keepnames class org.xmlpull.** extends java.lang.Exception"/>
+            <arg value="-keepnames class org.** extends java.lang.Exception"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.maps.io.FileInput"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.maps.io.LoaderIO"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.io.CrcInputStream"/>
@@ -962,8 +960,7 @@
             <arg value="-keep class * implements javax.microedition.midlet.MIDlet"/>
             <arg value="-keepnames class cz.** extends java.lang.Exception"/>
             <arg value="-keepnames class api.** extends java.lang.Exception"/>
-            <arg value="-keepnames class org.hecl.** extends java.lang.Exception"/>
-            <arg value="-keepnames class org.xmlpull.** extends java.lang.Exception"/>
+            <arg value="-keepnames class org.** extends java.lang.Exception"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.maps.io.FileInput"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.maps.io.LoaderIO"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.io.CrcInputStream"/>
@@ -1000,8 +997,7 @@
             <arg value="-keep class * implements javax.microedition.midlet.MIDlet"/>
             <arg value="-keepnames class cz.** extends java.lang.Exception"/>
             <arg value="-keepnames class api.** extends java.lang.Exception"/>
-            <arg value="-keepnames class org.hecl.** extends java.lang.Exception"/>
-            <arg value="-keepnames class org.xmlpull.** extends java.lang.Exception"/>
+            <arg value="-keepnames class org.** extends java.lang.Exception"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.maps.io.FileInput"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.io.CrcInputStream"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.util.Logger"/>
@@ -1063,6 +1059,10 @@
             <attribute name="MIDlet-Icon" value="/resources/icon.png"/>
             <attribute name="${permission.attribute}" value="javax.microedition.io.Connector.file.read,javax.microedition.io.Connector.file.write,javax.microedition.io.Connector.bluetooth.client,javax.microedition.location.Location,javax.microedition.media.control.VideoControl.getSnapshot,javax.microedition.io.Connector.sms,javax.wireless.messaging.sms.receive,javax.wireless.messaging.sms.send,javax.microedition.io.Connector.comm,javax.microedition.io.Connector.cbs,javax.wireless.messaging.cbs.receive,javax.microedition.io.Connector.socket,javax.microedition.io.PushRegistry,javax.microedition.location.Orientation"/>
             <attribute name="Content-Folder" value="Applications"/>
+            <attribute name="Nokia-Scalable-Icon-MIDlet-1" value="/resources/icon.svg"/>
+            <attribute name="Nokia-MIDlet-Category" value="Application"/>
+            <attribute name="Nokia-MIDlet-No-Exit" value="true"/>
+            <attribute name="Nokia-MIDlet-On-Screen-Keypad" value="no"/>
         </wtkjad>
         <fixcrlf srcdir="dist/${vendor.dir}/${dist.dir}"
                  eol="crlf" eof="remove" encoding="UTF-8" 
@@ -1092,11 +1092,34 @@
             <attribute name="MIDlet-Icon" value="/resources/icon.png"/>
             <attribute name="${permission.attribute}" value="javax.microedition.io.Connector.file.read,javax.microedition.io.Connector.file.write,javax.microedition.io.Connector.bluetooth.client,javax.microedition.location.Location,javax.microedition.media.control.VideoControl.getSnapshot,javax.microedition.io.Connector.sms,javax.wireless.messaging.sms.receive,javax.wireless.messaging.sms.send,javax.microedition.io.Connector.comm,javax.microedition.io.Connector.cbs,javax.wireless.messaging.cbs.receive,javax.microedition.io.Connector.socket,javax.microedition.io.PushRegistry,javax.microedition.location.Orientation"/>
             <attribute name="Content-Folder" value="Applications"/>
+            <attribute name="Nokia-Scalable-Icon-MIDlet-1" value="/resources/icon.svg"/>
             <attribute name="Nokia-MIDlet-Category" value="Application"/>
             <attribute name="Nokia-MIDlet-No-Exit" value="true"/>
-            <attribute name="Nokia-MIDlet-S60-Selection-Key-Compatibility" value="true"/>
             <attribute name="Nokia-MIDlet-On-Screen-Keypad" value="no"/>
-            <attribute name="Nokia-Scalable-Icon-MIDlet-1" value="/resources/icon.svg"/>
+            <attribute name="Nokia-MIDlet-S60-Selection-Key-Compatibility" value="true"/>
+        </wtkjad>
+        <fixcrlf srcdir="dist/${vendor.dir}/${dist.dir}"
+                 eol="crlf" eof="remove" encoding="UTF-8"
+                 includes="trekbuddy${suffix}.jad"/>
+    </target>
+
+    <target name="dist.android">
+        <delete>
+            <fileset dir="dist/${vendor.dir}/${dist.dir}" includes="**/*.jar,**/*.jad"/>
+        </delete>
+        <copy file="tmp/preverified/trekbuddy${suffix}-obfuscated.jar"
+              tofile="dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jar"
+              verbose="true"/>
+        <wtkjad jadfile="dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad"
+                jarfile="dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jar"
+                config="CLDC-${wtk.cldc.version}"
+                profile="MIDP-${wtk.midp.version}"
+                name="${name}"
+                vendor="${vendor}"
+                version="${version}">
+            <midlet name="${name}" class="cz.kruch.track.TrackingMIDlet" icon="/resources/icon.png"/>
+            <attribute name="MicroEdition-Configuration" value="CLDC-${wtk.cldc.version}"/>
+            <attribute name="MicroEdition-Profile" value="MIDP-${wtk.midp.version}"/>
         </wtkjad>
         <fixcrlf srcdir="dist/${vendor.dir}/${dist.dir}"
                  eol="crlf" eof="remove" encoding="UTF-8"

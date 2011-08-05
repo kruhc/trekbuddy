@@ -48,7 +48,8 @@ public final class MotorolaLocationProvider
         try {
             // parse initialization params
             CharArrayTokenizer tokenizer = new CharArrayTokenizer();
-            tokenizer.init(Config.getLocationTimings(Config.LOCATION_PROVIDER_MOTOROLA), false);
+            tokenizer.init(Config.getLocationTimings(Config.LOCATION_PROVIDER_MOTOROLA),
+                           CharArrayTokenizer.DEFAULT_DELIMS, false);
             this.accuracy = tokenizer.nextInt();
             this.age = tokenizer.nextInt();
             this.timeout = tokenizer.nextInt();

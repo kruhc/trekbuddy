@@ -11,17 +11,19 @@ import javax.microedition.lcdui.game.Sprite;
 import javax.microedition.lcdui.Graphics;
 import javax.microedition.lcdui.Image;
 
+import api.file.File;
+import api.io.BufferedInputStream;
 import api.location.QualifiedCoordinates;
 import api.location.Location;
 import api.location.CartesianCoordinates;
 import api.location.ProjectionSetup;
 import api.location.Datum;
-import api.file.File;
 
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Calendar;
 import java.util.TimeZone;
+import java.util.Vector;
 
 /**
  * Misc helper.
@@ -62,6 +64,17 @@ public final class NavigationScreens {
     private static final char[] STR_M   = { ' ', 'm' };
     private static final char[] STR_FT  = { ' ', 'f', 't' };
 
+    private static final String RES_CROSSHAIRS = "/resources/crosshairs.png";
+    private static final String RES_ARROWS = "/resources/arrows.png";
+    private static final String RES_NAVIWS = "/resources/naviws.png";
+    private static final String RES_POIS = "/resources/pois.png";
+    private static final String RES_WPT = "/resources/wpt.png";
+    private static final String RES_BULLETS = "/resources/bullets.png";
+    private static final String RES_NLOCK = "/resources/nlock.png";
+    private static final String RES_SYMBOLS = "/resources/symbols.png";
+    private static final String RES_ZOOMS = "/resources/zooms.png";
+    private static final String RES_GUIDES = "/resources/guides.png";
+
     static {
 	    digits = "0123456789".toCharArray();
     }
@@ -73,14 +86,12 @@ public final class NavigationScreens {
     static Image logo;  // FIXME visibility
     static Image crosshairs; // FIXME visibility
     static Image nlock; // FIXME visibility
+    private static Image[] arrows;
     private static Image symbols;
-    private static Image touchs;
     private static Image waypoint, pois;
     private static Image providers;
-    private static Image[] arrows;
-/*
-    public static Image[] stores;   // FIXME visibility
-*/
+    private static Image zooms;
+    private static Image guides;
 
     // number formatter buffer
     private static final char[] print = new char[64];
@@ -92,39 +103,32 @@ public final class NavigationScreens {
     private static int wptSize2;
     private static int poiSize;
     private static int symbolSize;
-    private static int touchSize;
+    private static int zoomSize;
 
     // public (???) vars
-    public static int bulletSize;
     public static int useCondensed;
-    public static int nlockSize2;
+    static int bulletSize;
+    static int nlockSize2;
+    static int guideSize;
+    static int gdx, gdOffset;
 
     public static void initialize() throws IOException {
         // init image cache
-        crosshairs = Image.createImage("/resources/crosshairs.png");
+        crosshairs = Image.createImage(RES_CROSSHAIRS);
         arrows = new Image[] {
-            Image.createImage("/resources/arrows.png"),
-            Image.createImage("/resources/naviws.png")
+            Image.createImage(RES_ARROWS),
+            Image.createImage(RES_NAVIWS)
         };
-        pois = Image.createImage("/resources/pois.png");
-        waypoint = Image.createImage("/resources/wpt.png");
-        providers = Image.createImage("/resources/bullets.png");
-        nlock = Image.createImage("/resources/nlock.png");
-        symbols = Image.createImage("/resources/symbols.png");
-        touchs = Image.createImage("/resources/touches.png");
-/*
-        stores = new Image[] {
-            createImage("/resources/icon.store.xml.png"),
-            createImage("/resources/icon.store.xmla.png"),
-            createImage("/resources/icon.store.mem.png"),
-            createImage("/resources/icon.store.mema.png")
-        };
-*/
+        providers = Image.createImage(RES_BULLETS);
+        pois = Image.createImage(RES_POIS);
+        symbols = Image.createImage(RES_SYMBOLS);
+        waypoint = Image.createImage(RES_WPT);
+        nlock = Image.createImage(RES_NLOCK);
+
+        // setup vars
         arrowSize = new int[2];
         arrowSize2 = new int[2];
         arrowsFull = new boolean[2];
-
-        // setup vars
         setupVars(ARROW_COURSE);
         setupVars(ARROW_NAVI);
         wptSize2 = waypoint.getHeight() >> 1;
@@ -132,65 +136,65 @@ public final class NavigationScreens {
         poiSize = pois.getHeight();
         nlockSize2 = nlock.getHeight() >> 1;
         symbolSize = symbols.getHeight();
-        touchSize = touchs.getHeight();
     }
 
-    static int customize() throws IOException {
+    public static void initialize2() throws IOException { // 2nd init for touchscreens
+        // init image cache
+        zooms = Image.createImage(RES_ZOOMS);
+        zoomSize = zooms.getHeight();
+        guides = Image.createImage(RES_GUIDES);
+        guideSize = guides.getHeight();
+    }
+
+    static int customize(final Vector resources) throws IOException {
         int i = 0;
 
-        Image image = loadImage(Config.FOLDER_RESOURCES, "crosshairs.png");
+        Image image = loadImage(resources, RES_CROSSHAIRS);
         if (image != null) {
             crosshairs = null;
             crosshairs = image;
             i++;
         }
-        image = loadImage(Config.FOLDER_RESOURCES, "arrows.png");
+        image = loadImage(resources, RES_ARROWS);
         if (image != null) {
             arrows[ARROW_COURSE] = null;
             arrows[ARROW_COURSE] = image;
             setupVars(ARROW_COURSE);
             i++;
         }
-        image = loadImage(Config.FOLDER_RESOURCES, "naviws.png");
+        image = loadImage(resources, RES_NAVIWS);
         if (image != null) {
             arrows[ARROW_NAVI] = null;
             arrows[ARROW_NAVI] = image;
             setupVars(ARROW_NAVI);
             i++;
         }
-        image = loadImage(Config.FOLDER_RESOURCES, "wpt.png");
-        if (image != null) {
-            waypoint = null;
-            waypoint = image;
-            wptSize2 = waypoint.getHeight() >> 1;
-            i++;
-        }
-        image = loadImage(Config.FOLDER_RESOURCES, "pois.png");
-        if (image != null) {
-            pois = null;
-            pois = image;
-            poiSize = pois.getHeight();
-            i++;
-        }
-        image = loadImage(Config.FOLDER_RESOURCES, "nlock.png");
-        if (image != null) {
-            nlock = null;
-            nlock = image;
-            nlockSize2 = nlock.getHeight() >> 1;
-            i++;
-        }
-        image = loadImage(Config.FOLDER_RESOURCES, "symbols.png");
+        image = loadImage(resources, RES_SYMBOLS);
         if (image != null) {
             symbols = null;
             symbols = image;
-            symbolSize = symbols.getHeight();
+            symbolSize = image.getHeight();
             i++;
         }
-        image = loadImage(Config.FOLDER_RESOURCES, "touches.png");
+        image = loadImage(resources, RES_WPT);
         if (image != null) {
-            touchs = null;
-            touchs = image;
-            touchSize = touchs.getHeight();
+            waypoint = null;
+            waypoint = image;
+            wptSize2 = image.getHeight() >> 1;
+            i++;
+        }
+        image = loadImage(resources, RES_POIS);
+        if (image != null) {
+            pois = null;
+            pois = image;
+            poiSize = image.getHeight();
+            i++;
+        }
+        image = loadImage(resources, RES_NLOCK);
+        if (image != null) {
+            nlock = null;
+            nlock = image;
+            nlockSize2 = image.getHeight() >> 1;
             i++;
         }
 
@@ -199,6 +203,47 @@ public final class NavigationScreens {
         }
 
         return i;
+    }
+
+    static int customize2(final Vector resources) throws IOException {
+        int i = 0;
+
+        Image image = loadImage(resources, RES_ZOOMS);
+        if (image != null) {
+            zooms = null;
+            zooms = image;
+            zoomSize = image.getHeight();
+            i++;
+        }
+        image = loadImage(resources, RES_GUIDES);
+        if (image != null) {
+            guides = null;
+            guides = image;
+            guideSize = image.getHeight();
+            i++;
+        }
+
+        if (i > 0 && Config.forcedGc) {
+            System.gc(); // conditional
+        }
+
+        return i;
+    }
+
+    static void hasTouchEvents(final boolean isTouch) {
+        if (!isTouch) {
+            zooms = null;
+            guides = null;
+            zoomSize = guideSize = 0;
+        }
+        if (Config.zoomSpotsMode == 0) {
+            zooms = null;
+            zoomSize = 0;
+        }
+        if (Config.guideSpotsMode == 0) {
+            guides = null;
+            guideSize = 0;
+        }
     }
 
     private static void setupVars(final int idx) {
@@ -210,6 +255,14 @@ public final class NavigationScreens {
         arrowSize2[idx] = arrowSize[idx] >> 1;
     }
 
+    private static Image loadImage(final Vector resources, final String name) throws IOException {
+        final String sub = name.substring(11);
+        if (Config.resourceExist(resources, sub)) {
+            return loadImage(Config.FOLDER_RESOURCES, sub);
+        }
+        return null;
+    }
+
     static Image loadImage(final String folder, final String name) throws IOException {
         Image image = null;
         File file = null;
@@ -219,7 +272,7 @@ public final class NavigationScreens {
             if (file.exists()) {
                 InputStream in = null;
                 try {
-                    image = Image.createImage(in = file.openInputStream());
+                    image = Image.createImage(in = new BufferedInputStream(file.openInputStream(), 4096));
                 } finally {
                     if (in != null) {
                         try {
@@ -357,41 +410,123 @@ public final class NavigationScreens {
     }
 
     static void drawBacklightStatus(final Graphics graphics) {
-        /* no need to set clip - we draw at the bottom-right corner */
-        graphics.drawImage(symbols,
-                           Desktop.width - symbolSize, Desktop.height - symbolSize,
-                           Graphics.TOP | Graphics.LEFT);
-    }
-
-    static void drawKeylockStatus(final Graphics graphics) {
-        final int symbolSize = NavigationScreens.symbolSize;
-        if (symbols.getWidth() >= symbolSize << 1) { // complete status icon
-            /* no need to set clip - we draw at the bottom-left corner */
-//            graphics.drawImage(symbols,
-//                               0 - symbolSize, Desktop.height - symbolSize,
-//                               Graphics.TOP | Graphics.LEFT);
-            graphics.setClip(Desktop.width - (symbolSize << 1), Desktop.height - symbolSize,
-                             symbolSize, symbolSize);
+        if (guides == null || Config.guideSpotsMode == 0) {
+            final int symbolSize = NavigationScreens.symbolSize;
+            graphics.setClip(Desktop.width - symbolSize - 3, Desktop.height - symbolSize - 3, symbolSize, symbolSize);
+            drawBar(graphics, Desktop.height - symbolSize - 3, Desktop.height - 3, 0);
             graphics.drawImage(symbols,
-                               Desktop.width - ((symbolSize << 1) + symbolSize), Desktop.height - symbolSize,
+                               Desktop.width - symbolSize - 3, Desktop.height - symbolSize - 3,
                                Graphics.TOP | Graphics.LEFT);
             graphics.setClip(0, 0, Desktop.width, Desktop.height);
         }
     }
 
-    static void drawVisualSpots(final Graphics graphics) {
-        final int touchSize = NavigationScreens.touchSize;
-        final int j = Desktop.width / 5;
-        final int i = Desktop.height / 10;
-        final int insx = (j - touchSize) / 2;
-        final int insy = (i - touchSize) / 2;
-        final int i8y = i * 8 + insy;
-        final int j4x = j * 4 + insx;
-        graphics.setClip(insx, i8y, touchSize, touchSize);
-        graphics.drawImage(touchs, insx, i8y, Graphics.TOP | Graphics.LEFT);
-        graphics.setClip(j4x, i8y, touchSize, touchSize);
-        graphics.drawImage(touchs, j4x - touchSize, i8y, Graphics.TOP | Graphics.LEFT);
-        graphics.setClip(0, 0, Desktop.width, Desktop.height);
+    static void drawKeylockStatus(final Graphics graphics) {
+        if (guides == null || Config.guideSpotsMode == 0) {
+            final int symbolSize = NavigationScreens.symbolSize;
+            if (symbols.getWidth() >= (symbolSize << 1)) { // complete status icon
+                graphics.setClip(Desktop.width - (symbolSize << 1) - 3, Desktop.height - symbolSize - 3,
+                                 symbolSize, symbolSize);
+                drawBar(graphics, Desktop.height - symbolSize - 3, Desktop.height - 3, 0);
+                graphics.drawImage(symbols,
+                                   Desktop.width - ((symbolSize << 1) + symbolSize) - 3, Desktop.height - symbolSize - 3,
+                                   Graphics.TOP | Graphics.LEFT);
+                graphics.setClip(0, 0, Desktop.width, Desktop.height);
+            }
+        }
+    }
+
+    static void drawZoomSpots(final Graphics graphics) {
+        final boolean visible = Config.zoomSpotsMode == 1 || (Config.zoomSpotsMode == 2 && Desktop.screen.beenPressed);
+        if (visible && zooms != null && !Desktop.screen.isKeylock()) {
+            final int size = NavigationScreens.zoomSize;
+            final int j = Desktop.width / 5;
+            final int i = Desktop.height / 10;
+            final int insx = (j - size) >> 1;
+            final int insy = (i - size) >> 1;
+            final int i8y = i * 7 + insy;
+            final int j4x = j * 4 + insx;
+            graphics.setClip(insx, i8y, size, size);
+            graphics.drawImage(zooms, insx, i8y, Graphics.TOP | Graphics.LEFT);
+            graphics.setClip(j4x, i8y, size, size);
+            graphics.drawImage(zooms, j4x - size, i8y, Graphics.TOP | Graphics.LEFT);
+            graphics.setClip(0, 0, Desktop.width, Desktop.height);
+            // debug: render grid
+/*
+            graphics.setColor(0);
+            for (int a = 0; a < 5; a++) {
+                graphics.drawLine(a * j, 0, a * j, Desktop.height);
+            }
+            for (int a = 0; a < 10; a++) {
+                graphics.drawLine(0, a * i, Desktop.width, a * i);
+            }
+*/
+        }
+    }
+
+    static void drawGuideSpots(final Graphics graphics, final boolean all) {
+        final boolean visible = Config.guideSpotsMode == 1 || (Config.guideSpotsMode == 2 && Desktop.screen.beenPressed);
+        if (visible && guides != null) {
+            final boolean locked = Desktop.screen.isKeylock();
+            final int size = NavigationScreens.guideSize;
+            final int w = Desktop.width;
+            final int h = Desktop.height;
+            final int y = h - size - 3 + gdOffset;
+            // will be used for pointer-to-key mapping
+            gdx = (w - 5 * size - 2 * 3) / 4;
+            // 0. icons bar
+            if (all) {
+                drawBar(graphics, h - size - 2 * 3, Desktop.height, gdOffset);
+            }
+            // 1. home / lock
+            int x = 3;
+            if (all) {
+                graphics.setClip(x, y, size, size);
+                if (locked) {
+                    graphics.drawImage(guides, x - size, y, Graphics.TOP | Graphics.LEFT);
+                } else {
+                    graphics.drawImage(guides, x, y, Graphics.TOP | Graphics.LEFT);
+                }
+            }
+            // 2. waypoints
+            x += size + gdx;
+            if (all && !locked) {
+                graphics.setClip(x, y, size, size);
+                graphics.drawImage(guides, x - 4 * size, y, Graphics.TOP | Graphics.LEFT);
+            }
+            // 3. context
+            x += size + gdx;
+            if (!locked) {
+                graphics.setClip(x, y, size, size);
+                graphics.drawImage(guides, x - 2 * size, y, Graphics.TOP | Graphics.LEFT);
+            }
+            // 4. backlight
+            x += size + gdx;
+            if (all && !locked) {
+                graphics.setClip(x, y, size, size);
+                if (cz.kruch.track.ui.nokia.DeviceControl.getBacklightStatus() == 0) {
+                    graphics.drawImage(guides, x - 5 * size, y, Graphics.TOP | Graphics.LEFT);
+                } else {
+                    graphics.drawImage(guides, x - 6 * size, y, Graphics.TOP | Graphics.LEFT);
+                }
+            }
+            // 5. next screen
+            x += size + gdx;
+            if (all && !locked) {
+                graphics.setClip(x, y, size, size);
+                graphics.drawImage(guides, x - 3 * size, y, Graphics.TOP | Graphics.LEFT);
+            }
+            // restore clip
+            graphics.setClip(0, 0, w, h);
+        }
+    }
+
+    static void drawBar(final Graphics graphics, final int y1, final int y2, final int yOffset) {
+        final int bh = Desktop.bar.getHeight();
+        for (int y = y1; y < y2; ) {
+            graphics.drawImage(Desktop.bar, 0, y + yOffset, Graphics.TOP | Graphics.LEFT);
+            y += bh;
+        }
     }
 
     static StringBuffer toStringBuffer(final Location l, final StringBuffer sb) {

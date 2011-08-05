@@ -45,12 +45,10 @@ public class DeviceControl extends TimerTask {
 */
 //#ifdef __SYMBIAN__
         if (instance == null) {
-            if (cz.kruch.track.TrackingMIDlet.symbian) { // for IDEA only
-                try {
-                    instance = (DeviceControl) Class.forName("cz.kruch.track.ui.nokia.S60DeviceControl").newInstance();
-                } catch (Throwable t) {
-                    // ignore
-                }
+            try {
+                instance = (DeviceControl) Class.forName("cz.kruch.track.ui.nokia.S60DeviceControl").newInstance();
+            } catch (Throwable t) {
+                // ignore
             }
         }
 //#elifdef __ALL__

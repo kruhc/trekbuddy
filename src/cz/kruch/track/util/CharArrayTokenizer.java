@@ -10,10 +10,11 @@ import java.util.NoSuchElementException;
  * @author kruhc@seznam.cz
  */
 public final class CharArrayTokenizer {
-    private static final char[] DEFAULT_DELIMS = { ',' };
+    public static final char[] DEFAULT_DELIMS = { ',' };
 
     private char[] array;
     private char[] delimiters;
+    private char delimiter1, delimiter2;
     private boolean returnDelim;
 
     private int position;
@@ -30,16 +31,6 @@ public final class CharArrayTokenizer {
         this.init(token, DEFAULT_DELIMS, returnDelim);
     }
 
-    public void init(final String s, final boolean returnDelim) {
-        this.init(s, DEFAULT_DELIMS, returnDelim);
-    }
-
-    public void init(final char[] array, final int length, final char[] delimiters, final boolean returnDelim) {
-        this.init(array, delimiters, returnDelim);
-        /* set end explicitly */
-        this.end = length;
-    }
-
     public void init(final char[] array, final int length, final boolean returnDelim) {
         this.init(array, DEFAULT_DELIMS, returnDelim);
         /* set end explicitly */
@@ -53,17 +44,10 @@ public final class CharArrayTokenizer {
         this.end = token.begin + token.length;
     }
 
-    private void init(final char[] array, final char[] delimiters, final boolean returnDelim) {
-        /* gc hint */
-        this.array = null;
-        this.delimiters = null;
-        /* init */
-        this.array = array;
-        this.delimiters = delimiters;
-        this.returnDelim = returnDelim;
-        this.position = 0;
-        this.end = array.length;
-        this.dl = delimiters.length;
+    public void init(final char[] array, final int length, final char[] delimiters, final boolean returnDelim) {
+        this.init(array, delimiters, returnDelim);
+        /* set end explicitly */
+        this.end = length;
     }
 
     public void init(final String s, final char[] delimiters, final boolean returnDelim) {
@@ -77,11 +61,33 @@ public final class CharArrayTokenizer {
             this.array = new char[sLength + sLength >> 1];
         }
         s.getChars(0, sLength, this.array, 0);
-        this.delimiters = null; // gc hint
         this.delimiters = delimiters;
         this.returnDelim = returnDelim;
         this.position = 0;
         this.end = sLength;
+        this.dl = delimiters.length;
+    }
+
+    private void init(final char[] array, final char[] delimiters, final boolean returnDelim) {
+        /* gc hint */
+        this.array = null;
+        this.delimiters = null;
+        /* init */
+        this.array = array;
+        this.delimiters = delimiters;
+        switch (delimiters.length) {
+            case 1: {
+                this.delimiter1 = delimiters[0];
+                this.delimiter2 = 0;
+            } break;
+            case 2: {
+                this.delimiter1 = delimiters[0];
+                this.delimiter2 = delimiters[1];
+            } break;
+        }
+        this.returnDelim = returnDelim;
+        this.position = 0;
+        this.end = array.length;
         this.dl = delimiters.length;
     }
 
@@ -93,8 +99,16 @@ public final class CharArrayTokenizer {
         return parseInt(next());
     }
 
+    public int nextInt2() {
+        return parseInt(next2());
+    }
+
     public double nextDouble() {
         return parseDouble(next());
+    }
+
+    public double nextDouble2() {
+        return parseDouble(next2());
     }
 
     public Token next() {
@@ -105,7 +119,6 @@ public final class CharArrayTokenizer {
             // local refs
             final Token token = this.token;
             final char[] array = this.array;
-            final char[] delimiters = this.delimiters;
 
             // clear flag
             token.isDelimiter = false;
@@ -133,25 +146,65 @@ public final class CharArrayTokenizer {
 
             int offset = begin;
             while (offset < end) {
-                final char ch = array[offset];
+                if (isDelim(array[offset]))
+                    break;
+                offset++;
+            }
 
-                /* isDelim(ch) inlined */
-                boolean isDelim = false;
-                for (int i = dl; --i >= 0; ) {
-                    if (delimiters[i] == ch) {
-                        isDelim = true;
-                        break;
-                    }
+            // update position
+            position = offset;
+
+            // fill token
+            token.init(array, begin, offset - begin);
+
+            return token;
+        }
+
+        throw new NoSuchElementException();
+    }
+
+    public Token next2() {
+        // local ref
+        final int end = this.end;
+
+        if (position < end) {  /* == hasMoreTokens() */
+            // local refs
+            final Token token = this.token;
+            final char[] array = this.array;
+            final char delimiter1 = this.delimiter1;
+            final char delimiter2 = this.delimiter2;
+
+            // clear flag
+            token.isDelimiter = false;
+
+            // token beginning
+            int begin = position;
+            char ch = array[begin];
+
+            if (ch == delimiter1 || ch == delimiter2) { // TODO should be 'while'
+                // step fwd
+                begin++;
+                // delims wanted?
+                if (returnDelim) {
+                    // save position
+                    position = begin;
+                    // set delimiter flag
+                    token.isDelimiter = true;
+                    // return
+                    return token;
                 }
-                /* ~ */
-
-                /* hot code first */
-                if (!isDelim) {
-                    offset++;
-                    continue;
+                // check boundary
+                if (begin == end) {
+                    throw new NoSuchElementException();
                 }
+            }
 
-                break;
+            int offset = begin;
+            while (offset < end) {
+                ch = array[offset];
+                if (ch == delimiter1 || ch == delimiter2)
+                    break;
+                offset++;
             }
 
             // update position

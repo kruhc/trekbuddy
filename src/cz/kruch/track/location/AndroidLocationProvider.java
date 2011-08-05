@@ -284,6 +284,7 @@ public final class AndroidLocationProvider
                 }
             } catch (Exception e) {
                 setThrowable(e);
+                errors++;
             }
         }
 
@@ -302,19 +303,27 @@ public final class AndroidLocationProvider
         final int length = extra.length();
         int start = 0;
         int idx = extra.indexOf("$GP");
-        while (idx != -1) {
+        while (idx > -1) {
             if (idx != 0) {
                 if (idx - start < NmeaParser.MAX_SENTENCE_LENGTH) {
                     extra.getChars(start, idx, line, 0);
-                    final NmeaParser.Record rec = NmeaParser.parse(line, idx - start);
-                    switch (rec.type) {
-                        case NmeaParser.HEADER_GGA: {
-                            extraSat = rec.sat;
-                            extraFixQuality = rec.fix;
-                        } break;
-                        case NmeaParser.HEADER_GSA: {
-                            extraFix = rec.fix;
-                        } break;
+                    if (NmeaParser.validate(line, idx - start)) {
+                        final NmeaParser.Record rec = NmeaParser.parse(line, idx - start);
+                        switch (rec.type) {
+                            case NmeaParser.HEADER_GGA: {
+                                extraSat = rec.sat;
+                                extraFixQuality = rec.fix;
+                            } break;
+                            case NmeaParser.HEADER_GSA: {
+                                extraFix = rec.fix;
+                            } break;
+                        }
+                    } else {
+                        if (NmeaParser.getType(line, idx - start) != -1) {
+                            checksums++;
+                        } else {
+                            invalids++;
+                        }
                     }
                 }
             }

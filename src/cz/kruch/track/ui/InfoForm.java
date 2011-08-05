@@ -39,7 +39,7 @@ final class InfoForm implements CommandListener {
         pane.append(newItem(Resources.getString(Resources.INFO_ITEM_VENDOR), Resources.getString(Resources.INFO_ITEM_VENDOR_VALUE), Item.HYPERLINK));
         pane.append(newItem(Resources.getString(Resources.INFO_ITEM_VERSION), cz.kruch.track.TrackingMIDlet.version));
         pane.append(newItem(Resources.getString(Resources.INFO_ITEM_KEYS), ""));
-        pane.append(Resources.getString((short) (Resources.INFO_ITEM_KEYS_MS + desktop.getMode())));
+        pane.append(newItem(null, Resources.getString((short) (Resources.INFO_ITEM_KEYS_MS + desktop.getMode()))));
         pane.addCommand(new Command(Resources.getString(Resources.INFO_CMD_DETAILS), Desktop.POSITIVE_CMD_TYPE, 0));
         pane.addCommand(new Command(Resources.getString(Resources.CMD_CLOSE), Desktop.BACK_CMD_TYPE, 1));
         pane.setCommandListener(this);
@@ -51,13 +51,13 @@ final class InfoForm implements CommandListener {
     private void details(final Form pane) {
         // gc - for memory info to be correct...
         System.gc(); // unconditional!!!
-        final long totalMemory = Runtime.getRuntime().totalMemory();
         final long freeMemory = Runtime.getRuntime().freeMemory();
+        final long totalMemory = Runtime.getRuntime().totalMemory();
 
         // items
         pane.append(newItem("Platform", cz.kruch.track.TrackingMIDlet.getPlatform()));
 //#ifdef __ANDROID__
-        pane.append(newItem("Build", android.os.Build.MANUFACTURER + "|" + android.os.Build.MODEL + "|" + android.os.Build.PRODUCT));
+        pane.append(newItem("Build", android.os.Build.MANUFACTURER + "|" + android.os.Build.MODEL + "|" + android.os.Build.VERSION.RELEASE));
 //#endif
         final StringBuffer sb = new StringBuffer(32);
         sb.append(totalMemory).append('/').append(freeMemory);
@@ -83,35 +83,42 @@ final class InfoForm implements CommandListener {
         if (cz.kruch.track.TrackingMIDlet.getFlags() != null) {
             pane.append(newItem("AppFlags", cz.kruch.track.TrackingMIDlet.getFlags()));
         }
-        sb.delete(0, sb.length()).append(System.getProperty("microedition.locale"))
+        sb.delete(0, sb.length())
+                .append(System.getProperty("microedition.locale"))
                 .append(' ').append(System.getProperty("microedition.encoding"));
         pane.append(newItem("I18n", sb.toString()));
-        sb.delete(0, sb.length()).append(File.fsType)
-                .append("; resetable? ").append(cz.kruch.track.maps.Map.fileInputStreamResetable)
-//#ifdef __SYMBIAN__
-                .append("; network stream? ").append(cz.kruch.track.maps.Map.networkInputStreamAvailable)
-//#endif                
-                .append("; card: ").append(System.getProperty("fileconn.dir.memorycard"));
-        pane.append(newItem("Fs", sb.toString()));
-        sb.delete(0, sb.length()).append(cz.kruch.track.ui.nokia.DeviceControl.getName())
-                .append(' ').append(cz.kruch.track.ui.nokia.DeviceControl.getGsmCellId())
-                .append('/').append(cz.kruch.track.ui.nokia.DeviceControl.getGsmLac())
-                .append(' ').append(System.getProperty("com.nokia.mid.ui.version"));
-        pane.append(newItem("DeviceCtrl", sb.toString()));
-//#ifndef __ANDROID__
-        pane.append(newItem("Orientation", cz.kruch.track.ui.nokia.DeviceControl.getSensorStatus()));
-//#endif
-        sb.delete(0, sb.length()).append(cz.kruch.track.fun.Camera.type)
-                .append("; resolutions: ").append(System.getProperty("camera.resolutions"));
-        pane.append(newItem("Camera", sb.toString()));
-        sb.delete(0, sb.length()).append(cz.kruch.track.TrackingMIDlet.hasPorts())
-                .append("; ").append(System.getProperty("microedition.commports"));
-        pane.append(newItem("Ports", sb.toString()));
-        sb.delete(0, sb.length()).append(TimeZone.getDefault().getID())
+        sb.delete(0, sb.length())
+                .append(TimeZone.getDefault().getID())
                 .append("; ").append(TimeZone.getDefault().useDaylightTime())
                 .append("; ").append(TimeZone.getDefault().getRawOffset());
         pane.append(newItem("TimeZone", sb.toString()));
-        sb.delete(0, sb.length()).append("safe renderer? ").append(Config.S60renderer)
+        sb.delete(0, sb.length())
+                .append(cz.kruch.track.ui.nokia.DeviceControl.getName())
+                .append(' ').append(System.getProperty("com.nokia.mid.ui.version"));
+        if (Config.gpxGsmInfo) {
+            sb.append(' ').append(cz.kruch.track.ui.nokia.DeviceControl.getGsmCellId());
+            sb.append('/').append(cz.kruch.track.ui.nokia.DeviceControl.getGsmLac());
+        }
+        pane.append(newItem("DeviceCtrl", sb.toString()));
+        sb.delete(0, sb.length())
+                .append(File.fsType)
+                .append("; resetable? ").append(cz.kruch.track.maps.Map.fileInputStreamResetable)
+//#ifdef __SYMBIAN__
+                .append("; network stream? ").append(cz.kruch.track.maps.Map.networkInputStreamAvailable)
+//#endif
+//#ifdef __MARKSUPPORT__
+                .append("; advio: ").append(api.io.BufferedInputStream.marksCount)
+                .append('/').append(api.io.BufferedInputStream.resetsCount)
+                .append(',').append('/').append(com.ice.tar.TarInputStream.marksCount)
+                .append('/').append(com.ice.tar.TarInputStream.resetsCount)
+//#endif                
+                .append("; card: ").append(System.getProperty("fileconn.dir.memorycard"));
+        pane.append(newItem("Fs", sb.toString()));
+//#ifndef __ANDROID__
+        pane.append(newItem("Orientation", cz.kruch.track.ui.nokia.DeviceControl.getSensorStatus()));
+//#endif
+        sb.delete(0, sb.length())
+                .append("safe renderer? ").append(Config.S60renderer)
                 .append("; hasRepeatEvents? ").append(Desktop.screen.hasRepeatEvents())
                 .append("; hasPointerEvents? ").append(Desktop.screen.hasPointerEvents())
                 .append("; ").append(Desktop.width).append('x').append(Desktop.height)
@@ -120,7 +127,8 @@ final class InfoForm implements CommandListener {
         if (map == null) {
             pane.append(newItem("Map", ""));
         } else {
-            sb.delete(0, sb.length()).append(map.getName())
+            sb.delete(0, sb.length())
+                    .append(map.getName())
                     .append("; datum: ").append(map.getDatum())
                     .append("; projection: ").append(map.getProjection())
                     .append("; tmi? ").append(map.isTmi());
@@ -129,15 +137,17 @@ final class InfoForm implements CommandListener {
 //#endif
             pane.append(newItem("Map", sb.toString()));
         }
-        sb.delete(0, sb.length()).append((extras[0] == null ? "" : extras[0].toString()))
-                .append("; stalls=").append(api.location.LocationProvider.stalls)
-                .append("; restarts=").append(api.location.LocationProvider.restarts)
-                .append("; syncs=").append(api.location.LocationProvider.syncs)
-                .append("; mismatches=").append(api.location.LocationProvider.mismatches)
-                .append("; malformed=").append(api.location.LocationProvider.checksums)
-                .append("; errors=").append(api.location.LocationProvider.errors)
-                .append("; pings=").append(api.location.LocationProvider.pings)
-                .append("; maxavail=").append(api.location.LocationProvider.maxavail);
+        sb.delete(0, sb.length())
+                .append((extras[0] == null ? "" : extras[0].toString()))
+                .append("; st=").append(api.location.LocationProvider.stalls)
+                .append("; rs=").append(api.location.LocationProvider.restarts)
+                .append("; sc=").append(api.location.LocationProvider.syncs)
+                .append("; ms=").append(api.location.LocationProvider.mismatches)
+                .append("; mf=").append(api.location.LocationProvider.invalids)
+                .append("; ch=").append(api.location.LocationProvider.checksums)
+                .append("; er=").append(api.location.LocationProvider.errors)
+                .append("; pg=").append(api.location.LocationProvider.pings)
+                .append("; mx=").append(api.location.LocationProvider.maxavail);
         pane.append(newItem("ProviderStatus", sb.toString()));
         if (extras[1] != null) {
             pane.append(newItem("ProviderError", extras[1].toString()));
@@ -145,8 +155,17 @@ final class InfoForm implements CommandListener {
         if (extras[2] != null) {
             pane.append(newItem("TracklogError", extras[2].toString()));
         }
-        sb.delete(0, sb.length());
-        sb.append("pauses: ").append(cz.kruch.track.TrackingMIDlet.pauses)
+        sb.delete(0, sb.length())
+                .append(cz.kruch.track.fun.Camera.type)
+                .append("; encodings: ").append(System.getProperty("video.snapshot.encodings"))
+                .append("; resolutions: ").append(System.getProperty("camera.resolutions"));
+        pane.append(newItem("Camera", sb.toString()));
+        sb.delete(0, sb.length())
+                .append(cz.kruch.track.TrackingMIDlet.hasPorts())
+                .append("; ").append(System.getProperty("microedition.commports"));
+        pane.append(newItem("Ports", sb.toString()));
+        sb.delete(0, sb.length())
+                .append("pauses: ").append(cz.kruch.track.TrackingMIDlet.pauses)
                 .append("; uncaught: ").append(SmartRunnable.uncaught)
                 .append("; maxtasks: ").append(SmartRunnable.maxQT)
                 .append("; merged: ").append(SmartRunnable.mergedRT).append('/').append(SmartRunnable.mergedKT)
@@ -179,7 +198,7 @@ final class InfoForm implements CommandListener {
 
     private static StringItem newItem(final String label, final String text,
                                       final int appearance) {
-        final StringItem item = new StringItem(label + ": ", text, appearance);
+        final StringItem item = new StringItem(label != null ? label + ": " : null, text, appearance);
         item.setLayout(Item.LAYOUT_2 | Item.LAYOUT_NEWLINE_AFTER);
         item.setFont(Desktop.fontStringItems);
         return item;

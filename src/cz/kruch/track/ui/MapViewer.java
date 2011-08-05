@@ -2,11 +2,11 @@
 
 package cz.kruch.track.ui;
 
+import cz.kruch.track.configuration.Config;
+import cz.kruch.track.location.Waypoint;
 import cz.kruch.track.maps.Slice;
 import cz.kruch.track.maps.Map;
 import cz.kruch.track.util.ExtraMath;
-import cz.kruch.track.location.Waypoint;
-import cz.kruch.track.configuration.Config;
 
 import javax.microedition.lcdui.Graphics;
 import javax.microedition.lcdui.Canvas;
@@ -14,9 +14,9 @@ import javax.microedition.lcdui.Image;
 import javax.microedition.lcdui.game.Sprite;
 import java.util.Vector;
 
+import api.location.Datum;
 import api.location.Location;
 import api.location.QualifiedCoordinates;
-import api.location.Datum;
 import api.location.ProjectionSetup;
 
 /**
@@ -115,6 +115,10 @@ final class MapViewer {
 
         // update scale
         calculateScale();
+    }
+
+    void onBackground() {
+        slices.removeAllElements();        
     }
 
     boolean hasMap() {
@@ -290,8 +294,8 @@ final class MapViewer {
                 y0 = slice.getY();
                 switch (direction) {
                     case Canvas.UP:
-                        if (y0 < y) {
-                            y = y0;
+                        if (y0 < y /* tile larger than screen: */ - (mHeight - dHeight)) {
+                            y = y0 /* tile larger than screen: */ + (mHeight - dHeight);
                             chy = dHeight - crosshairSize2 /*- 1*/;
                             steps = mHeight - (py - y0);
                             dirty = true;
@@ -306,8 +310,8 @@ final class MapViewer {
                         }
                     break;
                     case Canvas.LEFT:
-                        if (x0 < x) {
-                            x = x0;
+                        if (x0 < x /* tile larger than screen: */ - (mWidth - dWidth)) {
+                            x = x0 /* tile larger than screen: */ + (mWidth - dWidth);
                             chx = dWidth - crosshairSize2 /*- 1*/;
                             steps = mWidth - (px - x0);
                             dirty = true;
@@ -485,10 +489,10 @@ final class MapViewer {
                     if (p.getX() == 0) result = 'W';
                 break;
                 case Canvas.RIGHT:
-                    if (p.getX() >= map.getWidth() - 1) result = 'E';
+                    if (p.getX() + 1 >= map.getWidth() - 1) result = 'E'; // TODO workaround, bug is elsewhere 
                 break;
                 case Canvas.DOWN:
-                    if (p.getY() >= map.getHeight() - 1) result = 'S';
+                    if (p.getY() + 1 >= map.getHeight() - 1) result = 'S'; // TODO workaround, bug is elsewhere
                 break;
             }
         }
@@ -833,21 +837,28 @@ final class MapViewer {
     }
 
     private void drawScale(final Graphics graphics) {
-        // local references for faster access
-        final int h = Desktop.height;
-        final int x0 = scaleDx;
-        final int x1 = scaleDx + scaleLength;
+        // position on screen
+        int h, x0, x1;
+        if (Desktop.screen.iconBarVisible() && NavigationScreens.guideSize > 0) {
+            h = Desktop.height - NavigationScreens.guideSize - 2 * 3;
+            x0 = (Desktop.width - scaleLength) >> 1;
+        } else {
+            h = Desktop.height;
+            x0 = scaleDx;
+        }
+        x1 = x0 + scaleLength;
 
         // scale
+        final int cy = h - Desktop.osd.bh - 2;
         if (!Config.osdNoBackground) {
-            graphics.drawImage(Desktop.barScale, x0 + 3 - 2, h - Desktop.osd.bh - 2, Graphics.TOP | Graphics.LEFT);
+            graphics.drawImage(Desktop.barScale, x0 + 3 - 2, cy, Graphics.TOP | Graphics.LEFT);
         }
         graphics.setColor(0);
-        graphics.drawLine(x0, h - 4, x0, h - 2);
-        graphics.drawLine(x0, h - 3, x1, h - 3);
-        graphics.drawLine(x1, h - 4, x1, h - 2);
+        graphics.drawLine(x0, h - 6, x0, h - 2);
+        graphics.drawLine(x0, h - 4, x1, h - 4);
+        graphics.drawLine(x1, h - 6, x1, h - 2);
         graphics.drawChars(sInfo, 0, sInfoLength,
-                           x0 + 3, h - Desktop.osd.bh - 2,
+                           x0 + 3, cy,
                            Graphics.LEFT | Graphics.TOP);
     }
 
@@ -1199,7 +1210,7 @@ final class MapViewer {
         if (thick > 1) {
             final int t0x0, t0y0, t0x1, t0y1, t0x2, t0y2;
             final int t1x0, t1y0, t1x1, t1y1, t1x2, t1y2;
-            final int th2 = thick / 2;
+            final int th2 = thick >> 1;
             if ((flags & 0x01) != 0) {
                 t0x0 = x0 - th2;
                 t0y0 = y0;
@@ -1465,7 +1476,7 @@ final class MapViewer {
                 }
                 final int grade = ExtraMath.grade(half);
                 long guess = (half / grade) * grade;
-                if (half - guess > grade / 2) {
+                if (half - guess > (grade >> 1)) {
                     guess += grade;
                 }
                 scaleLength = (int) (guess / scale);

@@ -6,50 +6,55 @@ import java.io.IOException;
 import java.io.InputStream;
 
 /**
- * Buffered input stream.
+ * Buffered input stream. Reusable and configurable behaviour.
  */
 public final class BufferedInputStream extends InputStream {
     /** underlying stream */
     private InputStream in;
     /** read buffer */
-    private byte[] buffer;
+    private byte[] buf;
     /** number of bytes in the buffer */
     private int count;
     /** current position in the buffer */
-    private int position;
+    private int pos;
+//#ifdef __MARKSUPPORT__
+    /** current mark limit */
+    private int marklimit;
+    /** currently marked position */
+    private int markpos;
+    // nr of reads after mark()
+    private int fillcount;
+//#endif
+    // allow autofill
+    private boolean autofill;
 
-    /**
-     * Constructor.
-     *
-     * @param in underlying stream - "not null" check removed <b>may be <code>null</code>!!!</b> (since 0.9.5, for reuse) // TODO redesign
-     * @param size buffer size
-     */
     public BufferedInputStream(InputStream in, int size) {
         this.in = in;
-        this.buffer = new byte[size];
+        this.buf = new byte[size];
+        this.autofill = true;
+//#ifdef __MARKSUPPORT__
+        this.markpos = -1;
+//#endif
     }
 
-    /**
-     * Reuses this stream with another underlying stream.
-     * Intended to avoid allocation of a new instance.
-     *
-     * @param in new underlying stream
-     * @return this stream
-     */
     public InputStream setInputStream(InputStream in) {
         this.in = null; // gc hint
         this.in = in;
-        this.position = this.count = 0;
+        this.pos = this.count = 0;
+//#ifdef __MARKSUPPORT__
+        this.fillcount = 0;
+        this.markpos = -1;
+//#endif
 
         return this;
     }
 
-    /*
-     * InputStream contract
-     */
+    public void setAutofill(boolean autofill) {
+        this.autofill = autofill;
+    }
 
     public int read() throws IOException {
-/* // original variant
+/* // original implementation
         if (pos >= count) {
             fillBuffer();
             if (pos >= count) {
@@ -59,20 +64,35 @@ public final class BufferedInputStream extends InputStream {
 
         return buffer[pos++] & 0xff;
 */
+
         /* Optimistic variant first, at the expense of duplicated code... */
-        if (position < count) {
-            return buffer[position++] & 0xff;
+        if (pos < count) {
+            return buf[pos++] & 0xff;
         }
 
-        final byte[] buffer = this.buffer;
-        
         /* buffer is depleted, fill it */
-        position = 0;
-        count = in.read(buffer, 0, buffer.length);
+        if (autofill) {
+            // fill(buf.length) inlined
+            pos = 0;
+//#ifdef __MARKSUPPORT__
+            if (fillcount++ > 0) {
+                markpos = -1;
+            }
+//#endif
+            count = in.read(buf, 0, buf.length);
+            // ~
+        } else {
+//#ifdef __MARKSUPPORT__
+            markpos = -1;
+//#endif
+            return in.read();
+        }
 
-        /* got something */
-        if (position < count) {
-            return buffer[position++] & 0xff;
+        /* got something? count is either -1 or greater than 0 */
+        if (count > 0) {
+            return buf[pos++] & 0xff;
+//        } else if (count == 0) {
+//            throw new RuntimeException("stream.read()=0");
         }
 
         return -1;
@@ -86,13 +106,41 @@ public final class BufferedInputStream extends InputStream {
         int n = 0;
 
         if (len > 0) {
-            final int avail = count - position;
+            final int avail = count - pos;
             if (avail > 0) {
                 n = avail < len ? avail : len;
-                System.arraycopy(buffer, position, b, off, n);
-                position += n;
+                System.arraycopy(buf, pos, b, off, n);
+                pos += n;
             } else {
-                n = in.read(b, off, len);
+//#ifdef __MARKSUPPORT__
+                // fill(len) inlined
+                pos = 0;
+                if (fillcount++ > 0) {
+                    markpos = -1;
+                }
+                n = count = in.read(buf, 0, autofill ? buf.length : len);
+                // ~
+                if (n > 0) { // count is either -1 or greater than 0
+                    n = n < len ? n : len;
+                    System.arraycopy(buf, 0, b, off, n);
+                    pos += n;
+                }
+//#else
+                if (autofill && len < buf.length) {
+                    pos = 0;
+                    n = count = in.read(buf, 0, buf.length);
+                    if (n > 0) { // count is either -1 or greater than 0
+                        n = n < len ? n : len;
+                        System.arraycopy(buf, 0, b, off, n);
+                        pos += n;
+                    }
+                } else {
+                    n = in.read(b, off, len);
+                }
+//                if (n == 0) {
+//                    throw new RuntimeException("stream.read([])=0");
+//                }
+//#endif
             }
         }
 
@@ -101,12 +149,17 @@ public final class BufferedInputStream extends InputStream {
 
     public long skip(long n) throws IOException {
         if (n > 0) {
-            final long avail = count - position;
+            final long avail = count - pos;
             if (avail > 0) {
                 n = avail < n ? avail : n;
-                position += n;
+                pos += n;
             } else { 
-                n = in.skip(n);
+                n = in.skip(n); /* should be read-through */
+//#ifdef __MARKSUPPORT__
+                if (n > 0) {
+                    markpos = -1;
+                }
+//#endif
             }
         }
 
@@ -114,15 +167,19 @@ public final class BufferedInputStream extends InputStream {
     }
 
     public int available() throws IOException {
-        final int avail = count - position;
-        if (avail > 0) {
-            return avail;
+        final int n = count - pos;
+        if (n > 0) {
+            return n;
         }
         return in.available();
     }
 
     public void close() throws IOException {
-        position = count = 0; // prepare for reuse
+        pos = count = 0; // prepare for reuse
+//#ifdef __MARKSUPPORT__
+        fillcount = 0;
+        markpos = -1;
+//#endif
         if (in != null) { // beware it may be null
             try {
                 in.close();
@@ -131,4 +188,34 @@ public final class BufferedInputStream extends InputStream {
             }
         }
     }
+
+//#ifdef __MARKSUPPORT__
+
+    public void mark(int readlimit) {
+        marksCount++;
+        marklimit = readlimit;
+        markpos = pos;
+        fillcount = 0;
+    }
+
+    public boolean markSupported() {
+        return true;
+    }
+
+    public void reset() throws IOException {
+        resetsCount++;
+        if (in == null) {
+            throw new IOException("Stream is closed");
+        }
+        if (markpos < 0) {
+            throw new IOException("Resetting to invalid mark");
+        }
+        pos = markpos;
+    }
+
+    /* stream characteristic */
+    public static int marksCount, resetsCount;
+
+//#endif
+
 }

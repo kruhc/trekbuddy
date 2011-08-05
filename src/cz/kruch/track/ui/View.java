@@ -85,6 +85,12 @@ abstract class View {
         return isVisible ? Desktop.MASK_SCREEN : Desktop.MASK_NONE;
     }
 
+    public void onBackground() {
+    }
+
+    public void onForeground() {
+    }
+
     public abstract void render(Graphics g, Font f, int mask);
     public abstract int locationUpdated(Location l);
 

@@ -84,6 +84,8 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
     private ChoiceGroup choiceInternal;
     private ChoiceGroup choicePower;
     private ChoiceGroup choiceEasyzoom;
+    private ChoiceGroup choiceZoomSpots;
+    private ChoiceGroup choiceGuideSpots;
 
     private List pane;
     private Form submenu;
@@ -199,7 +201,6 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
             choiceMisc.append(Resources.getString(Resources.CFG_DESKTOP_FLD_DEC_PRECISION), null);
             choiceMisc.append(Resources.getString(Resources.CFG_DESKTOP_FLD_HPS_WPT_TRUE_AZI), null);
             choiceMisc.append(Resources.getString(Resources.CFG_DESKTOP_FLD_EASYZOOM_VOLUME), null);
-            choiceMisc.append(Resources.getString(Resources.CFG_DESKTOP_FLD_SHOW_VISUAL_SPOTS), null);
             choiceMisc.append(Resources.getString(Resources.CFG_DESKTOP_FLD_OSD_BASIC), null);
             choiceMisc.append(Resources.getString(Resources.CFG_DESKTOP_FLD_OSD_EXT), null);
             choiceMisc.append(Resources.getString(Resources.CFG_DESKTOP_FLD_OSD_SCALE), null);
@@ -217,7 +218,6 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
                 Config.decimalPrecision,
                 Config.hpsWptTrueAzimuth,
                 Config.easyZoomVolumeKeys,
-                Config.showVisualSpots.booleanValue(),
                 Config.osdBasic,
                 Config.osdExtended,
                 Config.osdScale,
@@ -227,6 +227,30 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
             });
             submenu.append(choiceMisc);
 
+            // icons appearance
+            if (Desktop.screen.hasPointerEvents()) {
+                choiceZoomSpots = new ChoiceGroup(Resources.getString(Resources.CFG_DESKTOP_GROUP_ZOOM_SPOTS), ChoiceGroup.POPUP);
+                choiceZoomSpots.append(Resources.getString(Resources.CFG_LOCATION_FLD_TRACKLOG_NEVER), null);
+                choiceZoomSpots.append(Resources.getString(Resources.CFG_LOCATION_FLD_TRACKLOG_ALWAYS), null);
+                choiceZoomSpots.append(Resources.getString(Resources.CFG_DESKTOP_FLD_HIDE_AFTER) + " 3s", null);
+                choiceZoomSpots.setSelectedIndex(Config.zoomSpotsMode, true);
+                submenu.append(choiceZoomSpots);
+                choiceGuideSpots = new ChoiceGroup(Resources.getString(Resources.CFG_DESKTOP_GROUP_GUIDE_SPOTS), ChoiceGroup.POPUP);
+                choiceGuideSpots.append(Resources.getString(Resources.CFG_LOCATION_FLD_TRACKLOG_NEVER), null);
+                choiceGuideSpots.append(Resources.getString(Resources.CFG_LOCATION_FLD_TRACKLOG_ALWAYS), null);
+                choiceGuideSpots.append(Resources.getString(Resources.CFG_DESKTOP_FLD_HIDE_AFTER) + " 3s", null);
+                choiceGuideSpots.setSelectedIndex(Config.guideSpotsMode, true);
+                submenu.append(choiceGuideSpots);
+            }
+
+            // easyzoom
+            choiceEasyzoom = new ChoiceGroup(Resources.getString(Resources.CFG_DESKTOP_GROUP_EASYZOOM), ChoiceGroup.POPUP);
+            choiceEasyzoom.append(Resources.getString(Resources.CFG_DESKTOP_FLD_EASYZOOM_OFF), null);
+            choiceEasyzoom.append(Resources.getString(Resources.CFG_DESKTOP_FLD_EASYZOOM_LAYERS), null);
+//            choiceEasyzoom.append(Resources.getString(Resources.CFG_DESKTOP_FLD_EASYZOOM_MAPS), null);
+            choiceEasyzoom.setSelectedIndex(Config.easyZoomMode, true);
+            submenu.append(choiceEasyzoom);
+            
             // font
             submenu.append(gaugeDesktopFont = new Gauge(Resources.getString(Resources.CFG_DESKTOP_FLD_FONT_SIZE), true, 2, Config.desktopFontSize));
 
@@ -253,14 +277,6 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
             submenu.append(itemLineCfg = createLineCfgItem(Resources.getString(Resources.CFG_DESKTOP_FLD_TRAIL_PREVIEW),
                                                            Config.trailColor, Config.trailThick));
             submenu.append(new Spacer(submenu.getWidth(), 1));
-
-            // easyzoom
-            choiceEasyzoom = new ChoiceGroup(Resources.getString(Resources.CFG_DESKTOP_GROUP_EASYZOOM), ChoiceGroup.POPUP);
-            choiceEasyzoom.append(Resources.getString(Resources.CFG_DESKTOP_FLD_EASYZOOM_OFF), null);
-            choiceEasyzoom.append(Resources.getString(Resources.CFG_DESKTOP_FLD_EASYZOOM_LAYERS), null);
-//            choiceEasyzoom.append(Resources.getString(Resources.CFG_DESKTOP_FLD_EASYZOOM_MAPS), null);
-            choiceEasyzoom.setSelectedIndex(Config.easyZoomMode, true);
-            submenu.append(choiceEasyzoom);
 
         } else if (menuNavigation.equals(section)) {
 
@@ -349,14 +365,18 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
             submenu.append(choicePerformance);
 
             if (cz.kruch.track.TrackingMIDlet.supportsVideoCapture()) {
-                submenu.append(fieldCaptureLocator = new TextField(Resources.getString(Resources.CFG_LOCATION_FLD_CAPTURE_LOCATOR), Config.captureLocator, 16, TextField.URL));
+                submenu.append(fieldCaptureLocator = new TextField(Resources.getString(Resources.CFG_LOCATION_FLD_CAPTURE_LOCATOR), Config.captureLocator, 18, TextField.URL));
                 submenu.append(choiceSnapshotFormat = new ChoiceGroup(Resources.getString(Resources.CFG_LOCATION_FLD_CAPTURE_FMT), Desktop.CHOICE_POPUP_TYPE));
                 final String[] formats = Camera.getStillResolutions();
                 for (int N = formats.length, i = 0; i < N; i++) {
-                    choiceSnapshotFormat.setSelectedIndex(choiceSnapshotFormat.append(formats[i], null), Config.snapshotFormat.equals(formats[i]));
+                    final int idx = choiceSnapshotFormat.append(formats[i], null);
+                    if ((Camera.type == Camera.TYPE_JSR135 && Config.snapshotFormat.equals(formats[i]))
+                        || (Camera.type == Camera.TYPE_JSR234 && Config.snapshotFormatIdx == i)) {
+                        choiceSnapshotFormat.setSelectedIndex(idx, true);
+                    }
                 }
                 submenu.append(fieldSnapshotFormat = new TextField(null, Config.snapshotFormat, 64, TextField.ANY));
-                if (Config.snapshotFormat == null || Config.snapshotFormat.length() == 0) {
+                if (Camera.type == Camera.TYPE_JSR135 && (Config.snapshotFormat == null || Config.snapshotFormat.length() == 0)) {
                     if (choiceSnapshotFormat.size() > 0) {
                         fieldSnapshotFormat.setString(choiceSnapshotFormat.getString(choiceSnapshotFormat.getSelectedIndex()));
                     }
@@ -581,9 +601,11 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
             }
 
         } else if (affected == choiceSnapshotFormat) {
-            final int i0 = choiceSnapshotFormat.getSelectedIndex();
-            final String s0 = choiceSnapshotFormat.getString(i0);
-            fieldSnapshotFormat.setString(s0);
+            if (Camera.type == Camera.TYPE_JSR135) {
+                final int i0 = choiceSnapshotFormat.getSelectedIndex();
+                final String s0 = choiceSnapshotFormat.getString(i0);
+                fieldSnapshotFormat.setString(s0);
+            }
         }
         
     }
@@ -792,20 +814,23 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
                 Config.decimalPrecision = misc[7];
                 Config.hpsWptTrueAzimuth = misc[8];
                 Config.easyZoomVolumeKeys = misc[9];
-                Config.showVisualSpots = new Boolean(misc[10]);
-                Config.osdBasic = misc[11];
-                Config.osdExtended = misc[12];
-                Config.osdScale = misc[13];
-                Config.osdNoBackground = misc[14];
-                Config.osdBoldFont = misc[15];
-                Config.osdBlackColor = misc[16];
+                Config.osdBasic = misc[10];
+                Config.osdExtended = misc[11];
+                Config.osdScale = misc[12];
+                Config.osdNoBackground = misc[13];
+                Config.osdBoldFont = misc[14];
+                Config.osdBlackColor = misc[15];
+                if (Desktop.screen.hasPointerEvents()) {
+                    Config.zoomSpotsMode = choiceZoomSpots.getSelectedIndex();
+                    Config.guideSpotsMode = choiceGuideSpots.getSelectedIndex();
+                }
+                Config.easyZoomMode = choiceEasyzoom.getSelectedIndex();
                 Config.desktopFontSize = gaugeDesktopFont.getValue();
                 Config.osdAlpha = gaugeOsdAlpha.getValue() * gaugeAlphaScale;
                 Config.cmsCycle = Integer.parseInt(fieldCmsCycle.getString());
                 Config.listFont = Integer.parseInt(fieldListFont.getString(), 16);
                 Config.trailColor = itemLineColor;
                 Config.trailThick = itemLineThick;
-                Config.easyZoomMode = choiceEasyzoom.getSelectedIndex();
                 changed = true;
 
             } else if (menuMisc.equals(section)) {
@@ -830,8 +855,8 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
                 // multimedia
                 if (cz.kruch.track.TrackingMIDlet.supportsVideoCapture()) {
                     Config.captureLocator = fieldCaptureLocator.getString();
-                    Config.snapshotFormat = fieldSnapshotFormat.getString();
                     Config.snapshotFormatIdx = choiceSnapshotFormat.getSelectedIndex();
+                    Config.snapshotFormat = fieldSnapshotFormat.getString().trim();
                 }
             }
         }

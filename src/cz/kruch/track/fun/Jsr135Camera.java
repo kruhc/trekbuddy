@@ -5,6 +5,7 @@ package cz.kruch.track.fun;
 import cz.kruch.track.configuration.Config;
 
 import javax.microedition.media.MediaException;
+import javax.microedition.media.Control;
 import javax.microedition.media.control.VideoControl;
 import javax.microedition.io.Connector;
 import javax.microedition.lcdui.Form;
@@ -45,9 +46,6 @@ final class Jsr135Camera extends Camera {
         }
     }
 
-    void beforeShoot() throws MediaException {
-    }
-
 	void createFinder(final Form form) throws MediaException {
 		createFinder(form, (VideoControl) control);
 	}
@@ -61,20 +59,10 @@ final class Jsr135Camera extends Camera {
         Throwable throwable = null;
 
         try {
-            // fix the format
-            String format = Config.snapshotFormat.trim();
-            if ("".equals(format)) {
-                format = null;
-            }
 
-            // prepare for Armageddon
-//#ifndef __RIM__
-            System.gc(); // unconditional!!!
-//#endif
-
-            // take the snapshot
-            result = saveImage(((VideoControl) control).getSnapshot(format));
-
+            // take it
+            result = takePicture(control);
+            
         } catch (Throwable t) {
 
             // remember
@@ -89,7 +77,23 @@ final class Jsr135Camera extends Camera {
         finished(result, throwable);
     }
 
-    private String saveImage(final byte[] raw) throws IOException {
+    static String takePicture(final Control control) throws MediaException, IOException {
+        // fix the format
+        String format = Config.snapshotFormat.trim();
+        if ("".equals(format)) {
+            format = null;
+        }
+
+        // prepare for Armageddon
+//#ifndef __RIM__
+        System.gc(); // unconditional!!!
+//#endif
+
+        // take the snapshot
+        return saveImage(((VideoControl) control).getSnapshot(format));
+    }
+
+    static String saveImage(final byte[] raw) throws IOException {
         File file = null;
         OutputStream output = null;
 

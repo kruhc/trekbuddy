@@ -25,12 +25,13 @@ import java.io.InputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.OutputStream;
 import java.io.ByteArrayInputStream;
+import java.io.EOFException;
 import java.util.Vector;
 
 import api.file.File;
 
 /**
- * Camera for taking snapshots. Also plays sound.
+ * Multimeda helper for taking pictures and playing sounds.
  *
  * @author kruhc@seznam.cz
  */
@@ -47,8 +48,8 @@ public abstract class Camera implements
     protected static final String PIC_SUFFIX    = ".jpg";
     protected static final String FOLDER_PREFIX = "images-";
 
-    private static final String TYPE_JSR234 = "JSR234";
-    private static final String TYPE_JSR135 = "JSR135";
+    public static final String TYPE_JSR234 = "JSR234";
+    public static final String TYPE_JSR135 = "JSR135";
 
     // thumbnail byte marker
     private static final byte BYTE_FF = (byte) 0xFF;
@@ -61,6 +62,7 @@ public abstract class Camera implements
 
     // image counter
     protected static int imgNum;
+    protected static long timestamp;
 
 //#ifndef __ANDROID__
     // common members
@@ -71,17 +73,12 @@ public abstract class Camera implements
     // video capture members
     private Displayable next;
     private Callback callback;
-    protected long timestamp;
 
     // camera type
     public static String type;
 
-    // worker
-    public static Worker worker;
-
 //#ifndef __ANDROID__
     abstract void getResolutions(final Vector v);
-    abstract void beforeShoot() throws MediaException;
     abstract void createFinder(final Form form) throws MediaException;
 //#endif
     abstract boolean playSound(final String url);
@@ -127,7 +124,7 @@ public abstract class Camera implements
 
     public void commandAction(Command c, Displayable d) {
         if (c.getCommandType() == Command.SCREEN) {
-            worker.enqueue(this);
+            Desktop.getDiskWorker().enqueue(this);
         } else {
             shutdown();
         }
@@ -145,7 +142,8 @@ public abstract class Camera implements
         try {
             player = Manager.createPlayer(Config.captureLocator);
             player.realize();
-            if (player.getControl("javax.microedition.amms.control.camera.CameraControl") == null) {
+            if (player.getControl("javax.microedition.amms.control.camera.CameraControl") == null
+                    || player.getControl("javax.microedition.amms.control.camera.SnapshotControl") == null) {
                 cz.kruch.track.TrackingMIDlet.jsr234 = false;
             }
         } catch (Exception e) {
@@ -211,9 +209,6 @@ public abstract class Camera implements
                 throw new MediaException("Capture not supported");
             }
 
-            // one-time preparation
-            beforeShoot();
-
             // create form
             final Form form = new Form(null/*Resources.getString(Resources.NAV_TITLE_CAMERA)*/);
             form.addCommand(new Command(Resources.getString(Resources.NAV_CMD_TAKE), Command.SCREEN, 1));
@@ -265,7 +260,8 @@ public abstract class Camera implements
         }
     }
 
-    final String createImagesFolder(final boolean pathOnly) throws IOException {
+    static String createImagesFolder(final boolean pathOnly) throws IOException {
+        // result
         String result = null;
 
         // create folder url
@@ -283,9 +279,9 @@ public abstract class Camera implements
                 file.mkdir();
             }
             if (pathOnly) {
-                result = url.substring(7 /* "file://".length() */);
+                result = file.getPath() + file.getName(); //url.substring(7 /* "file://".length() */);
             } else {
-                result = url;
+                result = file.getURL(); //url
             }
         } finally {
             try {
@@ -298,14 +294,17 @@ public abstract class Camera implements
         return result;
     }
 
+
+//#endif /* !__ANDROID__ */
+
     public static Object getThumbnail(String url) {
         InputStream is = null;
-        Image thumbnail = null;
+        Object result = null;
         try {
-            is = Connector.openInputStream(url);
-            thumbnail = Image.createImage(new ByteArrayInputStream(getThumbnail(is)));
+            is = new api.io.BufferedInputStream(Connector.openInputStream(url), 8192);
+            result = Image.createImage(new ByteArrayInputStream(getThumbnail(is)));
         } catch (Throwable t) { // could be OOM?
-            return t;
+            result = t;
         } finally {
             try {
                 is.close();
@@ -314,7 +313,7 @@ public abstract class Camera implements
             }
         }
 
-        return thumbnail;
+        return result;
     }
 
     public static byte[] getThumbnail(InputStream is) throws IOException {
@@ -370,7 +369,11 @@ public abstract class Camera implements
     }
 
     private static byte pop(InputStream is, int ignored) throws IOException {
-        return (byte) is.read();
+        final int i = is.read();
+        if (i != -1) {
+            return (byte) i;
+        }
+        throw new EOFException(); // TODO this is hack, getThumbnail should check for -1
     }
 
     private static long skip(InputStream is, int length) throws IOException {
@@ -398,7 +401,4 @@ public abstract class Camera implements
 
         return c;
     }
-
-//#endif /* !__ANDROID__ */
-
 }

@@ -10,9 +10,9 @@ import api.location.QualifiedCoordinates;
 import cz.kruch.track.configuration.Config;
 
 /**
- * OSD bar.
+ * OSD.
  *
- * @author Ales Pour <kruhc@seznam.cz>
+ * @author kruhc@seznam.cz
  */
 final class OSD extends Bar {
 //#ifdef __LOG__
@@ -44,8 +44,8 @@ final class OSD extends Bar {
         this.providerStatus = LocationProvider.OUT_OF_SERVICE;
         this.rw = Desktop.font.charWidth('R');
         this.mmw = Desktop.font.stringWidth("<>");
-        this.nsatw = Desktop.font.stringWidth("4*");
-        this.nsatw2 = Desktop.font.stringWidth("12*");
+        this.nsatw = Desktop.font.stringWidth("5*");
+        this.nsatw2 = Desktop.font.stringWidth("15*");
 /*
         this.clip = new int[]{ gx, gy, -1, -1 };
 */
@@ -133,21 +133,6 @@ final class OSD extends Bar {
         NavigationScreens.drawProviderStatus(graphics, providerStatus,
                                              semaforX, semaforY,
                                              Graphics.TOP | Graphics.LEFT);
-
-        // draw backlight status
-        if (cz.kruch.track.ui.nokia.DeviceControl.getBacklightStatus() != 0) {
-            NavigationScreens.drawBacklightStatus(graphics);
-        }
-
-        // draw keylock status
-        if (Desktop.screen.isKeylock()) {
-            NavigationScreens.drawKeylockStatus(graphics);
-        }
-
-        // draw visual guides
-        if (Config.showVisualSpots.booleanValue()) {
-            NavigationScreens.drawVisualSpots(graphics);
-        }
     }
 
     public StringBuffer _getSb() {

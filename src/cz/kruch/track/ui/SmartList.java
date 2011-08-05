@@ -62,7 +62,6 @@ final class SmartList extends Canvas {
             throw new NullPointerException("List items is null");
         }
         this.items = items;
-        this.sizeChanged(getWidth(), getHeight());
     }
 
     /* magic - it prevents OutOfMemoryError :-O */
@@ -87,25 +86,32 @@ final class SmartList extends Canvas {
                 // ignore
             }
         }
+        recalculate(getWidth(), getHeight());
     }
 
     protected void sizeChanged(int w, int h) {
-        super.sizeChanged(w, h);
-        this.width = w;
-        this.height = h;
+        recalculate(w, h);
+//#ifdef __ANDROID__
+        /* does not paint when shown for the first time on Android without this */
+        repaint();
+//#endif
+    }
+
+    protected void recalculate(int w, int h) {
+        width = w;
+        height = h;
         if (Desktop.screen.hasPointerEvents()) {
-            this.sbWidth = (int) Math.ceil((float)w * .05);
-            if (this.sbWidth < 20) {
-                this.sbWidth = 20;
+            sbWidth = (int) ((float)w * .05);
+            if (sbWidth < 20) {
+                sbWidth = 20;
             }
         } else {
-            this.sbWidth = 5;
+            sbWidth = 5;
         }
         final int v = h / getLineHeight();
-        this.sbHeight = (int) Math.ceil(h * ((float)v / size()));
+        sbHeight = (int) (h * ((float)v / size()));
         setVisibleCount(v);
         makeSelectedVisible();
-        repaint();
     }
 
     protected void keyPressed(int i) {
@@ -266,7 +272,7 @@ final class SmartList extends Canvas {
         final int h = height;
         final int lines = h / getLineHeight();
 
-        if (count <= lines || x < width - sbWidth - 2 * HL_INSET) { // select wpt and open it
+        if (count <= lines || x < width - sbWidth - (HL_INSET << 1)) { // select wpt and open it
             int line = y / getLineHeight();
             if (line > lines) line--;
             if (line + top < count) {
@@ -293,7 +299,7 @@ final class SmartList extends Canvas {
         final int dy = y - pY;
 
         if (Math.abs(dy) > SHAKE_LIMIT && count > lines) {
-            if (x > width - sbWidth - 2 * HL_INSET) {
+            if (x > width - sbWidth - (HL_INSET << 1)) {
                 final int dl = cz.kruch.track.util.ExtraMath.round(count * ((float) dy / height));
                 if (Math.abs(dl) > 0) {
                     pY = y;
@@ -344,7 +350,7 @@ final class SmartList extends Canvas {
         if (lines < count) {
             this.pY = y;
         }
-        if (x < width - sbWidth - 2 * HL_INSET && !dragged) {
+        if (x < width - sbWidth - (HL_INSET << 1) && !dragged) {
             int line = y / getLineHeight();
             if (line > lines) line--;
             if (line + top < count) {
@@ -475,7 +481,7 @@ final class SmartList extends Canvas {
     }
 
     private static int getLineHeight() {
-        return Desktop.fontLists.getHeight() + 2 * VL_INSET;
+        return Desktop.fontLists.getHeight() + (VL_INSET << 1);
     }
 
     private void makeSelectedVisible() {

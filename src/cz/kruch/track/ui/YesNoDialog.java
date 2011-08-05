@@ -8,15 +8,16 @@ import javax.microedition.lcdui.Displayable;
 import javax.microedition.lcdui.Command;
 import javax.microedition.lcdui.CommandListener;
 import javax.microedition.lcdui.Alert;
+import javax.microedition.lcdui.AlertType;
 import javax.microedition.lcdui.TextBox;
 import javax.microedition.lcdui.TextField;
 
 /**
  * Feedback dialog.
  *
- * @author Ales Pour <kruhc@seznam.cz>
+ * @author kruhc@seznam.cz
  */
-public final class YesNoDialog implements CommandListener {
+public final class YesNoDialog implements CommandListener, Runnable {
 
     public interface AnswerListener {
         public void response(int answer, Object closure);
@@ -29,6 +30,8 @@ public final class YesNoDialog implements CommandListener {
     private final AnswerListener callback;
     private final Object closure, item;
     private final String question;
+
+    private int response;
 
     public YesNoDialog(AnswerListener callback, Object closure, String question, Object item) {
         this(Desktop.display.getCurrent(), callback, closure, question, item);
@@ -54,6 +57,7 @@ public final class YesNoDialog implements CommandListener {
         } else {
             dialog = new Alert("TrekBuddy");
             ((Alert) dialog).setString(question);
+            ((Alert) dialog).setTimeout(Alert.FOREVER);
             dialog.addCommand(new Command(Resources.getString(Resources.CMD_YES), Command.OK, 1));
             dialog.addCommand(new Command(Resources.getString(Resources.CMD_NO), Command.CANCEL, 1));
         }
@@ -73,6 +77,12 @@ public final class YesNoDialog implements CommandListener {
         Desktop.showNext(displayable, next);
 
         // return response code
-        callback.response(command.getCommandType() == Command.OK ? YES : NO, closure);
+//        callback.response(command.getCommandType() == Command.OK ? YES : NO, closure);
+        response = command.getCommandType() == Command.OK ? YES : NO;
+        Desktop.getEventWorker().enqueue(this);
+    }
+
+    public void run() {
+        callback.response(response, closure);
     }
 }

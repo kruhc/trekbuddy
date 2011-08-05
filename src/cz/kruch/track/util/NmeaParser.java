@@ -41,14 +41,14 @@ public final class NmeaParser {
     public static final byte[] snrs  = new byte[MAX_SATS];
     public static final byte[] prns = new byte[MAX_SATS];
 
-    public static float /*pdop, */hdop, vdop;
+    public static float pdop, hdop, vdop;
     public static float geoidh;
     public static int satv, sata;
     
     public static final Hashtable xdr = new Hashtable(4);
 
     public static void reset() {
-        /*pdop = */hdop = vdop = geoidh = Float.NaN;
+        pdop = hdop = vdop = geoidh = Float.NaN;
     }
 
     public static boolean validate(final char[] raw, final int length) {
@@ -107,9 +107,11 @@ public final class NmeaParser {
             case NmeaParser.HEADER_RMC: {
                 result = parseRMC(nmea, length);
             } break;
+/* commented out since 1.0.17
             case NmeaParser.HEADER_XDR: {
                 result = parseXDR(nmea, length);
             } break;
+*/
         }
 
         if (result == null) {
@@ -126,55 +128,66 @@ public final class NmeaParser {
         final Record record = gga;
 
         // init tokenizer and record
-        tokenizer.init(nmea, length, false);
+        tokenizer.init(nmea, length, delimiters, false);
         record.invalidate(HEADER_GGA);
 
         // process
         int index = 0;
         while (index < 12 && tokenizer.hasMoreTokens()) {
             final CharArrayTokenizer.Token token = tokenizer.next();
-            if (!token.isEmpty()) {
-                switch (index) {
-                    case 0: // $GPGGA
-                        break;
-                    case 1: {
+            /* no token empty check here */
+            switch (index) {
+                case 0: // $GPGGA
+                    break;
+                case 1: {
+                    if (!token.isEmpty()) {
                         record.timestamp = parseTime(token);
-                    } break;
-                    case 2: // lat - use RMC
-                    case 3: // lat sign - use RMC
-                    case 4: // lon - use RMC
-                    case 5: // lon sign - use RMC
-                        break;
-                    case 6: {
+                    } else {
+                        index = 1000; // break cycle
+                    }
+                } break;
+                case 2: // lat - use RMC
+                case 3: // lat sign - use RMC
+                case 4: // lon - use RMC
+                case 5: // lon sign - use RMC
+                    break;
+                case 6: {
+                    if (!token.isEmpty()) {
                         record.fix = CharArrayTokenizer.parseInt(token); // should not be empty
                         if (record.fix == 0 || record.fix == 6) { // invalid fix or dead reckoning
                             record.fix = 0;
-                            index = Integer.MAX_VALUE; // break cycle
+                            index = 1000; // break cycle
                         }
-                    } break;
-                    case 7: {
+                    } else {
+                        index = 1000; // break cycle
+                    }
+                } break;
+                case 7: {
+                    if (!token.isEmpty()) {
                         record.sat = CharArrayTokenizer.parseInt(token);
-                    } break;
-                    case 8: {
-                        if (!token.isEmpty()) {
-                            hdop = CharArrayTokenizer.parseFloat(token);
-                        } else {
-                            hdop = Float.NaN;
-                        }
-                    } break;
-                    case 9: {
+                    }
+                } break;
+                case 8: {
+                    if (!token.isEmpty()) {
+                        hdop = CharArrayTokenizer.parseFloat(token);
+                    } else {
+                        hdop = Float.NaN;
+                    }
+                } break;
+                case 9: {
+                    if (!token.isEmpty()) {
                         record.altitude = CharArrayTokenizer.parseFloat(token);
-                    } break;
-                    case 10: // 'm'
-                        break;
-                    case 11: {
-                        if (!token.isEmpty()) {
-                            geoidh = CharArrayTokenizer.parseFloat(token);
-                        } else {
-                            geoidh = Float.NaN;
-                        }
-                    } break;
-                }
+                    }
+                } break;
+                case 10: // 'm'
+                    break;
+                case 11: {
+                    if (!token.isEmpty()) {
+                        geoidh = CharArrayTokenizer.parseFloat(token);
+                    } else {
+                        geoidh = Float.NaN;
+                    }
+                } break;
             }
             index++;
         }
@@ -207,9 +220,13 @@ public final class NmeaParser {
                 case 1: // autoselection of 2d or 3d fix - ignored
                     break;
                 case 2: {
-                    record.fix = CharArrayTokenizer.parseInt(token); // should not be empty
-                    if (record.fix == 1) { // no fix
-                        index = Integer.MAX_VALUE; // break cycle
+                    if (!token.isEmpty()) {
+                        record.fix = CharArrayTokenizer.parseInt(token); // should not be empty
+                        if (record.fix == 1) { // no fix
+                            index = 1000; // break cycle
+                        }
+                    } else {
+                        index = 1000; // break cycle
                     }
                 } break;
                 case 3:
@@ -230,11 +247,11 @@ public final class NmeaParser {
                     } 
                 } break;
                 case 15:
-/*
                     if (!token.isEmpty()) {
                         pdop = CharArrayTokenizer.parseFloat(token);
+                    } else {
+                        pdop = Float.NaN;
                     }
-*/
                     break;
                 case 16: {
                     if (!token.isEmpty()) {
@@ -280,37 +297,36 @@ public final class NmeaParser {
         int index = 0;
         while (index < maxi && tokenizer.hasMoreTokens()) {
             final CharArrayTokenizer.Token token = tokenizer.next();
-            /* no token empty check here */
-            switch (index) {
-                case 0: // $GPGSV
-                    break;
-                case 1: // number of sentences
-                    break;
-                case 2: // current sentence
-                    sentence = CharArrayTokenizer.parseInt(token);
-                    if (sentence == 1) {
-                        sata = 0;
-                    }
-                    break;
-                case 3: // number of sats in view
-                    satv = CharArrayTokenizer.parseInt(token);
-                    maxi = 4 /* start offset */ + (satv > sentence * 4 ? 16 : (satv - (sentence - 1) * 4) * 4);
-                    break;
-                default: {
-                    final int mod = index % 4;
-                    switch (mod) {
-                        case 0: {
-                            tracked = -1;
-                            prn = CharArrayTokenizer.parseInt(token);
-                            for (int i = prnc; --i >= 0; ) {
-                                if (prn == prns[i]) {
-                                    tracked = i;
-                                    break;
+            if (!token.isEmpty()) {
+                switch (index) {
+                    case 0: // $GPGSV
+                        break;
+                    case 1: // number of sentences
+                        break;
+                    case 2: { // current sentence
+                        sentence = CharArrayTokenizer.parseInt(token);
+                        if (sentence == 1) {
+                            sata = 0;
+                        }
+                    } break;
+                    case 3: { // number of sats in view
+                        satv = CharArrayTokenizer.parseInt(token);
+                        maxi = 4 /* start offset */ + (satv > sentence * 4 ? 16 : (satv - (sentence - 1) * 4) * 4);
+                    } break;
+                    default: {
+                        final int mod = index % 4;
+                        switch (mod) {
+                            case 0: {
+                                tracked = -1;
+                                prn = CharArrayTokenizer.parseInt(token); // should not be empty
+                                for (int i = prnc; --i >= 0; ) {
+                                    if (prn == prns[i]) {
+                                        tracked = i;
+                                        break;
+                                    }
                                 }
-                            }
-                        } break;
-                        case 3: {
-                            if (!token.isEmpty()) {
+                            } break;
+                            case 3: {
                                 int snr = (CharArrayTokenizer.parseInt(token) - 15) / 3; // 'normalization'
                                 if (snr < 1/*0*/) {
                                     snr = 1/*0*/;
@@ -326,8 +342,8 @@ public final class NmeaParser {
                                         sata++;
                                     }
                                 }
-                            }
-                        } break;
+                            } break;
+                        }
                     }
                 }
             }
@@ -341,7 +357,7 @@ public final class NmeaParser {
         final Record record = rmc;
 
         // init tokenizer and record
-        tokenizer.init(nmea, length, false);
+        tokenizer.init(nmea, length, delimiters, false);
         record.invalidate(HEADER_RMC);
 
         // process

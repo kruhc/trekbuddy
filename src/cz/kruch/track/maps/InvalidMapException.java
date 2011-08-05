@@ -17,6 +17,11 @@ public class InvalidMapException extends IOException {
         super(string);
     }
 
+    public InvalidMapException(String string, String name) {
+        super(string);
+        this.name = name;
+    }
+
     public InvalidMapException(String message, Throwable throwable) {
         super(message + ": " + throwable.toString());
     }

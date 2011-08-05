@@ -140,7 +140,7 @@ final class OziCalibration extends Calibration {
 
         try {
             while (index <= 11 && tokenizer.hasMoreTokens()) {
-                final CharArrayTokenizer.Token token = tokenizer.next();
+                final CharArrayTokenizer.Token token = tokenizer.next2();
                 if (token.isDelimiter) {
                     index++;
                 } else {
@@ -206,8 +206,8 @@ final class OziCalibration extends Calibration {
 
     private static String parseProjectionType(final CharArrayTokenizer tokenizer) throws InvalidMapException {
         try {
-            tokenizer.next(); // skip "Map Projection"
-            return tokenizer.next().toString().trim();
+            tokenizer.next2(); // skip "Map Projection"
+            return tokenizer.next2().toString().trim();
         } catch (Exception e) {
             throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_PARSE_PROJ_FAILED), e);
         }
@@ -215,7 +215,7 @@ final class OziCalibration extends Calibration {
 
     private static String parseDatum(final CharArrayTokenizer tokenizer) throws InvalidMapException {
         try {
-            return tokenizer.next().toString().trim();
+            return tokenizer.next2().toString().trim();
         } catch (Exception e) {
             throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_PARSE_DATUM_FAILED), e);
         }
@@ -304,7 +304,7 @@ final class OziCalibration extends Calibration {
 
         try {
             while (index <= 7 && tokenizer.hasMoreTokens()) {
-                final CharArrayTokenizer.Token token = tokenizer.next();
+                final CharArrayTokenizer.Token token = tokenizer.next2();
                 if (token.isDelimiter) {
                     index++;
                 } else {
@@ -349,10 +349,10 @@ final class OziCalibration extends Calibration {
 
     private static boolean parseXY(final CharArrayTokenizer tokenizer, final Vector xy) throws InvalidMapException {
         try {
-            tokenizer.next(); // MMPXY
-            tokenizer.next(); // index [1-4]
-            final int x = tokenizer.nextInt();
-            final int y = tokenizer.nextInt();
+            tokenizer.next2(); // MMPXY
+            tokenizer.next2(); // index [1-4]
+            final int x = tokenizer.nextInt2();
+            final int y = tokenizer.nextInt2();
             xy.addElement(Position.newInstance(x, y));
         } catch (Exception e) {
             throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_INVALID_MMPXY), e);
@@ -363,10 +363,10 @@ final class OziCalibration extends Calibration {
 
     private static boolean parseLL(final CharArrayTokenizer tokenizer, final Vector ll) throws InvalidMapException {
         try {
-            tokenizer.next(); // MMPLL
-            tokenizer.next(); // index [1-4]
-            final double lon = tokenizer.nextDouble();
-            final double lat = tokenizer.nextDouble();
+            tokenizer.next2(); // MMPLL
+            tokenizer.next2(); // index [1-4]
+            final double lon = tokenizer.nextDouble2();
+            final double lat = tokenizer.nextDouble2();
             ll.addElement(QualifiedCoordinates.newInstance(lat, lon));
         } catch (Exception e) {
             throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_INVALID_MMPLL), e);
@@ -377,10 +377,10 @@ final class OziCalibration extends Calibration {
 
     private void parseIwh(final CharArrayTokenizer tokenizer) throws InvalidMapException {
         try {
-            tokenizer.next(); // IWH
-            tokenizer.next(); // Map Image Width/Height
-            setWidth(getDimension(tokenizer.nextInt()));
-            setHeight(getDimension(tokenizer.nextInt()));
+            tokenizer.next2(); // IWH
+            tokenizer.next2(); // Map Image Width/Height
+            setWidth(getDimension(tokenizer.nextInt2()));
+            setHeight(getDimension(tokenizer.nextInt2()));
         } catch (InvalidMapException e) {
             throw e;
         } catch (Exception e) {

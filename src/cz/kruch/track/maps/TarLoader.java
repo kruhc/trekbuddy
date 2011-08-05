@@ -40,6 +40,7 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
 
     TarLoader() {
         this.isTar = true;
+        ((api.io.BufferedInputStream) bufferef()).setAutofill(false);
     }
 
     Slice newSlice() {
@@ -223,7 +224,7 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
                     nativeIn = null; // gc hint
                     nativeIn = nativeFile.openInputStream();
                 }
-                buffered.setInputStream(nativeIn);
+                buffered(nativeIn);
                 tarIn.setStreamOffset(0);
 
             } else {
@@ -242,7 +243,7 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
 
     void dispose(final boolean deep) throws IOException {
         // detach buffered stream
-        buffered.setInputStream(null);
+        buffered(null);
 
         // release pointers when deep
         if (deep) {
@@ -318,7 +319,7 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
                             nativeIn = null; // gc hint
                             nativeIn = nativeFile.openInputStream();
                         }
-                        buffered.setInputStream(nativeIn);
+                        buffered(nativeIn);
                         tarIn.setStreamOffset(0);
                     }
                 } else { // non-resetable stream
@@ -326,12 +327,12 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
                     if (log.isEnabled()) log.debug("new stream");
 //#endif
                     in = nativeFile.openInputStream();
-                    buffered.setInputStream(in);
+                    buffered(in);
                     tarIn.setStreamOffset(0);
                 }
 
                 // prepare tar stream
-                tarIn.setInputStream(buffered);
+                tarIn.setInputStream(bufferef());
                 tarIn.skip(streamOffset - tarIn.getStreamOffset());
                 tarIn.getNextEntry();
 
@@ -347,7 +348,7 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
 //#endif
                     // close buffered
                     try {
-                        buffered.close();
+                        bufferel();
                     } catch (IOException e) {
                         // ignore
                     }
@@ -399,9 +400,9 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
                         String mName = null;
                         tokenizer.init(entryName, delims, false);
                         if (tokenizer.hasMoreTokens()) {
-                            lName = tokenizer.next().toString();
+                            lName = tokenizer.next2().toString();
                             if (tokenizer.hasMoreTokens()) {
-                                mName = tokenizer.next().toString();
+                                mName = tokenizer.next2().toString();
                             }
                         }
 
@@ -487,7 +488,7 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
                 final char[] delims = { ':' };
                 try {
                     // read entry meta info
-                    reader = new LineReader(file.openInputStream(), 4096);
+                    reader = new LineReader(file.openInputStream(), 8192);
                     token = reader.readToken(false);
                     while (token != null) {
 
@@ -498,10 +499,10 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
                         tokenizer.init(token, delims, false);
 
                         // get block offset
-                        final int block = tokenizer.nextInt();
+                        final int block = tokenizer.nextInt2();
 
                         // move to slice name
-                        token = tokenizer.next();
+                        token = tokenizer.next2();
 
                         // trim
                         token.trim();
@@ -511,8 +512,13 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
 
                         // add slice
                         if (token.startsWith(SET_DIR_PREFIX) && (token.endsWith(EXT_PNG) || token.endsWith(EXT_JPG))) {
+
+                            // entry is slice
                             registerSlice(token, block);
+
                         } else if (calEntryName == null && Calibration.isCalibration(token)) {
+
+                            // entry is map calibration
                             calEntryName = token.toString();
                             calBlockOffset = block;
 //#ifdef __LOG__

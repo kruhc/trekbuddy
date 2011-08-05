@@ -88,13 +88,16 @@ public class Slice {
     }
 
     public String toString() {
-        final StringBuffer sb = new StringBuffer(32);
+        return appendInfo(new StringBuffer(32)).toString();
+    }
+
+    public final StringBuffer appendInfo(final StringBuffer sb) {
         NavigationScreens.append(sb, getX()).append('-');
         NavigationScreens.append(sb, getY()).append(' ');
         NavigationScreens.append(sb, getWidth()).append('x');
         NavigationScreens.append(sb, getHeight());
 
-        return sb.toString();
+        return sb;
     }
 
     public final StringBuffer appendPath(final StringBuffer sb) {

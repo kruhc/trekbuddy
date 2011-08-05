@@ -77,6 +77,8 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
     public static final String FOLDER_SOUNDS       = "sounds/";
     public static final String FOLDER_GC           = "gc/";
 
+    private static final String DATUMS_FILE = "datums.txt";
+    
     /* 16 basic colors */
     public static final int[] COLORS_16 = {
         0x000000, 0x808080, 0xc0c0c0, 0xffffff,
@@ -163,12 +165,14 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
     public static boolean noQuestions;
     public static boolean uiNoCommands;
     public static boolean easyZoomVolumeKeys;
-    public static Boolean showVisualSpots;
+    /*public static Boolean showZoomSpots, showGuideSpots;*/
     public static int desktopFontSize;
-    public static int osdAlpha                  = 0x80;
+    public static int osdAlpha                  = 0xA0;
     public static int cmsCycle;
     public static int listFont                  = 0x200000;
     public static boolean uiNoItemCommands;
+    public static int zoomSpotsMode             = 2; // autohide
+    public static int guideSpotsMode            = 2; // autohide
 
     // [Units]
     public static int units;
@@ -252,8 +256,6 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
     private static final int ACTION_INITDATADIR     = 0;
     private static final int ACTION_PERSISTCFG      = 1;
 
-    public static Worker worker;
-
     private int action;
 
     private Config(int action) {
@@ -314,6 +316,8 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         }
         if (cz.kruch.track.TrackingMIDlet.symbian) {
             useNativeService = true; // !cz.kruch.track.TrackingMIDlet.s60rdfp2;
+        } else if (cz.kruch.track.TrackingMIDlet.nokia) {
+            captureLocator = "capture://image";
         }
 
 //#endif
@@ -531,10 +535,17 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
 
             // 1.0.11 change
             easyZoomVolumeKeys = din.readBoolean();
-            showVisualSpots = new Boolean(din.readBoolean());
+            /*showZoomSpots = new Boolean(*/din.readBoolean()/*)*/;
 
             // 1.0.14 change
             uiNoItemCommands = din.readBoolean();
+
+            // 1.0.17b change
+            /*showGuideSpots = new Boolean(*/din.readBoolean()/*)*/;
+
+            // 1.0.17 change
+            zoomSpotsMode = din.readInt();
+            guideSpotsMode = din.readInt();
 
         } catch (Exception e) {
         }
@@ -662,9 +673,14 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         dout.writeInt(easyZoomMode);
         /* since 1.0.11 */
         dout.writeBoolean(easyZoomVolumeKeys);
-        dout.writeBoolean(showVisualSpots.booleanValue());
+        dout.writeBoolean(false/*showZoomSpots.booleanValue()*/);
         /* since 1.0.14 */
         dout.writeBoolean(uiNoItemCommands);
+        /* since 1.0.17b */
+        dout.writeBoolean(false/*showGuideSpots.booleanValue()*/);
+        /* since 1.0.17 */
+        dout.writeInt(zoomSpotsMode);
+        dout.writeInt(guideSpotsMode);
 
 //#ifdef __LOG__
         if (log.isEnabled()) log.info("configuration updated");
@@ -810,7 +826,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
 //#ifdef __RIM__
             cz.kruch.track.ui.nokia.DeviceControl.saveAltDatadir();
 //#endif
-            worker.enqueue(new Config(ACTION_PERSISTCFG));
+            cz.kruch.track.ui.Desktop.getDiskWorker().enqueue(new Config(ACTION_PERSISTCFG));
         }
     }
 
@@ -837,7 +853,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
     }
 
     public static void initDataDir() {
-        worker.enqueue(new Config(ACTION_INITDATADIR));
+        (new Config(ACTION_INITDATADIR)).run();
     }
 
     public void run() {
@@ -887,50 +903,37 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
                 FOLDER_MAPS, FOLDER_NMEA, FOLDER_PROFILES, FOLDER_RESOURCES,
                 FOLDER_SOUNDS, FOLDER_TRACKS, FOLDER_WPTS, FOLDER_GC
             };
+            File dir = null;
             /* create folder structure */
             for (int i = folders.length; --i >= 0; ) {
-                File folder = null;
                 try {
-                    folder = File.open(getFolderURL(folders[i]), Connector.READ_WRITE);
-                    if (!folder.exists()) {
-//#ifdef __LOG__
-                        if (log.isEnabled()) log.info("creating subfolder " + folders[i]);
-//#endif
-                        folder.mkdir();
+                    dir = File.open(getFolderURL(folders[i]), Connector.READ_WRITE);
+                    if (!dir.exists()) {
+                        dir.mkdir();
                     }
-                } catch (Exception e) {
+                } catch (Throwable t) {
                     // ignore // TODO really?!?
-//#ifdef __LOG__
-                    if (log.isEnabled()) log.error("failed to create subfolder " + folders[i], e);
-//#endif
                 } finally {
                     try {
-                        folder.close();
+                        dir.close();
                     } catch (Exception e) { // NPE or IOE
                         // ignore
                     }
                 }
             }
             /* find default files */
-            File dir = null;
             try {
                 dir = File.open(Config.getFolderURL(Config.FOLDER_SOUNDS));
                 for (final Enumeration seq = dir.list(); seq.hasMoreElements(); ) {
                     final String name = (String) seq.nextElement();
                     final String candidate = name.toLowerCase();
                     if (candidate.startsWith("wpt.") && (candidate.endsWith(".amr") || candidate.endsWith(".wav") || candidate.endsWith(".mp3") || candidate.endsWith(".aac")|| candidate.endsWith(".m4a")|| candidate.endsWith(".3gp"))) {
-//#ifdef __LOG__
-                        if (log.isEnabled()) log.info("found wpt sound file " + name);
-//#endif
                         defaultWptSound = name;
                         break;
                     }
                 }
-            } catch (Exception e) {
+            } catch (Throwable t) {
                 // ignore
-//#ifdef __LOG__
-                if (log.isEnabled()) log.info("could not list sounds: " + e);
-//#endif
             } finally {
                 try {
                     dir.close();
@@ -1005,13 +1008,14 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         useDatum(geoDatum);
     }
 
-    public static void initUserDatums() {
-        if (dataDirExists) {
+    public static void initUserDatums(final Vector resources) {
+        if (Config.resourceExist(resources, DATUMS_FILE)) {
             File file = null;
             try {
-                file = File.open(Config.getFolderURL(Config.FOLDER_RESOURCES) + "datums.txt");
+                file = File.open(Config.getFolderURL(Config.FOLDER_RESOURCES) + DATUMS_FILE);
                 if (file.exists()) {
-                    initDatums(file.openInputStream(), new CharArrayTokenizer(), new char[]{ '{', '}', ',', '=' });
+                    initDatums(file.openInputStream(), new CharArrayTokenizer(),
+                               new char[]{ '{', '}', ',', '=' }); // streams gets closed there
                 }
             } catch (Throwable t) {
                 // ignore
@@ -1163,4 +1167,73 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
     public static void setLocationTimings(String timings) {
         locationTimings = timings;
     }
+
+    public static long rss = -1;
+
+    public static Vector listResources() {
+        File dir = null;
+        try {
+            dir = File.open(Config.getFolderURL(Config.FOLDER_RESOURCES));
+            if (dir.exists()) {
+                rss = dir.directorySize(false);
+            }
+        } catch (Exception e) {
+            // ignore
+        } finally {
+            try {
+                dir.close();
+            } catch (Exception e) { // NPE or IOE
+                // ignore
+            }
+        }
+        return null;
+    }
+
+    public static boolean resourceExist(final Vector resources, final String name) {
+        return rss > 0;
+    }
+
+    /* The variant bellow is too dangerous for now */
+
+/*
+    private static final int RES_CACHE_LIMIT = 32;
+
+    public static Vector listResources() {
+        Vector result = null;
+        File dir = null;
+        try {
+            dir = File.open(Config.getFolderURL(Config.FOLDER_RESOURCES));
+            result = new Vector(0);
+            if (dir.exists()) {
+                if ((rss = dir.directorySize(false)) > 0) {
+                    result.ensureCapacity(RES_CACHE_LIMIT);
+                    final Enumeration seq = dir.list();
+                    for ( ; seq.hasMoreElements(); ) {
+                        result.addElement(seq.nextElement().toString().toLowerCase());
+                        if (result.size() == RES_CACHE_LIMIT) {
+                            break;
+                        }
+                    }
+                    if (result.size() > 0 && seq.hasMoreElements()) {
+                        result = null;
+                    }
+                }
+            }
+        } catch (Throwable t) {
+            // ignore
+        } finally {
+            try {
+                dir.close();
+            } catch (Exception e) { // NPE or IOE
+                // ignore
+            }
+        }
+
+        return result;
+    }
+
+    public static boolean resourceExist(final Vector resources, final String name) {
+        return resources == null || resources.contains(name.toLowerCase());
+    }
+*/
 }

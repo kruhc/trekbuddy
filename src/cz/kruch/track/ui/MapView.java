@@ -111,6 +111,14 @@ final class MapView extends View {
         return location != null;
     }
 
+    /**
+     * @deprecated hack
+     */
+    public void onBackground() {
+        mapViewer.onBackground();
+        super.onBackground();
+    }
+
     public void close() {
         injectMap(null); // may save position in default map/atlas
     }
@@ -441,8 +449,7 @@ final class MapView extends View {
                         // TODO
                     } break;
                 }
-            }
-            break;
+            } break;
 
 //#ifdef __ANDROID__
             case -24:
@@ -470,8 +477,7 @@ final class MapView extends View {
                         // TODO
                     } break;
                 }
-            }
-            break;
+            } break;
         }
 
         return mask;
@@ -672,6 +678,24 @@ final class MapView extends View {
                 Desktop.status.render(g);
             }
 
+            // draw backlight status
+            if (cz.kruch.track.ui.nokia.DeviceControl.getBacklightStatus() != 0) {
+                NavigationScreens.drawBacklightStatus(g);
+            }
+
+            // draw keylock status
+            if (Desktop.screen.isKeylock()) {
+                NavigationScreens.drawKeylockStatus(g);
+            }
+
+            // draw zoom spots
+            if (navigator.isAtlas()) {
+                NavigationScreens.drawZoomSpots(g);
+            }
+
+            // draw visual guides
+            NavigationScreens.drawGuideSpots(g, true);
+
         } else { // no map
 
             // clear window
@@ -689,7 +713,7 @@ final class MapView extends View {
                     final Throwable t = (Throwable) result[1];
                     g.drawString(t.getClass().toString().substring(6) + ":", 0, Desktop.font.getHeight(), Graphics.TOP | Graphics.LEFT);
                     if (t.getMessage() != null) {
-                        g.drawString(t.getMessage(), 0, 2 * Desktop.font.getHeight(), Graphics.TOP | Graphics.LEFT);
+                        g.drawString(t.getMessage(), 0, Desktop.font.getHeight() << 1, Graphics.TOP | Graphics.LEFT);
                     }
                     if (result[2] == null) {
                         result[2] = result[1];

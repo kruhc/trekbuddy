@@ -9,6 +9,7 @@ import cz.kruch.track.event.Callback;
 import cz.kruch.track.fun.Friends;
 import cz.kruch.track.location.GpxTracklog;
 import cz.kruch.track.location.Waypoint;
+import cz.kruch.track.location.TripStatistics;
 import cz.kruch.track.maps.Map;
 import cz.kruch.track.maps.Atlas;
 import cz.kruch.track.util.CharArrayTokenizer;
@@ -52,7 +53,7 @@ import api.location.LocationException;
  */
 public final class Desktop implements CommandListener,
                                       LocationListener,
-                                      YesNoDialog.AnswerListener {
+                                      YesNoDialog.AnswerListener, Runnable {
 //#ifdef __LOG__
     private static final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("Desktop");
 //#endif
@@ -163,7 +164,7 @@ public final class Desktop implements CommandListener,
     private final Object loadingLock;
     private final Object renderLock;
 
-	// workers
+	// workers // TODO move to Worker? TrackingMIDlet?
 	private static Worker diskWorker, eventWorker;
 
     /**
@@ -264,13 +265,6 @@ public final class Desktop implements CommandListener,
         screen.setFullScreenMode(Config.fullscreen);
         screen.setTitle(null);
         Desktop.display.setCurrent(screen);
-//#ifdef __ANDROID__
-        try {
-            Thread.sleep(50);
-        } catch (InterruptedException e) {
-            // ignore
-        }
-//#endif
     }
 
     public void boot(final int imgcached, final int configured,
@@ -288,7 +282,7 @@ public final class Desktop implements CommandListener,
 
         // get graphics
         final Graphics g = screen.getGraphics();
-        g.setFont(Font.getFont(Font.FACE_MONOSPACE, Font.STYLE_PLAIN, Font.getDefaultFont().getSize()));
+        g.setFont(Font.getFont(Font.FACE_MONOSPACE, Font.STYLE_PLAIN, Font.SIZE_MEDIUM));
 
         // console text position
         short lineY = 0;
@@ -311,6 +305,17 @@ public final class Desktop implements CommandListener,
         consoleShow(g, lineY, Resources.getString(Resources.INFO_ITEM_VERSION) + " " + cz.kruch.track.TrackingMIDlet.version);
         lineY += lineHeight;
 
+/* does not work on Android
+        // yield - we can do it safely because we are in own thread
+        while (!screen.isShown()) {
+            try {
+                Thread.sleep(5);
+            } catch (InterruptedException e) {
+                // ignore
+            }
+        }
+*/
+
         // vertical space
         consoleShow(g, lineY, "");
         lineY += lineHeight;
@@ -326,10 +331,13 @@ public final class Desktop implements CommandListener,
         // additional steps from external resources
         if (cz.kruch.track.configuration.Config.dataDirExists) {
 
+            // get list
+            final Vector resources = Config.listResources();
+
             // user resources
             int localized;
             try {
-                localized = Resources.localize();
+                localized = Resources.localize(resources);
             } catch (Throwable t) {
                 localized = -1;
             }
@@ -342,7 +350,8 @@ public final class Desktop implements CommandListener,
             // UI customization
             int customized;
             try {
-                customized = cz.kruch.track.ui.NavigationScreens.customize();
+                customized = cz.kruch.track.ui.NavigationScreens.customize(resources);
+                customized = cz.kruch.track.ui.NavigationScreens.customize2(resources);
             } catch (Throwable t) {
                 customized = -1;
             }
@@ -355,7 +364,7 @@ public final class Desktop implements CommandListener,
             // user keymap
             int keysmapped;
             try {
-                keysmapped = Resources.keymap();
+                keysmapped = Resources.keymap(resources);
             } catch (Throwable t) {
                 keysmapped = -1;
             }
@@ -366,8 +375,11 @@ public final class Desktop implements CommandListener,
             }
 
             // user datums
-            cz.kruch.track.configuration.Config.initUserDatums();
+            cz.kruch.track.configuration.Config.initUserDatums(resources);
         }
+
+        // free some resources
+        NavigationScreens.hasTouchEvents(screen.hasPointerEvents());
 
 //#ifdef __B2B__
 
@@ -431,14 +443,83 @@ public final class Desktop implements CommandListener,
         // create default desktop components
         resetGui();
 
-        // last
-        postInit();
+        // set map // TODO move to resetGui???
+        ((MapView) views[VIEW_MAP]).setMap(map);
+
+        // initialize waypoints
+        Waypoints.initialize(this);
 
         // update screen
         if (update) {
             update(MASK_SCREEN);
         }
+
+        // last // TODO what about B2B build - should it call this too?
+        getDiskWorker().enqueue(this);
     }
+
+    // same as postInit, but invoked from disk worker
+    public void run() {
+
+        // finish screen splash
+        screen.autohide();
+
+        // check DataDir structure
+        if (Config.dataDirAccess) {
+            Config.initDataDir();
+        } else if (File.isFs()) {
+            showError("DataDir [" + Config.getDataDir() + "] not accessible - please fix it and restart", null, null);
+        } else {
+            showWarning("FileConnection API (JSR-75) not supported", null, null);
+        }
+
+        // loads CMS profiles // TODO move to resetGui???
+        ((Runnable) views[VIEW_CMS]).run();
+
+        // initialize groupware
+        if (cz.kruch.track.TrackingMIDlet.jsr120 && Config.locationSharing) {
+            if (friends == null) {
+                try {
+                    friends = Friends.createInstance();
+                    friends.start();
+                } catch (Throwable t) {
+                    showError(Resources.getString(Resources.DESKTOP_MSG_FRIENDS_FAILED), t, screen);
+                }
+            }
+        }
+    }
+
+//#ifdef __ANDROID__
+
+    public void onBackground() {
+        android.util.Log.i("TrekBuddy", "going background");
+
+        // notify views
+        if (views != null) {
+            for (int i = views.length; --i >= 0; ) {
+                views[i].onBackground();
+            }
+        }
+
+        // try gc
+        System.gc();
+    }
+
+    public void onForeground() {
+        android.util.Log.i("TrekBuddy", "going foreground");
+
+        // notify views
+        if (views != null) {
+            for (int i = views.length; --i >= 0; ) {
+                views[i].onForeground();
+            }
+        }
+
+        // repaint
+        update(MASK_SCREEN);
+    }
+
+//#endif
 
 //#ifdef __B2B__
 
@@ -824,46 +905,6 @@ public final class Desktop implements CommandListener,
         return true;
     }
 
-    private void postInit() {
-//#ifdef __LOG__
-        if (log.isEnabled()) log.info("post init");
-//#endif
-
-        // check DataDir structure
-        if (Config.dataDirAccess) {
-            Config.worker = getDiskWorker();
-            Config.initDataDir();
-        } else if (File.isFs()) {
-            showError("DataDir [" + Config.getDataDir() + "] not accessible - please fix it and restart", null, null);
-        } else {
-            showWarning("FileConnection API (JSR-75) not supported", null, null);
-        }
-
-        // initialize waypoints
-        Waypoints.initialize(this);
-
-        // set map // TODO move to resetGui???
-        ((MapView) views[VIEW_MAP]).setMap(map);
-
-        // loads CMS profiles // TODO move to resetGui???
-        getDiskWorker().enqueue((Runnable) views[VIEW_CMS]);
-
-        // initialize groupware
-        if (cz.kruch.track.TrackingMIDlet.jsr120) {
-            try {
-                if (friends == null) {
-                    friends = Friends.createInstance();
-                    friends.start();
-                }
-            } catch (Throwable t) {
-                showError(Resources.getString(Resources.DESKTOP_MSG_FRIENDS_FAILED), t, screen);
-            }
-        }
-
-        // initialize camera
-        cz.kruch.track.fun.Camera.worker = getDiskWorker();
-    }
-
     public void commandAction(Command command, Displayable displayable) {
         if (screen.isKeylock()) {
             showWarning(Resources.getString(Resources.DESKTOP_MSG_KEYS_LOCKED), null, null);
@@ -1135,6 +1176,15 @@ public final class Desktop implements CommandListener,
     }
 
     Friends getFriends() {
+        if (cz.kruch.track.TrackingMIDlet.jsr120) {
+            if (friends == null) {
+                try {
+                    friends = Friends.createInstance();
+                } catch (Throwable t) {
+                    showError(Resources.getString(Resources.DESKTOP_MSG_FRIENDS_FAILED), t, screen);
+                }
+            }
+        }
         return friends;
     }
 
@@ -1672,7 +1722,7 @@ public final class Desktop implements CommandListener,
 
                     case Canvas.KEY_NUM1: { // navigation
                         if (c == 1) {
-                            Waypoints.getInstance().showCurrent();
+                            Waypoints.getInstance().show();
                         }
                     } break;
 
@@ -1749,7 +1799,7 @@ public final class Desktop implements CommandListener,
                     } break;
 
                     case Canvas.KEY_NUM1: { // navigation
-                        Waypoints.getInstance().show();
+                        Waypoints.getInstance().showCurrent();
                     } break;
 
                     case Canvas.KEY_NUM3: { // notify user
@@ -1790,12 +1840,18 @@ public final class Desktop implements CommandListener,
         if (log.isEnabled()) log.debug("update " + Integer.toBinaryString(mask));
 //#endif
 
+//#ifdef __ANDROID__
+        if (cz.kruch.track.TrackingMIDlet.state != 1) {
+            return;
+        }
+//#endif        
+
         // anything to update?
         if (mask != MASK_NONE) {
 
             // notify map view that render event is about to happen...
             // so that it can start loading tiles asap...
-            // TODO MapView specific
+            // TODO MapView specific and very ugly
             if ((mask & Desktop.MASK_MAP) != 0 && mode == VIEW_MAP) {
                 synchronized (loadingLock) {
                     if (!initializingMap && !loadingSlices) {
@@ -2328,7 +2384,7 @@ public final class Desktop implements CommandListener,
         final int sh = f.getHeight();
         final int w = screen.getWidth() * 6 / 8;
         final int h = sh << 1;
-        final int x = (screen.getWidth() - w) / 2;
+        final int x = (screen.getWidth() - w) >> 1;
         final int y = (screen.getHeight() - h) - DeviceScreen.BTN_ARC;
         g.setColor(DeviceScreen.BTN_COLOR);
         g.fillRoundRect(x, y, w, h, DeviceScreen.BTN_ARC, DeviceScreen.BTN_ARC);
@@ -2336,7 +2392,7 @@ public final class Desktop implements CommandListener,
         g.drawRoundRect(x, y, w, h, DeviceScreen.BTN_ARC, DeviceScreen.BTN_ARC);
         g.setColor(0x00ffffff);
         g.setFont(f);
-        g.drawString(s, x + (w - sw) / 2, y + (h - sh) / 2, Graphics.TOP | Graphics.LEFT);
+        g.drawString(s, x + ((w - sw) >> 1), y + ((h - sh) >> 1), Graphics.TOP | Graphics.LEFT);
     }
 
     /*
@@ -2490,6 +2546,9 @@ public final class Desktop implements CommandListener,
 //#ifdef __LOG__
                 t.printStackTrace();
                 if (Desktop.log.isEnabled()) Desktop.log.error("render failure", t);
+//#endif
+//#ifdef __ANDROID__
+                android.util.Log.e("TrekBuddy", "render failure", t);
 //#endif
                 Desktop.showError("_RENDER FAILURE_", t, null);
 
@@ -2911,6 +2970,9 @@ public final class Desktop implements CommandListener,
                 t.printStackTrace();
                 if (log.isEnabled()) log.debug("event failure", t);
 //#endif
+//#ifdef __ANDROID__
+                android.util.Log.e("TrekBuddy", "event failure", t);
+//#endif                
                 Desktop.showError("_EVENT FAILURE_ (" + this + ")", t, Desktop.screen);
 
             } finally {
@@ -3082,7 +3144,7 @@ public final class Desktop implements CommandListener,
             } else {
 
                 // show a user error
-                Desktop.showError("[3] " + result, throwable, Desktop.screen);
+                Desktop.showError(nullToString("[3] ", result), throwable, Desktop.screen);
 
                 // cleanup
                 cleanup(throwable);
@@ -3280,7 +3342,7 @@ public final class Desktop implements CommandListener,
                 Desktop.this._updateLoadingResult(Resources.getString(Resources.DESKTOP_MSG_LOAD_MAP_FAILED), throwable);
 
                 // show user the error
-                Desktop.showError("[6] " + result, throwable, Desktop.screen);
+                Desktop.showError(nullToString("[6] ", result), throwable, Desktop.screen);
 
                 // cleanup
                 cleanup(throwable);
@@ -3306,7 +3368,7 @@ public final class Desktop implements CommandListener,
             } else {
 
                 // show user the error
-                Desktop.showError("[7] " + result, throwable, Desktop.screen);
+                Desktop.showError(nullToString("[7] ", result), throwable, Desktop.screen);
             }
 
         }
@@ -3328,7 +3390,7 @@ public final class Desktop implements CommandListener,
             } else {
 
                 // show user the error
-                Desktop.showError("[8] " + result, throwable, Desktop.screen);
+                Desktop.showError(nullToString("[8] ", result), throwable, Desktop.screen);
             }
 
         }
@@ -3348,8 +3410,11 @@ public final class Desktop implements CommandListener,
 
 					// remember track start
 					Desktop.this.trackstart = System.currentTimeMillis();
-					
-					// start tracklog
+
+                    // reset trip stats
+                    TripStatistics.reset();
+
+                    // start tracklog
                     Desktop.this.startTracklog();
 
                     // reset views on fresh start
@@ -3467,6 +3532,9 @@ public final class Desktop implements CommandListener,
             // if valid position do updates
             if (l.getFix() > 0) {
 
+                // update trip stats
+                TripStatistics.locationUpdated(l);
+
                 // update wpt navigation
                 try {
                     Desktop.this.updateNavigation(l.getQualifiedCoordinates());
@@ -3571,6 +3639,10 @@ public final class Desktop implements CommandListener,
             return "code " + code + ";result '" + result + "';throwable " + throwable;
         }
         // ~debug
+
+        private String nullToString(final String title, final Object var) {
+            return var == null ? title : title + var;
+        }
     }
 
     /*
@@ -3592,8 +3664,8 @@ public final class Desktop implements CommandListener,
         }
         if (NavigationScreens.logo != null) {
             final Image logo = NavigationScreens.logo;
-            final int x = (screen.getWidth() - logo.getWidth()) / 2;
-            final int y = (screen.getHeight() - logo.getHeight()) / 2;
+            final int x = (screen.getWidth() - logo.getWidth()) >> 1;
+            final int y = (screen.getHeight() - logo.getHeight()) >> 1;
             g.drawImage(logo, x, y, Graphics.TOP | Graphics.LEFT);
         }
         screen.flushGraphics();
@@ -3637,11 +3709,11 @@ public final class Desktop implements CommandListener,
     private void consoleDelay(final long tStart) {
         final long delay;
         if (NavigationScreens.logo != null) {
+            NavigationScreens.logo = null; // GC hint
             delay = 3500 - (System.currentTimeMillis() - tStart);
         } else {
             delay = consoleErrors > 0 ? 750 : (consoleSkips > 0 ? 250 : 0);
         }
-        NavigationScreens.logo = null; // GC hint
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("console delay " + delay);
 //#endif

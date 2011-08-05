@@ -296,8 +296,10 @@
 3526=maps
 3527=off
 3528=easyzoom with volume keys
-3529=show touchspots
+3529=Show zoom controls
 3530=no item commands
+3531=Show menubar
+3532=hide after
 
 # settings forms/fields/values (Location)
 3600=Provider
@@ -306,8 +308,8 @@
 3603=ask
 3604=never
 3605=Tracklog Format
-3606=Capture Locator
-3607=Capture Format
+3606=Camera Locator
+3607=Snapshot Format
 3608=Connection URL
 3609=Simulator Delay
 3610=Location Timings

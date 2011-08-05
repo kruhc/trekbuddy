@@ -5,7 +5,6 @@ package cz.kruch.track.maps;
 import cz.kruch.track.io.LineReader;
 import cz.kruch.track.Resources;
 import cz.kruch.track.util.CharArrayTokenizer;
-import cz.kruch.track.ui.NavigationScreens;
 
 import javax.microedition.lcdui.Image;
 import java.io.IOException;
@@ -108,14 +107,14 @@ final class JarLoader extends Map.Loader /*implements Atlas.Loader*/ {
         try {
 
             // read image
-            slice.setImage(Image.createImage(buffered.setInputStream(JarLoader.class.getResourceAsStream(url))));
+            slice.setImage(Image.createImage(buffered(JarLoader.class.getResourceAsStream(url))));
 
         } finally {
 
             // check for Palm - it resets :-(
             if (!cz.kruch.track.TrackingMIDlet.palm) {
                 try {
-                    buffered.close();
+                    bufferel();
                 } catch (Exception e) {
                     // ignore
                 }

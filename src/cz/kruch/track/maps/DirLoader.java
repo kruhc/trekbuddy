@@ -62,7 +62,7 @@ final class DirLoader extends Map.Loader implements Atlas.Loader {
             // parse known calibration
             try {
                 // path points to calibration file
-                map.setCalibration(Calibration.newInstance(buffered.setInputStream(Connector.openInputStream(map.getPath())), map.getPath()));
+                map.setCalibration(Calibration.newInstance(buffered(Connector.openInputStream(map.getPath())), map.getPath()));
 
                 // check calibration
                 if (getMapCalibration() == null) {
@@ -83,7 +83,7 @@ final class DirLoader extends Map.Loader implements Atlas.Loader {
             } finally {
 
                 // close stream
-                buffered.close();
+                bufferel();
 
             }
         }
@@ -103,7 +103,7 @@ final class DirLoader extends Map.Loader implements Atlas.Loader {
                     LineReader reader = null;
                     try {
                         // each line is a slice filename
-                        reader = new LineReader(buffered.setInputStream(file.openInputStream()));
+                        reader = new LineReader(buffered(file.openInputStream()));
                         CharArrayTokenizer.Token token = reader.readToken(false);
                         while (token != null) {
                             addSlice(token);
@@ -159,12 +159,12 @@ final class DirLoader extends Map.Loader implements Atlas.Loader {
         try {
 
             // read image
-            slice.setImage(Image.createImage(buffered.setInputStream(Connector.openInputStream(url))));
+            slice.setImage(Image.createImage(buffered(Connector.openInputStream(url))));
 
         } finally {
 
             // close stream
-            buffered.close();
+            bufferel();
 
         }
     }

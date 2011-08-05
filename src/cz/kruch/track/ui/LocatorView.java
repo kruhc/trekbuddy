@@ -7,6 +7,7 @@ import api.location.Location;
 
 import cz.kruch.track.configuration.Config;
 import cz.kruch.track.location.Waypoint;
+import cz.kruch.track.location.TripStatistics;
 import cz.kruch.track.util.ExtraMath;
 
 import javax.microedition.lcdui.Canvas;
@@ -32,16 +33,9 @@ final class LocatorView extends View {
     private static final int COLOR_AVGT         = 0x0000ff00;
     private static final int COLOR_NONAVGT      = 0x0000ffff;
 
-    private static final int HISTORY_DEPTH = 20;
-
-    private final Location[][] locations;
-    private int[] count;
-    private int[] position;
     private float[] lastCourse;
     private int orientation;
 
-//    private final QualifiedCoordinates[] coordinatesAvg;
-//    private final int[] satAvg;
     private final int[] rangeIdx;
 
     private int term, mode;
@@ -59,13 +53,6 @@ final class LocatorView extends View {
 
     LocatorView(/*Navigator*/Desktop navigator) {
         super(navigator);
-        this.locations = new Location[2][];
-        this.locations[0] = new Location[HISTORY_DEPTH];
-        this.locations[1] = new Location[HISTORY_DEPTH];
-//        this.coordinatesAvg = new QualifiedCoordinates[2];
-//        this.satAvg = new int[2];
-        this.count = new int[2];
-        this.position = new int[2];
         this.lastCourse = new float[2];
         this.orientation = -1;
         this.rangeIdx = new int[]{ 2, 2 };
@@ -97,16 +84,6 @@ final class LocatorView extends View {
     }
 
     public int locationUpdated(Location l) {
-        // only fix is good enough
-        if (l.getFix() > 0) {
-
-            // update array
-            append(0, l._clone());
-
-            // recalc
-            recalc(l.getTimestamp());
-        }
-
         return Desktop.MASK_SCREEN;
     }
 
@@ -156,109 +133,48 @@ final class LocatorView extends View {
         return Desktop.MASK_ALL;
     }
 
+    public int handleKey(final int keycode, final boolean repeated) {
+        // result repaint mask
+        int mask = Desktop.MASK_NONE;
+
+        // handle key
+        switch (keycode) {
+//#ifdef __ANDROID__
+            case -25:
+//#elifdef __ALL__
+            case -37: // SE
+                if (!Config.easyZoomVolumeKeys)
+                    break;
+//#endif
+            case Canvas.KEY_NUM7: {
+                if (rangeIdx[term] > 0) {
+                    rangeIdx[term]--;
+                    mask = Desktop.MASK_ALL;
+                }
+            } break;
+
+//#ifdef __ANDROID__
+            case -24:
+//#elifdef __ALL__
+            case -36: // SE
+                if (!Config.easyZoomVolumeKeys)
+                    break;
+//#endif
+            case Canvas.KEY_NUM9: {
+                if (rangeIdx[term] < (RANGES.length - 1)) {
+                    rangeIdx[term]++;
+                    mask = Desktop.MASK_ALL;
+                }
+            } break;
+        }
+
+        return mask;
+    }
+
     private void reset() {
         for (int i = 2; --i >= 0; ) {
-            final Location[] array = locations[i];
-            for (int j = HISTORY_DEPTH; --j >= 0; ) {
-                if (array[j] != null) {
-                    Location.releaseInstance(array[j]);
-                    array[j] = null; // gc hint
-                }
-            }
-            count[i] = position[i] = 0;
             lastCourse[i] = Float.NaN;
         }
-    }
-
-    private void append(final int term, final Location l) {
-        final Location[] array = this.locations[term];
-        final int[] count = this.count;
-        int position = this.position[term];
-
-        // rotate
-        if (++position == HISTORY_DEPTH) {
-            position = 0;
-        }
-
-        // release previous
-        if (array[position] != null) {
-            Location.releaseInstance(array[position]);
-            array[position] = null; // gc hint
-        }
-
-        // save location
-        array[position] = l;
-
-        // update term position
-        this.position[term] = position;
-
-        // update term counter
-        count[term]++;
-        if (count[term] > HISTORY_DEPTH) {
-            count[term] = HISTORY_DEPTH;
-        }
-    }
-
-    private void recalc(final long timestamp) {
-        // local ref for faster access
-        final Location[] array = locations[0];
-
-        // calc avg values
-        double latAvg = 0D, lonAvg = 0D;
-        float courseAvg = 0F, accuracySum = 0F, wSum = 0F/*, altAvg = 0F*/;
-        int c = 0/*, satSum = 0*/;
-
-        // calculate avg qcoordinates
-        for (int i = HISTORY_DEPTH; --i >= 0; ) {
-            final Location l = array[i];
-            if (l != null) {
-                final QualifiedCoordinates qc = l.getQualifiedCoordinates();
-                final float hAccuracy = qc.getHorizontalAccuracy();
-                if (!Float.isNaN(hAccuracy)) {
-                    final float w = 5F / hAccuracy;
-                    accuracySum += hAccuracy;
-//                  satSum += l.getSat();
-                    latAvg += qc.getLat() * w;
-                    lonAvg += qc.getLon() * w;
-//                  altAvg += qc.getAlt();
-                    wSum += w;
-                    c++;
-                    final float course = l.getCourse();
-                    if (!Float.isNaN(course)) {
-                        courseAvg += course * w;
-                    }
-                }
-            }
-        }
-        if (c > 0) {
-            latAvg /= wSum;
-            lonAvg /= wSum;
-//            altAvg /= c;
-            courseAvg /= wSum;
-/*
-            QualifiedCoordinates.releaseInstance(coordinatesAvg[0]);
-            coordinatesAvg[0] = null; // gc hint
-            coordinatesAvg[0] = QualifiedCoordinates.newInstance(latAvg, lonAvg);
-            coordinatesAvg[0].setHorizontalAccuracy(accuracySum / c);
-*/
-//            satAvg[term] = satSum / c;
-
-            final QualifiedCoordinates qc = QualifiedCoordinates.newInstance(latAvg, lonAvg);
-            qc.setHorizontalAccuracy(accuracySum / c);
-            final Location l = Location.newInstance(qc, timestamp, -1);
-            l.setCourse(courseAvg);
-            append(1, l);
-        }
-
-/*
-        // set non-avg qcoordinates - it is last position
-        QualifiedCoordinates.releaseInstance(coordinatesAvg[1]);
-        coordinatesAvg[1] = null; // gc hint
-        coordinatesAvg[1] = locations[position].getQualifiedCoordinates().clone();
-
-        // remember number of valid position in array
-        count = c;
-*/
     }
 
     public int changeDayNight(final int dayNight) {
@@ -314,7 +230,7 @@ final class LocatorView extends View {
         }
 
         /* block */ {
-            final Location current = this.locations[term][this.position[term]];
+            final Location current = TripStatistics.locations[term][TripStatistics.positions[term]];
             if (current != null) {
                 course = current.getCourse();
             } else {
@@ -360,7 +276,7 @@ final class LocatorView extends View {
         final Waypoint wpt = navigator.getNavigateTo();
 
         // draw points
-        if (count[term] > 0) {
+        if (TripStatistics.counts[term] > 0) {
 
             // print course
             graphics.setColor(fgColor);
@@ -371,8 +287,8 @@ final class LocatorView extends View {
             graphics.drawChars(sbChars, 0, cl, w - courseStrWidth, fh, Graphics.LEFT | Graphics.TOP);
 
             // local refs
-            final Location[] locations = this.locations[term];
-            final QualifiedCoordinates coordsAvg = locations[this.position[term]].getQualifiedCoordinates();
+            final Location[] locations = TripStatistics.locations[term];
+            final QualifiedCoordinates coordsAvg = locations[TripStatistics.positions[term]].getQualifiedCoordinates();
             final double latAvg = coordsAvg.getLat();
             final double lonAvg = coordsAvg.getLon();
             final int[] xy = this.vertex;
@@ -384,18 +300,18 @@ final class LocatorView extends View {
             final double xScale = ((double) (lineLength >> 1)) / (v / Math.cos(Math.toRadians(latAvg)));
 
             // points color
-            final int inc = (192/* = 256 - 64*/) / HISTORY_DEPTH;
+            final int inc = (192/* = 256 - 64*/) / TripStatistics.HISTORY_DEPTH;
             int cstep = inc;
             cstep <<= 8;
             if (term > 0) cstep += inc;
-            int color = (term == 0 ? COLOR_AVGT : COLOR_NONAVGT) - this.count[term] * cstep;
+            int color = (term == 0 ? COLOR_AVGT : COLOR_NONAVGT) - TripStatistics.counts[term] * cstep;
 
             // draw points
-            int offset = this.position[term] + 1; // to start from the oldest
-            if (offset == HISTORY_DEPTH) {
+            int offset = TripStatistics.positions[term] + 1; // to start from the oldest
+            if (offset == TripStatistics.HISTORY_DEPTH) {
                 offset = 0;
             }
-            for (int N = HISTORY_DEPTH, i = N; --i >= 0; ) {
+            for (int N = TripStatistics.HISTORY_DEPTH, i = N; --i >= 0; ) {
                 Location l = locations[offset++];
                 if (offset == N) {
                     offset = 0;
@@ -465,7 +381,7 @@ final class LocatorView extends View {
                 sb.append(' ').append(uc);
                 l = sb.length();
                 sb.getChars(0, l, sbChars, 0);
-                graphics.drawChars(sbChars, 0, l, OSD.BORDER, 2 * fh, Graphics.LEFT | Graphics.TOP);
+                graphics.drawChars(sbChars, 0, l, OSD.BORDER, fh << 1, Graphics.LEFT | Graphics.TOP);
             }
 
             // draw sat
@@ -573,6 +489,9 @@ final class LocatorView extends View {
         graphics.drawString(RANGES_STR[rangeIdx],
                             dx + 3, h - fh - 2,
                             Graphics.LEFT | Graphics.TOP);
+
+        // draw zoom spots
+        NavigationScreens.drawZoomSpots(graphics);
     }
 
     private void drawCompas(final int width2, final int height2, final int fh, final int thick,

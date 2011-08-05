@@ -399,7 +399,7 @@ final class WaypointForm implements CommandListener, ItemCommandListener, ItemSt
             appendWithNewlineAfter(this.fieldAlt = createTextField(Resources.NAV_FLD_ALT, sb.toString(), 5));
 
             // spacer
-            form.append(new Spacer(Desktop.width / 2, Desktop.height / 20));
+            form.append(new Spacer(Desktop.width >> 1, Desktop.height / 20));
         }
     }
 
@@ -425,7 +425,7 @@ final class WaypointForm implements CommandListener, ItemCommandListener, ItemSt
         viewResult = form.get(appendStringItem(Resources.getString(Resources.NAV_FLD_TARGET), ""));
 
         // spacer
-        form.append(new Spacer(Desktop.width / 2, Desktop.height / 20));
+        form.append(new Spacer(Desktop.width >> 1, Desktop.height / 20));
         
         // interactive update
         form.setItemStateListener(this);
@@ -457,11 +457,7 @@ final class WaypointForm implements CommandListener, ItemCommandListener, ItemSt
         if (source instanceof cz.kruch.track.fun.Camera) { // JSR-234 and new JSR-135 capture snapshot path
             if (result instanceof String) {
                 imagePath = (String) result;
-//#ifndef __ANDROID__
                 final Object thumbnail = Camera.getThumbnail(Config.getFolderURL(Config.FOLDER_WPTS) + imagePath);
-//#else
-                final Object thumbnail = null;
-//#endif
                 final Item item;
                 if (thumbnail instanceof Image) {
                     item = new ImageItem(null, (Image) thumbnail, ImageItem.LAYOUT_DEFAULT, null);

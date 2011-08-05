@@ -238,10 +238,10 @@ public final class FileBrowser implements CommandListener, Runnable, Comparator 
 //#endif
 
         // append items
-        list = null; // gc hint
         try {
             final Enumeration items = holder == null ? File.listRoots() : file.list();
             final String head = depth > 0 ? File.PARENT_DIR : null;
+            list = null; // gc hint
             list = new List(title, List.IMPLICIT, sort2array(items, head, filter), null);
 //#ifdef __LOG__
             if (log.isEnabled()) log.debug(list.size() + " entries");

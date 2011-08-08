@@ -233,7 +233,11 @@ public final class Jsr179LocationProvider
             if (idx != 0) {
                 if (idx - start < NmeaParser.MAX_SENTENCE_LENGTH) {
                     extra.getChars(start, idx, line, 0);
+//#ifdef __RIM__
+                    if (true) { // CRC is stripped in NMEA on Blackberries
+//#else
                     if (NmeaParser.validate(line, idx - start)) {
+//#endif
                         final NmeaParser.Record rec = NmeaParser.parse(line, idx - start);
                         switch (rec.type) {
                             case NmeaParser.HEADER_GGA: {

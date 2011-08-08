@@ -133,6 +133,7 @@ public final class Location {
     }
 
     public boolean isSpeedValid() {
+/*
         final float accuracy = this.coordinates.getHorizontalAccuracy();
         final float speed = this.speed;
         if (!Float.isNaN(accuracy) && !Float.isNaN(speed)) {
@@ -141,6 +142,8 @@ public final class Location {
             }
         }
         return false;
+*/
+        return !Float.isNaN(speed);
     }
 
     public void validateEx() {

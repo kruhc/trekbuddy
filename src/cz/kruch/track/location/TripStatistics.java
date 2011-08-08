@@ -21,8 +21,6 @@ public final class TripStatistics {
             new Location[HISTORY_DEPTH],
             new Location[HISTORY_DEPTH]
     };
-//    private final QualifiedCoordinates[] coordinatesAvg;
-//    private final int[] satAvg;
 
     public static int[] counts = { 0, 0 };
     public static int[] positions = { 0, 0 };
@@ -53,12 +51,12 @@ public final class TripStatistics {
     }
 
     private static void append(final int term, final Location l) {
+        // update term position
         int position = positions[term];
-
-        // rotate
         if (++position == HISTORY_DEPTH) {
             position = 0;
         }
+        positions[term] = position;
 
         // release previous
         final Location[] array = locations[term];
@@ -70,15 +68,12 @@ public final class TripStatistics {
         // save location
         array[position] = l;
 
-        // update term position
-        positions[term] = position;
-
         // update term counter
-        final int[] counts = TripStatistics.counts;
-        counts[term]++;
-        if (counts[term] > HISTORY_DEPTH) {
-            counts[term] = HISTORY_DEPTH;
+        int count = TripStatistics.counts[term];
+        if (++count > HISTORY_DEPTH) {
+            count = HISTORY_DEPTH;
         }
+        counts[term] = count;
     }
 
     private static void recalc(final long timestamp) {
@@ -95,51 +90,33 @@ public final class TripStatistics {
             final Location l = array[i];
             if (l != null) {
                 final QualifiedCoordinates qc = l.getQualifiedCoordinates();
-                final float hAccuracy = qc.getHorizontalAccuracy();
-                if (!Float.isNaN(hAccuracy)) {
-                    final float w = 5F / hAccuracy;
-                    accuracySum += hAccuracy;
-//                  satSum += l.getSat();
-                    latAvg += qc.getLat() * w;
-                    lonAvg += qc.getLon() * w;
-//                  altAvg += qc.getAlt();
-                    wSum += w;
-                    c++;
-                    final float course = l.getCourse();
-                    if (!Float.isNaN(course)) {
-                        courseAvg += course * w;
-                    }
+                float hAccuracy = qc.getHorizontalAccuracy();
+                if (Float.isNaN(hAccuracy)) {
+                    hAccuracy = 50 * 5; // max hdop 50 * 5 m
+                } else if (hAccuracy == 0F) { // shit happens
+                    hAccuracy = 5;
+                }
+                final float w = 5F / hAccuracy;
+                accuracySum += hAccuracy;
+                latAvg += qc.getLat() * w;
+                lonAvg += qc.getLon() * w;
+                wSum += w;
+                c++;
+                final float course = l.getCourse();
+                if (!Float.isNaN(course)) {
+                    courseAvg += course * w;
                 }
             }
         }
         if (c > HISTORY_DEPTH_MIN) {
             latAvg /= wSum;
             lonAvg /= wSum;
-//            altAvg /= c;
             courseAvg /= wSum;
-/*
-            QualifiedCoordinates.releaseInstance(coordinatesAvg[0]);
-            coordinatesAvg[0] = null; // gc hint
-            coordinatesAvg[0] = QualifiedCoordinates.newInstance(latAvg, lonAvg);
-            coordinatesAvg[0].setHorizontalAccuracy(accuracySum / c);
-*/
-//            satAvg[term] = satSum / c;
-
             final QualifiedCoordinates qc = QualifiedCoordinates.newInstance(latAvg, lonAvg);
             qc.setHorizontalAccuracy(accuracySum / c);
             final Location l = Location.newInstance(qc, timestamp, 1);
             l.setCourse(courseAvg);
             append(TERM_LONG, l);
         }
-
-/*
-        // set non-avg qcoordinates - it is last position
-        QualifiedCoordinates.releaseInstance(coordinatesAvg[1]);
-        coordinatesAvg[1] = null; // gc hint
-        coordinatesAvg[1] = locations[position].getQualifiedCoordinates().clone();
-
-        // remember number of valid position in array
-        count = c;
-*/
     }
 }

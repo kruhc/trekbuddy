@@ -304,7 +304,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
             dataDir = getDefaultDataDir("file:///b/", "trekbuddy/");
             forcedGc = true;
         } else if (cz.kruch.track.TrackingMIDlet.samsung) {
-            dataDir = getDefaultDataDir("file:///mmc/", "trekbuddy/");
+            dataDir = getDefaultDataDir("file:///Mmc/", "trekbuddy/");
         } else if (cz.kruch.track.TrackingMIDlet.uiq) {
             dataDir = getDefaultDataDir("file:///Ms/", "Other/TrekBuddy/");
             fullscreen = true;
@@ -317,6 +317,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         if (cz.kruch.track.TrackingMIDlet.symbian) {
             useNativeService = true; // !cz.kruch.track.TrackingMIDlet.s60rdfp2;
         } else if (cz.kruch.track.TrackingMIDlet.nokia) {
+            safeColors = true;
             captureLocator = "capture://image";
         }
 
@@ -349,7 +350,6 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
 
 //#ifdef __EMULATOR__
         locationProvider = Config.LOCATION_PROVIDER_SIMULATOR;
-        simulatorDelay = 1000;
 //#endif        
 
         return result;

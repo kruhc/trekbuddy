@@ -245,7 +245,7 @@ final class ComputerView extends View
     private static final float AUTO_MIN_SPD     = 2.4F;
     private static final long AUTO_MIN_T        = 30000;
     private static final int SHORT_AVG_DEPTH    = 30; // 30 sec (for 1 Hz NMEA)
-    private static final int SHORT_AVG_DEPTH_MIN = 15; // SHORT_AVG_DEPTH / 2 
+    private static final int SHORT_AVG_DEPTH_MIN = 15; // SHORT_AVG_DEPTH / 2
     private static final int MAX_TEXT_LENGTH    = 128;
 
 
@@ -461,24 +461,6 @@ final class ComputerView extends View
 
                 // calculate distance - emulate static navigation
                 float ds = 0F, dsn = 0F;
-//                if (snrefCoords != null) {
-//                    ds = snrefCoords.distance(qc);
-//                    if (Float.isNaN(hAccuracy)) {
-//                        if (ds < 50) {
-//                            ds = 0F;
-//                        }
-//                    } else if (ds < (3 * hAccuracy + 5)) {
-//                        ds = 0F;
-//                    } else {
-//                        QualifiedCoordinates.releaseInstance(snrefCoords);
-//                        snrefCoords = null;
-//                        snrefCoords = qc._clone();
-//                        /*snreftime = timestamp;*/
-//                    }
-//                } else {
-//                    snrefCoords = qc._clone();
-//                    /*snreftime = timestamp;*/
-//                }
                 final Location avgLoc = TripStatistics.getLast(TripStatistics.TERM_LONG);
                 if (avgLoc != null) {
                     final QualifiedCoordinates avgQc = avgLoc.getQualifiedCoordinates();

@@ -301,7 +301,7 @@ public abstract class Camera implements
         InputStream is = null;
         Object result = null;
         try {
-            is = new api.io.BufferedInputStream(Connector.openInputStream(url), 8192);
+            is = new api.io.BufferedInputStream(Connector.openInputStream(url), 4096);
             result = Image.createImage(new ByteArrayInputStream(getThumbnail(is)));
         } catch (Throwable t) { // could be OOM?
             result = t;

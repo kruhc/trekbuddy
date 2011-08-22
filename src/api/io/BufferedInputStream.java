@@ -27,11 +27,13 @@ public final class BufferedInputStream extends InputStream {
 //#endif
     // allow autofill
     private boolean autofill;
+    private int sizehint;
 
     public BufferedInputStream(InputStream in, int size) {
         this.in = in;
         this.buf = new byte[size];
         this.autofill = true;
+        this.sizehint = size;
 //#ifdef __MARKSUPPORT__
         this.markpos = -1;
 //#endif
@@ -51,6 +53,12 @@ public final class BufferedInputStream extends InputStream {
 
     public void setAutofill(boolean autofill) {
         this.autofill = autofill;
+        this.sizehint = buf.length;
+    }
+
+    public void setAutofill(boolean autofill, int sizehint) {
+        this.autofill = autofill;
+        this.sizehint = sizehint < buf.length ? sizehint : buf.length;
     }
 
     public int read() throws IOException {
@@ -79,7 +87,7 @@ public final class BufferedInputStream extends InputStream {
                 markpos = -1;
             }
 //#endif
-            count = in.read(buf, 0, buf.length);
+            count = in.read(buf, 0, sizehint);
             // ~
         } else {
 //#ifdef __MARKSUPPORT__
@@ -118,7 +126,7 @@ public final class BufferedInputStream extends InputStream {
                 if (fillcount++ > 0) {
                     markpos = -1;
                 }
-                n = count = in.read(buf, 0, autofill ? buf.length : len);
+                n = count = in.read(buf, 0, autofill ? sizehint : len);
                 // ~
                 if (n > 0) { // count is either -1 or greater than 0
                     n = n < len ? n : len;
@@ -128,7 +136,7 @@ public final class BufferedInputStream extends InputStream {
 //#else
                 if (autofill && len < buf.length) {
                     pos = 0;
-                    n = count = in.read(buf, 0, buf.length);
+                    n = count = in.read(buf, 0, sizehint);
                     if (n > 0) { // count is either -1 or greater than 0
                         n = n < len ? n : len;
                         System.arraycopy(buf, 0, b, off, n);

@@ -1876,7 +1876,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
 
         try {
             // open input
-            in = new BufferedInputStream(file.openInputStream(), 8192);
+            in = new BufferedInputStream(file.openInputStream(), 4096);
 
             // create parser
             parser = new HXmlParser();

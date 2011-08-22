@@ -30,23 +30,14 @@ public class DeviceControl extends TimerTask {
     //
 
     public static void initialize() {
-/*
-//#ifdef __ALL__
-        if (instance == null) {
-            if (cz.kruch.track.TrackingMIDlet.nokiaui14) {
-                try {
-                    instance = (DeviceControl) Class.forName("cz.kruch.track.ui.nokia.NokiaUi14DeviceControl").newInstance();
-                } catch (Throwable t) {
-                    // ignore
-                }
-            }
-        }
-//#endif
-*/
 //#ifdef __SYMBIAN__
         if (instance == null) {
             try {
-                instance = (DeviceControl) Class.forName("cz.kruch.track.ui.nokia.S60DeviceControl").newInstance();
+                if (cz.kruch.track.TrackingMIDlet.nokiaui14) {
+                    instance = (DeviceControl) Class.forName("cz.kruch.track.ui.nokia.NokiaUi14DeviceControl").newInstance();
+                } else {
+                    instance = (DeviceControl) Class.forName("cz.kruch.track.ui.nokia.S60DeviceControl").newInstance();
+                }
             } catch (Throwable t) {
                 // ignore
             }

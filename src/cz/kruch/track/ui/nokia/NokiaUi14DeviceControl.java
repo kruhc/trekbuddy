@@ -10,7 +10,7 @@ package cz.kruch.track.ui.nokia;
 final class NokiaUi14DeviceControl extends NokiaDeviceControl {
 
     NokiaUi14DeviceControl() {
-        this.name = "Nokia/UI 1.4+";
+        this.name = "Nokia+";
     }
 
     /** @Override */

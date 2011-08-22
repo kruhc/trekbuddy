@@ -104,7 +104,7 @@ final class InfoForm implements CommandListener {
                 .append(File.fsType)
                 .append("; resetable? ").append(cz.kruch.track.maps.Map.fileInputStreamResetable)
 //#ifdef __SYMBIAN__
-                .append("; network stream? ").append(cz.kruch.track.maps.Map.networkInputStreamAvailable)
+                .append("; network stream? ").append(Config.useNativeService && cz.kruch.track.maps.Map.networkInputStreamAvailable)
 //#endif
 //#ifdef __MARKSUPPORT__
                 .append("; advio: ").append(api.io.BufferedInputStream.marksCount)

@@ -485,7 +485,7 @@ final class SmartList extends Canvas {
     }
 
     private void makeSelectedVisible() {
-        if (selected >= 0) {
+        if (visible > 0 && selected >= 0) {
             if (selected < top) {
                 top = selected;
             } else if (selected - top + 1 > visible) {

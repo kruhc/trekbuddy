@@ -82,8 +82,8 @@ public final class TripStatistics {
 
         // calc avg values
         double latAvg = 0D, lonAvg = 0D;
-        float courseAvg = 0F, accuracySum = 0F, wSum = 0F/*, altAvg = 0F*/;
-        int c = 0/*, satSum = 0*/;
+        float spdAvg = 0F, courseAvg = 0F/*, altAvg = 0F*/, accuracySum = 0F, wSum = 0F;
+        int c = 0;
 
         // calculate avg qcoordinates
         for (int i = HISTORY_DEPTH; --i >= 0; ) {
@@ -102,6 +102,10 @@ public final class TripStatistics {
                 lonAvg += qc.getLon() * w;
                 wSum += w;
                 c++;
+                final float spd = l.getSpeed();
+                if (!Float.isNaN(spd)) {
+                    spdAvg += spd * w;
+                }
                 final float course = l.getCourse();
                 if (!Float.isNaN(course)) {
                     courseAvg += course * w;
@@ -111,10 +115,12 @@ public final class TripStatistics {
         if (c > HISTORY_DEPTH_MIN) {
             latAvg /= wSum;
             lonAvg /= wSum;
-            courseAvg /= wSum;
+            spdAvg /= wSum; // FIXME spd could have been NaN
+            courseAvg /= wSum; // FIXME course could have been NaN
             final QualifiedCoordinates qc = QualifiedCoordinates.newInstance(latAvg, lonAvg);
             qc.setHorizontalAccuracy(accuracySum / c);
             final Location l = Location.newInstance(qc, timestamp, 1);
+            l.setSpeed(spdAvg);
             l.setCourse(courseAvg);
             append(TERM_LONG, l);
         }

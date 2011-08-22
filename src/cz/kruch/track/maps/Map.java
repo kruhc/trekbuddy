@@ -339,8 +339,15 @@ public final class Map implements Runnable {
         protected static final char[] SET_DIR_PREFIX = { 's', 'e', 't', '/' };
         protected static final char[] EXT_PNG = { '.', 'p', 'n', 'g' };
         protected static final char[] EXT_JPG = { '.', 'j', 'p', 'g' };
-        
-        private static final BufferedInputStream buffin = new BufferedInputStream(null, 8192);
+
+//#if __SYMBIAN__
+        protected static final int BUFFERSIZE = 26280; // 18 * 1460 (MSS)
+//#elif __RIM__ || __ANDROID__
+        protected static final int BUFFERSIZE = 16384; // we have more memory
+//#else
+        protected static final int BUFFERSIZE = 4096; // conservative and also BC
+//#endif
+        private static final BufferedInputStream buffin = new BufferedInputStream(null, BUFFERSIZE);
 
         protected Map map;
         protected String basename;
@@ -566,7 +573,8 @@ public final class Map implements Runnable {
 //#ifdef __LOG__
                                 if (log.isEnabled()) log.debug("image loading failed: " + t);
 //#endif
-                                throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_SLICE_LOAD_FAILED) + ": " + t.toString());
+                                slice.setImage(Slice.NO_IMAGE);
+                                throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_SLICE_LOAD_FAILED), t);
                             }
 
                             // assertion and/or user warning

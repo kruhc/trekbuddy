@@ -13,7 +13,6 @@ import com.ice.tar.TarEntry;
 import cz.kruch.track.Resources;
 import cz.kruch.track.configuration.Config;
 import cz.kruch.track.io.LineReader;
-import cz.kruch.track.ui.NavigationScreens;
 import cz.kruch.track.util.CharArrayTokenizer;
 
 import javax.microedition.lcdui.Image;
@@ -38,8 +37,11 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
     private int hintTmiFileSize, increment, calBlockOffset;
     private String calEntryName;
 
+    private boolean useAAF;
+
     TarLoader() {
         this.isTar = true;
+        this.useAAF = true;
         ((api.io.BufferedInputStream) bufferef()).setAutofill(false);
     }
 
@@ -83,12 +85,13 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
 
             // open stream
 //#ifdef __SYMBIAN__
-			if (Config.useNativeService && Map.networkInputStreamAvailable) {
+            if (Config.useNativeService && Map.networkInputStreamAvailable) {
                 try {
                     in = cz.kruch.track.device.SymbianService.openInputStream(map.getPath());
+                    ((api.io.BufferedInputStream) bufferef()).setAutofill(true, BUFFERSIZE - 8);
+                    useAAF = false;
                     Map.networkInputStreamAvailable = true;
-                } catch (Exception e) { // IOE or SE
-                    // service not running/available
+                } catch (Exception e) { // IOE or SE = service not running/available
                     Map.networkInputStreamAvailable = false;
                 }
             }
@@ -106,9 +109,11 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
                     try {
                         if (!Config.lowmemIo) {
                             in.mark((int) nativeFile.fileSize());
+                            Map.fileInputStreamResetable = 1;
+                        } else {
+                            Map.fileInputStreamResetable = 0;
                         }
                         nativeIn = in;
-                        Map.fileInputStreamResetable = 1;
                     } catch (OutOfMemoryError e) {
                         /*
                          * OutOfMemoryError on S60. Let's try smaller buffer.
@@ -334,7 +339,13 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
                 // prepare tar stream
                 tarIn.setInputStream(bufferef());
                 tarIn.skip(streamOffset - tarIn.getStreamOffset());
-                tarIn.getNextEntry();
+                if (useAAF) {
+                    ((api.io.BufferedInputStream) bufferef()).setAutofill(false);
+                }
+                final TarEntry te = tarIn.getNextEntry();
+                if (useAAF) {
+                    ((api.io.BufferedInputStream) bufferef()).setAutofill(true, (int) te.getSize());
+                }
 
                 // read image
                 slice.setImage(Image.createImage(tarIn));
@@ -488,7 +499,7 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
                 final char[] delims = { ':' };
                 try {
                     // read entry meta info
-                    reader = new LineReader(file.openInputStream(), 8192);
+                    reader = new LineReader(file.openInputStream(), 4096);
                     token = reader.readToken(false);
                     while (token != null) {
 

@@ -79,7 +79,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         samsung = platform.startsWith("SAMSUNG") || platform.startsWith("SGH");
         siemens = System.getProperty("com.siemens.IMEI") != null || System.getProperty("com.siemens.mp.imei") != null;
         motorola = System.getProperty("com.motorola.IMEI") != null;
-        lg = platform.startsWith("LG");
+        lg = platform.startsWith("LG") || System.getProperty("com.lge.lgjp.specification") != null;
         j9 = platform.startsWith("Windows CE");
         jbed = platform.startsWith("Jbed");
         intent = platform.startsWith("intent");

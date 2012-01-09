@@ -16,7 +16,6 @@ import javax.microedition.media.control.VideoControl;
 import javax.microedition.io.Connector;
 import javax.microedition.lcdui.Form;
 import java.util.Vector;
-import java.io.IOException;
 
 import api.file.File;
 
@@ -134,7 +133,27 @@ final class Jsr234Camera extends Camera implements PlayerListener {
             final CameraControl cameraCtrl = (CameraControl) player.getControl("javax.microedition.amms.control.camera.CameraControl");
             cameraCtrl.setStillResolution(Config.snapshotFormatIdx);
             try {
-                cameraCtrl.enableShutterFeedback(true);
+                if (!cameraCtrl.isShutterFeedbackEnabled()) {
+                    cameraCtrl.enableShutterFeedback(true);
+                }
+            } catch (Exception e) {
+                // ignore
+            }
+
+            // adjust flash
+            try {
+                final FlashControl flashCtrl = (FlashControl) player.getControl("javax.microedition.amms.control.camera.FlashControl");
+                if (flashCtrl != null) {
+                    flashCtrl.setMode(FlashControl.AUTO);
+                    /* wait 1 sec max for flash to get ready */
+                    for (int i = 0; i < 10 && !flashCtrl.isFlashReady(); i++) {
+                        try {
+                            Thread.sleep(100);
+                        } catch (InterruptedException e) {
+                            // ignore
+                        }
+                    }
+                }
             } catch (Exception e) {
                 // ignore
             }
@@ -149,23 +168,16 @@ final class Jsr234Camera extends Camera implements PlayerListener {
                 // ignore
             }
 
-            // adjust flash
-            try {
-                final FlashControl flashCtrl = (FlashControl) player.getControl("javax.microedition.amms.control.camera.FlashControl");
-                if (flashCtrl != null) {
-                    flashCtrl.setMode(FlashControl.AUTO);
-                }
-            } catch (Exception e) {
-                // ignore
-            }
-
             // use snapshot control
             if (!Config.snapshotFormat.startsWith("encoding")) {
 
                 // prepare storage
-                final String imagePath = createImagesFolder(true);
+                String imagePath = createImagesFolder(true);
+                if (cz.kruch.track.TrackingMIDlet.nokia && imagePath.startsWith(File.PATH_SEPARATOR)) {
+                    imagePath = imagePath.substring(1);
+                }
 
-                // result (1st part, filename will be appende in the listener method)
+                // result (1st part, filename will be appended in the listener method)
                 callbackResult = imagePath.substring(imagePath.indexOf(FOLDER_PREFIX));
 
                 // we need to listen
@@ -173,13 +185,9 @@ final class Jsr234Camera extends Camera implements PlayerListener {
 
                 // shoot one picture
                 final SnapshotControl snapshotCtrl = (SnapshotControl) player.getControl("javax.microedition.amms.control.camera.SnapshotControl");
+                snapshotCtrl.setDirectory(imagePath);
                 snapshotCtrl.setFilePrefix(PIC_PREFIX);
                 snapshotCtrl.setFileSuffix(PIC_SUFFIX);
-                if (cz.kruch.track.TrackingMIDlet.nokia && imagePath.startsWith(File.PATH_SEPARATOR)) {
-                    snapshotCtrl.setDirectory(imagePath.substring(1));
-                } else {
-                    snapshotCtrl.setDirectory(imagePath);
-                }
                 snapshotCtrl.start(SnapshotControl.FREEZE);
 
             } else { // old school

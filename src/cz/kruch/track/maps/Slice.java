@@ -38,7 +38,19 @@ public class Slice {
         if (this.image == NO_IMAGE) {
             return;
         }
-
+//#ifdef __ANDROID__
+        if (image == null && this.image != null) {
+            final android.graphics.Bitmap bitmap;
+            if (this.image.isMutable()) {
+                bitmap = ((org.microemu.android.device.AndroidMutableImage) this.image).getBitmap();
+            } else {
+                bitmap = ((org.microemu.android.device.AndroidImmutableImage) this.image).getBitmap();
+            }
+            if (bitmap != null && !bitmap.isRecycled()) {
+                bitmap.recycle();
+            }
+        }
+//#endif
         this.image = image;
     }
 

@@ -230,11 +230,14 @@ final class ComputerView extends View
 //#endif                                                 
 
     // charset
-    private static final char[] CHARSET = {
+    private static final char[] CHARSET/* = {
         '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',
         ' ', '+', '-', '.', ':', '/', 0xb0, '"', '\'',
         'h', 'k', 'm', 'p', 's'
-    };
+    }*/;
+    static {
+        CHARSET = "0123456789 +-.:/°\"\'hkmps".toCharArray();
+    }
     private static final char[] DELIMITERS  = { '{', '}' };
 
     private static final String CMS_SIMPLE_XML  = "cms.simple.xml";

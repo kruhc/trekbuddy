@@ -30,6 +30,7 @@ public final class NmeaParser {
     private static final Record unknown = new Record();
     private static final CharArrayTokenizer tokenizer = new CharArrayTokenizer();
     private static final char[] delimiters = { ',', '*' };
+    private static final char[] NaN = { 'N', 'a', 'N' };
 
     private static long date;
     private static int day, month, year;
@@ -56,7 +57,7 @@ public final class NmeaParser {
         for (int i = 1; i < length; i++) {
             final byte b = (byte) (raw[i] & 0x00ff);
             if (b == '*') {
-                if (length - i >= 2) {
+                if (length - i == 3) { // length - 1 - i == 2
                     byte hi = (byte) (raw[i + 1] & 0x00ff);
                     byte lo = (byte) (raw[i + 2] & 0x00ff);
                     if (hi >= '0' && hi <= '9') {
@@ -175,7 +176,7 @@ public final class NmeaParser {
                     }
                 } break;
                 case 9: {
-                    if (!token.isEmpty()) {
+                    if (!token.isEmpty() && !token.endsWith(NaN)) {
                         record.altitude = CharArrayTokenizer.parseFloat(token);
                     }
                 } break;

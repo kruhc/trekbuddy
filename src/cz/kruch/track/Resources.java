@@ -398,6 +398,7 @@ public final class Resources {
     static int initialize() throws IOException {
         final Object[] holder = new Object[2];
 
+//#ifndef __LOCALE_PL__
         // read default resources
         String locale = System.getProperty("microedition.locale");
         if (locale != null && locale.length() != 0) { // locale not empty
@@ -413,6 +414,9 @@ public final class Resources {
         if (is == null) {
             is = Resources.class.getResourceAsStream("/resources/language.en.res");
         }
+//#else
+        InputStream is = Resources.class.getResourceAsStream("/resources/language.pl.res");
+//#endif
         loadRes(is, holder);
         ids = (int[]) holder[0];
         value = (String) holder[1];
@@ -478,7 +482,7 @@ public final class Resources {
         keymapSize = 0;
 
         // load user key mapping
-        if (Config.resourceExist(resources, LANGUAGE_FILE)) {
+        if (Config.resourceExist(resources, KEYMAP_FILE)) {
             api.file.File file = null;
             try {
                 file = api.file.File.open(Config.getFolderURL(Config.FOLDER_RESOURCES) + KEYMAP_FILE);

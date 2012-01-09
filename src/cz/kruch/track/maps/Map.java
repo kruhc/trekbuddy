@@ -35,6 +35,11 @@ public final class Map implements Runnable {
     // map state
     private Loader loader;
     private Calibration calibration;
+    private volatile boolean isInUse;
+
+    // special map properties
+    boolean virtual;
+    int bgColor;
 
     public Map(String path, String name, /*StateListener*/Desktop listener) {
         if (path == null) {
@@ -71,6 +76,14 @@ public final class Map implements Runnable {
 
     public Datum getDatum() {
         return calibration.getDatum();
+    }
+
+    public int getBgColor() {
+        return bgColor;
+    }
+
+    public boolean isVirtual() {
+        return virtual;
     }
 
     public double getStep(final char direction) {
@@ -163,6 +176,9 @@ public final class Map implements Runnable {
 //#ifdef __LOG__
         if (log.isEnabled()) log.info("dispose map " + getPath());
 //#endif
+
+        // no longer in use
+        isInUse = false;
 
         // dispose loader resources
         if (loader != null) {
@@ -280,12 +296,18 @@ public final class Map implements Runnable {
                     factory = Class.forName("cz.kruch.track.maps.TarLoader");
                 } else if (path.endsWith(".jar")) {
                     factory = Class.forName("cz.kruch.track.maps.JarLoader");
+                } else if (path.endsWith(".xml")) {
+                    factory = Class.forName("cz.kruch.track.maps.NoMapLoader");
                 } else {
                     factory = Class.forName("cz.kruch.track.maps.DirLoader");
                 }
                 loader = (Loader) factory.newInstance();
                 loader.init(this, path);
             }
+
+            // prepare loader
+            loader.prepare();
+            isInUse = true;
 
             // loads whatever is needed
             loader.loadMeta();
@@ -294,7 +316,7 @@ public final class Map implements Runnable {
             if (calibration == null) {
                 throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_NO_CALIBRATION), getName());
             }
-            if (loader.hasSlices() == false) {
+            if (!loader.hasSlices()) {
                 throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_NO_SLICES), getName());
             }
 
@@ -340,21 +362,19 @@ public final class Map implements Runnable {
         protected static final char[] EXT_PNG = { '.', 'p', 'n', 'g' };
         protected static final char[] EXT_JPG = { '.', 'j', 'p', 'g' };
 
-//#if __SYMBIAN__
-        protected static final int BUFFERSIZE = 26280; // 18 * 1460 (MSS)
-//#elif __RIM__ || __ANDROID__
-        protected static final int BUFFERSIZE = 16384; // we have more memory
+//#ifdef __SYMBIAN__ || __RIM__ || __ANDROID__
+        protected static final int BUFFERSIZE = 8192; // more memory available
 //#else
-        protected static final int BUFFERSIZE = 4096; // conservative and also BC
+        protected static final int BUFFERSIZE = 4096; // conservative; also backward compatible
 //#endif
-        private static final BufferedInputStream buffin = new BufferedInputStream(null, BUFFERSIZE);
+        private BufferedInputStream bufferedIn;
 
         protected Map map;
         protected String basename;
         protected char[] extension;
         protected boolean isGPSka, isTar, isTmi;
 
-        private int tileWidth, tileHeight;
+        protected int tileWidth, tileHeight;
         
         private Vector _list;
 
@@ -363,7 +383,7 @@ public final class Map implements Runnable {
 
         Loader() {
             this.tileWidth = this.tileHeight = Integer.MAX_VALUE;
-            ((api.io.BufferedInputStream) bufferef()).setAutofill(true);
+//            ((api.io.BufferedInputStream) bufferef()).setAutofill(true, -1);
         }
 
         void init(final Map map, final String url) throws IOException {
@@ -371,7 +391,26 @@ public final class Map implements Runnable {
             this.isGPSka = url.toLowerCase().endsWith(Calibration.XML_EXT);
         }
 
+        void prepare() throws IOException {
+            if (bufferedIn == null) {
+//#ifdef __SYMBIAN__
+                if (isTar && Config.useNativeService && Map.networkInputStreamAvailable) {
+                    bufferedIn = new BufferedInputStream(null, 26280 - 8); // 18 * 1460 (MSS) is good for network
+                } else {
+                    bufferedIn = new BufferedInputStream(null, BUFFERSIZE);
+                }
+//#else
+                bufferedIn = new BufferedInputStream(null, BUFFERSIZE);
+//#endif
+            }
+        }
+
         void dispose(final boolean deep) throws IOException {
+            if (bufferedIn != null) {
+                bufferedIn.setInputStream(null);
+                bufferedIn.close();
+            }
+            bufferedIn = null;
         }
 
         void fix() throws InvalidMapException {
@@ -469,7 +508,7 @@ public final class Map implements Runnable {
 //#endif
 
             // we are done
-            map.listener.slicesLoaded(null, throwable);
+            map.listener.slicesLoaded(null, map.isInUse ? throwable : null);
         }
 
         final Loader use(final Vector list) {
@@ -553,7 +592,7 @@ public final class Map implements Runnable {
             // load images for given slices
             try {
                 final StringBuffer sb = new StringBuffer(64);
-                for (int N = slices.size(), i = 0; i < N; i++) {
+                for (int N = slices.size(), i = 0; i < N && map.isInUse; i++) {
                     final Slice slice = (Slice) slices.elementAt(i);
                     if (slice.getImage() == null) {
 
@@ -588,7 +627,6 @@ public final class Map implements Runnable {
 
                             // notify
                             map.listener.loadingChanged(null, null);
-
                         }
                     }
                 }
@@ -603,16 +641,16 @@ public final class Map implements Runnable {
             return null;
         }
 
-        static InputStream bufferef() {
-            return buffin;
+        InputStream bufferef() {
+            return bufferedIn;
         }
 
-        static InputStream buffered(final InputStream in) {
-            return buffin.setInputStream(in);
+        InputStream buffered(final InputStream in) {
+            return bufferedIn.setInputStream(in);
         }
 
-        static void bufferel() throws IOException {
-            buffin.close();
+        void bufferel() throws IOException {
+            bufferedIn.close();
         }
 
         static String escape(final String url) {
@@ -641,6 +679,7 @@ public final class Map implements Runnable {
 
     /* stream characteristic */
     public static int fileInputStreamResetable;
+    public static boolean hasSEbug;
 //#ifdef __SYMBIAN__
     public static boolean networkInputStreamAvailable = true;
 //#endif

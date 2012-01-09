@@ -111,6 +111,10 @@ public final class CharArrayTokenizer {
         return parseDouble(next2());
     }
 
+    public String nextTrim() {
+        return next().toString().trim();
+    }
+
     public Token next() {
         // local ref
         final int end = this.end;
@@ -259,6 +263,8 @@ public final class CharArrayTokenizer {
                 // ignore whitespace and leading + sign
             } else if (ch == '-') {
                 sign = -1;
+            } else if (ch == '.') {
+                break;
             } else {
                 throw new NumberFormatException("Not a digit: " + ch);
             }

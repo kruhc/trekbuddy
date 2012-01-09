@@ -59,6 +59,11 @@ class NokiaDeviceControl extends DeviceControl {
         }
     }
 
+    /** @Override */
+    String level() {
+        return Integer.toString(values[backlight]) + "%";
+    }
+
     private void invertLevel() {
         if (backlight == 0) {
             backlight = cz.kruch.track.configuration.Config.nokiaBacklightLast;

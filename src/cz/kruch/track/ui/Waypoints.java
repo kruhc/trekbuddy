@@ -216,6 +216,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
         this.cmdActionSortByName = new ActionCommand(Resources.NAV_CMD_SORT_BYNAME, Command.ITEM, 8);
         this.cmdActionSortByDist = new ActionCommand(Resources.NAV_CMD_SORT_BYDIST, Command.ITEM, 9);
 
+        // FIXME create on demand to save memory
         this.pane = new List(Resources.getString(Resources.DESKTOP_CMD_NAVIGATION), List.IMPLICIT);
         this.pane.setFitPolicy(Choice.TEXT_WRAP_OFF);
         this.pane.setCommandListener(this);
@@ -956,9 +957,6 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                 // no current store
                 currentWpts = null; // gc hint
                 currentName = null; // gc hint
-//#if !__RIM__ && !__ANDROID__ && !__J9__
-                System.gc(); // unconditional!!!
-//#endif
             }
 
             // parse XML-based store

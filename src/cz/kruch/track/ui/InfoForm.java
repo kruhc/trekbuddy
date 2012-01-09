@@ -94,7 +94,8 @@ final class InfoForm implements CommandListener {
         pane.append(newItem("TimeZone", sb.toString()));
         sb.delete(0, sb.length())
                 .append(cz.kruch.track.ui.nokia.DeviceControl.getName())
-                .append(' ').append(System.getProperty("com.nokia.mid.ui.version"));
+                .append(' ').append(System.getProperty("com.nokia.mid.ui.version"))
+                .append(" (").append(cz.kruch.track.ui.nokia.DeviceControl.getLevel()).append(')');
         if (Config.gpxGsmInfo) {
             sb.append(' ').append(cz.kruch.track.ui.nokia.DeviceControl.getGsmCellId());
             sb.append('/').append(cz.kruch.track.ui.nokia.DeviceControl.getGsmLac());
@@ -103,14 +104,15 @@ final class InfoForm implements CommandListener {
         sb.delete(0, sb.length())
                 .append(File.fsType)
                 .append("; resetable? ").append(cz.kruch.track.maps.Map.fileInputStreamResetable)
+//                .append("; SE bug? ").append(cz.kruch.track.maps.Map.hasSEbug)
 //#ifdef __SYMBIAN__
                 .append("; network stream? ").append(Config.useNativeService && cz.kruch.track.maps.Map.networkInputStreamAvailable)
 //#endif
 //#ifdef __MARKSUPPORT__
-                .append("; advio: ").append(api.io.BufferedInputStream.marksCount)
-                .append('/').append(api.io.BufferedInputStream.resetsCount)
-                .append(',').append('/').append(com.ice.tar.TarInputStream.marksCount)
-                .append('/').append(com.ice.tar.TarInputStream.resetsCount)
+//                .append("; advio: ").append(api.io.BufferedInputStream.marksCount)
+//                .append('/').append(api.io.BufferedInputStream.resetsCount)
+//                .append(',').append('/').append(com.ice.tar.TarInputStream.marksCount)
+//                .append('/').append(com.ice.tar.TarInputStream.resetsCount)
 //#endif                
                 .append("; card: ").append(System.getProperty("fileconn.dir.memorycard"));
         pane.append(newItem("Fs", sb.toString()));
@@ -147,7 +149,12 @@ final class InfoForm implements CommandListener {
                 .append("; ch=").append(api.location.LocationProvider.checksums)
                 .append("; er=").append(api.location.LocationProvider.errors)
                 .append("; pg=").append(api.location.LocationProvider.pings)
-                .append("; mx=").append(api.location.LocationProvider.maxavail);
+                .append("; mx=").append(api.location.LocationProvider.maxavail)
+//#ifdef __RIM50__
+                .append("; bbs=").append(cz.kruch.track.location.Jsr179LocationProvider.bbStatus)
+                .append("; bbe=").append(cz.kruch.track.location.Jsr179LocationProvider.bbError)
+//#endif                
+                ;
         pane.append(newItem("ProviderStatus", sb.toString()));
         if (extras[1] != null) {
             pane.append(newItem("ProviderError", extras[1].toString()));
@@ -155,6 +162,9 @@ final class InfoForm implements CommandListener {
         if (extras[2] != null) {
             pane.append(newItem("TracklogError", extras[2].toString()));
         }
+//#ifdef __ANDROID__
+        pane.append(newItem("BtSocketType", cz.kruch.track.location.AndroidBluetoothLocationProvider.sockType));
+//#endif
         sb.delete(0, sb.length())
                 .append(cz.kruch.track.fun.Camera.type)
                 .append("; encodings: ").append(System.getProperty("video.snapshot.encodings"))

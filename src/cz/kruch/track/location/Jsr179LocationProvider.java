@@ -17,7 +17,7 @@ import java.io.IOException;
 /**
  * Internal (JSR-179) provider implementation.
  *
- * @author Ales Pour <kruhc@seznam.cz>
+ * @author kruhc@seznam.cz
  */
 public final class Jsr179LocationProvider
         extends api.location.LocationProvider
@@ -34,6 +34,9 @@ public final class Jsr179LocationProvider
     public Jsr179LocationProvider() {
         super("Internal");
         this.raw = new char[NmeaParser.MAX_SENTENCE_LENGTH];
+//#ifdef __RIM50__
+        bbStatus = bbError = 0;
+//#endif
     }
 
     public int start() throws LocationException {
@@ -64,11 +67,18 @@ public final class Jsr179LocationProvider
 
         try {
             // common criteria
+//#ifdef __RIM50__
+            final net.rim.device.api.gps.BlackBerryCriteria criteria = new net.rim.device.api.gps.BlackBerryCriteria();
+            final int mode = Config.assistedGps ? net.rim.device.api.gps.GPSInfo.GPS_MODE_ASSIST : net.rim.device.api.gps.GPSInfo.GPS_MODE_AUTONOMOUS;
+            criteria.setMode(mode);
+            criteria.setSatelliteInfoRequired(true, false);
+//#else
             final javax.microedition.location.Criteria criteria = new javax.microedition.location.Criteria();
+            criteria.setCostAllowed(Config.assistedGps);
+            criteria.setPreferredPowerConsumption(Config.powerUsage);
+//#endif
             criteria.setAltitudeRequired(true); /* may delay getting valid location? */
             criteria.setSpeedAndCourseRequired(true);
-            criteria.setPreferredPowerConsumption(Config.powerUsage);
-            criteria.setCostAllowed(Config.assistedGps);
 
             // init provider
             impl = javax.microedition.location.LocationProvider.getInstance(criteria);
@@ -126,8 +136,22 @@ public final class Jsr179LocationProvider
     private static final String APPLICATION_X_JSR179_LOCATION_NMEA = "application/X-jsr179-location-nmea";
     private static final String APPLICATION_X_JAVA_LOCATION_NMEA   = "application/X-java-location-nmea";
 
+//#ifdef __RIM50__    
+    public static int bbStatus, bbError;
+//#endif
+
     public void locationUpdated(javax.microedition.location.LocationProvider p,
                                 javax.microedition.location.Location l) {
+//#ifdef __RIM50__
+        bbError = ((net.rim.device.api.gps.BlackBerryLocation) l).getError();
+        bbStatus = ((net.rim.device.api.gps.BlackBerryLocation) l).getStatus();
+        switch (bbStatus) {
+            case net.rim.device.api.gps.BlackBerryLocation.GPS_FIX_PARTIAL:
+            case net.rim.device.api.gps.BlackBerryLocation.GPS_FIX_COMPLETE:
+                NmeaParser.satv = ((net.rim.device.api.gps.BlackBerryLocation) l).getSatelliteCount();
+            break;
+        }
+//#endif
 
         // get extra info
         String extra = l.getExtraInfo(APPLICATION_X_JSR179_LOCATION_NMEA);
@@ -182,7 +206,11 @@ public final class Jsr179LocationProvider
                                                                              xc.getVerticalAccuracy());
 
             // create location
+//#ifdef __RIM50__
+            location = Location.newInstance(qc, timestamp, bbStatus == net.rim.device.api.gps.BlackBerryLocation.GPS_FIX_COMPLETE ? 1 : 0, sat);
+//#else            
             location = Location.newInstance(qc, timestamp, 1, sat);
+//#endif
             location.setCourse(l.getCourse());
             location.setSpeed(l.getSpeed());
             location.updateFix(extraFix);

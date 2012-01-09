@@ -150,6 +150,10 @@ public class DeviceControl extends TimerTask {
         instance.next();
     }
 
+    public static String getLevel() {
+        return instance.level();
+    }
+
     public static void flash() {
         if (instance.backlight == STATUS_OFF) {
             cz.kruch.track.ui.Desktop.display.flashBacklight(1);
@@ -266,6 +270,10 @@ public class DeviceControl extends TimerTask {
         if (!cz.kruch.track.configuration.Config.powerSave) {
             cz.kruch.track.ui.Desktop.display.vibrate(100);
         }
+    }
+
+    String level() {
+        return backlight == STATUS_OFF ? "off" : "on";
     }
 
     void nextLevel() {

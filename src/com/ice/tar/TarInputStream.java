@@ -131,7 +131,7 @@ public final class TarInputStream extends InputStream {
 
         while (num > 0) {
 
-            final long numRead;
+            long numRead;
 
             // use skip method
             if (cz.kruch.track.maps.Map.useSkip || cz.kruch.track.configuration.Config.siemensIo) {
@@ -141,8 +141,8 @@ public final class TarInputStream extends InputStream {
                  * ie. return value of seek() :-)
                  * Fortunately this is also compatible with broken Siemens skip() :-)
                  */
-                if (numRead == this.streamOffset + n) {
-                    num = numRead; // trick - 'for' cycle will quit
+                if (numRead == this.streamOffset + num) {
+                    numRead = num; // trick - 'for' cycle will quit
                 }
             } else { // use read to 'skip' - misuse header buffer here ;-)
                 numRead = this.in.read(headerBuffer, 0, num > DEFAULT_RCDSIZE ? DEFAULT_RCDSIZE : (int) num);
@@ -153,14 +153,14 @@ public final class TarInputStream extends InputStream {
             }
 
             num -= numRead;
+
+            this.streamOffset += numRead;
+            this.entryOffset += numRead;
         }
 
         if (num > 0) {
             throw new IOException(num + " bytes left to be skipped");
         }
-
-        this.streamOffset += (n - num);
-        this.entryOffset += (n - num); 
 
         return (n - num);
     }
@@ -204,13 +204,14 @@ public final class TarInputStream extends InputStream {
         if (markpos < 0) {
             throw new IOException("Resetting to invalid mark");
         }
-        try {
+//        try {
             in.reset();
             streamOffset -= (entryOffset - markpos);
             entryOffset = markpos;
-        } catch (IOException e) {
-            markpos = -1;
-        }
+//        } catch (IOException e) {
+//            markpos = -1;
+//            throw e;
+//        }
     }
 
     /**

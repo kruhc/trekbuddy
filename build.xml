@@ -8,7 +8,7 @@
     <property name="description" value="${external.product.description}"/>
     <property name="vendor" value="${external.product.vendor}"/>
     <property name="vendor.dir" value="${external.vendor.dir}"/>
-    <property name="pre.extra" value="${external.pre.extra}"/>
+    <property name="pre.extra" value="${external.pre.extra},__MARKSUPPORT__"/>
 
     <property name="wtk.cldc.version" value="1.1"/>
     <property name="wtk.midp.version" value="2.0"/>
@@ -213,7 +213,7 @@
         <antcall target="jad2prc"/>
     </target>
 
-    <target name="rim41">
+    <!--target name="rim41">
         <property name="suffix" value="_bb_os41"/>
         <property name="dist.dir" value="rim41"/>
         <property name="rim.home" value="${rim41.home}"/>
@@ -231,7 +231,7 @@
         <antcall target="rim.rapc" inheritall="true"/>
         <antcall target="rim.sign" inheritall="true"/>
         <antcall target="rim.ota" inheritall="true"/>
-    </target>
+    </target-->
 
     <target name="rim42">
         <property name="suffix" value="_bb_os42"/>
@@ -244,7 +244,9 @@
         <antcall target="clean"/>
         <antcall target="a.pre.rim"/>
         <antcall target="compile.rim42"/>
-        <antcall target="rim.pack" inheritall="true"/>
+        <antcall target="rim.pack" inheritall="true">
+            <param name="resource.folder" value="res-RIM"/>
+        </antcall>
         <antcall target="obfuscate${use.proguard}.rim" inheritall="true"/>
         <antcall target="rim.preverify" inheritall="true"/>
         <antcall target="dist" inheritall="true"/>
@@ -262,9 +264,11 @@
         <property name="rim.cod.dependencies" value="net_rim_cldc,net_rim_locationapi,net_rim_bluetooth"/>
         <property name="rim.bb.version" value="[5.0,)"/>
         <antcall target="clean"/>
-        <antcall target="a.pre.rim"/>
+        <antcall target="a.pre.rim50"/>
         <antcall target="compile.rim50"/>
-        <antcall target="rim.pack" inheritall="true"/>
+        <antcall target="rim.pack" inheritall="true">
+            <param name="resource.folder" value="res-RIM50"/>
+        </antcall>
         <antcall target="obfuscate${use.proguard}.rim" inheritall="true"/>
         <antcall target="rim.preverify" inheritall="true"/>
         <antcall target="dist" inheritall="true"/>
@@ -448,6 +452,12 @@
         <mkdir dir="tmp/src"/>
         <wtkpreprocess srcdir="src" destdir="tmp/src" version="1"
                        symbols="__HECL__,__RIM__,${pre.extra}"/>
+    </target>
+
+    <target name="a.pre.rim50" depends="a.pre.hecl">
+        <mkdir dir="tmp/src"/>
+        <wtkpreprocess srcdir="src" destdir="tmp/src" version="1"
+                       symbols="__HECL__,__RIM__,__RIM50__,${pre.extra}"/>
     </target>
 
     <target name="a.pre.android" depends="a.pre.hecl">
@@ -699,6 +709,7 @@
             <fileset dir="tmp/build/classes"/>
             <fileset dir="res">
                 <include name="**/datums.txt"/>
+                <include name="**/no-map.xml"/>
                 <include name="**/*.png"/>
                 <include name="**/*.svg"/>
                 <include name="**/world.*"/>
@@ -708,16 +719,20 @@
                 <include name="**/*.png"/>
             </fileset>
             <fileset dir="res-lang">
-                <include name="resources/language.en.res"/>
+                <include name="resources/language.${locale}.res"/>
             </fileset>
             <manifest>
                 <attribute name="Built-By" value="kruhc@seznam.cz"/>
                 <attribute name="Content-Folder" value="Applications"/>
-                <attribute name="Nokia-Scalable-Icon-MIDlet-1" value="/resources/icon.svg"/>
+                <!--<attribute name="Nokia-Scalable-Icon-MIDlet-1" value="/resources/icon.svg"/>-->
                 <attribute name="Nokia-MIDlet-Category" value="Application"/>
                 <attribute name="Nokia-MIDlet-No-Exit" value="true"/>
                 <attribute name="LGE-MIDlet-Display-Nav-Keypad" value="no"/>
                 <attribute name="LGE-MIDlet-Display-Indicator" value="HIDE"/>
+                <attribute name="LGE-MIDlet-Allowed-background" value="YES"/>
+                <attribute name="MVM-Pause-Background" value="false"/>
+                <attribute name="MVM-BGM-Support" value="true"/>
+                <attribute name="FlipInsensitive" value="True"/>
             </manifest>
         </wtkpackage>
     </target>
@@ -730,6 +745,7 @@
             <fileset dir="tmp/build/classes"/>
             <fileset dir="res">
                 <include name="**/datums.txt"/>
+                <include name="**/no-map.xml"/>
                 <include name="**/*.png"/>
                 <exclude name="**/set/*.png"/>
             </fileset>
@@ -737,16 +753,20 @@
                 <include name="**/*.png"/>
             </fileset>
             <fileset dir="res-lang">
-                <include name="resources/language.en.res"/>
+                <include name="resources/language.${locale}.res"/>
             </fileset>
             <manifest>
                 <attribute name="Built-By" value="kruhc@seznam.cz"/>
                 <attribute name="Content-Folder" value="Applications"/>
-                <attribute name="Nokia-Scalable-Icon-MIDlet-1" value="/resources/icon.svg"/>
+                <!--<attribute name="Nokia-Scalable-Icon-MIDlet-1" value="/resources/icon.svg"/>-->
                 <attribute name="Nokia-MIDlet-Category" value="Application"/>
                 <attribute name="Nokia-MIDlet-No-Exit" value="true"/>
                 <attribute name="LGE-MIDlet-Display-Nav-Keypad" value="no"/>
                 <attribute name="LGE-MIDlet-Display-Indicator" value="HIDE"/>
+                <attribute name="LGE-MIDlet-Allowed-background" value="YES"/>
+                <attribute name="MVM-Pause-Background" value="false"/>
+                <attribute name="MVM-BGM-Support" value="true"/>
+                <attribute name="FlipInsensitive" value="True"/>
             </manifest>
         </wtkpackage>
     </target>
@@ -761,6 +781,7 @@
             </fileset>
             <fileset dir="res">
                 <include name="**/datums.txt"/>
+                <include name="**/no-map.xml"/>
                 <include name="**/world.*"/>
                 <include name="**/set/**"/>
             </fileset>
@@ -768,7 +789,7 @@
                 <include name="**/*.png"/>
             </fileset>
             <fileset dir="res-lang">
-                <include name="resources/language.en.res"/>
+                <include name="resources/language.${locale}.res"/>
             </fileset>
             <manifest>
                 <attribute name="Built-By" value="kruhc@seznam.cz"/>
@@ -778,15 +799,17 @@
     </target>
 
     <target name="rim.pack" depends="create.tmp.jad">
+        <echo message="Using RIM-specific resource folder: ${resource.folder}"/>
         <wtkpackage jarfile="tmp/trekbuddy${suffix}.jar"
                     jadfile="tmp/trekbuddy${suffix}.jad"
                     config="CLDC-${wtk.cldc.version}"
                     profile="MIDP-${wtk.midp.version}">
             <fileset dir="tmp/build/classes"/>
-            <fileset dir="res-RIM">
+            <fileset dir="${resource.folder}">
             </fileset>
             <fileset dir="res">
                 <include name="**/datums.txt"/>
+                <include name="**/no-map.xml"/>
                 <include name="**/world.*"/>
                 <include name="**/set/**"/>
             </fileset>
@@ -794,7 +817,7 @@
                 <include name="**/*.png"/>
             </fileset>
             <fileset dir="res-lang">
-                <include name="resources/language.en.res"/>
+                <include name="resources/language.${locale}.res"/>
             </fileset>
             <manifest>
                 <attribute name="Built-By" value="kruhc@seznam.cz"/>
@@ -811,6 +834,7 @@
             <fileset dir="tmp/build/classes"/>
             <fileset dir="res">
                 <include name="**/datums.txt"/>
+                <include name="**/no-map.xml"/>
                 <include name="**/*.png"/>
                 <include name="**/world.*"/>
                 <include name="**/set/**"/>
@@ -844,6 +868,7 @@
             <arg value="-keepnames class org.** extends java.lang.Exception"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.maps.io.FileInput"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.maps.io.LoaderIO"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.maps.J2NCalibration"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.io.CrcInputStream"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.util.Logger"/>
             <arg value="-whyareyoukeeping class api.io.BufferedOutputStream"/>
@@ -1128,26 +1153,27 @@
 
     <target name="sign.and.update">
         <java jar="${wtk.home}\bin\JadTool.jar" fork="true">
-            <arg line="-addcert -certnum 1 -alias 'trekbuddy2011' -keystore keystores\trekbuddy2011.jks -inputjad dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad -outputjad dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad"/>
+            <arg line="-addcert -certnum 1 -alias 'trekbuddy2012' -keystore keystores\trekbuddy2012.jks -inputjad dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad -outputjad dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad"/>
         </java>
         <java jar="${wtk.home}\bin\JadTool.jar" fork="true">
-            <arg line="-addcert -certnum 2 -alias 'trekbuddy2011' -keystore keystores\trekbuddy2011.jks -inputjad dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad -outputjad dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad"/>
+            <arg line="-addcert -certnum 2 -alias 'trekbuddy2012' -keystore keystores\trekbuddy2012.jks -inputjad dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad -outputjad dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad"/>
         </java>
         <java jar="${wtk.home}\bin\JadTool.jar" fork="true">
-            <arg line="-addcert -certnum 3 -alias 'trekbuddy2011' -keystore keystores\trekbuddy2011.jks -inputjad dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad -outputjad dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad"/>
+            <arg line="-addcert -certnum 3 -alias 'trekbuddy2012' -keystore keystores\trekbuddy2012.jks -inputjad dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad -outputjad dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad"/>
         </java>
-<!-- /* does not work, let's append manually using 'echo' task */
         <java jar="${wtk.home}\bin\JadTool.jar" fork="true">
-            <arg line="-addcert -alias 'thawteca' -keystore keystores\trekbuddy2011.jks -inputjad dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad -outputjad dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad"/>
+            <arg line="-addcert -certnum 4 -alias 'trekbuddy2012' -keystore keystores\trekbuddy2012.jks -inputjad dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad -outputjad dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad"/>
         </java>
--->
+
         <!-- Thawte Premium Server CA w/ SN: 1 -->
-        <echo file="dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad" append="true">MIDlet-Certificate-1-4: MIIDJzCCApCgAwIBAgIBATANBgkqhkiG9w0BAQQFADCBzjELMAkGA1UEBhMCWkExFTATBgNVBAgTDFdlc3Rlcm4gQ2FwZTESMBAGA1UEBxMJQ2FwZSBUb3duMR0wGwYDVQQKExRUaGF3dGUgQ29uc3VsdGluZyBjYzEoMCYGA1UECxMfQ2VydGlmaWNhdGlvbiBTZXJ2aWNlcyBEaXZpc2lvbjEhMB8GA1UEAxMYVGhhd3RlIFByZW1pdW0gU2VydmVyIENBMSgwJgYJKoZIhvcNAQkBFhlwcmVtaXVtLXNlcnZlckB0aGF3dGUuY29tMB4XDTk2MDgwMTAwMDAwMFoXDTIwMTIzMTIzNTk1OVowgc4xCzAJBgNVBAYTAlpBMRUwEwYDVQQIEwxXZXN0ZXJuIENhcGUxEjAQBgNVBAcTCUNhcGUgVG93bjEdMBsGA1UEChMUVGhhd3RlIENvbnN1bHRpbmcgY2MxKDAmBgNVBAsTH0NlcnRpZmljYXRpb24gU2VydmljZXMgRGl2aXNpb24xITAfBgNVBAMTGFRoYXd0ZSBQcmVtaXVtIFNlcnZlciBDQTEoMCYGCSqGSIb3DQEJARYZcHJlbWl1bS1zZXJ2ZXJAdGhhd3RlLmNvbTCBnzANBgkqhkiG9w0BAQEFAAOBjQAwgYkCgYEA0jY2aovXwlue2oFBYo847kkEVdbQ7xwblRZH7xhINTpS9CtqBo87L+pW46+GjZ4X9560ZXUCTe/LCaIhUdib0GfQug2SBhRz1JPLlyoAnFxODLz6FVL88kRu2hFKbgifLy3j+ao6hnO2RlNYyIkFvYMRuHM/qgeN9EJN50CdHDcCAwEAAaMTMBEwDwYDVR0TAQH/BAUwAwEB/zANBgkqhkiG9w0BAQQFAAOBgQAmSCwWwlj66BZ0DKqqX1Q/8tfJeGBeXm43YyJ3Nn6yF8Q0ufUIhfzJATj/Tb7yFkJD57taRvvBxhEf8UqwKEbJw8RCfbz6q1lu1bdRiBHjpIUZa4JMpAwSremkrj/xw0llmozFyD4lt5SZu5IycQfwhl7tUCemDaYj+bvLpgcUQg==</echo>
+        <!--echo file="dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad" append="true">MIDlet-Certificate-1-4: MIIDJzCCApCgAwIBAgIBATANBgkqhkiG9w0BAQQFADCBzjELMAkGA1UEBhMCWkExFTATBgNVBAgTDFdlc3Rlcm4gQ2FwZTESMBAGA1UEBxMJQ2FwZSBUb3duMR0wGwYDVQQKExRUaGF3dGUgQ29uc3VsdGluZyBjYzEoMCYGA1UECxMfQ2VydGlmaWNhdGlvbiBTZXJ2aWNlcyBEaXZpc2lvbjEhMB8GA1UEAxMYVGhhd3RlIFByZW1pdW0gU2VydmVyIENBMSgwJgYJKoZIhvcNAQkBFhlwcmVtaXVtLXNlcnZlckB0aGF3dGUuY29tMB4XDTk2MDgwMTAwMDAwMFoXDTIwMTIzMTIzNTk1OVowgc4xCzAJBgNVBAYTAlpBMRUwEwYDVQQIEwxXZXN0ZXJuIENhcGUxEjAQBgNVBAcTCUNhcGUgVG93bjEdMBsGA1UEChMUVGhhd3RlIENvbnN1bHRpbmcgY2MxKDAmBgNVBAsTH0NlcnRpZmljYXRpb24gU2VydmljZXMgRGl2aXNpb24xITAfBgNVBAMTGFRoYXd0ZSBQcmVtaXVtIFNlcnZlciBDQTEoMCYGCSqGSIb3DQEJARYZcHJlbWl1bS1zZXJ2ZXJAdGhhd3RlLmNvbTCBnzANBgkqhkiG9w0BAQEFAAOBjQAwgYkCgYEA0jY2aovXwlue2oFBYo847kkEVdbQ7xwblRZH7xhINTpS9CtqBo87L+pW46+GjZ4X9560ZXUCTe/LCaIhUdib0GfQug2SBhRz1JPLlyoAnFxODLz6FVL88kRu2hFKbgifLy3j+ao6hnO2RlNYyIkFvYMRuHM/qgeN9EJN50CdHDcCAwEAAaMTMBEwDwYDVR0TAQH/BAUwAwEB/zANBgkqhkiG9w0BAQQFAAOBgQAmSCwWwlj66BZ0DKqqX1Q/8tfJeGBeXm43YyJ3Nn6yF8Q0ufUIhfzJATj/Tb7yFkJD57taRvvBxhEf8UqwKEbJw8RCfbz6q1lu1bdRiBHjpIUZa4JMpAwSremkrj/xw0llmozFyD4lt5SZu5IycQfwhl7tUCemDaYj+bvLpgcUQg==</echo-->
         <!-- Thawte Premium Server CA w/ SN: 36... -->
         <!--echo file="dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad" append="true">MIDlet-Certificate-1-4: MIIDNjCCAp+gAwIBAgIQNhIilsXjOKUgodJfTNcJVDANBgkqhkiG9w0BAQUFADCBzjELMAkGA1UEBhMCWkExFTATBgNVBAgTDFdlc3Rlcm4gQ2FwZTESMBAGA1UEBxMJQ2FwZSBUb3duMR0wGwYDVQQKExRUaGF3dGUgQ29uc3VsdGluZyBjYzEoMCYGA1UECxMfQ2VydGlmaWNhdGlvbiBTZXJ2aWNlcyBEaXZpc2lvbjEhMB8GA1UEAxMYVGhhd3RlIFByZW1pdW0gU2VydmVyIENBMSgwJgYJKoZIhvcNAQkBFhlwcmVtaXVtLXNlcnZlckB0aGF3dGUuY29tMB4XDTk2MDgwMTAwMDAwMFoXDTIxMDEwMTIzNTk1OVowgc4xCzAJBgNVBAYTAlpBMRUwEwYDVQQIEwxXZXN0ZXJuIENhcGUxEjAQBgNVBAcTCUNhcGUgVG93bjEdMBsGA1UEChMUVGhhd3RlIENvbnN1bHRpbmcgY2MxKDAmBgNVBAsTH0NlcnRpZmljYXRpb24gU2VydmljZXMgRGl2aXNpb24xITAfBgNVBAMTGFRoYXd0ZSBQcmVtaXVtIFNlcnZlciBDQTEoMCYGCSqGSIb3DQEJARYZcHJlbWl1bS1zZXJ2ZXJAdGhhd3RlLmNvbTCBnzANBgkqhkiG9w0BAQEFAAOBjQAwgYkCgYEA0jY2aovXwlue2oFBYo847kkEVdbQ7xwblRZH7xhINTpS9CtqBo87L+pW46+GjZ4X9560ZXUCTe/LCaIhUdib0GfQug2SBhRz1JPLlyoAnFxODLz6FVL88kRu2hFKbgifLy3j+ao6hnO2RlNYyIkFvYMRuHM/qgeN9EJN50CdHDcCAwEAAaMTMBEwDwYDVR0TAQH/BAUwAwEB/zANBgkqhkiG9w0BAQUFAAOBgQBlkKyID1bZ5jA01CbH0FDxkt5r1DmICSLGpmODA/eZd9iy5Ri4XWPz1HP7bJyZePFLeH0ZJMMrAoT4vCLZiiLXoPxx7JGHIPG47LHlVYCsPVLIOQ7C8MAFT9aCdYy9X9LcdpoFEsmvcsPcJX6kTY4XpeCHf+GaWuFg3GQjPEIuTQ==</echo-->
+
         <java jar="${wtk.home}\bin\JadTool.jar" fork="true">
-            <arg line="-addjarsig -alias 'trekbuddy2011' -keystore keystores\trekbuddy2011.jks -keypass changeit -jarfile dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jar -inputjad dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad -outputjad dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad"/>
+            <arg line="-addjarsig -alias 'trekbuddy2012' -keystore keystores\trekbuddy2012.jks -keypass changeit -jarfile dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jar -inputjad dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad -outputjad dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad"/>
         </java>
+
         <fixcrlf srcdir="dist/${vendor.dir}/${dist.dir}"
                  eol="crlf" eof="remove" encoding="UTF-8"
                  includes="trekbuddy${suffix}.jad"/>

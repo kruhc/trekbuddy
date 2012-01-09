@@ -33,7 +33,7 @@ abstract class Calibration {
     public static final String OZI_EXT = ".map";
     public static final String GMI_EXT = ".gmi";
     public static final String XML_EXT = ".xml";
-    public static final String J2N_EXT = ".j2n";
+//    public static final String J2N_EXT = ".j2n";
 
     // map path and filename
     private String path;
@@ -363,15 +363,15 @@ abstract class Calibration {
         url = url.toLowerCase();
         return url.endsWith(Calibration.OZI_EXT)
                 || url.endsWith(Calibration.GMI_EXT)
-                || url.endsWith(Calibration.XML_EXT)
-                || url.endsWith(Calibration.J2N_EXT);
+                || url.endsWith(Calibration.XML_EXT);
+//                || url.endsWith(Calibration.J2N_EXT);
     }
 
     public static boolean isCalibration(CharArrayTokenizer.Token token) {
         return token.endsWith(Calibration.OZI_EXT)
                 || token.endsWith(Calibration.GMI_EXT)
-                || token.endsWith(Calibration.XML_EXT)
-                || token.endsWith(Calibration.J2N_EXT);
+                || token.endsWith(Calibration.XML_EXT);
+//                || token.endsWith(Calibration.J2N_EXT);
     }
 
     public static Calibration newInstance(final InputStream in, final String url) throws IOException {
@@ -390,8 +390,8 @@ abstract class Calibration {
                 factory = Class.forName("cz.kruch.track.maps.OziCalibration");
             } else if (lurl.endsWith(Calibration.GMI_EXT)) {
                 factory = Class.forName("cz.kruch.track.maps.GmiCalibration");
-            } else if (lurl.endsWith(Calibration.XML_EXT) || lurl.endsWith(Calibration.J2N_EXT)) {
-                factory = Class.forName("cz.kruch.track.maps.J2NCalibration");
+//            } else if (lurl.endsWith(Calibration.XML_EXT) || lurl.endsWith(Calibration.J2N_EXT)) {
+//                factory = Class.forName("cz.kruch.track.maps.J2NCalibration");
             } else {
                 return null;
             }
@@ -418,7 +418,7 @@ abstract class Calibration {
     }
 
     protected static int getDimension(final int i) throws InvalidMapException {
-        if (i < 0xfffff) {
+        if (i < 0x100000) {
             return i;
         }
         throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_MAP_TOO_LARGE));

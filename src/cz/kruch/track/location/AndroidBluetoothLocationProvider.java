@@ -28,7 +28,7 @@ import android.bluetooth.*;
 public class AndroidBluetoothLocationProvider
         extends StreamReadingLocationProvider
         implements Runnable {
-    private static final String SPP_UUID = "00001101-0000-1000-8000-00805F9B34FB";
+    private static final java.util.UUID SPP_UUID = java.util.UUID.fromString("00001101-0000-1000-8000-00805F9B34FB");
 
     private volatile String url;
 
@@ -136,14 +136,33 @@ public class AndroidBluetoothLocationProvider
             // get device, create socket, connect
             final BluetoothDevice device = BluetoothAdapter.getDefaultAdapter().getRemoteDevice(url);
             try {
-                socket = (BluetoothSocket) device.getClass().getMethod("createRfcommSocket", new Class[]{ int.class }).invoke(device, Integer.valueOf(1));
-            } catch (Exception e) {
+                socket = (BluetoothSocket) device.getClass().getMethod("createInsecureRfcommSocketToServiceRecord", new Class[]{ java.util.UUID.class }).invoke(device, SPP_UUID);
+                sockType = "Insecure";
+            } catch (Throwable t) {
 //#ifdef __LOG__
-                e.printStackTrace();
+                t.printStackTrace();
+//#endif
+//#ifdef __ANDROID__
+                android.util.Log.e("TrekBuddy", "createInsecureRfcommSocketToServiceRecord", t);
 //#endif
             }
             if (socket == null) {
-                socket = device.createRfcommSocketToServiceRecord(java.util.UUID.fromString(SPP_UUID));
+                // is this 1.6 method?
+                try {
+                    socket = (BluetoothSocket) device.getClass().getMethod("createRfcommSocket", new Class[]{ int.class }).invoke(device, Integer.valueOf(1));
+                    sockType = "Unspecified";
+                } catch (Throwable t) {
+//#ifdef __LOG__
+                    t.printStackTrace();
+//#endif
+//#ifdef __ANDROID__
+                    android.util.Log.e("TrekBuddy", "createRfcommSocket", t);
+//#endif
+                }
+            }
+            if (socket == null) {
+                socket = device.createRfcommSocketToServiceRecord(SPP_UUID);
+                sockType = "Secure";
             }
             socket.connect();
 
@@ -373,4 +392,6 @@ public class AndroidBluetoothLocationProvider
             }
         }
     }
+
+    public static String sockType;
 }

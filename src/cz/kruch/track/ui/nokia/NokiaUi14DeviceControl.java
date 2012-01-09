@@ -11,6 +11,7 @@ final class NokiaUi14DeviceControl extends NokiaDeviceControl {
 
     NokiaUi14DeviceControl() {
         this.name = "Nokia+";
+        this.values[0] = 10; // min backlight
     }
 
     /** @Override */

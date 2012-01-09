@@ -11,5 +11,5 @@ Pulkovo 1942 (2){Krassovsky 1940,28,-130,-95}=map:Pulkovo 1942 (2)
 Rijksdriehoeksmeting{Bessel 1841,593,26,478}=map:Rijksdriehoeksmeting
 Rome-1940{International 1924,-225,-65,9}=map:Rome 1940
 RT 90{Bessel 1841,498,-36,568}=map:RT 90
-S-42 {Krassovsky 1940,28,-121,-77}=map:S42
+S-42{Krassovsky 1940,28,-121,-77}=map:S42
 WGS 84{WGS 84,0,0,0}=map:WGS 84

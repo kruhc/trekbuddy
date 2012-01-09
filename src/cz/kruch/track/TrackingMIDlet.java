@@ -174,7 +174,8 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
 
         if (nokia) { /* Nokia UI API 1.4+ */
             try {
-                nokiaui14 = Float.parseFloat(System.getProperty("com.nokia.mid.ui.version")) >= 1.4F;
+                nokiaui14 = Float.parseFloat(System.getProperty("com.nokia.mid.ui.version")) >= 1.4F
+                            && "true".equals(System.getProperty("com.nokia.mid.ui.screensaverprevention"));
             } catch (Throwable t) {
             }
         } else if (sonyEricssonEx) { /* detect UIQ */

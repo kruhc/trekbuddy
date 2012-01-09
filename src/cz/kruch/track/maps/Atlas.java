@@ -32,6 +32,9 @@ public final class Atlas implements Runnable {
     private String current;
     private Hashtable maps;
 
+    // special properties
+    boolean virtual;
+
     public Atlas(String url, /*StateListener*/Desktop listener) {
         this.url = url;
         this.listener = listener;
@@ -187,12 +190,14 @@ public final class Atlas implements Runnable {
 //#endif
 
             // run loader
-            final String urllc = url.toLowerCase();
+            final String urlLc = url.toLowerCase();
             final Class factory;
-            if (urllc.endsWith(".tba")) {
+            if (urlLc.endsWith(".tba")) {
                 factory = Class.forName("cz.kruch.track.maps.DirLoader");
-            } else if (urllc.endsWith(".tar") || urllc.endsWith(".idx")) {
+            } else if (urlLc.endsWith(".tar") || urlLc.endsWith(".idx")) {
                 factory = Class.forName("cz.kruch.track.maps.TarLoader");
+            } else if (urlLc.endsWith(".xml")) {
+                factory = Class.forName("cz.kruch.track.maps.NoMapLoader");
             } else {
                 throw new InvalidMapException("Unsupported format");
             }

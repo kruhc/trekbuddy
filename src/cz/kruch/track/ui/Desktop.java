@@ -293,7 +293,7 @@ public final class Desktop implements CommandListener,
         consoleInit(g);
 
         // show copyright(s)
-        consoleShow(g, lineY, "TrekBuddy \u00a9 2011 KrUcH");
+        consoleShow(g, lineY, "TrekBuddy \u00a9 2012 KrUcH");
         lineY += lineHeight;
         final String lc = Resources.getString(Resources.BOOT_LOCAL_COPY);
         if (lc != null && lc.length() > 0) {
@@ -502,7 +502,7 @@ public final class Desktop implements CommandListener,
         }
 
         // try gc
-        System.gc();
+        System.gc(); // unconditional!!!
     }
 
     public void onForeground() {
@@ -726,9 +726,6 @@ public final class Desktop implements CommandListener,
         int h = screen.getHeight();
 
 //#ifdef __ANDROID__
-        if ("archos".equals(android.os.Build.MANUFACTURER)) {
-            h -= 20;
-        }
         org.microemu.android.MicroEmulator.ignoreVolumeKeys = !Config.easyZoomVolumeKeys;
 //#endif
 
@@ -926,16 +923,16 @@ public final class Desktop implements CommandListener,
         } else if (command == cmdLoadMap) {
             (new FileBrowser(Resources.getString(Resources.DESKTOP_MSG_SELECT_MAP), new Event(Event.EVENT_FILE_BROWSER_FINISHED, "map"),
                              screen, Config.FOLDER_MAPS,
-                             new String[]{ ".map", ".gmi", ".xml", ".j2n", ".tar" })).show();
+                             new String[]{ ".map", ".gmi", ".tar", ".xml"/*, ".j2n"*/  })).show();
         } else if (command == cmdLoadAtlas) {
             (new FileBrowser(Resources.getString(Resources.DESKTOP_MSG_SELECT_ATLAS), new Event(Event.EVENT_FILE_BROWSER_FINISHED, "atlas"),
                              screen, Config.FOLDER_MAPS,
-                             new String[]{ ".tba", ".idx", ".tar" })).show();
+                             new String[]{ ".tba", ".idx", ".tar", ".xml" })).show();
 /*
         } else if (command == cmdLoad) {
             (new FileBrowser(Resources.getString(Resources.DESKTOP_MSG_SELECT_MAP), new Event(Event.EVENT_FILE_BROWSER_FINISHED),
                              screen, Config.FOLDER_MAPS,
-                             new String[]{ ".tba", ".idx", ".tar", ".map", ".gmi", ".xml", ".j2n" })).show();
+                             new String[]{ ".tba", ".idx", ".tar", ".map", ".gmi", ".xml" })).show();
 */
 //#ifdef __B2B__
         } else if (command == cmdLoadGuide) {
@@ -1862,6 +1859,7 @@ public final class Desktop implements CommandListener,
                             t.printStackTrace();
 //#endif
                             showError(null, t, null);
+                            return;
                         }
                     }
                 }
@@ -2902,6 +2900,9 @@ public final class Desktop implements CommandListener,
                     showError(Resources.getString(Resources.DESKTOP_MSG_CFG_UPDATED), e, Desktop.screen);
                 }
             }
+
+            // update anyway
+            update(MASK_SCREEN);
         }
 
         /** fail-safe */
@@ -3068,7 +3069,7 @@ public final class Desktop implements CommandListener,
                     Desktop.this.map.close();
                     Desktop.this.map = null;
                 }
-
+                
 //#ifdef __BUILDER__
                 // reset checksum
                 cz.kruch.track.io.CrcInputStream.doReset();

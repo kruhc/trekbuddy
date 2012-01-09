@@ -1,229 +1,424 @@
-// @LICENSE@
+/*
+*  Licensed to the Apache Software Foundation (ASF) under one or more
+*  contributor license agreements.  See the NOTICE file distributed with
+*  this work for additional information regarding copyright ownership.
+*  The ASF licenses this file to You under the Apache License, Version 2.0
+*  (the "License"); you may not use this file except in compliance with
+*  the License.  You may obtain a copy of the License at
+*
+*     http://www.apache.org/licenses/LICENSE-2.0
+*
+*  Unless required by applicable law or agreed to in writing, software
+*  distributed under the License is distributed on an "AS IS" BASIS,
+*  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+*  See the License for the specific language governing permissions and
+*  limitations under the License.
+*/
 
 package api.io;
 
-import java.io.IOException;
 import java.io.InputStream;
+import java.io.IOException;
 
 /**
- * Buffered input stream. Reusable and configurable behaviour.
+ * Wraps an existing {@link java.io.InputStream} and <em>buffers</em> the input.
+ * Expensive interaction with the underlying input stream is minimized, since
+ * most (smaller) requests can be satisfied by accessing the buffer alone. The
+ * drawback is that some extra space is required to hold the buffer and that
+ * copying takes place when filling that buffer, but this is usually outweighed
+ * by the performance benefits.
+ * <p/>
+ * <p/>A typical application pattern for the class looks like this:<p/>
+ * <p/>
+ * <pre>
+ * BufferedInputStream buf = new BufferedInputStream(new FileInputStream(&quot;file.java&quot;));
+ * </pre>
+ *
+ * @see BufferedOutputStream
  */
-public final class BufferedInputStream extends InputStream {
-    /** underlying stream */
-    private InputStream in;
-    /** read buffer */
-    private byte[] buf;
-    /** number of bytes in the buffer */
-    private int count;
-    /** current position in the buffer */
-    private int pos;
-//#ifdef __MARKSUPPORT__
-    /** current mark limit */
-    private int marklimit;
-    /** currently marked position */
-    private int markpos;
-    // nr of reads after mark()
-    private int fillcount;
-//#endif
-    // allow autofill
-    private boolean autofill;
-    private int sizehint;
+public class BufferedInputStream extends InputStream {
+    /***
+     * The source input stream that is buffered.
+     */
+    protected volatile InputStream in;
 
+    /**
+     * The buffer containing the current bytes read from the target InputStream.
+     */
+    protected volatile byte[] buf;
+
+    /**
+     * The total number of bytes inside the byte array {@code buf}.
+     */
+    protected int count;
+
+    /**
+     * The current limit, which when passed, invalidates the current mark.
+     */
+    protected int marklimit;
+
+    /**
+     * The currently marked position. -1 indicates no mark has been set or the
+     * mark has been invalidated.
+     */
+    protected int markpos = -1;
+
+    /**
+     * The current position within the byte array {@code buf}.
+     */
+    protected int pos;
+
+    /**
+     * Constructs a new {@code BufferedInputStream} on the {@link InputStream}
+     * {@code in}. The default buffer size (8 KB) is allocated and all reads
+     * can now be filtered through this stream.
+     *
+     * @param in the InputStream the buffer reads from.
+     */
+    public BufferedInputStream(InputStream in) {
+        this.in = in;
+        this.buf = new byte[8192];
+    }
+
+    /**
+     * Constructs a new {@code BufferedInputStream} on the {@link InputStream}
+     * {@code in}. The buffer size is specified by the parameter {@code size}
+     * and all reads are now filtered through this stream.
+     *
+     * @param in   the input stream the buffer reads from.
+     * @param size the size of buffer to allocate.
+     * @throws IllegalArgumentException if {@code size < 0}.
+     */
     public BufferedInputStream(InputStream in, int size) {
         this.in = in;
-        this.buf = new byte[size];
-        this.autofill = true;
-        this.sizehint = size;
-//#ifdef __MARKSUPPORT__
-        this.markpos = -1;
-//#endif
-    }
-
-    public InputStream setInputStream(InputStream in) {
-        this.in = null; // gc hint
-        this.in = in;
-        this.pos = this.count = 0;
-//#ifdef __MARKSUPPORT__
-        this.fillcount = 0;
-        this.markpos = -1;
-//#endif
-
-        return this;
-    }
-
-    public void setAutofill(boolean autofill) {
-        this.autofill = autofill;
-        this.sizehint = buf.length;
-    }
-
-    public void setAutofill(boolean autofill, int sizehint) {
-        this.autofill = autofill;
-        this.sizehint = sizehint < buf.length ? sizehint : buf.length;
-    }
-
-    public int read() throws IOException {
-/* // original implementation
-        if (pos >= count) {
-            fillBuffer();
-            if (pos >= count) {
-                return -1;
-            }
+        if (size <= 0) {
+            // K0058=size must be > 0
+            throw new IllegalArgumentException("Size must be > 0"); //$NON-NLS-1$
         }
-
-        return buffer[pos++] & 0xff;
-*/
-
-        /* Optimistic variant first, at the expense of duplicated code... */
-        if (pos < count) {
-            return buf[pos++] & 0xff;
-        }
-
-        /* buffer is depleted, fill it */
-        if (autofill) {
-            // fill(buf.length) inlined
-            pos = 0;
-//#ifdef __MARKSUPPORT__
-            if (fillcount++ > 0) {
-                markpos = -1;
-            }
-//#endif
-            count = in.read(buf, 0, sizehint);
-            // ~
-        } else {
-//#ifdef __MARKSUPPORT__
-            markpos = -1;
-//#endif
-            return in.read();
-        }
-
-        /* got something? count is either -1 or greater than 0 */
-        if (count > 0) {
-            return buf[pos++] & 0xff;
-//        } else if (count == 0) {
-//            throw new RuntimeException("stream.read()=0");
-        }
-
-        return -1;
+        buf = new byte[size];
     }
 
-    public int read(byte[] b) throws IOException {
-        return read(b, 0, b.length);
-    }
-
-    public int read(byte[] b, int off, int len) throws IOException {
-        int n = 0;
-
-        if (len > 0) {
-            final int avail = count - pos;
-            if (avail > 0) {
-                n = avail < len ? avail : len;
-                System.arraycopy(buf, pos, b, off, n);
-                pos += n;
-            } else {
-//#ifdef __MARKSUPPORT__
-                // fill(len) inlined
-                pos = 0;
-                if (fillcount++ > 0) {
-                    markpos = -1;
-                }
-                n = count = in.read(buf, 0, autofill ? sizehint : len);
-                // ~
-                if (n > 0) { // count is either -1 or greater than 0
-                    n = n < len ? n : len;
-                    System.arraycopy(buf, 0, b, off, n);
-                    pos += n;
-                }
-//#else
-                if (autofill && len < buf.length) {
-                    pos = 0;
-                    n = count = in.read(buf, 0, sizehint);
-                    if (n > 0) { // count is either -1 or greater than 0
-                        n = n < len ? n : len;
-                        System.arraycopy(buf, 0, b, off, n);
-                        pos += n;
-                    }
-                } else {
-                    n = in.read(b, off, len);
-                }
-//                if (n == 0) {
-//                    throw new RuntimeException("stream.read([])=0");
-//                }
-//#endif
-            }
+    /**
+     * Returns the number of bytes that are available before this stream will
+     * block. This method returns the number of bytes available in the buffer
+     * plus those available in the source stream.
+     *
+     * @return the number of bytes available before blocking.
+     * @throws java.io.IOException if this stream is closed.
+     */
+    public synchronized int available() throws IOException {
+        InputStream localIn = in; // 'in' could be invalidated by close()
+        if (buf == null || localIn == null) {
+            // K0059=Stream is closed
+            throw new IOException("Stream is closed"); //$NON-NLS-1$
         }
-
-        return n;
+        return count - pos + localIn.available();
     }
 
-    public long skip(long n) throws IOException {
-        if (n > 0) {
-            final long avail = count - pos;
-            if (avail > 0) {
-                n = avail < n ? avail : n;
-                pos += n;
-            } else { 
-                n = in.skip(n); /* should be read-through */
-//#ifdef __MARKSUPPORT__
-                if (n > 0) {
-                    markpos = -1;
-                }
-//#endif
-            }
-        }
-
-        return n;
-    }
-
-    public int available() throws IOException {
-        final int n = count - pos;
-        if (n > 0) {
-            return n;
-        }
-        return in.available();
-    }
-
+    /**
+     * Closes this stream. The source stream is closed and any resources
+     * associated with it are released.
+     *
+     * @throws IOException if an error occurs while closing this stream.
+     */
     public void close() throws IOException {
-        pos = count = 0; // prepare for reuse
-//#ifdef __MARKSUPPORT__
-        fillcount = 0;
-        markpos = -1;
-//#endif
-        if (in != null) { // beware it may be null
-            try {
-                in.close();
-            } finally {
-                in = null; // gc hint
-            }
+/* // HACK
+        buf = null;
+*/
+        InputStream localIn = in;
+        in = null;
+        if (localIn != null) {
+            localIn.close();
         }
     }
 
-//#ifdef __MARKSUPPORT__
+    private int fillbuf(InputStream localIn, byte[] localBuf)
+            throws IOException {
+        if (markpos == -1 || (pos - markpos >= marklimit)) {
+            /* Mark position not set or exceeded readlimit */
+            int result = localIn.read(localBuf);
+            if (result > 0) {
+                markpos = -1;
+                pos = 0;
+                count = result == -1 ? 0 : result;
+            }
+            return result;
+        }
+        if (markpos == 0 && marklimit > localBuf.length) {
+            /* Increase buffer size to accommodate the readlimit */
+/* // HACK realloc not supported
+            int newLength = localBuf.length * 2;
+            if (newLength > marklimit) {
+                newLength = marklimit;
+            }
+            byte[] newbuf = new byte[newLength];
+            System.arraycopy(localBuf, 0, newbuf, 0, localBuf.length);
+            // Reassign buf, which will invalidate any local references
+            // FIXME: what if buf was null?
+            localBuf = buf = newbuf;
+*/
+            /* Buffer increase not support, invalidate mark */
+            markpos = -1;
+        } else if (markpos > 0) {
+            System.arraycopy(localBuf, markpos, localBuf, 0,
+                             localBuf.length - markpos);
+        }
+        /* Set the new position and mark position */
+        pos -= markpos;
+        count = markpos = 0;
+        int bytesread = localIn.read(localBuf, pos, localBuf.length - pos);
+        count = bytesread <= 0 ? pos : pos + bytesread;
+        return bytesread;
+    }
 
-    public void mark(int readlimit) {
-        marksCount++;
+    /**
+     * Sets a mark position in this stream. The parameter {@code readlimit}
+     * indicates how many bytes can be read before a mark is invalidated.
+     * Calling {@code reset()} will reposition the stream back to the marked
+     * position if {@code readlimit} has not been surpassed. The underlying
+     * buffer may be increased in size to allow {@code readlimit} number of
+     * bytes to be supported.
+     *
+     * @param readlimit the number of bytes that can be read before the mark is
+     *                  invalidated.
+     * @see #reset()
+     */
+    public synchronized void mark(int readlimit) {
         marklimit = readlimit;
         markpos = pos;
-        fillcount = 0;
     }
 
+    /**
+     * Indicates whether {@code BufferedInputStream} supports the {@code mark()}
+     * and {@code reset()} methods.
+     *
+     * @return {@code true} for BufferedInputStreams.
+     * @see #mark(int)
+     * @see #reset()
+     */
     public boolean markSupported() {
         return true;
     }
 
-    public void reset() throws IOException {
-        resetsCount++;
-        if (in == null) {
-            throw new IOException("Stream is closed");
+    /**
+     * Reads a single byte from this stream and returns it as an integer in the
+     * range from 0 to 255. Returns -1 if the end of the source string has been
+     * reached. If the internal buffer does not contain any available bytes then
+     * it is filled from the source stream and the first byte is returned.
+     *
+     * @return the byte read or -1 if the end of the source stream has been
+     *         reached.
+     * @throws IOException if this stream is closed or another IOException occurs.
+     */
+    public synchronized int read() throws IOException {
+        // Use local refs since buf and in may be invalidated by an
+        // unsynchronized close()
+        byte[] localBuf = buf;
+        InputStream localIn = in;
+        if (localBuf == null || localIn == null) {
+            // K0059=Stream is closed
+            throw new IOException("Stream is closed"); //$NON-NLS-1$
         }
-        if (markpos < 0) {
-            throw new IOException("Resetting to invalid mark");
+
+        /* Are there buffered bytes available? */
+        if (pos >= count && fillbuf(localIn, localBuf) == -1) {
+            return -1; /* no, fill buffer */
+        }
+        // localBuf may have been invalidated by fillbuf
+        if (localBuf != buf) {
+            localBuf = buf;
+            if (localBuf == null) {
+                // K0059=Stream is closed
+                throw new IOException("Stream is closed"); //$NON-NLS-1$
+            }
+        }
+
+        /* Did filling the buffer fail with -1 (EOF)? */
+        if (count - pos > 0) {
+            return localBuf[pos++] & 0xFF;
+        }
+        return -1;
+    }
+
+    /**
+     * Reads at most {@code length} bytes from this stream and stores them in
+     * byte array {@code buffer} starting at offset {@code offset}. Returns the
+     * number of bytes actually read or -1 if no bytes were read and the end of
+     * the stream was encountered. If all the buffered bytes have been used, a
+     * mark has not been set and the requested number of bytes is larger than
+     * the receiver's buffer size, this implementation bypasses the buffer and
+     * simply places the results directly into {@code buffer}.
+     *
+     * @param buffer the byte array in which to store the bytes read.
+     * @param offset the initial position in {@code buffer} to store the bytes read
+     *               from this stream.
+     * @param length the maximum number of bytes to store in {@code buffer}.
+     * @return the number of bytes actually read or -1 if end of stream.
+     * @throws IndexOutOfBoundsException if {@code offset < 0} or {@code length < 0}, or if
+     *                                   {@code offset + length} is greater than the size of
+     *                                   {@code buffer}.
+     * @throws IOException               if the stream is already closed or another IOException
+     *                                   occurs.
+     */
+    public synchronized int read(byte[] buffer, int offset, int length)
+            throws IOException {
+        // Use local ref since buf may be invalidated by an unsynchronized
+        // close()
+        byte[] localBuf = buf;
+        if (localBuf == null) {
+            // K0059=Stream is closed
+            throw new IOException("Stream is closed"); //$NON-NLS-1$
+        }
+        // avoid int overflow
+        if (offset > buffer.length - length || offset < 0 || length < 0) {
+            throw new IndexOutOfBoundsException();
+        }
+        if (length == 0) {
+            return 0;
+        }
+        InputStream localIn = in;
+        if (localIn == null) {
+            // K0059=Stream is closed
+            throw new IOException("Stream is closed"); //$NON-NLS-1$
+        }
+
+        int required;
+        if (pos < count) {
+            /* There are bytes available in the buffer. */
+            int copylength = count - pos >= length ? length : count
+                    - pos;
+            System.arraycopy(localBuf, pos, buffer, offset, copylength);
+            pos += copylength;
+            if (copylength == length || localIn.available() == 0) {
+                return copylength;
+            }
+            offset += copylength;
+            required = length - copylength;
+        } else {
+            required = length;
+        }
+
+        while (true) {
+            int read;
+            /*
+            * If we're not marked and the required size is greater than the
+            * buffer, simply read the bytes directly bypassing the buffer.
+            */
+            if (markpos == -1 && required >= localBuf.length) {
+                read = localIn.read(buffer, offset, required);
+                if (read == -1) {
+                    return required == length ? -1 : length - required;
+                }
+            } else {
+                if (fillbuf(localIn, localBuf) == -1) {
+                    return required == length ? -1 : length - required;
+                }
+                // localBuf may have been invalidated by fillbuf
+                if (localBuf != buf) {
+                    localBuf = buf;
+                    if (localBuf == null) {
+                        // K0059=Stream is closed
+                        throw new IOException("Stream is closed"); //$NON-NLS-1$
+                    }
+                }
+
+                read = count - pos >= required ? required : count - pos;
+                System.arraycopy(localBuf, pos, buffer, offset, read);
+                pos += read;
+            }
+            required -= read;
+            if (required == 0) {
+                return length;
+            }
+            if (localIn.available() == 0) {
+                return length - required;
+            }
+            offset += read;
+        }
+    }
+
+    /**
+     * Resets this stream to the last marked location.
+     *
+     * @throws IOException if this stream is closed, no mark has been set or the mark is
+     *                     no longer valid because more than {@code readlimit} bytes
+     *                     have been read since setting the mark.
+     * @see #mark(int)
+     */
+    public synchronized void reset() throws IOException {
+        if (buf == null) {
+            // K0059=Stream is closed
+            throw new IOException("Stream is closed"); //$NON-NLS-1$
+        }
+        if (-1 == markpos) {
+            // K005a=Mark has been invalidated.
+            throw new IOException("Mark has been invalidated"); //$NON-NLS-1$
         }
         pos = markpos;
     }
 
-    /* stream characteristic */
-    public static int marksCount, resetsCount;
+    /**
+     * Skips {@code amount} number of bytes in this stream. Subsequent
+     * {@code read()}'s will not return these bytes unless {@code reset()} is
+     * used.
+     *
+     * @param amount the number of bytes to skip. {@code skip} does nothing and
+     *               returns 0 if {@code amount} is less than zero.
+     * @return the number of bytes actually skipped.
+     * @throws IOException if this stream is closed or another IOException occurs.
+     */
+    public synchronized long skip(long amount) throws IOException {
+        // Use local refs since buf and in may be invalidated by an
+        // unsynchronized close()
+        byte[] localBuf = buf;
+        InputStream localIn = in;
+        if (localBuf == null) {
+            // K0059=Stream is closed
+            throw new IOException("Stream is closed"); //$NON-NLS-1$
+        }
+        if (amount < 1) {
+            return 0;
+        }
+        if (localIn == null) {
+            // K0059=Stream is closed
+            throw new IOException("Stream is closed"); //$NON-NLS-1$
+        }
 
-//#endif
+        if (count - pos >= amount) {
+            pos += amount;
+            return amount;
+        }
+        long read = count - pos;
+        pos = count;
 
+        if (markpos != -1) {
+            if (amount <= marklimit) {
+                if (fillbuf(localIn, localBuf) == -1) {
+                    return read;
+                }
+                if (count - pos >= amount - read) {
+                    pos += amount - read;
+                    return amount;
+                }
+                // Couldn't get all the bytes, skip what we read
+                read += (count - pos);
+                pos = count;
+                return read;
+            }
+        }
+        return read + localIn.skip(amount - read);
+    }
+
+    /**
+     * Sets for reuse with another stream.
+     * @param in new input stream
+     * @return this
+     */
+    public InputStream setInputStream(InputStream in) {
+        this.in = null; // gc hint
+        this.in = in;
+        pos = count = marklimit = 0;
+        markpos = -1;
+        return this;
+    }
 }

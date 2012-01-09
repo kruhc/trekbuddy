@@ -18,6 +18,7 @@ import java.io.DataOutputStream;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
+import java.io.OutputStream;
 
 import api.location.Datum;
 import api.location.Ellipsoid;
@@ -309,13 +310,13 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
             dataDir = getDefaultDataDir("file:///Ms/", "Other/TrekBuddy/");
             fullscreen = true;
         } else if (cz.kruch.track.TrackingMIDlet.sonim) {
-            dataDir = getDefaultDataDir("file:///TFCard/", "Trekbuddy/");
+            dataDir = getDefaultDataDir("file:///Memory card/", "Trekbuddy/");
         } else { // Nokia, SonyEricsson, ...
             dataDir = getDefaultDataDir("file:///E:/", "TrekBuddy/"); // pstros: "file:///SDCard/TrekBuddy/"
             fullscreen = cz.kruch.track.TrackingMIDlet.nokia || cz.kruch.track.TrackingMIDlet.sonyEricsson || cz.kruch.track.TrackingMIDlet.symbian;
         }
         if (cz.kruch.track.TrackingMIDlet.symbian) {
-            useNativeService = true; // !cz.kruch.track.TrackingMIDlet.s60rdfp2;
+            useNativeService = false; // !cz.kruch.track.TrackingMIDlet.s60rdfp2;
         } else if (cz.kruch.track.TrackingMIDlet.nokia) {
             safeColors = true;
             captureLocator = "capture://image";
@@ -921,6 +922,32 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
                     }
                 }
             }
+            /* create default files */
+            File file = null;
+            try {
+                file = File.open(Config.getFolderURL(Config.FOLDER_MAPS) + "no-map.xml", Connector.READ_WRITE);
+                if (!file.exists()) {
+                    file.create();
+                    final InputStream in = Config.class.getResourceAsStream("/resources/no-map.xml");
+                    final OutputStream out = file.openOutputStream();
+                    final byte[] buffer = new byte[256];
+                    int c = in.read(buffer);
+                    while (c > -1) {
+                        out.write(buffer, 0, c);
+                        c = in.read(buffer);
+                    }
+                    out.close();
+                    in.close();
+                }
+            } catch (Throwable t) { // IOE or SEC
+                // ignore
+            } finally {
+                try {
+                    file.close();
+                } catch (Exception e) { // NPE or IOE
+                    // ignore
+                }
+            }
             /* find default files */
             try {
                 dir = File.open(Config.getFolderURL(Config.FOLDER_SOUNDS));
@@ -1062,8 +1089,8 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
                                   final char[] delims) {
         try {
             tokenizer.init(token, delims, false);
-            final String datumName = tokenizer.next().toString();
-            final String ellipsoidName = tokenizer.next().toString();
+            final String datumName = tokenizer.nextTrim();
+            final String ellipsoidName = tokenizer.nextTrim();
             final Ellipsoid[] ellipsoids = Ellipsoid.ELLIPSOIDS;
             for (int i = ellipsoids.length; --i >= 0; ) {
                 if (ellipsoidName.equals(ellipsoids[i].getName())) {
@@ -1074,7 +1101,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
                     final Datum datum = new Datum(datumName, ellipsoid, dx, dy, dz);
                     datums.addElement(datum);
                     while (tokenizer.hasMoreTokens()) {
-                        final String nm = tokenizer.next().toString();
+                        final String nm = tokenizer.nextTrim();
                         datumMappings.put(nm, datum);
                     }
                     break;

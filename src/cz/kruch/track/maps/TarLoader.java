@@ -37,12 +37,12 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
     private int hintTmiFileSize, increment, calBlockOffset;
     private String calEntryName;
 
-    private boolean useAAF;
+//    private boolean useAAF;
 
     TarLoader() {
         this.isTar = true;
-        this.useAAF = true;
-        ((api.io.BufferedInputStream) bufferef()).setAutofill(false);
+//        this.useAAF = true;
+//        ((api.io.BufferedInputStream) bufferef()).setAutofill(false, -1);
     }
 
     Slice newSlice() {
@@ -74,7 +74,9 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
         // input stream
         InputStream in = null;
 
+/*
         try {
+*/
             // open native file
             nativeFile = File.open(map.getPath());
 
@@ -88,8 +90,8 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
             if (Config.useNativeService && Map.networkInputStreamAvailable) {
                 try {
                     in = cz.kruch.track.device.SymbianService.openInputStream(map.getPath());
-                    ((api.io.BufferedInputStream) bufferef()).setAutofill(true, BUFFERSIZE - 8);
-                    useAAF = false;
+//                    ((api.io.BufferedInputStream) bufferef()).setAutofill(true, BUFFERSIZE - 8);
+//                    useAAF = false;
                     Map.networkInputStreamAvailable = true;
                 } catch (Exception e) { // IOE or SE = service not running/available
                     Map.networkInputStreamAvailable = false;
@@ -108,25 +110,40 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
                 if (in.markSupported()) {
                     try {
                         if (!Config.lowmemIo) {
-                            in.mark((int) nativeFile.fileSize());
+                            /*
+                             * Use int.MAX_VALUE to test for stupid implementation.
+                             * Another dumb way of implementing it is aggregation up to the limit.
+                             */
+                            in.mark(Integer.MAX_VALUE/*(int) nativeFile.fileSize()*/);
+//                            nativeIn = in;
                             Map.fileInputStreamResetable = 1;
                         } else {
-                            Map.fileInputStreamResetable = 0;
+                            try {
+                                in.reset();
+//                                nativeIn = in;
+                                Map.fileInputStreamResetable = 3;
+                            } catch (Throwable t) {
+                                Map.fileInputStreamResetable = -3;
+                            }
                         }
-                        nativeIn = in;
                     } catch (OutOfMemoryError e) {
                         /*
-                         * OutOfMemoryError on S60. Let's try smaller buffer.
+                         * Occurs when implementation is stupid and creates a buffer of mark size :D.
                          */
-                        // TODO
-                        Map.fileInputStreamResetable = -7;
+                        try {
+                            in.reset();
+//                            nativeIn = in;
+                            Map.fileInputStreamResetable = 7;
+                        } catch (Throwable t) {
+                            Map.fileInputStreamResetable = -7;
+                        }
                     } catch (Throwable t) {
                         Map.fileInputStreamResetable = -1;
                     }
                 } else {
-                    try {
+                       try {
                         in.reset(); // try reset
-                        nativeIn = in;
+//                        nativeIn = in;
                         Map.fileInputStreamResetable = 2;
                     } catch (Throwable t) {
                         Map.fileInputStreamResetable = -2;
@@ -146,7 +163,7 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
                 loadTmi(map);
             }
 
-            // open tar input
+            // open tar inputstream
             tarIn = new TarInputStream(in);
 
             // do not have calibration or slices yet
@@ -210,19 +227,20 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
                     }
                 }
             }
-            
-        } finally {
 
-            // detach tar stream
+            // detach tar inputstream from file inputstream
             if (tarIn != null) {
                 tarIn.setInputStream(null);
             }
+
+            // always reusable
+            nativeIn = in;
 
             // reusable
             if (nativeIn != null) {
 
                 // get ready for reuse
-                if (!Config.lowmemIo) {
+                if (Map.fileInputStreamResetable > 0) {
                     nativeIn.reset();
                 } else {
                     nativeIn.close();
@@ -232,24 +250,24 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
                 buffered(nativeIn);
                 tarIn.setStreamOffset(0);
 
-            } else {
-//#ifdef __LOG__
-                if (log.isEnabled()) log.debug("input stream not reusable -> close it");
-//#endif
-                // close native stream
+            }
+/*
+        } finally {
+
+            // close stream when not reused
+            if (nativeIn == null) {
                 try {
                     in.close();
                 } catch (Exception e) { // NPE or IOE
                     // ignore
                 }
             }
+
         }
+*/
     }
 
     void dispose(final boolean deep) throws IOException {
-        // detach buffered stream
-        buffered(null);
-
         // release pointers when deep
         if (deep) {
 //#ifdef __LOG__
@@ -257,8 +275,11 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
 //#endif
             pointers = null;
         }
-
-        // dispose tar stream
+/*
+        // detach buffered stream
+        buffered(null);
+*/
+        // dispose tar inputstream
         if (tarIn != null) {
 //#ifdef __LOG__
             if (log.isEnabled()) log.debug("release tar input stream");
@@ -266,8 +287,7 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
             tarIn.setInputStream(null);
             tarIn = null; // gc hint
         }
-
-        // close native stream
+        // close native inputstream
         if (nativeIn != null) {
 //#ifdef __LOG__
             if (log.isEnabled()) log.debug("closing native stream");
@@ -280,7 +300,7 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
             nativeIn = null; // gc hint
         }
 
-        // close nativeFile
+        // close file
         if (nativeFile != null) {
             try {
                 nativeFile.close();
@@ -307,17 +327,19 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
             // local ref
             final TarInputStream tarIn = this.tarIn;
 
+/*
             try {
                 // resetable stream
                 if (nativeIn != null) {
+*/
 //#ifdef __LOG__
                     if (log.isEnabled()) log.debug("reuse stream");
 //#endif
-                    if (streamOffset < tarIn.getStreamOffset() || Config.siemensIo) {
+                    if (streamOffset < tarIn.getStreamOffset() || Config.siemensIo || Config.lowmemIo) {
 //#ifdef __LOG__
                         if (log.isEnabled()) log.debug("but reset it first");
 //#endif
-                        if (!Config.lowmemIo) {
+                        if (Map.fileInputStreamResetable > 0) {
                             nativeIn.reset();
                         } else {
                             nativeIn.close();
@@ -327,6 +349,7 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
                         buffered(nativeIn);
                         tarIn.setStreamOffset(0);
                     }
+/*
                 } else { // non-resetable stream
 //#ifdef __LOG__
                     if (log.isEnabled()) log.debug("new stream");
@@ -335,21 +358,23 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
                     buffered(in);
                     tarIn.setStreamOffset(0);
                 }
+*/
 
-                // prepare tar stream
+                // prepare tar inputstream
                 tarIn.setInputStream(bufferef());
                 tarIn.skip(streamOffset - tarIn.getStreamOffset());
-                if (useAAF) {
-                    ((api.io.BufferedInputStream) bufferef()).setAutofill(false);
-                }
+//                if (!useAAF) {
+//                    ((api.io.BufferedInputStream) bufferef()).setAutofill(false);
+//                }
                 final TarEntry te = tarIn.getNextEntry();
-                if (useAAF) {
-                    ((api.io.BufferedInputStream) bufferef()).setAutofill(true, (int) te.getSize());
-                }
+//                if (!useAAF) {
+//                    ((api.io.BufferedInputStream) bufferef()).setAutofill(true, (int) te.getSize());
+//                }
 
                 // read image
                 slice.setImage(Image.createImage(tarIn));
 
+/*
             } finally {
 
                 // close native stream when not reusable
@@ -365,7 +390,8 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
                     }
                 }
             }
-            
+*/
+
         } else { // incomplete archive handling
 
             // use empty image
@@ -604,9 +630,11 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
                 initialCapacity = (hintTmiFileSize / token.length) / 2;
                 if (initialCapacity < 64) {
                     initialCapacity = 64;
+                } else if (initialCapacity > 2048) {
+                    initialCapacity = 2048;
                 }
             } else {
-                initialCapacity = 4096;
+                initialCapacity = 2048;
             }
 
             // alloc initial array

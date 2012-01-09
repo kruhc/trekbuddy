@@ -50,11 +50,12 @@ public final class GpxTracklog implements Runnable {
     private static final String GSM_NAMESPACE       = "http://trekbuddy.net/2009/01/gpx/gsm";
     private static final String GSM_PREFIX          = "gsm";
 
-    private static final float  MIN_SPEED_WALK              = 1F;  // 1 m/s ~ 3.6 km/h
-    private static final float  MIN_SPEED_BIKE              = 5F;  // 5 m/s ~ 18 km/h
-    private static final float  MIN_SPEED_CAR               = 10F; // 10 m/s ~ 36 km/h
-    private static final float  MIN_COURSE_DIVERSION        = 15F; // 15 degrees
-    private static final float  MIN_COURSE_DIVERSION_FAST   = 10F; // 10 degrees
+    private static final float MIN_SPEED_WALK              = 1F;  // 1 m/s ~ 3.6 km/h
+    private static final float MIN_SPEED_BIKE              = 5F;  // 5 m/s ~ 18 km/h
+    private static final float MIN_SPEED_CAR               = 10F; // 10 m/s ~ 36 km/h
+    private static final float MIN_COURSE_DIVERSION_SLOW   = 15F; // 15 degrees
+    private static final float MIN_COURSE_DIVERSION_FAST   = 10F; // 10 degrees
+    private static final float MIN_COURSE_DIVERSION_DIST   = 15F; // 25 meters
 
     public static final int LOG_WPT = 0;
     public static final int LOG_TRK = 1;
@@ -143,6 +144,7 @@ public final class GpxTracklog implements Runnable {
     private Location refLocation;
     private float refCourse, courseDeviation;
     private int /*imgNum, */ptCount;
+    private volatile int onhold;
     private boolean force;
 
     private File file;
@@ -304,6 +306,16 @@ public final class GpxTracklog implements Runnable {
 //#ifdef __LOG__
             if (log.isEnabled()) log.debug("closing document");
 //#endif
+            if (type == LOG_TRK) {
+                final Location last = TripStatistics.getLast(TripStatistics.TERM_SHORT);
+                if (last != null) {
+                    try {
+                        serializeTrkpt(last);
+                    } catch (IOException e) {
+                        // ignore
+                    }
+                }
+            }
             final HXmlSerializer s = this.serializer;
             try {
                 if (type == LOG_TRK) { // '==' is ok
@@ -379,6 +391,11 @@ public final class GpxTracklog implements Runnable {
                         final Location l = (Location) item;
                         serializeTrkpt(l);
                         Location.releaseInstance(l);
+
+                        // break segment
+                        if (onhold == 1) {
+                            queue = Boolean.TRUE;
+                        }
 
                         /*
                          * no flush here for performance reasons - flusher should do it
@@ -725,18 +742,21 @@ public final class GpxTracklog implements Runnable {
 
     private Location check(final Location location) {
 
+        // check fix constraint first
         final int fix = location.getFix();
-
         if (fix <= 0 && Config.gpxOnlyValid) {
             return null;
         }
 
+        // check raw logging
         if (Config.gpxDt == 0) { // 'raw'
             return location;
         }
 
+        // log flag
         boolean bLog = false;
 
+        // startup init
         if (refLocation == null) {
             refLocation = location._clone();
             bLog = true;
@@ -745,13 +765,15 @@ public final class GpxTracklog implements Runnable {
             bLog = true;
         }
 
-        final boolean bTimeDiff = (location.getTimestamp() - refLocation.getTimestamp()) >= (Config.gpxDt * 1000);
-
-        if (bTimeDiff) {
+        // dt met?
+        final long dt = location.getTimestamp() - refLocation.getTimestamp();
+        if (dt >= (Config.gpxDt * 1000)) {
             bLog = true;
+//            if (bLog) System.out.println("blog timediff");
         }
 
-        if (!bLog) { // no condition met yet, try ds, dt, deviation
+        // no condition met yet - try ds, dt, course deviation
+        if (!bLog) {
             
             if (fix > 0) {
 
@@ -762,9 +784,9 @@ public final class GpxTracklog implements Runnable {
                     final float r = location.getQualifiedCoordinates().distance(refLocation.getQualifiedCoordinates());
 
                     // calculate course deviation
-                    final float speed = location.isSpeedValid() ? location.getSpeed() : 0F;
+                    final float speed = location.getSpeed();
                     final float course = location.getCourse();
-                    if (!Float.isNaN(course) && speed > MIN_SPEED_WALK) {
+                    if (!Float.isNaN(course) && !Float.isNaN(speed) && speed > MIN_SPEED_WALK) {
                         float diff = course - refCourse;
                         if (diff > 180F) {
                             diff -= 360F;
@@ -776,23 +798,42 @@ public final class GpxTracklog implements Runnable {
                     }
 
                     // depending on speed, find out whether log or not
-                    if (speed < MIN_SPEED_WALK) { /* no move or hiking speed */
+                    if (speed < MIN_SPEED_WALK) { /* no move */
                         bLog = r > 50;
-                    } else if (speed < MIN_SPEED_BIKE) { /* bike speed */
-                        bLog = r > 250 || Math.abs(courseDeviation) > MIN_COURSE_DIVERSION;
-                    } else if (speed < MIN_SPEED_CAR) { /* car speed */
-                        bLog = r > 500 || Math.abs(courseDeviation) > MIN_COURSE_DIVERSION_FAST;
-                    } else { /* ghost rider */
-                        bLog = r > 1000 || Math.abs(courseDeviation) > MIN_COURSE_DIVERSION_FAST;
+//                        if (bLog) System.out.println("blog: " + r + " > 50");
+                    } else if (speed < MIN_SPEED_BIKE) { /* jogging speed */
+                        bLog = r > 125 || (r > MIN_COURSE_DIVERSION_DIST && Math.abs(courseDeviation) > MIN_COURSE_DIVERSION_SLOW);
+//                        if (bLog) System.out.println("blog: " + r + " > 125; " + courseDeviation + " > " + MIN_COURSE_DIVERSION_SLOW);
+                    } else if (speed < MIN_SPEED_CAR) { /* bike speed */
+                        bLog = r > 250 || (r > MIN_COURSE_DIVERSION_DIST && Math.abs(courseDeviation) > MIN_COURSE_DIVERSION_FAST);
+//                        if (bLog) System.out.println("blog: " + r + " > 250; " + courseDeviation + " > " + MIN_COURSE_DIVERSION_FAST);
+                    } else { /* car rider */
+                        bLog = r > 500 || (r > MIN_COURSE_DIVERSION_DIST && Math.abs(courseDeviation) > MIN_COURSE_DIVERSION_FAST);
+//                        if (bLog) System.out.println("blog: " + r + " > 500; " + courseDeviation + " > " + MIN_COURSE_DIVERSION_FAST);
                     }
 
                     // check user's distance criteria if not going to log
                     if (!bLog && Config.gpxDs > 0) {
                         bLog = r > Config.gpxDs;
+//                        if (bLog) System.out.println("blog: " + r + " > ds");
+                    }
+
+                    // stop for too long
+                    if (bLog) {
+                        onhold = 0;
+                    } else if (dt >= 60 * 1000) { // no movement for 1 min 
+                        final float ds = location.getQualifiedCoordinates().distance(refLocation.getQualifiedCoordinates());
+//                        System.out.println("no trkpt long; short trip dist = " + ds + "; onhold = " + onhold);
+                        if (ds < 50) { // should always be true
+                            if (onhold++ == 0) {
+                                bLog = true;
+                            }
+                        }
                     }
 
                 } else {
                     bLog = true;
+//                    if (bLog) System.out.println("ref fix <= 0");
                 }
             }
         }

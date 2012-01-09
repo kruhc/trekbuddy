@@ -44,6 +44,8 @@ final class MapViewer {
 
     private int gx, gy;
 
+    private int sy;
+    
 /*
     private final int[] clip;
 */
@@ -55,8 +57,7 @@ final class MapViewer {
     private int sInfoLength;
 
     private Map map;
-    private Vector slices;
-    private Vector slices2; // for reuse during switch
+    private Vector slices, slices2; // slices2 for reuse during switch
 
     private float course, course2;
 
@@ -118,7 +119,7 @@ final class MapViewer {
     }
 
     void onBackground() {
-        slices.removeAllElements();        
+        dispose();
     }
 
     boolean hasMap() {
@@ -141,9 +142,10 @@ final class MapViewer {
             this.map = null; // gc hint
             this.map = map;
 
-            // clear slices collection
-            this.slices.removeAllElements();
-            /* slicesTemp is always empty */
+            // new slices collection
+            dispose();
+            this.slices = new Vector(4);
+            /* slices2 is always empty */
 
         } // ~synchronized
 
@@ -294,11 +296,21 @@ final class MapViewer {
                 y0 = slice.getY();
                 switch (direction) {
                     case Canvas.UP:
-                        if (y0 < y /* tile larger than screen: */ - (mHeight - dHeight)) {
-                            y = y0 /* tile larger than screen: */ + (mHeight - dHeight);
-                            chy = dHeight - crosshairSize2 /*- 1*/;
-                            steps = mHeight - (py - y0);
-                            dirty = true;
+                        final int dy = mHeight - dHeight;
+                        if (dy >= 0) {
+                            if (y0 < y /* tile larger than screen: */ - dy) {
+                                y = y0 /* tile larger than screen: */ + dy;
+                                chy = dHeight - crosshairSize2 /*- 1*/;
+                                steps = mHeight - (py - y0);
+                                dirty = true;
+                            }
+                        } else {
+                            if (y0 < y /* tile smaller than screen: */) {
+                                y = y0 /* tile smaller than screen: */;
+                                chy = dHeight - crosshairSize2 /*- 1*/;
+                                steps = mHeight - (py - y0);
+                                dirty = true;
+                            }
                         }
                     break;
                     case Canvas.DOWN:
@@ -310,11 +322,21 @@ final class MapViewer {
                         }
                     break;
                     case Canvas.LEFT:
-                        if (x0 < x /* tile larger than screen: */ - (mWidth - dWidth)) {
-                            x = x0 /* tile larger than screen: */ + (mWidth - dWidth);
-                            chx = dWidth - crosshairSize2 /*- 1*/;
-                            steps = mWidth - (px - x0);
-                            dirty = true;
+                        final int dx = mWidth - dWidth;
+                        if (dx >= 0) {
+                            if (x0 < x /* tile larger than screen: */ - dx) {
+                                x = x0 /* tile larger than screen: */ + dx;
+                                chx = dWidth - crosshairSize2 /*- 1*/;
+                                steps = mWidth - (px - x0);
+                                dirty = true;
+                            }
+                        } else {
+                            if (x0 < x /* tile smaller than screen: */) {
+                                x = x0 /* tile smaller than screen: */;
+                                chx = dWidth - crosshairSize2 /*- 1*/;
+                                steps = mWidth - (px - x0);
+                                dirty = true;
+                            }
                         }
                     break;
                     case Canvas.RIGHT:
@@ -410,6 +432,12 @@ final class MapViewer {
                 break;
             default:
                 throw new IllegalArgumentException("Internal error - weird direction");
+        }
+
+        getPosition();
+        if (Math.abs(sy - position.getY()) >= mHeight * 0.01) {
+            sy = position.getY();
+            calculateScale();
         }
 
         return dirty;
@@ -678,6 +706,9 @@ final class MapViewer {
         if (Config.oneTileScroll) {
             graphics.setColor(0x0);
             graphics.fillRect(0, 0, Desktop.width, Desktop.height);
+        } else if (map.isVirtual()) {
+            graphics.setColor(map.getBgColor());
+            graphics.fillRect(0, 0, Desktop.width, Desktop.height);
         }
 
         /* synchronized to avoid race condition with ensureSlices() */
@@ -743,6 +774,16 @@ final class MapViewer {
         if (Config.osdScale && sInfoLength > 0) {
             drawScale(graphics);
         }
+    }
+
+    private void dispose() {
+//#ifdef __ANDROID__
+        final Vector slices = this.slices;
+        for (int i = slices.size(); --i >= 0; ) {
+            ((Slice) slices.elementAt(i)).setImage(null);
+        }
+//#endif
+        slices.removeAllElements();
     }
 
     private void drawNavigation(final Graphics graphics) {
@@ -1008,7 +1049,7 @@ final class MapViewer {
                                         Graphics.TOP | Graphics.LEFT);
                 }
 //#endif                
-            } else {
+            } else if (!map.isVirtual()) {
                 graphics.setColor(0x0);
                 graphics.fillRect(x_dest, y_dest, w, h);
                 graphics.setColor(0x00404040);
@@ -1289,7 +1330,7 @@ final class MapViewer {
         /* synchronized to avoid race condition with render() */
         synchronized (this) {
 
-            // local ref to temp collection
+            // local refs to vectors
             final Vector oldSlices = slices;
             final Vector newSlices = slices2;
 
@@ -1348,13 +1389,7 @@ final class MapViewer {
             // gc cleanup
             oldSlices.removeAllElements();
 
-            // exchange vectors and do cleanup
-/*
-            final Vector v = slices;
-            slices = slices2;
-            slices2 = v;
-            slices2.removeAllElements();
-*/
+            // exchange vectors
             slices = newSlices;
             slices2 = oldSlices;
         } // ~synchronized
@@ -1416,18 +1451,15 @@ final class MapViewer {
 
         // have map?
         if (map != null) {
-/*
-            // use full range - fails for globe maps :-)
-            final QualifiedCoordinates[] range = map.getRange();
-            double scale = range[0].distance(range[1]) / map.getWidth();
-*/
             // use 10% of map width at current Y (lat) for calculation
             final int cy = getPosition().getY();
+            final float wd = ((float) map.getWidth()) / 10;
             QualifiedCoordinates qc0 = map.transform(0, cy);
-            QualifiedCoordinates qc1 = map.transform(map.getWidth() / 10, cy);
-            double scale = qc0.distance(qc1) / (map.getWidth() / 10);
-            QualifiedCoordinates.releaseInstance(qc0);
-            QualifiedCoordinates.releaseInstance(qc1);
+            QualifiedCoordinates qc1 = map.transform(ExtraMath.round(wd), cy);
+            double scale = qc0.distance(qc1) / wd;
+            // not too frequent, reduce code size
+//            QualifiedCoordinates.releaseInstance(qc0);
+//            QualifiedCoordinates.releaseInstance(qc1);
 
             // valid scale?
             if (scale > 0F) { // this always true now, isn't it?

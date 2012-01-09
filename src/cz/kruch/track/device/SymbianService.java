@@ -105,7 +105,7 @@ public final class SymbianService {
 	private static StreamConnection openConnection(String url) throws IOException {
         final SocketConnection connection = (SocketConnection) Connector.open(url, Connector.READ_WRITE);
         connection.setSocketOption(SocketConnection.DELAY, 0);
-        connection.setSocketOption(SocketConnection.RCVBUF, 4 * 8760);
+//        connection.setSocketOption(SocketConnection.RCVBUF, 26280); // 18 * 1460
         return connection;
 	}
 
@@ -172,11 +172,10 @@ public final class SymbianService {
 
             // init communication
             try {
-
                 // open I/O
                 this.connection = openConnection(URL);
                 this.output = connection.openOutputStream();
-                this.input = new DataInputStream(connection.openInputStream());
+                this.input = connection.openDataInputStream();
 
                 // open remote file
                 sendPacketEx(output, (byte) 0x01, utf8name.length, utf8name);

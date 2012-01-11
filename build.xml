@@ -436,11 +436,11 @@
                        symbols="__HECL__,${pre.extra}"/>
     </target>
 
-	<target name="a.pre.symbian" depends="a.pre.hecl">
-		<mkdir dir="tmp/src"/>
-		<wtkpreprocess srcdir="src" destdir="tmp/src" version="1"
-					   symbols="__HECL__,__ALL__,__SYMBIAN__,${pre.extra}"/>
-	</target>
+    <target name="a.pre.symbian" depends="a.pre.hecl">
+        <mkdir dir="tmp/src"/>
+        <wtkpreprocess srcdir="src" destdir="tmp/src" version="1"
+                       symbols="__HECL__,__ALL__,__SYMBIAN__,${pre.extra}"/>
+    </target>
 
     <target name="a.pre.j9" depends="a.pre.hecl">
         <mkdir dir="tmp/src"/>

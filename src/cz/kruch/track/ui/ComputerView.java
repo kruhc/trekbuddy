@@ -584,7 +584,10 @@ final class ComputerView extends View
                 }
 */
             } else {
-                
+
+                // invalidate
+                sat = dgps = 0;
+
                 // spg-avg short
                 if (dt >= 1000) {
                     calcSpdAvgShort(0F, 0F, t);

@@ -57,7 +57,7 @@ public final class NmeaParser {
         for (int i = 1; i < length; i++) {
             final byte b = (byte) (raw[i] & 0x00ff);
             if (b == '*') {
-                if (length - i == 3) { // length - 1 - i == 2
+                if (length - i >= 3) { // at least 2 CRC digits 
                     byte hi = (byte) (raw[i + 1] & 0x00ff);
                     byte lo = (byte) (raw[i + 2] & 0x00ff);
                     if (hi >= '0' && hi <= '9') {

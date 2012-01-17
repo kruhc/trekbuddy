@@ -249,7 +249,9 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         } else { // resumed from background
             state = 1;
 //#ifdef __ANDROID__
-            desktop.onForeground();
+            if (desktop != null) {
+                desktop.onForeground();
+            }
 //#endif
         }
     }
@@ -266,8 +268,10 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
 
         // minimize
 //#ifdef __ANDROID__
-        desktop.onBackground();
-//#endif        
+        if (desktop != null) {
+            desktop.onBackground();
+        }
+//#endif
     }
 
     protected void destroyApp(boolean unconditional) throws MIDletStateChangeException {

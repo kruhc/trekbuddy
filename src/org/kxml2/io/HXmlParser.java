@@ -121,7 +121,7 @@ public final class HXmlParser implements XmlPullParser {
         this.elementStack = new String[16];
         this.nspStack = new String[8];
         this.nspCounts = new int[4];
-        this.srcBuf = new char[4096];
+        this.srcBuf = new char[8192];
         this.txtBuf = new char[512];
         this.attributes = new String[32];
         this.peek = new int[2];
@@ -365,6 +365,23 @@ public final class HXmlParser implements XmlPullParser {
         int c = read();
 
         switch (c) {
+            case '!': {
+                if (peek(0) == '[') {
+                    result = CDSECT;
+                    req = "[CDATA[";
+                    term = ']';
+                    push = true;
+                } else if (peek(0) == '-') {
+                    result = COMMENT;
+                    req = "--";
+                    term = '-';
+                } else {
+                    result = DOCDECL;
+                    req = "DOCTYPE";
+                    term = -1;
+                }
+            } break;
+
             case '?': {
                 if ((peek(0) == 'x' || peek(0) == 'X')
                     && (peek(1) == 'm' || peek(1) == 'M')) {
@@ -422,23 +439,6 @@ public final class HXmlParser implements XmlPullParser {
 
                 term = '?';
                 result = PROCESSING_INSTRUCTION;
-            } break;
-
-            case '!': {
-                if (peek(0) == '-') {
-                    result = COMMENT;
-                    req = "--";
-                    term = '-';
-                } else if (peek(0) == '[') {
-                    result = CDSECT;
-                    req = "[CDATA[";
-                    term = ']';
-                    push = true;
-                } else {
-                    result = DOCDECL;
-                    req = "DOCTYPE";
-                    term = -1;
-                }
             } break;
 
             default: {

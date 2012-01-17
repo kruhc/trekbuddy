@@ -27,7 +27,7 @@
     <property name="android20.home" value="c:\J2ME\android-sdk-windows\platforms\android-2.0"/>
     <property name="microemu.home" value="z:\repository\microemu-google\microemulator"/>
     <property name="proguard3.home" value="z:\apps\proguard3.11"/>
-    <property name="proguard4.home" value="z:\apps\proguard4.6"/>
+    <property name="proguard4.home" value="z:\apps\proguard4.7"/>
 
     <property name="use.proguard" value="3"/>
 
@@ -391,7 +391,7 @@
         <echo>*** Properties:   ${include.properties}</echo>
         <echo>*** Extra Prep:   ${pre.extra}</echo>
         <echo>*** Vendor Dir:   ${vendor.dir}</echo>
-        <echo>*** Locale:       ${locale}</echo>
+        <echo>*** Locale:       ${locale} (ignored)</echo>
         <echo>************************************************************</echo>
         <echo/>
     </target>
@@ -719,7 +719,8 @@
                 <include name="**/*.png"/>
             </fileset>
             <fileset dir="res-lang">
-                <include name="resources/language.${locale}.res"/>
+                <include name="resources/language.en.res"/>
+                <include name="resources/language.pl.res"/>
             </fileset>
             <manifest>
                 <attribute name="Built-By" value="kruhc@seznam.cz"/>
@@ -753,7 +754,8 @@
                 <include name="**/*.png"/>
             </fileset>
             <fileset dir="res-lang">
-                <include name="resources/language.${locale}.res"/>
+                <include name="resources/language.en.res"/>
+                <include name="resources/language.pl.res"/>
             </fileset>
             <manifest>
                 <attribute name="Built-By" value="kruhc@seznam.cz"/>
@@ -789,7 +791,8 @@
                 <include name="**/*.png"/>
             </fileset>
             <fileset dir="res-lang">
-                <include name="resources/language.${locale}.res"/>
+                <include name="resources/language.en.res"/>
+                <include name="resources/language.pl.res"/>
             </fileset>
             <manifest>
                 <attribute name="Built-By" value="kruhc@seznam.cz"/>
@@ -817,7 +820,8 @@
                 <include name="**/*.png"/>
             </fileset>
             <fileset dir="res-lang">
-                <include name="resources/language.${locale}.res"/>
+                <include name="resources/language.en.res"/>
+                <include name="resources/language.pl.res"/>
             </fileset>
             <manifest>
                 <attribute name="Built-By" value="kruhc@seznam.cz"/>
@@ -844,7 +848,9 @@
                 <include name="**/*.png"/>
             </fileset>
             <fileset dir="res-lang">
-                <include name="resources/language.*.res"/>
+                <include name="resources/language.en.res"/>
+                <include name="resources/language.es.res"/>
+                <include name="resources/language.pl.res"/>
             </fileset>
             <manifest>
                 <attribute name="Built-By" value="kruhc@seznam.cz"/>

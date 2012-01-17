@@ -1108,13 +1108,21 @@ final class MapViewer {
         }
 
         // draw line from last "gpx" point to current position
-        if (!Desktop.browsing) {
+        if (!Desktop.browsing && Desktop.synced) {
             final Position p0 = arrayXY[idx0];
             final int x0 = p0.getX() - x;
             final int y0 = p0.getY() - y;
             final int x1 = chx + crosshairSize2;
             final int y1 = chy + crosshairSize2;
-            drawLineSegment(graphics, x0, y0, x1, y1, updatePF(Config.trailThick, x1 - x0, y1 - y0), w, h);
+            final boolean xIsOff = (x0 < 0 && x1 < 0) || (x0 >= w && x1 >= w);
+            final boolean yIsOff = (y0 < 0 && y1 < 0) || (y0 >= h && y1 >= h);
+            
+            // bounding box check first
+            if (!xIsOff && !yIsOff) {
+
+                // draw segment
+                drawLineSegment(graphics, x0, y0, x1, y1, updatePF(Config.trailThick, x1 - x0, y1 - y0), w, h);
+            }
         }
         
         // restore color and style

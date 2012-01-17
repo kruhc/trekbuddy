@@ -530,6 +530,9 @@ final class MapView extends View {
         // result update mask
         int mask = Desktop.MASK_NONE;
 
+        // clear synced ('onMap') flag
+        Desktop.synced = false;
+
         // tracking?
         if (!Desktop.browsing && !navigator._getInitializingMap()) {
 
@@ -559,7 +562,7 @@ final class MapView extends View {
                     QualifiedCoordinates qc = l.getQualifiedCoordinates();
 
                     // on map detection
-                    final boolean onMap = map.isWithin(qc);
+                    final boolean onMap = Desktop.synced = map.isWithin(qc);
 
                     // OSD basic
                     setBasicOSD(qc, onMap);

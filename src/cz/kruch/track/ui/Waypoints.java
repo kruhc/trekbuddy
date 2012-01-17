@@ -339,13 +339,24 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                 // depth-specific action
                 switch (depth) {
                     case 0: { // main menu
+//#ifdef __ANDROID__
+                        try {
+//#endif
                         // get command item
                         final String item = ((List) list).getString(((List) list).getSelectedIndex());
                         idx[depth] = item;
                         // exec
                         mainMenuCommandAction(item);
+//#ifdef __ANDROID__
+                        } catch (ArrayIndexOutOfBoundsException e) {
+                            // no item selected - ignore
+                        }
+//#endif
                     } break;
                     case 1: { // store action
+//#ifdef __ANDROID__
+                        try {
+//#endif
                         // get store name
                         final String item;
                         if (list instanceof SmartList) {
@@ -359,6 +370,11 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                         if (List.SELECT_COMMAND == command || cmdOpen == command) {
                             onBackground(item, null);
                         }
+//#ifdef __ANDROID__
+                        } catch (ArrayIndexOutOfBoundsException e) {
+                            // no item selected - ignore
+                        }
+//#endif
                     } break;
                     case 2: { // wpt action
                         // selected item
@@ -1265,7 +1281,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
 
             try {
                 // open input
-                in = new BufferedInputStream(file.openInputStream(), 4096);
+                in = new BufferedInputStream(file.openInputStream(), 8192);
 
                 // create parser
                 parser = new HXmlParser();
@@ -1874,7 +1890,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
 
         try {
             // open input
-            in = new BufferedInputStream(file.openInputStream(), 4096);
+            in = new BufferedInputStream(file.openInputStream(), 8192);
 
             // create parser
             parser = new HXmlParser();

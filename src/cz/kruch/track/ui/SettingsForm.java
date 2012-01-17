@@ -618,6 +618,10 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
                 // submenu
                 try {
                     show(section = pane.getString(pane.getSelectedIndex()));
+//#ifdef __ANDROID__
+                } catch (ArrayIndexOutOfBoundsException e) {
+                    // no item selected - ignore
+//#endif
                 } catch (Throwable t) {
                     Desktop.showError("Show menu error", t, null);
                 }

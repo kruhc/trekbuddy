@@ -205,6 +205,9 @@ public final class FileBrowser implements CommandListener, Runnable, Comparator 
     public void commandAction(Command command, Displayable displayable) {
         if (command == cmdSelect) {
             path = null; // gc hint
+//#ifdef __ANDROID__
+            try {
+//#endif
             path = list.getString(list.getSelectedIndex());
             if (File.PARENT_DIR.equals(path)) {
                 depth--;
@@ -212,6 +215,11 @@ public final class FileBrowser implements CommandListener, Runnable, Comparator 
                 depth++;
             }
             browse();
+//#ifdef __ANDROID__
+            } catch (ArrayIndexOutOfBoundsException e) {
+                // no item selected - ignore
+            }
+//#endif
 //#ifdef __B2B__
         } else if (command == cmdDir) {
             path = list.getString(list.getSelectedIndex());

@@ -69,6 +69,46 @@ final class Jsr234Camera extends Camera implements PlayerListener {
         return Jsr135Camera.sound(url);
     }
 
+    void setupControls() {
+
+        // set camera resolution and shutter feedback
+        final CameraControl cameraCtrl = (CameraControl) player.getControl("javax.microedition.amms.control.camera.CameraControl");
+        cameraCtrl.setStillResolution(Config.snapshotFormatIdx);
+        try {
+            cameraCtrl.enableShutterFeedback(true);
+        } catch (Exception e) {
+            // ignore
+        }
+
+        // adjust focus
+        try {
+            final FocusControl focusCtrl = (FocusControl) player.getControl("javax.microedition.amms.control.camera.FocusControl");
+            if (focusCtrl != null && focusCtrl.isAutoFocusSupported()) {
+                focusCtrl.setFocus(FocusControl.AUTO);
+            }
+        } catch (Exception e) {
+            // ignore
+        }
+/* // outdoor does not usually need flash
+        // adjust flash
+        try {
+            final FlashControl flashCtrl = (FlashControl) player.getControl("javax.microedition.amms.control.camera.FlashControl");
+            if (flashCtrl != null) {
+                flashCtrl.setMode(FlashControl.AUTO);
+                for (int i = 0; i < 12 && !flashCtrl.isFlashReady(); i++) { // wait 3 sec (12 * 250 ms) max
+                    try {
+                        Thread.sleep(250);
+                    } catch (InterruptedException e) {
+                        // ignore
+                    }
+                }
+            }
+        } catch (Exception e) {
+            // ignore
+        }
+*/
+    }
+
     public void playerUpdate(Player player, String event, Object eventData) {
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("event " + event + "; data " + eventData);
@@ -102,7 +142,8 @@ final class Jsr234Camera extends Camera implements PlayerListener {
                 }
 
                 // rename image
-                callbackResult = moveImage(callbackResult);
+// 2012-01-14: not needed, numbering is done with setFileSuffix                
+//                callbackResult = moveImage(callbackResult);
             }
 
             // close player
@@ -129,45 +170,6 @@ final class Jsr234Camera extends Camera implements PlayerListener {
 
         try {
 
-            // set camera resolution and shutter feedback
-            final CameraControl cameraCtrl = (CameraControl) player.getControl("javax.microedition.amms.control.camera.CameraControl");
-            cameraCtrl.setStillResolution(Config.snapshotFormatIdx);
-            try {
-                if (!cameraCtrl.isShutterFeedbackEnabled()) {
-                    cameraCtrl.enableShutterFeedback(true);
-                }
-            } catch (Exception e) {
-                // ignore
-            }
-
-            // adjust flash
-            try {
-                final FlashControl flashCtrl = (FlashControl) player.getControl("javax.microedition.amms.control.camera.FlashControl");
-                if (flashCtrl != null) {
-                    flashCtrl.setMode(FlashControl.AUTO);
-                    /* wait 1 sec max for flash to get ready */
-                    for (int i = 0; i < 10 && !flashCtrl.isFlashReady(); i++) {
-                        try {
-                            Thread.sleep(100);
-                        } catch (InterruptedException e) {
-                            // ignore
-                        }
-                    }
-                }
-            } catch (Exception e) {
-                // ignore
-            }
-
-            // adjust focus
-            try {
-                final FocusControl focusCtrl = (FocusControl) player.getControl("javax.microedition.amms.control.camera.FocusControl");
-                if (focusCtrl != null && focusCtrl.isAutoFocusSupported()) {
-                    focusCtrl.setFocus(FocusControl.AUTO);
-                }
-            } catch (Exception e) {
-                // ignore
-            }
-
             // use snapshot control
             if (!Config.snapshotFormat.startsWith("encoding")) {
 
@@ -183,11 +185,14 @@ final class Jsr234Camera extends Camera implements PlayerListener {
                 // we need to listen
                 player.addPlayerListener(this);
 
+                // setup controls
+                setupControls();
+
                 // shoot one picture
                 final SnapshotControl snapshotCtrl = (SnapshotControl) player.getControl("javax.microedition.amms.control.camera.SnapshotControl");
                 snapshotCtrl.setDirectory(imagePath);
                 snapshotCtrl.setFilePrefix(PIC_PREFIX);
-                snapshotCtrl.setFileSuffix(PIC_SUFFIX);
+                snapshotCtrl.setFileSuffix(Integer.toString(++imgNum) + PIC_SUFFIX);
                 snapshotCtrl.start(SnapshotControl.FREEZE);
 
             } else { // old school

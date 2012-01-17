@@ -108,11 +108,14 @@ public class BufferedInputStream extends InputStream {
      */
     public synchronized int available() throws IOException {
         InputStream localIn = in; // 'in' could be invalidated by close()
-        if (buf == null || localIn == null) {
+        if (localIn == null) {
             // K0059=Stream is closed
             throw new IOException("Stream is closed"); //$NON-NLS-1$
         }
+/* // HACK // can be very slow when called frequently on some devices (Samsung, Nokia S40)
         return count - pos + localIn.available();
+*/
+        return count - pos;
     }
 
     /**
@@ -215,7 +218,7 @@ public class BufferedInputStream extends InputStream {
         // unsynchronized close()
         byte[] localBuf = buf;
         InputStream localIn = in;
-        if (localBuf == null || localIn == null) {
+        if (localIn == null) {
             // K0059=Stream is closed
             throw new IOException("Stream is closed"); //$NON-NLS-1$
         }
@@ -265,10 +268,6 @@ public class BufferedInputStream extends InputStream {
         // Use local ref since buf may be invalidated by an unsynchronized
         // close()
         byte[] localBuf = buf;
-        if (localBuf == null) {
-            // K0059=Stream is closed
-            throw new IOException("Stream is closed"); //$NON-NLS-1$
-        }
         // avoid int overflow
         if (offset > buffer.length - length || offset < 0 || length < 0) {
             throw new IndexOutOfBoundsException();
@@ -346,7 +345,7 @@ public class BufferedInputStream extends InputStream {
      * @see #mark(int)
      */
     public synchronized void reset() throws IOException {
-        if (buf == null) {
+        if (in == null) {
             // K0059=Stream is closed
             throw new IOException("Stream is closed"); //$NON-NLS-1$
         }
@@ -372,10 +371,6 @@ public class BufferedInputStream extends InputStream {
         // unsynchronized close()
         byte[] localBuf = buf;
         InputStream localIn = in;
-        if (localBuf == null) {
-            // K0059=Stream is closed
-            throw new IOException("Stream is closed"); //$NON-NLS-1$
-        }
         if (amount < 1) {
             return 0;
         }

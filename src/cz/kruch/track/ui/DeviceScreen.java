@@ -565,6 +565,7 @@ final class DeviceScreen extends GameCanvas implements Runnable {
         _setInKey(i);
 
         // help repeat
+        keyRepeatedCount = 0;
         checkKeyRepeated(i);
 
         // keymap
@@ -680,9 +681,6 @@ final class DeviceScreen extends GameCanvas implements Runnable {
                 repeatedKeyCheck = null;
             }
         }
-
-        // clear counter
-        keyRepeatedCount = 0;
 
 //#ifdef __ALL__
 

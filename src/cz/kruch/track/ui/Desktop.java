@@ -84,6 +84,7 @@ public final class Desktop implements CommandListener,
     static volatile boolean paused;
     static volatile boolean navigating;
     static volatile boolean showall;
+    static volatile boolean synced;
 
     // all-purpose timer
     private static Timer timer;

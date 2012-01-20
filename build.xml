@@ -1222,7 +1222,7 @@
         <property name="rim.ota.dir" value="dist/${vendor.dir}/${dist.dir}/ota"/>
         <mkdir dir="${rim.ota.dir}"/>
         <script language="javascript"><![CDATA[
-          self.getProject().setNewProperty("rim.cod.modified", (new java.io.File(self.getProject().getProperty("rim.cod.file")).lastModified()) / 1000);
+          self.getProject().setNewProperty("rim.cod.modified", (new Number(new java.io.File(self.getProject().getProperty("rim.cod.file")).lastModified()) / 1000).toFixed());
         ]]></script>
         <wtkjad jadfile="${rim.ota.dir}/trekbuddy${suffix}.jad"
                 config="CLDC-${wtk.cldc.version}"

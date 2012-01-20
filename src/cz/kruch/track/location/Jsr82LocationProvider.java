@@ -161,7 +161,7 @@ public final class Jsr82LocationProvider extends SerialLocationProvider {
         }
     }
 
-    private final class Discoverer implements javax.bluetooth.DiscoveryListener, CommandListener, Runnable {
+    private final class Discoverer implements javax.bluetooth.DiscoveryListener, CommandListener {
 
         private final javax.bluetooth.UUID[] uuidSet = {
 //            new javax.bluetooth.UUID(0x1101)  // SPP
@@ -201,7 +201,7 @@ public final class Jsr82LocationProvider extends SerialLocationProvider {
             }
         }
 
-        private void letsGo(boolean ok) {
+        private void letsGo(final boolean ok) {
             // restore screen anyway
             Desktop.display.setCurrent(Desktop.screen);
 
@@ -282,7 +282,7 @@ public final class Jsr82LocationProvider extends SerialLocationProvider {
             }
         }
 
-        private void setupCommands(boolean ready) {
+        private void setupCommands(final boolean ready) {
             pane.removeCommand(cmdBack);
             pane.removeCommand(cmdRefresh);
             pane.removeCommand(cmdConnect);
@@ -295,7 +295,7 @@ public final class Jsr82LocationProvider extends SerialLocationProvider {
             pane.addCommand(cmdBack);
         }
 
-        private String getFixedAddress(javax.bluetooth.RemoteDevice device) {
+        private String getFixedAddress(final javax.bluetooth.RemoteDevice device) {
             final String address = device.getBluetoothAddress();
             if (preknownUsed && cz.kruch.track.configuration.Config.btAddressWorkaround) {
                 try {
@@ -313,22 +313,17 @@ public final class Jsr82LocationProvider extends SerialLocationProvider {
             return address;
         }
 
-        public void run() {
-            pane.setTicker(new Ticker(Resources.getString(Resources.DESKTOP_MSG_RESOLVING_NAMES)));
-            for (int N = devices.size(), i = 0; i < N; i++) {
-                final javax.bluetooth.RemoteDevice remoteDevice = ((javax.bluetooth.RemoteDevice) devices.elementAt(i));
-                String name = null;
-                try {
-                    name = remoteDevice.getFriendlyName(false);
-                } catch (Throwable t) {
-                    // ignore
-                }
-                if (name == null || name.length() == 0) {
-                    name = getFixedAddress(remoteDevice);
-                }
-                pane.append(name, null);
+        private String resolveName(javax.bluetooth.RemoteDevice device) {
+            String name = null;
+            try {
+                name = device.getFriendlyName(false);
+            } catch (Throwable t) {
+                // ignore
             }
-            pane.setTicker(null);
+            if (name == null || name.length() == 0) {
+                name = getFixedAddress(device);
+            }
+            return name;
         }
 
         public void deviceDiscovered(javax.bluetooth.RemoteDevice remoteDevice, javax.bluetooth.DeviceClass deviceClass) {
@@ -395,27 +390,39 @@ public final class Jsr82LocationProvider extends SerialLocationProvider {
             // set flag
             inquiryCompleted = true;
 
-            // fallback to preknown devices
-            if (devices.size() == 0) {
-                final javax.bluetooth.RemoteDevice[] preknown = agent.retrieveDevices(javax.bluetooth.DiscoveryAgent.PREKNOWN);
-                if (preknown != null && preknown.length != 0) {
-                    pane.setTitle(Resources.getString(Resources.DESKTOP_MSG_SELECT_DEVICE) + " (PREKNOWN)");
-                    preknownUsed = true;
-                    for (int N = preknown.length, i = 0; i < N; i++) {
-                        devices.addElement(preknown[i]);
-                        pane.append(getFixedAddress(preknown[i]), null); // show bt adresses just to signal we are finding any
-                    }
+            // number of found
+            final int n = devices.size();
+
+            // add paired devices
+            final javax.bluetooth.RemoteDevice[] preknown = agent.retrieveDevices(javax.bluetooth.DiscoveryAgent.PREKNOWN);
+            if (preknown != null && preknown.length != 0) {
+                preknownUsed = true;
+                for (int N = preknown.length, i = 0; i < N; i++) {
+                    devices.addElement(preknown[i]);
+                    pane.append(preknown[i].getBluetoothAddress()+ " *", null); // show bt adresses just to signal we are finding any
                 }
             }
 
             // update UI
+//            pane.deleteAll();
+            pane.setTicker(new Ticker(Resources.getString(Resources.DESKTOP_MSG_RESOLVING_NAMES)));
+
+            // resolve names
+            for (int N = devices.size(), i = 0; i < N; i++) {
+                final javax.bluetooth.RemoteDevice remoteDevice = ((javax.bluetooth.RemoteDevice) devices.elementAt(i));
+//                pane.append(resolveName(remoteDevice), null);
+                String name = resolveName(remoteDevice);
+                if (i >= n) {
+                    name += " *";
+                }
+                pane.set(i, name, null);
+            }
+
+            // setup commands
             pane.setTicker(null);
-            pane.deleteAll();
-            
-            // adjust commands
             setupCommands(true);
 
-            // decide
+            // warn user or quit when devices are available
             if (devices.size() == 0) {
                 if (cancel) {
                     letsGo(false);
@@ -436,12 +443,6 @@ public final class Jsr82LocationProvider extends SerialLocationProvider {
                     }
                     Desktop.showError(Resources.getString(Resources.DESKTOP_MSG_NO_DEVICES_DISCOVERED) + " (" + codeStr + ")", null, null);
                 }
-            } else {
-                // resolve names in a thread
-/*
-                (new Thread(this)).start();
-*/              // can't we resolve names from impl callback?
-                run();
             }
         }
 

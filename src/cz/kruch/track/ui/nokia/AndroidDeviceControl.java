@@ -31,7 +31,7 @@ final class AndroidDeviceControl
     /** @Override */
     void turnOn() {
         if (wl == null) {
-            wl = ((android.os.PowerManager) org.microemu.android.MicroEmulator.context.getSystemService(android.content.Context.POWER_SERVICE)).newWakeLock((wake++ % 2 == 0 ? android.os.PowerManager.SCREEN_DIM_WAKE_LOCK : android.os.PowerManager.SCREEN_BRIGHT_WAKE_LOCK) | android.os.PowerManager.ON_AFTER_RELEASE, "TrekBuddy");
+            wl = ((android.os.PowerManager) cz.kruch.track.TrackingMIDlet.getActivity().getSystemService(android.content.Context.POWER_SERVICE)).newWakeLock((wake++ % 2 == 0 ? android.os.PowerManager.SCREEN_DIM_WAKE_LOCK : android.os.PowerManager.SCREEN_BRIGHT_WAKE_LOCK) | android.os.PowerManager.ON_AFTER_RELEASE, "TrekBuddy");
         }
         wl.acquire();
         wl.release();
@@ -44,10 +44,10 @@ final class AndroidDeviceControl
 
     /** @Override */
     void useTicker(Object list, final String msg) {
-        ((org.microemu.android.MicroEmulatorActivity) org.microemu.android.MicroEmulator.context).post(new Runnable() {
+        ((org.microemu.android.MicroEmulatorActivity) cz.kruch.track.TrackingMIDlet.getActivity()).post(new Runnable() {
             public void run() {
                 if (msg != null) {
-                    ticker = android.app.ProgressDialog.show(org.microemu.android.MicroEmulator.context,
+                    ticker = android.app.ProgressDialog.show(cz.kruch.track.TrackingMIDlet.getActivity(),
                                                              "", msg, true);
                 } else {
                     if (ticker != null) {
@@ -61,7 +61,7 @@ final class AndroidDeviceControl
     /** @Override */
     void sense(api.location.LocationListener listener) {
         this.listener = listener;
-        final android.hardware.SensorManager sm = (android.hardware.SensorManager) org.microemu.android.MicroEmulator.context.getSystemService(android.content.Context.SENSOR_SERVICE);
+        final android.hardware.SensorManager sm = (android.hardware.SensorManager) cz.kruch.track.TrackingMIDlet.getActivity().getSystemService(android.content.Context.SENSOR_SERVICE);
         sensor = sm.getDefaultSensor(android.hardware.Sensor.TYPE_ORIENTATION);
         if (sensor != null) {
             sm.registerListener(this, sensor, android.hardware.SensorManager.SENSOR_DELAY_NORMAL);
@@ -70,7 +70,7 @@ final class AndroidDeviceControl
 
     /** @Override */
     void nonsense(api.location.LocationListener listener) {
-        final android.hardware.SensorManager sm = (android.hardware.SensorManager) org.microemu.android.MicroEmulator.context.getSystemService(android.content.Context.SENSOR_SERVICE);
+        final android.hardware.SensorManager sm = (android.hardware.SensorManager) cz.kruch.track.TrackingMIDlet.getActivity().getSystemService(android.content.Context.SENSOR_SERVICE);
         if (sensor != null) {
             sm.unregisterListener(this, sensor);
             sensor = null;

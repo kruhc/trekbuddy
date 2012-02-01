@@ -76,7 +76,7 @@ public final class FileBrowser implements CommandListener, Runnable, Comparator 
 
     private void browse() {
         // on background
-        (new Thread(this)).start();
+        Desktop.getDiskWorker().enqueue(this);
     }
 
     public int compare(Object o1, Object o2) {

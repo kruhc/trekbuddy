@@ -46,6 +46,16 @@ import api.location.Location;
 import api.location.QualifiedCoordinates;
 import api.location.LocationException;
 
+//#ifdef __ANDROID__
+import android.content.ComponentName;
+import android.content.Context;
+import android.content.Intent;
+import android.content.ServiceConnection;
+import android.os.IBinder;
+import net.trekbuddy.midlet.IRuntime;
+//#endif
+import net.trekbuddy.midlet.Runtime;
+
 /**
  * Main user interface and event handling.
  *
@@ -57,6 +67,7 @@ public final class Desktop implements CommandListener,
 //#ifdef __LOG__
     private static final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("Desktop");
 //#endif
+    private static final String TAG = cz.kruch.track.TrackingMIDlet.APP_TITLE;
 
     // dialog timeouts
     private static final int INFO_DIALOG_TIMEOUT    = 1000;
@@ -135,8 +146,7 @@ public final class Desktop implements CommandListener,
     private /*volatile*/ boolean loadingSlices;   // using synchronized access helper
     private final Object[] loadingResult;
 
-    // location provider and its last-op throwable and status
-    private volatile LocationProvider provider;
+    // location provider last-op throwable and status
     private volatile Object providerStatus;
     private volatile Throwable providerError;
     private volatile Throwable tracklogError;
@@ -150,7 +160,7 @@ public final class Desktop implements CommandListener,
     private long trackstart;
     private boolean tracklog;
 
-    // navigation // TODO move to Waypoints
+    // navigation // TODO move to Waypoints or Runtime
     /*public*/ static volatile Vector wpts;
     /*public*/ static volatile String wptsName;
     /*public*/ static volatile int wptIdx, wptEndIdx, reachedIdx;
@@ -167,6 +177,13 @@ public final class Desktop implements CommandListener,
 
 	// workers // TODO move to Worker? TrackingMIDlet?
 	private static Worker diskWorker, eventWorker;
+
+//#ifdef __ANDROID__
+    private volatile ServiceConnection svcConn;
+    private volatile IRuntime runtime;
+//#else
+    private volatile Runtime runtime;
+//#endif
 
     /**
      * Desktop constructor.
@@ -209,6 +226,12 @@ public final class Desktop implements CommandListener,
         display = Display.getDisplay(midlet);
         screen = new DeviceScreen(this, midlet);
         browsing = true;
+        osd = null;
+        status = null;
+//#ifdef __ANDROID__
+        // clear dalvik for activity restart
+        jvmClear();
+//#endif
 
         // init basic members
         this.midlet = midlet;
@@ -273,6 +296,9 @@ public final class Desktop implements CommandListener,
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("boot");
 //#endif
+//#ifdef __ANDROID__
+        android.util.Log.i(TAG, "[app] starting");
+//#endif
 
 //#ifdef __B2B__
         // required for reboot
@@ -305,17 +331,6 @@ public final class Desktop implements CommandListener,
         // show version
         consoleShow(g, lineY, Resources.getString(Resources.INFO_ITEM_VERSION) + " " + cz.kruch.track.TrackingMIDlet.version);
         lineY += lineHeight;
-
-/* does not work on Android
-        // yield - we can do it safely because we are in own thread
-        while (!screen.isShown()) {
-            try {
-                Thread.sleep(5);
-            } catch (InterruptedException e) {
-                // ignore
-            }
-        }
-*/
 
         // vertical space
         consoleShow(g, lineY, "");
@@ -427,9 +442,35 @@ public final class Desktop implements CommandListener,
                     // ignore
                 }
                 midlet.notifyDestroyed();
+                // TODO Android: finish/exit
             }
         }
 
+//#endif
+
+//#ifdef __ANDROID__
+        // bind to runtime
+        android.util.Log.d(TAG, "[app] connect to service");
+        svcConn = new ServiceConnection() {
+            public void onServiceConnected(ComponentName className, IBinder binder) {
+                android.util.Log.d(TAG, "[app] service connected");
+                runtime = (IRuntime) binder;
+//                if (runtime.isRunning()) {
+//                    android.util.Log.d(TAG, "[app] runtime already running");
+//                } else {
+//                    android.util.Log.d(TAG, "[app] runtime not running");
+//                }
+            }
+
+            public void onServiceDisconnected(ComponentName className) {
+                android.util.Log.d(TAG, "[app] service disconnected");
+                runtime = null;
+            }
+        };
+        cz.kruch.track.TrackingMIDlet.getActivity().bindService(new Intent(cz.kruch.track.TrackingMIDlet.getActivity(), Runtime.class),
+                                                                svcConn, Context.BIND_AUTO_CREATE);
+//#else
+        runtime = new Runtime();
 //#endif
 
         // show boot progress for a while
@@ -493,7 +534,7 @@ public final class Desktop implements CommandListener,
 //#ifdef __ANDROID__
 
     public void onBackground() {
-        android.util.Log.i("TrekBuddy", "going background");
+        android.util.Log.i(TAG, "[app] going background");
 
         // notify views
         if (views != null) {
@@ -507,7 +548,7 @@ public final class Desktop implements CommandListener,
     }
 
     public void onForeground() {
-        android.util.Log.i("TrekBuddy", "going foreground");
+        android.util.Log.i(TAG, "[app] going foreground");
 
         // notify views
         if (views != null) {
@@ -604,9 +645,11 @@ public final class Desktop implements CommandListener,
         screen.addCommand(this.cmdSettings = new Command(Resources.getString(Resources.DESKTOP_CMD_SETTINGS), POSITIVE_CMD_TYPE, 6));
         screen.addCommand(this.cmdInfo = new Command(Resources.getString(Resources.DESKTOP_CMD_INFO), POSITIVE_CMD_TYPE, 7));
         screen.addCommand(this.cmdExit = new Command(Resources.getString(Resources.DESKTOP_CMD_EXIT), EXIT_CMD_TYPE, 8/*1*/));
+//#ifndef __ANDROID__
         if (Config.fullscreen && Config.hideBarCmd) {
             screen.addCommand(this.cmdHide = new Command("...", Command.CANCEL, 0));
         }
+//#endif
         this.cmdPause = new Command(Resources.getString(Resources.DESKTOP_CMD_PAUSE), Config.fullscreen || cz.kruch.track.TrackingMIDlet.sonyEricsson || cz.kruch.track.TrackingMIDlet.jbed ? POSITIVE_CMD_TYPE : Command.STOP, 1);
         this.cmdContinue = new Command(Resources.getString(Resources.DESKTOP_CMD_CONTINUE), Config.fullscreen || cz.kruch.track.TrackingMIDlet.sonyEricsson || cz.kruch.track.TrackingMIDlet.jbed ? POSITIVE_CMD_TYPE : Command.STOP, 1);
         this.cmdStop = new Command(Resources.getString(Resources.DESKTOP_CMD_STOP), Config.fullscreen || cz.kruch.track.TrackingMIDlet.sonyEricsson || cz.kruch.track.TrackingMIDlet.jbed ? POSITIVE_CMD_TYPE : Command.STOP, 2);
@@ -713,6 +756,19 @@ public final class Desktop implements CommandListener,
         }
     }
 
+    private static void jvmClear() {
+        // for proper resetGUI on next start
+        width = height = 0;
+        // thread-based refs
+        timer = null;
+        eventWorker = diskWorker = null;
+        rtCountFree = countFree = 0;
+//#ifdef __ANDROID__
+        java.util.Arrays.fill(rtPool, null);
+        java.util.Arrays.fill(pool, null);
+//#endif
+    }
+
     synchronized boolean resetGui() {
         // that's it when booting
         if (boot) {
@@ -727,6 +783,7 @@ public final class Desktop implements CommandListener,
         int h = screen.getHeight();
 
 //#ifdef __ANDROID__
+        // TODO move to better place
         org.microemu.android.MicroEmulator.ignoreVolumeKeys = !Config.easyZoomVolumeKeys;
 //#endif
 
@@ -912,7 +969,7 @@ public final class Desktop implements CommandListener,
             final InfoForm form = new InfoForm();
             final Object[] extras;
             if (isTracking()) {
-                extras = new Object[]{ provider.getStatus(), provider.getThrowable(), tracklogError };
+                extras = new Object[]{ runtime.getProvider().getStatus(), runtime.getProvider().getThrowable(), tracklogError };
             } else {
                 extras = new Object[]{ providerStatus, providerError, tracklogError };
             }
@@ -948,7 +1005,7 @@ public final class Desktop implements CommandListener,
         } else if (command == cmdStop) {
             // stop tracking
             _setStopRequest(true);
-            stopTracking();
+            stopTrackingRuntime();
         } else if (command == cmdRunLast) {
             // start tracking with known device
             _setStopRequest(false);
@@ -991,6 +1048,10 @@ public final class Desktop implements CommandListener,
 //#ifdef __LOG__
                 if (log.isEnabled()) log.debug("exit command");
 //#endif
+//#ifdef __ANDROID__
+                android.util.Log.i(TAG, "[app] exiting");
+//#endif
+
                 // stop device control
                 cz.kruch.track.ui.nokia.DeviceControl.destroy();
 
@@ -1003,8 +1064,13 @@ public final class Desktop implements CommandListener,
                 }
 
                 // stop tracklog and tracking
-                stopTracking();
+                stopTrackingRuntime();
                 stopTracklog();
+
+//#ifdef __ANDROID__
+                // unbind runtime
+                cz.kruch.track.TrackingMIDlet.getActivity().unbindService(svcConn);
+//#endif
 
 /* probably not necessary
                 // stop Friends
@@ -1013,7 +1079,7 @@ public final class Desktop implements CommandListener,
                 }
 */
 
-/* most probably not necessary
+/* probably not necessary
                 // close atlas/map
                 if (atlas != null) {
                     atlas.close();
@@ -1035,8 +1101,16 @@ public final class Desktop implements CommandListener,
                     // ignore
                 }
 
+                // clear JVM
+                jvmClear();
+
                 // bail out
                 midlet.notifyDestroyed();
+
+//#ifdef __ANDROID__
+                cz.kruch.track.TrackingMIDlet.getActivity().finish();
+//                System.exit(0); // see lines 466-467 in microemulator\microemu-javase\src\main\java\org\microemu\app\Common.java
+//#endif
             }
 
         } else if (closure instanceof Boolean) { // START TRACKING
@@ -1046,8 +1120,8 @@ public final class Desktop implements CommandListener,
                 tracklog = true; // !
             }
 
-            // start tracking
-            if (((Boolean) closure).booleanValue()) startTrackingLast(); else startTracking();
+            // start runtime/tracking
+            startTrackingRuntime(((Boolean) closure).booleanValue());
 
             // update OSD
             update(MASK_OSD);
@@ -1154,7 +1228,7 @@ public final class Desktop implements CommandListener,
     //
 
     boolean isTracking() {
-        return this.provider != null;
+        return this.runtime.getProvider() != null;
     }
 
     boolean isLocation() {
@@ -1835,7 +1909,7 @@ public final class Desktop implements CommandListener,
 
     void update(int mask) {
 //#ifdef __LOG__
-        if (log.isEnabled()) log.debug("update " + Integer.toBinaryString(mask));
+        if (log.isEnabled()) log.debug("update " + Integer.toBinaryString(mask) + "; state: " + cz.kruch.track.TrackingMIDlet.state);
 //#endif
 
 //#ifdef __ANDROID__
@@ -1927,7 +2001,7 @@ public final class Desktop implements CommandListener,
         }
         if (t != null) {
 //#ifdef __ANDROID__
-            android.util.Log.e("TrekBuddy", message, t);
+            android.util.Log.e(TAG, message, t);
 //#elifdef __SYMBIAN__
             System.err.println("[TrekBuddy] " + message);
             t.printStackTrace();
@@ -1959,7 +2033,7 @@ public final class Desktop implements CommandListener,
     private void preTracking(final boolean last) {
 
         // assertion - should never happen
-        if (provider != null) {
+        if (runtime.getProvider() != null) {
             throw new IllegalStateException("Tracking already started");
         }
 
@@ -1969,14 +2043,14 @@ public final class Desktop implements CommandListener,
         // start tracklog?
         switch (Config.tracklog) {
             case Config.TRACKLOG_NEVER: {
-                if (last) startTrackingLast(); else startTracking();
+                startTrackingRuntime(last);
             } break;
             case Config.TRACKLOG_ASK: {
                 (new YesNoDialog(screen, this, new Boolean(last), Resources.getString(Resources.DESKTOP_MSG_START_TRACKLOG), null)).show();
             } break;
             case Config.TRACKLOG_ALWAYS: {
                 tracklog = true; // !
-                if (last) startTrackingLast(); else startTracking();
+                startTrackingRuntime(last);
             } break;
         }
 
@@ -1989,8 +2063,9 @@ public final class Desktop implements CommandListener,
         if (log.isEnabled()) log.debug("start tracking...");
 //#endif
 
-        // which provider?
+        // provider
         String providerName = null;
+        LocationProvider provider;
 
         // instantiate provider
         try {
@@ -2048,7 +2123,7 @@ public final class Desktop implements CommandListener,
         // start provider
         final int state;
         try {
-            state = provider.start();
+            state = runtime.startTracking(provider);
 //#ifdef __LOG__
             if (log.isEnabled()) log.debug("provider started; state " + state);
 //#endif
@@ -2057,18 +2132,12 @@ public final class Desktop implements CommandListener,
             // notify user
             showError(e.getMessage(), null, null);
 
-            // cleanup
-            provider = null;
-
 			return false;
 
         } catch (Throwable t) {
 
             // notify user
             showError(Resources.getString(Resources.DESKTOP_MSG_START_PROV_FAILED) + " [" + provider.getName() + "]", t, null);
-
-            // cleanup
-            provider = null;
 
 			return false;
         }
@@ -2098,6 +2167,7 @@ public final class Desktop implements CommandListener,
 //#endif
 
         // instantiate BT provider
+        LocationProvider provider;
         try {
 //#ifdef __ANDROID__
             provider = (LocationProvider) Class.forName("cz.kruch.track.location.AndroidBluetoothLocationProvider").newInstance();
@@ -2116,13 +2186,7 @@ public final class Desktop implements CommandListener,
         provider.setLocationListener(this);
 
         // (re)start BT provider
-        final Thread thread = new Thread((Runnable) provider);
-//#ifdef __ALL__
-        if (cz.kruch.track.TrackingMIDlet.samsung) {
-            thread.setPriority(Thread.MIN_PRIORITY);
-        }
-//#endif
-        thread.start();
+        runtime.quickstartTracking(provider);
 
         // not browsing
         browsing = false;
@@ -2152,13 +2216,7 @@ public final class Desktop implements CommandListener,
         osd.setProviderStatus(LocationProvider._STARTING);
 
         // (re)start provider
-        final Thread thread = new Thread((Runnable) provider);
-//#ifdef __ALL__
-        if (cz.kruch.track.TrackingMIDlet.samsung) {
-            thread.setPriority(Thread.MIN_PRIORITY);
-        }
-//#endif
-        thread.start();
+        runtime.restartTracking();
 
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("~restart tracking");
@@ -2169,16 +2227,16 @@ public final class Desktop implements CommandListener,
 
     private void afterTracking() {
 //#ifdef __LOG__
-        if (log.isEnabled()) log.debug("after tracking " + provider);
+        if (log.isEnabled()) log.debug("after tracking");
 //#endif
 
         // record provider status
-        providerStatus = provider.getStatus();
-        providerError = provider.getThrowable();
+        providerStatus = runtime.getProvider().getStatus();
+        providerError = runtime.getProvider().getThrowable();
 
-        // gc
-        provider = null;
-        
+        // cleanup
+        runtime.afterTracking();
+
         // stop tracklog
         stopTracklog();
 
@@ -2219,11 +2277,11 @@ public final class Desktop implements CommandListener,
 
     private boolean stopTracking() {
 //#ifdef __LOG__
-        if (log.isEnabled()) log.debug("stop tracking " + provider);
+        if (log.isEnabled()) log.debug("stop tracking");
 //#endif
 
         // assertion - should never happen
-        if (provider == null) {
+        if (runtime.getProvider() == null) {
 //            throw new IllegalStateException("Tracking already stopped");
 //#ifdef __LOG__
             if (log.isEnabled()) log.error("tracking already stopped");
@@ -2235,7 +2293,7 @@ public final class Desktop implements CommandListener,
         trackstart = 0;
 
         // already stopping?
-        if (!provider.isGo()) {
+        if (!runtime.getProvider().isGo()) {
 //#ifdef __LOG__
             if (log.isEnabled()) log.error("tracking already stopping");
 //#endif
@@ -2244,7 +2302,7 @@ public final class Desktop implements CommandListener,
 
         // stop provider
         try {
-            provider.stop();
+            runtime.stopTracking();
         } catch (Throwable t) {
             showError(Resources.getString(Resources.DESKTOP_MSG_STOP_PROV_FAILED), t, null);
         }
@@ -2323,7 +2381,7 @@ public final class Desktop implements CommandListener,
                         nmeaOut = new BufferedOutputStream(tracklogNmea.openOutputStream(), 4096, true);
 
                         // inject observer
-                        provider.setObserver(nmeaOut);
+                        runtime.getProvider().setObserver(nmeaOut);
 
                         // notify itself ;-)
                         (new Event(Event.EVENT_TRACKLOG)).invoke(new Integer(GpxTracklog.CODE_RECORDING_START), null, this);
@@ -2337,6 +2395,30 @@ public final class Desktop implements CommandListener,
                 }
             }
         }
+    }
+
+    private boolean startTrackingRuntime(boolean last) {
+        final boolean started;
+        if (last) {
+            started = startTrackingLast();
+        } else {
+            started = startTracking();
+        }
+        if (started) {
+//#ifdef __ANDROID__
+            cz.kruch.track.TrackingMIDlet.getActivity().startService(
+                    new Intent(cz.kruch.track.TrackingMIDlet.getActivity(), Runtime.class));
+//#endif
+        }
+        return started;
+    }
+
+    private boolean stopTrackingRuntime() {
+//#ifdef __ANDROID__
+        cz.kruch.track.TrackingMIDlet.getActivity().stopService(
+                new Intent(cz.kruch.track.TrackingMIDlet.getActivity(), Runtime.class));
+//#endif
+        return stopTracking();
     }
 
     private void stopTracklog() {
@@ -2520,6 +2602,7 @@ public final class Desktop implements CommandListener,
 
         public void merge(RenderTask r) {
             this.mask |= r.mask;
+            releaseRenderTask(r);
         }
         
         public void run() {
@@ -2547,7 +2630,7 @@ public final class Desktop implements CommandListener,
                 if (Desktop.log.isEnabled()) Desktop.log.error("render failure", t);
 //#endif
 //#ifdef __ANDROID__
-                android.util.Log.e("TrekBuddy", "render failure", t);
+                android.util.Log.e(TAG, "render failure", t);
 //#endif
                 Desktop.showError("_RENDER FAILURE_", t, null);
 
@@ -2743,9 +2826,11 @@ public final class Desktop implements CommandListener,
         screen.removeCommand(cmdSettings); cmdSettings = null;
         screen.removeCommand(cmdInfo); cmdInfo = null;
         screen.removeCommand(cmdExit); cmdExit = null;
+//#ifndef __ANDROID__
         if (cmdHide != null) {
             screen.removeCommand(cmdHide); cmdHide = null;
         }
+//#endif        
         // views reset
         ((ComputerView) views[VIEW_CMS]).b2b_reset(); // TODO ugly
         ((MapView) views[VIEW_MAP]).setMap(null);
@@ -2973,7 +3058,7 @@ public final class Desktop implements CommandListener,
                 if (log.isEnabled()) log.debug("event failure", t);
 //#endif
 //#ifdef __ANDROID__
-                android.util.Log.e("TrekBuddy", "event failure", t);
+                android.util.Log.e(TAG, "event failure", t);
 //#endif                
                 Desktop.showError("_EVENT FAILURE_ (" + this + ")", t, Desktop.screen);
 
@@ -3457,12 +3542,12 @@ public final class Desktop implements CommandListener,
                     }
 
                     // stop tracking completely or restart
-                    if (Desktop.this._isStopRequest() || Desktop.this.provider == null) {
+                    if (Desktop.this._isStopRequest() || Desktop.this.runtime.getProvider() == null) {
 //#ifdef __LOG__
                         if (log.isEnabled()) log.debug("to do: after tracking");
 //#endif
                         Desktop.this.afterTracking();
-                    } else if (Desktop.this.provider.isRestartable()) {
+                    } else if (Desktop.this.runtime.getProvider().isRestartable()) {
 //#ifdef __LOG__
                         if (log.isEnabled()) log.debug("to do: restart tracking");
 //#endif
@@ -3471,7 +3556,7 @@ public final class Desktop implements CommandListener,
 //#ifdef __LOG__
                         if (log.isEnabled()) log.debug("to do: stop tracking");
 //#endif
-                        Desktop.this.stopTracking();
+                        Desktop.this.stopTrackingRuntime();
                         Desktop.this.afterTracking();
                     }
 
@@ -3486,7 +3571,7 @@ public final class Desktop implements CommandListener,
 
                     // stop provider - if it is restartable, it will be restarted (see above case)
                     try {
-                        Desktop.this.provider.stop();
+                        Desktop.this.stopTrackingRuntime();
                     } catch (Exception e) {
 //#ifdef __LOG__
                         e.printStackTrace();
@@ -3499,7 +3584,7 @@ public final class Desktop implements CommandListener,
                 case LocationProvider._CANCELLED: {
 
                     // stop and resume
-                    Desktop.this.stopTracking();
+                    Desktop.this.stopTrackingRuntime();
                     Desktop.this.afterTracking();
 
                 } break;

@@ -204,7 +204,7 @@ public final class GpxTracklog implements Runnable {
 
     public void start() {
         go = true;
-        thread = new Thread(this, "GPX tracklog");
+        thread = new Thread(this, "[TrekBuddy] GPX tracklog");
         thread.start();
     }
 

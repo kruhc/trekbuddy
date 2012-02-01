@@ -11,12 +11,15 @@ import javax.microedition.lcdui.Display;
 import javax.microedition.lcdui.Canvas;
 import javax.microedition.lcdui.Ticker;
 import javax.microedition.lcdui.Command;
-import java.util.Vector;
+import javax.microedition.lcdui.Displayable;
+import javax.microedition.lcdui.Image;
 
 /**
  * Unlimited UI list.
+ * 
+ * http://developers.sun.com/mobility/midp/ttips/customcomponent/index.html
  */
-final class SmartList extends Canvas {
+final class SmartList extends Canvas implements UiList {
     private static final int HL_INSET = 2;
     private static final int VL_INSET = 3;
     private static final int SHAKE_LIMIT = 10;
@@ -27,11 +30,13 @@ final class SmartList extends Canvas {
     private static final int colorSbHiMain = DeviceScreen.BTN_HICOLOR;
 
     private CommandListener listener;
-    private Vector items;
+    private NakedVector items;
     private String title;
+    private Image awpt;
 
     private int top, selected, marked;
     private int visible;
+    private int awptSize;
     private boolean dragged;
 
     private int width, height, sbY, sbWidth, sbHeight, pY;
@@ -43,7 +48,7 @@ final class SmartList extends Canvas {
         } catch (Exception e) { // RIM bug???
             this.title = title;
         }
-        this.marked = -1;
+        this.marked = this.selected = -1;
         if (cz.kruch.track.configuration.Config.safeColors) {
             this.colorBackSel = 0x000000ff;
             this.colorBackUnsel = 0x00ffffff;
@@ -55,9 +60,22 @@ final class SmartList extends Canvas {
             this.colorForeSel = Desktop.display.getColor(Display.COLOR_HIGHLIGHTED_FOREGROUND);
             this.colorForeUnsel = Desktop.display.getColor(Display.COLOR_FOREGROUND);
         }
+        this.awptSize = getLineHeight() - 2 * 2 * VL_INSET;
+        if (this.awptSize < NavigationScreens.wptSize2 << 1) {
+            this.awpt = NavigationScreens.resizeImage(NavigationScreens.waypoint,
+                                                      this.awptSize, this.awptSize,
+                                                      NavigationScreens.SLOW_RESAMPLE);
+        } else {
+            this.awptSize = NavigationScreens.wptSize2 << 1;
+            this.awpt = NavigationScreens.waypoint;
+        }
     }
 
-    public void setData(Vector items) {
+    public Displayable getUI() {
+        return this;
+    }
+
+    public void setData(NakedVector items) {
         if (items == null) {
             throw new NullPointerException("List items is null");
         }
@@ -78,6 +96,65 @@ final class SmartList extends Canvas {
         super.setCommandListener(this.listener = listener);
     }
 
+    public int getSelectedIndex() {
+        return selected;
+    }
+
+    public void setSelectedIndex(int elementNum, boolean select) {
+        if (select) {
+            if (elementNum >= 0 && elementNum < items.size()) {
+                selected = elementNum;
+                makeSelectedVisible();
+            } else {
+                selected = -1;
+            }
+            repaint();
+        } else {
+            throw new IllegalArgumentException("Unselect not supported");
+        }
+    }
+
+    public Object getSelectedItem() {
+        if (selected >= 0 && selected < items.size()) {
+            return items.elementAt(selected);
+        }
+        return null;
+    }
+
+    public void setSelectedItem(Object item) {
+        setSelectedIndex(indexOf(item), true);
+    }
+
+/* REMOVE
+    public String getString(int index) {
+        return items.elementAt(index).toString();
+    }
+
+*/
+    public void setMarked(int elementNum) {
+        if (elementNum >= 0 && elementNum < items.size()) {
+            marked = elementNum;
+        }
+    }
+
+    public int indexOf(Object item) {
+        final Object[] items = this.items.getData();
+        for (int i = this.items.size(); --i >= 0; ) {
+            if (item.equals(items[i])) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    public int size() {
+        return items.size();
+    }
+
+    //
+    // canvas handling
+    //
+
     protected void showNotify() {
         if (title != null) {
             try {
@@ -95,23 +172,6 @@ final class SmartList extends Canvas {
         /* does not paint when shown for the first time on Android without this */
         repaint();
 //#endif
-    }
-
-    protected void recalculate(int w, int h) {
-        width = w;
-        height = h;
-        if (Desktop.screen.hasPointerEvents()) {
-            sbWidth = (int) ((float)w * .05);
-            if (sbWidth < 20) {
-                sbWidth = 20;
-            }
-        } else {
-            sbWidth = 5;
-        }
-        final int v = h / getLineHeight();
-        sbHeight = (int) (h * ((float)v / size()));
-        setVisibleCount(v);
-        makeSelectedVisible();
     }
 
     protected void keyPressed(int i) {
@@ -346,7 +406,7 @@ final class SmartList extends Canvas {
     protected void pointerReleased(int x, int y) {
 		final int count = items.size();
 		final int lines = height / getLineHeight();
-        
+
         if (lines < count) {
             this.pY = y;
         }
@@ -369,8 +429,8 @@ final class SmartList extends Canvas {
         final int lines = h / lh;
         final int sbWidth = this.sbWidth;
         final int sbHeight = this.sbHeight;
-        final Object[] items = ((NakedVector) this.items).getData();
-        
+        final Object[] items = this.items.getData();
+
         int curr = top;
         int last = top + lines + 1 + 1/* partial */;
         int y = 0;
@@ -390,7 +450,9 @@ final class SmartList extends Canvas {
             if (curr != marked) {
                 g.drawString(s, HL_INSET, y + VL_INSET, Graphics.TOP | Graphics.LEFT);
             } else {
-                g.drawString("(*) " + s, HL_INSET, y + VL_INSET, Graphics.TOP | Graphics.LEFT);
+                final int dy = (lh - awptSize) >> 1;
+                g.drawImage(awpt, HL_INSET, y /*+ VL_INSET*/ + dy, Graphics.TOP | Graphics.LEFT);
+                g.drawString(/*"(*) " + */s, HL_INSET + awptSize + HL_INSET, y + VL_INSET, Graphics.TOP | Graphics.LEFT);
             }
             if (curr == selected) { // restore color
                 g.setColor(colorForeUnsel);
@@ -419,65 +481,29 @@ final class SmartList extends Canvas {
 		}
 	}
 
-    public void setVisibleCount(int count) {
+    //
+    // private methods
+    //
+
+    private void setVisibleCount(int count) {
         visible = (count > 0 ? count : 1);
     }
 
-    public int size() {
-        return items.size();
-    }
-
-    public int getSelectedIndex() {
-        return selected;
-    }
-
-    public int setSelectedIndex(int elementNum, boolean select) {
-        if (select) {
-            if (elementNum >= 0 && elementNum < items.size()) {
-                selected = elementNum;
-                makeSelectedVisible();
-            } else {
-                selected = -1;
+    private void recalculate(int w, int h) {
+        width = w;
+        height = h;
+        if (Desktop.screen.hasPointerEvents()) {
+            sbWidth = (int) ((float)w * .05);
+            if (sbWidth < 20) {
+                sbWidth = 20;
             }
-            repaint();
         } else {
-            throw new IllegalArgumentException("Unselect not supported");
+            sbWidth = 5;
         }
-        return selected;
-    }
-
-    public Object getSelectedItem() {
-        return items.elementAt(selected);
-    }
-
-    public int setSelectedItem(Object item) {
-        final Object[] items = ((NakedVector) this.items).getData();
-        for (int i = this.items.size(); --i >= 0; ) {
-            if (item.equals(items[i])) {
-                return setSelectedIndex(i, true);
-            }
-        }
-        return -1;
-    }
-
-    public int getIndex(Object item) {
-        final Object[] items = ((NakedVector) this.items).getData();
-        for (int i = this.items.size(); --i >= 0; ) {
-            if (item.equals(items[i])) {
-                return i;
-            }
-        }
-        return -1;
-    }
-
-    public String getString(int index) {
-        return items.elementAt(index).toString();
-    }
-
-    public void setMarked(int elementNum) {
-        if (elementNum >= 0 && elementNum < items.size()) {
-            marked = elementNum;
-        }
+        final int v = h / getLineHeight();
+        sbHeight = (int) (h * ((float)v / size()));
+        setVisibleCount(v);
+        makeSelectedVisible();
     }
 
     private static int getLineHeight() {
@@ -495,7 +521,7 @@ final class SmartList extends Canvas {
     }
 
 	private boolean stepOnto(final char lc, final char uc) {
-		final Object[] raw = ((NakedVector) this.items).getData();
+		final Object[] raw = this.items.getData();
 		for (int N = items.size(), i = 0; i < N; i++) {
 			final char c = raw[i].toString().charAt(0);
 			if (c == lc || c == uc) {

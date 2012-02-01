@@ -29,6 +29,8 @@
     <property name="proguard3.home" value="z:\apps\proguard3.11"/>
     <property name="proguard4.home" value="z:\apps\proguard4.7"/>
 
+    <property name="build.dir" value="r:\trekbuddy"/>
+
     <property name="use.proguard" value="3"/>
 
     <taskdef resource="antenna.properties" classpath="lib/antenna-bin-1.0.2.jar"/>
@@ -81,7 +83,7 @@
         <pathelement location="${microemu.home}\microemu-cldc\target\microemu-cldc-3.0.0-SNAPSHOT.jar"/>
         <pathelement location="${microemu.home}\microemu-midp\target\microemu-midp-3.0.0-SNAPSHOT.jar"/>
         <pathelement location="${microemu.home}\microemu-extensions\microemu-jsr-75\target\microemu-jsr-75-3.0.0-SNAPSHOT.jar"/>
-        <pathelement location="${microemu.home}\microemu-android\microemu-android-idea.jar"/>
+        <pathelement location="${microemu.home}\microemu-android\microemu-android-ant.jar"/>
         <pathelement location="${android20.home}\android.jar"/>
     </path>
 
@@ -89,7 +91,7 @@
         <pathelement location="${microemu.home}\microemu-cldc\target\microemu-cldc-3.0.0-SNAPSHOT.jar"/>
         <pathelement location="${microemu.home}\microemu-midp\target\microemu-midp-3.0.0-SNAPSHOT.jar"/>
         <pathelement location="${microemu.home}\microemu-extensions\microemu-jsr-75\target\microemu-jsr-75-3.0.0-SNAPSHOT.jar"/>
-        <pathelement location="${microemu.home}\microemu-android\microemu-android-idea.jar"/>
+        <pathelement location="${microemu.home}\microemu-android\microemu-android-ant.jar"/>
         <pathelement location="${android16.home}\android.jar"/>
         <pathelement location="${microemu.home}\microemu-android\lib\backport-android-bluetooth2.jar"/>
     </path>
@@ -280,7 +282,7 @@
     <target name="android">
         <property name="suffix" value="-android"/>
         <property name="dist.dir" value="android"/>
-        <property name="libraryjars" value="${microemu.home}\microemu-cldc\target\microemu-cldc-3.0.0-SNAPSHOT.jar;${microemu.home}\microemu-midp\target\microemu-midp-3.0.0-SNAPSHOT.jar;${microemu.home}\microemu-extensions\microemu-jsr-75\target\microemu-jsr-75-3.0.0-SNAPSHOT.jar;${android20.home}\android.jar;${microemu.home}\microemu-android\microemu-android-idea.jar"/>
+        <property name="libraryjars" value="${microemu.home}\microemu-cldc\target\microemu-cldc-3.0.0-SNAPSHOT.jar;${microemu.home}\microemu-midp\target\microemu-midp-3.0.0-SNAPSHOT.jar;${microemu.home}\microemu-extensions\microemu-jsr-75\target\microemu-jsr-75-3.0.0-SNAPSHOT.jar;${android20.home}\android.jar;${microemu.home}\microemu-android\microemu-android-ant.jar"/>
         <antcall target="clean"/>
         <ant dir="${microemu.home}/microemu-android"
              antfile="build-trekbuddy.xml" target="clean"
@@ -320,7 +322,7 @@
     <target name="android-backport">
         <property name="suffix" value="-android"/>
         <property name="dist.dir" value="android-backport"/>
-        <property name="libraryjars" value="${microemu.home}\microemu-cldc\target\microemu-cldc-3.0.0-SNAPSHOT.jar;${microemu.home}\microemu-midp\target\microemu-midp-3.0.0-SNAPSHOT.jar;${microemu.home}\microemu-extensions\microemu-jsr-75\target\microemu-jsr-75-3.0.0-SNAPSHOT.jar;${android20.home}\android.jar;${microemu.home}\microemu-android\lib\backport-android-bluetooth2.jar;${microemu.home}\microemu-android\microemu-android-idea.jar"/>
+        <property name="libraryjars" value="${microemu.home}\microemu-cldc\target\microemu-cldc-3.0.0-SNAPSHOT.jar;${microemu.home}\microemu-midp\target\microemu-midp-3.0.0-SNAPSHOT.jar;${microemu.home}\microemu-extensions\microemu-jsr-75\target\microemu-jsr-75-3.0.0-SNAPSHOT.jar;${android20.home}\android.jar;${microemu.home}\microemu-android\lib\backport-android-bluetooth2.jar;${microemu.home}\microemu-android\microemu-android-ant.jar"/>
         <antcall target="clean"/>
         <ant dir="${microemu.home}/microemu-android"
              antfile="build-trekbuddy.xml" target="clean"
@@ -720,6 +722,7 @@
             </fileset>
             <fileset dir="res-lang">
                 <include name="resources/language.en.res"/>
+                <include name="resources/language.es.res"/>
                 <include name="resources/language.pl.res"/>
             </fileset>
             <manifest>
@@ -755,6 +758,7 @@
             </fileset>
             <fileset dir="res-lang">
                 <include name="resources/language.en.res"/>
+                <include name="resources/language.es.res"/>
                 <include name="resources/language.pl.res"/>
             </fileset>
             <manifest>
@@ -792,6 +796,7 @@
             </fileset>
             <fileset dir="res-lang">
                 <include name="resources/language.en.res"/>
+                <include name="resources/language.es.res"/>
                 <include name="resources/language.pl.res"/>
             </fileset>
             <manifest>
@@ -821,6 +826,7 @@
             </fileset>
             <fileset dir="res-lang">
                 <include name="resources/language.en.res"/>
+                <include name="resources/language.es.res"/>
                 <include name="resources/language.pl.res"/>
             </fileset>
             <manifest>
@@ -872,6 +878,7 @@
             <arg value="-keepnames class cz.** extends java.lang.Exception"/>       
             <arg value="-keepnames class api.** extends java.lang.Exception"/>
             <arg value="-keepnames class org.** extends java.lang.Exception"/>
+            <arg value="-whyareyoukeeping class net.trekbuddy.midlet.IRuntime"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.maps.io.FileInput"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.maps.io.LoaderIO"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.maps.J2NCalibration"/>
@@ -903,6 +910,7 @@
             <arg value="-keepnames class cz.** extends java.lang.Exception"/>
             <arg value="-keepnames class api.** extends java.lang.Exception"/>
             <arg value="-keepnames class org.** extends java.lang.Exception"/>
+            <arg value="-whyareyoukeeping class net.trekbuddy.midlet.IRuntime"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.maps.io.FileInput"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.maps.io.LoaderIO"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.io.CrcInputStream"/>
@@ -934,6 +942,7 @@
             <arg value="-keepnames class cz.** extends java.lang.Exception"/>
             <arg value="-keepnames class api.** extends java.lang.Exception"/>
             <arg value="-keepnames class org.** extends java.lang.Exception"/>
+            <arg value="-whyareyoukeeping class net.trekbuddy.midlet.IRuntime"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.maps.io.FileInput"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.maps.io.LoaderIO"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.io.CrcInputStream"/>
@@ -964,6 +973,7 @@
             <arg value="-keepnames class cz.** extends java.lang.Exception"/>
             <arg value="-keepnames class api.** extends java.lang.Exception"/>
             <arg value="-keepnames class org.** extends java.lang.Exception"/>
+            <arg value="-whyareyoukeeping class net.trekbuddy.midlet.IRuntime"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.maps.io.FileInput"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.maps.io.LoaderIO"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.io.CrcInputStream"/>
@@ -990,11 +1000,15 @@
 -->
             <arg value="-keep class * implements javax.microedition.midlet.MIDlet"/>
             <arg value="-keepnames class cz.** extends java.lang.Exception"/>
+            <arg value="-keepnames class net.trekbuddy.midlet.Runtime"/>
+            <arg value="-keepnames class net.trekbuddy.midlet.IRuntime"/>
             <arg value="-keepnames class api.** extends java.lang.Exception"/>
             <arg value="-keepnames class org.** extends java.lang.Exception"/>
+            <arg value="-whyareyoukeeping class net.trekbuddy.midlet.IRuntime"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.maps.io.FileInput"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.maps.io.LoaderIO"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.io.CrcInputStream"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.ui.SmartList"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.util.Logger"/>
             <arg value="-whyareyoukeeping class api.io.BufferedOutputStream"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.hecl.ControlledInterp"/>
@@ -1026,11 +1040,15 @@
             <arg value="-renamesourcefileattribute TrekBuddy"/>
             <arg value="-keepattributes SourceFile,LineNumberTable"/>
             <arg value="-keep class * implements javax.microedition.midlet.MIDlet"/>
+            <arg value="-keepnames class net.trekbuddy.midlet.Runtime"/>
+            <arg value="-keepnames class net.trekbuddy.midlet.IRuntime"/>
             <arg value="-keepnames class cz.** extends java.lang.Exception"/>
             <arg value="-keepnames class api.** extends java.lang.Exception"/>
             <arg value="-keepnames class org.** extends java.lang.Exception"/>
+            <arg value="-whyareyoukeeping class net.trekbuddy.midlet.IRuntime"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.maps.io.FileInput"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.io.CrcInputStream"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.ui.SmartList"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.util.Logger"/>
             <arg value="-whyareyoukeeping class api.io.BufferedOutputStream"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.hecl.ControlledInterp"/>

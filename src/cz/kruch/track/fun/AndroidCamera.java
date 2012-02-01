@@ -34,7 +34,7 @@ final class AndroidCamera extends Camera {
 */
 
     boolean playSound(final String url) {
-        MediaPlayer player = MediaPlayer.create(org.microemu.android.MicroEmulator.context,
+        MediaPlayer player = MediaPlayer.create(cz.kruch.track.TrackingMIDlet.getActivity(),
                                                 Uri.parse(url));
         try {
             player.start();

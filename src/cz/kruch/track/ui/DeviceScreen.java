@@ -206,10 +206,11 @@ final class DeviceScreen extends GameCanvas implements Runnable {
     /** @Override */
     public void setFullScreenMode(boolean b) {
         if (b) {
-            ((org.microemu.android.MicroEmulatorActivity) org.microemu.android.MicroEmulator.context).runOnUiThread(new Runnable() {
+            cz.kruch.track.TrackingMIDlet.getActivity().runOnUiThread(new Runnable() {
 				public void run() {
-                    ((org.microemu.android.MicroEmulatorActivity) org.microemu.android.MicroEmulator.context).getWindow().setFlags(android.view.WindowManager.LayoutParams.FLAG_FULLSCREEN,
-                                                                                                                                   android.view.WindowManager.LayoutParams.FLAG_FULLSCREEN);
+                    cz.kruch.track.TrackingMIDlet.getActivity().getWindow().setFlags(
+                            android.view.WindowManager.LayoutParams.FLAG_FULLSCREEN,
+                            android.view.WindowManager.LayoutParams.FLAG_FULLSCREEN);
 				}
 			});
         }

@@ -49,7 +49,7 @@ public final class AndroidLocationProvider
 
     public int start() throws LocationException {
         try {
-            manager = (android.location.LocationManager) org.microemu.android.MicroEmulator.context.getSystemService(android.content.Context.LOCATION_SERVICE);
+            manager = (android.location.LocationManager) cz.kruch.track.TrackingMIDlet.getActivity().getSystemService(android.content.Context.LOCATION_SERVICE);
             if (manager == null) {
                 throw new LocationException("Location Service not found");
             }

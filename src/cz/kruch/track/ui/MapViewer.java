@@ -29,7 +29,11 @@ final class MapViewer {
     private static final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("MapViewer");
 //#endif
 
+//#ifdef __SYMBIAN__ || __RIM__ || __ANDROID__
     private static final int MAX_TRAJECTORY_LENGTH = 2048;
+//#else
+    private static final int MAX_TRAJECTORY_LENGTH = 1024;
+//#endif
 
     public static final byte WPT_STATUS_VOID    = 0;
     public static final byte WPT_STATUS_REACHED = 1;
@@ -122,11 +126,11 @@ final class MapViewer {
         dispose();
     }
 
-    boolean hasMap() {
+    synchronized boolean hasMap() {
         return map != null;
     }
 
-    Map getMap() {
+    synchronized Map getMap() {
         return map;
     }
 
@@ -435,7 +439,7 @@ final class MapViewer {
         }
 
         getPosition();
-        if (Math.abs(sy - position.getY()) >= mHeight * 0.01) {
+        if (Math.abs(sy - position.getY()) >= mHeight * 0.05) {
             sy = position.getY();
             calculateScale();
         }

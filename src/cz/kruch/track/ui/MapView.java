@@ -69,7 +69,8 @@ final class MapView extends View {
             // update basic OSD
             final QualifiedCoordinates qc = map.transform(mapViewer.getPosition());
             setBasicOSD(qc, true);
-            QualifiedCoordinates.releaseInstance(qc);
+            // not too frequent, reduce code size
+//            QualifiedCoordinates.releaseInstance(qc);
 
             // setup navigation
             if (Desktop.wpts != null) {
@@ -199,7 +200,8 @@ final class MapView extends View {
                 Config.lat = qc.getLat();
                 Config.lon = qc.getLon();
             }
-            QualifiedCoordinates.releaseInstance(qc);
+            // not too frequent, reduce code size
+//            QualifiedCoordinates.releaseInstance(qc);
             try {
                 Config.update(Config.VARS_090);
             } catch (ConfigurationException e) {
@@ -216,12 +218,14 @@ final class MapView extends View {
             if (map.isWithin(qc)) {
                 setPosition(map.transform(qc));
             } else {
-                QualifiedCoordinates.releaseInstance(qc);
+                // not too frequent, reduce code size
+//                QualifiedCoordinates.releaseInstance(qc);
                 qc = QualifiedCoordinates.newInstance(Config.lat, Config.lon);
                 if (map.isWithin(qc)) {
                     setPosition(map.transform(qc));
                 }
-                QualifiedCoordinates.releaseInstance(qc);
+                // not too frequent, reduce code size
+//                QualifiedCoordinates.releaseInstance(qc);
             }
         }
     }
@@ -642,6 +646,7 @@ final class MapView extends View {
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("render");
 //#endif
+
         // local refs
         final MapViewer mapViewer = this.mapViewer;
 

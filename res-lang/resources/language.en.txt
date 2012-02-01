@@ -137,6 +137,7 @@
 1388=Operation in progress...
 1389=Registration for SMS push failed
 1390=Invalid input
+1391=Tracking active
 
 # navigation commands
 2000=RouteAlong
@@ -237,6 +238,7 @@
 2409=Note added
 2410=<new file>
 2411=user-
+2412=Select waypoint first
 
 # settings commands
 3000=Apply

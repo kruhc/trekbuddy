@@ -154,6 +154,7 @@ public final class Resources {
     public static final short DESKTOP_MSG_IN_PROGRESS           = 1388;
     public static final short DESKTOP_MSG_PUSH_SMS_FAILED       = 1389;
     public static final short DESKTOP_MSG_INVALID_INPUT         = 1390;
+    public static final short DESKTOP_MSG_TRACKING_ACTIVE       = 1391;
     /* navigation - commands */
     public static final short NAV_CMD_ROUTE_ALONG               = 2000;
     public static final short NAV_CMD_ROUTE_BACK                = 2001;
@@ -214,6 +215,7 @@ public final class Resources {
     public static final short NAV_MSG_NOTE_ADDED                = 2409;
     public static final short NAV_MSG_NEW_FILE_ITEM             = 2410;
     public static final short NAV_MSG_USER_FILE_PREFIX          = 2411;
+    public static final short NAV_MSG_NO_WPT_SELECTED           = 2412;
     /* navigation - waypoint form */
     public static final short NAV_TITLE_WPT                     = 2200;
     public static final short NAV_FLD_WPT_NAME                  = 2201;

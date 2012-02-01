@@ -14,6 +14,23 @@ public final class Worker extends Thread {
     private static final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("Worker");
 //#endif
 
+    public static void asyncTask(final Runnable task) {
+//#ifdef __ANDROID__
+        (new Thread(task)).start();
+/*
+        (new android.os.AsyncTask<Void,Void,Void>() {
+            @Override
+            protected Void doInBackground(Void... voids) {
+                task.run();
+                return null;
+            }
+        }).execute();
+*/
+//#else
+        (new Thread(task)).start();
+//#endif
+    }
+
     private final Vector tasks;
 	private boolean go;
 
@@ -32,11 +49,17 @@ public final class Worker extends Thread {
             go = false;
             notify();
         }
+//#ifdef __LOG__
+        if (log.isEnabled()) log.debug("wakeup sent");
+//#endif
         try {
             join();
         } catch (InterruptedException e) {
             // ignore
         }
+//#ifdef __LOG__
+        if (log.isEnabled()) log.debug("joined");
+//#endif
     }
 
     public void enqueue(final Runnable r) {
@@ -68,6 +91,9 @@ public final class Worker extends Thread {
                     } catch (InterruptedException e) {
                         // ignore
                     }
+//#ifdef __LOG__
+                    if (log.isEnabled()) log.debug("wokeup; go? " + go + " tasks? " + tasks.size());
+//#endif
                 }
                 if (tasks.size() > 0) {
                     task = (Runnable) tasks.elementAt(0);

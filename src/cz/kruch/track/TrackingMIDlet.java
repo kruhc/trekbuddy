@@ -44,6 +44,8 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
     public static final String JAD_APP_FLAGS               = "App-Flags";
 
     public TrackingMIDlet() {
+        // initial state
+        state = 0;
         // detect environment
         platform = System.getProperty("microedition.platform");
         flags = getAppProperty(JAD_APP_FLAGS);
@@ -240,7 +242,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
 
     protected void startApp() throws MIDletStateChangeException {
 //#ifdef __LOG__
-        System.out.println("* startApp *");
+        System.out.println("* startApp * " + state);
 //#endif
         // initial launch?
         if (state == 0) {
@@ -348,7 +350,14 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         // create and boot desktop
         desktop = new cz.kruch.track.ui.Desktop(this);
         desktop.show();
-        desktop.boot(imaged, configured, resourced, true);
+        try {
+            desktop.boot(imaged, configured, resourced, true);
+        } catch (Throwable t) {
+            t.printStackTrace();
+//#ifdef __ANDROID__            
+            System.exit(0);
+//#endif
+        }
     }
 
     /*
@@ -380,4 +389,10 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
     public static boolean supportsVideoCapture() {
         return ((jsr135 || jsr234) && "true".equals(System.getProperty("supports.video.capture")));
     }
+
+//#ifdef __ANDROID__
+    public static android.app.Activity getActivity() {
+        return ((org.microemu.android.device.AndroidDevice) org.microemu.device.DeviceFactory.getDevice()).getActivity();
+    }
+//#endif
 }

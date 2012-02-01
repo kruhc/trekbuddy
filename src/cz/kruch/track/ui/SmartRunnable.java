@@ -54,7 +54,7 @@ final class SmartRunnable implements Runnable {
         // fire flag
         final boolean fire;
 
-        // avoid collisino with run() or setActive()
+        // avoid collision with run() or setActive()
         synchronized (this) {
 
             // try task merge first

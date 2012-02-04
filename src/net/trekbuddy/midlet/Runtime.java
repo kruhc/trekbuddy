@@ -54,8 +54,6 @@ public final class Runtime
     @Override
     public void onStart(Intent intent, int startId) {
         Log.d(TAG, "[svc] onStart");
-        intent.setAction(ACTION_FOREGROUND);
-        handleCommand(intent);
     }
 
 //#else
@@ -63,8 +61,6 @@ public final class Runtime
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         Log.d(TAG, "[svc] onStartCommand");
-        intent.setAction(ACTION_FOREGROUND);
-        handleCommand(intent);
 
         // We want this service to continue running until it is explicitly stopped, so return sticky.
         return START_STICKY;
@@ -128,7 +124,7 @@ public final class Runtime
     private Object[] mStartForegroundArgs = new Object[2];
     private Object[] mStopForegroundArgs = new Object[1];
 
-    void invokeMethod(Method method, Object[] args) {
+    private void invokeMethod(Method method, Object[] args) {
         try {
             method.invoke(this, args);
         } catch (Exception e) {
@@ -139,18 +135,8 @@ public final class Runtime
 
     private void handleCommand(Intent intent) {
         if (ACTION_FOREGROUND.equals(intent.getAction())) {
-            // In this sample, we'll use the same text for the ticker and the expanded notification
-            CharSequence text = Resources.getString(Resources.DESKTOP_MSG_TRACKING_ACTIVE);
-            // Set the icon, scrolling text and timestamp
-            Notification notification = new Notification(R.drawable.app_icon_notif, text,
-                                                         System.currentTimeMillis());
-            // The PendingIntent to launch our activity if the user selects this notification
-            PendingIntent contentIntent = PendingIntent.getActivity(this, 0,
-                    new Intent(this, org.microemu.android.MicroEmulator.class), 0);
-            // Set the info for the views that show in the notification panel.
-            notification.setLatestEventInfo(this, NOTIFICATION_TITLE, text, contentIntent);
             // Set notification
-            startForegroundCompat(NOTIFICATION_ID, notification);
+            startForegroundCompat(NOTIFICATION_ID, createNotification());
         } else if (ACTION_BACKGROUND.equals(intent.getAction())) {
             // Remove notification
             stopForegroundCompat(NOTIFICATION_ID);
@@ -161,7 +147,7 @@ public final class Runtime
      * This is a wrapper around the new startForeground method, using the older
      * APIs if it is not available.
      */
-    void startForegroundCompat(int id, Notification notification) {
+    private void startForegroundCompat(int id, Notification notification) {
         // If we have the new startForeground API, then use it.
         if (mStartForeground != null) {
             mStartForegroundArgs[0] = Integer.valueOf(id);
@@ -179,7 +165,7 @@ public final class Runtime
      * This is a wrapper around the new stopForeground method, using the older
      * APIs if it is not available.
      */
-    void stopForegroundCompat(int id) {
+    private void stopForegroundCompat(int id) {
         // If we have the new stopForeground API, then use it.
         if (mStopForeground != null) {
             mStopForegroundArgs[0] = Boolean.TRUE;
@@ -191,6 +177,20 @@ public final class Runtime
         mNM.cancel(id);
         mSetForegroundArgs[0] = Boolean.FALSE;
         invokeMethod(mSetForeground, mSetForegroundArgs);
+    }
+
+    private Notification createNotification() {
+        // In this sample, we'll use the same text for the ticker and the expanded notification
+        CharSequence text = Resources.getString(Resources.DESKTOP_MSG_TRACKING_ACTIVE);
+        // Set the icon, scrolling text and timestamp
+        Notification notification = new Notification(R.drawable.app_icon_notif, text,
+                                                     System.currentTimeMillis());
+        // The PendingIntent to launch our activity if the user selects this notification
+        PendingIntent contentIntent = PendingIntent.getActivity(this, 0,
+                new Intent(this, org.microemu.android.MicroEmulator.class), 0);
+        // Set the info for the views that show in the notification panel.
+        notification.setLatestEventInfo(this, NOTIFICATION_TITLE, text, contentIntent);
+        return notification;
     }
 
     //
@@ -217,6 +217,9 @@ public final class Runtime
 //#endif
         final int status = provider.start();
         this.provider = provider;
+//#ifdef __ANDROID__
+        startForegroundCompat(NOTIFICATION_ID, createNotification());
+//#endif
         return status;
     }
 

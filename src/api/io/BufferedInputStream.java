@@ -149,7 +149,7 @@ public class BufferedInputStream extends InputStream {
         }
         if (markpos == 0 && marklimit > localBuf.length) {
             /* Increase buffer size to accommodate the readlimit */
-/* // HACK realloc not supported
+/* // HACK // resize not supported
             int newLength = localBuf.length * 2;
             if (newLength > marklimit) {
                 newLength = marklimit;
@@ -160,8 +160,6 @@ public class BufferedInputStream extends InputStream {
             // FIXME: what if buf was null?
             localBuf = buf = newbuf;
 */
-            /* Buffer increase not support, invalidate mark */
-            markpos = -1;
         } else if (markpos > 0) {
             System.arraycopy(localBuf, markpos, localBuf, 0,
                              localBuf.length - markpos);
@@ -189,6 +187,10 @@ public class BufferedInputStream extends InputStream {
     public synchronized void mark(int readlimit) {
         marklimit = readlimit;
         markpos = pos;
+        // HACK // limit mark to buffer size; pos is very probably 0
+        if (marklimit > buf.length) {
+            marklimit = buf.length;
+        }
     }
 
     /**
@@ -244,6 +246,13 @@ public class BufferedInputStream extends InputStream {
     }
 
     /**
+     * JVM optimization. 
+     */
+    public int read(byte[] buffer) throws IOException {
+        return read(buffer, 0, buffer.length);
+    }
+
+    /**
      * Reads at most {@code length} bytes from this stream and stores them in
      * byte array {@code buffer} starting at offset {@code offset}. Returns the
      * number of bytes actually read or -1 if no bytes were read and the end of
@@ -288,11 +297,14 @@ public class BufferedInputStream extends InputStream {
                     - pos;
             System.arraycopy(localBuf, pos, buffer, offset, copylength);
             pos += copylength;
+/* // HACK // always satisfy
             if (copylength == length || localIn.available() == 0) {
                 return copylength;
             }
             offset += copylength;
             required = length - copylength;
+*/
+            return copylength;
         } else {
             required = length;
         }
@@ -312,6 +324,7 @@ public class BufferedInputStream extends InputStream {
                 if (fillbuf(localIn, localBuf) == -1) {
                     return required == length ? -1 : length - required;
                 }
+/* // HACK // cannot happen - resize is commented out in fillbuf
                 // localBuf may have been invalidated by fillbuf
                 if (localBuf != buf) {
                     localBuf = buf;
@@ -320,11 +333,13 @@ public class BufferedInputStream extends InputStream {
                         throw new IOException("Stream is closed"); //$NON-NLS-1$
                     }
                 }
+*/
 
                 read = count - pos >= required ? required : count - pos;
                 System.arraycopy(localBuf, pos, buffer, offset, read);
                 pos += read;
             }
+/* // HACK // always satisfy
             required -= read;
             if (required == 0) {
                 return length;
@@ -333,6 +348,8 @@ public class BufferedInputStream extends InputStream {
                 return length - required;
             }
             offset += read;
+*/
+            return read;
         }
     }
 

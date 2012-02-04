@@ -590,137 +590,155 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
 
             } else if (action instanceof Integer) { // wpt action
 
-                // wpt index (in currentWpts collection)
-                final Waypoint wpt = (Waypoint) list.getSelectedItem();
-                if (wpt == null) {
-                    Desktop.showWarning(Resources.getString(Resources.NAV_MSG_NO_WPT_SELECTED), null, null);
-                } else {
-                final int idxSelected = pane == list ? -1 : wptIdx(currentWpts, wpt);
+                // action level
+                if (pane == list) { // top level command
 
-                switch (((Integer) action).intValue()) {
-
-                    case Resources.NAV_CMD_ROUTE_ALONG: {
-                        // remember idx
-                        idx[depth] = wpt;
-
-                        // close nav UI
-                        close();
-
-                        // use current store
-                        useCurrent();
-
-                        // call navigator
-                        navigator.setNavigateTo(currentWpts, currentName, idxSelected, -1);
-                    } break;
-
-                    case Resources.NAV_CMD_ROUTE_BACK: {
-                        // remember idx
-                        idx[depth] = wpt;
-
-                        // close nav UI
-                        close();
-
-                        // use current store
-                        useCurrent();
-
-                        // call navigator
-                        navigator.setNavigateTo(currentWpts, currentName, -1, idxSelected);
-                    } break;
-
-                    case Resources.NAV_CMD_NAVIGATE_TO: {
-                        // remember idx
-                        idx[depth] = wpt;
-
-                        // close nav UI
-                        close();
-
-                        // use current store
-                        useCurrent();
-
-                        // call navigator
-                        navigator.setNavigateTo(currentWpts, currentName, idxSelected, idxSelected);
-                    } break;
-
-                    case Resources.NAV_CMD_SET_AS_ACTIVE: {
-                        // remember idx
-                        idx[depth] = wpt;
-
-                        // close nav UI
-                        close();
-
-                        // call navigator
-                        if (Desktop.routeDir == 1) {
-                            navigator.setNavigateTo(currentWpts /* == Desktop.wpts */, currentName, idxSelected, -1);
-                        } else {
-                            navigator.setNavigateTo(currentWpts /* == Desktop.wpts */, currentName, -1, idxSelected);
-                        }
-                    } break;
-
-                    case Resources.NAV_CMD_GO_TO: {
-                        // remember idx
-                        idx[depth] = wpt;
-
-                        // close nav UI
-                        close();
-
-                        // call navigator
-                        navigator.goTo((Waypoint) currentWpts.elementAt(idxSelected));
-                    } break;
-
-                    case Resources.NAV_CMD_UPDATE: {
-                        // update current store
-                        updateStore(currentName, currentWpts);
-                    } break;
-
-                    case Resources.NAV_CMD_DELETE: {
-                        // remove selected wpt
-                        currentWpts.removeElementAt(idxSelected);
-                        int nextSelected = list.getSelectedIndex();
-                        sortedWpts.removeElementAt(nextSelected);
-                        if (list instanceof List) { // FIXME
-                            ((List) list).delete(nextSelected);
-                        }
-                        if (idxSelected >= sortedWpts.size()) {
-                            nextSelected--;
-                        }
-                        list.setSelectedIndex(nextSelected, true);
-
-                        // update current store
-                        updateStore(currentName, currentWpts);
-                    } break;
+                    // action
+                    switch (((Integer) action).intValue()) {
 //#ifndef __ANDROID__
-                    case Resources.NAV_CMD_SEND: {
-                        // close nav UI
-                        close();
+                        case Resources.NAV_CMD_SEND: {
+                            // close nav UI
+                            close();
 
-                        // vars
-                        final String type = (String) ret[3];
-                        final QualifiedCoordinates qc;
-                        final long time;
+                            // vars
+                            final String type = (String) ret[3];
+                            final QualifiedCoordinates qc;
+                            final long time;
 
-                        // get message type and location
-                        if (cz.kruch.track.fun.Friends.TYPE_IAH == type) { // == is OK
-                            time = navigator.getLocation().getTimestamp();
-                            qc = navigator.getLocation().getQualifiedCoordinates()._clone();
-                        } else { // Friends.TYPE_MYT
-                            time = System.currentTimeMillis();
-                            qc = navigator.getPointer();
-                        }
+                            // get message type and location
+                            if (cz.kruch.track.fun.Friends.TYPE_IAH == type) { // == is OK
+                                time = navigator.getLocation().getTimestamp();
+                                qc = navigator.getLocation().getQualifiedCoordinates()._clone();
+                            } else { // Friends.TYPE_MYT
+                                time = System.currentTimeMillis();
+                                qc = navigator.getPointer();
+                            }
 
-                        // send the message
-                        navigator.getFriends().send((String) ret[1], type, (String) ret[2], qc, time);
-                    } break;
+                            // send the message
+                            navigator.getFriends().send((String) ret[1], type, (String) ret[2], qc, time);
+                        } break;
 //#endif
-                    case Resources.NAV_ITEM_ENTER_CUSTOM:
-                    case Resources.NAV_ITEM_RECORD_CURRENT:
-                    case Resources.NAV_ITEM_PROJECT_NEW: {
-                        // add waypoint to memory store
-                        addToPrefferedStore(STORE_USER, (Waypoint) ret[1]);
-                    } break;
+                        case Resources.NAV_ITEM_ENTER_CUSTOM:
+                        case Resources.NAV_ITEM_RECORD_CURRENT:
+                        case Resources.NAV_ITEM_PROJECT_NEW: {
+                            // add waypoint to memory store
+                            addToPrefferedStore(STORE_USER, (Waypoint) ret[1]);
+                        } break;
 
-                    default:
-                        throw new IllegalArgumentException("Unknown wpt action: " + action);
-                }
+                        default:
+                            throw new IllegalArgumentException("Unknown wpt action: " + action);
+                    }
+
+                } else { // selected wpt action
+
+                    // get selected wpt
+                    final Waypoint wpt = (Waypoint) list.getSelectedItem();
+                    if (wpt == null) {
+
+                        // warn user
+                        Desktop.showWarning(Resources.getString(Resources.NAV_MSG_NO_WPT_SELECTED), null, null);
+                    
+                    } else {
+
+                        // get selected wpt index
+                        final int idxSelected = wptIdx(currentWpts, wpt);
+
+                        // action
+                        switch (((Integer) action).intValue()) {
+
+                            case Resources.NAV_CMD_ROUTE_ALONG: {
+                                // remember idx
+                                idx[depth] = wpt;
+
+                                // close nav UI
+                                close();
+
+                                // use current store
+                                useCurrent();
+
+                                // call navigator
+                                navigator.setNavigateTo(currentWpts, currentName, idxSelected, -1);
+                            } break;
+
+                            case Resources.NAV_CMD_ROUTE_BACK: {
+                                // remember idx
+                                idx[depth] = wpt;
+
+                                // close nav UI
+                                close();
+
+                                // use current store
+                                useCurrent();
+
+                                // call navigator
+                                navigator.setNavigateTo(currentWpts, currentName, -1, idxSelected);
+                            } break;
+
+                            case Resources.NAV_CMD_NAVIGATE_TO: {
+                                // remember idx
+                                idx[depth] = wpt;
+
+                                // close nav UI
+                                close();
+
+                                // use current store
+                                useCurrent();
+
+                                // call navigator
+                                navigator.setNavigateTo(currentWpts, currentName, idxSelected, idxSelected);
+                            } break;
+
+                            case Resources.NAV_CMD_SET_AS_ACTIVE: {
+                                // remember idx
+                                idx[depth] = wpt;
+
+                                // close nav UI
+                                close();
+
+                                // call navigator
+                                if (Desktop.routeDir == 1) {
+                                    navigator.setNavigateTo(currentWpts /* == Desktop.wpts */, currentName, idxSelected, -1);
+                                } else {
+                                    navigator.setNavigateTo(currentWpts /* == Desktop.wpts */, currentName, -1, idxSelected);
+                                }
+                            } break;
+
+                            case Resources.NAV_CMD_GO_TO: {
+                                // remember idx
+                                idx[depth] = wpt;
+
+                                // close nav UI
+                                close();
+
+                                // call navigator
+                                navigator.goTo((Waypoint) currentWpts.elementAt(idxSelected));
+                            } break;
+
+                            case Resources.NAV_CMD_UPDATE: {
+                                // update current store
+                                updateStore(currentName, currentWpts);
+                            } break;
+
+                            case Resources.NAV_CMD_DELETE: {
+                                // remove selected wpt
+                                currentWpts.removeElementAt(idxSelected);
+                                int nextSelected = list.getSelectedIndex();
+                                sortedWpts.removeElementAt(nextSelected);
+                                if (list instanceof List) { // FIXME
+                                    ((List) list).delete(nextSelected);
+                                }
+                                if (idxSelected >= sortedWpts.size()) {
+                                    nextSelected--;
+                                }
+                                list.setSelectedIndex(nextSelected, true);
+
+                                // update current store
+                                updateStore(currentName, currentWpts);
+                            } break;
+                            default:
+                                throw new IllegalArgumentException("Unknown wpt action: " + action);
+                        }
+                    }
                 }
             } else {
                 throw new IllegalArgumentException("Unknown waypoint form invocation; result = " + result + "; throwable = " + throwable);

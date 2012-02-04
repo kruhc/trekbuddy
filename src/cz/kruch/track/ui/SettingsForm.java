@@ -491,7 +491,9 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
                 choicePower.append("HIGH", null);
                 choicePower.setSelectedIndex(Config.powerUsage, true);
                 fieldLocationTimings = new TextField(Resources.getString(Resources.CFG_LOCATION_FLD_LOCATION_TIMINGS), Config.getLocationTimings(Config.locationProvider), 12, TextField.ANY);
-//#endif
+//#else
+                fieldLocationTimings = new TextField(Resources.getString(Resources.CFG_LOCATION_FLD_LOCATION_TIMINGS), Config.getLocationTimings(Config.locationProvider), 4, TextField.NUMERIC);
+//#endif                
                 fieldAltCorrection = new TextField(Resources.getString(Resources.CFG_LOCATION_FLD_ALT_CORRECTION), Float.toString(Config.altCorrection), 5, TextField.ANY/*TextField.NUMERIC*/);
             }
 //#ifdef __ALL__
@@ -557,10 +559,10 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
 //#ifndef __ANDROID__
                         appendWithNewlineAfter(submenu, choiceInternal);
                         appendWithNewlineAfter(submenu, choicePower);
+//#endif
                         /* different timings for Motorola and others, hence update... */
                         fieldLocationTimings.setString(Config.getLocationTimings(provider));
                         appendWithNewlineAfter(submenu, fieldLocationTimings);
-//#endif
                         appendWithNewlineAfter(submenu, fieldAltCorrection);
                     break;
                     case Config.LOCATION_PROVIDER_SERIAL:
@@ -726,8 +728,8 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
 //#endif
 //#ifndef __ANDROID__
                     Config.powerUsage = choicePower.getSelectedIndex();
-                    Config.setLocationTimings(fieldLocationTimings.getString());
 //#endif
+                    Config.setLocationTimings(fieldLocationTimings.getString());
                     Config.altCorrection = Float.parseFloat(fieldAltCorrection.getString());
                 }
                 if (fieldBtKeepalive != null) {

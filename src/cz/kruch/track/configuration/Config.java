@@ -1179,6 +1179,8 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
                 } else if (cz.kruch.track.TrackingMIDlet.rim) {
                     timings = "2,-1,-1";
 */
+                } else if (cz.kruch.track.TrackingMIDlet.android) {
+                    timings = "0";
                 }
             break;
 //#ifdef __ALL__

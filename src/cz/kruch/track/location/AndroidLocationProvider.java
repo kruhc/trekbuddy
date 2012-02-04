@@ -8,6 +8,7 @@ import api.location.QualifiedCoordinates;
 import api.location.Location;
 import cz.kruch.track.event.Callback;
 import cz.kruch.track.util.NmeaParser;
+import cz.kruch.track.configuration.Config;
 
 import java.io.OutputStream;
 import java.io.IOException;
@@ -89,9 +90,22 @@ public final class AndroidLocationProvider
                 // ignore
             }
 
+            // get timing
+            int interval = 0;
+            try {
+                interval = Integer.parseInt(Config.getLocationTimings(Config.LOCATION_PROVIDER_JSR179)) * 1000;
+                if (interval <= 1000) {
+                    interval = 0;
+                }
+            } catch (NumberFormatException e) {
+                // ignore
+            }
+            android.util.Log.d(cz.kruch.track.TrackingMIDlet.APP_TITLE,
+                               "location updates interval: " + (interval == 0 ? "max" : (interval + " ms")));
+
             // start location updates
             manager.requestLocationUpdates(android.location.LocationManager.GPS_PROVIDER,
-                                           0, 0, this, looper);
+                                           interval, 0, this, looper);
 
             // start watcher
             cz.kruch.track.ui.Desktop.schedule(watcher = new TimerTask() {

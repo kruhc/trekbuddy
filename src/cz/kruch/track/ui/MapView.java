@@ -112,13 +112,28 @@ final class MapView extends View {
         return location != null;
     }
 
+//#ifdef __ANDROID__
+
+    volatile Map map;
+
     /**
      * @deprecated hack
      */
-    public void onBackground() {
-        mapViewer.onBackground();
-        super.onBackground();
+    void onBackground() {
+        map = mapViewer.getMap();
+        injectMap(null);
     }
+
+    /**
+     * @deprecated hack
+     */
+    void onForeground() {
+        if (map != null) {
+            injectMap(map);
+        }
+    }
+
+//#endif    
 
     public void close() {
         injectMap(null); // may save position in default map/atlas

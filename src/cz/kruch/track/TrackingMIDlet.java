@@ -348,10 +348,11 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         }
 
         // create and boot desktop
-        desktop = new cz.kruch.track.ui.Desktop(this);
-        desktop.show();
+        cz.kruch.track.ui.Desktop d = new cz.kruch.track.ui.Desktop(this);
+        d.show();
         try {
-            desktop.boot(imaged, configured, resourced, true);
+            d.boot(imaged, configured, resourced, true);
+            desktop = d;
         } catch (Throwable t) {
             t.printStackTrace();
 //#ifdef __ANDROID__            

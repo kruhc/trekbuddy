@@ -460,6 +460,8 @@ public final class Desktop implements CommandListener,
 //                } else {
 //                    android.util.Log.d(TAG, "[app] runtime not running");
 //                }
+                cz.kruch.track.TrackingMIDlet.getActivity().startService(
+                        new Intent(cz.kruch.track.TrackingMIDlet.getActivity(), Runtime.class));
             }
 
             public void onServiceDisconnected(ComponentName className) {
@@ -543,7 +545,7 @@ public final class Desktop implements CommandListener,
             }
         }
 
-        // try gc
+        // force GC
         System.gc(); // unconditional!!!
     }
 
@@ -1068,6 +1070,9 @@ public final class Desktop implements CommandListener,
                 stopTracklog();
 
 //#ifdef __ANDROID__
+                // stop service
+                cz.kruch.track.TrackingMIDlet.getActivity().stopService(
+                        new Intent(cz.kruch.track.TrackingMIDlet.getActivity(), Runtime.class));
                 // unbind runtime
                 cz.kruch.track.TrackingMIDlet.getActivity().unbindService(svcConn);
 //#endif
@@ -2406,8 +2411,8 @@ public final class Desktop implements CommandListener,
         }
         if (started) {
 //#ifdef __ANDROID__
-            cz.kruch.track.TrackingMIDlet.getActivity().startService(
-                    new Intent(cz.kruch.track.TrackingMIDlet.getActivity(), Runtime.class));
+//            cz.kruch.track.TrackingMIDlet.getActivity().startService(
+//                    new Intent(cz.kruch.track.TrackingMIDlet.getActivity(), Runtime.class));
 //#endif
         }
         return started;
@@ -2415,8 +2420,8 @@ public final class Desktop implements CommandListener,
 
     private boolean stopTrackingRuntime() {
 //#ifdef __ANDROID__
-        cz.kruch.track.TrackingMIDlet.getActivity().stopService(
-                new Intent(cz.kruch.track.TrackingMIDlet.getActivity(), Runtime.class));
+//        cz.kruch.track.TrackingMIDlet.getActivity().stopService(
+//                new Intent(cz.kruch.track.TrackingMIDlet.getActivity(), Runtime.class));
 //#endif
         return stopTracking();
     }

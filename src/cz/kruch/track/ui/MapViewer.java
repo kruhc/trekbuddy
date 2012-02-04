@@ -29,7 +29,7 @@ final class MapViewer {
     private static final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("MapViewer");
 //#endif
 
-//#ifdef __SYMBIAN__ || __RIM__ || __ANDROID__
+//#if __SYMBIAN__ || __RIM__ || __ANDROID__
     private static final int MAX_TRAJECTORY_LENGTH = 2048;
 //#else
     private static final int MAX_TRAJECTORY_LENGTH = 1024;
@@ -122,15 +122,11 @@ final class MapViewer {
         calculateScale();
     }
 
-    void onBackground() {
-        dispose();
-    }
-
-    synchronized boolean hasMap() {
+    boolean hasMap() {
         return map != null;
     }
 
-    synchronized Map getMap() {
+    Map getMap() {
         return map;
     }
 
@@ -438,11 +434,13 @@ final class MapViewer {
                 throw new IllegalArgumentException("Internal error - weird direction");
         }
 
+//#if __SYMBIAN__ || __RIM__ || __ANDROID__
         getPosition();
         if (Math.abs(sy - position.getY()) >= mHeight * 0.05) {
             sy = position.getY();
             calculateScale();
         }
+//#endif        
 
         return dirty;
     }
@@ -787,7 +785,7 @@ final class MapViewer {
             ((Slice) slices.elementAt(i)).setImage(null);
         }
 //#endif
-        slices.removeAllElements();
+        this.slices = null;
     }
 
     private void drawNavigation(final Graphics graphics) {

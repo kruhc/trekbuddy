@@ -204,14 +204,14 @@ public final class TarInputStream extends InputStream {
         if (markpos < 0) {
             throw new IOException("Resetting to invalid mark");
         }
-//        try {
+        try {
             in.reset();
             streamOffset -= (entryOffset - markpos);
             entryOffset = markpos;
-//        } catch (IOException e) {
-//            markpos = -1;
-//            throw e;
-//        }
+        } catch (IOException e) {
+            markpos = -1;
+            throw e;
+        }
     }
 
     /**
@@ -330,6 +330,11 @@ public final class TarInputStream extends InputStream {
         if (c > -1) {
             this.entryOffset += c;
             this.streamOffset += c;
+//#ifdef __MARKSUPPORT__
+            if (markpos > -1 && entryOffset > markpos + marklimit) {
+                markpos = -1;
+            }
+//#endif /*__MARKSUPPORT__*/
         }
 
         return c;

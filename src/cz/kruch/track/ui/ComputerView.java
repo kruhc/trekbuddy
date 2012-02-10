@@ -339,6 +339,7 @@ final class ComputerView extends View
     /* very private members */
     private TimerTask rotator;
     private boolean rotate;
+    private boolean activeIO;
 
     ComputerView(/*Navigator*/Desktop navigator) {
         super(navigator);
@@ -704,10 +705,13 @@ final class ComputerView extends View
             // shit happens sometimes TODO but why?!?
             if (_profileName == null) {
 //#ifdef __ANDROID__
-                android.util.Log.e("TrekBuddy", "profileName is null");
+                android.util.Log.e(cz.kruch.track.TrackingMIDlet.APP_TITLE, "profileName is null");
 //#endif
                 return;
             }
+
+            // I/O active
+            activeIO = true;
 
             // try to load new profile
             try {
@@ -726,28 +730,35 @@ final class ComputerView extends View
                 t.printStackTrace();
 //#endif
                 Desktop.showError(Resources.getString(Resources.DESKTOP_MSG_LOAD_PROFILE_FAILED), t, Desktop.screen);
+
             } finally {
+
+                // TODO why??
                 _profileName = null;
+
+                // I/O active
+                activeIO = false;
             }
             
         } else {
 
             // not initialized yet
-            profiles = new Hashtable(4);
+            Hashtable ps = new Hashtable(4);
 
             // try to load profiles
             if (Config.dataDirExists) {
 
+                // I/O active
+                activeIO = true;
+
                 try {
 
                     // find profiles
-                    findProfiles();
+                    findProfiles(ps);
 
                     // got something?
-                    if (profiles.size() > 0) {
-
+                    if (ps.size() > 0) {
 //#ifdef __HECL__
-
                         // initialize interp
                         interp = new ControlledInterp(false);
                         interp.addFallback(this);
@@ -772,6 +783,9 @@ final class ComputerView extends View
 //                        heclArgvOnTimer = new Thing[]{ new Thing(EVENT_ON_TIMER), LongThing.create(0) };
 
 //#endif /* __HECL__ */
+
+                        // use new set already
+                        profiles = ps;
 
                         // look for default profile
                         final String s;
@@ -818,12 +832,22 @@ final class ComputerView extends View
                     }
 
                 } catch (Throwable t) {
-                    status = t.toString();
 //#ifdef __LOG__
                     t.printStackTrace();
 //#endif
+                    // save this error
+                    status = t.toString();
+
+                } finally {
+
+                    // I/O active
+                    activeIO = false;
+
                 }
             }
+
+            // use new set
+            profiles = ps;
         }
     }
 
@@ -1891,7 +1915,7 @@ final class ComputerView extends View
         return result;
     }
 
-    private void findProfiles() throws IOException {
+    private void findProfiles(Hashtable profiles) throws IOException {
         // var
         File dir = null;
 

@@ -33,6 +33,16 @@ abstract class View {
         isVisible = b;
     }
 
+//#ifdef __ANDROID__
+
+    void onBackground() {
+    }
+
+    void onForeground() {
+    }
+
+//#endif
+
     public int handleAction(int action, boolean repeated) {
         return Desktop.MASK_NONE;
     }
@@ -84,16 +94,6 @@ abstract class View {
     public int orientationChanged(int heading) {
         return isVisible ? Desktop.MASK_SCREEN : Desktop.MASK_NONE;
     }
-
-//#ifdef __ANDROID__
-
-    void onBackground() {
-    }
-
-    void onForeground() {
-    }
-
-//#endif    
 
     public abstract void render(Graphics g, Font f, int mask);
     public abstract int locationUpdated(Location l);

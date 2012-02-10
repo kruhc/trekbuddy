@@ -28,13 +28,14 @@ final class SmartRunnable implements Runnable {
     }
 
     void setActive(boolean active) {
+
         // fire flag
         final boolean fire;
 
         // avoid collision with run()
         synchronized (this) {
             this.active = active;
-            if (active && !pending) {
+            if (active && !pending && runnables.size() > 0) {
                 fire = pending = true;
             } else {
                 fire = false;
@@ -48,7 +49,7 @@ final class SmartRunnable implements Runnable {
     }
 
     void callSerially(final Runnable r) {
-		// local ref
+        // local ref
         final Vector runnables = this.runnables;
 
         // fire flag

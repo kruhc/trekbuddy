@@ -688,6 +688,7 @@ final class DeviceScreen extends GameCanvas implements Runnable {
 
         // no key pressed anymore
         _setInKey(0);
+        keyRepeatedCount = 0;
 
         // stop key checker
         synchronized (this) {

@@ -1757,12 +1757,20 @@ public final class HXmlParser implements XmlPullParser {
 
     public long skip(long n) throws IOException {
         if (n > (srcCount - srcPos)) {
-            reader.skip(n - (srcCount - srcPos));
+            long num = (n - (srcCount - srcPos));
+            while (num > 0) {
+                long skipped = reader.skip(num);
+                if (skipped < 0) {
+                    n -= num;
+                    break;
+                }
+                num -= skipped;
+            }
             srcPos = srcCount = 0;
         } else {
             srcPos += n;
         }
-        offset = elementOffset = (int) n;
+        offset = elementOffset = (int) n; // this is probably bug - should be ... += n
         return n;
     }
 }

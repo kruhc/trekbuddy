@@ -682,6 +682,7 @@ public final class Map implements Runnable {
     public static boolean hasSEbug;
 //#ifdef __SYMBIAN__
     public static boolean networkInputStreamAvailable = true;
+    public static String fileInputStreamClass;
 //#endif
     /* behaviour flags */
     public static boolean useReset = true;

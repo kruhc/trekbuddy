@@ -101,6 +101,9 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
             if (in == null) {
                 in = nativeFile.openInputStream();
             }
+//#ifdef __SYMBIAN__
+            Map.fileInputStreamClass = in.getClass().getName();
+//#endif        
 
             /*
             * test quality of File API
@@ -206,7 +209,7 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
                             registerSlice(entryName, (int) (entry.getPosition() / TarInputStream.DEFAULT_RCDSIZE));
 
                         } else if (entryName.indexOf(File.PATH_SEPCHAR) == -1
-                            && getMapCalibration() == null) { // no calibration nativeFile yet
+                            && getMapCalibration() == null) { // no calibration yet
 //#ifdef __LOG__
                             if (log.isEnabled()) log.debug("do not have calibration yet");
 //#endif
@@ -247,6 +250,8 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
                     nativeIn = null; // gc hint
                     nativeIn = nativeFile.openInputStream();
                 }
+
+                // preset
                 buffered(nativeIn);
                 tarIn.setStreamOffset(0);
 

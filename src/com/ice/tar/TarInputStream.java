@@ -110,7 +110,8 @@ public final class TarInputStream extends InputStream {
      * @return The number of available bytes for the current entry.
      */
     public int available() throws IOException {
-        return (int) (this.entrySize - this.entryOffset);
+//        return (int) (this.entrySize - this.entryOffset);
+        return in.available();
     }
 
     /**
@@ -156,6 +157,10 @@ public final class TarInputStream extends InputStream {
 
             this.streamOffset += numRead;
             this.entryOffset += numRead;
+//#ifdef __MARKSUPPORT__
+            // to invalidate or not, that is the question
+            // probably not, because we are not using skip correctly in tar context
+//#endif /*__MARKSUPPORT__*/
         }
 
         if (num > 0) {
@@ -204,14 +209,14 @@ public final class TarInputStream extends InputStream {
         if (markpos < 0) {
             throw new IOException("Resetting to invalid mark");
         }
-        try {
+//        try {
             in.reset();
             streamOffset -= (entryOffset - markpos);
             entryOffset = markpos;
-        } catch (IOException e) {
-            markpos = -1;
-            throw e;
-        }
+//        } catch (IOException e) {
+//            markpos = -1;
+//            throw e;
+//        }
     }
 
     /**
@@ -256,7 +261,9 @@ public final class TarInputStream extends InputStream {
                 numToSkip += (DEFAULT_RCDSIZE - padding);
             }
 
-            this.skip(numToSkip);
+            if (numToSkip > 0) {
+                this.skip(numToSkip);
+            }
         }
 
         final long entryPosition = this.streamOffset;
@@ -331,9 +338,8 @@ public final class TarInputStream extends InputStream {
             this.entryOffset += c;
             this.streamOffset += c;
 //#ifdef __MARKSUPPORT__
-            if (markpos > -1 && entryOffset > markpos + marklimit) {
-                markpos = -1;
-            }
+            // to invalidate or not, that is the question
+            // how to do it correctly in tar context?!?
 //#endif /*__MARKSUPPORT__*/
         }
 

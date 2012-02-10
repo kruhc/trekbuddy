@@ -105,6 +105,7 @@ public final class SymbianService {
 	private static StreamConnection openConnection(String url) throws IOException {
         final SocketConnection connection = (SocketConnection) Connector.open(url, Connector.READ_WRITE);
         connection.setSocketOption(SocketConnection.DELAY, 0);
+//        connection.setSocketOption(SocketConnection.SNDBUF, 8); // request packet size
 //        connection.setSocketOption(SocketConnection.RCVBUF, 26280); // 18 * 1460
         return connection;
 	}

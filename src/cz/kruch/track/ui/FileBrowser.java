@@ -245,12 +245,18 @@ public final class FileBrowser implements CommandListener, Runnable, Comparator 
         if (log.isEnabled()) log.debug("show; depth = " + depth);
 //#endif
 
+        // may take long, avoid impatient user
+        if (list != null) {
+            list.setCommandListener(null);
+        }
+
         // append items
         try {
             final Enumeration items = holder == null ? File.listRoots() : file.list();
             final String head = depth > 0 ? File.PARENT_DIR : null;
+            final List l = new List(title, List.IMPLICIT, sort2array(items, head, filter), null);
             list = null; // gc hint
-            list = new List(title, List.IMPLICIT, sort2array(items, head, filter), null);
+            list = l;
 //#ifdef __LOG__
             if (log.isEnabled()) log.debug(list.size() + " entries");
 //#endif

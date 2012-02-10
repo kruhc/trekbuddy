@@ -1029,7 +1029,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
 
             } catch (Throwable t) {
 //#ifdef __ANDROID__
-                android.util.Log.e("TrekBuddy", "Failed to parse " + storeName, t);
+                android.util.Log.e(cz.kruch.track.TrackingMIDlet.APP_TITLE, "Failed to parse " + storeName, t);
 //#endif
 //#ifdef __LOG__
                 t.printStackTrace();
@@ -1111,7 +1111,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
 
             } catch (Throwable t) {
 //#ifdef __ANDROID__
-                android.util.Log.e("TrekBuddy", "Failed to list " + storeName, t);
+                android.util.Log.e(cz.kruch.track.TrackingMIDlet.APP_TITLE, "Failed to list " + storeName, t);
 //#endif
 //#ifdef __LOG__
                 t.printStackTrace();

@@ -227,7 +227,7 @@ public final class GroundspeakBean {
                 UNKNOWN = javax.microedition.lcdui.Image.createImage("/resources/log.any.png");
             } catch (Exception e) {
 //#ifdef __ANDROID__
-                android.util.Log.w("TrekBuddy", "Failed to load GC icon", e);
+                android.util.Log.w(cz.kruch.track.TrackingMIDlet.APP_TITLE, "Failed to load GC icon", e);
 //#endif
             }
         }

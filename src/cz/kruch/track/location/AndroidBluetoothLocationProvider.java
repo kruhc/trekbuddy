@@ -143,7 +143,7 @@ public class AndroidBluetoothLocationProvider
                 t.printStackTrace();
 //#endif
 //#ifdef __ANDROID__
-                android.util.Log.e("TrekBuddy", "createInsecureRfcommSocketToServiceRecord", t);
+                android.util.Log.e(cz.kruch.track.TrackingMIDlet.APP_TITLE, "createInsecureRfcommSocketToServiceRecord", t);
 //#endif
             }
             if (socket == null) {
@@ -156,7 +156,7 @@ public class AndroidBluetoothLocationProvider
                     t.printStackTrace();
 //#endif
 //#ifdef __ANDROID__
-                    android.util.Log.e("TrekBuddy", "createRfcommSocket", t);
+                    android.util.Log.e(cz.kruch.track.TrackingMIDlet.APP_TITLE, "createRfcommSocket", t);
 //#endif
                 }
             }

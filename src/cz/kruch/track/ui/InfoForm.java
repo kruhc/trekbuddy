@@ -106,14 +106,9 @@ final class InfoForm implements CommandListener {
                 .append("; resetable? ").append(cz.kruch.track.maps.Map.fileInputStreamResetable)
 //                .append("; SE bug? ").append(cz.kruch.track.maps.Map.hasSEbug)
 //#ifdef __SYMBIAN__
+                .append("; stream class: ").append(cz.kruch.track.maps.Map.fileInputStreamClass)
                 .append("; network stream? ").append(Config.useNativeService && cz.kruch.track.maps.Map.networkInputStreamAvailable)
 //#endif
-//#ifdef __MARKSUPPORT__
-//                .append("; advio: ").append(api.io.BufferedInputStream.marksCount)
-//                .append('/').append(api.io.BufferedInputStream.resetsCount)
-//                .append(',').append('/').append(com.ice.tar.TarInputStream.marksCount)
-//                .append('/').append(com.ice.tar.TarInputStream.resetsCount)
-//#endif                
                 .append("; card: ").append(System.getProperty("fileconn.dir.memorycard"));
         pane.append(newItem("Fs", sb.toString()));
 //#ifndef __ANDROID__

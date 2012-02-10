@@ -229,6 +229,7 @@ public class BufferedInputStream extends InputStream {
         if (pos >= count && fillbuf(localIn, localBuf) == -1) {
             return -1; /* no, fill buffer */
         }
+/* // HACK // cannot happen - resize is commented out in fillbuf
         // localBuf may have been invalidated by fillbuf
         if (localBuf != buf) {
             localBuf = buf;
@@ -237,7 +238,7 @@ public class BufferedInputStream extends InputStream {
                 throw new IOException("Stream is closed"); //$NON-NLS-1$
             }
         }
-
+*/
         /* Did filling the buffer fail with -1 (EOF)? */
         if (count - pos > 0) {
             return localBuf[pos++] & 0xFF;
@@ -297,14 +298,11 @@ public class BufferedInputStream extends InputStream {
                     - pos;
             System.arraycopy(localBuf, pos, buffer, offset, copylength);
             pos += copylength;
-/* // HACK // always satisfy
-            if (copylength == length || localIn.available() == 0) {
+            if (copylength == length/* || localIn.available() == 0*/) {
                 return copylength;
             }
             offset += copylength;
             required = length - copylength;
-*/
-            return copylength;
         } else {
             required = length;
         }
@@ -339,8 +337,8 @@ public class BufferedInputStream extends InputStream {
                 System.arraycopy(localBuf, pos, buffer, offset, read);
                 pos += read;
             }
-/* // HACK // always satisfy
             required -= read;
+/* // HACK // always satisfy after first read
             if (required == 0) {
                 return length;
             }
@@ -349,7 +347,7 @@ public class BufferedInputStream extends InputStream {
             }
             offset += read;
 */
-            return read;
+            return length - required;
         }
     }
 

@@ -226,12 +226,9 @@ public final class Desktop implements CommandListener,
         display = Display.getDisplay(midlet);
         screen = new DeviceScreen(this, midlet);
         browsing = true;
-        osd = null;
-        status = null;
-//#ifdef __ANDROID__
-        // clear dalvik for activity restart
-        jvmClear();
-//#endif
+
+        // HCK reset static members
+        jvmReset();
 
         // init basic members
         this.midlet = midlet;
@@ -246,7 +243,6 @@ public final class Desktop implements CommandListener,
         this.renderLock = new Object();
 
         // TODO move to Waypoints???
-        Desktop.wptIdx = Desktop.wptEndIdx = Desktop.reachedIdx = -1;
         this.wptAzimuth = -1;
         this.wptDistance = -1F;
         this.wptHeightDiff = Float.NaN;
@@ -758,17 +754,27 @@ public final class Desktop implements CommandListener,
         }
     }
 
-    private static void jvmClear() {
+    private static void jvmReset() {
+        /* reset everything for proper activity restart */
+//#ifdef __ANDROID__
         // for proper resetGUI on next start
         width = height = 0;
+        osd = null;
+        status = null;
         // thread-based refs
         timer = null;
         eventWorker = diskWorker = null;
         rtCountFree = countFree = 0;
-//#ifdef __ANDROID__
+        // navigation refs
+        wpts = null;
+        wptsName = null;
+        routeDir = 0;
+        // pools
         java.util.Arrays.fill(rtPool, null);
         java.util.Arrays.fill(pool, null);
 //#endif
+        // navigation reset
+        wptIdx = wptEndIdx = reachedIdx = -1;
     }
 
     synchronized boolean resetGui() {
@@ -1096,6 +1102,7 @@ public final class Desktop implements CommandListener,
 
                 // close views
                 for (int i = views.length; --i >= 0; ) {
+                    views[i].setVisible(false);
                     views[i].close();
                 }
 
@@ -1107,13 +1114,14 @@ public final class Desktop implements CommandListener,
                 }
 
                 // clear JVM
-                jvmClear();
+                jvmReset();
 
                 // bail out
                 midlet.notifyDestroyed();
 
 //#ifdef __ANDROID__
                 cz.kruch.track.TrackingMIDlet.getActivity().finish();
+//                System.runFinalizersOnExit(true);
 //                System.exit(0); // see lines 466-467 in microemulator\microemu-javase\src\main\java\org\microemu\app\Common.java
 //#endif
             }

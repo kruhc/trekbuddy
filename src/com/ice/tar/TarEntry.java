@@ -263,6 +263,15 @@ public final class TarEntry {
     }
 
     /**
+     * Return string representation of the entry.
+     *
+     * @return string representation
+     */
+    public String toString() {
+        return (new StringBuffer()).append(getName()).append(" [size: " + getSize() + " position: " + getPosition() + "]").toString();
+    }
+
+    /**
      * Parses header.
      *
      * @param headerBuf header bytes

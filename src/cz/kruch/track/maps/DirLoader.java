@@ -155,28 +155,6 @@ final class DirLoader extends Map.Loader implements Atlas.Loader {
         if (log.isEnabled()) log.debug("load slice image from " + url);
 //#endif
 
-//#ifdef __ANDROID__
-
-        final File file = File.open(url);
-
-        // read image
-        try {
-
-            // read image
-            slice.setImage(Image.createImage(buffered(file.openInputStream())));
-
-        } finally {
-
-            // close stream
-            bufferel();
-
-            // close file
-            file.close();
-
-        }
-
-//#else
-
         // read image
         try {
 
@@ -189,8 +167,6 @@ final class DirLoader extends Map.Loader implements Atlas.Loader {
             bufferel();
 
         }
-
-//#endif
 
     }
 

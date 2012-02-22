@@ -68,6 +68,10 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
     public static final int EASYZOOM_LAYERS         = 1;
     public static final int EASYZOOM_MAPS           = 2;
 
+    /* listmode */
+    public static final int LISTMODE_DEFAULT        = 0;
+    public static final int LISTMODE_CUSTOM         = 1;
+
     /* datadir folders */
     public static final String FOLDER_MAPS         = "maps/";
     public static final String FOLDER_NMEA         = "tracks-nmea/";
@@ -180,6 +184,9 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
 
     // [Coordinates]
     public static int cfmt;
+
+    // group [Listmode]
+    public static int extListMode;
 
     // group [Easyzoom]
     public static int easyZoomMode;
@@ -548,6 +555,9 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
             zoomSpotsMode = din.readInt();
             guideSpotsMode = din.readInt();
 
+            // 1.0.24 change
+            extListMode = din.readInt();
+
         } catch (Exception e) {
         }
 
@@ -682,6 +692,8 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         /* since 1.0.17 */
         dout.writeInt(zoomSpotsMode);
         dout.writeInt(guideSpotsMode);
+        /* since 1.0.24 */
+        dout.writeInt(extListMode);
 
 //#ifdef __LOG__
         if (log.isEnabled()) log.info("configuration updated");

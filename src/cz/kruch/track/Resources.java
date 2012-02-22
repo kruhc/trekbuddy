@@ -311,6 +311,9 @@ public final class Resources {
     public static final short CFG_DESKTOP_FLD_NO_ITEM_COMMANDS  = 3530;
     public static final short CFG_DESKTOP_GROUP_GUIDE_SPOTS     = 3531;
     public static final short CFG_DESKTOP_FLD_HIDE_AFTER        = 3532;
+    public static final short CFG_DESKTOP_GROUP_LIST_MODE       = 3533;
+    public static final short CFG_DESKTOP_FLD_MODE_DEFAULT      = 3534;
+    public static final short CFG_DESKTOP_FLD_MODE_CUSTOM       = 3535;
     /* settings - Location */
     public static final short CFG_LOCATION_GROUP_PROVIDER       = 3600;
     public static final short CFG_LOCATION_GROUP_TRACKLOG       = 3601;

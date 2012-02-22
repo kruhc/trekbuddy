@@ -83,7 +83,8 @@ public final class Desktop implements CommandListener,
 
     // UI
     public static int POSITIVE_CMD_TYPE, EXIT_CMD_TYPE, SELECT_CMD_TYPE,
-                      BACK_CMD_TYPE, CANCEL_CMD_TYPE, CHOICE_POPUP_TYPE;
+                      BACK_CMD_TYPE, CANCEL_CMD_TYPE, CHOICE_POPUP_TYPE,
+                      ITEM_CMD_TYPE;
 
     // desktop screen and display
     public static DeviceScreen screen;
@@ -198,11 +199,16 @@ public final class Desktop implements CommandListener,
         BACK_CMD_TYPE = Command.BACK;
         CANCEL_CMD_TYPE = Command.CANCEL;
         CHOICE_POPUP_TYPE = Choice.POPUP;
+        ITEM_CMD_TYPE = Command.ITEM;
 
         // platform-specific hacks
 //#ifdef __ALL__
         if (cz.kruch.track.TrackingMIDlet.sonyEricssonEx) {
             CANCEL_CMD_TYPE = Command.BACK;
+        }
+        if (cz.kruch.track.TrackingMIDlet.symbian) {
+            SELECT_CMD_TYPE = Command.SCREEN; 
+            ITEM_CMD_TYPE = Command.SCREEN;
         }
         if (cz.kruch.track.TrackingMIDlet.uiq) {
             BACK_CMD_TYPE = Command.EXIT;

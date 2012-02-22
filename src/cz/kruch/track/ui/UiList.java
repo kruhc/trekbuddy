@@ -17,13 +17,14 @@ interface UiList {
     void setSelectCommand(Command cmd);
 
     Object getSelectedItem();
-    void setSelectedItem(Object item);
+    void setSelectedItem(Object item, boolean highlight);
 
     int getSelectedIndex();
     void setSelectedIndex(int elementNum, boolean select);
     void setMarked(int elementNum);
 
+    void delete(int elementNum);
     int indexOf(Object item);
-
     int size();
+    void setFitPolicy(int policy);
 }

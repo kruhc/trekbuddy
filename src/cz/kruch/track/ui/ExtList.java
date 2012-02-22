@@ -1,18 +1,18 @@
 package cz.kruch.track.ui;
 
 import cz.kruch.track.util.NakedVector;
+import cz.kruch.track.configuration.Config;
 
 import javax.microedition.lcdui.List;
 import javax.microedition.lcdui.Displayable;
 import javax.microedition.lcdui.Image;
 
 final class ExtList extends List implements UiList {
-    private static final int AWPT_ICON_SIZE = 12;
 
     private NakedVector items;
-    private Image awpt;
+    private Image awpt, selected;
 
-    private int marked;
+    private int marked, selectedOld;
 
     public ExtList(String title, int listType) {
         super(title, listType);
@@ -20,10 +20,10 @@ final class ExtList extends List implements UiList {
 
     public ExtList(String title, int listType, String[] stringElements, Image[] imageElements) {
         super(title, listType, stringElements, imageElements);
-        this.marked = -1;
-        int awptSize;
+        this.marked = this.selectedOld = -1;
+        int iconSize;
         try {
-            awptSize = getFont(0).getHeight();
+            iconSize = getFont(0).getHeight();
         } catch (Throwable t) { // happens on Android
 //#ifdef __ANDROID__
             if (Desktop.screen.getHeight() > 320 || Desktop.screen.getWidth() > 320)
@@ -31,17 +31,24 @@ final class ExtList extends List implements UiList {
             if (Desktop.screen.getHeight() > 480 || Desktop.screen.getWidth() > 480)
 //#endif
             { // hi-res display
-                awptSize = 24;
+                iconSize = 24;
             } else {
-                awptSize = 16;
+                iconSize = 16;
             }
         }
-        if (awptSize < NavigationScreens.wptSize2 << 1) {
+        if (iconSize < NavigationScreens.wptSize2 << 1) {
             this.awpt = NavigationScreens.resizeImage(NavigationScreens.waypoint,
-                                                      awptSize, awptSize,
+                                                      iconSize, iconSize,
                                                       NavigationScreens.SLOW_RESAMPLE);
         } else {
             this.awpt = NavigationScreens.waypoint;
+        }
+        if (iconSize < NavigationScreens.selectedSize2 << 1) {
+            this.selected = NavigationScreens.resizeImage(NavigationScreens.selected,
+                                                          iconSize, iconSize,
+                                                          NavigationScreens.SLOW_RESAMPLE);
+        } else {
+            this.selected = NavigationScreens.selected;
         }
     }
 
@@ -54,29 +61,47 @@ final class ExtList extends List implements UiList {
     }
 
     public Object getSelectedItem() {
-        final int selected = getSelectedIndex();
-        if (selected >= 0) {
+        final int elementNum = getSelectedIndex();
+        if (elementNum >= 0 && elementNum < size()) {
             if (items == null) { // HACK when used as ordinary List
-                return getString(getSelectedIndex());
+                return getString(elementNum);
             } else {
-                return items.elementAt(getSelectedIndex());
+                return items.elementAt(elementNum);
             }
         }
         return null;
     }
 
-    public void setSelectedItem(Object item) {
-        setSelectedIndex(indexOf(item), true);
-    }
-
-    public void setSelectedIndex(int elementNum, boolean select) {
-        super.setSelectedIndex(elementNum, select);
+    public void setSelectedItem(Object item, boolean highlight) {
+        final int idx = indexOf(item);
+        if (idx > -1) {
+            setSelectedIndex(idx, true);
+            if (Config.extListMode == Config.LISTMODE_CUSTOM) {
+                if (selectedOld > -1 && selectedOld != marked) {
+                    set(selectedOld, getString(selectedOld), null);
+                }
+                selectedOld = idx;
+                if (highlight && idx != marked) {
+                    set(idx, getString(idx), this.selected);
+                }
+            }
+        }
     }
 
     public void setMarked(int elementNum) {
-        if (marked >= 0 && marked < size()) {
-            set(marked, getString(marked), null);
+        // already set?
+        if (elementNum == marked) {
+            return;
         }
+        // unmark previous
+        if (marked >= 0 && marked < size()) {
+            if (selectedOld == marked && Config.extListMode == Config.LISTMODE_CUSTOM) {
+                set(marked, getString(marked), selected);
+            } else {
+                set(marked, getString(marked), null);
+            }
+        }
+        // marked item
         if (elementNum >= 0 && elementNum < items.size()) {
             marked = elementNum;
             set(elementNum, getString(elementNum), awpt);

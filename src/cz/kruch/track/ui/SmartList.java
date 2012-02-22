@@ -36,7 +36,7 @@ final class SmartList extends Canvas implements UiList {
 
     private int top, selected, marked;
     private int visible;
-    private int awptSize;
+    private int iconSize;
     private boolean dragged;
 
     private int width, height, sbY, sbWidth, sbHeight, pY;
@@ -45,10 +45,10 @@ final class SmartList extends Canvas implements UiList {
     public SmartList(String title) {
         try {
             super.setTitle(title);
-        } catch (Exception e) { // RIM bug???
+        } catch (Throwable t) { // RIM bug???
             this.title = title;
         }
-        this.marked = this.selected = -1;
+        this.marked = -1;
         if (cz.kruch.track.configuration.Config.safeColors) {
             this.colorBackSel = 0x000000ff;
             this.colorBackUnsel = 0x00ffffff;
@@ -60,13 +60,12 @@ final class SmartList extends Canvas implements UiList {
             this.colorForeSel = Desktop.display.getColor(Display.COLOR_HIGHLIGHTED_FOREGROUND);
             this.colorForeUnsel = Desktop.display.getColor(Display.COLOR_FOREGROUND);
         }
-        this.awptSize = getLineHeight() - 2 * 2 * VL_INSET;
-        if (this.awptSize < NavigationScreens.wptSize2 << 1) {
+        this.iconSize = getLineHeight() - 2 * 2 * VL_INSET;
+        if (this.iconSize < NavigationScreens.wptSize2 << 1) {
             this.awpt = NavigationScreens.resizeImage(NavigationScreens.waypoint,
-                                                      this.awptSize, this.awptSize,
+                                                      iconSize, iconSize,
                                                       NavigationScreens.SLOW_RESAMPLE);
         } else {
-            this.awptSize = NavigationScreens.wptSize2 << 1;
             this.awpt = NavigationScreens.waypoint;
         }
     }
@@ -121,11 +120,18 @@ final class SmartList extends Canvas implements UiList {
         return null;
     }
 
-    public void setSelectedItem(Object item) {
-        setSelectedIndex(indexOf(item), true);
+    public void setSelectedItem(Object item, boolean highlight) {
+        final int idx = indexOf(item);
+        if (idx > -1) {
+            setSelectedIndex(idx, true);
+        }
     }
 
-/* REMOVE
+    public void setFitPolicy(int policy) {
+        // ignore
+    }
+
+    /* REMOVE
     public String getString(int index) {
         return items.elementAt(index).toString();
     }
@@ -149,6 +155,10 @@ final class SmartList extends Canvas implements UiList {
 
     public int size() {
         return items.size();
+    }
+
+    public void delete(int elementNum) {
+        // do nothing - we are backed by array
     }
 
     //
@@ -450,9 +460,9 @@ final class SmartList extends Canvas implements UiList {
             if (curr != marked) {
                 g.drawString(s, HL_INSET, y + VL_INSET, Graphics.TOP | Graphics.LEFT);
             } else {
-                final int dy = (lh - awptSize) >> 1;
+                final int dy = (lh - iconSize) >> 1;
                 g.drawImage(awpt, HL_INSET, y /*+ VL_INSET*/ + dy, Graphics.TOP | Graphics.LEFT);
-                g.drawString(/*"(*) " + */s, HL_INSET + awptSize + HL_INSET, y + VL_INSET, Graphics.TOP | Graphics.LEFT);
+                g.drawString(/*"(*) " + */s, HL_INSET + iconSize + HL_INSET, y + VL_INSET, Graphics.TOP | Graphics.LEFT);
             }
             if (curr == selected) { // restore color
                 g.setColor(colorForeUnsel);

@@ -114,9 +114,9 @@ final class FieldNoteForm implements CommandListener {
 
         // grab form data
         if (fire) {
-            note[1] = timeField.getString();
+            note[1] = trim(timeField.getString());
             note[2] = typeChoice.getString(typeChoice.getSelectedIndex());
-            note[3] = noteField.getString();
+            note[3] = trim(noteField.getString());
         }
 
         // show next
@@ -142,6 +142,13 @@ final class FieldNoteForm implements CommandListener {
         sb.append(i);
 
         return sb;
+    }
+
+    private static String trim(final String text) {
+        if (text != null) {
+            return text.trim();
+        }
+        return "";
     }
 
     static String format(final String[] note, final StringBuffer sb) {

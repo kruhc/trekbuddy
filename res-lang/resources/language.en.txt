@@ -140,8 +140,8 @@
 1391=Tracking active
 
 # navigation commands
-2000=RouteAlong
-2001=RouteBack
+2000=RouteForward
+2001=RouteBackward
 2002=NavigateTo
 2003=SetAsActive
 2004=GoTo
@@ -302,6 +302,9 @@
 3530=no item commands
 3531=Show menubar
 3532=hide after
+3533=List mode
+3534=platform default
+3535=custom selector
 
 # settings forms/fields/values (Location)
 3600=Provider

@@ -288,6 +288,10 @@
 3530=no item commands
 3531=Muestrar menubar
 3532=ocultar tras
+3533=Modo de listados
+3534=plataforma por defecto
+3535=selección de pedido
+
 
 # settings forms/fields/values (Location)
 3600=Proveedor

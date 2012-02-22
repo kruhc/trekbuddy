@@ -69,6 +69,7 @@ public final class NavigationScreens {
     private static final String RES_NAVIWS = "/resources/naviws.png";
     private static final String RES_POIS = "/resources/pois.png";
     private static final String RES_WPT = "/resources/wpt.png";
+    private static final String RES_SELECTED = "/resources/selected.png";
     private static final String RES_BULLETS = "/resources/bullets.png";
     private static final String RES_NLOCK = "/resources/nlock.png";
     private static final String RES_SYMBOLS = "/resources/symbols.png";
@@ -87,6 +88,7 @@ public final class NavigationScreens {
     static Image crosshairs; // FIXME visibility
     static Image nlock; // FIXME visibility
     static Image waypoint; // FIXME visibility
+    static Image selected; // FIXME visibility
     private static Image[] arrows;
     private static Image symbols;
     private static Image pois;
@@ -112,6 +114,7 @@ public final class NavigationScreens {
     static int wptSize2;
     static int guideSize;
     static int gdx, gdOffset;
+    static int selectedSize2;
 
     public static void initialize() throws IOException {
         // init image cache
@@ -125,6 +128,7 @@ public final class NavigationScreens {
         symbols = Image.createImage(RES_SYMBOLS);
         waypoint = Image.createImage(RES_WPT);
         nlock = Image.createImage(RES_NLOCK);
+        selected = Image.createImage(RES_SELECTED);
 
         // setup vars
         arrowSize = new int[2];
@@ -137,6 +141,7 @@ public final class NavigationScreens {
         poiSize = pois.getHeight();
         nlockSize2 = nlock.getHeight() >> 1;
         symbolSize = symbols.getHeight();
+        selectedSize2 = selected.getHeight() >> 1;
     }
 
     public static void initialize2() throws IOException { // 2nd init for touchscreens
@@ -196,6 +201,13 @@ public final class NavigationScreens {
             nlock = null;
             nlock = image;
             nlockSize2 = image.getHeight() >> 1;
+            i++;
+        }
+        image = loadImage(resources, RES_SELECTED);
+        if (image != null) {
+            selected = null;
+            selected = image;
+            selectedSize2 = selected.getHeight() >> 1;
             i++;
         }
 

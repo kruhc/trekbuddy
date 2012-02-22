@@ -128,11 +128,13 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
 
     private ExtList pane;
     private List notes;
-    private /*Displayable*/UiList list;
-    private NakedVector sortedWpts, cachedDisk, fieldNotes;
-    private String folder, notesFilename;
+    private /*Displayable*/UiList list, listGc;
+//    private Hashtable cachedDisks;
+    private NakedVector sortedWpts, fieldNotes;
+    private String folder, subfolder;
+    private String notesFilename;
     private final Object[] idx;
-    private int entry, depth, sort, cacheDiskHint;
+    private int entry, depth, sort;
 
     private String itemWptsStores, itemTracksStores,
                    itemRecordCurrent, itemEnterCustom, itemProjectNew,
@@ -145,7 +147,8 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
 
     private Command cmdBack, cmdCancel, cmdClose, cmdOpen;
     private Command cmdActionNavigateTo, cmdActionNavigateAlong, cmdActionNavigateBack,
-                    cmdActionSetAsCurrent, cmdActionGoTo, cmdActionShowAll, cmdActionHideAll,
+                    cmdActionSetAsCurrent, cmdActionGoTo, cmdActionAddFieldNote,
+                    cmdActionShowAll, cmdActionHideAll,
                     cmdActionSortByOrder, cmdActionSortByName, cmdActionSortByDist;
 
     private static Waypoints instance;
@@ -175,10 +178,10 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
         this.navigator = navigator;
         this.backends = new Hashtable(4);
         this.stores = new Hashtable(4);
+//        this.cachedDisks = new Hashtable(4);
         this.fieldNotes = new NakedVector(0, 4);
         this.idx = new Object[3];
         this.sort = Config.sort;
-        this.cacheDiskHint = INITIAL_LIST_SIZE;
         this.notesFilename = "fieldnotes-" + GpxTracklog.dateToFileDate(System.currentTimeMillis()) + ".txt";
 
         this.NEW_FILE_STORE = Resources.getString(Resources.NAV_MSG_NEW_FILE_ITEM);
@@ -206,16 +209,17 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
         this.cmdCancel = new Command(Resources.getString(Resources.CMD_CANCEL), Desktop.CANCEL_CMD_TYPE, 1);
         this.cmdClose = new Command(Resources.getString(Resources.CMD_CLOSE), Desktop.BACK_CMD_TYPE, 1);
         this.cmdOpen = new Command(Resources.getString(Resources.DESKTOP_CMD_OPEN), Desktop.SELECT_CMD_TYPE, 0);
-        this.cmdActionNavigateTo = new ActionCommand(Resources.NAV_CMD_NAVIGATE_TO, Command.ITEM, 2);
-        this.cmdActionNavigateAlong = new ActionCommand(Resources.NAV_CMD_ROUTE_ALONG, Command.ITEM, 3);
-        this.cmdActionNavigateBack = new ActionCommand(Resources.NAV_CMD_ROUTE_BACK, Command.ITEM, 4);
-        this.cmdActionSetAsCurrent = new ActionCommand(Resources.NAV_CMD_SET_AS_ACTIVE, Command.ITEM, 2);
-        this.cmdActionShowAll = new ActionCommand(Resources.NAV_CMD_SHOW_ALL, Command.ITEM, 5);
-        this.cmdActionHideAll = new ActionCommand(Resources.NAV_CMD_HIDE_ALL, Command.ITEM, 5);
-        this.cmdActionGoTo = new ActionCommand(Resources.NAV_CMD_GO_TO, Command.ITEM, 6);
-        this.cmdActionSortByOrder = new ActionCommand(Resources.NAV_CMD_SORT_BYORDER, Command.ITEM, 7);
-        this.cmdActionSortByName = new ActionCommand(Resources.NAV_CMD_SORT_BYNAME, Command.ITEM, 8);
-        this.cmdActionSortByDist = new ActionCommand(Resources.NAV_CMD_SORT_BYDIST, Command.ITEM, 9);
+        this.cmdActionNavigateTo = new ActionCommand(Resources.NAV_CMD_NAVIGATE_TO, Desktop.ITEM_CMD_TYPE, 2);
+        this.cmdActionNavigateAlong = new ActionCommand(Resources.NAV_CMD_ROUTE_ALONG, Desktop.ITEM_CMD_TYPE, 3);
+        this.cmdActionNavigateBack = new ActionCommand(Resources.NAV_CMD_ROUTE_BACK, Desktop.ITEM_CMD_TYPE, 4);
+        this.cmdActionSetAsCurrent = new ActionCommand(Resources.NAV_CMD_SET_AS_ACTIVE, Desktop.ITEM_CMD_TYPE, 2);
+        this.cmdActionGoTo = new ActionCommand(Resources.NAV_CMD_GO_TO, Desktop.ITEM_CMD_TYPE, 5);
+        this.cmdActionAddFieldNote = new ActionCommand(Resources.NAV_CMD_NEW_NOTE, Desktop.ITEM_CMD_TYPE, 6);
+        this.cmdActionShowAll = new ActionCommand(Resources.NAV_CMD_SHOW_ALL, Desktop.ITEM_CMD_TYPE, 7);
+        this.cmdActionHideAll = new ActionCommand(Resources.NAV_CMD_HIDE_ALL, Desktop.ITEM_CMD_TYPE, 7);
+        this.cmdActionSortByOrder = new ActionCommand(Resources.NAV_CMD_SORT_BYORDER, Desktop.ITEM_CMD_TYPE, 8);
+        this.cmdActionSortByName = new ActionCommand(Resources.NAV_CMD_SORT_BYNAME, Desktop.ITEM_CMD_TYPE, 9);
+        this.cmdActionSortByDist = new ActionCommand(Resources.NAV_CMD_SORT_BYDIST, Desktop.ITEM_CMD_TYPE, 10);
 
         // FIXME create on demand to save memory
         this.pane = new ExtList(Resources.getString(Resources.DESKTOP_CMD_NAVIGATION), List.IMPLICIT);
@@ -227,6 +231,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
     public void show() {
         // let's start with basic menu
         entry = depth = 0;
+        subfolder = null;
         use(pane);
         menu(0);
     }
@@ -241,6 +246,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
             use(listWaypoints(currentName, currentWpts, true));
         } else {
             entry = depth = 0;
+            subfolder = null;
             use(pane);
         }
         menu(depth);
@@ -274,20 +280,32 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
             case 1: {
                 // set last known choice
                 if (idx[depth] != null) {
-                    list.setSelectedItem(idx[depth]);
+                    list.setSelectedItem(idx[depth], false);
                 }
             } break;
             case 2: {
                 // set last known choice
                 if (inUseName == null || inUseName.equals(currentName)) {
                     if (idx[depth] != null) {
-                        list.setSelectedItem(idx[depth]);
+                        list.setSelectedItem(idx[depth], true);
                     }
+                }
+                // set marked, if any
+                if (Desktop.wpts != null && Desktop.wpts == inUseWpts && Desktop.wptIdx > -1) {
+                    list.setMarked(list.indexOf(inUseWpts.elementAt(Desktop.wptIdx)));
+//                    list.setSelectedIndex(Desktop.wptIdx, true);
                 }
             } break;
         }
         // show list
         Desktop.display.setCurrent(list.getUI());
+//#ifndef __ANDROID__
+        // remove ticker, may be left
+        if (listGc != null) {
+            listGc.getUI().setTicker(null);
+            listGc = null;
+        }
+//#endif
     }
 
     public void commandAction(Command command, Displayable displayable) {
@@ -317,19 +335,24 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                 if (depth == 0) {
                     close();
                 } else {
-                    switch (--depth) {
-                        case 0: {
-                            use(pane);
-                            menu(depth);
-                        } break;
-                        case 1: {
-                            if (entry == 2) {
-                                depth = 0;
-                                close();
-                            } else {
-                                actionListStores(_listingTitle);
-                            }
-                        } break;
+                    if (depth == 1 && subfolder != null) { // same as SELECTing ".."
+                        subfolder = null;
+                        onBackground(null, null);
+                    } else {
+                        switch (--depth) {
+                            case 0: {
+                                use(pane);
+                                menu(0);
+                            } break;
+                            case 1: {
+                                if (entry == 2) {
+                                    depth = 0;
+                                    close();
+                                } else {
+                                    onBackground(null, null);
+                                }
+                            } break;
+                        }
                     }
                 }
             } else {
@@ -361,7 +384,15 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
 
                         // store action
                         if (List.SELECT_COMMAND == command || cmdOpen == command) {
-                            onBackground(item, null);
+                            if (item.endsWith(File.PATH_SEPARATOR)) {
+                                subfolder = item;
+                                onBackground(null, null);
+                            } else if (item.equals(File.PARENT_DIR)) {
+                                subfolder = null;
+                                onBackground(null, null);
+                            } else {
+                                onBackground(item, null);
+                            }
                         }
 //#ifdef __ANDROID__
                         } catch (ArrayIndexOutOfBoundsException e) {
@@ -375,7 +406,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                         // exec command
                         if (List.SELECT_COMMAND == command || cmdOpen == command) {
                             // save current depth list position
-                            if (/*inUseName == null || */currentName.equals(inUseName)) {
+                            if (inUseName == null || currentName.equals(inUseName)) {
                                 idx[depth] = item;
                             }
                             // calculate distance
@@ -438,6 +469,11 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                                     // sort
                                     sortWaypoints(list, SORT_BYDIST, false, currentWpts);
                                 } break;
+                                case Resources.NAV_CMD_NEW_NOTE: {
+                                    // open New Note form
+                                    final Waypoint wpt = (Waypoint) inUseWpts.elementAt(Desktop.wptIdx);
+                                    (new FieldNoteForm(wpt, displayable, this)).show();
+                                } break;
                             }
                         }
                     } break;
@@ -451,13 +487,11 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
         if (itemWptsStores.equals(item)) {
             // use "wpts/" folder
             folder = Config.FOLDER_WPTS;
-            cachedDisk = null;
             // list in thread
             onBackground(null, actionListWpts);
         } else if (itemTracksStores.equals(item)) {
             // use "tracks-gpx/" folder
             folder = Config.FOLDER_TRACKS;
-            cachedDisk = null;
             // list in thread
             onBackground(null, actionListTracks);
         } else if (itemFieldNotes.equals(item)) {
@@ -478,16 +512,16 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                     // open form with current location
                     (new WaypointForm(this, location)).show().setTracklogTime(navigator.getTracklogTime());
                 } else {
-                    Desktop.showInfo(Resources.getString(Resources.NAV_MSG_NO_POS_YET), pane);
+                    Desktop.showInfo(Resources.getString(Resources.NAV_MSG_NO_POS_YET), pane.getUI());
                 }
             } else {
-                Desktop.showInfo(Resources.getString(Resources.NAV_MSG_NOT_TRACKING), pane);
+                Desktop.showInfo(Resources.getString(Resources.NAV_MSG_NOT_TRACKING), pane.getUI());
             }
         } else if (itemEnterCustom.equals(item)) {
             // got position?
             final QualifiedCoordinates pointer = navigator.getPointer();
             if (pointer == null) {
-                Desktop.showInfo(Resources.getString(Resources.NAV_MSG_NO_POS_YET), pane);
+                Desktop.showInfo(Resources.getString(Resources.NAV_MSG_NO_POS_YET), pane.getUI());
             } else {
                 (new WaypointForm(this, pointer, Resources.NAV_ITEM_ENTER_CUSTOM)).show();
             }
@@ -495,7 +529,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
             // got position?
             final QualifiedCoordinates qc = navigator.getRelQc();
             if (qc == null) {
-                Desktop.showInfo(Resources.getString(Resources.NAV_MSG_NO_POS_YET), pane);
+                Desktop.showInfo(Resources.getString(Resources.NAV_MSG_NO_POS_YET), pane.getUI());
             } else {
                 (new WaypointForm(this, qc, Resources.NAV_ITEM_PROJECT_NEW)).show();
             }
@@ -504,7 +538,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
             // do we have position?
             final Location location = navigator.getLocation();
             if (location == null) {
-                Desktop.showInfo(Resources.getString(Resources.NAV_MSG_NO_POS_YET), pane);
+                Desktop.showInfo(Resources.getString(Resources.NAV_MSG_NO_POS_YET), pane.getUI());
             } else {
                 (new WaypointForm(this, cz.kruch.track.fun.Friends.TYPE_IAH,
                         location.getQualifiedCoordinates()._clone())).show();
@@ -513,7 +547,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
             // got position?
             final QualifiedCoordinates pointer = navigator.getPointer();
             if (pointer == null) {
-                Desktop.showInfo(Resources.getString(Resources.NAV_MSG_NO_POS_YET), pane);
+                Desktop.showInfo(Resources.getString(Resources.NAV_MSG_NO_POS_YET), pane.getUI());
             } else {
                 (new WaypointForm(this, cz.kruch.track.fun.Friends.TYPE_MYT,
                         pointer)).show();
@@ -585,6 +619,13 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
             // execute action
             if (null == action) {
 
+                // custom list mode
+                if (Config.extListMode == Config.LISTMODE_CUSTOM) {
+                    if (source instanceof WaypointForm && list instanceof ExtList) {
+                        list.setSelectedItem(list.getSelectedItem(), true);
+                    }
+                }
+                
                 // restore list
                 Desktop.display.setCurrent(list.getUI());
 
@@ -724,9 +765,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                                 currentWpts.removeElementAt(idxSelected);
                                 int nextSelected = list.getSelectedIndex();
                                 sortedWpts.removeElementAt(nextSelected);
-                                if (list instanceof List) { // FIXME
-                                    ((List) list).delete(nextSelected);
-                                }
+                                list.delete(nextSelected);
                                 if (idxSelected >= sortedWpts.size()) {
                                     nextSelected--;
                                 }
@@ -878,8 +917,9 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
         if (log.isEnabled()) log.debug("list stores as " + title);
 //#endif
 
-        final NakedVector v = new NakedVector(cacheDiskHint + 16, INCREMENT_LIST_SIZE);
-        final boolean recursive;
+        final String uiTitle = subfolder == null ? title :
+                (new StringBuffer()).append(title).append(" [").append(subfolder).append("]").toString();
+        final NakedVector v = new NakedVector(INITIAL_LIST_SIZE, INCREMENT_LIST_SIZE);
 
         // offer new file when selecting target
         if (title == actionListTargets) { // == is OK
@@ -895,21 +935,24 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
         }
 
         // list special stores first only when listing "wpts/" folder
-        if (folder == Config.FOLDER_WPTS) { // == is OK
+        if (folder == Config.FOLDER_WPTS && subfolder == null) { // == is OK
 
             // add prefered stores
             listKnown(v, title == actionListTargets);
 
-            // list "wpts/" recursively
-            recursive = true;
+//        } else if (subfolder != null) {
+//
+//            // back
+//            v.addElement(File.PARENT_DIR);
 
-        } else {
-
-            // no recursion
-            recursive = false;
         }
 
         final int left = v.size();
+        final String storesFolder = getStoresFolder();
+        NakedVector cachedDisk = null; //(NakedVector) cachedDisks.get(storesFolder);
+//#ifndef __ANDROID__
+        boolean ticker = false;
+//#endif
 
         // no cached disk files?
         if (cachedDisk == null) {
@@ -920,23 +963,30 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                 try {
 
                     // may take some time - start ticker
-                    cz.kruch.track.ui.nokia.DeviceControl.setTicker(list.getUI(), Resources.getString(Resources.NAV_MSG_TICKER_LISTING));
+                    cz.kruch.track.ui.nokia.DeviceControl.setTicker(list.getUI(), Resources.getString(Resources.NAV_MSG_TICKER_LISTING) + storesFolder);
+//#ifndef __ANDROID__
+                    ticker = true;
+//#endif                    
 
                     // list file stores
-                    listWptFiles("", cachedDisk = new NakedVector(cacheDiskHint + 16, INCREMENT_LIST_SIZE), recursive);
-                    cacheDiskHint = cachedDisk.size();
+                    listWptFiles(cachedDisk = new NakedVector(INITIAL_LIST_SIZE, INCREMENT_LIST_SIZE));
+
+                    // cache (but only wpts folder files for safety)
+//                    if (folder == Config.FOLDER_WPTS) { // '==' is OK
+//                        cachedDisks.put(storesFolder, cachedDisk);
+//                    }
 
                 } catch (Throwable t) {
 
                     // show error
                     Desktop.showError(Resources.getString(Resources.NAV_MSG_LIST_STORES_FAILED), t, null);
 
-                } finally {
-
-                    // remove ticker
+                }
+//#ifdef __ANDROID__
+                  finally {
                     cz.kruch.track.ui.nokia.DeviceControl.setTicker(list.getUI(), null);
                 }
-
+//#endif
             }
 
         }
@@ -948,40 +998,68 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
          * it would be dangerous, but it seems ok (2010-03-30).
          */
 //        if (title != actionListTargets) { // '==' is OK
-            appendCached(v);
+            appendCached(v, cachedDisk, title == actionListTargets);
 //        }
 
         // got anything?
         if (v.size() == 0) {
 
+            // stay at root
+            subfolder = null;
+
+//#ifndef __ANDROID__
+            // remove ticker
+            if (ticker) {
+                cz.kruch.track.ui.nokia.DeviceControl.setTicker(list.getUI(), null);
+            }
+//#endif
+
             // notify user
-            Desktop.showInfo(Resources.getString(Resources.NAV_MSG_NO_STORES), pane);
+            Desktop.showInfo(Resources.getString(Resources.NAV_MSG_NO_STORES), null);
 
         } else {
 
-            // sort file stores (leaves memory stores at the beginning)
-            FileBrowser.sort(v.getData(), left, v.size() - 1);
+            try {
 
-            // create UI list
-            use(listStores(v, title));
+                // sort file stores (leaves memory stores at the beginning)
+                FileBrowser.sort(v.getData(), left, v.size() - 1);
 
-            // list stores
-            menu(1);
+                // create UI list
+                use(listStores(v, uiTitle));
+
+                // list stores
+                menu(1);
+
+            } catch (Throwable t) {
+//#ifdef __ANDROID__
+                android.util.Log.e(cz.kruch.track.TrackingMIDlet.APP_TITLE, "Failed to list " + storesFolder, t);
+//#endif
+//#ifdef __LOG__
+                t.printStackTrace();
+//#endif
+                Desktop.showError("Failed to list landmark files", t, list.getUI());
+            }
         }
     }
 
     /**
      * Loads waypoints from file landmark store.
      */
-    private Vector actionListStore(final String storeName, final int uiAction, 
+    private Vector actionListStore(final String fileName, final int uiAction,
                                    final boolean lazyGs) {
 //#ifdef __LOG__
-        if (log.isEnabled()) log.debug("list store: " + storeName);
+        if (log.isEnabled()) log.debug("list store: " + fileName);
 //#endif
+
+        // store name
+        final String storeName = subfolder == null ? fileName : subfolder + fileName;
 
         // local
         Vector wpts = null;
         Throwable parseException = null;
+//#ifndef __ANDROID__
+        boolean ticker = false;
+//#endif
 
         // got store in cache?
         final Vector wptsCached = (Vector) stores.get(storeName);
@@ -1008,6 +1086,9 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                 // may take some time - start ticker
                 if (uiAction == 2) {
                     cz.kruch.track.ui.nokia.DeviceControl.setTicker(list.getUI(), Resources.getString(Resources.NAV_MSG_TICKER_LOADING));
+//#ifndef __ANDROID__
+                    ticker = true;
+//#endif
                 }
 
                 // open file
@@ -1039,17 +1120,16 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
 
             } finally {
 
-                // remove ticker
-                if (uiAction == 2) {
-                    cz.kruch.track.ui.nokia.DeviceControl.setTicker(list.getUI(), null);
-                }
-
                 // close file
                 try {
                     file.close();
                 } catch (Exception e) { // NPE or IOE
                     // ignore
                 }
+//#ifdef __ANDROID__
+                // remove ticker
+                cz.kruch.track.ui.nokia.DeviceControl.setTicker(list.getUI(), null);
+//#endif
             }
 
         } else {
@@ -1069,6 +1149,11 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
 
             // notify
             if (uiAction == 2) {
+//#ifndef __ANDROID__
+                if (ticker) {
+                    cz.kruch.track.ui.nokia.DeviceControl.setTicker(list.getUI(), null);
+                }
+//#endif
                 if (parseException == null) {
                     Desktop.showWarning(Resources.getString(Resources.NAV_MSG_NO_WPTS_FOUND_IN) + " " + storeName, null, list.getUI());
                 } else {
@@ -1099,14 +1184,13 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                     // create list
                     use(listWaypoints(storeName, wpts, true));
 
-                    // notify user (if just loaded)
-                    if (wptsCached == null) {
-                        Desktop.showInfo(wpts.size() + " " + Resources.getString(Resources.NAV_MSG_WPTS_LOADED), list.getUI());
-                    }
-
                     // update menu
                     menu(2);
 
+                    // notify user (only if freshly loaded)
+                    if (wptsCached == null) {
+                        Desktop.showInfo(wpts.size() + " " + Resources.getString(Resources.NAV_MSG_WPTS_LOADED), list.getUI());
+                    }
                 }
 
             } catch (Throwable t) {
@@ -1264,7 +1348,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
         if (name.equals(NEW_FILE_STORE)) { // new store
             stores.remove(storeKey);
             backends.remove(storeKey);
-            cachedDisk = null; // force refresh of file list
+//            cachedDisks.clear(); // force refresh of file list
         } else if (name.equals(currentName)) { // current store
             useKey = name;
         } else if (!name.equals(getBackend(storeKey, null).getFileName())) { // store other than last
@@ -1346,15 +1430,15 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
 
         } finally {
 
-            // remove ticker
-            cz.kruch.track.ui.nokia.DeviceControl.setTicker(list.getUI(), null);
-
             // close file
             try {
                 file.close();
             } catch (Exception e) { // NPE or IOE
                 // ignore
             }
+
+            // remove ticker
+            cz.kruch.track.ui.nokia.DeviceControl.setTicker(list.getUI(), null);
         }
     }
 
@@ -1422,6 +1506,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
 
     private void listKnown(final Vector v, final boolean omitUnparsed) {
 
+        // enumerate all known backends
         for (final Enumeration e = backends.keys(); e.hasMoreElements();) {
 
             // get backend name (ie. filename)
@@ -1611,16 +1696,15 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
         Desktop.getDiskWorker().enqueue(this);
     }
 
-    private void listWptFiles(final String path, final Vector v,
-                              final boolean recursive) throws IOException {
+    private void listWptFiles(final Vector v) throws IOException {
 //#ifdef __LOG__
-        if (log.isEnabled()) log.debug("list " + path);
+        if (log.isEnabled()) log.debug("list " + getStoresFolder());
 //#endif
 
         File dir = null;
         try {
             // open directory
-            dir = File.open(Config.getFolderURL(folder) + path);
+            dir = File.open(Config.getFolderURL(getStoresFolder()));
 
             // list file stores in the directory
             if (dir.exists()) {
@@ -1633,28 +1717,17 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                     final int i = name.lastIndexOf('.');
                     if (i > -1) {
                         final String lcname = name.toLowerCase();
-                        if (lcname.endsWith(SUFFIX_GPX)
-                                || lcname.endsWith(SUFFIX_LOC)) {
-                            if (recursive) {
-                                v.addElement(name);
-                            } else {
-                                v.addElement(path + name);
-                            }
+                        if (lcname.endsWith(SUFFIX_GPX) || lcname.endsWith(SUFFIX_LOC)) {
+                            v.addElement(name);
                         }
 //#ifdef __RIM__
                           else if (lcname.endsWith(SUFFIX_GPX_REM)) {
                             final String rem = name.substring(0, name.length() - 4); // ".rem".length()
-                            if (recursive) {
-                                v.addElement(rem);
-                            } else {
-                                v.addElement(path + rem);
-                            }
+                            v.addElement(rem);
                         }
 //#endif
-                    } else if (recursive) { // is subfolder?
-                        if (/* isDir: */name.endsWith(File.PATH_SEPARATOR) && !name.startsWith("images-")) {
-                            listWptFiles(name, v, false);
-                        }
+                    } if (subfolder == null && /* isDir: */name.endsWith(File.PATH_SEPARATOR) && !name.startsWith("images-")) {
+                        v.addElement(name);
                     }
                 }
             }
@@ -1665,9 +1738,6 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
             Desktop.showError(Resources.getString(Resources.NAV_MSG_LIST_STORES_FAILED), t, null);
 
         } finally {
-//#ifdef __LOG__
-            if (log.isEnabled()) log.debug("~list " + path);
-//#endif
 
             // close dir
             try {
@@ -1685,6 +1755,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                 && !cz.kruch.track.TrackingMIDlet.wm) { // prefer native lists on phones w/ touchscreen, except WM
             try {
                 l = new ExtList(title, List.IMPLICIT, names2strings(stores), null);
+                l.setFitPolicy(Choice.TEXT_WRAP_OFF);
             } catch (Throwable t) {
                 // ignore - can be IllegalArgumentException due to 255 limit etc
             }
@@ -1696,7 +1767,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
 
         // add commands
         l.setSelectCommand(cmdOpen);
-        if (title == actionListWpts || title == actionListTracks) { // == is OK
+        if (title == actionListWpts || title == actionListTracks || title.startsWith(actionListWpts)) { // == is OK
             l.addCommand(cmdBack);
         } else if (title == actionListTargets) { // == is OK
             l.addCommand(cmdCancel);
@@ -1716,12 +1787,13 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
         sortedWpts = new NakedVector((NakedVector) wpts);
 
         // create UI list
-        UiList l = null;
         final String title = (new StringBuffer(32)).append(store).append(" [").append(wpts.size()).append(']').toString();
-        if (Desktop.screen.hasPointerEvents()
+        UiList l = null;
+        if (Desktop.screen.hasPointerEvents() || true
                 && !cz.kruch.track.TrackingMIDlet.wm) { // prefer native lists on phones w/ touchscreen, except WM
             try {
                 l = new ExtList(title, List.IMPLICIT, wpts2strings(sortedWpts), null);
+                l.setFitPolicy(Choice.TEXT_WRAP_OFF);
             } catch (Throwable t) {
                 // ignore - can be IllegalArgumentException due to 255 limit etc
             }
@@ -1733,11 +1805,6 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
 
         // pre-sort
         sortWaypoints(l, sort, forceSort, wpts);
-
-        // set selected
-        if (Desktop.wpts == wpts && Desktop.wptIdx > -1) {
-            l.setMarked(l.indexOf(wpts.elementAt(Desktop.wptIdx)));
-        }
 
         // add commands
         l.setSelectCommand(cmdOpen);
@@ -1751,29 +1818,24 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                     l.addCommand(cmdActionNavigateBack);
                 }
             }
+            l.addCommand(cmdActionGoTo);
+            if (Desktop.wptIdx > -1 && isCache()) {
+                l.addCommand(cmdActionAddFieldNote);
+            }
             if (Desktop.showall) {
                 l.addCommand(cmdActionHideAll);
             } else if (Desktop.routeDir == 0) {
                 l.addCommand(cmdActionShowAll);
             }
-        } else if (Desktop.wpts == null || Desktop.wptIdx == -1) /*if (Desktop.wpts == null)*/ {
+        } else if (Desktop.wpts == null || Desktop.wptIdx == -1) {
             l.addCommand(cmdActionNavigateTo);
             if (sort == SORT_BYORDER) {
                 l.addCommand(cmdActionNavigateAlong);
                 l.addCommand(cmdActionNavigateBack);
             }
+            l.addCommand(cmdActionGoTo);
             l.addCommand(cmdActionShowAll);
         }
-
-/*
-        if (Desktop.wpts == wpts && Desktop.showall) {
-            l.addCommand(cmdHideAll);
-        } else if (Desktop.wpts == null || (Desktop.wpts == wpts && Desktop.routeDir == 0)) {
-            l.addCommand(cmdShowAll);
-        }
-*/
-
-        l.addCommand(cmdActionGoTo);
         l.addCommand(cmdActionSortByOrder);
         l.addCommand(cmdActionSortByName);
         l.addCommand(cmdActionSortByDist);
@@ -1791,20 +1853,28 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
         Desktop.display.setCurrent(Desktop.screen);
     }
 
-    private void appendCached(final Vector v) {
-        if (cachedDisk != null) {
-            final Object[] names = cachedDisk.getData();
-            for (int N = cachedDisk.size(), i = 0; i < N; i++) {
+    private void appendCached(final Vector v, final NakedVector cached, final boolean omitFolders) {
+        if (cached != null) {
+            final Object[] names = cached.getData();
+            for (int N = cached.size(), i = 0; i < N; i++) {
                 final String name = (String) names[i];
-                if (!hideStore(name)) {
+                if (!hideStore(name) && !(omitFolders && File.isDir(name))) {
                     v.addElement(name);
                 }
             }
         }
     }
 
+    private String getStoresFolder() {
+        if (subfolder == null) {
+            return folder;
+        }
+        return folder + subfolder;
+    }
+
     private void use(final UiList l) {
         // gc hint
+        listGc = list;
         list = null;
         // use new
         list = l;
@@ -1824,8 +1894,8 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                     // copy refs from store
                     wpts.copyInto(sortedWpts.getData());
                     // update list
-                    if (list instanceof List) { // FIXME
-                        wpts2list((List) list, sortedWpts);
+                    if (list instanceof ExtList) { // FIXME
+                        wpts2list((ExtList) list, sortedWpts);
                     }
                     // route navigation avail
                     list.addCommand(cmdActionNavigateAlong);
@@ -1843,8 +1913,8 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                         // gc hint
                         _pointer = null;
                         // update list
-                        if (list instanceof List) { // FIXME
-                            wpts2list((List) list, sortedWpts);
+                        if (list instanceof ExtList) { // FIXME
+                            wpts2list((ExtList) list, sortedWpts);
                         }
                     } finally {
                         // may take some time - start ticker
@@ -1873,7 +1943,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
     }
 
     private void useCurrent() {
-        if (inUseName != null) {
+        if (inUseName != null && !inUseName.equals(currentName)) {
             stores.remove(inUseName);
         }
         inUseName = currentName;
@@ -1924,7 +1994,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
     /**
      * @deprecated be smarter 
      */
-    private static void wpts2list(final List list, final NakedVector wpts) {
+    private static void wpts2list(final ExtList list, final NakedVector wpts) {
         final Object[] data = wpts.getData();
         for (int N = wpts.size(), i = 0; i < N; i++) {
             list.set(i, data[i].toString(), null);

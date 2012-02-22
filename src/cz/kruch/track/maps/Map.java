@@ -395,7 +395,7 @@ public final class Map implements Runnable {
             if (bufferedIn == null) {
 //#ifdef __SYMBIAN__
                 if (isTar && Config.useNativeService && Map.networkInputStreamAvailable) {
-                    bufferedIn = new BufferedInputStream(null, 26280 - 8); // 18 * 1460 (MSS) is good for network
+                    bufferedIn = new BufferedInputStream(null, 26280 - 8); // 26280 = 18 * 1460 (MSS) is good for network
                 } else {
                     bufferedIn = new BufferedInputStream(null, BUFFERSIZE);
                 }
@@ -678,11 +678,11 @@ public final class Map implements Runnable {
     }
 
     /* stream characteristic */
+    public static String fileInputStreamClass;
     public static int fileInputStreamResetable;
     public static boolean hasSEbug;
 //#ifdef __SYMBIAN__
     public static boolean networkInputStreamAvailable = true;
-    public static String fileInputStreamClass;
 //#endif
     /* behaviour flags */
     public static boolean useReset = true;

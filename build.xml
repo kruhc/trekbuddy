@@ -36,7 +36,8 @@
 
     <taskdef resource="antenna.properties" classpath="lib/antenna-bin-1.0.2.jar"/>
     <taskdef name="otaJad" classname="RimOtaJadSha" classpath="${basedir}/tools/classes"/>
-    
+    <taskdef name="barManifest" classname="BarManifestVersion" classpath="${basedir}/tools/classes"/>
+
     <path id="bootclasspath.standard">
         <pathelement location="${wtk.home}\lib\cldcapi11.jar"/>
         <pathelement location="${wtk.home}\lib\midpapi20.jar"/>
@@ -363,7 +364,9 @@
     </target>
 
     <target name="playbook">
-        <mkdir dir="dist\public\playbook"/>
+        <delete includeemptydirs="true" verbose="true">
+          <fileset dir="dist/${vendor.dir}/playbook" excludes="build.log"/>
+        </delete>
         <copy file="dist\public\android\trekbuddy.apk" todir="dist\public\playbook"/>
         <java classname="net.rim.tools.apk2bar.verifier.Apk2BarVerifier"
               fork="true"
@@ -379,6 +382,24 @@
               failonerror="true"
               maxmemory="512m">
             <arg line="dist\public\playbook\trekbuddy.apk ${android.home} -a kruch"/>
+            <classpath>
+                <pathelement location="${android.home}\lib\BARPackager.jar"/>
+                <pathelement location="${android.home}\lib\Apk2Bar-1.0.3.jar"/>
+            </classpath>
+        </java>
+        <unzip src="dist\public\playbook\trekbuddy.bar" dest="dist\public\playbook">
+            <patternset>
+                <include name="META-INF/MANIFEST.MF"/>
+            </patternset>
+        </unzip>
+        <barManifest infile="dist\public\playbook\META-INF\MANIFEST.MF"
+                     outfile="dist\public\playbook\trekbuddy.MF"
+                     appVersion="${version}.0"/>
+        <java classname="net.rim.tools.apk2bar.Apk2bar"
+              fork="true"
+              failonerror="true"
+              maxmemory="512m">
+            <arg line="dist\public\playbook\trekbuddy.apk ${android.home} -m -a kruch"/>
             <classpath>
                 <pathelement location="${android.home}\lib\BARPackager.jar"/>
                 <pathelement location="${android.home}\lib\Apk2Bar-1.0.3.jar"/>
@@ -422,7 +443,7 @@
     <target name="clean">
         <delete dir="tmp"/>
         <delete includeemptydirs="true" verbose="true">
-          <fileset dir="dist/${vendor.dir}/${dist.dir}" includes="**/trekbuddy*"/>
+          <fileset dir="dist/${vendor.dir}/${dist.dir}" includes="**/trekbuddy*" excludes="build.log"/>
         </delete>
         <echo/>
         <echo>Prepared for bulding ${version} version in dist/${vendor.dir}/${dist.dir}</echo>
@@ -680,6 +701,7 @@
     </target>
 
     <target name="remove.android.src">
+        <delete file="tmp/src/api/io/RandomAccessInputStream.java"/>
         <delete file="tmp/src/cz/kruch/track/fun/AndroidCamera.java"/>
         <delete file="tmp/src/cz/kruch/track/location/AndroidBluetoothLocationProvider.java"/>
         <delete file="tmp/src/cz/kruch/track/location/AndroidLocationProvider.java"/>
@@ -917,6 +939,7 @@
             <arg value="-overloadaggressively"/>
             <arg value="-allowaccessmodification"/>
             <arg value="-keep class * implements javax.microedition.midlet.MIDlet"/>
+            <arg value="-keepnames class cz.kruch.track.device.SymbianService$NetworkedInputStream"/>
             <arg value="-keepnames class cz.** extends java.lang.Exception"/>
             <arg value="-keepnames class api.** extends java.lang.Exception"/>
             <arg value="-keepnames class org.** extends java.lang.Exception"/>
@@ -949,6 +972,7 @@
             <arg value="-overloadaggressively"/>
             <arg value="-allowaccessmodification"/>
             <arg value="-keep class * implements javax.microedition.midlet.MIDlet"/>
+            <arg value="-keepnames class cz.kruch.track.device.SymbianService$NetworkedInputStream"/>
             <arg value="-keepnames class cz.** extends java.lang.Exception"/>
             <arg value="-keepnames class api.** extends java.lang.Exception"/>
             <arg value="-keepnames class org.** extends java.lang.Exception"/>
@@ -1041,9 +1065,10 @@
             <arg value="-overloadaggressively"/>
 -->
             <arg value="-keep class * implements javax.microedition.midlet.MIDlet"/>
-            <arg value="-keepnames class cz.** extends java.lang.Exception"/>
+            <arg value="-keepnames class api.io.RandomAccessInputStream"/>
             <arg value="-keepnames class net.trekbuddy.midlet.Runtime"/>
             <arg value="-keepnames class net.trekbuddy.midlet.IRuntime"/>
+            <arg value="-keepnames class cz.** extends java.lang.Exception"/>
             <arg value="-keepnames class api.** extends java.lang.Exception"/>
             <arg value="-keepnames class org.** extends java.lang.Exception"/>
             <arg value="-whyareyoukeeping class net.trekbuddy.midlet.IRuntime"/>
@@ -1082,6 +1107,7 @@
             <arg value="-renamesourcefileattribute TrekBuddy"/>
             <arg value="-keepattributes SourceFile,LineNumberTable"/>
             <arg value="-keep class * implements javax.microedition.midlet.MIDlet"/>
+            <arg value="-keepnames class api.io.RandomAccessInputStream"/>
             <arg value="-keepnames class net.trekbuddy.midlet.Runtime"/>
             <arg value="-keepnames class net.trekbuddy.midlet.IRuntime"/>
             <arg value="-keepnames class cz.** extends java.lang.Exception"/>

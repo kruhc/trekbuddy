@@ -86,6 +86,7 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
     private ChoiceGroup choiceEasyzoom;
     private ChoiceGroup choiceZoomSpots;
     private ChoiceGroup choiceGuideSpots;
+    private ChoiceGroup choiceListMode;
 
     private List pane;
     private Form submenu;
@@ -269,7 +270,16 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
                 hexstr.insert(0, '0');
             }
             submenu.append(fieldListFont = new TextField(Resources.getString(Resources.CFG_DESKTOP_FLD_LIST_FONT), hexstr.toString(), 10, TextField.ANY));
-            
+
+            // list mode
+            if (Desktop.screen.hasPointerEvents()) {
+                choiceListMode = new ChoiceGroup(Resources.getString(Resources.CFG_DESKTOP_GROUP_LIST_MODE), ChoiceGroup.POPUP);
+                choiceListMode.append(Resources.getString(Resources.CFG_DESKTOP_FLD_MODE_DEFAULT), null);
+                choiceListMode.append(Resources.getString(Resources.CFG_DESKTOP_FLD_MODE_CUSTOM), null);
+                choiceListMode.setSelectedIndex(Config.extListMode, true);
+                submenu.append(choiceListMode);
+            }
+
             // CMS cycling
             submenu.append(fieldCmsCycle = new TextField(Resources.getString(Resources.CFG_DESKTOP_FLD_CMS_CYCLE), Integer.toString(Config.cmsCycle), 4, /*TextField.*/NUMERIC));
 
@@ -829,6 +839,7 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
                 if (Desktop.screen.hasPointerEvents()) {
                     Config.zoomSpotsMode = choiceZoomSpots.getSelectedIndex();
                     Config.guideSpotsMode = choiceGuideSpots.getSelectedIndex();
+                    Config.extListMode = choiceListMode.getSelectedIndex();
                 }
                 Config.easyZoomMode = choiceEasyzoom.getSelectedIndex();
                 Config.desktopFontSize = gaugeDesktopFont.getValue();

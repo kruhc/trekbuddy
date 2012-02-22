@@ -99,11 +99,13 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
             }
 //#endif
             if (in == null) {
+//#ifdef __ANDROID__
+                in = new api.io.RandomAccessInputStream(map.getPath());
+//#else
                 in = nativeFile.openInputStream();
+//#endif
             }
-//#ifdef __SYMBIAN__
             Map.fileInputStreamClass = in.getClass().getName();
-//#endif        
 
             /*
             * test quality of File API

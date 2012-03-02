@@ -7,12 +7,20 @@ public final class Int {
         this.value = value;
     }
 
-    public int getValue() {
+    public int intValue() {
         return value;
     }
 
     public void setValue(int value) {
         this.value = value;
+    }
+
+    public int inc() {
+        return ++value;
+    }
+
+    public int dec() {
+        return --value;
     }
 
     public Int _clone() {
@@ -24,10 +32,7 @@ public final class Int {
     }
 
     public boolean equals(Object object) {
-        if (object instanceof Int) {
-            return ((Int) object).value == value;
-        }
-        return false;
+        return object instanceof Int && ((Int) object).value == value;
     }
 
     public String toString() {

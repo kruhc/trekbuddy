@@ -197,7 +197,7 @@ public final class GroundspeakBean {
         return '?';
     }
 
-    private static String cache(String input) {
+    static String cache(String input) {
         final Vector tokens = GroundspeakBean.tokens;
         final int i = tokens.indexOf(input);
         if (i > -1) {

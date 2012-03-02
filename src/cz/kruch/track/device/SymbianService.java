@@ -36,7 +36,7 @@ public final class SymbianService {
      * @return instance of <code>InputStream</code>
      * @throws IOException if the connection to <b>TrekBuddyService</b> cannot be opened
      */
-    public static InputStream openInputStream(String name) throws IOException {
+    public static InputStream openInputStream(final String name) throws IOException {
         return new NetworkedInputStream(name);
     }
 
@@ -61,8 +61,8 @@ public final class SymbianService {
      *
      * @throws IOException if anything goes wrong
      */
-    private static void sendPacket(final OutputStream output,
-                                   final byte action, final int param) throws IOException {
+    static void sendPacket(final OutputStream output,
+                           final byte action, final int param) throws IOException {
         PKT[0] = (byte)0xFF;
         PKT[1] = (byte)0xEB;
         PKT[2] = (byte)0x00;
@@ -85,9 +85,9 @@ public final class SymbianService {
      *
      * @throws IOException if anything goes wrong
      */
-    private static void sendPacketEx(final OutputStream output,
-                                     final byte action, final int param,
-                                     final byte[] extra) throws IOException {
+    static void sendPacketEx(final OutputStream output,
+                             final byte action, final int param,
+                             final byte[] extra) throws IOException {
         final byte[] large = new byte[8 + extra.length];
         large[0] = (byte)0xFF;
         large[1] = (byte)0xEB;
@@ -102,7 +102,7 @@ public final class SymbianService {
         output.flush();
     }
 
-	private static StreamConnection openConnection(String url) throws IOException {
+	static StreamConnection openConnection(final String url) throws IOException {
         final SocketConnection connection = (SocketConnection) Connector.open(url, Connector.READ_WRITE);
         connection.setSocketOption(SocketConnection.DELAY, 0);
 //        connection.setSocketOption(SocketConnection.SNDBUF, 8); // request packet size

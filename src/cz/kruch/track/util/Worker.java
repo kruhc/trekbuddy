@@ -75,6 +75,20 @@ public final class Worker extends Thread {
         }
     }
 
+//#ifdef __HECL__
+
+    public Runnable peek() {
+        final Vector tasks = this.tasks;
+        synchronized (this) {
+            if (tasks.size() > 0) {
+                return (Runnable) tasks.elementAt(tasks.size() - 1);
+            }
+        }
+        return null;
+    }
+
+//#endif
+
     public void run() {
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("thread starting...");

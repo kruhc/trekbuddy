@@ -1497,7 +1497,7 @@ public final class HXmlParser implements XmlPullParser {
     }
 
     public int getHash() {
-        return hash.getValue();
+        return hash.intValue();
     }
     
     public boolean isEmptyElementTag() throws XmlPullParserException {

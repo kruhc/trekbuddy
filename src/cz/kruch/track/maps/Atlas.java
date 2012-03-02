@@ -25,6 +25,7 @@ public final class Atlas implements Runnable {
 
     // interaction with outside world
     private String url;
+    private String name;
     private /*StateListener*/ Desktop listener;
 
     // atlas state
@@ -35,8 +36,9 @@ public final class Atlas implements Runnable {
     // special properties
     boolean virtual;
 
-    public Atlas(String url, /*StateListener*/Desktop listener) {
+    public Atlas(String url, String name, /*StateListener*/Desktop listener) {
         this.url = url;
+        this.name = name;
         this.listener = listener;
         this.layers = new Hashtable();
         this.maps = new Hashtable();
@@ -46,6 +48,10 @@ public final class Atlas implements Runnable {
         return url;
     }
 
+    public String getName() {
+        return name;
+    }
+    
     public Enumeration getLayers() {
         return layers.keys();
     }

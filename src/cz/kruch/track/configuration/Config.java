@@ -3,9 +3,9 @@
 package cz.kruch.track.configuration;
 
 import cz.kruch.track.util.CharArrayTokenizer;
-import cz.kruch.track.util.Worker;
 import cz.kruch.track.io.LineReader;
 import cz.kruch.track.ui.YesNoDialog;
+import cz.kruch.track.event.Callback;
 
 import javax.microedition.rms.RecordStore;
 import javax.microedition.io.Connector;
@@ -81,6 +81,9 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
     public static final String FOLDER_RESOURCES    = "resources/";
     public static final String FOLDER_SOUNDS       = "sounds/";
     public static final String FOLDER_GC           = "gc/";
+//#ifdef __HECL__
+    public static final String FOLDER_PLUGINS      = "plugins/";
+//#endif
 
     private static final String DATUMS_FILE = "datums.txt";
     
@@ -95,6 +98,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
     /* rms stores */
     public static final String VARS_090             = "vars_090";
     public static final String CONFIG_090           = "config_090";
+    public static final String PLUGIN_110           = "plugin_110_";
 
     public static final String EMPTY_STRING        = "";
 
@@ -170,14 +174,14 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
     public static boolean noQuestions;
     public static boolean uiNoCommands;
     public static boolean easyZoomVolumeKeys;
-    /*public static Boolean showZoomSpots, showGuideSpots;*/
+    public static boolean uiNoItemCommands;
     public static int desktopFontSize;
     public static int osdAlpha                  = 0xA0;
     public static int cmsCycle;
     public static int listFont                  = 0x200000;
-    public static boolean uiNoItemCommands;
     public static int zoomSpotsMode             = 2; // autohide
     public static int guideSpotsMode            = 2; // autohide
+    public static int prescale                  = 100; // 100%
 
     // [Units]
     public static int units;
@@ -205,6 +209,8 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
     public static boolean lowmemIo;
     public static boolean numericInputHack;
     public static boolean externalConfigBackup;
+    public static boolean tilesScaleFiltered;
+    public static int heclOpt                   = 1;
 
     // group [GPX options]
     public static int gpxDt                     = 60; // 1 min
@@ -284,9 +290,17 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
 //#elifdef __ANDROID__
 
         /* default for Android (MicroEmu) */
-        dataDir = getDefaultDataDir("file:///sdcard/", "TrekBuddy/");
+        if (android.os.Build.MODEL.indexOf("BlackBerry") > -1) {
+            cz.kruch.track.TrackingMIDlet.playbook = true;
+//            System.setProperty("fileconn.dir.memorycard", "file:///accounts/1000/shared/misc/android/");
+//            dataDir = "file:///accounts/1000/shared/misc/android/TrekBuddy/";
+            dataDir = getDefaultDataDir("file:///sdcard/", "TrekBuddy/");
+        } else {
+            dataDir = getDefaultDataDir("file:///sdcard/", "TrekBuddy/");
+        }
         desktopFontSize = 1;
         listFont = 0x200010;
+        tilesScaleFiltered = true;
 
 //#else
 
@@ -454,90 +468,90 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         tracklog = din.readInt();
         gpxOnlyValid = din.readBoolean();
 
+        // 0.9.66 extensions
+        units = din.readInt();
+
+        // 0.9.69 extensions
+        o2Depth = din.readInt();
+        siemensIo = din.readBoolean();
+
+        // 0.9.70 extensions
+        largeAtlases = din.readBoolean();
+        gpxGsmInfo = din.readBoolean();
+
+        // 0.9.74 extensions
+        osdAlpha = din.readInt();
+
+        // 0.9.77 extensions
+        btKeepAlive = din.readInt();
+
+        // 0.9.78 extensions
+        cmsCycle = din.readInt();
+
+        // 0.9.79 extensions
+        trailColor = din.readInt();
+        trailThick = din.readInt();
+        routeColor = din.readInt();
+        routeThick = din.readInt();
+
+        // 0.9.81 extensions
+        makeRevisions = din.readBoolean();
+        autohideNotification = din.readBoolean();
+        preferGsName = din.readBoolean();
+        safeColors = din.readBoolean();
+
+        // 0.9.82 extensions
+        powerSave = din.readBoolean();
+        snapshotFormatIdx = din.readInt();
+        cfmt = din.readInt();
+        sort = din.readInt();
+
+        // 0.9.85 extensions
+        listFont = din.readInt();
+
+        // 0.9.88 extensions
+        altCorrection = din.readInt();
+        gpxSecsDecimal = din.readBoolean();
+
+        // 0.9.91 extensions
+        negativeAltFix = din.readBoolean();
+
+        // 0.9.92 extensions
+        desktopFontSize = din.readInt();
+        startupScreen = din.readInt();
+
+        // 0.9.94 extensions
+        noQuestions = din.readBoolean();
+        reliableInput = din.readBoolean();
+
+        // 0.9.95 extensions
+        hideBarCmd = din.readBoolean();
+
+        // 0.9.96 extensions
+        useNativeService = din.readBoolean();
+        lazyGpxParsing = din.readBoolean();
+        assistedGps = din.readBoolean();
+
+        // 0.9.97 extensions
+        btDoServiceSearch = din.readBoolean();
+        uiNoCommands = din.readBoolean();
+        powerUsage = din.readInt();
+
+        // 0.9.98 extensions
+        btAddressWorkaround = din.readBoolean();
+        lowmemIo = din.readBoolean();
+        timeFix = din.readBoolean();
+
+        // 1.0.2 change
+        altCorrection = din.readFloat();
+
+        // 1.0.4 change
+        numericInputHack = din.readBoolean();
+
+        // 1.0.5 change
+        externalConfigBackup = din.readBoolean();
+
         try {
-            // 0.9.66 extensions
-            units = din.readInt();
-
-            // 0.9.69 extensions
-            o2Depth = din.readInt();
-            siemensIo = din.readBoolean();
-
-            // 0.9.70 extensions
-            largeAtlases = din.readBoolean();
-            gpxGsmInfo = din.readBoolean();
-
-            // 0.9.74 extensions
-            osdAlpha = din.readInt();
-
-            // 0.9.77 extensions
-            btKeepAlive = din.readInt();
-
-            // 0.9.78 extensions
-            cmsCycle = din.readInt();
-
-            // 0.9.79 extensions
-            trailColor = din.readInt();
-            trailThick = din.readInt();
-            routeColor = din.readInt();
-            routeThick = din.readInt();
-
-            // 0.9.81 extensions
-            makeRevisions = din.readBoolean();
-            autohideNotification = din.readBoolean();
-            preferGsName = din.readBoolean();
-            safeColors = din.readBoolean();
-
-            // 0.9.82 extensions
-            powerSave = din.readBoolean();
-            snapshotFormatIdx = din.readInt();
-            cfmt = din.readInt();
-            sort = din.readInt();
-
-            // 0.9.85 extensions
-            listFont = din.readInt();
-
-            // 0.9.88 extensions
-            altCorrection = din.readInt();
-            gpxSecsDecimal = din.readBoolean();
-
-            // 0.9.91 extensions
-            negativeAltFix = din.readBoolean();
-
-            // 0.9.92 extensions
-            desktopFontSize = din.readInt();
-            startupScreen = din.readInt();
-
-            // 0.9.94 extensions
-            noQuestions = din.readBoolean();
-            reliableInput = din.readBoolean();
-
-            // 0.9.95 extensions
-            hideBarCmd = din.readBoolean();
-
-            // 0.9.96 extensions
-            useNativeService = din.readBoolean();
-            lazyGpxParsing = din.readBoolean();
-            assistedGps = din.readBoolean();
-
-            // 0.9.97 extensions
-            btDoServiceSearch = din.readBoolean();
-            uiNoCommands = din.readBoolean();
-            powerUsage = din.readInt();
-
-            // 0.9.98 extensions
-            btAddressWorkaround = din.readBoolean();
-            lowmemIo = din.readBoolean();
-            timeFix = din.readBoolean();
-
-            // 1.0.2 change
-            altCorrection = din.readFloat();
-
-            // 1.0.4 change
-            numericInputHack = din.readBoolean();
-
-            // 1.0.5 change
-            externalConfigBackup = din.readBoolean();
-
             // 1.0.10 change
             easyZoomMode = din.readInt();
 
@@ -557,6 +571,9 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
 
             // 1.0.24 change
             extListMode = din.readInt();
+            heclOpt = din.readInt();
+            prescale = din.readInt();
+            tilesScaleFiltered = din.readBoolean();
 
         } catch (Exception e) {
         }
@@ -694,6 +711,9 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         dout.writeInt(guideSpotsMode);
         /* since 1.0.24 */
         dout.writeInt(extListMode);
+        dout.writeInt(heclOpt);
+        dout.writeInt(prescale);
+        dout.writeBoolean(tilesScaleFiltered);
 
 //#ifdef __LOG__
         if (log.isEnabled()) log.info("configuration updated");
@@ -729,7 +749,11 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         }
     }
 
-    private static int initialize(final String rms) throws ConfigurationException {
+    public static int initialize(final String rms) throws ConfigurationException {
+        return initialize(rms, null);
+    }
+
+    public static int initialize(final String rms, final Callback callback) throws ConfigurationException {
         int result;
 
         RecordStore rs = null;
@@ -747,8 +771,14 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
                 din = new DataInputStream(new ByteArrayInputStream(rs.getRecord(1)));
                 if (CONFIG_090.equals(rms)) {
                     readMain(din);
-                } else {
+                } else if (VARS_090.equals(rms)) {
                     readVars(din);
+                } else {
+                    try {
+                        callback.invoke(din, null, null);
+                    } catch (api.lang.RuntimeException e) {
+                        throw e.getCause();
+                    }
                 }
             }
         } catch (Throwable t) {
@@ -799,6 +829,10 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
     }
 
     public static void update(final String rms) throws ConfigurationException {
+        update(rms, null);
+    }
+
+    public static void update(final String rms, final Callback callback) throws ConfigurationException {
         RecordStore rs = null;
         DataOutputStream dout = null;
 
@@ -807,8 +841,14 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
             dout = new DataOutputStream(data);
             if (CONFIG_090.equals(rms)) {
                 writeMain(dout);
-            } else {
+            } else if (VARS_090.equals(rms)) {
                 writeVars(dout);
+            } else {
+                try {
+                    callback.invoke(dout, null, null);
+                } catch (api.lang.RuntimeException e) {
+                    throw e.getCause();
+                }
             }
             dout.flush();
             final byte[] bytes = data.toByteArray();
@@ -915,6 +955,9 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
             final String[] folders = {
                 FOLDER_MAPS, FOLDER_NMEA, FOLDER_PROFILES, FOLDER_RESOURCES,
                 FOLDER_SOUNDS, FOLDER_TRACKS, FOLDER_WPTS, FOLDER_GC
+//#ifdef __HECL__
+                , FOLDER_PLUGINS
+//#endif                    
             };
             File dir = null;
             /* create folder structure */

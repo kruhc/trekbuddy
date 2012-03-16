@@ -24,7 +24,8 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
     public static String version;
     public static boolean jsr82, jsr120, jsr135, jsr179, jsr234, jsr256, motorola179, comm, nokiaui14;
     public static boolean sonyEricsson, sonyEricssonEx, nokia, siemens, lg, motorola, samsung, sonim;
-    public static boolean j9, jbed, jblend, intent, wm, palm, rim, symbian, s60nd, s60rdfp2, uiq, brew, android;
+    public static boolean j9, jbed, jblend, intent, wm, palm, rim, symbian, s60nd, s60rdfp2, uiq, brew,
+                          android, playbook;
     public static boolean sxg75, a780, s65;
 
     // diagnostics

@@ -135,7 +135,7 @@ final class Jsr120Friends extends Friends implements MessageListener, Runnable {
                 // decode message type
                 final CharArrayTokenizer tokenizer = new CharArrayTokenizer();
                 tokenizer.init(text, new char[]{ ',', '*' }, false);
-                final String header = tokenizer.next().toString();
+                final String header = tokenizer.nextTrim();
                 String type = null;
                 String chat = null;
                 if (TBSMS_IAH.equals(header)) {
@@ -150,12 +150,12 @@ final class Jsr120Friends extends Friends implements MessageListener, Runnable {
                     Desktop.showWarning(Resources.getString(Resources.DESKTOP_MSG_UNKNOWN_SMS) + " '" + text + "'", null, null);
                 } else {
                     // get tokens
-                    final String times = tokenizer.next().toString();
-                    final String latv = tokenizer.next().toString();
-                    final String lats = tokenizer.next().toString();
-                    final String lonv = tokenizer.next().toString();
-                    final String lons = tokenizer.next().toString();
-                    final String unknown = tokenizer.next().toString();
+                    final String times = tokenizer.nextTrim();
+                    final String latv = tokenizer.nextTrim();
+                    final String lats = tokenizer.nextTrim();
+                    final String lonv = tokenizer.nextTrim();
+                    final String lons = tokenizer.nextTrim();
+                    final String unknown = tokenizer.nextTrim();
                     if (tokenizer.hasMoreTokens()) {
                         chat += unknown;
                     } else {
@@ -179,7 +179,7 @@ final class Jsr120Friends extends Friends implements MessageListener, Runnable {
                     final Waypoint wpt = new StampedWaypoint(QualifiedCoordinates.newInstance(lat, lon),
                                                              address, chat, time);
 
-                    // notify
+                    // notify - can call directly, we are running in our own thread
                     Waypoints.getInstance().invoke(wpt, null, this);
                 }
             }
@@ -189,21 +189,28 @@ final class Jsr120Friends extends Friends implements MessageListener, Runnable {
     }
 
     private void execSend() {
+        Throwable throwable = null;
         MessageConnection connection = null;
         try {
             connection = (MessageConnection) Connector.open(url, Connector.WRITE);
             final TextMessage sms = (TextMessage) connection.newMessage(MessageConnection.TEXT_MESSAGE);
             sms.setPayloadText(text);
             connection.send(sms);
-            Desktop.showConfirmation(Resources.getString(Resources.DESKTOP_MSG_SMS_SENT), null);
         } catch (Throwable t) {
-            Desktop.showError(Resources.getString(Resources.DESKTOP_MSG_SMS_SEND_FAILED)+ " [" + url + "]", t, null);
+            throwable = t;
         } finally {
             try {
                 connection.close();
             } catch (Exception e) { // IOE or NPE
                 // ignore
             }
+            connection = null;
+        }
+        if (throwable == null) {
+            Desktop.showConfirmation(Resources.getString(Resources.DESKTOP_MSG_SMS_SENT), null);
+        } else {
+            Desktop.showError(Resources.getString(Resources.DESKTOP_MSG_SMS_SEND_FAILED)+ " [" + url + "]",
+                              throwable, null);
         }
     }
 

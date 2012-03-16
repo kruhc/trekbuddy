@@ -1,6 +1,7 @@
 package cz.kruch.track.ui;
 
 import cz.kruch.track.util.NakedVector;
+import cz.kruch.track.util.ImageUtils;
 import cz.kruch.track.configuration.Config;
 
 import javax.microedition.lcdui.List;
@@ -37,16 +38,16 @@ final class ExtList extends List implements UiList {
             }
         }
         if (iconSize < NavigationScreens.wptSize2 << 1) {
-            this.awpt = NavigationScreens.resizeImage(NavigationScreens.waypoint,
-                                                      iconSize, iconSize,
-                                                      NavigationScreens.SLOW_RESAMPLE);
+            this.awpt = ImageUtils.resizeImage(NavigationScreens.waypoint,
+                                               iconSize, iconSize,
+                                               ImageUtils.SLOW_RESAMPLE);
         } else {
             this.awpt = NavigationScreens.waypoint;
         }
         if (iconSize < NavigationScreens.selectedSize2 << 1) {
-            this.selected = NavigationScreens.resizeImage(NavigationScreens.selected,
-                                                          iconSize, iconSize,
-                                                          NavigationScreens.SLOW_RESAMPLE);
+            this.selected = ImageUtils.resizeImage(NavigationScreens.selected,
+                                                   iconSize, iconSize,
+                                                   ImageUtils.SLOW_RESAMPLE);
         } else {
             this.selected = NavigationScreens.selected;
         }
@@ -58,6 +59,17 @@ final class ExtList extends List implements UiList {
 
     public void setData(NakedVector data) {
         this.items = data;
+    }
+
+    public void setAll(String[] stringElements) {
+//#ifndef __ANDROID__
+        for (int i = 0, N = stringElements.length; i < N; i++) {
+            set(i, stringElements[i], null);
+        }
+//#else
+        deleteAll();
+        appendAll(stringElements, null);
+//#endif
     }
 
     public Object getSelectedItem() {

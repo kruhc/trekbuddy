@@ -233,10 +233,18 @@ final class LocatorView extends View {
 
         // draw compas
         float course;
+        int ifh, efh;
+        if (Desktop.isHires()) {
+            ifh = 8;
+            efh = 11;
+        } else {
+            ifh = 4;
+            efh = 7;
+        }
 
         // draw internal compass value
         if (orientation != -1) {
-            drawCompas(wHalf, hHalf, fh, 4, graphics, orientation, true,
+            drawCompas(wHalf, hHalf, fh, ifh, graphics, orientation, true,
                        0x00FFD700, 0x00FFAA00);
         }
 
@@ -264,7 +272,7 @@ final class LocatorView extends View {
                     colorHi = 0x001E90FF;
                     colorLo = 0x001560BD;
                 }
-                drawCompas(wHalf, hHalf, fh, 7, graphics, useCourse, fresh, colorHi, colorLo);
+                drawCompas(wHalf, hHalf, fh, efh, graphics, useCourse, fresh, colorHi, colorLo);
             }
         } /* ~ */
 

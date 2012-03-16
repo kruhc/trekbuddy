@@ -57,8 +57,9 @@ public final class Resources {
     public static final short DESKTOP_CMD_STOP                  = 1001;
     public static final short DESKTOP_CMD_PAUSE                 = 1002;
     public static final short DESKTOP_CMD_CONTINUE              = 1003;
-    public static final short DESKTOP_CMD_LOAD_MAP              = 1004;
-    public static final short DESKTOP_CMD_LOAD_ATLAS            = 1005;
+//    public static final short DESKTOP_CMD_LOAD_MAP              = 1004;
+//    public static final short DESKTOP_CMD_LOAD_ATLAS            = 1005;
+    public static final short DESKTOP_CMD_MAPS                  = 1004;
     public static final short DESKTOP_CMD_SETTINGS              = 1006;
     public static final short DESKTOP_CMD_NAVIGATION            = 1007;
     public static final short DESKTOP_CMD_INFO                  = 1008;
@@ -67,6 +68,9 @@ public final class Resources {
     public static final short DESKTOP_CMD_CONNECT               = 1011;
     public static final short DESKTOP_CMD_OPEN                  = 1012;
     public static final short DESKTOP_CMD_SELECT                = 1013;
+//#ifdef __HECL__
+    public static final short DESKTOP_CMD_LIVE                  = 1014;
+//#endif    
     /* desktop - messages */
     public static final short DESKTOP_MSG_FRIENDS_FAILED        = 1300;
     public static final short DESKTOP_MSG_WANT_QUIT             = 1301;
@@ -155,6 +159,7 @@ public final class Resources {
     public static final short DESKTOP_MSG_PUSH_SMS_FAILED       = 1389;
     public static final short DESKTOP_MSG_INVALID_INPUT         = 1390;
     public static final short DESKTOP_MSG_TRACKING_ACTIVE       = 1391;
+    public static final short DESKTOP_MSG_NO_PLUGINS            = 1392;
     /* navigation - commands */
     public static final short NAV_CMD_ROUTE_ALONG               = 2000;
     public static final short NAV_CMD_ROUTE_BACK                = 2001;
@@ -261,6 +266,11 @@ public final class Resources {
     public static final short CFG_ITEM_LOCATION                 = 3102;
     public static final short CFG_ITEM_NAVIGATION               = 3103;
     public static final short CFG_ITEM_MISC                     = 3104;
+    public static final short CFG_ITEM_PLUGINS                  = 3105;
+    /* settings - Plugins */
+    public static final short CFG_PLUGINS_CONFIGURE             = 3180;
+    public static final short CFG_PLUGINS_ENABLE                = 3181;
+    public static final short CFG_PLUGINS_NO_CONFIG             = 3182;
     /* settings - Basic */
     public static final short CFG_BASIC_FLD_START_MAP           = 3400;
     public static final short CFG_BASIC_GROUP_DEFAULT_DATUM     = 3401;
@@ -314,6 +324,7 @@ public final class Resources {
     public static final short CFG_DESKTOP_GROUP_LIST_MODE       = 3533;
     public static final short CFG_DESKTOP_FLD_MODE_DEFAULT      = 3534;
     public static final short CFG_DESKTOP_FLD_MODE_CUSTOM       = 3535;
+    public static final short CFG_DESKTOP_FLD_MAP_PRESCALE      = 3536;
     /* settings - Location */
     public static final short CFG_LOCATION_GROUP_PROVIDER       = 3600;
     public static final short CFG_LOCATION_GROUP_TRACKLOG       = 3601;
@@ -352,7 +363,7 @@ public final class Resources {
     public static final short CFG_NAVIGATION_FLD_POI_PROXIMITY  = 3701;
     public static final short CFG_NAVIGATION_GROUP_ROUTE_LINE   = 3702;
     public static final short CFG_NAVIGATION_FLD_DOTTED         = 3703;
-    public static final short CFG_NAVIGATION_FLD_RED            = 3704;
+//    public static final short CFG_NAVIGATION_FLD_RED            = 3704;
     public static final short CFG_NAVIGATION_FLD_POI_ICONS      = 3705;
     public static final short CFG_NAVIGATION_GROUP_SMS          = 3706;
     public static final short CFG_NAVIGATION_FLD_RECEIVE        = 3707;
@@ -379,6 +390,10 @@ public final class Resources {
     public static final short CFG_TWEAKS_FLD_NUMERIC_INPUT_HACK = 3812;
     public static final short CFG_TWEAKS_FLD_DRAW_MAIN_MENU     = 3813;
     public static final short CFG_TWEAKS_FLD_EXTERNAL_CFG_BACKUP = 3814;
+    public static final short CFG_TWEAKS_HECL_GROUP             = 3815;
+//    public static final short CFG_TWEAKS_HECL_NONE              = 3816;
+//    public static final short CFG_TWEAKS_HECL_PREP              = 3817;
+//    public static final short CFG_TWEAKS_HECL_PRPR              = 3818;
     /* info - commands */
     public static final short INFO_CMD_DETAILS                  = 4000;
     /* info - items */

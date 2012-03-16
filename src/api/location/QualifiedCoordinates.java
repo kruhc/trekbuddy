@@ -133,6 +133,12 @@ public final class QualifiedCoordinates implements GeodeticPosition {
             if (ilat1 > ilat2) {
                 result = 180D;
             }
+        } else if (ilat1 == ilat2) {
+            if (ilon1 > ilon2) {
+                result = 270D;
+            } else {
+                result = 90D;
+            }
         } else {
             final double c = ExtraMath.acos(Math.sin(lat2) * Math.sin(lat1) + Math.cos(lat2) * Math.cos(lat1) * Math.cos((lon2 - lon1)));
             final double A = ExtraMath.asin(Math.cos(lat2) * Math.sin((lon2 - lon1)) / Math.sin(c));

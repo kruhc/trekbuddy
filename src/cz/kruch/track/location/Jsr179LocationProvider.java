@@ -178,6 +178,10 @@ public final class Jsr179LocationProvider
                 timestamp = System.currentTimeMillis();
             }
 //#endif
+            float speed = l.getSpeed();
+            if (cz.kruch.track.TrackingMIDlet.sonim) {
+                speed /= 2;
+            }
 
             // enhance with raw NMEA
             int sat = 0;
@@ -212,7 +216,7 @@ public final class Jsr179LocationProvider
             location = Location.newInstance(qc, timestamp, 1, sat);
 //#endif
             location.setCourse(l.getCourse());
-            location.setSpeed(l.getSpeed());
+            location.setSpeed(speed);
             location.updateFix(extraFix);
             location.updateFixQuality(extraFixQuality);
 

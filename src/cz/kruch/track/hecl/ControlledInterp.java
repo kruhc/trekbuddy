@@ -2,36 +2,53 @@
 
 package cz.kruch.track.hecl;
 
-import org.hecl.*;
+import org.hecl.net.HttpCmd;
+import org.hecl.Interp;
+import org.hecl.Thing;
+import org.hecl.HeclException;
+import org.hecl.CodeThing;
+import org.hecl.NumberThing;
+import org.hecl.FloatThing;
 
 import java.util.Enumeration;
 import java.util.Hashtable;
+import java.io.InputStreamReader;
+import java.io.IOException;
 
 import cz.kruch.track.util.NakedVector;
 import cz.kruch.track.fun.Camera;
 import cz.kruch.track.configuration.Config;
+
 import api.location.QualifiedCoordinates;
 import api.lang.Int;
+import api.io.BufferedInputStream;
+import api.file.File;
 
 import javax.microedition.lcdui.AlertType;
+import javax.microedition.io.Connector;
 
-public final class ControlledInterp extends Interp {
+public class ControlledInterp extends Interp {
 //#ifdef __LOG__
     private static final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("ControlledInterp");
 //#endif
 
     public interface Lookup {
-        public Thing get(String varname);
+        public Thing get(String varname, int units);
     }
 
+    String basedir;
     private Lookup fallback;
     private Hashtable codes;
-    private Int key;
+    private Int key, units;
 
-    public ControlledInterp(boolean background) throws HeclException {
+    public ControlledInterp(String basedir, boolean background) throws HeclException {
         super();
+        this.basedir = basedir;
         this.codes = new Hashtable(16);
         this.key = new Int(0);
+
+        // extensions
+        HttpCmd.load(this);
 
         // internal commands
         addCommand("var", new VarCmd()); // stateful variables support
@@ -45,15 +62,67 @@ public final class ControlledInterp extends Interp {
 
         // process mode
         if (background) {
-            super.start(); // Thread.start();
+//            super.start(); // Thread.start();
+            throw new IllegalStateException("Background execution not supported");
         }
     }
 
-    public void addFallback(Lookup fallback) {
+    public void addFallback(final Lookup fallback, final Int units) {
         this.fallback = fallback;
+        this.units = units;
     }
 
-    public NakedVector getHandlers(String eventName) {
+    public void optimize() {
+        if (Config.heclOpt > 1) {
+            for (Enumeration seq = commands.keys(); seq.hasMoreElements(); ) {
+                final Object key = seq.nextElement();
+                if (commands.get(key) instanceof org.hecl.Proc) {
+                    try {
+                        ((org.hecl.Proc) commands.get(key)).compile(this);
+                    } catch (HeclException e) {
+                        System.out.println("failed to precompile " + key);
+                        e.printStackTrace();
+                    }
+                }
+            }
+        }
+    }
+
+    public void loadUserScripts(final String folder) throws IOException, HeclException {
+        File dir = null;
+
+        try {
+            // open stores directory
+            dir = File.open(folder);
+
+            // parse handlers
+            if (dir.exists()) {
+
+                // load all scripts for given folder
+                for (Enumeration e = dir.list(); e.hasMoreElements(); ) {
+                    final String filename = (String) e.nextElement();
+                    if (filename.endsWith(".hcl") || filename.endsWith(".HCL")) {
+                        
+                        // load script from file
+                        loadUserScript(folder, filename);
+                    }
+                }
+            }
+        } finally {
+            // close dir
+            try {
+                dir.close();
+            } catch (Exception e) { // IOE or NPE
+                // ignore
+            }
+        }
+    }
+
+    public void loadUserScript(final String folder, final String filename) throws IOException, HeclException {
+        evalNoncaching(new Thing(loadAsText(folder + filename)));
+    }
+
+    public NakedVector getHandlers(final String eventName) {
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("find handlers for event: " + eventName);
 //#endif
@@ -66,7 +135,7 @@ public final class ControlledInterp extends Interp {
                 if (log.isEnabled()) log.debug("found handler: " + name);
 //#endif
                 if (v == null) {
-                    v = new NakedVector(4, 4);
+                    v = new NakedVector(4, 2);
                 }
                 v.addElement(commands.get(name));
             }
@@ -80,8 +149,13 @@ public final class ControlledInterp extends Interp {
         // do nothing
     }
 
+    /* @overriden we want threading control */
+    public synchronized void yield() {
+        // do nothing
+    }
+
     /* @overriden */
-    public synchronized Thing eval(Thing in) throws HeclException {
+    public synchronized Thing eval(final Thing in) throws HeclException {
         key.setValue(in.hashCode());
         CodeThing thing = (CodeThing) codes.get(key);
         if (thing == null) {
@@ -91,13 +165,13 @@ public final class ControlledInterp extends Interp {
     }
 
     /* @overriden */
-    public synchronized Thing getVar(String varname, int level) throws HeclException {
+    public synchronized Thing getVar(final String varname, final int level) throws HeclException {
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("interp get var: " + varname);
 //#endif
         
         if (fallback != null) {
-            final Thing res = fallback.get(varname);
+            final Thing res = fallback.get(varname, units.intValue());
             if (res != null) {
 //#ifdef __LOG__
                 if (log.isEnabled()) log.debug("interp " + varname + " is built-in var: " + res);
@@ -146,7 +220,7 @@ public final class ControlledInterp extends Interp {
     }
 
     /* @overriden */
-    public synchronized void setVar(String varname, Thing value, int level) {
+    public synchronized void setVar(final String varname, final Thing value, final int level) {
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("interp setvar " + varname + " " + level + " to " + value);
 //#endif
@@ -186,12 +260,70 @@ public final class ControlledInterp extends Interp {
 */
     }
 
-    public synchronized Thing resolveVar(String varname) throws HeclException {
+    public synchronized Thing resolveVar(final String varname) throws HeclException {
         return super.getVar(varname, 0);
     }
 
-    public synchronized Thing evalNoncaching(Thing in) throws HeclException {
+    public synchronized Thing evalNoncaching(final Thing in) throws HeclException {
         return super.eval(in);
+    }
+
+    private static String loadAsText(final String filename) throws IOException {
+        InputStreamReader reader = null;
+        try {
+            reader = new InputStreamReader(new BufferedInputStream(Connector.openInputStream(filename), 4096));
+            int sol = -1;
+            boolean comment = false;
+            final char[] buffer = new char[1024];
+            final StringBuffer sb = new StringBuffer(4096);
+            int c = reader.read(buffer);
+            while (c != -1) {
+                if (Config.heclOpt > 0) {
+                    for (int i = 0; i < c; i++) {
+                        switch (buffer[i]) {
+                            case '\t': // whitespace
+                                break;
+                            case '\n': // eol
+                                if (sol >= 0) {
+                                    sb.append(buffer, sol, i - sol + 1);
+                                    sol = -1;
+                                }
+                                if (comment) {
+                                    comment = false;
+                                }
+                                break;
+                            case '\r': // ignore
+                                break;
+                            case ' ':  // whitespace
+                                break;
+                            case '#':
+                                if (sol < 0) { // start of line
+                                    comment = true;
+                                }
+                                break;
+                            default:
+                                if (sol < 0 && !comment) {
+                                    sol = i;
+                                }
+                        }
+                    }
+                    if (sol >= 0) {
+                        sb.append(buffer, sol, c - sol);
+                        sol = 0;
+                    }
+                } else {
+                    sb.append(buffer, 0, c);
+                }
+                c = reader.read(buffer);
+            }
+            return sb.toString();
+        } finally {
+            try {
+                reader.close();
+            } catch (Exception e) { // NPE or IOE
+                // ignore
+            }
+        }
     }
 
     private static final class VarCmd implements org.hecl.Command {
@@ -241,9 +373,11 @@ public final class ControlledInterp extends Interp {
                 } break;
                 case CMD_PUTS: {
                     // does nothing
+                    // TODO dangerous
+                    System.out.println(argv[1]);
                 } break;
                 case CMD_PLAY: {
-                    if (!Camera.play(Config.getFolderURL(Config.FOLDER_PROFILES) + argv[1].toString())) {
+                    if (!Camera.play(Config.getFolderURL(((ControlledInterp) interp).basedir) + argv[1].toString())) {
                         AlertType.WARNING.playSound(cz.kruch.track.ui.Desktop.display);
                     }
                 } break;

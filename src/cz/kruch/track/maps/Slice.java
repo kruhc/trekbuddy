@@ -14,7 +14,7 @@ import javax.microedition.lcdui.Image;
  * @author Ales Pour <kruhc@seznam.cz>
  */
 public class Slice {
-    public static Image NO_IMAGE = Image.createImage(4, 4);
+    public static Image NO_IMAGE = Image.createImage(2, 2);
 
     private static final int MAX_XY_VALUE = 0x000fffff; // 1M
     private static final int MAX_WH_VALUE = 0x00000fff; // 4096
@@ -126,9 +126,9 @@ public class Slice {
         hy = h << 20 | y;
     }
 
-    private static int as20b(final int i) throws InvalidMapException {
+    private static long as20b(final int i) throws InvalidMapException {
         if (i <= MAX_XY_VALUE) {
-            return i;
+            return (long) i;
         }
         throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_SLICE_TOO_BIG) + ": " + i);
     }
@@ -171,7 +171,7 @@ public class Slice {
             }
         }
         if (p0 > -1 && p1 > -1) {
-            return (long) as20b(parseInt(array, p0 + 1, p1)) << 20 | as20b(parseInt(array, p1 + 1, i));
+            return as20b(parseInt(array, p0 + 1, p1)) << 20 | as20b(parseInt(array, p1 + 1, i));
         } else {
             throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_INVALID_SLICE_NAME) + token.toString());
         }

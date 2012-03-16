@@ -3,6 +3,7 @@
 package cz.kruch.track.ui;
 
 import cz.kruch.track.Resources;
+import cz.kruch.track.util.NakedVector;
 import cz.kruch.track.configuration.Config;
 import cz.kruch.track.configuration.ConfigurationException;
 import cz.kruch.track.fun.Camera;
@@ -30,6 +31,10 @@ import javax.microedition.lcdui.Spacer;
 import javax.microedition.lcdui.StringItem;
 import java.util.Vector;
 
+//#ifdef __HECL__
+import cz.kruch.track.hecl.PluginManager;
+//#endif
+
 /**
  * Settings forms.
  *
@@ -42,51 +47,35 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
     private final String menuDesktop;
     private final String menuLocation;
     private final String menuNavigation;
+//#ifdef __HECL__
+    private final String menuPlugins;
+//#endif
     private final String menuMisc;
 
     private final Desktop.Event event;
 
-    private TextField fieldMapPath;
-    private ChoiceGroup choiceMapDatum;
-    private ChoiceGroup choiceCoordinates;
-    private ChoiceGroup choiceUnits;
-    private ChoiceGroup choiceScreen;
+    private ChoiceGroup choice1, choice2, choice3, choice4, choice5, choice6, choice7;
     private ChoiceGroup choiceProvider;
+    private ChoiceGroup choiceStream;
+    private ChoiceGroup choiceInternal;
+    private ChoiceGroup choicePower;
     private ChoiceGroup choiceTracklog;
     private ChoiceGroup choiceTracklogFormat;
-    private TextField fieldDataDir;
+    private ChoiceGroup choiceGpx;
+    private ChoiceGroup choiceSnapshotFormat;
+    private TextField field1, field2, field3;
     private TextField fieldCaptureLocator;
     private TextField fieldSnapshotFormat;
-    private ChoiceGroup choiceSnapshotFormat;
     private TextField fieldSimulatorDelay;
     private TextField fieldLocationTimings;
     private TextField fieldCommUrl;
     private TextField fieldBtKeepalive;
     private TextField fieldO2Depth;
-    private ChoiceGroup choiceFriends;
-    private ChoiceGroup choiceMisc;
-    private ChoiceGroup choicePerformance;
-    private TextField fieldWptProximity;
-    private TextField fieldPoiProximity;
-    private ChoiceGroup choiceRouteLine;
-    private ChoiceGroup choiceGpx;
     private TextField fieldGpxDt;
     private TextField fieldGpxDs;
-    private Gauge gaugeDesktopFont;
-    private Gauge gaugeOsdAlpha;
-    private TextField fieldCmsCycle;
-    private ChoiceGroup choiceWaypoints;
-    private Item itemLineCfg;
-    private ChoiceGroup choiceSort;
-    private TextField fieldListFont;
     private TextField fieldAltCorrection;
-    private ChoiceGroup choiceStream;
-    private ChoiceGroup choiceInternal;
-    private ChoiceGroup choicePower;
-    private ChoiceGroup choiceEasyzoom;
-    private ChoiceGroup choiceZoomSpots;
-    private ChoiceGroup choiceGuideSpots;
-    private ChoiceGroup choiceListMode;
+    private Gauge gauge1, gauge2;
+    private Item itemLineCfg;
 
     private List pane;
     private Form submenu;
@@ -104,6 +93,9 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
         this.menuDesktop = Resources.getString(Resources.CFG_ITEM_DESKTOP);
         this.menuLocation = Resources.getString(Resources.CFG_ITEM_LOCATION);
         this.menuNavigation = Resources.getString(Resources.CFG_ITEM_NAVIGATION);
+//#ifdef __HECL__
+        this.menuPlugins = Resources.getString(Resources.CFG_ITEM_PLUGINS);
+//#endif
         this.menuMisc = Resources.getString(Resources.CFG_ITEM_MISC);
         if (Config.numericInputHack) {
             NUMERIC = TextField.ANY;
@@ -120,6 +112,11 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
         pane.append(menuDesktop, null);
         pane.append(menuLocation, null);
         pane.append(menuNavigation, null);
+//#ifdef __HECL__
+        if (PluginManager.getInstance().size() > 0) {
+            pane.append(menuPlugins, null);
+        }
+//#endif
         pane.append(menuMisc, null);
 
         // add command and handling
@@ -132,7 +129,7 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
         Desktop.display.setCurrent(pane);
     }
 
-    private void show(String section) {
+    private void show(final String section) {
         // submenu form
         submenu = new Form(Resources.prefixed(section));
 
@@ -140,75 +137,73 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
 
             // default map path field
             if (File.isFs()) {
-                submenu.append(fieldMapPath = new TextField(Resources.getString(Resources.CFG_BASIC_FLD_START_MAP),
-                                                            Config.mapURL, MAX_URL_LENGTH, TextField.URL));
+                submenu.append(field1 = new TextField(Resources.getString(Resources.CFG_BASIC_FLD_START_MAP),
+                                                      Config.mapURL, MAX_URL_LENGTH, TextField.URL));
             }
 
             // map datum
-            choiceMapDatum = new ChoiceGroup(Resources.getString(Resources.CFG_BASIC_GROUP_DEFAULT_DATUM), Desktop.CHOICE_POPUP_TYPE);
-            choiceMapDatum.setFitPolicy(Choice.TEXT_WRAP_ON);
+            choice1 = new ChoiceGroup(Resources.getString(Resources.CFG_BASIC_GROUP_DEFAULT_DATUM),
+                                      Desktop.CHOICE_POPUP_TYPE);
+            choice1.setFitPolicy(Choice.TEXT_WRAP_ON);
             for (int N = Config.datums.size(), i = 0; i < N; i++) {
                 final String id = ((Datum) Config.datums.elementAt(i)).name;
-                choiceMapDatum.setSelectedIndex(choiceMapDatum.append(id, null), Config.geoDatum.equals(id));
+                choice1.setSelectedIndex(choice1.append(id, null), Config.geoDatum.equals(id));
             }
-            submenu.append(choiceMapDatum);
+            submenu.append(choice1);
 
             // coordinates format
-            choiceCoordinates = new ChoiceGroup(Resources.getString(Resources.CFG_BASIC_GROUP_COORDS_FMT), Desktop.CHOICE_POPUP_TYPE);
-            choiceCoordinates.setFitPolicy(Choice.TEXT_WRAP_ON);
-            choiceCoordinates.append(Resources.getString(Resources.CFG_BASIC_FLD_COORDS_MAPLL), null);
-            choiceCoordinates.append(Resources.getString(Resources.CFG_BASIC_FLD_COORDS_MAPGRID), null);
-            choiceCoordinates.append(Resources.getString(Resources.CFG_BASIC_FLD_COORDS_GCLL), null);
-            choiceCoordinates.append(ProjectionSetup.PROJ_UTM, null);
+            choice2 = new ChoiceGroup(Resources.getString(Resources.CFG_BASIC_GROUP_COORDS_FMT),
+                                      Desktop.CHOICE_POPUP_TYPE);
+            choice2.setFitPolicy(Choice.TEXT_WRAP_ON);
+            choice2.append(Resources.getString(Resources.CFG_BASIC_FLD_COORDS_MAPLL), null);
+            choice2.append(Resources.getString(Resources.CFG_BASIC_FLD_COORDS_MAPGRID), null);
+            choice2.append(Resources.getString(Resources.CFG_BASIC_FLD_COORDS_GCLL), null);
+            choice2.append(ProjectionSetup.PROJ_UTM, null);
             // TODO: add BNG, IG, SG, SUI
-            choiceCoordinates.setSelectedIndex(Config.cfmt, true);
-            submenu.append(choiceCoordinates);
+            choice2.setSelectedIndex(Config.cfmt, true);
+            submenu.append(choice2);
 
             // units format
-            choiceUnits = new ChoiceGroup(Resources.getString(Resources.CFG_BASIC_GROUP_UNITS), Desktop.CHOICE_POPUP_TYPE);
-            choiceUnits.setFitPolicy(Choice.TEXT_WRAP_ON);
-            choiceUnits.append(Resources.getString(Resources.CFG_BASIC_FLD_UNITS_METRIC), null);
-            choiceUnits.append(Resources.getString(Resources.CFG_BASIC_FLD_UNITS_IMPERIAL), null);
-            choiceUnits.append(Resources.getString(Resources.CFG_BASIC_FLD_UNITS_NAUTICAL), null);
-            choiceUnits.setSelectedIndex(Config.units, true);
-            submenu.append(choiceUnits);
+            choice3 = new ChoiceGroup(Resources.getString(Resources.CFG_BASIC_GROUP_UNITS),
+                                      Desktop.CHOICE_POPUP_TYPE);
+            choice3.setFitPolicy(Choice.TEXT_WRAP_ON);
+            choice3.append(Resources.getString(Resources.CFG_BASIC_FLD_UNITS_METRIC), null);
+            choice3.append(Resources.getString(Resources.CFG_BASIC_FLD_UNITS_IMPERIAL), null);
+            choice3.append(Resources.getString(Resources.CFG_BASIC_FLD_UNITS_NAUTICAL), null);
+            choice3.setSelectedIndex(Config.units, true);
+            submenu.append(choice3);
 
             // startup screen
-            choiceScreen = new ChoiceGroup(Resources.getString(Resources.CFG_BASIC_GROUP_START_SCREEN), Desktop.CHOICE_POPUP_TYPE);
-            choiceScreen.setFitPolicy(Choice.TEXT_WRAP_ON);
-            choiceScreen.append(Resources.getString(Resources.CFG_BASIC_FLD_SCREEN_MAP), null);
-            choiceScreen.append(Resources.getString(Resources.CFG_BASIC_FLD_SCREEN_HPS), null);
-            choiceScreen.append(Resources.getString(Resources.CFG_BASIC_FLD_SCREEN_CMS), null);
-            choiceScreen.setSelectedIndex(Config.startupScreen, true);
-            submenu.append(choiceScreen);
+            choice4 = new ChoiceGroup(Resources.getString(Resources.CFG_BASIC_GROUP_START_SCREEN),
+                                      Desktop.CHOICE_POPUP_TYPE);
+            choice4.setFitPolicy(Choice.TEXT_WRAP_ON);
+            choice4.append(Resources.getString(Resources.CFG_BASIC_FLD_SCREEN_MAP), null);
+            choice4.append(Resources.getString(Resources.CFG_BASIC_FLD_SCREEN_HPS), null);
+            choice4.append(Resources.getString(Resources.CFG_BASIC_FLD_SCREEN_CMS), null);
+            choice4.setSelectedIndex(Config.startupScreen, true);
+            submenu.append(choice4);
 
             // datadir
             if (File.isFs()) {
-                submenu.append(fieldDataDir = new TextField(Resources.getString(Resources.CFG_BASIC_FLD_DATA_DIR),
+                submenu.append(field2 = new TextField(Resources.getString(Resources.CFG_BASIC_FLD_DATA_DIR),
                                Config.getDataDir(), MAX_URL_LENGTH, TextField.URL));
             }
 
         } else if (menuDesktop.equals(section)) {
 
             // desktop settings
-            choiceMisc = new ChoiceGroup(Resources.getString(Resources.CFG_DESKTOP_GROUP), ChoiceGroup.MULTIPLE);
-            choiceMisc.append(Resources.getString(Resources.CFG_DESKTOP_FLD_FULLSCREEN), null);
-            choiceMisc.append(Resources.getString(Resources.CFG_DESKTOP_FLD_SAFE_COLORS), null);
-            choiceMisc.append(Resources.getString(Resources.CFG_DESKTOP_FLD_NO_SOUNDS), null);
-            choiceMisc.append(Resources.getString(Resources.CFG_DESKTOP_FLD_NO_QUESTIONS), null);
-            choiceMisc.append(Resources.getString(Resources.CFG_DESKTOP_FLD_NO_COMMANDS), null);
-            choiceMisc.append(Resources.getString(Resources.CFG_DESKTOP_FLD_NO_ITEM_COMMANDS), null);
-            choiceMisc.append(Resources.getString(Resources.CFG_DESKTOP_FLD_TRAJECTORY), null);
-            choiceMisc.append(Resources.getString(Resources.CFG_DESKTOP_FLD_DEC_PRECISION), null);
-            choiceMisc.append(Resources.getString(Resources.CFG_DESKTOP_FLD_HPS_WPT_TRUE_AZI), null);
-            choiceMisc.append(Resources.getString(Resources.CFG_DESKTOP_FLD_EASYZOOM_VOLUME), null);
-            choiceMisc.append(Resources.getString(Resources.CFG_DESKTOP_FLD_OSD_BASIC), null);
-            choiceMisc.append(Resources.getString(Resources.CFG_DESKTOP_FLD_OSD_EXT), null);
-            choiceMisc.append(Resources.getString(Resources.CFG_DESKTOP_FLD_OSD_SCALE), null);
-            choiceMisc.append(Resources.getString(Resources.CFG_DESKTOP_FLD_OSD_NO_BG), null);
-            choiceMisc.append(Resources.getString(Resources.CFG_DESKTOP_FLD_OSD_BOLD_FONT), null);
-            choiceMisc.append(Resources.getString(Resources.CFG_DESKTOP_FLD_OSD_BLACK), null);
-            choiceMisc.setSelectedFlags(new boolean[] {
+            choice1 = new ChoiceGroup(Resources.getString(Resources.CFG_DESKTOP_GROUP), ChoiceGroup.MULTIPLE);
+            choice1.append(Resources.getString(Resources.CFG_DESKTOP_FLD_FULLSCREEN), null);
+            choice1.append(Resources.getString(Resources.CFG_DESKTOP_FLD_SAFE_COLORS), null);
+            choice1.append(Resources.getString(Resources.CFG_DESKTOP_FLD_NO_SOUNDS), null);
+            choice1.append(Resources.getString(Resources.CFG_DESKTOP_FLD_NO_QUESTIONS), null);
+            choice1.append(Resources.getString(Resources.CFG_DESKTOP_FLD_NO_COMMANDS), null);
+            choice1.append(Resources.getString(Resources.CFG_DESKTOP_FLD_NO_ITEM_COMMANDS), null);
+            choice1.append(Resources.getString(Resources.CFG_DESKTOP_FLD_TRAJECTORY), null);
+            choice1.append(Resources.getString(Resources.CFG_DESKTOP_FLD_DEC_PRECISION), null);
+            choice1.append(Resources.getString(Resources.CFG_DESKTOP_FLD_HPS_WPT_TRUE_AZI), null);
+            choice1.append(Resources.getString(Resources.CFG_DESKTOP_FLD_EASYZOOM_VOLUME), null);
+            choice1.setSelectedFlags(new boolean[] {
                 Config.fullscreen,
                 Config.safeColors,
                 Config.noSounds,
@@ -218,42 +213,27 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
                 Config.trailOn,
                 Config.decimalPrecision,
                 Config.hpsWptTrueAzimuth,
-                Config.easyZoomVolumeKeys,
+                Config.easyZoomVolumeKeys
+            });
+            submenu.append(choice1);
+
+            // OSD settings
+            choice2 = new ChoiceGroup("OSD", ChoiceGroup.MULTIPLE);
+            choice2.append(Resources.getString(Resources.CFG_DESKTOP_FLD_OSD_BASIC), null);
+            choice2.append(Resources.getString(Resources.CFG_DESKTOP_FLD_OSD_EXT), null);
+            choice2.append(Resources.getString(Resources.CFG_DESKTOP_FLD_OSD_SCALE), null);
+            choice2.append(Resources.getString(Resources.CFG_DESKTOP_FLD_OSD_NO_BG), null);
+            choice2.append(Resources.getString(Resources.CFG_DESKTOP_FLD_OSD_BOLD_FONT), null);
+            choice2.append(Resources.getString(Resources.CFG_DESKTOP_FLD_OSD_BLACK), null);
+            choice2.setSelectedFlags(new boolean[] {
                 Config.osdBasic,
                 Config.osdExtended,
                 Config.osdScale,
                 Config.osdNoBackground,
                 Config.osdBoldFont,
-                Config.osdBlackColor,
+                Config.osdBlackColor
             });
-            submenu.append(choiceMisc);
-
-            // icons appearance
-            if (Desktop.screen.hasPointerEvents()) {
-                choiceZoomSpots = new ChoiceGroup(Resources.getString(Resources.CFG_DESKTOP_GROUP_ZOOM_SPOTS), ChoiceGroup.POPUP);
-                choiceZoomSpots.append(Resources.getString(Resources.CFG_LOCATION_FLD_TRACKLOG_NEVER), null);
-                choiceZoomSpots.append(Resources.getString(Resources.CFG_LOCATION_FLD_TRACKLOG_ALWAYS), null);
-                choiceZoomSpots.append(Resources.getString(Resources.CFG_DESKTOP_FLD_HIDE_AFTER) + " 3s", null);
-                choiceZoomSpots.setSelectedIndex(Config.zoomSpotsMode, true);
-                submenu.append(choiceZoomSpots);
-                choiceGuideSpots = new ChoiceGroup(Resources.getString(Resources.CFG_DESKTOP_GROUP_GUIDE_SPOTS), ChoiceGroup.POPUP);
-                choiceGuideSpots.append(Resources.getString(Resources.CFG_LOCATION_FLD_TRACKLOG_NEVER), null);
-                choiceGuideSpots.append(Resources.getString(Resources.CFG_LOCATION_FLD_TRACKLOG_ALWAYS), null);
-                choiceGuideSpots.append(Resources.getString(Resources.CFG_DESKTOP_FLD_HIDE_AFTER) + " 3s", null);
-                choiceGuideSpots.setSelectedIndex(Config.guideSpotsMode, true);
-                submenu.append(choiceGuideSpots);
-            }
-
-            // easyzoom
-            choiceEasyzoom = new ChoiceGroup(Resources.getString(Resources.CFG_DESKTOP_GROUP_EASYZOOM), ChoiceGroup.POPUP);
-            choiceEasyzoom.append(Resources.getString(Resources.CFG_DESKTOP_FLD_EASYZOOM_OFF), null);
-            choiceEasyzoom.append(Resources.getString(Resources.CFG_DESKTOP_FLD_EASYZOOM_LAYERS), null);
-//            choiceEasyzoom.append(Resources.getString(Resources.CFG_DESKTOP_FLD_EASYZOOM_MAPS), null);
-            choiceEasyzoom.setSelectedIndex(Config.easyZoomMode, true);
-            submenu.append(choiceEasyzoom);
-            
-            // font
-            submenu.append(gaugeDesktopFont = new Gauge(Resources.getString(Resources.CFG_DESKTOP_FLD_FONT_SIZE), true, 2, Config.desktopFontSize));
+            submenu.append(choice2);
 
             // OSD transparency
             int alphaSteps = Desktop.display.numAlphaLevels();
@@ -262,26 +242,66 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
             }
             gaugeAlphaScale = 0x100 / alphaSteps;
             final int value = Config.osdAlpha / gaugeAlphaScale;
-            submenu.append(gaugeOsdAlpha = new Gauge(Resources.getString(Resources.CFG_DESKTOP_TRANSPARENCY), true, alphaSteps, value));
+            submenu.append(gauge2 = new Gauge(Resources.getString(Resources.CFG_DESKTOP_TRANSPARENCY),
+                                              true, alphaSteps, value));
+
+            // map prescale
+            submenu.append(field3 = new TextField(Resources.getString(Resources.CFG_DESKTOP_FLD_MAP_PRESCALE) + " (100% - 270%)",
+                                                  Integer.toString(Config.prescale),
+                                                  3, /*TextField.*/NUMERIC));
+
+            // icons appearance
+            if (Desktop.screen.hasPointerEvents()) {
+                choice3 = new ChoiceGroup(Resources.getString(Resources.CFG_DESKTOP_GROUP_ZOOM_SPOTS),
+                                          Desktop.CHOICE_POPUP_TYPE);
+                choice3.append(Resources.getString(Resources.CFG_LOCATION_FLD_TRACKLOG_NEVER), null);
+                choice3.append(Resources.getString(Resources.CFG_LOCATION_FLD_TRACKLOG_ALWAYS), null);
+                choice3.append(Resources.getString(Resources.CFG_DESKTOP_FLD_HIDE_AFTER) + " 3s", null);
+                choice3.setSelectedIndex(Config.zoomSpotsMode, true);
+                submenu.append(choice3);
+                choice4 = new ChoiceGroup(Resources.getString(Resources.CFG_DESKTOP_GROUP_GUIDE_SPOTS),
+                                          Desktop.CHOICE_POPUP_TYPE);
+                choice4.append(Resources.getString(Resources.CFG_LOCATION_FLD_TRACKLOG_NEVER), null);
+                choice4.append(Resources.getString(Resources.CFG_LOCATION_FLD_TRACKLOG_ALWAYS), null);
+                choice4.append(Resources.getString(Resources.CFG_DESKTOP_FLD_HIDE_AFTER) + " 3s", null);
+                choice4.setSelectedIndex(Config.guideSpotsMode, true);
+                submenu.append(choice4);
+            }
+
+            // easyzoom
+            choice5 = new ChoiceGroup(Resources.getString(Resources.CFG_DESKTOP_GROUP_EASYZOOM),
+                                      Desktop.CHOICE_POPUP_TYPE);
+            choice5.append(Resources.getString(Resources.CFG_DESKTOP_FLD_EASYZOOM_OFF), null);
+            choice5.append(Resources.getString(Resources.CFG_DESKTOP_FLD_EASYZOOM_LAYERS), null);
+//            choice5.append(Resources.getString(Resources.CFG_DESKTOP_FLD_EASYZOOM_MAPS), null);
+            choice5.setSelectedIndex(Config.easyZoomMode, true);
+            submenu.append(choice5);
+
+            // font
+            submenu.append(gauge1 = new Gauge(Resources.getString(Resources.CFG_DESKTOP_FLD_FONT_SIZE), true,
+                                              2, Config.desktopFontSize));
 
             // smartlist font
-            StringBuffer hexstr = new StringBuffer(Integer.toHexString(Config.listFont));
+            final StringBuffer hexstr = new StringBuffer(Integer.toHexString(Config.listFont));
             while (hexstr.length() < 6) {
                 hexstr.insert(0, '0');
             }
-            submenu.append(fieldListFont = new TextField(Resources.getString(Resources.CFG_DESKTOP_FLD_LIST_FONT), hexstr.toString(), 10, TextField.ANY));
+            submenu.append(field1 = new TextField(Resources.getString(Resources.CFG_DESKTOP_FLD_LIST_FONT),
+                                                  hexstr.toString(), 10, TextField.ANY));
 
             // list mode
             if (Desktop.screen.hasPointerEvents()) {
-                choiceListMode = new ChoiceGroup(Resources.getString(Resources.CFG_DESKTOP_GROUP_LIST_MODE), ChoiceGroup.POPUP);
-                choiceListMode.append(Resources.getString(Resources.CFG_DESKTOP_FLD_MODE_DEFAULT), null);
-                choiceListMode.append(Resources.getString(Resources.CFG_DESKTOP_FLD_MODE_CUSTOM), null);
-                choiceListMode.setSelectedIndex(Config.extListMode, true);
-                submenu.append(choiceListMode);
+                choice6 = new ChoiceGroup(Resources.getString(Resources.CFG_DESKTOP_GROUP_LIST_MODE),
+                                          Desktop.CHOICE_POPUP_TYPE);
+                choice6.append(Resources.getString(Resources.CFG_DESKTOP_FLD_MODE_DEFAULT), null);
+                choice6.append(Resources.getString(Resources.CFG_DESKTOP_FLD_MODE_CUSTOM), null);
+                choice6.setSelectedIndex(Config.extListMode, true);
+                submenu.append(choice6);
             }
 
             // CMS cycling
-            submenu.append(fieldCmsCycle = new TextField(Resources.getString(Resources.CFG_DESKTOP_FLD_CMS_CYCLE), Integer.toString(Config.cmsCycle), 4, /*TextField.*/NUMERIC));
+            submenu.append(field2 = new TextField(Resources.getString(Resources.CFG_DESKTOP_FLD_CMS_CYCLE),
+                                                  Integer.toString(Config.cmsCycle), 4, /*TextField.*/NUMERIC));
 
             // trail line
             submenu.append(itemLineCfg = createLineCfgItem(Resources.getString(Resources.CFG_DESKTOP_FLD_TRAIL_PREVIEW),
@@ -291,20 +311,20 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
         } else if (menuNavigation.equals(section)) {
 
             // proximity
-            submenu.append(fieldWptProximity = new TextField(Resources.getString(Resources.CFG_NAVIGATION_FLD_WPT_PROXIMITY), Integer.toString(Config.wptProximity), 5, /*TextField.*/NUMERIC));
-            /*append(*/fieldPoiProximity = new TextField(Resources.getString(Resources.CFG_NAVIGATION_FLD_POI_PROXIMITY), Integer.toString(Config.poiProximity), 5, /*TextField.*/NUMERIC)/*)*/;
+            submenu.append(field1 = new TextField(Resources.getString(Resources.CFG_NAVIGATION_FLD_WPT_PROXIMITY), Integer.toString(Config.wptProximity), 5, /*TextField.*/NUMERIC));
+            /*append(*/field2 = new TextField(Resources.getString(Resources.CFG_NAVIGATION_FLD_POI_PROXIMITY), Integer.toString(Config.poiProximity), 5, /*TextField.*/NUMERIC)/*)*/;
 
             // route line
-            choiceRouteLine = new ChoiceGroup(Resources.getString(Resources.CFG_NAVIGATION_GROUP_ROUTE_LINE), ChoiceGroup.MULTIPLE);
-            choiceRouteLine.append(Resources.getString(Resources.CFG_NAVIGATION_FLD_DOTTED), null);
-//            choiceRouteLine.append(Resources.getString(Resources.CFG_NAVIGATION_FLD_RED), null);
-            choiceRouteLine.append(Resources.getString(Resources.CFG_NAVIGATION_FLD_POI_ICONS), null);
-            choiceRouteLine.setSelectedFlags(new boolean[] {
+            choice1 = new ChoiceGroup(Resources.getString(Resources.CFG_NAVIGATION_GROUP_ROUTE_LINE), ChoiceGroup.MULTIPLE);
+            choice1.append(Resources.getString(Resources.CFG_NAVIGATION_FLD_DOTTED), null);
+//            choice1.append(Resources.getString(Resources.CFG_NAVIGATION_FLD_RED), null);
+            choice1.append(Resources.getString(Resources.CFG_NAVIGATION_FLD_POI_ICONS), null);
+            choice1.setSelectedFlags(new boolean[] {
                 Config.routeLineStyle,
 //                Config.routeLineColor != 0,
                 Config.routePoiMarks
             });
-            submenu.append(choiceRouteLine);
+            submenu.append(choice1);
 
             // route line
             submenu.append(itemLineCfg = createLineCfgItem(Resources.getString(Resources.CFG_NAVIGATION_GROUP_ROUTE_LINE),
@@ -312,51 +332,52 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
             submenu.append(new Spacer(submenu.getWidth(), 1));
 
             // waypoints
-            choiceWaypoints = new ChoiceGroup(Resources.getString(Resources.NAV_ITEM_WAYPOINTS), ChoiceGroup.MULTIPLE);
-            choiceWaypoints.append(Resources.getString(Resources.CFG_NAVIGATION_FLD_REVISIONS), null);
-            choiceWaypoints.append(Resources.getString(Resources.CFG_NAVIGATION_FLD_PREFER_GSNAME), null);
-            choiceWaypoints.setSelectedFlags(new boolean[] {
+            choice2 = new ChoiceGroup(Resources.getString(Resources.NAV_ITEM_WAYPOINTS), ChoiceGroup.MULTIPLE);
+            choice2.append(Resources.getString(Resources.CFG_NAVIGATION_FLD_REVISIONS), null);
+            choice2.append(Resources.getString(Resources.CFG_NAVIGATION_FLD_PREFER_GSNAME), null);
+            choice2.setSelectedFlags(new boolean[] {
                 Config.makeRevisions,
                 Config.preferGsName
             });
-            submenu.append(choiceWaypoints);
+            submenu.append(choice2);
 
             // wpts sorting
-            choiceSort = new ChoiceGroup(Resources.getString(Resources.CFG_NAVIGATION_GROUP_SORT), Desktop.CHOICE_POPUP_TYPE);
-            choiceSort.setFitPolicy(Choice.TEXT_WRAP_ON);
-            choiceSort.append(Resources.getString(Resources.CFG_NAVIGATION_FLD_SORT_BYPOS), null);
-            choiceSort.append(Resources.getString(Resources.CFG_NAVIGATION_FLD_SORT_BYNAME), null);
-            choiceSort.append(Resources.getString(Resources.CFG_NAVIGATION_FLD_SORT_BYDIST), null);
-            choiceSort.setSelectedIndex(Config.sort, true);
-            submenu.append(choiceSort);
+            choice3 = new ChoiceGroup(Resources.getString(Resources.CFG_NAVIGATION_GROUP_SORT), Desktop.CHOICE_POPUP_TYPE);
+            choice3.setFitPolicy(Choice.TEXT_WRAP_ON);
+            choice3.append(Resources.getString(Resources.CFG_NAVIGATION_FLD_SORT_BYPOS), null);
+            choice3.append(Resources.getString(Resources.CFG_NAVIGATION_FLD_SORT_BYNAME), null);
+            choice3.append(Resources.getString(Resources.CFG_NAVIGATION_FLD_SORT_BYDIST), null);
+            choice3.setSelectedIndex(Config.sort, true);
+            submenu.append(choice3);
 
             // 'Friends'
             if (cz.kruch.track.TrackingMIDlet.jsr120) {
-                choiceFriends = new ChoiceGroup(Resources.getString(Resources.CFG_NAVIGATION_GROUP_SMS), ChoiceGroup.MULTIPLE);
-                choiceFriends.append(Resources.getString(Resources.CFG_NAVIGATION_FLD_RECEIVE), null);
-                choiceFriends.append(Resources.getString(Resources.CFG_NAVIGATION_FLD_AUTOHIDE), null);
-                choiceFriends.setSelectedFlags(new boolean[] {
+                choice4 = new ChoiceGroup(Resources.getString(Resources.CFG_NAVIGATION_GROUP_SMS), ChoiceGroup.MULTIPLE);
+                choice4.append(Resources.getString(Resources.CFG_NAVIGATION_FLD_RECEIVE), null);
+                choice4.append(Resources.getString(Resources.CFG_NAVIGATION_FLD_AUTOHIDE), null);
+                choice4.setSelectedFlags(new boolean[] {
                     Config.locationSharing,
                     Config.autohideNotification
                 });
-                submenu.append(choiceFriends);
+                submenu.append(choice4);
             }
             
         } else if (menuMisc.equals(section)) {
 
             // tweaks
-            choicePerformance = new ChoiceGroup(Resources.getString(Resources.CFG_TWEAKS_GROUP), ChoiceGroup.MULTIPLE);
-            choicePerformance.append(Resources.getString(Resources.CFG_TWEAKS_FLD_SIEMENS_IO), null);
-            choicePerformance.append(Resources.getString(Resources.CFG_TWEAKS_FLD_LOWMEM_IO), null);
-            choicePerformance.append(Resources.getString(Resources.CFG_TWEAKS_FLD_SAFE_RENDERER), null);
-            choicePerformance.append(Resources.getString(Resources.CFG_TWEAKS_FLD_FORCED_GC), null);
-            choicePerformance.append(Resources.getString(Resources.CFG_TWEAKS_FLD_POWER_SAVE), null);
-            choicePerformance.append(Resources.getString(Resources.CFG_TWEAKS_FLD_1TILE_SCROLL), null);
-            choicePerformance.append(Resources.getString(Resources.CFG_TWEAKS_FLD_LARGE_ATLASES), null);
-            choicePerformance.append(Resources.getString(Resources.CFG_TWEAKS_FLD_LAZY_GPX), null);
-            choicePerformance.append(Resources.getString(Resources.CFG_TWEAKS_FLD_NUMERIC_INPUT_HACK), null);
-            choicePerformance.append(Resources.getString(Resources.CFG_TWEAKS_FLD_EXTERNAL_CFG_BACKUP), null);
-            choicePerformance.setSelectedFlags(new boolean[] {
+            choice1 = new ChoiceGroup(Resources.getString(Resources.CFG_TWEAKS_GROUP), ChoiceGroup.MULTIPLE);
+            choice1.append(Resources.getString(Resources.CFG_TWEAKS_FLD_SIEMENS_IO), null);
+            choice1.append(Resources.getString(Resources.CFG_TWEAKS_FLD_LOWMEM_IO), null);
+            choice1.append(Resources.getString(Resources.CFG_TWEAKS_FLD_SAFE_RENDERER), null);
+            choice1.append(Resources.getString(Resources.CFG_TWEAKS_FLD_FORCED_GC), null);
+            choice1.append(Resources.getString(Resources.CFG_TWEAKS_FLD_POWER_SAVE), null);
+            choice1.append(Resources.getString(Resources.CFG_TWEAKS_FLD_1TILE_SCROLL), null);
+            choice1.append(Resources.getString(Resources.CFG_TWEAKS_FLD_LARGE_ATLASES), null);
+            choice1.append(Resources.getString(Resources.CFG_TWEAKS_FLD_LAZY_GPX), null);
+            choice1.append(Resources.getString(Resources.CFG_TWEAKS_FLD_NUMERIC_INPUT_HACK), null);
+            choice1.append(Resources.getString(Resources.CFG_TWEAKS_FLD_EXTERNAL_CFG_BACKUP), null);
+            choice1.append("filtered scaling", null);
+            choice1.setSelectedFlags(new boolean[] {
                 Config.siemensIo,
                 Config.lowmemIo,
                 Config.S60renderer,
@@ -366,14 +387,25 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
                 Config.largeAtlases,
                 Config.lazyGpxParsing,
                 Config.numericInputHack,
-                Config.externalConfigBackup
+                Config.externalConfigBackup,
+                Config.tilesScaleFiltered
             });
             if (cz.kruch.track.TrackingMIDlet.symbian) {
-                choicePerformance.setSelectedIndex(choicePerformance.append(Resources.getString(Resources.CFG_TWEAKS_FLD_USE_TBSVC), null),
-                                                   Config.useNativeService);
+                choice1.setSelectedIndex(choice1.append(Resources.getString(Resources.CFG_TWEAKS_FLD_USE_TBSVC), null),
+                                         Config.useNativeService);
             }
-            submenu.append(choicePerformance);
+            submenu.append(choice1);
 
+            // HECL
+            choice2 = new ChoiceGroup(Resources.getString(Resources.CFG_TWEAKS_HECL_GROUP),
+                                      Desktop.CHOICE_POPUP_TYPE);
+            choice2.append("none", null);
+            choice2.append("preprocess", null);
+            choice2.append("precompile", null);
+            choice2.setSelectedIndex(Config.heclOpt, true);
+            submenu.append(choice2);
+
+            // capture device and format
             if (cz.kruch.track.TrackingMIDlet.supportsVideoCapture()) {
                 submenu.append(fieldCaptureLocator = new TextField(Resources.getString(Resources.CFG_LOCATION_FLD_CAPTURE_LOCATOR), Config.captureLocator, 18, TextField.URL));
                 submenu.append(choiceSnapshotFormat = new ChoiceGroup(Resources.getString(Resources.CFG_LOCATION_FLD_CAPTURE_FMT), Desktop.CHOICE_POPUP_TYPE));
@@ -438,16 +470,21 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
 
             // tracklogs, waypoints
             if (File.isFs()) {
-                choiceTracklog = new ChoiceGroup(Resources.getString(Resources.CFG_LOCATION_GROUP_TRACKLOG), ChoiceGroup.EXCLUSIVE);
-                choiceTracklog.setSelectedIndex(choiceTracklog.append(Resources.getString(Resources.CFG_LOCATION_FLD_TRACKLOG_NEVER), null), Config.TRACKLOG_NEVER == Config.tracklog);
+                choiceTracklog = new ChoiceGroup(Resources.getString(Resources.CFG_LOCATION_GROUP_TRACKLOG),
+                                                 ChoiceGroup.EXCLUSIVE);
+                choiceTracklog.append(Resources.getString(Resources.CFG_LOCATION_FLD_TRACKLOG_NEVER), null);
                 if (Config.dataDirExists) {
-                    choiceTracklog.setSelectedIndex(choiceTracklog.append(Resources.getString(Resources.CFG_LOCATION_FLD_TRACKLOG_ASK), null), Config.TRACKLOG_ASK == Config.tracklog);
-                    choiceTracklog.setSelectedIndex(choiceTracklog.append(Resources.getString(Resources.CFG_LOCATION_FLD_TRACKLOG_ALWAYS), null), Config.TRACKLOG_ALWAYS == Config.tracklog);
+                    choiceTracklog.append(Resources.getString(Resources.CFG_LOCATION_FLD_TRACKLOG_ASK), null);
+                    choiceTracklog.append(Resources.getString(Resources.CFG_LOCATION_FLD_TRACKLOG_ALWAYS), null);
                 }
+                choiceTracklog.setSelectedIndex(Config.tracklog, true);
 
-                choiceTracklogFormat = new ChoiceGroup(Resources.getString(Resources.CFG_LOCATION_GROUP_TRACKLOG_FMT), ChoiceGroup.EXCLUSIVE);
-                choiceTracklogFormat.setSelectedIndex(choiceTracklogFormat.append(Config.TRACKLOG_FORMAT_GPX, null), Config.TRACKLOG_FORMAT_GPX.equals(Config.tracklogFormat));
-                choiceTracklogFormat.setSelectedIndex(choiceTracklogFormat.append(Config.TRACKLOG_FORMAT_NMEA, null), Config.TRACKLOG_FORMAT_NMEA.equals(Config.tracklogFormat));
+                choiceTracklogFormat = new ChoiceGroup(Resources.getString(Resources.CFG_LOCATION_GROUP_TRACKLOG_FMT),
+                                                       ChoiceGroup.EXCLUSIVE);
+                choiceTracklogFormat.setSelectedIndex(choiceTracklogFormat.append(Config.TRACKLOG_FORMAT_GPX, null),
+                                                      Config.TRACKLOG_FORMAT_GPX.equals(Config.tracklogFormat));
+                choiceTracklogFormat.setSelectedIndex(choiceTracklogFormat.append(Config.TRACKLOG_FORMAT_NMEA, null),
+                                                      Config.TRACKLOG_FORMAT_NMEA.equals(Config.tracklogFormat));
 
                 choiceGpx = new ChoiceGroup(Resources.getString(Resources.CFG_LOCATION_GROUP_GPX_OPTS), ChoiceGroup.MULTIPLE);
                 choiceGpx.append(Resources.getString(Resources.CFG_LOCATION_FLD_GPX_LOG_VALID), null);
@@ -465,13 +502,16 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
 
             // provider specific
             if (cz.kruch.track.TrackingMIDlet.hasPorts()) {
-                fieldCommUrl = new TextField(Resources.getString(Resources.CFG_LOCATION_FLD_CONN_URL), Config.commUrl, 64, TextField.ANY);
+                fieldCommUrl = new TextField(Resources.getString(Resources.CFG_LOCATION_FLD_CONN_URL),
+                                             Config.commUrl, 64, TextField.ANY);
             }
             if (File.isFs()) {
-                fieldSimulatorDelay = new TextField(Resources.getString(Resources.CFG_LOCATION_FLD_SIMULATOR_DELAY), Integer.toString(Config.simulatorDelay), 8, /*TextField.*/NUMERIC);
+                fieldSimulatorDelay = new TextField(Resources.getString(Resources.CFG_LOCATION_FLD_SIMULATOR_DELAY),
+                                                    Integer.toString(Config.simulatorDelay), 8, /*TextField.*/NUMERIC);
             }
             if (cz.kruch.track.TrackingMIDlet.jsr82) {
-                fieldBtKeepalive = new TextField(Resources.getString(Resources.CFG_LOCATION_FLD_BT_KEEP_ALIVE), Integer.toString(Config.btKeepAlive), 6, /*TextField.*/NUMERIC);
+                fieldBtKeepalive = new TextField(Resources.getString(Resources.CFG_LOCATION_FLD_BT_KEEP_ALIVE),
+                                                 Integer.toString(Config.btKeepAlive), 6, /*TextField.*/NUMERIC);
             }
             if (cz.kruch.track.TrackingMIDlet.jsr179 || cz.kruch.track.TrackingMIDlet.motorola179) {
 //#ifdef __RIM__
@@ -485,7 +525,8 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
 //#elifdef __ANDROID__
                 // nothing for Android
 //#else
-                choiceInternal = new ChoiceGroup(Resources.getString(Resources.CFG_LOCATION_FLD_PROV_INTERNAL), ChoiceGroup.MULTIPLE);
+                choiceInternal = new ChoiceGroup(Resources.getString(Resources.CFG_LOCATION_FLD_PROV_INTERNAL),
+                                                 ChoiceGroup.MULTIPLE);
                 choiceInternal.append(Resources.getString(Resources.CFG_LOCATION_FLD_ASSISTED_GPS), null);
                 choiceInternal.append(Resources.getString(Resources.CFG_LOCATION_FLD_TIME_FIX), null);
                 choiceInternal.setSelectedFlags(new boolean[] {
@@ -494,27 +535,58 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
                 });
 //#endif
 //#ifndef __ANDROID__
-                choicePower = new ChoiceGroup(Resources.getString(Resources.CFG_LOCATION_GROUP_POWER), Desktop.CHOICE_POPUP_TYPE);
+                choicePower = new ChoiceGroup(Resources.getString(Resources.CFG_LOCATION_GROUP_POWER),
+                                              Desktop.CHOICE_POPUP_TYPE);
                 choicePower.append("NO_REQUIREMENT", null);
                 choicePower.append("LOW", null);
                 choicePower.append("MEDIUM", null);
                 choicePower.append("HIGH", null);
                 choicePower.setSelectedIndex(Config.powerUsage, true);
-                fieldLocationTimings = new TextField(Resources.getString(Resources.CFG_LOCATION_FLD_LOCATION_TIMINGS), Config.getLocationTimings(Config.locationProvider), 12, TextField.ANY);
+                fieldLocationTimings = new TextField(Resources.getString(Resources.CFG_LOCATION_FLD_LOCATION_TIMINGS),
+                                                     Config.getLocationTimings(Config.locationProvider), 12, TextField.ANY);
 //#else
-                fieldLocationTimings = new TextField(Resources.getString(Resources.CFG_LOCATION_FLD_LOCATION_TIMINGS), Config.getLocationTimings(Config.locationProvider), 4, TextField.NUMERIC);
+                fieldLocationTimings = new TextField(Resources.getString(Resources.CFG_LOCATION_FLD_LOCATION_TIMINGS),
+                                                     Config.getLocationTimings(Config.locationProvider), 4, TextField.NUMERIC);
 //#endif                
-                fieldAltCorrection = new TextField(Resources.getString(Resources.CFG_LOCATION_FLD_ALT_CORRECTION), Float.toString(Config.altCorrection), 5, TextField.ANY/*TextField.NUMERIC*/);
+                fieldAltCorrection = new TextField(Resources.getString(Resources.CFG_LOCATION_FLD_ALT_CORRECTION),
+                                                   Float.toString(Config.altCorrection), 5, TextField.DECIMAL);
             }
 //#ifdef __ALL__
             if (cz.kruch.track.TrackingMIDlet.hasFlag("provider_o2_germany")) {
-                fieldO2Depth = new TextField(Resources.getString(Resources.CFG_LOCATION_FLD_FILTER_DEPTH), Integer.toString(Config.o2Depth), 2, /*TextField.*/NUMERIC);
+                fieldO2Depth = new TextField(Resources.getString(Resources.CFG_LOCATION_FLD_FILTER_DEPTH),
+                                             Integer.toString(Config.o2Depth), 2, /*TextField.*/NUMERIC);
             }
 //#endif            
 
             // show current provider and tracklog specific options
             itemStateChanged(choiceProvider);
             submenu.setItemStateListener(this);
+
+//#ifdef __HECL__
+
+        } else if (menuPlugins.equals(section)) {
+
+            // same for all plugins // TODO move to PluginManager
+            final NakedVector plugins = PluginManager.getInstance().getPlugins();
+            final Object[] ps = plugins.getData();
+            for (int i = 0, N = plugins.size(); i < N; i++) {
+                final PluginManager.Plugin plugin = (PluginManager.Plugin) ps[i];
+                final StringItem cfgBtn;
+                if (plugin.hasOptions()) {
+                    cfgBtn = new StringItem(null, Resources.getString(Resources.CFG_PLUGINS_CONFIGURE), Item.BUTTON);
+                    cfgBtn.setDefaultCommand(new Command(Resources.getString(Resources.CFG_PLUGINS_CONFIGURE), Command.ITEM, i));
+                    cfgBtn.setItemCommandListener(this);
+                } else {
+                    cfgBtn = new StringItem(null, Resources.getString(Resources.CFG_PLUGINS_NO_CONFIG), Item.PLAIN);
+                }
+                final ChoiceGroup cg = new ChoiceGroup(plugin.getFullName(), ChoiceGroup.MULTIPLE);
+                cg.append(Resources.getString(Resources.CFG_PLUGINS_ENABLE), null);
+                cg.setSelectedFlags(new boolean[]{ plugin.isEnabled() });
+                submenu.append(cg);
+                submenu.append(cfgBtn);
+                submenu.append(new Spacer(submenu.getWidth(), 8));
+            }
+//#endif
         }
 
         // add command and handling
@@ -655,6 +727,11 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
     }
 
     public void commandAction(Command command, Item item) {
+//#ifdef __HECL__
+        if (menuPlugins.equals(section))
+            (new PluginForm(PluginManager.getInstance().getPlugin(command.getPriority()))).show();
+        else
+//#endif
         (new LineCfgForm()).show();
     }
 
@@ -691,24 +768,24 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
 
                 // map path
                 if (File.isFs()) {
-                    Config.mapURL = fieldMapPath.getString();
+                    Config.mapURL = getString(field1);
                 }
 
                 // datum
-                Config.geoDatum = choiceMapDatum.getString(choiceMapDatum.getSelectedIndex());
+                Config.geoDatum = choice1.getString(choice1.getSelectedIndex());
 
                 // coordinates format
-                Config.cfmt = choiceCoordinates.getSelectedIndex();
+                Config.cfmt = choice2.getSelectedIndex();
 
                 // units format
-                Config.units = choiceUnits.getSelectedIndex();
+                Config.units = choice3.getSelectedIndex();
 
                 // startup screen
-                Config.startupScreen = choiceScreen.getSelectedIndex();
+                Config.startupScreen = choice4.getSelectedIndex();
 
                 // datadir
                 if (File.isFs()) {
-                    Config.setDataDir(fieldDataDir.getString());
+                    Config.setDataDir(getString(field2));
                 }
 
             } else if (menuLocation.equals(section)) {
@@ -720,7 +797,7 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
 
                 // provider-specific
                 if (fieldSimulatorDelay != null) {
-                    Config.simulatorDelay = Integer.parseInt(fieldSimulatorDelay.getString());
+                    Config.simulatorDelay = getInt(fieldSimulatorDelay);
                 }
                 if (cz.kruch.track.TrackingMIDlet.jsr179 || cz.kruch.track.TrackingMIDlet.motorola179) {
 //#ifdef __RIM__
@@ -739,21 +816,21 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
 //#ifndef __ANDROID__
                     Config.powerUsage = choicePower.getSelectedIndex();
 //#endif
-                    Config.setLocationTimings(fieldLocationTimings.getString());
-                    Config.altCorrection = Float.parseFloat(fieldAltCorrection.getString());
+                    Config.setLocationTimings(getString(fieldLocationTimings));
+                    Config.altCorrection = Float.parseFloat(getString(fieldAltCorrection));
                 }
                 if (fieldBtKeepalive != null) {
-                    Config.btKeepAlive = Integer.parseInt(fieldBtKeepalive.getString());
+                    Config.btKeepAlive = getInt(fieldBtKeepalive);
                     if (Config.btKeepAlive > 0 && Config.btKeepAlive < 250) {
                         Config.btKeepAlive = 250;
                     }
                 }
                 if (fieldCommUrl != null) {
-                    Config.commUrl = fieldCommUrl.getString();
+                    Config.commUrl = getString(fieldCommUrl);
                 }
 //#ifdef __ALL__
                 if (fieldO2Depth != null) {
-                    Config.o2Depth = Integer.parseInt(fieldO2Depth.getString());
+                    Config.o2Depth = getInt(fieldO2Depth);
                 }
 //#endif                
 
@@ -778,19 +855,19 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
                     Config.gpxOnlyValid = opts[0];
                     Config.gpxGsmInfo = opts[1];
                     Config.gpxSecsDecimal = opts[2];
-                    Config.gpxDt = Integer.parseInt(fieldGpxDt.getString());
-                    Config.gpxDs = Integer.parseInt(fieldGpxDs.getString());
+                    Config.gpxDt = getInt(fieldGpxDt);
+                    Config.gpxDs = getInt(fieldGpxDs);
                 }
 
             } else if (menuNavigation.equals(section)) {
 
                 // proximity
-                Config.wptProximity = Integer.parseInt(fieldWptProximity.getString());
-                Config.poiProximity = Integer.parseInt(fieldPoiProximity.getString());
+                Config.wptProximity = getInt(field1);
+                Config.poiProximity = getInt(field2);
 
                 // route line
-                final boolean[] rl = new boolean[choiceRouteLine.size()];
-                choiceRouteLine.getSelectedFlags(rl);
+                final boolean[] rl = new boolean[choice1.size()];
+                choice1.getSelectedFlags(rl);
                 Config.routeLineStyle = rl[0];
 //                Config.routeLineColor = rl[1] ? 0x00FF0000 : 0x0;
 //                Config.routePoiMarks = rl[2];
@@ -799,18 +876,18 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
                 Config.routeThick = itemLineThick;
 
                 // waypoints
-                final boolean[] wpts = new boolean[choiceWaypoints.size()];
-                choiceWaypoints.getSelectedFlags(wpts);
+                final boolean[] wpts = new boolean[choice2.size()];
+                choice2.getSelectedFlags(wpts);
                 Config.makeRevisions = wpts[0];
                 Config.preferGsName = wpts[1];
 
                 // wpts sorting
-                Config.sort = choiceSort.getSelectedIndex();
+                Config.sort = choice3.getSelectedIndex();
 
                 // location sharing
                 if (cz.kruch.track.TrackingMIDlet.jsr120) {
-                    final boolean[] friends = new boolean[choiceFriends.size()];
-                    choiceFriends.getSelectedFlags(friends);
+                    final boolean[] friends = new boolean[choice4.size()];
+                    choice4.getSelectedFlags(friends);
                     Config.locationSharing = friends[0];
                     Config.autohideNotification = friends[1];
                 }
@@ -818,43 +895,66 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
             } else if (menuDesktop.equals(section)) {
 
                 // desktop
-                final boolean[] misc = new boolean[choiceMisc.size()];
-                choiceMisc.getSelectedFlags(misc);
-                Config.fullscreen = misc[0];
-                Config.safeColors = misc[1];
-                Config.noSounds = misc[2];
-                Config.noQuestions = misc[3];
-                Config.uiNoCommands = misc[4];
-                Config.uiNoItemCommands = misc[5];
-                Config.trailOn = misc[6];
-                Config.decimalPrecision = misc[7];
-                Config.hpsWptTrueAzimuth = misc[8];
-                Config.easyZoomVolumeKeys = misc[9];
-                Config.osdBasic = misc[10];
-                Config.osdExtended = misc[11];
-                Config.osdScale = misc[12];
-                Config.osdNoBackground = misc[13];
-                Config.osdBoldFont = misc[14];
-                Config.osdBlackColor = misc[15];
+                final boolean[] desktop = new boolean[choice1.size()];
+                choice1.getSelectedFlags(desktop);
+                Config.fullscreen = desktop[0];
+                Config.safeColors = desktop[1];
+                Config.noSounds = desktop[2];
+                Config.noQuestions = desktop[3];
+                Config.uiNoCommands = desktop[4];
+                Config.uiNoItemCommands = desktop[5];
+                Config.trailOn = desktop[6];
+                Config.decimalPrecision = desktop[7];
+                Config.hpsWptTrueAzimuth = desktop[8];
+                Config.easyZoomVolumeKeys = desktop[9];
+                final boolean[] osd = new boolean[choice2.size()];
+                choice2.getSelectedFlags(osd);
+                Config.osdBasic = osd[0];
+                Config.osdExtended = osd[1];
+                Config.osdScale = osd[2];
+                Config.osdNoBackground = osd[3];
+                Config.osdBoldFont = osd[4];
+                Config.osdBlackColor = osd[5];
                 if (Desktop.screen.hasPointerEvents()) {
-                    Config.zoomSpotsMode = choiceZoomSpots.getSelectedIndex();
-                    Config.guideSpotsMode = choiceGuideSpots.getSelectedIndex();
-                    Config.extListMode = choiceListMode.getSelectedIndex();
+                    Config.zoomSpotsMode = choice3.getSelectedIndex();
+                    Config.guideSpotsMode = choice4.getSelectedIndex();
+                    Config.extListMode = choice6.getSelectedIndex();
                 }
-                Config.easyZoomMode = choiceEasyzoom.getSelectedIndex();
-                Config.desktopFontSize = gaugeDesktopFont.getValue();
-                Config.osdAlpha = gaugeOsdAlpha.getValue() * gaugeAlphaScale;
-                Config.cmsCycle = Integer.parseInt(fieldCmsCycle.getString());
-                Config.listFont = Integer.parseInt(fieldListFont.getString(), 16);
+                Config.easyZoomMode = choice5.getSelectedIndex();
+                Config.desktopFontSize = gauge1.getValue();
+                Config.osdAlpha = gauge2.getValue() * gaugeAlphaScale;
+                Config.listFont = Integer.parseInt(getString(field1), 16);
+                Config.cmsCycle = getInt(field2);
+                Config.prescale = getInt(field3);
+                if (Config.prescale < 100 || Config.prescale > 270) {
+                    Desktop.showError(Resources.getString(Resources.DESKTOP_MSG_INVALID_INPUT) + ": " + getString(field3), null, null);
+                    return;
+                }
                 Config.trailColor = itemLineColor;
                 Config.trailThick = itemLineThick;
                 changed = true;
 
+//#ifdef __HECL__
+
+            } else if (menuPlugins.equals(section)) {
+
+                // iterate over all
+                for (int i = 0, N = submenu.size() / 3; i < N; i++) {
+
+                    // get enabled status
+                    final ChoiceGroup cg = (ChoiceGroup) submenu.get(i * 3);
+                    final boolean[] enabled = new boolean[1];
+                    cg.getSelectedFlags(enabled);
+                    PluginManager.getInstance().getPlugin(i).setEnabled(enabled[0]);
+                }
+
+//#endif
+
             } else if (menuMisc.equals(section)) {
 
                 // performance
-                final boolean[] perf = new boolean[choicePerformance.size()];
-                choicePerformance.getSelectedFlags(perf);
+                final boolean[] perf = new boolean[choice1.size()];
+                choice1.getSelectedFlags(perf);
                 Config.siemensIo = perf[0];
                 Config.lowmemIo = perf[1];
                 Config.S60renderer = perf[2];
@@ -865,15 +965,19 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
                 Config.lazyGpxParsing = perf[7];
                 Config.numericInputHack = perf[8];
                 Config.externalConfigBackup = perf[9];
+                Config.tilesScaleFiltered = perf[10];
                 if (cz.kruch.track.TrackingMIDlet.symbian) {
-                    Config.useNativeService = perf[10];
+                    Config.useNativeService = perf[11];
                 }
+
+                // HECL
+                Config.heclOpt = choice2.getSelectedIndex();
 
                 // multimedia
                 if (cz.kruch.track.TrackingMIDlet.supportsVideoCapture()) {
-                    Config.captureLocator = fieldCaptureLocator.getString();
+                    Config.captureLocator = getString(fieldCaptureLocator);
                     Config.snapshotFormatIdx = choiceSnapshotFormat.getSelectedIndex();
-                    Config.snapshotFormat = fieldSnapshotFormat.getString().trim();
+                    Config.snapshotFormat = getString(fieldSnapshotFormat);
                 }
             }
         }
@@ -896,6 +1000,11 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
             try {
                 // update config
                 Config.update(Config.CONFIG_090);
+
+//#ifdef __HECL__
+                // update plugins configurations
+                PluginManager.getInstance().saveConfiguration();
+//#endif
 
                 // show confirmation
                 Desktop.showConfirmation(Resources.getString(Resources.DESKTOP_MSG_CFG_UPDATED), Desktop.screen);
@@ -964,6 +1073,14 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
             choiceStream.setSelectedIndex(choiceStream.append(Resources.getString(Resources.CFG_LOCATION_FLD_ADDRESS_FIX), null), Config.btAddressWorkaround);
         }
         return choiceStream;
+    }
+
+    private static String getString(final TextField field) {
+        return field.getString().trim();
+    }
+
+    private static int getInt(final TextField field) {
+        return Integer.parseInt(field.getString().trim());
     }
 
     private int itemLineColor;
@@ -1038,4 +1155,38 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
             Desktop.display.setCurrent(submenu);
         }
     }
+
+//#ifdef __HECL__
+
+    private final class PluginForm implements CommandListener {
+
+        private PluginManager.Plugin plugin;
+
+        public PluginForm(PluginManager.Plugin plugin) {
+            this.plugin = plugin;
+        }
+
+        public void show() {
+            try {
+                final Form form = new Form(plugin.getFullName());
+                plugin.appendOptions(form);
+                form.addCommand(new Command(Resources.getString(Resources.CMD_OK), Desktop.POSITIVE_CMD_TYPE, 0));
+                form.addCommand(new Command(Resources.getString(Resources.CMD_CLOSE), Desktop.BACK_CMD_TYPE, 1));
+                form.setCommandListener(this);
+                Desktop.display.setCurrent(form);
+            } catch (Throwable t) {
+                Desktop.showError("Error showing plugin configuration tab", t, submenu);
+            }
+        }
+
+        public void commandAction(Command command, Displayable displayable) {
+            if (command.getCommandType() != Desktop.BACK_CMD_TYPE) {
+                plugin.grabOptions((Form) displayable);
+            }
+            Desktop.display.setCurrent(submenu);
+        }
+    }
+
+//#endif
+
 }

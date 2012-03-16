@@ -3,6 +3,7 @@
 package cz.kruch.track.ui;
 
 import cz.kruch.track.util.NakedVector;
+import cz.kruch.track.util.ImageUtils;
 
 import javax.microedition.lcdui.CommandListener;
 import javax.microedition.lcdui.List;
@@ -62,9 +63,9 @@ final class SmartList extends Canvas implements UiList {
         }
         this.iconSize = getLineHeight() - 2 * 2 * VL_INSET;
         if (this.iconSize < NavigationScreens.wptSize2 << 1) {
-            this.awpt = NavigationScreens.resizeImage(NavigationScreens.waypoint,
-                                                      iconSize, iconSize,
-                                                      NavigationScreens.SLOW_RESAMPLE);
+            this.awpt = ImageUtils.resizeImage(NavigationScreens.waypoint,
+                                               iconSize, iconSize,
+                                               ImageUtils.SLOW_RESAMPLE);
         } else {
             this.awpt = NavigationScreens.waypoint;
         }

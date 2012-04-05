@@ -394,6 +394,7 @@ public final class Resources {
 //    public static final short CFG_TWEAKS_HECL_NONE              = 3816;
 //    public static final short CFG_TWEAKS_HECL_PREP              = 3817;
 //    public static final short CFG_TWEAKS_HECL_PRPR              = 3818;
+    public static final short CFG_TWEAKS_FLD_FILTERED_SCALING   = 3819;
     /* info - commands */
     public static final short INFO_CMD_DETAILS                  = 4000;
     /* info - items */

@@ -51,7 +51,7 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
 
     Slice getSlice(int x, int y) {
         final Slice slice = super.getSlice(x, y);
-        final long xy = slice.getXyLong();
+        final long xy = getScaledXyLong(slice); // slice.getXyLong();
         final long[] pointers = this.pointers;
         for (int i = numberOfPointers; --i >= 0; ) {
             final long pointer = pointers[i];
@@ -174,6 +174,9 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
             // do not have calibration or slices yet
             if (getMapCalibration() == null || pointers == null) {
 
+                // local ref
+                final String path = map.getPath();
+
                 // changes during loading - we need to remember initial state
                 final boolean gotSlices = pointers != null;
 //#ifdef __LOG__
@@ -193,7 +196,7 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
                     tarIn.getNextEntry();
 
                     // try this root entry as a calibration
-                    map.setCalibration(Calibration.newInstance(tarIn, map.getPath(), calEntryName));
+                    map.setCalibration(Calibration.newInstance(tarIn, path, calEntryName));
 
                 } else { // do a full scan
 
@@ -216,7 +219,7 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
                             if (log.isEnabled()) log.debug("do not have calibration yet");
 //#endif
                             // try this root entry as a calibration
-                            map.setCalibration(Calibration.newInstance(tarIn, map.getPath(), entryName.toString()));
+                            map.setCalibration(Calibration.newInstance(tarIn, path, entryName.toString()));
 
                             // skip the rest if we already have them
                             if (gotSlices && getMapCalibration() != null) {
@@ -231,6 +234,11 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
                         entry = tarIn.getNextEntry();
                     }
                 }
+            }
+
+            // trim pointers
+            if (pointers != null) {
+                trimPointers();
             }
 
             // detach tar inputstream from file inputstream
@@ -379,7 +387,7 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
 //                }
 
                 // read image
-                slice.setImage(Image.createImage(tarIn));
+                slice.setImage(scaleImage(tarIn));
 
 /*
             } finally {
@@ -418,11 +426,11 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
         TarInputStream tar = null;
 
         try {
-            // create stream
+            // open stream
             file = File.open(url);
             tar = new TarInputStream(in = file.openInputStream());
 
-            // shared vars
+            // local vars
             final char[] delims = { File.PATH_SEPCHAR };
             final CharArrayTokenizer tokenizer = new CharArrayTokenizer();
             final StringBuffer sb = new StringBuffer(32);
@@ -431,11 +439,18 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
             TarEntry entry = tar.getNextEntry();
             while (entry != null) {
 
+                // entry name
+                final CharArrayTokenizer.Token entryName = entry.getName();
+
+                // HACK this could be map
+                if (entryName.startsWith(SET_DIR_PREFIX)) {
+                    throw new InvalidMapException("ATLAS->MAP");
+                }
+
                 // search for plain files
                 if (!entry.isDirectory()) {
 
                     // tokenize
-                    final CharArrayTokenizer.Token entryName = entry.getName();
                     final int indexOf = entryName.lastIndexOf('.');
                     if (indexOf > -1) {
 
@@ -459,11 +474,12 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
                             // construct URLs
                             final String realUrl = entryName.append(sb).toString();
                             final String fakeUrl;
-                            if (url.endsWith(".idx") || url.endsWith(".IDX")) {
-                                fakeUrl = escape(realUrl);
-                            } else {
+// WTF was this?!?                            
+//                            if (url.endsWith(".idx") || url.endsWith(".IDX")) {
+//                                fakeUrl = escape(realUrl);
+//                            } else {
                                 fakeUrl = escape(sb.delete(0, sb.length()).append(baseUrl).append(lName).append(File.PATH_SEPCHAR).append(mName).append(File.PATH_SEPCHAR).append(mName).append(".tar").toString());
-                            }
+//                            }
 
                             // load map calibration file
                             final Calibration calibration = Calibration.newInstance(tar, fakeUrl, realUrl);
@@ -516,7 +532,8 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
 
         try {
             // check for .tmi existence
-            final String tmiPath = map.getPath().substring(0, map.getPath().lastIndexOf('.')) + ".tmi";
+            final String path = map.getPath();
+            final String tmiPath = path.substring(0, path.lastIndexOf('.')) + ".tmi";
             file = File.open(tmiPath);
             if (file.exists()) {
 //#ifdef __LOG__
@@ -637,8 +654,8 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
                 initialCapacity = (hintTmiFileSize / token.length) / 2;
                 if (initialCapacity < 64) {
                     initialCapacity = 64;
-                } else if (initialCapacity > 2048) {
-                    initialCapacity = 2048;
+                } else if (initialCapacity > 4096) {
+                    initialCapacity = 4096;
                 }
             } else {
                 initialCapacity = 2048;
@@ -652,5 +669,14 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
 
         // cook and add pointer
         pointers[numberOfPointers++] = (long) block << 40 | xy;
+    }
+
+    private void trimPointers() {
+        if (pointers.length - numberOfPointers >= 512) { // ie. 4 kB memory
+            final long[] array = new long[numberOfPointers];
+            System.arraycopy(pointers, 0, array, 0, numberOfPointers);
+            pointers = null; // gc hint
+            pointers = array;
+        }
     }
 }

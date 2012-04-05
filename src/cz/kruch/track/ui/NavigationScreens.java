@@ -26,7 +26,7 @@ import java.util.TimeZone;
 import java.util.Vector;
 
 /**
- * Misc helper.
+ * UI helper.
  *
  * @author kruhc@seznam.cz
  */

@@ -11,7 +11,6 @@ import cz.kruch.track.util.SimpleCalendar;
 import cz.kruch.track.util.NmeaParser;
 import cz.kruch.track.util.NakedVector;
 import cz.kruch.track.util.Mercator;
-import cz.kruch.track.util.ExtraMath;
 
 import javax.microedition.lcdui.Graphics;
 import javax.microedition.lcdui.Image;
@@ -22,17 +21,16 @@ import javax.microedition.lcdui.Command;
 import javax.microedition.lcdui.Displayable;
 import javax.microedition.lcdui.Canvas;
 import javax.microedition.lcdui.game.Sprite;
-import javax.microedition.io.Connector;
 
 import api.file.File;
 import api.io.BufferedInputStream;
 import api.location.Location;
 import api.location.QualifiedCoordinates;
 import api.location.CartesianCoordinates;
+import api.lang.Int;
 
 import java.io.InputStream;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.util.Vector;
 import java.util.Hashtable;
 import java.util.Calendar;
@@ -261,6 +259,7 @@ final class ComputerView extends View
     private static final String EVENT_ON_LOCATION_UPDATED   = "onLocationUpdated";
     private static final String EVENT_ON_TRACKING_START     = "onTrackingStart";
     private static final String EVENT_ON_TRACKING_STOP      = "onTrackingStop";
+    private static final String EVENT_ON_STATUS_CHANGED     = "onStatusChanged";
     private static final String EVENT_ON_KEY_PRESS          = "onKeyPress";
 /*
     private static final String EVENT_ON_TIMER              = "onTimer";
@@ -294,6 +293,7 @@ final class ComputerView extends View
     private char[] text;
 
     /* profile vars */
+    private Int iunits;
     private Integer units;
     private NakedVector areas;
     private Image backgroundImage;
@@ -306,11 +306,12 @@ final class ComputerView extends View
     /* HECL - shared among profiles */
     private ControlledInterp interp;
     private NakedVector heclOnUpdated, heclOnStart, heclOnStop, heclOnKey/*, heclOnTimer*/;
-    private Thing[] heclArgvOnUpdated, heclArgvOnStart, heclArgvOnStop, heclArgvOnKey/*, heclArgvOnTimer*/;
+    private Thing[] heclArgvOnUpdated, heclArgvOnStart, heclArgvOnStop, heclArgvVoid, heclArgvOnKey/*, heclArgvOnTimer*/;
     private Hashtable heclResults;
 /*
     private TimerTask heclTimer;
 */
+    private final api.lang.Int interpLock = new api.lang.Int(0);
 //#endif
 
     /* profiles and current profile */
@@ -327,7 +328,7 @@ final class ComputerView extends View
     private volatile QualifiedCoordinates valueCoords, snrefCoords;
     private volatile long timestamp, starttime, /*snreftime,*/ timetauto;
     private volatile float altLast, altDiff;
-    private volatile int counter, sat, fix, dgps;
+    private volatile int sat, fix, dgps;
     private float[] valuesFloat;
 
     /* short term avg speed */
@@ -343,7 +344,9 @@ final class ComputerView extends View
 
     ComputerView(/*Navigator*/Desktop navigator) {
         super(navigator);
+        this.iunits = new Int(Config.units);
         this.rotate = true;
+        init();
     }
 
 //#ifdef __B2B__
@@ -355,12 +358,19 @@ final class ComputerView extends View
 
 //#endif
 
-    private void initialize() {
+    private void init() {
         // init calendars
-        TIME_CALENDAR = new SimpleCalendar(Calendar.getInstance(TimeZone.getDefault()));
-        ETA_CALENDAR = new SimpleCalendar(Calendar.getInstance(TimeZone.getDefault()));
+        this.TIME_CALENDAR = new SimpleCalendar(Calendar.getInstance(TimeZone.getDefault()));
+        this.ETA_CALENDAR = new SimpleCalendar(Calendar.getInstance(TimeZone.getDefault()));
 
-        // init CRC table
+        // trip values
+        this.valuesFloat = new float[TOKENS_float.length];
+        this.spdavgFloat = new float[SHORT_AVG_DEPTH];
+        this.spdavgLong = new long[SHORT_AVG_DEPTH];
+    }
+
+    private void initializeForProfiles() {
+        // init CRC table for PNG colorification
         int[] crc_table = CRC_TABLE = new int[256];
         for (int n = 0; n < 256; n++) {
             int c = n;
@@ -373,22 +383,14 @@ final class ComputerView extends View
             crc_table[n] = c;
         }
 
-        // init vars
+        // init vars for theme parsing
         this.tokenizer = new CharArrayTokenizer();
         this.text = new char[MAX_TEXT_LENGTH];
         this.sb = new StringBuffer(MAX_TEXT_LENGTH);
 
-        // init shared
+        // init themes shared var
         this.fonts = new Hashtable(8);
         this.backgrounds = new Hashtable(8);
-
-        // trip values
-        this.valuesFloat = new float[TOKENS_float.length];
-        this.spdavgFloat = new float[SHORT_AVG_DEPTH];
-        this.spdavgLong = new long[SHORT_AVG_DEPTH];
-
-        // reset trip values
-        reset();
     }
 
 //#ifdef __HECL__
@@ -409,29 +411,30 @@ final class ComputerView extends View
 //#endif
 
     public void trackingStarted() {
-        if (!isUsable()) {
-            return;
-        }
-
-        // reset trip values
+        // reset trip vars
         reset();
 
+        // have profiles
+        if (isUsable()) {
 //#ifdef __HECL__
-        // invoke handlers
-        invokeHandlers(interp, heclOnStart, heclArgvOnStart);
+            // invoke handlers
+            invokeHandlers(interp, heclOnStart, heclArgvOnStart);
 //#endif
+        }
     }
 
 //#ifdef __HECL__
+
     public void trackingStopped() {
         // invoke handlers
         invokeHandlers(interp, heclOnStop, heclArgvOnStop);
     }
+
 //#endif
 
     public int locationUpdated(Location l) {
-        // got any profile?
-        if (isUsable()) {
+        // got any profile or plugin // HACK
+        if (isUsable() || havePlugins()) {
 
             // timestamp
             final long t = l.getTimestamp();
@@ -474,7 +477,6 @@ final class ComputerView extends View
                             ds = 0F;
                         } else {
                             QualifiedCoordinates.releaseInstance(snrefCoords);
-                            snrefCoords = null;
                             snrefCoords = avgQc._clone();
                         }
                     } else {
@@ -484,7 +486,6 @@ final class ComputerView extends View
 
                 // update coords
                 QualifiedCoordinates.releaseInstance(valueCoords);
-                valueCoords = null;
                 valueCoords = qc._clone();
 
                 // local ref for faster access
@@ -597,11 +598,24 @@ final class ComputerView extends View
             }
 
 //#ifdef __HECL__
-            // invalidate vars
-            interp.cacheversion++;
 
-            // invoke users handlers
-            invokeHandlers(interp, heclOnUpdated, heclArgvOnUpdated);
+            // have handler
+            if (heclOnUpdated != null) {
+                // dont hang
+                synchronized (interpLock) {
+                    // avoid waiting for lock
+                    if (interpLock.intValue() == 0) {
+                        // enter
+                        interpLock.inc();
+                        // invalidate vars
+                        interp.cacheversion++;
+                        // invoke users handlers
+                        invokeHandlers(interp, heclOnUpdated, heclArgvOnUpdated);
+                        // leave
+                        interpLock.dec();
+                    }
+                }
+            }
 //#endif
         }
 
@@ -758,17 +772,21 @@ final class ComputerView extends View
 
                     // got something?
                     if (ps.size() > 0) {
+
+                        // finalize initialization
+                        initializeForProfiles();
+
 //#ifdef __HECL__
                         // initialize interp
-                        interp = new ControlledInterp(false);
-                        interp.addFallback(this);
+                        interp = new ControlledInterp(Config.FOLDER_PROFILES, false);
+                        interp.addFallback(this, iunits);
                         interp.addCommand("print", new PrintCommand(this));
 
                         // debug help
                         heclResults = new Hashtable(16);
                         
                         // find handlers
-                        findHandlers();
+                        interp.loadUserScripts(Config.getFolderURL(Config.FOLDER_PROFILES));
 
                         // get handlers
                         heclOnUpdated = interp.getHandlers(EVENT_ON_LOCATION_UPDATED);
@@ -781,6 +799,9 @@ final class ComputerView extends View
                         heclArgvOnStop = new Thing[]{ new Thing(EVENT_ON_TRACKING_STOP) };
                         heclArgvOnKey = new Thing[]{ new Thing(EVENT_ON_KEY_PRESS), IntThing.create(0) };
 //                        heclArgvOnTimer = new Thing[]{ new Thing(EVENT_ON_TIMER), LongThing.create(0) };
+
+                        // turn on optimizations
+                        interp.optimize();
 
 //#endif /* __HECL__ */
 
@@ -805,9 +826,6 @@ final class ComputerView extends View
 
                         // got some profile?
                         if (s != null) {
-
-                            // finalize initialization
-                            initialize();
 
                             // load default profile
                             loadViaCache(s);
@@ -958,9 +976,11 @@ final class ComputerView extends View
     private String _profileName;
 
     public void commandAction(Command command, Displayable displayable) {
+
         // load new profile if selected
         boolean load = false;
         if (Desktop.CANCEL_CMD_TYPE != command.getCommandType()) {
+
             // get selection
             synchronized (this) {
                 final List list = (List) displayable;
@@ -1731,6 +1751,14 @@ final class ComputerView extends View
         return profiles != null && profiles.size() != 0 && initialProfile != null;
     }
 
+    private boolean havePlugins() {
+//#ifdef __HECL__
+        return cz.kruch.track.hecl.PluginManager.getInstance().size() > 0;
+//#else
+        return false;
+//#endif
+    }
+
     private void reset() {
         // reset calendars
         TIME_CALENDAR.reset();
@@ -1740,7 +1768,7 @@ final class ComputerView extends View
         valueCoords = snrefCoords = null;
         timestamp = starttime = timetauto = 0;
         altLast = altDiff = Float.NaN;
-        counter = sat = fix = dgps = 0;
+        sat = fix = dgps = 0;
         final float[] valuesFloat = this.valuesFloat;
         for (int i = valuesFloat.length; --i >= 0; ) {
             valuesFloat[i] = 0F;
@@ -1756,7 +1784,9 @@ final class ComputerView extends View
 
 //#ifdef __HECL__
         // invalidate vars
-        interp.cacheversion = 0;
+        if (interp != null) {
+            interp.cacheversion = 0;
+        }
 //#endif
     }
 
@@ -1853,7 +1883,7 @@ final class ComputerView extends View
             // load from file
             load(filename);
 
-            // fix vars
+            // fix missing profile vars
             if (units == null) {
                 units = new Integer(Config.units);
             }
@@ -1861,6 +1891,9 @@ final class ComputerView extends View
             // cache
             profiles.put(filename, new Object[]{ areas, colors, units });
         }
+
+        // fallback hack
+        iunits.setValue(units.intValue());
 
         // remember last selection
         Config.cmsProfile = filename;
@@ -1927,10 +1960,10 @@ final class ComputerView extends View
             if (dir.exists()) {
                 final Vector v = new Vector(8);
                 for (Enumeration e = dir.list(); e.hasMoreElements(); ) {
-                    final String name = (String) e.nextElement();
-                    final String candidate = name.toLowerCase();
+                    final String filename = (String) e.nextElement();
+                    final String candidate = filename.toLowerCase();
                     if (candidate.startsWith("cms.") && candidate.endsWith(".xml")) {
-                        v.addElement(name); // use original to preserve case
+                        v.addElement(filename); // use original to preserve case
                     }
                 }
                 profilesNames = FileBrowser.sort2array(v.elements(), null, null);
@@ -2365,70 +2398,6 @@ final class ComputerView extends View
 
 //#ifdef __HECL__
 
-    private void findHandlers() throws IOException, HeclException {
-        File dir = null;
-
-        try {
-            // open stores directory
-            dir = File.open(Config.getFolderURL(Config.FOLDER_PROFILES));
-
-            // parse handlers
-            if (dir.exists()) {
-
-                // locals
-                final char[] buffer = new char[512];
-                final StringBuffer sb = new StringBuffer(4096);
-                InputStreamReader reader = null;
-
-                // eval all scripts
-                for (Enumeration e = dir.list(); e.hasMoreElements(); ) {
-                    final String filename = (String) e.nextElement();
-                    if (filename.endsWith(".hcl") || filename.endsWith(".HCL")) {
-                        try {
-                            // read script from file
-                            reader = new InputStreamReader(new BufferedInputStream(Connector.openInputStream(Config.getFolderURL(Config.FOLDER_PROFILES) + filename), 4096));
-                            int c = reader.read(buffer);
-                            while (c != -1) {
-                                sb.append(buffer, 0, c);
-                                c = reader.read(buffer);
-                            }
-                            String script = sb.toString();
-//#ifdef __LOG__
-                            if (log.isEnabled()) {
-                                log.debug("-- evaluate: \n");
-                                log.debug(script);
-                                log.debug("-- ~evaluate");
-                            }
-//#endif
-                            // register handlers
-                            interp.evalNoncaching(new Thing(script));
-
-                        } finally {
-
-                            // cleanup
-                            try {
-                                reader.close();
-                            } catch (Exception ex) { // NPE or IOE or SE
-                                // ignore
-                            }
-                            reader = null;
-
-                            // reset string buffer
-                            sb.delete(0, sb.length());
-                        }
-                    }
-                }
-            }
-        } finally {
-            // close dir
-            try {
-                dir.close();
-            } catch (Exception e) { // IOE or NPE
-                // ignore
-            }
-        }
-    }
-
     /* synchronized to avoid race-cond with hecl processing in render */
     private /*static*/ synchronized void invokeHandlers(final Interp interp,
                                                         final NakedVector handlers,
@@ -2456,6 +2425,8 @@ final class ComputerView extends View
             heclResults.put(handlerName, result);
         }
     }
+
+    // TODO move to TripStatitics
 
     private static final int HASH_ALT           = 0x179a9; // array     // 96681
     private static final int HASH_FIX           = 0x18c15; // specs     // 101397
@@ -2506,19 +2477,16 @@ final class ComputerView extends View
 //    private static final int HASH_WPT_IMG	    = 0x5c9d03b1; // 1553793969
 //    private static final int HASH_WPT_COORDS	= 0x79d50970; // 2044004720
 
-    public Thing get(String varname) {
+    public Thing get(final String varname, final int units) {
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("interp get: " + varname);
 //#endif
         Thing result = null;
 
+        // try our standard vars
         if (varname.startsWith("cms::")) {
             final int hash = hash(varname, 5);
-            final int units = this.units.intValue();
             boolean fromKmh = false, toFeets = false;
-//#ifdef __LOG__
-            if (log.isEnabled()) log.debug("var hash: " + Integer.toHexString(hash));
-//#endif
             int idx = -1;
             switch (hash) {
                 case HASH_ALT: {
@@ -2573,6 +2541,7 @@ final class ComputerView extends View
 //#ifdef __LOG__
                 if (log.isEnabled()) log.debug("var " + varname + " resolved as float, idx = " + idx + ", value = " + valuesFloat[idx]);
 //#endif
+                // found float type var
                 float v = valuesFloat[idx];
                 if (fromKmh) {
                     v = fromKmh(units, v);
@@ -2583,6 +2552,7 @@ final class ComputerView extends View
 
             } else if (result == null) {
 
+                // try specials
                 switch (hash) {
                     case HASH_FIX: {
                         result = IntThing.create(fix);
@@ -2736,7 +2706,7 @@ final class ComputerView extends View
 					} break;
                 }
             }
-        } else {
+        } else if (heclResults != null) { // can be also debug info
             final Object msg = heclResults.get(varname);
             if (msg != null) {
 //#ifdef __LOG__
@@ -2753,6 +2723,8 @@ final class ComputerView extends View
         return result;
     }
 
+    // TODO ~ move to TripStatitics
+                                                 
     private static Thing updateCachedOrCreate(final Thing cached, final double value) {
         final Thing result;
         if (cached != null) {
@@ -2824,7 +2796,6 @@ final class ComputerView extends View
             
             final StringBuffer sb = parent.sb;
             final RealThing thing = argv[1].getVal();
-
             if (thing instanceof NumberThing) {
                 final NumberThing number = (NumberThing) thing;
                 if (number.isIntegral()) {

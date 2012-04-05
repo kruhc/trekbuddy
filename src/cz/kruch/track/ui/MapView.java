@@ -15,6 +15,7 @@ import javax.microedition.lcdui.Canvas;
 import javax.microedition.lcdui.Graphics;
 import javax.microedition.lcdui.Font;
 import java.util.Vector;
+import java.util.TimerTask;
 
 /**
  * Map screen.
@@ -40,6 +41,9 @@ final class MapView extends View {
     private Position[] route;
     private int lastRouteId;
 
+    // magnifier
+    private int x2;
+
     MapView(/*Navigator*/Desktop navigator) {
         super(navigator);
         this.mapViewer = new MapViewer(/*0, 0, */);
@@ -56,6 +60,11 @@ final class MapView extends View {
      * @deprecated hack
      */
     void setMap(Map map) {
+
+        // setup magnifier
+        if (map != null) {
+            map.setMagnifier(x2);
+        }
 
         // setup map viewer
         injectMap(map);
@@ -308,7 +317,6 @@ final class MapView extends View {
 
     public int handleAction(final int action, final boolean repeated) {
         // local refs
-        final Desktop navigator = this.navigator;
         final MapViewer mapViewer = this.mapViewer;
 
         int mask = Desktop.MASK_NONE;
@@ -316,16 +324,29 @@ final class MapView extends View {
         // only if map viewer is usable
         if (mapViewer.hasMap()) {
 
+            // local ref
+            final Desktop navigator = this.navigator;
+
             // sync or navigate
             if (action == Canvas.FIRE) {
 
-                // mode flags
-                Desktop.browsing = false;
-                Desktop.navigating = !Desktop.navigating;
+                // sync
+                if (!repeated) {
 
-                // trick
-                if (navigator.isTracking() && isLocation()) {
-                    mask |= updatedTrick();
+                    // mode flags
+                    Desktop.browsing = false;
+                    Desktop.navigating = !Desktop.navigating;
+
+                    // trick
+                    if (navigator.isTracking() && isLocation()) {
+                        mask |= updatedTrick();
+                    }
+
+                } else {
+
+                    // trigger bitmap zoom
+                    toogleMagnifier();
+                    mask = Desktop.MASK_ALL;
                 }
 
             } else { // move left-right-up-down
@@ -427,7 +448,7 @@ final class MapView extends View {
             }
             break;
 
-            case Canvas.KEY_NUM5: {
+            case Canvas.KEY_NUM5: { // same as FIRE
                 if (!repeated) {
                     if (mapViewer.hasMap()) {
                         Desktop.browsing = false;
@@ -438,6 +459,9 @@ final class MapView extends View {
                     } else if (navigator.isTracking()) {
                         Desktop.showWarning(navigator._getLoadingResultText(), null, Desktop.screen);
                     }
+                } else { // trigger bitmap zoom
+                    toogleMagnifier();
+                    mask = Desktop.MASK_ALL;
                 }
             }
             break;
@@ -647,6 +671,25 @@ final class MapView extends View {
         }
 
         return mask;
+    }
+
+    private int toogleMagnifier() {
+        // give feedback
+        if (!Config.powerSave) {
+            Desktop.display.vibrate(100);
+        }
+
+        // invert
+        x2 = ++x2 % 2;
+
+        // setup map
+        final Map map = mapViewer.getMap();
+        setMap(null);
+//        map.toggleMagnifier();
+        map.setMagnifier(x2);
+        setMap(map);
+        
+        return Desktop.MASK_ALL;
     }
 
     public Location getLocation() {
@@ -881,6 +924,21 @@ final class MapView extends View {
             return mapPath.startsWith(s);
         } else { // single map
             return mapPath.equals(startupURL);
+        }
+    }
+
+    private volatile TimerTask dcChecker;
+
+    private final class DoubleClickChecker extends TimerTask {
+        private int zoom;
+
+        public DoubleClickChecker(int zoom) {
+            this.zoom = zoom;
+        }
+
+        public void run() {
+            dcChecker = null;
+            navigator.zoom(zoom);
         }
     }
 }

@@ -35,8 +35,8 @@
 1001=Stop
 1002=Pause
 1003=Continue
-1004=Load Map
-1005=Load Atlas
+1004=Maps
+#REMOVED 1005=Load Atlas
 1006=Settings
 1007=Navigation
 1008=Info
@@ -45,6 +45,7 @@
 1011=Connect
 1012=Open
 1013=Select
+1014=Live
 
 # desktop messages
 1300=Failed to init location sharing
@@ -72,8 +73,8 @@
 1322=Map loading failed
 1323=Tiles loaded
 1324=Loading status
-1325=Select Map
-1326=Select Atlas
+1325=Select Map/Atlas
+#REMOVED 1326=Select Atlas
 1327=Select Layer
 1328=Unknown SMS
 1329=Location SMS sent
@@ -138,6 +139,7 @@
 1389=Registration for SMS push failed
 1390=Invalid input
 1391=Tracking active
+1392=No plugins found
 
 # navigation commands
 2000=RouteForward
@@ -250,6 +252,12 @@
 3102=Location
 3103=Navigation
 3104=Misc
+3105=Plugins
+
+# settings (Plugins)
+3180=Configure
+3181=enabled
+3182=<no configuration>
 
 # settings forms/fields/values (Basic)
 3400=Startup map
@@ -305,6 +313,7 @@
 3533=List mode
 3534=platform default
 3535=custom selector
+3536=Map zoom
 
 # settings forms/fields/values (Location)
 3600=Provider
@@ -345,7 +354,7 @@
 3701=POI Proximity
 3702=Route Line
 3703=dotted
-3704=red color
+#REMOVED 3704=red color
 3705=POI icons
 3706=Location SMS
 3707=receive
@@ -373,7 +382,9 @@
 3811=lowmem I/O
 3812=numeric input hack
 3813=draw main menu
-3814=external cfg backup 
+3814=external cfg backup
+3815=HECL opt level
+3819=filtered scaling
 
 # info commands
 4000=Technical

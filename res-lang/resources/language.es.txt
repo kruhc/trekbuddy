@@ -21,8 +21,8 @@
 1001=Parar
 1002=Pausa
 1003=Continuar
-1004=Cargar Mapa
-1005=Cargar Atlas
+1004=Mapas
+#REMOVED 1005=Cargar Atlas
 1006=Configuración
 1007=Navegación
 1008=Información
@@ -31,6 +31,7 @@
 1011=Conectar
 1012=Abrir
 1013=Seleccionar
+1014=Live
 
 # desktop messages
 1300=Fallo al iniciar ubicación compartida
@@ -58,8 +59,8 @@
 1322=Fallo cargando el mapa
 1323=Porciones de mapa cargados
 1324=Cargando estado
-1325=Selecciona Mapa
-1326=Selecciona Atlas
+1325=Selecciona Mapa/Atlas
+#REMOVED 1326=Selecciona Atlas
 1327=Selecciona Capa
 1328=SMS desconocido
 1329=SMS de localización enviado
@@ -124,6 +125,7 @@
 1389=Fallo de registro por SMS push
 1390=Entrada no válida
 1391=Seguimiento activo
+1392=No se han encontrado plugins
 
 # navigation commands
 2000=Seguir Ruta
@@ -236,6 +238,11 @@
 3102=Localización
 3103=Navegación
 3104=Varios
+3105=Plugins
+
+3180=Configurar
+3181=habilitado
+3182=<sin configuración>
 
 # settings forms/fields/values (Basic)
 3400=Mapa de inicio
@@ -332,7 +339,7 @@
 3701=Proximidad a POI (m)
 3702=Estilo línea de Ruta
 3703=punteada
-3704=color rojo
+#REMOVED 3704=color rojo
 3705=iconos POI
 3706=SMS Localización
 3707=recibir
@@ -361,6 +368,8 @@
 3812=numeric input hack
 3813=dibujar menú principal
 3814=backup configuración externa
+3815=HECL opt nivel
+3819=ampliación filtrado
  
 # info commands
 4000=Técnica

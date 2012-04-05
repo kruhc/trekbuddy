@@ -292,12 +292,8 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         /* default for Android (MicroEmu) */
         if (android.os.Build.MODEL.indexOf("BlackBerry") > -1) {
             cz.kruch.track.TrackingMIDlet.playbook = true;
-//            System.setProperty("fileconn.dir.memorycard", "file:///accounts/1000/shared/misc/android/");
-//            dataDir = "file:///accounts/1000/shared/misc/android/TrekBuddy/";
-            dataDir = getDefaultDataDir("file:///sdcard/", "TrekBuddy/");
-        } else {
-            dataDir = getDefaultDataDir("file:///sdcard/", "TrekBuddy/");
         }
+        dataDir = getDefaultDataDir("file:///sdcard/", "TrekBuddy/");
         desktopFontSize = 1;
         listFont = 0x200010;
         tilesScaleFiltered = true;

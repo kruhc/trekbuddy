@@ -45,7 +45,7 @@ final class JarLoader extends Map.Loader /*implements Atlas.Loader*/ {
                 }
             }
             try {
-                map.setCalibration(Calibration.newInstance(in, path));
+                map.setCalibration(Calibration.newInstance(in, path, path));
             } catch (InvalidMapException e) {
                 throw e;
             } catch (IOException e) {
@@ -107,7 +107,7 @@ final class JarLoader extends Map.Loader /*implements Atlas.Loader*/ {
         try {
 
             // read image
-            slice.setImage(Image.createImage(buffered(JarLoader.class.getResourceAsStream(url))));
+            slice.setImage(scaleImage(buffered(JarLoader.class.getResourceAsStream(url))));
 
         } finally {
 

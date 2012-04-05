@@ -34,7 +34,7 @@ final class DeviceScreen extends GameCanvas implements Runnable {
     static final int BTN_TXTCOLOR   = 0x00ffffff; // 0x00ffffff;
 
     // main application
-    private final Desktop delegate;
+    final Desktop delegate;
 
     // behaviour
     private int fullScreenHeight;
@@ -203,6 +203,7 @@ final class DeviceScreen extends GameCanvas implements Runnable {
     }
 
 //#ifdef __ANDROID__
+
     /** @Override */
     public void setFullScreenMode(boolean b) {
         if (b) {
@@ -215,15 +216,16 @@ final class DeviceScreen extends GameCanvas implements Runnable {
 			});
         }
     }
+
 //#endif
 
-    public void splash() {
+    void splash() {
         if (Config.guideSpotsMode > 0 || Config.zoomSpotsMode > 0) {
             beenPressed = true;
         }
     }
 
-    public void autohide() {
+    void autohide() {
         if (beenPressed && (Config.guideSpotsMode > 1 || Config.zoomSpotsMode > 1)) {
             if (delayedRepaint == null) {
                 Desktop.schedule(delayedRepaint = new RepaintTask(), 3000);
@@ -231,7 +233,7 @@ final class DeviceScreen extends GameCanvas implements Runnable {
         }
     }
     
-    public boolean iconBarVisible() {
+    boolean iconBarVisible() {
         return Config.guideSpotsMode == 1 || (Config.guideSpotsMode == 2 && beenPressed);
     }
 
@@ -289,6 +291,11 @@ final class DeviceScreen extends GameCanvas implements Runnable {
 
         // recalc touch threshold
         gdiff = Math.min(w / 15, h / 15);
+
+        // too early invocation? happens on Belle :-$
+        if (delegate == null) {
+            return;
+        }
 
         // reset and repaint UI
         if (delegate.resetGui()) {
@@ -380,6 +387,9 @@ final class DeviceScreen extends GameCanvas implements Runnable {
         // clear helpers
 		gx = gy = 0;
 
+        // stop key checker
+        cancelKeyRepeated();
+
         // delayed repaint for menu autohide
         autohide();
 
@@ -449,6 +459,7 @@ final class DeviceScreen extends GameCanvas implements Runnable {
 
         // usual drag
         if (adx >= gdiff || ady >= gdiff || _getInMove()) {
+            cancelKeyRepeated(); // stop key checker
             _setInKey(0);
             _setInMove(true);
             delegate.handleMove(x, y);
@@ -686,17 +697,15 @@ final class DeviceScreen extends GameCanvas implements Runnable {
             return;
         }
 
+        // was long press?
+        final boolean waslp = keyRepeatedCount > 0;
+
         // no key pressed anymore
         _setInKey(0);
         keyRepeatedCount = 0;
 
         // stop key checker
-        synchronized (this) {
-            if (repeatedKeyCheck != null) {
-                repeatedKeyCheck.cancel();
-                repeatedKeyCheck = null;
-            }
-        }
+        cancelKeyRepeated();
 
 //#ifdef __ALL__
 
@@ -747,6 +756,15 @@ final class DeviceScreen extends GameCanvas implements Runnable {
         synchronized (this) {
             if (repeatedKeyCheck == null) {
                 Desktop.schedule(repeatedKeyCheck = new KeyCheckTimerTask(), 750L);
+            }
+        }
+    }
+
+    void cancelKeyRepeated() {
+        synchronized (this) {
+            if (repeatedKeyCheck != null) {
+                repeatedKeyCheck.cancel();
+                repeatedKeyCheck = null;
             }
         }
     }
@@ -890,8 +908,12 @@ final class DeviceScreen extends GameCanvas implements Runnable {
         }
 //#ifndef __B2B__
         if (api.file.File.isFs()) {
-            drawButton(g, delegate.cmdLoadMap, dx, (dy << 1) + bh, bw, bh);
-            drawButton(g, delegate.cmdLoadAtlas, dx + bw + dx, (dy << 1) + bh, bw, bh);
+//            drawButton(g, delegate.cmdLoadMap, dx, (dy << 1) + bh, bw, bh);
+//            drawButton(g, delegate.cmdLoadAtlas, dx + bw + dx, (dy << 1) + bh, bw, bh);
+            drawButton(g, delegate.cmdLoadMaps, dx, (dy << 1) + bh, bw, bh);
+//#ifdef __HECL__
+            drawButton(g, delegate.cmdLive, dx + bw + dx, (dy << 1) + bh, bw, bh);
+//#endif
         }
 //#endif        
         drawButton(g, delegate.cmdSettings, dx, 3 * dy + (bh << 1), bw, bh);
@@ -947,9 +969,13 @@ final class DeviceScreen extends GameCanvas implements Runnable {
 //#ifndef __B2B__
                     if (api.file.File.isFs()) {
                         if (xL) {
-                            cmd = delegate.cmdLoadMap;
+//                            cmd = delegate.cmdLoadMap;
+                            cmd = delegate.cmdLoadMaps;
                         } else if (xR) {
-                            cmd = delegate.cmdLoadAtlas;
+//                            cmd = delegate.cmdLoadAtlas;
+//#ifdef __HECL__
+                            cmd = delegate.cmdLive;
+//#endif                            
                         }
                     }
 //#endif
@@ -1136,6 +1162,11 @@ final class DeviceScreen extends GameCanvas implements Runnable {
     }
 
     private final class RepaintTask extends TimerTask {
+
+        /* to avoid $1 */
+        public RepaintTask() {
+        }
+
         public void run() {
             if (Config.guideSpotsMode > 1) {
                 final int dy = (NavigationScreens.guideSize + 2 * 3) / 10;

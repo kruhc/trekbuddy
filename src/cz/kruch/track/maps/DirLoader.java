@@ -52,6 +52,7 @@ final class DirLoader extends Map.Loader implements Atlas.Loader {
     void loadMeta() throws IOException {
         // local ref
         final Map map = this.map;
+        final String path = map.getPath();
 
         // read calibration
         if (getMapCalibration() == null) {
@@ -62,11 +63,12 @@ final class DirLoader extends Map.Loader implements Atlas.Loader {
             // parse known calibration
             try {
                 // path points to calibration file
-                map.setCalibration(Calibration.newInstance(buffered(Connector.openInputStream(map.getPath())), map.getPath()));
+                map.setCalibration(Calibration.newInstance(buffered(Connector.openInputStream(path)),
+                                                           path, path));
 
                 // check calibration
                 if (getMapCalibration() == null) {
-                    throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_UNKNOWN_CAL_FILE) + ": " + map.getPath());
+                    throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_UNKNOWN_CAL_FILE) + ": " + path);
                 }
 
                 // GPSka hack
@@ -79,7 +81,7 @@ final class DirLoader extends Map.Loader implements Atlas.Loader {
             } catch (InvalidMapException e) {
                 throw e;
             } catch (IOException e) {
-                throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_PARSE_CAL_FAILED) + ": " + map.getPath(), e);
+                throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_PARSE_CAL_FAILED) + ": " + path, e);
             } finally {
 
                 // close stream
@@ -97,7 +99,7 @@ final class DirLoader extends Map.Loader implements Atlas.Loader {
             File file = null;
             try {
                 // check for .set file
-                final String setFile = map.getPath().substring(0, map.getPath().lastIndexOf('.')) + ".set";
+                final String setFile = path.substring(0, path.lastIndexOf('.')) + ".set";
                 file = File.open(setFile);
                 if (file.exists()) {
                     LineReader reader = null;
@@ -159,7 +161,7 @@ final class DirLoader extends Map.Loader implements Atlas.Loader {
         try {
 
             // read image
-            slice.setImage(Image.createImage(buffered(Connector.openInputStream(url))));
+            slice.setImage(scaleImage(buffered(Connector.openInputStream(url))));
 
         } finally {
 
@@ -224,7 +226,8 @@ final class DirLoader extends Map.Loader implements Atlas.Loader {
                                         InputStream in = null;
                                         Calibration calibration = null;
                                         try {
-                                            calibration = Calibration.newInstance(in = Connector.openInputStream(path), path);
+                                            calibration = Calibration.newInstance(in = Connector.openInputStream(path),
+                                                                                  path, path);
                                         } finally {
                                             try {
                                                 in.close();

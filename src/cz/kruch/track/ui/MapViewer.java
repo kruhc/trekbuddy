@@ -44,10 +44,8 @@ final class MapViewer {
     private int chx, chy;
     private int chx0, chy0;
     private int crosshairSize, crosshairSize2;
-    private int mWidth, mHeight;
 
     private int gx, gy;
-
     private int sy;
     
 /*
@@ -157,8 +155,6 @@ final class MapViewer {
             ProjectionSetup.contextProjection = map.getProjection();
 
             // use new map
-            this.mWidth = map.getWidth();
-            this.mHeight = map.getHeight();
             this.chx0 = this.chx = (Desktop.width - crosshairSize) >> 1;
             this.chy0 = this.chy = (Desktop.height - crosshairSize) >> 1;
             this.x = this.y = 0;
@@ -194,6 +190,10 @@ final class MapViewer {
     }
 
     boolean setPosition(Position p) {
+        if (map == null) {
+            return false;
+        }
+        
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("move to " + p + ", current position is " + getPosition());
 //#endif
@@ -233,8 +233,8 @@ final class MapViewer {
         final int crosshairSize2 = this.crosshairSize2;
         final boolean ots = Config.oneTileScroll;
 
-        int mHeight = this.mHeight;
-        int mWidth = this.mWidth;
+        int mWidth = map.getWidth();
+        int mHeight = map.getHeight();
         final int x0;
         final int y0;
         boolean dirty = false;
@@ -405,7 +405,7 @@ final class MapViewer {
                     chx++;
                     dirty = true;
                 } else if (ots) {
-                    if (x0 + mWidth < this.mWidth) {
+                    if (x0 + mWidth < map.getWidth()) {
                         x = x0 + mWidth;
                         chx = 0 - crosshairSize2;
                         dirty = true;
@@ -423,7 +423,7 @@ final class MapViewer {
                     chy++;
                     dirty = true;
                 } else if (ots) {
-                    if (y0 + mHeight < this.mHeight) {
+                    if (y0 + mHeight < map.getWidth()) {
                         y = y0 + mHeight;
                         chy = 0 - crosshairSize2;
                         dirty = true;
@@ -504,7 +504,10 @@ final class MapViewer {
     }
 
     void setPoiStatus(int idx, byte status) {
-        wptStatuses[idx] = status;
+        /* synchronized to avoid race condition with render() */
+        synchronized (this) {
+            wptStatuses[idx] = status;
+        }
     }
 
     char boundsHit(final int direction) {
@@ -519,7 +522,7 @@ final class MapViewer {
                     if (p.getX() == 0) result = 'W';
                 break;
                 case Canvas.RIGHT:
-                    if (p.getX() + 1 >= map.getWidth() - 1) result = 'E'; // TODO workaround, bug is elsewhere 
+                    if (p.getX() + 1 >= map.getWidth() - 1) result = 'E'; // TODO workaround, bug is elsewhere
                 break;
                 case Canvas.DOWN:
                     if (p.getY() + 1 >= map.getHeight() - 1) result = 'S'; // TODO workaround, bug is elsewhere
@@ -1350,10 +1353,12 @@ final class MapViewer {
             }
 
             // find needed slices ("row by row")
+            final int mWidth = map.getWidth();
+            final int mHeight = map.getHeight();
             int _x = x;
             int _y = y;
-            final int xmax = x + Desktop.width > mWidth ? mWidth : x + Desktop.width;
-            final int ymax = y + Desktop.height > mHeight ? mHeight : y + Desktop.height;
+            final int xmax = _x + Desktop.width > mWidth ? mWidth : _x + Desktop.width;
+            final int ymax = _y + Desktop.height > mHeight ? mHeight : _y + Desktop.height;
             while (_y < ymax) {
                 int _l = ymax; // bottom for current "line"
                 while (_x < xmax) {

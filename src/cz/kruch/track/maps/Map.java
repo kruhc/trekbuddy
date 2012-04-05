@@ -10,12 +10,15 @@ import cz.kruch.track.configuration.Config;
 import cz.kruch.track.ui.Position;
 import cz.kruch.track.ui.Desktop;
 import cz.kruch.track.util.CharArrayTokenizer;
+import cz.kruch.track.util.ImageUtils;
 import cz.kruch.track.Resources;
 
 import api.io.BufferedInputStream;
 import api.location.QualifiedCoordinates;
 import api.location.Datum;
 import api.location.ProjectionSetup;
+
+import javax.microedition.lcdui.Image;
 
 /**
  * Map representation and handling.
@@ -27,17 +30,22 @@ public final class Map implements Runnable {
     private static final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("Map");
 //#endif
 
-    // interaction with outside world
+    // map properties
     private String path;
     private String name;
-    private /*StateListener*/Desktop listener;
+
+    // interaction with outside world
+    /*StateListener*/Desktop listener;
+
+    // map loader
+    private Loader loader;
 
     // map state
-    private Loader loader;
     private Calibration calibration;
     private volatile boolean isInUse;
+    private int x2;
 
-    // special map properties
+    // special map properties // HACK
     boolean virtual;
     int bgColor;
 
@@ -291,18 +299,21 @@ public final class Map implements Runnable {
         try {
             // create loader
             if (loader == null) {
+                final String pathLc = path.toLowerCase();
                 final Class factory;
-                if (path.endsWith(".tar") || path.endsWith(".TAR")) {
+                if (pathLc.endsWith(".tar")) {
                     factory = Class.forName("cz.kruch.track.maps.TarLoader");
-                } else if (path.endsWith(".jar")) {
+                } else if (pathLc.endsWith(".jar")) {
                     factory = Class.forName("cz.kruch.track.maps.JarLoader");
-                } else if (path.endsWith(".xml")) {
+                } else if (pathLc.endsWith(".xml")) {
                     factory = Class.forName("cz.kruch.track.maps.NoMapLoader");
                 } else {
                     factory = Class.forName("cz.kruch.track.maps.DirLoader");
                 }
                 loader = (Loader) factory.newInstance();
                 loader.init(this, path);
+            } else {
+                loader.x2 = 0;
             }
 
             // prepare loader
@@ -320,13 +331,17 @@ public final class Map implements Runnable {
                 throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_NO_SLICES), getName());
             }
 
-            // fix tile info
+            // fix tile info and scale
             loader.fix();
 
 //#ifdef __LOG__
             if (log.isEnabled()) log.debug("map opened");
 //#endif
-            
+
+            // GC
+            if (Config.forcedGc) {
+                System.gc(); // conditional
+            }
 
         } catch (Throwable t) {
 
@@ -349,6 +364,19 @@ public final class Map implements Runnable {
         }
 
         return null;
+    }
+
+    /** @deprecated */
+    public void toggleMagnifier() {
+        x2 = ++x2 % 2;
+        calibration.magnify(x2);
+        loader.magnify(x2);
+    }
+
+    public void setMagnifier(final int x2) {
+        this.x2 = x2;
+        calibration.magnify(x2);
+        loader.magnify(x2);
     }
 
     /**
@@ -375,7 +403,9 @@ public final class Map implements Runnable {
         protected boolean isGPSka, isTar, isTmi;
 
         protected int tileWidth, tileHeight;
-        
+        protected int scaledTileWidth, scaledTileHeight;
+        protected int x2, prescale;
+
         private Vector _list;
 
         abstract void loadMeta() throws IOException;
@@ -383,6 +413,7 @@ public final class Map implements Runnable {
 
         Loader() {
             this.tileWidth = this.tileHeight = Integer.MAX_VALUE;
+            this.prescale = Config.prescale;
 //            ((api.io.BufferedInputStream) bufferef()).setAutofill(true, -1);
         }
 
@@ -391,7 +422,7 @@ public final class Map implements Runnable {
             this.isGPSka = url.toLowerCase().endsWith(Calibration.XML_EXT);
         }
 
-        void prepare() throws IOException {
+        final void prepare() throws IOException {
             if (bufferedIn == null) {
 //#ifdef __SYMBIAN__
                 if (isTar && Config.useNativeService && Map.networkInputStreamAvailable) {
@@ -413,7 +444,7 @@ public final class Map implements Runnable {
             bufferedIn = null;
         }
 
-        void fix() throws InvalidMapException {
+        final void fix() throws InvalidMapException {
             if (tileWidth == Integer.MAX_VALUE || tileHeight == Integer.MAX_VALUE) {
 //#ifdef __LOG__
                 if (log.isEnabled()) log.debug("find tile dimensions from root tile");
@@ -432,9 +463,83 @@ public final class Map implements Runnable {
                     throw new InvalidMapException("Root tile 0-0 missing");
                 }
             }
+            scaledTileWidth = prescale(tileWidth);
+            scaledTileHeight = prescale(tileHeight);
         }
 
-        long addSlice(final CharArrayTokenizer.Token token) throws InvalidMapException {
+        final void magnify(final int x2) {
+            if (this.x2 != x2) {
+                this.x2 = x2;
+                if (x2 == 0) {
+                    scaledTileWidth >>= 1;
+                    scaledTileHeight >>= 1;
+                } else {
+                    scaledTileWidth <<= 1;
+                    scaledTileHeight <<= 1;
+                }
+            }
+        }
+
+        // HACK sx is multiple scaled width
+        private int sx2x(final int sx) {
+            return sx / scaledTileWidth * tileWidth;
+        }
+
+        // HACK sy is multiple scaled height
+        private int sy2y(final int sy) {
+            return sy / scaledTileHeight * tileHeight;
+        }
+
+        // HACK
+        final long getScaledXyLong(final Slice slice) {
+            final long x = sx2x(slice.getX());
+            final long y = sy2y(slice.getY());
+            return x << 20 | y;
+        }
+        
+        // HACK
+        final void loadScaledSlice(final Slice slice) throws IOException {
+            // temp slice
+            final Slice ss = newSlice();
+            // for Jar- or DirLoader
+            ss.setRect(sx2x(slice.getX()), sy2y(slice.getY()), tileWidth, tileHeight);
+            // for TarLoader
+            if (isTar) {
+                ((TarSlice) ss).setStreamOffset(((TarSlice) slice).getBlockOffset());
+            }
+            // load slice
+            loadSlice(ss);
+            // set image
+            slice.setImage(ss.getImage());
+        }
+
+        final Image scaleImage(final InputStream stream) throws IOException {
+            if (x2 == 0 && prescale == 100) {
+                return Image.createImage(stream);
+            }
+//#ifdef __RIM50__
+            return ImageUtils.RIMresizeImage(stream, prescale, x2);
+//#else
+            final Image image = Image.createImage(stream);
+            return ImageUtils.resizeImage(image,
+                                          prescale(image.getWidth()) << x2,
+                                          prescale(image.getHeight()) << x2,
+                                          ImageUtils.FAST_RESAMPLE);
+//#endif
+        }
+
+        /** @deprecated obsolete */ // TODO remove
+        final Image scaleImage(final Image image) {
+            if (x2 == 0 && prescale == 100) {
+                return image;
+            }
+            return ImageUtils.resizeImage(image,
+                                          prescale(image.getWidth()) << x2,
+                                          prescale(image.getHeight()) << x2,
+                                          ImageUtils.FAST_RESAMPLE);
+        }
+
+        final long addSlice(final CharArrayTokenizer.Token token) throws InvalidMapException {
             // detect slice basename
             if (basename == null) {
                 basename = getBasename(token);
@@ -468,8 +573,8 @@ public final class Map implements Runnable {
             final Calibration calibration = getMapCalibration();
             final int mw = calibration.getWidth();
             final int mh = calibration.getHeight();
-            final int tw = tileWidth;
-            final int th = tileHeight;
+            final int tw = scaledTileWidth;
+            final int th = scaledTileHeight;
             final int sx = (x / tw) * tw;
             final int sy = (y / th) * th;
             final int sw = sx + tw <= mw ? tw : mw - sx;
@@ -574,13 +679,21 @@ public final class Map implements Runnable {
             return name;
         }
 
-        private char[] getExtension(final CharArrayTokenizer.Token token) throws InvalidMapException {
+        private static char[] getExtension(final CharArrayTokenizer.Token token) throws InvalidMapException {
             final String name = token.toString();
             final int i = name.lastIndexOf('.');
             if (i > -1) {
                 return name.substring(i).toCharArray();
             }
             throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_INVALID_SLICE_NAME) + name);
+        }
+
+        private int prescale(final int i) {
+            final int ps = prescale;
+            if (ps == 100) {
+                return i;
+            }
+            return (i * ps) / 100;
         }
 
         private Throwable loadImages(final Vector slices) {
@@ -602,7 +715,7 @@ public final class Map implements Runnable {
                         try {
                             // load image
                             try {
-                                loadSlice(slice);
+                                loadScaledSlice(slice);
                             } catch (IOException e) { // file not found or corrupted
 //#ifdef __LOG__
                                 if (log.isEnabled()) log.debug("image loading failed: " + e);

@@ -376,7 +376,7 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
             choice1.append(Resources.getString(Resources.CFG_TWEAKS_FLD_LAZY_GPX), null);
             choice1.append(Resources.getString(Resources.CFG_TWEAKS_FLD_NUMERIC_INPUT_HACK), null);
             choice1.append(Resources.getString(Resources.CFG_TWEAKS_FLD_EXTERNAL_CFG_BACKUP), null);
-            choice1.append("filtered scaling", null);
+            choice1.append(Resources.getString(Resources.CFG_TWEAKS_FLD_FILTERED_SCALING), null);
             choice1.setSelectedFlags(new boolean[] {
                 Config.siemensIo,
                 Config.lowmemIo,
@@ -399,9 +399,9 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
             // HECL
             choice2 = new ChoiceGroup(Resources.getString(Resources.CFG_TWEAKS_HECL_GROUP),
                                       Desktop.CHOICE_POPUP_TYPE);
-            choice2.append("none", null);
-            choice2.append("preprocess", null);
-            choice2.append("precompile", null);
+            choice2.append("0", null);
+            choice2.append("1", null);
+            choice2.append("2", null);
             choice2.setSelectedIndex(Config.heclOpt, true);
             submenu.append(choice2);
 
@@ -549,7 +549,7 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
                                                      Config.getLocationTimings(Config.locationProvider), 4, TextField.NUMERIC);
 //#endif                
                 fieldAltCorrection = new TextField(Resources.getString(Resources.CFG_LOCATION_FLD_ALT_CORRECTION),
-                                                   Float.toString(Config.altCorrection), 5, TextField.DECIMAL);
+                                                   Float.toString(Config.altCorrection), 5, TextField.ANY/*DECIMAL*/);
             }
 //#ifdef __ALL__
             if (cz.kruch.track.TrackingMIDlet.hasFlag("provider_o2_germany")) {

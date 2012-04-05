@@ -39,12 +39,12 @@ abstract class Calibration {
     private String path;
     protected String imgname;
 
-    // map dimensions
-    protected int w, h;
-
     // map datum and projection params
     private Datum datum;
     private ProjectionSetup projectionSetup;
+
+    // map dimensions
+    private int w, h;
 
     // main (left-top) calibration point
     private int cxyx, cxyy;
@@ -59,7 +59,11 @@ abstract class Calibration {
     // reusable info
     private Position proximite;
 
+    // prescale and magnifier
+    private int prescale, x2;
+
     protected Calibration() {
+        this.prescale = Config.prescale;
     }
 
     protected final void init(final String path) {
@@ -83,12 +87,12 @@ abstract class Calibration {
         return h;
     }
 
-    public void setWidth(int width) {
-        this.w = width;
+    protected void setWidth(int width) {
+        this.w = prescale(width);
     }
 
-    public void setHeight(int height) {
-        this.h = height;
+    protected void setHeight(int height) {
+        this.h = prescale(height);
     }
 
     public ProjectionSetup getProjection() {
@@ -101,6 +105,40 @@ abstract class Calibration {
         }
 
         return datum;
+    }
+
+    final void magnify(final int x2) {
+        if (this.x2 != x2) {
+            System.out.println("calibration magnify by " + x2);
+            this.x2 = x2;
+            if (x2 == 0) {
+                w >>= 1;
+                h >>= 1;
+                cxyx >>= 1;
+                cxyy >>= 1;
+                gridTHscale *= 2;
+                gridLVscale *= 2;
+                h2 *= 2;
+                v2 *= 2;
+                ek0 *= 2;
+                nk0 *= 2;
+                hScale /= 2;
+                vScale /= 2;
+            } else {
+                w <<= 1;
+                h <<= 1;
+                cxyx <<= 1;
+                cxyy <<= 1;
+                gridTHscale /= 2;
+                gridLVscale /= 2;
+                h2 /= 2;
+                v2 /= 2;
+                ek0 /= 2;
+                nk0 /= 2;
+                hScale *= 2;
+                vScale *= 2;
+            }
+        }
     }
 
     final boolean isWithin(final QualifiedCoordinates coordinates) {
@@ -230,8 +268,8 @@ abstract class Calibration {
 
         // remember main calibration point x-y
         final Position calibrationXy = (Position) xy.elementAt(0);
-        cxyx = calibrationXy.getX();
-        cxyy = calibrationXy.getY();
+        cxyx = prescale(calibrationXy.getX());
+        cxyy = prescale(calibrationXy.getY());
 
         // compute grid
         if (projectionSetup.isCartesian()) {
@@ -261,6 +299,24 @@ abstract class Calibration {
 
         // compute pixel grid
         computeGrid(xy, ll);
+
+        // prescale
+        final float psf = (float)prescale / 100;
+        gridTHscale /= psf;
+        gridLVscale /= psf;
+        h2 /= psf;
+        v2 /= psf;
+        ek0 /= psf;
+        nk0 /= psf;
+        hScale *= psf;
+        vScale *= psf;
+    }
+
+    private int prescale(final int i) {
+        if (prescale == 100) {
+            return i;
+        }
+        return (i * prescale) / 100;
     }
 
     private void computeGrid(final Vector xy, final Vector gp) {
@@ -372,10 +428,6 @@ abstract class Calibration {
                 || token.endsWith(Calibration.GMI_EXT)
                 || token.endsWith(Calibration.XML_EXT);
 //                || token.endsWith(Calibration.J2N_EXT);
-    }
-
-    public static Calibration newInstance(final InputStream in, final String url) throws IOException {
-        return newInstance(in, url, url);
     }
 
     public static Calibration newInstance(final InputStream in,

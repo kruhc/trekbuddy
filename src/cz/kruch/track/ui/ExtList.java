@@ -26,12 +26,7 @@ final class ExtList extends List implements UiList {
         try {
             iconSize = getFont(0).getHeight();
         } catch (Throwable t) { // happens on Android
-//#ifdef __ANDROID__
-            if (Desktop.screen.getHeight() > 320 || Desktop.screen.getWidth() > 320)
-//#else
-            if (Desktop.screen.getHeight() > 480 || Desktop.screen.getWidth() > 480)
-//#endif
-            { // hi-res display
+            if (Desktop.isHires()) {
                 iconSize = 24;
             } else {
                 iconSize = 16;
@@ -40,14 +35,14 @@ final class ExtList extends List implements UiList {
         if (iconSize < NavigationScreens.wptSize2 << 1) {
             this.awpt = ImageUtils.resizeImage(NavigationScreens.waypoint,
                                                iconSize, iconSize,
-                                               ImageUtils.SLOW_RESAMPLE);
+                                               ImageUtils.SLOW_RESAMPLE, false);
         } else {
             this.awpt = NavigationScreens.waypoint;
         }
         if (iconSize < NavigationScreens.selectedSize2 << 1) {
             this.selected = ImageUtils.resizeImage(NavigationScreens.selected,
                                                    iconSize, iconSize,
-                                                   ImageUtils.SLOW_RESAMPLE);
+                                                   ImageUtils.SLOW_RESAMPLE, false);
         } else {
             this.selected = NavigationScreens.selected;
         }

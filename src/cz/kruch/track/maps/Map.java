@@ -524,19 +524,9 @@ public final class Map implements Runnable {
             return ImageUtils.resizeImage(image,
                                           prescale(image.getWidth()) << x2,
                                           prescale(image.getHeight()) << x2,
-                                          ImageUtils.FAST_RESAMPLE);
+                                          ImageUtils.FAST_RESAMPLE,
+                                          true);
 //#endif
-        }
-
-        /** @deprecated obsolete */ // TODO remove
-        final Image scaleImage(final Image image) {
-            if (x2 == 0 && prescale == 100) {
-                return image;
-            }
-            return ImageUtils.resizeImage(image,
-                                          prescale(image.getWidth()) << x2,
-                                          prescale(image.getHeight()) << x2,
-                                          ImageUtils.FAST_RESAMPLE);
         }
 
         final long addSlice(final CharArrayTokenizer.Token token) throws InvalidMapException {

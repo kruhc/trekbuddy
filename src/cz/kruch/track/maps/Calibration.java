@@ -43,6 +43,9 @@ abstract class Calibration {
     private Datum datum;
     private ProjectionSetup projectionSetup;
 
+    // cal points
+    private Vector xy, ll;
+
     // map dimensions
     private int w, h;
 
@@ -109,35 +112,24 @@ abstract class Calibration {
 
     final void magnify(final int x2) {
         if (this.x2 != x2) {
-            System.out.println("calibration magnify by " + x2);
             this.x2 = x2;
             if (x2 == 0) {
                 w >>= 1;
                 h >>= 1;
-                cxyx >>= 1;
-                cxyy >>= 1;
-                gridTHscale *= 2;
-                gridLVscale *= 2;
-                h2 *= 2;
-                v2 *= 2;
-                ek0 *= 2;
-                nk0 *= 2;
-                hScale /= 2;
-                vScale /= 2;
             } else {
                 w <<= 1;
                 h <<= 1;
-                cxyx <<= 1;
-                cxyy <<= 1;
-                gridTHscale /= 2;
-                gridLVscale /= 2;
-                h2 /= 2;
-                v2 /= 2;
-                ek0 /= 2;
-                nk0 /= 2;
-                hScale *= 2;
-                vScale *= 2;
             }
+            final Vector xy = this.xy;
+            for (int i = 0, N = xy.size(); i < N; i++) {
+                final Position p = (Position) xy.elementAt(i);
+                if (x2 == 0) {
+                    p.setXy(p.getX() >> 1, p.getY() >> 1);
+                } else {
+                    p.setXy(p.getX() << 1, p.getY() << 1);
+                }
+            }
+            computeInternals(xy, ll);
         }
     }
 
@@ -235,14 +227,14 @@ abstract class Calibration {
 
     protected final void doFinal(final Datum datum, final ProjectionSetup setup,
                                  final Vector xy, final Vector ll) throws InvalidMapException {
-        // assertions
-        if ((xy.size() < 2) || (ll.size() < 2)) {
-            throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_TOO_FEW_CALPOINTS));
-        }
-
         // dimension check
         if (w == 0 || h == 0) {
             throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_INVALID_MAP_DIMENSION));
+        }
+
+        // assertions
+        if ((xy.size() < 2) || (ll.size() < 2)) {
+            throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_TOO_FEW_CALPOINTS));
         }
 
         // paranoia
@@ -266,12 +258,7 @@ abstract class Calibration {
         if (log.isEnabled()) log.debug("using projection setup " + projectionSetup);
 //#endif
 
-        // remember main calibration point x-y
-        final Position calibrationXy = (Position) xy.elementAt(0);
-        cxyx = prescale(calibrationXy.getX());
-        cxyy = prescale(calibrationXy.getY());
-
-        // compute grid
+        // prepare projection setup (if necessary)
         if (projectionSetup.isCartesian()) {
 
             // setup is for Mercator projection
@@ -292,24 +279,12 @@ abstract class Calibration {
 
         }
 
-        // remember main calibration point
-        GeodeticPosition calibrationGp = (GeodeticPosition) ll.elementAt(0);
-        cgph = calibrationGp.getH();
-        cgpv = calibrationGp.getV();
+        // save cal points
+        this.xy = prescale(xy);
+        this.ll = ll;
 
-        // compute pixel grid
-        computeGrid(xy, ll);
-
-        // prescale
-        final float psf = (float)prescale / 100;
-        gridTHscale /= psf;
-        gridLVscale /= psf;
-        h2 /= psf;
-        v2 /= psf;
-        ek0 /= psf;
-        nk0 /= psf;
-        hScale *= psf;
-        vScale *= psf;
+        // computer internals
+        computeInternals(this.xy, ll);
     }
 
     private int prescale(final int i) {
@@ -317,6 +292,33 @@ abstract class Calibration {
             return i;
         }
         return (i * prescale) / 100;
+    }
+
+    private Vector prescale(final Vector xy) {
+        if (prescale == 100) {
+            return xy;
+        }
+        final Vector result = new Vector(xy.size());
+        for (int i = 0, N = xy.size(); i < N; i++) {
+            final Position p = (Position) xy.elementAt(i);
+            result.addElement(new Position(prescale(p.getX()), prescale(p.getY())));
+        }
+        return result;
+    }
+
+    private void computeInternals(final Vector xy, final Vector ll) {
+        // remember main calibration point x-y
+        final Position calibrationXy = (Position) xy.elementAt(0);
+        cxyx = calibrationXy.getX();
+        cxyy = calibrationXy.getY();
+
+        // remember main calibration point l-l
+        GeodeticPosition calibrationGp = (GeodeticPosition) ll.elementAt(0);
+        cgph = calibrationGp.getH();
+        cgpv = calibrationGp.getV();
+
+        // compute pixel grid
+        computeGrid(xy, ll);
     }
 
     private void computeGrid(final Vector xy, final Vector gp) {

@@ -54,6 +54,11 @@ final class DeviceScreen extends GameCanvas implements Runnable {
     private /*volatile*/ TimerTask repeatedKeyCheck;
     private /*volatile*/ int inKey; // using synchronized access helper
 
+//#ifdef __RIM__
+    // rolling flag
+    private volatile boolean inRolling;
+//#endif
+
     // touch ops
     private volatile boolean touchMenuActive, cmdExec;
 
@@ -265,6 +270,14 @@ final class DeviceScreen extends GameCanvas implements Runnable {
 */
         // shortcut
         final int key = _getInKey();
+
+//#ifdef __RIM__
+        final boolean isrl = key == Canvas.UP || key == Canvas.DOWN || key == Canvas.LEFT || key == Canvas.RIGHT;
+        if (inRolling && !isrl) {
+            inRolling = false;
+            return;
+        }
+//#endif
         
         // action
         if (key != 0) {
@@ -688,7 +701,10 @@ final class DeviceScreen extends GameCanvas implements Runnable {
 //#ifdef __RIM__
         /* trackball rolling stopped? */
         if (i == Canvas.UP || i == Canvas.DOWN || i == Canvas.LEFT || i == Canvas.RIGHT) {
+            inRolling = true;
             return;
+        } else {
+            inRolling = false;
         }
 //#endif
 

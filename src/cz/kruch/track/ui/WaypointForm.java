@@ -905,6 +905,9 @@ final class WaypointForm implements CommandListener, ItemCommandListener, ItemSt
 
     public static String convertHtmlSnippet(String escapedHtmlSnippet) {
         //String unescapedSnippet = undoHtmlEscape(escapedHtmlSnippet); - this is unescaped from GPX parser :-)
+        if (escapedHtmlSnippet == null || escapedHtmlSnippet.length() == 0) {
+            return "";
+        }
         return (new HtmlSnippet2StringConvertor(escapedHtmlSnippet)).convert();
     }
 

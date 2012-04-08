@@ -430,7 +430,15 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                                 idx[depth] = item;
                             }
                             // calculate distance
-                            _distance = item.getQualifiedCoordinates().distance(navigator.getRelQc());
+//#ifdef __ANDROID__
+                            try {
+//#endif
+                                _distance = item.getQualifiedCoordinates().distance(navigator.getRelQc());
+//#ifdef __ANDROID__
+                            } catch (NullPointerException e) { // relQC - how come?!?
+                                _distance = -1F;
+                            }
+//#endif
                             // check parsing status
                             if (item.getUserObject() instanceof GroundspeakBean && !((GroundspeakBean) item.getUserObject()).isParsed()) {
                                 // fully parse bean and show wpt details

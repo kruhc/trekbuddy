@@ -21,7 +21,7 @@ public final class ImageUtils {
         Image img = Image.createImage(resource);
         if (img != null) {
             if (!Desktop.isHires() && (img.getWidth() > 20) || img.getHeight() > 20) {
-                img = ImageUtils.resizeImage(img, 16, 16, ImageUtils.SLOW_RESAMPLE);
+                img = ImageUtils.resizeImage(img, 16, 16, ImageUtils.SLOW_RESAMPLE, false);
             }
         }
         return img;
@@ -56,7 +56,7 @@ public final class ImageUtils {
      * @param mode  A flag indicating what type of resizing we want to do: FAST_RESAMPLE or SLOW_RESAMPLE.
      * @return The resized image.
      */
-    public static Image resizeImage(Image src, int destW, int destH, int mode) {
+    public static Image resizeImage(Image src, int destW, int destH, int mode, boolean recycle) {
 
         final int srcW = src.getWidth();
         final int srcH = src.getHeight();
@@ -71,7 +71,7 @@ public final class ImageUtils {
         android.graphics.Bitmap bitmap = ((org.microemu.android.device.AndroidImmutableImage) src).getBitmap();
         android.graphics.Bitmap scaled = android.graphics.Bitmap.createScaledBitmap(bitmap, destW, destH,
                                                                                     mode == SLOW_RESAMPLE || Config.tilesScaleFiltered);
-        if (bitmap != null && !bitmap.isRecycled()) {
+        if (recycle && bitmap != null && !bitmap.isRecycled()) {
             bitmap.recycle();
         }
         return new org.microemu.android.device.AndroidImmutableImage(scaled);

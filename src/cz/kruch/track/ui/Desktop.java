@@ -737,7 +737,7 @@ public final class Desktop implements CommandListener,
 //#ifdef __ANDROID__
         return height > 320 || width > 320;
 //#else
-        return height >= 480 || width >= 480;
+        return height > 480 || width > 480;
 //#endif
     }
 
@@ -1872,7 +1872,7 @@ public final class Desktop implements CommandListener,
                     } break;
 
                     default: {
-                        if (c == 1) { // only repeated passed along
+                        if (c == 1) { // only first repeated passed along
                             mask = views[mode].handleKey(i, repeated);
                         }
                     }

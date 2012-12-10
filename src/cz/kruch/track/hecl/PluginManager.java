@@ -179,7 +179,11 @@ public final class PluginManager implements CommandListener, Runnable, Comparato
                     final RealThing rt = optionVar.getVal();
                     final int inputType, maxLen;
                     if (rt instanceof NumberThing) {
-                        inputType = ((NumberThing) rt).isIntegral() ? TextField.NUMERIC : TextField.DECIMAL;
+                        if (Config.numericInputHack) {
+                            inputType = TextField.ANY;
+                        } else {
+                            inputType = ((NumberThing) rt).isIntegral() ? TextField.NUMERIC : TextField.DECIMAL;
+                        }
                         maxLen = 24;
                     } else {
                         inputType = TextField.ANY;

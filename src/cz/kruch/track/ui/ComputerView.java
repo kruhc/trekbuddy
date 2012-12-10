@@ -477,16 +477,16 @@ final class ComputerView extends View
                             ds = 0F;
                         } else {
                             QualifiedCoordinates.releaseInstance(snrefCoords);
-                            snrefCoords = avgQc._clone();
+                            snrefCoords = avgQc._clone(); // TODO use copyFrom
                         }
                     } else {
-                        snrefCoords = avgQc._clone();
+                        snrefCoords = avgQc._clone(); // TODO use copyFrom
                     }
                 }
 
                 // update coords
                 QualifiedCoordinates.releaseInstance(valueCoords);
-                valueCoords = qc._clone();
+                valueCoords = qc._clone(); // TODO use copyFrom
 
                 // local ref for faster access
                 final float[] valuesFloat = this.valuesFloat;

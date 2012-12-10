@@ -652,7 +652,11 @@ public final class Desktop implements CommandListener,
             screen.addCommand(new Command("", Command.SCREEN, 0));
         }
         if (Config.btDeviceName.length() > 0) {
-            this.cmdRunLast = new Command(Resources.getString(Resources.DESKTOP_CMD_START) + " " + Config.btDeviceName, POSITIVE_CMD_TYPE, 1);
+            String fitName = Config.btDeviceName;
+            if (fitName.length() > 6) {
+                fitName = fitName.substring(0, 6) + "*";
+            }
+            this.cmdRunLast = new Command(Resources.getString(Resources.DESKTOP_CMD_START) + " " + fitName, POSITIVE_CMD_TYPE, 1);
             if (Config.locationProvider == Config.LOCATION_PROVIDER_JSR82) {
                 screen.addCommand(this.cmdRunLast);
             }
@@ -1291,7 +1295,7 @@ public final class Desktop implements CommandListener,
     //
 
     boolean isTracking() {
-        return this.runtime.getProvider() != null;
+        return this.runtime != null && this.runtime.getProvider() != null;
     }
 
     boolean isLocation() {

@@ -25,7 +25,7 @@ final class ExtList extends List implements UiList {
         int iconSize;
         try {
             iconSize = getFont(0).getHeight();
-        } catch (Throwable t) { // happens on Android
+        } catch (Throwable t) { // happens on Android, because of incomplete List implementation 
             if (Desktop.isHires()) {
                 iconSize = 24;
             } else {
@@ -79,18 +79,26 @@ final class ExtList extends List implements UiList {
         return null;
     }
 
+    public void setSelectedIndex(int elementNum, boolean selected) {
+        setSelected(elementNum, selected, true);
+    }
+
     public void setSelectedItem(Object item, boolean highlight) {
         final int idx = indexOf(item);
         if (idx > -1) {
-            setSelectedIndex(idx, true);
-            if (Config.extListMode == Config.LISTMODE_CUSTOM) {
-                if (selectedOld > -1 && selectedOld != marked) {
-                    set(selectedOld, getString(selectedOld), null);
-                }
-                selectedOld = idx;
-                if (highlight && idx != marked) {
-                    set(idx, getString(idx), this.selected);
-                }
+            setSelected(idx, true, highlight);
+        }
+    }
+
+    private void setSelected(int idx, boolean selected, boolean highlight) {
+        super.setSelectedIndex(idx, selected);
+        if (Config.extListMode == Config.LISTMODE_CUSTOM) {
+            if (selectedOld > -1 && selectedOld != marked) {
+                set(selectedOld, getString(selectedOld), null);
+            }
+            selectedOld = idx;
+            if (highlight && idx != marked) {
+                set(idx, getString(idx), this.selected);
             }
         }
     }

@@ -125,7 +125,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
     private final Hashtable stores, backends;
 
     private Vector currentWpts, inUseWpts;
-    private String currentName, inUseName;
+    private String currentName, inUseName, sortedName;
 
     private ExtList pane;
     private List notes;
@@ -193,7 +193,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
 //        this.cachedDisks = new Hashtable(4);
         this.fieldNotes = new NakedVector(0, 4);
         this.idx = new Object[3];
-        this.sort = Config.sort;
+//        this.sort = Config.sort;
         this.notesFilename = "fieldnotes-" + GpxTracklog.dateToFileDate(System.currentTimeMillis()) + ".txt";
 
         this.NEW_FILE_STORE = Resources.getString(Resources.NAV_MSG_NEW_FILE_ITEM);
@@ -267,10 +267,10 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
         // show current store, if any...
         if (inUseWpts != null) {
             entry = depth = 2;
-            use(listWaypoints(inUseName, inUseWpts, true, false));
+            use(listWaypoints(inUseName, inUseWpts, false, false));
         } else if (currentWpts != null) {
             entry = depth = 2;
-            use(listWaypoints(currentName, currentWpts, true, false));
+            use(listWaypoints(currentName, currentWpts, false, false));
         } else {
             entry = depth = 0;
             subfolder = null;
@@ -1306,11 +1306,13 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                             if (log.isEnabled()) log.debug("wpt written " + elements[i]);
 //#endif
                         }
+/*
                     } catch (Exception e) {
                         status = e;
 //#ifdef __LOG__
                         if (log.isEnabled()) log.error("error writting wpt", e);
 //#endif
+*/
                     } finally {
                         _storeUpdate.close(); // safe operation
                     }
@@ -1322,6 +1324,10 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
 //#ifdef __LOG__
             t.printStackTrace();
 //#endif
+//#ifdef __ANDROID__
+            android.util.Log.e(cz.kruch.track.TrackingMIDlet.APP_TITLE, "Failed to update " + name, t);
+//#endif
+
             // report
             status = t;
 
@@ -1804,11 +1810,19 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
 //#endif
 
         // prepare list content
-        sortedWpts = null; // gc hint
-        sortedWpts = new NakedVector((NakedVector) wpts);
+        if (forceSort || sortedWpts == null || !store.equals(sortedName)) {
 
-        // pre-sort
-        sortWaypoints(list, wpts, tickerInUse);
+            // use preferred sort method
+            sort = Config.sort;
+
+            // create new vector
+            sortedWpts = null; // gc hint
+            sortedWpts = new NakedVector((NakedVector) wpts);
+            sortedName = store;
+
+            // pre-sort
+            sortWaypoints(list, wpts, tickerInUse);
+        }
 
         // create UI list
         final String title = (new StringBuffer(32)).append(store).append(" [").append(wpts.size()).append(']').toString();
@@ -1827,8 +1841,8 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
         }
         l.setData(sortedWpts);
 
-        // pre-sort
-//        sortWaypoints(l, sort, forceSort, wpts, tickerInUse);
+        // selected first
+        l.setSelectedIndex(0, true);
 
         // add commands
         l.setSelectCommand(cmdOpen);
@@ -1872,7 +1886,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
     private void close() {
         // gc hints
         list = null;
-        sortedWpts = null;
+//        sortedWpts = null;
         // restore navigator
         Desktop.display.setCurrent(Desktop.screen);
     }
@@ -2102,7 +2116,6 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
     private static void parseGpx(final HXmlParser parser, final Vector v,
                                  final boolean lazyGs)
             throws IOException, XmlPullParserException {
-        NakedVector links = null;
         GroundspeakBean gsbean = null;
 
         char[] name = null, cmt = null, sym = null;
@@ -2110,6 +2123,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
         float alt = Float.NaN;
         long timestamp = 0;
 
+        final NakedVector links = new NakedVector(2, 2);
         final StringBuffer sb = new StringBuffer(16);
         final Calendar calendar = Calendar.getInstance(TimeZone.getTimeZone("GMT"));
         final CharArrayTokenizer tokenizer = new CharArrayTokenizer();
@@ -2150,9 +2164,6 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                                 } break;
                                 case TAG_LINK: {
                                     // get link
-                                    if (links == null) {
-                                        links = new NakedVector(4, 4);
-                                    }
                                     links.addElement(parser.getAttributeValue(null, ATTR_HREF));
                                 } break;
                                 case TAG_NAME: {
@@ -2241,10 +2252,13 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                                     // create wpt
                                     final Waypoint wpt;
                                     final QualifiedCoordinates qc = QualifiedCoordinates.newInstance(lat, lon, alt);
-                                    if (gsbean != null || links != null) {
+                                    if (gsbean != null || links.size() != 0) {
                                         wpt = new ExtWaypoint(qc, name, cmt, sym, timestamp, gsbean, links);
+                                        gsbean = null;
+                                        links.removeAllElements();
                                     } else if (timestamp != 0) {
                                         wpt = new StampedWaypoint(qc, name, cmt, sym, timestamp);
+                                        timestamp = 0;
                                     } else {
                                         wpt = new Waypoint(qc, name, cmt, sym);
                                     }
@@ -2258,10 +2272,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                                     // reset temps
                                     alt = Float.NaN;
                                     lat = lon = -1D;
-                                    timestamp = 0;
                                     name = cmt = sym = null;
-                                    links = null;
-                                    gsbean = null;
 
                                 } break;
                             }

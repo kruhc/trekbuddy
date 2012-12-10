@@ -413,6 +413,7 @@ public final class Map implements Runnable {
 
         Loader() {
             this.tileWidth = this.tileHeight = Integer.MAX_VALUE;
+            this.scaledTileWidth = this.scaledTileHeight = Integer.MAX_VALUE;
             this.prescale = Config.prescale;
 //            ((api.io.BufferedInputStream) bufferef()).setAutofill(true, -1);
         }
@@ -450,7 +451,7 @@ public final class Map implements Runnable {
                 if (log.isEnabled()) log.debug("find tile dimensions from root tile");
 //#endif
                 final Slice slice = getSlice(0, 0);
-                if (slice != null) {
+                if (slice != null) { // TODO always true
                     try {
                         loadSlice(slice);
                         tileWidth = slice.getImage().getWidth();

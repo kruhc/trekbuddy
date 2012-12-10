@@ -7,13 +7,15 @@ import cz.kruch.track.util.ExtraMath;
 public final class QualifiedCoordinates implements GeodeticPosition {
 
     public static QualifiedCoordinates INVALID = newInstance(Double.NaN, Double.NaN);
-    
+
     public static final int UNKNOWN = 0;
     public static final int LAT = 1;
     public static final int LON = 2;
 
     public static final int DD_MM_SS  = 1;
     public static final int DD_MM     = 2;
+
+    private static final double FLATTENING_WGS84 = 1D / 298.257223563;
 
     private double lat, lon;
     private float alt;
@@ -72,6 +74,12 @@ public final class QualifiedCoordinates implements GeodeticPosition {
 
     public QualifiedCoordinates _clone() {
         return newInstance(lat, lon, alt, hAccuracy, vAccuracy);
+    }
+
+    public QualifiedCoordinates copyFrom(final QualifiedCoordinates qc) {
+        this.lat = qc.lat;
+        this.lon = qc.lon;
+        return this;
     }
 
     public double getH() {
@@ -186,15 +194,22 @@ public final class QualifiedCoordinates implements GeodeticPosition {
         final double sinf = Math.sin(F);
         final double cosg = Math.cos(G);
 
-        final double S = sing * sing * cosl * cosl + cosf * cosf * sinl * sinl;
-        final double C = cosg * cosg * cosl * cosl + sinf * sinf * sinl * sinl;
+        final double sinf_2 = sinf * sinf;
+        final double sing_2 = sing * sing;
+        final double sinl_2 = sinl * sinl;
+        final double cosf_2 = cosf * cosf;
+        final double cosg_2 = cosg * cosg;
+        final double cosl_2 = cosl * cosl;
+
+        final double S = sing_2 * cosl_2 + cosf_2 * sinl_2;
+        final double C = cosg_2 * cosl_2 + sinf_2 * sinl_2;
         final double W = ExtraMath.atan2(Math.sqrt(S), Math.sqrt(C));
         final double R = Math.sqrt((S * C)) / W;
         final double H1 = (3 * R - 1D) / (2 * C);
         final double H2 = (3 * R + 1D) / (2 * S);
         final double D = 2 * W * 6378137;
-        return (float) (D * (1 + (1D / 298.257223563) * H1 * sinf * sinf * cosg * cosg -
-            (1D / 298.257223563) * H2 * cosf * cosf * sing * sing));
+        return (float) (D * (1 + FLATTENING_WGS84 * H1 * sinf_2 * cosg_2 -
+            FLATTENING_WGS84 * H2 * cosf_2 * sing_2));
     }
 
     public static QualifiedCoordinates project(final QualifiedCoordinates from,
@@ -204,7 +219,7 @@ public final class QualifiedCoordinates implements GeodeticPosition {
          * Free code from http://www.gavaghan.org/blog/free-source-code/geodesy-library-vincentys-formula-java/.
          */
 
-        final double f = 1D / 298.257223563D;
+        final double f = FLATTENING_WGS84;
         final double a = 6378137;
         final double b = (1D - f) * a;
         final double aSquared = a * a;

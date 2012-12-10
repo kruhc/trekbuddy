@@ -12,7 +12,7 @@ import java.util.Vector;
  * TODO This is in fact <b>Landmark</b> from JSR-179, and so it should be moved
  * to {@link api.location} package.
  *
- * @author Ales Pour <kruhc@seznam.cz>
+ * @author kruhc@seznam.cz
  */
 public class Waypoint {
 //#ifdef __LOG__
@@ -31,7 +31,7 @@ public class Waypoint {
 
     public Waypoint(QualifiedCoordinates qc, char[] name, char[] comment, char[] sym) {
         this.coordinates = qc;
-        this.texts(name, comment/*, sym*/);
+        this.texts(name, comment);
         if (sym != null && sym.length != 0) {
             this.sym = cache(new String(sym));
         }
@@ -43,49 +43,21 @@ public class Waypoint {
         this.comment = comment;
     }
 
-    private void texts(char[] name, char[] comment/*, char[] sym*/) {
-        int l = 0;
-        if (name != null) {
-            l += name.length;
+    private void texts(char[] name, char[] comment) {
+        if (name != null && comment != null) {
+            final int nl = name.length;
+            final int cl = comment.length;
+            final char[] _raw = new char[nl + cl];
+            System.arraycopy(name, 0, _raw, 0, nl);
+            System.arraycopy(comment, 0, _raw, nl, cl);
+            final String _texts = new String(_raw);
+            this.name = _texts.substring(0, nl);
+            this.comment = _texts.substring(nl);
+        } else if (name != null) {
+            this.name = new String(name);
+        } else { // comment != null
+            this.comment = new String(comment);
         }
-        if (comment != null) {
-            l += comment.length;
-        }
-/*
-        if (sym != null) {
-            l += sym.length;
-        }
-*/
-        final char[] _raw = new char[l];
-        l = 0;
-        if (name != null) {
-            System.arraycopy(name, 0, _raw, 0, name.length);
-            l += name.length;
-        }
-        if (comment != null) {
-            System.arraycopy(comment, 0, _raw, l, comment.length);
-            l += comment.length;
-        }
-/*
-        if (sym != null) {
-            System.arraycopy(sym, 0, _raw, l, sym.length);
-        }
-*/
-        final String _texts = new String(_raw);
-        l = 0;
-        if (name != null) {
-            this.name = _texts.substring(0, name.length);
-            l += name.length;
-        }
-        if (comment != null) {
-            this.comment = _texts.substring(l, l + comment.length);
-            l += comment.length;
-        }
-/*
-        if (sym != null) {
-            this.sym = _texts.substring(l);
-        }
-*/
     }
 
     public QualifiedCoordinates getQualifiedCoordinates() {

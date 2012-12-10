@@ -385,7 +385,11 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
     }
 
     public static boolean hasPorts() {
+//#ifdef __ANDROID__
+        return true;
+//#else
         return comm; // System.getProperty("microedition.commports") != null && System.getProperty("microedition.commports").length() > 0;
+//#endif
     }
 
     public static boolean supportsVideoCapture() {

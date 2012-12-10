@@ -26,7 +26,8 @@ public final class ExtraMath {
         return i;
     }
 
-    public static int round(final double d) {
+    public static long round(final double d) {
+/*
         int i = (int) d;
         final double v = d - i;
         if (v > 0.5D) {
@@ -36,6 +37,12 @@ public final class ExtraMath {
         }
 
         return i;
+*/
+        return (long) Math.floor(d + 0.5D);
+    }
+
+    public static int round(final float f) {
+        return (int) Math.floor(f + 0.5F);
     }
 
     /****************************************

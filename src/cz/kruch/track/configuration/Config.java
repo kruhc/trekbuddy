@@ -1220,24 +1220,26 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
             return locationTimings;
         }
 
+//#ifdef __ANDROID__
+        String timings = "0";
+//#else
         String timings = "1,-1,-1";
+//#endif
 
         switch (provider) {
-            case LOCATION_PROVIDER_JSR179:
+            case LOCATION_PROVIDER_JSR179: {
                 if (cz.kruch.track.TrackingMIDlet.a780) {
                     timings = "2,2,-1"; /* from http://www.kiu.weite-welt.com/de.schoar.blog/?p=186 */
-/* Blackberries seem fine with 1,-1,-1 
+/* Blackberries seem fine with 1,-1,-1
                 } else if (cz.kruch.track.TrackingMIDlet.rim) {
                     timings = "2,-1,-1";
 */
-                } else if (cz.kruch.track.TrackingMIDlet.android) {
-                    timings = "0";
                 }
-            break;
+            } break;
 //#ifdef __ALL__
-            case LOCATION_PROVIDER_MOTOROLA:
+            case LOCATION_PROVIDER_MOTOROLA: {
                 timings = "9999,1,2000";
-            break;
+            } break;
 //#endif
         }
 

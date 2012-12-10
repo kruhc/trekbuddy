@@ -217,8 +217,8 @@ abstract class Calibration {
         fx = (H - cgph + (cxyx * _h) + (ek0 * cxyy) - (ek0 / _v) * (- V + cgpv + (cxyy * _v) - (nk0 * cxyx))) / (_h + (nk0 * ek0) / _v);
         fy = (- V + cgpv + (cxyy * _v) + (nk0 * (fx - cxyx))) / _v;
 
-        final int x = ExtraMath.round(fx);
-        final int y = ExtraMath.round(fy);
+        final int x = (int) ExtraMath.round(fx);
+        final int y = (int) ExtraMath.round(fy);
 
         proximite.setXy(x, y);
 
@@ -291,7 +291,8 @@ abstract class Calibration {
         if (prescale == 100) {
             return i;
         }
-        return (i * prescale) / 100;
+        final float k = ((float) prescale) / 100;
+        return ExtraMath.round(k * i);
     }
 
     private Vector prescale(final Vector xy) {

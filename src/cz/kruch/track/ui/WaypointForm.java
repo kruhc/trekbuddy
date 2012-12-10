@@ -396,7 +396,7 @@ final class WaypointForm implements CommandListener, ItemCommandListener, ItemSt
             // altitude
             sb.delete(0, sb.length());
             NavigationScreens.printAltitude(sb, qc.getAlt());
-            appendWithNewlineAfter(this.fieldAlt = createTextField(Resources.NAV_FLD_ALT, sb.toString(), 5));
+            appendWithNewlineAfter(this.fieldAlt = createTextField(Resources.NAV_FLD_ALT, sb.toString(), 8));
 
             // spacer
             form.append(new Spacer(Desktop.width >> 1, Desktop.height / 20));

@@ -756,36 +756,21 @@ public final class Desktop implements CommandListener,
         int color = alpha << 24 | (Config.osdBlackColor ? 0x00dfdfdf : 0x007f7f7f);
         int h = font.getHeight();
         int w = screen.getWidth();
-        int[] shadow = new int[w * h];
-        for (int i = shadow.length; --i >= 0; ) {
-            shadow[i] = color;
-        }
         bar = null; // gc hint
-        bar = Image.createRGBImage(shadow, w, h, true);
-        shadow = null; // gc hint
+        bar = cz.kruch.track.util.ImageUtils.createRGBImage(w, h, color);
 
         // wpt label bar
         color = alpha << 24 | 0x00ffff00;
         h = cz.kruch.track.TrackingMIDlet.getPlatform().startsWith("Nokia/6230i") ? font.getBaselinePosition() + 2 : font.getHeight();
-        shadow = new int[w * h];
-        for (int i = shadow.length; --i >= 0; ) {
-            shadow[i] = color;
-        }
         barWpt = null; // gc hint
-        barWpt = Image.createRGBImage(shadow, w, h, true);
-        shadow = null; // gc hint
+        barWpt = cz.kruch.track.util.ImageUtils.createRGBImage(w, h, color);
 
         // scale bar
         color = alpha << 24 | 0x00ffffff;
         h = font.getHeight();
         w = font.stringWidth("99999 km") + 4;
-        shadow = new int[w * h];
-        for (int i = shadow.length; --i >= 0; ) {
-            shadow[i] = color;
-        }
         barScale = null; // gc hint
-        barScale = Image.createRGBImage(shadow, w, h, true);
-        shadow = null; // gc hint
+        barScale = cz.kruch.track.util.ImageUtils.createRGBImage(w, h, color);
 
         if (Config.forcedGc) {
             System.gc(); // conditional

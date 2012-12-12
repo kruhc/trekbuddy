@@ -21,10 +21,18 @@ public final class ImageUtils {
         Image img = Image.createImage(resource);
         if (img != null) {
             if (!Desktop.isHires() && (img.getWidth() > 20) || img.getHeight() > 20) {
-                img = ImageUtils.resizeImage(img, 16, 16, ImageUtils.SLOW_RESAMPLE, false);
+                img = resizeImage(img, 16, 16, ImageUtils.SLOW_RESAMPLE, false);
             }
         }
         return img;
+    }
+
+    public static Image createRGBImage(final int w, final int h, final int color) {
+        final int[] shadow = new int[w * h];
+        for (int i = shadow.length; --i >= 0; ) {
+            shadow[i] = color;
+        }
+        return Image.createRGBImage(shadow, w, h, true);
     }
 
     /**

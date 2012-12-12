@@ -210,7 +210,7 @@ final class DeviceScreen extends GameCanvas implements Runnable {
 //#ifdef __ANDROID__
 
     /** @Override */
-    public void setFullScreenMode(boolean b) {
+    public void setFullScreenMode(final boolean b) {
         if (b) {
             cz.kruch.track.TrackingMIDlet.getActivity().runOnUiThread(new Runnable() {
 				public void run() {
@@ -750,7 +750,7 @@ final class DeviceScreen extends GameCanvas implements Runnable {
         }
     }
 
-    void callSerially(Runnable r) {
+    void callSerially(final Runnable r) {
         eventing.callSerially(r);
     }
 

@@ -474,12 +474,13 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
                             // construct URLs
                             final String realUrl = entryName.append(sb).toString();
                             final String fakeUrl;
-// WTF was this?!?                            
-//                            if (url.endsWith(".idx") || url.endsWith(".IDX")) {
-//                                fakeUrl = escape(realUrl);
-//                            } else {
+
+                            // idx is tar-made index for untarred atlases
+                            if (url.endsWith(".idx") || url.endsWith(".IDX")) {
+                                fakeUrl = escape(realUrl);
+                            } else {
                                 fakeUrl = escape(sb.delete(0, sb.length()).append(baseUrl).append(lName).append(File.PATH_SEPCHAR).append(mName).append(File.PATH_SEPCHAR).append(mName).append(".tar").toString());
-//                            }
+                            }
 
                             // load map calibration file
                             final Calibration calibration = Calibration.newInstance(tar, fakeUrl, realUrl);

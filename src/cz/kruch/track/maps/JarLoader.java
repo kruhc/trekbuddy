@@ -30,33 +30,25 @@ final class JarLoader extends Map.Loader /*implements Atlas.Loader*/ {
         InputStream in = null;
         LineReader reader = null;
 
-        try {
-            // embedded map path
-            String path;
+        // embedded map path
+        String path;
 
+        try {
             // look for Ozi calibration first
             in = JarLoader.class.getResourceAsStream(path = DEFAULT_OZI_MAP);
             if (in == null) {
                 // look for GMI then
                 in = JarLoader.class.getResourceAsStream(path = DEFAULT_GMI_MAP);
                 if (in == null) {
-                    // neither MapCalibrator calibration
-                    throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_NO_CALIBRATION));
+                    // we are screwed
+                    throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_LOAD_MAP_FAILED));
                 }
             }
-            try {
-                map.setCalibration(Calibration.newInstance(in, path, path));
-            } catch (InvalidMapException e) {
-                throw e;
-            } catch (IOException e) {
-                throw new InvalidMapException("Corrupted built-in map: " + e.toString());
-            }
 
-//#ifdef __LOG__
-            if (log.isEnabled()) log.debug("in-jar calibration loaded");
-//#endif
+            // process calibration
+            map.setCalibration(Calibration.newInstance(in, path, path));
 
-            // each line is a slice filename
+            // parse tileset file
             reader = new LineReader(JarLoader.class.getResourceAsStream(RESOURCES_SET_FILE));
             CharArrayTokenizer.Token token = reader.readToken(false);
             while (token != null) {
@@ -65,8 +57,12 @@ final class JarLoader extends Map.Loader /*implements Atlas.Loader*/ {
                 token = reader.readToken(false);
             }
 //#ifdef __LOG__
-            if (log.isEnabled()) log.debug("in-jar .set processed");
+            if (log.isEnabled()) log.debug("in-jar tileset file processed");
 //#endif
+        } catch (InvalidMapException e) {
+            throw e;
+        } catch (IOException e) {
+            throw new InvalidMapException("Corrupted built-in map: " + e.toString());
         } finally {
 
             // check for Palm - it resets it :-(
@@ -91,9 +87,13 @@ final class JarLoader extends Map.Loader /*implements Atlas.Loader*/ {
 
         // construct slice path
         sb.append(RESOURCES_SET_DIR).append(basename);
+//#ifdef __SUPPORT_GPSKA__
         if (!isGPSka) {
+//#endif
             slice.appendPath(sb);
+//#ifdef __SUPPORT_GPSKA__
         }
+//#endif        
         sb.append(extension);
 
         // get full url

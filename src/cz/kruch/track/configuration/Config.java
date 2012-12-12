@@ -85,7 +85,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
     public static final String FOLDER_PLUGINS      = "plugins/";
 //#endif
 
-    private static final String DATUMS_FILE = "datums.txt";
+    private static final String DATUMS_FILE        = "datums.txt";
     
     /* 16 basic colors */
     public static final int[] COLORS_16 = {
@@ -100,7 +100,8 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
     public static final String CONFIG_090           = "config_090";
     public static final String PLUGIN_110           = "plugin_110_";
 
-    public static final String EMPTY_STRING        = "";
+    public static final String EMPTY_STRING         = "";
+    public static final String NO_MAP_RESOURCE      = "/resources/no-map.xml";
 
     /*
      * Configuration params, initialized to default values.
@@ -979,7 +980,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
                 file = File.open(Config.getFolderURL(Config.FOLDER_MAPS) + "no-map.xml", Connector.READ_WRITE);
                 if (!file.exists()) {
                     file.create();
-                    final InputStream in = Config.class.getResourceAsStream("/resources/no-map.xml");
+                    final InputStream in = Config.class.getResourceAsStream(NO_MAP_RESOURCE);
                     final OutputStream out = file.openOutputStream();
                     final byte[] buffer = new byte[256];
                     int c = in.read(buffer);

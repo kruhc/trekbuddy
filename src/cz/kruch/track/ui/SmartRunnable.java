@@ -58,8 +58,11 @@ final class SmartRunnable implements Runnable {
         // avoid collision with run() or setActive()
         synchronized (this) {
 
+            // current tasks count
+            int count = runnables.size();
+
             // try task merge first
-            if (runnables.size() > 0) {
+            if (count > 0) {
                 final Object last = runnables.lastElement();
                 if (r instanceof Desktop.RenderTask) { // trick #1: merge render tasks
                     if (last instanceof Desktop.RenderTask) {
@@ -77,10 +80,11 @@ final class SmartRunnable implements Runnable {
 
             // no task to merge with, just append
             runnables.addElement(r);
+            count++;
 
             // debug info
-            if (runnables.size() > maxQT) {
-                maxQT = runnables.size();
+            if (count > maxQT) {
+                maxQT = count;
             }
 
             // fire task if no task is running

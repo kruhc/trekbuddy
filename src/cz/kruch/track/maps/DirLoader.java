@@ -71,13 +71,14 @@ final class DirLoader extends Map.Loader implements Atlas.Loader {
                     throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_UNKNOWN_CAL_FILE) + ": " + path);
                 }
 
+//#ifdef __SUPPORT_GPSKA__
                 // GPSka hack
                 if (isGPSka) {
                     basename = getMapCalibration().getImgname();
                     extension = EXT_PNG;
                     addSlice(null);
                 }
-
+//#endif
             } catch (InvalidMapException e) {
                 throw e;
             } catch (IOException e) {
@@ -145,9 +146,13 @@ final class DirLoader extends Map.Loader implements Atlas.Loader {
 
         // construct slice path
         sb.append(dir).append(SET_DIR_PREFIX).append(basename);
+//#ifdef __SUPPORT_GPSKA__
         if (!isGPSka) {
+//#endif
             slice.appendPath(sb);
+//#ifdef __SUPPORT_GPSKA__
         }
+//#endif        
         sb.append(extension);
 
         // get full url

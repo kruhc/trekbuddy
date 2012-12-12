@@ -400,7 +400,10 @@ public final class Map implements Runnable {
         protected Map map;
         protected String basename;
         protected char[] extension;
-        protected boolean isGPSka, isTar, isTmi;
+//#ifdef __SUPPORT_GPSKA__
+        protected boolean isGPSka;
+//#endif        
+        protected boolean isTar, isTmi;
 
         protected int tileWidth, tileHeight;
         protected int scaledTileWidth, scaledTileHeight;
@@ -420,7 +423,9 @@ public final class Map implements Runnable {
 
         void init(final Map map, final String url) throws IOException {
             this.map = map;
+//#ifdef __SUPPORT_GPSKA__
             this.isGPSka = url.toLowerCase().endsWith(Calibration.XML_EXT);
+//#endif            
         }
 
         final void prepare() throws IOException {
@@ -633,7 +638,9 @@ public final class Map implements Runnable {
                 name = name.substring(4); // skips leading "set/..."
             }
 
+//#ifdef __SUPPORT_GPSKA__
             if (!isGPSka) {
+//#endif
                 int p0 = -1, p1 = -1;
                 int i = 0;
                 for (int N = name.length() - 4/* extension length */; i < N; i++) {
@@ -647,8 +654,9 @@ public final class Map implements Runnable {
                 } else {
                     throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_INVALID_SLICE_NAME) + name);
                 }
+//#ifdef __SUPPORT_GPSKA__                
             }
-
+//#endif
 /*
             // URL encode
             final StringBuffer sb = new StringBuffer(name.length() + 16);

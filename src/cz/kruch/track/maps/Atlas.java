@@ -65,7 +65,7 @@ public final class Atlas implements Runnable {
     }
 
     public Enumeration getMapNames() {
-        return ((Hashtable) layers.get(current)).keys();
+        return getMapNames(current);
     }
 
     public Enumeration getMapNames(final String layer) {

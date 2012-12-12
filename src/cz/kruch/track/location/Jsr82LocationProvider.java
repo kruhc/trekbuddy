@@ -180,15 +180,16 @@ public final class Jsr82LocationProvider extends SerialLocationProvider {
         private final Vector devices = new Vector();
         
         private final Command cmdBack = new Command(Resources.getString(Resources.CMD_CANCEL), Desktop.CANCEL_CMD_TYPE, 1);
-        private final Command cmdRefresh = new Command(Resources.getString(Resources.DESKTOP_CMD_REFRESH), Command.SCREEN, 1);
         private final Command cmdConnect = new Command(Resources.getString(Resources.DESKTOP_CMD_CONNECT), Command.ITEM, 1);
+        private final Command cmdRefresh = new Command(Resources.getString(Resources.DESKTOP_CMD_REFRESH), Command.SCREEN, 2);
 
         private List pane;
 
         public Discoverer() {
             this.pane = new List(Resources.getString(Resources.DESKTOP_MSG_SELECT_DEVICE), List.IMPLICIT);
+            this.pane.setSelectCommand(null);
+            this.pane.addCommand(cmdBack);
             this.pane.setCommandListener(this);
-            this.pane.removeCommand(List.SELECT_COMMAND);
         }
 
         public void start() throws LocationException {
@@ -283,16 +284,15 @@ public final class Jsr82LocationProvider extends SerialLocationProvider {
         }
 
         private void setupCommands(final boolean ready) {
-            pane.removeCommand(cmdBack);
             pane.removeCommand(cmdRefresh);
             pane.removeCommand(cmdConnect);
+            pane.setSelectCommand(null);
             if (ready) {
-                pane.addCommand(cmdRefresh);
                 if (devices.size() > 0) {
-                    pane.addCommand(cmdConnect);
+                    pane.setSelectCommand(cmdConnect);
                 }
+                pane.addCommand(cmdRefresh);
             }
-            pane.addCommand(cmdBack);
         }
 
         private String getFixedAddress(final javax.bluetooth.RemoteDevice device) {
@@ -447,16 +447,7 @@ public final class Jsr82LocationProvider extends SerialLocationProvider {
         }
 
         public void commandAction(Command command, Displayable displayable) {
-            if (command == cmdConnect) { /* device selection */
-                btname = pane.getString(pane.getSelectedIndex());
-                device = (javax.bluetooth.RemoteDevice) devices.elementAt(pane.getSelectedIndex());
-                if (Config.btDoServiceSearch) {
-                    goServices();
-                } else {
-                    btspp = "btspp://" + getFixedAddress(device) + ":1";
-                    letsGo(true);
-                }
-            } else if (command.getCommandType() == Desktop.CANCEL_CMD_TYPE) {
+            if (command.getCommandType() == Desktop.CANCEL_CMD_TYPE) {
                 cancel = true;
                 if (transactionID > 0) {
                     agent.cancelServiceSearch(transactionID);
@@ -471,11 +462,22 @@ public final class Jsr82LocationProvider extends SerialLocationProvider {
                 } else { /* offer device selection */
                     showDevices();
                 }
-            } else if (command == cmdRefresh) { /* refresh device list */
-                try {
-                    goDevices();
-                } catch (LocationException e) {
-                    Desktop.showError(BLUETOOTH_ERROR_MSG + "Discovery restart failed", e, null);
+            } else {
+                if (command.getPriority() == 1) {
+                    btname = pane.getString(pane.getSelectedIndex());
+                    device = (javax.bluetooth.RemoteDevice) devices.elementAt(pane.getSelectedIndex());
+                    if (Config.btDoServiceSearch) {
+                        goServices();
+                    } else {
+                        btspp = "btspp://" + getFixedAddress(device) + ":1";
+                        letsGo(true);
+                    }
+                } else { // 2
+                    try {
+                        goDevices();
+                    } catch (LocationException e) {
+                        Desktop.showError(BLUETOOTH_ERROR_MSG + "Discovery restart failed", e, null);
+                    }
                 }
             }
         }

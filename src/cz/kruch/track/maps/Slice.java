@@ -29,7 +29,7 @@ public class Slice {
         return image;
     }
 
-    public final synchronized void setImage(Image image) {
+    public final synchronized void setImage(final Image image) {
         // assertion
         if (this.image != null && image != null) {
             throw new IllegalStateException("Replacing image in tile " + this);
@@ -93,7 +93,7 @@ public class Slice {
 
     public boolean equals(Object object) {
         if (object instanceof Slice) {
-            Slice s = (Slice) object;
+            final Slice s = (Slice) object;
             return s.wx == wx && s.hy == hy;
         }
         return false;

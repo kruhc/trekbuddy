@@ -198,7 +198,9 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
 
     // group [Tweaks]
     public static boolean siemensIo;
+//#ifdef __ALT_RENDERER__
     public static boolean S60renderer           = true;
+//#endif    
     public static boolean forcedGc;
     public static boolean oneTileScroll;
     public static boolean largeAtlases;
@@ -211,6 +213,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
     public static boolean numericInputHack;
     public static boolean externalConfigBackup;
     public static boolean tilesScaleFiltered;
+    public static boolean verboseLoading;
     public static int heclOpt                   = 1;
 
     // group [GPX options]
@@ -429,7 +432,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
 
         // pre 0.9.4 extension
         /*optimisticIo = */din.readBoolean();
-        S60renderer = din.readBoolean();
+        /*S60renderer = */din.readBoolean();
         /*cacheOffline = */din.readBoolean();
 
         // 0.9.5 extension
@@ -572,6 +575,9 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
             prescale = din.readInt();
             tilesScaleFiltered = din.readBoolean();
 
+            // 1.1.2 change
+            verboseLoading = din.readBoolean();
+
         } catch (Exception e) {
         }
 
@@ -606,7 +612,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         dout.writeUTF(EMPTY_STRING/*tracklog*/);
         dout.writeBoolean(false/*useGeocachingFormat*/);
         dout.writeBoolean(false/*optimisticIo*/);
-        dout.writeBoolean(S60renderer);
+        dout.writeBoolean(true/*S60renderer*/);
         dout.writeBoolean(false/*cacheOffline*/);
         dout.writeBoolean(decimalPrecision);
         dout.writeBoolean(false/*useGridFormat*/);
@@ -711,6 +717,8 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         dout.writeInt(heclOpt);
         dout.writeInt(prescale);
         dout.writeBoolean(tilesScaleFiltered);
+        /* since 1.1.2 */
+        dout.writeBoolean(verboseLoading);
 
 //#ifdef __LOG__
         if (log.isEnabled()) log.info("configuration updated");

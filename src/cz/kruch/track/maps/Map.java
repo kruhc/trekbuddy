@@ -412,7 +412,8 @@ public final class Map implements Runnable {
         private Vector _list;
 
         abstract void loadMeta() throws IOException;
-        abstract void loadSlice(final Slice slice) throws IOException;
+        abstract void loadIndex(Atlas atlas, String url, String baseUrl) throws IOException;
+        abstract void loadSlice(Slice slice) throws IOException;
 
         Loader() {
             this.tileWidth = this.tileHeight = Integer.MAX_VALUE;
@@ -709,7 +710,9 @@ public final class Map implements Runnable {
                     if (slice.getImage() == null) {
 
                         // notify
-                        map.listener.loadingChanged(slice.appendInfo(sb.delete(0, sb.length()).append("Loading ")).toString(), null);
+                        if (Config.verboseLoading) {
+                            map.listener.loadingChanged(slice.appendInfo(sb.delete(0, sb.length()).append("Loading ")).toString(), null);
+                        }
 
                         try {
                             // load image
@@ -738,7 +741,9 @@ public final class Map implements Runnable {
                         } finally {
 
                             // notify
-                            map.listener.loadingChanged(null, null);
+                            if (Config.verboseLoading) {
+                                map.listener.loadingChanged(null, null);
+                            }
                         }
                     }
                 }

@@ -940,7 +940,8 @@ final class DeviceScreen extends GameCanvas implements Runnable {
     }
 
     private void drawButton(final Graphics g, final Command cmd,
-                            final int x, final int y, final int bw, final int bh) {
+                            final int x, final int y,
+                            final int bw, final int bh) {
         g.setColor(BTN_COLOR);
         g.fillRoundRect(x, y, bw, bh, BTN_ARC, BTN_ARC);
         g.setColor(BTN_HICOLOR);

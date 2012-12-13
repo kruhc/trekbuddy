@@ -368,7 +368,7 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
             choice1 = new ChoiceGroup(Resources.getString(Resources.CFG_TWEAKS_GROUP), ChoiceGroup.MULTIPLE);
             choice1.append(Resources.getString(Resources.CFG_TWEAKS_FLD_SIEMENS_IO), null);
             choice1.append(Resources.getString(Resources.CFG_TWEAKS_FLD_LOWMEM_IO), null);
-            choice1.append(Resources.getString(Resources.CFG_TWEAKS_FLD_SAFE_RENDERER), null);
+//            choice1.append(Resources.getString(Resources.CFG_TWEAKS_FLD_SAFE_RENDERER), null);
             choice1.append(Resources.getString(Resources.CFG_TWEAKS_FLD_FORCED_GC), null);
             choice1.append(Resources.getString(Resources.CFG_TWEAKS_FLD_POWER_SAVE), null);
             choice1.append(Resources.getString(Resources.CFG_TWEAKS_FLD_1TILE_SCROLL), null);
@@ -377,10 +377,11 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
             choice1.append(Resources.getString(Resources.CFG_TWEAKS_FLD_NUMERIC_INPUT_HACK), null);
             choice1.append(Resources.getString(Resources.CFG_TWEAKS_FLD_EXTERNAL_CFG_BACKUP), null);
             choice1.append(Resources.getString(Resources.CFG_TWEAKS_FLD_FILTERED_SCALING), null);
+            choice1.append(Resources.getString(Resources.CFG_TWEAKS_FLD_VERBOSE_LOADING), null);
             choice1.setSelectedFlags(new boolean[] {
                 Config.siemensIo,
                 Config.lowmemIo,
-                Config.S60renderer,
+//                Config.S60renderer,
                 Config.forcedGc,
                 Config.powerSave,
                 Config.oneTileScroll,
@@ -388,7 +389,8 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
                 Config.lazyGpxParsing,
                 Config.numericInputHack,
                 Config.externalConfigBackup,
-                Config.tilesScaleFiltered
+                Config.tilesScaleFiltered,
+                Config.verboseLoading
             });
             if (cz.kruch.track.TrackingMIDlet.symbian) {
                 choice1.setSelectedIndex(choice1.append(Resources.getString(Resources.CFG_TWEAKS_FLD_USE_TBSVC), null),
@@ -957,15 +959,16 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
                 choice1.getSelectedFlags(perf);
                 Config.siemensIo = perf[0];
                 Config.lowmemIo = perf[1];
-                Config.S60renderer = perf[2];
-                Config.forcedGc = perf[3];
-                Config.powerSave = perf[4];
-                Config.oneTileScroll = perf[5];
-                Config.largeAtlases = perf[6];
-                Config.lazyGpxParsing = perf[7];
-                Config.numericInputHack = perf[8];
-                Config.externalConfigBackup = perf[9];
-                Config.tilesScaleFiltered = perf[10];
+//                Config.S60renderer = perf[2];
+                Config.forcedGc = perf[2];
+                Config.powerSave = perf[3];
+                Config.oneTileScroll = perf[4];
+                Config.largeAtlases = perf[5];
+                Config.lazyGpxParsing = perf[6];
+                Config.numericInputHack = perf[7];
+                Config.externalConfigBackup = perf[8];
+                Config.tilesScaleFiltered = perf[9];
+                Config.verboseLoading = perf[10];
                 if (cz.kruch.track.TrackingMIDlet.symbian) {
                     Config.useNativeService = perf[11];
                 }

@@ -115,7 +115,9 @@ final class InfoForm implements CommandListener {
         pane.append(newItem("Orientation", cz.kruch.track.ui.nokia.DeviceControl.getSensorStatus()));
 //#endif
         sb.delete(0, sb.length())
+//#ifdef __ALT_RENDERER__
                 .append("safe renderer? ").append(Config.S60renderer)
+//#endif                
                 .append("; hasRepeatEvents? ").append(Desktop.screen.hasRepeatEvents())
                 .append("; hasPointerEvents? ").append(Desktop.screen.hasPointerEvents())
                 .append("; ").append(Desktop.width).append('x').append(Desktop.height)

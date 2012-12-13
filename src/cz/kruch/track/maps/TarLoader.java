@@ -22,7 +22,7 @@ import javax.microedition.lcdui.Image;
  *
  * @author kruhc@seznam.cz
  */
-final class TarLoader extends Map.Loader implements Atlas.Loader {
+final class TarLoader extends Map.Loader /*implements Atlas.Loader*/ {
 
     /*
      * Map.Loader contract.
@@ -49,7 +49,7 @@ final class TarLoader extends Map.Loader implements Atlas.Loader {
         return new TarSlice();
     }
 
-    Slice getSlice(int x, int y) {
+    Slice getSlice(final int x, final int y) {
         final Slice slice = super.getSlice(x, y);
         final long xy = getScaledXyLong(slice); // slice.getXyLong();
         final long[] pointers = this.pointers;

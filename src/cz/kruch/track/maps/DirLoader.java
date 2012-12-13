@@ -17,7 +17,7 @@ import api.file.File;
 import javax.microedition.io.Connector;
 import javax.microedition.lcdui.Image;
 
-final class DirLoader extends Map.Loader implements Atlas.Loader {
+final class DirLoader extends Map.Loader /*implements Atlas.Loader*/ {
 
     /*
      * Map.Loader contract.

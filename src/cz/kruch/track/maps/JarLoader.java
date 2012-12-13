@@ -122,5 +122,13 @@ final class JarLoader extends Map.Loader /*implements Atlas.Loader*/ {
 
         }
     }
+
+    /*
+    * Atlas.Loader contract.
+    */
+
+    void loadIndex(Atlas atlas, String url, String baseUrl) throws IOException {
+        throw new IllegalStateException("Not supported");
+    }
 }
 

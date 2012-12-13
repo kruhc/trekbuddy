@@ -8,7 +8,6 @@ import org.xmlpull.v1.XmlPullParserException;
 
 import java.io.IOException;
 import java.io.InputStream;
-import java.io.OutputStream;
 import java.util.Hashtable;
 import java.util.Vector;
 
@@ -16,7 +15,6 @@ import api.io.BufferedInputStream;
 import api.location.Datum;
 import api.location.ProjectionSetup;
 import api.location.QualifiedCoordinates;
-import api.file.File;
 
 import javax.microedition.io.Connector;
 
@@ -30,7 +28,7 @@ import cz.kruch.track.configuration.Config;
  *
  * @author kruhc@seznam.cz
  */
-final class NoMapLoader extends Map.Loader implements Atlas.Loader {
+final class NoMapLoader extends Map.Loader /*implements Atlas.Loader*/ {
 
     private static final String TAG_METADATA    = "metadata";
     private static final String TAG_NAME        = "name";
@@ -56,6 +54,7 @@ final class NoMapLoader extends Map.Loader implements Atlas.Loader {
         basename = BASENAME;
         tileWidth = MIN_MAP_WIDTH; //map.getWidth() > 4096 ? 4096 : map.getWidth();
         tileHeight = MIN_MAP_HEIGHT; //map.getHeight() > 4096 ? 4096 : map.getHeight();
+
         // set loaded map properties
         map.bgColor = bgcolor;
         map.virtual = true;
@@ -90,7 +89,7 @@ final class NoMapLoader extends Map.Loader implements Atlas.Loader {
         } catch (XmlPullParserException e) {
 
             throw new IOException(e.toString());
-            
+
         } finally {
             try {
                 parser.close();
@@ -108,9 +107,7 @@ final class NoMapLoader extends Map.Loader implements Atlas.Loader {
     private static void parse(final HXmlParser parser, final Atlas atlas) throws IOException, XmlPullParserException {
 
         String name = null;
-        double minlat, minlon, maxlat, maxlon;
-
-        minlat = minlon = maxlat = maxlon = Double.NaN;
+        double minlat = Double.NaN, minlon = Double.NaN, maxlat = Double.NaN, maxlon = Double.NaN;
 
         for (int depth = 0, eventType = parser.next(); eventType != XmlPullParser.END_DOCUMENT; eventType = parser.next()) {
             switch (eventType) {
@@ -231,6 +228,7 @@ final class NoMapLoader extends Map.Loader implements Atlas.Loader {
         }
     }
 
+/*
     private static void createFakeAtlas(final Atlas atlas,
                                         final double minlat, final double minlon,
                                         final double maxlat, final double maxlon) throws IOException {
@@ -253,6 +251,7 @@ final class NoMapLoader extends Map.Loader implements Atlas.Loader {
             }
         }
     }
+*/
 
     private static Calibration createFakeCalibration(final String path,
                                                      final int width, final int height,

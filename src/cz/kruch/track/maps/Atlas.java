@@ -129,7 +129,7 @@ public final class Atlas implements Runnable {
         return maps;
     }
 
-    public static String atlasURLtoFileURL(String url) {
+    public static String atlasURLtoFileURL(final String url) {
         final String[] parts = parseURL(url);
         final StringBuffer sb = new StringBuffer(64);
         sb.append(parts[0].substring(0, parts[0].lastIndexOf(File.PATH_SEPCHAR) + 1));
@@ -138,7 +138,7 @@ public final class Atlas implements Runnable {
         return sb.toString();
     }
 
-    public static String[] parseURL(String url) {
+    public static String[] parseURL(final String url) {
         final CharArrayTokenizer tokenizer = new CharArrayTokenizer();
         tokenizer.init(url, new char[]{ '?', '&','=' }, false);
         final String atlasURL = tokenizer.next().toString();
@@ -207,7 +207,7 @@ public final class Atlas implements Runnable {
             } else {
                 throw new InvalidMapException("Unsupported format");
             }
-            final Loader loader = (Loader) factory.newInstance();
+            final Map.Loader loader = (Map.Loader) factory.newInstance();
             loader.loadIndex(this, url, baseUrl);
 
 //#ifdef __LOG__
@@ -245,13 +245,6 @@ public final class Atlas implements Runnable {
         // gc hints
         maps = null;
         layers = null;
-    }
-
-    /**
-     * Atlas loader.
-     */
-    interface Loader {
-        abstract void loadIndex(Atlas atlas, String url, String baseUrl) throws IOException;
     }
 
     Hashtable getLayerCollection(final Atlas atlas, final String cName) {

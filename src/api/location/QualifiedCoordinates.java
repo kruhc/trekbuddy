@@ -4,6 +4,11 @@ package api.location;
 
 import cz.kruch.track.util.ExtraMath;
 
+/**
+ * Qualified coordinates.
+ *
+ * @author kruhc@seznam.cz
+ */
 public final class QualifiedCoordinates implements GeodeticPosition {
 
     public static QualifiedCoordinates INVALID = newInstance(Double.NaN, Double.NaN);

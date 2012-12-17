@@ -36,9 +36,11 @@ abstract class View {
 //#ifdef __ANDROID__
 
     void onBackground() {
+        setVisible(false);
     }
 
     void onForeground() {
+        setVisible(true);
     }
 
 //#endif

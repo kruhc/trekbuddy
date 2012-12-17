@@ -73,6 +73,14 @@ public final class Location {
         return l;
     }
 
+    public Location copyFrom(final Location l) {
+        this.coordinates.copyFrom(l.getQualifiedCoordinates());
+        this.speed = l.speed;
+        this.course = l.course;
+        this.fixsat = l.fixsat;
+        return this;
+    }
+
     public QualifiedCoordinates getQualifiedCoordinates() {
         return coordinates;
     }

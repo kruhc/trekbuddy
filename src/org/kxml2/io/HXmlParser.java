@@ -43,6 +43,11 @@ public final class HXmlParser implements XmlPullParser {
     private static final String CONSTANT_XMLNS  = "xmlns";
     private static final String CONSTANT_EMPTY  = "";
 
+    private static final char[] CCONSTANT_EMPTY     = {};
+    private static final char[] CCONSTANT_CDATA     = "[CDATA[".toCharArray();
+    private static final char[] CCONSTANT_DOCTYPE   = "DOCTYPE".toCharArray();
+    private static final char[] CCONSTANT_MINMIN    = { '-', '-' };
+
     private static final String ENC_UTF_32BE    = "UTF-32BE";
     private static final String ENC_UTF_32LE    = "UTF-32LE";
     private static final String ENC_UTF_16BE    = "UTF-16BE";
@@ -82,7 +87,7 @@ public final class HXmlParser implements XmlPullParser {
     // txtbuffer
 
     private char[] txtBuf;
-    private int txtPos;
+    private int txtPos, txtLen;
 
     // event-related
 
@@ -122,7 +127,7 @@ public final class HXmlParser implements XmlPullParser {
         this.nspStack = new String[8];
         this.nspCounts = new int[4];
         this.srcBuf = new char[8192];
-        this.txtBuf = new char[512];
+        this.txtBuf = new char[this.txtLen = 1024];
         this.attributes = new String[32];
         this.peek = new int[2];
         this.hash = new Int(0);
@@ -356,28 +361,28 @@ public final class HXmlParser implements XmlPullParser {
     }
 
     private int parseLegacy(boolean push) throws IOException, XmlPullParserException {
-        String req = CONSTANT_EMPTY;
+        /*String*/char[] req = CCONSTANT_EMPTY;
         int term;
         int result;
         int prev = 0;
 
         read(); // <
-        int c = read();
+        final int c = read();
 
         switch (c) {
             case '!': {
                 if (peek(0) == '[') {
                     result = CDSECT;
-                    req = "[CDATA[";
+                    req = CCONSTANT_CDATA; //"[CDATA[";
                     term = ']';
                     push = true;
                 } else if (peek(0) == '-') {
                     result = COMMENT;
-                    req = "--";
+                    req = CCONSTANT_MINMIN;
                     term = '-';
                 } else {
                     result = DOCDECL;
-                    req = "DOCTYPE";
+                    req = CCONSTANT_DOCTYPE;
                     term = -1;
                 }
             } break;
@@ -447,27 +452,31 @@ public final class HXmlParser implements XmlPullParser {
             }
         }
 
-        for (int N = req.length(), i = 0; i < N; i++) {
-            read(req.charAt(i));
+        for (int N = req.length, i = 0; i < N; i++) {
+            read(req[i]);
         }
 
         if (result == DOCDECL) {
             parseDoctype(push);
         } else {
             while (true) {
-                c = read();
-                if (c == -1){
+                final int cx = read();
+//                if (cx == -1){
+//                    error(UNEXPECTED_EOF);
+//                    return COMMENT;
+//                }
+                if (cx > -1) {
+                    if (push)
+                        push(cx);
+
+                    if ((cx == term || term == '?') && peek(0) == term && peek(1) == '>')
+                        break;
+
+                    prev = cx;
+                } else {
                     error(UNEXPECTED_EOF);
                     return COMMENT;
                 }
-
-                if (push)
-                    push(c);
-
-                if ((term == '?' || c == term) && peek(0) == term && peek(1) == '>')
-                    break;
-
-                prev = c;
             }
 
             if (term == '-' && prev == '-') {
@@ -575,10 +584,11 @@ public final class HXmlParser implements XmlPullParser {
                 return ENTITY_REF;
             case '<' :
                 switch (peek(1)) {
+                    case '!' :
+                        return LEGACY;
                     case '/' :
                         return END_TAG;
                     case '?' :
-                    case '!' :
                         return LEGACY;
                     default :
                         return START_TAG;
@@ -615,8 +625,8 @@ public final class HXmlParser implements XmlPullParser {
     private void push(final int c) {
         isWhitespace &= c <= ' ';
 
-        if (txtPos == txtBuf.length) {
-            final char[] bigger = new char[txtPos * 4 / 3 + 4];
+        if (txtPos == txtLen) {
+            final char[] bigger = new char[txtLen = txtPos * 4 / 3 + 4];
             System.arraycopy(txtBuf, 0, bigger, 0, txtPos);
             txtBuf = null; // gc hint
             txtBuf = bigger;
@@ -1062,6 +1072,10 @@ public final class HXmlParser implements XmlPullParser {
                 default: {
                     peek[peekCount++] = nw;
                     wasCR = false;
+                    if (pos == 0 || peekCount == 2) { // HACK performance optimization
+                        return nw;
+                    } else
+                        throw new IllegalStateException("! pos == 0 || peekCount == 2");
                 }
             }
         }

@@ -41,7 +41,7 @@ public class HeclTask {
 		    v.addElement(new Thing(e.toString()));
 		    ip.eval(ListThing.create(v),0);
 		} catch(Exception e2) {
-		    System.err.println("Hecl severe bg error: "+e.getMessage());
+		    //System.err.println("Hecl severe bg error: "+e.getMessage());
 		    e2.printStackTrace();
 		}
 	    }

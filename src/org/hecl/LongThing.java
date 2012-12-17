@@ -20,7 +20,7 @@ package org.hecl;
  *
  * @version 1.0
  */
-public class LongThing extends FractionalThing {
+public class LongThing extends IntegralThing {
     /* The internal value. */
     private long val;
 
@@ -57,7 +57,13 @@ public class LongThing extends FractionalThing {
      * @param s a <code>String</code> value
      */
     public LongThing(String s) {
-        this(Long.parseLong(s));
+        long l;
+        if (s.startsWith("0x")) {
+            l = Long.parseLong(s.substring(2), 16);
+        } else {
+            l = Long.parseLong(s, 10);
+        }
+        set(l);
     }
 
     public String thingclass() {

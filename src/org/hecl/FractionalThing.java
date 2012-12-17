@@ -29,4 +29,8 @@ public abstract class FractionalThing extends NumberThing {
     public boolean isFractional() {
 	return true;
     }
+
+    public boolean isDouble() {
+	return false;
+    }
 }

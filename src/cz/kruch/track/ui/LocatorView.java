@@ -95,26 +95,14 @@ final class LocatorView extends View {
     }
 
     void setVisible(final boolean b) {
-        super.setVisible(b);
         orientation = -1;
         if (b) {
             cz.kruch.track.ui.nokia.DeviceControl.senseOn(navigator);
         } else {
             cz.kruch.track.ui.nokia.DeviceControl.senseOff(navigator);
         }
+        super.setVisible(b);
     }
-
-//#ifdef __ANDROID__
-
-    void onBackground() {
-        setVisible(false);
-    }
-
-    void onForeground() {
-        setVisible(true);
-    }
-
-//#endif
 
     public int handleAction(final int action, final boolean repeated) {
         if (repeated) {
@@ -152,11 +140,13 @@ final class LocatorView extends View {
         switch (keycode) {
 //#ifdef __ANDROID__
             case -25:
-//#elifdef __ALL__
+//#elifdef __RIM__
+            case -151:
+//#else
             case -37: // SE
+//#endif
                 if (!Config.easyZoomVolumeKeys)
                     break;
-//#endif
             case Canvas.KEY_NUM7: {
                 if (rangeIdx[term] > 0) {
                     rangeIdx[term]--;
@@ -166,11 +156,13 @@ final class LocatorView extends View {
 
 //#ifdef __ANDROID__
             case -24:
-//#elifdef __ALL__
+//#elifdef __RIM__
+            case -150:
+//#else
             case -36: // SE
+//#endif
                 if (!Config.easyZoomVolumeKeys)
                     break;
-//#endif
             case Canvas.KEY_NUM9: {
                 if (rangeIdx[term] < (RANGES.length - 1)) {
                     rangeIdx[term]++;

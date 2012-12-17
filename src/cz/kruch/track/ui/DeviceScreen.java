@@ -28,7 +28,7 @@ final class DeviceScreen extends GameCanvas implements Runnable {
 
     private static final int VROWS  = 15;
 
-    static final int BTN_ARC        = 10;
+    static int BTN_ARC        = 10;
     static final int BTN_COLOR      = 0x00424242; // 0x005b87ce;
     static final int BTN_HICOLOR    = 0x00ffffff; // 0x000a2468;
     static final int BTN_TXTCOLOR   = 0x00ffffff; // 0x00ffffff;
@@ -242,6 +242,14 @@ final class DeviceScreen extends GameCanvas implements Runnable {
         return Config.guideSpotsMode == 1 || (Config.guideSpotsMode == 2 && beenPressed);
     }
 
+    boolean isHires() {
+//#ifdef __ANDROID__
+        return getHeight() > 320 || getWidth() > 320;
+//#else
+        return getHeight() > 480 || getWidth() > 480;
+//#endif
+    }
+
     /**
      * Used for key repetition emulation
      */
@@ -304,6 +312,9 @@ final class DeviceScreen extends GameCanvas implements Runnable {
 
         // recalc touch threshold
         gdiff = Math.min(w / 15, h / 15);
+
+        // adjust UI
+        BTN_ARC = isHires() ? 25 : 10;
 
         // too early invocation? happens on Belle :-$
         if (delegate == null) {
@@ -682,7 +693,7 @@ final class DeviceScreen extends GameCanvas implements Runnable {
             if (keyRepeatedCount == 1) {
                 keylock = !keylock;
                 delegate.update(Desktop.MASK_OSD);
-                Desktop.display.vibrate(100);
+                Desktop.display.vibrate(100); // bypass power-save check
             }
             return;
         }

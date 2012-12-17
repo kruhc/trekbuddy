@@ -23,8 +23,8 @@ package org.hecl;
  * @author <a href="mailto:davidw@dedasys.com">David N. Welton </a>
  * @version 1.0
  */
-public class StringThing implements RealThing {
-    private StringBuffer val;
+public final class StringThing implements RealThing {
+    private Object val;
 
     /**
      * Creates a new, empty <code>StringThing</code> instance.
@@ -40,8 +40,8 @@ public class StringThing implements RealThing {
      * @param s
      *            a <code>String</code> value
      */
-    public StringThing(String s) {
-        val = s != null ? new StringBuffer(s) : new StringBuffer();
+    public StringThing(final String s) {
+        val = s != null ? s : (Object)(new StringBuffer());
     }
 
     /**
@@ -50,7 +50,7 @@ public class StringThing implements RealThing {
      * @param sb
      *            a <code>StringBuffer</code> value
      */
-    public StringThing(StringBuffer sb) {
+    public StringThing(final StringBuffer sb) {
         val = sb;
     }
 
@@ -65,7 +65,7 @@ public class StringThing implements RealThing {
      * @param s A <code>String</code> value which may be <code>null</code>.
      * @return A <code>Thing</code> value
      */
-    public static Thing create(String s) {
+    public static Thing create(final String s) {
 	return new Thing(new StringThing(s != null ? s : ""));
     }
 	    
@@ -77,7 +77,7 @@ public class StringThing implements RealThing {
      *            a <code>Thing</code> value
      * @throws HeclException
      */
-    private static void setStringFromAny(Thing thing) {
+    private static void setStringFromAny(final Thing thing) { 
         RealThing realthing = thing.getVal();
         if (!(realthing instanceof StringThing)) {
             thing.setVal(new StringThing(thing.toString()));
@@ -93,7 +93,7 @@ public class StringThing implements RealThing {
      * @return a <code>String</code> value
      * @throws HeclException
      */
-    public static String get(Thing thing) {
+    public static String get(final Thing thing) {
         setStringFromAny(thing);
         return thing.toString();
     }
@@ -113,6 +113,11 @@ public class StringThing implements RealThing {
      * @return a <code>String</code> value
      */
     public String getStringRep() {
+        if (val instanceof StringBuffer) {
+            final String _val = val.toString();
+            val = null; // gc hint
+            val = _val;
+        }
         return val.toString();
     }
 
@@ -122,8 +127,18 @@ public class StringThing implements RealThing {
      * @param ch
      *            a <code>char</code> value
      */
-    public void append(char ch) {
-        val.append(ch);
+    public void append(final char ch) {
+        if (val instanceof StringBuffer) {
+            ((StringBuffer) val).append(ch);
+        } else { // val is String
+            val = (new StringBuffer(val.toString())).append(ch);
+        }
+/*        
+        if (val instanceof String) {
+            val = new StringBuffer(val.toString());
+        }
+        ((StringBuffer) val).append(ch);
+*/
     }
 
     /**
@@ -132,7 +147,28 @@ public class StringThing implements RealThing {
      * @param str
      *            a <code>String</code> value
      */
-    public void append(String str) {
-        val.append(str);
+    public void append(final String str) {
+        if (val instanceof StringBuffer) {
+            ((StringBuffer) val).append(str);
+        } else { // val is String
+            val = (new StringBuffer(val.toString())).append(str);
+        }
+/*    
+        if (val instanceof String) {
+            val = new StringBuffer(val.toString());
+        }
+        ((StringBuffer) val).append(str);
+*/        
     }
+
+    /*
+     * HACK: reuse most frequent strings
+     */
+    static StringThing reuse(final StringThing str) {
+        if ("set".equals(str.getStringRep())) {
+            return SET;
+        }
+        return str;
+    }
+    static StringThing SET = new StringThing("set");
 }

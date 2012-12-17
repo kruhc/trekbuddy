@@ -62,7 +62,13 @@ public class IntThing extends IntegralThing {
      *            a <code>String</code> value
      */
     public IntThing(String s) {
-        set(Integer.parseInt(s));
+        int i;
+        if (s.startsWith("0x")) {
+            i = Integer.parseInt(s.substring(2), 16);
+        } else {
+            i = Integer.parseInt(s, 10);
+        }
+        set(i);
     }
 
     public String thingclass() {

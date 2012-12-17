@@ -54,6 +54,7 @@ public class MathCmds extends org.hecl.Operator {
     public static final int ROUND = 21;
     public static final int MIN = 22;
     public static final int MAX = 23;
+    public static final int ATAN2 = 24;
 
     // valid only for java 1.5
     public static final int SIGNUM = 30;
@@ -91,6 +92,12 @@ public class MathCmds extends org.hecl.Operator {
     public static final int PLUS = 105;
     public static final int MINUS = 106;
     public static final int MUL = 107;
+    public static final int BOR = 108;
+    public static final int BAND = 109;
+    public static final int SHIFTL = 110;
+    public static final int SHIFTR = 111;
+
+    public static final int TOHEX = 120;
 
     // Comparison
     public static int compare(Thing a,Thing b) {
@@ -204,7 +211,29 @@ public class MathCmds extends org.hecl.Operator {
 	  case EXPM1:
 	    return DoubleThing.create(Math.expm1(a.doubleValue()));
 //#endif
+//#else
+	  case LOG:
+	    return DoubleThing.create(cz.kruch.track.util.ExtraMath.ln(a.doubleValue()));
+	  case ASIN:
+	    return DoubleThing.create(cz.kruch.track.util.ExtraMath.asin(a.doubleValue()));
+	  case ACOS:
+	    return DoubleThing.create(cz.kruch.track.util.ExtraMath.acos(a.doubleValue()));
+	  case ATAN:
+	    return DoubleThing.create(cz.kruch.track.util.ExtraMath.atan(a.doubleValue()));
 //#endif
+	  case TOHEX:
+//#if javaversion >= 1.5 || cldc > 1.0
+	    if(a.isIntegral()) {
+//#endif
+	    if(((IntegralThing)a).isLong()) {
+	      return StringThing.create(Long.toString(a.longValue(), 16));
+	    }
+	    return StringThing.create(Integer.toHexString(a.intValue()));
+//#if javaversion >= 1.5 || cldc > 1.0
+	    }
+	    throw new HeclException("Integral argument required.");
+//#endif
+
 	}
 	throw new HeclException("Unknown unary mathcmdcode '"+cmdcode+"'.");
     }
@@ -279,6 +308,58 @@ public class MathCmds extends org.hecl.Operator {
 	    }
 	    return DoubleThing.create(a.doubleValue()%b.doubleValue());
 //#endif
+	  case BOR:
+//#if javaversion >= 1.5 || cldc > 1.0
+	    if(a.isIntegral() && b.isIntegral()) {
+//#endif
+		if(((IntegralThing)a).isLong()
+		   || ((IntegralThing)b).isLong()) {
+		    return LongThing.create(a.longValue()|b.longValue());
+		}
+		return IntThing.create(a.intValue()|b.intValue());
+//#if javaversion >= 1.5 || cldc > 1.0
+	    }
+	    throw new HeclException("Integral argument required.");
+//#endif
+	  case BAND:
+//#if javaversion >= 1.5 || cldc > 1.0
+	    if(a.isIntegral() && b.isIntegral()) {
+//#endif
+		if(((IntegralThing)a).isLong()
+		   || ((IntegralThing)b).isLong()) {
+		    return LongThing.create(a.longValue()&b.longValue());
+		}
+		return IntThing.create(a.intValue()&b.intValue());
+//#if javaversion >= 1.5 || cldc > 1.0
+	    }
+	    throw new HeclException("Integral argument required.");
+//#endif
+	  case SHIFTL:
+//#if javaversion >= 1.5 || cldc > 1.0
+	    if(a.isIntegral() && b.isIntegral()) {
+//#endif
+		if(((IntegralThing)a).isLong()
+		   || ((IntegralThing)b).isLong()) {
+		    return LongThing.create(a.longValue()<<b.longValue());
+		}
+		return IntThing.create(a.intValue()<<b.intValue());
+//#if javaversion >= 1.5 || cldc > 1.0
+	    }
+	    throw new HeclException("Integral argument required.");
+//#endif
+	  case SHIFTR:
+//#if javaversion >= 1.5 || cldc > 1.0
+	    if(a.isIntegral() && b.isIntegral()) {
+//#endif
+		if(((IntegralThing)a).isLong()
+		   || ((IntegralThing)b).isLong()) {
+		    return LongThing.create(a.longValue()>>b.longValue());
+		}
+		return IntThing.create(a.intValue()>>b.intValue());
+//#if javaversion >= 1.5 || cldc > 1.0
+	    }
+	    throw new HeclException("Integral argument required.");
+//#endif
 	  case AND:
 //#if javaversion >= 1.5 || cldc > 1.0
 	    if(a.isIntegral() && b.isIntegral()) {
@@ -313,6 +394,11 @@ public class MathCmds extends org.hecl.Operator {
 	  case HYPOT:
 	    return DoubleThing.create(Math.hypot(a.doubleValue(), b.doubleValue()));
 //#endif
+//#else
+	  case POW:
+	    return DoubleThing.create(cz.kruch.track.util.ExtraMath.pow(a.doubleValue(), b.doubleValue()));
+	  case ATAN2:
+	    return DoubleThing.create(cz.kruch.track.util.ExtraMath.atan2(a.doubleValue(), b.doubleValue()));
 //#endif
 	  case EQ:
 	    return boolres(compare(a,b) == 0);
@@ -491,6 +577,9 @@ public class MathCmds extends org.hecl.Operator {
 	// unary operators
 	cmdtable.put("abs",new MathCmds(ABS,1,1));
 	cmdtable.put("not",new MathCmds(NOT,1,1));
+	
+	// hexa
+	cmdtable.put("0x",new MathCmds(TOHEX,1,1));
 
 	// binary operators
 	cmdtable.put("+",new MathCmds(PLUS,-1,-1));
@@ -498,6 +587,10 @@ public class MathCmds extends org.hecl.Operator {
 	cmdtable.put("*",new MathCmds(MUL,-1,-1));
 	cmdtable.put("/", new MathCmds(BINDIV,2,2));
 	cmdtable.put("%", new MathCmds(MOD,2,2));
+	cmdtable.put("|", new MathCmds(BOR,2,2));
+	cmdtable.put("&", new MathCmds(BAND,2,2));
+	cmdtable.put("<<", new MathCmds(SHIFTL,2,2));
+	cmdtable.put(">>", new MathCmds(SHIFTR,2,2));
 
 	// comparison
 	cmdtable.put("=",new MathCmds(EQ,2,2));
@@ -517,6 +610,7 @@ public class MathCmds extends org.hecl.Operator {
 	cmdtable.put("tan",new MathCmds(TAN,1,1));
 	cmdtable.put("floor",new MathCmds(FLOOR,1,1));
 	cmdtable.put("ceil",new MathCmds(CEIL,1,1));
+	cmdtable.put("round",new MathCmds(ROUND,1,1));
 	cmdtable.put("float",new MathCmds(CASTFLOAT,1,1));
 	cmdtable.put("double",new MathCmds(CASTDOUBLE,1,1));
 	cmdtable.put("toDegrees",new MathCmds(TODEGREES,1,1));
@@ -532,7 +626,6 @@ public class MathCmds extends org.hecl.Operator {
 	cmdtable.put("acos",new MathCmds(ACOS,1,1));
 	cmdtable.put("atan",new MathCmds(ATAN,1,1));
 	cmdtable.put("exp",new MathCmds(EXP,1,1));
-	cmdtable.put("round",new MathCmds(ROUND,1,1));
 
 //#if javaversion > 1.5
 	cmdtable.put("signum",new MathCmds(SIGNUM,1,1));
@@ -546,6 +639,17 @@ public class MathCmds extends org.hecl.Operator {
 	cmdtable.put("hypot", new MathCmds(HYPOT,2,2));
 //#endif
 
+//#else
+
+	// TB ExtraMath
+	cmdtable.put("pow", new MathCmds(POW,2,2));
+	cmdtable.put("log",new MathCmds(LOG,1,1));
+	cmdtable.put("asin",new MathCmds(ASIN,1,1));
+	cmdtable.put("acos",new MathCmds(ACOS,1,1));
+	cmdtable.put("atan",new MathCmds(ATAN,1,1));
+	cmdtable.put("atan2",new MathCmds(ATAN2,2,2));
+
 //#endif
+  
     }
 }

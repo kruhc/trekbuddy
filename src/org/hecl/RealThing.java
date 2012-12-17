@@ -25,7 +25,7 @@ package org.hecl;
  * @author <a href="mailto:davidw@dedasys.com">David N. Welton </a>
  * @version 1.0
  */
-public abstract interface RealThing {
+public interface RealThing {
     public String thingclass();
 
     /**

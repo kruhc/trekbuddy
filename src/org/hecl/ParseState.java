@@ -55,7 +55,6 @@ public class ParseState {
      * @return a <code>char</code> value
      */
     public char nextchar() {
-	char result;
 	if (eoc) {
 	    return (char) 0;
 	}
@@ -64,7 +63,7 @@ public class ParseState {
 	    eof = true;
 	    return (char) 0;
 	}
-	result = chars[idx];
+	final char result = chars[idx];
 	idx++;
 	return result;
     }
@@ -76,7 +75,7 @@ public class ParseState {
      * @return a <code>boolean</code> value
      */
     public boolean done() {
-	return (eof || eoc) ? true : false;
+	return (eof || eoc); // ? true : false;
     }
 
     /**
@@ -85,7 +84,9 @@ public class ParseState {
      *
      */
     public void remaining() {
+//#if j2se
 	System.out.println("remaining:" + chars[idx]);
+//#endif	
     }
 
     /**

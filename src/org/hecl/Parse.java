@@ -138,6 +138,7 @@ public class Parse {
 
             code.addStanza(interp, argv, beginline);
         }
+        code.optimize();
         return code;
     }
 
@@ -177,17 +178,18 @@ public class Parse {
 		}
 	    }
 	    if (newthing == null) {
+		if (str instanceof StringThing) str = StringThing.reuse((StringThing) str);
 		newthing = new Thing(str);
 		newthing.literal = true;
 	    }
 	    outList.addElement(newthing);
 	} else if (outGroup.size() > 1) {
-	    Vector outv = new Vector();
+	    Vector outv = new Vector(4, 2);
 	    for (Enumeration e = outGroup.elements(); e.hasMoreElements();) {
 		RealThing rt = (RealThing)e.nextElement();
 		outv.addElement(new Thing(rt).setLiteral());
 	    }
-
+	    outv.trimToSize();
 	    outList.addElement(GroupThing.create(outv).setLiteral());
 	} else {
 	    /* If nothing has been added (for example {}), then make
@@ -203,7 +205,7 @@ public class Parse {
      *
      * @param ch a <code>char</code>
      */
-    protected void appendToCurrent(char ch) throws HeclException {
+    protected void appendToCurrent(final char ch) throws HeclException {
 	if (!outBufused) {
 	    outBuf = new StringThing();
 	    outBufNumeric = true;
@@ -240,7 +242,7 @@ public class Parse {
 	addSub(DOLLAR);
     }
 
-    public void addSub(int type) throws HeclException {
+    public void addSub(final int type) throws HeclException {
         Vector savegroup = outGroup;
 	StringThing savebuf = outBuf;
 	newCurrent();
@@ -251,7 +253,7 @@ public class Parse {
 	}
 
 	for (Enumeration e = outGroup.elements(); e.hasMoreElements();) {
-	    RealThing rt = (RealThing)e.nextElement();
+	    final RealThing rt = (RealThing)e.nextElement();
 	    savegroup.addElement(rt);
 	}
 
@@ -266,11 +268,11 @@ public class Parse {
      * @param state a <code>ParseState</code> value
      * @exception HeclException if an error occurs
      */
-    public void parseLine(ParseState state) throws HeclException {
-        char ch;
+    public void parseLine(final ParseState state) throws HeclException {
+//        char ch;
 
         while (true) {
-            ch = state.nextchar();
+            final char ch = state.nextchar();
             if (state.done()) {
                 return;
             }
@@ -328,10 +330,10 @@ public class Parse {
      *
      * @param state a <code>ParseState</code> value
      */
-    private void parseComment(ParseState state) {
-        char ch;
+    private void parseComment(final ParseState state) {
+//        char ch;
         while (true) {
-            ch = state.nextchar();
+            final char ch = state.nextchar();
 	    if (ch == '\n') {
 		state.lineno ++;
 		return;
@@ -346,16 +348,16 @@ public class Parse {
 
     private static String allowed = "_/@:-";
     private static String xchars="0123456789ABCDEFabcdef";
-    private static boolean isLetter(char ch) {
+    private static boolean isLetter(final char ch) {
 	return ((ch >= 'A' && ch <= 'Z') || (ch >= 'a' && ch <= 'z'));
     }
-    private static boolean isDigit(char ch) {
+    private static boolean isDigit(final char ch) {
 	return (ch >= '0' && ch <= '9');
     }
-    private static boolean isXDigit(char ch) {
+    private static boolean isXDigit(final char ch) {
 	return xchars.indexOf(ch) >= 0;
     }
-    private static boolean isValidVarPunct(char ch) {
+    private static boolean isValidVarPunct(final char ch) {
 	return allowed.indexOf(ch) >= 0;
     }
 
@@ -367,7 +369,7 @@ public class Parse {
      * @param state a <code>ParseState</code> value
      * @exception HeclException if an error occurs
      */
-    private void parseDollar(ParseState state)
+    private void parseDollar(final ParseState state)
 	throws HeclException {
 	char ch;
 	ch = state.nextchar();
@@ -397,11 +399,11 @@ public class Parse {
      * @param state a <code>ParseState</code> value
      * @exception HeclException if an error occurs
      */
-    protected void parseBlock(ParseState state) throws HeclException {
+    protected void parseBlock(final ParseState state) throws HeclException {
         parseBlockOrCommand(state, true, false);
     }
 
-    protected void parseVarBlock(ParseState state) throws HeclException {
+    protected void parseVarBlock(final ParseState state) throws HeclException {
 	parseBlockOrCommand(state, true, true);
     }
 
@@ -411,7 +413,7 @@ public class Parse {
      * @param state a <code>ParseState</code> value
      * @exception HeclException if an error occurs
      */
-    protected void parseCommand(ParseState state) throws HeclException {
+    protected void parseCommand(final ParseState state) throws HeclException {
         parseBlockOrCommand(state, false, false);
     }
 
@@ -423,7 +425,7 @@ public class Parse {
      * @param block a <code>boolean</code> value
      * @exception HeclException if an error occurs
      */
-    protected void parseBlockOrCommand(ParseState state, boolean block, boolean invar)
+    protected void parseBlockOrCommand(final ParseState state, final boolean block, final boolean invar)
             throws HeclException {
         int level = 1;
         char ldelim, rdelim;
@@ -493,10 +495,10 @@ public class Parse {
      * @param state a <code>ParseState</code> value
      * @exception HeclException if an error occurs
      */
-    protected void parseText(ParseState state) throws HeclException {
-        char ch;
+    protected void parseText(final ParseState state) throws HeclException {
+//        char ch;
         while (true) {
-            ch = state.nextchar();
+            final char ch = state.nextchar();
             if (state.done()) {
                 return;
             }
@@ -527,10 +529,10 @@ public class Parse {
      * @param state a <code>ParseState</code> value
      * @exception HeclException if an error occurs
      */
-    protected void parseWord(ParseState state) throws HeclException {
-        char ch;
+    protected void parseWord(final ParseState state) throws HeclException {
+//        char ch;
         while (true) {
-            ch = state.nextchar();
+            final char ch = state.nextchar();
             if (state.done()) {
 		return;
             }
@@ -572,15 +574,15 @@ public class Parse {
      * @return a <code>boolean</code> value
      * @exception HeclException if an error occurs
      */
-    protected boolean parseEscape(ParseState state) throws HeclException {
-	char ch = state.nextchar();
+    protected boolean parseEscape(final ParseState state) throws HeclException {
+	final char ch = state.nextchar();
 	if (state.done()) {
 	    return true;
 	}
 	/* \n style escapes */
 	switch (ch) {
 	  case '\r':
-	    char ch2 = state.nextchar();
+	    final char ch2 = state.nextchar();
 	    if (ch2 == '\n') {
 		return true;
 	    } else {

@@ -24,9 +24,11 @@ import java.util.*;
  * @version 1.0
  */
 
-class Proc implements Command {
+public class Proc implements Command {
+    private String name;
     private Thing vars;
     private Thing code;
+    private CodeThing ccode;
 
     /**
      * Creates a new <code>Proc</code> instance, with the variable names in
@@ -35,12 +37,30 @@ class Proc implements Command {
      * @param cmdvars a <code>Thing</code> value
      * @param cmdcode a <code>Thing</code> value
      */
-    public Proc(Thing cmdvars, Thing cmdcode) {
+    public Proc(String cmdname, Thing cmdvars, Thing cmdcode) {
+        name = cmdname;
         vars = cmdvars;
         code = cmdcode;
+
+        /*
+         * HACK: cmdcode's val is StringThing with StringBuffer, 
+         * and toString converts StringBuffer->String, which reduces 
+         * memory consumption (StringBuffer usualy doubles capacity
+         * when it needs more space -> more waste)
+         */
+
+        code.toString();
     }
 
     private static final String varargvarname = "args";
+
+    public void compile(Interp interp) throws HeclException {
+        if (code != null) {
+            ccode = CodeThing.get(interp, code);
+            ccode.optimize();
+            code = null;
+        }
+    }
 
     public Thing cmdCode(Interp interp, Thing[] argv) throws HeclException {
         Vector varnames = ListThing.get(vars);
@@ -88,9 +108,13 @@ class Proc implements Command {
 	    interp.setVar(varargvarname, ListThing.create(vargvals));
 
 	/* We actually run the code here. */
-	Thing res = null;
+	Thing res;
         try {
-            res = interp.eval(code);
+            if (ccode == null) {
+                res = interp.eval(code);
+            } else {
+                res = ccode.run(interp);
+            }
         } catch (HeclException e) {
             if (e.code != HeclException.RETURN) {
 		interp.stackDecr();
@@ -114,5 +138,9 @@ class Proc implements Command {
      */
     public Thing getCode() {
 	return code;
+    }
+
+    public String toString() {
+    return name;
     }
 }

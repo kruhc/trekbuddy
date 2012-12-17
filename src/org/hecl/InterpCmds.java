@@ -86,7 +86,7 @@ class InterpCmds extends Operator {
 	    break;
 
 	  case PROC:
-	    interp.commands.put(argv[1].toString(), new Proc(argv[2], argv[3]));
+	    interp.commands.put(argv[1].toString(), new Proc(argv[1].toString(), argv[2], argv[3]));
 	    break;
 
 	  case RENAME:
@@ -247,15 +247,19 @@ class InterpCmds extends Operator {
 	    break;
 	    
 	  case BGERROR:
+//#if j2se
 	    System.err.println("bgerror - "+argv[1].toString());
+//#endif	    
 	    break;
 	    
 	  case EXIT:
+//#if j2se
 	    retval = 0;
 	    if (argv.length > 1) {
 		retval = IntThing.get(argv[1]);
 	    }
 	    System.exit(retval);
+//#endif
 	    break;
 
 	  case UPCMD:

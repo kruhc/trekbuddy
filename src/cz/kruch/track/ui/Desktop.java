@@ -565,6 +565,7 @@ public final class Desktop implements CommandListener,
         android.util.Log.i(TAG, "[app] going background");
 
         // notify views
+        final View[] views = this.views;
         if (views != null) {
             for (int i = views.length; --i >= 0; ) {
                 views[i].onBackground();
@@ -579,6 +580,7 @@ public final class Desktop implements CommandListener,
         android.util.Log.i(TAG, "[app] going foreground");
 
         // notify views
+        final View[] views = this.views;
         if (views != null) {
             for (int i = views.length; --i >= 0; ) {
                 views[i].onForeground();
@@ -695,6 +697,16 @@ public final class Desktop implements CommandListener,
         return mode;
     }
 
+    public static boolean isHires() {
+        return screen.isHires();
+    }
+
+    public static void vibrate(int ms) {
+        if (!Config.powerSave) {
+            display.vibrate(ms);
+        }
+    }
+
     private static Timer getTimer() {
         if (timer == null) {
 //#ifdef __ANDROID__
@@ -735,14 +747,6 @@ public final class Desktop implements CommandListener,
             size = Font.SIZE_SMALL;
         }
         Desktop.fontStringItems = Font.getFont(df.getFace(), df.getStyle(), size);
-    }
-
-    public static boolean isHires() {
-//#ifdef __ANDROID__
-        return height > 320 || width > 320;
-//#else
-        return height > 480 || width > 480;
-//#endif
     }
 
     private static void resetBar() {
@@ -856,7 +860,6 @@ public final class Desktop implements CommandListener,
             if (log.isEnabled()) log.debug("creating OSD");
 //#endif
             osd = new OSD(0, 0, w, h);
-            _osd = osd.isVisible();
         } else /*if (sizeChanged)*/ {
             osd.resize(w, h);
         }
@@ -897,27 +900,33 @@ public final class Desktop implements CommandListener,
         return true;
     }
 
-    private void initDefaultMap() throws Throwable {
+    private boolean initDefaultMap() throws Throwable {
 //#ifdef __LOG__
         if (log.isEnabled()) log.info("init default map");
 //#endif
 
         // in-jar map
-        map = new Map("trekbuddy.jar", DEFAULT_MAP_NAME, this);
-        final Throwable t = map.loadMap();
+        final Map _map = new Map("trekbuddy.jar", DEFAULT_MAP_NAME, this);
+        Throwable t = _map.loadMap();
         if (t != null) {
-            throw t;
+//            throw t;
+            return false;
         }
 
+        // use these
+        map = _map;
+        
         // we are done
         _setInitializingMap(false);
 
 //#ifdef __LOG__
         if (log.isEnabled()) log.info("~init default map");
 //#endif
+
+        return true;
     }
 
-    /* hack - call blocking method to show result in boot console */
+    /* hack - call blocking method to show result in boot console */ // TODO rather ugly
     private boolean initMap() throws Throwable {
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("init map");
@@ -1136,6 +1145,7 @@ public final class Desktop implements CommandListener,
 */
 
                 // close views
+                final View[] views = this.views;
                 for (int i = views.length; --i >= 0; ) {
                     views[i].setVisible(false);
                     views[i].close();
@@ -1331,6 +1341,7 @@ public final class Desktop implements CommandListener,
         }
     }
 
+    /* called from synchronized block in Event.execTrackingPositionUpdated */
     private void updateRouting(final QualifiedCoordinates from) {
         // route navigation?
         if (wpts != null && wptIdx > -1) {
@@ -1352,9 +1363,7 @@ public final class Desktop implements CommandListener,
 
                     // play sound and vibrate
                     if (Config.noSounds) {
-                        if (!Config.powerSave) {
-                            display.vibrate(500);
-                        }
+                        vibrate(500);
                     } else {
                         boolean notified = false;
                         final String s = ((Waypoint) wpts.elementAt(wptIdx)).getLink(Waypoint.LINK_GENERIC_SOUND);
@@ -1365,9 +1374,7 @@ public final class Desktop implements CommandListener,
                             notified = cz.kruch.track.fun.Camera.play(Config.getFolderURL(Config.FOLDER_SOUNDS) + Config.defaultWptSound);
                         }
                         if (notified) {
-                            if (!Config.powerSave) {
-                                display.vibrate(500);
-                            }
+                            vibrate(500);
                         } else { // fallback to system alarm
                             AlertType.ALARM.playSound(display);
                         }
@@ -1399,6 +1406,7 @@ public final class Desktop implements CommandListener,
                     updateNavigation(from);
 
                     // notify views
+                    final View[] views = this.views;
                     for (int i = views.length; --i >= 0;) {
                         views[i].navigationChanged(wpts, wptIdx, true);
                     }
@@ -1550,6 +1558,7 @@ public final class Desktop implements CommandListener,
         int mask = MASK_OSD;
 
         // notify views
+        final View[] views = this.views;
         for (int i = views.length; --i >= 0; ) {
             mask |= views[i].routeExpanded(Desktop.wpts);
         }
@@ -1630,6 +1639,7 @@ public final class Desktop implements CommandListener,
         int mask = MASK_OSD;
 
         // notify views
+        final View[] views = this.views;
         for (int i = views.length; --i >= 0; ) {
             if (rchange) {
                 views[i].routeChanged(wpts);
@@ -1965,7 +1975,7 @@ public final class Desktop implements CommandListener,
         }
     }
 
-    void update(int mask) {
+    void update(final int mask) {
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("update " + Integer.toBinaryString(mask) + "; state: " + cz.kruch.track.TrackingMIDlet.state);
 //#endif
@@ -1986,11 +1996,10 @@ public final class Desktop implements CommandListener,
                 synchronized (loadingLock) {
                     if (!initializingMap && !loadingSlices) {
                         try {
-                            ((MapView) views[VIEW_MAP]).prerender();
-                        } catch (Throwable t) {
-//#ifdef __LOG__
-                            t.printStackTrace();
-//#endif
+                            if (((MapView) views[VIEW_MAP]).prerender()) { // loading will start soon
+                                return; 
+                            }
+                        } catch (Throwable t) { // should never happen
                             showError(null, t, null);
                             return;
                         }
@@ -2030,9 +2039,7 @@ public final class Desktop implements CommandListener,
 
     public static void showAlarm(String message, Displayable nextDisplayable,
                                  boolean forever) {
-        if (Config.noSounds) {
-            Desktop.display.vibrate(500);
-        }
+        vibrate(500);
         showAlert(AlertType.ALARM, message, forever ? Alert.FOREVER : ALARM_DIALOG_TIMEOUT, nextDisplayable);
     }
 
@@ -2313,6 +2320,7 @@ public final class Desktop implements CommandListener,
 
         // notify views (if start was propagated too - this is hack)
         if (trackstart > 0) {
+            final View[] views = this.views;
             for (int i = views.length; --i >= 0; ) {
                 views[i].trackingStopped();
             }
@@ -2320,7 +2328,9 @@ public final class Desktop implements CommandListener,
             cz.kruch.track.hecl.PluginManager.getInstance().trackingStopped();
 //#endif
         } else {
-            System.out.println("false stop tracking");
+//#ifdef __LOG__
+            log.warn("false stop tracking");
+//#endif
         }
 
         // forget track start
@@ -2554,6 +2564,7 @@ public final class Desktop implements CommandListener,
 
     public void slicesLoading(final Object result, final Throwable throwable) {
         _setLoadingSlices(true);
+        /* nothing else to do */
     }
 
     public void slicesLoaded(final Object result, final Throwable throwable) {
@@ -2665,7 +2676,7 @@ public final class Desktop implements CommandListener,
             this.mask = m;
         }
 
-        public void merge(RenderTask r) {
+        public void merge(final RenderTask r) {
             this.mask |= r.mask;
             releaseRenderTask(r);
         }
@@ -2714,7 +2725,6 @@ public final class Desktop implements CommandListener,
     private volatile Atlas _atlas;
     private volatile QualifiedCoordinates _qc; // WGS84
     private volatile boolean _switch;
-    private volatile boolean _osd;
 
     void changeLayer() {
         if (atlas != null) {
@@ -2771,6 +2781,8 @@ public final class Desktop implements CommandListener,
                         break;
                     }
                 }
+                // give feedback
+                vibrate(50);
             }
         }
     }
@@ -2828,7 +2840,9 @@ public final class Desktop implements CommandListener,
         osd.setVisible(false);
 
         // render screen
-        update(MASK_SCREEN);
+        if (Config.verboseLoading) {
+            update(MASK_SCREEN);
+        }
 
         // dispose current map
         if (map != null) {
@@ -2992,17 +3006,18 @@ public final class Desktop implements CommandListener,
 
         private boolean release;
 
-        public Event(int code) {
+        public Event(final int code) {
             this.code = code;
             this.release = true;
         }
 
-        public Event(int code, Object closure) {
+        public Event(final int code, final Object closure) {
             this(code);
             this.closure = closure;
         }
 
-        public Event(int code, Object result, Throwable throwable, Object closure) {
+        public Event(final int code, final Object result,
+                     final Throwable throwable, final Object closure) {
             this(code, closure);
             this.result = result;
             this.throwable = throwable;
@@ -3071,48 +3086,46 @@ public final class Desktop implements CommandListener,
                 if (log.isEnabled()) log.debug("event run; " + this);
 //#endif
 
-                synchronized (Desktop.this.renderLock) {
-                    switch (code) {
-                        case EVENT_CONFIGURATION_CHANGED: {
-                            execConfigChanged();
-                        } break;
-                        case EVENT_FILE_BROWSER_FINISHED: {
-                            execFileBrowserFinished();
-                        } break;
-                        case EVENT_TRACKLOG: {
-                            execTracklog();
-                        } break;
-                        case EVENT_ATLAS_OPENED: {
-                            execAtlasOpened();
-                        } break;
-                        case EVENT_LAYER_SELECTION_FINISHED: {
-                            execLayerSelectionFinished();
-                        } break;
-                        case EVENT_MAP_SELECTION_FINISHED: {
-                            execMapSelectionFinished();
-                        } break;
-                        case EVENT_MAP_OPENED: {
-                            execMapOpened();
-                        } break;
-                        case EVENT_SLICES_LOADED: {
-                            execSlicesLoaded();
-                        } break;
-                        case EVENT_LOADING_STATUS_CHANGED: {
-                            execLoadingStatusChanged();
-                        } break;
-                        case EVENT_TRACKING_STATUS_CHANGED: {
-                            execTrackingStatusChanged();
-                        } break;
-                        case EVENT_TRACKING_POSITION_UPDATED: {
-                            execTrackingPositionUpdated();
-                        } break;
-                        case EVENT_ORIENTATION_CHANGED: {
-                            execOrientationChanged();
-                        } break;
-                        default:
-                            throw new IllegalArgumentException("Unknown event " + code);
-                    }
-                } // ~synchronized
+                switch (code) {
+                    case EVENT_CONFIGURATION_CHANGED: {
+                        execConfigChanged();
+                    } break;
+                    case EVENT_FILE_BROWSER_FINISHED: {
+                        execFileBrowserFinished();
+                    } break;
+                    case EVENT_TRACKLOG: {
+                        execTracklog();
+                    } break;
+                    case EVENT_ATLAS_OPENED: {
+                        execAtlasOpened();
+                    } break;
+                    case EVENT_LAYER_SELECTION_FINISHED: {
+                        execLayerSelectionFinished();
+                    } break;
+                    case EVENT_MAP_SELECTION_FINISHED: {
+                        execMapSelectionFinished();
+                    } break;
+                    case EVENT_MAP_OPENED: {
+                        execMapOpened();
+                    } break;
+                    case EVENT_SLICES_LOADED: {
+                        execSlicesLoaded();
+                    } break;
+                    case EVENT_LOADING_STATUS_CHANGED: {
+                        execLoadingStatusChanged();
+                    } break;
+                    case EVENT_TRACKING_STATUS_CHANGED: {
+                        execTrackingStatusChanged();
+                    } break;
+                    case EVENT_TRACKING_POSITION_UPDATED: {
+                        execTrackingPositionUpdated();
+                    } break;
+                    case EVENT_ORIENTATION_CHANGED: {
+                        execOrientationChanged();
+                    } break;
+                    default:
+                        throw new IllegalArgumentException("Unknown event " + code);
+                }
 
 //#ifdef __LOG__
                 if (log.isEnabled()) log.debug("~event run; " + this);
@@ -3145,8 +3158,10 @@ public final class Desktop implements CommandListener,
 
             // force changes
             Config.useDatum(Config.geoDatum);
-            resetFont();
-            resetBar();
+            synchronized (Desktop.this.renderLock) {
+                resetFont();
+                resetBar();
+            }
 
 //#ifdef __ANDROID__
             org.microemu.android.MicroEmulator.ignoreVolumeKeys = !Config.easyZoomVolumeKeys;
@@ -3167,16 +3182,19 @@ public final class Desktop implements CommandListener,
             }
 
             // notify views
-            for (int i = Desktop.this.views.length; --i >= 0; ) {
-                try {
-                    Desktop.this.views[i].configChanged();
-                } catch (Exception e) {
+            final View[] views = Desktop.this.views;
+            synchronized (Desktop.this.renderLock) {
+                for (int i = views.length; --i >= 0; ) {
+                    try {
+                        views[i].configChanged();
+                    } catch (Exception e) {
 //#ifdef __LOG__
-                    e.printStackTrace();
+                        e.printStackTrace();
 //#endif
-                    throw new api.lang.RuntimeException("Error in [config changed] in view #" + i, e);
+                        throw new api.lang.RuntimeException("Error in [config changed] in view #" + i, e);
+                    }
                 }
-            }
+            } // ~synchronized
 
             // update screen
             Desktop.this.update(MASK_ALL);
@@ -3208,8 +3226,10 @@ public final class Desktop implements CommandListener,
                     Desktop.this._qc = getPointer();
                 }
 
-                // hide map viewer and OSD // TODO hackish, and conflicts with _qc just above 
-                ((MapView) views[VIEW_MAP]).setMap(null);
+                synchronized (Desktop.this.renderLock) {
+                    // hide map viewer and OSD // TODO hackish, and conflicts with _qc just above
+                    ((MapView) views[VIEW_MAP]).setMap(null);
+                } // ~synchronized
 
                 // release current data
                 if (Desktop.this.atlas != null) {
@@ -3220,7 +3240,7 @@ public final class Desktop implements CommandListener,
                     Desktop.this.map.close();
                     Desktop.this.map = null;
                 }
-                
+
 //#ifdef __BUILDER__
                 // reset checksum
                 cz.kruch.track.io.CrcInputStream.doReset();
@@ -3437,7 +3457,12 @@ public final class Desktop implements CommandListener,
 
                     // setup map viewer
                     final MapView mapView = ((MapView) Desktop.this.views[VIEW_MAP]);
-                    mapView.setMap(Desktop.this.map);
+                    synchronized (Desktop.this.renderLock) {
+                        mapView.setMap(Desktop.this.map);
+                    }
+
+                    // enable OSD
+                    osd.setVisible(true);
 
                     // move viewer to known position, if any
                     if (Desktop.this._qc != null) {
@@ -3461,7 +3486,9 @@ public final class Desktop implements CommandListener,
                             
                             // move to position
                             if (map.isWithin(_qc)) {
-                                mapView.setPosition(map.transform(_qc));
+                                synchronized (Desktop.this.renderLock) {
+                                    mapView.setPosition(map.transform(_qc));
+                                }
                             }
 
                         } finally {
@@ -3472,12 +3499,14 @@ public final class Desktop implements CommandListener,
                     // TODO ugly code begins ---
 
                     // update OSD & navigation UI
-                    QualifiedCoordinates qc = Desktop.this.map.transform(mapView.getPosition());
-                    MapView.setBasicOSD(qc, true);
-                    Desktop.this.updateNavigation(qc);
-                    QualifiedCoordinates.releaseInstance(qc);
-                    qc = null; // gc hint
-                    mapView.updateNavigationInfo(); // TODO ugly
+                    synchronized (Desktop.this.renderLock) {
+                        QualifiedCoordinates qc = Desktop.this.map.transform(mapView.getPosition());
+                        MapView.setBasicOSD(qc, true);
+                        Desktop.this.updateNavigation(qc);
+                        QualifiedCoordinates.releaseInstance(qc);
+                        qc = null; // gc hint
+                        mapView.updateNavigationInfo(); // TODO ugly
+                    }
 
                     // TODO -- ugly code ends
 
@@ -3485,7 +3514,7 @@ public final class Desktop implements CommandListener,
                     Desktop.this._setInitializingMap(false);
 
                     // render screen - it will force slices loading
-                    Desktop.this.update(MASK_MAP | MASK_OSD);
+                    Desktop.this.update(MASK_SCREEN);
 
                     // offer use as default?
                     if (!Desktop.this._switch && !Config.noQuestions) {
@@ -3527,6 +3556,7 @@ public final class Desktop implements CommandListener,
 
         }
 
+        // TODO this is quite wasting event
         private void execSlicesLoaded() {
 
             // update loading result
@@ -3535,11 +3565,8 @@ public final class Desktop implements CommandListener,
             // if loading was ok
             if (throwable == null) {
 
-                // restore OSD
-                Desktop.osd.setVisible(_osd);
-
                 // update screen
-                Desktop.this.update(MASK_MAP | MASK_OSD);
+                Desktop.this.update(MASK_ALL);
 
             } else {
 
@@ -3595,8 +3622,11 @@ public final class Desktop implements CommandListener,
 
                     // reset views on fresh start
                     if (!Desktop.this._isProviderRestart()) {
-                        for (int i = Desktop.this.views.length; --i >= 0; ) {
-                            Desktop.this.views[i].trackingStarted();
+                        final View[] views = Desktop.this.views;
+                        synchronized (Desktop.this.renderLock) {
+                            for (int i = views.length; --i >= 0; ) {
+                                views[i].trackingStarted();
+                            }
                         }
 //#ifdef __HECL__
                         cz.kruch.track.hecl.PluginManager.getInstance().trackingStarted();
@@ -3708,49 +3738,55 @@ public final class Desktop implements CommandListener,
                 Desktop.this.tracklogGpx.locationUpdated(l);
             }
 
+            // update mask
+            int mask = MASK_NONE;
+
             // if valid position do updates
             if (l.getFix() > 0) {
 
                 // update trip stats
                 TripStatistics.locationUpdated(l);
 
-                // update wpt navigation
-                try {
-                    Desktop.this.updateNavigation(l.getQualifiedCoordinates());
-                } catch (Exception e) {
-//#ifdef __LOG__
-                    e.printStackTrace();
-//#endif
-                    throw new api.lang.RuntimeException("Error in [navigation update]", e);
-                }
+                // TODO ugly big lock
+                synchronized (Desktop.this.renderLock) {
 
-                // update route navigation
-                try {
-                    Desktop.this.updateRouting(l.getQualifiedCoordinates());
-                } catch (Exception e) {
+                    // update wpt navigation
+                    try {
+                        Desktop.this.updateNavigation(l.getQualifiedCoordinates());
+                    } catch (Exception e) {
 //#ifdef __LOG__
-                    e.printStackTrace();
+                        e.printStackTrace();
 //#endif
-                    throw new api.lang.RuntimeException("Error in [routing update]", e);
-                }
-            }
-
-            // notify views
-            int mask = MASK_NONE;
-            final View[] views = Desktop.this.views;
-            for (int i = views.length; --i >= 0; ) {
-                try {
-                    final int m = views[i].locationUpdated(l);
-                    if (i == mode) { // current view
-                        mask |= m;
+                        throw new api.lang.RuntimeException("Error in [navigation update]", e);
                     }
-                } catch (Exception e) {
+
+                    // update route navigation
+                    try {
+                        Desktop.this.updateRouting(l.getQualifiedCoordinates());
+                    } catch (Exception e) {
 //#ifdef __LOG__
-                    e.printStackTrace();
+                        e.printStackTrace();
 //#endif
-                    throw new api.lang.RuntimeException("Error in [location updated] in view #" + i, e);
+                        throw new api.lang.RuntimeException("Error in [routing update]", e);
+                    }
                 }
-            }
+
+                // notify views
+                final View[] views = Desktop.this.views;
+                for (int i = views.length; --i >= 0; ) {
+                    try {
+                        final int m = views[i].locationUpdated(l);
+                        if (i == mode) { // current view
+                            mask |= m;
+                        }
+                    } catch (Exception e) {
+//#ifdef __LOG__
+                        e.printStackTrace();
+//#endif
+                        throw new api.lang.RuntimeException("Error in [location updated] in view #" + i, e);
+                    }
+                }
+            } // ~synchronized
 
 //#ifdef __HECL__
             cz.kruch.track.hecl.PluginManager.getInstance().locationUpdated(l);
@@ -3771,19 +3807,21 @@ public final class Desktop implements CommandListener,
             // notify views
             int mask = MASK_NONE;
             final View[] views = Desktop.this.views;
-            for (int i = views.length; --i >= 0; ) {
-                try {
-                    final int m = views[i].orientationChanged(heading);
-                    if (i == mode) { // current view
-                        mask |= m;
+            synchronized (Desktop.this.renderLock) {
+                for (int i = views.length; --i >= 0; ) {
+                    try {
+                        final int m = views[i].orientationChanged(heading);
+                        if (i == mode) { // current view
+                            mask |= m;
+                        }
+                    } catch (Exception e) {
+    //#ifdef __LOG__
+                        e.printStackTrace();
+    //#endif
+                        throw new api.lang.RuntimeException("Error in [orientation changed] in view #" + i, e);
                     }
-                } catch (Exception e) {
-//#ifdef __LOG__
-                    e.printStackTrace();
-//#endif
-                    throw new api.lang.RuntimeException("Error in [orientation changed] in view #" + i, e);
                 }
-            }
+            } // ~synchronized
 
             // update screen
             Desktop.this.update(mask);

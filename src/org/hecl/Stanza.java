@@ -25,10 +25,10 @@ package org.hecl;
 
 class Stanza {
     /* The line this stanza begins on. */
-    private int lineno = 0;
+    private int lineno;
 
-    private Command command = null;
-    private Thing[] argv = null;
+    private Command command;
+    private Thing[] argv;
 
     /**
      * Creates a new <code>Stanza</code> instance, taking a Command and
@@ -95,8 +95,10 @@ class Stanza {
 	ClassCommandInfo info = null;
 	
 	//System.err.println("-->Stanza.run, this="+this);
-	
+
+//	Thing res = null;
 	Thing[] newargv = new Thing[this.argv.length];
+//	try {
 
 	/* If we have a CodeThing, GroupThing or SubstThing as
 	 * argv[0], we don't want to save 'command'. */
@@ -130,6 +132,7 @@ class Stanza {
 				    this.lineno);
 	}
 	
+//#ifdef j2se
 	/* DEBUG - before. */
 	if (//true
 	    false
@@ -140,6 +143,7 @@ class Stanza {
 	    }
 	    System.out.println("BEFORE ENDCOMMAND ^ ");
 	}
+//#endif
 
 	/*
 	 * Fill in the elements of the new argv - doing substitutions and
@@ -165,6 +169,7 @@ class Stanza {
 	    throw he;
 	}
 
+//#ifdef j2se
 	/* DEBUG - after. */
 	if (//true
 	    false
@@ -175,8 +180,9 @@ class Stanza {
 	    }
 	    System.out.println("AFTER ENDCOMMAND ^ ");
 	}
+//#endif
 
-	Thing res = null;
+	Thing res;
 	try {
 	    if(info != null) {
 		res = info.getCommand().method(interp,info,newargv);
@@ -209,6 +215,7 @@ class Stanza {
 	if (saveit) {
 	    command = tmpcommand;
 	}
+//	}
 	return res != null ? res : Thing.emptyThing();
     }
 

@@ -26,7 +26,7 @@ import java.util.Enumeration;
  * @version 1.0
  */
 public class HashThing implements RealThing {
-    private Hashtable val = null;
+    private Hashtable val;
 
     /**
      * Creates a new, empty <code>HashThing</code> instance.

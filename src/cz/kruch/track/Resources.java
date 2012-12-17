@@ -378,7 +378,7 @@ public final class Resources {
     /* settings - tweaks */
     public static final short CFG_TWEAKS_GROUP                  = 3800;
     public static final short CFG_TWEAKS_FLD_SIEMENS_IO         = 3801;
-    public static final short CFG_TWEAKS_FLD_SAFE_RENDERER      = 3802;
+//    public static final short CFG_TWEAKS_FLD_SAFE_RENDERER      = 3802;
     public static final short CFG_TWEAKS_FLD_FORCED_GC          = 3803;
     public static final short CFG_TWEAKS_FLD_1TILE_SCROLL       = 3804;
     public static final short CFG_TWEAKS_FLD_LARGE_ATLASES      = 3805;

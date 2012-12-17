@@ -31,14 +31,18 @@ public class CodeThing implements RealThing {
     private Vector stanzas;
 
     /* Mark this for substitution or not. */
-    public boolean marksubst = false;
+    public boolean marksubst;
 
     CodeThing() {
-        stanzas = new Vector();
+        stanzas = new Vector(8);
     }
 
     CodeThing(Vector newstanzas) {
 	stanzas = newstanzas;
+    }
+
+    void optimize() {
+	stanzas.trimToSize();
     }
 
     public String thingclass() {
@@ -105,8 +109,8 @@ public class CodeThing implements RealThing {
     public RealThing deepcopy() throws HeclException {
 	Vector deststanzas = new Vector();
 
-	for (Enumeration e = stanzas.elements(); e.hasMoreElements();) {
-            Stanza s = (Stanza)e.nextElement();
+	for (int N = stanzas.size(), i = 0; i < N; i++) {
+            Stanza s = (Stanza) stanzas.elementAt(i);
             deststanzas.addElement(s.deepcopy());
         }
         return new CodeThing(deststanzas);
@@ -163,10 +167,8 @@ public class CodeThing implements RealThing {
         StringBuffer result = new StringBuffer("");
         Vector v = GroupThing.get(thing);
 
-	Thing t = null;
-
-	for (Enumeration e = v.elements(); e.hasMoreElements();) {
-	    t = (Thing) e.nextElement();
+	for (int N = v.size(), i = 0; i < N; i++) {
+	    Thing t = (Thing) v.elementAt(i);
 
 	    realthing = t.getVal();
 	    if (realthing instanceof GroupThing) {
@@ -205,8 +207,8 @@ public class CodeThing implements RealThing {
 	//System.err.println("starting CodeThing run" + level);
         //System.out.println("RUNNING: " + this.getStringRep() +"</RUNNING>");
 	Thing res = null;
-	for (Enumeration e = stanzas.elements(); e.hasMoreElements();) {
-	    Stanza s = (Stanza) e.nextElement();
+	for (int N = stanzas.size(), i = 0; i < N; i++) {
+	    Stanza s = (Stanza) stanzas.elementAt(i);
 	    res = s.run(interp);
 	}
 	if(res == null)
@@ -226,13 +228,13 @@ public class CodeThing implements RealThing {
 	int i = 0;
         StringBuffer out = new StringBuffer();
 
-        for (Enumeration e = stanzas.elements(); e.hasMoreElements();) {
-            Stanza s = (Stanza) e.nextElement();
+        for (int N = stanzas.size(), j = 0; j < N; j++) {
+            Stanza s = (Stanza) stanzas.elementAt(j);
 	    /* Simulate 'join'ing the stanzas. */
 	    if (i > 0) {
-		out.append("\n");
+		out.append('\n');
 	    } else {
-		i ++;
+		i++;
 	    }
             out.append(s.toString());
         }

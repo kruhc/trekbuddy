@@ -59,7 +59,7 @@ final class MapView extends View {
     /**
      * @deprecated hack
      */
-    void setMap(Map map) {
+    void setMap(final Map map) {
 
         // setup magnifier
         if (map != null) {
@@ -88,7 +88,9 @@ final class MapView extends View {
                 prepareRoute(Desktop.wpts);
 
                 // set route for new map
-                mapViewer.setRoute(route);
+                synchronized (this) { // @threads ?:route
+                    mapViewer.setRoute(route);
+                }
             }
         }
     }
@@ -108,13 +110,13 @@ final class MapView extends View {
     }
 
     /* @Override */
-    void setVisible(boolean b) {
-        super.setVisible(b);
+    void setVisible(final boolean b) {
         if (b) { /* trick */
             if (isLocation()) {
                 updatedTrick();
             }
         }
+        super.setVisible(b);
     }
 
     public boolean isLocation() {
@@ -123,23 +125,26 @@ final class MapView extends View {
 
 //#ifdef __ANDROID__
 
-    volatile Map map;
+//    private volatile Map map;
 
     /**
      * @deprecated hack
      */
     void onBackground() {
-        map = mapViewer.getMap();
-        injectMap(null);
+//        map = mapViewer.getMap();
+//        injectMap(null);
+        mapViewer.reslice();
+        super.onBackground();
     }
 
     /**
      * @deprecated hack
      */
     void onForeground() {
-        if (map != null) {
-            injectMap(map);
-        }
+//        if (map != null) {
+//            injectMap(map);
+//        }
+        super.onForeground();
     }
 
 //#endif    
@@ -148,7 +153,7 @@ final class MapView extends View {
         injectMap(null); // may save position in default map/atlas
     }
 
-    public int routeChanged(Vector wpts) {
+    public int routeChanged(final Vector wpts) {
         // release old route
         disposeRoute();
 
@@ -172,12 +177,14 @@ final class MapView extends View {
         }
 
         // init or clear route
-        mapViewer.initRoute(route, reset); // route is null when navigation stopped
+        synchronized (this) { // @threads ?:route
+            mapViewer.initRoute(route, reset); // route is null when navigation stopped
+        }
 
         return super.routeChanged(wpts);
     }
 
-    public int routeExpanded(Vector wpts) {
+    public int routeExpanded(final Vector wpts) {
         // release old route
         disposeRoute();
 
@@ -185,7 +192,9 @@ final class MapView extends View {
         prepareRoute(wpts);
 
         // set route
-        mapViewer.setRoute(route);
+        synchronized (this) { // @threads ?:route
+            mapViewer.setRoute(route);
+        }
 
         return super.routeExpanded(wpts);
     }
@@ -254,29 +263,50 @@ final class MapView extends View {
         }
     }
 
-    /*private */void browsingOn(boolean reason) { // TODO fix visibility
-        mapViewer.setCourse(Float.NaN);
-        if (reason) {
-            synchronized (this) {
-                if (location != null && location.getFix() > 0) {
-                    mapViewer.appendToTrail(location.getQualifiedCoordinates());
+    /*private */void browsingOn(final boolean trackingStopped) { // TODO fix visibility
+        // per Pavel request, hide after stop
+        if (!trackingStopped) {
+            mapViewer.setCourse(Float.NaN);
+        }
+
+        // tracking stopped?
+        if (trackingStopped) {
+
+            // append last position to trail
+            boolean hasLocation;
+            double lat = 0D, lon = 0D;
+            synchronized (this) { // @threads ?:location
+                final Location l = location;
+                hasLocation = l != null && l.getFix() > 0;
+                if (hasLocation) {
+                    final QualifiedCoordinates qc = l.getQualifiedCoordinates();
+                    lat = qc.getLat();
+                    lon = qc.getLon();
                 }
+            }
+            if (hasLocation) {
+                mapViewer.appendToTrail(lat, lon);
             }
         }
     }
 
-    int moveTo(int x, int y) { // TODO direct access from Desktop
+    int moveTo(final int x, final int y) { // TODO direct access from Desktop
         int mask = Desktop.MASK_NONE;
+
+        // set browsing mode
         browsingOn(false);
+
+        // update position and update OSD
         if (mapViewer.hasMap() && mapViewer.move(x, y)) {
             syncOSD();
             mask = Desktop.MASK_MAP | Desktop.MASK_OSD;
         }
+
         return mask;
     }
 
     private void disposeRoute() {
-        synchronized (this) {
+        synchronized (this) { // @threads ?:route
             final Position[] route = this.route;
             if (route != null) {
                 for (int i = route.length; --i >= 0;) {
@@ -290,7 +320,7 @@ final class MapView extends View {
 
     private void prepareRoute(final Vector wpts) {
         // local ref
-        final Map map = this.mapViewer.getMap();
+        final Map map = mapViewer.getMap();
 
         // NPE reported on AM // TODO how can this happen??
         if (map != null) {
@@ -311,7 +341,9 @@ final class MapView extends View {
             }
 
             // set
-            this.route = route;
+            synchronized (this) { // @threads ?:route
+                this.route = route;
+            }
         }
     }
 
@@ -391,7 +423,7 @@ final class MapView extends View {
 //#endif
                         // got sibling?
                         if (neighbour != ' ') {
-                            final Map map = navigator.getMap();
+                            final Map map = mapViewer.getMap();
                             final QualifiedCoordinates qc = map.transform(mapViewer.getPosition());
                             final double lat = qc.getLat();
                             final double lon = qc.getLon();
@@ -442,7 +474,7 @@ final class MapView extends View {
                     }
                 } else {
                     mapViewer.starTick();
-                    Desktop.display.vibrate(100);
+                    Desktop.display.vibrate(100); // bypass power-save check
                 }
                 toggle = repeated;
             }
@@ -468,11 +500,13 @@ final class MapView extends View {
 
 //#ifdef __ANDROID__
             case -25:
-//#elifdef __ALL__
+//#elifdef __RIM__
+            case -151:
+//#else
             case -37: // SE
+//#endif
                 if (!Config.easyZoomVolumeKeys)
                     break;
-//#endif
             case Canvas.KEY_NUM7: {
                 scrolls = 0;
                 switch (Config.easyZoomMode) {
@@ -496,11 +530,13 @@ final class MapView extends View {
 
 //#ifdef __ANDROID__
             case -24:
-//#elifdef __ALL__
+//#elifdef __RIM__
+            case -150:
+//#else
             case -36: // SE
+//#endif
                 if (!Config.easyZoomVolumeKeys)
                     break;
-//#endif
             case Canvas.KEY_NUM9: {
                 scrolls = 0;
                 switch (Config.easyZoomMode) {
@@ -539,7 +575,9 @@ final class MapView extends View {
         // set mode
         browsingOn(true);
         // local reset
-        location = null;
+        synchronized (this) { // @threads ?:location
+            location = null;
+        }
     }
 
     public int locationUpdated(Location l) {
@@ -547,10 +585,12 @@ final class MapView extends View {
         if (l.getFix() > 0) {
             
             // make a copy of last known WGS-84 position
-            synchronized (this) {
-                Location.releaseInstance(location);
-                location = null; // gc hint
-                location = l._clone();
+            synchronized (this) { // @threads ?:location
+                if (location != null) {
+                    location.copyFrom(l);
+                } else {
+                    location = l._clone();
+                }
             }
 
             // pass event
@@ -583,9 +623,11 @@ final class MapView extends View {
             if (log.isEnabled()) log.debug("tracking...");
 //#endif
 
-            synchronized (this) {
+            final Location l;
+            synchronized (this) { // @threads ?:location
                 // local rel
-                final Location l = this.location;
+                l = this.location;
+            }
 
                 // minimum UI update
                 mask = Desktop.MASK_OSD;
@@ -601,7 +643,7 @@ final class MapView extends View {
                     mask |= Desktop.MASK_CROSSHAIR;
 
                     // get wgs84 and local coordinates
-                    final Map map = navigator.getMap();
+                    final Map map = navigator.getMap(); // mapViewer may have no map when in bg // !!! not true since 1.1.2
                     QualifiedCoordinates qc = l.getQualifiedCoordinates();
 
                     // on map detection
@@ -667,17 +709,20 @@ final class MapView extends View {
                     }
 
                 }
-            } // ~synchronized
+//            } // ~synchronized
         }
 
         return mask;
     }
 
     private int toogleMagnifier() {
-        // give feedback
-        if (!Config.powerSave) {
-            Desktop.display.vibrate(100);
+        // no zoom with virtual map, it does not work (yet??)
+        if (!mapViewer.hasMap() || mapViewer.getMap().isVirtual()) {
+            return Desktop.MASK_NONE;
         }
+
+        // give feedback
+        Desktop.vibrate(50);
 
         // invert
         x2 = ++x2 % 2;
@@ -685,7 +730,6 @@ final class MapView extends View {
         // setup map
         final Map map = mapViewer.getMap();
         setMap(null);
-//        map.toggleMagnifier();
         map.setMagnifier(x2);
         setMap(map);
         
@@ -697,7 +741,7 @@ final class MapView extends View {
     }
 
     public QualifiedCoordinates getPointer() {
-        return navigator.getMap().transform(mapViewer.getPosition());
+        return navigator.getMap().transform(mapViewer.getPosition()); // mapViewer may have no map when in bg
     }
 
     public void render(final Graphics g, final Font f, final int mask) {
@@ -839,7 +883,7 @@ final class MapView extends View {
 
     /*private */void syncOSD() { // TODO fix visibility
         // vars
-        QualifiedCoordinates qc = navigator.getMap().transform(mapViewer.getPosition());
+        QualifiedCoordinates qc = getPointer();
 
         // OSD basic
         setBasicOSD(qc, true);
@@ -859,14 +903,25 @@ final class MapView extends View {
     private boolean syncPosition() {
         boolean moved = false;
 
-        synchronized (this) {
-            if (location != null && location.getFix() > 0) {
-                final QualifiedCoordinates qc = location.getQualifiedCoordinates();
-                final Map map = navigator.getMap();
-                if (map.isWithin(qc)) {
-                    moved = mapViewer.setPosition(map.transform(qc));
-                }
+        // update current position on map
+        boolean hasLocation;
+        double lat = 0D, lon = 0D;
+        synchronized (this) { // @threads ?:location
+            final Location l = location;
+            hasLocation = l != null && l.getFix() > 0;
+            if (hasLocation) {
+                final QualifiedCoordinates qc = l.getQualifiedCoordinates();
+                lat = qc.getLat();
+                lon = qc.getLon();
             }
+        }
+        if (hasLocation) {
+            final Map map = navigator.getMap();
+            final QualifiedCoordinates qc = QualifiedCoordinates.newInstance(lat, lon);
+            if (map.isWithin(qc)) {
+                moved = mapViewer.setPosition(map.transform(qc));
+            }
+            QualifiedCoordinates.releaseInstance(qc);
         }
 
         return moved;

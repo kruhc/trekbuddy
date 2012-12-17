@@ -45,7 +45,7 @@ import jline.SimpleCompletor;
  * @author <a href="mailto:davidw@dedasys.com">David N. Welton </a>
  * @version 1.0
  */
-public class Interp extends Thread/*implements Runnable*/ {
+public abstract class Interp /*extends Thread*//*implements Runnable*/ {
     /**
      * Package name prefix of the module classes.
      */
@@ -81,7 +81,11 @@ public class Interp extends Thread/*implements Runnable*/ {
      */
     static final Thing GLOBALREFTHING = new Thing("");
 
+//#if j2se
     public long cacheversion = 0;
+//#else
+    public int cacheversion = 0;
+//#endif
 
     /**
      * The <code>commands</code> <code>Hashtable</code> provides the
@@ -715,8 +719,9 @@ public class Interp extends Thread/*implements Runnable*/ {
 	//	System.err.println("loading hash cmds...");
 	/* Hash table commands. */
 	HashCmds.load(this);
-
+//#ifdef j2se
         commands.put("puts", new PutsCmd());
+//#endif        
         commands.put("sort", new SortCmd());
 	//	System.err.println("<--initinterp");
     }
@@ -828,7 +833,7 @@ public class Interp extends Thread/*implements Runnable*/ {
 	    res = (Thing)globalhash.get(varname);
 	    if(res == GLOBALREFTHING) {
 		// should not happen, but just in case...
-		System.err.println("Unexpected GLOBALREFTHING in globalhash");
+		//System.err.println("Unexpected GLOBALREFTHING in globalhash");
 		res = null;
 	    }
 //#ifdef emptyglobals
@@ -836,7 +841,7 @@ public class Interp extends Thread/*implements Runnable*/ {
 		// Return a fake empty value for a non-set global variable for
 		// the sake of modifying commands.
 		// !!!! THIS IS STRANGE !!!
-		System.err.println("FAKE EMPTY VALUE for global var");
+		//System.err.println("FAKE EMPTY VALUE for global var");
 		res = new Thing("");
 		globalhash.put(varname,res);
 	    }
@@ -914,7 +919,7 @@ public class Interp extends Thread/*implements Runnable*/ {
 	    } catch (HeclException he) {
 		/* This isn't going to happen - we're dealing with a
 		 * literal from the parser. */
-		System.err.println("Interp.java: This can never happen!");
+		//System.err.println("Interp.java: This can never happen!");
 	    }
 	}
 
@@ -1225,4 +1230,8 @@ public class Interp extends Thread/*implements Runnable*/ {
 	    return b.toString();
 	return null;
     }
+
+    // HACK fake Thread class methods since Interp no longer extends it
+    public abstract void start();
+    public abstract void yield();
 }

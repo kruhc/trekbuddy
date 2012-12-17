@@ -26,11 +26,11 @@ import java.util.Vector;
  */
 
 public class HeclException extends Exception {
-    public String code = null;
+    public String code;
 
     Stack stack;
-    Thing value = null;
-    Thing message = null;
+    Thing value;
+    Thing message;
 
     static final String BREAK = "BREAK";
 
@@ -125,7 +125,7 @@ public class HeclException extends Exception {
         StringBuffer str = new StringBuffer();
         for (int i = 0; i < count && i < argv.length; i++) {
             str.append(argv[i].toString());
-            str.append(" ");
+            str.append(' ');
         }
         return new HeclException("wrong # args: should be \"" + str + message + "\"");
     }

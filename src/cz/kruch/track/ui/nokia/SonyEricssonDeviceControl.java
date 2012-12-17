@@ -53,9 +53,7 @@ final class SonyEricssonDeviceControl extends DeviceControl {
     /** @Override */
     void confirm() {
         if (jp6plus) {
-            if (!cz.kruch.track.configuration.Config.powerSave) {
-                cz.kruch.track.ui.Desktop.display.vibrate(100);
-            }
+            cz.kruch.track.ui.Desktop.vibrate(100);
         } else {
             cz.kruch.track.ui.Desktop.showConfirmation(cz.kruch.track.Resources.getString(backlight == STATUS_OFF ? cz.kruch.track.Resources.DESKTOP_MSG_BACKLIGHT_OFF : cz.kruch.track.Resources.DESKTOP_MSG_BACKLIGHT_ON), null);
         }

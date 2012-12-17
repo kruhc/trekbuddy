@@ -267,9 +267,7 @@ public class DeviceControl extends TimerTask {
     }
 
     void confirm() {
-        if (!cz.kruch.track.configuration.Config.powerSave) {
-            cz.kruch.track.ui.Desktop.display.vibrate(100);
-        }
+        cz.kruch.track.ui.Desktop.vibrate(100);
     }
 
     String level() {

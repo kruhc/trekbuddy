@@ -7,6 +7,7 @@ import cz.kruch.track.location.Waypoint;
 import cz.kruch.track.maps.Slice;
 import cz.kruch.track.maps.Map;
 import cz.kruch.track.util.ExtraMath;
+import cz.kruch.track.util.NakedVector;
 
 import javax.microedition.lcdui.Graphics;
 import javax.microedition.lcdui.Canvas;
@@ -59,7 +60,7 @@ final class MapViewer {
     private int sInfoLength;
 
     private Map map;
-    private Vector slices, slices2; // slices2 for reuse during switch
+    private NakedVector slices, slices2; // slices2 for reuse during switch
 
     private float course, course2;
 
@@ -68,12 +69,14 @@ final class MapViewer {
 
     private int star;
 
-    private QualifiedCoordinates[] trailLL;
-    private Position[] trailXY;
+    private final QualifiedCoordinates[] trailLL;
+    private final Position[] trailXY;
+//#ifndef __ANDROID__
+    private final short[] trailPF;
+//#endif    
     private QualifiedCoordinates refQc;
-    private short[] trailPF;
-    private int lllast, xylast, pflast, llcount, xycount;
     private float accDist, refCourse, courseDeviation;
+    private int lllast, xylast, pflast, llcount, xycount;
 
     private int ci, li;
 
@@ -84,13 +87,15 @@ final class MapViewer {
         this.clip = new int[] { -1, -1, crosshairSize, crosshairSize };
 */
         this.position = new Position(0, 0);
-        this.slices = new Vector(4);
-        this.slices2 = new Vector(4);
+        this.slices = new NakedVector(4, 4);
+        this.slices2 = new NakedVector(4, 4);
         this.sInfo = new char[32];
         this.course = this.course2 = Float.NaN;
         this.trailLL = new QualifiedCoordinates[MAX_TRAJECTORY_LENGTH];
         this.trailXY = new Position[MAX_TRAJECTORY_LENGTH];
+//#ifndef __ANDROID__
         this.trailPF = new short[MAX_TRAJECTORY_LENGTH];
+//#endif
     }
 
     public void sizeChanged(int w, int h) {
@@ -99,7 +104,7 @@ final class MapViewer {
 //#endif
 
         // reset vars
-        Position p = getPosition()._clone();
+        final Position p = getPosition()._clone();
         this.chx0 = this.chx = (w - crosshairSize) >> 1;
         this.chy0 = this.chy = (h - crosshairSize) >> 1;
         this.x = this.y = 0;
@@ -120,29 +125,28 @@ final class MapViewer {
         calculateScale();
     }
 
-    boolean hasMap() {
+    boolean hasMap() { // @threads ?:map
         return map != null;
     }
 
-    Map getMap() {
+    Map getMap() { // @threads ?:map
         return map;
     }
 
-    void setMap(Map map) {
+    void setMap(final Map map) {
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("set map " + map);
 //#endif
 
         /* synchronized to avoid race condition with render() */
-        synchronized (this) {
+        synchronized (this) { // @threads ?:map,slices
 
             // use new map
             this.map = null; // gc hint
             this.map = map;
 
             // new slices collection
-            dispose();
-            this.slices = new Vector(4);
+            reslice();
             /* slices2 is always empty */
 
         } // ~synchronized
@@ -445,7 +449,7 @@ final class MapViewer {
         return dirty;
     }
 
-    boolean move(int x, int y) {
+    boolean move(final int x, final int y) {
         boolean dirty = false;
 
         if (x == -1 && y == -1) {
@@ -474,7 +478,7 @@ final class MapViewer {
 
     void initRoute(final Position[] positions, final boolean reset) {
         /* synchronized to avoid race condition with render() */
-        synchronized (this) {
+        synchronized (this) { // @threads ?:wpt*
             this.wptPositions = null;
             this.wptStatuses = null;
             if (positions != null) {
@@ -487,9 +491,9 @@ final class MapViewer {
         }
     }
 
-    void setRoute(Position[] positions) {
+    void setRoute(final Position[] positions) {
         /* synchronized to avoid race condition with render() */
-        synchronized (this) {
+        synchronized (this) { // @threads ?:wpt*
             this.wptPositions = null;
             this.wptPositions = positions;
             if (positions != null) { // use new route
@@ -503,9 +507,9 @@ final class MapViewer {
         }
     }
 
-    void setPoiStatus(int idx, byte status) {
+    void setPoiStatus(final int idx, final byte status) {
         /* synchronized to avoid race condition with render() */
-        synchronized (this) {
+        synchronized (this) { // @threads ?:wpt*
             wptStatuses[idx] = status;
         }
     }
@@ -534,14 +538,27 @@ final class MapViewer {
     }
 
     void reset() {
-        lllast = xylast = pflast = llcount = xycount = 0;
-        accDist = courseDeviation = 0F;
+        synchronized (this) { // @threads event|render:*
+            lllast = xylast = pflast = llcount = xycount = 0;
+            accDist = courseDeviation = 0F;
+        }
+    }
+
+    void reslice() {
+//#ifdef __ANDROID__
+        final Object[] slicesArray = this.slices.getData();
+        for (int i = this.slices.size(); --i >= 0; ) {
+            ((Slice) slicesArray[i]).setImage(null);
+        }
+//#endif
+        this.slices = null;
+        this.slices = new NakedVector(4, 4);
     }
 
     /*
      * TODO reuse with GpxTracklog
      */
-    void locationUpdated(Location location) {
+    void locationUpdated(final Location location) {
 
         // got fix?
         if (location.getFix() > 0) { // TODO && dt >= 1000
@@ -549,100 +566,115 @@ final class MapViewer {
             final QualifiedCoordinates coords = location.getQualifiedCoordinates();
             QualifiedCoordinates qc = null;
 
-            // in-trail?
-            if (llcount > 0) {
+            synchronized (this) { // @threads event|render:*
 
-                // add distance increment
-                accDist += coords.distance(refQc);
-                final float r = accDist;
+                // in-trail?
+                if (llcount > 0) {
 
-                // course deviation-based decision when moving faster than 3.6 km/h
-                if (location.isSpeedValid() && location.getSpeed() > 1F) {
+                    // add distance increment
+                    accDist += coords.distance(refQc);
+                    final float r = accDist;
 
-                    // get course
-                    final float course = location.getCourse();
+                    // course deviation-based decision when moving faster than 7.2 km/h
+                    if (location.isSpeedValid() && location.getSpeed() > 2F) {
 
-                    // is course valid?
-                    if (!Float.isNaN(course)) {
+                        // get course
+                        final float course = location.getCourse();
 
-                        // calc deviation
-                        float diff = course - refCourse;
-                        if (diff > 180F) {
-                            diff -= 360F;
-                        } else if (diff < -180F) {
-                            diff += 360F;
-                        }
-                        courseDeviation += diff;
-                        refCourse = course;
+                        // is course valid?
+                        if (!Float.isNaN(course)) {
 
-                        // make decision
-                        final float absCourseDev = Math.abs(courseDeviation);
-                        final boolean doLog = (absCourseDev >= 60F && r > 25F) || (absCourseDev >= 45F && r >= 50) || (absCourseDev >= 15F && r >= 250) || (absCourseDev >= 5 && r >= 750);
-                        if (doLog) {
+                            // calc deviation
+                            float diff = course - refCourse;
+                            if (diff > 180F) {
+                                diff -= 360F;
+                            } else if (diff < -180F) {
+                                diff += 360F;
+                            }
+                            courseDeviation += diff;
+                            refCourse = course;
+
+                            // make decision
+                            final float absCourseDev = Math.abs(courseDeviation);
+                            final boolean doLog = (absCourseDev >= 60F && r > 25F) || (absCourseDev >= 45F && r >= 50) || (absCourseDev >= 15F && r >= 250) || (absCourseDev >= 5 && r >= 750);
+                            if (doLog) {
 //#ifdef __LOG__
-                            if (log.isEnabled()) log.debug("moving; dist = " + r + "; course dev = " + courseDeviation);
+                                if (log.isEnabled()) log.debug("moving; dist = " + r + "; course dev = " + courseDeviation);
 //#endif
-                            qc = refQc;
+                                qc = refQc;
+                            }
                         }
+
+                    } else { // dist-based decision
+//#ifdef __LOG__
+                        if (log.isEnabled()) log.debug("not moving; dist = " + r);
+//#endif
+                        qc = r >= 50 ? coords : null;
                     }
 
-                } else { // dist-based decision
+                    // use as reference
+                    refQc.copyFrom(coords);
+
+                } else {
+
 //#ifdef __LOG__
-                    if (log.isEnabled()) log.debug("not moving; dist = " + r);
+                    if (log.isEnabled()) log.debug("first position");
 //#endif
-                    qc = r >= 50 ? coords : null;
+                    // log first position
+                    qc = coords;
+                    refQc = coords._clone();
                 }
 
-            } else {
+                // got trail point?
+                if (qc != null) {
+                    accDist = courseDeviation = 0F;
+                }
 
-//#ifdef __LOG__
-                if (log.isEnabled()) log.debug("first position");
-//#endif
-                // log first position
-                qc = coords;
+            } // ~synchronized
 
-            }
-
-            // got trail point?
+            // append to trail point if got any
             if (qc != null) {
-                accDist = courseDeviation = 0F;
-                appendToTrail(qc);
+                appendToTrail(qc.getLat(), qc.getLon());
             }
-
-            // ref (~ last)
-            QualifiedCoordinates.releaseInstance(refQc);
-            refQc = coords._clone();
         }
     }
 
-    void appendToTrail(QualifiedCoordinates coords) {
-        // local refs for faster access
-        final QualifiedCoordinates[] arrayLL = trailLL;
-        final Position[] arrayXY = trailXY;
-        final short[] arrayPF = trailPF;
-        int lllast = this.lllast;
-        int xylast = this.xylast;
-        int pflast = this.pflast;
+    void appendToTrail(final double lat, final double lon) {
+        // create qc
+        final QualifiedCoordinates qc = QualifiedCoordinates.newInstance(lat, lon);
 
-        // properly append
-        if (arrayLL[lllast] != null) {
-            QualifiedCoordinates.releaseInstance(arrayLL[lllast]);
-            arrayLL[lllast] = null; // gc hint
-        }
-        if (arrayXY[xylast] != null) {
-            Position.releaseInstance(arrayXY[xylast]);
-            arrayXY[xylast] = null; // gc hint
-        }
+        // @threads event|input:*
+        synchronized (this) {
 
-        // append to LL array
-        final QualifiedCoordinates cloned = coords._clone();
-        arrayLL[lllast] = cloned;
-        if (++lllast == MAX_TRAJECTORY_LENGTH) {
-            lllast = 0;
-        }
+            // local refs for faster access
+            final QualifiedCoordinates[] arrayLL = trailLL;
+            final Position[] arrayXY = trailXY;
+//#ifndef __ANDROID__
+            final short[] arrayPF = trailPF;
+//#endif
+            int lllast = this.lllast;
+            int xylast = this.xylast;
+            int pflast = this.pflast;
+
+            // properly append
+            if (arrayLL[lllast] != null) {
+                QualifiedCoordinates.releaseInstance(arrayLL[lllast]);
+                arrayLL[lllast] = null; // gc hint
+            }
+            if (arrayXY[xylast] != null) {
+                Position.releaseInstance(arrayXY[xylast]);
+                arrayXY[xylast] = null; // gc hint
+            }
+
+            // append to LL array
+            arrayLL[lllast] = qc;
+            if (++lllast == MAX_TRAJECTORY_LENGTH) {
+                lllast = 0;
+            }
+//        } // ~synchronized
 
         /* synchronized to avoid race condition with setMap() */
-        synchronized (this) {
+//        synchronized (this) { // @threads ?:*
             final Map map = this.map;
             if (map != null) {
 
@@ -676,23 +708,26 @@ final class MapViewer {
                         if (pfnext == MAX_TRAJECTORY_LENGTH) {
                             pfnext = 0;
                         }
+//#ifndef __ANDROID__
                         arrayPF[pflast] = updatePF(Config.trailThick,
                                                    arrayXY[pflast], arrayXY[pfnext]);
+//#endif
                         if (++pflast == MAX_TRAJECTORY_LENGTH) {
                             pflast = 0;
                         }
                     } while (--N > 0);
                 }
             }
-        }
+//        } // ~synchronized
 
-        // update members
-        this.lllast = lllast;
-        this.xylast = xylast;
-        this.pflast = pflast;
-        if (++llcount > MAX_TRAJECTORY_LENGTH) {
-            llcount = MAX_TRAJECTORY_LENGTH;
-        }
+            // update members
+            this.lllast = lllast;
+            this.xylast = xylast;
+            this.pflast = pflast;
+            if (++llcount > MAX_TRAJECTORY_LENGTH) {
+                llcount = MAX_TRAJECTORY_LENGTH;
+            }
+        } // ~synchronized
 
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("count = " + llcount);
@@ -703,41 +738,54 @@ final class MapViewer {
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("render");
 //#endif
-        // local refs
-        final int crosshairSize = this.crosshairSize;
-        final int crosshairSize2 = this.crosshairSize2;
+
+        // local ref
+        final Map map = this.map;
 
         // clear bg
-        if (Config.oneTileScroll) {
+        if (Config.oneTileScroll || map.getWidth() < Desktop.width || map.getHeight() < Desktop.height) {
             graphics.setColor(0x0);
             graphics.fillRect(0, 0, Desktop.width, Desktop.height);
         } else if (map.isVirtual()) {
             graphics.setColor(map.getBgColor());
             graphics.fillRect(0, 0, Desktop.width, Desktop.height);
+/*
+        } else {
+            graphics.setColor(0x00a0a0a0);
+            graphics.fillRect(0, 0, Desktop.width, Desktop.height);
+*/
         }
 
         /* synchronized to avoid race condition with ensureSlices() */
-        synchronized (this) {
+        synchronized (this) { // @threads ?:slices
          
-            // local ref for faster access
-            final Vector slices = this.slices;
-
             // project slices to window
-            for (int N = slices.size(), i = 0; i < N; i++) {
-                drawSlice(graphics, /*clip, */(Slice) slices.elementAt(i));
+            if (!map.isVirtual()) {
+                final Object[] slicesArray = this.slices.getData();
+                for (int N = this.slices.size(), i = 0; i < N; i++) {
+                    drawSlice(graphics, /*clip, */(Slice) slicesArray[i]);
+                }
             }
 
         } // ~synchronized
 
         // paint route/pois/wpt
-        if (wptPositions != null) {
-            drawNavigation(graphics);
+        synchronized (this) { // @threads ?:wpt*
+            if (wptPositions != null) {
+                drawNavigation(graphics);
+            }
         }
 
         // draw trajectory
-        if (Config.trailOn && xycount > 1) {
-            drawTrail(graphics);
-        }
+        synchronized (this) { // @threads ?:?
+            if (Config.trailOn && xycount > 1) {
+                drawTrail(graphics);
+            }
+        } // ~synchronized
+
+        // local refs
+        final int crosshairSize = this.crosshairSize;
+        final int crosshairSize2 = this.crosshairSize2;
 
         // paint crosshair
 //#ifdef __ALT_RENDERER__
@@ -781,16 +829,6 @@ final class MapViewer {
         }
     }
 
-    private void dispose() {
-//#ifdef __ANDROID__
-        final Vector slices = this.slices;
-        for (int i = slices.size(); --i >= 0; ) {
-            ((Slice) slices.elementAt(i)).setImage(null);
-        }
-//#endif
-        this.slices = null;
-    }
-
     private void drawNavigation(final Graphics graphics) {
         // hack! setup graphics for waypoints
         final int color = graphics.getColor();
@@ -808,6 +846,9 @@ final class MapViewer {
                 graphics.setStrokeStyle(Graphics.DOTTED);
             }
             graphics.setColor(Config.COLORS_16[Config.routeColor]);
+//#ifdef __ANDROID__
+            graphics.setStrokeWidth(Config.routeThick * 2 + 1);
+//#endif
 
             // draw route as line
             final int thickness = Config.routeThick;
@@ -831,7 +872,11 @@ final class MapViewer {
                         if (!xIsOff && !yIsOff) {
 
                             // draw segment
+//#ifndef __ANDROID__
                             drawLineSegment(graphics, x0, y0, x1, y1, updatePF(thickness, p0, p1), w, h);
+//#else
+                            drawLineSegment(graphics, x0, y0, x1, y1, (short)(1 << 8), w, h); // 1 means stroke width is 1
+//#endif
                         }
                     }
                     p0 = p1;
@@ -842,6 +887,9 @@ final class MapViewer {
             if (Config.routeLineStyle) {
                 graphics.setStrokeStyle(Graphics.SOLID);
             }
+//#ifdef __ANDROID__
+            graphics.setStrokeWidth(1);
+//#endif
         }
 
         // POI name/desc color
@@ -1054,7 +1102,7 @@ final class MapViewer {
                                         Graphics.TOP | Graphics.LEFT);
                 }
 //#endif                
-            } else if (!map.isVirtual()) {
+            } else {
                 graphics.setColor(0x0);
                 graphics.fillRect(x_dest, y_dest, w, h);
                 graphics.setColor(0x00404040);
@@ -1069,7 +1117,9 @@ final class MapViewer {
 
     private void drawTrail(final Graphics graphics) {
         final Position[] arrayXY = trailXY;
+//#ifndef __ANDROID__
         final short[] arrayPF = trailPF;
+//#endif
         final int count = this.xycount;
         final int x = this.x;
         final int y = this.y;
@@ -1083,6 +1133,9 @@ final class MapViewer {
         // set color and style
         final int color = graphics.getColor();
         graphics.setColor(Config.COLORS_16[Config.trailColor]);
+//#ifdef __ANDROID__
+        graphics.setStrokeWidth(Config.trailThick * 2 + 1);
+//#endif
 
         // draw polyline
         for (int i = count - 1; --i >= 0; ) {
@@ -1106,13 +1159,17 @@ final class MapViewer {
             if (!xIsOff && !yIsOff) {
                 
                 // draw segment
+//#ifndef __ANDROID__
                 drawLineSegment(graphics, x0, y0, x1, y1, arrayPF[idx0], w, h);
+//#else
+                drawLineSegment(graphics, x0, y0, x1, y1, (short) (1 << 8), w, h); // 1 means stroke width is 1
+//#endif
             }
 
             idx0 = idx1;
         }
 
-        // draw line from last "gpx" point to current position
+        // draw line from last trailpoint to current position
         if (!Desktop.browsing && Desktop.synced) {
             final Position p0 = arrayXY[idx0];
             final int x0 = p0.getX() - x;
@@ -1126,12 +1183,19 @@ final class MapViewer {
             if (!xIsOff && !yIsOff) {
 
                 // draw segment
+//#ifndef __ANDROID__
                 drawLineSegment(graphics, x0, y0, x1, y1, updatePF(Config.trailThick, x1 - x0, y1 - y0), w, h);
+//#else
+                drawLineSegment(graphics, x0, y0, x1, y1, (short) (1 << 8), w, h); // 1 means stroke width is 1
+//#endif
             }
         }
         
         // restore color and style
         graphics.setColor(color);
+//#ifdef __ANDROID__
+        graphics.setStrokeWidth(1);
+//#endif
     }
 
     private static void drawLineSegment(final Graphics graphics,
@@ -1334,6 +1398,9 @@ final class MapViewer {
         if (log.isEnabled()) log.debug("ensure slices from map " + map);
 //#endif
 
+        // local ref
+        final Map map = this.map;
+
         // gonna-release flag
         boolean releasing = false;
 
@@ -1341,11 +1408,11 @@ final class MapViewer {
         boolean gotAll = true;
 
         /* synchronized to avoid race condition with render() */
-        synchronized (this) {
+        synchronized (this) { // @threads ?:slices
 
             // local refs to vectors
-            final Vector oldSlices = slices;
-            final Vector newSlices = slices2;
+            final NakedVector oldSlices = slices;
+            final NakedVector newSlices = slices2;
 
             // assertion
             if (!newSlices.isEmpty()) {
@@ -1385,8 +1452,9 @@ final class MapViewer {
              */
 
             // release slices images we will no longer use
+            final Object[] oldSlicesArray = oldSlices.getData();
             for (int i = oldSlices.size(); --i >= 0; ) {
-                final Slice slice = (Slice) oldSlices.elementAt(i);
+                final Slice slice = (Slice) oldSlicesArray[i];
                 if (!newSlices.contains(slice)) {
 //#ifdef __LOG__
                     if (log.isEnabled()) log.debug("release image in " + slice);
@@ -1413,7 +1481,7 @@ final class MapViewer {
         boolean loading = false;
 
         // start loading images
-        if (!gotAll) {
+        if (!gotAll && !map.isVirtual()) {
             loading = map.ensureImages(slices);
         }
 
@@ -1422,8 +1490,8 @@ final class MapViewer {
     }
 
     private Slice ensureSlice(final int x, final int y,
-                              final Vector oldSlices,
-                              final Vector newSlices) {
+                              final NakedVector oldSlices,
+                              final NakedVector newSlices) {
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("ensure slice for " + x + "-" + y);
 //#endif
@@ -1431,8 +1499,9 @@ final class MapViewer {
         Slice slice = null;
 
         // look for suitable slice in current set
+        final Object[] oldSlicesArray = oldSlices.getData();
         for (int i = oldSlices.size(); --i >= 0; ) {
-            final Slice s = (Slice) oldSlices.elementAt(i);
+            final Slice s = (Slice) oldSlicesArray[i];
             if (s.isWithin(x, y)) {
                 slice = s;
                 break;
@@ -1458,6 +1527,30 @@ final class MapViewer {
         }
 
         return slice;
+    }
+
+    private Slice getSliceFor(final int px, final int py) {
+        // first look in current set
+        final Object[] slicesArray = this.slices.getData();
+        for (int i = slices.size(); --i >= 0; ) {
+            final Slice s = (Slice) slicesArray[i];
+            if (s.isWithin(px, py)) {
+                return s;
+            }
+        }
+
+        // next try map (we may have no map on start, so be careful)
+        final Slice s;
+        if (map != null) {
+            s = map.getSlice(px, py);
+            if (s == null) {
+                throw new IllegalStateException("No slice for position " + new Position(px, py));
+            }
+        } else {
+            s = null;
+        }
+
+        return s;
     }
 
     private void calculateScale() {
@@ -1564,6 +1657,8 @@ final class MapViewer {
         }
     }
 
+//#ifndef __ANDROID__
+
     private static short updatePF(final int thick0, final Position p0, final Position p1) {
         return updatePF(thick0, p1.getX() - p0.getX(), p1.getY() - p0.getY());
     }
@@ -1605,27 +1700,6 @@ final class MapViewer {
         return flags;
     }
 
-    private Slice getSliceFor(final int px, final int py) {
-        // first look in current set
-        final Vector slices = this.slices;
-        for (int i = slices.size(); --i >= 0; ) {
-            final Slice s = (Slice) slices.elementAt(i);
-            if (s.isWithin(px, py)) {
-                return s;
-            }
-        }
+//#endif // !__ANDROID__
 
-        // next try map (we may have no map on start, so be careful)
-        final Slice s;
-        if (map != null) {
-            s = map.getSlice(px, py);
-            if (s == null) {
-                throw new IllegalStateException("No slice for position " + new Position(px, py));
-            }
-        } else {
-            s = null;
-        }
-
-        return s;
-    }
 }

@@ -193,11 +193,13 @@ class ListCmds extends Operator {
     }
 
     public static int getIndex(Thing t,int llen) throws HeclException {
-	String s = t.toString();
-	if(s.equals("end"))
-	    return llen-1;
-	if(s.equals("start"))
-	    return 0;
+	if (t.getVal() instanceof StringThing) {
+	    String s = t.toString();
+	    if(s.equals("end"))
+		return llen-1;
+	    if(s.equals("start"))
+		return 0;
+	}
 	int idx = IntThing.get(t);
 	if (idx < 0) {
 	    idx += llen;

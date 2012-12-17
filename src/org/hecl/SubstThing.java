@@ -25,11 +25,15 @@ package org.hecl;
  * @version 1.0
  */
 public class SubstThing implements RealThing {
+//#if j2se
     public long cacheversion = -1;
+//#else
+    public int cacheversion = -1;
+//#endif
 
-    private Thing val = null;
+    private Thing val;
 
-    private String varName = null;
+    private String varName;
 
     public SubstThing() {
     }

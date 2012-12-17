@@ -2,6 +2,7 @@
 <project name="TrekBuddy" default="standard" basedir=".">
 
     <property file="${include.properties}" prefix="external."/>
+    <property file="build.properties"/>
 
     <property name="name" value="${external.product.name}"/>
     <property name="version" value="${external.product.version}"/>
@@ -28,7 +29,7 @@
     <property name="android20.home" value="c:\J2ME\android-sdk-windows\platforms\android-2.0"/>
     <property name="microemu.home" value="z:\repository\microemu-google\microemulator"/>
     <property name="proguard3.home" value="z:\apps\proguard3.11"/>
-    <property name="proguard4.home" value="z:\apps\proguard4.7"/>
+    <property name="proguard4.home" value="z:\apps\proguard4.8"/>
 
     <property name="build.dir" value="r:\trekbuddy"/>
 
@@ -37,6 +38,7 @@
     <taskdef resource="antenna.properties" classpath="lib/antenna-bin-1.0.2.jar"/>
     <taskdef name="otaJad" classname="RimOtaJadSha" classpath="${basedir}/tools/classes"/>
     <taskdef name="barManifest" classname="BarManifestVersion" classpath="${basedir}/tools/classes"/>
+    <taskdef name="buildVersion" classname="BuildVersion" classpath="${basedir}/tools/classes"/>
 
     <path id="bootclasspath.standard">
         <pathelement location="${wtk.home}\lib\cldcapi11.jar"/>
@@ -108,6 +110,29 @@
 
     <path id="bootclasspath.rim50">
         <pathelement location="${rim50.home}\lib\net_rim_api.jar"/>
+    </path>
+
+    <path id="bootclasspath.emulator">
+<!--
+        <pathelement location="c:\Program Files (x86)\Java\jdk1.5.0_22\jre\lib\rt.jar"/>
+-->
+        <pathelement location="${wtk.home}\lib\cldcapi11.jar"/>
+        <pathelement location="${wtk.home}\lib\midpapi20.jar"/>
+        <pathelement location="${wtk.home}\lib\jsr75.jar"/>
+        <pathelement location="${wtk.home}\lib\jsr082.jar"/>
+        <pathelement location="${wtk.home}\lib\jsr179.jar"/>
+        <pathelement location="${wtk.home}\lib\jsr234.jar"/>
+        <pathelement location="${wtk.home}\lib\wma11.jar"/>
+        <pathelement location="${wtk.home}\lib\mmapi.jar"/>
+        <pathelement location="lib\lg-mmpp.jar"/>
+        <pathelement location="lib\motorola-ext.jar"/>
+        <pathelement location="lib\motorola-file.jar"/>
+        <pathelement location="lib\motorola-location.jar"/>
+        <pathelement location="lib\motorola-javaextensions.jar"/>
+        <pathelement location="lib\nokia-ui-devicecontrol.jar"/>
+        <pathelement location="lib\siemens-file.jar"/>
+        <pathelement location="lib\siemens-game.jar"/>
+        <pathelement location="lib\samsung-apis.jar"/>
     </path>
 
     <target name="standard">
@@ -290,14 +315,18 @@
              antfile="build-trekbuddy.xml" target="clean"
              inheritAll="false" inheritRefs="false">
             <property name="target.version" value="any"/>
-			<property name="sdk.version" value="2.0"/>
-			<property name="api.level" value="3"/>
-			<property name="dist.dir" value="android"/>
-		</ant>
+            <property name="sdk.version" value="2.2"/>
+            <property name="api.level" value="3"/>
+            <property name="dist.dir" value="android"/>
+	    </ant>
         <antcall target="a.pre.android"/>
         <antcall target="compile.android"/>
         <antcall target="android.pack" inheritall="true"/>
         <antcall target="obfuscate4.android" inheritall="true"/>
+<!--
+        <copyfile src="tmp/trekbuddy${suffix}.jar"
+                  dest="tmp/trekbuddy${suffix}-obfuscated.jar"/>
+-->
 <!-- not needed, so rename the jar as if it happened
         <antcall target="preverify" inheritall="true"/>
 -->
@@ -308,7 +337,7 @@
              antfile="build-trekbuddy.xml" target="zipalign"
              inheritAll="false" inheritRefs="false">
             <property name="target.version" value="any"/>
-            <property name="sdk.version" value="2.0"/>
+            <property name="sdk.version" value="2.2"/>
             <property name="api.level" value="3"/>
             <property name="dist.dir" value="android"/>
             <property name="javac.debug" value="true"/>
@@ -319,6 +348,8 @@
         </ant>
         <copy file="${microemu.home}/microemu-android/bin/trekbuddy.apk"
 			  tofile="dist/${vendor.dir}/${dist.dir}/trekbuddy.apk"/>
+        <move file="dist/${vendor.dir}/${dist.dir}/trekbuddy-android.map"
+              tofile="dist/${vendor.dir}/${dist.dir}/trekbuddy.map"/>
     </target>
 
     <target name="android-backport">
@@ -348,9 +379,9 @@
              antfile="build-trekbuddy.xml" target="zipalign"
              inheritAll="false" inheritRefs="false">
             <property name="target.version" value="backport"/>
-			<property name="sdk.version" value="1.6"/>
-			<property name="api.level" value="3"/>
-			<property name="dist.dir" value="android-backport"/>
+            <property name="sdk.version" value="1.6"/>
+            <property name="api.level" value="3"/>
+            <property name="dist.dir" value="android-backport"/>
 <!--
             <property name="javac.debug" value="true"/>
             <property name="javac.debuglevel" value="source,lines"/>
@@ -361,6 +392,8 @@
         </ant>
         <copy file="${microemu.home}/microemu-android/bin/trekbuddy.apk"
 			  tofile="dist/${vendor.dir}/${dist.dir}/trekbuddy-backport.apk"/>
+        <move file="dist/${vendor.dir}/${dist.dir}/trekbuddy-android.map"
+              tofile="dist/${vendor.dir}/${dist.dir}/trekbuddy-backport.map"/>
     </target>
 
     <target name="playbook">
@@ -394,7 +427,7 @@
         </unzip>
         <barManifest infile="dist\public\playbook\META-INF\MANIFEST.MF"
                      outfile="dist\public\playbook\trekbuddy.MF"
-                     appVersion="${version}.0"/>
+                     appVersion="${version}.${build_version}"/>
         <java classname="net.rim.tools.apk2bar.Apk2bar"
               fork="true"
               failonerror="true"
@@ -433,10 +466,14 @@
         <antcall target="a.pre.emulator"/>
         <antcall target="compile.emulator"/>
         <antcall target="a.pack" inheritall="true"/>
+<!--
         <antcall target="emulator.obfuscate" inheritall="true"/>
+        <antcall target="preverify" inheritall="true"/>
+-->
         <move file="tmp/trekbuddy${suffix}.jar"
               tofile="tmp/trekbuddy${suffix}-obfuscated.jar"/>
-        <antcall target="preverify" inheritall="true"/>
+        <move file="tmp/trekbuddy${suffix}-obfuscated.jar"
+              tofile="tmp/preverified/trekbuddy${suffix}-obfuscated.jar"/>
         <antcall target="dist" inheritall="true"/>
     </target>
 
@@ -554,7 +591,7 @@
     <target name="a.pre.emulator" depends="a.pre.hecl">
         <mkdir dir="tmp/src"/>
         <wtkpreprocess srcdir="src" destdir="tmp/src" version="1"
-                       symbols="__HECL__,__ALL__,__LOG__,__EMULATOR__,${pre.extra}"/>
+                       symbols="__ALL__,__HECL__,__EMULATOR__,__LOG__,${pre.extra}"/>
     </target>
 
     <target name="compile.standard" depends="remove.symbian.src,remove.rim.src,remove.android.src">
@@ -666,7 +703,7 @@
                tempdir="tmp/ant"
                fork="true"
                target="1.1" source="1.3" debug="true"
-               bootclasspathref="bootclasspath.standard"/>
+               bootclasspathref="bootclasspath.emulator"/>
     </target>
 
     <target name="remove.nonstd.src" depends="remove.nonmidp.src,remove.android.src">
@@ -708,6 +745,7 @@
 
     <target name="remove.hecl.src">
         <delete file="tmp/src/cz/kruch/track/hecl/ControlledInterp.java"/>
+        <delete file="tmp/src/cz/kruch/track/hecl/PluginManager.java"/>
     </target>
 
     <target name="remove.rim.src">
@@ -966,6 +1004,7 @@
             <arg value="-whyareyoukeeping class cz.kruch.track.hecl.ControlledInterp"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.ui.nokia.NokiaUi14DeviceControl"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.ui.nokia.S60DeviceControl"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.hecl.PluginManager"/>
             <arg value="-printmapping dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.map"/>
             <arg value="-printseeds"/>
             <arg value="-printusage dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.dco"/>
@@ -997,6 +1036,7 @@
             <arg value="-whyareyoukeeping class cz.kruch.track.hecl.ControlledInterp"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.ui.nokia.NokiaUi14DeviceControl"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.ui.nokia.S60DeviceControl"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.hecl.PluginManager"/>            
             <arg value="-printmapping dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.map"/>
             <arg value="-printseeds"/>
             <arg value="-printusage dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.dco"/>
@@ -1111,7 +1151,10 @@
             <arg value="-outjars tmp/trekbuddy${suffix}-obfuscated.jar"/>
             <arg value="-libraryjars ${libraryjars}"/>
             <arg value="-dontobfuscate"/>
+            <arg value="-dontshrink"/>
+            <arg value="-dontoptimize"/>
             <arg value="-keep class * implements javax.microedition.midlet.MIDlet"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.hecl.PluginManager"/>
             <arg value="-printmapping dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.map"/>
             <arg value="-printseeds"/>
             <arg value="-verbose"/>
@@ -1262,7 +1305,7 @@
         <replace file="${basedir}\dist\${vendor.dir}\${dist.dir}\trekbuddy${suffix}.alx" token="@SUFFIX@" value="${suffix}"/>
         <replace file="${basedir}\dist\${vendor.dir}\${dist.dir}\trekbuddy${suffix}.alx" token="@BBVERSION@" value="${rim.bb.version}"/>
         <replace file="${basedir}\dist\${vendor.dir}\${dist.dir}\trekbuddy${suffix}.alx" token="@DESCRIPTION@" value="${description}"/>
-        <replace file="${basedir}\dist\${vendor.dir}\${dist.dir}\trekbuddy${suffix}.alx" token="@VERSION@" value="${version}.100"/>
+        <replace file="${basedir}\dist\${vendor.dir}\${dist.dir}\trekbuddy${suffix}.alx" token="@VERSION@" value="${version}.${build_version}"/>
         <replace file="${basedir}\dist\${vendor.dir}\${dist.dir}\trekbuddy${suffix}.alx" token="@VENDOR@" value="${vendor}"/>
         <replace file="${basedir}\dist\${vendor.dir}\${dist.dir}\trekbuddy${suffix}.alx" token="@MODULES@" value="trekbuddy${suffix}.cod"/>
     </target>
@@ -1321,7 +1364,7 @@
         <replace file="${rim.ota.dir}\trekbuddy${suffix}.alx" token="@SUFFIX@" value="${suffix}"/>
         <replace file="${rim.ota.dir}\trekbuddy${suffix}.alx" token="@BBVERSION@" value="${rim.bb.version}"/>
         <replace file="${rim.ota.dir}\trekbuddy${suffix}.alx" token="@DESCRIPTION@" value="${description}"/>
-        <replace file="${rim.ota.dir}\trekbuddy${suffix}.alx" token="@VERSION@" value="${version}.100"/>
+        <replace file="${rim.ota.dir}\trekbuddy${suffix}.alx" token="@VERSION@" value="${version}.${build_version}"/>
         <replace file="${rim.ota.dir}\trekbuddy${suffix}.alx" token="@VENDOR@" value="${vendor}"/>
         <replace file="${rim.ota.dir}\trekbuddy${suffix}.alx" token="@MODULES@" value="${rim.cod.modules}"/>
         <zip destfile="${rim.ota.dir}\trekbuddy${suffix}.zip"

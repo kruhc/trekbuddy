@@ -25,7 +25,7 @@ package org.hecl;
 
 /* This 'abstract' apparently needs to be here for j2me stuff. */
 
-public abstract interface Command {
+public interface Command {
 
     /**
      * The <code>cmdCode</code> method takes an interpreter and an array of

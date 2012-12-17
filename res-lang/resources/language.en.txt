@@ -87,7 +87,7 @@
 1336=Failed to start tracklog
 1337=Failed to load profile
 1338=No provider instance
-1339=No startup map. Use Options->Load Map/Atlas.
+1339=No startup map. Use Options->Maps.
 1340=Paused
 1341=No profile(s) found.
 1342=Profiles
@@ -370,7 +370,7 @@
 # settings forms/fields/values (Tweaks)
 3800=Tweaks
 3801=broken I/O
-3802=safe renderer
+#REMOVED 3802=safe renderer
 3803=forced GC
 3804=1-tile scroll
 3805=large atlases
@@ -385,6 +385,7 @@
 3814=external cfg backup
 3815=HECL opt level
 3819=filtered scaling
+3820=verbose loading
 
 # info commands
 4000=Technical

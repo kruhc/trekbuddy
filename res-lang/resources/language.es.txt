@@ -355,7 +355,7 @@
 # settings forms/fields/values (Tweaks)
 3800=Ajustes
 3801=roto I/O
-3802=Desplazamiento seguro
+#REMOVED 3802=Desplazamiento seguro
 3803=Forzar GC
 3804=1-tile scroll
 3805=Atlas muy grandes
@@ -370,6 +370,7 @@
 3814=backup configuración externa
 3815=HECL opt nivel
 3819=ampliación filtrado
+3820=verboso cargando
  
 # info commands
 4000=Técnica

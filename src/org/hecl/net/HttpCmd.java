@@ -50,6 +50,7 @@ public class HttpCmd extends org.hecl.Operator {
 	  case GETURL:
 	    h = new Hashtable();
 	    String qdata = null;
+/*	    
 	    Thing t = null;
 	    try {
 		t = interp.getVar("http.useragent",0);
@@ -60,7 +61,9 @@ public class HttpCmd extends org.hecl.Operator {
 	    if (deflocale != null) {
 		h.put(contentlanguageheader, deflocale);
 	    }
-
+*/
+		h.put(useragentheader, defuseragent);
+		h.put(acceptcharsetheader, defcharset);
 	    for(int i = 2; i<argv.length; i += 2) {
 		String key = argv[i].toString();
 		if(key.equals("-query")) {
@@ -83,6 +86,7 @@ public class HttpCmd extends org.hecl.Operator {
 	    }
 	    HttpRequest r = new HttpRequest(argv[1].toString(), qdata,
 					    validate, h);
+/*					    
 	    r.start();
 
  	    try {
@@ -104,18 +108,17 @@ public class HttpCmd extends org.hecl.Operator {
 		    Thread.currentThread().yield();
 		}
 	    }
-
+*/
+	    r.run();
 	    int status = r.getStatus();
-	    //System.err.println("status="+status);
 	    if(status != HttpRequest.OK) {
 		Exception e = r.getException();
 		// wke 31.08.2006
 		// need a stringbuffer here, otherwise error message is not
 		// complete. May be a compiler problem.
 		StringBuffer s = new StringBuffer();
-		s.append("HTTP geturl failed '").append(HttpRequest.getStatusText(status))
+		s.append("http.geturl failed '").append(HttpRequest.getStatusText(status))
 		    .append("' - ").append(e != null ? e.toString() : "");
-		System.err.println("msg="+s.toString());
 		throw new HeclException(s.toString());
 	    }
 		
@@ -126,8 +129,7 @@ public class HttpCmd extends org.hecl.Operator {
 		ht.put("status",new Thing(HttpRequest.getStatusText(status)));
 		ht.put("ncode",IntThing.create(retcode));
 		
-		Enumeration e = r.getResponseFieldNames();
-		while(e.hasMoreElements()) {
+		for (Enumeration e = r.getResponseFieldNames(); e.hasMoreElements(); ) {
 		    String key = (String)e.nextElement();
 		    ht.put(key,new Thing(r.getResponseFieldValue(key)));
 		}
@@ -178,10 +180,11 @@ public class HttpCmd extends org.hecl.Operator {
     public static final int GETNCODE = 4;
     public static final int GETSTATUS = 5;
     
+    public static final String acceptcharsetheader = "Accept-Charset";    
     public static final String useragentheader = "User-Agent";
     public static final String contentlanguageheader = "Content-Language";
 
-    public static final String defcharset = "ISO8859-1";
+    private static String defcharset = "ISO-8859-1";
     private static String defuseragent = "Hecl http-module";
     private static String deflocale = "en-US";
     private static boolean firsttime = true;
@@ -192,31 +195,50 @@ public class HttpCmd extends org.hecl.Operator {
 //#ifdef j2me
 	String conf = System.getProperty("microedition.configuration");
 	String prof = System.getProperty("microedition.profiles");
+	String cset = System.getProperty("microedition.encoding");	
 
 	if (prof == null) {
-	    prof = "none";
+	    prof = "MIDP-2.0";
 	}
 	if (conf == null) {
-	    conf = "none";
+	    conf = "CLDC-1.1";
 	}
 
 	int space = prof.indexOf(' ');
 	if (space != -1) {
 	    prof = prof.substring(0, space -1);
 	}
-	defuseragent = "Profile/" + prof + " Configuration/" + conf;
+	//defuseragent = "Profile/" + prof + " Configuration/" + conf;
+	defuseragent = prof.replace('-', '/') + " " + conf.replace('-', '/');	
 	try {
 	    deflocale = System.getProperty("microedition.locale");
 	} catch (Exception ace) {
-	    System.err.println("Access control exception: " + ace.toString());
+	    // ignore
 	}
+	if(cset != null) {
+    defcharset = cset;
+	}
+	defcharset += ",utf-8";
 //#else
 	// No special treatment for j2se at the moment.
 //#endif 
 	if(deflocale == null) {
 	    deflocale = "en-US";
 	}
-	cmdtable.put("http.geturl", new HttpCmd(GETURL,1,-1));
+	deflocale += ",en";	
+	deflocale = deflocale.toLowerCase();
+	
+//#ifndef android 	
+	System.out.println("http.geturl user-agent: " + defuseragent);
+	System.out.println("http.geturl accept-charset: " + defcharset);
+	System.out.println("http.geturl accept-language: " + deflocale);
+//#else
+	android.util.Log.i("TrekBuddy", "[hecl] http.geturl user-agent: " + defuseragent);
+	android.util.Log.i("TrekBuddy", "[hecl] http.geturl accept-charset: " + defcharset);
+	android.util.Log.i("TrekBuddy", "[hecl] http.geturl accept-language: " + deflocale);
+//#endif	
+
+        cmdtable.put("http.geturl", new HttpCmd(GETURL,1,-1));
         cmdtable.put("http.formatQuery", new HttpCmd(FORMATQUERY,0,-1));
         cmdtable.put("http.data", new HttpCmd(GETDATA,0,-1));
         cmdtable.put("http.ncode", new HttpCmd(GETNCODE,0,-1));

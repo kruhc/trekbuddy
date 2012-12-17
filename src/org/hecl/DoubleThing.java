@@ -152,7 +152,11 @@ class DoubleThing extends FractionalThing {
     }
 
     public double doubleValue() {
-	return (double)val;
+	return val;
+    }
+
+    public boolean isDouble() {
+	return true;
     }
 
     /**

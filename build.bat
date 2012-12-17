@@ -9,6 +9,8 @@ if not exist properties\build-%1.properties goto vendor
 
 if "%ANT_HOME%"=="" set ANT_HOME=z:\apps\apache-ant-1.8.2
 
+java -cp tools/classes;%ANT_HOME%/lib/ant.jar BuildVersion public
+
 cmd /c %ANT_HOME%\bin\ant -Dinclude.properties=properties\build-%1.properties -Dlocale=%3 -l dist\%1\%2\build.log -f build.xml %2
 goto end
 

@@ -28,7 +28,7 @@ import java.util.Vector;
 
 public class GroupThing implements RealThing {
 
-    protected Vector val = null;
+    protected Vector val;
 
     /**
      * Creates a new <code>GroupThing</code> instance from a vector.
@@ -74,7 +74,7 @@ public class GroupThing implements RealThing {
         RealThing realthing = thing.getVal();
 
         if (!(realthing instanceof GroupThing)) {
-            Vector group = new Vector();
+            Vector group = new Vector(1);
             if (realthing instanceof CodeThing) {
                 group.addElement(thing);
             } else {

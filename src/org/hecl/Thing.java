@@ -29,20 +29,20 @@ public class Thing extends Object {
 
     /* This flag is used by Stanza to indicate whether a Thing should
      * be copied if something tries to write to it.  */
-    protected boolean copy = false;
+    protected boolean copy;
 
     /**
      * <code>literal</code> is used to indicate Things which come
      * directly from the parser and thus should not be changed.
      *
      */
-    protected boolean literal = false;
+    protected boolean literal;
 
     /* Refers to a global variable? */
-    public boolean global = false;
+    public boolean global;
 
     /* Used to keep track of nesting depth. */
-    private int depth = 0;
+    private int depth;
 
     /* Depth that things like lists are allowed to nest. */
     static final int NESTDEPTH = 10;
@@ -104,8 +104,9 @@ public class Thing extends Object {
     }
 
 
-    public static final Thing emptyThing() {
-	return new Thing((String)null);
+    public static Thing emptyThing() {
+//	return new Thing((String)null);
+	return new Thing("");
     }
     
     /**

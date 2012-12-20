@@ -17,6 +17,9 @@ package cz.kruch.track.util;
  */
 public final class ExtraMath {
 
+    private ExtraMath() {
+    }
+
     public static int grade(final double d) {
         int i = 1;
         while ((d / i) >= 10) {

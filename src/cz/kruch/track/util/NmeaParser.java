@@ -48,6 +48,9 @@ public final class NmeaParser {
     
     public static final Hashtable xdr = new Hashtable(4);
 
+    private NmeaParser() {
+    }
+
     public static void reset() {
         pdop = hdop = vdop = geoidh = Float.NaN;
     }

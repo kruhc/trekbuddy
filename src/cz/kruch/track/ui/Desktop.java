@@ -571,6 +571,7 @@ public final class Desktop implements CommandListener,
                 views[i].onBackground();
             }
         }
+        views[mode].setVisible(false);
 
         // force GC
         System.gc(); // unconditional!!!
@@ -586,6 +587,7 @@ public final class Desktop implements CommandListener,
                 views[i].onForeground();
             }
         }
+        views[mode].setVisible(true);
 
         // repaint
         update(MASK_SCREEN);
@@ -1984,7 +1986,7 @@ public final class Desktop implements CommandListener,
         if (cz.kruch.track.TrackingMIDlet.state != 1) {
             return;
         }
-//#endif        
+//#endif
 
         // anything to update?
         if (mask != MASK_NONE) {

@@ -95,13 +95,13 @@ final class LocatorView extends View {
     }
 
     void setVisible(final boolean b) {
+        super.setVisible(b);
         orientation = -1;
         if (b) {
             cz.kruch.track.ui.nokia.DeviceControl.senseOn(navigator);
         } else {
             cz.kruch.track.ui.nokia.DeviceControl.senseOff(navigator);
         }
-        super.setVisible(b);
     }
 
     public int handleAction(final int action, final boolean repeated) {

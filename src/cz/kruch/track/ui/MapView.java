@@ -111,12 +111,12 @@ final class MapView extends View {
 
     /* @Override */
     void setVisible(final boolean b) {
+        super.setVisible(b);
         if (b) { /* trick */
             if (isLocation()) {
                 updatedTrick();
             }
         }
-        super.setVisible(b);
     }
 
     public boolean isLocation() {
@@ -125,29 +125,12 @@ final class MapView extends View {
 
 //#ifdef __ANDROID__
 
-//    private volatile Map map;
-
-    /**
-     * @deprecated hack
-     */
     void onBackground() {
-//        map = mapViewer.getMap();
-//        injectMap(null);
+        // release images
         mapViewer.reslice();
-        super.onBackground();
     }
 
-    /**
-     * @deprecated hack
-     */
-    void onForeground() {
-//        if (map != null) {
-//            injectMap(map);
-//        }
-        super.onForeground();
-    }
-
-//#endif    
+//#endif
 
     public void close() {
         injectMap(null); // may save position in default map/atlas

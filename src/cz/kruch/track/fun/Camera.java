@@ -7,7 +7,7 @@ import cz.kruch.track.configuration.Config;
 import cz.kruch.track.ui.Desktop;
 import cz.kruch.track.Resources;
 
-//#ifndef __ANDROID__
+//#if !__ANDROID__ && !__CN1__
 import javax.microedition.media.Player;
 import javax.microedition.media.Manager;
 import javax.microedition.media.MediaException;
@@ -63,7 +63,7 @@ public abstract class Camera implements
     protected static int imgNum;
     protected static long timestamp;
 
-//#ifndef __ANDROID__
+//#if !__ANDROID__ && !__CN1__
     // common members
     protected Player player;
     protected Control control;
@@ -76,7 +76,7 @@ public abstract class Camera implements
     // camera type
     public static String type;
 
-//#ifndef __ANDROID__
+//#if !__ANDROID__ && !__CN1__
     abstract void getResolutions(final Vector v);
     abstract void createFinder(final Form form) throws MediaException;
 //#endif
@@ -101,7 +101,7 @@ public abstract class Camera implements
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("capture locator: " + Config.captureLocator);
 //#endif
-//#ifndef __ANDROID__
+//#if !__ANDROID__ && !__CN1__
         createRecorder(next, callback, timestamp).open();
 //#endif
     }
@@ -109,7 +109,7 @@ public abstract class Camera implements
     public static String[] getStillResolutions() {
         if (resolutions == null) {
             final Vector v = new Vector(8);
-//#ifndef __ANDROID__
+//#if !__ANDROID__ && !__CN1__
             createRecorder(null, null, -1).getResolutions(v);
 //#endif            
             resolutions = new String[v.size()];
@@ -119,7 +119,7 @@ public abstract class Camera implements
         return resolutions;
     }
 
-//#ifndef __ANDROID__
+//#if !__ANDROID__ && !__CN1__
 
     public void commandAction(Command c, Displayable d) {
         if (c.getCommandType() == Command.SCREEN) {
@@ -168,7 +168,7 @@ public abstract class Camera implements
         return instance;
     }
 
-//#ifndef __ANDROID__
+//#if !__ANDROID__ && !__CN1__
 
     private static Camera createRecorder(final Displayable next,
                                          final Callback callback,

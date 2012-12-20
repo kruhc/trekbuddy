@@ -244,7 +244,7 @@ final class DeviceScreen extends GameCanvas implements Runnable {
 
     boolean isHires() {
 //#ifdef __ANDROID__
-        return getHeight() > 320 || getWidth() > 320;
+        return getHeight() > 480 || getWidth() > 480;
 //#else
         return getHeight() > 480 || getWidth() > 480;
 //#endif

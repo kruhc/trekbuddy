@@ -124,10 +124,12 @@ final class ExtList extends List implements UiList {
     }
 
     public int indexOf(Object item) {
-        final Object[] items = this.items.getData();
-        for (int i = this.items.size(); --i >= 0; ) {
-            if (item.equals(items[i])) {
-                return i;
+        if (items != null) {
+            final Object[] items = this.items.getData();
+            for (int i = this.items.size(); --i >= 0; ) {
+                if (item.equals(items[i])) {
+                    return i;
+                }
             }
         }
         return -1;

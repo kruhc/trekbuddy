@@ -28,6 +28,7 @@
     <property name="android16.home" value="c:\J2ME\android-sdk-windows\platforms\android-1.6"/>
     <property name="android20.home" value="c:\J2ME\android-sdk-windows\platforms\android-2.0"/>
     <property name="microemu.home" value="z:\repository\microemu-google\microemulator"/>
+    <property name="cn1.home" value="z:\apps\Codename One"/>
     <property name="proguard3.home" value="z:\apps\proguard3.11"/>
     <property name="proguard4.home" value="z:\apps\proguard4.8"/>
 
@@ -112,10 +113,20 @@
         <pathelement location="${rim50.home}\lib\net_rim_api.jar"/>
     </path>
 
+    <path id="bootclasspath.cn1.microemu">
+        <pathelement location="c:\Program Files (x86)\Java\jdk1.4.2_19\jre\lib\rt.jar"/>
+        <pathelement location="${cn1.home}\lib\CLDC11.jar"/>
+        <pathelement location="${cn1.home}\lib\CodenameOne.jar"/>
+        <pathelement location="${microemu.home}\microemu-cldc\target\microemu-cldc-3.0.0-SNAPSHOT.jar"/>
+        <pathelement location="${microemu.home}\microemu-midp\target\microemu-midp-3.0.0-SNAPSHOT.jar"/>
+    </path>
+
+    <path id="bootclasspath.cn1">
+        <pathelement location="${cn1.home}\lib\CLDC11.jar"/>
+        <pathelement location="${cn1.home}\lib\CodenameOne.jar"/>
+    </path>
+
     <path id="bootclasspath.emulator">
-<!--
-        <pathelement location="c:\Program Files (x86)\Java\jdk1.5.0_22\jre\lib\rt.jar"/>
--->
         <pathelement location="${wtk.home}\lib\cldcapi11.jar"/>
         <pathelement location="${wtk.home}\lib\midpapi20.jar"/>
         <pathelement location="${wtk.home}\lib\jsr75.jar"/>
@@ -327,7 +338,8 @@
         <copyfile src="tmp/trekbuddy${suffix}.jar"
                   dest="tmp/trekbuddy${suffix}-obfuscated.jar"/>
 -->
-<!-- not needed, so rename the jar as if it happened
+        <!-- not needed, so rename the jar as if it happened -->
+<!--        
         <antcall target="preverify" inheritall="true"/>
 -->
         <move file="tmp/trekbuddy${suffix}-obfuscated.jar"
@@ -369,7 +381,8 @@
         <antcall target="compile.android-backport"/>
         <antcall target="android.pack" inheritall="true"/>
         <antcall target="obfuscate4.android" inheritall="true"/>
-<!-- not needed, so rename the jar as if it happened
+        <!-- not needed, so rename the jar as if it happened -->
+<!--
         <antcall target="preverify" inheritall="true"/>
 -->
         <move file="tmp/trekbuddy${suffix}-obfuscated.jar"
@@ -455,6 +468,26 @@
                 <pathelement location="${android.home}\lib\KeyTool.jar"/>
             </classpath>
         </java>
+    </target>
+
+    <target name="cn1">
+        <property name="suffix" value="-cn1"/>
+        <property name="dist.dir" value="cn1"/>
+        <property name="libraryjars" value="${cn1.home}\lib\CLDC11.jar;${cn1.home}\lib\CodenameOne.jar"/>
+        <property name="classpath.preverify" value="${libraryjars}"/>
+        <antcall target="clean"/>
+        <antcall target="a.pre.cn1"/>
+        <antcall target="compile.cn1"/>
+        <antcall target="a.pack" inheritall="true"/>
+<!--
+        <antcall target="emulator.obfuscate" inheritall="true"/>
+        <antcall target="preverify" inheritall="true"/>
+-->
+        <move file="tmp/trekbuddy${suffix}.jar"
+              tofile="tmp/trekbuddy${suffix}-obfuscated.jar"/>
+        <move file="tmp/trekbuddy${suffix}-obfuscated.jar"
+              tofile="tmp/preverified/trekbuddy${suffix}-obfuscated.jar"/>
+        <antcall target="dist" inheritall="true"/>
     </target>
 
     <target name="emulator">
@@ -588,6 +621,12 @@
                        symbols="__HECL__,__ANDROID__,__BACKPORT__,${pre.extra}"/>
     </target>
 
+    <target name="a.pre.cn1" depends="a.pre.hecl">
+        <mkdir dir="tmp/src"/>
+        <wtkpreprocess srcdir="src" destdir="tmp/src" version="1"
+                       symbols="__CN1__,__HECL__,__LOG__,${pre.extra}"/>
+    </target>
+
     <target name="a.pre.emulator" depends="a.pre.hecl">
         <mkdir dir="tmp/src"/>
         <wtkpreprocess srcdir="src" destdir="tmp/src" version="1"
@@ -695,6 +734,22 @@
                bootclasspathref="bootclasspath.android16"/>
     </target>
 
+    <target name="compile.cn1" depends="remove.nonstd.src,remove.rim.src,remove.android.src,
+                                        remove.mmapi.src,remove.fileapi.src,remove.lapi.src">
+        <mkdir dir="tmp/build/classes"/>
+        <mkdir dir="tmp/ant"/>
+        <copy file="src\api\file\Cn1File.java" todir="tmp\src\api\file"/>
+        <javac sourcepath=""
+               destdir="tmp/build/classes"
+               tempdir="tmp/ant"
+               fork="true"
+               target="1.3" source="1.3" debug="true"
+               bootclasspathref="bootclasspath.cn1.microemu">
+            <src path="tmp/src"/>
+            <src path="${microemu.home}\microemu-cn1\src\main\java"/>
+        </javac>
+    </target>
+
     <target name="compile.emulator" depends="remove.symbian.src,remove.rim.src,remove.android.src">
         <mkdir dir="tmp/build/classes"/>
         <mkdir dir="tmp/ant"/>
@@ -713,6 +768,7 @@
         <delete file="tmp/src/api/file/MotorolaFile.java"/>
         <delete file="tmp/src/api/file/Motorola1000File.java"/>
         <delete file="tmp/src/api/file/SiemensFile.java"/>
+        <delete file="tmp/src/api/file/Cn1File.java"/>
         <delete file="tmp/src/cz/kruch/track/ui/nokia/NokiaDeviceControl.java"/>
         <delete file="tmp/src/cz/kruch/track/ui/nokia/NokiaUi14DeviceControl.java"/>
         <delete file="tmp/src/cz/kruch/track/ui/nokia/MotorolaDeviceControl.java"/>
@@ -729,6 +785,7 @@
         <delete file="tmp/src/api/file/MotorolaFile.java"/>
         <delete file="tmp/src/api/file/Motorola1000File.java"/>
         <delete file="tmp/src/api/file/SiemensFile.java"/>
+        <delete file="tmp/src/api/file/Cn1File.java"/>
         <delete file="tmp/src/cz/kruch/track/ui/nokia/MotorolaDeviceControl.java"/>
         <delete file="tmp/src/cz/kruch/track/ui/nokia/Motorola2DeviceControl.java"/>
         <delete file="tmp/src/cz/kruch/track/ui/nokia/SiemensDeviceControl.java"/>
@@ -781,20 +838,30 @@
         <delete file="tmp/src/cz/kruch/track/ui/nokia/Midp2DeviceControl.java"/>
     </target>
 
-    <target name="remove.nonandroid.src" depends="remove.nonmidp.src">
+    <target name="remove.nonandroid.src" depends="remove.nonmidp.src,remove.mmapi.src,remove.lapi.src">
         <delete dir="tmp/src/org/xmlpull"/>
+    </target>
+
+    <target name="remove.android2.src">
+        <delete file="tmp/src/cz/kruch/track/location/AndroidNmeaListener.java" verbose="true"/>
+    </target>
+
+    <target name="remove.mmapi.src">
         <delete file="tmp/src/cz/kruch/track/fun/Jsr120Friends.java"/>
         <delete file="tmp/src/cz/kruch/track/fun/Jsr135Camera.java"/>
         <delete file="tmp/src/cz/kruch/track/fun/Jsr234Camera.java"/>
         <delete file="tmp/src/cz/kruch/track/fun/Playback.java"/>
+    </target>
+
+    <target name="remove.lapi.src">
         <delete file="tmp/src/cz/kruch/track/location/Jsr82LocationProvider.java"/>
         <delete file="tmp/src/cz/kruch/track/location/Jsr179LocationProvider.java"/>
         <delete file="tmp/src/cz/kruch/track/location/Jsr179OrientationProvider.java"/>
         <delete file="tmp/src/cz/kruch/track/location/O2GermanyLocationProvider.java"/>
     </target>
 
-    <target name="remove.android2.src">
-        <delete file="tmp/src/cz/kruch/track/location/AndroidNmeaListener.java" verbose="true"/>
+    <target name="remove.fileapi.src">
+        <delete file="tmp/src/api/file/Jsr75File.java"/>
     </target>
 
     <target name="create.tmp.jad">

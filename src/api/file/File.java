@@ -27,6 +27,9 @@ public abstract class File {
     public static final int FS_SXG75            = 3;
     public static final int FS_MOTOROLA         = 4;
     public static final int FS_MOTOROLA1000     = 5;
+//#ifdef __CN1__
+    public static final int FS_CN1              = 6;
+//#endif
 
     public static int fsType; // 0 (= FS_UNKNOWN)
 
@@ -42,6 +45,16 @@ public abstract class File {
             fsType = traverseBug ? FS_SXG75 : FS_JSR75;
         } catch (Throwable t) {
         }
+//#ifdef __CN1__
+        if (factory == null) {
+            try {
+                Class.forName("com.codename1.io.FileSystemStorage");
+                factory = Class.forName("api.file.Cn1File");
+                fsType = FS_CN1;
+            } catch (Throwable t) {
+            }
+        }
+//#endif
 //#ifdef __ALL__
         if (factory == null) {
             try {

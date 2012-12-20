@@ -535,11 +535,13 @@ public final class NavigationScreens {
     }
 
     static void drawBar(final Graphics graphics, final int y1, final int y2, final int yOffset) {
+//#ifndef __CN1__
         final int bh = Desktop.bar.getHeight();
         for (int y = y1; y < y2; ) {
             graphics.drawImage(Desktop.bar, 0, y + yOffset, Graphics.TOP | Graphics.LEFT);
             y += bh;
         }
+//#endif        
     }
 
     static StringBuffer toStringBuffer(final Location l, final StringBuffer sb) {

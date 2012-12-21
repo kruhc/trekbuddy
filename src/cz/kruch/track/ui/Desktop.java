@@ -742,13 +742,8 @@ public final class Desktop implements CommandListener,
         fontBtns = null; // gc hint
         fontBtns = Font.getFont(df.getFace(), Font.STYLE_PLAIN, Font.SIZE_MEDIUM);
         fontStringItems = null;
-        final int size;
-        if (isHires()) {
-            size = Font.SIZE_MEDIUM;
-        } else {
-            size = Font.SIZE_SMALL;
-        }
-        Desktop.fontStringItems = Font.getFont(df.getFace(), df.getStyle(), size);
+        Desktop.fontStringItems = Font.getFont(df.getFace(), df.getStyle(),
+                                               isHires() ? Font.SIZE_MEDIUM : Font.SIZE_SMALL);
     }
 
     private static void resetBar() {

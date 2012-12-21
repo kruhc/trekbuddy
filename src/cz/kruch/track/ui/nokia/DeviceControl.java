@@ -130,11 +130,11 @@ public class DeviceControl extends TimerTask {
         instance.close();
     }
 
-    public static void senseOn(api.location.LocationListener listener) {
+    public static void senseOn(final api.location.LocationListener listener) {
         instance.sense(listener);
     }
 
-    public static void senseOff(api.location.LocationListener listener) {
+    public static void senseOff(final api.location.LocationListener listener) {
         instance.nonsense(listener);
     }
 
@@ -168,8 +168,8 @@ public class DeviceControl extends TimerTask {
         return instance.getLac();
     }
 
-    public static void setTicker(javax.microedition.lcdui.Displayable displayable,
-                                 String ticker) {
+    public static void setTicker(final javax.microedition.lcdui.Displayable displayable,
+                                 final String ticker) {
         if (displayable != null) {
             instance.useTicker(displayable, ticker);
         }
@@ -203,7 +203,7 @@ public class DeviceControl extends TimerTask {
     private cz.kruch.track.event.Callback sensor;
 //#endif
 
-    void sense(api.location.LocationListener listener) {
+    void sense(final api.location.LocationListener listener) {
 //#ifndef __ANDROID__
         if (cz.kruch.track.TrackingMIDlet.jsr179) {
             try {
@@ -216,7 +216,7 @@ public class DeviceControl extends TimerTask {
 //#endif
     }
 
-    void nonsense(api.location.LocationListener listener) {
+    void nonsense(final api.location.LocationListener listener) {
 //#ifndef __ANDROID__
         if (sensor != null) {
             SensorAction.exec(SensorAction.ACTION_STOP, sensor, listener);
@@ -314,7 +314,7 @@ public class DeviceControl extends TimerTask {
         throw new IllegalStateException("override");
     }
 
-    void useTicker(Object list, String msg) {
+    void useTicker(final Object list, final String msg) {
         if (msg != null) {
             ((javax.microedition.lcdui.Displayable) list).setTicker(new javax.microedition.lcdui.Ticker(msg));
         } else {
@@ -362,9 +362,9 @@ public class DeviceControl extends TimerTask {
             cz.kruch.track.ui.Desktop.getDiskWorker().enqueue(new SensorAction(action, callback, listener));
         }
 
-        private SensorAction(int action,
-                             cz.kruch.track.event.Callback callback,
-                             api.location.LocationListener listener) {
+        private SensorAction(final int action,
+                             final cz.kruch.track.event.Callback callback,
+                             final api.location.LocationListener listener) {
             this.action = action;
             this.callback = callback;
             this.listener = listener;

@@ -43,7 +43,7 @@ final class AndroidDeviceControl
      }
 
     /** @Override */
-    void useTicker(Object list, final String msg) {
+    void useTicker(final Object list, final String msg) {
         ((org.microemu.android.MicroEmulatorActivity) cz.kruch.track.TrackingMIDlet.getActivity()).post(new Runnable() {
             public void run() {
                 if (msg != null) {
@@ -59,7 +59,7 @@ final class AndroidDeviceControl
     }
 
     /** @Override */
-    void sense(api.location.LocationListener listener) {
+    void sense(final api.location.LocationListener listener) {
         this.listener = listener;
         final android.hardware.SensorManager sm = (android.hardware.SensorManager) cz.kruch.track.TrackingMIDlet.getActivity().getSystemService(android.content.Context.SENSOR_SERVICE);
         sensor = sm.getDefaultSensor(android.hardware.Sensor.TYPE_ORIENTATION);
@@ -69,7 +69,7 @@ final class AndroidDeviceControl
     }
 
     /** @Override */
-    void nonsense(api.location.LocationListener listener) {
+    void nonsense(final api.location.LocationListener listener) {
         final android.hardware.SensorManager sm = (android.hardware.SensorManager) cz.kruch.track.TrackingMIDlet.getActivity().getSystemService(android.content.Context.SENSOR_SERVICE);
         if (sensor != null) {
             sm.unregisterListener(this, sensor);

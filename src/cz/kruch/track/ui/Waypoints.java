@@ -56,11 +56,11 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
     private static final int TYPE_GPX = 0;
     private static final int TYPE_LOC = 1;
 
-    private static final int SORT_BYORDER = 0;
-    private static final int SORT_BYNAME = 1;
-    private static final int SORT_BYDIST = 2;
+    private static final int SORT_BYORDER   = 0;
+    private static final int SORT_BYNAME    = 1;
+    private static final int SORT_BYDIST    = 2;
 
-    private static final int SUFFIX_LENGTH = 4;
+    private static final int SUFFIX_LENGTH  = 4;
 
     private static final String STORE_USER      = "<user>";
     private static final String STORE_FRIENDS   = "<sms>";
@@ -1802,7 +1802,6 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
         return l;
     }
 
-    // TODO forceSort is always true - remove it
     private UiList listWaypoints(final String store, final Vector wpts,
                                  final boolean forceSort, final boolean tickerInUse) {
 //#ifdef __LOG__
@@ -1822,6 +1821,12 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
 
             // pre-sort
             sortWaypoints(list, wpts, tickerInUse);
+
+        } else if (sort == SORT_BYDIST) { // has to be re-sorted everytime, but we can reuse existing vector
+
+            // re-sort
+            sortWaypoints(list, sortedWpts, tickerInUse);
+
         }
 
         // create UI list

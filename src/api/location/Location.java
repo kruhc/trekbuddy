@@ -75,6 +75,7 @@ public final class Location {
 
     public Location copyFrom(final Location l) {
         this.coordinates.copyFrom(l.getQualifiedCoordinates());
+        this.timestamp = l.timestamp;
         this.speed = l.speed;
         this.course = l.course;
         this.fixsat = l.fixsat;

@@ -84,6 +84,9 @@ public final class QualifiedCoordinates implements GeodeticPosition {
     public QualifiedCoordinates copyFrom(final QualifiedCoordinates qc) {
         this.lat = qc.lat;
         this.lon = qc.lon;
+        this.alt = qc.alt;
+        this.hAccuracy = qc.hAccuracy;
+        this.vAccuracy = qc.vAccuracy;
         return this;
     }
 

@@ -242,9 +242,23 @@ final class DeviceScreen extends GameCanvas implements Runnable {
         return Config.guideSpotsMode == 1 || (Config.guideSpotsMode == 2 && beenPressed);
     }
 
+//#ifdef __ANDROID__
+    private final float density = Float.parseFloat(System.getProperty("microemu.display.density"));
+    private final float xdpi = Float.parseFloat(System.getProperty("microemu.display.xdpi"));
+    private final float ydpi = Float.parseFloat(System.getProperty("microemu.display.ydpi"));
+//#endif
+
     boolean isHires() {
 //#ifdef __ANDROID__
+        return xdpi > 160 || ydpi > 160;
+//#else
         return getHeight() > 480 || getWidth() > 480;
+//#endif
+    }
+
+    boolean isHiresGui() {
+//#ifdef __ANDROID__
+        return density > 1.0f;
 //#else
         return getHeight() > 480 || getWidth() > 480;
 //#endif
@@ -314,7 +328,7 @@ final class DeviceScreen extends GameCanvas implements Runnable {
         gdiff = Math.min(w / 15, h / 15);
 
         // adjust UI
-        BTN_ARC = isHires() ? 25 : 10;
+        BTN_ARC = isHiresGui() ? 25 : 10;
 
         // too early invocation? happens on Belle :-$
         if (delegate == null) {

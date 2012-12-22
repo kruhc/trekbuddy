@@ -21,7 +21,7 @@ import api.util.Comparator;
 /**
  * Generic file browser.
  *
- * @author Ales Pour <kruhc@seznam.cz>
+ * @author kruhc@seznam.cz
  */
 public final class FileBrowser implements CommandListener, Runnable, Comparator {
 //#ifdef __LOG__
@@ -79,8 +79,24 @@ public final class FileBrowser implements CommandListener, Runnable, Comparator 
         Desktop.getDiskWorker().enqueue(this);
     }
 
-    public int compare(Object o1, Object o2) {
-        return compareAsFiles((String) o1, (String) o2);
+    public int compare(final Object o1, final Object o2) {
+        final String s1 = (String) o1;
+        final String s2 = (String) o2;
+        final boolean isDir1 = File.isDir(s1) || s1.indexOf(File.PATH_SEPCHAR) > -1;
+        final boolean isDir2 = File.isDir(s2) || s2.indexOf(File.PATH_SEPCHAR) > -1;
+        if (isDir1) {
+            if (isDir2) {
+                return s1.compareTo(s2);
+            } else {
+                return -1;
+            }
+        } else {
+            if (isDir2) {
+                return 1;
+            } else {
+                return s1.compareTo(s2);
+            }
+        }
     }
 
     public void run() {
@@ -301,12 +317,12 @@ public final class FileBrowser implements CommandListener, Runnable, Comparator 
     }
 
     /**
-     * Sorts enumeration of strings and creates array.
+     * Creates sorted array from enumeration of files/directories.
      *
-     * @param items enumeration of strings
-     * @param head first entry; can be <tt>null</tt>
+     * @param items enumeration of strings of files/directories
+     * @param head forced first entry; can be <tt>null</tt>
      * @param allowed array of allowed extensions
-     * @return list
+     * @return array
      */
     public static String[] sort2array(final Enumeration items,
                                       final String head,
@@ -337,7 +353,6 @@ public final class FileBrowser implements CommandListener, Runnable, Comparator 
         v.copyInto(array);
 
         // gc hint
-        v.removeAllElements();
         v = null;
 
         // sort array
@@ -348,18 +363,33 @@ public final class FileBrowser implements CommandListener, Runnable, Comparator 
     }
 
     /**
-     * Array sorting - in-place quicksort. See http://en.wikipedia.org/wiki/Quicksort.
+     * Sorts array of files/directories using {@link #compare(Object, Object)} method.
      *
-     * @param array array of objects
-     * @param lo left boundary
-     * @param hi right boundary
+     * @param array array of files/directories names
+     * @param lo left boundary (see quicksort)
+     * @param hi right boundary (see quicksort)
      */
     public static void sort(final Object[] array, final int lo, final int hi) {
         sort(array, new FileBrowser(), lo, hi);
     }
 
+    // Collections methods
+
     /**
-     * Array sorting - in-place quicksort. See http://en.wikipedia.org/wiki/Quicksort.
+     * Shuffles array.
+     *
+     * @param a array
+     */
+    public static void shuffle(final Object[] a) {
+        final java.util.Random rnd = new java.util.Random();
+        for (int i = a.length; i > 1; i--) {
+            exch(a, i - 1, rnd.nextInt(i));
+        }
+    }
+
+    /**
+     * Array sorting using in-place quicksort.
+     * See http://en.wikipedia.org/wiki/Quicksort.
      *
      * @param array array of objects
      * @param comparator comparator
@@ -393,6 +423,7 @@ public final class FileBrowser implements CommandListener, Runnable, Comparator 
             // check if pointers cross
             if (i >= j) break;
 
+            // swap
             exch(a, i, j);
         }
 
@@ -407,30 +438,5 @@ public final class FileBrowser implements CommandListener, Runnable, Comparator 
         final Object swap = a[i];
         a[i] = a[j];
         a[j] = swap;
-    }
-
-    /**
-     * Compares objects as filenames, with directories first.
-     *
-     * @param s1 first string
-     * @param s2 second string
-     * @return same as {@link String#compareTo(String)}
-     */
-    private static int compareAsFiles(final String s1, final String s2) {
-        final boolean isDir1 = File.isDir(s1) || s1.indexOf(File.PATH_SEPCHAR) > -1;
-        final boolean isDir2 = File.isDir(s2) || s2.indexOf(File.PATH_SEPCHAR) > -1;
-        if (isDir1) {
-            if (isDir2) {
-                return s1.compareTo(s2);
-            } else {
-                return -1;
-            }
-        } else {
-            if (isDir2) {
-                return 1;
-            } else {
-                return s1.compareTo(s2);
-            }
-        }
     }
 }

@@ -276,6 +276,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
             subfolder = null;
             use(pane);
         }
+        // update menu and show list
         menu(depth);
     }
 
@@ -398,6 +399,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
 //#ifdef __ANDROID__
                         try {
 //#endif
+
                         // get store name
                         final String item = (String) list.getSelectedItem();
                         idx[depth] = item;
@@ -825,10 +827,13 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                 cmp = wpt1.toString().compareTo(wpt2.toString());
             } break;
             case SORT_BYDIST: {
-                final QualifiedCoordinates qc = _pointer;
-                if (qc != null) {
-                    final float d1 = qc.distance(wpt1.getQualifiedCoordinates());
-                    final float d2 = qc.distance(wpt2.getQualifiedCoordinates());
+//                final QualifiedCoordinates qc = _pointer;
+//                if (qc != null) {
+//                    final float d1 = qc.distance(wpt1.getQualifiedCoordinates());
+//                    final float d2 = qc.distance(wpt2.getQualifiedCoordinates());
+                if (_pointer != null) {
+                    final float d1 = getDistanceHack(wpt1);
+                    final float d2 = getDistanceHack(wpt2);
                     if (d1 < d2) {
                         cmp = -1;
                     } else if (d1 > d2) {
@@ -913,6 +918,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
     private volatile Waypoint _addWptSelf;
     private volatile Object _addWptStoreKey;
     private volatile QualifiedCoordinates _pointer;
+    private volatile Hashtable _distances;
     private volatile String _storeName, _updateName, _listingTitle;
     private volatile GpxTracklog _storeUpdate;
     private volatile Waypoint _parseWpt;
@@ -1203,7 +1209,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                     // create list
                     use(listWaypoints(storeName, wpts, true, tickerInUse), tickerInUse);
 
-                    // update menu
+                    // update menu and show list
                     menu(2);
 
                     // notify user (only if freshly loaded)
@@ -1824,11 +1830,14 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
 
         } else if (sort == SORT_BYDIST) { // has to be re-sorted everytime, but we can reuse existing vector
 
+            // HACK to fight quicksort inefficiency when array is already sorted
+            FileBrowser.shuffle(sortedWpts.getData());
+
             // re-sort
             sortWaypoints(list, sortedWpts, tickerInUse);
 
         }
-
+        
         // create UI list
         final String title = (new StringBuffer(32)).append(store).append(" [").append(wpts.size()).append(']').toString();
         UiList l = null;
@@ -1915,6 +1924,15 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
         return folder + subfolder;
     }
 
+    private float getDistanceHack(final Waypoint wpt) {
+        Float fo = (Float) _distances.get(wpt);
+        if (fo == null) {
+            fo = new Float(_pointer.distance(wpt.getQualifiedCoordinates()));
+            _distances.put(wpt, fo);
+        }
+        return fo.floatValue();
+    }
+
     private void use(final UiList l) {
         // gc hint
         list = null;
@@ -1934,33 +1952,52 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
     }
 
     private void sortWaypoints(final UiList list, final Vector wpts, final boolean tickerInUse) {
-        // may take some time - start ticker
-        final boolean showTicker = list != null && wpts.size() > 64 && !tickerInUse;
-        if (showTicker) {
-            cz.kruch.track.ui.nokia.DeviceControl.setTicker(list.getUI(), Resources.getString(Resources.NAV_MSG_TICKER_LISTING));
-        }
-        try {
-            // do sort
-            switch (sort) {
-                case SORT_BYORDER: {
-                    // copy list as is
-                    wpts.copyInto(sortedWpts.getData());
-                } break;
-                case SORT_BYNAME:
-                case SORT_BYDIST: {
+        // do sort
+        switch (sort) {
+
+            case SORT_BYORDER: {
+
+                // copy original list as is
+                wpts.copyInto(sortedWpts.getData());
+
+            } break;
+
+            case SORT_BYNAME: {
+                // sort using this comparer
+                FileBrowser.sort(sortedWpts.getData(), this, 0, sortedWpts.size() - 1);
+
+            } break;
+
+            case SORT_BYDIST: {
+
+                // may take some time - start ticker
+                final boolean showTicker = list != null && wpts.size() > 64 && !tickerInUse;
+                try {
+                    if (showTicker) {
+                        cz.kruch.track.ui.nokia.DeviceControl.setTicker(list.getUI(), Resources.getString(Resources.NAV_MSG_TICKER_LISTING));
+                    }
+
                     // grab map position (used in by-dist sorting)
                     _pointer = navigator.getRelQc();
-                    // sort
+
+                    // create cache for distances
+                    _distances = new Hashtable(sortedWpts.size());
+
+                    // sort using this comparer
                     FileBrowser.sort(sortedWpts.getData(), this, 0, sortedWpts.size() - 1);
-                    // gc hint
+
+                } finally {
+
+                    // gc hints
                     _pointer = null;
-                } break;
-            }
-        } finally {
-            // stop ticker
-            if (showTicker) {
-                cz.kruch.track.ui.nokia.DeviceControl.setTicker(list.getUI(), null);
-            }
+                    _distances = null;
+
+                    // stop ticker
+                    if (showTicker) {
+                        cz.kruch.track.ui.nokia.DeviceControl.setTicker(list.getUI(), null);
+                    }
+                }
+            } break;
         }
     }
 

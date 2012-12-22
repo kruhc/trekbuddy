@@ -157,7 +157,7 @@
 2012=Update
 2013=Delete
 2014=Show
-2015=SortByPosition
+2015=SortByFilepos
 2016=SortByName
 2017=SortByDistance
 2018=Add Field Note
@@ -362,7 +362,7 @@
 3709=file revisions
 3710=prefer GC name
 3711=Sort By
-3712=position
+3712=filepos
 3713=name
 3714=distance
 3715=dynamic

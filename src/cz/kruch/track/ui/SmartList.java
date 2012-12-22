@@ -315,7 +315,9 @@ final class SmartList extends Canvas implements UiList {
                         }
                     } break;
                     case Canvas.FIRE: { // open selected
-                        listener.commandAction(List.SELECT_COMMAND, this);
+                        if (listener != null) {
+                            listener.commandAction(List.SELECT_COMMAND, this);
+                        }
                     } break;
                 }
             }
@@ -430,7 +432,15 @@ final class SmartList extends Canvas implements UiList {
         }
     }
 
-    protected void paint(Graphics g) {
+    protected void paint(final Graphics g) {
+        try {
+            paintImpl(g);
+        } catch (Throwable t) {
+            // ignore
+        }
+    }
+
+    protected void paintImpl(final Graphics g) {
         final int w = width;
         final int h = height;
         final int selected = this.selected;

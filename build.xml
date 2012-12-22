@@ -334,12 +334,7 @@
         <antcall target="compile.android"/>
         <antcall target="android.pack" inheritall="true"/>
         <antcall target="obfuscate4.android" inheritall="true"/>
-<!--
-        <copyfile src="tmp/trekbuddy${suffix}.jar"
-                  dest="tmp/trekbuddy${suffix}-obfuscated.jar"/>
--->
-        <!-- not needed, so rename the jar as if it happened -->
-<!--        
+<!-- not needed, so rename the jar as if it happened
         <antcall target="preverify" inheritall="true"/>
 -->
         <move file="tmp/trekbuddy${suffix}-obfuscated.jar"
@@ -354,9 +349,9 @@
             <property name="dist.dir" value="android"/>
             <property name="javac.debug" value="true"/>
             <property name="javac.debuglevel" value="source,lines"/>
-<!--
+            <!--
             <property name="do.obfuscate" value="true"/>
--->
+            -->
         </ant>
         <copy file="${microemu.home}/microemu-android/bin/trekbuddy.apk"
 			  tofile="dist/${vendor.dir}/${dist.dir}/trekbuddy.apk"/>
@@ -381,8 +376,7 @@
         <antcall target="compile.android-backport"/>
         <antcall target="android.pack" inheritall="true"/>
         <antcall target="obfuscate4.android" inheritall="true"/>
-        <!-- not needed, so rename the jar as if it happened -->
-<!--
+<!-- not needed, so rename the jar as if it happened
         <antcall target="preverify" inheritall="true"/>
 -->
         <move file="tmp/trekbuddy${suffix}-obfuscated.jar"
@@ -395,13 +389,11 @@
             <property name="sdk.version" value="1.6"/>
             <property name="api.level" value="3"/>
             <property name="dist.dir" value="android-backport"/>
-<!--
             <property name="javac.debug" value="true"/>
             <property name="javac.debuglevel" value="source,lines"/>
--->
-<!--
+            <!--
             <property name="do.obfuscate" value="true"/>
--->
+            -->
         </ant>
         <copy file="${microemu.home}/microemu-android/bin/trekbuddy.apk"
 			  tofile="dist/${vendor.dir}/${dist.dir}/trekbuddy-backport.apk"/>
@@ -633,7 +625,7 @@
                        symbols="__ALL__,__HECL__,__EMULATOR__,__LOG__,${pre.extra}"/>
     </target>
 
-    <target name="compile.standard" depends="remove.symbian.src,remove.rim.src,remove.android.src">
+    <target name="compile.standard" depends="remove.symbian.src,remove.rim.src,remove.android.src,remove.cn1.src">
         <mkdir dir="tmp/build/classes"/>
         <mkdir dir="tmp/ant"/>
         <javac srcdir="tmp/src"
@@ -644,7 +636,8 @@
                bootclasspathref="bootclasspath.standard"/>
     </target>
 
-    <target name="compile.standard-lite" depends="remove.symbian.src,remove.rim.src,remove.android.src,remove.hecl.src">
+    <target name="compile.standard-lite" depends="remove.symbian.src,remove.rim.src,remove.android.src,
+                                                  remove.cn1.src,remove.hecl.src">
         <mkdir dir="tmp/build/classes"/>
         <mkdir dir="tmp/ant"/>
         <javac srcdir="tmp/src"
@@ -862,6 +855,10 @@
 
     <target name="remove.fileapi.src">
         <delete file="tmp/src/api/file/Jsr75File.java"/>
+    </target>
+
+    <target name="remove.cn1.src">
+        <delete file="tmp/src/api/file/Cn1File.java"/>
     </target>
 
     <target name="create.tmp.jad">
@@ -1177,8 +1174,7 @@
             <arg value="-outjars tmp/trekbuddy${suffix}-obfuscated.jar"/>
             <arg value="-libraryjars ${libraryjars}"/>
             <arg value="-dontpreverify"/>
-            <!-- let dx optimize -->
-<!--
+<!-- let dx optimize
             <arg value="-dontoptimize"/>
 -->
             <arg value="-optimizations !code/simplification/arithmetic"/> <!-- dalvik 1.0/1.5 issue workaround -->
@@ -1205,6 +1201,7 @@
             <arg value="-whyareyoukeeping class cz.kruch.track.util.Logger"/>
             <arg value="-whyareyoukeeping class api.io.BufferedOutputStream"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.hecl.ControlledInterp"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.hecl.PluginManager"/>
             <arg value="-printmapping dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.map"/>
             <arg value="-printseeds"/>
             <arg value="-printusage dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.dco"/>

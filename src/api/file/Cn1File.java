@@ -2,6 +2,8 @@
 
 package api.file;
 
+//#ifdef __CN1__
+
 import com.codename1.io.FileSystemStorage;
 
 import java.util.Enumeration;
@@ -103,3 +105,5 @@ final class Cn1File extends File {
         return array.elements();
     }
 }
+
+//#endif

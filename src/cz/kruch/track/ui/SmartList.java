@@ -43,7 +43,7 @@ final class SmartList extends Canvas implements UiList {
     private int width, height, sbY, sbWidth, sbHeight, pY;
     private int colorBackSel, colorBackUnsel, colorForeSel, colorForeUnsel;
 
-    public SmartList(String title) {
+    public SmartList(final String title) {
         try {
             super.setTitle(title);
         } catch (Throwable t) { // RIM bug???
@@ -51,7 +51,7 @@ final class SmartList extends Canvas implements UiList {
         }
         this.marked = -1;
         if (cz.kruch.track.configuration.Config.safeColors) {
-            this.colorBackSel = 0x000000ff;
+            this.colorBackSel = 0x000a3b76;
             this.colorBackUnsel = 0x00ffffff;
             this.colorForeSel = 0x00ffffff;
             this.colorForeUnsel = 0x0;
@@ -63,9 +63,13 @@ final class SmartList extends Canvas implements UiList {
         }
         this.iconSize = getLineHeight() - 2 * 2 * VL_INSET;
         if (this.iconSize < NavigationScreens.wptSize2 << 1) {
-            this.awpt = ImageUtils.resizeImage(NavigationScreens.waypoint,
-                                               iconSize, iconSize,
-                                               ImageUtils.SLOW_RESAMPLE, false);
+            try {
+                this.awpt = ImageUtils.resizeImage(NavigationScreens.waypoint,
+                                                   iconSize, iconSize,
+                                                   ImageUtils.SLOW_RESAMPLE, false);
+            } catch (Throwable t) {
+                // ignore
+            }
         } else {
             this.awpt = NavigationScreens.waypoint;
         }
@@ -75,7 +79,7 @@ final class SmartList extends Canvas implements UiList {
         return this;
     }
 
-    public void setData(NakedVector items) {
+    public void setData(final NakedVector items) {
         if (items == null) {
             throw new NullPointerException("List items is null");
         }
@@ -83,16 +87,16 @@ final class SmartList extends Canvas implements UiList {
     }
 
     /* magic - it prevents OutOfMemoryError :-O */
-    public void setTicker(Ticker ticker) {
+    public void setTicker(final Ticker ticker) {
         super.setTicker(ticker);
     }
 
     // TODO
-    public void setSelectCommand(Command command) {
+    public void setSelectCommand(final Command command) {
         super.addCommand(command);
     }
 
-    public void setCommandListener(CommandListener listener) {
+    public void setCommandListener(final CommandListener listener) {
         super.setCommandListener(this.listener = listener);
     }
 
@@ -100,7 +104,7 @@ final class SmartList extends Canvas implements UiList {
         return selected;
     }
 
-    public void setSelectedIndex(int elementNum, boolean select) {
+    public void setSelectedIndex(final int elementNum, final boolean select) {
         if (select) {
             if (elementNum >= 0 && elementNum < items.size()) {
                 selected = elementNum;
@@ -121,7 +125,7 @@ final class SmartList extends Canvas implements UiList {
         return null;
     }
 
-    public void setSelectedItem(Object item, boolean highlight) {
+    public void setSelectedItem(final Object item, final boolean highlight) {
         final int idx = indexOf(item);
         if (idx > -1) {
             setSelectedIndex(idx, true);
@@ -132,19 +136,19 @@ final class SmartList extends Canvas implements UiList {
         // ignore
     }
 
-    /* REMOVE
+/* REMOVE
     public String getString(int index) {
         return items.elementAt(index).toString();
     }
 
 */
-    public void setMarked(int elementNum) {
+    public void setMarked(final int elementNum) {
         if (elementNum >= 0 && elementNum < items.size()) {
             marked = elementNum;
         }
     }
 
-    public int indexOf(Object item) {
+    public int indexOf(final Object item) {
         final Object[] items = this.items.getData();
         for (int i = this.items.size(); --i >= 0; ) {
             if (item.equals(items[i])) {
@@ -167,7 +171,7 @@ final class SmartList extends Canvas implements UiList {
     //
 
     protected void showNotify() {
-        if (title != null) {
+        if (title != null) { // RIM bug? see contructor
             try {
                 super.setTitle(title);
             } catch (Exception e) {
@@ -177,7 +181,7 @@ final class SmartList extends Canvas implements UiList {
         recalculate(getWidth(), getHeight());
     }
 
-    protected void sizeChanged(int w, int h) {
+    protected void sizeChanged(final int w, final int h) {
         recalculate(w, h);
 //#ifdef __ANDROID__
         /* does not paint when shown for the first time on Android without this */
@@ -185,7 +189,7 @@ final class SmartList extends Canvas implements UiList {
 //#endif
     }
 
-    protected void keyPressed(int i) {
+    protected void keyPressed(final int i) {
         boolean repaint = false;
         switch (i) {
             case Canvas.KEY_NUM1:
@@ -329,7 +333,7 @@ final class SmartList extends Canvas implements UiList {
         }
     }
 
-    protected void keyRepeated(int i) {
+    protected void keyRepeated(final int i) {
         switch (getGameAction(i)) {
             case Canvas.UP:
             case Canvas.LEFT:
@@ -340,7 +344,7 @@ final class SmartList extends Canvas implements UiList {
         }
     }
 
-    protected void pointerPressed(int x, int y) {
+    protected void pointerPressed(final int x, final int y) {
         final int count = items.size();
         final int h = height;
         final int lines = h / getLineHeight();
@@ -366,7 +370,7 @@ final class SmartList extends Canvas implements UiList {
         dragged = false;
     }
 
-    protected void pointerDragged(int x, int y) {
+    protected void pointerDragged(final int x, final int y) {
         final int count = items.size();
         final int lines = height / getLineHeight();
         final int dy = y - pY;
@@ -416,7 +420,7 @@ final class SmartList extends Canvas implements UiList {
         }
     }
 
-    protected void pointerReleased(int x, int y) {
+    protected void pointerReleased(final int x, final int y) {
 		final int count = items.size();
 		final int lines = height / getLineHeight();
 
@@ -427,7 +431,9 @@ final class SmartList extends Canvas implements UiList {
             int line = y / getLineHeight();
             if (line > lines) line--;
             if (line + top < count) {
-                listener.commandAction(List.SELECT_COMMAND, this);
+                if (listener != null) {
+                    listener.commandAction(List.SELECT_COMMAND, this);
+                }
             }
         }
     }
@@ -470,7 +476,7 @@ final class SmartList extends Canvas implements UiList {
             final String s = items[curr].toString();
             if (curr != marked) {
                 g.drawString(s, HL_INSET, y + VL_INSET, Graphics.TOP | Graphics.LEFT);
-            } else {
+            } else if (awpt != null) {
                 final int dy = (lh - iconSize) >> 1;
                 g.drawImage(awpt, HL_INSET, y /*+ VL_INSET*/ + dy, Graphics.TOP | Graphics.LEFT);
                 g.drawString(/*"(*) " + */s, HL_INSET + iconSize + HL_INSET, y + VL_INSET, Graphics.TOP | Graphics.LEFT);
@@ -506,11 +512,11 @@ final class SmartList extends Canvas implements UiList {
     // private methods
     //
 
-    private void setVisibleCount(int count) {
+    private void setVisibleCount(final int count) {
         visible = (count > 0 ? count : 1);
     }
 
-    private void recalculate(int w, int h) {
+    private void recalculate(final int w, final int h) {
         width = w;
         height = h;
         if (Desktop.screen.hasPointerEvents()) {

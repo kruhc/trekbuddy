@@ -290,6 +290,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         fullscreen = true;
         safeColors = true;
         externalConfigBackup = true;
+        listFont = 0x200008;
 
 //#elifdef __ANDROID__
 
@@ -322,6 +323,9 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         } else if (cz.kruch.track.TrackingMIDlet.lg) {
             dataDir = getDefaultDataDir("file:///Card/", "TrekBuddy/");
             fullscreen = true;
+        } else if (cz.kruch.track.TrackingMIDlet.iden) {
+            dataDir = getDefaultDataDir("file:///Storage%20Card/", "trekbuddy/");
+            safeColors = true;
         } else if (cz.kruch.track.TrackingMIDlet.motorola || cz.kruch.track.TrackingMIDlet.a780) {
             dataDir = getDefaultDataDir("file:///b/", "trekbuddy/");
             forcedGc = true;
@@ -1012,10 +1016,10 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
             try {
                 dir = File.open(Config.getFolderURL(Config.FOLDER_SOUNDS));
                 for (final Enumeration seq = dir.list(); seq.hasMoreElements(); ) {
-                    final String name = (String) seq.nextElement();
-                    final String candidate = name.toLowerCase();
-                    if (candidate.startsWith("wpt.") && (candidate.endsWith(".amr") || candidate.endsWith(".wav") || candidate.endsWith(".mp3") || candidate.endsWith(".aac")|| candidate.endsWith(".m4a")|| candidate.endsWith(".3gp"))) {
-                        defaultWptSound = name;
+                    final String filename = (String) seq.nextElement();
+                    final String candidate = filename.toLowerCase();
+                    if (candidate.startsWith("wpt.") && (candidate.endsWith(".amr") || candidate.endsWith(".wav") || candidate.endsWith(".mp3") || candidate.endsWith(".aac")|| candidate.endsWith(".m4a")|| candidate.endsWith(".3gp"))) { // FIXME for iDEN
+                        defaultWptSound = filename;
                         break;
                     }
                 }

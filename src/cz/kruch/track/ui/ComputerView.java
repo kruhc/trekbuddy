@@ -786,7 +786,14 @@ final class ComputerView extends View
                         heclResults = new Hashtable(16);
                         
                         // find handlers
-                        interp.loadUserScripts(Config.getFolderURL(Config.FOLDER_PROFILES));
+                        try {
+                            interp.loadUserScripts(Config.getFolderURL(Config.FOLDER_PROFILES));
+                        } catch (Throwable t) {
+//#ifdef __LOG__
+                            t.printStackTrace();
+                            if (log.isEnabled()) log.error("failed to load user scripts: " + t);
+//#endif
+                        }
 
                         // get handlers
                         heclOnUpdated = interp.getHandlers(EVENT_ON_LOCATION_UPDATED);
@@ -804,6 +811,10 @@ final class ComputerView extends View
                         interp.optimize();
 
 //#endif /* __HECL__ */
+
+//#ifdef __LOG__
+                        if (log.isEnabled()) log.debug("use profiles");
+//#endif
 
                         // use new set already
                         profiles = ps;
@@ -823,6 +834,10 @@ final class ComputerView extends View
                         } else {
                             s = (String) profiles.keys().nextElement();
                         }
+
+//#ifdef __LOG__
+                        if (log.isEnabled()) log.debug("start profile: " + s);
+//#endif
 
                         // got some profile?
                         if (s != null) {
@@ -1909,6 +1924,10 @@ final class ComputerView extends View
     }
 
     private Object load(final String filename) {
+//#ifdef __LOG__
+        if (log.isEnabled()) log.debug("load " + filename);
+//#endif
+
         Object result = null;
         File file = null;
         try {
@@ -1931,6 +1950,10 @@ final class ComputerView extends View
                         }
                     }
                 }
+//#ifdef __LOG__
+            } else {
+                if (log.isEnabled()) log.warn("file " + filename + " does not exist");
+//#endif
             }
         } catch (Throwable t) {
             status = t.toString();
@@ -1948,7 +1971,11 @@ final class ComputerView extends View
         return result;
     }
 
-    private void findProfiles(Hashtable profiles) throws IOException {
+    private void findProfiles(final Hashtable profiles) throws IOException {
+//#ifdef __LOG__
+        if (log.isEnabled()) log.debug("find profiles");
+//#endif
+        
         // var
         File dir = null;
 
@@ -1959,11 +1986,14 @@ final class ComputerView extends View
             // list profiles
             if (dir.exists()) {
                 final Vector v = new Vector(8);
-                for (Enumeration e = dir.list(); e.hasMoreElements(); ) {
+                for (final Enumeration e = dir.list(); e.hasMoreElements(); ) {
                     final String filename = (String) e.nextElement();
                     final String candidate = filename.toLowerCase();
-                    if (candidate.startsWith("cms.") && candidate.endsWith(".xml")) {
-                        v.addElement(filename); // use original to preserve case
+//#ifdef __LOG__
+                    if (log.isEnabled()) log.debug("found file " + filename);
+//#endif
+                    if (candidate.startsWith("cms.") && (File.isOfType(candidate, ".xml"))) {
+                        v.addElement(File.idenFix(filename));
                     }
                 }
                 profilesNames = FileBrowser.sort2array(v.elements(), null, null);
@@ -1971,6 +2001,9 @@ final class ComputerView extends View
                     profiles.put(profilesNames[i], this/* hack: null not allowed */);
                 }
             } else {
+//#ifdef __LOG__
+                if (log.isEnabled()) log.warn("folder ui-profiles does not exist");
+//#endif
                 status = "Folder ui-profiles does not exist.";
             }
         } finally {
@@ -1981,6 +2014,9 @@ final class ComputerView extends View
                 // ignore
             }
         }
+//#ifdef __LOG__
+        if (log.isEnabled()) log.debug("~find profiles; " + profiles.size());
+//#endif
     }
 
      private String loadProfile(final String filename, final InputStream in) throws IOException, XmlPullParserException {

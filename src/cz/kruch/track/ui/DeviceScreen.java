@@ -105,7 +105,7 @@ final class DeviceScreen extends GameCanvas implements Runnable {
         if (Config.uiNoCommands) {
             this.commands = new Command[10];
             if (Config.safeColors) {
-                this.colorBackSel = 0x000000ff;
+                this.colorBackSel = 0x000a3b76;
                 this.colorBackUnsel = 0x00ffffff;
                 this.colorForeSel = 0x00ffffff;
                 this.colorForeUnsel = 0x0;

@@ -337,7 +337,7 @@ public final class Desktop implements CommandListener,
         consoleInit(g);
 
         // show copyright(s)
-        consoleShow(g, lineY, "TrekBuddy \u00a9 2012 KrUcH");
+        consoleShow(g, lineY, "TrekBuddy \u00a9 2013 KrUcH");
         lineY += lineHeight;
         final String lc = Resources.getString(Resources.BOOT_LOCAL_COPY);
         if (lc != null && lc.length() > 0) {
@@ -2024,27 +2024,27 @@ public final class Desktop implements CommandListener,
         display.setCurrent(next);
     }
 
-    public static void showWaitScreen(String title, String message) {
+    public static void showWaitScreen(final String title, final String message) {
         final Form form = new Form(title);
         form.append(message);
         display.setCurrent(form);
     }
 
-    public static void showConfirmation(String message, Displayable nextDisplayable) {
+    public static void showConfirmation(final String message, final Displayable nextDisplayable) {
         showAlert(AlertType.CONFIRMATION, message, INFO_DIALOG_TIMEOUT, nextDisplayable);
     }
 
-    public static void showAlarm(String message, Displayable nextDisplayable,
-                                 boolean forever) {
+    public static void showAlarm(final String message, final Displayable nextDisplayable,
+                                 final boolean forever) {
         vibrate(500);
         showAlert(AlertType.ALARM, message, forever ? Alert.FOREVER : ALARM_DIALOG_TIMEOUT, nextDisplayable);
     }
 
-    public static void showInfo(String message, Displayable nextDisplayable) {
+    public static void showInfo(final String message, final Displayable nextDisplayable) {
         showAlert(AlertType.INFO, message, INFO_DIALOG_TIMEOUT, nextDisplayable);
     }
 
-    public static void showWarning(String message, Throwable t, Displayable nextDisplayable) {
+    public static void showWarning(String message, final Throwable t, final Displayable nextDisplayable) {
         if (message == null) {
             message = "";
         }
@@ -2057,7 +2057,7 @@ public final class Desktop implements CommandListener,
         showAlert(AlertType.WARNING, message, WARN_DIALOG_TIMEOUT, nextDisplayable);
     }
 
-    public static void showError(String message, Throwable t, Displayable nextDisplayable) {
+    public static void showError(String message, final Throwable t, final Displayable nextDisplayable) {
         if (message == null) {
             message = "";
         }
@@ -2080,8 +2080,8 @@ public final class Desktop implements CommandListener,
         showAlert(AlertType.ERROR, message, Alert.FOREVER, nextDisplayable);
     }
 
-    private static void showAlert(AlertType type, String message, int timeout,
-                                  Displayable nextDisplayable) {
+    private static void showAlert(final AlertType type, final String message, final int timeout,
+                                  final Displayable nextDisplayable) {
         Alert alert = new Alert(cz.kruch.track.TrackingMIDlet.APP_TITLE,
                                 message, null, Config.noSounds ? null : type);
         alert.setTimeout(timeout);

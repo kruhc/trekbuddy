@@ -144,6 +144,32 @@ public abstract class File {
         return fsType == FS_SXG75 || fsType == FS_MOTOROLA || fsType == FS_MOTOROLA1000;
     }
 
+    public static boolean isOfType(final String filename, final String extension) {
+        final String candidate = filename.toLowerCase();
+//#if __SYMBIAN__ || __RIM__ || __ANDROID__
+        return candidate.endsWith(extension);
+//#else
+        if (candidate.endsWith(extension)) {
+            return true;
+        } else if (cz.kruch.track.TrackingMIDlet.iden) {
+            return candidate.endsWith(extension + PATH_SEPARATOR);
+        }
+        return false;
+//#endif
+    }
+
+    public static String idenFix(final String filename) {
+//#if __SYMBIAN__ || __RIM__ || __ANDROID__
+        return filename;
+//#else
+        if (!cz.kruch.track.TrackingMIDlet.iden || !filename.endsWith(PATH_SEPARATOR)) {
+            return filename;
+        }
+
+        return filename.substring(0, filename.length() - 1);
+//#endif
+    }
+
     abstract Enumeration getRoots();
      
     public abstract Enumeration list() throws IOException;

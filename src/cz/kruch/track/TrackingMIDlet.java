@@ -25,7 +25,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
     public static boolean jsr82, jsr120, jsr135, jsr179, jsr234, jsr256, motorola179, comm, nokiaui14;
     public static boolean sonyEricsson, sonyEricssonEx, nokia, siemens, lg, motorola, samsung, sonim;
     public static boolean j9, jbed, jblend, intent, wm, palm, rim, symbian, s60nd, s60rdfp2, uiq, brew,
-                          android, playbook;
+                          android, playbook, iden;
     public static boolean sxg75, a780, s65;
 
     // diagnostics
@@ -92,6 +92,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         a780 = "j2me".equals(platform);
         s65 = "S65".equals(platform);
         sonim = platform.startsWith("Sonim");
+        System.getProperty("com.nokia.targetdebug"); // for ODD
 //#endif
 
 //#ifndef __ANDROID__
@@ -209,7 +210,17 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         }
 
 //#endif /* __ALL__ */
-        
+
+        // has to be outside __ALL__
+        try {
+            Class.forName("com.mot.iden.zip.ZipException");
+            iden = true;
+//#ifdef __LOG__
+            System.out.println("* iDEN");
+//#endif
+        } catch (Throwable t) {
+        }
+                
         // init device control (also helps to detect other platforms)
         cz.kruch.track.ui.nokia.DeviceControl.initialize();
 

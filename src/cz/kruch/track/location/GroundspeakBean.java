@@ -33,7 +33,7 @@ public final class GroundspeakBean {
     private Object properties;
 
     public GroundspeakBean(String ns, String id) {
-        this.ns = ns;
+        this.ns = cache(ns);
         this.id = id;
     }
 
@@ -121,14 +121,15 @@ public final class GroundspeakBean {
     }
 
     public String getShortListing() {
-        if (getProperties()[IDX_SHORTL] instanceof byte[]) {
+        final Object property = getProperties()[IDX_SHORTL];
+        if (property instanceof byte[]) {
             try {
-                return new String((byte[]) getProperties()[IDX_SHORTL], UTF_8);
+                return new String((byte[]) property, UTF_8);
             } catch (UnsupportedEncodingException e) {
                 // should never happen
             }
         }
-        return (String) getProperties()[IDX_SHORTL];
+        return (String) property;
     }
 
     public void setShortListing(String shortListing) {
@@ -140,14 +141,15 @@ public final class GroundspeakBean {
     }
 
     public String getLongListing() {
-        if (getProperties()[IDX_LONGL] instanceof byte[]) {
+        final Object property = getProperties()[IDX_LONGL];
+        if (property instanceof byte[]) {
             try {
-                return new String((byte[]) getProperties()[IDX_LONGL], UTF_8);
+                return new String((byte[]) property, UTF_8);
             } catch (UnsupportedEncodingException e) {
                 // should never happen
             }
         }
-        return (String) getProperties()[IDX_LONGL];
+        return (String) property;
     }
 
     public void setLongListing(String longListing) {
@@ -201,12 +203,9 @@ public final class GroundspeakBean {
         final Vector tokens = GroundspeakBean.tokens;
         final int i = tokens.indexOf(input);
         if (i > -1) {
-//#ifdef __LOG__
-            if (log.isEnabled()) log.debug("token '" + input + "' is cached");
-//#endif
             return (String) tokens.elementAt(i);
         }
-        if (tokens.size() < 64) { // paranoia
+        if (tokens.size() < 128) { // paranoia
             tokens.addElement(input);
         }
         return input;
@@ -232,9 +231,13 @@ public final class GroundspeakBean {
             }
         }
 
-        private String id;
-        private String date, type, finder;
+        private String id, type;
+        private String date, finder;
+//#if __SYMBIAN__ || __RIM__ || __ANDROID__
         private String text;
+//#else
+        private Object text;
+//#endif
         private javax.microedition.lcdui.Image icon;
 
         public Log(String id) {
@@ -252,7 +255,7 @@ public final class GroundspeakBean {
 
         public void setDate(String date) {
             if (date != null) {
-                final int idx = date.indexOf("T00:00:00");
+                final int idx = date.indexOf("T00:00:00"); // billy06's logs
                 if (idx > -1) {
                     date = date.substring(0, idx);
                 }
@@ -269,11 +272,30 @@ public final class GroundspeakBean {
         }
 
         public String getText() {
+//#if __SYMBIAN__ || __RIM__ || __ANDROID__
             return text;
+//#else
+            if (text instanceof byte[]) {
+                try {
+                    return new String((byte[]) text, UTF_8);
+                } catch (UnsupportedEncodingException e) {
+                    // should never happen
+                }
+            }
+            return (String) text;
+//#endif
         }
 
         public void setText(String text) {
-            this.text = cache(text);
+//#if __SYMBIAN__ || __RIM__ || __ANDROID__
+            this.text = text;
+//#else
+            try {
+                this.text = text.getBytes(UTF_8);
+            } catch (UnsupportedEncodingException e) {
+                this.text = text;
+            }
+//#endif
         }
 
         public String getType() {
@@ -299,7 +321,7 @@ public final class GroundspeakBean {
         }
 
         public String toString() {
-            return date;
+            return getDate();
         }
     }
 }

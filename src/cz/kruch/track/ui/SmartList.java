@@ -63,13 +63,9 @@ final class SmartList extends Canvas implements UiList {
         }
         this.iconSize = getLineHeight() - 2 * 2 * VL_INSET;
         if (this.iconSize < NavigationScreens.wptSize2 << 1) {
-            try {
-                this.awpt = ImageUtils.resizeImage(NavigationScreens.waypoint,
-                                                   iconSize, iconSize,
-                                                   ImageUtils.SLOW_RESAMPLE, false);
-            } catch (Throwable t) {
-                // ignore
-            }
+            this.awpt = ImageUtils.resizeImage(NavigationScreens.waypoint,
+                                               iconSize, iconSize,
+                                               ImageUtils.SLOW_RESAMPLE, false);
         } else {
             this.awpt = NavigationScreens.waypoint;
         }

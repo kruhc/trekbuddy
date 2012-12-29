@@ -277,11 +277,11 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
             choice5.setSelectedIndex(Config.easyZoomMode, true);
             submenu.append(choice5);
 
-            // font
+            // desktop font
             submenu.append(gauge1 = new Gauge(Resources.getString(Resources.CFG_DESKTOP_FLD_FONT_SIZE), true,
                                               2, Config.desktopFontSize));
 
-            // smartlist font
+            // list font
             final StringBuffer hexstr = new StringBuffer(Integer.toHexString(Config.listFont));
             while (hexstr.length() < 6) {
                 hexstr.insert(0, '0');

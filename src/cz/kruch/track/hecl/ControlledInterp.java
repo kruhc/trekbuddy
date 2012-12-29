@@ -99,12 +99,12 @@ public class ControlledInterp extends Interp {
             if (dir.exists()) {
 
                 // load all scripts for given folder
-                for (Enumeration e = dir.list(); e.hasMoreElements(); ) {
+                for (final Enumeration e = dir.list(); e.hasMoreElements(); ) {
                     final String filename = (String) e.nextElement();
-                    if (filename.endsWith(".hcl") || filename.endsWith(".HCL")) {
-                        
+                    if (File.isOfType(filename, ".hcl")) {
+
                         // load script from file
-                        loadUserScript(folder, filename);
+                        loadUserScript(folder, File.idenFix(filename));
                     }
                 }
             }
@@ -128,7 +128,7 @@ public class ControlledInterp extends Interp {
 //#endif
 
         NakedVector v = null;
-        for (Enumeration e = commands.keys(); e.hasMoreElements(); ) {
+        for (final Enumeration e = commands.keys(); e.hasMoreElements(); ) {
             final String name = (String) e.nextElement();
             if (name.endsWith(eventName)) {
 //#ifdef __LOG__

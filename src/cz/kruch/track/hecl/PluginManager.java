@@ -634,11 +634,11 @@ public final class PluginManager implements CommandListener, Runnable, Comparato
             for (final Enumeration seq = dir.list(); seq.hasMoreElements(); ) {
                 final String filename = (String) seq.nextElement();
                 final String candidate = filename.toLowerCase();
-                if (candidate.startsWith("live.") && candidate.endsWith(".hcl")) {
+                if (candidate.startsWith("live.") && File.isOfType(candidate, ".hcl")) {
                     if (plugins == null) {
                         plugins = new NakedVector(4, 2);
                     }
-                    plugins.addElement(new Plugin(filename));
+                    plugins.addElement(new Plugin(File.idenFix(filename)));
                 }
             }
         } catch (Throwable t) {

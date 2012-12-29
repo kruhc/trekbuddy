@@ -5,6 +5,7 @@ import cz.kruch.track.util.NakedVector;
 import javax.microedition.lcdui.Displayable;
 import javax.microedition.lcdui.Command;
 import javax.microedition.lcdui.CommandListener;
+import javax.microedition.lcdui.Ticker;
 
 interface UiList {
     Displayable getUI();
@@ -27,4 +28,7 @@ interface UiList {
     int indexOf(Object item);
     int size();
     void setFitPolicy(int policy);
+
+    boolean isShown();
+    Ticker getTicker();
 }

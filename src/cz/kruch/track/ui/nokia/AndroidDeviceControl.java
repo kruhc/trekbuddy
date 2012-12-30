@@ -52,6 +52,7 @@ final class AndroidDeviceControl
                 } else {
                     if (ticker != null) {
                         ticker.dismiss();
+                        ticker = null;
                     }
                 }
             }

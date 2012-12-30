@@ -1495,7 +1495,7 @@ public final class HXmlParser implements XmlPullParser {
             return result;
         }
 
-        return null;
+        return CCONSTANT_EMPTY;
     }
 
     public String getNamespace() {

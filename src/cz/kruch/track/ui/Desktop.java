@@ -703,9 +703,15 @@ public final class Desktop implements CommandListener,
         return screen.isHires();
     }
 
-    public static void vibrate(int ms) {
+    public static void vibrate(final int ms) {
         if (!Config.powerSave) {
             display.vibrate(ms);
+        }
+    }
+
+    public static void actionFeedback(final boolean act) {
+        if (act) {
+            display.vibrate(50); // TODO config
         }
     }
 
@@ -2529,23 +2535,21 @@ public final class Desktop implements CommandListener,
         }
     }
 
-    // TODO move to DeviceScreen???
-    private static void drawPause(final Graphics g) {
+    static void drawPause(final Graphics g, final Displayable target, final String text) {
         final Font f = Font.getDefaultFont();
-        final String s = Resources.getString(Resources.DESKTOP_MSG_PAUSED);
-        final int sw = f.stringWidth(s);
+        final int sw = f.stringWidth(text);
         final int sh = f.getHeight();
-        final int w = screen.getWidth() * 6 / 8;
+        final int w = target.getWidth() * 6 / 8;
         final int h = sh << 1;
-        final int x = (screen.getWidth() - w) >> 1;
-        final int y = (screen.getHeight() - h) - DeviceScreen.BTN_ARC;
+        final int x = (target.getWidth() - w) >> 1;
+        final int y = (target.getHeight() - h) * 4 / 5;
         g.setColor(DeviceScreen.BTN_COLOR);
         g.fillRoundRect(x, y, w, h, DeviceScreen.BTN_ARC, DeviceScreen.BTN_ARC);
         g.setColor(DeviceScreen.BTN_HICOLOR);
         g.drawRoundRect(x, y, w, h, DeviceScreen.BTN_ARC, DeviceScreen.BTN_ARC);
         g.setColor(0x00ffffff);
         g.setFont(f);
-        g.drawString(s, x + ((w - sw) >> 1), y + ((h - sh) >> 1), Graphics.TOP | Graphics.LEFT);
+        g.drawString(text, x + ((w - sw) >> 1), y + ((h - sh) >> 1), Graphics.TOP | Graphics.LEFT);
     }
 
     /*
@@ -2691,7 +2695,7 @@ public final class Desktop implements CommandListener,
 
                 // paused?
                 if (Desktop.paused) {
-                    Desktop.drawPause(g);
+                    Desktop.drawPause(g, screen, Resources.getString(Resources.DESKTOP_MSG_PAUSED));
                 }
 
                 // flush offscreen buffer
@@ -2779,7 +2783,7 @@ public final class Desktop implements CommandListener,
                     }
                 }
                 // give feedback
-                vibrate(50);
+                actionFeedback(true);
             }
         }
     }

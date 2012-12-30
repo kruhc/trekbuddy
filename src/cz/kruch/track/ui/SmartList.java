@@ -14,6 +14,9 @@ import javax.microedition.lcdui.Ticker;
 import javax.microedition.lcdui.Command;
 import javax.microedition.lcdui.Displayable;
 import javax.microedition.lcdui.Image;
+import javax.microedition.lcdui.Font;
+
+//#define __CUSTOM_TICKER__
 
 /**
  * Unlimited UI list.
@@ -34,6 +37,9 @@ final class SmartList extends Canvas implements UiList {
     private NakedVector items;
     private String title;
     private Image awpt;
+//#ifdef __CUSTOM_TICKER__
+    private Ticker ticker;
+//#endif
 
     private int top, selected, marked;
     private int visible;
@@ -84,8 +90,19 @@ final class SmartList extends Canvas implements UiList {
 
     /* magic - it prevents OutOfMemoryError :-O */
     public void setTicker(final Ticker ticker) {
+//#ifndef __CUSTOM_TICKER__
         super.setTicker(ticker);
+//#else
+        this.ticker = ticker;
+        repaint();
+//#endif
     }
+
+//#ifdef __CUSTOM_TICKER__
+    public Ticker getTicker() {
+        return ticker;
+    }
+//#endif
 
     // TODO
     public void setSelectCommand(final Command command) {
@@ -502,7 +519,14 @@ final class SmartList extends Canvas implements UiList {
 			g.setColor(colorSbHiBorder);
 			g.drawLine(w - 1, 0, w - 1, h);
 		}
-	}
+
+//#ifdef __CUSTOM_TICKER__
+        if (ticker != null) {
+            Desktop.drawPause(g, this, ticker.getString());
+        }
+//#endif
+
+    }
 
     //
     // private methods
@@ -513,6 +537,10 @@ final class SmartList extends Canvas implements UiList {
     }
 
     private void recalculate(final int w, final int h) {
+        if (width == w && height == h) {
+            return;
+        }
+
         width = w;
         height = h;
         if (Desktop.screen.hasPointerEvents()) {
@@ -525,6 +553,7 @@ final class SmartList extends Canvas implements UiList {
         }
         final int v = h / getLineHeight();
         sbHeight = (int) (h * ((float)v / size()));
+
         setVisibleCount(v);
         makeSelectedVisible();
     }
@@ -554,4 +583,5 @@ final class SmartList extends Canvas implements UiList {
 		}
 		return false;
 	}
+
 }

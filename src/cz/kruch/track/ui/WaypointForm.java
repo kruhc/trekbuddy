@@ -643,9 +643,9 @@ final class WaypointForm implements CommandListener, ItemCommandListener, ItemSt
                 final Form main = form;
                 // fill form
                 final Form box = form = new Form(Resources.getString(Resources.NAV_FLD_GS_LOG));
-                appendStringItem(Resources.getString(Resources.NAV_FLD_DATE), gclog.getDate());
+                appendStringItem(Resources.getString(Resources.NAV_FLD_DATE), gclog.getDateAsString());
                 appendStringItem(Resources.getString(Resources.NAV_FLD_TYPE), gclog.getType());
-                appendStringItem(Resources.getString(Resources.NAV_FLD_FINDER), gclog.getFinder());
+                appendStringItem(Resources.getString(Resources.NAV_FLD_FINDER), gclog.getFinderAsString());
                 appendStringItem(Resources.getString(Resources.NAV_FLD_TEXT),
                                  convertHtmlSnippet(gclog.getText()));
                 // hack: restore main form member

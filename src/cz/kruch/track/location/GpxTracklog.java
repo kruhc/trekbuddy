@@ -616,7 +616,7 @@ public final class GpxTracklog implements Runnable {
             for (int i = 0; i < logs.size(); i++) {
                 final GroundspeakBean.Log entry = (GroundspeakBean.Log) logs.elementAt(i);
                 serializer.startTag(ns, ELEMENT_LOG);
-                serializer.attribute(DEFAULT_NAMESPACE, ATTRIBUTE_ID, entry.getId());
+                serializeAttribute(serializer, entry.getId(), DEFAULT_NAMESPACE, ATTRIBUTE_ID);
                 serializeElement(serializer, entry.getDate(), ns, eleDate);
                 serializeElement(serializer, entry.getType(), ns, ELEMENT_TYPE);
                 serializeElement(serializer, entry.getFinder(), ns, eleFinder);
@@ -666,11 +666,27 @@ public final class GpxTracklog implements Runnable {
         serializer.endTag(DEFAULT_NAMESPACE, ELEMENT_WPT);
     }
 
+    private static void serializeAttribute(final HXmlSerializer serializer, final char value[],
+                                           final String ns, final String name) throws IOException {
+        if (value != null && value.length > 0) {
+            serializer.attribute(ns, name, value, value.length);
+        }
+    }
+
     private static void serializeElement(final HXmlSerializer serializer, final String value,
                                          final String ns, final String tag) throws IOException {
         if (value != null && value.length() > 0) {
             serializer.startTag(ns, tag);
             serializer.text(value);
+            serializer.endTag(ns, tag);
+        }
+    }
+
+    private static void serializeElement(final HXmlSerializer serializer, final char[] value,
+                                         final String ns, final String tag) throws IOException {
+        if (value != null && value.length > 0) {
+            serializer.startTag(ns, tag);
+            serializer.text(value, 0, value.length);
             serializer.endTag(ns, tag);
         }
     }

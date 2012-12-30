@@ -533,16 +533,13 @@ final class SmartList extends Canvas implements UiList {
     //
 
     private void setVisibleCount(final int count) {
-        visible = (count > 0 ? count : 1);
+        visible = count > 0 ? count : 1;
     }
 
     private void recalculate(final int w, final int h) {
-        if (width == w && height == h) {
-            return;
-        }
-
         width = w;
         height = h;
+        
         if (Desktop.screen.hasPointerEvents()) {
             sbWidth = (int) ((float)w * .05);
             if (sbWidth < 20) {

@@ -121,43 +121,19 @@ public final class GroundspeakBean {
     }
 
     public String getShortListing() {
-        final Object property = getProperties()[IDX_SHORTL];
-        if (property instanceof byte[]) {
-            try {
-                return new String((byte[]) property, UTF_8);
-            } catch (UnsupportedEncodingException e) {
-                // should never happen
-            }
-        }
-        return (String) property;
+        return objectToString(getProperties()[IDX_SHORTL]);
     }
 
     public void setShortListing(String shortListing) {
-        try {
-            this.getProperties()[IDX_SHORTL] = shortListing.getBytes(UTF_8);
-        } catch (UnsupportedEncodingException e) {
-            this.getProperties()[IDX_SHORTL] = shortListing;
-        }
+        getProperties()[IDX_SHORTL] = stringToObject(shortListing);
     }
 
     public String getLongListing() {
-        final Object property = getProperties()[IDX_LONGL];
-        if (property instanceof byte[]) {
-            try {
-                return new String((byte[]) property, UTF_8);
-            } catch (UnsupportedEncodingException e) {
-                // should never happen
-            }
-        }
-        return (String) property;
+        return objectToString(getProperties()[IDX_LONGL]);
     }
 
     public void setLongListing(String longListing) {
-        try {
-            this.getProperties()[IDX_LONGL] = longListing.getBytes(UTF_8);
-        } catch (UnsupportedEncodingException e) {
-            this.getProperties()[IDX_LONGL] = longListing;
-        }
+        getProperties()[IDX_LONGL] = stringToObject(longListing);
     }
 
     public Vector getLogs() {
@@ -211,6 +187,27 @@ public final class GroundspeakBean {
         return input;
     }
 
+    static Object stringToObject(final String s) {
+        Object result;
+        try {
+            result = s.getBytes(UTF_8);
+        } catch (UnsupportedEncodingException e) {
+            result = s;
+        }
+        return result;
+    }
+
+    static String objectToString(final Object o) {
+        if (o instanceof byte[]) {
+            try {
+                return new String((byte[]) o, UTF_8);
+            } catch (UnsupportedEncodingException e) {
+                // should never happen
+            }
+        }
+        return (String) o;
+    }
+
     public static class Log {
         public static final String[] TYPES = { "Found it", "Didn't find it", "Write note", "Needs Maintenance", "Owner Maintenance" };
         public static final javax.microedition.lcdui.Image[] ICONS = new javax.microedition.lcdui.Image[TYPES.length];
@@ -231,26 +228,28 @@ public final class GroundspeakBean {
             }
         }
 
-        private String id, type;
-        private String date, finder;
+        private char[] id, finder, date;
+        private Object type;
 //#if __SYMBIAN__ || __RIM__ || __ANDROID__
         private String text;
 //#else
         private Object text;
 //#endif
-        private javax.microedition.lcdui.Image icon;
 
         public Log(String id) {
-            this.id = id;
-            this.icon = UNKNOWN;
+            this.id = id.toCharArray();
         }
 
-        public String getId() {
+        public char[] getId() {
             return id;
         }
 
-        public String getDate() {
+        public char[] getDate() {
             return date;
+        }
+
+        public String getDateAsString() {
+            return new String(date);
         }
 
         public void setDate(String date) {
@@ -259,15 +258,20 @@ public final class GroundspeakBean {
                 if (idx > -1) {
                     date = date.substring(0, idx);
                 }
+                this.date = date.toCharArray();
             }
-            this.date = date;
+            // never null
         }
 
-        public String getFinder() {
+        public char[] getFinder() {
             return finder;
         }
 
-        public void setFinder(String finder) {
+        public String getFinderAsString() {
+            return new String(finder);
+        }
+
+        public void setFinder(char[] finder) {
             this.finder = finder;
         }
 
@@ -275,14 +279,7 @@ public final class GroundspeakBean {
 //#if __SYMBIAN__ || __RIM__ || __ANDROID__
             return text;
 //#else
-            if (text instanceof byte[]) {
-                try {
-                    return new String((byte[]) text, UTF_8);
-                } catch (UnsupportedEncodingException e) {
-                    // should never happen
-                }
-            }
-            return (String) text;
+            return objectToString(text);
 //#endif
         }
 
@@ -290,38 +287,37 @@ public final class GroundspeakBean {
 //#if __SYMBIAN__ || __RIM__ || __ANDROID__
             this.text = text;
 //#else
-            try {
-                this.text = text.getBytes(UTF_8);
-            } catch (UnsupportedEncodingException e) {
-                this.text = text;
-            }
+            this.text = stringToObject(text);
 //#endif
         }
 
         public String getType() {
-            return type;
+            if (type instanceof Byte) {
+                return TYPES[((Byte)type).byteValue()];
+            }
+            return (String)type;
         }
 
         public void setType(String type) {
-            javax.microedition.lcdui.Image icon = UNKNOWN;
             final String[] types = TYPES;
             for (int i = types.length; --i >= 0; ) {
                 if (types[i].equals(type)) {
-                    type = types[i];
-                    icon = ICONS[i];
-                    break;
+                    this.type = new Byte((byte)i);
+                    return;
                 }
             }
             this.type = type;
-            this.icon = icon;
         }
 
         public javax.microedition.lcdui.Image getIcon() {
-            return icon;
+            if (type instanceof Byte) {
+                return ICONS[((Byte)type).byteValue()];
+            }
+            return UNKNOWN;
         }
 
         public String toString() {
-            return getDate();
+            return getDateAsString();
         }
     }
 }

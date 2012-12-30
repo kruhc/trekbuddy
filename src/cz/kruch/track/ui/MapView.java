@@ -705,7 +705,7 @@ final class MapView extends View {
         }
 
         // give feedback
-        Desktop.vibrate(50);
+        Desktop.actionFeedback(true);
 
         // invert
         x2 = ++x2 % 2;

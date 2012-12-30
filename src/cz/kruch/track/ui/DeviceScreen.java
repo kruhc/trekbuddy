@@ -63,7 +63,7 @@ final class DeviceScreen extends GameCanvas implements Runnable {
     private volatile boolean touchMenuActive, cmdExec;
 
     // menu appearance
-    volatile boolean beenPressed;
+    volatile boolean beenPressed; // TODO review visibility
     private volatile TimerTask delayedRepaint;
 
 //#ifdef __ALL__

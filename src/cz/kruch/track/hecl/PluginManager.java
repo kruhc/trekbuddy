@@ -3,10 +3,10 @@
 package cz.kruch.track.hecl;
 
 import api.file.File;
-import api.util.Comparator;
 import api.lang.RuntimeException;
 import api.lang.Int;
 import api.location.Location;
+import api.util.Comparator;
 
 import java.util.Enumeration;
 import java.util.Vector;

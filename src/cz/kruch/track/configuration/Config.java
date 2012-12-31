@@ -200,7 +200,10 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
     public static boolean siemensIo;
 //#ifdef __ALT_RENDERER__
     public static boolean S60renderer           = true;
-//#endif    
+//#endif
+//#ifndef __ANDROID__
+    public static boolean s40ticker;
+//#endif
     public static boolean forcedGc;
     public static boolean oneTileScroll;
     public static boolean largeAtlases;
@@ -345,6 +348,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         } else if (cz.kruch.track.TrackingMIDlet.nokia) {
             safeColors = true;
             captureLocator = "capture://image";
+            s40ticker = cz.kruch.track.TrackingMIDlet.s40th6;
         }
 
 //#endif
@@ -582,6 +586,9 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
             // 1.1.2 change
             verboseLoading = din.readBoolean();
 
+            // 1.1.4 change
+            s40ticker = din.readBoolean();
+
         } catch (Exception e) {
         }
 
@@ -723,6 +730,8 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         dout.writeBoolean(tilesScaleFiltered);
         /* since 1.1.2 */
         dout.writeBoolean(verboseLoading);
+        /* since 1.1.4 */
+        dout.writeBoolean(s40ticker);
 
 //#ifdef __LOG__
         if (log.isEnabled()) log.info("configuration updated");

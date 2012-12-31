@@ -392,10 +392,14 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
                 Config.tilesScaleFiltered,
                 Config.verboseLoading
             });
-            if (cz.kruch.track.TrackingMIDlet.symbian) {
-                choice1.setSelectedIndex(choice1.append(Resources.getString(Resources.CFG_TWEAKS_FLD_USE_TBSVC), null),
-                                         Config.useNativeService);
-            }
+//#ifndef __ANDROID__
+            choice1.setSelectedIndex(choice1.append("S40 ticker hack", null),
+                                     Config.s40ticker);
+//#endif
+//#ifdef __SYMBIAN__
+            choice1.setSelectedIndex(choice1.append(Resources.getString(Resources.CFG_TWEAKS_FLD_USE_TBSVC), null),
+                                     Config.useNativeService);
+//#endif
             submenu.append(choice1);
 
             // HECL
@@ -969,9 +973,12 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
                 Config.externalConfigBackup = perf[8];
                 Config.tilesScaleFiltered = perf[9];
                 Config.verboseLoading = perf[10];
-                if (cz.kruch.track.TrackingMIDlet.symbian) {
-                    Config.useNativeService = perf[11];
-                }
+//#ifndef __ANDROID__
+                Config.s40ticker = perf[11];
+//#endif
+//#ifdef __SYMBIAN__
+                Config.useNativeService = perf[12];
+//#endif
 
                 // HECL
                 Config.heclOpt = choice2.getSelectedIndex();

@@ -193,7 +193,7 @@ public final class FileBrowser implements CommandListener, Runnable, Comparator 
                     isDir = file.getURL().endsWith(File.PATH_SEPARATOR);
                 }
 //#ifdef __LOG__
-                if (log.isEnabled()) log.error("isDir? " + isDir);
+                if (log.isEnabled()) log.error("isDir? " + isDir + "; " + file.getURL());
 //#endif
 
                 // list dir content
@@ -258,7 +258,7 @@ public final class FileBrowser implements CommandListener, Runnable, Comparator 
 
     private void show(final File holder) {
 //#ifdef __LOG__
-        if (log.isEnabled()) log.debug("show; depth = " + depth);
+        if (log.isEnabled()) log.debug("show; depth = " + depth + "; file = " + file.getURL());
 //#endif
 
         // may take long, avoid impatient user

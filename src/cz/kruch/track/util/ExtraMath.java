@@ -62,6 +62,16 @@ public final class ExtraMath {
         return Math.pow(arg1, arg2);
     }
 
+//#elifdef __RIM__
+
+    public static double ln(double value) {
+        return net.rim.device.api.util.MathUtilities.log(value);
+    }
+
+    public static double pow(final double arg1, final double arg2) {
+        return net.rim.device.api.util.MathUtilities.pow(arg1, arg2);
+    }
+
 //#else
 
     private static final double[] N = {
@@ -207,6 +217,24 @@ public final class ExtraMath {
         return Math.acos(arg);
     }
 
+//#elifdef __RIM50__
+
+    public static double atan(final double arg) {
+        return net.rim.device.api.util.MathUtilities.atan(arg);
+    }
+
+    public static double atan2(double arg1, final double arg2) {
+        return net.rim.device.api.util.MathUtilities.atan2(arg1, arg2);
+    }
+
+    public static double asin(double arg) {
+        return net.rim.device.api.util.MathUtilities.asin(arg);
+    }
+
+    public static double acos(final double arg) {
+        return net.rim.device.api.util.MathUtilities.acos(arg);
+    }
+    
 //#else
 
     // constants

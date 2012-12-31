@@ -315,10 +315,11 @@ public class DeviceControl extends TimerTask {
     }
 
     void useTicker(final Object list, final String msg) {
+        final javax.microedition.lcdui.Displayable displayable = (javax.microedition.lcdui.Displayable) list;
         if (msg != null) {
-            ((javax.microedition.lcdui.Displayable) list).setTicker(new javax.microedition.lcdui.Ticker(msg));
+            displayable.setTicker(new javax.microedition.lcdui.Ticker(msg));
         } else {
-            ((javax.microedition.lcdui.Displayable) list).setTicker(null);
+            displayable.setTicker(null);
         }
     }
 

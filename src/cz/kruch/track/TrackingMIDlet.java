@@ -24,8 +24,8 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
     public static String version;
     public static boolean jsr82, jsr120, jsr135, jsr179, jsr234, jsr256, motorola179, comm, nokiaui14;
     public static boolean sonyEricsson, sonyEricssonEx, nokia, siemens, lg, motorola, samsung, sonim;
-    public static boolean j9, jbed, jblend, intent, wm, palm, rim, symbian, s60nd, s60rdfp2, uiq, brew,
-                          android, playbook, iden;
+    public static boolean j9, jbed, jblend, intent, wm, palm, rim, symbian, s40th6, s60nd, s60rdfp2, uiq, 
+                          brew, android, playbook, iden;
     public static boolean sxg75, a780, s65;
 
     // diagnostics
@@ -176,7 +176,8 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         
 //#ifdef __ALL__
 
-        if (nokia) { /* Nokia UI API 1.4+ */
+        if (nokia) { /* detect Nokia UI API 1.4+ */
+            s40th6 = jsr179 && System.getProperty("com.nokia.mid.ui.version") == null;
             try {
                 nokiaui14 = Float.parseFloat(System.getProperty("com.nokia.mid.ui.version")) >= 1.4F
                             && "true".equals(System.getProperty("com.nokia.mid.ui.screensaverprevention"));

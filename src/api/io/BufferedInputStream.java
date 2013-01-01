@@ -115,7 +115,14 @@ public class BufferedInputStream extends InputStream {
 /* // HACK // can be very slow when called frequently on some devices (Samsung, Nokia S40)
         return count - pos + localIn.available();
 */
+//#if __SYMBIAN__ || __RIM__ || __ANDROID__
         return count - pos;
+//#else
+        if (!cz.kruch.track.TrackingMIDlet.iden) {
+            return count - pos;
+        }
+        return count - pos + localIn.available();
+//#endif
     }
 
     /**

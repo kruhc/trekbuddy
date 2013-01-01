@@ -331,34 +331,11 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
             resourced = -1;
         }
 
-        // load default datums
-        cz.kruch.track.configuration.Config.initDefaultDatums();
-
         // initialize file API
-        api.file.File.initialize(sxg75 || android || hasFlag("fs_traverse_bug"));
+        api.file.File.initialize(sxg75 || android || iden || hasFlag("fs_traverse_bug"));
 //#ifdef __LOG__
         System.out.println("* FsType: " + api.file.File.fsType);
 //#endif
-
-//#ifndef __B2B__
-
-        // check datadir access and existence
-        if (File.isFs()) {
-            cz.kruch.track.configuration.Config.checkDataDir(configured);
-        }
-
-//#else
-
-        // just assume it exists
-        cz.kruch.track.configuration.Config.dataDirAccess = true;
-        cz.kruch.track.configuration.Config.dataDirExists = true;
-
-//#endif
-
-        // fallback to external configuration in case of trouble
-        if (configured == 0) {
-            cz.kruch.track.configuration.Config.fallback();
-        }
 
         // create and boot desktop
         cz.kruch.track.ui.Desktop d = new cz.kruch.track.ui.Desktop(this);

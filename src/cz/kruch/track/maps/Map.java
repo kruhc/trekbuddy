@@ -720,11 +720,13 @@ public final class Map implements Runnable {
                                 loadScaledSlice(slice);
                             } catch (IOException e) { // file not found or corrupted
 //#ifdef __LOG__
+                                e.printStackTrace();
                                 if (log.isEnabled()) log.debug("image loading failed: " + e);
 //#endif
                                 slice.setImage(Slice.NO_IMAGE);
                             } catch (Throwable t) { // typically out of memory
 //#ifdef __LOG__
+                                t.printStackTrace();
                                 if (log.isEnabled()) log.debug("image loading failed: " + t);
 //#endif
                                 slice.setImage(Slice.NO_IMAGE);
@@ -758,15 +760,15 @@ public final class Map implements Runnable {
             return null;
         }
 
-        InputStream bufferef() {
+        final InputStream bufferef() {
             return bufferedIn;
         }
 
-        InputStream buffered(final InputStream in) {
+        final InputStream buffered(final InputStream in) {
             return bufferedIn.setInputStream(in);
         }
 
-        void bufferel() throws IOException {
+        final void bufferel() throws IOException {
             bufferedIn.close();
         }
 

@@ -587,7 +587,9 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
             verboseLoading = din.readBoolean();
 
             // 1.1.4 change
+//#ifndef __ANDROID__
             s40ticker = din.readBoolean();
+//#endif
 
         } catch (Exception e) {
         }
@@ -731,7 +733,9 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         /* since 1.1.2 */
         dout.writeBoolean(verboseLoading);
         /* since 1.1.4 */
+//#ifndef __ANDROID__
         dout.writeBoolean(s40ticker);
+//#endif
 
 //#ifdef __LOG__
         if (log.isEnabled()) log.info("configuration updated");

@@ -326,40 +326,72 @@ public final class Desktop implements CommandListener,
 
         // get graphics
         final Graphics g = screen.getGraphics();
-        g.setFont(Font.getFont(Font.FACE_MONOSPACE, Font.STYLE_PLAIN, Font.SIZE_MEDIUM));
+        final Font f = Font.getFont(Font.FACE_MONOSPACE, Font.STYLE_PLAIN, Font.SIZE_MEDIUM);
+        g.setFont(f);
 
-        // console text position
-        short lineY = 0;
-        final short lineHeight = (short) g.getFont().getHeight();
+        // console text start position
+        final int consoleLineHeight = f.getHeight();
+        int consoleLineY = 0;
 
         // console init
         final long tStart = System.currentTimeMillis();
         consoleInit(g);
 
         // show copyright(s)
-        consoleShow(g, lineY, "TrekBuddy \u00a9 2013 KrUcH");
-        lineY += lineHeight;
+        consoleShow(g, consoleLineY, "TrekBuddy \u00a9 2013 KrUcH");
+        consoleLineY += consoleLineHeight;
         final String lc = Resources.getString(Resources.BOOT_LOCAL_COPY);
         if (lc != null && lc.length() > 0) {
-            consoleShow(g, lineY, lc);
-            lineY += lineHeight;
+            consoleShow(g, consoleLineY, lc);
+            consoleLineY += consoleLineHeight;
         }
 
         // show version
-        consoleShow(g, lineY, Resources.getString(Resources.INFO_ITEM_VERSION) + " " + cz.kruch.track.TrackingMIDlet.version);
-        lineY += lineHeight;
+        consoleShow(g, consoleLineY, (new StringBuffer(32)).append(Resources.getString(Resources.INFO_ITEM_VERSION)).append(' ').append(cz.kruch.track.TrackingMIDlet.version).toString());
+        consoleLineY += consoleLineHeight;
 
         // vertical space
-        consoleShow(g, lineY, "");
-        lineY += lineHeight;
+        consoleShow(g, consoleLineY, "");
+        consoleLineY += consoleLineHeight;
 
         // show initial steps results
-        consoleShow(g, lineY, Resources.getString(Resources.BOOT_CACHING_IMAGES));
-        consoleResult(g, lineY, imgcached);
-        lineY += lineHeight;
-        consoleShow(g, lineY, Resources.getString(Resources.BOOT_LOADING_CFG));
-        consoleResult(g, lineY, configured);
-        lineY += lineHeight;
+        consoleShow(g, consoleLineY, Resources.getString(Resources.BOOT_CACHING_IMAGES));
+        consoleResult(g, consoleLineY, imgcached);
+        consoleLineY += consoleLineHeight;
+        consoleShow(g, consoleLineY, Resources.getString(Resources.BOOT_LOADING_CFG));
+        consoleResult(g, consoleLineY, configured);
+        consoleLineY += consoleLineHeight;
+
+        /*
+         * from TrackingMIDlet.run
+         */
+        
+        // load default datums
+        cz.kruch.track.configuration.Config.initDefaultDatums();
+
+//#ifndef __B2B__
+
+        // check datadir access and existence
+        if (File.isFs()) {
+            cz.kruch.track.configuration.Config.checkDataDir(configured);
+        }
+
+//#else
+
+        // just assume it exists
+        cz.kruch.track.configuration.Config.dataDirAccess = true;
+        cz.kruch.track.configuration.Config.dataDirExists = true;
+
+//#endif
+
+        // fallback to external configuration in case of trouble
+        if (configured == 0) {
+            cz.kruch.track.configuration.Config.fallback();
+        }
+
+        /*
+         * ~from TrackingMIDlet.run
+         */
 
         // additional steps from external resources
         if (cz.kruch.track.configuration.Config.dataDirExists) {
@@ -375,9 +407,9 @@ public final class Desktop implements CommandListener,
                 localized = -1;
             }
             if (localized != 0) {
-                consoleShow(g, lineY, Resources.getString(Resources.BOOT_L10N));
-                consoleResult(g, lineY, localized);
-                lineY += lineHeight;
+                consoleShow(g, consoleLineY, Resources.getString(Resources.BOOT_L10N));
+                consoleResult(g, consoleLineY, localized);
+                consoleLineY += consoleLineHeight;
             }
 
             // UI customization
@@ -389,9 +421,9 @@ public final class Desktop implements CommandListener,
                 customized = -1;
             }
             if (customized != 0) {
-                consoleShow(g, lineY, Resources.getString(Resources.BOOT_CUSTOMIZING));
-                consoleResult(g, lineY, customized);
-                lineY += lineHeight;
+                consoleShow(g, consoleLineY, Resources.getString(Resources.BOOT_CUSTOMIZING));
+                consoleResult(g, consoleLineY, customized);
+                consoleLineY += consoleLineHeight;
             }
 
             // user keymap
@@ -402,9 +434,9 @@ public final class Desktop implements CommandListener,
                 keysmapped = -1;
             }
             if (keysmapped != 0) {
-                consoleShow(g, lineY, Resources.getString(Resources.BOOT_KEYMAP));
-                consoleResult(g, lineY, keysmapped);
-                lineY += lineHeight;
+                consoleShow(g, consoleLineY, Resources.getString(Resources.BOOT_KEYMAP));
+                consoleResult(g, consoleLineY, keysmapped);
+                consoleLineY += consoleLineHeight;
             }
 
             // user datums
@@ -422,17 +454,17 @@ public final class Desktop implements CommandListener,
 //#endif
 
         // show load map
-        consoleShow(g, lineY, Resources.getString(Resources.BOOT_LOADING_MAP));
+        consoleShow(g, consoleLineY, Resources.getString(Resources.BOOT_LOADING_MAP));
         try {
             if (Config.EMPTY_STRING.equals(Config.mapURL)) {
                 initDefaultMap();
-                consoleResult(g, lineY, 0);
+                consoleResult(g, consoleLineY, 0);
             } else {
                 if (!initMap()) {
                     initDefaultMap();
-                    consoleResult(g, lineY, -1);
+                    consoleResult(g, consoleLineY, -1);
                 } else {
-                    consoleResult(g, lineY, 1);
+                    consoleResult(g, consoleLineY, 1);
                 }
             }
         } catch (Throwable t) {
@@ -445,7 +477,7 @@ public final class Desktop implements CommandListener,
             // message for map screen
             _updateLoadingResult(Resources.getString(Resources.DESKTOP_MSG_INIT_MAP), t);
             // show result on boot screen
-            consoleResult(g, lineY, -1);
+            consoleResult(g, consoleLineY, -1);
         }
 
 //#ifdef __B2B__
@@ -3868,13 +3900,13 @@ public final class Desktop implements CommandListener,
     }
 
     /*
-     * Boot console // TODO make it a View... ?!?
+     * Boot console // TODO make it a View... ?!? move to DeviceScreen... ?!?
      */
 
     // vars
-    private short consoleErrors, consoleSkips;
+    private static short consoleErrors, consoleSkips;
 
-    private void consoleInit(final Graphics g) {
+    private static void consoleInit(final Graphics g) {
         g.setColor(0x0);
         g.fillRect(0, 0, screen.getWidth(), screen.getHeight());
         if (cz.kruch.track.configuration.Config.dataDirExists) {
@@ -3893,7 +3925,7 @@ public final class Desktop implements CommandListener,
         screen.flushGraphics();
     }
 
-    private void consoleShow(final Graphics g, final int y, final String text) {
+    private static void consoleShow(final Graphics g, final int y, final String text) {
         if (NavigationScreens.logo == null) {
             if (text != null) {
                 g.setColor(0x00FFFFFF);
@@ -3908,7 +3940,7 @@ public final class Desktop implements CommandListener,
 //#endif
     }
 
-    private void consoleResult(final Graphics g, final int y, final int code) {
+    private static void consoleResult(final Graphics g, final int y, final int code) {
         if (NavigationScreens.logo == null) {
             final int x = screen.getWidth() - 2 - g.getFont().charWidth('*');
             switch (code) {
@@ -3928,7 +3960,7 @@ public final class Desktop implements CommandListener,
         }
     }
 
-    private void consoleDelay(final long tStart) {
+    private static void consoleDelay(final long tStart) {
         final long delay;
         if (NavigationScreens.logo != null) {
             NavigationScreens.logo = null; // GC hint

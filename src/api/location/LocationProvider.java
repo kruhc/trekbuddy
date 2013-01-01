@@ -109,7 +109,7 @@ public abstract class LocationProvider {
         setStatus("starting");
 
         // reset
-        cz.kruch.track.util.NmeaParser.reset();
+        cz.kruch.track.util.NmeaParser.reset(); // FIXME move to startTracking or some
         setLast(0L);
 
         // just about to start

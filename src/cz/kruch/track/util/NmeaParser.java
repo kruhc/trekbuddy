@@ -1,6 +1,6 @@
 // @LICENSE@
 
-package cz.kruch.track.util;
+package cz.kruch.track.util; // TODO move to cz.kruch.track.location package 
 
 import api.location.LocationException;
 

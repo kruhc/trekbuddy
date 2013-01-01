@@ -892,10 +892,10 @@
             <fileset dir="res">
                 <include name="**/datums.txt"/>
                 <include name="**/no-map.xml"/>
-                <include name="**/*.png"/>
-                <include name="**/*.svg"/>
                 <include name="**/world.*"/>
                 <include name="**/set/**"/>
+                <include name="**/*.png"/>
+                <include name="**/*.svg"/>
             </fileset>
             <fileset dir="res-extra">
                 <include name="**/*.png"/>

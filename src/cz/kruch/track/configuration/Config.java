@@ -306,6 +306,11 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         listFont = 0x200010;
         tilesScaleFiltered = true;
 
+//#elifdef __CN1__
+
+        dataDir = getDefaultDataDir("file:///D:/", "TrekBuddy/");
+        safeColors = true;
+
 //#else
 
         if (cz.kruch.track.TrackingMIDlet.sxg75) {

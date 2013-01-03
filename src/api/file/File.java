@@ -146,7 +146,7 @@ public abstract class File {
 
     public static boolean isOfType(final String filename, final String extension) {
         final String candidate = filename.toLowerCase();
-//#if __SYMBIAN__ || __RIM__ || __ANDROID__
+//#if __SYMBIAN__ || __RIM__ || __ANDROID__ || __CN1__
         return candidate.endsWith(extension);
 //#else
         if (candidate.endsWith(extension)) {
@@ -159,7 +159,7 @@ public abstract class File {
     }
 
     public static String idenFix(final String filename) {
-//#if __SYMBIAN__ || __RIM__ || __ANDROID__
+//#if __SYMBIAN__ || __RIM__ || __ANDROID__ || __CN1__
         return filename;
 //#else
         if (!cz.kruch.track.TrackingMIDlet.iden || !filename.endsWith(PATH_SEPARATOR)) {

@@ -122,6 +122,9 @@
     </path>
 
     <path id="bootclasspath.cn1">
+<!--
+        <pathelement location="c:\Program Files (x86)\Java\jdk1.4.2_19\jre\lib\rt.jar"/>
+-->
         <pathelement location="${cn1.home}\lib\CLDC11.jar"/>
         <pathelement location="${cn1.home}\lib\CodenameOne.jar"/>
     </path>
@@ -613,10 +616,10 @@
                        symbols="__HECL__,__ANDROID__,__BACKPORT__,${pre.extra}"/>
     </target>
 
-    <target name="a.pre.cn1" depends="a.pre.hecl">
+    <target name="a.pre.cn1">
         <mkdir dir="tmp/src"/>
         <wtkpreprocess srcdir="src" destdir="tmp/src" version="1"
-                       symbols="__CN1__,__HECL__,__LOG__,${pre.extra}"/>
+                       symbols="__CN1__,__LOG__,${pre.extra}"/>
     </target>
 
     <target name="a.pre.emulator" depends="a.pre.hecl">
@@ -728,6 +731,21 @@
     </target>
 
     <target name="compile.cn1" depends="remove.nonstd.src,remove.rim.src,remove.android.src,
+                                        remove.mmapi.src,remove.lapi.src">
+        <mkdir dir="tmp/build/classes"/>
+        <mkdir dir="tmp/ant"/>
+        <javac sourcepath=""
+               destdir="tmp/build/classes"
+               tempdir="tmp/ant"
+               fork="true"
+               target="1.3" source="1.3" debug="true"
+               bootclasspathref="bootclasspath.cn1">
+            <src path="tmp/src"/>
+            <src path="cn1-compat/src"/>
+        </javac>
+    </target>
+
+    <target name="compile.cn1.microemu" depends="remove.nonstd.src,remove.rim.src,remove.android.src,
                                         remove.mmapi.src,remove.fileapi.src,remove.lapi.src">
         <mkdir dir="tmp/build/classes"/>
         <mkdir dir="tmp/ant"/>

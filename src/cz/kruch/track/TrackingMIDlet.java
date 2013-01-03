@@ -48,7 +48,11 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         // initial state
         state = 0;
         // detect environment
+//#ifndef __CN1__
         platform = System.getProperty("microedition.platform");
+//#else
+        platform = "cn1";
+//#endif
         flags = getAppProperty(JAD_APP_FLAGS);
         if (flags == null) {
             flags = System.getProperty("trekbuddy.app-flags");

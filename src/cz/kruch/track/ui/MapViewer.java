@@ -13,7 +13,6 @@ import javax.microedition.lcdui.Graphics;
 import javax.microedition.lcdui.Canvas;
 import javax.microedition.lcdui.Image;
 import javax.microedition.lcdui.game.Sprite;
-import java.util.Vector;
 
 import api.location.Datum;
 import api.location.Location;

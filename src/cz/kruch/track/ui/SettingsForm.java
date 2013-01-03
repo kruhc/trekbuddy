@@ -596,7 +596,9 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
         }
 
         // add command and handling
+//#ifndef __ANDROID__
         submenu.addCommand(new Command(Resources.getString(Resources.CMD_OK), Desktop.POSITIVE_CMD_TYPE, 0));
+//#endif
         submenu.addCommand(new Command(Resources.getString(Resources.CMD_BACK), Desktop.BACK_CMD_TYPE, 1));
         submenu.setCommandListener(this);
 
@@ -766,10 +768,10 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
     }
 
     private void subMenuCommandAction(Command command) {
-
+//#ifndef __ANDROID__
         // grab values on OK
         if (command.getCommandType() != Desktop.BACK_CMD_TYPE) {
-
+//#endif
             if (menuBasic.equals(section)) {
 
                 // map path
@@ -990,7 +992,9 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
                     Config.snapshotFormat = getString(fieldSnapshotFormat);
                 }
             }
+//#ifndef __ANDROID__
         }
+//#endif
 
         // gc hint
 /* causes crash on Symbian^3 phones

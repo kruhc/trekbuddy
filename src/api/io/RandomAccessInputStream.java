@@ -2,6 +2,8 @@
  
 package api.io;
 
+//#ifdef __ANDROID__
+
 import java.io.FileNotFoundException;
 import java.io.InputStream;
 import java.io.IOException;
@@ -51,3 +53,5 @@ public class RandomAccessInputStream extends InputStream {
         return true;
     }
 }
+
+ //#endif

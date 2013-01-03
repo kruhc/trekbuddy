@@ -2,6 +2,8 @@
 
 package cz.kruch.track.hecl;
 
+//#ifdef __HECL__
+
 import api.file.File;
 import api.lang.RuntimeException;
 import api.lang.Int;
@@ -748,3 +750,5 @@ public final class PluginManager implements CommandListener, Runnable, Comparato
         }
     }
 }
+
+//#endif

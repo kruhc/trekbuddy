@@ -2,6 +2,8 @@
 
 package cz.kruch.track.device;
 
+//#ifdef __SYMBIAN__
+
 import javax.microedition.io.Connector;
 import javax.microedition.io.SocketConnection;
 import javax.microedition.io.StreamConnection;
@@ -292,3 +294,5 @@ public final class SymbianService {
         }
     }
 }
+
+//#endif

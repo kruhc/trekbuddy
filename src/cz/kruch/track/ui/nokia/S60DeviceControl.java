@@ -2,6 +2,8 @@
 
 package cz.kruch.track.ui.nokia;
 
+//#ifdef __SYMBIAN__
+
 /**
  * Device control implementation for S60/UIQ phones.
  *
@@ -99,3 +101,5 @@ final class S60DeviceControl extends NokiaDeviceControl {
         }
     }
 }
+
+//#endif

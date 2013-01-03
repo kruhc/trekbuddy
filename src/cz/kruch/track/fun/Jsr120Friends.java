@@ -2,6 +2,8 @@
 
 package cz.kruch.track.fun;
 
+//#ifndef __CN1__
+
 import cz.kruch.track.configuration.Config;
 import cz.kruch.track.ui.Desktop;
 import cz.kruch.track.ui.Waypoints;
@@ -221,3 +223,5 @@ final class Jsr120Friends extends Friends implements MessageListener, Runnable {
         }
     }
 }
+
+//#endif

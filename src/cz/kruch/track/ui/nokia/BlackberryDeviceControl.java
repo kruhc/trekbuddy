@@ -2,6 +2,8 @@
 
 package cz.kruch.track.ui.nokia;
 
+//#ifdef __RIM__
+
 /**
  * Device control implementation for Blackberry phones.
  *
@@ -78,3 +80,5 @@ final class BlackberryDeviceControl extends DeviceControl {
         }
     }
 }
+
+//#endif

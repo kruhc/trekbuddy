@@ -2,6 +2,8 @@
 
 package cz.kruch.track.location;
 
+//#ifdef __ANDROID__
+
 import cz.kruch.track.event.Callback;
 
 public class AndroidNmeaListener implements android.location.GpsStatus.NmeaListener, Callback {
@@ -27,3 +29,5 @@ public class AndroidNmeaListener implements android.location.GpsStatus.NmeaListe
         provider.onNmeaReceived(timestamp, nmea);
     }
 }
+
+//#endif

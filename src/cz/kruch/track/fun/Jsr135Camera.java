@@ -2,6 +2,8 @@
 
 package cz.kruch.track.fun;
 
+//#ifndef __CN1__
+
 import cz.kruch.track.configuration.Config;
 
 import javax.microedition.media.MediaException;
@@ -180,3 +182,5 @@ final class Jsr135Camera extends Camera {
         return false;
     }
 }
+
+//#endif

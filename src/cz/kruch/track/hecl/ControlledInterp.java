@@ -2,6 +2,8 @@
 
 package cz.kruch.track.hecl;
 
+//#ifdef __HECL__
+
 import org.hecl.net.HttpCmd;
 import org.hecl.Interp;
 import org.hecl.Thing;
@@ -391,3 +393,5 @@ public class ControlledInterp extends Interp {
         }
     }
 }
+
+//#endif

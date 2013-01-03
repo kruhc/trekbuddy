@@ -2,6 +2,8 @@
 
 package cz.kruch.track.location;
 
+//#ifdef __ANDROID__
+
 import api.location.LocationException;
 import api.location.LocationProvider;
 import api.location.Location;
@@ -395,3 +397,5 @@ public class AndroidBluetoothLocationProvider
 
     public static String sockType;
 }
+
+//#endif

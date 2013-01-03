@@ -2,6 +2,8 @@
 
 package cz.kruch.track.location;
 
+//#ifdef __ANDROID__
+
 import api.location.LocationProvider;
 import api.location.LocationException;
 import api.location.QualifiedCoordinates;
@@ -388,3 +390,5 @@ public final class AndroidLocationProvider
         }
     }
 }
+
+//#endif

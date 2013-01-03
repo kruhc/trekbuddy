@@ -2,6 +2,8 @@
 
 package cz.kruch.track.ui.nokia;
 
+//#ifdef __ANDROID__
+
 final class AndroidDeviceControl
         extends DeviceControl
         implements android.hardware.SensorEventListener {
@@ -100,3 +102,5 @@ final class AndroidDeviceControl
         }
     }
 }
+
+//#endif

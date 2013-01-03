@@ -2,6 +2,8 @@
 
 package cz.kruch.track.fun;
 
+//#ifdef __ANDROID__
+
 import android.media.MediaPlayer;
 import android.net.Uri;
 
@@ -53,3 +55,5 @@ final class AndroidCamera extends Camera {
     public void run() {
     }
 }
+
+//#endif

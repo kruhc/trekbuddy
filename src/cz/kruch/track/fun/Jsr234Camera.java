@@ -2,6 +2,8 @@
 
 package cz.kruch.track.fun;
 
+//#ifndef __CN1__
+
 import cz.kruch.track.configuration.Config;
 
 import javax.microedition.amms.control.camera.CameraControl;
@@ -259,3 +261,5 @@ final class Jsr234Camera extends Camera implements PlayerListener {
         return sb.toString();
     }
 }
+
+//#endif

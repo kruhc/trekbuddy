@@ -127,9 +127,12 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
     private Vector currentWpts, inUseWpts;
     private String currentName, inUseName, sortedName;
 
-    private ExtList pane;
-    private List notes;
-    private /*Displayable*/UiList list;
+    private volatile ExtList pane;
+    private volatile List notes;
+    private volatile UiList list;
+
+    private volatile boolean tickerInUse; // FIXME
+    
 //    private Hashtable cachedDisks;
     private NakedVector sortedWpts, fieldNotes;
     private String folder, subfolder;
@@ -157,6 +160,8 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                    iconRecordCurrent, iconEnterCustom, iconProjectNew,
                    iconFriendHere, iconFriendThere, iconStop, iconFieldNotes;
 
+    private static boolean useNativeList;
+
     private static Waypoints instance;
 
     static void initialize(/*Navigator*/final Desktop navigator) {
@@ -170,6 +175,8 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
             instance.onBackground(Config.vendorNaviStore, instance.actionResourceNavi);
         }
 //#endif
+        // prefer native lists on phones w/ touchscreen, except WM
+        useNativeList = Desktop.screen.hasPointerEvents() && !cz.kruch.track.TrackingMIDlet.wm;
     }
 
 //#ifdef __ANDROID__
@@ -256,9 +263,10 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
     }
 
     public void show() {
-        // let's start with basic menu
+        // reset state
         entry = depth = 0;
         subfolder = null;
+        // start with main menu
         use(pane);
         menu(0);
     }
@@ -281,6 +289,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
     }
 
     private void menu(final int depth) {
+        // setup list
         switch (this.depth = depth) {
             case 0: {
                 // clear list
@@ -329,11 +338,18 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
         Desktop.display.setCurrent(list.getUI());
     }
 
-    public void commandAction(Command command, Displayable displayable) {
+    public void commandAction(final Command command, final Displayable displayable) {
+//#ifdef __LOG__
+        if (log.isEnabled()) log.debug("commandAction; command: " + command.getLabel() + "; displayable: " + displayable.getTitle());
+//#endif
         // command source
         boolean fn = false;
         if (displayable instanceof List) {
             fn = itemFieldNotes.equals(displayable.getTitle());
+//#ifndef __ANDROID__
+        } else if (displayable instanceof javax.microedition.lcdui.Alert) {
+            return; // S40 "ticker" activity indicator
+//#endif            
         }
 
         // field notes action?
@@ -358,7 +374,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                 } else {
                     if (depth == 1 && subfolder != null) { // same as SELECTing ".."
                         subfolder = null;
-                        onBackground(null, null);
+                        onBackground(null, null, Resources.NAV_MSG_TICKER_LISTING);
                     } else {
                         switch (--depth) {
                             case 0: {
@@ -370,7 +386,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                                     depth = 0;
                                     close();
                                 } else {
-                                    onBackground(null, null);
+                                    onBackground(null, null, Resources.NAV_MSG_TICKER_LISTING);
                                 }
                             } break;
                         }
@@ -408,12 +424,12 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                         if (List.SELECT_COMMAND == command || cmdOpen == command) {
                             if (item.endsWith(File.PATH_SEPARATOR)) {
                                 subfolder = item;
-                                onBackground(null, null);
+                                onBackground(null, null, Resources.NAV_MSG_TICKER_LISTING);
                             } else if (item.equals(File.PARENT_DIR)) {
                                 subfolder = null;
-                                onBackground(null, null);
+                                onBackground(null, null, Resources.NAV_MSG_TICKER_LISTING);
                             } else {
-                                onBackground(item, null);
+                                onBackground(item, null, Resources.NAV_MSG_TICKER_LOADING);
                             }
                         }
 //#ifdef __ANDROID__
@@ -428,7 +444,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                         // exec command
                         if (List.SELECT_COMMAND == command || cmdOpen == command) {
                             // save current depth list position
-                            if (inUseName == null || currentName.equals(inUseName)) {
+                            if (inUseName == null || inUseName.equals(currentName)) {
                                 idx[depth] = item;
                             }
                             // calculate distance
@@ -445,7 +461,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                             if (item.getUserObject() instanceof GroundspeakBean && !((GroundspeakBean) item.getUserObject()).isParsed()) {
                                 // fully parse bean and show wpt details
                                 _parseWpt = item;
-                                Desktop.getDiskWorker().enqueue(this);
+                                exec();
                             } else {
                                 // open waypoint form
                                 (new WaypointForm(this, item, _distance,
@@ -510,6 +526,9 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                 }
             }
         }
+//#ifdef __LOG__
+    if (log.isEnabled()) log.debug("~commandAction");
+//#endif
     }
 
     private void mainMenuCommandAction(final String item) {
@@ -518,12 +537,12 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
             // use "wpts/" folder
             folder = Config.FOLDER_WPTS;
             // list in thread
-            onBackground(null, actionListWpts);
+            onBackground(null, actionListWpts, Resources.NAV_MSG_TICKER_LISTING);
         } else if (itemTracksStores.equals(item)) {
             // use "tracks-gpx/" folder
             folder = Config.FOLDER_TRACKS;
             // list in thread
-            onBackground(null, actionListTracks);
+            onBackground(null, actionListTracks, Resources.NAV_MSG_TICKER_LISTING);
         } else if (itemFieldNotes.equals(item)) {
             // show notes
             if (fieldNotes.size() > 0) {
@@ -620,7 +639,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
             // persist changes
             _storeName = notesFilename;
             _listingTitle = actionAddFieldNote;
-            Desktop.getDiskWorker().enqueue(this);
+            exec();
 
 //#ifndef __ANDROID__
         } else if (source instanceof cz.kruch.track.fun.Friends) { // SMS received
@@ -913,6 +932,9 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
             _addWptStoreKey = null;
             _addWptSelf = null;
         }
+//#ifdef __LOG__
+        if (log.isEnabled()) log.debug("~run");
+//#endif
     }
 
     private volatile Waypoint _addWptSelf;
@@ -930,6 +952,13 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
      * Background task launcher.
      */
     private void onBackground(final String storeName, final String listingTitle) {
+        onBackground(storeName, listingTitle, -1);
+    }
+
+    /*
+     * Background task launcher.
+     */
+    private void onBackground(final String storeName, final String listingTitle, final int resText) {
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("onBackground; " + storeName + "," + listingTitle);
 //#endif
@@ -938,6 +967,36 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
         if (listingTitle != null) {
             this._listingTitle = listingTitle;
         }
+//-#ifndef __ANDROID__
+        if (resText > -1 && list != null) {
+            final String busyText = Resources.getString((short) resText);
+            final String busyTitle = listingTitle == null ? storeName : listingTitle;
+//#ifndef __ANDROID__
+            if (Config.s40ticker) {
+                final javax.microedition.lcdui.Alert wait = new javax.microedition.lcdui.Alert(busyTitle, busyText,
+                                                                                               null, null);
+                wait.setTimeout(javax.microedition.lcdui.Alert.FOREVER);
+                wait.setIndicator(new javax.microedition.lcdui.Gauge(null, false,
+                                                                     javax.microedition.lcdui.Gauge.INDEFINITE,
+                                                                     javax.microedition.lcdui.Gauge.CONTINUOUS_RUNNING));
+                wait.setCommandListener(this);
+                Desktop.display.setCurrent(wait);
+            } else {
+//#endif
+                cz.kruch.track.ui.nokia.DeviceControl.setTicker(list.getUI(), busyText);
+                tickerInUse = true;
+//#ifndef __ANDROID__
+            }
+//#endif
+        }
+//-#endif
+        exec();
+    }
+
+    /*
+     * Executes in background.
+     */
+    private void exec() {
         Desktop.getDiskWorker().enqueue(this);
     }
 
@@ -984,7 +1043,9 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
         final int left = v.size();
         final String storesFolder = getStoresFolder();
         NakedVector cachedDisk = null; //(NakedVector) cachedDisks.get(storesFolder);
-        boolean tickerInUse = false;
+//#ifdef __ANDROID__
+//        boolean tickerInUse = false;
+//#endif        
 
         // no cached disk files?
         if (cachedDisk == null) {
@@ -995,8 +1056,10 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                 try {
 
                     // may take some time - start ticker
-                    cz.kruch.track.ui.nokia.DeviceControl.setTicker(list.getUI(), Resources.getString(Resources.NAV_MSG_TICKER_LISTING) + storesFolder);
-                    tickerInUse = true;
+//#ifdef __ANDROID__
+//                    cz.kruch.track.ui.nokia.DeviceControl.setTicker(list.getUI(), Resources.getString(Resources.NAV_MSG_TICKER_LISTING) + storesFolder);
+//                    tickerInUse = true;
+//#endif
 
                     // list file stores
                     listWptFiles(cachedDisk = new NakedVector(INITIAL_LIST_SIZE, INCREMENT_LIST_SIZE));
@@ -1033,9 +1096,13 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
             subfolder = null;
 
             // remove ticker
-            if (tickerInUse) {
-                cz.kruch.track.ui.nokia.DeviceControl.setTicker(list.getUI(), null);
-            }
+//-#ifdef __ANDROID__
+//            if (tickerInUse) {
+//                cz.kruch.track.ui.nokia.DeviceControl.setTicker(list.getUI(), null);
+//            }
+//-#else
+            clearTicker();
+//-#endif
 
             // notify user
             Desktop.showInfo(Resources.getString(Resources.NAV_MSG_NO_STORES), null);
@@ -1080,7 +1147,9 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
         // local
         Vector wpts = null;
         Throwable parseException = null;
-        boolean tickerInUse = false;
+//#ifdef __ANDROID__
+//        boolean tickerInUse = false;
+//#endif        
 
         // got store in cache?
         final Vector wptsCached = (Vector) stores.get(storeName);
@@ -1090,9 +1159,11 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
             if (uiAction == 2) {
 
                 // may take some time - start ticker
-                cz.kruch.track.ui.nokia.DeviceControl.setTicker(list.getUI(), Resources.getString(Resources.NAV_MSG_TICKER_LOADING));
-                tickerInUse = true;
-                
+//#ifdef __ANDROID__
+//                cz.kruch.track.ui.nokia.DeviceControl.setTicker(list.getUI(), Resources.getString(Resources.NAV_MSG_TICKER_LOADING));
+//                tickerInUse = true;
+//#endif
+
                 // remove current store from cache IF IT IS NOT in use
                 if (currentName != null && !currentName.equals(inUseName)) {
                     stores.remove(currentName);
@@ -1150,6 +1221,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
             // used cached
             wpts = wptsCached;
 
+/* without parsing everything should be fast
             // only foreground activity
             if (uiAction == 2) {
 
@@ -1159,7 +1231,8 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                     tickerInUse = true;
                 }
             }
-            
+*/
+
         }
 
         // return intermediate
@@ -1174,9 +1247,13 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
             if (uiAction == 2) {
 
                 // kill ticker
-                if (tickerInUse) {
-                    cz.kruch.track.ui.nokia.DeviceControl.setTicker(list.getUI(), null);
-                }
+//-#ifdef __ANDROID__
+//                if (tickerInUse) {
+//                    cz.kruch.track.ui.nokia.DeviceControl.setTicker(list.getUI(), null);
+//                }
+//-#else
+                clearTicker();
+//-#endif
 
                 // notify on errors
                 if (parseException == null) {
@@ -1248,7 +1325,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
         // wait screen
         if (!onBackround) {
             Desktop.showWaitScreen(Resources.getString(Resources.DESKTOP_CMD_NAVIGATION),
-                    Resources.getString(Resources.DESKTOP_MSG_IN_PROGRESS));
+                                   Resources.getString(Resources.DESKTOP_MSG_IN_PROGRESS));
         }
 
         try {
@@ -1647,7 +1724,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                     throw new NullPointerException("storeName");
                 }
                 // remove previous file backend
-                for (Enumeration e = backends.keys(); e.hasMoreElements();) {
+                for (final Enumeration e = backends.keys(); e.hasMoreElements();) {
                     final String key = (String) e.nextElement();
                     if (!key.startsWith(SPECIAL_STORE_HEADING)) {
 //#ifdef __LOG__
@@ -1724,7 +1801,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
         _listingTitle = actionListWpts;
 
         // do the rest on background
-        Desktop.getDiskWorker().enqueue(this);
+        exec();
     }
 
     private void listWptFiles(final Vector v) throws IOException {
@@ -1744,21 +1821,21 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                 for (final Enumeration e = dir.list(); e.hasMoreElements();) {
 
                     // has suffix?
-                    final String name = (String) e.nextElement();
-                    final int i = name.lastIndexOf('.');
+                    final String filename = (String) e.nextElement();
+                    final int i = filename.lastIndexOf('.');
                     if (i > -1) {
-                        final String lcname = name.toLowerCase();
-                        if (lcname.endsWith(SUFFIX_GPX) || lcname.endsWith(SUFFIX_LOC)) {
-                            v.addElement(name);
+                        final String candidate = filename.toLowerCase();
+                        if (File.isOfType(candidate, SUFFIX_GPX) || File.isOfType(candidate, SUFFIX_LOC)) {
+                            v.addElement(File.idenFix(filename));
                         }
 //#ifdef __RIM__
-                          else if (lcname.endsWith(SUFFIX_GPX_REM)) {
-                            final String rem = name.substring(0, name.length() - 4); // ".rem".length()
-                            v.addElement(rem);
+                          else if (File.isOfType(candidate, SUFFIX_GPX_REM)) {
+                            final String rem = filename.substring(0, filename.length() - 4); // ".rem".length()
+                            v.addElement(File.idenFix(rem));
                         }
 //#endif
-                    } if (subfolder == null && /* isDir: */name.endsWith(File.PATH_SEPARATOR) && !name.startsWith("images-")) {
-                        v.addElement(name);
+                    } else if (subfolder == null && /* isDir: */filename.endsWith(File.PATH_SEPARATOR) && !filename.startsWith("images-")) {
+                        v.addElement(filename);
                     }
                 }
             }
@@ -1782,8 +1859,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
     private UiList listStores(final NakedVector stores, final String title) {
         // create UI list
         UiList l = null;
-        if (Desktop.screen.hasPointerEvents()
-                && !cz.kruch.track.TrackingMIDlet.wm) { // prefer native lists on phones w/ touchscreen, except WM
+        if (useNativeList) {
             try {
                 l = new ExtList(title, List.IMPLICIT, names2strings(stores), null);
                 l.setFitPolicy(Choice.TEXT_WRAP_OFF);
@@ -1841,8 +1917,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
         // create UI list
         final String title = (new StringBuffer(32)).append(store).append(" [").append(wpts.size()).append(']').toString();
         UiList l = null;
-        if (Desktop.screen.hasPointerEvents()
-                && !cz.kruch.track.TrackingMIDlet.wm) { // prefer native lists on phones w/ touchscreen, except WM
+        if (useNativeList) {
             try {
                 l = new ExtList(title, List.IMPLICIT, wpts2strings(sortedWpts), null);
                 l.setFitPolicy(Choice.TEXT_WRAP_OFF);
@@ -1899,8 +1974,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
 
     private void close() {
         // gc hints
-        list = null;
-//        sortedWpts = null;
+        use(null);
         // restore navigator
         Desktop.display.setCurrent(Desktop.screen);
     }
@@ -1934,21 +2008,38 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
     }
 
     private void use(final UiList l) {
-        // gc hint
-        list = null;
+        // remove ticker
+//-#ifndef __ANDROID__
+        clearTicker();
+//-#endif
         // use new
         list = l;
     }
 
     private void use(final UiList l, final boolean tickerInUse) {
         // remove ticker
-        if (tickerInUse) {
+//#ifdef __ANDROID__
+//        if (tickerInUse) {
+//            cz.kruch.track.ui.nokia.DeviceControl.setTicker(list.getUI(), null);
+//        }
+//#endif        
+        // use use
+        use(l);
+    }
+
+    private void clearTicker() {
+        if (list != null && tickerInUse) {
+//#ifdef __ANDROID__
+            // no harm if there is no ticker
             cz.kruch.track.ui.nokia.DeviceControl.setTicker(list.getUI(), null);
+//#else
+            // better check for ticker existence, for dumb implementations may act crazilu
+            if (list.getTicker() != null) { 
+                cz.kruch.track.ui.nokia.DeviceControl.setTicker(list.getUI(), null);
+            }
+//#endif
         }
-        // gc hint
-        list = null;
-        // use new
-        list = l;
+        tickerInUse = false;
     }
 
     private void sortWaypoints(final UiList list, final Vector wpts, final boolean tickerInUse) {
@@ -1971,7 +2062,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
             case SORT_BYDIST: {
 
                 // may take some time - start ticker
-                final boolean showTicker = list != null && wpts.size() > 64 && !tickerInUse;
+                final boolean showTicker = list != null && list.isShown() && wpts.size() > 1024 && !tickerInUse;
                 try {
                     if (showTicker) {
                         cz.kruch.track.ui.nokia.DeviceControl.setTicker(list.getUI(), Resources.getString(Resources.NAV_MSG_TICKER_LISTING));
@@ -2107,6 +2198,12 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
         return -1;
     }
 
+//#if __SYMBIAN__ || __RIM__ || __ANDROID__
+    private static final int BUFFERSIZE = 16384; // more memory available
+//#else
+    private static final int BUFFERSIZE = 8192; // conservative; also backward compatible
+//#endif
+
     private static Vector parseWaypoints(final File file, final int fileType,
                                          final boolean lazyGs)
             throws IOException, XmlPullParserException {
@@ -2116,10 +2213,10 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
         // input stream and parser
         InputStream in = null;
         HXmlParser parser = null;
-
+        
         try {
             // open input
-            in = new BufferedInputStream(file.openInputStream(), 8192);
+            in = new BufferedInputStream(file.openInputStream(), BUFFERSIZE);
 
             // create parser
             parser = new HXmlParser();
@@ -2138,7 +2235,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                 }
                 break;
             }
-
+            
             return result;
 
         } finally {
@@ -2158,6 +2255,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
     private static void parseGpx(final HXmlParser parser, final Vector v,
                                  final boolean lazyGs)
             throws IOException, XmlPullParserException {
+
         GroundspeakBean gsbean = null;
 
         char[] name = null, cmt = null, sym = null;
@@ -2448,7 +2546,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                                 case TAG_AU_FINDER:
                                 case TAG_GS_FINDER: {
                                     // date
-                                    gslog.setFinder(parser.nextText());
+                                    gslog.setFinder(parser.nextChars());
                                 } break;
                                 case TAG_GS_TEXT: {
                                     // date

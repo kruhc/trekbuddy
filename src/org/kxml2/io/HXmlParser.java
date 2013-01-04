@@ -126,7 +126,11 @@ public final class HXmlParser implements XmlPullParser {
         this.elementStack = new String[16];
         this.nspStack = new String[8];
         this.nspCounts = new int[4];
+//#if __SYMBIAN__ || __RIM__ || __ANDROID__ || __CN1__
         this.srcBuf = new char[8192];
+//#else
+        this.srcBuf = new char[4096];
+//#endif
         this.txtBuf = new char[this.txtLen = 1024];
         this.attributes = new String[32];
         this.peek = new int[2];
@@ -171,10 +175,10 @@ public final class HXmlParser implements XmlPullParser {
                 final int j = (nspCounts[depth]++) << 1;
 
                 if (nspStack.length < j + 2) {
-                    final String[] bigger = new String[j + 2 + 16];
-                    System.arraycopy(nspStack, 0, bigger, 0, nspStack.length);
+                    final String[] _nspStack = new String[j + 2 + 16];
+                    System.arraycopy(nspStack, 0, _nspStack, 0, nspStack.length);
                     nspStack = null;
-                    nspStack = bigger;
+                    nspStack = _nspStack;
                 }
 
                 nspStack[j] = attrName;
@@ -270,9 +274,6 @@ public final class HXmlParser implements XmlPullParser {
      * txtPos and whitespace. Does not set the type variable */
 
     private void nextImpl() throws IOException, XmlPullParserException {
-        if (reader == null) {
-            exception("No Input specified");
-        }
         if (type == END_TAG) {
             depth--;
         }
@@ -361,7 +362,7 @@ public final class HXmlParser implements XmlPullParser {
     }
 
     private int parseLegacy(boolean push) throws IOException, XmlPullParserException {
-        /*String*/char[] req = CCONSTANT_EMPTY;
+        char[] req = CCONSTANT_EMPTY;
         int term;
         int result;
         int prev = 0;
@@ -461,10 +462,6 @@ public final class HXmlParser implements XmlPullParser {
         } else {
             while (true) {
                 final int cx = read();
-//                if (cx == -1){
-//                    error(UNEXPECTED_EOF);
-//                    return COMMENT;
-//                }
                 if (cx > -1) {
                     if (push)
                         push(cx);
@@ -626,10 +623,10 @@ public final class HXmlParser implements XmlPullParser {
         isWhitespace &= c <= ' ';
 
         if (txtPos == txtLen) {
-            final char[] bigger = new char[txtLen = txtPos * 4 / 3 + 4];
-            System.arraycopy(txtBuf, 0, bigger, 0, txtPos);
+            final char[] _txtBuf = new char[txtLen = (txtLen = txtPos * 4 / 3 + 4) - txtLen % 4];
+            System.arraycopy(txtBuf, 0, _txtBuf, 0, txtPos);
             txtBuf = null; // gc hint
-            txtBuf = bigger;
+            txtBuf = _txtBuf;
         }
 
         txtBuf[txtPos++] = (char) c;
@@ -648,18 +645,18 @@ public final class HXmlParser implements XmlPullParser {
         int sp = depth++ << 2;
 
         if (depth >= nspCounts.length) {
-            final int[] bigger = new int[depth + 4];
-            System.arraycopy(nspCounts, 0, bigger, 0, nspCounts.length);
+            final int[] _nspCounts = new int[depth + 4];
+            System.arraycopy(nspCounts, 0, _nspCounts, 0, nspCounts.length);
             nspCounts = null; // gc hint
-            nspCounts = bigger;
+            nspCounts = _nspCounts;
         }
         nspCounts[depth] = nspCounts[depth - 1];
 
         if (elementStack.length < sp + 4) {
-            final String[] bigger = new String[sp + 4 + 16];
-            System.arraycopy(elementStack, 0, bigger, 0, elementStack.length);
+            final String[] _elementStack = new String[sp + 4 + 16];
+            System.arraycopy(elementStack, 0, _elementStack, 0, elementStack.length);
             elementStack = null;
-            elementStack = bigger;
+            elementStack = _elementStack;
         }
 
         final String[] elementStack = this.elementStack;
@@ -715,10 +712,10 @@ public final class HXmlParser implements XmlPullParser {
             int i = (attributeCount++) << 2;
 
             if (attributes.length < i + 4) {
-                final String[] bigger = new String[i + 4 + 16];
-                System.arraycopy(attributes, 0, bigger, 0, attributes.length);
+                final String[] _attributes = new String[i + 4 + 16];
+                System.arraycopy(attributes, 0, _attributes, 0, attributes.length);
                 attributes = null;
-                attributes = bigger;
+                attributes = _attributes;
             }
 
             final String[] attributes = this.attributes;
@@ -762,10 +759,10 @@ public final class HXmlParser implements XmlPullParser {
         elementStack[sp + 3] = name;
 
         if (depth >= nspCounts.length) {
-            final int[] bigger = new int[depth + 4];
-            System.arraycopy(nspCounts, 0, bigger, 0, nspCounts.length);
+            final int[] _nspCounts = new int[depth + 4];
+            System.arraycopy(nspCounts, 0, _nspCounts, 0, nspCounts.length);
             nspCounts = null; // gc hint
-            nspCounts = bigger;
+            nspCounts = _nspCounts;
         }
 
         nspCounts[depth] = nspCounts[depth - 1];
@@ -926,6 +923,7 @@ public final class HXmlParser implements XmlPullParser {
     /*
      * fast text copy (local variant of push-read-peek with some whitespaces hack)
      * 2008-12-18: whitespace hack commented out
+     * 2013-01-01: line increment commented out - position was wrong
      */
 
     private void fastCopyText() throws IOException {
@@ -945,7 +943,9 @@ public final class HXmlParser implements XmlPullParser {
             } else if (c <= ' ') {
                 column++;
                 if (c == '\n') {
+/* 2013-01-01: this is wrong                   
                     line++;
+*/
                     column = 1;
                     if (wsCount++ > 0) { // let's ignore multiple CRLFs
                         continue;
@@ -1410,7 +1410,7 @@ public final class HXmlParser implements XmlPullParser {
     }
 
     public String getPositionDescription() {
-        StringBuffer buf = new StringBuffer(type < TYPES.length ? TYPES[type] : "unknown");
+        final StringBuffer buf = new StringBuffer(type < TYPES.length ? TYPES[type] : "unknown");
         buf.append(' ');
 
         if (type == START_TAG || type == END_TAG) {
@@ -1449,7 +1449,7 @@ public final class HXmlParser implements XmlPullParser {
             buf.append(text);
         }
 
-        buf.append('@').append(line).append(':').append(column);
+        buf.append('@').append(line).append(':').append(column).append(':').append(encoding);
         if (location != null){
             buf.append(" in ");
             buf.append(location);
@@ -1489,10 +1489,12 @@ public final class HXmlParser implements XmlPullParser {
     public char[] getChars() {
         if (type == TEXT) {
             final int l = txtPos;
-            final char[] result = new char[l];
-            System.arraycopy(txtBuf, 0, result, 0, l);
+            if (l > 0) {
+                final char[] result = new char[l];
+                System.arraycopy(txtBuf, 0, result, 0, l);
 
-            return result;
+                return result;
+            }
         }
 
         return CCONSTANT_EMPTY;
@@ -1678,7 +1680,7 @@ public final class HXmlParser implements XmlPullParser {
             result = getChars();
             next();
         } else {
-            result = null;
+            result = CCONSTANT_EMPTY;
         }
 
         if (type != END_TAG) {

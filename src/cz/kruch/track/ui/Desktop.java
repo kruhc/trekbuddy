@@ -728,7 +728,7 @@ public final class Desktop implements CommandListener,
 
     public static void actionFeedback(final boolean act) {
         if (act) {
-            display.vibrate(50); // TODO config
+            vibrate(50);
         }
     }
 

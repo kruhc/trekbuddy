@@ -62,7 +62,7 @@ public final class ExtraMath {
         return Math.pow(arg1, arg2);
     }
 
-//#elifdef __RIM__
+//#elifdef __RIM50__
 
     public static double ln(double value) {
         return net.rim.device.api.util.MathUtilities.log(value);

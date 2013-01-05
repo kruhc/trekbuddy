@@ -211,7 +211,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
     public static boolean reliableInput;
     public static boolean hideBarCmd;
     public static boolean useNativeService;
-    public static boolean lazyGpxParsing;
+    public static boolean lazyGpxParsing        = true;
     public static boolean lowmemIo;
     public static boolean numericInputHack;
     public static boolean externalConfigBackup;

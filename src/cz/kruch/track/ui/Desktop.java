@@ -3918,12 +3918,7 @@ public final class Desktop implements CommandListener,
                 g.drawString(text, 2, y, Graphics.TOP | Graphics.LEFT);
                 screen.flushGraphics();
             }
-        } else {
-            final Font f = g.getFont();
-            g.setColor(0x00808080);
-            g.drawChar('.', y + f.charWidth('.') >> 1, screen.getHeight() - f.getHeight(), Graphics.TOP | Graphics.LEFT);
-            screen.flushGraphics();
-        }
+        } 
     }
 
     private static void consoleResult(final Graphics g, final int y, final int code) {
@@ -3953,9 +3948,6 @@ public final class Desktop implements CommandListener,
         } else {
             delay = 3000 - (System.currentTimeMillis() - tStart);
         }
-//#ifdef __LOG__
-        if (log.isEnabled()) log.debug("console delay " + delay);
-//#endif
         if (delay > 0) {
             try {
                 Thread.sleep(delay);

@@ -341,6 +341,21 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         System.out.println("* FsType: " + api.file.File.fsType);
 //#endif
 
+//#ifndef __B2B__
+
+        // check datadir access and existence
+        if (File.isFs()) {
+            cz.kruch.track.configuration.Config.checkDataDir(configured);
+        }
+
+//#else
+
+        // just assume it exists
+        cz.kruch.track.configuration.Config.dataDirAccess = true;
+        cz.kruch.track.configuration.Config.dataDirExists = true;
+
+//#endif
+
         // create and boot desktop
         cz.kruch.track.ui.Desktop d = new cz.kruch.track.ui.Desktop(this);
         d.show();

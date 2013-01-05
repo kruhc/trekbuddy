@@ -84,7 +84,6 @@ public final class NavigationScreens {
      * image cache
      */
 
-    static Image logo;  // FIXME visibility
     static Image crosshairs; // FIXME visibility
     static Image nlock; // FIXME visibility
     static Image waypoint; // FIXME visibility

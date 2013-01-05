@@ -524,11 +524,18 @@ final class WaypointForm implements CommandListener, ItemCommandListener, ItemSt
                 } break;
                 case Resources.NAV_FLD_GS_LOGS: {
                     final Vector logs = bean.getLogs();
-                    final List l = list = new List(label, List.IMPLICIT);
-                    l.setFitPolicy(Choice.TEXT_WRAP_OFF);
-                    for (int N = logs.size(), i = 0; i < N; i++) {
+                    final int N = logs.size();
+                    final String[] strings = new String[N];
+                    final Image[] images = new Image[N];
+                    for (int i = 0; i < N; i++) {
                         final GroundspeakBean.Log entry = (GroundspeakBean.Log) logs.elementAt(i);
-                        l.setFont(l.append(entry.toString(), entry.getIcon()), Desktop.fontStringItems);
+                        strings[i] = entry.toString();
+                        images[i]= entry.getIcon();
+                    }
+                    final List l = list = new List(label, List.IMPLICIT, strings, images);
+                    l.setFitPolicy(Choice.TEXT_WRAP_OFF);
+                    for (int i = 0; i < N; i++) {
+                        l.setFont(i, Desktop.fontStringItems);
                     }
                     l.addCommand(new Command(Resources.getString(Resources.CMD_CLOSE), Desktop.BACK_CMD_TYPE, 1));
                     l.setCommandListener(this);

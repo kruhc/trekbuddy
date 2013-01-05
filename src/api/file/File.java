@@ -111,9 +111,7 @@ public abstract class File {
 
             return instance;
 
-        } catch (InstantiationException e) {
-            throw new IllegalStateException("File API error: " + e.toString());
-        } catch (IllegalAccessException e) {
+        } catch (Exception e) {
             throw new IllegalStateException("File API error: " + e.toString());
         }
     }

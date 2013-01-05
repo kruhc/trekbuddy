@@ -46,7 +46,7 @@ echo call "build %1 playbook.signed %RESOURCE_LANG%" when releasing
 goto end
 
 :build
-cmd /c %ANT_HOME%\bin\ant -Dinclude.properties=properties\build-%1.properties -Dlocale=%RESOURCE_LANG% -l dist\%1\standard\build.log -f build.xml %2
+cmd /c %ANT_HOME%\bin\ant -Dinclude.properties=properties\build-%1.properties -Dlocale=%RESOURCE_LANG% -l dist\%1\%2\build.log -f build.xml %2
 echo.
 exit /b
 

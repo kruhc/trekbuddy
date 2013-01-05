@@ -98,9 +98,10 @@ public final class HXmlParser implements XmlPullParser {
     private String name;
     private Int hash;
 
-    private final String[] composite;
+    private String composite0, composite1, composite2/*, composite3*/;
     private final Hashtable nameCache;
     private final Int txtHash;
+    private Hashtable valueCache;
 
     private String[] attributes;
     private String error;
@@ -113,7 +114,7 @@ public final class HXmlParser implements XmlPullParser {
      * wrap around in the first level read buffer
      */
 
-    private final int[] peek;
+    private int peek0, peek1;
     private int peekCount;
     private boolean wasCR;
 
@@ -133,9 +134,7 @@ public final class HXmlParser implements XmlPullParser {
 //#endif
         this.txtBuf = new char[this.txtLen = 1024];
         this.attributes = new String[32];
-        this.peek = new int[2];
         this.hash = new Int(0);
-        this.composite = new String[4];
         this.nameCache = new Hashtable(64);
         this.txtHash = new Int(0);
     }
@@ -371,6 +370,7 @@ public final class HXmlParser implements XmlPullParser {
         final int c = read();
 
         switch (c) {
+            
             case '!': {
                 if (peek(0) == '[') {
                     result = CDSECT;
@@ -406,6 +406,8 @@ public final class HXmlParser implements XmlPullParser {
                         }
 
                         parseStartTag(true);
+
+                        nameCache.remove(new Int(0x6c)); // hack remove 'l' from cache
 
                         if (attributeCount < 1 || !"version".equals(attributes[2])) {
                             error("version expected");
@@ -608,7 +610,18 @@ public final class HXmlParser implements XmlPullParser {
                 return CONSTANT_EMPTY;
             }
         }
-        return new String(txtBuf, pos, txtPos - pos);
+
+        if (valueCache == null) {
+            return new String(txtBuf, pos, txtPos - pos);
+        }
+
+        hash.setValue(hash(pos));
+        String result = (String) valueCache.get(hash);
+        if (result == null) {
+            result = new String(txtBuf, pos, txtPos - pos);
+            valueCache.put(hash._clone(), result);
+        }
+        return result;
     }
 
 /*
@@ -660,12 +673,12 @@ public final class HXmlParser implements XmlPullParser {
         }
 
         final String[] elementStack = this.elementStack;
-        final String[] composite = this.composite;
-        elementStack[sp] = composite[0];
-        elementStack[sp + 1] = composite[1];
-        elementStack[sp + 2] = composite[2];
+//        final String[] composite = this.composite;
+        elementStack[sp] = composite0;
+        elementStack[sp + 1] = composite1;
+        elementStack[sp + 2] = composite2;
         elementStack[sp + 3] = name;
-        name = composite[2];
+        name = composite2;
 
         attributeCount = 0;
 
@@ -911,7 +924,7 @@ public final class HXmlParser implements XmlPullParser {
 
             if (next != '&') {
                 push(read());
-                fastCopyText();
+                fastCopyText2();
             } else {
                 pushEntity();
             }
@@ -969,6 +982,50 @@ public final class HXmlParser implements XmlPullParser {
         this.column = column;
     }
 
+    private void fastCopyText2() throws IOException {
+        final char[] srcBuf = this.srcBuf;
+        final char[] txtBuf = this.txtBuf;
+        final int lengh = txtBuf.length;
+        final int srcCount = this.srcCount;
+        int srcPos = this.srcPos;
+        int txtPos = this.txtPos;
+        int column = this.column;
+        while (srcPos < srcCount && txtPos < lengh) {
+            final char c = srcBuf[srcPos++];
+            if (c == '<' || c == '&') {
+                srcPos--;
+                break;
+            } else if (c <= ' ') {
+                column++;
+                if (c == '\n') {
+/* 2013-01-01: this is wrong
+                    line++;
+*/
+                    column = 1;
+/* 2013-01-05: html formatter will fix it (???) // TODO
+                    if (wsCount++ > 0) { // let's ignore multiple CRLFs
+                        continue;
+                    }
+*/
+                }
+/* 2008-12-18: reformats users breaks
+                if (wsCount++ > 0) {
+                    continue;
+                }
+                c = ' ';
+*/
+            } else {
+                column++;
+            }
+            txtPos++;
+        }
+        System.arraycopy(srcBuf, this.srcPos, txtBuf, this.txtPos, txtPos - this.txtPos);
+        this.offset += srcPos - this.srcPos;
+        this.srcPos = srcPos;
+        this.txtPos = txtPos;
+        this.column = column;
+    }
+
     /*
      * fast name copy (local variant of push-read-peek with valid char check)
      */
@@ -1004,6 +1061,36 @@ public final class HXmlParser implements XmlPullParser {
         return peek(0);
     }
 
+    private int fastCopyName2() throws IOException {
+        final char[] srcBuf = this.srcBuf;
+        final char[] txtBuf = this.txtBuf;
+        final int lengh = txtBuf.length;
+        final int srcCount = this.srcCount;
+        int srcPos = this.srcPos;
+        int txtPos = this.txtPos;
+        while (srcPos < srcCount && txtPos < lengh) {
+            final char c = srcBuf[srcPos++];
+            if ((c >= 'a' && c <= 'z')
+                || (c >= 'A' && c <= 'Z')
+                || (c >= '0' && c <= '9')
+                || c == '_'
+                || c == '-'
+                || c == '.'
+                || c >= 0x0b7) {
+                txtPos++;
+                continue;
+            }
+            srcPos--;
+            break;
+        }
+        System.arraycopy(srcBuf, this.srcPos, txtBuf, this.txtPos, txtPos - this.txtPos);
+        this.column += srcPos - this.srcPos;
+        this.offset += srcPos - this.srcPos;
+        this.srcPos = srcPos;
+        this.txtPos = txtPos;
+        return peek(0);
+    }
+
     private void read(final char c) throws IOException, XmlPullParserException {
         final int a = read();
         if (a != c) {
@@ -1017,14 +1104,9 @@ public final class HXmlParser implements XmlPullParser {
         if (peekCount == 0) {
             result = peek(0);
         } else {
-            final int[] peek = this.peek;
-            result = peek[0];
-            peek[0] = peek[1];
+            result = peek0;
+            peek0 = peek1;
         }
-        //		else {
-        //			result = peek[0]; 
-        //			System.arraycopy (peek, 1, peek, 0, peekCount-1);
-        //		}
 
         peekCount--;
         column++;
@@ -1040,7 +1122,6 @@ public final class HXmlParser implements XmlPullParser {
     /* Does never read more than needed */
 
     private int peek(final int pos) throws IOException {
-        final int[] peek = this.peek;
 
         while (pos >= peekCount) {
             final int nw;
@@ -1061,26 +1142,39 @@ public final class HXmlParser implements XmlPullParser {
             switch (nw) {
                 case '\n': {
                     if (!wasCR) {
-                        peek[peekCount++] = '\n';
+                        if (peekCount++ == 0) {
+                            peek0 = '\n';
+                        } else {
+                            peek1 = '\n';
+                        }
+                    } else {
+                        wasCR = false;
                     }
-                    wasCR = false;
                 } break;
                 case '\r': {
                     wasCR = true;
-                    peek[peekCount++] = '\n';
+                    if (peekCount++ == 0) {
+                        peek0 = '\n';
+                    } else {
+                        peek1 = '\n';
+                    }
                 } break;
                 default: {
-                    peek[peekCount++] = nw;
+                    if (peekCount++ == 0) {
+                        peek0 = nw;
+                    } else {
+                        peek1 = nw;
+                    }
                     wasCR = false;
                     if (pos == 0 || peekCount == 2) { // HACK performance optimization
                         return nw;
-                    } else
-                        throw new IllegalStateException("! pos == 0 || peekCount == 2");
+                    }
+                    throw new IllegalStateException("! pos == 0 || peekCount == 2");
                 }
             }
         }
 
-        return peek[pos];
+        return pos == 0 ? peek0 : peek1;
     }
 
     private String readName(final Int hash) throws IOException, XmlPullParserException {
@@ -1095,10 +1189,10 @@ public final class HXmlParser implements XmlPullParser {
                 error("name expected");
         }
 
-        final String[] composite = this.composite;
+//        final String[] composite = this.composite;
 
-        composite[0] = NO_NAMESPACE;
-        composite[1] = null;
+        composite0 = NO_NAMESPACE;
+        composite1 = null;
 
         do {
             push(read());
@@ -1106,9 +1200,9 @@ public final class HXmlParser implements XmlPullParser {
             c = peek(0);
 */
             if (peekCount > 0) { // == 1
-                c = peek[0];
+                c = peek0;
             } else {
-                c = fastCopyName();
+                c = fastCopyName2();
             }
         } while ((c >= 'a' && c <= 'z')
                 || (c >= 'A' && c <= 'Z')
@@ -1120,8 +1214,8 @@ public final class HXmlParser implements XmlPullParser {
                 || c >= 0x0b7);
         if (c == ':') {
             if (processNsp) {
-                composite[1] = getCached(pos, txtHash);
-                composite[0] = getNamespace(composite[1]);
+                composite1 = getCached(pos, txtHash);
+                composite0 = getNamespace(composite1);
                 semipos = txtPos;
                 semipos++;
             }
@@ -1131,9 +1225,9 @@ public final class HXmlParser implements XmlPullParser {
                 c = peek(0);
 */
                 if (peekCount > 0) { // == 1
-                    c = peek[0];
+                    c = peek0;
                 } else {
-                    c = fastCopyName();
+                    c = fastCopyName2();
                 }
             } while ((c >= 'a' && c <= 'z')
                     || (c >= 'A' && c <= 'Z')
@@ -1144,8 +1238,8 @@ public final class HXmlParser implements XmlPullParser {
                     || c >= 0x0b7);
         }
 
-        composite[2] = getCached(semipos, hash); // localname
-        composite[3] = getCached(pos, txtHash); // element/attribute "as is"
+        composite2 = getCached(semipos, hash); // localname
+//        composite3 = getCachedName(pos, txtHash); // element/attribute "as is"
 
 /*
         final String result = getCached(pos); // element/attribute "as is"
@@ -1153,7 +1247,8 @@ public final class HXmlParser implements XmlPullParser {
 */
         txtPos = pos;
 
-        return composite[3];
+//        return composite3;
+        return composite2;
     }
 
     private int hash(int pos) {
@@ -1641,6 +1736,18 @@ public final class HXmlParser implements XmlPullParser {
             || (namespace != null && !namespace.equals(getNamespace()))
             || (name != null && !name.equals(getName()))) {
             exception("expected: " + TYPES[type] + " {" + namespace + "}" + name);
+        }
+    }
+
+    public String nextText(final Hashtable cache) throws XmlPullParserException, IOException {
+        if (cache == null) {
+            return nextText();
+        }
+        valueCache = cache;
+        try {
+            return nextText();
+        } finally {
+            valueCache = null;
         }
     }
 

@@ -369,21 +369,6 @@ public final class Desktop implements CommandListener,
         // load default datums
         cz.kruch.track.configuration.Config.initDefaultDatums();
 
-//#ifndef __B2B__
-
-        // check datadir access and existence
-        if (File.isFs()) {
-            cz.kruch.track.configuration.Config.checkDataDir(configured);
-        }
-
-//#else
-
-        // just assume it exists
-        cz.kruch.track.configuration.Config.dataDirAccess = true;
-        cz.kruch.track.configuration.Config.dataDirExists = true;
-
-//#endif
-
         // fallback to external configuration in case of trouble
         if (configured == 0) {
             cz.kruch.track.configuration.Config.fallback();
@@ -3905,43 +3890,44 @@ public final class Desktop implements CommandListener,
 
     // vars
     private static short consoleErrors, consoleSkips;
+    private static boolean consoleLogo;
 
     private static void consoleInit(final Graphics g) {
         g.setColor(0x0);
         g.fillRect(0, 0, screen.getWidth(), screen.getHeight());
         if (cz.kruch.track.configuration.Config.dataDirExists) {
             try {
-                NavigationScreens.logo = NavigationScreens.loadImage(Config.FOLDER_RESOURCES, "logo.png");
+                final Image logo = NavigationScreens.loadImage(Config.FOLDER_RESOURCES, "logo.png");
+                if (logo != null) {
+                    consoleLogo = true;
+                    final int x = (screen.getWidth() - logo.getWidth()) >> 1;
+                    final int y = (screen.getHeight() - logo.getHeight()) >> 1;
+                    g.drawImage(logo, x, y, Graphics.TOP | Graphics.LEFT);
+                }
             } catch (Throwable t) {
                 // ignore
             }
-        }
-        if (NavigationScreens.logo != null) {
-            final Image logo = NavigationScreens.logo;
-            final int x = (screen.getWidth() - logo.getWidth()) >> 1;
-            final int y = (screen.getHeight() - logo.getHeight()) >> 1;
-            g.drawImage(logo, x, y, Graphics.TOP | Graphics.LEFT);
         }
         screen.flushGraphics();
     }
 
     private static void consoleShow(final Graphics g, final int y, final String text) {
-        if (NavigationScreens.logo == null) {
+        if (!consoleLogo) {
             if (text != null) {
                 g.setColor(0x00FFFFFF);
                 g.drawString(text, 2, y, Graphics.TOP | Graphics.LEFT);
                 screen.flushGraphics();
             }
-        }
-//#ifdef __ANDROID__
-          else {
+        } else {
+            final Font f = g.getFont();
+            g.setColor(0x00808080);
+            g.drawChar('.', y + f.charWidth('.') >> 1, screen.getHeight() - f.getHeight(), Graphics.TOP | Graphics.LEFT);
             screen.flushGraphics();
         }
-//#endif
     }
 
     private static void consoleResult(final Graphics g, final int y, final int code) {
-        if (NavigationScreens.logo == null) {
+        if (!consoleLogo) {
             final int x = screen.getWidth() - 2 - g.getFont().charWidth('*');
             switch (code) {
                 case -1:
@@ -3962,11 +3948,10 @@ public final class Desktop implements CommandListener,
 
     private static void consoleDelay(final long tStart) {
         final long delay;
-        if (NavigationScreens.logo != null) {
-            NavigationScreens.logo = null; // GC hint
-            delay = 3500 - (System.currentTimeMillis() - tStart);
-        } else {
+        if (!consoleLogo) {
             delay = consoleErrors > 0 ? 750 : (consoleSkips > 0 ? 250 : 0);
+        } else {
+            delay = 3000 - (System.currentTimeMillis() - tStart);
         }
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("console delay " + delay);

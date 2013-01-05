@@ -3,6 +3,7 @@
 package cz.kruch.track.location;
 
 import java.util.Vector;
+import java.util.Hashtable;
 import java.io.UnsupportedEncodingException;
 
 /**
@@ -14,7 +15,6 @@ public final class GroundspeakBean {
 //#endif
 
     private static final String UTF_8 = "UTF-8";
-    private static final Vector tokens = new Vector(16, 16);
 
     private static final int IDX_TYPE       = 0;
     private static final int IDX_CONTAINER  = 1;
@@ -28,12 +28,14 @@ public final class GroundspeakBean {
 
     private static final int N_PROPERTIES   = 9;
 
+    public static final Hashtable valuesCache = new Hashtable(16);
+
     private String ns;
     private String id, name;
     private Object properties;
 
     public GroundspeakBean(String ns, String id) {
-        this.ns = cache(ns);
+        this.ns = ns;
         this.id = id;
     }
 
@@ -85,7 +87,7 @@ public final class GroundspeakBean {
     }
 
     public void setType(String type) {
-        this.getProperties()[IDX_TYPE] = cache(type);
+        this.getProperties()[IDX_TYPE] = /*cache*/(type);
     }
 
     public String getContainer() {
@@ -93,7 +95,7 @@ public final class GroundspeakBean {
     }
 
     public void setContainer(String container) {
-        this.getProperties()[IDX_CONTAINER] = cache(container);
+        this.getProperties()[IDX_CONTAINER] = /*cache*/(container);
     }
 
     public String getDifficulty() {
@@ -101,7 +103,7 @@ public final class GroundspeakBean {
     }
 
     public void setDifficulty(String difficulty) {
-        this.getProperties()[IDX_DIFF] = cache(difficulty);
+        this.getProperties()[IDX_DIFF] = /*cache*/(difficulty);
     }
 
     public String getTerrain() {
@@ -109,7 +111,7 @@ public final class GroundspeakBean {
     }
 
     public void setTerrain(String terrain) {
-        this.getProperties()[IDX_TERRAIN] = cache(terrain);
+        this.getProperties()[IDX_TERRAIN] = /*cache*/(terrain);
     }
 
     public String getCountry() {
@@ -117,7 +119,7 @@ public final class GroundspeakBean {
     }
 
     public void setCountry(String country) {
-        this.getProperties()[IDX_COUNTRY] = cache(country);
+        this.getProperties()[IDX_COUNTRY] = /*cache*/(country);
     }
 
     public String getShortListing() {
@@ -150,7 +152,7 @@ public final class GroundspeakBean {
 
     public String classify() {
         final Object[] p = getProperties();
-        final StringBuffer sb = new StringBuffer(8);
+        final StringBuffer sb = new StringBuffer(16);
         sb.append(charAt0((String) p[IDX_TYPE]))
                 .append(charAt0((String) p[IDX_CONTAINER]))
                 .append(((String) p[IDX_DIFF]))
@@ -175,17 +177,20 @@ public final class GroundspeakBean {
         return '?';
     }
 
-    static String cache(String input) {
+    /* cached by parser to reduce GC during parsing */
+/*
+    static String cache(final String input) {
         final Vector tokens = GroundspeakBean.tokens;
         final int i = tokens.indexOf(input);
         if (i > -1) {
             return (String) tokens.elementAt(i);
         }
-        if (tokens.size() < 128) { // paranoia
+        if (tokens.size() < 64) { // paranoia
             tokens.addElement(input);
         }
         return input;
     }
+*/
 
     static Object stringToObject(final String s) {
         Object result;

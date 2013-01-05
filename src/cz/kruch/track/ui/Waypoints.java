@@ -2213,7 +2213,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
         // input stream and parser
         InputStream in = null;
         HXmlParser parser = null;
-        
+
         try {
             // open input
             in = new BufferedInputStream(file.openInputStream(), BUFFERSIZE);
@@ -2463,7 +2463,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                                 } break;
                                 case TAG_GS_TYPE: {
                                     // get GS type
-                                    gsbean.setType(parser.nextText());
+                                    gsbean.setType(parser.nextText(GroundspeakBean.valuesCache));
                                 } break;
                                 case TAG_AU_HINTS: {
                                     // get GS long listing
@@ -2475,11 +2475,11 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                                 } break;
                                 case TAG_GS_COUNTRY: {
                                     // get GS terrain
-                                    gsbean.setCountry(parser.nextText());
+                                    gsbean.setCountry(parser.nextText(GroundspeakBean.valuesCache));
                                 } break;
                                 case TAG_GS_DIFF: {
                                     // get GS difficulty
-                                    gsbean.setDifficulty(parser.nextText());
+                                    gsbean.setDifficulty(parser.nextText(GroundspeakBean.valuesCache));
                                 } break;
                                 case TAG_AU_SUMMARY: {
                                     // get AU summary used as GS long listing as
@@ -2495,11 +2495,11 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                                 } break;
                                 case TAG_GS_TERRAIN: {
                                     // get GS terrain
-                                    gsbean.setTerrain(parser.nextText());
+                                    gsbean.setTerrain(parser.nextText(GroundspeakBean.valuesCache));
                                 } break;
                                 case TAG_GS_CONTAINER: {
                                     // get GS container
-                                    gsbean.setContainer(parser.nextText());
+                                    gsbean.setContainer(parser.nextText(GroundspeakBean.valuesCache));
                                 } break;
                                 case TAG_GS_SHORTL: {
                                     // get GS short listing

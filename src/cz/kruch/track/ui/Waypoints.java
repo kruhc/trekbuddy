@@ -348,7 +348,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
             fn = itemFieldNotes.equals(displayable.getTitle());
 //#ifndef __ANDROID__
         } else if (displayable instanceof javax.microedition.lcdui.Alert) {
-            return; // S40 "ticker" activity indicator
+            return; // S40 "ticker" activity indicator (dialog with dismiss button)
 //#endif            
         }
 
@@ -429,7 +429,11 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                                 subfolder = null;
                                 onBackground(null, null, Resources.NAV_MSG_TICKER_LISTING);
                             } else {
-                                onBackground(item, null, Resources.NAV_MSG_TICKER_LOADING);
+                                if (_listingTitle != actionListTargets) {
+                                    onBackground(item, null, Resources.NAV_MSG_TICKER_LOADING);
+                                } else { // "Operation in progress" or "Enter landmarks filename:" will be shown
+                                    onBackground(item, null);
+                                }
                             }
                         }
 //#ifdef __ANDROID__

@@ -997,10 +997,6 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
 //#endif
 
         // gc hint
-/* causes crash on Symbian^3 phones
-        submenu.setCommandListener(null);
-        submenu.deleteAll();
-*/
         submenu = null;
 
         // restore top-level menu

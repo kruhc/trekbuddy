@@ -133,7 +133,6 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
 
     private volatile boolean tickerInUse; // FIXME
     
-//    private Hashtable cachedDisks;
     private NakedVector sortedWpts, fieldNotes;
     private String folder, subfolder;
     private String notesFilename;
@@ -197,7 +196,6 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
         this.navigator = navigator;
         this.backends = new Hashtable(4);
         this.stores = new Hashtable(4);
-//        this.cachedDisks = new Hashtable(4);
         this.fieldNotes = new NakedVector(0, 4);
         this.idx = new Object[3];
 //        this.sort = Config.sort;
@@ -254,12 +252,6 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
         } catch (Throwable t) {
             // ignore
         }
-
-        // FIXME create on demand to save memory
-        this.pane = new ExtList(Resources.getString(Resources.DESKTOP_CMD_NAVIGATION), List.IMPLICIT);
-        this.pane.setFitPolicy(Choice.TEXT_WRAP_OFF);
-        this.pane.setCommandListener(this);
-        this.pane.addCommand(cmdClose);
     }
 
     public void show() {
@@ -267,7 +259,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
         entry = depth = 0;
         subfolder = null;
         // start with main menu
-        use(pane);
+        use(pane());
         menu(0);
     }
 
@@ -282,10 +274,18 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
         } else {
             entry = depth = 0;
             subfolder = null;
-            use(pane);
+            use(pane());
         }
         // update menu and show list
         menu(depth);
+    }
+
+    private ExtList pane() {
+        pane = new ExtList(Resources.getString(Resources.DESKTOP_CMD_NAVIGATION), List.IMPLICIT);
+        pane.setFitPolicy(Choice.TEXT_WRAP_OFF);
+        pane.setCommandListener(this);
+        pane.addCommand(cmdClose);
+        return pane;
     }
 
     private void menu(final int depth) {
@@ -429,7 +429,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                                 subfolder = null;
                                 onBackground(null, null, Resources.NAV_MSG_TICKER_LISTING);
                             } else {
-                                if (_listingTitle != actionListTargets) {
+                                if (_listingTitle != actionListTargets) { // != is OK
                                     onBackground(item, null, Resources.NAV_MSG_TICKER_LOADING);
                                 } else { // "Operation in progress" or "Enter landmarks filename:" will be shown
                                     onBackground(item, null);
@@ -1046,13 +1046,10 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
 
         final int left = v.size();
         final String storesFolder = getStoresFolder();
-        NakedVector cachedDisk = null; //(NakedVector) cachedDisks.get(storesFolder);
+        NakedVector cachedDisk = null;
 //#ifdef __ANDROID__
 //        boolean tickerInUse = false;
 //#endif        
-
-        // no cached disk files?
-        if (cachedDisk == null) {
 
             // list persistent stores
             if (Config.dataDirExists) {
@@ -1068,11 +1065,6 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                     // list file stores
                     listWptFiles(cachedDisk = new NakedVector(INITIAL_LIST_SIZE, INCREMENT_LIST_SIZE));
 
-                    // cache (but only wpts folder files for safety)
-//                    if (folder == Config.FOLDER_WPTS) { // '==' is OK
-//                        cachedDisks.put(storesFolder, cachedDisk);
-//                    }
-
                 } catch (Throwable t) {
 
                     // show error
@@ -1080,8 +1072,6 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
 
                 }
             }
-
-        }
 
         // now append (cached) folder content
         /**
@@ -1319,18 +1309,27 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("action update store '" + name + "'");
 //#endif
+/*
         // interactive?
         final boolean onBackround = STORE_FRIENDS.equals(_addWptStoreKey);
+*/
 
         // execution status
         Throwable status = null;
         String url = null;
 
         // wait screen
+/* called earlier from updateStore
         if (!onBackround) {
+//#ifndef __ANDROID__
             Desktop.showWaitScreen(Resources.getString(Resources.DESKTOP_CMD_NAVIGATION),
                                    Resources.getString(Resources.DESKTOP_MSG_IN_PROGRESS));
+//#else
+            cz.kruch.track.ui.nokia.DeviceControl.setTicker(list.getUI(), Resources.getString(Resources.DESKTOP_MSG_IN_PROGRESS));
+            tickerInUse = true; // so that use() will hide the progress dialog (Android)
+//#endif
         }
+*/
 
         try {
             // create file revision
@@ -1424,6 +1423,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
             _storeUpdate = null; // gc hint
 
             // what next
+            final boolean onBackround = STORE_FRIENDS.equals(_addWptStoreKey);
             if (!onBackround) {
                 final UiList next;
                 if (depth > 1) {
@@ -1460,7 +1460,6 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
         if (name.equals(NEW_FILE_STORE)) { // new store
             stores.remove(storeKey);
             backends.remove(storeKey);
-//            cachedDisks.clear(); // force refresh of file list
         } else if (name.equals(currentName)) { // current store
             useKey = name;
         } else if (!name.equals(getBackend(storeKey, null).getFileName())) { // store other than last
@@ -1804,6 +1803,18 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
         // fallback action
         _listingTitle = actionListWpts;
 
+        // wait screen
+        final boolean onBackround = STORE_FRIENDS.equals(_addWptStoreKey);
+        if (!onBackround) {
+//#ifndef __ANDROID__
+            Desktop.showWaitScreen(Resources.getString(Resources.DESKTOP_CMD_NAVIGATION),
+                                   Resources.getString(Resources.DESKTOP_MSG_IN_PROGRESS));
+//#else
+            cz.kruch.track.ui.nokia.DeviceControl.setTicker(list.getUI(), Resources.getString(Resources.DESKTOP_MSG_IN_PROGRESS));
+            tickerInUse = true; // so that use() will hide the progress dialog (Android)
+//#endif
+        }
+        
         // do the rest on background
         exec();
     }
@@ -1979,6 +1990,8 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
     private void close() {
         // gc hints
         use(null);
+        // no more needed
+        pane = null;
         // restore navigator
         Desktop.display.setCurrent(Desktop.screen);
     }
@@ -2037,7 +2050,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
             // no harm if there is no ticker
             cz.kruch.track.ui.nokia.DeviceControl.setTicker(list.getUI(), null);
 //#else
-            // better check for ticker existence, for dumb implementations may act crazilu
+            // better check for ticker existence, for dumb implementations may act crazily
             if (list.getTicker() != null) { 
                 cz.kruch.track.ui.nokia.DeviceControl.setTicker(list.getUI(), null);
             }

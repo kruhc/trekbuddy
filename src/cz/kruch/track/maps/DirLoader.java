@@ -152,8 +152,12 @@ final class DirLoader extends Map.Loader /*implements Atlas.Loader*/ {
             slice.appendPath(sb);
 //#ifdef __SUPPORT_GPSKA__
         }
-//#endif        
+//#endif
+//#ifndef __CN1__
         sb.append(extension);
+//#else
+        sb.append(extension, 0, extension.length);
+//#endif
 
         // get full url
         final String url = sb.toString();

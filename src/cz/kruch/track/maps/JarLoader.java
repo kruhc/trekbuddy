@@ -94,7 +94,11 @@ final class JarLoader extends Map.Loader /*implements Atlas.Loader*/ {
 //#ifdef __SUPPORT_GPSKA__
         }
 //#endif        
+//#ifndef __CN1__
         sb.append(extension);
+//#else
+        sb.append(extension, 0, extension.length);
+//#endif
 
         // get full url
         final String url = sb.toString();

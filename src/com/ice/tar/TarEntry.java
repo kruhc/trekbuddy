@@ -268,7 +268,7 @@ public final class TarEntry {
      * @return string representation
      */
     public String toString() {
-        return (new StringBuffer()).append(getName()).append(" [size: " + getSize() + " position: " + getPosition() + "]").toString();
+        return (new StringBuffer()).append(getName()).append(" [size: ").append(getSize()).append(" position: ").append(getPosition()).append(']').toString();
     }
 
     /**

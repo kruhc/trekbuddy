@@ -54,8 +54,7 @@ public final class YesNoDialog implements CommandListener, Runnable {
 //#endif
             dialog.addCommand(new Command(Resources.getString(Resources.CMD_OK), Command.OK, 1));
         } else {
-            dialog = new Alert("TrekBuddy");
-            ((Alert) dialog).setString(question);
+            dialog = new Alert("TrekBuddy", question, null, null);
             ((Alert) dialog).setTimeout(Alert.FOREVER);
             dialog.addCommand(new Command(Resources.getString(Resources.CMD_YES), Command.OK, 1));
             dialog.addCommand(new Command(Resources.getString(Resources.CMD_NO), Command.CANCEL, 1));

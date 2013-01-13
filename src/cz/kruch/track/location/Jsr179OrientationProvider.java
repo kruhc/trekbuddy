@@ -2,6 +2,8 @@
 
 package cz.kruch.track.location;
 
+//#ifndef __CN1__
+
 import cz.kruch.track.event.Callback;
 
 import java.util.TimerTask;
@@ -79,3 +81,5 @@ public final class Jsr179OrientationProvider
         }
     }
 }
+
+//#endif

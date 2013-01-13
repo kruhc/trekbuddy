@@ -28,7 +28,8 @@ final class DeviceScreen extends GameCanvas implements Runnable {
 
     private static final int VROWS  = 15;
 
-    static int BTN_ARC        = 10;
+    static int BTN_ARC              = 10;
+    
     static final int BTN_COLOR      = 0x00424242; // 0x005b87ce;
     static final int BTN_HICOLOR    = 0x00ffffff; // 0x000a2468;
     static final int BTN_TXTCOLOR   = 0x00ffffff; // 0x00ffffff;

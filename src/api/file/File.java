@@ -27,9 +27,7 @@ public abstract class File {
     public static final int FS_SXG75            = 3;
     public static final int FS_MOTOROLA         = 4;
     public static final int FS_MOTOROLA1000     = 5;
-//#ifdef __CN1__
     public static final int FS_CN1              = 6;
-//#endif
 
     public static int fsType; // 0 (= FS_UNKNOWN)
 
@@ -42,19 +40,13 @@ public abstract class File {
         try {
             Class.forName("javax.microedition.io.file.FileConnection");
             factory = Class.forName("api.file.Jsr75File");
+//#ifndef __CN1__
             fsType = traverseBug ? FS_SXG75 : FS_JSR75;
+//#else
+            fsType = FS_CN1;
+//#endif
         } catch (Throwable t) {
         }
-//#ifdef __CN1__
-        if (factory == null) {
-            try {
-                Class.forName("com.codename1.io.FileSystemStorage");
-                factory = Class.forName("api.file.Cn1File");
-                fsType = FS_CN1;
-            } catch (Throwable t) {
-            }
-        }
-//#endif
 //#ifdef __ALL__
         if (factory == null) {
             try {
@@ -139,7 +131,7 @@ public abstract class File {
     }
 
     public static boolean isBrokenTraversal() {
-        return fsType == FS_SXG75 || fsType == FS_MOTOROLA || fsType == FS_MOTOROLA1000;
+        return fsType == FS_SXG75 || fsType == FS_MOTOROLA || fsType == FS_MOTOROLA1000 || fsType == FS_CN1;
     }
 
     public static boolean isOfType(final String filename, final String extension) {
@@ -220,7 +212,11 @@ public abstract class File {
     }
 
     public static boolean isDir(final String path) {
+//#ifndef __CN1__
         return File.PATH_SEPCHAR == path.charAt(path.length() - 1) || File.PARENT_DIR.equals(path);
+//#else
+        return File.PATH_SEPCHAR == path.charAt(path.length() - 1) || File.PARENT_DIR.equals(path) || javax.microedition.io.file.FileConnection.OS_PATH_SEPCHAR == path.charAt(path.length() - 1);
+//#endif
     }
 
     public static String encode(String path) {

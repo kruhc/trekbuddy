@@ -135,12 +135,6 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
 
         if (menuBasic.equals(section)) {
 
-            // default map path field
-            if (File.isFs()) {
-                submenu.append(field1 = new TextField(Resources.getString(Resources.CFG_BASIC_FLD_START_MAP),
-                                                      Config.mapURL, MAX_URL_LENGTH, TextField.URL));
-            }
-
             // map datum
             choice1 = new ChoiceGroup(Resources.getString(Resources.CFG_BASIC_GROUP_DEFAULT_DATUM),
                                       Desktop.CHOICE_POPUP_TYPE);
@@ -187,6 +181,8 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
             if (File.isFs()) {
                 submenu.append(field2 = new TextField(Resources.getString(Resources.CFG_BASIC_FLD_DATA_DIR),
                                Config.getDataDir(), MAX_URL_LENGTH, TextField.URL));
+                submenu.append(field1 = new TextField(Resources.getString(Resources.CFG_BASIC_FLD_START_MAP),
+                                                      Config.mapURL, MAX_URL_LENGTH, TextField.URL));
             }
 
         } else if (menuDesktop.equals(section)) {

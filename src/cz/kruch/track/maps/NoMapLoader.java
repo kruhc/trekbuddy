@@ -285,6 +285,10 @@ final class NoMapLoader extends Map.Loader /*implements Atlas.Loader*/ {
 
     private static class FakeCalibration extends Calibration {
 
+        /* to avoid $1 */
+        public FakeCalibration() {
+        }
+
         void init(final InputStream in, final String path) throws IOException {
             super.init(path);
         }

@@ -180,7 +180,9 @@ public final class FileBrowser implements CommandListener, Runnable, Comparator 
 //#endif
 
                     // traverse
-                    file.setFileConnection(path);
+                    if (path != null) {
+                        file.setFileConnection(path);
+                    }
                 }
 
                 // dir flag
@@ -258,7 +260,7 @@ public final class FileBrowser implements CommandListener, Runnable, Comparator 
 
     private void show(final File holder) {
 //#ifdef __LOG__
-        if (log.isEnabled()) log.debug("show; depth = " + depth + "; file = " + file.getURL());
+        if (log.isEnabled()) log.debug("show; depth = " + depth + "; file = " + (file == null ? "null" : file.getURL()));
 //#endif
 
         // may take long, avoid impatient user

@@ -902,14 +902,21 @@ final class ComputerView extends View
 //#ifdef __LOG__
                 if (log.isEnabled()) log.debug("prepare panel for " + Config.cmsProfile);
 //#endif
-                // colorify panel
-                colorifyPng(data, colors[dayNight * 4 + 1]);
-
                 // create image
                 try {
+
+                    // colorify panel
+                    colorifyPng(data, colors[dayNight * 4 + 1]);
+
+                    // create image
                     backgroundImage = Image.createImage(data, 0, data.length);
+
                 } catch (Throwable t) {
                     // ignore
+//#ifdef __LOG__
+                    if (log.isEnabled()) log.error("failure", t);
+                    t.printStackTrace();
+//#endif
                 }
 
             }
@@ -936,7 +943,6 @@ final class ComputerView extends View
                         // get cached bitmap font
                         Image bitmap = (Image) cache.get(area.fontName);
                         if (bitmap == null) { // create fresh new
-
 //#ifdef __LOG__
                             if (log.isEnabled()) log.error("bitmap font image not colorified yet: " + area.fontName + "; colorify using " + Integer.toHexString(colors[dayNight * 4 + 1]) + " color");
 //#endif
@@ -944,11 +950,11 @@ final class ComputerView extends View
                             // get raw data
                             final byte[] data = (byte[]) fonts.get(area.fontName);
 
-                            // colorify
-                            colorifyPng(data, colors[dayNight * 4 + 1]);
+                            // create image
+                            if (data != null) {
 
-                            // create and cache image
-                            try {
+                                // colorify
+                                colorifyPng(data, colors[dayNight * 4 + 1]);
 
                                 // create image
                                 bitmap = Image.createImage(data, 0, data.length);
@@ -956,8 +962,6 @@ final class ComputerView extends View
                                 // cache image
                                 cache.put(area.fontName, bitmap);
 
-                            } catch (Throwable t) {
-                                // ignore
                             }
                         }
 

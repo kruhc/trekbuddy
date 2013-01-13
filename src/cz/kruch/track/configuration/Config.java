@@ -310,6 +310,8 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
 
         dataDir = getDefaultDataDir("file:///D:/", "TrekBuddy/");
         safeColors = true;
+        zoomSpotsMode = guideSpotsMode = 0;
+        noQuestions = true;
 
 //#else
 
@@ -809,6 +811,9 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
                 }
             }
         } catch (Throwable t) {
+//#ifdef __LOG__
+            t.printStackTrace();
+//#endif
             throw new ConfigurationException(t);
         } finally {
             try {

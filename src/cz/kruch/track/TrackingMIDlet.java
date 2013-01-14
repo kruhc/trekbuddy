@@ -153,6 +153,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         } catch (Throwable t) {
         }
 */
+/*
         try {
             Class.forName("javax.microedition.io.CommConnection");
             comm = true;
@@ -161,6 +162,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
 //#endif
         } catch (Throwable t) {
         }
+*/
 
 //#else /* __ANDROID__ */
 
@@ -313,7 +315,6 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         int imaged;
         try {
             cz.kruch.track.ui.NavigationScreens.initialize();
-            cz.kruch.track.ui.NavigationScreens.initialize2();
             imaged = 1;
         } catch (Throwable t) {
             imaged = -1;
@@ -393,11 +394,11 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
     }
 
     public static boolean hasPorts() {
-//#ifdef __ANDROID__
+//-#ifdef __ANDROID__
         return true;
-//#else
-        return comm; // System.getProperty("microedition.commports") != null && System.getProperty("microedition.commports").length() > 0;
-//#endif
+//-#else
+//        return comm;
+//-#endif
     }
 
     public static boolean supportsVideoCapture() {

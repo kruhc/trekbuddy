@@ -20,10 +20,8 @@ final class OSD extends Bar {
 //#endif
 
     private static final char[] MM = { '<', '>' };
-    private static final char[] NSAT;
-    static {
-        NSAT = "3*4*5*6*7*8*9*10*11*12*".toCharArray();
-    }
+    private static final char[] NSAT = "3*4*5*6*7*8*9*10*11*12*".toCharArray();
+    private static final int NSAT_MAX = 12;
 
     int providerStatus;
 
@@ -107,7 +105,7 @@ final class OSD extends Bar {
                         graphics.drawChars(NSAT, (sat - 3) * 2, 2,
                                            width - BORDER - nsatw,
                                            gy + bh, Graphics.TOP | Graphics.LEFT);
-                    } else if (sat <= 12) {
+                    } else if (sat <= NSAT_MAX) {
                         graphics.drawChars(NSAT, 14 + (sat - 10) * 3, 3,
                                            width - BORDER - nsatw2,
                                            gy + bh, Graphics.TOP | Graphics.LEFT);

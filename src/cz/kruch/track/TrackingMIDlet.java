@@ -103,7 +103,9 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
 
         // detect runtime capabilities
         try {
-            Class.forName("javax.microedition.location.LocationProvider");
+            if (System.getProperty("microedition.location.version") == null) {
+                Class.forName("javax.microedition.location.LocationProvider");
+            }
             jsr179 = true;
 //#ifdef __LOG__
             System.out.println("* JSR-179");
@@ -111,7 +113,9 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         } catch (Throwable t) {
         }
         try {
-            Class.forName("javax.bluetooth.DiscoveryAgent");
+            if (System.getProperty("bluetooth.api.version") == null) {
+                Class.forName("javax.bluetooth.DiscoveryAgent");
+            }
             jsr82 = true;
 //#ifdef __LOG__
             System.out.println("* JSR-82");
@@ -119,7 +123,9 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         } catch (Throwable t) {
         }
         try {
-            Class.forName("javax.wireless.messaging.TextMessage");
+            if (System.getProperty("wireless.messaging.version") == null) {
+                Class.forName("javax.wireless.messaging.TextMessage");
+            }
             jsr120 = true;
 //#ifdef __LOG__
             System.out.println("* JSR-120");

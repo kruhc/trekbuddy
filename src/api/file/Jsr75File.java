@@ -68,15 +68,27 @@ final class Jsr75File extends File {
     }
 
     public String getURL() {
+//#ifdef __RIM__
+        return resolveEncrypted(((FileConnection) fc).getURL());
+//#else
         return ((FileConnection) fc).getURL();
+//#endif
     }
 
     public String getName() {
+//#ifdef __RIM__
+        return resolveEncrypted(((FileConnection) fc).getName());
+//#else
         return ((FileConnection) fc).getName();
+//#endif
     }
 
     public String getPath() {
+//#ifdef __RIM__
+        return resolveEncrypted(((FileConnection) fc).getPath());
+//#else
         return ((FileConnection) fc).getPath();
+//#endif
     }
 
     public void setFileConnection(String path) throws IOException {

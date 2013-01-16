@@ -113,18 +113,7 @@
         <pathelement location="${rim50.home}\lib\net_rim_api.jar"/>
     </path>
 
-    <path id="bootclasspath.cn1.microemu">
-        <pathelement location="c:\Program Files (x86)\Java\jdk1.4.2_19\jre\lib\rt.jar"/>
-        <pathelement location="${cn1.home}\lib\CLDC11.jar"/>
-        <pathelement location="${cn1.home}\lib\CodenameOne.jar"/>
-        <pathelement location="${microemu.home}\microemu-cldc\target\microemu-cldc-3.0.0-SNAPSHOT.jar"/>
-        <pathelement location="${microemu.home}\microemu-midp\target\microemu-midp-3.0.0-SNAPSHOT.jar"/>
-    </path>
-
     <path id="bootclasspath.cn1">
-<!--
-        <pathelement location="c:\Program Files (x86)\Java\jdk1.4.2_19\jre\lib\rt.jar"/>
--->
         <pathelement location="${cn1.home}\lib\CLDC11.jar"/>
         <pathelement location="${cn1.home}\lib\CodenameOne.jar"/>
     </path>
@@ -715,7 +704,7 @@
                destdir="tmp/build/classes"
                tempdir="tmp/ant"
                fork="true"
-               target="1.5" source="1.5" debug="true" debuglevel="source,lines"
+               target="1.5" debug="true" debuglevel="source,lines"
                bootclasspathref="bootclasspath.android20"/>
     </target>
 
@@ -726,7 +715,7 @@
                destdir="tmp/build/classes"
                tempdir="tmp/ant"
                fork="true"
-               target="1.5" source="1.5"
+               target="1.5"
                bootclasspathref="bootclasspath.android16"/>
     </target>
 
@@ -738,26 +727,11 @@
                destdir="tmp/build/classes"
                tempdir="tmp/ant"
                fork="true"
-               target="1.3" source="1.3" debug="true"
+               target="1.5" debug="true"
                bootclasspathref="bootclasspath.cn1">
+            <compilerarg value="-Xlint:unchecked"/>
             <src path="tmp/src"/>
             <src path="cn1-compat/src"/>
-        </javac>
-    </target>
-
-    <target name="compile.cn1.microemu" depends="remove.nonstd.src,remove.rim.src,remove.android.src,
-                                        remove.mmapi.src,remove.fileapi.src,remove.lapi.src">
-        <mkdir dir="tmp/build/classes"/>
-        <mkdir dir="tmp/ant"/>
-        <copy file="src\api\file\Cn1File.java" todir="tmp\src\api\file"/>
-        <javac sourcepath=""
-               destdir="tmp/build/classes"
-               tempdir="tmp/ant"
-               fork="true"
-               target="1.3" source="1.3" debug="true"
-               bootclasspathref="bootclasspath.cn1.microemu">
-            <src path="tmp/src"/>
-            <src path="${microemu.home}\microemu-cn1\src\main\java"/>
         </javac>
     </target>
 
@@ -850,6 +824,7 @@
     </target>
 
     <target name="remove.nonandroid.src" depends="remove.nonmidp.src,remove.mmapi.src,remove.lapi.src">
+        <delete file="tmp/src/cz/kruch/track/location/Jsr179LocationProvider.java"/>
         <delete dir="tmp/src/org/xmlpull"/>
     </target>
 
@@ -866,7 +841,6 @@
 
     <target name="remove.lapi.src">
         <delete file="tmp/src/cz/kruch/track/location/Jsr82LocationProvider.java"/>
-        <delete file="tmp/src/cz/kruch/track/location/Jsr179LocationProvider.java"/>
         <delete file="tmp/src/cz/kruch/track/location/Jsr179OrientationProvider.java"/>
         <delete file="tmp/src/cz/kruch/track/location/O2GermanyLocationProvider.java"/>
     </target>

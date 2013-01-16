@@ -390,7 +390,7 @@ public final class Map implements Runnable {
         protected static final char[] EXT_PNG = { '.', 'p', 'n', 'g' };
         protected static final char[] EXT_JPG = { '.', 'j', 'p', 'g' };
 
-//#if __SYMBIAN__ || __RIM__ || __ANDROID__
+//#if __SYMBIAN__ || __RIM__ || __ANDROID__ || __CN1__
         protected static final int BUFFERSIZE = 8192; // more memory available
 //#else
         protected static final int BUFFERSIZE = 4096; // conservative; also backward compatible

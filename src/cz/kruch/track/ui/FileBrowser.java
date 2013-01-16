@@ -339,11 +339,16 @@ public final class FileBrowser implements CommandListener, Runnable, Comparator 
             if (File.isDir(item)) {
                 v.addElement(item);
             } else if (allowed != null) {
-                final String itemlc = item.toLowerCase();
+                final String candidate = item.toLowerCase();
                 for (int i = allowed.length; --i >= 0; ) {
-                    if (itemlc.endsWith(allowed[i])) {
-                        v.addElement(item);
+                    if (File.isOfType(candidate, allowed[i])) {
+                        v.addElement(File.idenFix(item));
                     }
+//#ifdef __RIM__
+                      else if (candidate.endsWith(allowed[i] + ".rem")) {
+                        v.addElement(File.resolveEncrypted(item));
+                    }
+//#endif
                 }
             } else {
                 v.addElement(item);

@@ -1844,9 +1844,8 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                             v.addElement(File.idenFix(filename));
                         }
 //#ifdef __RIM__
-                          else if (File.isOfType(candidate, SUFFIX_GPX_REM)) {
-                            final String rem = filename.substring(0, filename.length() - 4); // ".rem".length()
-                            v.addElement(File.idenFix(rem));
+                          else if (candidate.endsWith(SUFFIX_GPX_REM)) {
+                            v.addElement(File.resolveEncrypted(filename));
                         }
 //#endif
                     } else if (subfolder == null && /* isDir: */filename.endsWith(File.PATH_SEPARATOR) && !filename.startsWith("images-")) {

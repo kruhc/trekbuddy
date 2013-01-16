@@ -14,8 +14,6 @@ import api.location.LocationProvider;
 import java.io.OutputStream;
 import java.io.IOException;
 
-import net.rim.device.api.gps.BlackBerryLocation;
-
 /**
  * Internal (JSR-179) provider implementation.
  *
@@ -145,7 +143,7 @@ public final class Jsr179LocationProvider
     public void locationUpdated(javax.microedition.location.LocationProvider p,
                                 javax.microedition.location.Location l) {
 //#ifdef __RIM50__
-        final BlackBerryLocation bbl = (BlackBerryLocation) l;
+        final net.rim.device.api.gps.BlackBerryLocation bbl = (net.rim.device.api.gps.BlackBerryLocation) l;
         bbError = bbl.getError();
         bbStatus = bbl.getStatus();
         switch (bbStatus) {

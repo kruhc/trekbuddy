@@ -30,6 +30,7 @@ public final class AndroidLocationProvider
 //#ifdef __LOG__
     private static final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("AndroidLocationProvider");
 //#endif
+    private static final String TAG = cz.kruch.track.TrackingMIDlet.APP_TITLE;
     private static final String KEY_SATELLITES = "satellites";
     private static final byte[] CRLF = { '\r', '\n' };
 
@@ -40,6 +41,7 @@ public final class AndroidLocationProvider
     private TimerTask watcher;
 
     private volatile int sat, status;
+    private volatile boolean hasNmea;
 
     private final char[] raw;
     private int extraSat, extraFix, extraFixQuality;
@@ -77,6 +79,9 @@ public final class AndroidLocationProvider
 
         // let's roll
         baby();
+
+        // reset
+        extraSat = extraFix = extraFixQuality = 0;
 
         try {
             // create looper
@@ -189,7 +194,7 @@ public final class AndroidLocationProvider
         if (extras != null) {
             sat = extras.getInt(KEY_SATELLITES, 0);
         }
-        if (sat == 0) { // fallback to value from onStatusChanged/onGpsStatusChanged/onNmeaReceived 
+        if (sat == 0) { // fallback to value from onStatusChanged/onGpsStatusChanged/onNmeaReceived
             sat = this.sat;
         }
         final Location location = Location.newInstance(qc, l.getTime(), 1, sat);
@@ -228,13 +233,15 @@ public final class AndroidLocationProvider
                 break;
                 case android.location.LocationProvider.AVAILABLE:
                     status = AVAILABLE;
+                    if (!hasNmea) {
+                        if (extras != null) {
+                            final int cnt = extras.getInt(KEY_SATELLITES, 0);
+                            if (cnt > 0) {
+                                NmeaParser.satv = cnt;
+                            }
+                        }
+                    }
                 break;
-            }
-            if (extras != null) {
-                final int cnt = extras.getInt(KEY_SATELLITES, 0);
-                if (cnt > 0) {
-                    this.sat = cnt;
-                }
             }
             if (this.status != status) {
                 notifyListener(this.status = status);
@@ -261,16 +268,33 @@ public final class AndroidLocationProvider
         if (log.isEnabled()) log.debug("onGpsStatusChanged");
 //#endif
 
+        if (hasNmea) {
+            return;
+        }
+
         switch (event) {
             case android.location.GpsStatus.GPS_EVENT_SATELLITE_STATUS: {
                 gpsStatus = manager.getGpsStatus(gpsStatus);
                 if (gpsStatus != null) {
-                    int cnt = 0;
+                    /*
+                     * only sats in view with SNR are available in GSV (Xperia/Android 4.0.4)
+                     */
+                    int cnt = 0, sat = 0;
                     for (android.location.GpsSatellite satellite : gpsStatus.getSatellites()) {
+                        if (cnt < NmeaParser.MAX_SATS) {
+                            NmeaParser.prns[cnt] = (byte) satellite.getPrn();
+                            NmeaParser.snrs[cnt] = NmeaParser.normalizeSnr((int) satellite.getSnr());
+                        }
                         cnt++;
+                        if (satellite.usedInFix()) {
+                            sat++;
+                        }
                     }
                     if (cnt > 0) {
-                        this.sat = cnt;
+                        NmeaParser.satv = cnt;
+                        NmeaParser.sata = cnt;
+                        NmeaParser.resetPrnSnr();
+                        this.sat = sat;
                     }
                 }
             } break;
@@ -282,23 +306,30 @@ public final class AndroidLocationProvider
         if (log.isEnabled()) log.debug("onNmeaReceived");
 //#endif
 
+        // set flag
+        hasNmea = true;
+
         // enhance with raw NMEA
         int sat = 0;
         if (nmea != null) {
-            extraSat = extraFix = extraFixQuality = 0;
             try {
                 parseNmea(nmea);
                 if (extraSat > 0) {
                     sat = extraSat;
+/*
                 } else {
                     if (NmeaParser.sata != 0) {
                         sat = NmeaParser.sata;
                     }
+*/
                 }
                 if (sat > 0) {
                     this.sat = sat;
                 }
             } catch (Exception e) {
+//#ifdef __LOG__
+                android.util.Log.w(TAG, "NMEA parsing failed", e);
+//#endif
                 setThrowable(e);
                 errors++;
             }

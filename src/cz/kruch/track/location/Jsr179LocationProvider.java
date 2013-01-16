@@ -14,6 +14,8 @@ import api.location.LocationProvider;
 import java.io.OutputStream;
 import java.io.IOException;
 
+import net.rim.device.api.gps.BlackBerryLocation;
+
 /**
  * Internal (JSR-179) provider implementation.
  *
@@ -143,12 +145,25 @@ public final class Jsr179LocationProvider
     public void locationUpdated(javax.microedition.location.LocationProvider p,
                                 javax.microedition.location.Location l) {
 //#ifdef __RIM50__
-        bbError = ((net.rim.device.api.gps.BlackBerryLocation) l).getError();
-        bbStatus = ((net.rim.device.api.gps.BlackBerryLocation) l).getStatus();
+        final BlackBerryLocation bbl = (BlackBerryLocation) l;
+        bbError = bbl.getError();
+        bbStatus = bbl.getStatus();
         switch (bbStatus) {
+            case net.rim.device.api.gps.BlackBerryLocation.GPS_FIX_UNAVAILABLE:
             case net.rim.device.api.gps.BlackBerryLocation.GPS_FIX_PARTIAL:
             case net.rim.device.api.gps.BlackBerryLocation.GPS_FIX_COMPLETE:
-                NmeaParser.satv = ((net.rim.device.api.gps.BlackBerryLocation) l).getSatelliteCount();
+                int sat = 0;
+                for (java.util.Enumeration e = bbl.getSatelliteInfo(); e.hasMoreElements(); ) {
+                    final net.rim.device.api.gps.SatelliteInfo si = (net.rim.device.api.gps.SatelliteInfo) e.nextElement();
+                    if (sat < NmeaParser.MAX_SATS && si.getId() > 0) { // si.isvalid() seems to strict ;-)
+                        NmeaParser.prns[sat] = (byte) si.getId();
+                        NmeaParser.snrs[sat] = NmeaParser.normalizeSnr(si.getSignalQuality());
+                    }
+                    sat++;
+                }
+                NmeaParser.satv = bbl.getSatelliteCount();
+                NmeaParser.sata = sat;
+                NmeaParser.resetPrnSnr();
             break;
         }
 //#endif
@@ -191,10 +206,12 @@ public final class Jsr179LocationProvider
                     parseNmea(extra);
                     if (extraSat > 0) {
                         sat = extraSat;
+/*
                     } else {
                         if (NmeaParser.sata != 0) {
                             sat = NmeaParser.sata;
                         }
+*/
                     }
                 } catch (Exception e) {
                     setThrowable(e);

@@ -16,6 +16,7 @@ import java.util.Hashtable;
  */
 public final class NmeaParser {
     public static final int MAX_SENTENCE_LENGTH = 128; // 82(79) max according to NMEA 0183 v3.01
+    public static final int MAX_SATS            = 12;
 
     public static final int HEADER_$GP = 0x00244750;
     public static final int HEADER_GGA = 0x00474741;
@@ -34,10 +35,12 @@ public final class NmeaParser {
 
     private static long date;
     private static int day, month, year;
+/*
     private static int prnc;
+    private static boolean hasPrnc;
+*/
 
     private static final int HEADER_LENGTH  = 6;   // sentence header length
-    private static final int MAX_SATS       = 12;
 
     public static final byte[] snrs  = new byte[MAX_SATS];
     public static final byte[] prns = new byte[MAX_SATS];
@@ -46,13 +49,38 @@ public final class NmeaParser {
     public static float geoidh;
     public static int satv, sata;
     
+//#ifdef __NMEA_XDR__
     public static final Hashtable xdr = new Hashtable(4);
+//#endif
 
     private NmeaParser() {
     }
 
     public static void reset() {
         pdop = hdop = vdop = geoidh = Float.NaN;
+        satv = sata = 0;
+/*
+        prnc = 0;
+        hasPrnc = false;
+*/
+        resetPrnSnr();
+    }
+
+    public static void resetPrnSnr() {
+        for (int i = sata; i < MAX_SATS; i++) {
+            prns[i] = 0;
+            snrs[i] = 0;
+        }
+    }
+
+    public static byte normalizeSnr(int value) {
+        int snr = ((value & 0x7f) - 15) / 3; // 'normalization'
+        if (snr < 1/*0*/) {
+            snr = 1/*0*/;
+        } else if (snr > 9) {
+            snr = 9;
+        }
+        return (byte) snr;
     }
 
     public static boolean validate(final char[] raw, final int length) {
@@ -111,11 +139,11 @@ public final class NmeaParser {
             case NmeaParser.HEADER_RMC: {
                 result = parseRMC(nmea, length);
             } break;
-/* commented out since 1.0.17
+//#ifdef __NMEA_XDR__
             case NmeaParser.HEADER_XDR: {
                 result = parseXDR(nmea, length);
             } break;
-*/
+//#endif
         }
 
         if (result == null) {
@@ -203,15 +231,20 @@ public final class NmeaParser {
         // local refs for faster access
         final CharArrayTokenizer tokenizer = NmeaParser.tokenizer;
         final Record record = gsa;
+/*
         final byte[] snrs = NmeaParser.snrs;
         final byte[] prns = NmeaParser.prns;
+*/
 
         // init tokenizer and record
         tokenizer.init(nmea, length, delimiters, false);
         record.invalidate(HEADER_GSA);
 
+/*
         // prn indexes
         prnc = 0;
+        hasPrnc = true;
+*/
 
         // process
         int index = 0;
@@ -247,8 +280,10 @@ public final class NmeaParser {
                 case 14: {
                     if (!token.isEmpty()) {
                         record.sat++;
+/*
                         prns[prnc++] = (byte) CharArrayTokenizer.parseInt(token);
-                    } 
+*/
+                    }
                 } break;
                 case 15:
                     if (!token.isEmpty()) {
@@ -275,11 +310,13 @@ public final class NmeaParser {
             index++;
         }
 
+/*
         // clear remaining prns & snrs
         for (int i = prnc; i < MAX_SATS; i++) {
             prns[i] = 0;
             snrs[i] = 0;
         }
+*/
 
         return record;
     }
@@ -294,8 +331,8 @@ public final class NmeaParser {
         tokenizer.init(nmea, length, delimiters, false);
 
         // local vars
-        int sentence = 0, maxi = 20;
-        int tracked = -1, prn = -1;
+        int sentence = 0, sentences = 0, maxi = 20;
+        int /*tracked = -1,*/ prn = -1;
 
         // process
         int index = 0;
@@ -306,6 +343,7 @@ public final class NmeaParser {
                     case 0: // $GPGSV
                         break;
                     case 1: // number of sentences
+                        sentences = CharArrayTokenizer.parseInt(token);
                         break;
                     case 2: { // current sentence
                         sentence = CharArrayTokenizer.parseInt(token);
@@ -321,30 +359,39 @@ public final class NmeaParser {
                         final int mod = index % 4;
                         switch (mod) {
                             case 0: {
+/*
                                 tracked = -1;
+*/
                                 prn = CharArrayTokenizer.parseInt(token); // should not be empty
+/*
                                 for (int i = prnc; --i >= 0; ) {
                                     if (prn == prns[i]) {
                                         tracked = i;
                                         break;
                                     }
                                 }
+*/
+                                if (sata < MAX_SATS) {
+                                    prns[sata] = (byte) prn;
+                                    snrs[sata] = (byte) 0; // it may be empty later
+                                    sata++;
+                                }
                             } break;
                             case 3: {
-                                int snr = (CharArrayTokenizer.parseInt(token) - 15) / 3; // 'normalization'
-                                if (snr < 1/*0*/) {
-                                    snr = 1/*0*/;
-                                } else if (snr > 9) {
-                                    snr = 9;
-                                }
+                                byte snr = normalizeSnr(CharArrayTokenizer.parseInt(token));
+/*
                                 if (tracked != -1) {
                                     snrs[tracked] = (byte) snr;
-                                } else if (prnc == 0) { // no GSA
+                                } else if (!hasPrnc) { // no preceding GSA
                                     if (sata < MAX_SATS) {
                                         prns[sata] = (byte) prn;
                                         snrs[sata] = (byte) snr;
                                         sata++;
                                     }
+                                }
+*/
+                                if (sata < MAX_SATS) {
+                                    snrs[sata - 1] = snr; // sata was already incremented
                                 }
                             } break;
                         }
@@ -352,6 +399,11 @@ public final class NmeaParser {
                 }
             }
             index++;
+        }
+
+        // clear remaining prns & snrs
+        if (sentence == sentences) {
+            resetPrnSnr();
         }
     }
 
@@ -414,6 +466,8 @@ public final class NmeaParser {
         return record;
     }
 
+//#ifdef __NMEA_XDR__
+
     private static Record parseXDR(final char[] nmea, final int length) throws LocationException {
         // local refs for faster access
         final CharArrayTokenizer tokenizer = NmeaParser.tokenizer;
@@ -456,6 +510,8 @@ public final class NmeaParser {
 
         return unknown;
     }
+
+//#endif
 
     private static int parseTime(final CharArrayTokenizer.Token token) {
         int tl = CharArrayTokenizer.parseInt(token.array, token.begin, 6/*token.length*/);

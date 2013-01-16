@@ -374,6 +374,15 @@ public final class Desktop implements CommandListener,
             cz.kruch.track.configuration.Config.fallback();
         }
 
+        // load extra (touchscreen) graphics
+        if (screen.hasPointerEvents()) {
+            try {
+                NavigationScreens.initializeForTouch();
+            } catch (Throwable t) {
+                // ignore
+            }
+        }
+
         /*
          * ~from TrackingMIDlet.run
          */
@@ -401,7 +410,9 @@ public final class Desktop implements CommandListener,
             int customized;
             try {
                 customized = cz.kruch.track.ui.NavigationScreens.customize(resources);
-                customized = cz.kruch.track.ui.NavigationScreens.customize2(resources);
+                if (screen.hasPointerEvents()) {
+                    customized = cz.kruch.track.ui.NavigationScreens.customizeForTouch(resources);
+                }
             } catch (Throwable t) {
                 customized = -1;
             }
@@ -427,9 +438,6 @@ public final class Desktop implements CommandListener,
             // user datums
             cz.kruch.track.configuration.Config.initUserDatums(resources);
         }
-
-        // free some resources
-        NavigationScreens.hasTouchEvents(screen.hasPointerEvents());
 
 //#ifdef __B2B__
 
@@ -1191,7 +1199,7 @@ public final class Desktop implements CommandListener,
 //#ifdef __ANDROID__
                 cz.kruch.track.TrackingMIDlet.getActivity().finish();
 //                System.runFinalizersOnExit(true);
-//                System.exit(0); // see lines 466-467 in microemulator\microemu-javase\src\main\java\org\microemu\app\Common.java
+                System.exit(0); // see lines 466-467 in microemulator\microemu-javase\src\main\java\org\microemu\app\Common.java
 //#endif
             }
 

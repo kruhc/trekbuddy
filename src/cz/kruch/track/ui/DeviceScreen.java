@@ -244,9 +244,9 @@ final class DeviceScreen extends GameCanvas implements Runnable {
     }
 
 //#ifdef __ANDROID__
-    private final float density = Float.parseFloat(System.getProperty("microemu.display.density"));
-    private final float xdpi = Float.parseFloat(System.getProperty("microemu.display.xdpi"));
-    private final float ydpi = Float.parseFloat(System.getProperty("microemu.display.ydpi"));
+    static final float density = Float.parseFloat(System.getProperty("microemu.display.density"));
+    static final float xdpi = Float.parseFloat(System.getProperty("microemu.display.xdpi"));
+    static final float ydpi = Float.parseFloat(System.getProperty("microemu.display.ydpi"));
 //#endif
 
     boolean isHires() {

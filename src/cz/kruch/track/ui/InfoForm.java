@@ -79,7 +79,7 @@ final class InfoForm implements CommandListener {
         if (cz.kruch.track.TrackingMIDlet.jsr256)
             sb.append("256 ");
 */
-        pane.append(newItem("ExtraJsr", sb.toString()));
+        pane.append(newItem("Jsr", sb.toString()));
         if (cz.kruch.track.TrackingMIDlet.getFlags() != null) {
             pane.append(newItem("AppFlags", cz.kruch.track.TrackingMIDlet.getFlags()));
         }
@@ -115,12 +115,16 @@ final class InfoForm implements CommandListener {
         pane.append(newItem("Orientation", cz.kruch.track.ui.nokia.DeviceControl.getSensorStatus()));
 //#endif
         sb.delete(0, sb.length())
+                .append(Desktop.width).append('x').append(Desktop.height)
+//#ifdef __ANDROID__
+                .append("; dpi? ").append((int)DeviceScreen.xdpi).append('/')
+                                  .append((int)DeviceScreen.ydpi)
+//#endif
 //#ifdef __ALT_RENDERER__
-                .append("safe renderer? ").append(Config.S60renderer)
+                .append("; safe renderer? ").append(Config.S60renderer)
 //#endif                
                 .append("; hasRepeatEvents? ").append(Desktop.screen.hasRepeatEvents())
                 .append("; hasPointerEvents? ").append(Desktop.screen.hasPointerEvents())
-                .append("; ").append(Desktop.width).append('x').append(Desktop.height)
                 .append("; skips? ").append(Desktop.skips);
         pane.append(newItem("Desktop", sb.toString()));
         if (map == null) {

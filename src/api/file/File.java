@@ -219,6 +219,17 @@ public abstract class File {
 //#endif
     }
 
+//#ifdef __RIM__
+
+     public static String resolveEncrypted(String path) {
+         if (path.endsWith(".rem")) {
+             path = path.substring(0, path.length() - 4);
+         }
+         return path;
+     }
+
+//#endif
+
     public static String encode(String path) {
         int idx = path.indexOf(' ');
         if (idx > -1) {

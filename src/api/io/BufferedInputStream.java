@@ -119,12 +119,7 @@ public class BufferedInputStream extends InputStream {
         if (available > 0) {
             return available;
         }
-//#ifdef __ALL__
-        if (cz.kruch.track.TrackingMIDlet.motorola || cz.kruch.track.TrackingMIDlet.iden) {
-            return localIn.available();
-        }
-//#endif
-        return 0;
+        return localIn.available();
     }
 
     /**

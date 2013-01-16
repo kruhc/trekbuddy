@@ -9,10 +9,18 @@ import javax.microedition.lcdui.Image;
 import javax.microedition.lcdui.Graphics;
 import java.io.IOException;
 
+//#ifdef __ANDROID__
+
+import android.graphics.Bitmap;
+import org.microemu.android.device.AndroidImmutableImage;
+
+//#endif
+
 //#ifdef __RIM50__
-import net.rim.device.api.math.Fixed32;
+
 import net.rim.device.api.system.Bitmap;
 import net.rim.device.api.system.EncodedImage;
+
 //#endif
 
 public final class ImageUtils {
@@ -76,13 +84,13 @@ public final class ImageUtils {
 
 //#ifdef __ANDROID__
 
-        android.graphics.Bitmap bitmap = ((org.microemu.android.device.AndroidImmutableImage) src).getBitmap();
-        android.graphics.Bitmap scaled = android.graphics.Bitmap.createScaledBitmap(bitmap, destW, destH,
-                                                                                    mode == SLOW_RESAMPLE || Config.tilesScaleFiltered);
+        Bitmap bitmap = ((AndroidImmutableImage) src).getBitmap();
+        Bitmap scaled = Bitmap.createScaledBitmap(bitmap, destW, destH,
+                                                  mode == SLOW_RESAMPLE || Config.tilesScaleFiltered);
         if (recycle && bitmap != null && !bitmap.isRecycled()) {
             bitmap.recycle();
         }
-        return new org.microemu.android.device.AndroidImmutableImage(scaled);
+        return new AndroidImmutableImage(scaled);
 
 //-#elifdef __RIM__
 
@@ -102,6 +110,10 @@ public final class ImageUtils {
 //        scaled = null;
 //
 //        return Image.createRGBImage(rgb, destW, destH, true);
+
+//#elifdef __CN1__
+
+        return src.scaled(destW, destH);
 
 //#else
 
@@ -306,19 +318,20 @@ public final class ImageUtils {
 */
         byte[] data = net.rim.device.api.io.IOUtilities.streamToBytes(stream, 4096);
         EncodedImage image = EncodedImage.createEncodedImage(data, 0, data.length);
-        data = null;
-        image.setDecodeMode(EncodedImage.DECODE_READONLY/* | EncodedImage.DECODE_NO_DITHER | EncodedImage.DECODE_NATIVE*/);
+        data = null; // gc hint
+        image.setDecodeMode(EncodedImage.DECODE_READONLY | EncodedImage.DECODE_NO_DITHER /* | EncodedImage.DECODE_NATIVE*/);
         Bitmap bitmap = image.getBitmap();
-        image = null;
+        image = null; // gc hint
         final int destW = prescale(prescale, bitmap.getWidth()) << x2;
         final int destH = prescale(prescale, bitmap.getHeight()) << x2;
         Bitmap scaled = new Bitmap(destW, destH);
-        bitmap.scaleInto(scaled, Config.tilesScaleFiltered ? Bitmap.FILTER_BILINEAR : Bitmap.FILTER_BOX,
+        bitmap.scaleInto(scaled, Config.tilesScaleFiltered ? Bitmap.FILTER_BILINEAR
+                                                           : Bitmap.FILTER_BOX,
                          Bitmap.SCALE_TO_FIT);
-        bitmap = null;
-        int[] rgb = new int[destW * destH];
+        bitmap = null; // gc hint
+        final int[] rgb = new int[destW * destH];
         scaled.getARGB(rgb, 0, destW, 0, 0, destW, destH);
-        scaled = null;
+        scaled = null; // gc hint
 
         return Image.createRGBImage(rgb, destW, destH, false);
     }

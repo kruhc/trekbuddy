@@ -990,17 +990,18 @@ public final class HXmlParser implements XmlPullParser {
         int srcPos = this.srcPos;
         int txtPos = this.txtPos;
         int column = this.column;
+        char cc = 0;
         while (srcPos < srcCount && txtPos < lengh) {
             final char c = srcBuf[srcPos++];
             if (c == '<' || c == '&') {
                 srcPos--;
                 break;
-            } else if (c <= ' ') {
+            } else if (c < ' ') {
                 column++;
                 if (c == '\n') {
-/* 2013-01-01: this is wrong
-                    line++;
-*/
+                    if (cc > 0) {
+                        line++;
+                    }
                     column = 1;
 /* 2013-01-05: html formatter will fix it (???) // TODO
                     if (wsCount++ > 0) { // let's ignore multiple CRLFs
@@ -1018,6 +1019,7 @@ public final class HXmlParser implements XmlPullParser {
                 column++;
             }
             txtPos++;
+            cc = c;
         }
         System.arraycopy(srcBuf, this.srcPos, txtBuf, this.txtPos, txtPos - this.txtPos);
         this.offset += srcPos - this.srcPos;

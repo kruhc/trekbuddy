@@ -143,12 +143,22 @@ public final class NavigationScreens {
         selectedSize2 = selected.getHeight() >> 1;
     }
 
-    public static void initialize2() throws IOException { // 2nd init for touchscreens
+    public static void initializeForTouch() throws IOException { // 2nd init for touchscreens
         // init image cache
-        zooms = Image.createImage(RES_ZOOMS);
-        zoomSize = zooms.getHeight();
-        guides = Image.createImage(RES_GUIDES);
-        guideSize = guides.getHeight();
+//#if !__SYMBIAN__ && !__RIM__ && !__ANDROID__ && !__CN1__
+        if (Config.zoomSpotsMode != 0)
+//#endif
+        {
+            zooms = Image.createImage(RES_ZOOMS);
+            zoomSize = zooms.getHeight();
+        }
+//#if !__SYMBIAN__ && !__RIM__ && !__ANDROID__ && !__CN1__
+        if (Config.guideSpotsMode != 0)
+//#endif
+        {
+            guides = Image.createImage(RES_GUIDES);
+            guideSize = guides.getHeight();
+        }
     }
 
     static int customize(final Vector resources) throws IOException {
@@ -217,22 +227,32 @@ public final class NavigationScreens {
         return i;
     }
 
-    static int customize2(final Vector resources) throws IOException {
+    static int customizeForTouch(final Vector resources) throws IOException {
         int i = 0;
 
-        Image image = loadImage(resources, RES_ZOOMS);
-        if (image != null) {
-            zooms = null;
-            zooms = image;
-            zoomSize = image.getHeight();
-            i++;
+//#if !__SYMBIAN__ && !__RIM__ && !__ANDROID__ && !__CN1__
+        if (Config.zoomSpotsMode != 0)
+//#endif
+        {
+            final Image image = loadImage(resources, RES_ZOOMS);
+            if (image != null) {
+                zooms = null;
+                zooms = image;
+                zoomSize = image.getHeight();
+                i++;
+            }
         }
-        image = loadImage(resources, RES_GUIDES);
-        if (image != null) {
-            guides = null;
-            guides = image;
-            guideSize = image.getHeight();
-            i++;
+//#if !__SYMBIAN__ && !__RIM__ && !__ANDROID__ && !__CN1__
+        if (Config.guideSpotsMode != 0)
+//#endif
+        {
+            final Image image = loadImage(resources, RES_GUIDES);
+            if (image != null) {
+                guides = null;
+                guides = image;
+                guideSize = image.getHeight();
+                i++;
+            }
         }
 
         if (i > 0 && Config.forcedGc) {
@@ -240,22 +260,6 @@ public final class NavigationScreens {
         }
 
         return i;
-    }
-
-    static void hasTouchEvents(final boolean isTouch) {
-        if (!isTouch) {
-            zooms = null;
-            guides = null;
-            zoomSize = guideSize = 0;
-        }
-        if (Config.zoomSpotsMode == 0) {
-            zooms = null;
-            zoomSize = 0;
-        }
-        if (Config.guideSpotsMode == 0) {
-            guides = null;
-            guideSize = 0;
-        }
     }
 
     private static void setupVars(final int idx) {

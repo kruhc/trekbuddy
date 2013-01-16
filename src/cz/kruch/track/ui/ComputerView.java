@@ -1451,6 +1451,7 @@ final class ComputerView extends View
                                     case VALUE_PRN0 + 11: {
                                         NavigationScreens.append(sb, NmeaParser.prns[idx - VALUE_PRN0]);
                                     } break;
+//#ifdef __NMEA_XDR__
                                     case VALUE_XDR: {
                                         final String xdrId = token.substring(4/* TOKEN_XDR.length() */);
                                         final Float value = (Float) NmeaParser.xdr.get(xdrId);
@@ -1460,6 +1461,7 @@ final class ComputerView extends View
                                             sb.append('?');
                                         }
                                     } break;
+//#endif
                                     case VALUE_SIGN: {
                                         sb.append(NavigationScreens.SIGN);
                                     } break;

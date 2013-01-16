@@ -560,9 +560,11 @@ public final class GpxTracklog implements Runnable {
                 serializer.text(sbChars, 0, i);
                 serializer.endTag(NMEA_NAMESPACE, ELEMENT_SPEED);
             }
+//#ifdef __NMEA_XDR__
             if (l.isXdrBound()) {
                 serializeXdr(serializer);
             }
+//#endif
             if (Config.gpxGsmInfo) {
                 serializeElement(serializer, cz.kruch.track.ui.nokia.DeviceControl.getGsmCellId(), GSM_NAMESPACE, ELEMENT_CELLID);
                 serializeElement(serializer, cz.kruch.track.ui.nokia.DeviceControl.getGsmLac(), GSM_NAMESPACE, ELEMENT_LAC);
@@ -691,6 +693,8 @@ public final class GpxTracklog implements Runnable {
         }
     }
 
+//#ifdef __NMEA_XDR__
+
     private void serializeXdr(final HXmlSerializer serializer) throws IOException {
         final Hashtable xdr = NmeaParser.xdr;
         if (xdr.size() > 0) {
@@ -708,6 +712,8 @@ public final class GpxTracklog implements Runnable {
             serializer.endTag(NMEA_NAMESPACE, ELEMENT_SENSORS);
         }
     }
+
+//#endif
 
 /*
     public void insert(final Waypoint waypoint) {

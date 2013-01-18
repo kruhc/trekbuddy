@@ -1390,22 +1390,21 @@ public final class Desktop implements CommandListener,
                     cz.kruch.track.ui.nokia.DeviceControl.flash();
 
                     // play sound and vibrate
-                    if (Config.noSounds) {
-                        vibrate(500);
-                    } else {
-                        boolean notified = false;
+                    boolean notified = false;
+                    if (!Config.noSounds) {
                         final String s = ((Waypoint) wpts.elementAt(wptIdx)).getLink(Waypoint.LINK_GENERIC_SOUND);
-                        if (s != null) {
-                            notified = cz.kruch.track.fun.Camera.play(Config.getFolderURL(Config.FOLDER_SOUNDS) + s);
+                        if (s != null) { // try wpt-specific sound first
+                            notified = cz.kruch.track.fun.Camera.play(Config.getFileURL(Config.FOLDER_SOUNDS, s));
                         }
-                        if (!notified) {
-                            notified = cz.kruch.track.fun.Camera.play(Config.getFolderURL(Config.FOLDER_SOUNDS) + Config.defaultWptSound);
+                        if (!notified) { // now try defaul wpt sound
+                            notified = cz.kruch.track.fun.Camera.play(Config.getFileURL(Config.FOLDER_SOUNDS, Config.defaultWptSound));
                         }
-                        if (notified) {
-                            vibrate(500);
-                        } else { // fallback to system alarm
-                            AlertType.ALARM.playSound(display);
+                        if (!notified) { // fallback to system alarm
+                            notified = AlertType.ALARM.playSound(display);
                         }
+                    }
+                    if (!notified) {
+                        vibrate(500);
                     }
                 }
 
@@ -1652,7 +1651,7 @@ public final class Desktop implements CommandListener,
             // reset global navigation info
             Desktop.navigating = false;
             Desktop.routeDir = 0;
-            Desktop.wptIdx = -1;
+            Desktop.wptIdx = Desktop.reachedIdx = Desktop.wptEndIdx = -1;
 
             // reset local navigation info
             wptsId = 0;
@@ -2474,7 +2473,7 @@ public final class Desktop implements CommandListener,
 
                     try {
                         // create file
-                        tracklogNmea = File.open(Config.getFolderURL(Config.FOLDER_NMEA) + GpxTracklog.dateToFileDate(trackstart) + ".nmea", Connector.READ_WRITE);
+                        tracklogNmea = File.open(Config.getFileURL(Config.FOLDER_NMEA, GpxTracklog.dateToFileDate(trackstart) + ".nmea"), Connector.READ_WRITE);
                         if (tracklogNmea.exists()) {
                             tracklogNmea.delete();
                         }

@@ -471,22 +471,24 @@ final class ComputerView extends View
                 final Location avgLoc = TripStatistics.getLast(TripStatistics.TERM_LONG);
                 if (avgLoc != null) {
                     final QualifiedCoordinates avgQc = avgLoc.getQualifiedCoordinates();
-                    if (snrefCoords != null) {
+                    if (snrefCoords == null) {
+                        snrefCoords = avgQc._clone();
+                    } else {
                         ds = dsn = snrefCoords.distance(avgQc);
                         if (ds < 25) {
                             ds = 0F;
                         } else {
-                            QualifiedCoordinates.releaseInstance(snrefCoords);
-                            snrefCoords = avgQc._clone(); // TODO use copyFrom
+                            snrefCoords.copyFrom(avgQc);
                         }
-                    } else {
-                        snrefCoords = avgQc._clone(); // TODO use copyFrom
                     }
                 }
 
                 // update coords
-                QualifiedCoordinates.releaseInstance(valueCoords);
-                valueCoords = qc._clone(); // TODO use copyFrom
+                if (valueCoords == null) {
+                    valueCoords = qc._clone();
+                } else {
+                    valueCoords.copyFrom(qc);
+                }
 
                 // local ref for faster access
                 final float[] valuesFloat = this.valuesFloat;

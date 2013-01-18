@@ -753,7 +753,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         File f = null;
         DataOutputStream os = null;
         try {
-            f = File.open(getFolderURL(FOLDER_RESOURCES) + "settings.dat", Connector.READ_WRITE);
+            f = File.open(getFileURL(FOLDER_RESOURCES, "settings.dat"), Connector.READ_WRITE);
             if (f.exists()) {
                 f.delete();
             }
@@ -836,7 +836,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
             File f = null;
             DataInputStream in = null;
             try {
-                f = File.open(getFolderURL(FOLDER_RESOURCES) + "settings.dat", Connector.READ);
+                f = File.open(getFileURL(FOLDER_RESOURCES, "settings.dat"), Connector.READ);
                 if (f.exists()) {
                     in = new DataInputStream(f.openInputStream());
                     readMain(in);
@@ -1012,7 +1012,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
             /* create default files */
             File file = null;
             try {
-                file = File.open(Config.getFolderURL(Config.FOLDER_MAPS) + "no-map.xml", Connector.READ_WRITE);
+                file = File.open(Config.getFileURL(Config.FOLDER_MAPS, "no-map.xml"), Connector.READ_WRITE);
                 if (!file.exists()) {
                     file.create();
                     final InputStream in = Config.class.getResourceAsStream(NO_MAP_RESOURCE);
@@ -1126,7 +1126,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         if (Config.resourceExist(resources, DATUMS_FILE)) {
             File file = null;
             try {
-                file = File.open(Config.getFolderURL(Config.FOLDER_RESOURCES) + DATUMS_FILE);
+                file = File.open(Config.getFileURL(Config.FOLDER_RESOURCES, DATUMS_FILE));
                 if (file.exists()) {
                     initDatums(file.openInputStream(), new CharArrayTokenizer(),
                                new char[]{ '{', '}', ',', '=' }); // streams gets closed there
@@ -1248,7 +1248,11 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
     }
 
     public static String getFolderURL(String folder) {
-        return getDataDir() + folder;
+        return getDataDir().concat(folder);
+    }
+
+    public static String getFileURL(String folder, String file) {
+        return (new StringBuffer(32).append(getDataDir()).append(folder).append(file)).toString();
     }
 
     public static String getLocationTimings(final int provider) {

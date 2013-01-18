@@ -237,7 +237,7 @@ final class Jsr234Camera extends Camera implements PlayerListener {
         File f = null;
         try {
             // rename file
-            f = File.open(Config.getFolderURL(Config.FOLDER_WPTS) + relPath, Connector.READ_WRITE);
+            f = File.open(Config.getFileURL(Config.FOLDER_WPTS, relPath), Connector.READ_WRITE);
             f.rename(newName);
             // update link path
             sb.insert(0, File.PATH_SEPCHAR);

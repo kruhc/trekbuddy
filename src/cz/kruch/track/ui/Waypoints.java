@@ -1015,7 +1015,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
 //#endif
 
         final String uiTitle = subfolder == null ? title :
-                (new StringBuffer()).append(title).append(" [").append(subfolder).append("]").toString();
+                (new StringBuffer(32)).append(title).append(" [").append(subfolder).append("]").toString();
         final NakedVector v = new NakedVector(INITIAL_LIST_SIZE, INCREMENT_LIST_SIZE);
 
         // offer new file when selecting target
@@ -1174,7 +1174,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
             try {
 
                 // open file
-                file = File.open(Config.getFolderURL(folder) + storeName);
+                file = File.open(Config.getFileURL(folder, storeName));
                 if (file.exists()) {
 
                     // parse new waypoints
@@ -1351,7 +1351,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                 // do rename
                 File f = null;
                 try {
-                    f = File.open(Config.getFolderURL(Config.FOLDER_WPTS) + name, Connector.READ_WRITE);
+                    f = File.open(Config.getFileURL(Config.FOLDER_WPTS, name), Connector.READ_WRITE);
                     f.rename(newName);
                 } catch (Exception e) {
 //#ifdef __LOG__
@@ -1493,7 +1493,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
             cz.kruch.track.ui.nokia.DeviceControl.setTicker(list.getUI(), Resources.getString(Resources.NAV_MSG_TICKER_LOADING));
 
             // open file
-            file = File.open(Config.getFolderURL(folder) + currentName);
+            file = File.open(Config.getFileURL(folder, currentName));
 
             // input stream and parser
             InputStream in = null;
@@ -1559,7 +1559,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
         try {
 
             // create file
-            file = File.open(Config.getFolderURL(Config.FOLDER_GC) + notesFilename, Connector.READ_WRITE);
+            file = File.open(Config.getFileURL(Config.FOLDER_GC, notesFilename), Connector.READ_WRITE);
             if (file.exists()) {
                 file.delete();
             }

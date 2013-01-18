@@ -457,7 +457,7 @@ final class WaypointForm implements CommandListener, ItemCommandListener, ItemSt
         if (source instanceof cz.kruch.track.fun.Camera) { // JSR-234 and new JSR-135 capture snapshot path
             if (result instanceof String) {
                 imagePath = (String) result;
-                final Object thumbnail = Camera.getThumbnail(Config.getFolderURL(Config.FOLDER_WPTS) + imagePath);
+                final Object thumbnail = Camera.getThumbnail(Config.getFileURL(Config.FOLDER_WPTS, imagePath));
                 final Item item;
                 if (thumbnail instanceof Image) {
                     item = new ImageItem(null, (Image) thumbnail, ImageItem.LAYOUT_DEFAULT, null);

@@ -461,7 +461,7 @@ public final class Resources {
         if (Config.resourceExist(resources, LANGUAGE_FILE)) {
             api.file.File file = null;
             try {
-                file = api.file.File.open(Config.getFolderURL(Config.FOLDER_RESOURCES) + LANGUAGE_FILE);
+                file = api.file.File.open(Config.getFileURL(Config.FOLDER_RESOURCES, LANGUAGE_FILE));
                 if (file.exists()) {
                     final Object[] holder = new Object[2];
                     loadRes(file.openInputStream(), holder);
@@ -507,7 +507,7 @@ public final class Resources {
         if (Config.resourceExist(resources, KEYMAP_FILE)) {
             api.file.File file = null;
             try {
-                file = api.file.File.open(Config.getFolderURL(Config.FOLDER_RESOURCES) + KEYMAP_FILE);
+                file = api.file.File.open(Config.getFileURL(Config.FOLDER_RESOURCES, KEYMAP_FILE));
                 if (file.exists()) {
                     LineReader reader = null;
                     try {

@@ -230,7 +230,7 @@ public final class GpxTracklog implements Runnable {
         if (fileName == null) {
             fileName = getDefaultFileName();
         }
-        url = Config.getFolderURL(type == LOG_TRK ? Config.FOLDER_TRACKS : Config.FOLDER_WPTS) + fileName;
+        url = Config.getFileURL(type == LOG_TRK ? Config.FOLDER_TRACKS : Config.FOLDER_WPTS, fileName);
 
         // try to open and create a file - isolated operation
         try {

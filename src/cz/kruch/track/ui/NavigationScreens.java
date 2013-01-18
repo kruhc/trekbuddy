@@ -284,7 +284,7 @@ public final class NavigationScreens {
         File file = null;
 
         try {
-            file = File.open(Config.getFolderURL(folder) + name);
+            file = File.open(Config.getFileURL(folder, name));
             if (file.exists()) {
                 InputStream in = null;
                 try {

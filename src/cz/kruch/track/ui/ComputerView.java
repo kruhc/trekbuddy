@@ -1937,7 +1937,7 @@ final class ComputerView extends View
         Object result = null;
         File file = null;
         try {
-            file = File.open(Config.getFolderURL(Config.FOLDER_PROFILES) + filename);
+            file = File.open(Config.getFileURL(Config.FOLDER_PROFILES, filename));
             if (file.exists()) {
                 InputStream in = null;
                 try {

@@ -81,13 +81,12 @@ public final class QualifiedCoordinates implements GeodeticPosition {
         return newInstance(lat, lon, alt, hAccuracy, vAccuracy);
     }
 
-    public QualifiedCoordinates copyFrom(final QualifiedCoordinates qc) {
+    public void copyFrom(final QualifiedCoordinates qc) {
         this.lat = qc.lat;
         this.lon = qc.lon;
         this.alt = qc.alt;
         this.hAccuracy = qc.hAccuracy;
         this.vAccuracy = qc.vAccuracy;
-        return this;
     }
 
     public double getH() {

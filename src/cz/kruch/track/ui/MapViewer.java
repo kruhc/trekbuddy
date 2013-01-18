@@ -1561,8 +1561,8 @@ final class MapViewer {
             // use 10% of map width at current Y (lat) for calculation
             final int cy = getPosition().getY();
             final float wd = ((float) map.getWidth()) / 10;
-            QualifiedCoordinates qc0 = map.transform(0, cy);
-            QualifiedCoordinates qc1 = map.transform(ExtraMath.round(wd), cy);
+            final QualifiedCoordinates qc0 = map.transform(0, cy);
+            final QualifiedCoordinates qc1 = map.transform(ExtraMath.round(wd), cy);
             double scale = qc0.distance(qc1) / wd;
             // not too frequent, reduce code size
 //            QualifiedCoordinates.releaseInstance(qc0);

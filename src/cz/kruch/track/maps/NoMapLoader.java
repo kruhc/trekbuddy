@@ -190,11 +190,11 @@ final class NoMapLoader extends Map.Loader /*implements Atlas.Loader*/ {
         int idx = 0, iscale = 0;
 
         // area boundaries
-        QualifiedCoordinates any = QualifiedCoordinates.newInstance(Config.latAny, Config.lonAny);
-        QualifiedCoordinates qcl = QualifiedCoordinates.project(any, 270D, MIN_MAP_WIDTH * 1000 / 2);
-        QualifiedCoordinates qcr = QualifiedCoordinates.project(any, 90D, MIN_MAP_WIDTH * 1000 / 2);
-        QualifiedCoordinates qct = QualifiedCoordinates.project(any, 0D, MIN_MAP_HEIGHT * 1000 / 2);
-        QualifiedCoordinates qcb = QualifiedCoordinates.project(any, 180D, MIN_MAP_HEIGHT * 1000 / 2);
+        final QualifiedCoordinates any = QualifiedCoordinates.newInstance(Config.latAny, Config.lonAny);
+        final QualifiedCoordinates qcl = QualifiedCoordinates.project(any, 270D, MIN_MAP_WIDTH * 1000 / 2);
+        final QualifiedCoordinates qcr = QualifiedCoordinates.project(any, 90D, MIN_MAP_WIDTH * 1000 / 2);
+        final QualifiedCoordinates qct = QualifiedCoordinates.project(any, 0D, MIN_MAP_HEIGHT * 1000 / 2);
+        final QualifiedCoordinates qcb = QualifiedCoordinates.project(any, 180D, MIN_MAP_HEIGHT * 1000 / 2);
         final double minlat = qcb.getLat();
         final double maxlat = qct.getLat();
         final double minlon = qcl.getLon();

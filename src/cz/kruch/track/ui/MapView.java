@@ -7,6 +7,8 @@ import api.location.QualifiedCoordinates;
 import cz.kruch.track.maps.Map;
 import cz.kruch.track.maps.Atlas;
 import cz.kruch.track.Resources;
+import cz.kruch.track.util.NakedVector;
+import cz.kruch.track.util.GpxVector;
 import cz.kruch.track.configuration.Config;
 import cz.kruch.track.configuration.ConfigurationException;
 import cz.kruch.track.location.Waypoint;
@@ -15,7 +17,6 @@ import javax.microedition.lcdui.Canvas;
 import javax.microedition.lcdui.Graphics;
 import javax.microedition.lcdui.Font;
 import java.util.Vector;
-import java.util.TimerTask;
 
 /**
  * Map screen.
@@ -119,7 +120,7 @@ final class MapView extends View {
         }
     }
 
-    public boolean isLocation() {
+    boolean isLocation() {
         return location != null;
     }
 
@@ -132,22 +133,31 @@ final class MapView extends View {
 
 //#endif
 
-    public void close() {
+    void close() {
         injectMap(null); // may save position in default map/atlas
     }
 
-    public int routeChanged(final Vector wpts) {
+    int routeChanged(final Vector wpts, final int mode) {
+
         // release old route
         disposeRoute();
 
         // mapviewer reset
         boolean reset = false;
 
+        // ranges
+        NakedVector ranges = null;
+
         // routing starts
         if (wpts != null) {
 
             // prepare route
             prepareRoute(wpts);
+
+            // get ranges
+            if (((GpxVector) wpts).hasTracks()) {
+                ranges = ((GpxVector) wpts).getRanges();
+            }
 
             // detect significant change
             reset = lastRouteId != wpts.hashCode();
@@ -161,13 +171,14 @@ final class MapView extends View {
 
         // init or clear route
         synchronized (this) { // @threads ?:route
-            mapViewer.initRoute(route, reset); // route is null when navigation stopped
+            mapViewer.initRoute(route, ranges, reset); // route is null when navigation stopped
         }
 
-        return super.routeChanged(wpts);
+        return super.routeChanged(wpts, mode);
     }
 
-    public int routeExpanded(final Vector wpts) {
+    int routeExpanded(final Vector wpts) {
+
         // release old route
         disposeRoute();
 
@@ -183,7 +194,8 @@ final class MapView extends View {
     }
 
     // TODO vector not used
-	public int navigationChanged(final Vector wpts, final int idx, final boolean silent) {
+	int navigationChanged(final Vector wpts, final int idx, final boolean silent) {
+
         // navigation started or changed
         if (wpts != null) {
 
@@ -290,14 +302,7 @@ final class MapView extends View {
 
     private void disposeRoute() {
         synchronized (this) { // @threads ?:route
-            final Position[] route = this.route;
-            if (route != null) {
-                for (int i = route.length; --i >= 0;) {
-                    Position.releaseInstance(route[i]);
-                    route[i] = null; // gc hint
-                }
-            }
-            this.route = null; // gc hint
+            this.route = null;
         }
     }
 
@@ -330,7 +335,7 @@ final class MapView extends View {
         }
     }
 
-    public int handleAction(final int action, final boolean repeated) {
+    int handleAction(final int action, final boolean repeated) {
         // local refs
         final MapViewer mapViewer = this.mapViewer;
 
@@ -439,7 +444,7 @@ final class MapView extends View {
         return mask;
     }
 
-    public int handleKey(final int keycode, final boolean repeated) {
+    int handleKey(final int keycode, final boolean repeated) {
         // local refs
         final Desktop navigator = this.navigator;
         final MapViewer mapViewer = this.mapViewer;
@@ -545,16 +550,16 @@ final class MapView extends View {
         return mask;
     }
 
-    public void sizeChanged(int w, int h) {
+    void sizeChanged(int w, int h) {
         mapViewer.sizeChanged(w, h);
     }
 
-    public void trackingStarted() {
+    void trackingStarted() {
         // pass event
         mapViewer.reset();
     }
 
-    public void trackingStopped() {
+    void trackingStopped() {
         // set mode
         browsingOn(true);
         // local reset
@@ -563,7 +568,7 @@ final class MapView extends View {
         }
     }
 
-    public int locationUpdated(Location l) {
+    int locationUpdated(Location l) {
         // only valid location
         if (l.getFix() > 0) {
             
@@ -584,6 +589,135 @@ final class MapView extends View {
         }
 
         return Desktop.MASK_SCREEN;
+    }
+
+    Location getLocation() {
+        return location;
+    }
+
+    QualifiedCoordinates getPointer() {
+        return navigator.getMap().transform(mapViewer.getPosition()); // mapViewer may have no map when in bg
+    }
+
+    void render(final Graphics g, final Font f, final int mask) {
+//#ifdef __LOG__
+        if (log.isEnabled()) log.debug("render");
+//#endif
+
+        // local refs
+        final MapViewer mapViewer = this.mapViewer;
+
+        // common screen params
+        g.setFont(f);
+
+        // is map(viewer) ready?
+        if (mapViewer.hasMap()) {
+
+            // draw map
+/* always redraw 'background'
+                if ((mask & MASK_MAP) != 0) {
+*/
+            // whole map redraw requested
+            mapViewer.render(g);
+/*
+                }
+*/
+
+            // draw OSD
+            if ((mask & Desktop.MASK_OSD) != 0) {
+
+                // set text color
+                g.setColor(Config.osdBlackColor ? 0x0 : 0x00FFFFFF);
+
+                // render
+                Desktop.osd.render(g);
+            }
+
+            // draw status
+            if ((mask & Desktop.MASK_STATUS) != 0) {
+
+                // set text color
+                g.setColor(Config.osdBlackColor ? 0x00000000 : 0x00FFFFFF);
+
+                // render
+                Desktop.status.render(g);
+            }
+
+            // draw backlight status
+            if (cz.kruch.track.ui.nokia.DeviceControl.getBacklightStatus() != 0) {
+                NavigationScreens.drawBacklightStatus(g);
+            }
+
+            // draw keylock status
+            if (Desktop.screen.isKeylock()) {
+                NavigationScreens.drawKeylockStatus(g);
+            }
+
+            // draw zoom spots
+            if (navigator.isAtlas()) {
+                NavigationScreens.drawZoomSpots(g);
+            }
+
+            // draw visual guides
+            NavigationScreens.drawGuideSpots(g, true);
+
+        } else { // no map
+
+            // clear window
+            g.setColor(0x0);
+            g.fillRect(0, 0, Desktop.width, Desktop.height);
+            g.setColor(0x00FFFFFF);
+
+            // draw loaded target
+            final Object[] result = navigator._getLoadingResult();
+            if (result[0] != null) {
+                g.drawString(result[0].toString(), 0, 0, Graphics.TOP | Graphics.LEFT);
+            }
+            if (result[1] != null) {
+                if (result[1] instanceof Throwable) {
+                    final Throwable t = (Throwable) result[1];
+                    g.drawString(t.getClass().toString().substring(6) + ":", 0, Desktop.font.getHeight(), Graphics.TOP | Graphics.LEFT);
+                    if (t.getMessage() != null) {
+                        g.drawString(t.getMessage(), 0, Desktop.font.getHeight() << 1, Graphics.TOP | Graphics.LEFT);
+                    }
+                    if (result[2] == null) {
+                        result[2] = result[1];
+                        Desktop.showError("Init map", t, Desktop.screen);
+                    }
+                } else {
+                    g.drawString(result[1].toString(), 0, Desktop.font.getHeight(), Graphics.TOP | Graphics.LEFT);
+                }
+            }
+
+        }
+/*
+        // flush
+        if ((mask & Desktop.MASK_MAP) != 0 || (mask & Desktop.MASK_SCREEN) != 0 || !Desktop.partialFlush) {
+//#ifdef __LOG__
+            if (log.isEnabled()) log.debug("full flush");
+//#endif
+            flushGraphics();
+        } else {
+            if ((mask & Desktop.MASK_OSD) != 0) {
+//#ifdef __LOG__
+                if (log.isEnabled()) log.debug("flush OSD clip " + Desktop.osd.getClip());
+//#endif
+                flushGraphics(Desktop.osd.getClip());
+            }
+            if ((mask & Desktop.MASK_STATUS) != 0) {
+//#ifdef __LOG__
+                if (log.isEnabled()) log.debug("flush Status clip " + Desktop.status.getClip());
+//#endif
+                flushGraphics(Desktop.status.getClip());
+            }
+            if ((mask & Desktop.MASK_CROSSHAIR) != 0) {
+//#ifdef __LOG__
+                if (log.isEnabled()) log.debug("flush crosshair clip " + mapViewer.getClip());
+//#endif
+                flushGraphics(mapViewer.getClip());
+            }
+        }
+*/
     }
 
     private int updatedTrick() {
@@ -705,7 +839,7 @@ final class MapView extends View {
         }
 
         // give feedback
-        Desktop.actionFeedback(true);
+        Desktop.vibrate(50);
 
         // invert
         x2 = ++x2 % 2;
@@ -715,137 +849,8 @@ final class MapView extends View {
         setMap(null);
         map.setMagnifier(x2);
         setMap(map);
-        
+
         return Desktop.MASK_ALL;
-    }
-
-    public Location getLocation() {
-        return location;
-    }
-
-    public QualifiedCoordinates getPointer() {
-        return navigator.getMap().transform(mapViewer.getPosition()); // mapViewer may have no map when in bg
-    }
-
-    public void render(final Graphics g, final Font f, final int mask) {
-//#ifdef __LOG__
-        if (log.isEnabled()) log.debug("render");
-//#endif
-
-        // local refs
-        final MapViewer mapViewer = this.mapViewer;
-
-        // common screen params
-        g.setFont(f);
-
-        // is map(viewer) ready?
-        if (mapViewer.hasMap()) {
-
-            // draw map
-/* always redraw 'background'
-                if ((mask & MASK_MAP) != 0) {
-*/
-            // whole map redraw requested
-            mapViewer.render(g);
-/*
-                }
-*/
-
-            // draw OSD
-            if ((mask & Desktop.MASK_OSD) != 0) {
-
-                // set text color
-                g.setColor(Config.osdBlackColor ? 0x0 : 0x00FFFFFF);
-
-                // render
-                Desktop.osd.render(g);
-            }
-
-            // draw status
-            if ((mask & Desktop.MASK_STATUS) != 0) {
-
-                // set text color
-                g.setColor(Config.osdBlackColor ? 0x00000000 : 0x00FFFFFF);
-
-                // render
-                Desktop.status.render(g);
-            }
-
-            // draw backlight status
-            if (cz.kruch.track.ui.nokia.DeviceControl.getBacklightStatus() != 0) {
-                NavigationScreens.drawBacklightStatus(g);
-            }
-
-            // draw keylock status
-            if (Desktop.screen.isKeylock()) {
-                NavigationScreens.drawKeylockStatus(g);
-            }
-
-            // draw zoom spots
-            if (navigator.isAtlas()) {
-                NavigationScreens.drawZoomSpots(g);
-            }
-
-            // draw visual guides
-            NavigationScreens.drawGuideSpots(g, true);
-
-        } else { // no map
-
-            // clear window
-            g.setColor(0x0);
-            g.fillRect(0, 0, Desktop.width, Desktop.height);
-            g.setColor(0x00FFFFFF);
-
-            // draw loaded target
-            final Object[] result = navigator._getLoadingResult();
-            if (result[0] != null) {
-                g.drawString(result[0].toString(), 0, 0, Graphics.TOP | Graphics.LEFT);
-            }
-            if (result[1] != null) {
-                if (result[1] instanceof Throwable) {
-                    final Throwable t = (Throwable) result[1];
-                    g.drawString(t.getClass().toString().substring(6) + ":", 0, Desktop.font.getHeight(), Graphics.TOP | Graphics.LEFT);
-                    if (t.getMessage() != null) {
-                        g.drawString(t.getMessage(), 0, Desktop.font.getHeight() << 1, Graphics.TOP | Graphics.LEFT);
-                    }
-                    if (result[2] == null) {
-                        result[2] = result[1];
-                        Desktop.showError("Init map", t, Desktop.screen);
-                    }
-                } else {
-                    g.drawString(result[1].toString(), 0, Desktop.font.getHeight(), Graphics.TOP | Graphics.LEFT);
-                }
-            }
-
-        }
-/*
-        // flush
-        if ((mask & Desktop.MASK_MAP) != 0 || (mask & Desktop.MASK_SCREEN) != 0 || !Desktop.partialFlush) {
-//#ifdef __LOG__
-            if (log.isEnabled()) log.debug("full flush");
-//#endif
-            flushGraphics();
-        } else {
-            if ((mask & Desktop.MASK_OSD) != 0) {
-//#ifdef __LOG__
-                if (log.isEnabled()) log.debug("flush OSD clip " + Desktop.osd.getClip());
-//#endif
-                flushGraphics(Desktop.osd.getClip());
-            }
-            if ((mask & Desktop.MASK_STATUS) != 0) {
-//#ifdef __LOG__
-                if (log.isEnabled()) log.debug("flush Status clip " + Desktop.status.getClip());
-//#endif
-                flushGraphics(Desktop.status.getClip());
-            }
-            if ((mask & Desktop.MASK_CROSSHAIR) != 0) {
-//#ifdef __LOG__
-                if (log.isEnabled()) log.debug("flush crosshair clip " + mapViewer.getClip());
-//#endif
-                flushGraphics(mapViewer.getClip());
-            }
-        }
-*/
     }
 
     private void getNavigationInfo(final StringBuffer extInfo) {
@@ -962,21 +967,6 @@ final class MapView extends View {
             return mapPath.startsWith(s);
         } else { // single map
             return mapPath.equals(startupURL);
-        }
-    }
-
-    private volatile TimerTask dcChecker;
-
-    private final class DoubleClickChecker extends TimerTask {
-        private int zoom;
-
-        public DoubleClickChecker(int zoom) {
-            this.zoom = zoom;
-        }
-
-        public void run() {
-            dcChecker = null;
-            navigator.zoom(zoom);
         }
     }
 }

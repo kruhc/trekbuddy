@@ -43,60 +43,60 @@ abstract class View {
 
 //#endif
 
-    public int handleAction(int action, boolean repeated) {
+    int handleAction(int action, boolean repeated) {
         return Desktop.MASK_NONE;
     }
 
-    public int handleKey(int keycode, boolean repeated) {
+    int handleKey(int keycode, boolean repeated) {
         return Desktop.MASK_NONE;
     }
 
-    public int changeDayNight(int dayNight) {
+    int changeDayNight(int dayNight) {
         return Desktop.MASK_NONE;
     }
 
-    public int navigationChanged(Vector wpts, int idx, boolean silent) {
+    int navigationChanged(Vector wpts, int idx, boolean silent) {
         return isVisible ? Desktop.MASK_SCREEN : Desktop.MASK_NONE;
     }
 
-    public int routeChanged(Vector wpts) {
+    int routeChanged(Vector wpts, int mode) {
         return isVisible ? Desktop.MASK_SCREEN : Desktop.MASK_NONE;
     }
 
-    public int routeExpanded(Vector wpts) {
+    int routeExpanded(Vector wpts) {
         return isVisible ? Desktop.MASK_SCREEN : Desktop.MASK_NONE;
     }
 
-    public int configChanged() {
+    int configChanged() {
         return isVisible ? Desktop.MASK_SCREEN : Desktop.MASK_NONE;
     }
 
-    public void close() {
+    void close() {
     }
 
-    public Location getLocation() {
+    Location getLocation() {
         throw new IllegalStateException("Illegal view for this operation");
     }
 
-    public QualifiedCoordinates getPointer() {
+    QualifiedCoordinates getPointer() {
         throw new IllegalStateException("Illegal view for this operation");
     }
 
-    public void trackingStarted() {
+    void trackingStarted() {
     }
 
-    public void trackingStopped() {
+    void trackingStopped() {
     }
 
-    public void sizeChanged(int w, int h) {
+    void sizeChanged(int w, int h) {
     }
 
-    public int orientationChanged(int heading) {
+    int orientationChanged(int heading) {
         return isVisible ? Desktop.MASK_SCREEN : Desktop.MASK_NONE;
     }
 
-    public abstract void render(Graphics g, Font f, int mask);
-    public abstract int locationUpdated(Location l);
+    abstract void render(Graphics g, Font f, int mask);
+    abstract int locationUpdated(Location l);
 
 //#ifdef __B2B__
 

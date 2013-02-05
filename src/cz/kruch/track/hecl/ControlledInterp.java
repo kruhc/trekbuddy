@@ -4,7 +4,6 @@ package cz.kruch.track.hecl;
 
 //#ifdef __HECL__
 
-import org.hecl.net.HttpCmd;
 import org.hecl.Interp;
 import org.hecl.Thing;
 import org.hecl.HeclException;
@@ -18,13 +17,13 @@ import java.io.InputStreamReader;
 import java.io.IOException;
 
 import cz.kruch.track.util.NakedVector;
-import cz.kruch.track.fun.Camera;
+import cz.kruch.track.fun.Playback;
 import cz.kruch.track.configuration.Config;
 
-import api.location.QualifiedCoordinates;
-import api.lang.Int;
-import api.io.BufferedInputStream;
 import api.file.File;
+import api.io.BufferedInputStream;
+import api.lang.Int;
+import api.location.QualifiedCoordinates;
 
 import javax.microedition.lcdui.AlertType;
 import javax.microedition.io.Connector;
@@ -50,7 +49,9 @@ public class ControlledInterp extends Interp {
         this.key = new Int(0);
 
         // extensions
-        HttpCmd.load(this);
+//#ifndef __NO_NET__
+        org.hecl.net.HttpCmd.load(this);
+//#endif
 
         // internal commands
         addCommand("var", new VarCmd()); // stateful variables support
@@ -64,7 +65,7 @@ public class ControlledInterp extends Interp {
 
         // process mode
         if (background) {
-//            super.start(); // Thread.start();
+//            super.start(); // = Thread.start();
             throw new IllegalStateException("Background execution not supported");
         }
     }
@@ -379,9 +380,7 @@ public class ControlledInterp extends Interp {
                     System.out.println(argv[1]);
                 } break;
                 case CMD_PLAY: {
-                    if (!Camera.play(Config.getFolderURL(((ControlledInterp) interp).basedir) + argv[1].toString())) {
-                        AlertType.WARNING.playSound(cz.kruch.track.ui.Desktop.display);
-                    }
+                    Playback.play(((ControlledInterp) interp).basedir, argv[1].toString(), null, AlertType.WARNING);
                 } break;
                 default:
                     throw new HeclException("Unknown command '"

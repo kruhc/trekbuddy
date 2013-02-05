@@ -64,6 +64,14 @@ class NokiaDeviceControl extends DeviceControl {
         return Integer.toString(values[backlight]) + "%";
     }
 
+    /** @Override */
+    void flash() {
+        /* S60 - OK, S40 - it turns the screen off :( */
+//#ifdef __SYMBIAN__
+        super.flash();
+//#endif
+    }
+
     private void invertLevel() {
         if (backlight == 0) {
             backlight = cz.kruch.track.configuration.Config.nokiaBacklightLast;

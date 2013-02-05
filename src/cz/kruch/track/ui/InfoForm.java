@@ -171,6 +171,12 @@ final class InfoForm implements CommandListener {
                 .append("; encodings: ").append(System.getProperty("video.snapshot.encodings"))
                 .append("; resolutions: ").append(System.getProperty("camera.resolutions"));
         pane.append(newItem("Camera", sb.toString()));
+        if (cz.kruch.track.fun.Camera.state != null) {
+            pane.append(newItem("Capture", cz.kruch.track.fun.Camera.state.toString()));
+        }
+        if (cz.kruch.track.fun.Playback.state != null) {
+            pane.append(newItem("Playback", cz.kruch.track.fun.Playback.state.toString()));
+        }
         sb.delete(0, sb.length())
                 .append(cz.kruch.track.TrackingMIDlet.hasPorts())
                 .append("; ").append(System.getProperty("microedition.commports"));

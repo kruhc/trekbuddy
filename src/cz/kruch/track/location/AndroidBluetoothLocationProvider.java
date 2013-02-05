@@ -144,9 +144,7 @@ public class AndroidBluetoothLocationProvider
 //#ifdef __LOG__
                 t.printStackTrace();
 //#endif
-//#ifdef __ANDROID__
                 android.util.Log.e(cz.kruch.track.TrackingMIDlet.APP_TITLE, "createInsecureRfcommSocketToServiceRecord", t);
-//#endif
             }
             if (socket == null) {
                 // is this 1.6 method?
@@ -157,9 +155,7 @@ public class AndroidBluetoothLocationProvider
 //#ifdef __LOG__
                     t.printStackTrace();
 //#endif
-//#ifdef __ANDROID__
                     android.util.Log.e(cz.kruch.track.TrackingMIDlet.APP_TITLE, "createRfcommSocket", t);
-//#endif
                 }
             }
             if (socket == null) {

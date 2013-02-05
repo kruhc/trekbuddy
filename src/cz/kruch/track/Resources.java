@@ -180,6 +180,7 @@ public final class Resources {
     public static final short NAV_CMD_SORT_BYNAME               = 2016;
     public static final short NAV_CMD_SORT_BYDIST               = 2017;
     public static final short NAV_CMD_NEW_NOTE                  = 2018;
+//    public static final short NAV_CMD_OVERLAY                   = 2019;
     /* navigation - menu */
     public static final short NAV_ITEM_WAYPOINTS                = 2100;
     public static final short NAV_ITEM_RECORD_CURRENT           = 2101;
@@ -325,6 +326,7 @@ public final class Resources {
     public static final short CFG_DESKTOP_FLD_MODE_DEFAULT      = 3534;
     public static final short CFG_DESKTOP_FLD_MODE_CUSTOM       = 3535;
     public static final short CFG_DESKTOP_FLD_MAP_PRESCALE      = 3536;
+    public static final short CFG_DESKTOP_FLD_FORCE_TF_FOCUS    = 3537;
     /* settings - Location */
     public static final short CFG_LOCATION_GROUP_PROVIDER       = 3600;
     public static final short CFG_LOCATION_GROUP_TRACKLOG       = 3601;
@@ -375,6 +377,10 @@ public final class Resources {
     public static final short CFG_NAVIGATION_FLD_SORT_BYNAME    = 3713;
     public static final short CFG_NAVIGATION_FLD_SORT_BYDIST    = 3714;
     public static final short CFG_NAVIGATION_FLD_DYNAMIC_PROX   = 3715;
+    public static final short CFG_NAVIGATION_GROUP_WPT_ALERT    = 3716;
+    public static final short CFG_NAVIGATION_FLD_WPT_ALERT_SND  = 3717;
+    public static final short CFG_NAVIGATION_FLD_WPT_ALERT_VIB  = 3718;
+    public static final short CFG_NAVIGATION_GROUP_TRACK_LINE   = 3719;
     /* settings - tweaks */
     public static final short CFG_TWEAKS_GROUP                  = 3800;
     public static final short CFG_TWEAKS_FLD_SIEMENS_IO         = 3801;

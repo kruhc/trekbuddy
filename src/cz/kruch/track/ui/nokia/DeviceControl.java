@@ -92,6 +92,8 @@ public class DeviceControl extends TimerTask {
                 Class.forName("com.nokia.mid.ui.DeviceControl");
                 if (cz.kruch.track.TrackingMIDlet.sonyEricssonEx) {
                     instance = (DeviceControl) Class.forName("cz.kruch.track.ui.nokia.SonyEricssonDeviceControl").newInstance();
+                } else if (cz.kruch.track.TrackingMIDlet.nokiaui14) {
+                    instance = (DeviceControl) Class.forName("cz.kruch.track.ui.nokia.NokiaUi14DeviceControl").newInstance();
                 } else {
                     instance = (DeviceControl) Class.forName("cz.kruch.track.ui.nokia.NokiaDeviceControl").newInstance();
                 }
@@ -154,9 +156,9 @@ public class DeviceControl extends TimerTask {
         return instance.level();
     }
 
-    public static void flash() {
+    public static void flashScreen() {
         if (instance.backlight == STATUS_OFF) {
-            cz.kruch.track.ui.Desktop.display.flashBacklight(1);
+            instance.flash();
         }
     }
 
@@ -268,6 +270,10 @@ public class DeviceControl extends TimerTask {
 
     void confirm() {
         cz.kruch.track.ui.Desktop.vibrate(100);
+    }
+
+    void flash() {
+        cz.kruch.track.ui.Desktop.display.flashBacklight(1);
     }
 
     String level() {

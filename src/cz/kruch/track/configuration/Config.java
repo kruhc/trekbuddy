@@ -183,6 +183,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
     public static int zoomSpotsMode             = 2; // autohide
     public static int guideSpotsMode            = 2; // autohide
     public static int prescale                  = 100; // 100%
+    public static boolean forceTextFieldFocus;
 
     // [Units]
     public static int units;
@@ -234,13 +235,18 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
     // group [Navigation]
     public static int wptProximity              = 50;
     public static int poiProximity              = 1000;
-    public static boolean routeLineStyle;
     public static boolean routePoiMarks         = true;
+    public static boolean routeLineStyle;
     public static int routeColor                = 6;
     public static int routeThick;
+    public static boolean trackLineStyle;
+    public static int trackColor                = 7;
+    public static int trackThick;
     public static boolean makeRevisions;
     public static boolean preferGsName          = true;
     public static int sort;
+    public static boolean wptAlertSound         = true;
+    public static boolean wptAlertVibr          /*= true*/;
 
     // hidden
     public static String btDeviceName   = EMPTY_STRING;
@@ -598,7 +604,22 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
             s40ticker = din.readBoolean();
 //#endif
 
+            // 1.2.0 change
+            forceTextFieldFocus = din.readBoolean();
+            wptAlertSound = din.readBoolean();
+            wptAlertVibr = din.readBoolean();
+            trackLineStyle = din.readBoolean();
+            trackColor = din.readInt();
+            trackThick = din.readInt();
+
         } catch (Exception e) {
+
+            // 1.2.0 fallback
+            wptAlertSound = !noSounds;
+            wptAlertVibr = !powerSave;
+            trackColor = routeColor;
+            trackThick = routeThick;
+
         }
 
 //#ifdef __LOG__
@@ -743,6 +764,13 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
 //#ifndef __ANDROID__
         dout.writeBoolean(s40ticker);
 //#endif
+        /* since 1.2.0 */
+        dout.writeBoolean(forceTextFieldFocus);
+        dout.writeBoolean(wptAlertSound);
+        dout.writeBoolean(wptAlertVibr);
+        dout.writeBoolean(trackLineStyle);
+        dout.writeInt(trackColor);
+        dout.writeInt(trackThick);
 
 //#ifdef __LOG__
         if (log.isEnabled()) log.info("configuration updated");

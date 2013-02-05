@@ -25,7 +25,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
     public static boolean jsr82, jsr120, jsr135, jsr179, jsr234, jsr256, motorola179, comm, nokiaui14;
     public static boolean sonyEricsson, sonyEricssonEx, nokia, siemens, lg, motorola, samsung, sonim;
     public static boolean j9, jbed, jblend, intent, wm, palm, rim, symbian, s40th6, s60nd, s60rdfp2, uiq, 
-                          brew, android, playbook, iden;
+                          brew, android, playbook, iden, jp6plus;
     public static boolean sxg75, a780, s65;
 
     // diagnostics
@@ -102,44 +102,10 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
 //#ifndef __ANDROID__
 
         // detect runtime capabilities
-        try {
-            if (System.getProperty("microedition.location.version") == null) {
-                Class.forName("javax.microedition.location.LocationProvider");
-            }
-            jsr179 = true;
-//#ifdef __LOG__
-            System.out.println("* JSR-179");
-//#endif
-        } catch (Throwable t) {
-        }
-        try {
-            if (System.getProperty("bluetooth.api.version") == null) {
-                Class.forName("javax.bluetooth.DiscoveryAgent");
-            }
-            jsr82 = true;
-//#ifdef __LOG__
-            System.out.println("* JSR-82");
-//#endif
-        } catch (Throwable t) {
-        }
-        try {
-            if (System.getProperty("wireless.messaging.version") == null) {
-                Class.forName("javax.wireless.messaging.TextMessage");
-            }
-            jsr120 = true;
-//#ifdef __LOG__
-            System.out.println("* JSR-120");
-//#endif
-        } catch (Throwable t) {
-        }
-        try {
-            Class.forName("javax.microedition.media.control.VideoControl");
-            jsr135 = true;
-//#ifdef __LOG__
-            System.out.println("* JSR-135");
-//#endif
-        } catch (Throwable t) {
-        }
+        jsr82 = forName("bluetooth.api.version", "javax.bluetooth.DiscoveryAgent", "* JSR-82");
+        jsr120 = forName("wireless.messaging.version", "javax.wireless.messaging.TextMessage", "* JSR-120");
+        jsr135 = forName(null, "javax.microedition.media.control.VideoControl", "* JSR-135"); // TODO property
+        jsr179 = forName("microedition.location.version", "javax.microedition.location.LocationProvider", "* JSR-179");
         try {
             Class.forName("javax.microedition.amms.control.camera.CameraControl");
             Class.forName("javax.microedition.amms.control.camera.SnapshotControl");
@@ -148,41 +114,22 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
             System.out.println("* JSR-234");
 //#endif
         } catch (Throwable t) {
+            // ignore
         }
 /*
-        try {
-            Class.forName("javax.microedition.sensor.SensorManager");
-            jsr256 = true;
-//#ifdef __LOG__
-            System.out.println("* JSR-256");
-//#endif
-        } catch (Throwable t) {
-        }
-*/
-/*
-        try {
-            Class.forName("javax.microedition.io.CommConnection");
-            comm = true;
-//#ifdef __LOG__
-            System.out.println("* CommConnection");
-//#endif
-        } catch (Throwable t) {
-        }
+        jsr256 = forName(null, "javax.microedition.sensor.SensorManager", "* JSR-256");
+        comm = forName(null, "javax.microedition.io.CommConnection", "* CommConnection");
 */
 
 //#else /* __ANDROID__ */
 
         // detect runtime capabilities
         jsr179 = true;
-        try {
 //#ifdef __BACKPORT__
-            Class.forName("backport.android.bluetooth.BluetoothSocket");
+        jsr82 = forName(null, "backport.android.bluetooth.BluetoothSocket", null);
 //#else
-            Class.forName("android.bluetooth.BluetoothSocket");
+        jsr82 = forName(null, "android.bluetooth.BluetoothSocket", null);
 //#endif
-            jsr82 = true;
-        } catch (Throwable t) {
-        }
 
 //#endif /* __ANDROID__ */
         
@@ -193,46 +140,34 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
             try {
                 nokiaui14 = Float.parseFloat(System.getProperty("com.nokia.mid.ui.version")) >= 1.4F
                             && "true".equals(System.getProperty("com.nokia.mid.ui.screensaverprevention"));
-            } catch (Throwable t) {
+            } catch (Exception e) {
+                // ignore parse error
             }
-        } else if (sonyEricssonEx) { /* detect UIQ */
-            if (symbian && !s60rdfp2) {
-                uiq = true;
+        } else if (sonyEricssonEx) { /* detect UIQ and/or family */
+            if (symbian) { // UIQ?
+                uiq = !s60rdfp2;
+            } else { // detect family
+                jp6plus = forName(null, "java.rmi.Remote", null);
             }
         } else {
             /* detect Jbed */
-            try {
-                Class.forName("com.jbed.io.CharConvUTF8");
-                jbed = true;
-            } catch (Throwable t) {
-            }
+            jbed = forName(null, "com.jbed.io.CharConvUTF8", null);
             /* detect Jblend */
-            try {
-                Class.forName("com.jblend.util.SortedVector");
-                jblend = true;
-            } catch (Throwable t) {
-            }
+            jblend = forName(null, "com.jblend.util.SortedVector", null);
             /* detect Motorola-specific Location API */
-            try {
-                Class.forName("com.motorola.location.PositionSource");
-                motorola179 = true;
-            } catch (Throwable t) {
-            }
+            motorola179 = forName(null, "com.motorola.location.PositionSource", null);
             /* detect WM */
             wm = jbed || jblend || intent;
         }
 
 //#endif /* __ALL__ */
 
+//#if !__RIM__ && !__SYMBIAN__ && !__ANDROID__
+
         // has to be outside __ALL__
-        try {
-            Class.forName("com.mot.iden.zip.ZipException");
-            iden = true;
-//#ifdef __LOG__
-            System.out.println("* iDEN");
+        iden = forName("* iDEN", "com.mot.iden.zip.ZipException", null);
+
 //#endif
-        } catch (Throwable t) {
-        }
                 
         // init device control (also helps to detect other platforms)
         cz.kruch.track.ui.nokia.DeviceControl.initialize();
@@ -400,20 +335,41 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
     }
 
     public static boolean hasPorts() {
-//-#ifdef __ANDROID__
-        return true;
-//-#else
+//-#ifndef __ANDROID__
 //        return comm;
+//-#else
+        return true;
 //-#endif
     }
 
     public static boolean supportsVideoCapture() {
+//#ifndef __ANDROID__
         return ((jsr135 || jsr234) && "true".equals(System.getProperty("supports.video.capture")));
+//#else
+        return true;
+//#endif
     }
 
 //#ifdef __ANDROID__
-    public static android.app.Activity getActivity() {
-        return ((org.microemu.android.device.AndroidDevice) org.microemu.device.DeviceFactory.getDevice()).getActivity();
+    public static org.microemu.android.MicroEmulatorActivity getActivity() {
+        return (org.microemu.android.MicroEmulatorActivity) ((org.microemu.android.device.AndroidDevice) org.microemu.device.DeviceFactory.getDevice()).getActivity();
     }
 //#endif
+
+    private static boolean forName(final String property, final String clazz, final String msg) {
+        try {
+            if (property == null || System.getProperty(property) == null) {
+                Class.forName(clazz);
+            }
+//#ifdef __LOG__
+            if (msg != null) { // message to printed when success
+                System.out.println(msg);
+            }
+//#endif
+            return true;
+        } catch (Throwable t) {
+            // ignore
+        }
+        return false;
+    }
 }

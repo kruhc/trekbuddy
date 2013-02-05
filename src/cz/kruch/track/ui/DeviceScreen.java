@@ -1018,7 +1018,7 @@ final class DeviceScreen extends GameCanvas implements Runnable {
 //                            cmd = delegate.cmdLoadAtlas;
 //#ifdef __HECL__
                             cmd = delegate.cmdLive;
-//#endif                            
+//#endif
                         }
                     }
 //#endif

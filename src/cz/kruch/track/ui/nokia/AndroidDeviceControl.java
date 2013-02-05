@@ -46,7 +46,7 @@ final class AndroidDeviceControl
 
     /** @Override */
     void useTicker(final Object list, final String msg) {
-        ((org.microemu.android.MicroEmulatorActivity) cz.kruch.track.TrackingMIDlet.getActivity()).post(new Runnable() {
+        cz.kruch.track.TrackingMIDlet.getActivity().post(new Runnable() {
             public void run() {
                 if (msg != null) {
                     ticker = android.app.ProgressDialog.show(cz.kruch.track.TrackingMIDlet.getActivity(),

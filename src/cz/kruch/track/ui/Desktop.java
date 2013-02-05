@@ -14,6 +14,7 @@ import cz.kruch.track.maps.Map;
 import cz.kruch.track.maps.Atlas;
 import cz.kruch.track.util.CharArrayTokenizer;
 import cz.kruch.track.util.Worker;
+import cz.kruch.track.util.NakedVector;
 
 import javax.microedition.lcdui.Canvas;
 import javax.microedition.lcdui.Display;
@@ -95,7 +96,7 @@ public final class Desktop implements CommandListener,
     static volatile boolean browsing;
     static volatile boolean paused;
     static volatile boolean navigating;
-    static volatile boolean showall;
+    static volatile boolean showall, overlay;
     static volatile boolean synced;
 
     // all-purpose timer
@@ -176,8 +177,8 @@ public final class Desktop implements CommandListener,
     /*private */volatile int wptsId, wptsSize;
 
     // sync objects
-    private final Object loadingLock;
-    private final Object renderLock;
+    private static final Object loadingLock = new Object();
+    private static final Object renderLock = new Object();
 
 	// workers // TODO move to Worker? TrackingMIDlet?
 	private static Worker diskWorker, eventWorker, liveWorker;
@@ -248,8 +249,8 @@ public final class Desktop implements CommandListener,
         };
 
         // locking objects
-        this.loadingLock = new Object();
-        this.renderLock = new Object();
+//        this.loadingLock = new Object();
+//        this.renderLock = new Object();
 
         // TODO move to Waypoints???
         this.wptAzimuth = -1;
@@ -734,12 +735,6 @@ public final class Desktop implements CommandListener,
         }
     }
 
-    public static void actionFeedback(final boolean act) {
-        if (act) {
-            vibrate(50);
-        }
-    }
-
     private static Timer getTimer() {
         if (timer == null) {
 //#ifdef __ANDROID__
@@ -752,29 +747,34 @@ public final class Desktop implements CommandListener,
     }
 
     private static void resetFont() {
-        final Font df = Font.getDefaultFont();
-        font = null; // gc hint
-        font = Font.getFont(Font.FACE_MONOSPACE,
-                            Config.osdBoldFont ? Font.STYLE_BOLD : Font.STYLE_PLAIN,
-                            Config.desktopFontSize == 0 ? Font.SIZE_SMALL :
-                                    (Config.desktopFontSize == 1 ? Font.SIZE_MEDIUM : Font.SIZE_LARGE));
-        fontWpt = null; // gc hint
-        fontWpt = Font.getFont(Font.FACE_SYSTEM,
-                               Config.osdBoldFont ? Font.STYLE_BOLD : Font.STYLE_PLAIN,
-                               Font.SIZE_SMALL);
-        fontLists = null; // gc hint
-        try {
-            fontLists = Font.getFont((Config.listFont >> 16) & 0x000000ff,
-                                     (Config.listFont >> 8) & 0x000000ff,
-                                     Config.listFont & 0x000000ff);
-        } catch (IllegalArgumentException e) {
-            fontLists = df;
-        }
-        fontBtns = null; // gc hint
-        fontBtns = Font.getFont(df.getFace(), Font.STYLE_PLAIN, Font.SIZE_MEDIUM);
-        fontStringItems = null;
-        Desktop.fontStringItems = Font.getFont(df.getFace(), df.getStyle(),
-                                               isHires() ? Font.SIZE_MEDIUM : Font.SIZE_SMALL);
+
+        synchronized (renderLock) { // @threads:?:?
+
+            final Font df = Font.getDefaultFont();
+            font = null; // gc hint
+            font = Font.getFont(Font.FACE_MONOSPACE,
+                                Config.osdBoldFont ? Font.STYLE_BOLD : Font.STYLE_PLAIN,
+                                Config.desktopFontSize == 0 ? Font.SIZE_SMALL :
+                                        (Config.desktopFontSize == 1 ? Font.SIZE_MEDIUM : Font.SIZE_LARGE));
+            fontWpt = null; // gc hint
+            fontWpt = Font.getFont(Font.FACE_SYSTEM,
+                                   Config.osdBoldFont ? Font.STYLE_BOLD : Font.STYLE_PLAIN,
+                                   Font.SIZE_SMALL);
+            fontBtns = null; // gc hint
+            fontBtns = Font.getFont(df.getFace(), Font.STYLE_PLAIN, Font.SIZE_MEDIUM);
+            fontStringItems = null;
+            fontStringItems = Font.getFont(df.getFace(), df.getStyle(),
+                                           isHires() ? Font.SIZE_MEDIUM : Font.SIZE_SMALL);
+            fontLists = null; // gc hint
+            try {
+                fontLists = Font.getFont((Config.listFont >> 16) & 0x000000ff,
+                                         (Config.listFont >> 8) & 0x000000ff,
+                                         Config.listFont & 0x000000ff);
+            } catch (IllegalArgumentException e) {
+                fontLists = df;
+            }
+
+        } /* ~synchronized */
     }
 
     private static void resetBar() {
@@ -784,25 +784,29 @@ public final class Desktop implements CommandListener,
             alpha = 0xff;
         }
 
-        // OSD/status bar
-        int color = alpha << 24 | (Config.osdBlackColor ? 0x00dfdfdf : 0x007f7f7f);
-        int h = font.getHeight();
-        int w = screen.getWidth();
-        bar = null; // gc hint
-        bar = cz.kruch.track.util.ImageUtils.createRGBImage(w, h, color);
+        synchronized (renderLock) { // @threads:?:?
 
-        // wpt label bar
-        color = alpha << 24 | 0x00ffff00;
-        h = cz.kruch.track.TrackingMIDlet.getPlatform().startsWith("Nokia/6230i") ? font.getBaselinePosition() + 2 : font.getHeight();
-        barWpt = null; // gc hint
-        barWpt = cz.kruch.track.util.ImageUtils.createRGBImage(w, h, color);
+            // OSD/status bar
+            int color = alpha << 24 | (Config.osdBlackColor ? 0x00dfdfdf : 0x007f7f7f);
+            int h = font.getHeight();
+            int w = screen.getWidth();
+            bar = null; // gc hint
+            bar = cz.kruch.track.util.ImageUtils.createRGBImage(w, h, color);
 
-        // scale bar
-        color = alpha << 24 | 0x00ffffff;
-        h = font.getHeight();
-        w = font.stringWidth("99999 km") + 4;
-        barScale = null; // gc hint
-        barScale = cz.kruch.track.util.ImageUtils.createRGBImage(w, h, color);
+            // wpt label bar
+            color = alpha << 24 | 0x00ffff00;
+            h = cz.kruch.track.TrackingMIDlet.getPlatform().startsWith("Nokia/6230i") ? font.getBaselinePosition() + 2 : font.getHeight();
+            barWpt = null; // gc hint
+            barWpt = cz.kruch.track.util.ImageUtils.createRGBImage(w, h, color);
+
+            // scale bar
+            color = alpha << 24 | 0x00ffffff;
+            h = font.getHeight();
+            w = font.stringWidth("99999 km") + 4;
+            barScale = null; // gc hint
+            barScale = cz.kruch.track.util.ImageUtils.createRGBImage(w, h, color);
+
+        } /* ~synchronized */
 
         if (Config.forcedGc) {
             System.gc(); // conditional
@@ -828,7 +832,7 @@ public final class Desktop implements CommandListener,
 //#ifdef __HECL__
         // plugin ref
         cz.kruch.track.hecl.PluginManager.jvmReset();
-//#endif        
+//#endif
         // pools
         java.util.Arrays.fill(rtPool, null);
         java.util.Arrays.fill(pool, null);
@@ -852,7 +856,8 @@ public final class Desktop implements CommandListener,
 
 //#ifdef __ANDROID__
         // TODO move to better place
-        org.microemu.android.MicroEmulator.ignoreVolumeKeys = !Config.easyZoomVolumeKeys;
+        cz.kruch.track.TrackingMIDlet.getActivity().config.ignoreVolumeKeys = !Config.easyZoomVolumeKeys;
+        cz.kruch.track.TrackingMIDlet.getActivity().config.ignoreTextFieldFocus = !Config.forceTextFieldFocus;
 //#endif
 
         if (w == width && h == height) {
@@ -1053,7 +1058,7 @@ public final class Desktop implements CommandListener,
         } else if (command == cmdSettings) {
             (new SettingsForm(new Event(Event.EVENT_CONFIGURATION_CHANGED))).show();
         } else if (command == cmdWaypoints) {
-            Waypoints.getInstance().show();
+            Waypoints.getInstance().show(0);
 /*
         } else if (command == cmdLoadMap) {
             (new FileBrowser(Resources.getString(Resources.DESKTOP_MSG_SELECT_MAP), new Event(Event.EVENT_FILE_BROWSER_FINISHED, "map"),
@@ -1387,24 +1392,21 @@ public final class Desktop implements CommandListener,
                     reachedIdx = wptIdx;
 
                     // flash screen
-                    cz.kruch.track.ui.nokia.DeviceControl.flash();
+/* this makes mess on S40, SonyEricsson, ... where else??
+                    cz.kruch.track.ui.nokia.DeviceControl.flashScreen();
+*/
 
-                    // play sound and vibrate
-                    boolean notified = false;
-                    if (!Config.noSounds) {
-                        final String s = ((Waypoint) wpts.elementAt(wptIdx)).getLink(Waypoint.LINK_GENERIC_SOUND);
-                        if (s != null) { // try wpt-specific sound first
-                            notified = cz.kruch.track.fun.Camera.play(Config.getFileURL(Config.FOLDER_SOUNDS, s));
-                        }
-                        if (!notified) { // now try defaul wpt sound
-                            notified = cz.kruch.track.fun.Camera.play(Config.getFileURL(Config.FOLDER_SOUNDS, Config.defaultWptSound));
-                        }
-                        if (!notified) { // fallback to system alarm
-                            notified = AlertType.ALARM.playSound(display);
-                        }
+                    // play sound if set
+                    if (Config.wptAlertSound) {
+                        final String userLink = ((Waypoint) wpts.elementAt(wptIdx)).getLink(Waypoint.LINK_GENERIC_SOUND);
+                        cz.kruch.track.fun.Playback.play(Config.FOLDER_SOUNDS,
+                                                         userLink, Config.defaultWptSound,
+                                                         AlertType.ALARM);
                     }
-                    if (!notified) {
-                        vibrate(500);
+
+                    // vibrate if set - overrides powerSave
+                    if (Config.wptAlertVibr) {
+                        display.vibrate(500);
                     }
                 }
 
@@ -1448,6 +1450,10 @@ public final class Desktop implements CommandListener,
      *
      * @return last known position from GPS
      */
+//#ifdef __ANDROID__
+    /* public for picture geotagging, see AndroidCamera */
+    public
+//#endif
     Location getLocation() {
         return views[VIEW_MAP].getLocation();
     }
@@ -1538,10 +1544,11 @@ public final class Desktop implements CommandListener,
      * - no set is shown, or
      * - different set shown
      */
-    void showWaypoints(final Vector wpts, final String wptsName,
-                       final boolean visible) {
+    void showWaypoints(final NakedVector wpts, final String wptsName, final int mode) {
+
         // show?
-        if (visible) {
+        final boolean show = wpts != null && wptsName != null;
+        if (show) {
 
             // not navigating yet or different set
             if (Desktop.wpts == null || Desktop.wptIdx == -1) {
@@ -1551,8 +1558,8 @@ public final class Desktop implements CommandListener,
                 Desktop.wptsName = wptsName;
                 wptsId = wpts.hashCode();
 
-                // notify map view // TODO this is ugly
-                views[VIEW_MAP].routeChanged(wpts);
+                // notify map view
+                views[VIEW_MAP].routeChanged(wpts, mode);
 
             } else if (Desktop.wpts == wpts && Desktop.showall == false) {
 
@@ -1568,14 +1575,13 @@ public final class Desktop implements CommandListener,
 
 /* 2009-01-07: do nothing, showall flag is enough */
 /* 2010-04-08: and what about releasing memory?? and map viewer state?? */
-            // notify map view // TODO this is ugly
-            views[VIEW_MAP].routeChanged(null);
-            ((MapView) views[VIEW_MAP]).mapViewer.setRoute(null);
 
+            // notify map view
+            views[VIEW_MAP].routeChanged(null, mode);
         }
 
         // set flag
-        Desktop.showall = visible;
+        Desktop.showall = show;
 
         // update screen
         update(MASK_ALL);
@@ -1669,7 +1675,7 @@ public final class Desktop implements CommandListener,
         final View[] views = this.views;
         for (int i = views.length; --i >= 0; ) {
             if (rchange) {
-                views[i].routeChanged(wpts);
+                views[i].routeChanged(wpts, 1);
             }
             mask |= views[i].navigationChanged(wpts, wptIdx, false);
         }
@@ -1886,7 +1892,7 @@ public final class Desktop implements CommandListener,
 
                     case Canvas.KEY_NUM1: { // navigation
                         if (c == 1) {
-                            Waypoints.getInstance().show();
+                            Waypoints.getInstance().show(1);
                         }
                     } break;
 
@@ -1973,6 +1979,12 @@ public final class Desktop implements CommandListener,
                         cz.kruch.track.ui.nokia.DeviceControl.getBacklight();
                         mask = MASK_ALL;
                     } break;
+
+//#ifdef __ANDROID__
+                    case -27: { // camera key :)
+                        Waypoints.getInstance().show(2);
+                    } break;
+//#endif
 
                     default: {
                         mask = views[mode].handleKey(i, false);
@@ -2807,7 +2819,7 @@ public final class Desktop implements CommandListener,
                     }
                 }
                 // give feedback
-                actionFeedback(true);
+                vibrate(50);
             }
         }
     }
@@ -3189,7 +3201,8 @@ public final class Desktop implements CommandListener,
             }
 
 //#ifdef __ANDROID__
-            org.microemu.android.MicroEmulator.ignoreVolumeKeys = !Config.easyZoomVolumeKeys;
+            cz.kruch.track.TrackingMIDlet.getActivity().config.ignoreVolumeKeys = !Config.easyZoomVolumeKeys;
+            cz.kruch.track.TrackingMIDlet.getActivity().config.ignoreTextFieldFocus = !Config.forceTextFieldFocus;
 //#endif
 
             // runtime ops

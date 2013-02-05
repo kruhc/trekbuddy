@@ -61,15 +61,15 @@ public class ExtWaypoint extends StampedWaypoint {
     public String getLink(int type) {
         if (links != null) {
             if (links instanceof String) {
-                String link = (String) this.links;
-                if (isTypedLink(link, type)) {
+                final String link = (String) this.links;
+                if (isTypedLink(link.toLowerCase(), type)) {
                     return link;
                 }
             } else {
                 final Vector links = (Vector) this.links;
                 for (int N = links.size(), i = 0; i < N; i++) {
                     final String link = (String) links.elementAt(i);
-                    if (isTypedLink(link, type)) {
+                    if (isTypedLink(link.toLowerCase(), type)) {
                         return link;
                     }
                 }

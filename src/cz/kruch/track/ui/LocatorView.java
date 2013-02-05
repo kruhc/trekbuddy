@@ -67,7 +67,7 @@ final class LocatorView extends View {
         reset();
     }
 
-    public void sizeChanged(int w, int h) {
+    void sizeChanged(int w, int h) {
         this.lineLength = Math.min(w - w / 10, h - h / 10);
         this.dx = (w - lineLength) >> 1;
         this.dy = (h - lineLength) >> 1;
@@ -75,19 +75,19 @@ final class LocatorView extends View {
         this.center[1] = h >> 1;
     }
 
-    public void trackingStarted() {
+    void trackingStarted() {
         reset();
     }
 
-    public void trackingStopped() {
+    void trackingStopped() {
         reset();
     }
 
-    public int locationUpdated(Location l) {
+    int locationUpdated(Location l) {
         return Desktop.MASK_SCREEN;
     }
 
-    public int orientationChanged(int heading) {
+    int orientationChanged(int heading) {
         // remember
         orientation = heading;
 
@@ -104,7 +104,7 @@ final class LocatorView extends View {
         }
     }
 
-    public int handleAction(final int action, final boolean repeated) {
+    int handleAction(final int action, final boolean repeated) {
         if (repeated) {
             return Desktop.MASK_NONE;
         }
@@ -132,7 +132,7 @@ final class LocatorView extends View {
         return Desktop.MASK_ALL;
     }
 
-    public int handleKey(final int keycode, final boolean repeated) {
+    int handleKey(final int keycode, final boolean repeated) {
         // result repaint mask
         int mask = Desktop.MASK_NONE;
 
@@ -174,17 +174,11 @@ final class LocatorView extends View {
         return mask;
     }
 
-    private void reset() {
-        for (int i = 2; --i >= 0; ) {
-            lastCourse[i] = Float.NaN;
-        }
-    }
-
-    public int changeDayNight(final int dayNight) {
+    int changeDayNight(final int dayNight) {
         return Desktop.MASK_SCREEN; 
     }
 
-    public void render(final Graphics graphics, final Font font, final int mask) {
+    void render(final Graphics graphics, final Font font, final int mask) {
         // local references for faster access
         final OSD osd = Desktop.osd;
         final StringBuffer sb = this.sb;
@@ -503,6 +497,12 @@ final class LocatorView extends View {
 
         // draw zoom spots
         NavigationScreens.drawZoomSpots(graphics);
+    }
+
+    private void reset() {
+        for (int i = 2; --i >= 0; ) {
+            lastCourse[i] = Float.NaN;
+        }
     }
 
     private void drawCompas(final int width2, final int height2, final int fh, final int thick,

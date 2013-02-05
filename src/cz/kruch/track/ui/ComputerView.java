@@ -410,7 +410,7 @@ final class ComputerView extends View
 */
 //#endif
 
-    public void trackingStarted() {
+    void trackingStarted() {
         // reset trip vars
         reset();
 
@@ -425,7 +425,7 @@ final class ComputerView extends View
 
 //#ifdef __HECL__
 
-    public void trackingStopped() {
+    void trackingStopped() {
         // invoke handlers
         invokeHandlers(interp, heclOnStop, heclArgvOnStop);
     }
@@ -624,7 +624,7 @@ final class ComputerView extends View
         return Desktop.MASK_SCREEN;
     }
 
-    public int configChanged() {
+    int configChanged() {
 
         // check CMS cycling
         if (rotator != null) {
@@ -638,7 +638,7 @@ final class ComputerView extends View
         return super.configChanged();
     }
 
-    public int handleAction(final int action, final boolean repeated) {
+    int handleAction(final int action, final boolean repeated) {
         if (repeated) {
             return Desktop.MASK_NONE;
         }
@@ -695,7 +695,7 @@ final class ComputerView extends View
         return Desktop.MASK_NONE;
     }
 
-    public int handleKey(final int keycode, final boolean repeated) {
+    int handleKey(final int keycode, final boolean repeated) {
         switch (keycode) {
             case Canvas.KEY_NUM7: {
                 if (!repeated) {
@@ -1020,7 +1020,7 @@ final class ComputerView extends View
     }
 
     /* synchronized to avoid race-cond with rendering */
-    public synchronized int changeDayNight(final int dayNight) {
+    synchronized int changeDayNight(final int dayNight) {
         if (isUsable()) {
 /*
             // get rid of bitmap fonts in all areas

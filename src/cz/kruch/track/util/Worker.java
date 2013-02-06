@@ -40,7 +40,7 @@ public final class Worker extends Thread {
         this.go = true;
     }
 
-    public int getQueueSize() {
+    public synchronized int getQueueSize() {
         return tasks.size();
     }
 
@@ -95,9 +95,9 @@ public final class Worker extends Thread {
 //#endif
 
         final Vector tasks = this.tasks;
+        Runnable task = null;
 
         while (true) {
-            Runnable task = null;
             synchronized (this) {
                 while (go && tasks.size() == 0) {
                     try {
@@ -111,7 +111,6 @@ public final class Worker extends Thread {
                 }
                 if (tasks.size() > 0) {
                     task = (Runnable) tasks.elementAt(0);
-                    tasks.setElementAt(null, 0); // helps GC?
                     tasks.removeElementAt(0);
                 }
                 if (!go)
@@ -135,6 +134,9 @@ public final class Worker extends Thread {
 //#endif
                 // ignore
             }
+
+            // gc
+            task = null;
 
 //#ifdef __LOG__
             if (log.isEnabled()) log.debug("task finished");

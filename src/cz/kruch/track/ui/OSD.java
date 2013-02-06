@@ -20,7 +20,7 @@ final class OSD extends Bar {
 //#endif
 
     private static final char[] MM = { '<', '>' };
-    private static final char[] NSAT = "3*4*5*6*7*8*9*10*11*12*".toCharArray();
+    private static final String NSAT = "3*4*5*6*7*8*9*10*11*12*";
     private static final int NSAT_MAX = 12;
 
     int providerStatus;
@@ -44,9 +44,6 @@ final class OSD extends Bar {
         this.mmw = Desktop.font.stringWidth("<>");
         this.nsatw = Desktop.font.stringWidth("5*");
         this.nsatw2 = Desktop.font.stringWidth("15*");
-/*
-        this.clip = new int[]{ gx, gy, -1, -1 };
-*/
         this.sb = new StringBuffer(64);
         this.cInfo = new char[64];
         this.cExtInfo = new char[64];
@@ -99,18 +96,20 @@ final class OSD extends Bar {
                                    width - BORDER - mmw,
                                    gy + bh, Graphics.TOP | Graphics.LEFT);
             } else {
+//#ifndef __CN1__
                 final int sat = this.sat;
                 if (sat >= 3) {
                     if (sat < 10) {
-                        graphics.drawChars(NSAT, (sat - 3) * 2, 2,
-                                           width - BORDER - nsatw,
-                                           gy + bh, Graphics.TOP | Graphics.LEFT);
+                        graphics.drawSubstring(NSAT, (sat - 3) * 2, 2,
+                                               width - BORDER - nsatw,
+                                               gy + bh, Graphics.TOP | Graphics.LEFT);
                     } else if (sat <= NSAT_MAX) {
-                        graphics.drawChars(NSAT, 14 + (sat - 10) * 3, 3,
-                                           width - BORDER - nsatw2,
-                                           gy + bh, Graphics.TOP | Graphics.LEFT);
+                        graphics.drawSubstring(NSAT, 14 + (sat - 10) * 3, 3,
+                                               width - BORDER - nsatw2,
+                                               gy + bh, Graphics.TOP | Graphics.LEFT);
                     }
                 }
+//#endif
             }
         }
 
@@ -183,16 +182,4 @@ final class OSD extends Bar {
         sb.getChars(0, cInfoLength, cInfo, 0);
         this.ok = ok;
     }
-
-/*
-    public int[] getClip() {
-        if (!visible && !update)
-            return null;
-
-        clip[2] = width;
-        clip[3] = / *cExtInfoLength == 0 ? bh : * /2 * bh;
-
-        return clip;
-    }
-*/
 }

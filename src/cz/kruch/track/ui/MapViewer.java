@@ -19,6 +19,9 @@ import api.location.Location;
 import api.location.QualifiedCoordinates;
 import api.location.ProjectionSetup;
 
+//#define __CLIP__
+//-#define __PF__
+
 /**
  * Map viewer.
  *
@@ -29,10 +32,10 @@ final class MapViewer {
     private static final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("MapViewer");
 //#endif
 
-//#if __SYMBIAN__ || __RIM__ || __ANDROID__
-    private static final int MAX_TRAJECTORY_LENGTH = 2048;
+//#if __SYMBIAN__ || __RIM__ || __ANDROID__ || __CN1__
+    private static final int MAX_TRAIL_LENGTH = 2048;
 //#else
-    private static final int MAX_TRAJECTORY_LENGTH = 1024;
+    private static final int MAX_TRAIL_LENGTH = 1024;
 //#endif
 
     public static final byte WPT_STATUS_VOID    = 0;
@@ -48,9 +51,6 @@ final class MapViewer {
     private int gx, gy;
     private int sy;
     
-/*
-    private final int[] clip;
-*/
     private final Position position;
 
     private int scaleDx/*, dy*/;
@@ -65,14 +65,17 @@ final class MapViewer {
 
     private Position[] wptPositions;
     private byte[] wptStatuses;
+    private NakedVector trkRanges;
 
     private int star;
 
     private final QualifiedCoordinates[] trailLL;
     private final Position[] trailXY;
 //#ifndef __ANDROID__
+//#ifdef __PF__
     private final short[] trailPF;
-//#endif    
+//#endif
+//#endif
     private QualifiedCoordinates refQc;
     private float accDist, refCourse, courseDeviation;
     private int lllast, xylast, pflast, llcount, xycount;
@@ -82,18 +85,17 @@ final class MapViewer {
     MapViewer() {
         this.crosshairSize = NavigationScreens.crosshairs.getHeight();
         this.crosshairSize2 = this.crosshairSize >> 1;
-/*
-        this.clip = new int[] { -1, -1, crosshairSize, crosshairSize };
-*/
         this.position = new Position(0, 0);
         this.slices = new NakedVector(4, 4);
         this.slices2 = new NakedVector(4, 4);
         this.sInfo = new char[32];
         this.course = this.course2 = Float.NaN;
-        this.trailLL = new QualifiedCoordinates[MAX_TRAJECTORY_LENGTH];
-        this.trailXY = new Position[MAX_TRAJECTORY_LENGTH];
+        this.trailLL = new QualifiedCoordinates[MAX_TRAIL_LENGTH];
+        this.trailXY = new Position[MAX_TRAIL_LENGTH];
 //#ifndef __ANDROID__
-        this.trailPF = new short[MAX_TRAJECTORY_LENGTH];
+//#ifdef __PF__
+        this.trailPF = new short[MAX_TRAIL_LENGTH];
+//#endif
 //#endif
     }
 
@@ -475,14 +477,18 @@ final class MapViewer {
         return dirty;
     }
 
-    void initRoute(final Position[] positions, final boolean reset) {
+    void initRoute(final Position[] positions, final NakedVector ranges, final boolean reset) {
         /* synchronized to avoid race condition with render() */
         synchronized (this) { // @threads ?:wpt*
             this.wptPositions = null;
             this.wptStatuses = null;
+            this.trkRanges = null;
             if (positions != null) {
                 this.wptPositions = positions;
                 this.wptStatuses = new byte[positions.length];
+            }
+            if (ranges != null) {
+                this.trkRanges = ranges;
             }
         }
         if (reset) {
@@ -649,7 +655,9 @@ final class MapViewer {
             final QualifiedCoordinates[] arrayLL = trailLL;
             final Position[] arrayXY = trailXY;
 //#ifndef __ANDROID__
+//#ifdef __PF__
             final short[] arrayPF = trailPF;
+//#endif
 //#endif
             int lllast = this.lllast;
             int xylast = this.xylast;
@@ -667,7 +675,7 @@ final class MapViewer {
 
             // append to LL array
             arrayLL[lllast] = qc;
-            if (++lllast == MAX_TRAJECTORY_LENGTH) {
+            if (++lllast == MAX_TRAIL_LENGTH) {
                 lllast = 0;
             }
 //        } // ~synchronized
@@ -680,17 +688,17 @@ final class MapViewer {
                 // how many XY is missing
                 int N = lllast - xylast;
                 if (N < 0) {
-                    N = MAX_TRAJECTORY_LENGTH + N;
+                    N = MAX_TRAIL_LENGTH + N;
                 }
 
                 // calculate missing XYs
                 do {
                     arrayXY[xylast] = map.transform(arrayLL[xylast])._clone();
-                    if (++xylast == MAX_TRAJECTORY_LENGTH) {
+                    if (++xylast == MAX_TRAIL_LENGTH) {
                         xylast = 0;
                     }
-                    if (++xycount > MAX_TRAJECTORY_LENGTH) {
-                        xycount = MAX_TRAJECTORY_LENGTH;
+                    if (++xycount > MAX_TRAIL_LENGTH) {
+                        xycount = MAX_TRAIL_LENGTH;
                     }
                 } while (--N > 0);
 
@@ -698,20 +706,22 @@ final class MapViewer {
                 if (xycount > 1) {
                     N = xylast - pflast - 1;
                     if (N < 0) {
-                        N = MAX_TRAJECTORY_LENGTH + N;
+                        N = MAX_TRAIL_LENGTH + N;
                     }
 
                     // calculate missing PFs
                     do {
                         int pfnext = pflast + 1;
-                        if (pfnext == MAX_TRAJECTORY_LENGTH) {
+                        if (pfnext == MAX_TRAIL_LENGTH) {
                             pfnext = 0;
                         }
 //#ifndef __ANDROID__
+//#ifdef __PF__
                         arrayPF[pflast] = updatePF(Config.trailThick,
                                                    arrayXY[pflast], arrayXY[pfnext]);
 //#endif
-                        if (++pflast == MAX_TRAJECTORY_LENGTH) {
+//#endif
+                        if (++pflast == MAX_TRAIL_LENGTH) {
                             pflast = 0;
                         }
                     } while (--N > 0);
@@ -723,8 +733,8 @@ final class MapViewer {
             this.lllast = lllast;
             this.xylast = xylast;
             this.pflast = pflast;
-            if (++llcount > MAX_TRAJECTORY_LENGTH) {
-                llcount = MAX_TRAJECTORY_LENGTH;
+            if (++llcount > MAX_TRAIL_LENGTH) {
+                llcount = MAX_TRAIL_LENGTH;
             }
         } // ~synchronized
 
@@ -762,7 +772,7 @@ final class MapViewer {
             if (!map.isVirtual()) {
                 final Object[] slicesArray = this.slices.getData();
                 for (int N = this.slices.size(), i = 0; i < N; i++) {
-                    drawSlice(graphics, /*clip, */(Slice) slicesArray[i]);
+                    drawSlice(graphics, (Slice) slicesArray[i]);
                 }
             }
 
@@ -836,56 +846,49 @@ final class MapViewer {
         // local ref for faster access
         final Position[] positions = this.wptPositions;
         final byte[] statuses = this.wptStatuses;
+        final int NR = this.trkRanges == null ? 0 : this.trkRanges.size();
+        final int eow = NR > 0 ? ((int[])this.trkRanges.elementAt(0))[0] : positions.length;
 
-        // draw polyline
-        if (Desktop.routeDir != 0) {
+        // draw polylines
+        if (Desktop.routeDir != 0 || NR != 0) {
 
-            // line color and style
-            if (Config.routeLineStyle) {
-                graphics.setStrokeStyle(Graphics.DOTTED);
-            }
-            graphics.setColor(Config.COLORS_16[Config.routeColor]);
-//#ifdef __ANDROID__
-            graphics.setStrokeWidth(Config.routeThick * 2 + 1);
-//#endif
+            // draw polys
+            if (NR == 0) { // one single nav line
 
-            // draw route as line
-            final int thickness = Config.routeThick;
-            final int w = Desktop.width;
-            final int h = Desktop.height;
-            final int x = this.x;
-            final int y = this.y;
-            Position p0 = null;
-            for (int i = positions.length; --i >= 0; ) {
-                final Position p1 = positions[i];
-                if (p1 != null) {
-                    if (p0 != null) {
-                        final int x0 = p0.getX() - x;
-                        final int y0 = p0.getY() - y;
-                        final int x1 = p1.getX() - x;
-                        final int y1 = p1.getY() - y;
+                // route line color and style
+                setStroke(graphics, Config.routeLineStyle ? Graphics.DOTTED : Graphics.SOLID,
+                          Config.routeColor, Config.routeThick);
 
-                        // bounding box check first
-                        final boolean xIsOff = (x0 < 0 && x1 < 0) || (x0 >= w && x1 >= w);
-                        final boolean yIsOff = (y0 < 0 && y1 < 0) || (y0 >= h && y1 >= h);
-                        if (!xIsOff && !yIsOff) {
+                // draw route line
+                drawPoly(graphics, positions, 0, positions.length, Config.routeThick);
 
-                            // draw segment
-//#ifndef __ANDROID__
-                            drawLineSegment(graphics, x0, y0, x1, y1, updatePF(thickness, p0, p1), w, h);
-//#else
-                            drawLineSegment(graphics, x0, y0, x1, y1, (short)(1 << 8), w, h); // 1 means stroke width is 1
-//#endif
-                        }
-                    }
-                    p0 = p1;
+            } else { // nav line and trk segs
+
+                // track line color and style
+                setStroke(graphics, Config.trackLineStyle ? Graphics.DOTTED : Graphics.SOLID,
+                          Config.trackColor, Config.trackThick);
+
+                // draw tracks
+                final Object[] ranges = this.trkRanges.getData();
+                for (int i = NR; --i >= 0; ) {
+                    final int[] range = (int[]) ranges[i];
+                    drawPoly(graphics, positions, range[0], range[1], Config.trackThick);
+                }
+
+                // has wpts?
+                if (Desktop.routeDir != 0 && eow != 0) {
+
+                    // route line color and style
+                    setStroke(graphics, Config.routeLineStyle ? Graphics.DOTTED : Graphics.SOLID,
+                              Config.routeColor, Config.routeThick);
+
+                    // draw route line
+                    drawPoly(graphics, positions, 0, eow, Config.routeThick);
                 }
             }
 
             // restore line style
-            if (Config.routeLineStyle) {
-                graphics.setStrokeStyle(Graphics.SOLID);
-            }
+            graphics.setStrokeStyle(Graphics.SOLID);
 //#ifdef __ANDROID__
             graphics.setStrokeWidth(1);
 //#endif
@@ -899,7 +902,7 @@ final class MapViewer {
 
         // draw POIs
         if (Desktop.routeDir != 0 || Desktop.showall) {
-            for (int i = positions.length; --i >= 0; ) {
+            for (int i = eow; --i >= 0; ) {
                 if (positions[i] != null) {
                     byte status = statuses[i];
                     if (status == WPT_STATUS_VOID) {
@@ -927,6 +930,14 @@ final class MapViewer {
         // hack! restore graphics
         graphics.setColor(color);
         graphics.setFont(Desktop.font);
+    }
+
+    private static void setStroke(final Graphics g, final int style, final int color, final int width) {
+        g.setStrokeStyle(style);
+        g.setColor(Config.COLORS_16[color]);
+//#ifdef __ANDROID__
+        g.setStrokeWidth(width * 2 + 1);
+//#endif
     }
 
     private void drawScale(final Graphics graphics) {
@@ -1117,7 +1128,11 @@ final class MapViewer {
     private void drawTrail(final Graphics graphics) {
         final Position[] arrayXY = trailXY;
 //#ifndef __ANDROID__
+//#ifdef __PF__
         final short[] arrayPF = trailPF;
+//#else
+        final int flags = ((Config.trailThick << 1) + 1) << 8;
+//#endif
 //#endif
         final int count = this.xycount;
         final int x = this.x;
@@ -1133,7 +1148,7 @@ final class MapViewer {
         final int color = graphics.getColor();
         graphics.setColor(Config.COLORS_16[Config.trailColor]);
 //#ifdef __ANDROID__
-        graphics.setStrokeWidth(Config.trailThick * 2 + 1);
+        graphics.setStrokeWidth((Config.trailThick << 1) + 1);
 //#endif
 
         // draw polyline
@@ -1159,9 +1174,13 @@ final class MapViewer {
                 
                 // draw segment
 //#ifndef __ANDROID__
+//#ifdef __PF__
                 drawLineSegment(graphics, x0, y0, x1, y1, arrayPF[idx0], w, h);
 //#else
-                drawLineSegment(graphics, x0, y0, x1, y1, (short) (1 << 8), w, h); // 1 means stroke width is 1
+                drawLineSegment(graphics, x0, y0, x1, y1, flags, w, h);
+//#endif
+//#else
+                drawLineSegment(graphics, x0, y0, x1, y1, (1 << 8), w, h); // 1 means stroke width is 1
 //#endif
             }
 
@@ -1183,9 +1202,13 @@ final class MapViewer {
 
                 // draw segment
 //#ifndef __ANDROID__
+//#ifdef __PF__
                 drawLineSegment(graphics, x0, y0, x1, y1, updatePF(Config.trailThick, x1 - x0, y1 - y0), w, h);
 //#else
-                drawLineSegment(graphics, x0, y0, x1, y1, (short) (1 << 8), w, h); // 1 means stroke width is 1
+                drawLineSegment(graphics, x0, y0, x1, y1, (((Config.trailThick << 1) + 1) << 8), w, h);
+//#endif
+//#else
+                drawLineSegment(graphics, x0, y0, x1, y1, (1 << 8), w, h); // 1 means stroke width is 1
 //#endif
             }
         }
@@ -1197,11 +1220,51 @@ final class MapViewer {
 //#endif
     }
 
+    private void drawPoly(final Graphics graphics, final Position[] points,
+                          final int begin, final int end, final int thickness) {
+        final int w = Desktop.width;
+        final int h = Desktop.height;
+        final int x = this.x;
+        final int y = this.y;
+        Position p0 = null;
+        for (int i = end; --i >= begin; ) {
+            final Position p1 = points[i];
+            if (p1 != null) {
+                if (p0 != null) {
+                    final int x0 = p0.getX() - x;
+                    final int y0 = p0.getY() - y;
+                    final int x1 = p1.getX() - x;
+                    final int y1 = p1.getY() - y;
+
+                    // bounding box check first
+                    final boolean xIsOff = (x0 < 0 && x1 < 0) || (x0 >= w && x1 >= w);
+                    final boolean yIsOff = (y0 < 0 && y1 < 0) || (y0 >= h && y1 >= h);
+                    if (!xIsOff && !yIsOff) {
+
+                        // draw segment
+//#ifndef __ANDROID__
+//#ifdef __PF__
+                        drawLineSegment(graphics, x0, y0, x1, y1, updatePF(thickness, p0, p1), w, h);
+//#else
+                        drawLineSegment(graphics, x0, y0, x1, y1, (((thickness << 1) + 1) << 8), w, h);
+//#endif
+//#else
+                        drawLineSegment(graphics, x0, y0, x1, y1, (1 << 8), w, h); // 1 means stroke width is 1
+//#endif
+                    }
+                }
+                p0 = p1;
+            }
+        }
+
+    }
+
     private static void drawLineSegment(final Graphics graphics,
                                         int x0, int y0,
                                         int x1, int y1,
-                                        final short flags,
+                                        final int flags,
                                         final int w, final int h) {
+//#ifdef __CLIP__
         final boolean p0IsWithin = x0 >=0 && x0 < w && y0 >=0 && y0 < h;
         final boolean p1IsWithin = x1 >=0 && x1 < w && y1 >=0 && y1 < h;
         if (!p0IsWithin || !p1IsWithin) {
@@ -1315,16 +1378,18 @@ final class MapViewer {
                 }
             }
         }
+//#endif
         clipLineSegment(graphics, x0, y0, x1, y1, flags);
     }
 
     private static void clipLineSegment(final Graphics graphics,
                                         final int x0, final int y0,
                                         final int x1, final int y1,
-                                        final short flags) {
+                                        final int flags) {
 
         final int thick = flags >>> 8;
         if (thick > 1) {
+//#ifdef __PF__
             final int t0x0, t0y0, t0x1, t0y1, t0x2, t0y2;
             final int t1x0, t1y0, t1x1, t1y1, t1x2, t1y2;
             final int th2 = thick >> 1;
@@ -1360,6 +1425,34 @@ final class MapViewer {
             }
             graphics.fillTriangle(t0x0, t0y0, t0x1, t0y1, t0x2, t0y2);
             graphics.fillTriangle(t1x0, t1y0, t1x1, t1y1, t1x2, t1y2);
+//#else
+            final int th = thick >>> 1;
+            final int dx = (x1 - x0);
+            final int dy = (y1 - y0);
+            final int p2 = dx * dx + dy * dy;
+            final int t2 = th * th;
+            final int k = (int)Math.sqrt(p2 / t2);
+            final int r = k >>> 1;
+            int tx = 0, ty = 0;
+            if (k != 0) {
+                tx = dy < 0 ? (dy - r) / k : (dy + r) / k;
+                ty = dx < 0 ? (dx - r) / k : (dx + r) / k;
+            }
+// DEBUG
+//            graphics.setColor(0xff,0,0);
+//            graphics.drawLine(x0 + tx, y0 - ty, x1 + tx, y1 - ty);
+//            graphics.drawLine(x1 + tx, y1 - ty, x1 + tx, y1 + ty);
+//            graphics.setColor(0,0xff,0);
+//            graphics.drawLine(x1 + tx, y1 + ty, x0 - tx, y0 + ty);
+//            graphics.drawLine(x0 - tx, y0 + ty, x0 + tx, y0 - ty);
+// ~DEBUG
+            final int c1x = x1 + tx;
+            final int c1y = y1 - ty;
+            final int c0x = x0 - tx;
+            final int c0y = y0 + ty;
+            graphics.fillTriangle(x0 + tx, y0 - ty, c1x, c1y, c0x, c0y);
+            graphics.fillTriangle(c1x, c1y, c0x, c0y, x1 - tx, y1 + ty);
+//#endif
         } else {
             graphics.drawLine(x0, y0, x1, y1);
         }
@@ -1382,15 +1475,6 @@ final class MapViewer {
     void starTick() {
         star++;
     }
-
-/*
-    public int[] getClip() {
-        clip[0] = chx;
-        clip[1] = chy;
-
-        return clip;
-    }
-*/
 
     boolean ensureSlices() {
 //#ifdef __LOG__
@@ -1658,12 +1742,14 @@ final class MapViewer {
 
 //#ifndef __ANDROID__
 
+//#ifdef __PF__
+
     private static short updatePF(final int thick0, final Position p0, final Position p1) {
         return updatePF(thick0, p1.getX() - p0.getX(), p1.getY() - p0.getY());
     }
     
     private static short updatePF(final int thick0, final double dx, final double dy) {
-        final int thick = thick0 * 2 + 1;
+        final int thick = (thick0 << 1) + 1;
         double aRad;
         short flags = 0;
         if (dx > 0) {
@@ -1698,6 +1784,8 @@ final class MapViewer {
 
         return flags;
     }
+
+//#endif
 
 //#endif // !__ANDROID__
 

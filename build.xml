@@ -34,7 +34,7 @@
 
     <property name="build.dir" value="r:\trekbuddy"/>
 
-    <property name="use.proguard" value="3"/>
+    <property name="use.proguard" value="4"/>
 
     <taskdef resource="antenna.properties" classpath="lib/antenna-bin-1.0.2.jar"/>
     <taskdef name="otaJad" classname="RimOtaJadSha" classpath="${basedir}/tools/classes"/>
@@ -319,7 +319,7 @@
              inheritAll="false" inheritRefs="false">
             <property name="target.version" value="any"/>
             <property name="sdk.version" value="2.2"/>
-            <property name="api.level" value="3"/>
+            <property name="api.level" value="5"/>
             <property name="dist.dir" value="android"/>
 	    </ant>
         <antcall target="a.pre.android"/>
@@ -337,7 +337,7 @@
              inheritAll="false" inheritRefs="false">
             <property name="target.version" value="any"/>
             <property name="sdk.version" value="2.2"/>
-            <property name="api.level" value="3"/>
+            <property name="api.level" value="5"/>
             <property name="dist.dir" value="android"/>
             <property name="javac.debug" value="true"/>
             <property name="javac.debuglevel" value="source,lines"/>
@@ -347,6 +347,48 @@
         </ant>
         <copy file="${microemu.home}/microemu-android/bin/trekbuddy.apk"
 			  tofile="dist/${vendor.dir}/${dist.dir}/trekbuddy.apk"/>
+        <move file="dist/${vendor.dir}/${dist.dir}/trekbuddy-android.map"
+              tofile="dist/${vendor.dir}/${dist.dir}/trekbuddy.map"/>
+    </target>
+
+    <target name="android-offline">
+        <property name="suffix" value="-android"/>
+        <property name="dist.dir" value="android-offline"/>
+        <property name="libraryjars" value="${microemu.home}\microemu-cldc\target\microemu-cldc-3.0.0-SNAPSHOT.jar;${microemu.home}\microemu-midp\target\microemu-midp-3.0.0-SNAPSHOT.jar;${microemu.home}\microemu-extensions\microemu-jsr-75\target\microemu-jsr-75-3.0.0-SNAPSHOT.jar;${android20.home}\android.jar;${microemu.home}\microemu-android\microemu-android-ant.jar"/>
+        <antcall target="clean"/>
+        <ant dir="${microemu.home}/microemu-android"
+             antfile="build-trekbuddy.xml" target="clean"
+             inheritAll="false" inheritRefs="false">
+            <property name="target.version" value="any"/>
+            <property name="sdk.version" value="2.2"/>
+            <property name="api.level" value="5"/>
+            <property name="dist.dir" value="android"/>
+	    </ant>
+        <antcall target="a.pre.android-offline"/>
+        <antcall target="compile.android"/>
+        <antcall target="android.pack" inheritall="true"/>
+        <antcall target="obfuscate4.android" inheritall="true"/>
+<!-- not needed, so rename the jar as if it happened
+        <antcall target="preverify" inheritall="true"/>
+-->
+        <move file="tmp/trekbuddy${suffix}-obfuscated.jar"
+              tofile="tmp/preverified/trekbuddy${suffix}-obfuscated.jar"/>
+        <antcall target="dist.android" inheritall="true"/>
+        <ant dir="${microemu.home}/microemu-android"
+             antfile="build-trekbuddy.xml" target="zipalign"
+             inheritAll="false" inheritRefs="false">
+            <property name="target.version" value="any-offline"/>
+            <property name="sdk.version" value="2.2"/>
+            <property name="api.level" value="5"/>
+            <property name="dist.dir" value="android-offline"/>
+            <property name="javac.debug" value="true"/>
+            <property name="javac.debuglevel" value="source,lines"/>
+            <!--
+            <property name="do.obfuscate" value="true"/>
+            -->
+        </ant>
+        <copy file="${microemu.home}/microemu-android/bin/trekbuddy.apk"
+			  tofile="dist/${vendor.dir}/${dist.dir}/trekbuddy-offline.apk"/>
         <move file="dist/${vendor.dir}/${dist.dir}/trekbuddy-android.map"
               tofile="dist/${vendor.dir}/${dist.dir}/trekbuddy.map"/>
     </target>
@@ -361,7 +403,7 @@
              inheritAll="false" inheritRefs="false">
             <property name="target.version" value="backport"/>
             <property name="sdk.version" value="1.6"/>
-            <property name="api.level" value="3"/>
+            <property name="api.level" value="4"/>
             <property name="dist.dir" value="android-backport"/>
         </ant>
         <antcall target="a.pre.android-backport"/>
@@ -379,7 +421,7 @@
              inheritAll="false" inheritRefs="false">
             <property name="target.version" value="backport"/>
             <property name="sdk.version" value="1.6"/>
-            <property name="api.level" value="3"/>
+            <property name="api.level" value="4"/>
             <property name="dist.dir" value="android-backport"/>
             <property name="javac.debug" value="true"/>
             <property name="javac.debuglevel" value="source,lines"/>
@@ -463,6 +505,24 @@
         <antcall target="a.pre.cn1"/>
         <antcall target="compile.cn1"/>
         <antcall target="a.pack" inheritall="true"/>
+        <antcall target="obfuscate4.cn1" inheritall="true"/>
+<!--
+        <antcall target="preverify" inheritall="true"/>
+-->
+        <move file="tmp/trekbuddy${suffix}-obfuscated.jar"
+              tofile="tmp/preverified/trekbuddy${suffix}-obfuscated.jar"/>
+        <antcall target="dist" inheritall="true"/>
+    </target>
+
+    <target name="cn1-emulator">
+        <property name="suffix" value="-cn1"/>
+        <property name="dist.dir" value="cn1-emulator"/>
+        <property name="libraryjars" value="${cn1.home}\lib\CLDC11.jar;${cn1.home}\lib\CodenameOne.jar"/>
+        <property name="classpath.preverify" value="${libraryjars}"/>
+        <antcall target="clean"/>
+        <antcall target="a.pre.cn1-emulator"/>
+        <antcall target="compile.cn1"/>
+        <antcall target="a.pack" inheritall="true"/>
 <!--
         <antcall target="emulator.obfuscate" inheritall="true"/>
         <antcall target="preverify" inheritall="true"/>
@@ -539,6 +599,16 @@
         <delete file="tmp/src/org/hecl/PutsCmd.java" verbose="true"/>
     </target>
 
+    <target name="a.pre.hecl-android-offline">
+<!--
+        <ant antfile="hecl.xml" target="compile"/>
+-->
+        <wtkpreprocess srcdir="hecl-core" destdir="tmp/src" version="2"
+                       symbols="j2me=1,cldc=${wtk.cldc.version},midp=${wtk.midp.version},javaversion=1.2,android=1"/>
+        <delete file="tmp/src/org/hecl/PrintThing.java" verbose="true"/>
+        <delete file="tmp/src/org/hecl/PutsCmd.java" verbose="true"/>
+    </target>
+
     <target name="a.pre.standard" depends="a.pre.hecl">
         <mkdir dir="tmp/src"/>
         <wtkpreprocess srcdir="src" destdir="tmp/src" version="1"
@@ -599,6 +669,12 @@
                        symbols="__HECL__,__ANDROID__,${pre.extra}"/>
     </target>
 
+    <target name="a.pre.android-offline" depends="a.pre.hecl-android-offline">
+        <mkdir dir="tmp/src"/>
+        <wtkpreprocess srcdir="src" destdir="tmp/src" version="1"
+                       symbols="__HECL__,__ANDROID__,__NO_NET__,${pre.extra}"/>
+    </target>
+
     <target name="a.pre.android-backport" depends="a.pre.hecl-android">
         <mkdir dir="tmp/src"/>
         <wtkpreprocess srcdir="src" destdir="tmp/src" version="1"
@@ -606,6 +682,12 @@
     </target>
 
     <target name="a.pre.cn1">
+        <mkdir dir="tmp/src"/>
+        <wtkpreprocess srcdir="src" destdir="tmp/src" version="1"
+                       symbols="__CN1__,${pre.extra}"/>
+    </target>
+
+    <target name="a.pre.cn1-emulator">
         <mkdir dir="tmp/src"/>
         <wtkpreprocess srcdir="src" destdir="tmp/src" version="1"
                        symbols="__CN1__,__LOG__,${pre.extra}"/>
@@ -617,7 +699,7 @@
                        symbols="__ALL__,__HECL__,__EMULATOR__,__LOG__,${pre.extra}"/>
     </target>
 
-    <target name="compile.standard" depends="remove.symbian.src,remove.rim.src,remove.android.src,remove.cn1.src">
+    <target name="compile.standard" depends="remove.symbian.src,remove.rim.src,remove.android.src">
         <mkdir dir="tmp/build/classes"/>
         <mkdir dir="tmp/ant"/>
         <javac srcdir="tmp/src"
@@ -628,8 +710,8 @@
                bootclasspathref="bootclasspath.standard"/>
     </target>
 
-    <target name="compile.standard-lite" depends="remove.symbian.src,remove.rim.src,remove.android.src,
-                                                  remove.cn1.src,remove.hecl.src">
+    <target name="compile.standard-lite" depends="remove.symbian.src,remove.rim.src,
+                                                  remove.android.src,remove.hecl.src">
         <mkdir dir="tmp/build/classes"/>
         <mkdir dir="tmp/ant"/>
         <javac srcdir="tmp/src"
@@ -700,6 +782,9 @@
     <target name="compile.android" depends="remove.nonandroid.src,remove.rim.src">
         <mkdir dir="tmp/build/classes"/>
         <mkdir dir="tmp/ant"/>
+        <mkdir dir="tmp/src/javax/microedition/media"/>
+        <copy file="cn1-compat/src/javax/microedition/media/MediaException.java"
+              todir="tmp/src/javax/microedition/media"/>
         <javac srcdir="tmp/src"
                destdir="tmp/build/classes"
                tempdir="tmp/ant"
@@ -797,6 +882,7 @@
     <target name="remove.android.src">
         <delete file="tmp/src/api/io/RandomAccessInputStream.java"/>
         <delete file="tmp/src/cz/kruch/track/fun/AndroidCamera.java"/>
+        <delete file="tmp/src/cz/kruch/track/fun/AndroidPlayback.java"/>
         <delete file="tmp/src/cz/kruch/track/location/AndroidBluetoothLocationProvider.java"/>
         <delete file="tmp/src/cz/kruch/track/location/AndroidLocationProvider.java"/>
         <delete file="tmp/src/cz/kruch/track/location/AndroidNmeaListener.java"/>
@@ -830,16 +916,18 @@
 
     <target name="remove.android2.src">
         <delete file="tmp/src/cz/kruch/track/location/AndroidNmeaListener.java" verbose="true"/>
+        <delete file="tmp/src/cz/kruch/track/fun/AndroidCamera.java" verbose="true"/>
     </target>
 
     <target name="remove.mmapi.src">
         <delete file="tmp/src/cz/kruch/track/fun/Jsr120Friends.java"/>
         <delete file="tmp/src/cz/kruch/track/fun/Jsr135Camera.java"/>
         <delete file="tmp/src/cz/kruch/track/fun/Jsr234Camera.java"/>
-        <delete file="tmp/src/cz/kruch/track/fun/Playback.java"/>
+        <delete file="tmp/src/cz/kruch/track/fun/Jsr135Playback.java"/>
     </target>
 
     <target name="remove.lapi.src">
+        <delete file="tmp/src/cz/kruch/track/location/SerialLocationProvider.java"/>
         <delete file="tmp/src/cz/kruch/track/location/Jsr82LocationProvider.java"/>
         <delete file="tmp/src/cz/kruch/track/location/Jsr179OrientationProvider.java"/>
         <delete file="tmp/src/cz/kruch/track/location/O2GermanyLocationProvider.java"/>
@@ -847,10 +935,6 @@
 
     <target name="remove.fileapi.src">
         <delete file="tmp/src/api/file/Jsr75File.java"/>
-    </target>
-
-    <target name="remove.cn1.src">
-        <delete file="tmp/src/api/file/Cn1File.java"/>
     </target>
 
     <target name="create.tmp.jad">
@@ -1058,9 +1142,9 @@
             <arg value="-whyareyoukeeping class cz.kruch.track.util.Logger"/>
             <arg value="-whyareyoukeeping class api.io.BufferedOutputStream"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.hecl.ControlledInterp"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.hecl.PluginManager"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.ui.nokia.NokiaUi14DeviceControl"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.ui.nokia.S60DeviceControl"/>
-            <arg value="-whyareyoukeeping class cz.kruch.track.hecl.PluginManager"/>
             <arg value="-printmapping dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.map"/>
             <arg value="-printseeds"/>
             <arg value="-printusage dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.dco"/>
@@ -1070,6 +1154,7 @@
 
     <target name="obfuscate4">
         <java jar="${proguard4.home}\lib\proguard.jar" fork="true">
+            <jvmarg value="-Dmaximum.inlined.code.length=4"/>
             <arg value="-injars tmp/trekbuddy${suffix}.jar"/>
             <arg value="-outjars tmp/trekbuddy${suffix}-obfuscated.jar"/>
             <arg value="-libraryjars ${libraryjars}"/>
@@ -1090,9 +1175,48 @@
             <arg value="-whyareyoukeeping class cz.kruch.track.util.Logger"/>
             <arg value="-whyareyoukeeping class api.io.BufferedOutputStream"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.hecl.ControlledInterp"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.hecl.PluginManager"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.ui.nokia.NokiaUi14DeviceControl"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.ui.nokia.S60DeviceControl"/>
-            <arg value="-whyareyoukeeping class cz.kruch.track.hecl.PluginManager"/>            
+            <arg value="-printmapping dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.map"/>
+            <arg value="-printseeds"/>
+            <arg value="-printusage dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.dco"/>
+            <arg value="-verbose"/>
+        </java>
+    </target>
+
+    <target name="obfuscate4.cn1">
+        <java jar="${proguard4.home}\lib\proguard.jar" fork="true">
+            <jvmarg value="-Dmaximum.inlined.code.length=4"/>
+            <arg value="-injars tmp/trekbuddy${suffix}.jar"/>
+            <arg value="-outjars tmp/trekbuddy${suffix}-obfuscated.jar"/>
+            <arg value="-libraryjars ${libraryjars}"/>
+            <arg value="-dontpreverify"/> <!-- not preverified; this is 4.x flag -->
+            <arg value="-dontoptimize"/>
+            <arg value="-dontusemixedcaseclassnames"/>
+            <arg value="-dontskipnonpubliclibraryclasses"/>
+            <arg value="-useuniqueclassmembernames"/>
+<!-- could be used dangerous
+            <arg value="-repackageclasses ''"/>
+            <arg value="-overloadaggressively"/>
+            <arg value="-allowaccessmodification"/>
+-->
+            <arg value="-keepnames class *"/>
+            <arg value="-keep class * implements javax.microedition.midlet.MIDlet"/>
+            <arg value="-keep class net.trekbuddy.midlet.TrackingApp { *; }"/>
+            <arg value="-keepnames class cz.** extends java.lang.Exception"/>
+            <arg value="-keepnames class api.** extends java.lang.Exception"/>
+            <arg value="-keepnames class org.** extends java.lang.Exception"/>
+            <arg value="-whyareyoukeeping class net.trekbuddy.midlet.IRuntime"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.maps.io.FileInput"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.maps.io.LoaderIO"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.io.CrcInputStream"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.util.Logger"/>
+            <arg value="-whyareyoukeeping class api.io.BufferedOutputStream"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.hecl.ControlledInterp"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.hecl.PluginManager"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.ui.nokia.NokiaUi14DeviceControl"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.ui.nokia.S60DeviceControl"/>
             <arg value="-printmapping dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.map"/>
             <arg value="-printseeds"/>
             <arg value="-printusage dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.dco"/>
@@ -1123,6 +1247,7 @@
             <arg value="-whyareyoukeeping class cz.kruch.track.util.Logger"/>
             <arg value="-whyareyoukeeping class api.io.BufferedOutputStream"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.hecl.ControlledInterp"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.hecl.PluginManager"/>
             <arg value="-printmapping dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.map"/>
             <arg value="-printseeds"/>
             <arg value="-verbose"/>
@@ -1131,6 +1256,7 @@
 
     <target name="obfuscate4.rim">
 	    <java jar="${proguard4.home}\lib\proguard.jar" fork="true">
+            <jvmarg value="-Dmaximum.inlined.code.length=4"/>
             <arg value="-injars tmp/trekbuddy${suffix}.jar"/>
             <arg value="-outjars tmp/trekbuddy${suffix}-obfuscated.jar"/>
             <arg value="-libraryjars '${libraryjars}'"/>
@@ -1154,6 +1280,7 @@
             <arg value="-whyareyoukeeping class cz.kruch.track.util.Logger"/>
             <arg value="-whyareyoukeeping class api.io.BufferedOutputStream"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.hecl.ControlledInterp"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.hecl.PluginManager"/>
             <arg value="-printmapping dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.map"/>
             <arg value="-printseeds"/>
             <arg value="-verbose"/>
@@ -1162,6 +1289,7 @@
 
     <target name="obfuscate4.android">
 	    <java jar="${proguard4.home}\lib\proguard.jar" fork="true">
+            <jvmarg value="-Dmaximum.inlined.code.length=4"/>
             <arg value="-injars tmp/trekbuddy${suffix}.jar"/>
             <arg value="-outjars tmp/trekbuddy${suffix}-obfuscated.jar"/>
             <arg value="-libraryjars ${libraryjars}"/>

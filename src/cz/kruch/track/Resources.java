@@ -258,6 +258,7 @@ public final class Resources {
     public static final short NAV_FLD_COURSE                    = 2232;
     public static final short NAV_FLD_SOURCE                    = 2233;
     public static final short NAV_FLD_TARGET                    = 2234;
+    public static final short NAV_FLD_SESSION                   = 2235;
     /* settings - commands */
     public static final short CFG_CMD_APPLY                     = 3000;
     public static final short CFG_CMD_SAVE                      = 3001;

@@ -2,128 +2,101 @@
 
 package cz.kruch.track.fun;
 
-import javax.microedition.media.PlayerListener;
-import javax.microedition.media.Player;
-import javax.microedition.media.Manager;
-import javax.microedition.media.Control;
-import javax.microedition.media.control.VolumeControl;
-import java.io.InputStream;
-import java.io.IOException;
+import cz.kruch.track.configuration.Config;
+
+import javax.microedition.lcdui.AlertType;
+
+import api.file.File;
 
 /**
- * JSR-135 sound player.
+ * Sound player.
  *
  * @author Ales Pour <kruhc@seznam.cz>
  */
-final class Playback implements PlayerListener {
+public abstract class Playback implements Runnable {
 //#ifdef __LOG__
     private static final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("Playback");
 //#endif
+    public static StringBuffer state;
 
-    private Control control;
-    private InputStream in;
-    private String contentType;
-    private int level;
+    private String baseFolder, userLink, defaultLink;
+    private AlertType alert;
 
-    Playback(InputStream in, String name) {
-        this.in = in;
-        final String lcname = name.toLowerCase();
-        if (lcname.endsWith(".amr")) {
-            contentType = "audio/amr";
-        } else if (lcname.endsWith(".wav")) {
-            contentType = "audio/x-wav";
-        } else if (lcname.endsWith(".mp3")) {
-            contentType = "audio/mpeg";
-        } else if (lcname.endsWith(".aac")) {
-            contentType = "audio/aac";
-        } else if (lcname.endsWith(".m4a")) {
-            contentType = "audio/m4a";
-        } else if (lcname.endsWith(".3gp")) {
-            contentType = "audio/3gpp";
-        }
+    // contract
+    abstract boolean playSounds();
+    abstract boolean sound(String url);
+
+    protected Playback() {
+        state = new StringBuffer(128);
     }
 
-    public void playerUpdate(Player player, String event, Object eventData) {
+    public static void play(final String baseFolder,
+                            final String userLink, final String defaultLink,
+                            final AlertType alert) {
 //#ifdef __LOG__
-        if (log.isEnabled()) log.debug("event " + event + "; data " + eventData);
-//#endif
-        if (event.equals(PlayerListener.CLOSED)) {
-            // cleanup
-            onClose();
-        } else if (event.equals(PlayerListener.END_OF_MEDIA) || event.equals(PlayerListener.ERROR) || event.equals(PlayerListener.STOPPED)) {
-            // close player
-            player.close();
-        }
-//#ifdef __LOG__
-        else {
-            if (log.isEnabled()) log.warn("unhandled event " + event + "; data " + eventData);
-        }
-//#endif
-    }
-
-    boolean sound() {
-//#ifdef __LOG__
-        if (log.isEnabled()) log.debug("play sound");
+        if (log.isEnabled()) log.debug("play " + userLink + "," + defaultLink);
 //#endif
 
-        // player
-        Player player = null;
-
-        try {
-            // create player
-            player = Manager.createPlayer(in, contentType);
-            player.realize();
-            player.prefetch();
-
-            // get volume control and set it to max
-            control = player.getControl("VolumeControl");
-            if (control != null) {
-                level = ((VolumeControl) control).getLevel();
-                ((VolumeControl) control).setLevel(100);
-            }
-
-            // we need to listen
-            player.addPlayerListener(this);
-
-            // start
-            player.start();
-
-            return true;
-
-        } catch (Throwable t) {
-//#ifdef __LOG__
-            if (log.isEnabled()) log.error("play failed: " + t);
-            t.printStackTrace();
-//#endif
-
-            // abort
-            if (player != null) {
-                player.close();
-            }
-
-            return false;
-        }
-    }
-
-    private void onClose() {
-//#ifdef __LOG__
-        if (log.isEnabled()) log.debug("on close");
-//#endif
-
-        // close input
-        if (in != null) {
+        if (Config.dataDirExists) {
             try {
-                in.close();
-            } catch (IOException e) {
+                createPlayback(baseFolder, userLink, defaultLink, alert).playSounds();
+            } catch (Exception e) {
                 // ignore
             }
-            in = null; // gc hint
+        } else {
+            playAlert(alert);
         }
+    }
 
-        // restore volume
-        if (control instanceof VolumeControl) {
-            ((VolumeControl) control).setLevel(level);
+    public void run() {
+        boolean played = false;
+        if (!played && userLink != null) {
+            played = playLink(userLink);
+            state.append("played ").append(userLink).append("? ").append(played).append(" -> ");
         }
-        control = null; // gc hint
+        if (!played && defaultLink != null) {
+            played = playLink(defaultLink);
+            state.append("played ").append(defaultLink).append("? ").append(played).append(" -> ");
+        }
+        if (!played && alert != null) {
+            playAlert(alert);
+            state.append("played alert -> ");
+        }
+    }
+
+    private static Playback createPlayback(final String baseFolder,
+                                           final String userLink, final String defaultLink,
+                                           final AlertType alert) throws Exception {
+        Playback instance;
+//#ifndef __ANDROID__
+        instance = (Playback) Class.forName("cz.kruch.track.fun.Jsr135Playback").newInstance();
+//#else
+        instance = (Playback) Class.forName("cz.kruch.track.fun.AndroidPlayback").newInstance();
+//#endif
+        instance.baseFolder = baseFolder;
+        instance.userLink = userLink;
+        instance.defaultLink = defaultLink;
+        instance.alert = alert;
+
+        return instance;
+    }
+
+    private boolean playLink(final String fileLink) {
+        final String url = Config.getFileURL(baseFolder, fileLink);
+        try {
+            final File f = File.open(url);
+            final boolean exists = f.exists();
+            f.close();
+            if (exists) {
+                return sound(url);
+            }
+        } catch (Exception e) { // IOE or SE
+            // ignore
+        }
+        return false;
+    }
+
+    private static void playAlert(final AlertType alert) {
+        alert.playSound(cz.kruch.track.ui.Desktop.display);
     }
 }

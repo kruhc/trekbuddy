@@ -5,13 +5,21 @@ package cz.kruch.track.fun;
 //#ifndef __CN1__
 
 import cz.kruch.track.configuration.Config;
+import cz.kruch.track.Resources;
+import cz.kruch.track.ui.Desktop;
 
 import javax.microedition.media.MediaException;
 import javax.microedition.media.Control;
+import javax.microedition.media.Manager;
+import javax.microedition.media.Player;
+import javax.microedition.media.PlayerListener;
 import javax.microedition.media.control.VideoControl;
 import javax.microedition.io.Connector;
 import javax.microedition.lcdui.Form;
 import javax.microedition.lcdui.Item;
+import javax.microedition.lcdui.Command;
+import javax.microedition.lcdui.CommandListener;
+import javax.microedition.lcdui.Displayable;
 import java.util.Vector;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -22,14 +30,18 @@ import api.file.File;
 /**
  * JSR-135 camera.
  *
- * @author Ales Pour <kruhc@seznam.cz>
+ * @author kruhc@seznam.cz
  */
-final class Jsr135Camera extends Camera {
+class Jsr135Camera extends Camera implements Runnable, CommandListener, PlayerListener {
 //#ifdef __LOG__
     private static final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("Jsr135Camera");
 //#endif
 
-    public Jsr135Camera() {
+    // common members
+    protected Player player;
+    protected Control control;
+
+    Jsr135Camera() {
     }
 
     void getResolutions(final Vector v) {
@@ -48,15 +60,75 @@ final class Jsr135Camera extends Camera {
         }
     }
 
-	void createFinder(final Form form) throws MediaException {
-		createFinder(form, (VideoControl) control);
-	}
+    void open() throws MediaException {
+        try {
+            // create player
+            player = Manager.createPlayer(Config.captureLocator);
+            addPlayerListener(player);
+            player.realize();
+            player.prefetch(); // workaround for some S60 3rd, harmless(?) to others
+            state.append("x-prefetched -> ");
 
-	boolean playSound(final String url) {
-		return sound(url);
-	}
+            // get video control
+            control = player.getControl("VideoControl");
+            if (control == null) {
+                throw new MediaException("Capture not supported");
+            }
+
+            // create form
+            final Form form = new Form(null/*Resources.getString(Resources.NAV_TITLE_CAMERA)*/);
+            form.addCommand(new Command(Resources.getString(Resources.NAV_CMD_TAKE), Command.SCREEN, 1));
+            form.addCommand(new Command(Resources.getString(Resources.CMD_CANCEL), Desktop.CANCEL_CMD_TYPE, 1));
+            form.setCommandListener(this);
+
+            // show camera window
+            Desktop.display.setCurrent(form);
+
+            // create view finder item
+            createFinder(form, (VideoControl) control);
+
+            // start camera
+            player.start();
+            state.append("x-started -> ");
+
+        } catch (Throwable t) {
+//#ifdef __LOG__
+            if (log.isEnabled()) log.error("camera failed: " + t);
+            t.printStackTrace();
+//#endif
+            state.append("open error: ").append(t.toString()).append(" -> ");
+
+            // cleanup
+            shutdown();
+
+            // bail out
+            throw new MediaException(t.toString());
+        }
+    }
+
+    void addPlayerListener(Player player) {
+    }
+
+    public void playerUpdate(Player player, String event, Object eventData) {
+    }
+
+    void shutdown() {
+        // close player
+        if (player != null) {
+            player.close();
+            player = null;
+        }
+
+        // gc hints
+        control = null;
+
+        // parent
+        super.shutdown();
+    }
 
     public void run() {
+        
+        // exported values
         String result = null;
         Throwable throwable = null;
 
@@ -79,6 +151,15 @@ final class Jsr135Camera extends Camera {
         finished(result, throwable);
     }
 
+    public void commandAction(Command c, Displayable d) {
+        if (c.getCommandType() == Command.SCREEN) {
+            Desktop.getDiskWorker().enqueue(this);
+        } else {
+            state.append("x-cancel -> ");
+            shutdown();
+        }
+    }
+
     static String takePicture(final Control control) throws MediaException, IOException {
         // fix the format
         String format = Config.snapshotFormat.trim();
@@ -93,49 +174,6 @@ final class Jsr135Camera extends Camera {
 
         // take the snapshot
         return saveImage(((VideoControl) control).getSnapshot(format));
-    }
-
-    static String saveImage(final byte[] raw) throws IOException {
-        File file = null;
-        OutputStream output = null;
-
-        try {
-            // create folder
-            final String dir = createImagesFolder(false);
-
-            // image filename
-            final StringBuffer sb = new StringBuffer(dir);
-            sb.append(PIC_PREFIX).append(++imgNum).append(PIC_SUFFIX);
-            final String url = sb.toString();
-//#ifdef __LOG__
-            if (log.isEnabled()) log.debug("save image data to " + url);
-//#endif
-
-            // save picture
-            file = File.open(url, Connector.READ_WRITE);
-            if (!file.exists()) {
-                file.create();
-            }
-            output = file.openOutputStream();
-            output.write(raw);
-
-            // return relative path
-            return url.substring(url.indexOf(FOLDER_PREFIX));
-
-        } finally {
-
-            // cleanup
-            try {
-                output.close();
-            } catch (Exception e) { // NPE or IOE
-                // ignore
-            }
-            try {
-                file.close();
-            } catch (Exception e) { // NPE or IOE
-                // ignore
-            }
-        }
     }
 
     static void createFinder(final Form form, final VideoControl control) throws MediaException {
@@ -166,20 +204,6 @@ final class Jsr135Camera extends Camera {
             }
             ((VideoControl) control).setVisible(true);
 */
-    }
-
-    static boolean sound(final String url) {
-        InputStream in = null;
-        try {
-            return (new Playback(in = Connector.openInputStream(url), url)).sound();
-        } catch (Exception e) {
-            try {
-                in.close();
-            } catch (Exception exc) { // NPE or IOE
-                // ignore
-            }
-        }
-        return false;
     }
 }
 

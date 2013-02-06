@@ -7,18 +7,10 @@ import cz.kruch.track.configuration.Config;
 import cz.kruch.track.ui.Desktop;
 import cz.kruch.track.Resources;
 
-//#if !__ANDROID__ && !__CN1__
-import javax.microedition.media.Player;
-import javax.microedition.media.Manager;
-import javax.microedition.media.MediaException;
-import javax.microedition.media.Control;
-//#endif
 import javax.microedition.io.Connector;
-import javax.microedition.lcdui.CommandListener;
 import javax.microedition.lcdui.Displayable;
-import javax.microedition.lcdui.Command;
-import javax.microedition.lcdui.Form;
 import javax.microedition.lcdui.Image;
+import javax.microedition.media.MediaException; // for android use impl from cn1-compat
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.ByteArrayOutputStream;
@@ -28,20 +20,18 @@ import java.io.EOFException;
 import java.util.Vector;
 
 import api.file.File;
+import api.location.QualifiedCoordinates;
 
 /**
- * Multimeda helper for taking pictures and playing sounds.
+ * Camera helper.
  *
  * @author kruhc@seznam.cz
  */
-public abstract class Camera implements
-//#ifndef __ANDROID__
-        CommandListener,
-//#endif
-        Runnable {
+public abstract class Camera {
 //#ifdef __LOG__
     private static final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("Camera");
 //#endif
+    public static StringBuffer state;
 
     protected static final String PIC_PREFIX    = "pic-";
     protected static final String PIC_SUFFIX    = ".jpg";
@@ -61,57 +51,31 @@ public abstract class Camera implements
 
     // image counter
     protected static int imgNum;
-    protected static long timestamp;
-
-//#if !__ANDROID__ && !__CN1__
-    // common members
-    protected Player player;
-    protected Control control;
-//#endif
+    protected static long filestamp;
 
     // video capture members
     private Displayable next;
-    private Callback callback;
+    protected Callback callback;
+    protected QualifiedCoordinates gpsCoords;
+    protected long gpsTimestamp;
 
     // camera type
     public static String type;
 
-//#if !__ANDROID__ && !__CN1__
+    // contract
     abstract void getResolutions(final Vector v);
-    abstract void createFinder(final Form form) throws MediaException;
-//#endif
-    abstract boolean playSound(final String url);
+    abstract void open() throws MediaException;
 
-    public static boolean play(final String url) {
-//#ifdef __LOG__
-        if (log.isEnabled()) log.debug("play " + url);
-//#endif
-        if (Config.dataDirExists) {
-            try {
-                return createPlayback().playSound(url);
-            } catch (Exception e) {
-                // ignore
-            }
-        }
-        return false;
-    }
-
-    public static void show(final Displayable next, final Callback callback,
-                            final long timestamp) throws Throwable {
-//#ifdef __LOG__
-        if (log.isEnabled()) log.debug("capture locator: " + Config.captureLocator);
-//#endif
-//#if !__ANDROID__ && !__CN1__
-        createRecorder(next, callback, timestamp).open();
-//#endif
+    protected Camera() {
+        state = new StringBuffer(128);
     }
 
     public static String[] getStillResolutions() {
         if (resolutions == null) {
             final Vector v = new Vector(8);
-//#if !__ANDROID__ && !__CN1__
-            createRecorder(null, null, -1).getResolutions(v);
-//#endif            
+//#if !__CN1__ && !__BACKPORT__
+            createRecorder(null, null, -1, null, -1).getResolutions(v);
+//#endif
             resolutions = new String[v.size()];
             v.copyInto(resolutions);
         }
@@ -119,15 +83,14 @@ public abstract class Camera implements
         return resolutions;
     }
 
-//#if !__ANDROID__ && !__CN1__
-
-    public void commandAction(Command c, Displayable d) {
-        if (c.getCommandType() == Command.SCREEN) {
-            Desktop.getDiskWorker().enqueue(this);
-        } else {
-            shutdown();
-        }
+    public static void show(final Displayable next, final Callback callback, final long filestamp,
+                            final QualifiedCoordinates qc, final long timestamp) throws Throwable {
+//#if !__CN1__ && !__BACKPORT__
+        createRecorder(next, callback, filestamp, qc, timestamp).open();
+//#endif
     }
+
+//#if !__ANDROID__ && !__CN1__
 
     private static void fixJsr234() {
         // run once only
@@ -137,9 +100,9 @@ public abstract class Camera implements
         jsr234fixed = true;
 
         // detect broken amms
-        Player player = null;
+        javax.microedition.media.Player player = null;
         try {
-            player = Manager.createPlayer(Config.captureLocator);
+            player = javax.microedition.media.Manager.createPlayer(Config.captureLocator);
             player.realize();
             if (player.getControl("javax.microedition.amms.control.camera.CameraControl") == null
                     || player.getControl("javax.microedition.amms.control.camera.SnapshotControl") == null) {
@@ -156,104 +119,57 @@ public abstract class Camera implements
         }
     }
 
-//#endif /* !__ANDROID__ */    
-
-    private static Camera createPlayback() throws Exception {
-        Camera instance;
-//#ifdef __ANDROID__
-        instance = (Camera) Class.forName("cz.kruch.track.fun.AndroidCamera").newInstance();
-//#else
-        instance = (Camera) Class.forName("cz.kruch.track.fun.Jsr135Camera").newInstance();
-//#endif
-        return instance;
-    }
-
-//#if !__ANDROID__ && !__CN1__
+//#endif /* !__ANDROID__ && !__CN1__ */
 
     private static Camera createRecorder(final Displayable next,
                                          final Callback callback,
+                                         final long filestamp,
+                                         final QualifiedCoordinates coords,
                                          final long timestamp) {
-        Camera delegate;
+        Camera camera;
         try {
+//#if !__ANDROID__ && !__CN1__
             fixJsr234();
             if (cz.kruch.track.TrackingMIDlet.jsr234) {
-                delegate = (Camera) Class.forName("cz.kruch.track.fun.Jsr234Camera").newInstance();
+                camera = (Camera) Class.forName("cz.kruch.track.fun.Jsr234Camera").newInstance();
                 type = TYPE_JSR234;
             } else {
-                delegate = (Camera) Class.forName("cz.kruch.track.fun.Jsr135Camera").newInstance();
+                camera = (Camera) Class.forName("cz.kruch.track.fun.Jsr135Camera").newInstance();
                 type = TYPE_JSR135;
             }
-            delegate.next = next;
-            delegate.callback = callback;
-            delegate.timestamp = timestamp;
+//#else
+            camera = (Camera) Class.forName("cz.kruch.track.fun.AndroidCamera").newInstance();
+            type = TYPE_JSR234; // yes, this is a trick
+//#endif
         } catch (Exception e) {
 //#ifdef __LOG__
             e.printStackTrace();
 //#endif
             throw new IllegalStateException(e.toString());
         }
-        return delegate;
+
+        // set camera params
+        camera.next = next;
+        camera.callback = callback;
+        camera.gpsCoords = coords;
+        camera.gpsTimestamp = timestamp;
+
+        // TODO make instance?
+        Camera.filestamp = filestamp;
+
+        return camera;
     }
 
-    private void open() throws Throwable {
-        try {
-            // create player
-            player = Manager.createPlayer(Config.captureLocator);
-            player.realize();
-            player.prefetch(); // workaround for some S60 3rd, harmless(?) to others
-
-            // get video control
-            control = player.getControl("VideoControl");
-            if (control == null) {
-                throw new MediaException("Capture not supported");
-            }
-
-            // create form
-            final Form form = new Form(null/*Resources.getString(Resources.NAV_TITLE_CAMERA)*/);
-            form.addCommand(new Command(Resources.getString(Resources.NAV_CMD_TAKE), Command.SCREEN, 1));
-            form.addCommand(new Command(Resources.getString(Resources.CMD_CANCEL), Desktop.CANCEL_CMD_TYPE, 1));
-            form.setCommandListener(this);
-
-            // show camera window
-            Desktop.display.setCurrent(form);
-
-            // create view finder item
-            createFinder(form);
-
-            // start camera
-            player.start();
-
-        } catch (Throwable t) {
-
-//#ifdef __LOG__
-            if (log.isEnabled()) log.error("camera failed: " + t);
-            t.printStackTrace();
-//#endif
-
-            // cleanup
-            shutdown();
-
-            // bail out
-            throw t;
-        }
-    }
-
-    void finished(final Object result, final Throwable throwable) {
+    /* assertion: should be called from bg */
+    final void finished(final Object result, final Throwable throwable) {
         // notify
+        state.append("x-finished -> ").append(result).append(';').append(throwable);
         callback.invoke(result, throwable, this);
     }
 
     void shutdown() {
-        // close player
-        if (player != null) {
-            player.close();
-            player = null;
-        }
-
-        // gc hints
-        control = null;
-
         // restore UI
+        state.append("x-shutdown -> ");
         if (next != null) {
             Desktop.display.setCurrent(next);
         }
@@ -266,7 +182,7 @@ public abstract class Camera implements
         // create folder url
         final StringBuffer sb = new StringBuffer(32);
         sb.append(Config.getFolderURL(Config.FOLDER_WPTS));
-        sb.append(FOLDER_PREFIX).append(cz.kruch.track.location.GpxTracklog.dateToFileDate(timestamp));
+        sb.append(FOLDER_PREFIX).append(cz.kruch.track.location.GpxTracklog.dateToFileDate(filestamp));
         sb.append('/');
         final String url = sb.toString();
 
@@ -278,9 +194,12 @@ public abstract class Camera implements
                 file.mkdir();
             }
             if (pathOnly) {
-                result = file.getPath() + file.getName(); //url.substring(7 /* "file://".length() */);
+                result = file.getPath().concat(file.getName()); // url.substring(7 /* "file://".length() */);
             } else {
-                result = file.getURL(); //url
+                result = file.getURL(); // url
+            }
+            if (!result.endsWith("/")) {
+                result = result.concat("/");
             }
         } finally {
             try {
@@ -293,8 +212,48 @@ public abstract class Camera implements
         return result;
     }
 
+    static String saveImage(final byte[] raw) throws IOException {
+        File file = null;
+        OutputStream output = null;
 
-//#endif /* !__ANDROID__ */
+        try {
+            // create folder
+            final String dir = createImagesFolder(false);
+
+            // image filename
+            final StringBuffer sb = new StringBuffer(64);
+            sb.append(dir).append(PIC_PREFIX).append(++imgNum).append(PIC_SUFFIX);
+            final String url = sb.toString();
+//#ifdef __LOG__
+            if (log.isEnabled()) log.debug("save image data to " + url);
+//#endif
+
+            // save picture
+            file = File.open(url, Connector.READ_WRITE);
+            if (!file.exists()) {
+                file.create();
+            }
+            output = file.openOutputStream();
+            output.write(raw);
+
+            // return relative path
+            return url.substring(url.indexOf(FOLDER_PREFIX));
+
+        } finally {
+
+            // cleanup
+            try {
+                output.close();
+            } catch (Exception e) { // NPE or IOE
+                // ignore
+            }
+            try {
+                file.close();
+            } catch (Exception e) { // NPE or IOE
+                // ignore
+            }
+        }
+    }
 
     public static Object getThumbnail(String url) {
         InputStream is = null;

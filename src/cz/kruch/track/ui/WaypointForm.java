@@ -17,7 +17,6 @@ import java.util.Calendar;
 import java.util.TimeZone;
 import java.util.Vector;
 import java.util.Hashtable;
-import java.io.IOException;
 
 import javax.microedition.lcdui.Form;
 import javax.microedition.lcdui.CommandListener;
@@ -34,6 +33,8 @@ import javax.microedition.lcdui.ItemStateListener;
 import javax.microedition.lcdui.Spacer;
 import javax.microedition.lcdui.Image;
 import javax.microedition.lcdui.ImageItem;
+import javax.microedition.lcdui.ChoiceGroup;
+import javax.microedition.lcdui.Font;
 
 import api.location.Location;
 import api.location.QualifiedCoordinates;
@@ -53,6 +54,7 @@ final class WaypointForm implements CommandListener, ItemCommandListener, ItemSt
     private final Callback callback;
     private QualifiedCoordinates coordinates;
     private Waypoint waypoint;
+    private String session;
     private long timestamp, tracklogTime;
 
     private Form form;
@@ -61,6 +63,7 @@ final class WaypointForm implements CommandListener, ItemCommandListener, ItemSt
     private TextField fieldZone, fieldLat, fieldLon, fieldAlt;
     private TextField fieldCourse, fieldDistance;
     private TextField fieldNumber, fieldMessage;
+    private ChoiceGroup choiceSession;
     private Item viewResult;
     private Object closure;
 
@@ -198,19 +201,18 @@ final class WaypointForm implements CommandListener, ItemCommandListener, ItemSt
      *
      * @param location location
      * @param callback callback
+     * @param session id
      */
-    public WaypointForm(final Callback callback, final Location location) {
+    public WaypointForm(final Callback callback, final Location location, final String session) {
         this.callback = callback;
+        this.session = session;
         this.coordinates = location.getQualifiedCoordinates()._clone(); // copy
         this.timestamp = location.getTimestamp();
         this.form = new Form(Resources.getString(Resources.NAV_TITLE_WPT)); // TODO use context NAV_ITEM_RECORD_CURRENT
         this.previewItemIdx = -1;
 
-        // name
-        appendWithNewlineAfter(this.fieldName = createTextField(Resources.NAV_FLD_WPT_NAME, null, 128));
-
-        // comment
-        appendWithNewlineAfter(this.fieldComment = createTextField(Resources.NAV_FLD_WPT_CMT, null, 256));
+        // common items
+        createCommonItems(null, null);
 
         // timestamp
         appendWithNewlineAfter(Resources.getString(Resources.NAV_FLD_TIME), dateToString(location.getTimestamp()));
@@ -228,15 +230,26 @@ final class WaypointForm implements CommandListener, ItemCommandListener, ItemSt
         // form commands
         if (cz.kruch.track.TrackingMIDlet.supportsVideoCapture()) {
             CMD_TAKE = Resources.getString(Resources.NAV_CMD_TAKE);
-            final StringItem snapshot = new StringItem(Resources.getString(Resources.NAV_FLD_SNAPSHOT), CMD_TAKE, Item.BUTTON);
+//            final StringItem snapshot = new StringItem(Resources.getString(Resources.NAV_FLD_SNAPSHOT), CMD_TAKE, Item.BUTTON);
+            final StringItem snapshot = new StringItem(null, (new StringBuffer(16)).append(CMD_TAKE).append(' ').append(Resources.getString(Resources.NAV_FLD_SNAPSHOT)).toString(), Item.BUTTON);
             snapshot.setFont(Desktop.fontStringItems);
             snapshot.setDefaultCommand(new Command(CMD_TAKE, Command.ITEM, 1));
             snapshot.setItemCommandListener(this);
             appendWithNewlineAfter(snapshot);
-            form.append(new Spacer(form.getWidth(), 1));
+//            form.append(new Spacer(form.getWidth(), 1));
         }
+
+        // session mode
+        createSessionChoice(session);
+
+        // main commands
+//#ifndef __ANDROID__
         form.addCommand(new Command(Resources.getString(Resources.CMD_CANCEL), Desktop.CANCEL_CMD_TYPE, 1));
         form.addCommand(new ActionCommand(Resources.NAV_ITEM_RECORD_CURRENT, Desktop.POSITIVE_CMD_TYPE, 1, Resources.CMD_OK));
+//#else
+        form.addCommand(new Command(Resources.getString(Resources.CMD_CANCEL), Command.CANCEL, 1));
+        form.addCommand(new ActionCommand(Resources.NAV_ITEM_RECORD_CURRENT, Command.BACK, 1, Resources.CMD_OK));
+//#endif
     }
 
     /**
@@ -244,12 +257,12 @@ final class WaypointForm implements CommandListener, ItemCommandListener, ItemSt
      *
      * @param callback callback
      * @param pointer current position
+     * @param action action
      */
-    public WaypointForm(final Callback callback, final QualifiedCoordinates pointer,
-                        final int mode) {
+    public WaypointForm(final Callback callback, final QualifiedCoordinates pointer, final int action) {
         this.callback = callback;
         this.coordinates = pointer._clone(); // copy
-        this.form = new Form(Resources.getString(Resources.NAV_TITLE_WPT)); // TODO use context 'mode'
+        this.form = new Form(Resources.getString(Resources.NAV_TITLE_WPT)); // TODO use context 'action'
 
         // generated name
         final StringBuffer sb = new StringBuffer(16);
@@ -257,16 +270,21 @@ final class WaypointForm implements CommandListener, ItemCommandListener, ItemSt
         NavigationScreens.append(sb, cnt + 1, 3);
 
         // shared
-        if (mode == Resources.NAV_ITEM_ENTER_CUSTOM) {
+        if (action == Resources.NAV_ITEM_ENTER_CUSTOM) {
             populateEditableForm(sb.toString(), "", pointer, true);
-        } else if (mode == Resources.NAV_ITEM_PROJECT_NEW) {
+        } else if (action == Resources.NAV_ITEM_PROJECT_NEW) {
             populateEditableForm(sb.toString(), "", pointer, false);
             extendEditableForm();
         }
 
         // commands
+//#ifndef __ANDROID__
         form.addCommand(new Command(Resources.getString(Resources.CMD_CANCEL), Desktop.CANCEL_CMD_TYPE, 1));
-        form.addCommand(new ActionCommand(mode, Desktop.POSITIVE_CMD_TYPE, 1, Resources.CMD_OK));
+        form.addCommand(new ActionCommand(action, Desktop.POSITIVE_CMD_TYPE, 1, Resources.CMD_OK));
+//#else
+        form.addCommand(new Command(Resources.getString(Resources.CMD_CANCEL), Command.CANCEL, 1));
+        form.addCommand(new ActionCommand(action, Command.BACK, 1, Resources.CMD_OK));
+//#endif
     }
 
     /**
@@ -326,13 +344,29 @@ final class WaypointForm implements CommandListener, ItemCommandListener, ItemSt
         return command;
     }
 
-    private void populateEditableForm(final String name, final String comment,
-                                      final QualifiedCoordinates qc, final boolean standalone) {
+    private void createCommonItems(final String name, final String comment) {
         // name
-        appendWithNewlineAfter(this.fieldName = createTextField(Resources.NAV_FLD_WPT_NAME, name, 128));
+        appendWithNewlineAfter(fieldName = createTextField(Resources.NAV_FLD_WPT_NAME, name, 128));
 
         // comment
-        appendWithNewlineAfter(this.fieldComment = createTextField(Resources.NAV_FLD_WPT_CMT, comment, 256));
+        appendWithNewlineAfter(fieldComment = createTextField(Resources.NAV_FLD_WPT_CMT, comment, 256));
+    }
+
+    private void createSessionChoice(final String session) {
+        // session mode for adding new wpts
+        choiceSession = new ChoiceGroup(null, ChoiceGroup.MULTIPLE);
+        choiceSession.append(Resources.getString(Resources.NAV_FLD_SESSION), null);
+        if (session != null) {
+            choiceSession.setSelectedIndex(0, true);
+        }
+        choiceSession.setFont(0, Font.getFont(Font.FACE_PROPORTIONAL, Font.STYLE_ITALIC, Font.SIZE_MEDIUM));
+        appendWithNewlineAfter(choiceSession);
+    }
+
+    private void populateEditableForm(final String name, final String comment,
+                                      final QualifiedCoordinates qc, final boolean standalone) {
+        // common items
+        createCommonItems(name, comment);
 
         // coordinates
         final short labelXidx, labelYidx;
@@ -454,7 +488,7 @@ final class WaypointForm implements CommandListener, ItemCommandListener, ItemSt
     }
 
     public void invoke(Object result, Throwable throwable, Object source) {
-        if (source instanceof cz.kruch.track.fun.Camera) { // JSR-234 and new JSR-135 capture snapshot path
+        if (source instanceof cz.kruch.track.fun.Camera) { // capture snapshot path
             if (result instanceof String) {
                 imagePath = (String) result;
                 final Object thumbnail = Camera.getThumbnail(Config.getFileURL(Config.FOLDER_WPTS, imagePath));
@@ -495,7 +529,7 @@ final class WaypointForm implements CommandListener, ItemCommandListener, ItemSt
         final String cmd = command.getLabel();
         if (cmd.equals(CMD_TAKE)) {
             try {
-                Camera.show(form, this, tracklogTime);
+                Camera.show(form, this, tracklogTime, coordinates, timestamp);
             } catch (Throwable t) {
                 Desktop.showError(Resources.getString(Resources.NAV_MSG_CAMERA_FAILED), t, form);
             }
@@ -595,6 +629,7 @@ final class WaypointForm implements CommandListener, ItemCommandListener, ItemSt
                     case Resources.NAV_CMD_NEW_NOTE: {
                         (new FieldNoteForm(waypoint, displayable, this)).show();
                     } break;
+//#ifndef __ANDROID__
                     case Resources.NAV_ITEM_RECORD_CURRENT: {
                         final ExtWaypoint wpt = new ExtWaypoint(coordinates,
                                                                 trimToNull(fieldName.getString()),
@@ -603,7 +638,9 @@ final class WaypointForm implements CommandListener, ItemCommandListener, ItemSt
                         if (imagePath != null) {
                             wpt.addLink(imagePath);
                         }
-                        safeCallbackInvoke(callback, new Object[]{ actionObject, wpt });
+                        final boolean isSession = choiceSession.isSelected(0);
+                        final String sid = isSession ? (session == null ? "" : session) : null;
+                        safeCallbackInvoke(callback, new Object[]{ actionObject, wpt, sid });
                     } break;
                     case Resources.NAV_ITEM_ENTER_CUSTOM: {
                         try {
@@ -612,7 +649,7 @@ final class WaypointForm implements CommandListener, ItemCommandListener, ItemSt
                                                                      trimToNull(fieldComment.getString()),
                                                                      System.currentTimeMillis());
                             cnt++;
-                            safeCallbackInvoke(callback, new Object[]{ actionObject, wpt });
+                            safeCallbackInvoke(callback, new Object[]{ actionObject, wpt, null });
                         } catch (Exception e) { // usually input data format - parsing error
                             Desktop.showError(Resources.getString(Resources.DESKTOP_MSG_INVALID_INPUT), e, null);
                         }
@@ -625,11 +662,12 @@ final class WaypointForm implements CommandListener, ItemCommandListener, ItemSt
                                                                      trimToNull(fieldComment.getString()),
                                                                      System.currentTimeMillis());
                             cnt++;
-                            safeCallbackInvoke(callback, new Object[]{ actionObject, wpt });
+                            safeCallbackInvoke(callback, new Object[]{ actionObject, wpt, null });
                         } catch (Exception e) { // usually input data format - parsing error
                             Desktop.showError(Resources.getString(Resources.DESKTOP_MSG_INVALID_INPUT), e, null);
                         }
                     } break;
+//#endif
                     case Resources.NAV_FLD_GS_LISTING_LONG:
                     case Resources.NAV_FLD_GS_HINT:
                     case Resources.NAV_FLD_GS_LOGS: {
@@ -639,7 +677,52 @@ final class WaypointForm implements CommandListener, ItemCommandListener, ItemSt
                         Desktop.showWarning("Internal error", new IllegalStateException("Unknown waypoint action: " + action), null);
                 }
             } else {
-                // dummy invocation
+//#ifdef __ANDROID__
+                if (Command.BACK == command.getCommandType() && command instanceof ActionCommand) {
+                    final int action = ((ActionCommand) command).getAction();
+                    final Integer actionObject = new Integer(action);
+                    switch (action) {
+                        case Resources.NAV_ITEM_RECORD_CURRENT: {
+                            final ExtWaypoint wpt = new ExtWaypoint(coordinates,
+                                                                    trimToNull(fieldName.getString()),
+                                                                    trimToNull(fieldComment.getString()),
+                                                                    timestamp);
+                            if (imagePath != null) {
+                                wpt.addLink(imagePath);
+                            }
+                            final boolean isSession = choiceSession.isSelected(0);
+                            final String sid = isSession ? (session == null ? "" : session) : null;
+                            safeCallbackInvoke(callback, new Object[]{ actionObject, wpt, sid });
+                        } break;
+                        case Resources.NAV_ITEM_ENTER_CUSTOM: {
+                            try {
+                                final Waypoint wpt = new StampedWaypoint(parseCoordinates(),
+                                                                         trimToNull(fieldName.getString()),
+                                                                         trimToNull(fieldComment.getString()),
+                                                                         System.currentTimeMillis());
+                                cnt++;
+                                safeCallbackInvoke(callback, new Object[]{ actionObject, wpt, null });
+                            } catch (Exception e) { // usually input data format - parsing error
+                                Desktop.showError(Resources.getString(Resources.DESKTOP_MSG_INVALID_INPUT), e, null);
+                            }
+                        } break;
+                        case Resources.NAV_ITEM_PROJECT_NEW: {
+                            try {
+                                final QualifiedCoordinates qc = calcProjected();
+                                final Waypoint wpt = new StampedWaypoint(qc,
+                                                                         trimToNull(fieldName.getString()),
+                                                                         trimToNull(fieldComment.getString()),
+                                                                         System.currentTimeMillis());
+                                cnt++;
+                                safeCallbackInvoke(callback, new Object[]{ actionObject, wpt, null });
+                            } catch (Exception e) { // usually input data format - parsing error
+                                Desktop.showError(Resources.getString(Resources.DESKTOP_MSG_INVALID_INPUT), e, null);
+                            }
+                        } break;
+                    }
+                } else
+//#endif
+                // dummy invocation, callbacker is responsible for closing the form
                 callback.invoke(new Object[]{ null, null }, null, this);
             }
         } else if (displayable == list) {
@@ -910,10 +993,12 @@ final class WaypointForm implements CommandListener, ItemCommandListener, ItemSt
         return result;
     }
 
-    public static String convertHtmlSnippet(String escapedHtmlSnippet) {
-        //String unescapedSnippet = undoHtmlEscape(escapedHtmlSnippet); - this is unescaped from GPX parser :-)
+    private static String convertHtmlSnippet(String escapedHtmlSnippet) {
         if (escapedHtmlSnippet == null || escapedHtmlSnippet.length() == 0) {
             return "";
+        }
+        if (escapedHtmlSnippet.indexOf('<') > -1) { // hack for non-html content
+            escapedHtmlSnippet = escapedHtmlSnippet.replace('<', '\u2264');
         }
         return (new HtmlSnippet2StringConvertor(escapedHtmlSnippet)).convert();
     }

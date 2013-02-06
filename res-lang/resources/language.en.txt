@@ -45,7 +45,7 @@
 1011=Connect
 1012=Open
 1013=Select
-1014=Live
+1014=Plugins
 
 # desktop messages
 1300=Failed to init location sharing
@@ -209,6 +209,7 @@
 2232=Bearing
 2233=Source
 2234=Destination
+2235=session mode
 
 # navigation messages
 2300=Failed to load in-jar waypoints
@@ -314,6 +315,7 @@
 3534=platform default
 3535=custom selector
 3536=Map zoom
+3537=force textfield focus
 
 # settings forms/fields/values (Location)
 3600=Provider
@@ -366,6 +368,10 @@
 3713=name
 3714=distance
 3715=dynamic
+3716=Wpt Proximity Alerts
+3717=acoustic
+3718=vibration
+3719=Track Line
 
 # settings forms/fields/values (Tweaks)
 3800=Tweaks

@@ -31,7 +31,7 @@
 1011=Conectar
 1012=Abrir
 1013=Seleccionar
-1014=Live
+1014=Plugins
 
 # desktop messages
 1300=Fallo al iniciar ubicación compartida
@@ -195,6 +195,7 @@
 2232=Orientación
 2233=Origen
 2234=Destino
+2235=sesión modo
 
 # navigation messages
 2300=Fallo al cargar waypoints de archivo .jar
@@ -298,7 +299,8 @@
 3533=Modo de listados
 3534=plataforma por defecto
 3535=selección de pedido
-
+3536=Map zoom
+3537=force textfield focus
 
 # settings forms/fields/values (Location)
 3600=Proveedor
@@ -351,6 +353,10 @@
 3713=nombre
 3714=distancia
 3715=dinámico
+3716=Wpt Proximidad Alerta
+3717=acústico
+3718=vibración
+3719=Estilo línea de Track
 
 # settings forms/fields/values (Tweaks)
 3800=Ajustes

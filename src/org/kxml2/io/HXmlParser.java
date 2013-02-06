@@ -340,7 +340,7 @@ public final class HXmlParser implements XmlPullParser {
                     return;
 
                 case TEXT :
-                    copyText();
+                    copyText(); // pushText('<', !token);
                     if (depth == 0) {
                         if (isWhitespace) {
                             type = IGNORABLE_WHITESPACE;

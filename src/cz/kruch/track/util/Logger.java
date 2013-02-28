@@ -2,6 +2,8 @@
 
 package cz.kruch.track.util;
 
+//#ifdef __LOG__
+
 import java.util.Date;
 
 /**
@@ -18,11 +20,25 @@ public final class Logger {
     private String cname;
     private boolean enabled;
 
+    public static void out(String message) {
+//#ifndef __CN1__
+        System.out.println(message);
+//#else
+        com.codename1.io.Log.p(message, com.codename1.io.Log.INFO);
+//#endif
+    }
+
+    public static void printStackTrace(Throwable t) {
+//#ifndef __CN1__
+        t.printStackTrace();
+//#else
+        com.codename1.io.Log.e(t);
+//#endif
+    }
+
     public Logger(String componentName) {
         this.cname = componentName;
-//#ifdef __LOG__
         this.enabled = cz.kruch.track.TrackingMIDlet.isLogEnabled();
-//#endif        
     }
 
     public boolean isEnabled() {
@@ -62,15 +78,25 @@ public final class Logger {
 
     private void log(String severity, String message) {
         if (enabled) {
+//#ifndef __CN1__
             System.out.println("[" + (new Date()) + "] " + cname + " - " + message);
             System.out.flush();
+//#else
+            com.codename1.io.Log.p("[" + (new Date()) + "] " + cname + " - " + message);
+//#endif
         }
     }
 
     private void log(Throwable t) {
         if (enabled) {
+//#ifndef __CN1__
             t.printStackTrace();
             System.err.flush();
+//#else
+            com.codename1.io.Log.e(t);
+//#endif
         }
     }
 }
+
+//#endif

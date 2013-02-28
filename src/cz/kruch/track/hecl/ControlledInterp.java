@@ -83,8 +83,10 @@ public class ControlledInterp extends Interp {
                     try {
                         ((org.hecl.Proc) commands.get(key)).compile(this);
                     } catch (HeclException e) {
-                        System.out.println("failed to precompile " + key);
+//#ifdef __LOG__
+                        cz.kruch.track.util.Logger.out("failed to precompile " + key);
                         e.printStackTrace();
+//#endif
                     }
                 }
             }

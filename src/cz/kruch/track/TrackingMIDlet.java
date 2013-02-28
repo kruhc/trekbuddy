@@ -24,7 +24,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
     public static String version;
     public static boolean jsr82, jsr120, jsr135, jsr179, jsr234, jsr256, motorola179, comm, nokiaui14;
     public static boolean sonyEricsson, sonyEricssonEx, nokia, siemens, lg, motorola, samsung, sonim;
-    public static boolean j9, jbed, jblend, intent, wm, palm, rim, symbian, s40th6, s60nd, s60rdfp2, uiq, 
+    public static boolean j9, jbed, jblend, intent, wm, palm, rim, symbian, s40th6, s60nd, s60rdfp2, uiq,
                           brew, android, playbook, iden, jp6plus;
     public static boolean sxg75, a780, s65;
 
@@ -64,7 +64,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
 //#endif
 //#ifdef __LOG__
         logEnabled = hasFlag("log_enable");
-        System.out.println("* platform is " + platform);
+        cz.kruch.track.util.Logger.out("* platform is " + platform);
 //#endif
 
         // detect brand/device
@@ -111,7 +111,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
             Class.forName("javax.microedition.amms.control.camera.SnapshotControl");
             jsr234 = true;
 //#ifdef __LOG__
-            System.out.println("* JSR-234");
+            cz.kruch.track.util.Logger.out("* JSR-234");
 //#endif
         } catch (Throwable t) {
             // ignore
@@ -202,7 +202,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
 
     protected void startApp() throws MIDletStateChangeException {
 //#ifdef __LOG__
-        System.out.println("* startApp * " + state);
+        cz.kruch.track.util.Logger.out("* startApp * " + state);
 //#endif
         // initial launch?
         if (state == 0) {
@@ -220,7 +220,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
 
     protected void pauseApp() {
 //#ifdef __LOG__
-        System.out.println("* pauseApp *");
+        cz.kruch.track.util.Logger.out("* pauseApp *");
 //#endif
         // diagnostics
         pauses++;
@@ -250,7 +250,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
 
     public void run() {
 //#ifdef __LOG__
-        System.out.println("* run *");
+        cz.kruch.track.util.Logger.out("* run *");
 //#endif
         // fit static images into video memory
         int imaged;
@@ -280,7 +280,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         // initialize file API
         api.file.File.initialize(sxg75 || android || iden || hasFlag("fs_traverse_bug"));
 //#ifdef __LOG__
-        System.out.println("* FsType: " + api.file.File.fsType);
+        cz.kruch.track.util.Logger.out("* FsType: " + api.file.File.fsType);
 //#endif
 
 //#ifndef __B2B__
@@ -318,7 +318,11 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
 
 //#ifdef __LOG__
     public static boolean isLogEnabled() {
+//#ifndef __CN1__
         return logEnabled;
+//#else
+        return true;
+//#endif
     }
 //#endif
 
@@ -363,7 +367,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
             }
 //#ifdef __LOG__
             if (msg != null) { // message to printed when success
-                System.out.println(msg);
+                cz.kruch.track.util.Logger.out(msg);
             }
 //#endif
             return true;

@@ -583,6 +583,10 @@ public final class Desktop implements CommandListener,
 
         // finally initialized
         initialized = true;
+
+//#ifdef __CN1__
+        com.codename1.io.Log.showLog();
+//#endif
     }
 
 //#ifdef __ANDROID__
@@ -3112,8 +3116,8 @@ public final class Desktop implements CommandListener,
         public void run() {
 //#ifdef __LOG__
             if (throwable != null) {
-                System.out.println("*event throwable*");
-                throwable.printStackTrace();
+                cz.kruch.track.util.Logger.out("*event throwable*");
+                cz.kruch.track.util.Logger.printStackTrace(throwable);
             }
             if (log.isEnabled()) log.debug("event " + this.toString());
 //#endif

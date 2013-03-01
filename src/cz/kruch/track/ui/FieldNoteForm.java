@@ -20,8 +20,6 @@ import java.util.Calendar;
 import java.util.TimeZone;
 import java.util.Date;
 
-import api.lang.Int;
-
 /**
  * Field note form.
  *

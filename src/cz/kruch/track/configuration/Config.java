@@ -361,7 +361,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         } else if (cz.kruch.track.TrackingMIDlet.nokia) {
             safeColors = true;
             captureLocator = "capture://image";
-            s40ticker = cz.kruch.track.TrackingMIDlet.s40th6;
+            s40ticker = System.getProperty("com.nokia.mid.ui.layout") != null; // since S40 6th FP1
         }
 
 //#endif

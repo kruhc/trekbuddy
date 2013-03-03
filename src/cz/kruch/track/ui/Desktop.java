@@ -176,6 +176,9 @@ public final class Desktop implements CommandListener,
     /*private */volatile int wptAzimuth;
     /*private */volatile int wptsId, wptsSize;
 
+    // doubleclick action
+    private long lastKeyTime;
+
     // sync objects
     private static final Object loadingLock = new Object();
     private static final Object renderLock = new Object();
@@ -1950,6 +1953,19 @@ public final class Desktop implements CommandListener,
             break;
         }
 
+        // intercept MOB
+        if (i == Canvas.KEY_NUM5 || action == Canvas.FIRE) {
+            final long now = System.currentTimeMillis();
+            final long tdiff = now - lastKeyTime;
+            lastKeyTime = now;
+            if (tdiff < 500 && isTracking() && isLocation()) {
+                // record wpt and start navigation
+                Waypoints.getInstance().mob();
+                // done
+                return;
+            }
+        }
+
         final View[] views = this.views;
         if (views == null) return; // too early invocation
 
@@ -2134,6 +2150,9 @@ public final class Desktop implements CommandListener,
         if (nextDisplayable == null) {
             display.setCurrent(alert);
         } else {
+            if (display.getCurrent() instanceof Alert) {
+                display.setCurrent(nextDisplayable); // this should cancel alert 
+            }
             display.setCurrent(alert, nextDisplayable);
         }
     }
@@ -2729,7 +2748,7 @@ public final class Desktop implements CommandListener,
                 final Graphics g = Desktop.screen.getGraphics();
 
                 // render current view
-                synchronized (Desktop.this.renderLock) {
+                synchronized (Desktop.renderLock) {
                     Desktop.this.views[mode].render(g, font, mask);
                 }
 
@@ -3199,7 +3218,7 @@ public final class Desktop implements CommandListener,
 
             // force changes
             Config.useDatum(Config.geoDatum);
-            synchronized (Desktop.this.renderLock) {
+            synchronized (Desktop.renderLock) {
                 resetFont();
                 resetBar();
             }
@@ -3225,7 +3244,7 @@ public final class Desktop implements CommandListener,
 
             // notify views
             final View[] views = Desktop.this.views;
-            synchronized (Desktop.this.renderLock) {
+            synchronized (Desktop.renderLock) {
                 for (int i = views.length; --i >= 0; ) {
                     try {
                         views[i].configChanged();
@@ -3268,7 +3287,7 @@ public final class Desktop implements CommandListener,
                     Desktop.this._qc = getPointer();
                 }
 
-                synchronized (Desktop.this.renderLock) {
+                synchronized (Desktop.renderLock) {
                     // hide map viewer and OSD // TODO hackish, and conflicts with _qc just above
                     ((MapView) views[VIEW_MAP]).setMap(null);
                 } // ~synchronized
@@ -3499,7 +3518,7 @@ public final class Desktop implements CommandListener,
 
                     // setup map viewer
                     final MapView mapView = ((MapView) Desktop.this.views[VIEW_MAP]);
-                    synchronized (Desktop.this.renderLock) {
+                    synchronized (Desktop.renderLock) {
                         mapView.setMap(Desktop.this.map);
                     }
 
@@ -3528,7 +3547,7 @@ public final class Desktop implements CommandListener,
                             
                             // move to position
                             if (map.isWithin(_qc)) {
-                                synchronized (Desktop.this.renderLock) {
+                                synchronized (Desktop.renderLock) {
                                     mapView.setPosition(map.transform(_qc));
                                 }
                             }
@@ -3541,7 +3560,7 @@ public final class Desktop implements CommandListener,
                     // TODO ugly code begins ---
 
                     // update OSD & navigation UI
-                    synchronized (Desktop.this.renderLock) {
+                    synchronized (Desktop.renderLock) {
                         QualifiedCoordinates qc = Desktop.this.map.transform(mapView.getPosition());
                         MapView.setBasicOSD(qc, true);
                         Desktop.this.updateNavigation(qc);
@@ -3665,7 +3684,7 @@ public final class Desktop implements CommandListener,
                     // reset views on fresh start
                     if (!Desktop.this._isProviderRestart()) {
                         final View[] views = Desktop.this.views;
-                        synchronized (Desktop.this.renderLock) {
+                        synchronized (Desktop.renderLock) {
                             for (int i = views.length; --i >= 0; ) {
                                 views[i].trackingStarted();
                             }
@@ -3790,7 +3809,7 @@ public final class Desktop implements CommandListener,
                 TripStatistics.locationUpdated(l);
 
                 // TODO ugly big lock
-                synchronized (Desktop.this.renderLock) {
+                synchronized (Desktop.renderLock) {
 
                     // update wpt navigation
                     try {
@@ -3849,7 +3868,7 @@ public final class Desktop implements CommandListener,
             // notify views
             int mask = MASK_NONE;
             final View[] views = Desktop.this.views;
-            synchronized (Desktop.this.renderLock) {
+            synchronized (Desktop.renderLock) {
                 for (int i = views.length; --i >= 0; ) {
                     try {
                         final int m = views[i].orientationChanged(heading);

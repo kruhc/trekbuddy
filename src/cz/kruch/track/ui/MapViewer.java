@@ -146,12 +146,12 @@ final class MapViewer {
             this.map = null; // gc hint
             this.map = map;
 
-            // new slices collection
-            reslice();
-            /* slices2 is always empty */
-
         } // ~synchronized
 
+        // new slices collection
+        reslice();
+        /* slices2 is always empty */
+        
         // use new map (if any)
         if (map != null) {
 
@@ -550,14 +550,16 @@ final class MapViewer {
     }
 
     void reslice() {
+        synchronized (this) { // @threads lifecycle|render:slices
 //#ifdef __ANDROID__
-        final Object[] slicesArray = this.slices.getData();
-        for (int i = this.slices.size(); --i >= 0; ) {
-            ((Slice) slicesArray[i]).setImage(null);
-        }
+            final Object[] slicesArray = this.slices.getData();
+            for (int i = this.slices.size(); --i >= 0; ) {
+                ((Slice) slicesArray[i]).setImage(null);
+            }
 //#endif
-        this.slices = null;
-        this.slices = new NakedVector(4, 4);
+            this.slices = null;
+            this.slices = new NakedVector(4, 4);
+        }
     }
 
     /*

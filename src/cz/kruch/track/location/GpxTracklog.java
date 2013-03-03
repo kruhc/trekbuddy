@@ -176,7 +176,11 @@ public final class GpxTracklog implements Runnable {
     }
 
     public String getDefaultFileName() {
-        return (filePrefix == null ? "" : filePrefix) + fileDate + ".gpx";
+        final StringBuffer sb = getSb();
+        if (filePrefix != null) {
+            sb.append(filePrefix);
+        }
+        return sb.append(fileDate).append(".gpx").toString();
     }
 
     public String getFileName() {
@@ -880,7 +884,7 @@ public final class GpxTracklog implements Runnable {
         date.setTime(timestamp);
         calendar.setTime(date);
 
-        final StringBuffer sb = this.sb.delete(0, this.sb.length());
+        final StringBuffer sb = getSb();
         final Calendar calendar = this.calendar;
 
         NavigationScreens.append(sb, calendar.get(Calendar.YEAR)).append('-');
@@ -905,13 +909,17 @@ public final class GpxTracklog implements Runnable {
     }
 
     private int doubleToChars(final double value, final int precision) {
-        final StringBuffer sb = this.sb.delete(0, this.sb.length());
+        final StringBuffer sb = getSb();
         NavigationScreens.append(sb, value, precision);
 
         final int result = sb.length();
         sb.getChars(0, result, sbChars, 0);
 
         return result;
+    }
+
+    private StringBuffer getSb() {
+        return sb.delete(0, sb.length());
     }
 
     public static String dateToFileDate(final long time) {

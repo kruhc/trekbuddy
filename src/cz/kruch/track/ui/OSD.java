@@ -156,11 +156,11 @@ final class OSD extends Bar {
         this.cExtInfoLength = 0;
     }
 
-    public void setNavigationInfo(StringBuffer sb) {
+    public void setNavigationInfo(final StringBuffer sb) {
         setExtendedInfo(sb);
     }
 
-    public void setExtendedInfo(StringBuffer sb) {
+    public void setExtendedInfo(final StringBuffer sb) {
         if (sb != this.sb) {
             throw new IllegalStateException("Alien StringBuffer");
         }
@@ -171,9 +171,8 @@ final class OSD extends Bar {
         sb.getChars(0, cExtInfoLength, cExtInfo, 0);
     }
 
-    public void setInfo(QualifiedCoordinates qc, boolean ok) {
-        StringBuffer sb = this.sb;
-        sb.delete(0, sb.length());
+    public void setInfo(final QualifiedCoordinates qc, final boolean ok) {
+        final StringBuffer sb = _getSb();
         NavigationScreens.printTo(qc, sb);
         cInfoLength = sb.length();
         if (cInfoLength > cInfo.length) {

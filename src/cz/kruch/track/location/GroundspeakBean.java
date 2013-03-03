@@ -235,14 +235,14 @@ public final class GroundspeakBean {
 
         private char[] id, finder, date;
         private Object type;
-//#if __SYMBIAN__ || __RIM__ || __ANDROID__
+//#if __SYMBIAN__ || __RIM__ || __ANDROID__ || __CN1__
         private String text;
 //#else
         private Object text;
 //#endif
 
         public Log(String id) {
-            this.id = id.toCharArray();
+            this.id = id == null ? null : id.toCharArray();
         }
 
         public char[] getId() {

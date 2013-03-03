@@ -65,12 +65,14 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
 
     private static final String STORE_USER      = "<user>";
     private static final String STORE_FRIENDS   = "<sms>";
+    private static final String STORE_MOB       = "<mob>";
     private /*static*/ final String NEW_FILE_STORE;
 
     private static final String SPECIAL_STORE_HEADING = "<";
 
     private /*static*/ final String PREFIX_USER;
     private static final String PREFIX_FRIENDS  = "sms-";
+    private static final String PREFIX_MOB      = "mob-";
 
     private static final String SUFFIX_GPX      = ".gpx";
     private static final String SUFFIX_LOC      = ".loc";
@@ -262,7 +264,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
         }
     }
 
-    public void show(final int hint) {
+    void show(final int hint) {
 
         // reset state
         entry = depth = 0;
@@ -293,7 +295,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
         }
     }
 
-    public void showCurrent() {
+    void showCurrent() {
         // reset state
         quickAction = false;
         // show current store, if any...
@@ -310,6 +312,27 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
         }
         // update menu and show list
         menu(depth);
+    }
+
+    void mob() {
+        // create wpt
+        final Location location = navigator.getLocation();
+        final StampedWaypoint wpt = new StampedWaypoint(location.getQualifiedCoordinates(), "MOB!", null,
+                                                        location.getTimestamp());
+
+        // add waypoint to store
+        final GpxTracklog backend = getBackend(STORE_MOB, null);
+        if (backend.getFileName() == null) {
+            backend.setFileName(backend.getDefaultFileName());
+        }
+        addToStore(STORE_MOB, backend.getFileName(), wpt);
+
+        // activate navigation
+        currentWpts = (GpxVector) stores.get(STORE_MOB);
+        currentName = backend.getFileName();
+        useCurrent();
+        final int idx = currentWpts.size() - 1;
+        navigator.setNavigateTo(currentWpts, currentName, idx, idx);
     }
 
     private ExtList pane() {
@@ -1115,8 +1138,9 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                 } catch (Throwable t) {
 
                     // show error
-                    Desktop.showError(Resources.getString(Resources.NAV_MSG_LIST_STORES_FAILED), t, null);
+                    Desktop.showError(Resources.getString(Resources.NAV_MSG_LIST_STORES_FAILED), t, list.getUI());
 
+                    return;
                 }
             }
 
@@ -1146,7 +1170,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
 //-#endif
 
             // notify user
-            Desktop.showInfo(Resources.getString(Resources.NAV_MSG_NO_STORES), null);
+            Desktop.showInfo(Resources.getString(Resources.NAV_MSG_NO_STORES), list.getUI());
 
         } else {
 
@@ -1166,7 +1190,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                 android.util.Log.e(cz.kruch.track.TrackingMIDlet.APP_TITLE, "Failed to list " + storesFolder, t);
 //#endif
 //#ifdef __LOG__
-                t.printStackTrace();
+                log.error("failed to list " + storesFolder, t);
 //#endif
                 Desktop.showError("Failed to list landmark files", t, list.getUI());
             }
@@ -1358,7 +1382,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
 //#endif
 /*
         // interactive?
-        final boolean onBackround = STORE_FRIENDS.equals(_addWptStoreKey);
+        final boolean onBackround = STORE_FRIENDS.equals(_addWptStoreKey) || STORE_MOB.equals(_addWptStoreKey);
 */
 
         // execution status
@@ -1457,7 +1481,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
             _storeUpdate = null; // gc hint
 
             // what next
-            final boolean onBackround = STORE_FRIENDS.equals(_addWptStoreKey);
+            final boolean onBackround = STORE_FRIENDS.equals(_addWptStoreKey) || STORE_MOB.equals(_addWptStoreKey);
             if (!onBackround) {
                 final Displayable next;
                 if (depth > 1) {
@@ -1774,6 +1798,8 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                 gpx.setFilePrefix(PREFIX_USER);
             } else if (STORE_FRIENDS.equals(storeKey)) {
                 gpx.setFilePrefix(PREFIX_FRIENDS);
+            } else if (STORE_MOB.equals(storeKey)) {
+                gpx.setFilePrefix(PREFIX_MOB);
             } else {
                 // assertion
                 if (storeName == null) {
@@ -1818,7 +1844,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
             }
         }
         if (wpts == null) {
-            stores.put(storeKey, wpts = new NakedVector(16, 16));
+            stores.put(storeKey, wpts = new GpxVector(4, 4));
         }
         wpts.addElement(wpt);
 
@@ -1851,13 +1877,13 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
         _addWptStoreKey = name;
 
         // flag update revision
-        _updateRevision = name.startsWith(SPECIAL_STORE_HEADING) ? false : Config.makeRevisions;
+        _updateRevision = Config.makeRevisions && !name.startsWith(SPECIAL_STORE_HEADING);
 
         // fallback action
         _listingTitle = actionListWpts;
 
         // wait screen // TODO move to addToStore but need to handle updateStore invocation from waypoint form
-        final boolean onBackround = STORE_FRIENDS.equals(_addWptStoreKey);
+        final boolean onBackround = STORE_FRIENDS.equals(_addWptStoreKey) || STORE_MOB.equals(_addWptStoreKey);
         if (!onBackround) {
 //#ifndef __ANDROID__
             Desktop.showWaitScreen(Resources.getString(Resources.DESKTOP_CMD_NAVIGATION),

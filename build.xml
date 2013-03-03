@@ -684,7 +684,7 @@
     <target name="a.pre.cn1">
         <mkdir dir="tmp/src"/>
         <wtkpreprocess srcdir="src" destdir="tmp/src" version="1"
-                       symbols="__CN1__,${pre.extra}"/>
+                       symbols="__CN1__,__LOG__,${pre.extra}"/>
     </target>
 
     <target name="a.pre.cn1-emulator">

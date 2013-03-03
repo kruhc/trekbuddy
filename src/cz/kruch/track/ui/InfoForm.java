@@ -94,12 +94,17 @@ final class InfoForm implements CommandListener {
         pane.append(newItem("TimeZone", sb.toString()));
         sb.delete(0, sb.length())
                 .append(cz.kruch.track.ui.nokia.DeviceControl.getName())
+//#ifndef __ANDROID__
                 .append(' ').append(System.getProperty("com.nokia.mid.ui.version"))
+                .append('/').append(System.getProperty("com.nokia.mid.ui.layout"))
+//#endif
                 .append(" (").append(cz.kruch.track.ui.nokia.DeviceControl.getLevel()).append(')');
+//#ifndef __ANDROID__
         if (Config.gpxGsmInfo) {
             sb.append(' ').append(cz.kruch.track.ui.nokia.DeviceControl.getGsmCellId());
             sb.append('/').append(cz.kruch.track.ui.nokia.DeviceControl.getGsmLac());
         }
+//#endif
         pane.append(newItem("DeviceCtrl", sb.toString()));
         sb.delete(0, sb.length())
                 .append(File.fsType)

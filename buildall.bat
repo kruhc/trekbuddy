@@ -36,6 +36,9 @@ call :build %1 rim50 %RESOURCE_LANG%
 echo Build version 'android' ...
 call :build %1 android %RESOURCE_LANG%
 
+echo Build version 'android-offline' ...
+call :build %1 android-offline %RESOURCE_LANG%
+
 echo Build version 'android-backport' ...
 call :build %1 android-backport %RESOURCE_LANG%
 

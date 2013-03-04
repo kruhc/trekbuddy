@@ -34,7 +34,7 @@
 
     <property name="build.dir" value="r:\trekbuddy"/>
 
-    <property name="use.proguard" value="4"/>
+    <property name="use.proguard" value="3"/>
 
     <taskdef resource="antenna.properties" classpath="lib/antenna-bin-1.0.2.jar"/>
     <taskdef name="otaJad" classname="RimOtaJadSha" classpath="${basedir}/tools/classes"/>
@@ -390,7 +390,7 @@
         <copy file="${microemu.home}/microemu-android/bin/trekbuddy.apk"
 			  tofile="dist/${vendor.dir}/${dist.dir}/trekbuddy-offline.apk"/>
         <move file="dist/${vendor.dir}/${dist.dir}/trekbuddy-android.map"
-              tofile="dist/${vendor.dir}/${dist.dir}/trekbuddy.map"/>
+              tofile="dist/${vendor.dir}/${dist.dir}/trekbuddy-offline.map"/>
     </target>
 
     <target name="android-backport">
@@ -489,6 +489,7 @@
             <classpath>
                 <pathelement location="${android.home}\lib\EccpressoAll.jar"/>
                 <pathelement location="${android.home}\lib\EccpressoJDK15ECC.jar"/>
+                <pathelement location="${android.home}\lib\TrustpointAll.jar"/>
                 <pathelement location="${android.home}\lib\BarSigner.jar"/>
                 <pathelement location="${android.home}\lib\BarPackager.jar"/>
                 <pathelement location="${android.home}\lib\KeyTool.jar"/>

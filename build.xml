@@ -797,6 +797,8 @@
     <target name="compile.android-backport" depends="remove.nonandroid.src,remove.android2.src,remove.rim.src">
         <mkdir dir="tmp/build/classes"/>
         <mkdir dir="tmp/ant"/>
+        <copy file="cn1-compat/src/javax/microedition/media/MediaException.java"
+              todir="tmp/src/javax/microedition/media"/>
         <javac srcdir="tmp/src"
                destdir="tmp/build/classes"
                tempdir="tmp/ant"

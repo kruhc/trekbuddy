@@ -317,7 +317,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
     void mob() {
         // create wpt
         final Location location = navigator.getLocation();
-        final StampedWaypoint wpt = new StampedWaypoint(location.getQualifiedCoordinates(), "MOB!", null,
+        final StampedWaypoint wpt = new StampedWaypoint(location.getQualifiedCoordinates()._clone(), "MOB!", null,
                                                         location.getTimestamp());
 
         // add waypoint to store

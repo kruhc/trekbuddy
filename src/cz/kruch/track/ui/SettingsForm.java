@@ -371,8 +371,10 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
             choice6 = newChoiceGroup(Resources.CFG_NAVIGATION_GROUP_TRACK_LINE,
                                      ChoiceGroup.MULTIPLE);
             append(choice6, Resources.CFG_NAVIGATION_FLD_DOTTED);
+            append(choice6, Resources.CFG_NAVIGATION_FLD_POI_ICONS);
             choice6.setSelectedFlags(new boolean[] {
-                Config.trackLineStyle
+                Config.trackLineStyle,
+                Config.trackPoiMarks
             });
             submenu.append(choice6);
 
@@ -924,6 +926,7 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
                 // track line
                 final boolean[] tl = getSelectedFlags(choice6);
                 Config.trackLineStyle = tl[0];
+                Config.trackPoiMarks = tl[1];
                 Config.trackColor = itemLineColor[1];
                 Config.trackThick = itemLineThick[1];
 

@@ -850,6 +850,7 @@ final class MapViewer {
         final byte[] statuses = this.wptStatuses;
         final int NR = this.trkRanges == null ? 0 : this.trkRanges.size();
         final int eow = NR > 0 ? ((int[])this.trkRanges.elementAt(0))[0] : positions.length;
+        final int eop = Config.trackPoiMarks ? positions.length : eow;
 
         // draw polylines
         if (Desktop.routeDir != 0 || NR != 0) {
@@ -904,7 +905,7 @@ final class MapViewer {
 
         // draw POIs
         if (Desktop.routeDir != 0 || Desktop.showall) {
-            for (int i = eow; --i >= 0; ) {
+            for (int i = eop; --i >= 0; ) {
                 if (positions[i] != null) {
                     byte status = statuses[i];
                     if (status == WPT_STATUS_VOID) {

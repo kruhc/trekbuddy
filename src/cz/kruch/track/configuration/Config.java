@@ -239,6 +239,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
     public static boolean routeLineStyle;
     public static int routeColor                = 6;
     public static int routeThick;
+    public static boolean trackPoiMarks;
     public static boolean trackLineStyle;
     public static int trackColor                = 7;
     public static int trackThick;
@@ -615,6 +616,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
 
             // 1.2.1 change
             mobEnabled = din.readBoolean();
+            trackPoiMarks = din.readBoolean();
 
         } catch (Exception e) {
 
@@ -778,6 +780,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
 
         /* since 1.2.1 */
         dout.writeBoolean(mobEnabled);
+        dout.writeBoolean(trackPoiMarks);
 
 //#ifdef __LOG__
         if (log.isEnabled()) log.info("configuration updated");

@@ -313,6 +313,27 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
 
         } else if (menuNavigation.equals(section)) {
 
+            // waypoints
+            choice2 = newChoiceGroup(Resources.NAV_ITEM_WAYPOINTS, ChoiceGroup.MULTIPLE);
+            append(choice2, Resources.CFG_NAVIGATION_FLD_REVISIONS);
+            append(choice2, Resources.CFG_NAVIGATION_FLD_PREFER_GSNAME);
+            append(choice2, Resources.CFG_NAVIGATION_FLD_ENABLE_MOB);
+            choice2.setSelectedFlags(new boolean[] {
+                Config.makeRevisions,
+                Config.preferGsName,
+                Config.mobEnabled
+            });
+            submenu.append(choice2);
+
+            // wpts sorting
+            choice3 = newChoiceGroup(Resources.CFG_NAVIGATION_GROUP_SORT, Desktop.CHOICE_POPUP_TYPE);
+            choice3.setFitPolicy(Choice.TEXT_WRAP_ON);
+            append(choice3, Resources.CFG_NAVIGATION_FLD_SORT_BYPOS);
+            append(choice3, Resources.CFG_NAVIGATION_FLD_SORT_BYNAME);
+            append(choice3, Resources.CFG_NAVIGATION_FLD_SORT_BYDIST);
+            choice3.setSelectedIndex(Config.sort, true);
+            submenu.append(choice3);
+
             // wpt proximity alerts
             choice5 = newChoiceGroup(Resources.CFG_NAVIGATION_GROUP_WPT_ALERT,
                                      ChoiceGroup.MULTIPLE);
@@ -360,25 +381,6 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
                                                             1, Config.trackColor, Config.trackThick));
             submenu.append(new Spacer(submenu.getWidth(), 4));
 
-            // waypoints
-            choice2 = newChoiceGroup(Resources.NAV_ITEM_WAYPOINTS, ChoiceGroup.MULTIPLE);
-            append(choice2, Resources.CFG_NAVIGATION_FLD_REVISIONS);
-            append(choice2, Resources.CFG_NAVIGATION_FLD_PREFER_GSNAME);
-            choice2.setSelectedFlags(new boolean[] {
-                Config.makeRevisions,
-                Config.preferGsName
-            });
-            submenu.append(choice2);
-
-            // wpts sorting
-            choice3 = newChoiceGroup(Resources.CFG_NAVIGATION_GROUP_SORT, Desktop.CHOICE_POPUP_TYPE);
-            choice3.setFitPolicy(Choice.TEXT_WRAP_ON);
-            append(choice3, Resources.CFG_NAVIGATION_FLD_SORT_BYPOS);
-            append(choice3, Resources.CFG_NAVIGATION_FLD_SORT_BYNAME);
-            append(choice3, Resources.CFG_NAVIGATION_FLD_SORT_BYDIST);
-            choice3.setSelectedIndex(Config.sort, true);
-            submenu.append(choice3);
-
             // 'Friends'
             if (cz.kruch.track.TrackingMIDlet.jsr120) {
                 choice4 = newChoiceGroup(Resources.CFG_NAVIGATION_GROUP_SMS,
@@ -423,7 +425,7 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
                 Config.verboseLoading
             });
 //#ifndef __ANDROID__
-            choice1.setSelectedIndex(choice1.append("S40 ticker hack", null),
+            choice1.setSelectedIndex(choice1.append(Resources.getString(Resources.CFG_TWEAKS_FLD_S40_TICKER), null),
                                      Config.s40ticker);
 //#endif
 //#ifdef __SYMBIAN__
@@ -929,6 +931,7 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
                 final boolean[] wpts = getSelectedFlags(choice2);
                 Config.makeRevisions = wpts[0];
                 Config.preferGsName = wpts[1];
+                Config.mobEnabled = wpts[2];
 
                 // wpts sorting
                 Config.sort = choice3.getSelectedIndex();

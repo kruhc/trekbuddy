@@ -382,6 +382,7 @@ public final class Resources {
     public static final short CFG_NAVIGATION_FLD_WPT_ALERT_SND  = 3717;
     public static final short CFG_NAVIGATION_FLD_WPT_ALERT_VIB  = 3718;
     public static final short CFG_NAVIGATION_GROUP_TRACK_LINE   = 3719;
+    public static final short CFG_NAVIGATION_FLD_ENABLE_MOB     = 3720;
     /* settings - tweaks */
     public static final short CFG_TWEAKS_GROUP                  = 3800;
     public static final short CFG_TWEAKS_FLD_SIEMENS_IO         = 3801;
@@ -403,6 +404,7 @@ public final class Resources {
 //    public static final short CFG_TWEAKS_HECL_PRPR              = 3818;
     public static final short CFG_TWEAKS_FLD_FILTERED_SCALING   = 3819;
     public static final short CFG_TWEAKS_FLD_VERBOSE_LOADING    = 3820;
+    public static final short CFG_TWEAKS_FLD_S40_TICKER         = 3821;
     /* info - commands */
     public static final short INFO_CMD_DETAILS                  = 4000;
     /* info - items */

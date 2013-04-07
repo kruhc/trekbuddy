@@ -247,6 +247,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
     public static int sort;
     public static boolean wptAlertSound         = true;
     public static boolean wptAlertVibr          /*= true*/;
+    public static boolean mobEnabled            = true;
 
     // hidden
     public static String btDeviceName   = EMPTY_STRING;
@@ -612,6 +613,9 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
             trackColor = din.readInt();
             trackThick = din.readInt();
 
+            // 1.2.1 change
+            mobEnabled = din.readBoolean();
+
         } catch (Exception e) {
 
             // 1.2.0 fallback
@@ -771,6 +775,9 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         dout.writeBoolean(trackLineStyle);
         dout.writeInt(trackColor);
         dout.writeInt(trackThick);
+
+        /* since 1.2.1 */
+        dout.writeBoolean(mobEnabled);
 
 //#ifdef __LOG__
         if (log.isEnabled()) log.info("configuration updated");

@@ -1954,15 +1954,17 @@ public final class Desktop implements CommandListener,
         }
 
         // intercept MOB
-        if (i == Canvas.KEY_NUM5 || action == Canvas.FIRE) {
-            final long now = System.currentTimeMillis();
-            final long tdiff = now - lastKeyTime;
-            lastKeyTime = now;
-            if (tdiff < 500 && isTracking() && isLocation()) {
-                // record wpt and start navigation
-                Waypoints.getInstance().mob();
-                // done
-                return;
+        if (Config.mobEnabled) {
+            if (i == Canvas.KEY_NUM5 || action == Canvas.FIRE) {
+                final long now = System.currentTimeMillis();
+                final long tdiff = now - lastKeyTime;
+                lastKeyTime = now;
+                if (tdiff < 350 && isTracking() && isLocation()) {
+                    // record wpt and start navigation
+                    Waypoints.getInstance().mob();
+                    // done
+                    return;
+                }
             }
         }
 

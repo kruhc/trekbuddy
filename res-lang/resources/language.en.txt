@@ -372,6 +372,7 @@
 3717=acoustic
 3718=vibration
 3719=Track Line
+3720=enable MOB
 
 # settings forms/fields/values (Tweaks)
 3800=Tweaks
@@ -392,6 +393,7 @@
 3815=HECL opt level
 3819=filtered scaling
 3820=verbose loading
+3821=S40 progress indicator
 
 # info commands
 4000=Technical

@@ -100,7 +100,28 @@ public final class Jsr179LocationProvider
             synchronized (this) {
                 while (isGo()) {
                     try {
+//#ifndef __RIM50__
                         wait();
+//#else
+                        /*
+                         * With (some) Blackberries, provider remains in AVAILABLE state
+                         * but stops giving new locations when GPS view goes bad
+                         * (when you enter building etc).
+                         * The following code helps in these two possible scenarios:
+                         * a) if you restore good GPS view within 1 min, locations start coming
+                         * b) if GPS view is still bad after1 1 min, the provider changes
+                         *    its state to UNAVAILABLE (and lastGood is reseted to 0 - see providerStateChanged,
+                         *    and thus there will be no more reset attemps.
+                         */
+                        wait(15 * 1000);
+                        if (lastGood > 0 && (System.currentTimeMillis() - lastGood) > (60 * 1000)) {
+                            lastGood = 0;
+                            impl.setLocationListener(null, -1, -1, -1);
+                            impl.reset();
+                            impl.setLocationListener(this, interval, timeout, maxage);
+                            restarts++;
+                        }
+//#endif
                     } catch (InterruptedException e) {
                         // ignore
                     }
@@ -138,11 +159,14 @@ public final class Jsr179LocationProvider
 
 //#ifdef __RIM50__    
     public static int bbStatus, bbError;
+    private volatile long lastGood;
 //#endif
 
     public void locationUpdated(javax.microedition.location.LocationProvider p,
                                 javax.microedition.location.Location l) {
 //#ifdef __RIM50__
+
+        // get satellites info
         final net.rim.device.api.gps.BlackBerryLocation bbl = (net.rim.device.api.gps.BlackBerryLocation) l;
         bbError = bbl.getError();
         bbStatus = bbl.getStatus();
@@ -164,6 +188,10 @@ public final class Jsr179LocationProvider
                 NmeaParser.resetPrnSnr();
             break;
         }
+
+        // let's assume provider is in AVAILABLE state
+        lastGood = System.currentTimeMillis();
+
 //#endif
 
         // get extra info
@@ -240,7 +268,7 @@ public final class Jsr179LocationProvider
             // fixable vars
             long timestamp = l.getTimestamp();
 //#ifdef __RIM__
-            // nothing to do
+            // nothing to do?
 //#else
             if (timestamp == 0 && Config.timeFix) { // TODO what devices?
                 timestamp = System.currentTimeMillis();
@@ -268,6 +296,12 @@ public final class Jsr179LocationProvider
     public void providerStateChanged(javax.microedition.location.LocationProvider locationProvider, int i) {
         if (isGo()) {
             notifyListener(i);
+//#ifdef __RIM50__
+            // it is normal that there is no new location when provider is out
+            if (i != javax.microedition.location.LocationProvider.AVAILABLE) {
+                lastGood = 0;
+            }
+//#endif
         }
     }
 

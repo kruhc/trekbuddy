@@ -993,14 +993,15 @@ final class WaypointForm implements CommandListener, ItemCommandListener, ItemSt
         return result;
     }
 
-    private static String convertHtmlSnippet(String escapedHtmlSnippet) {
+    private static String convertHtmlSnippet(final String escapedHtmlSnippet) {
         if (escapedHtmlSnippet == null || escapedHtmlSnippet.length() == 0) {
             return "";
         }
-        if (escapedHtmlSnippet.indexOf('<') > -1) { // hack for non-html content
-            escapedHtmlSnippet = escapedHtmlSnippet.replace('<', '\u2264');
+        try {
+            return (new HtmlSnippet2StringConvertor(escapedHtmlSnippet)).convert();
+        } catch (ArrayIndexOutOfBoundsException e) { // happens when snippet is non-html
+            return escapedHtmlSnippet;
         }
-        return (new HtmlSnippet2StringConvertor(escapedHtmlSnippet)).convert();
     }
 
     /**

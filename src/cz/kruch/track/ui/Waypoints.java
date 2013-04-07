@@ -638,7 +638,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
             if (pointer == null) {
                 Desktop.showInfo(Resources.getString(Resources.NAV_MSG_NO_POS_YET), pane.getUI());
             } else {
-                (new WaypointForm(this, pointer, Resources.NAV_ITEM_ENTER_CUSTOM)).show();
+                (new WaypointForm(this, pointer, session, Resources.NAV_ITEM_ENTER_CUSTOM)).show();
             }
         } else if (itemProjectNew.equals(item)) {
             // got position?
@@ -646,7 +646,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
             if (qc == null) {
                 Desktop.showInfo(Resources.getString(Resources.NAV_MSG_NO_POS_YET), pane.getUI());
             } else {
-                (new WaypointForm(this, qc, Resources.NAV_ITEM_PROJECT_NEW)).show();
+                (new WaypointForm(this, qc, session, Resources.NAV_ITEM_PROJECT_NEW)).show();
             }
 //#ifndef __ANDROID__
         } else if (itemFriendHere.equals(item)) {

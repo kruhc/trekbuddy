@@ -229,6 +229,11 @@ final class WaypointForm implements CommandListener, ItemCommandListener, ItemSt
 
         // form commands
         if (cz.kruch.track.TrackingMIDlet.supportsVideoCapture()) {
+
+            // spacer
+            form.append(createSpacer());
+            
+            // picture button
             CMD_TAKE = Resources.getString(Resources.NAV_CMD_TAKE);
 //            final StringItem snapshot = new StringItem(Resources.getString(Resources.NAV_FLD_SNAPSHOT), CMD_TAKE, Item.BUTTON);
             final StringItem snapshot = new StringItem(null, (new StringBuffer(16)).append(CMD_TAKE).append(' ').append(Resources.getString(Resources.NAV_FLD_SNAPSHOT)).toString(), Item.BUTTON);
@@ -236,7 +241,6 @@ final class WaypointForm implements CommandListener, ItemCommandListener, ItemSt
             snapshot.setDefaultCommand(new Command(CMD_TAKE, Command.ITEM, 1));
             snapshot.setItemCommandListener(this);
             appendWithNewlineAfter(snapshot);
-//            form.append(new Spacer(form.getWidth(), 1));
         }
 
         // session mode
@@ -257,9 +261,11 @@ final class WaypointForm implements CommandListener, ItemCommandListener, ItemSt
      *
      * @param callback callback
      * @param pointer current position
+     * @param session id
      * @param action action
      */
-    public WaypointForm(final Callback callback, final QualifiedCoordinates pointer, final int action) {
+    public WaypointForm(final Callback callback, final QualifiedCoordinates pointer,
+                        final String session, final int action) {
         this.callback = callback;
         this.coordinates = pointer._clone(); // copy
         this.form = new Form(Resources.getString(Resources.NAV_TITLE_WPT)); // TODO use context 'action'
@@ -271,12 +277,15 @@ final class WaypointForm implements CommandListener, ItemCommandListener, ItemSt
 
         // shared
         if (action == Resources.NAV_ITEM_ENTER_CUSTOM) {
-            populateEditableForm(sb.toString(), "", pointer, true);
+            populateEditableForm(sb.toString(), "", pointer, false);
         } else if (action == Resources.NAV_ITEM_PROJECT_NEW) {
             populateEditableForm(sb.toString(), "", pointer, false);
-            extendEditableForm();
+            extendEditableForm(false);
         }
 
+        // session mode
+        createSessionChoice(session);
+        
         // commands
 //#ifndef __ANDROID__
         form.addCommand(new Command(Resources.getString(Resources.CMD_CANCEL), Desktop.CANCEL_CMD_TYPE, 1));
@@ -353,6 +362,9 @@ final class WaypointForm implements CommandListener, ItemCommandListener, ItemSt
     }
 
     private void createSessionChoice(final String session) {
+        // spacer
+        form.append(createSpacer());
+
         // session mode for adding new wpts
         choiceSession = new ChoiceGroup(null, ChoiceGroup.MULTIPLE);
         choiceSession.append(Resources.getString(Resources.NAV_FLD_SESSION), null);
@@ -433,11 +445,11 @@ final class WaypointForm implements CommandListener, ItemCommandListener, ItemSt
             appendWithNewlineAfter(this.fieldAlt = createTextField(Resources.NAV_FLD_ALT, sb.toString(), 8));
 
             // spacer
-            form.append(new Spacer(Desktop.width >> 1, Desktop.height / 20));
+            appendWithNewlineAfter(createSpacer());
         }
     }
 
-    private void extendEditableForm() {
+    private void extendEditableForm(final boolean standalone) {
         // course
         appendWithNewlineAfter(this.fieldCourse = createTextField(Resources.NAV_FLD_COURSE, "", 4, TextField.NUMERIC));
 
@@ -458,9 +470,13 @@ final class WaypointForm implements CommandListener, ItemCommandListener, ItemSt
         // projected coords
         viewResult = form.get(appendStringItem(Resources.getString(Resources.NAV_FLD_TARGET), ""));
 
-        // spacer
-        form.append(new Spacer(Desktop.width >> 1, Desktop.height / 20));
-        
+        // no more items
+        if (standalone) {
+
+            // spacer
+            appendWithNewlineAfter(createSpacer());
+        }
+
         // interactive update
         form.setItemStateListener(this);
     }
@@ -638,9 +654,7 @@ final class WaypointForm implements CommandListener, ItemCommandListener, ItemSt
                         if (imagePath != null) {
                             wpt.addLink(imagePath);
                         }
-                        final boolean isSession = choiceSession.isSelected(0);
-                        final String sid = isSession ? (session == null ? "" : session) : null;
-                        safeCallbackInvoke(callback, new Object[]{ actionObject, wpt, sid });
+                        safeCallbackInvoke(callback, new Object[]{ actionObject, wpt, grabSid() });
                     } break;
                     case Resources.NAV_ITEM_ENTER_CUSTOM: {
                         try {
@@ -649,7 +663,7 @@ final class WaypointForm implements CommandListener, ItemCommandListener, ItemSt
                                                                      trimToNull(fieldComment.getString()),
                                                                      System.currentTimeMillis());
                             cnt++;
-                            safeCallbackInvoke(callback, new Object[]{ actionObject, wpt, null });
+                            safeCallbackInvoke(callback, new Object[]{ actionObject, wpt, grabSid() });
                         } catch (Exception e) { // usually input data format - parsing error
                             Desktop.showError(Resources.getString(Resources.DESKTOP_MSG_INVALID_INPUT), e, null);
                         }
@@ -662,7 +676,7 @@ final class WaypointForm implements CommandListener, ItemCommandListener, ItemSt
                                                                      trimToNull(fieldComment.getString()),
                                                                      System.currentTimeMillis());
                             cnt++;
-                            safeCallbackInvoke(callback, new Object[]{ actionObject, wpt, null });
+                            safeCallbackInvoke(callback, new Object[]{ actionObject, wpt, grabSid() });
                         } catch (Exception e) { // usually input data format - parsing error
                             Desktop.showError(Resources.getString(Resources.DESKTOP_MSG_INVALID_INPUT), e, null);
                         }
@@ -690,9 +704,7 @@ final class WaypointForm implements CommandListener, ItemCommandListener, ItemSt
                             if (imagePath != null) {
                                 wpt.addLink(imagePath);
                             }
-                            final boolean isSession = choiceSession.isSelected(0);
-                            final String sid = isSession ? (session == null ? "" : session) : null;
-                            safeCallbackInvoke(callback, new Object[]{ actionObject, wpt, sid });
+                            safeCallbackInvoke(callback, new Object[]{ actionObject, wpt, grabSid() });
                         } break;
                         case Resources.NAV_ITEM_ENTER_CUSTOM: {
                             try {
@@ -701,7 +713,7 @@ final class WaypointForm implements CommandListener, ItemCommandListener, ItemSt
                                                                          trimToNull(fieldComment.getString()),
                                                                          System.currentTimeMillis());
                                 cnt++;
-                                safeCallbackInvoke(callback, new Object[]{ actionObject, wpt, null });
+                                safeCallbackInvoke(callback, new Object[]{ actionObject, wpt, grabSid() });
                             } catch (Exception e) { // usually input data format - parsing error
                                 Desktop.showError(Resources.getString(Resources.DESKTOP_MSG_INVALID_INPUT), e, null);
                             }
@@ -714,7 +726,7 @@ final class WaypointForm implements CommandListener, ItemCommandListener, ItemSt
                                                                          trimToNull(fieldComment.getString()),
                                                                          System.currentTimeMillis());
                                 cnt++;
-                                safeCallbackInvoke(callback, new Object[]{ actionObject, wpt, null });
+                                safeCallbackInvoke(callback, new Object[]{ actionObject, wpt, grabSid() });
                             } catch (Exception e) { // usually input data format - parsing error
                                 Desktop.showError(Resources.getString(Resources.DESKTOP_MSG_INVALID_INPUT), e, null);
                             }
@@ -778,6 +790,12 @@ final class WaypointForm implements CommandListener, ItemCommandListener, ItemSt
         } catch (IllegalArgumentException e) {
             Desktop.showWarning(null, e, null);
         }
+    }
+
+    private String grabSid() {
+        final boolean isSession = choiceSession.isSelected(0);
+        final String sid = isSession ? (session == null ? "" : session) : null;
+        return sid;
     }
 
     private boolean touched() {
@@ -991,6 +1009,12 @@ final class WaypointForm implements CommandListener, ItemCommandListener, ItemSt
             result = new TextField(label, value, maxLength, type);
         }
         return result;
+    }
+
+    private static Item createSpacer() {
+        final Item item = new Spacer(Desktop.width, Desktop.height / 50);
+        item.setLayout(Item.LAYOUT_2);
+        return item;
     }
 
     private static String convertHtmlSnippet(final String escapedHtmlSnippet) {

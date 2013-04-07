@@ -292,9 +292,31 @@ final class MapView extends View {
         browsingOn(false);
 
         // update position and update OSD
-        if (mapViewer.hasMap() && mapViewer.move(x, y)) {
-            syncOSD();
-            mask = Desktop.MASK_MAP | Desktop.MASK_OSD;
+        if (mapViewer.hasMap()) {
+            if (mapViewer.move(x, y)) {
+                syncOSD();
+                mask = Desktop.MASK_MAP | Desktop.MASK_OSD;
+            } else {
+                final Position p = mapViewer.getPosition();
+                final int px = p.getX();
+                final int py = p.getY();
+                int action;
+                if (px == 0) {
+                    action = Canvas.LEFT;
+                } else if (py == 0) {
+                    action = Canvas.UP;
+                } else {
+                    final Map map = mapViewer.getMap();
+                    final int dx = Math.abs(map.getWidth() - px);
+                    final int dy = Math.abs(map.getHeight() - py);
+                    if (dx > dy) {
+                        action = Canvas.DOWN;
+                    } else {
+                        action = Canvas.RIGHT;
+                    }
+                }
+                loadSiblingMap(action);
+            }
         }
 
         return mask;
@@ -354,6 +376,7 @@ final class MapView extends View {
                 if (!repeated) {
 
                     // mode flags
+                    Desktop.synced = false;
                     Desktop.browsing = false;
                     Desktop.navigating = !Desktop.navigating;
 
@@ -401,42 +424,8 @@ final class MapView extends View {
 
                 } else if (steps > 0) { // no scroll? out of current map? find sibling map
 
-                    // find sibling in atlas
-                    if (navigator.isAtlas() && !navigator._getInitializingMap() && !navigator._getLoadingSlices()) {
-
-                        // bounds hit?
-                        final char neighbour = mapViewer.boundsHit(action);
-//#ifdef __LOG__
-                        if (log.isEnabled()) log.debug("bounds hit? sibling is " + neighbour);
-//#endif
-                        // got sibling?
-                        if (neighbour != ' ') {
-                            final Map map = mapViewer.getMap();
-                            final QualifiedCoordinates qc = map.transform(mapViewer.getPosition());
-                            final double lat = qc.getLat();
-                            final double lon = qc.getLon();
-
-                            // calculate coords that lies in the sibling map
-                            QualifiedCoordinates newQc = null;
-                            switch (neighbour) {
-                                case 'E':
-                                    newQc = QualifiedCoordinates.newInstance(lat, lon + 5 * map.getStep(neighbour));
-                                    break;
-                                case 'N':
-                                    newQc = QualifiedCoordinates.newInstance(lat + 5 * map.getStep(neighbour), lon);
-                                    break;
-                                case 'S':
-                                    newQc = QualifiedCoordinates.newInstance(lat + 5 * map.getStep(neighbour), lon);
-                                    break;
-                                case 'W':
-                                    newQc = QualifiedCoordinates.newInstance(lat, lon + 5 * map.getStep(neighbour));
-                                    break;
-                            }
-
-                            // switch alternate map
-                            navigator.startAlternateMap(navigator.getAtlas().getLayer(), newQc);
-                        }
-                    }
+                    // try sibling map
+                    loadSiblingMap(action);
                 }
             }
         }
@@ -471,6 +460,7 @@ final class MapView extends View {
             case Canvas.KEY_NUM5: { // same as FIRE
                 if (!repeated) {
                     if (mapViewer.hasMap()) {
+                        Desktop.synced = false;
                         Desktop.browsing = false;
                         Desktop.navigating = !Desktop.navigating;
                         if (navigator.isTracking() && isLocation()) {
@@ -718,6 +708,46 @@ final class MapView extends View {
             }
         }
 */
+    }
+
+    private void loadSiblingMap(final int action) {
+
+        // find sibling in atlas
+        if (navigator.isAtlas() && !navigator._getInitializingMap() && !navigator._getLoadingSlices()) {
+
+            // bounds hit?
+            final char neighbour = mapViewer.boundsHit(action);
+//#ifdef __LOG__
+            if (log.isEnabled()) log.debug("bounds hit? sibling is " + neighbour);
+//#endif
+            // got sibling?
+            if (neighbour != ' ') {
+                final Map map = mapViewer.getMap();
+                final QualifiedCoordinates qc = map.transform(mapViewer.getPosition());
+                final double lat = qc.getLat();
+                final double lon = qc.getLon();
+
+                // calculate coords that lies in the sibling map
+                QualifiedCoordinates newQc = null;
+                switch (neighbour) {
+                    case 'E':
+                        newQc = QualifiedCoordinates.newInstance(lat, lon + 5 * map.getStep(neighbour));
+                        break;
+                    case 'N':
+                        newQc = QualifiedCoordinates.newInstance(lat + 5 * map.getStep(neighbour), lon);
+                        break;
+                    case 'S':
+                        newQc = QualifiedCoordinates.newInstance(lat + 5 * map.getStep(neighbour), lon);
+                        break;
+                    case 'W':
+                        newQc = QualifiedCoordinates.newInstance(lat, lon + 5 * map.getStep(neighbour));
+                        break;
+                }
+
+                // switch alternate map
+                navigator.startAlternateMap(navigator.getAtlas().getLayer(), newQc);
+            }
+        }
     }
 
     private int updatedTrick() {

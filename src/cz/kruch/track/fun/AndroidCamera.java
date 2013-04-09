@@ -23,6 +23,7 @@ import java.util.List;
 
 import cz.kruch.track.ui.Desktop;
 import cz.kruch.track.Resources;
+import cz.kruch.track.configuration.Config;
 
 /**
  * Android camera.
@@ -174,21 +175,20 @@ final class AndroidCamera extends Camera implements CommandListener,
         public void surfaceCreated(SurfaceHolder holder) {
             Log.d(TAG, "preview surface created");
 
-            // ipen cam
+            // open cam
             camera = android.hardware.Camera.open();
 
-            // set preview
+            // set picture size
+            android.hardware.Camera.Parameters p = camera.getParameters();
             try {
-                camera.setPreviewDisplay(holder);
-            } catch (Exception exception) {
-                close();
+                android.hardware.Camera.Size size = p.getSupportedPictureSizes().get(Config.snapshotFormatIdx);
+                p.setPictureSize(size.width, size.height);
+                Log.i(TAG, "set resolution to " + size.width + "x" + size.height);
+            } catch (Exception e) {
+                Log.w(TAG, "failed to set resolution; index " + Config.snapshotFormatIdx, e);
             }
 
-            // start previewing
-            camera.startPreview();
-
             // geotag
-            android.hardware.Camera.Parameters p = camera.getParameters();
             if (gpsCoords != null && gpsTimestamp != 0) { // assertion: should be true
                 p.setGpsLatitude(gpsCoords.getLat());
                 p.setGpsLongitude(gpsCoords.getLon());
@@ -199,21 +199,34 @@ final class AndroidCamera extends Camera implements CommandListener,
                 camera.setParameters(p);
             }
 
-            // set autofocus
-            if (android.os.Build.VERSION.SDK_INT >= 14) { // on 4.x use continuous autofocus
-                try {
-                    p = camera.getParameters();
-                    p.setFocusMode("continuous-picture"); // value of FOCUS_MODE_CONTINUOUS_PICTURE
-                    camera.setParameters(p);
-                    Log.i(TAG, "continuous-picture camera mode");
-                    state.append("continuous-picture mode -> ");
-                } catch (Exception e) {
-                     // ignore
+            try {
+                
+                // set preview
+                camera.setPreviewDisplay(holder);
+
+                // start previewing
+                camera.startPreview();
+
+                // set autofocus
+                if (android.os.Build.VERSION.SDK_INT >= 14) { // on 4.x use continuous autofocus
+                    try {
+                        p = camera.getParameters();
+                        p.setFocusMode("continuous-picture"); // value of FOCUS_MODE_CONTINUOUS_PICTURE
+                        camera.setParameters(p);
+                        Log.i(TAG, "use continuous-picture camera mode");
+                        state.append("continuous-picture mode -> ");
+                    } catch (Exception e) {
+                         // ignore
+                    }
+                } else { // use manual autofocus
+                    camera.autoFocus(this);
+                    Log.i(TAG, "use autofocus camera mode");
+                    state.append("autofocus mode -> ");
                 }
-            } else { // use manual autofocus
-                camera.autoFocus(this);
-                Log.i(TAG, "autofocus camera mode");
-                state.append("autofocus mode -> ");
+
+            } catch (Exception e) {
+                Log.e(TAG, "start preview failed", e);
+                close();
             }
         }
 

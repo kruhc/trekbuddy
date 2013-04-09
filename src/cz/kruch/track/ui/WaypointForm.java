@@ -273,7 +273,7 @@ final class WaypointForm implements CommandListener, ItemCommandListener, ItemSt
         // generated name
         final StringBuffer sb = new StringBuffer(16);
         sb.append("WPT");
-        NavigationScreens.append(sb, cnt + 1, 3);
+        NavigationScreens.append(sb, cnt + 1, 100);
 
         // shared
         if (action == Resources.NAV_ITEM_ENTER_CUSTOM) {
@@ -468,7 +468,7 @@ final class WaypointForm implements CommandListener, ItemCommandListener, ItemSt
         appendWithNewlineAfter(this.fieldDistance = createTextField(sb.toString(), "", 7, TextField.NUMERIC));
 
         // projected coords
-        viewResult = form.get(appendStringItem(Resources.getString(Resources.NAV_FLD_TARGET), ""));
+        viewResult = form.get(appendStringItem(Resources.getString(Resources.NAV_FLD_TARGET), "<undetermined>"));
 
         // no more items
         if (standalone) {

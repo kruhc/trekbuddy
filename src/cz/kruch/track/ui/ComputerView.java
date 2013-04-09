@@ -1405,9 +1405,9 @@ final class ComputerView extends View
                                         if (value < 100F) {
                                             final int mins = (int) value;
                                             final int secs = (int) (60 * (value - mins));
-                                            NavigationScreens.append(sb, mins, 2);
+                                            NavigationScreens.append(sb, mins, 2); // fixme should be 100?
                                             sb.append(':');
-                                            NavigationScreens.append(sb, secs, 2);
+                                            NavigationScreens.append(sb, secs, 2); // fixme should be 100?
                                         } else {
                                             sb.append("99:99");
                                         }

@@ -30,7 +30,7 @@
     <property name="microemu.home" value="z:\repository\microemu-google\microemulator"/>
     <property name="cn1.home" value="z:\apps\Codename One"/>
     <property name="proguard3.home" value="z:\apps\proguard3.11"/>
-    <property name="proguard4.home" value="z:\apps\proguard4.8"/>
+    <property name="proguard4.home" value="z:\apps\proguard4.9"/>
 
     <property name="build.dir" value="r:\trekbuddy"/>
 
@@ -1155,78 +1155,6 @@
         </java>
     </target> 
 
-    <target name="obfuscate4">
-        <java jar="${proguard4.home}\lib\proguard.jar" fork="true">
-            <jvmarg value="-Dmaximum.inlined.code.length=4"/>
-            <arg value="-injars tmp/trekbuddy${suffix}.jar"/>
-            <arg value="-outjars tmp/trekbuddy${suffix}-obfuscated.jar"/>
-            <arg value="-libraryjars ${libraryjars}"/>
-            <arg value="-dontpreverify"/> <!-- preverified elsewhere; this is 4.x flag -->
-            <arg value="-dontusemixedcaseclassnames"/>
-            <arg value="-dontskipnonpubliclibraryclasses"/>
-            <arg value="-repackageclasses ''"/>
-            <arg value="-overloadaggressively"/>
-            <arg value="-allowaccessmodification"/>
-            <arg value="-keep class * implements javax.microedition.midlet.MIDlet"/>
-            <arg value="-keepnames class cz.** extends java.lang.Exception"/>
-            <arg value="-keepnames class api.** extends java.lang.Exception"/>
-            <arg value="-keepnames class org.** extends java.lang.Exception"/>
-            <arg value="-whyareyoukeeping class net.trekbuddy.midlet.IRuntime"/>
-            <arg value="-whyareyoukeeping class cz.kruch.track.maps.io.FileInput"/>
-            <arg value="-whyareyoukeeping class cz.kruch.track.maps.io.LoaderIO"/>
-            <arg value="-whyareyoukeeping class cz.kruch.track.io.CrcInputStream"/>
-            <arg value="-whyareyoukeeping class cz.kruch.track.util.Logger"/>
-            <arg value="-whyareyoukeeping class api.io.BufferedOutputStream"/>
-            <arg value="-whyareyoukeeping class cz.kruch.track.hecl.ControlledInterp"/>
-            <arg value="-whyareyoukeeping class cz.kruch.track.hecl.PluginManager"/>
-            <arg value="-whyareyoukeeping class cz.kruch.track.ui.nokia.NokiaUi14DeviceControl"/>
-            <arg value="-whyareyoukeeping class cz.kruch.track.ui.nokia.S60DeviceControl"/>
-            <arg value="-printmapping dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.map"/>
-            <arg value="-printseeds"/>
-            <arg value="-printusage dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.dco"/>
-            <arg value="-verbose"/>
-        </java>
-    </target>
-
-    <target name="obfuscate4.cn1">
-        <java jar="${proguard4.home}\lib\proguard.jar" fork="true">
-            <jvmarg value="-Dmaximum.inlined.code.length=4"/>
-            <arg value="-injars tmp/trekbuddy${suffix}.jar"/>
-            <arg value="-outjars tmp/trekbuddy${suffix}-obfuscated.jar"/>
-            <arg value="-libraryjars ${libraryjars}"/>
-            <arg value="-dontpreverify"/> <!-- not preverified; this is 4.x flag -->
-            <arg value="-dontoptimize"/>
-            <arg value="-dontusemixedcaseclassnames"/>
-            <arg value="-dontskipnonpubliclibraryclasses"/>
-            <arg value="-useuniqueclassmembernames"/>
-<!-- could be used dangerous
-            <arg value="-repackageclasses ''"/>
-            <arg value="-overloadaggressively"/>
-            <arg value="-allowaccessmodification"/>
--->
-            <arg value="-keepnames class *"/>
-            <arg value="-keep class * implements javax.microedition.midlet.MIDlet"/>
-            <arg value="-keep class net.trekbuddy.midlet.TrackingApp { *; }"/>
-            <arg value="-keepnames class cz.** extends java.lang.Exception"/>
-            <arg value="-keepnames class api.** extends java.lang.Exception"/>
-            <arg value="-keepnames class org.** extends java.lang.Exception"/>
-            <arg value="-whyareyoukeeping class net.trekbuddy.midlet.IRuntime"/>
-            <arg value="-whyareyoukeeping class cz.kruch.track.maps.io.FileInput"/>
-            <arg value="-whyareyoukeeping class cz.kruch.track.maps.io.LoaderIO"/>
-            <arg value="-whyareyoukeeping class cz.kruch.track.io.CrcInputStream"/>
-            <arg value="-whyareyoukeeping class cz.kruch.track.util.Logger"/>
-            <arg value="-whyareyoukeeping class api.io.BufferedOutputStream"/>
-            <arg value="-whyareyoukeeping class cz.kruch.track.hecl.ControlledInterp"/>
-            <arg value="-whyareyoukeeping class cz.kruch.track.hecl.PluginManager"/>
-            <arg value="-whyareyoukeeping class cz.kruch.track.ui.nokia.NokiaUi14DeviceControl"/>
-            <arg value="-whyareyoukeeping class cz.kruch.track.ui.nokia.S60DeviceControl"/>
-            <arg value="-printmapping dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.map"/>
-            <arg value="-printseeds"/>
-            <arg value="-printusage dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.dco"/>
-            <arg value="-verbose"/>
-        </java>
-    </target>
-
     <target name="obfuscate3.rim">
 	    <java jar="${proguard3.home}\lib\proguard.jar" fork="true">
             <arg value="-injars tmp/trekbuddy${suffix}.jar"/>
@@ -1255,16 +1183,51 @@
             <arg value="-printseeds"/>
             <arg value="-verbose"/>
         </java>
-    </target> 
+    </target>
+
+    <target name="obfuscate4">
+        <java jar="${proguard4.home}\lib\proguard.jar" fork="true">
+            <jvmarg value="-Dmaximum.inlined.code.length=4"/>
+            <jvmarg value="-Doptimize.conservatively=true"/>
+            <arg value="-injars tmp/trekbuddy${suffix}.jar"/>
+            <arg value="-outjars tmp/trekbuddy${suffix}-obfuscated.jar"/>
+            <arg value="-libraryjars ${libraryjars}"/>
+            <arg value="-dontpreverify"/> <!-- preverified elsewhere; this is 4.x flag -->
+            <arg value="-dontusemixedcaseclassnames"/>
+            <arg value="-dontskipnonpubliclibraryclasses"/>
+            <arg value="-repackageclasses ''"/>
+            <arg value="-overloadaggressively"/>
+            <arg value="-allowaccessmodification"/>
+            <arg value="-keep class * implements javax.microedition.midlet.MIDlet"/>
+            <arg value="-keepnames class cz.** extends java.lang.Exception"/>
+            <arg value="-keepnames class api.** extends java.lang.Exception"/>
+            <arg value="-keepnames class org.** extends java.lang.Exception"/>
+            <arg value="-whyareyoukeeping class net.trekbuddy.midlet.IRuntime"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.maps.io.FileInput"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.maps.io.LoaderIO"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.io.CrcInputStream"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.util.Logger"/>
+            <arg value="-whyareyoukeeping class api.io.BufferedOutputStream"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.hecl.ControlledInterp"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.hecl.PluginManager"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.ui.nokia.NokiaUi14DeviceControl"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.ui.nokia.S60DeviceControl"/>
+            <arg value="-printmapping dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.map"/>
+            <arg value="-printseeds"/>
+            <arg value="-printusage dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.dco"/>
+            <arg value="-verbose"/>
+        </java>
+    </target>
 
     <target name="obfuscate4.rim">
 	    <java jar="${proguard4.home}\lib\proguard.jar" fork="true">
             <jvmarg value="-Dmaximum.inlined.code.length=4"/>
+            <jvmarg value="-Doptimize.conservatively=true"/>
             <arg value="-injars tmp/trekbuddy${suffix}.jar"/>
             <arg value="-outjars tmp/trekbuddy${suffix}-obfuscated.jar"/>
             <arg value="-libraryjars '${libraryjars}'"/>
-            <arg value="-dontpreverify"/> <!-- preverified elsewhere; this is 4.x flag -->
-            <arg value="-dontoptimize"/> <!-- breaks code on RIM -->
+            <arg value="-dontpreverify"/> <!-- preverified with RIM SDK; this is 4.x flag -->
+            <arg value="-dontoptimize"/> <!-- breaks preverification -->
             <arg value="-dontskipnonpubliclibraryclasses"/>
             <arg value="-dontusemixedcaseclassnames"/>
             <arg value="-repackageclasses ''"/>
@@ -1293,13 +1256,11 @@
     <target name="obfuscate4.android">
 	    <java jar="${proguard4.home}\lib\proguard.jar" fork="true">
             <jvmarg value="-Dmaximum.inlined.code.length=4"/>
+            <jvmarg value="-Doptimize.conservatively=true"/>
             <arg value="-injars tmp/trekbuddy${suffix}.jar"/>
             <arg value="-outjars tmp/trekbuddy${suffix}-obfuscated.jar"/>
             <arg value="-libraryjars ${libraryjars}"/>
-            <arg value="-dontpreverify"/>
-<!-- let dx optimize
-            <arg value="-dontoptimize"/>
--->
+            <arg value="-dontpreverify"/> <!-- not preverified; this is 4.x flag -->
             <arg value="-optimizations !code/simplification/arithmetic"/> <!-- dalvik 1.0/1.5 issue workaround -->
             <arg value="-dontusemixedcaseclassnames"/>
             <arg value="-dontskipnonpubliclibraryclasses"/>
@@ -1332,22 +1293,46 @@
         </java>
     </target>
 
-    <target name="emulator.obfuscate">
-	    <java jar="${proguard3.home}\lib\proguard.jar" fork="true">
+    <target name="obfuscate4.cn1">
+        <java jar="${proguard4.home}\lib\proguard.jar" fork="true">
+            <jvmarg value="-Dmaximum.inlined.code.length=4"/>
+            <jvmarg value="-Doptimize.conservatively=true"/>
             <arg value="-injars tmp/trekbuddy${suffix}.jar"/>
             <arg value="-outjars tmp/trekbuddy${suffix}-obfuscated.jar"/>
             <arg value="-libraryjars ${libraryjars}"/>
-            <arg value="-dontobfuscate"/>
-            <arg value="-dontshrink"/>
+            <arg value="-dontpreverify"/> <!-- not preverified; this is 4.x flag -->
             <arg value="-dontoptimize"/>
+            <arg value="-dontusemixedcaseclassnames"/>
+            <arg value="-dontskipnonpubliclibraryclasses"/>
+            <arg value="-useuniqueclassmembernames"/>
+<!-- could be dangerous
+            <arg value="-repackageclasses ''"/>
+            <arg value="-overloadaggressively"/>
+            <arg value="-allowaccessmodification"/>
+-->
+            <arg value="-keepnames class *"/>
             <arg value="-keep class * implements javax.microedition.midlet.MIDlet"/>
+            <arg value="-keep class net.trekbuddy.midlet.TrackingApp { *; }"/>
+            <arg value="-keepnames class cz.** extends java.lang.Exception"/>
+            <arg value="-keepnames class api.** extends java.lang.Exception"/>
+            <arg value="-keepnames class org.** extends java.lang.Exception"/>
+            <arg value="-whyareyoukeeping class net.trekbuddy.midlet.IRuntime"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.maps.io.FileInput"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.maps.io.LoaderIO"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.io.CrcInputStream"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.util.Logger"/>
+            <arg value="-whyareyoukeeping class api.io.BufferedOutputStream"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.hecl.ControlledInterp"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.hecl.PluginManager"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.ui.nokia.NokiaUi14DeviceControl"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.ui.nokia.S60DeviceControl"/>
             <arg value="-printmapping dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.map"/>
             <arg value="-printseeds"/>
+            <arg value="-printusage dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.dco"/>
             <arg value="-verbose"/>
         </java>
-    </target> 
-	
+    </target>
+
 	<target name="preverify">
 	    <exec executable="${wtk.home}\bin\preverify1.1.exe">
             <arg line="-classpath ${classpath.preverify} -d tmp/preverified tmp/trekbuddy${suffix}-obfuscated.jar"/>

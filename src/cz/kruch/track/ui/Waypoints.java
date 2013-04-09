@@ -143,7 +143,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
     private String folder, subfolder;
     private String notesFilename;
     private final Object[] idx;
-    private int entry, depth, sort;
+    private int entry, depth, sort, mobs;
 
     private volatile String session;
 
@@ -317,7 +317,10 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
     void mob() {
         // create wpt
         final Location location = navigator.getLocation();
-        final StampedWaypoint wpt = new StampedWaypoint(location.getQualifiedCoordinates()._clone(), "MOB!", null,
+        final StringBuffer sb = new StringBuffer(16).append("MOB");
+        NavigationScreens.append(sb, ++mobs, 100);
+        final StampedWaypoint wpt = new StampedWaypoint(location.getQualifiedCoordinates()._clone(),
+                                                        sb.toString(), null,
                                                         location.getTimestamp());
 
         // add waypoint to store
@@ -333,6 +336,12 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
         useCurrent();
         final int idx = currentWpts.size() - 1;
         navigator.setNavigateTo(currentWpts, currentName, idx, idx);
+    }
+
+    void trackingStopped() {
+        mobs = 0;
+        stores.remove(STORE_MOB);
+        backends.remove(STORE_MOB);
     }
 
     private ExtList pane() {

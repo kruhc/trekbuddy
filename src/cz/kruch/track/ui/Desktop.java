@@ -2382,6 +2382,9 @@ public final class Desktop implements CommandListener,
         osd.resetExtendedInfo();
         osd.setRecording(false);
 
+        // notify navigation manager
+        Waypoints.getInstance().trackingStopped();
+
         // notify views (if start was propagated too - this is hack)
         if (trackstart > 0) {
             final View[] views = this.views;

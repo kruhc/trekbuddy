@@ -161,9 +161,9 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
 
 //#endif /* __ALL__ */
 
-//#if !__RIM__ && !__SYMBIAN__ && !__ANDROID__
+//#if !__RIM__ && !__SYMBIAN__ && !__ANDROID__ && !__CN1__
 
-        // has to be outside __ALL__
+        // has to be outside __ALL__ for j9 or basic build
         iden = forName("* iDEN", "com.mot.iden.zip.ZipException", null);
 
 //#endif

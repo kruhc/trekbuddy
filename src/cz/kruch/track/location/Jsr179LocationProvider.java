@@ -175,13 +175,17 @@ public final class Jsr179LocationProvider
             case net.rim.device.api.gps.BlackBerryLocation.GPS_FIX_PARTIAL:
             case net.rim.device.api.gps.BlackBerryLocation.GPS_FIX_COMPLETE:
                 int sat = 0;
-                for (java.util.Enumeration e = bbl.getSatelliteInfo(); e.hasMoreElements(); ) {
-                    final net.rim.device.api.gps.SatelliteInfo si = (net.rim.device.api.gps.SatelliteInfo) e.nextElement();
-                    if (sat < NmeaParser.MAX_SATS && si.getId() > 0) { // si.isvalid() seems to strict ;-)
-                        NmeaParser.prns[sat] = (byte) si.getId();
-                        NmeaParser.snrs[sat] = NmeaParser.normalizeSnr(si.getSignalQuality());
+                try {
+                    for (java.util.Enumeration e = bbl.getSatelliteInfo(); e.hasMoreElements(); ) {
+                        final net.rim.device.api.gps.SatelliteInfo si = (net.rim.device.api.gps.SatelliteInfo) e.nextElement();
+                        if (sat < NmeaParser.MAX_SATS && si.getId() > 0) { // si.isvalid() seems to strict ;-)
+                            NmeaParser.prns[sat] = (byte) si.getId();
+                            NmeaParser.snrs[sat] = NmeaParser.normalizeSnr(si.getSignalQuality());
+                        }
+                        sat++;
                     }
-                    sat++;
+                } catch (NullPointerException e) {
+                    // ignore
                 }
                 NmeaParser.satv = bbl.getSatelliteCount();
                 NmeaParser.sata = sat;

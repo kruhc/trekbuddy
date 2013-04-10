@@ -50,7 +50,11 @@ final class InfoForm implements CommandListener {
 
     private void details(final Form pane) {
         // gc - for memory info to be correct...
+//#if __SYMBIAN__ || __RIM__ || __ANDROID__ || __CN1__
+        // GC is useless
+//#else
         System.gc(); // unconditional!!!
+//#endif
         final long freeMemory = Runtime.getRuntime().freeMemory();
         final long totalMemory = Runtime.getRuntime().totalMemory();
 

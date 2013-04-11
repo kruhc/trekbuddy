@@ -113,7 +113,6 @@ final class InfoForm implements CommandListener {
         sb.delete(0, sb.length())
                 .append(File.fsType)
                 .append("; resetable? ").append(cz.kruch.track.maps.Map.fileInputStreamResetable)
-//                .append("; SE bug? ").append(cz.kruch.track.maps.Map.hasSEbug)
                 .append("; stream class: ").append(cz.kruch.track.maps.Map.fileInputStreamClass)
 //#ifdef __SYMBIAN__
                 .append("; network stream? ").append(Config.useNativeService && cz.kruch.track.maps.Map.networkInputStreamAvailable)

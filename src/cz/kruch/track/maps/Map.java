@@ -799,7 +799,6 @@ public final class Map implements Runnable {
     /* stream characteristic */
     public static String fileInputStreamClass;
     public static int fileInputStreamResetable;
-    public static boolean hasSEbug;
 //#ifdef __SYMBIAN__
     public static boolean networkInputStreamAvailable = true;
 //#endif

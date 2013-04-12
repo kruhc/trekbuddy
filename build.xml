@@ -297,7 +297,7 @@
         <property name="rim.bb.version" value="[5.0,)"/>
         <antcall target="clean"/>
         <antcall target="a.pre.rim50"/>
-        <antcall target="compile.rim50"/>
+        <antcall target="compile.rim50-ng"/>
         <antcall target="rim.pack" inheritall="true">
             <param name="resource.folder" value="res-RIM50"/>
         </antcall>
@@ -780,6 +780,19 @@
                bootclasspathref="bootclasspath.rim50"/>
     </target>
 
+    <target name="compile.rim50-ng" depends="remove.nonrim50.src">
+        <mkdir dir="tmp/build/classes"/>
+        <mkdir dir="tmp/ant"/>
+        <javac srcdir="tmp/src"
+               destdir="tmp/build/classes"
+               tempdir="tmp/ant"
+               fork="true"
+               deprecation="true"
+               optimize="true" debug="true" debuglevel="source,lines"
+               target="1.3" source="1.3"
+               bootclasspathref="bootclasspath.rim50"/>
+    </target>
+
     <target name="compile.android" depends="remove.nonandroid.src,remove.rim.src">
         <mkdir dir="tmp/build/classes"/>
         <mkdir dir="tmp/ant"/>
@@ -1227,7 +1240,6 @@
             <arg value="-outjars tmp/trekbuddy${suffix}-obfuscated.jar"/>
             <arg value="-libraryjars '${libraryjars}'"/>
             <arg value="-dontpreverify"/> <!-- preverified with RIM SDK; this is 4.x flag -->
-            <arg value="-dontoptimize"/> <!-- breaks preverification -->
             <arg value="-dontskipnonpubliclibraryclasses"/>
             <arg value="-dontusemixedcaseclassnames"/>
             <arg value="-repackageclasses ''"/>

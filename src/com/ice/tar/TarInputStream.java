@@ -111,7 +111,19 @@ public final class TarInputStream extends InputStream {
      */
     public int available() throws IOException {
 //        return (int) (this.entrySize - this.entryOffset);
-        return in.available();
+//        return in.available();
+        /*
+         * Some implementations (eg. Nokia JRE) may return total number of bytes
+         * in the stream :-$, so we have to trim it to current entry size.
+         * Note: 'in' is most probably api.io.BufferedInputStream that calls its own
+         * underlying stream's available() method when is empty.
+         */
+        final int n = in.available();
+        if (n > 0) { // not very common, but may happen
+            final int rem = (int) (this.entrySize - this.entryOffset);
+            return n <= rem ? n : rem; // inlined Math.min(n, rem)
+        }
+        return 0;
     }
 
     /**
@@ -157,6 +169,9 @@ public final class TarInputStream extends InputStream {
 
             this.streamOffset += numRead;
             this.entryOffset += numRead;
+            if (this.entryOffset > this.entrySize) {
+                this.entryOffset = this.entrySize;
+            }
 //#ifdef __MARKSUPPORT__
             // to invalidate or not, that is the question
             // probably not, because we are not using skip correctly in tar context

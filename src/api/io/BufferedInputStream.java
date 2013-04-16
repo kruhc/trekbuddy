@@ -191,7 +191,7 @@ public class BufferedInputStream extends InputStream {
     public synchronized void mark(int readlimit) {
         marklimit = readlimit;
         markpos = pos;
-        // HACK // limit mark to buffer size; pos is very probably 0
+/* // HACK // limit mark to buffer size; pos is very probably 0 */
         if (marklimit > buf.length) {
             marklimit = buf.length;
         }

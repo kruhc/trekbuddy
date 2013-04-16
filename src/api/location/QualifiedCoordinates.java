@@ -46,7 +46,7 @@ public final class QualifiedCoordinates implements GeodeticPosition {
                                                                 final float alt,
                                                                 final float hAccuracy,
                                                                 final float vAccuracy) {
-        QualifiedCoordinates result;
+        final QualifiedCoordinates result;
         if (countFree == 0) {
             result = new QualifiedCoordinates();
         } else {

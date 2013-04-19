@@ -30,7 +30,11 @@ public class RandomAccessInputStream extends InputStream {
     }
 
     public long skip(long n) throws IOException {
-        return file.skipBytes((int) n);
+//        return file.skipBytes((int) n);
+        if (n > 0) {
+            file.seek(file.getFilePointer() + n);
+        }
+        return n;
     }
 
     public int available() throws IOException {

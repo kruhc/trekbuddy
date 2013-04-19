@@ -160,6 +160,30 @@ public abstract class File {
 //#endif
     }
 
+    public static void closeQuietly(final File file) {
+        try {
+            file.close();
+        } catch (Exception e) { // NPE or IOE
+            // ignore
+        }
+    }
+
+    public static void closeQuietly(final InputStream in) {
+        try {
+            in.close();
+        } catch (Exception e) { // NPE or IOE
+            // ignore
+        }
+    }
+
+    public static void closeQuietly(final OutputStream out) {
+        try {
+            out.close();
+        } catch (Exception e) { // NPE or IOE
+            // ignore
+        }
+    }
+
     abstract Enumeration getRoots();
      
     public abstract Enumeration list() throws IOException;

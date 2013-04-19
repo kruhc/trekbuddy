@@ -117,4 +117,12 @@ public final class LineReader extends InputStreamReader {
 
         throw new IllegalStateException("Line length > " + MAX_LINE_LENGTH);
     }
+
+    public static void closeQuietly(final InputStreamReader reader) {
+        try {
+            reader.close();
+        } catch (Exception e) { // NPE or IOE
+            // ignore
+        }
+    }
 }

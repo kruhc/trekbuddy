@@ -78,7 +78,7 @@ public final class TarInputStream extends InputStream {
         this.in = null; // gc hint
         this.in = in;
         this.hasHitEOF = false;
-        this.entryOffset = this.entrySize = 0;
+//        this.entryOffset = this.entrySize = 0;
 //#ifdef __MARKSUPPORT__
         this.markpos = -1;
 //#endif        
@@ -110,16 +110,22 @@ public final class TarInputStream extends InputStream {
      * @return The number of available bytes for the current entry.
      */
     public int available() throws IOException {
-//        return (int) (this.entrySize - this.entryOffset);
-//        return in.available();
+        /**
+         * Some implementation (eg. Motorola IDEN) requires file/tile size
+         * to decode it correctly.
+         */
+        if (cz.kruch.track.configuration.Config.filesizeAvail) {
+            return (int) (this.entrySize - this.entryOffset);
+        }
         /*
          * Some implementations (eg. Nokia JRE) may return total number of bytes
          * in the stream :-$, so we have to trim it to current entry size.
-         * Note: 'in' is most probably api.io.BufferedInputStream that calls its own
-         * underlying stream's available() method when is empty.
+         * Note: 'in' is most probably api.io.BufferedInputStream. It calls its own
+         * underlying stream's available() method when is empty. Or it can hold more
+         * bytes than a tile has.
          */
         final int n = in.available();
-        if (n > 0) { // not very common, but may happen
+        if (n > 0) {
             final int rem = (int) (this.entrySize - this.entryOffset);
             return n <= rem ? n : rem; // inlined Math.min(n, rem)
         }
@@ -201,6 +207,7 @@ public final class TarInputStream extends InputStream {
      */
     public void setStreamOffset(long streamOffset) {
         this.streamOffset = streamOffset;
+        this.entryOffset = this.entrySize = 0; // hack streamOffset is always 0
     }
 
 //#ifdef __MARKSUPPORT__
@@ -235,9 +242,10 @@ public final class TarInputStream extends InputStream {
     }
 
     /**
-     * Sets the mark.
+     * Marks the current position in this input stream.
      *
-     * @param readlimit
+     * @param readlimit the maximum limit of bytes that can be read
+     *        before the mark position becomes invalid
      */
     public void mark(int readlimit) {
         in.mark(readlimit); // TODO 1. not sure about this 2. catch Throwable and invalidate mark and limit?
@@ -264,14 +272,14 @@ public final class TarInputStream extends InputStream {
         if (this.hasHitEOF)
             return null;
 
-        if (this.currEntry != null) {
+        if (this.currEntry != null) { // always true, currEntry is reused
             long numToSkip = 0;
 
             final long liveBytes = this.entrySize - this.entryOffset;
             if (liveBytes > 0) {
                 numToSkip += liveBytes;
             }
-            final long padding = (this.entryOffset + liveBytes) % DEFAULT_RCDSIZE;
+            final long padding = (this.streamOffset + liveBytes) % DEFAULT_RCDSIZE;
             if (padding > 0) {
                 numToSkip += (DEFAULT_RCDSIZE - padding);
             }

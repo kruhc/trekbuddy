@@ -1283,11 +1283,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
             } finally {
 
                 // close file
-                try {
-                    file.close();
-                } catch (Exception e) { // NPE or IOE
-                    // ignore
-                }
+                File.closeQuietly(file);
             }
 
         } else {
@@ -1426,11 +1422,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
 //#endif
                     status = e;
                 } finally {
-                    try {
-                        f.close();
-                    } catch (Exception e) { // NPE or IOE
-                        // ignore
-                    }
+                    File.closeQuietly(f);
                 }
             }
 
@@ -1594,16 +1586,8 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                 (new WaypointForm(this, wpt, _distance, isModifiable(), isCache())).show();
 
             } finally {
-                try {
-                    parser.close();
-                } catch (Exception e) { // NPE or IOE
-                    // ignore
-                }
-                try {
-                    in.close();
-                } catch (Exception e) { // NPE or IOE
-                    // ignore
-                }
+                HXmlParser.closeQuietly(parser);
+                File.closeQuietly(in);
             }
 
         } catch (Throwable t) {
@@ -1615,11 +1599,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
         } finally {
 
             // close file
-            try {
-                file.close();
-            } catch (Exception e) { // NPE or IOE
-                // ignore
-            }
+            File.closeQuietly(file);
 
             // remove ticker
             cz.kruch.track.ui.nokia.DeviceControl.setTicker(list.getUI(), null);
@@ -1664,11 +1644,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                 Desktop.showConfirmation(Resources.getString(Resources.NAV_MSG_NOTE_ADDED), null);
 
             } finally {
-                try {
-                    out.close();
-                } catch (Exception e) { // NPE or IOE
-                    // ignore
-                }
+                File.closeQuietly(out);
             }
 
         } catch (Throwable t) {
@@ -1680,11 +1656,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
         } finally {
 
             // close file
-            try {
-                file.close();
-            } catch (Exception e) { // NPE or IOE
-                // ignore
-            }
+            File.closeQuietly(file);
         }
     }
 
@@ -1857,6 +1829,12 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
         }
         wpts.addElement(wpt);
 
+        // update active sorted list
+        if (storeKey.equals(sortedName)) {
+            sortedWpts.addElement(wpt);
+            sortWaypoints(null, wpts, true);
+        }
+
         // update navigator if we update store being used
         if (Desktop.wpts != null) {
             if (Desktop.wptsName.equals(storeName)) {
@@ -1952,11 +1930,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
         } finally {
 
             // close dir
-            try {
-                dir.close();
-            } catch (Exception e) { // NPE or IOE
-                // ignore
-            }
+            File.closeQuietly(dir);
         }
     }
 
@@ -2162,6 +2136,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
             } break;
 
             case SORT_BYNAME: {
+
                 // sort using this comparer
                 FileBrowser.sort(sortedWpts.getData(), this, 0, sortedWpts.size() - 1);
 
@@ -2347,16 +2322,8 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
             return result;
 
         } finally {
-            try {
-                parser.close();
-            } catch (Exception e) { // NPE or IOE
-                // ignore
-            }
-            try {
-                in.close();
-            } catch (Exception e) { // NPE or IOE
-                // ignore
-            }
+            HXmlParser.closeQuietly(parser);
+            File.closeQuietly(in);
         }
     }
 

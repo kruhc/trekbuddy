@@ -144,7 +144,8 @@ final class InfoForm implements CommandListener {
                     .append(map.getName())
                     .append("; datum: ").append(map.getDatum())
                     .append("; projection: ").append(map.getProjection())
-                    .append("; tmi? ").append(map.isTmi());
+                    .append("; tmi/tmc? ");
+            map.isTmx(sb);
 //#ifdef __BUILDER__
             sb.append("; checksum: ").append(Integer.toHexString(cz.kruch.track.io.CrcInputStream.getChecksum()));
 //#endif

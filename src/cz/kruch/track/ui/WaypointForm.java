@@ -267,6 +267,7 @@ final class WaypointForm implements CommandListener, ItemCommandListener, ItemSt
     public WaypointForm(final Callback callback, final QualifiedCoordinates pointer,
                         final String session, final int action) {
         this.callback = callback;
+        this.session = session;
         this.coordinates = pointer._clone(); // copy
         this.form = new Form(Resources.getString(Resources.NAV_TITLE_WPT)); // TODO use context 'action'
 

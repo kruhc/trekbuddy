@@ -1578,10 +1578,14 @@ public final class Desktop implements CommandListener,
 
             }
 
-        } else {
+        } else if (Desktop.wptIdx == -1) { /* 2013-04-21: cannot release route when navigating */
 
 /* 2009-01-07: do nothing, showall flag is enough */
 /* 2010-04-08: and what about releasing memory?? and map viewer state?? */
+
+            // no more any wpts
+            Desktop.wpts = null;
+            wptsId = 0;
 
             // notify map view
             views[VIEW_MAP].routeChanged(null, mode);
@@ -1617,14 +1621,12 @@ public final class Desktop implements CommandListener,
         // 'route changed' flag
         boolean rchange = false;
 
-        // gc hint
-        Desktop.wpts = null;
-
         // start navigation?
         if (wpts != null) {
 
             // update state vars
             Desktop.navigating = true;
+            Desktop.wpts = null; // gc hint
             Desktop.wpts = wpts;
             Desktop.wptsName = wptsName;
 
@@ -1674,6 +1676,13 @@ public final class Desktop implements CommandListener,
 
             // set 'route changed' flag
             rchange = true;
+
+            // hack this does not solve different routes for navigation and and showall
+            if (showall) {
+                rchange = false;
+            } else {
+                Desktop.wpts = null;
+            }
         }
 
         int mask = MASK_OSD;
@@ -2584,17 +2593,9 @@ public final class Desktop implements CommandListener,
 //#ifdef __LOG__
             if (log.isEnabled()) log.debug("stopping NMEA tracklog");
 //#endif
-            try {
-                nmeaOut.close();
-            } catch (Exception e) {
-                // ignore
-            }
+            File.closeQuietly(nmeaOut);
             nmeaOut = null;
-            try {
-                tracklogNmea.close();
-            } catch (Exception e) {
-                // ignore
-            }
+            File.closeQuietly(tracklogNmea);
             tracklogNmea = null;
         }
     }
@@ -3281,11 +3282,7 @@ public final class Desktop implements CommandListener,
                 final String url = file.getURL();
 
                 // close file connection
-                try {
-                    file.close();
-                } catch (IOException e) {
-                    // ignore
-                }
+                File.closeQuietly(file);
 
                 // to recover position when new map loaded
                 if (Desktop.this.map != null) {

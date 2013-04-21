@@ -19,7 +19,7 @@ final class TarSlice extends Slice {
         return blockOffset;
     }
 
-    public void setStreamOffset(final int blockOffset) {
+    public void setBlockOffset(final int blockOffset) {
         this.blockOffset = blockOffset;
     }
 }

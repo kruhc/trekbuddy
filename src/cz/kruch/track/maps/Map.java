@@ -17,6 +17,7 @@ import api.io.BufferedInputStream;
 import api.location.QualifiedCoordinates;
 import api.location.Datum;
 import api.location.ProjectionSetup;
+import api.file.File;
 
 import javax.microedition.lcdui.Image;
 
@@ -173,8 +174,10 @@ public final class Map implements Runnable {
         return calibration.isWithin(coordinates);
     }
 
-    public boolean isTmi() {
-        return loader != null && loader.isTmi;
+    public void isTmx(final StringBuffer sb) {
+        if (loader != null) {
+            sb.append(loader.isTmi).append('/').append(loader.isTmc);
+        }
     }
 
     /**
@@ -390,11 +393,6 @@ public final class Map implements Runnable {
         protected static final char[] EXT_PNG = { '.', 'p', 'n', 'g' };
         protected static final char[] EXT_JPG = { '.', 'j', 'p', 'g' };
 
-//#if __SYMBIAN__ || __RIM__ || __ANDROID__ || __CN1__
-        protected static final int BUFFERSIZE = 8192; // more memory available
-//#else
-        protected static final int BUFFERSIZE = 4096; // conservative; also backward compatible
-//#endif
         private BufferedInputStream bufferedIn;
 
         protected Map map;
@@ -403,7 +401,7 @@ public final class Map implements Runnable {
 //#ifdef __SUPPORT_GPSKA__
         protected boolean isGPSka;
 //#endif        
-        protected boolean isTar, isTmi;
+        protected boolean isTar, isTmi, isTmc;
 
         protected int tileWidth, tileHeight;
         protected int scaledTileWidth, scaledTileHeight;
@@ -435,12 +433,21 @@ public final class Map implements Runnable {
                 if (isTar && Config.useNativeService && Map.networkInputStreamAvailable) {
                     bufferedIn = new BufferedInputStream(null, 26280 - 8); // 26280 = 18 * 1460 (MSS) is good for network
                 } else {
-                    bufferedIn = new BufferedInputStream(null, BUFFERSIZE);
+                    bufferedIn = new BufferedInputStream(null, Config.inputBufferSize);
                 }
 //#else
-                bufferedIn = new BufferedInputStream(null, BUFFERSIZE);
+                bufferedIn = new BufferedInputStream(null, Config.inputBufferSize);
 //#endif
             }
+        }
+
+        protected void onLoad() {
+        }
+
+        final protected File getMetaFile(final String ext, final int mode) throws IOException {
+            final String path = map.getPath();
+            final String sibPath = path.substring(0, path.lastIndexOf('.')).concat(ext);
+            return File.open(sibPath, mode);
         }
 
         void dispose(final boolean deep) throws IOException {
@@ -472,6 +479,7 @@ public final class Map implements Runnable {
             }
             scaledTileWidth = prescale(tileWidth);
             scaledTileHeight = prescale(tileHeight);
+            onLoad();
         }
 
         final void magnify(final int x2) {
@@ -512,7 +520,7 @@ public final class Map implements Runnable {
             ss.setRect(sx2x(slice.getX()), sy2y(slice.getY()), tileWidth, tileHeight);
             // for TarLoader
             if (isTar) {
-                ((TarSlice) ss).setStreamOffset(((TarSlice) slice).getBlockOffset());
+                ((TarSlice) ss).setBlockOffset(((TarSlice) slice).getBlockOffset());
             }
             // load slice
             loadSlice(ss);

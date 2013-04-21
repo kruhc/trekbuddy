@@ -219,6 +219,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
     public static boolean tilesScaleFiltered;
     public static boolean verboseLoading;
     public static int heclOpt                   = 1;
+    public static int inputBufferSize           = 4096;
 
     // group [GPX options]
     public static int gpxDt                     = 60; // 1 min
@@ -264,6 +265,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
 
     // runtime (not persisted)
     public static boolean dataDirAccess, dataDirExists;
+    public static boolean filesizeAvail;
     public static String defaultWptSound;
 
 //#ifdef __B2B__
@@ -344,6 +346,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         } else if (cz.kruch.track.TrackingMIDlet.iden) {
             dataDir = getDefaultDataDir("file:///Storage%20Card/", "trekbuddy/");
             safeColors = true;
+            filesizeAvail = true;
         } else if (cz.kruch.track.TrackingMIDlet.motorola || cz.kruch.track.TrackingMIDlet.a780) {
             dataDir = getDefaultDataDir("file:///b/", "trekbuddy/");
             forcedGc = true;
@@ -366,6 +369,12 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
             s40ticker = System.getProperty("com.nokia.mid.ui.layout") != null; // since S40 6th FP1
         }
 
+//#endif
+
+//#if __SYMBIAN__ || __RIM__ || __ANDROID__ || __CN1__
+
+        inputBufferSize = 8192;
+        
 //#endif
 
         int result;
@@ -618,6 +627,9 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
             mobEnabled = din.readBoolean();
             trackPoiMarks = din.readBoolean();
 
+            // 1.2.2 change
+            inputBufferSize = din.readInt();
+
         } catch (Exception e) {
 
             // 1.2.0 fallback
@@ -782,6 +794,9 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         dout.writeBoolean(mobEnabled);
         dout.writeBoolean(trackPoiMarks);
 
+        /* since 1.2.2 */
+        dout.writeInt(inputBufferSize);
+
 //#ifdef __LOG__
         if (log.isEnabled()) log.info("configuration updated");
 //#endif
@@ -803,16 +818,8 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
             e.printStackTrace();
 //#endif
         } finally {
-            try {
-                os.close();
-            } catch (Exception e) { // NPE or IOE
-                // ignore
-            }
-            try {
-                f.close();
-            } catch (Exception e) { // NPE or IOE
-                // ignore
-            }
+            File.closeQuietly(os);
+            File.closeQuietly(f);
         }
     }
 
@@ -854,16 +861,8 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
 //#endif
             throw new ConfigurationException(t);
         } finally {
-            try {
-                din.close();
-            } catch (Exception e) { // NPE or IOE
-                // ignore
-            }
-            try {
-                rs.closeRecordStore();
-            } catch (Exception e) { // NPE or IOE
-                // ignore
-            }
+            File.closeQuietly(din);
+            closeQuietly(rs);
         }
 
         return result;
@@ -884,16 +883,8 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
                 e.printStackTrace();
 //#endif
             } finally {
-                try {
-                    in.close();
-                } catch (Exception e) { // NPE or IOE
-                    // ignore
-                }
-                try {
-                    f.close();
-                } catch (Exception e) { // NPE or IOE
-                    // ignore
-                }
+                File.closeQuietly(in);
+                File.closeQuietly(f);
             }
         }
     }
@@ -933,16 +924,8 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         } catch (Throwable t) {
             throw new ConfigurationException(t);
         } finally {
-            try {
-                dout.close();
-            } catch (Exception e) { // NPE or IOE
-                // ignore
-            }
-            try {
-                rs.closeRecordStore();
-            } catch (Exception e) { // NPE or IOE
-                // ignore
-            }
+            File.closeQuietly(dout);
+            closeQuietly(rs);
         }
 
         if (CONFIG_090.equals(rms) && externalConfigBackup && dataDirExists) {
@@ -967,11 +950,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         } catch (Exception e) { // IOE or SE
             // ignore
         } finally {
-            try {
-                dir.close();
-            } catch (Exception e) { // IOE or NPE
-                // ignore
-            }
+            File.closeQuietly(dir);
         }
     }
 
@@ -1014,11 +993,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
                 cz.kruch.track.ui.Desktop.showError("Failed to create " + getDataDir().substring(8 /* "file:///".length() */),
                                                     e, null);
             } finally {
-                try {
-                    datadir.close();
-                } catch (Exception e) { // NPE or IOE
-                    // ignore
-                }
+                File.closeQuietly(datadir);
             }
         }
         if (dataDirExists) {
@@ -1040,11 +1015,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
                 } catch (Throwable t) {
                     // ignore // TODO really?!?
                 } finally {
-                    try {
-                        dir.close();
-                    } catch (Exception e) { // NPE or IOE
-                        // ignore
-                    }
+                    File.closeQuietly(dir);
                 }
             }
             /* create default files */
@@ -1061,17 +1032,13 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
                         out.write(buffer, 0, c);
                         c = in.read(buffer);
                     }
-                    out.close();
-                    in.close();
+                    File.closeQuietly(out);
+                    File.closeQuietly(in);
                 }
             } catch (Throwable t) { // IOE or SEC
                 // ignore
             } finally {
-                try {
-                    file.close();
-                } catch (Exception e) { // NPE or IOE
-                    // ignore
-                }
+                File.closeQuietly(file);
             }
             /* find default files */
             try {
@@ -1087,11 +1054,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
             } catch (Throwable t) {
                 // ignore
             } finally {
-                try {
-                    dir.close();
-                } catch (Exception e) { // NPE or IOE
-                    // ignore
-                }
+                File.closeQuietly(dir);
             }
         }
     }
@@ -1172,11 +1135,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
             } catch (Throwable t) {
                 // ignore
             } finally {
-                try {
-                    file.close();
-                } catch (Exception e) { // IOE or NPE
-                    // ignore
-                }
+                File.closeQuietly(file);
             }
         }
     }
@@ -1201,11 +1160,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
             // ignore
         } finally {
             // close reader - closes the stream as well
-            try {
-                reader.close();
-            } catch (Exception e) { // NPE or IOE
-                // ignore
-            }
+            LineReader.closeQuietly(reader);
         }
     }
 
@@ -1233,6 +1188,14 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
                 }
             }
         } catch (Throwable t) {
+            // ignore
+        }
+    }
+
+    private static void closeQuietly(final RecordStore rs) {
+        try {
+            rs.closeRecordStore();
+        } catch (Exception e) { // NPE or IOE
             // ignore
         }
     }
@@ -1340,11 +1303,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         } catch (Exception e) {
             // ignore
         } finally {
-            try {
-                dir.close();
-            } catch (Exception e) { // NPE or IOE
-                // ignore
-            }
+            File.closeQuietly(dir);
         }
         return null;
     }

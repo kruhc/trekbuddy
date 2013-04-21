@@ -171,7 +171,7 @@ final class MapView extends View {
 
         // init or clear route
         synchronized (this) { // @threads ?:route
-            mapViewer.initRoute(route, ranges, reset); // route is null when navigation stopped
+            mapViewer.initRoute(route, ranges, reset, mode); // route is null when navigation stopped
         }
 
         return super.routeChanged(wpts, mode);

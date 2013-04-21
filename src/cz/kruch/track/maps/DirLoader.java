@@ -5,7 +5,6 @@ package cz.kruch.track.maps;
 import cz.kruch.track.Resources;
 import cz.kruch.track.util.CharArrayTokenizer;
 import cz.kruch.track.io.LineReader;
-import cz.kruch.track.ui.NavigationScreens;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -15,7 +14,6 @@ import java.util.Hashtable;
 import api.file.File;
 
 import javax.microedition.io.Connector;
-import javax.microedition.lcdui.Image;
 
 final class DirLoader extends Map.Loader /*implements Atlas.Loader*/ {
 
@@ -100,8 +98,9 @@ final class DirLoader extends Map.Loader /*implements Atlas.Loader*/ {
             File file = null;
             try {
                 // check for .set file
-                final String setFile = path.substring(0, path.lastIndexOf('.')) + ".set";
-                file = File.open(setFile);
+//                final String setFile = path.substring(0, path.lastIndexOf('.')) + ".set";
+//                file = File.open(setFile);
+                file = getMetaFile(".set", Connector.READ);
                 if (file.exists()) {
                     LineReader reader = null;
                     try {
@@ -119,23 +118,14 @@ final class DirLoader extends Map.Loader /*implements Atlas.Loader*/ {
                         throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_PARSE_SET_FAILED), e);
                     } finally {
                         // close reader
-                        try {
-                            reader.close();
-                        } catch (Exception e) { // NPE or IOE
-                            // ignore
-                        }
+                        LineReader.closeQuietly(reader);
                     }
                 } else {
-                    throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_NO_SET_FILE) + setFile);
+                    throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_NO_SET_FILE) + file.getPath());
                 }
             } finally {
-
                 // close file
-                try {
-                    file.close();
-                } catch (Exception e) { // NPE or IOE
-                    // ignore
-                }
+                File.closeQuietly(file);
             }
         }
     }
@@ -238,11 +228,7 @@ final class DirLoader extends Map.Loader /*implements Atlas.Loader*/ {
                                             calibration = Calibration.newInstance(in = Connector.openInputStream(path),
                                                                                   path, path);
                                         } finally {
-                                            try {
-                                                in.close();
-                                            } catch (Exception e) { // NPE or IOE
-                                                // ignore
-                                            }
+                                            File.closeQuietly(in);
                                         }
 
                                         // found calibration
@@ -273,11 +259,7 @@ final class DirLoader extends Map.Loader /*implements Atlas.Loader*/ {
         } finally {
 
             // close file
-            try {
-                file.close();
-            } catch (Exception e) { // NPE or IOE
-                // ignore
-            }
+            File.closeQuietly(file);
         }
     }
 }

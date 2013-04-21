@@ -127,11 +127,7 @@ public final class HXmlParser implements XmlPullParser {
         this.elementStack = new String[16];
         this.nspStack = new String[8];
         this.nspCounts = new int[4];
-//#if __SYMBIAN__ || __RIM__ || __ANDROID__ || __CN1__
-        this.srcBuf = new char[8192];
-//#else
-        this.srcBuf = new char[4096];
-//#endif
+        this.srcBuf = new char[cz.kruch.track.configuration.Config.inputBufferSize];
         this.txtBuf = new char[this.txtLen = 1024];
         this.attributes = new String[32];
         this.hash = new Int(0);
@@ -1897,5 +1893,13 @@ public final class HXmlParser implements XmlPullParser {
         }
         offset = elementOffset = (int) n; // this is probably bug - should be ... += n
         return n;
+    }
+
+    public static void closeQuietly(final HXmlParser parser) {
+        try {
+            parser.close();
+        } catch (Exception e) {
+            // ignore
+        }
     }
 }

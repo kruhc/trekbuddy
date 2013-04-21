@@ -445,6 +445,20 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
             choice2.setSelectedIndex(Config.heclOpt, true);
             submenu.append(choice2);
 
+            // I/O read buffer size
+            choice3 = new ChoiceGroup("Read buffer size", Desktop.CHOICE_POPUP_TYPE);
+            choice3.append("4K", null);
+            choice3.append("8K", null);
+            choice3.append("16K", null);
+            choice3.append("32K", null);
+            int ibs = (Config.inputBufferSize / 4096) >> 1, ibsi = 0;
+            while (ibs > 0) {
+                ibs >>= 1;
+                ibsi++;
+            }
+            choice3.setSelectedIndex(ibsi, true);
+            submenu.append(choice3);
+
             // capture device and format
             if (cz.kruch.track.TrackingMIDlet.supportsVideoCapture()) {
 //#ifndef __ANDROID__
@@ -1036,6 +1050,9 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
 
                 // HECL
                 Config.heclOpt = choice2.getSelectedIndex();
+
+                // I/O read buffer size
+                Config.inputBufferSize = 4096 << choice3.getSelectedIndex();
 
                 // multimedia
                 if (cz.kruch.track.TrackingMIDlet.supportsVideoCapture()) {

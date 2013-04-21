@@ -144,11 +144,7 @@ public final class FileBrowser implements CommandListener, Runnable, Comparator 
 
                     // close existing fc
                     if (file != null) {
-                        try {
-                            file.close();
-                        } catch (IOException e) {
-                            // ignore
-                        }
+                        File.closeQuietly(file);
                         file = null; // gc hint
                     }
 

@@ -92,11 +92,7 @@ final class J2NCalibration extends Calibration {
         } catch (Exception e) {
             throw new InvalidMapException(e.toString());
         } finally {
-            try {
-                parser.close();
-            } catch (IOException e) {
-                // ignore
-            }
+            HXmlParser.closeQuietly(parser);
         }
 
         // gc hint

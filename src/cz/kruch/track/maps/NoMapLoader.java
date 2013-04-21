@@ -15,6 +15,7 @@ import api.io.BufferedInputStream;
 import api.location.Datum;
 import api.location.ProjectionSetup;
 import api.location.QualifiedCoordinates;
+import api.file.File;
 
 import javax.microedition.io.Connector;
 
@@ -91,16 +92,8 @@ final class NoMapLoader extends Map.Loader /*implements Atlas.Loader*/ {
             throw new IOException(e.toString());
 
         } finally {
-            try {
-                parser.close();
-            } catch (Exception e) { // NPE or IOE
-                // ignore
-            }
-            try {
-                in.close();
-            } catch (Exception e) { // NPE or IOE
-                // ignore
-            }
+            HXmlParser.closeQuietly(parser);
+            File.closeQuietly(in);
         }
     }
 

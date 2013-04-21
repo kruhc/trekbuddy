@@ -170,20 +170,10 @@ public final class SimulatorLocationProvider
         } finally {
 
             // close the stream
-            if (in != null) {
-                try {
-                    in.close();
-                } catch (IOException e) {
-                    // ignore
-                }
-            }
-            
+            File.closeQuietly(in);
+
             // close file connection
-            try {
-                file.close();
-            } catch (Exception e) {
-                // ignore
-            }
+            File.closeQuietly(file);
             file = null; // gc hint
 
             // zombie

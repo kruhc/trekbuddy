@@ -646,11 +646,7 @@ public final class PluginManager implements CommandListener, Runnable, Comparato
         } catch (Throwable t) {
             // ignore
         } finally {
-            try {
-                dir.close();
-            } catch (Exception e) { // NPE or IOE
-                // ignore
-            }
+            File.closeQuietly(dir);
         }
 
         // found anything

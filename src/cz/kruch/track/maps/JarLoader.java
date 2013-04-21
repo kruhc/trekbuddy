@@ -6,9 +6,10 @@ import cz.kruch.track.io.LineReader;
 import cz.kruch.track.Resources;
 import cz.kruch.track.util.CharArrayTokenizer;
 
-import javax.microedition.lcdui.Image;
 import java.io.IOException;
 import java.io.InputStream;
+
+import api.file.File;
 
 final class JarLoader extends Map.Loader /*implements Atlas.Loader*/ {
     private static final String DEFAULT_OZI_MAP = "/resources/world.map";
@@ -67,16 +68,8 @@ final class JarLoader extends Map.Loader /*implements Atlas.Loader*/ {
 
             // check for Palm - it resets it :-(
             if (!cz.kruch.track.TrackingMIDlet.palm) {
-                try {
-                    in.close();
-                } catch (Exception e) { // NPE or IOE
-                    // ignore
-                }
-                try {
-                    reader.close();
-                } catch (Exception e) { // NPE or IOE
-                    // ignore
-                }
+                File.closeQuietly(in);
+                LineReader.closeQuietly(reader);
             }
         }
     }

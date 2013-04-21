@@ -485,11 +485,7 @@ public final class Resources {
                 t.printStackTrace();
 //#endif
             } finally {
-                try {
-                    file.close();
-                } catch (Exception e) { // IOE or NPE
-                    // ignore
-                }
+                api.file.File.closeQuietly(file);
 //#ifndef __B2B__
                 if (b2b_RejectRes(userIds)) {
                     userIds = null;
@@ -535,21 +531,11 @@ public final class Resources {
                             token = reader.readToken(false);
                         }
                     } finally {
-                        if (reader != null) {
-                            try {
-                                reader.close();
-                            } catch (IOException e) {
-                                // ignore
-                            }
-                        }
+                        LineReader.closeQuietly(reader);
                     }
                 }
             } finally {
-                try {
-                    file.close();
-                } catch (Exception e) { // IOE or NPE
-                    // ignore
-                }
+                api.file.File.closeQuietly(file);
             }
         }
 
@@ -621,11 +607,7 @@ public final class Resources {
             } catch (EOFException e) {
                 // end of stream
             } finally {
-                try {
-                    resin.close();
-                } catch (IOException e) {
-                    // ignore
-                }
+                api.file.File.closeQuietly(resin);
             }
         }
     }

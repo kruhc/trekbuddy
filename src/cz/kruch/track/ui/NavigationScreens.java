@@ -291,20 +291,12 @@ public final class NavigationScreens {
                     image = Image.createImage(in = new BufferedInputStream(file.openInputStream(), 4096));
                 } finally {
                     if (in != null) {
-                        try {
-                            in.close();
-                        } catch (IOException e) {
-                            // ignore
-                        }
+                        File.closeQuietly(in);
                     }
                 }
             }
         } finally {
-            try {
-                file.close();
-            } catch (Exception e) { // IOE or NPE
-                // ignore
-            }
+            File.closeQuietly(file);
         }
 
         return image;

@@ -339,14 +339,8 @@ public final class GpxTracklog implements Runnable {
         }
 
         // close file
-        if (file != null) {
-            try {
-                file.close();
-            } catch (Exception e) {
-                // ignore
-            }
-            file = null; // gc hint
-        }
+        File.closeQuietly(file);
+        file = null; // gc hint
     }
 
     public void run() {

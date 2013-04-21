@@ -115,11 +115,7 @@ public class ControlledInterp extends Interp {
             }
         } finally {
             // close dir
-            try {
-                dir.close();
-            } catch (Exception e) { // IOE or NPE
-                // ignore
-            }
+            File.closeQuietly(dir);
         }
     }
 

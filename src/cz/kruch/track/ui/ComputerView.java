@@ -1950,13 +1950,7 @@ final class ComputerView extends View
                         result = loadFont(in, file.fileSize());
                     }
                 } finally {
-                    if (in != null) {
-                        try {
-                            in.close();
-                        } catch (IOException e) {
-                            // ignore
-                        }
-                    }
+                    File.closeQuietly(in);
                 }
 //#ifdef __LOG__
             } else {
@@ -1969,11 +1963,7 @@ final class ComputerView extends View
             t.printStackTrace();
 //#endif
         } finally {
-            try {
-                file.close();
-            } catch (Exception e) { // IOE or NPE
-                // ignore
-            }
+            File.closeQuietly(file);
         }
 
         return result;
@@ -2016,11 +2006,7 @@ final class ComputerView extends View
             }
         } finally {
             // close dir
-            try {
-                dir.close();
-            } catch (Exception e) { // IOE or NPE
-                // ignore
-            }
+            File.closeQuietly(dir);
         }
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("~find profiles; " + profiles.size());
@@ -2142,11 +2128,7 @@ final class ComputerView extends View
                  }
              }
          } finally {
-             try {
-                 parser.close();
-             } catch (IOException e) {
-                 // ignore
-             }
+             HXmlParser.closeQuietly(parser);
          }
 
          return filename;

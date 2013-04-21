@@ -477,7 +477,8 @@ final class MapViewer {
         return dirty;
     }
 
-    void initRoute(final Position[] positions, final NakedVector ranges, final boolean reset) {
+    void initRoute(final Position[] positions, final NakedVector ranges,
+                   final boolean reset, final int mode) {
         /* synchronized to avoid race condition with render() */
         synchronized (this) { // @threads ?:wpt*
             this.wptPositions = null;
@@ -485,7 +486,9 @@ final class MapViewer {
             this.trkRanges = null;
             if (positions != null) {
                 this.wptPositions = positions;
-                this.wptStatuses = new byte[positions.length];
+                if (mode == 1) { // navigation
+                    this.wptStatuses = new byte[positions.length];
+                }
             }
             if (ranges != null) {
                 this.trkRanges = ranges;
@@ -907,7 +910,7 @@ final class MapViewer {
         if (Desktop.routeDir != 0 || Desktop.showall) {
             for (int i = eop; --i >= 0; ) {
                 if (positions[i] != null) {
-                    byte status = statuses[i];
+                    byte status = statuses != null ? statuses[i] : WPT_STATUS_VOID; // statuses are null when showAll
                     if (status == WPT_STATUS_VOID) {
                         if (i < wptIdx) {
                             status = WPT_STATUS_MISSED;

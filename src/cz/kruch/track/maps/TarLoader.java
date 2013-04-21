@@ -3,9 +3,13 @@
 package cz.kruch.track.maps;
 
 import api.file.File;
+import api.io.BufferedOutputStream;
+import api.io.BufferedInputStream;
 
 import java.io.InputStream;
 import java.io.IOException;
+import java.io.DataOutputStream;
+import java.io.DataInputStream;
 
 import com.ice.tar.TarInputStream;
 import com.ice.tar.TarEntry;
@@ -15,10 +19,30 @@ import cz.kruch.track.configuration.Config;
 import cz.kruch.track.io.LineReader;
 import cz.kruch.track.util.CharArrayTokenizer;
 
-import javax.microedition.lcdui.Image;
+import javax.microedition.io.Connector;
 
 /**
  * Packed map and atlas support.
+ * <p>
+ * Binary index (.tmc) format:
+ * <pre>
+ * signature:=int
+ * version:=int
+ * mapName:=String
+ * mapCalibration:=String (can be empty)
+ * mapCalibrationOffset:=int
+ * mapWidth:=int
+ * mapHeight:=int
+ * tileWidth:=int
+ * tileHeight:=int
+ * numberOfTiles:=int
+ * N*tileInfo:={
+ *   x:=int
+ *   y:=int
+ *   offset:=int
+ * }
+ * </pre>
+ * </p>
  *
  * @author kruhc@seznam.cz
  */
@@ -56,7 +80,7 @@ final class TarLoader extends Map.Loader /*implements Atlas.Loader*/ {
         for (int i = numberOfPointers; --i >= 0; ) {
             final long pointer = pointers[i];
             if (((pointer & 0x000000ffffffffffL) ^ xy) == 0) {
-                ((TarSlice) slice).setStreamOffset((int)(pointer >> 40));
+                ((TarSlice) slice).setBlockOffset((int)(pointer >> 40));
                 break;
             }
         }
@@ -165,6 +189,9 @@ final class TarLoader extends Map.Loader /*implements Atlas.Loader*/ {
 
             // try tar metainfo file first
             if (pointers == null) {
+                loadTmc(map);
+            }
+            if (pointers == null) {
                 loadTmi(map);
             }
 
@@ -220,6 +247,10 @@ final class TarLoader extends Map.Loader /*implements Atlas.Loader*/ {
 //#endif
                             // try this root entry as a calibration
                             map.setCalibration(Calibration.newInstance(tarIn, path, entryName.toString()));
+
+                            // remember
+                            calEntryName = entryName.toString();
+                            calBlockOffset = (int)(entry.getPosition() / TarInputStream.DEFAULT_RCDSIZE);
 
                             // skip the rest if we already have them
                             if (gotSlices && getMapCalibration() != null) {
@@ -282,6 +313,14 @@ final class TarLoader extends Map.Loader /*implements Atlas.Loader*/ {
 */
     }
 
+    /** @Override */
+    protected void onLoad() {
+        // create binary index
+        if (!isTmc) {
+            saveTmc();
+        }
+    }
+
     void dispose(final boolean deep) throws IOException {
         // release pointers when deep
         if (deep) {
@@ -307,21 +346,16 @@ final class TarLoader extends Map.Loader /*implements Atlas.Loader*/ {
 //#ifdef __LOG__
             if (log.isEnabled()) log.debug("closing native stream");
 //#endif
-            try {
-                nativeIn.close();
-            } catch (IOException e) {
-                // ignore
-            }
+            File.closeQuietly(nativeIn);
             nativeIn = null; // gc hint
         }
 
         // close file
         if (nativeFile != null) {
-            try {
-                nativeFile.close();
-            } catch (IOException e) {
-                // ignore
-            }
+//#ifdef __LOG__
+            if (log.isEnabled()) log.debug("closing native file");
+//#endif
+            File.closeQuietly(nativeFile);
             nativeFile = null; // gc hint
         }
 
@@ -330,17 +364,18 @@ final class TarLoader extends Map.Loader /*implements Atlas.Loader*/ {
     }
 
     void loadSlice(final Slice slice) throws IOException {
-        // slice entry stream offset
-        final int streamOffset = ((TarSlice) slice).getBlockOffset() * TarInputStream.DEFAULT_RCDSIZE;
+        
+        // slice entry block offset
+        final long blockOffset = ((TarSlice) slice).getBlockOffset();
 
         // slice exists in the archive
-        if (streamOffset >= 0) {
-
-            // input stream
-            InputStream in = null;
+        if (blockOffset >= 0) {
 
             // local ref
             final TarInputStream tarIn = this.tarIn;
+
+            // stream offset
+            final long streamOffset = blockOffset << 9 ; // * TarInputStream.DEFAULT_RCDSIZE;
 
 /*
             try {
@@ -512,18 +547,122 @@ final class TarLoader extends Map.Loader /*implements Atlas.Loader*/ {
             }
 
             // close input stream
+            File.closeQuietly(in);
+
+            // close native file
+            File.closeQuietly(file);
+        }
+    }
+
+    private void loadTmc(final Map map) throws IOException {
+        // var
+        File file = null;
+
+        try {
+            // check for .tmc existence
+            file = getMetaFile(".tmc", Connector.READ);
+            if (file.exists()) {
+//#ifdef __LOG__
+                if (log.isEnabled()) log.debug("gonna use tmc");
+//#endif
+                // load binary meta
+                DataInputStream dai = null;
+                try {
+                    // read meta
+                    dai = new DataInputStream(new BufferedInputStream(file.openInputStream(), 4096));
+                    dai.readInt(); // signature
+                    dai.readInt(); // version
+                    calEntryName = dai.readUTF();
+                    calBlockOffset = dai.readInt();
+                    dai.readUTF(); // map calibration
+                    dai.readInt(); // map width
+                    dai.readInt(); // map height
+                    tileWidth = dai.readInt();
+                    tileHeight = dai.readInt();
+                    final int N = dai.readInt();
+                    final long[] pointers = new long[N];
+                    for (int i = 0; i < N; i++) {
+                        final long x = dai.readInt();
+                        final long y = dai.readInt();
+                        final long block = dai.readInt();
+                        pointers[i] = block << 40 | x << 20 | y;
+                    }
+
+                    // got pointers
+                    this.numberOfPointers = N;
+                    this.pointers = pointers;
+
+                    // tmc used
+                    isTmc = true;
+                    
+                } catch (Exception e) {
+                    throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_PARSE_SET_FAILED), e);
+                } finally {
+                    // close stream
+                    File.closeQuietly(dai);
+                }
+            }
+
+        } finally {
+
+            // close file
+            File.closeQuietly(file);
+        }
+    }
+
+    private void saveTmc() {
+        // local ref
+        final Map map = this.map;
+
+        // var
+        File file = null;
+        DataOutputStream dao = null;
+
+        try {
+            // create .tmc
+            file = getMetaFile(".tmc", Connector.READ_WRITE);
+            file.create();
+
+            // serialize meta
+            dao = new DataOutputStream(new BufferedOutputStream(file.openOutputStream(), 4096, true));
+            dao.writeInt(0xEB4D4910);
+            dao.writeInt(1);
+            dao.writeUTF(calEntryName);
+            dao.writeInt(calBlockOffset);
+            dao.writeUTF("");
+            dao.writeInt(map.getWidth());
+            dao.writeInt(map.getHeight());
+            dao.writeInt(tileWidth);
+            dao.writeInt(tileHeight);
+            dao.writeInt(numberOfPointers);
+            final int N = numberOfPointers;
+            final long[] pointers = this.pointers;
+            for (int i = 0; i < N; i++) {
+                final long l = pointers[i];
+                final int block = (int) (l >> 40);
+                final int x = (int) ((l >> 20) & 0xfffff);
+                final int y = (int) (l & 0xfffff);
+                dao.writeInt(x);
+                dao.writeInt(y);
+                dao.writeInt(block);
+            }
+
+        } catch (Exception e) {
+
+            // delete trash
             try {
-                in.close();
-            } catch (Exception e) { // NPE or IOE
+                file.delete();
+            } catch (Exception exc) { // NPE or IOE or SE
                 // ignore
             }
 
-            // close native file
-            try {
-                file.close();
-            } catch (Exception e) { // NPE or IOE
-                // ignore
-            }
+        } finally {
+
+            // close stream
+            File.closeQuietly(dao);
+
+            // close file
+            File.closeQuietly(file);
         }
     }
 
@@ -533,12 +672,13 @@ final class TarLoader extends Map.Loader /*implements Atlas.Loader*/ {
 
         try {
             // check for .tmi existence
-            final String path = map.getPath();
-            final String tmiPath = path.substring(0, path.lastIndexOf('.')) + ".tmi";
-            file = File.open(tmiPath);
+//            final String path = map.getPath();
+//            final String tmiPath = path.substring(0, path.lastIndexOf('.')) + ".tmi";
+//            file = File.open(tmiPath);
+            file = getMetaFile(".tmi", Connector.READ);
             if (file.exists()) {
 //#ifdef __LOG__
-                if (log.isEnabled()) log.debug("gonna use " + tmiPath);
+                if (log.isEnabled()) log.debug("gonna use tmi");
 //#endif
                 // helper member
                 hintTmiFileSize = (int) file.fileSize();
@@ -595,33 +735,21 @@ final class TarLoader extends Map.Loader /*implements Atlas.Loader*/ {
 
                     // tmi used
                     isTmi = true;
-                    
+
                 } catch (InvalidMapException e) {
                     throw e;
                 } catch (Exception e) {
                     throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_PARSE_SET_FAILED), e);
                 } finally {
-
                     // close reader
-                    try {
-                        reader.close();
-                    } catch (Exception e) { // NPE or IOE
-                        // ignore
-                    }
-//#ifdef __LOG__
-                    if (log.isEnabled()) log.debug("tmi utilized: " + tmiPath);
-//#endif
+                    LineReader.closeQuietly(reader);
                 }
             }
 
         } finally {
 
             // close file
-            try {
-                file.close();
-            } catch (Exception e) { // NPE or IOE
-                // ignore
-            }
+            File.closeQuietly(file);
         }
     }
 

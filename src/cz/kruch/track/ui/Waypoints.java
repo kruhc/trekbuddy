@@ -1952,7 +1952,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
 
         // add commands
         l.setSelectCommand(cmdOpen);
-        if (title == actionListWpts || title == actionListTracks || title.startsWith(actionListWpts)) { // == is OK
+        if (title == actionListWpts || title == actionListTracks || title.startsWith(actionListWpts) || title.startsWith(actionListTracks)) { // == is OK
             l.addCommand(cmdBack);
         } else if (title == actionListTargets) { // == is OK
             l.addCommand(cmdCancel);

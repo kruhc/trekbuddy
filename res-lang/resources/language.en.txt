@@ -381,7 +381,7 @@
 3803=forced GC
 3804=1-tile scroll
 3805=large atlases
-3806=power save
+3806=less vibrations
 3807=reliable input
 #REMOVED 3808=hide menubar cmd 
 3809=use native service

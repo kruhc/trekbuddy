@@ -281,7 +281,7 @@ public final class GroundspeakBean {
         }
 
         public String getText() {
-//#if __SYMBIAN__ || __RIM__ || __ANDROID__
+//#if __SYMBIAN__ || __RIM__ || __ANDROID__ || __CN1__
             return text;
 //#else
             return objectToString(text);
@@ -289,7 +289,7 @@ public final class GroundspeakBean {
         }
 
         public void setText(String text) {
-//#if __SYMBIAN__ || __RIM__ || __ANDROID__
+//#if __SYMBIAN__ || __RIM__ || __ANDROID__ || __CN1__
             this.text = text;
 //#else
             this.text = stringToObject(text);

@@ -79,6 +79,8 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         sonyEricsson = System.getProperty("com.sonyericsson.imei") != null;
         sonyEricssonEx = sonyEricsson || platform.startsWith("SonyEricsson");
         symbian = true;
+//#elifdef __CN1__
+        // nothing to detect
 //#else
         nokia = platform.startsWith("Nokia");
         sonyEricsson = System.getProperty("com.sonyericsson.imei") != null;
@@ -101,6 +103,8 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
 
 //#ifndef __ANDROID__
 
+//#ifndef __CN1__
+
         // detect runtime capabilities
         jsr82 = forName("bluetooth.api.version", "javax.bluetooth.DiscoveryAgent", "* JSR-82");
         jsr120 = forName("wireless.messaging.version", "javax.wireless.messaging.TextMessage", "* JSR-120");
@@ -120,6 +124,13 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         jsr256 = forName(null, "javax.microedition.sensor.SensorManager", "* JSR-256");
         comm = forName(null, "javax.microedition.io.CommConnection", "* CommConnection");
 */
+
+//#else /* __CN1__ */
+
+        // detect runtime capabilities
+        jsr179 = true;
+
+//#endif /* __CN1__ */ 
 
 //#else /* __ANDROID__ */
 
@@ -206,13 +217,19 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         // initial launch?
         if (state == 0) {
             state = 1;
+//#ifndef __CN1__
             (new Thread(this)).start();
+//#else
+            run();
+//#endif
         } else { // resumed from background
             state = 1;
 //#ifdef __ANDROID__
             if (desktop != null) {
                 desktop.onForeground();
             }
+//#elifdef __CN1__
+            cz.kruch.track.ui.Desktop.display.setCurrent(cz.kruch.track.ui.Desktop.display.getCurrent());
 //#endif
         }
     }

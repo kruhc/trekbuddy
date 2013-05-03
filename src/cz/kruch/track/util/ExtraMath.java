@@ -20,6 +20,10 @@ public final class ExtraMath {
     private ExtraMath() {
     }
 
+    public static int prescale(final float scale, final int i) {
+        return round((scale / 100) * i);
+    }
+
     public static int grade(final double d) {
         int i = 1;
         while ((d / i) >= 10) {

@@ -2281,7 +2281,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
         return -1;
     }
 
-//#if __SYMBIAN__ || __RIM__ || __ANDROID__
+//#if __SYMBIAN__ || __RIM__ || __ANDROID__ || __CN1__
     private static final int BUFFERSIZE = 16384; // more memory available
 //#else
     private static final int BUFFERSIZE = 8192; // conservative; also backward compatible

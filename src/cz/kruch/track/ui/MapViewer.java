@@ -439,7 +439,7 @@ final class MapViewer {
                 throw new IllegalArgumentException("Internal error - weird direction");
         }
 
-//#if __SYMBIAN__ || __RIM__ || __ANDROID__
+//#if __SYMBIAN__ || __RIM__ || __ANDROID__ || __CN1__
         getPosition();
         if (Math.abs(sy - position.getY()) >= mHeight * 0.05) {
             sy = position.getY();

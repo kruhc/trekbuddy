@@ -283,7 +283,8 @@ public final class ImageUtils {
 
 //#ifdef __RIM50__
 
-    public static Image RIMresizeImage(java.io.InputStream stream, int prescale, int x2) throws IOException {
+    public static Image RIMresizeImage(final java.io.InputStream stream,
+                                       final float prescale, final int x2) throws IOException {
 
 /*
         api.io.NakedByteArrayOutputStream baos = new api.io.NakedByteArrayOutputStream(8192);
@@ -336,8 +337,8 @@ public final class ImageUtils {
         image.setDecodeMode(EncodedImage.DECODE_READONLY | EncodedImage.DECODE_NO_DITHER /* | EncodedImage.DECODE_NATIVE*/);
         Bitmap bitmap = image.getBitmap();
         image = null; // gc hint
-        final int destW = prescale(prescale, bitmap.getWidth()) << x2;
-        final int destH = prescale(prescale, bitmap.getHeight()) << x2;
+        final int destW = ExtraMath.prescale(prescale, bitmap.getWidth()) << x2;
+        final int destH = ExtraMath.prescale(prescale, bitmap.getHeight()) << x2;
         Bitmap scaled = new Bitmap(destW, destH);
         bitmap.scaleInto(scaled, Config.tilesScaleFiltered ? Bitmap.FILTER_BILINEAR
                                                            : Bitmap.FILTER_BOX,
@@ -348,10 +349,6 @@ public final class ImageUtils {
         scaled = null; // gc hint
 
         return Image.createRGBImage(rgb, destW, destH, false);
-    }
-
-    private static int prescale(final int ps, final int i) {
-        return (i * ps) / 100;
     }
 
 //#endif

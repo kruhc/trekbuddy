@@ -63,10 +63,12 @@ abstract class Calibration {
     private Position proximite;
 
     // prescale and magnifier
-    private int prescale, x2;
+    private int iprescale, x2;
+    private float fprescale;
 
     protected Calibration() {
-        this.prescale = Config.prescale;
+        this.iprescale = Config.prescale;
+        this.fprescale = Config.prescale;
     }
 
     protected final void init(final String path) {
@@ -288,15 +290,18 @@ abstract class Calibration {
     }
 
     private int prescale(final int i) {
-        if (prescale == 100) {
+        if (iprescale == 100) {
             return i;
         }
+/*
         final float k = ((float) prescale) / 100;
         return ExtraMath.round(k * i);
+*/
+        return ExtraMath.prescale(fprescale, i);
     }
 
     private Vector prescale(final Vector xy) {
-        if (prescale == 100) {
+        if (iprescale == 100) {
             return xy;
         }
         final Vector result = new Vector(xy.size());

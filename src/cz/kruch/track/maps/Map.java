@@ -11,6 +11,7 @@ import cz.kruch.track.ui.Position;
 import cz.kruch.track.ui.Desktop;
 import cz.kruch.track.util.CharArrayTokenizer;
 import cz.kruch.track.util.ImageUtils;
+import cz.kruch.track.util.ExtraMath;
 import cz.kruch.track.Resources;
 
 import api.io.BufferedInputStream;
@@ -404,8 +405,9 @@ public final class Map implements Runnable {
         protected boolean isTar, isTmi, isTmc;
 
         protected int tileWidth, tileHeight;
+        protected int x2, iprescale;
         protected int scaledTileWidth, scaledTileHeight;
-        protected int x2, prescale;
+        protected float fprescale;
 
         private Vector _list;
 
@@ -416,7 +418,8 @@ public final class Map implements Runnable {
         Loader() {
             this.tileWidth = this.tileHeight = Integer.MAX_VALUE;
             this.scaledTileWidth = this.scaledTileHeight = Integer.MAX_VALUE;
-            this.prescale = Config.prescale;
+            this.iprescale = Config.prescale;
+            this.fprescale = Config.prescale;
 //            ((api.io.BufferedInputStream) bufferef()).setAutofill(true, -1);
         }
 
@@ -516,7 +519,7 @@ public final class Map implements Runnable {
         final void loadScaledSlice(final Slice slice) throws IOException {
             // temp slice
             final Slice ss = newSlice();
-            // for Jar- or DirLoader
+            // required for JarLoader or DirLoader
             ss.setRect(sx2x(slice.getX()), sy2y(slice.getY()), tileWidth, tileHeight);
             // for TarLoader
             if (isTar) {
@@ -529,11 +532,11 @@ public final class Map implements Runnable {
         }
 
         final Image scaleImage(final InputStream stream) throws IOException {
-            if (x2 == 0 && prescale == 100) {
+            if (x2 == 0 && iprescale == 100) {
                 return Image.createImage(stream);
             }
 //#ifdef __RIM50__
-            return ImageUtils.RIMresizeImage(stream, prescale, x2);
+            return ImageUtils.RIMresizeImage(stream, fprescale, x2);
 //#else
             final Image image = Image.createImage(stream);
             return ImageUtils.resizeImage(image,
@@ -697,11 +700,10 @@ public final class Map implements Runnable {
         }
 
         private int prescale(final int i) {
-            final int ps = prescale;
-            if (ps == 100) {
+            if (iprescale == 100) {
                 return i;
             }
-            return (i * ps) / 100;
+            return ExtraMath.prescale(fprescale, i);
         }
 
         private Throwable loadImages(final Vector slices) {

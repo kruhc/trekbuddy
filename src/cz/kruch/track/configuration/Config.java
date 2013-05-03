@@ -1024,7 +1024,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
                 file = File.open(Config.getFileURL(Config.FOLDER_MAPS, "no-map.xml"), Connector.READ_WRITE);
                 if (!file.exists()) {
                     file.create();
-                    final InputStream in = Config.class.getResourceAsStream(NO_MAP_RESOURCE);
+                    final InputStream in = getResourceAsStream(NO_MAP_RESOURCE);
                     final OutputStream out = file.openOutputStream();
                     final byte[] buffer = new byte[256];
                     int c = in.read(buffer);
@@ -1111,7 +1111,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
 
         // first try built-in
         try {
-            initDatums(Config.class.getResourceAsStream("/resources/datums.txt"), tokenizer, delims);
+            initDatums(getResourceAsStream("/resources/datums.txt"), tokenizer, delims);
         } catch (Throwable t) {
             // ignore
         }
@@ -1310,6 +1310,17 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
 
     public static boolean resourceExist(final Vector resources, final String name) {
         return rss > 0;
+    }
+
+    private static InputStream getResourceAsStream(String resource) {
+//#ifndef __CN1__
+        return Config.class.getResourceAsStream(resource);
+//#else
+        if (resource.startsWith("/resources/")) {
+            resource = resource.substring("/resources".length());
+        }
+        return com.codename1.ui.Display.getInstance().getResourceAsStream(Config.class, resource);
+//#endif
     }
 
     /* The variant bellow is too dangerous for now */

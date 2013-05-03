@@ -36,10 +36,10 @@ final class JarLoader extends Map.Loader /*implements Atlas.Loader*/ {
 
         try {
             // look for Ozi calibration first
-            in = JarLoader.class.getResourceAsStream(path = DEFAULT_OZI_MAP);
+            in = getResourceAsStream(path = DEFAULT_OZI_MAP);
             if (in == null) {
                 // look for GMI then
-                in = JarLoader.class.getResourceAsStream(path = DEFAULT_GMI_MAP);
+                in = getResourceAsStream(path = DEFAULT_GMI_MAP);
                 if (in == null) {
                     // we are screwed
                     throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_LOAD_MAP_FAILED));
@@ -50,7 +50,7 @@ final class JarLoader extends Map.Loader /*implements Atlas.Loader*/ {
             map.setCalibration(Calibration.newInstance(in, path, path));
 
             // parse tileset file
-            reader = new LineReader(JarLoader.class.getResourceAsStream(RESOURCES_SET_FILE));
+            reader = new LineReader(getResourceAsStream(RESOURCES_SET_FILE));
             CharArrayTokenizer.Token token = reader.readToken(false);
             while (token != null) {
                 addSlice(token);
@@ -104,7 +104,7 @@ final class JarLoader extends Map.Loader /*implements Atlas.Loader*/ {
         try {
 
             // read image
-            slice.setImage(scaleImage(buffered(JarLoader.class.getResourceAsStream(url))));
+            slice.setImage(scaleImage(buffered(getResourceAsStream(url))));
 
         } finally {
 
@@ -126,6 +126,19 @@ final class JarLoader extends Map.Loader /*implements Atlas.Loader*/ {
 
     void loadIndex(Atlas atlas, String url, String baseUrl) throws IOException {
         throw new IllegalStateException("Not supported");
+    }
+
+    private static InputStream getResourceAsStream(String resource) {
+//#ifndef __CN1__
+        return JarLoader.class.getResourceAsStream(resource);
+//#else
+        if (resource.startsWith("/resources/set/")) {
+            resource = resource.substring("/resources/set".length());
+        } else if (resource.startsWith("/resources/")) {
+            resource = resource.substring("/resources".length());
+        }
+        return com.codename1.ui.Display.getInstance().getResourceAsStream(JarLoader.class, resource);
+//#endif
     }
 }
 

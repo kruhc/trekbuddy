@@ -441,12 +441,12 @@ public final class Resources {
         } else {
             locale = "en"; // default is english
         }
-        InputStream is = Resources.class.getResourceAsStream("/resources/language." + locale + ".res");
+        InputStream is = getResourceAsStream("/resources/language." + locale + ".res");
         if (is == null) {
-            is = Resources.class.getResourceAsStream("/resources/language.en.res");
+            is = getResourceAsStream("/resources/language.en.res");
         }
 //#else
-        InputStream is = Resources.class.getResourceAsStream("/resources/language.pl.res");
+        InputStream is = getResourceAsStream("/resources/language.pl.res");
 //#endif
         loadRes(is, holder);
         ids = (int[]) holder[0];
@@ -649,4 +649,14 @@ public final class Resources {
 
 //#endif
 
+    private static InputStream getResourceAsStream(String resource) {
+//#ifndef __CN1__
+        return Resources.class.getResourceAsStream(resource);
+//#else
+        if (resource.startsWith("/resources/")) {
+            resource = resource.substring("/resources".length());
+        }
+        return com.codename1.ui.Display.getInstance().getResourceAsStream(Resources.class, resource);
+//#endif
+    }
 }

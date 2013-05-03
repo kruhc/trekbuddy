@@ -117,17 +117,17 @@ public final class NavigationScreens {
 
     public static void initialize() throws IOException {
         // init image cache
-        crosshairs = Image.createImage(RES_CROSSHAIRS);
+        crosshairs = createImage(RES_CROSSHAIRS);
         arrows = new Image[] {
-            Image.createImage(RES_ARROWS),
-            Image.createImage(RES_NAVIWS)
+            createImage(RES_ARROWS),
+            createImage(RES_NAVIWS)
         };
-        providers = Image.createImage(RES_BULLETS);
-        pois = Image.createImage(RES_POIS);
-        symbols = Image.createImage(RES_SYMBOLS);
-        waypoint = Image.createImage(RES_WPT);
-        nlock = Image.createImage(RES_NLOCK);
-        selected = Image.createImage(RES_SELECTED);
+        providers = createImage(RES_BULLETS);
+        pois = createImage(RES_POIS);
+        symbols = createImage(RES_SYMBOLS);
+        waypoint = createImage(RES_WPT);
+        nlock = createImage(RES_NLOCK);
+        selected = createImage(RES_SELECTED);
 
         // setup vars
         arrowSize = new int[2];
@@ -149,14 +149,14 @@ public final class NavigationScreens {
         if (Config.zoomSpotsMode != 0)
 //#endif
         {
-            zooms = Image.createImage(RES_ZOOMS);
+            zooms = createImage(RES_ZOOMS);
             zoomSize = zooms.getHeight();
         }
 //#if !__SYMBIAN__ && !__RIM__ && !__ANDROID__ && !__CN1__
         if (Config.guideSpotsMode != 0)
 //#endif
         {
-            guides = Image.createImage(RES_GUIDES);
+            guides = createImage(RES_GUIDES);
             guideSize = guides.getHeight();
         }
     }
@@ -989,5 +989,9 @@ public final class NavigationScreens {
         }
 
         return precision;
+    }
+
+    private static Image createImage(final String resource) throws IOException {
+        return Image.createImage(cz.kruch.track.util.ImageUtils.getRealResourcePath(resource));
     }
 }

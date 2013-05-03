@@ -26,7 +26,7 @@ import net.rim.device.api.system.EncodedImage;
 public final class ImageUtils {
 
     public static Image getGoodIcon(final String resource) throws IOException {
-        Image img = Image.createImage(resource);
+        Image img = Image.createImage(getRealResourcePath(resource));
         if (img != null) {
             if (!Desktop.isHires() && (img.getWidth() > 20) || img.getHeight() > 20) {
                 img = resizeImage(img, 16, 16, ImageUtils.SLOW_RESAMPLE, false);
@@ -41,6 +41,20 @@ public final class ImageUtils {
             shadow[i] = color;
         }
         return Image.createRGBImage(shadow, w, h, true);
+    }
+
+    public static String getRealResourcePath(final String resource) {
+//#ifndef __CN1__
+        return resource;
+//#else
+        if (resource.startsWith("/resources/set/")) {
+            return resource.substring("/resources/set".length());
+        } else if (resource.startsWith("/resources/")) {
+            return resource.substring("/resources".length());
+        } else {
+            return resource;
+        }
+//#endif
     }
 
     /**

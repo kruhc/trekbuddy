@@ -517,6 +517,7 @@ public final class Desktop implements CommandListener,
         };
         cz.kruch.track.TrackingMIDlet.getActivity().bindService(new Intent(cz.kruch.track.TrackingMIDlet.getActivity(), Runtime.class),
                                                                 svcConn, Context.BIND_AUTO_CREATE);
+        cz.kruch.track.sensor.ANTPlus.initialize();
 //#else
         runtime = new Runtime();
 //#endif
@@ -588,7 +589,7 @@ public final class Desktop implements CommandListener,
         initialized = true;
 
 //#ifdef __CN1__
-        com.codename1.io.Log.showLog();
+        cz.kruch.track.util.Logger.showLog();
 //#endif
     }
 
@@ -1853,6 +1854,7 @@ public final class Desktop implements CommandListener,
 
         final View[] views = this.views;
         if (views == null) return; // too early invocation
+
         final boolean repeated = c != 0;
 
         switch (action) {
@@ -1867,6 +1869,7 @@ public final class Desktop implements CommandListener,
 
                 // repetition
                 if (repeated && mode == VIEW_MAP) {
+                    mask |= MASK_FPSCTRL;
                     screen.callSerially(Desktop.screen);
                 } else {
                     screen.checkKeyRepeated(i);
@@ -2033,7 +2036,7 @@ public final class Desktop implements CommandListener,
         if (views == null) return; // too early invocation
         if (mode == VIEW_MAP) {
             Desktop.browsing = true;
-            update(((MapView) views[mode]).moveTo(x, y));
+            update(((MapView) views[mode]).moveTo(x, y) | MASK_FPSCTRL);
         }
     }
 
@@ -2732,8 +2735,10 @@ public final class Desktop implements CommandListener,
     public static final int MASK_CROSSHAIR  = 8;
     public static final int MASK_ALL        = MASK_MAP | MASK_OSD | MASK_STATUS | MASK_CROSSHAIR;
     public static final int MASK_SCREEN     = MASK_ALL;
+    public static final int MASK_FPSCTRL    = 1 << 8;
 
     static long skips;
+    static long last;
 
     final class RenderTask implements Runnable {
         private int mask;
@@ -2746,10 +2751,20 @@ public final class Desktop implements CommandListener,
             this.mask |= r.mask;
             releaseRenderTask(r);
         }
-        
+
+//#if __SYMBIAN__ || __RIM__ || __ANDROID__ || __CN1__
+        private static final int FPS_AGGRESIVE_MS = 13;
+//#else
+        private static final int FPS_AGGRESIVE_MS = 13; // 16 is too jumpy
+//#endif
+        private static final int FPS_NORMAL_MS = 16;
+
         public void run() {
             // render
             try {
+                // fps limit
+                if (Config.fpsControl == 2 && skipFrame(FPS_AGGRESIVE_MS)) return;
+
                 // get graphics
                 final Graphics g = Desktop.screen.getGraphics();
 
@@ -2763,9 +2778,12 @@ public final class Desktop implements CommandListener,
                     Desktop.drawPause(g, screen, Resources.getString(Resources.DESKTOP_MSG_PAUSED));
                 }
 
+                // fps limit
+                if (Config.fpsControl == 1 && skipFrame(FPS_NORMAL_MS)) return;
+
                 // flush offscreen buffer
                 Desktop.screen.flushGraphics();
-                
+
             } catch (Throwable t) {
 //#ifdef __LOG__
                 t.printStackTrace();
@@ -2782,6 +2800,21 @@ public final class Desktop implements CommandListener,
                 releaseRenderTask(this);
             }
 
+        }
+
+        private boolean skipFrame(final int ms) {
+            final long now = System.currentTimeMillis();
+            boolean skip = false;
+            if ((mask & MASK_FPSCTRL) != 0) {
+                if (now - last < ms) {
+                    skips++;
+                    skip = true;
+                }
+            }
+            if (!skip) {
+                last = now;
+            }
+            return skip;
         }
     }
 

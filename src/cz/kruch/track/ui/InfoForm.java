@@ -135,6 +135,7 @@ final class InfoForm implements CommandListener {
 //#endif                
                 .append("; hasRepeatEvents? ").append(Desktop.screen.hasRepeatEvents())
                 .append("; hasPointerEvents? ").append(Desktop.screen.hasPointerEvents())
+                .append("; isDoubleBuffered? ").append(Desktop.screen.isDoubleBuffered())
                 .append("; skips? ").append(Desktop.skips);
         pane.append(newItem("Desktop", sb.toString()));
         if (map == null) {
@@ -176,6 +177,9 @@ final class InfoForm implements CommandListener {
         }
 //#ifdef __ANDROID__
         pane.append(newItem("BtSocketType", cz.kruch.track.location.AndroidBluetoothLocationProvider.sockType));
+        sb.delete(0, sb.length())
+                .append("supported? ").append(cz.kruch.track.sensor.ANTPlus.isSupported());
+        pane.append(newItem("ANT+", sb.toString()));
 //#endif
         sb.delete(0, sb.length())
                 .append(cz.kruch.track.fun.Camera.type)
@@ -183,7 +187,7 @@ final class InfoForm implements CommandListener {
                 .append("; resolutions: ").append(System.getProperty("camera.resolutions"));
         pane.append(newItem("Camera", sb.toString()));
         if (cz.kruch.track.fun.Camera.state != null) {
-            pane.append(newItem("Capture", cz.kruch.track.fun.Camera.state.toString()));
+            pane.append(newItem("Camera", cz.kruch.track.fun.Camera.state.toString()));
         }
         if (cz.kruch.track.fun.Playback.state != null) {
             pane.append(newItem("Playback", cz.kruch.track.fun.Playback.state.toString()));

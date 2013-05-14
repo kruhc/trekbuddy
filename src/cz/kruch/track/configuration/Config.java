@@ -220,6 +220,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
     public static boolean verboseLoading;
     public static int heclOpt                   = 1;
     public static int inputBufferSize           = 4096;
+    public static int fpsControl;
 
     // group [GPX options]
     public static int gpxDt                     = 60; // 1 min
@@ -367,6 +368,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
             safeColors = true;
             captureLocator = "capture://image";
             s40ticker = System.getProperty("com.nokia.mid.ui.layout") != null; // since S40 6th FP1
+            fpsControl = 1;
         }
 
 //#endif
@@ -630,6 +632,9 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
             // 1.2.2 change
             inputBufferSize = din.readInt();
 
+            // 1.2.3 change
+            fpsControl = din.readInt();
+
         } catch (Exception e) {
 
             // 1.2.0 fallback
@@ -796,6 +801,9 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
 
         /* since 1.2.2 */
         dout.writeInt(inputBufferSize);
+
+        /* since 1.2.3 */
+        dout.writeInt(fpsControl);
 
 //#ifdef __LOG__
         if (log.isEnabled()) log.info("configuration updated");

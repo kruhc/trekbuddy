@@ -405,6 +405,10 @@ public final class Resources {
     public static final short CFG_TWEAKS_FLD_FILTERED_SCALING   = 3819;
     public static final short CFG_TWEAKS_FLD_VERBOSE_LOADING    = 3820;
     public static final short CFG_TWEAKS_FLD_S40_TICKER         = 3821;
+    public static final short CFG_TWEAKS_FPS_GROUP              = 3822;
+    public static final short CFG_TWEAKS_FLD_FPS_NONE           = 3823;
+    public static final short CFG_TWEAKS_FLD_FPS_NORMAL         = 3824;
+    public static final short CFG_TWEAKS_FLD_FPS_AGGRESSIVE     = 3825;
     /* info - commands */
     public static final short INFO_CMD_DETAILS                  = 4000;
     /* info - items */

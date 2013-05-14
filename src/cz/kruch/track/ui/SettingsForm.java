@@ -436,29 +436,6 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
 //#endif
             submenu.append(choice1);
 
-            // HECL
-            choice2 = newChoiceGroup(Resources.CFG_TWEAKS_HECL_GROUP,
-                                     Desktop.CHOICE_POPUP_TYPE);
-            choice2.append("0", null);
-            choice2.append("1", null);
-            choice2.append("2", null);
-            choice2.setSelectedIndex(Config.heclOpt, true);
-            submenu.append(choice2);
-
-            // I/O read buffer size
-            choice3 = new ChoiceGroup("Read buffer size", Desktop.CHOICE_POPUP_TYPE);
-            choice3.append("4K", null);
-            choice3.append("8K", null);
-            choice3.append("16K", null);
-            choice3.append("32K", null);
-            int ibs = (Config.inputBufferSize / 4096) >> 1, ibsi = 0;
-            while (ibs > 0) {
-                ibs >>= 1;
-                ibsi++;
-            }
-            choice3.setSelectedIndex(ibsi, true);
-            submenu.append(choice3);
-
             // capture device and format
             if (cz.kruch.track.TrackingMIDlet.supportsVideoCapture()) {
 //#ifndef __ANDROID__
@@ -485,6 +462,38 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
 //#endif
                 submenu.setItemStateListener(this);
             }
+
+            // HECL
+            choice2 = newChoiceGroup(Resources.CFG_TWEAKS_HECL_GROUP,
+                                     Desktop.CHOICE_POPUP_TYPE);
+            choice2.append("0", null);
+            choice2.append("1", null);
+            choice2.append("2", null);
+            choice2.setSelectedIndex(Config.heclOpt, true);
+            submenu.append(choice2);
+
+            // fps control
+            choice4 = newChoiceGroup(Resources.CFG_TWEAKS_FPS_GROUP,
+                                     Desktop.CHOICE_POPUP_TYPE);
+            append(choice4, Resources.CFG_TWEAKS_FLD_FPS_NONE);
+            append(choice4, Resources.CFG_TWEAKS_FLD_FPS_NORMAL);
+            append(choice4, Resources.CFG_TWEAKS_FLD_FPS_AGGRESSIVE);
+            choice4.setSelectedIndex(Config.fpsControl, true);
+            submenu.append(choice4);
+
+            // I/O read buffer size
+            choice3 = new ChoiceGroup("Read buffer size", Desktop.CHOICE_POPUP_TYPE);
+            choice3.append("4K", null);
+            choice3.append("8K", null);
+            choice3.append("16K", null);
+            choice3.append("32K", null);
+            int ibs = (Config.inputBufferSize / 4096) >> 1, ibsi = 0;
+            while (ibs > 0) {
+                ibs >>= 1;
+                ibsi++;
+            }
+            choice3.setSelectedIndex(ibsi, true);
+            submenu.append(choice3);
 
         } else if (menuLocation.equals(section)) {
 
@@ -1050,6 +1059,9 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
 
                 // HECL
                 Config.heclOpt = choice2.getSelectedIndex();
+
+                // FPS control
+                Config.fpsControl = choice4.getSelectedIndex();
 
                 // I/O read buffer size
                 Config.inputBufferSize = 4096 << choice3.getSelectedIndex();

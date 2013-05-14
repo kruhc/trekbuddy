@@ -145,8 +145,8 @@ final class DeviceScreen extends GameCanvas implements Runnable {
 
     /** @Override to make <code>Graphics</code> publicly accessible and handle weird states */
     public Graphics getGraphics() {
-        if (graphics == null || cz.kruch.track.TrackingMIDlet.s65) {
-            graphics = null;
+        if (graphics == null /*|| cz.kruch.track.TrackingMIDlet.s65*/) {
+            /*graphics = null;*/
             graphics = super.getGraphics();
         }
         return graphics;
@@ -166,14 +166,14 @@ final class DeviceScreen extends GameCanvas implements Runnable {
         return hasRepeatEvents;
     }
 
+//#ifdef __ANDROID__
+    
     /** @Override for more control */
     public boolean hasPointerEvents() {
-//#ifdef __ANDROID__
         return true;
-//#else
-        return super.hasPointerEvents();
-//#endif
     }
+
+//#endif
 
     /** @Override */
     public void setCommandListener(CommandListener commandListener) {
@@ -322,7 +322,7 @@ final class DeviceScreen extends GameCanvas implements Runnable {
         if (log.isEnabled()) log.info("size changed: " + w + "x" + h);
 //#endif
 
-        // release current graphics - probably will not work after size change (RIM, ANDROID)
+        // current graphics probably no longer valid (RIM, ANDROID)
         graphics = null;
 
         // recalc touch threshold

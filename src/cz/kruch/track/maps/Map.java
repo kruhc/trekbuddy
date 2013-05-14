@@ -383,6 +383,14 @@ public final class Map implements Runnable {
         loader.magnify(x2);
     }
 
+    public int getPSX(final int x) {
+        return loader.getPSX(x);
+    }
+
+    public int getPSY(final int y) {
+        return loader.getPSY(y);
+    }
+
     /**
      * Map loader.
      */
@@ -704,6 +712,14 @@ public final class Map implements Runnable {
                 return i;
             }
             return ExtraMath.prescale(fprescale, i);
+        }
+
+        private int getPSX(final int x) {
+            return prescale(sx2x(x) << x2);
+        }
+
+        private int getPSY(final int y) {
+            return prescale(sy2y(y) << x2);
         }
 
         private Throwable loadImages(final Vector slices) {

@@ -82,6 +82,8 @@ final class MapViewer {
 
     private int ci, li;
 
+    private int iprescale;
+
     MapViewer() {
         this.crosshairSize = NavigationScreens.crosshairs.getHeight();
         this.crosshairSize2 = this.crosshairSize >> 1;
@@ -168,6 +170,9 @@ final class MapViewer {
                 this.chx = 0 - crosshairSize2;
                 this.chy = 0 - crosshairSize2;
             }
+
+            // use current prescale
+            iprescale = Config.prescale;
 
             // update scale
             calculateScale();
@@ -1063,10 +1068,23 @@ final class MapViewer {
             return;
         }
 
-        final int m_x0 = slice.getX();
-        final int m_y0 = slice.getY();
+        /*final */int m_x0 = slice.getX();
+        /*final */int m_y0 = slice.getY();
         final int slice_w = slice.getWidth();
         final int slice_h = slice.getHeight();
+
+        /*
+         * FIXME hack
+         *
+         * Fixes x-y scaled position for screen rendering. The error in x-y is caused
+         * by integer math in getSlice(). It is however necessary there because is ensures
+         * that real tile x-y is derived from scaled x-y. Hacks from the very start :(
+         */
+        if (iprescale > 100) {
+            final Map map = this.map;
+            m_x0 = map.getPSX(m_x0);
+            m_y0 = map.getPSY(m_y0);
+        }
 
         final int x_src;
         int w;

@@ -44,7 +44,7 @@ final class SmartRunnable implements Runnable {
 
         // better enqueue it out of synchronized block
         if (fire) {
-            Desktop.display.callSerially(this);
+            execute();
         }
     }
 
@@ -97,7 +97,7 @@ final class SmartRunnable implements Runnable {
 
         // better enqueue it out of synchronized block
         if (fire) {
-            Desktop.display.callSerially(this);
+            execute();
         }
     }
 
@@ -148,7 +148,11 @@ final class SmartRunnable implements Runnable {
 
         // better enqueue it out of synchronized block
         if (fire) {
-            Desktop.display.callSerially(this);
+            execute();
         }
+    }
+
+    private void execute() {
+        Desktop.display.callSerially(this);
     }
 }

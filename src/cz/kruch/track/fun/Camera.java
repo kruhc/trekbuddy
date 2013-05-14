@@ -5,7 +5,6 @@ package cz.kruch.track.fun;
 import cz.kruch.track.event.Callback;
 import cz.kruch.track.configuration.Config;
 import cz.kruch.track.ui.Desktop;
-import cz.kruch.track.Resources;
 
 import javax.microedition.io.Connector;
 import javax.microedition.lcdui.Displayable;

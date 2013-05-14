@@ -30,7 +30,7 @@ import cz.kruch.track.util.NmeaParser;
 /**
  * GPX.
  *
- * @author Ales Pour <kruhc@seznam.cz>
+ * @author kruhc@seznam.cz
  */
 public final class GpxTracklog implements Runnable {
 //#ifdef __LOG__
@@ -49,6 +49,9 @@ public final class GpxTracklog implements Runnable {
     private static final String NMEA_PREFIX         = "nmea";
     private static final String GSM_NAMESPACE       = "http://trekbuddy.net/2009/01/gpx/gsm";
     private static final String GSM_PREFIX          = "gsm";
+
+    private static final String GARMIN_EXT_NAMESPACE  = "http://www.garmin.com/xmlschemas/TrackPointExtension/v1";
+    private static final String GARMIN_EXT_PREFIX     = "gpxtpx";
 
     private static final float MIN_SPEED_WALK              = 1F;  // 1 m/s ~ 3.6 km/h
     private static final float MIN_SPEED_BIKE              = 5F;  // 5 m/s ~ 18 km/h
@@ -105,6 +108,9 @@ public final class GpxTracklog implements Runnable {
     private static final String ELEMENT_TEXT            = "text";
     private static final String ELEMENT_GS_FINDER       = "finder";
     private static final String ELEMENT_AU_FINDER       = "geocacher";
+
+    private static final String ELEMENT_TRKPTEXT        = "TrackPointExtension";
+    private static final String ELEMENT_HR              = "hr";
 
     private static final String ATTRIBUTE_UTF_8         = "UTF-8";
     private static final String ATTRIBUTE_ISO_8859_1    = "ISO-8859-1";
@@ -272,6 +278,9 @@ public final class GpxTracklog implements Runnable {
                     serializer.startDocument(ATTRIBUTE_ISO_8859_1, null);
                 }
                 serializer.setPrefix(null, GPX_1_1_NAMESPACE);
+//#ifdef __ANDROID__
+                serializer.setPrefix(GARMIN_EXT_PREFIX, GARMIN_EXT_NAMESPACE);
+//#endif
                 if (type == LOG_WPT) {
                     serializer.setPrefix(GS_1_0_PREFIX, GS_1_0_NAMESPACE);
                     serializer.setPrefix(AU_1_0_PREFIX, AU_1_0_NAMESPACE);
@@ -544,8 +553,21 @@ public final class GpxTracklog implements Runnable {
          */
         final float course = l.getCourse();
         final float speed = l.getSpeed();
-        if (!Float.isNaN(course) || !Float.isNaN(speed) || l.isXdrBound() || Config.gpxGsmInfo) {
+//#ifdef __ANDROID__
+        final int bpm = cz.kruch.track.sensor.ANTPlus.getInstance().getSensorBPM();
+        if (!Float.isNaN(course) || !Float.isNaN(speed) || l.isXdrBound() || Config.gpxGsmInfo || bpm > -1)
+//#else
+        if (!Float.isNaN(course) || !Float.isNaN(speed) || l.isXdrBound() || Config.gpxGsmInfo)
+//#endif
+        {
             serializer.startTag(DEFAULT_NAMESPACE, ELEMENT_EXTENSIONS);
+//#ifdef __ANDROID__
+            if (bpm > -1) {
+                serializer.startTag(GARMIN_EXT_NAMESPACE, ELEMENT_TRKPTEXT);
+                serializeElement(serializer, (new Integer(bpm)).toString(), GARMIN_EXT_NAMESPACE, ELEMENT_HR);
+                serializer.endTag(GARMIN_EXT_NAMESPACE, ELEMENT_TRKPTEXT);
+            }
+//#endif
             if (!Float.isNaN(course)) {
                 serializer.startTag(NMEA_NAMESPACE, ELEMENT_COURSE);
                 i = doubleToChars(course, 1);

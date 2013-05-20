@@ -41,6 +41,10 @@ public abstract class Canvas extends Displayable {
         return true;
     }
 
+    public boolean isDoubleBuffered() {
+        return false;
+    }
+
     protected abstract void paint(Graphics g);
 
     public final void repaint() {

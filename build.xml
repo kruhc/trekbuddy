@@ -100,6 +100,7 @@
         <pathelement location="${microemu.home}\microemu-extensions\microemu-jsr-75\target\microemu-jsr-75-3.0.0-SNAPSHOT.jar"/>
         <pathelement location="${microemu.home}\microemu-android\microemu-android-ant.jar"/>
         <pathelement location="${android16.home}\android.jar"/>
+        <pathelement location="${androidant.home}\lib\antlib.jar"/>
         <pathelement location="${microemu.home}\microemu-android\lib\backport-android-bluetooth2.jar"/>
     </path>
 
@@ -356,7 +357,7 @@
     <target name="android-offline">
         <property name="suffix" value="-android"/>
         <property name="dist.dir" value="android-offline"/>
-        <property name="libraryjars" value="${microemu.home}\microemu-cldc\target\microemu-cldc-3.0.0-SNAPSHOT.jar;${microemu.home}\microemu-midp\target\microemu-midp-3.0.0-SNAPSHOT.jar;${microemu.home}\microemu-extensions\microemu-jsr-75\target\microemu-jsr-75-3.0.0-SNAPSHOT.jar;${android20.home}\android.jar;${microemu.home}\microemu-android\microemu-android-ant.jar"/>
+        <property name="libraryjars" value="${microemu.home}\microemu-cldc\target\microemu-cldc-3.0.0-SNAPSHOT.jar;${microemu.home}\microemu-midp\target\microemu-midp-3.0.0-SNAPSHOT.jar;${microemu.home}\microemu-extensions\microemu-jsr-75\target\microemu-jsr-75-3.0.0-SNAPSHOT.jar;${android20.home}\android.jar;${microemu.home}\microemu-android\microemu-android-ant.jar;${androidant.home}\lib\antlib.jar"/>
         <antcall target="clean"/>
         <ant dir="${microemu.home}/microemu-android"
              antfile="build-trekbuddy.xml" target="clean"
@@ -398,7 +399,7 @@
     <target name="android-backport">
         <property name="suffix" value="-android"/>
         <property name="dist.dir" value="android-backport"/>
-        <property name="libraryjars" value="${microemu.home}\microemu-cldc\target\microemu-cldc-3.0.0-SNAPSHOT.jar;${microemu.home}\microemu-midp\target\microemu-midp-3.0.0-SNAPSHOT.jar;${microemu.home}\microemu-extensions\microemu-jsr-75\target\microemu-jsr-75-3.0.0-SNAPSHOT.jar;${android20.home}\android.jar;${microemu.home}\microemu-android\lib\backport-android-bluetooth2.jar;${microemu.home}\microemu-android\microemu-android-ant.jar"/>
+        <property name="libraryjars" value="${microemu.home}\microemu-cldc\target\microemu-cldc-3.0.0-SNAPSHOT.jar;${microemu.home}\microemu-midp\target\microemu-midp-3.0.0-SNAPSHOT.jar;${microemu.home}\microemu-extensions\microemu-jsr-75\target\microemu-jsr-75-3.0.0-SNAPSHOT.jar;${android20.home}\android.jar;${microemu.home}\microemu-android\lib\backport-android-bluetooth2.jar;${microemu.home}\microemu-android\microemu-android-ant.jar;${androidant.home}\lib\antlib.jar"/>
         <antcall target="clean"/>
         <ant dir="${microemu.home}/microemu-android"
              antfile="build-trekbuddy.xml" target="clean"

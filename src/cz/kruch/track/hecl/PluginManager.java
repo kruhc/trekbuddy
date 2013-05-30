@@ -49,7 +49,9 @@ import org.hecl.DoubleThing;
 import org.hecl.StringThing;
 
 public final class PluginManager implements CommandListener, Runnable, Comparator {
+//#ifdef __ANDROID__
     private static final String TAG = cz.kruch.track.TrackingMIDlet.APP_TITLE;
+//#endif
     
     private static final String PROC_GET_VERSION            = "getVersion";
     private static final String PROC_GET_NAME               = "getName";
@@ -70,30 +72,24 @@ public final class PluginManager implements CommandListener, Runnable, Comparato
     private static final String NAMESPACE_SEPARATOR = "::";
     private static final String STATUS_OK = "OK";
 
-    public static class Plugin implements Callback {
-        static final Thing[] procVoidArgv = { Thing.emptyThing() };
+    public static abstract class Plugin implements Callback {
+        protected String name, ns;
+        protected String version;
+        protected Vector options, actions;
+        protected boolean enabled;
 
-        private String filename;
-        private String name;
-        private String version;
-        private Vector options, actions;
-
-        org.hecl.Command procGetStatus, procGetDetail,
-                         eventOnTrackingStart, eventOnTrackingStop, eventOnLocationUpdated;
-
-        private boolean enabled;
-
-        private ControlledInterp interp;
         private String errorMessage;
         private Date errorTime;
         private int errors;
 
-        public Plugin(String filename) {
-            this.filename = filename;
+        public Plugin() {
+            this.name = "unknown";
         }
 
-        public String getFilename() {
-            return filename;
+        protected Plugin(String name, String version, String ns) {
+            this.name = name;
+            this.version = version;
+            this.ns = ns;
         }
 
         public boolean isEnabled() {
@@ -109,23 +105,29 @@ public final class PluginManager implements CommandListener, Runnable, Comparato
         }
 
         public String getName() {
+            return name;
+        }
+
+        public String getFullName() {
             if (name != null) {
-                return name;
+                final StringBuffer sb = new StringBuffer(32);
+                sb.append(name);
+                sb.append(" v");
+                if (version != null) {
+                    sb.append(version);
+                } else {
+                    sb.append("???");
+                }
+                return sb.toString();
             }
-            return "unknown / " + filename;
+            return getName();
         }
 
         public String getStatus() {
-            if (procGetStatus != null) {
-                return invoke(procGetStatus, procVoidArgv).toString();
-            }
             return null;
         }
 
         public String getDetail() {
-            if (procGetDetail != null) {
-                return invoke(procGetDetail, procVoidArgv).toString();
-            }
             return null;
         }
 
@@ -157,19 +159,93 @@ public final class PluginManager implements CommandListener, Runnable, Comparato
             return errors;
         }
 
-        public String getFullName() {
-            if (name != null) {
-                final StringBuffer sb = new StringBuffer(32);
-                sb.append(name);
-                sb.append(" v");
-                if (version != null) {
-                    sb.append(version);
-                } else {
-                    sb.append("???");
-                }
-                return sb.toString();
-            }
+        void setError(String message) {
+            errorMessage = message;
+            errorTime = new Date();
+            errors++;
+        }
+
+        void clearError() {
+            errorMessage = null;
+            errorTime = null;
+        }
+
+        void reset() {
+            errorMessage = null;
+            errorTime = null;
+        }
+
+        String getNs() {
+            return ns;
+        }
+
+        public String toString() {
             return getName();
+        }
+
+        public void invoke(Object result, Throwable throwable, Object source) {
+            try {
+                if (result instanceof DataInputStream) {
+                    loadOptions((DataInputStream) result);
+                } else if (result instanceof DataOutputStream) {
+                    saveOptions((DataOutputStream) result);
+                }
+            } catch (Exception e) {
+                throw new RuntimeException(getName(), e);
+            }
+        }
+
+        protected void loadOptions(DataInputStream in) throws IOException {
+        }
+
+        protected void saveOptions(DataOutputStream out) throws IOException {
+        }
+
+        protected void setVisible(Form form) {
+        }
+
+        public abstract Form appendOptions(Form form);
+        public abstract void grabOptions(Form form);
+        public abstract String execute(Form form, String action);
+    }
+
+    public static class HeclPlugin extends Plugin {
+        static final Thing[] procVoidArgv = { Thing.emptyThing() };
+
+        private String filename;
+
+        org.hecl.Command procGetStatus, procGetDetail,
+                         eventOnTrackingStart, eventOnTrackingStop, eventOnLocationUpdated;
+
+        private ControlledInterp interp;
+
+        public HeclPlugin(String filename) {
+            this.filename = filename;
+        }
+
+        public String getFilename() {
+            return filename;
+        }
+
+        public String getName() {
+            if (name != null) {
+                return name;
+            }
+            return "unknown / " + filename;
+        }
+
+        public String getStatus() {
+            if (procGetStatus != null) {
+                return invoke(procGetStatus, procVoidArgv).toString();
+            }
+            return super.getStatus();
+        }
+
+        public String getDetail() {
+            if (procGetDetail != null) {
+                return invoke(procGetDetail, procVoidArgv).toString();
+            }
+            return super.getDetail();
         }
 
         public Form appendOptions(Form form) {
@@ -234,19 +310,14 @@ public final class PluginManager implements CommandListener, Runnable, Comparato
         }
 
         public String toString() {
-            return filename;
+            return getFilename();
         }
 
-        public void invoke(Object result, Throwable throwable, Object source) {
-            try {
-                if (result instanceof DataInputStream) {
-                    loadOptions((DataInputStream) result);
-                } else if (result instanceof DataOutputStream) {
-                    saveOptions((DataOutputStream) result);
-                }
-            } catch (Exception e) {
-                throw new RuntimeException(filename, e);
-            }
+        public String execute(Form form, String actionCommand) {
+//            final org.hecl.Command hc = firstUnknown(actionCommand);
+//            final Thing hr = hc.cmdCode(interp, HeclPlugin.procVoidArgv);
+//            return hr.toString();
+            throw new api.lang.RuntimeException("execute", null);
         }
 
         void setup(final ControlledInterp interp,
@@ -287,23 +358,7 @@ public final class PluginManager implements CommandListener, Runnable, Comparato
             return filename.substring(5, filename.length() - 4); // 5: "live.".length, 4: ".hcl".length
         }
 
-        void setError(String message) {
-            errorMessage = message;
-            errorTime = new Date();
-            errors++;
-        }
-
-        void clearError() {
-            errorMessage = null;
-            errorTime = null;
-        }
-
-        void reset() {
-            errorMessage = null;
-            errorTime = null;
-        }
-
-        private void loadOptions(final DataInputStream in) throws IOException {
+        protected void loadOptions(final DataInputStream in) throws IOException {
             int i = in.readInt();
             enabled = in.readBoolean();
             while (--i >= 0) {
@@ -334,7 +389,7 @@ public final class PluginManager implements CommandListener, Runnable, Comparato
             }
         }
 
-        private void saveOptions(final DataOutputStream out) throws IOException {
+        protected void saveOptions(final DataOutputStream out) throws IOException {
             final Vector options = getOptions();
             out.writeInt(options.size());
             out.writeBoolean(enabled);
@@ -384,6 +439,8 @@ public final class PluginManager implements CommandListener, Runnable, Comparato
     private Image iconOK, iconUnknown, iconError;
 
     private volatile String _actionCommand;
+    private volatile Plugin _actionPlugin;
+    private volatile Form _actionForm;
 
     public static PluginManager getInstance() {
         if (instance == null) {
@@ -408,6 +465,13 @@ public final class PluginManager implements CommandListener, Runnable, Comparato
         } catch (Throwable t) {
             // ignore
         }
+    }
+
+    public void addPlugin(Plugin plugin) {
+        if (plugins == null) {
+            plugins = new NakedVector(4, 2);
+        }
+        plugins.addElement(plugin);
     }
 
     public Plugin getPlugin(int elementNum) {
@@ -476,6 +540,11 @@ public final class PluginManager implements CommandListener, Runnable, Comparato
             }
             Desktop.display.setCurrent(next);
             pane = null;
+            if (_actionPlugin != null) {
+                _actionPlugin.setVisible(null);
+                _actionPlugin = null;
+            }
+            _actionForm = null;
         } else {
             if (displayable instanceof List) {
                 final List list = (List) displayable;
@@ -495,12 +564,15 @@ public final class PluginManager implements CommandListener, Runnable, Comparato
                     for (int i = 0, N = actions.size(); i < N; i++) {
                         box.addCommand(new Command(actions.elementAt(i).toString(), Desktop.POSITIVE_CMD_TYPE, i));
                     }
+                    _actionPlugin = plugin;
+                    _actionPlugin.setVisible(box);
                 }
                 box.addCommand(new Command(Resources.getString(Resources.CMD_CLOSE), Desktop.BACK_CMD_TYPE, 1));
                 box.setCommandListener(this);
                 Desktop.display.setCurrent(box);
                 pane = displayable;
             } else {
+                _actionForm = (Form) displayable;
                 _actionCommand = command.getLabel();
                 Desktop.getLiveWorker().enqueue(this);
             }
@@ -530,11 +602,18 @@ public final class PluginManager implements CommandListener, Runnable, Comparato
 
     public void run() {
         try {
-            if (_actionCommand == null) {
+            if (_actionCommand == null) { // load HECL plugins
                 load();
             } else {
                 try {
-                    final Thing result = firstUnknown(_actionCommand).cmdCode(interp, Plugin.procVoidArgv);
+                    String result;
+                    if (_actionPlugin instanceof HeclPlugin) {
+                        final org.hecl.Command hc = firstUnknown(_actionCommand);
+                        final Thing hr = hc.cmdCode(interp, HeclPlugin.procVoidArgv);
+                        result = hr.toString();
+                    } else {
+                        result = _actionPlugin.execute(_actionForm, _actionCommand);
+                    }
                     Desktop.showInfo((new StringBuffer(64).append('[').append(_actionCommand)
                             .append("] ").append(result)).toString(), null);
                 } catch (Throwable t) {
@@ -585,22 +664,23 @@ public final class PluginManager implements CommandListener, Runnable, Comparato
         final Object[] ps = plugins.getData();
         for (int i = 0, N = plugins.size(); i < N; i++) {
             final Plugin plugin = (Plugin) ps[i];
-            if (plugin.isEnabled()) {
+            if (plugin.isEnabled() && plugin instanceof HeclPlugin) {
+                final HeclPlugin hp = (HeclPlugin) plugin;
                 final org.hecl.Command proc;
                 switch (eventType) {
                     case EVENT_ON_TRACKING_START:
                         interp.cacheversion = 0;
-                        proc = plugin.eventOnTrackingStart;
+                        proc = hp.eventOnTrackingStart;
                     break;
                     case EVENT_ON_TRACKING_STOP:
-                        proc = plugin.eventOnTrackingStop;
+                        proc = hp.eventOnTrackingStop;
                     break;
                     case EVENT_ON_LOCATION_UPDATED:
                         if (plugin.hasError()) {
                             proc = null;
                         } else {
                             interp.cacheversion++;
-                            proc = plugin.eventOnLocationUpdated;
+                            proc = hp.eventOnLocationUpdated;
                         }
                     break;
                     default:
@@ -608,7 +688,7 @@ public final class PluginManager implements CommandListener, Runnable, Comparato
                 }
                 if (proc != null) {
                     try {
-                        proc.cmdCode(interp, Plugin.procVoidArgv);
+                        proc.cmdCode(interp, HeclPlugin.procVoidArgv);
                         plugin.clearError();
                     } catch (Throwable t) {
 //#ifdef __ANDROID__
@@ -626,6 +706,12 @@ public final class PluginManager implements CommandListener, Runnable, Comparato
 
     private void load() throws IOException, HeclException {
 
+        // offset for built-in plugins
+        int hoffset = 0;
+        if (plugins != null) {
+            hoffset = plugins.size();
+        }
+
         // "plugins" folder
         final String folder = Config.getFolderURL(Config.FOLDER_PLUGINS);
 
@@ -640,7 +726,7 @@ public final class PluginManager implements CommandListener, Runnable, Comparato
                     if (plugins == null) {
                         plugins = new NakedVector(4, 2);
                     }
-                    plugins.addElement(new Plugin(File.idenFix(filename)));
+                    plugins.addElement(new HeclPlugin(File.idenFix(filename)));
                 }
             }
         } catch (Throwable t) {
@@ -661,10 +747,10 @@ public final class PluginManager implements CommandListener, Runnable, Comparato
 
             // load all
             final Object[] ps = plugins.getData();
-            for (int i = 0, N = plugins.size(); i < N; i++) {
+            for (int i = hoffset, N = plugins.size(); i < N; i++) {
 
                 // load script from file
-                final Plugin plugin = (Plugin) ps[i];
+                final HeclPlugin plugin = (HeclPlugin) ps[i];
                 interp.loadUserScript(folder, plugin.getFilename());
 
                 // get plugin namespace

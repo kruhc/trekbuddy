@@ -807,85 +807,72 @@ public final class GpxTracklog implements Runnable {
             bLog = true;
         }
 
-        // dt met?
-        final long dt = location.getTimestamp() - refLocation.getTimestamp();
-        if (dt >= (Config.gpxDt * 1000)) {
+        // dt criteria
+        final long dt = (location.getTimestamp() - refLocation.getTimestamp()) / 1000;
+        if (dt >= (Config.gpxDt)) {
             bLog = true;
-//            if (bLog) System.out.println("blog timediff");
         }
 
-        // no condition met yet - try ds, dt, course deviation
-        if (!bLog) {
+        // still no condition met - try ds criteria and course deviation
+        if (!bLog && fix > 0) {
             
-            if (fix > 0) {
+            // check logging criteria
+            if (refLocation.getFix() > 0) {
 
-                // check logging criteria
-                if (refLocation.getFix() > 0) {
+                // compute dist from reference location
+                final float r = location.getQualifiedCoordinates().distance(refLocation.getQualifiedCoordinates());
 
-                    // compute dist from reference location
-                    final float r = location.getQualifiedCoordinates().distance(refLocation.getQualifiedCoordinates());
-
-                    // calculate course deviation
-                    final float speed = location.getSpeed();
-                    final float course = location.getCourse();
-                    if (!Float.isNaN(course) && !Float.isNaN(speed) && speed > MIN_SPEED_WALK) {
-                        float diff = course - refCourse;
-                        if (diff > 180F) {
-                            diff -= 360F;
-                        } else if (diff < -180F) {
-                            diff += 360F;
-                        }
-                        courseDeviation += diff;
-                        refCourse = course;
+                // calculate course deviation
+                final float speed = location.getSpeed();
+                final float course = location.getCourse();
+                if (!Float.isNaN(course) && !Float.isNaN(speed) && speed > MIN_SPEED_WALK) {
+                    float diff = course - refCourse;
+                    if (diff > 180F) {
+                        diff -= 360F;
+                    } else if (diff < -180F) {
+                        diff += 360F;
                     }
-
-                    // depending on speed, find out whether log or not
-                    if (speed < MIN_SPEED_WALK) { /* no move */
-                        bLog = r > 50;
-//                        if (bLog) System.out.println("blog: " + r + " > 50");
-                    } else if (speed < MIN_SPEED_BIKE) { /* jogging speed */
-                        bLog = r > 125 || (r > MIN_COURSE_DIVERSION_DIST && Math.abs(courseDeviation) > MIN_COURSE_DIVERSION_SLOW);
-//                        if (bLog) System.out.println("blog: " + r + " > 125; " + courseDeviation + " > " + MIN_COURSE_DIVERSION_SLOW);
-                    } else if (speed < MIN_SPEED_CAR) { /* bike speed */
-                        bLog = r > 250 || (r > MIN_COURSE_DIVERSION_DIST && Math.abs(courseDeviation) > MIN_COURSE_DIVERSION_FAST);
-//                        if (bLog) System.out.println("blog: " + r + " > 250; " + courseDeviation + " > " + MIN_COURSE_DIVERSION_FAST);
-                    } else { /* car rider */
-                        bLog = r > 500 || (r > MIN_COURSE_DIVERSION_DIST && Math.abs(courseDeviation) > MIN_COURSE_DIVERSION_FAST);
-//                        if (bLog) System.out.println("blog: " + r + " > 500; " + courseDeviation + " > " + MIN_COURSE_DIVERSION_FAST);
-                    }
-
-                    // check user's distance criteria if not going to log
-                    if (!bLog && Config.gpxDs > 0) {
-                        bLog = r > Config.gpxDs;
-//                        if (bLog) System.out.println("blog: " + r + " > ds");
-                    }
-
-                    // stop for too long
-                    if (bLog) {
-                        onhold = 0;
-                    } else if (dt >= 60 * 1000) { // no movement for 1 min 
-                        final float ds = location.getQualifiedCoordinates().distance(refLocation.getQualifiedCoordinates());
-//                        System.out.println("no trkpt long; short trip dist = " + ds + "; onhold = " + onhold);
-                        if (ds < 50) { // should always be true
-                            if (onhold++ == 0) {
-                                bLog = true;
-                            }
-                        }
-                    }
-
-                } else {
-                    bLog = true;
-//                    if (bLog) System.out.println("ref fix <= 0");
+                    courseDeviation += diff;
+                    refCourse = course;
                 }
+
+                // depending on speed, find out whether log or not
+                if (speed < MIN_SPEED_WALK) { /* no move */
+                    bLog = r > 50;
+                } else if (speed < MIN_SPEED_BIKE) { /* jogging speed */
+                    bLog = r > 125 || (r > MIN_COURSE_DIVERSION_DIST && Math.abs(courseDeviation) > MIN_COURSE_DIVERSION_SLOW);
+                } else if (speed < MIN_SPEED_CAR) { /* bike speed */
+                    bLog = r > 250 || (r > MIN_COURSE_DIVERSION_DIST && Math.abs(courseDeviation) > MIN_COURSE_DIVERSION_FAST);
+                } else { /* car rider */
+                    bLog = r > 500 || (r > MIN_COURSE_DIVERSION_DIST && Math.abs(courseDeviation) > MIN_COURSE_DIVERSION_FAST);
+                }
+
+                // check user's distance criteria if not going to log
+                if (!bLog && Config.gpxDs > 0) {
+                    bLog = r > Config.gpxDs;
+                }
+
+                // stop for too long
+                if (bLog) {
+                    onhold = 0;
+                } else if (dt >= 60 * 1000) { // no movement for 1 min
+                    final float ds = location.getQualifiedCoordinates().distance(refLocation.getQualifiedCoordinates());
+                    if (ds < 50) { // should always be true
+                        if (onhold++ == 0) {
+                            bLog = true;
+                        }
+                    }
+                }
+
+            } else { // this is first valid location
+                bLog = true;
             }
         }
 
         if (bLog) {
 
             // use location as new reference
-            Location.releaseInstance(refLocation);
-            refLocation = null;
-            refLocation = location._clone();
+            refLocation.copyFrom(location);
 
             // new heading 
             courseDeviation = 0F;

@@ -119,10 +119,12 @@ public final class LineReader extends InputStreamReader {
     }
 
     public static void closeQuietly(final InputStreamReader reader) {
-        try {
-            reader.close();
-        } catch (Exception e) { // NPE or IOE
-            // ignore
+        if (reader != null) {
+            try {
+                reader.close();
+            } catch (Exception e) { // NPE or IOE
+                // ignore
+            }
         }
     }
 }

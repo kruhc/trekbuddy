@@ -1896,10 +1896,12 @@ public final class HXmlParser implements XmlPullParser {
     }
 
     public static void closeQuietly(final HXmlParser parser) {
-        try {
-            parser.close();
-        } catch (Exception e) {
-            // ignore
+        if (parser != null) {
+            try {
+                parser.close();
+            } catch (Exception e) {
+                // ignore
+            }
         }
     }
 }

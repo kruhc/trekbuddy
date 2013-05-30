@@ -1201,10 +1201,12 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
     }
 
     private static void closeQuietly(final RecordStore rs) {
-        try {
-            rs.closeRecordStore();
-        } catch (Exception e) { // NPE or IOE
-            // ignore
+        if (rs != null) {
+            try {
+                rs.closeRecordStore();
+            } catch (Exception e) { // NPE or IOE
+                // ignore
+            }
         }
     }
 

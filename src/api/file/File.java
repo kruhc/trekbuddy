@@ -161,26 +161,32 @@ public abstract class File {
     }
 
     public static void closeQuietly(final File file) {
-        try {
-            file.close();
-        } catch (Exception e) { // NPE or IOE
-            // ignore
+        if (file != null) {
+            try {
+                file.close();
+            } catch (Exception e) { // NPE or IOE
+                // ignore
+            }
         }
     }
 
     public static void closeQuietly(final InputStream in) {
-        try {
-            in.close();
-        } catch (Exception e) { // NPE or IOE
-            // ignore
+        if (in != null) {
+            try {
+                in.close();
+            } catch (Exception e) { // NPE or IOE
+                // ignore
+            }
         }
     }
 
     public static void closeQuietly(final OutputStream out) {
-        try {
-            out.close();
-        } catch (Exception e) { // NPE or IOE
-            // ignore
+        if (out != null) {
+            try {
+                out.close();
+            } catch (Exception e) { // NPE or IOE
+                // ignore
+            }
         }
     }
 

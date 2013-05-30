@@ -44,6 +44,7 @@ call :build %1 android-backport %RESOURCE_LANG%
 
 echo Build version 'playbook' ...
 call :build %1 playbook %RESOURCE_LANG%
+echo Build version 'playbook.signed' ...
 call :build %1 playbook.signed %RESOURCE_LANG%
 
 goto end

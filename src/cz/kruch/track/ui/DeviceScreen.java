@@ -234,7 +234,7 @@ final class DeviceScreen extends GameCanvas implements Runnable {
     void autohide() {
         if (beenPressed && (Config.guideSpotsMode > 1 || Config.zoomSpotsMode > 1)) {
             if (delayedRepaint == null) {
-                Desktop.schedule(delayedRepaint = new RepaintTask(), 3000);
+                Desktop.schedule(delayedRepaint = new AnyTask(AnyTask.TASK_REPAINT), 3000);
             }
         }
     }
@@ -384,7 +384,7 @@ final class DeviceScreen extends GameCanvas implements Runnable {
             
             // run the command
             if (cmd != null) {
-                callSerially(new CommandTask(cmd));
+                callSerially(new AnyTask(AnyTask.TASK_COMMAND, cmd));
             }
 
         } else { // no, detect action
@@ -566,7 +566,7 @@ final class DeviceScreen extends GameCanvas implements Runnable {
                             final Command cmd = indexToCmd();
                             // run the command
                             if (cmd != null) {
-                                callSerially(new CommandTask(cmd));
+                                callSerially(new AnyTask(AnyTask.TASK_COMMAND, cmd));
                             }
                         } break;
                     }
@@ -797,7 +797,7 @@ final class DeviceScreen extends GameCanvas implements Runnable {
     void emulateKeyRepeated(final int keyCode) {
         synchronized (this) {
             if (repeatedKeyCheck == null) {
-                Desktop.schedule(repeatedKeyCheck = new KeyCheckTimerTask(), 750L);
+                Desktop.schedule(repeatedKeyCheck = new AnyTask(AnyTask.TASK_KEYCHECK), 750L);
             }
         }
     }
@@ -1191,6 +1191,59 @@ final class DeviceScreen extends GameCanvas implements Runnable {
 //#endif
     }
 
+    private final class AnyTask extends TimerTask {
+        private static final int TASK_COMMAND   = 0;
+        private static final int TASK_REPAINT   = 1;
+        private static final int TASK_KEYCHECK  = 2;
+
+        private int type;
+        private Object arg;
+
+        public AnyTask(int type) {
+            this.type = type;
+        }
+
+        public AnyTask(int type, Object arg) {
+            this.type = type;
+            this.arg = arg;
+        }
+
+        public void run() {
+            switch (type) {
+                case TASK_COMMAND: {
+                    delegate.commandAction((Command) arg, DeviceScreen.this);
+                } break;
+                case TASK_REPAINT: {
+                    if (Config.guideSpotsMode > 1) {
+                        final int dy = (NavigationScreens.guideSize + 2 * 3) / 10;
+                        try {
+                            NavigationScreens.gdOffset = 0;
+                            for (int i = 0; i < 9; i++) {
+                                NavigationScreens.gdOffset += dy;
+                                delegate.update(Desktop.MASK_SCREEN);
+                                try {
+                                    Thread.sleep(25 - i);
+                                } catch (InterruptedException e) {
+                                    // ignore
+                                }
+                            }
+                        } finally {
+                            NavigationScreens.gdOffset = 0;
+                        }
+                    }
+                    beenPressed = false;
+                    delegate.update(Desktop.MASK_SCREEN);
+                } break;
+                case TASK_KEYCHECK: {
+                    callSerially(DeviceScreen.this);
+                    firedKeyRepeated();
+                } break;
+            }
+        }
+    }
+
+//#ifdef __NOTDEF__
+
     private final class CommandTask implements Runnable {
 
         private Command cmd;
@@ -1232,5 +1285,30 @@ final class DeviceScreen extends GameCanvas implements Runnable {
             delegate.update(Desktop.MASK_SCREEN);
         }
     }
+
+    private final class KeyCheckTimerTask extends TimerTask {
+
+        /* to avoid $1 */
+        public KeyCheckTimerTask() {
+        }
+
+        /*
+        * "A key's bit will be 1 if the key is currently down or has
+        * been pressed at least once since the last time this method
+        * was called."
+        *
+        * Therefore the dummy getKeyStates() call before invoking run().
+        */
+        public void run() {
+/* must correspond with DeviceScreen.run()!!!
+            getKeyStates(); // trick
+*/
+            callSerially(DeviceScreen.this);
+            firedKeyRepeated();
+        }
+    }
+
+//#endif
+
 }
 

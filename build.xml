@@ -27,6 +27,7 @@
     <property name="android15.home" value="c:\J2ME\android-sdk-windows\platforms\android-1.5"/>
     <property name="android16.home" value="c:\J2ME\android-sdk-windows\platforms\android-1.6"/>
     <property name="android20.home" value="c:\J2ME\android-sdk-windows\platforms\android-2.0"/>
+    <property name="androidant.home" value="c:\J2ME\android-sdk-ant"/>
     <property name="microemu.home" value="z:\repository\microemu-google\microemulator"/>
     <property name="cn1.home" value="z:\apps\Codename One"/>
     <property name="proguard3.home" value="z:\apps\proguard3.11"/>
@@ -90,6 +91,7 @@
         <pathelement location="${microemu.home}\microemu-extensions\microemu-jsr-75\target\microemu-jsr-75-3.0.0-SNAPSHOT.jar"/>
         <pathelement location="${microemu.home}\microemu-android\microemu-android-ant.jar"/>
         <pathelement location="${android20.home}\android.jar"/>
+        <pathelement location="${androidant.home}\lib\antlib.jar"/>
     </path>
 
     <path id="bootclasspath.android16">
@@ -312,7 +314,7 @@
     <target name="android">
         <property name="suffix" value="-android"/>
         <property name="dist.dir" value="android"/>
-        <property name="libraryjars" value="${microemu.home}\microemu-cldc\target\microemu-cldc-3.0.0-SNAPSHOT.jar;${microemu.home}\microemu-midp\target\microemu-midp-3.0.0-SNAPSHOT.jar;${microemu.home}\microemu-extensions\microemu-jsr-75\target\microemu-jsr-75-3.0.0-SNAPSHOT.jar;${android20.home}\android.jar;${microemu.home}\microemu-android\microemu-android-ant.jar"/>
+        <property name="libraryjars" value="${microemu.home}\microemu-cldc\target\microemu-cldc-3.0.0-SNAPSHOT.jar;${microemu.home}\microemu-midp\target\microemu-midp-3.0.0-SNAPSHOT.jar;${microemu.home}\microemu-extensions\microemu-jsr-75\target\microemu-jsr-75-3.0.0-SNAPSHOT.jar;${android20.home}\android.jar;${microemu.home}\microemu-android\microemu-android-ant.jar;${androidant.home}\lib\antlib.jar"/>
         <antcall target="clean"/>
         <ant dir="${microemu.home}/microemu-android"
              antfile="build-trekbuddy.xml" target="clean"
@@ -505,11 +507,13 @@
         <antcall target="clean"/>
         <antcall target="a.pre.cn1"/>
         <antcall target="compile.cn1"/>
-        <antcall target="a.pack" inheritall="true"/>
-        <antcall target="obfuscate4.cn1" inheritall="true"/>
+        <antcall target="cn1.pack" inheritall="true"/>
 <!--
+        <antcall target="obfuscate4.cn1" inheritall="true"/>
         <antcall target="preverify" inheritall="true"/>
 -->
+        <move file="tmp/trekbuddy${suffix}.jar"
+              tofile="tmp/trekbuddy${suffix}-obfuscated.jar"/>
         <move file="tmp/trekbuddy${suffix}-obfuscated.jar"
               tofile="tmp/preverified/trekbuddy${suffix}-obfuscated.jar"/>
         <antcall target="dist" inheritall="true"/>
@@ -523,7 +527,7 @@
         <antcall target="clean"/>
         <antcall target="a.pre.cn1-emulator"/>
         <antcall target="compile.cn1"/>
-        <antcall target="a.pack" inheritall="true"/>
+        <antcall target="cn1.pack" inheritall="true"/>
 <!--
         <antcall target="emulator.obfuscate" inheritall="true"/>
         <antcall target="preverify" inheritall="true"/>
@@ -533,6 +537,16 @@
         <move file="tmp/trekbuddy${suffix}-obfuscated.jar"
               tofile="tmp/preverified/trekbuddy${suffix}-obfuscated.jar"/>
         <antcall target="dist" inheritall="true"/>
+    </target>
+
+    <target name="cn1-nb">
+        <property name="suffix" value="-cn1"/>
+        <property name="dist.dir" value="cn1-nb"/>
+        <property name="libraryjars" value="${cn1.home}\lib\CLDC11.jar;${cn1.home}\lib\CodenameOne.jar"/>
+        <property name="classpath.preverify" value="${libraryjars}"/>
+        <antcall target="clean"/>
+        <antcall target="a.pre.cn1-nb"/>
+        <antcall target="prepare.cn1-nb"/>
     </target>
 
     <target name="emulator">
@@ -686,12 +700,37 @@
         <mkdir dir="tmp/src"/>
         <wtkpreprocess srcdir="src" destdir="tmp/src" version="1"
                        symbols="__CN1__,__LOG__,${pre.extra}"/>
+        <wtkpreprocess srcdir="cn1-compat/src" destdir="tmp/src" version="1"
+                       symbols="__CN1__,__LOG__,${pre.extra}"/>
     </target>
 
     <target name="a.pre.cn1-emulator">
         <mkdir dir="tmp/src"/>
         <wtkpreprocess srcdir="src" destdir="tmp/src" version="1"
                        symbols="__CN1__,__LOG__,${pre.extra}"/>
+        <wtkpreprocess srcdir="cn1-compat/src" destdir="tmp/src" version="1"
+                       symbols="__CN1__,__LOG__,${pre.extra}"/>
+    </target>
+
+    <target name="a.pre.cn1-nb" depends="a.pre.cn1">
+        <copy todir="tmp/src">
+            <fileset dir="res/resources">
+                <include name="datums.txt"/>
+                <include name="no-map.xml"/>
+                <include name="world.*"/>
+                <include name="*.png"/>
+                <include name="*.svg"/>
+            </fileset>
+            <fileset dir="res/resources/set"/>
+            <fileset dir="res-extra/resources">
+                <include name="*.png"/>
+            </fileset>
+            <fileset dir="res-lang/resources">
+                <include name="language.en.res"/>
+                <include name="language.es.res"/>
+                <include name="language.pl.res"/>
+            </fileset>
+        </copy>
     </target>
 
     <target name="a.pre.emulator" depends="a.pre.hecl">
@@ -830,10 +869,14 @@
                fork="true"
                target="1.5" debug="true"
                bootclasspathref="bootclasspath.cn1">
-            <compilerarg value="-Xlint:unchecked"/>
+            <compilerarg line="-Xlint:unchecked -Xmaxwarns 1000"/>
             <src path="tmp/src"/>
             <src path="cn1-compat/src"/>
         </javac>
+    </target>
+
+    <target name="prepare.cn1-nb" depends="remove.nonstd.src,remove.rim.src,remove.android.src,
+                                           remove.mmapi.src,remove.lapi.src">
     </target>
 
     <target name="compile.emulator" depends="remove.symbian.src,remove.rim.src,remove.android.src">
@@ -1136,7 +1179,51 @@
         </wtkpackage>
     </target>
 
-	<target name="obfuscate3">
+    <target name="cn1.pack" depends="create.tmp.jad">
+        <wtkpackage jarfile="tmp/trekbuddy${suffix}.jar"
+                    jadfile="tmp/trekbuddy${suffix}.jad"
+                    config="CLDC-${wtk.cldc.version}"
+                    profile="MIDP-${wtk.midp.version}">
+            <fileset dir="tmp/build/classes"/>
+            <fileset dir="res/resources">
+                <include name="datums.txt"/>
+                <include name="no-map.xml"/>
+                <include name="world.*"/>
+<!--
+                <include name="**/set/**"/>
+-->
+                <include name="*.png"/>
+                <include name="*.svg"/>
+            </fileset>
+            <fileset dir="res/resources/set"/>
+            <fileset dir="res-extra/resources">
+                <include name="*.png"/>
+            </fileset>
+            <fileset dir="res-lang/resources">
+                <include name="language.en.res"/>
+                <include name="language.es.res"/>
+                <include name="language.pl.res"/>
+            </fileset>
+            <fileset dir="z:\repository\cn1\Themes">
+                <include name="winTheme.res"/>
+            </fileset>
+            <manifest>
+                <attribute name="Built-By" value="kruhc@seznam.cz"/>
+                <attribute name="Content-Folder" value="Applications"/>
+                <!--<attribute name="Nokia-Scalable-Icon-MIDlet-1" value="/resources/icon.svg"/>-->
+                <attribute name="Nokia-MIDlet-Category" value="Application"/>
+                <attribute name="Nokia-MIDlet-No-Exit" value="true"/>
+                <attribute name="LGE-MIDlet-Display-Nav-Keypad" value="no"/>
+                <attribute name="LGE-MIDlet-Display-Indicator" value="HIDE"/>
+                <attribute name="LGE-MIDlet-Allowed-background" value="YES"/>
+                <attribute name="MVM-Pause-Background" value="false"/>
+                <attribute name="MVM-BGM-Support" value="true"/>
+                <attribute name="FlipInsensitive" value="True"/>
+            </manifest>
+        </wtkpackage>
+    </target>
+
+    <target name="obfuscate3">
 	    <java jar="${proguard3.home}\lib\proguard.jar" fork="true">
             <arg value="-injars tmp/trekbuddy${suffix}.jar"/>
             <arg value="-outjars tmp/trekbuddy${suffix}-obfuscated.jar"/>
@@ -1159,6 +1246,7 @@
             <arg value="-whyareyoukeeping class api.io.BufferedOutputStream"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.hecl.ControlledInterp"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.hecl.PluginManager"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.ui.KeyCheckTimerTask"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.ui.nokia.NokiaUi14DeviceControl"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.ui.nokia.S60DeviceControl"/>
             <arg value="-printmapping dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.map"/>
@@ -1223,6 +1311,7 @@
             <arg value="-whyareyoukeeping class api.io.BufferedOutputStream"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.hecl.ControlledInterp"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.hecl.PluginManager"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.ui.KeyCheckTimerTask"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.ui.nokia.NokiaUi14DeviceControl"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.ui.nokia.S60DeviceControl"/>
             <arg value="-printmapping dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.map"/>

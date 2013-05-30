@@ -45,7 +45,7 @@
 1011=Connect
 1012=Open
 1013=Select
-1014=Plugins
+1014=Extras
 
 # desktop messages
 1300=Failed to init location sharing
@@ -139,7 +139,7 @@
 1389=Registration for SMS push failed
 1390=Invalid input
 1391=Tracking active
-1392=No plugins found
+1392=Nothing available
 
 # navigation commands
 2000=RouteForward
@@ -249,13 +249,13 @@
 
 # settings menu
 3100=Basic
-3101=Desktop
+3101=Screen
 3102=Location
 3103=Navigation
 3104=Misc
-3105=Plugins
+3105=Extras
 
-# settings (Plugins)
+# settings (Extras)
 3180=Configure
 3181=enabled
 3182=<no configuration>
@@ -394,6 +394,10 @@
 3819=filtered scaling
 3820=verbose loading
 3821=S40 progress indicator
+3822=map scroll control
+3823=none
+3824=normal
+3825=aggressive
 
 # info commands
 4000=Technical

@@ -179,6 +179,9 @@ public final class Desktop implements CommandListener,
     // doubleclick action
     private long lastKeyTime;
 
+    // pause task
+    private PauseTask pauseTask;
+
     // sync objects
     private static final Object loadingLock = new Object();
     private static final Object renderLock = new Object();
@@ -1113,6 +1116,7 @@ public final class Desktop implements CommandListener,
         } else if (command == cmdPause) {
             // update flag
             paused = true;
+            handlePause(true);
             // update menu
             screen.removeCommand(cmdPause);
             screen.addCommand(cmdContinue);
@@ -1121,6 +1125,7 @@ public final class Desktop implements CommandListener,
         } else if (command == cmdContinue) {
             // update flag
             paused = false;
+            handlePause(false);
             // update menu
             screen.removeCommand(cmdContinue);
             screen.addCommand(cmdPause);
@@ -2388,6 +2393,7 @@ public final class Desktop implements CommandListener,
         // not tracking
         browsing = true;
         paused = false;
+        handlePause(false);
 
         // update OSD & navigation UI
         osd.setProviderStatus(LocationProvider.OUT_OF_SERVICE);
@@ -2603,6 +2609,18 @@ public final class Desktop implements CommandListener,
         }
     }
 
+    private synchronized void handlePause(final boolean pause) {
+        if (pause && pauseTask == null) {
+            schedule(pauseTask = new PauseTask(), 0, 1000);
+            if (tracklogGpx != null) {
+                tracklogGpx.insert(Boolean.TRUE);
+            }
+        } else if (!pause && pauseTask != null) {
+            pauseTask.cancel();
+            pauseTask = null;
+        }
+    }
+
     static void drawPause(final Graphics g, final Displayable target, final String text) {
         final Font f = Font.getDefaultFont();
         final int sw = f.stringWidth(text);
@@ -2618,6 +2636,45 @@ public final class Desktop implements CommandListener,
         g.setColor(0x00ffffff);
         g.setFont(f);
         g.drawString(text, x + ((w - sw) >> 1), y + ((h - sh) >> 1), Graphics.TOP | Graphics.LEFT);
+    }
+
+    static final class PauseTask extends TimerTask {
+
+        private StringBuffer sb;
+        private long since;
+
+        public PauseTask() {
+            this.sb = new StringBuffer(64);
+            this.since = System.currentTimeMillis();
+        }
+
+        public synchronized String getText() {
+            return sb.toString();
+        }
+
+        public void run() {
+            final long now = System.currentTimeMillis();
+            synchronized (this) {
+                final StringBuffer sb = this.sb;
+                sb.delete(0, sb.length());
+                int diff = (int) (now - since) / 1000;
+                if (diff < 360000) {
+                    final int ss = diff % 60;
+                    diff /= 60;
+                    final int mm = diff % 60;
+                    diff /= 60;
+                    sb.append(Resources.getString(Resources.DESKTOP_MSG_PAUSED)).append(' ');
+                    NavigationScreens.append(sb, diff, 10).append(':');
+                    NavigationScreens.append(sb, mm, 10).append(':');
+                    NavigationScreens.append(sb, ss, 10);
+                } else {
+                    sb.append("99:99:99");
+                }
+            }
+            final DeviceScreen screen = Desktop.screen;
+            drawPause(screen.getGraphics(), screen, getText());
+            screen.flushGraphics();
+        }
     }
 
     /*
@@ -2775,7 +2832,7 @@ public final class Desktop implements CommandListener,
 
                 // paused?
                 if (Desktop.paused) {
-                    Desktop.drawPause(g, screen, Resources.getString(Resources.DESKTOP_MSG_PAUSED));
+                    Desktop.drawPause(g, screen, pauseTask.getText());
                 }
 
                 // fps limit

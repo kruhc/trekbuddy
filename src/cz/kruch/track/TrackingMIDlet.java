@@ -2,8 +2,6 @@
 
 package cz.kruch.track;
 
-import api.file.File;
-
 import javax.microedition.midlet.MIDlet;
 import javax.microedition.midlet.MIDletStateChangeException;
 
@@ -13,6 +11,9 @@ import javax.microedition.midlet.MIDletStateChangeException;
  * @author kruhc@seznam.cz
  */
 public class TrackingMIDlet extends MIDlet implements Runnable {
+//#ifdef __LOG__
+    private static final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("TrackingMIDlet");
+//#endif
 
     /** application title/name */
     public static final String APP_TITLE = "TrekBuddy";
@@ -269,6 +270,9 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         cz.kruch.track.util.Logger.out("* run *");
 //#endif
         // fit static images into video memory
+//#ifdef __LOG__
+        log.debug("navscreens initialize");
+//#endif
         int imaged;
         try {
             cz.kruch.track.ui.NavigationScreens.initialize();
@@ -278,6 +282,9 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         }
 
         // load configuration
+//#ifdef __LOG__
+        log.debug("config initialize");
+//#endif
         int configured;
         try {
             configured = cz.kruch.track.configuration.Config.initialize();
@@ -286,6 +293,9 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         }
 
         // load default resources
+//#ifdef __LOG__
+        log.debug("resources initialize");
+//#endif
         int resourced;
         try {
             resourced = Resources.initialize();
@@ -294,6 +304,9 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         }
 
         // initialize file API
+//#ifdef __LOG__
+        log.debug("file initialize");
+//#endif
         api.file.File.initialize(sxg75 || android || iden || hasFlag("fs_traverse_bug"));
 //#ifdef __LOG__
         cz.kruch.track.util.Logger.out("* FsType: " + api.file.File.fsType);
@@ -302,7 +315,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
 //#ifndef __B2B__
 
         // check datadir access and existence
-        if (File.isFs()) {
+        if (api.file.File.isFs()) {
             cz.kruch.track.configuration.Config.checkDataDir(configured);
         }
 
@@ -315,9 +328,15 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
 //#endif
 
         // create and boot desktop
+//#ifdef __LOG__
+        log.debug("create desktop");
+//#endif
         cz.kruch.track.ui.Desktop d = new cz.kruch.track.ui.Desktop(this);
         d.show();
         try {
+//#ifdef __LOG__
+            log.debug("boot desktop");
+//#endif
             d.boot(imaged, configured, resourced, true);
             desktop = d;
         } catch (Throwable t) {

@@ -249,7 +249,7 @@
 
 # settings menu
 3100=Basic
-3101=Screen
+3101=Desktop
 3102=Location
 3103=Navigation
 3104=Misc
@@ -277,7 +277,7 @@
 3414=compass
 3415=cms
 
-# settings forms/fields/values (Desktop)
+# settings forms/fields/values (Screen)
 3500=Desktop
 3501=fullscreen
 3502=no sounds

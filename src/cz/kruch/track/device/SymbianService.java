@@ -237,6 +237,10 @@ public final class SymbianService {
         }
 
         public long skip(long n) throws IOException {
+            while (n > Integer.MAX_VALUE) {
+                sendPacket(output, (byte) 0x05, Integer.MAX_VALUE);
+                n -= Integer.MAX_VALUE;
+            }
             sendPacket(output, (byte) 0x05, (int) n);
             return n;
         }

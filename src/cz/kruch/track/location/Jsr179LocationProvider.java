@@ -145,7 +145,7 @@ public final class Jsr179LocationProvider
             impl = null;
             
             // workaround for impl bug
-//#ifndef __RIM__
+//#ifdef __ALL__
             System.gc(); // unconditional!!!
 //#endif            
 

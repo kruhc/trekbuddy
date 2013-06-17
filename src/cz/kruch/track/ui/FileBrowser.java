@@ -191,7 +191,7 @@ public final class FileBrowser implements CommandListener, Runnable, Comparator 
                     isDir = file.getURL().endsWith(File.PATH_SEPARATOR);
                 }
 //#ifdef __LOG__
-                if (log.isEnabled()) log.error("isDir? " + isDir + "; " + file.getURL());
+                if (log.isEnabled()) log.debug("isDir? " + isDir + "; " + file.getURL());
 //#endif
 
                 // list dir content

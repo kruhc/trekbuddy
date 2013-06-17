@@ -55,8 +55,10 @@ final class InfoForm implements CommandListener {
 //#else
         System.gc(); // unconditional!!!
 //#endif
+//#ifndef __CN1__
         final long freeMemory = Runtime.getRuntime().freeMemory();
         final long totalMemory = Runtime.getRuntime().totalMemory();
+//#endif
 
         // items
         pane.append(newItem("Platform", cz.kruch.track.TrackingMIDlet.getPlatform()));
@@ -64,8 +66,10 @@ final class InfoForm implements CommandListener {
         pane.append(newItem("Build", android.os.Build.MANUFACTURER + "|" + android.os.Build.MODEL + "|" + android.os.Build.VERSION.RELEASE));
 //#endif
         final StringBuffer sb = new StringBuffer(32);
+//#ifndef __CN1__
         sb.append(totalMemory).append('/').append(freeMemory);
         pane.append(newItem("Memory", sb.toString()));
+//#endif
         sb.delete(0, sb.length());
         if (File.fsType == File.FS_JSR75 || File.fsType == File.FS_SXG75)
             sb.append("75 ");

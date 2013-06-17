@@ -61,12 +61,8 @@ final class TarLoader extends Map.Loader /*implements Atlas.Loader*/ {
     private int hintTmiFileSize, increment, calBlockOffset;
     private String calEntryName;
 
-//    private boolean useAAF;
-
     TarLoader() {
         this.isTar = true;
-//        this.useAAF = true;
-//        ((api.io.BufferedInputStream) bufferef()).setAutofill(false, -1);
     }
 
     Slice newSlice() {
@@ -114,8 +110,6 @@ final class TarLoader extends Map.Loader /*implements Atlas.Loader*/ {
             if (Config.useNativeService && Map.networkInputStreamAvailable) {
                 try {
                     in = cz.kruch.track.device.SymbianService.openInputStream(map.getPath());
-//                    ((api.io.BufferedInputStream) bufferef()).setAutofill(true, BUFFERSIZE - 8);
-//                    useAAF = false;
                     Map.networkInputStreamAvailable = true;
                 } catch (Exception e) { // IOE or SE = service not running/available
                     Map.networkInputStreamAvailable = false;
@@ -413,13 +407,7 @@ final class TarLoader extends Map.Loader /*implements Atlas.Loader*/ {
                 // prepare tar inputstream
                 tarIn.setInputStream(bufferef());
                 tarIn.skip(streamOffset - tarIn.getStreamOffset());
-//                if (!useAAF) {
-//                    ((api.io.BufferedInputStream) bufferef()).setAutofill(false);
-//                }
                 final TarEntry te = tarIn.getNextEntry();
-//                if (!useAAF) {
-//                    ((api.io.BufferedInputStream) bufferef()).setAutofill(true, (int) te.getSize());
-//                }
 
                 // read image
                 slice.setImage(scaleImage(tarIn));

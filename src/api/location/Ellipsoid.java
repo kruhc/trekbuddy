@@ -80,6 +80,7 @@ public final class Ellipsoid {
         new Ellipsoid("Indonesian 1974", 6378160, 298.247),
         new Ellipsoid("International 1924", 6378388, 297),
         new Ellipsoid("Krassovsky 1940", 6378245, 298.3),
+        new Ellipsoid("Popular Visualisation Sphere", 6378137, 0),
         new Ellipsoid("GRS 67", 6378160, 298.2471674),
         new Ellipsoid("GRS 80", 6378137, 298.257222101),
         new Ellipsoid("South American 1969", 6378160, 298.25),

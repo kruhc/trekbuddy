@@ -248,7 +248,7 @@ final class ComputerView extends View
     private static final int SHORT_AVG_DEPTH    = 30; // 30 sec (for 1 Hz NMEA)
     private static final int SHORT_AVG_DEPTH_MIN = 15; // SHORT_AVG_DEPTH / 2
     private static final int MAX_TEXT_LENGTH    = 128;
-
+    private static final float ALT_DIFF_THRESHOLD = 30F;
 
 /*
     private static final Calendar CALENDAR  = Calendar.getInstance(TimeZone.getDefault());
@@ -516,12 +516,17 @@ final class ComputerView extends View
                     valuesFloat[VALUE_ALT_D] = (alt - valuesFloat[VALUE_ALT]) / (dt / 1000);
                     valuesFloat[VALUE_ALT] = alt;
 
+                    // initial alt
+                    if (altLast == 0F) {
+                        altLast = alt;
+                    }
+
                     // asc-t/desc-t
                     altDiff += (alt - altLast);
-                    if (altDiff >= 50F) {
+                    if (altDiff >= ALT_DIFF_THRESHOLD) {
                         valuesFloat[VALUE_ASC_T] += altDiff;
                         altDiff = 0F;
-                    } else if (altDiff <= -50F) {
+                    } else if (altDiff <= -ALT_DIFF_THRESHOLD) {
                         valuesFloat[VALUE_DESC_T] += altDiff;
                         altDiff = 0F;
                     }
@@ -1790,7 +1795,7 @@ final class ComputerView extends View
         // reset vars
         valueCoords = snrefCoords = null;
         timestamp = starttime = timetauto = 0;
-        altLast = altDiff = Float.NaN;
+        altLast = altDiff = 0F;
         sat = fix = dgps = 0;
         final float[] valuesFloat = this.valuesFloat;
         for (int i = valuesFloat.length; --i >= 0; ) {

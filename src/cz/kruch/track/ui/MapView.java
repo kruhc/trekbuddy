@@ -124,7 +124,7 @@ final class MapView extends View {
         return location != null;
     }
 
-//#ifdef __ANDROID__
+//#if __ANDROID__ || __CN1__
 
     void onBackground() {
         // release images
@@ -863,8 +863,8 @@ final class MapView extends View {
     }
 
     private int toogleMagnifier() {
-        // no zoom with virtual map, it does not work (yet??)
-        if (!mapViewer.hasMap() || mapViewer.getMap().isVirtual()) {
+        // map needed
+        if (!mapViewer.hasMap()) {
             return Desktop.MASK_NONE;
         }
 

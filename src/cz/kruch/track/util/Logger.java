@@ -4,12 +4,10 @@ package cz.kruch.track.util;
 
 //#ifdef __LOG__
 
-import java.util.Date;
-
 /**
- * Logger for debugging - output goes to System.out.
+ * Logger for debugging - output goes to standard out/err or platform log.
  *
- * @author Ales Pour <kruhc@seznam.cz>
+ * @author kruhc@seznam.cz
  */
 public final class Logger {
     private static final String LEVEL_DEBUG  = "DEBUG";
@@ -35,6 +33,14 @@ public final class Logger {
         com.codename1.io.Log.e(t);
 //#endif
     }
+
+//#ifdef __CN1__
+
+    public static void showLog() {
+        com.codename1.io.Log.showLog();
+    }
+
+//#endif
 
     public Logger(String componentName) {
         this.cname = componentName;
@@ -79,10 +85,10 @@ public final class Logger {
     private void log(String severity, String message) {
         if (enabled) {
 //#ifndef __CN1__
-            System.out.println("[" + (new Date()) + "] " + cname + " - " + message);
+            System.out.println("[" + (new java.util.Date()) + "] " + cname + " - " + message);
             System.out.flush();
 //#else
-            com.codename1.io.Log.p("[" + (new Date()) + "] " + cname + " - " + message);
+            com.codename1.io.Log.p(cname + " - " + message);
 //#endif
         }
     }

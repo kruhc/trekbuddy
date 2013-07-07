@@ -49,16 +49,12 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         // initial state
         state = 0;
         // detect environment
-//#ifndef __CN1__
         platform = System.getProperty("microedition.platform");
-//#else
-        platform = "cn1";
-//#endif
         flags = getAppProperty(JAD_APP_FLAGS);
         if (flags == null) {
             flags = System.getProperty("trekbuddy.app-flags");
         }
-//#ifdef __ANDROID__
+//#if __ANDROID__ || __CN1__
         version = System.getProperty("MIDlet-Version");
 //#else
         version = getAppProperty("MIDlet-Version");
@@ -218,19 +214,13 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         // initial launch?
         if (state == 0) {
             state = 1;
-//#ifndef __CN1__
             (new Thread(this)).start();
-//#else
-            run();
-//#endif
         } else { // resumed from background
             state = 1;
-//#ifdef __ANDROID__
+//#if __ANDROID__ || __CN1__
             if (desktop != null) {
                 desktop.onForeground();
             }
-//#elifdef __CN1__
-            cz.kruch.track.ui.Desktop.display.setCurrent(cz.kruch.track.ui.Desktop.display.getCurrent());
 //#endif
         }
     }
@@ -246,7 +236,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         state = 2;
 
         // minimize
-//#ifdef __ANDROID__
+//#if __ANDROID__ || __CN1__
         if (desktop != null) {
             desktop.onBackground();
         }

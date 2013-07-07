@@ -33,7 +33,7 @@ abstract class View {
         isVisible = b;
     }
 
-//#ifdef __ANDROID__
+//#if __ANDROID__ || __CN1__
 
     void onBackground() {
     }

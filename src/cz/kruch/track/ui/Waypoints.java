@@ -413,7 +413,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
         boolean fn = false;
         if (displayable instanceof List) {
             fn = itemFieldNotes.equals(displayable.getTitle());
-//#ifndef __ANDROID__
+//#if !__ANDROID__ && !__CN1__
         } else if (displayable instanceof javax.microedition.lcdui.Alert) {
             return; // S40 "ticker" activity indicator (dialog with dismiss button)
 //#endif            
@@ -1054,7 +1054,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
         if (resText > -1 && list != null) {
             final String busyText = Resources.getString((short) resText);
             final String busyTitle = listingTitle == null ? storeName : listingTitle;
-//#ifndef __ANDROID__
+//#if !__ANDROID__ && !__CN1__
             if (Config.s40ticker) {
                 final javax.microedition.lcdui.Alert wait = new javax.microedition.lcdui.Alert(busyTitle, busyText,
                                                                                                null, null);
@@ -1068,7 +1068,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
 //#endif
                 cz.kruch.track.ui.nokia.DeviceControl.setTicker(list.getUI(), busyText);
                 tickerInUse = true;
-//#ifndef __ANDROID__
+//#if !__ANDROID__ && !__CN1__
             }
 //#endif
         }
@@ -1872,7 +1872,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
         // wait screen // TODO move to addToStore but need to handle updateStore invocation from waypoint form
         final boolean onBackround = STORE_FRIENDS.equals(_addWptStoreKey) || STORE_MOB.equals(_addWptStoreKey);
         if (!onBackround) {
-//#ifndef __ANDROID__
+//#if !__ANDROID__ && !__CN1__
             Desktop.showWaitScreen(Resources.getString(Resources.DESKTOP_CMD_NAVIGATION),
                                    Resources.getString(Resources.DESKTOP_MSG_IN_PROGRESS));
 //#else

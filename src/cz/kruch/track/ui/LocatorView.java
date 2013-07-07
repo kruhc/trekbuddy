@@ -46,7 +46,7 @@ final class LocatorView extends View {
     private final int navigationStrWidth, courseStrWidth;
 
     private final int[] center, vertex;
-    private final int[][] triangle;
+    private final int[] triangle0, triangle1, triangle2;
 
     private final StringBuffer sb;
     private final char[] sbChars;
@@ -61,7 +61,9 @@ final class LocatorView extends View {
         this.courseStrWidth = Desktop.font.stringWidth("359\u00b0");
         this.center = new int[2];
         this.vertex = new int[2];
-        this.triangle = new int[3][2];
+        this.triangle0 = new int[2];
+        this.triangle1 = new int[2];
+        this.triangle2 = new int[2];
         this.sb = new StringBuffer(32);
         this.sbChars = new char[32];
         reset();
@@ -97,11 +99,13 @@ final class LocatorView extends View {
     void setVisible(final boolean b) {
         super.setVisible(b);
         orientation = -1;
+//#ifndef __CN1__
         if (b) {
             cz.kruch.track.ui.nokia.DeviceControl.senseOn(navigator);
         } else {
             cz.kruch.track.ui.nokia.DeviceControl.senseOff(navigator);
         }
+//#endif
     }
 
     int handleAction(final int action, final boolean repeated) {
@@ -508,10 +512,9 @@ final class LocatorView extends View {
     private void drawCompas(final int width2, final int height2, final int fh, final int thick,
                             final Graphics g, final float course, final boolean uptodate,
                             final int colorHi, final int colorLo) {
-        final int[][] triangle = this.triangle;
-        final int[] triangle0 = triangle[0];
-        final int[] triangle1 = triangle[1];
-        final int[] triangle2 = triangle[2];
+        final int[] triangle0 = this.triangle0;
+        final int[] triangle1 = this.triangle1;
+        final int[] triangle2 = this.triangle2;
 
         triangle0[0] = width2;
         triangle0[1] = height2;
@@ -521,7 +524,7 @@ final class LocatorView extends View {
         triangle2[1] = height2;
 
         g.setColor(0x00707070);
-        drawTriangle(g, course, triangle);
+        drawTriangle(g, course, triangle0, triangle1, triangle2);
 
         triangle0[0] = width2 - thick;
         triangle0[1] = height2;
@@ -531,7 +534,7 @@ final class LocatorView extends View {
         triangle2[1] = height2;
 
         g.setColor(0x00909090);
-        drawTriangle(g, course, triangle);
+        drawTriangle(g, course, triangle0, triangle1, triangle2);
 
 /*
         triangle0[0] = dx + fh;
@@ -565,7 +568,7 @@ final class LocatorView extends View {
         } else {
             g.setColor(0x00707070);
         }
-        drawTriangle(g, course, triangle);
+        drawTriangle(g, course, triangle0, triangle1, triangle2);
 
         triangle0[0] = width2;
         triangle0[1] = height2;
@@ -579,19 +582,20 @@ final class LocatorView extends View {
         } else {
             g.setColor(0x00505050);
         }
-        drawTriangle(g, course, triangle);
+        drawTriangle(g, course, triangle0, triangle1, triangle2);
     }
 
-    private void drawTriangle(final Graphics g, final float bearing, final int[][] triangle) {
+    private void drawTriangle(final Graphics g, final float bearing,
+                              final int[] triangle0, final int[] triangle1, final int[] triangle2) {
         if (bearing > 1F) {
             final int[] center = this.center;
-            transform(center, bearing, triangle[0]);
-            transform(center, bearing, triangle[1]);
-            transform(center, bearing, triangle[2]);
+            transform(center, bearing, triangle0);
+            transform(center, bearing, triangle1);
+            transform(center, bearing, triangle2);
         }
-        g.fillTriangle(triangle[0][0], triangle[0][1],
-                       triangle[1][0], triangle[1][1],
-                       triangle[2][0], triangle[2][1]);
+        g.fillTriangle(triangle0[0], triangle0[1],
+                       triangle1[0], triangle1[1],
+                       triangle2[0], triangle2[1]);
     }
 
     private static boolean transform(final int[] center,

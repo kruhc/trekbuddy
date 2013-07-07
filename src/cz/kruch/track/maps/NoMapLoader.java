@@ -42,8 +42,8 @@ final class NoMapLoader extends Map.Loader /*implements Atlas.Loader*/ {
     private static final String TAG_BACKGROUND  = "background";
     private static final String ATTR_COLOR      = "color";
 
-    private static final int MIN_MAP_WIDTH  = 2048;
-    private static final int MIN_MAP_HEIGHT = 1280;
+    private static final int MIN_MAP_WIDTH  = 1920; // full HD
+    private static final int MIN_MAP_HEIGHT = 1920; // full HD
 
     private static final String FILE_SUFFIX = ".xml";
     private static final String BASENAME    = "default";
@@ -53,8 +53,8 @@ final class NoMapLoader extends Map.Loader /*implements Atlas.Loader*/ {
     void loadMeta() throws IOException {
         // set loader properties
         basename = BASENAME;
-        tileWidth = MIN_MAP_WIDTH; //map.getWidth() > 4096 ? 4096 : map.getWidth();
-        tileHeight = MIN_MAP_HEIGHT; //map.getHeight() > 4096 ? 4096 : map.getHeight();
+        tileWidth = MIN_MAP_WIDTH;
+        tileHeight = MIN_MAP_HEIGHT;
 
         // set loaded map properties
         map.bgColor = bgcolor;

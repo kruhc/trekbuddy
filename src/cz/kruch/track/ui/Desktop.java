@@ -180,11 +180,11 @@ public final class Desktop implements CommandListener,
     private long lastKeyTime;
 
     // pause task
-    private PauseTask pauseTask;
+    /*private*/ PauseTask pauseTask; // RenderTask visibility to avoid synthetic accessors
 
     // sync objects
-    private static final Object loadingLock = new Object();
-    private static final Object renderLock = new Object();
+    /*private*/ static final Object loadingLock = new Object(); // RenderTask visibility to avoid synthetic accessors
+    /*private*/ static final Object renderLock = new Object();  // RenderTask visibility to avoid synthetic accessors
 
 	// workers // TODO move to Worker? TrackingMIDlet?
 	private static Worker diskWorker, eventWorker, liveWorker;
@@ -293,6 +293,10 @@ public final class Desktop implements CommandListener,
         return eventWorker;
     }
 
+    static Worker getResponseWorker() {
+        return getDiskWorker();
+    }
+
 //#ifdef __HECL__
 
     public static Worker getLiveWorker() {
@@ -361,14 +365,6 @@ public final class Desktop implements CommandListener,
         consoleShow(g, consoleLineY, "");
         consoleLineY += consoleLineHeight;
 
-        // show initial steps results
-        consoleShow(g, consoleLineY, Resources.getString(Resources.BOOT_CACHING_IMAGES));
-        consoleResult(g, consoleLineY, imgcached);
-        consoleLineY += consoleLineHeight;
-        consoleShow(g, consoleLineY, Resources.getString(Resources.BOOT_LOADING_CFG));
-        consoleResult(g, consoleLineY, configured);
-        consoleLineY += consoleLineHeight;
-
         /*
          * from TrackingMIDlet.run
          */
@@ -394,31 +390,44 @@ public final class Desktop implements CommandListener,
          * ~from TrackingMIDlet.run
          */
 
+        int localized = 0;
+
         // additional steps from external resources
         if (cz.kruch.track.configuration.Config.dataDirExists) {
 
             // get list
-            final Vector resources = Config.listResources();
+            /*final Vector resources = */Config.listResources();
 
             // user resources
-            int localized;
             try {
-                localized = Resources.localize(resources);
+                localized = Resources.localize(null/*resources*/);
             } catch (Throwable t) {
                 localized = -1;
             }
-            if (localized != 0) {
-                consoleShow(g, consoleLineY, Resources.getString(Resources.BOOT_L10N));
-                consoleResult(g, consoleLineY, localized);
-                consoleLineY += consoleLineHeight;
-            }
+        }
+
+        // show initial steps results (with localization)
+        consoleShow(g, consoleLineY, Resources.getString(Resources.BOOT_CACHING_IMAGES));
+        consoleResult(g, consoleLineY, imgcached);
+        consoleLineY += consoleLineHeight;
+        consoleShow(g, consoleLineY, Resources.getString(Resources.BOOT_LOADING_CFG));
+        consoleResult(g, consoleLineY, configured);
+        consoleLineY += consoleLineHeight;
+        if (localized != 0) {
+            consoleShow(g, consoleLineY, Resources.getString(Resources.BOOT_L10N));
+            consoleResult(g, consoleLineY, localized);
+            consoleLineY += consoleLineHeight;
+        }
+
+        // continue with additional steps from external resources
+        if (cz.kruch.track.configuration.Config.dataDirExists) {
 
             // UI customization
             int customized;
             try {
-                customized = cz.kruch.track.ui.NavigationScreens.customize(resources);
+                customized = cz.kruch.track.ui.NavigationScreens.customize(null/*resources*/);
                 if (screen.hasPointerEvents()) {
-                    customized = cz.kruch.track.ui.NavigationScreens.customizeForTouch(resources);
+                    customized = cz.kruch.track.ui.NavigationScreens.customizeForTouch(null/*resources*/);
                 }
             } catch (Throwable t) {
                 customized = -1;
@@ -432,7 +441,7 @@ public final class Desktop implements CommandListener,
             // user keymap
             int keysmapped;
             try {
-                keysmapped = Resources.keymap(resources);
+                keysmapped = Resources.keymap(null/*resources*/);
             } catch (Throwable t) {
                 keysmapped = -1;
             }
@@ -443,7 +452,7 @@ public final class Desktop implements CommandListener,
             }
 
             // user datums
-            cz.kruch.track.configuration.Config.initUserDatums(resources);
+            cz.kruch.track.configuration.Config.initUserDatums(null/*resources*/);
         }
 
 //#ifdef __B2B__
@@ -528,6 +537,11 @@ public final class Desktop implements CommandListener,
         // show boot progress for a while
         consoleDelay(tStart);
 
+//#ifdef __CN1__
+        // hack MI clear
+        screen.clearGraphics();
+//#endif
+
         // setup commands
         configure();
 
@@ -590,16 +604,14 @@ public final class Desktop implements CommandListener,
 
         // finally initialized
         initialized = true;
-
-//#ifdef __CN1__
-        cz.kruch.track.util.Logger.showLog();
-//#endif
     }
 
-//#ifdef __ANDROID__
+//#if __ANDROID__ || __CN1__
 
     public void onBackground() {
+//#ifdef __ANDROID__
         android.util.Log.i(TAG, "[app] going background");
+//#endif
 
         // notify views
         final View[] views = this.views;
@@ -610,12 +622,16 @@ public final class Desktop implements CommandListener,
         }
         views[mode].setVisible(false);
 
+//#ifdef __ANDROID__
         // force GC
         System.gc(); // unconditional!!!
+//#endif
     }
 
     public void onForeground() {
+//#ifdef __ANDROID__
         android.util.Log.i(TAG, "[app] going foreground");
+//#endif
 
         // notify views
         final View[] views = this.views;
@@ -630,7 +646,7 @@ public final class Desktop implements CommandListener,
         update(MASK_SCREEN);
     }
 
-//#endif
+//#endif // __ANDROID__ || __CN1__
 
 //#ifdef __B2B__
 
@@ -869,6 +885,10 @@ public final class Desktop implements CommandListener,
         // TODO move to better place
         cz.kruch.track.TrackingMIDlet.getActivity().config.ignoreVolumeKeys = !Config.easyZoomVolumeKeys;
         cz.kruch.track.TrackingMIDlet.getActivity().config.ignoreTextFieldFocus = !Config.forceTextFieldFocus;
+//#endif
+
+//#ifdef __LOG__
+        if (log.isEnabled()) log.debug("GUI reset - " + w + "x" + h);
 //#endif
 
         if (w == width && h == height) {
@@ -1209,6 +1229,11 @@ public final class Desktop implements CommandListener,
                 // clear JVM
                 jvmReset();
 
+//#endif
+
+//#ifdef __CN1__
+                // flush log
+                com.codename1.io.Log.getInstance().flush();
 //#endif
 
                 // bail out
@@ -2058,7 +2083,7 @@ public final class Desktop implements CommandListener,
         if (log.isEnabled()) log.debug("update " + Integer.toBinaryString(mask) + "; state: " + cz.kruch.track.TrackingMIDlet.state);
 //#endif
 
-//#ifdef __ANDROID__
+//#if __ANDROID__ || __CN1__
         if (cz.kruch.track.TrackingMIDlet.state != 1) {
             return;
         }
@@ -2066,16 +2091,19 @@ public final class Desktop implements CommandListener,
 
         // anything to update?
         if (mask != MASK_NONE) {
-
             // notify map view that render event is about to happen...
             // so that it can start loading tiles asap...
             // TODO MapView specific and very ugly
+/*
             if ((mask & Desktop.MASK_MAP) != 0 && mode == VIEW_MAP) {
                 synchronized (loadingLock) {
                     if (!initializingMap && !loadingSlices) {
                         try {
                             if (((MapView) views[VIEW_MAP]).prerender()) { // loading will start soon
-                                return; 
+//#ifdef __LOG__
+                                if (log.isEnabled()) log.debug("tiles loading ahead");
+//#endif
+                                return;
                             }
                         } catch (Throwable t) { // should never happen
                             showError(null, t, null);
@@ -2084,9 +2112,11 @@ public final class Desktop implements CommandListener,
                     }
                 }
             }
+*/
+            final boolean mapscr = (mask & Desktop.MASK_MAP) != 0 && mode == VIEW_MAP;
 
             // call render task
-            screen.callSerially(newRenderTask(mask));
+            screen.callSerially(newRenderTask(mask, mapscr));
 
         }
 //#ifdef __LOG__
@@ -2147,6 +2177,9 @@ public final class Desktop implements CommandListener,
             android.util.Log.e(TAG, message, t);
 //#elifdef __SYMBIAN__
             System.err.println("[TrekBuddy] " + message);
+            t.printStackTrace();
+//#elifdef __LOG__
+            if (log.isEnabled()) log.error(message);
             t.printStackTrace();
 //#endif
             final StringBuffer sb = new StringBuffer(message);
@@ -2757,23 +2790,23 @@ public final class Desktop implements CommandListener,
     private static final RenderTask[] rtPool = new RenderTask[16];
     private static int rtCountFree;
 
-    private RenderTask newRenderTask(final int m) {
+    private RenderTask newRenderTask(final int m, final boolean y) {
         final RenderTask result;
 
         synchronized (rtPool) {
             if (rtCountFree == 0) {
-                result = new RenderTask(m);
+                result = new RenderTask(m, y);
             } else {
                 result = rtPool[--rtCountFree];
                 rtPool[rtCountFree] = null;
-                result.mask = m;
+                result.set(m, y);
             }
         }
 
         return result;
     }
 
-    private void releaseRenderTask(final RenderTask task) {
+    /*private*/ void releaseRenderTask(final RenderTask task) { // RenderTask visibility to avoid synthetic accessors
         synchronized (rtPool) {
             if (rtCountFree < rtPool.length) {
                 rtPool[rtCountFree++] = task;
@@ -2799,13 +2832,21 @@ public final class Desktop implements CommandListener,
 
     final class RenderTask implements Runnable {
         private int mask;
+        private boolean mapscr;
 
-        public RenderTask(final int m) {
+        public RenderTask(final int m, final boolean y) {
             this.mask = m;
+            this.mapscr = y;
+        }
+
+        void set(final int m, final boolean y) {
+            this.mask = m;
+            this.mapscr = y;
         }
 
         public void merge(final RenderTask r) {
             this.mask |= r.mask;
+            this.mapscr |= r.mapscr;
             releaseRenderTask(r);
         }
 
@@ -2817,6 +2858,10 @@ public final class Desktop implements CommandListener,
         private static final int FPS_NORMAL_MS = 16;
 
         public void run() {
+
+            // prerender phase
+            GTR();
+
             // render
             try {
                 // fps limit
@@ -2824,6 +2869,11 @@ public final class Desktop implements CommandListener,
 
                 // get graphics
                 final Graphics g = Desktop.screen.getGraphics();
+
+//#ifdef __CN1__
+                // clear paint operations
+                Desktop.screen.clearGraphics();
+//#endif
 
                 // render current view
                 synchronized (Desktop.renderLock) {
@@ -2856,7 +2906,22 @@ public final class Desktop implements CommandListener,
                 // release task
                 releaseRenderTask(this);
             }
+        }
 
+        private void GTR() {
+            synchronized (loadingLock) {
+                if (!initializingMap && !loadingSlices) {
+                    try {
+                        if (((MapView) views[VIEW_MAP]).prerender()) { // loading will start soon
+//#ifdef __LOG__
+                            if (log.isEnabled()) log.debug("tiles loading ahead");
+//#endif
+                        }
+                    } catch (Throwable t) { // should never happen
+                        showError(null, t, null);
+                    }
+                }
+            }
         }
 
         private boolean skipFrame(final int ms) {
@@ -2982,7 +3047,7 @@ public final class Desktop implements CommandListener,
         } // ~synchronized
     }
 
-    private void startOpenMap(final String url, final String name) {
+    /*private*/ void startOpenMap(final String url, final String name) { // Event visibility to avoid synthetic accessors
         // flag on
         _setInitializingMap(true);
 
@@ -3025,7 +3090,7 @@ public final class Desktop implements CommandListener,
         _map.open();
     }
 
-    private void startOpenAtlas(final String url, final String name) {
+    /*private*/ void startOpenAtlas(final String url, final String name) { // Event visibility to avoid synthetic accessors
         // flag on
         _setInitializingMap(true);
 
@@ -3115,17 +3180,14 @@ public final class Desktop implements CommandListener,
             } else {
                 event = pool[--countFree];
                 pool[countFree] = null;
-                event.code = code;
-                event.result = result;
-                event.throwable = throwable;
-                event.closure = closure;
+                event.set(code, result, throwable, closure);
             }
         }
 
         return event;
     }
 
-    private void releaseEvent(final Event event) {
+    /*private*/ void releaseEvent(final Event event) { // Event visibility to avoid synthetic accessors
         synchronized (pool) {
             if (countFree < pool.length) {
                 pool[countFree++] = event;
@@ -3177,6 +3239,14 @@ public final class Desktop implements CommandListener,
             this(code, closure);
             this.result = result;
             this.throwable = throwable;
+        }
+
+        void set(final int code, final Object result,
+                 final Throwable throwable, final Object closure) {
+            this.code = code;
+            this.result = result;
+            this.throwable = throwable;
+            this.closure = closure;
         }
 
         public void invoke(final Object result, final Throwable throwable, final Object source) {

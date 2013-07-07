@@ -82,6 +82,8 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
     private Vector providers;
     private int gaugeAlphaScale;
 
+    private static api.lang.RuntimeException exception;
+
     private boolean changed;
 
     private final int NUMERIC;
@@ -134,6 +136,9 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
     }
 
     private void show(final String section) {
+        // fresh show
+        exception = null;
+
         // submenu form
         submenu = new Form(Resources.prefixed(section));
 
@@ -156,7 +161,8 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
             append(choice2, Resources.CFG_BASIC_FLD_COORDS_MAPLL);
             append(choice2, Resources.CFG_BASIC_FLD_COORDS_MAPGRID);
             append(choice2, Resources.CFG_BASIC_FLD_COORDS_GCLL);
-            choice2.append(ProjectionSetup.PROJ_UTM, null);
+            choice2.append("UTM", null);
+            append(choice2, Resources.CFG_BASIC_FLD_COORDS_GPXLL);
             // TODO: add BNG, IG, SG, SUI
             choice2.setSelectedIndex(Config.cfmt, true);
             submenu.append(choice2);
@@ -183,8 +189,10 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
 
             // datadir
             if (File.isFs()) {
+//#ifndef __CN1__
                 submenu.append(field2 = newTextField(Resources.CFG_BASIC_FLD_DATA_DIR,
                                Config.getDataDir(), MAX_URL_LENGTH, TextField.URL));
+//#endif
                 submenu.append(field1 = newTextField(Resources.CFG_BASIC_FLD_START_MAP,
                                Config.mapURL, MAX_URL_LENGTH, TextField.URL));
             }
@@ -620,7 +628,7 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
                                                     Config.getLocationTimings(Config.locationProvider), 4, TextField.NUMERIC);
 //#endif                
                 fieldAltCorrection = newTextField(Resources.CFG_LOCATION_FLD_ALT_CORRECTION,
-                                                  Float.toString(Config.altCorrection), 5, TextField.ANY/*DECIMAL*/);
+                                                  Float.toString(Config.altCorrection), 6, TextField.ANY/*DECIMAL*/);
             }
 //#ifdef __ALL__
             if (cz.kruch.track.TrackingMIDlet.hasFlag("provider_o2_germany")) {
@@ -666,6 +674,11 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
 //#endif
         submenu.addCommand(new Command(Resources.getString(Resources.CMD_BACK), Desktop.BACK_CMD_TYPE, 1));
         submenu.setCommandListener(this);
+
+        // manifest exception
+        if (exception != null) {
+            throw exception;
+        }
 
         // show
         Desktop.display.setCurrent(submenu);
@@ -779,6 +792,8 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
                 } catch (ArrayIndexOutOfBoundsException e) {
                     // no item selected - ignore
 //#endif
+                } catch (api.lang.RuntimeException e) {
+                    Desktop.showError("Show menu error [" + e.getMessage() + "]", e.getCause(), submenu);
                 } catch (Throwable t) {
                     Desktop.showError("Show menu error", t, null);
                 }
@@ -856,10 +871,12 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
                 // startup screen
                 Config.startupScreen = choice4.getSelectedIndex();
 
+//#ifndef __CN1__
                 // datadir
                 if (File.isFs()) {
                     Config.setDataDir(getString(field2));
                 }
+//#endif
 
             } else if (menuLocation.equals(section)) {
 
@@ -1191,7 +1208,17 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
 
     private static TextField newTextField(final short resourceId, final String value,
                                           final int max, final int type) {
-        return new TextField(Resources.getString(resourceId), value, max, type);
+        final String resource = Resources.getString(resourceId);
+        try {
+            return new TextField(resource, value, max, type);
+        } catch (Exception e) {
+            if (exception == null) {
+                exception = new api.lang.RuntimeException(resource, e);
+            } else {
+                throw exception;
+            }
+            return new TextField(resource, "", max, type);
+        }
     }
 
     private static ChoiceGroup newChoiceGroup(final short resourceId, final int type) {

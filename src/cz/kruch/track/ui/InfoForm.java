@@ -217,6 +217,7 @@ final class InfoForm implements CommandListener {
             // restore desktop UI
             Desktop.restore(displayable);
         } else {
+//#ifndef __CN1__
             // form
             final Form pane = (Form) displayable;
             // delete basic info
@@ -225,6 +226,14 @@ final class InfoForm implements CommandListener {
             pane.removeCommand(command);
             // show technical details
             details(pane);
+//#else
+            // reuse does not work well in CN1 due to paint events cummulation
+            final Form pane = new Form(Resources.prefixed(Resources.getString(Resources.DESKTOP_CMD_INFO)));
+            details(pane);
+            pane.addCommand(new Command(Resources.getString(Resources.CMD_CLOSE), Desktop.BACK_CMD_TYPE, 1));
+            pane.setCommandListener(this);
+            Desktop.display.setCurrent(pane);
+//#endif
         }
     }
 

@@ -57,6 +57,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
     public static final int COORDS_MAP_GRID         = 1;
     public static final int COORDS_GC_LATLON        = 2;
     public static final int COORDS_UTM              = 3;
+    public static final int COORDS_GPX_LATLON       = 4;
 
     /* units */
     public static final int UNITS_METRIC            = 0;
@@ -121,6 +122,9 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
 
     // group [DataDir]
     public static String dataDir;
+//#ifdef __CN1__
+    public static String cardDir;
+//#endif
 
     // group [common provider options]
     public static int tracklog              = TRACKLOG_NEVER;
@@ -319,10 +323,12 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
 
 //#elifdef __CN1__
 
-        dataDir = getDefaultDataDir("file:///D:/", "TrekBuddy/");
+        dataDir = "file:///TrekBuddy/";
+        cardDir = "file:///Card/TrekBuddy/";
         safeColors = true;
-        zoomSpotsMode = guideSpotsMode = 0;
-        noQuestions = true;
+        // TODO remove in release
+        zoomSpotsMode = 1;
+        guideSpotsMode = 0;
 
 //#else
 
@@ -973,13 +979,17 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
 
         switch (action) {
             case ACTION_INITDATADIR: {
+//#ifndef __CN1__
                 if (dataDirExists) {
                     response(YesNoDialog.NO, null);
                 } else {
-                    (new YesNoDialog(this, null,
+                    (new YesNoDialog(Config.this, null,
                                      "DataDir '" + getDataDir().substring(8 /* "file:///".length() */) + "' does not exists. Create it?",
                                      null)).show();
                 }
+//#else
+                response(YesNoDialog.YES, null);
+//#endif
             } break;
             case ACTION_PERSISTCFG: {
                 dump();
@@ -1259,11 +1269,19 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
     }
 
     public static String getFolderURL(String folder) {
+//-#ifndef __CN1__
         return getDataDir().concat(folder);
+//-#else
+//        if (FOLDER_MAPS.equals(folder)) {
+//            return cardDir.concat(folder);
+//        } else {
+//            return dataDir.concat(folder);
+//        }
+//-#endif
     }
 
     public static String getFileURL(String folder, String file) {
-        return (new StringBuffer(32).append(getDataDir()).append(folder).append(file)).toString();
+        return (new StringBuffer(32).append(getFolderURL(folder)).append(file)).toString();
     }
 
     public static String getLocationTimings(final int provider) {

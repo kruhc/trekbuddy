@@ -350,7 +350,7 @@ final class DeviceScreen extends GameCanvas implements Runnable {
 
     protected void pointerPressed(int x, int y) {
 //#ifdef __LOG__
-        if (log.isEnabled()) log.info("pointerPressed");
+        if (log.isEnabled()) log.debug("pointerPressed; " + x + "-" + y);
 //#endif
 
         // happens on android sometimes?!?
@@ -415,7 +415,7 @@ final class DeviceScreen extends GameCanvas implements Runnable {
 
     protected void pointerReleased(int x, int y) {
 //#ifdef __LOG__
-        if (log.isEnabled()) log.info("pointerReleased");
+        if (log.isEnabled()) log.debug("pointerReleased; " + x + "-" + y);
 //#endif
 
         // happens on android sometimes?!?
@@ -439,6 +439,9 @@ final class DeviceScreen extends GameCanvas implements Runnable {
 
         // detect action
         final int key = pointerToKey(x, y);
+//#ifdef __LOG__
+        if (log.isEnabled()) log.debug("pointerReleased; key = " + key);
+//#endif
 
         // distinguish screenlock and menu "popup"
         if (key == Canvas.KEY_STAR && _getInKey() == Canvas.KEY_STAR && keyRepeatedCount == 0) {
@@ -476,7 +479,7 @@ final class DeviceScreen extends GameCanvas implements Runnable {
 
     protected void pointerDragged(int x, int y) {
 //#ifdef __LOG__
-        if (log.isEnabled()) log.info("pointerDragged");
+        if (log.isEnabled()) log.debug("pointerDragged; " + x + "-" + y);
 //#endif
 
         // happens on android sometimes?!?
@@ -507,7 +510,7 @@ final class DeviceScreen extends GameCanvas implements Runnable {
 
     protected void keyPressed(int i) {
 //#ifdef __LOG__
-        if (log.isEnabled()) log.info("keyPressed");
+        if (log.isEnabled()) log.debug("keyPressed; " + i);
 //#endif
 
 //#ifdef __ALL__
@@ -636,6 +639,10 @@ final class DeviceScreen extends GameCanvas implements Runnable {
         // keymap
         i = Resources.remap(i);
 
+//#ifdef __LOG__
+        if (log.isEnabled()) log.debug("key is " + i);
+//#endif
+
         // handle specials
         if (Canvas.KEY_STAR == i) {
             return;
@@ -649,7 +656,7 @@ final class DeviceScreen extends GameCanvas implements Runnable {
 
     protected void keyRepeated(int i) {
 //#ifdef __LOG__
-        if (log.isEnabled()) log.info("keyRepeated");
+        if (log.isEnabled()) log.debug("keyRepeated");
 //#endif
 
 //#ifdef __ALL__
@@ -721,7 +728,7 @@ final class DeviceScreen extends GameCanvas implements Runnable {
 
     protected void keyReleased(int i) {
 //#ifdef __LOG__
-        if (log.isEnabled()) log.info("keyReleased");
+        if (log.isEnabled()) log.debug("keyReleased");
 //#endif
 
 //#ifdef __RIM__
@@ -920,6 +927,10 @@ final class DeviceScreen extends GameCanvas implements Runnable {
 //#endif    
 
     private void drawTouchMenu() {
+//#ifdef __LOG__
+        if (log.isEnabled()) log.debug("drawTouchMenu");
+//#endif
+
         // calculate spacing and button size
         final int w = getWidth();
         final int h = getHeight();
@@ -968,6 +979,9 @@ final class DeviceScreen extends GameCanvas implements Runnable {
     private void drawButton(final Graphics g, final Command cmd,
                             final int x, final int y,
                             final int bw, final int bh) {
+//#ifdef __LOG__
+        if (log.isEnabled()) log.debug("drawButton; " + g + " " + cmd);
+//#endif
         g.setColor(BTN_COLOR);
         g.fillRoundRect(x, y, bw, bh, BTN_ARC, BTN_ARC);
         g.setColor(BTN_HICOLOR);

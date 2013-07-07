@@ -71,7 +71,7 @@ final class MapViewer {
 
     private final QualifiedCoordinates[] trailLL;
     private final Position[] trailXY;
-//#ifndef __ANDROID__
+//#if !__ANDROID__ && !__CN1__
 //#ifdef __PF__
     private final short[] trailPF;
 //#endif
@@ -94,7 +94,7 @@ final class MapViewer {
         this.course = this.course2 = Float.NaN;
         this.trailLL = new QualifiedCoordinates[MAX_TRAIL_LENGTH];
         this.trailXY = new Position[MAX_TRAIL_LENGTH];
-//#ifndef __ANDROID__
+//#if !__ANDROID__ && !__CN1__
 //#ifdef __PF__
         this.trailPF = new short[MAX_TRAIL_LENGTH];
 //#endif
@@ -362,6 +362,10 @@ final class MapViewer {
                 return false;
             }
         }
+
+//#ifdef __LOG__
+        if (log.isEnabled()) log.debug("move made? steps: " + steps);
+//#endif
 
         for (int i = steps; i-- > 0; )
 
@@ -664,7 +668,7 @@ final class MapViewer {
             // local refs for faster access
             final QualifiedCoordinates[] arrayLL = trailLL;
             final Position[] arrayXY = trailXY;
-//#ifndef __ANDROID__
+//#if !__ANDROID__ && !__CN1__
 //#ifdef __PF__
             final short[] arrayPF = trailPF;
 //#endif
@@ -725,7 +729,7 @@ final class MapViewer {
                         if (pfnext == MAX_TRAIL_LENGTH) {
                             pfnext = 0;
                         }
-//#ifndef __ANDROID__
+//#if !__ANDROID__ && !__CN1__
 //#ifdef __PF__
                         arrayPF[pflast] = updatePF(Config.trailThick,
                                                    arrayXY[pflast], arrayXY[pfnext]);
@@ -900,7 +904,7 @@ final class MapViewer {
 
             // restore line style
             graphics.setStrokeStyle(Graphics.SOLID);
-//#ifdef __ANDROID__
+//#if __ANDROID__ || __CN1__
             graphics.setStrokeWidth(1);
 //#endif
         }
@@ -946,7 +950,7 @@ final class MapViewer {
     private static void setStroke(final Graphics g, final int style, final int color, final int width) {
         g.setStrokeStyle(style);
         g.setColor(Config.COLORS_16[color]);
-//#ifdef __ANDROID__
+//#if __ANDROID__ || __CN1__
         g.setStrokeWidth(width * 2 + 1);
 //#endif
     }
@@ -1151,7 +1155,7 @@ final class MapViewer {
 
     private void drawTrail(final Graphics graphics) {
         final Position[] arrayXY = trailXY;
-//#ifndef __ANDROID__
+//#if !__ANDROID__ && !__CN1__
 //#ifdef __PF__
         final short[] arrayPF = trailPF;
 //#else
@@ -1171,7 +1175,7 @@ final class MapViewer {
         // set color and style
         final int color = graphics.getColor();
         graphics.setColor(Config.COLORS_16[Config.trailColor]);
-//#ifdef __ANDROID__
+//#if __ANDROID__ || __CN1__
         graphics.setStrokeWidth((Config.trailThick << 1) + 1);
 //#endif
 
@@ -1197,7 +1201,7 @@ final class MapViewer {
             if (!xIsOff && !yIsOff) {
                 
                 // draw segment
-//#ifndef __ANDROID__
+//#if !__ANDROID__ && !__CN1__
 //#ifdef __PF__
                 drawLineSegment(graphics, x0, y0, x1, y1, arrayPF[idx0], w, h);
 //#else
@@ -1225,7 +1229,7 @@ final class MapViewer {
             if (!xIsOff && !yIsOff) {
 
                 // draw segment
-//#ifndef __ANDROID__
+//#if !__ANDROID__ && !__CN1__
 //#ifdef __PF__
                 drawLineSegment(graphics, x0, y0, x1, y1, updatePF(Config.trailThick, x1 - x0, y1 - y0), w, h);
 //#else
@@ -1239,7 +1243,7 @@ final class MapViewer {
         
         // restore color and style
         graphics.setColor(color);
-//#ifdef __ANDROID__
+//#if __ANDROID__ || __CN1__
         graphics.setStrokeWidth(1);
 //#endif
     }
@@ -1266,7 +1270,7 @@ final class MapViewer {
                     if (!xIsOff && !yIsOff) {
 
                         // draw segment
-//#ifndef __ANDROID__
+//#if !__ANDROID__ && !__CN1__
 //#ifdef __PF__
                         drawLineSegment(graphics, x0, y0, x1, y1, updatePF(thickness, p0, p1), w, h);
 //#else
@@ -1764,7 +1768,7 @@ final class MapViewer {
         }
     }
 
-//#ifndef __ANDROID__
+//#if !__ANDROID__ && !__CN1__
 
 //#ifdef __PF__
 
@@ -1811,6 +1815,6 @@ final class MapViewer {
 
 //#endif
 
-//#endif // !__ANDROID__
+//#endif // !__ANDROID__ && !__CN1__
 
 }

@@ -370,6 +370,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         }
         if (cz.kruch.track.TrackingMIDlet.symbian) {
             useNativeService = false; // !cz.kruch.track.TrackingMIDlet.s60rdfp2;
+            verboseLoading = true;
         } else if (cz.kruch.track.TrackingMIDlet.nokia) {
             safeColors = true;
             captureLocator = "capture://image";

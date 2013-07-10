@@ -251,7 +251,12 @@ final class WaypointForm implements CommandListener, ItemCommandListener, ItemSt
         form.addCommand(new Command(Resources.getString(Resources.CMD_CANCEL), Desktop.CANCEL_CMD_TYPE, 1));
         form.addCommand(new ActionCommand(Resources.NAV_ITEM_RECORD_CURRENT, Desktop.POSITIVE_CMD_TYPE, 1, Resources.CMD_OK));
 //#else
+        /*
+         * Duplicit positive buttons - menu OK and BACK key - for UI consistency.
+         * Since Desktop.CANCEL_CMD_TYPE is Command.BACK, Command.CANCEL has to be used for cancellation.
+         */
         form.addCommand(new Command(Resources.getString(Resources.CMD_CANCEL), Command.CANCEL, 1));
+        form.addCommand(new ActionCommand(Resources.NAV_ITEM_RECORD_CURRENT, Desktop.POSITIVE_CMD_TYPE, 1, Resources.CMD_OK));
         form.addCommand(new ActionCommand(Resources.NAV_ITEM_RECORD_CURRENT, Command.BACK, 1, Resources.CMD_OK));
 //#endif
     }
@@ -292,7 +297,12 @@ final class WaypointForm implements CommandListener, ItemCommandListener, ItemSt
         form.addCommand(new Command(Resources.getString(Resources.CMD_CANCEL), Desktop.CANCEL_CMD_TYPE, 1));
         form.addCommand(new ActionCommand(action, Desktop.POSITIVE_CMD_TYPE, 1, Resources.CMD_OK));
 //#else
+        /*
+         * Duplicit positive buttons - menu OK and BACK key - for UI consistency.
+         * Since Desktop.CANCEL_CMD_TYPE is Command.BACK, Command.CANCEL has to be used for cancellation.
+         */
         form.addCommand(new Command(Resources.getString(Resources.CMD_CANCEL), Command.CANCEL, 1));
+        form.addCommand(new ActionCommand(action, Desktop.POSITIVE_CMD_TYPE, 1, Resources.CMD_OK));
         form.addCommand(new ActionCommand(action, Command.BACK, 1, Resources.CMD_OK));
 //#endif
     }
@@ -413,7 +423,8 @@ final class WaypointForm implements CommandListener, ItemCommandListener, ItemSt
                 appendWithNewlineAfter(this.fieldZone = createTextField(Resources.NAV_FLD_ZONE, new String(cc.zone), 3));
                 CartesianCoordinates.releaseInstance(cc);
             } break;
-            case Config.COORDS_GC_LATLON: {
+            case Config.COORDS_GC_LATLON:
+            case Config.COORDS_GPX_LATLON: {
                 labelXidx = Resources.NAV_FLD_WGS84LAT;
                 labelYidx = Resources.NAV_FLD_WGS84LON;
             } break;
@@ -646,7 +657,7 @@ final class WaypointForm implements CommandListener, ItemCommandListener, ItemSt
                     case Resources.NAV_CMD_NEW_NOTE: {
                         (new FieldNoteForm(waypoint, displayable, this)).show();
                     } break;
-//#ifndef __ANDROID__
+//-#ifndef __ANDROID__
                     case Resources.NAV_ITEM_RECORD_CURRENT: {
                         final ExtWaypoint wpt = new ExtWaypoint(coordinates,
                                                                 trimToNull(fieldName.getString()),
@@ -682,7 +693,7 @@ final class WaypointForm implements CommandListener, ItemCommandListener, ItemSt
                             Desktop.showError(Resources.getString(Resources.DESKTOP_MSG_INVALID_INPUT), e, null);
                         }
                     } break;
-//#endif
+//-#endif
                     case Resources.NAV_FLD_GS_LISTING_LONG:
                     case Resources.NAV_FLD_GS_HINT:
                     case Resources.NAV_FLD_GS_LOGS: {
@@ -869,11 +880,11 @@ final class WaypointForm implements CommandListener, ItemCommandListener, ItemSt
             default: {
                 final QualifiedCoordinates _qc = QualifiedCoordinates.newInstance(parseLatOrLon(lats),
                                                                                   parseLatOrLon(lons));
-                if (Config.cfmt != Config.COORDS_GC_LATLON) {
+                if (Config.cfmt == Config.COORDS_GC_LATLON || Config.cfmt == Config.COORDS_GPX_LATLON) {
+                    qc = _qc;
+                } else {
                     qc = Datum.contextDatum.toWgs84(_qc);
                     QualifiedCoordinates.releaseInstance(_qc);
-                } else {
-                    qc = _qc;
                 }
             }
         }

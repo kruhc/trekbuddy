@@ -289,6 +289,7 @@ public final class Resources {
     public static final short CFG_BASIC_FLD_SCREEN_MAP          = 3413;
     public static final short CFG_BASIC_FLD_SCREEN_HPS          = 3414;
     public static final short CFG_BASIC_FLD_SCREEN_CMS          = 3415;
+    public static final short CFG_BASIC_FLD_COORDS_GPXLL        = 3416;
     /* settings - Desktop */
     public static final short CFG_DESKTOP_GROUP                 = 3500;
     public static final short CFG_DESKTOP_FLD_FULLSCREEN        = 3501;

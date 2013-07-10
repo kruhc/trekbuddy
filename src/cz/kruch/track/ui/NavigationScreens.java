@@ -612,7 +612,8 @@ public final class NavigationScreens {
                 toUTM(qc, sb);
                 break;
             }
-            case Config.COORDS_GC_LATLON: {
+            case Config.COORDS_GC_LATLON:
+            case Config.COORDS_GPX_LATLON: {
                 toLL(qc, sb);
             } break;
             default: {
@@ -692,10 +693,12 @@ public final class NavigationScreens {
 
     private static StringBuffer append(final StringBuffer sb, final int type,
                                        final double value, final boolean hp) {
-        if (Config.cfmt != Config.COORDS_GC_LATLON) {
-            appendAsDDMMSS(sb, type, value, hp);
-        } else {
+        if (Config.cfmt == Config.COORDS_GPX_LATLON) {
+            appendAsDD(sb, type, value, hp);
+        } else if (Config.cfmt == Config.COORDS_GC_LATLON) {
             appendAsDDMM(sb, type, value, hp);
+        } else {
+            appendAsDDMMSS(sb, type, value, hp);
         }
 
         return sb;
@@ -799,6 +802,26 @@ public final class NavigationScreens {
         return sb;
     }
 
+    private static StringBuffer appendAsDD(final StringBuffer sb, final int type,
+                                           final double value, final boolean hp) {
+        double l = Math.abs(value);
+        int h = (int) Math.floor(l);
+        l -= h;
+        l *= 1000000D;
+        int hh = (int) Math.floor(l);
+
+        if (type == QualifiedCoordinates.LON && h < 100) {
+            sb.append('0');
+        }
+        if (h < 10) {
+            sb.append('0');
+        }
+        append(sb, h).append('.');
+        append(sb, hh).append(SIGN);
+
+        return sb;
+    }
+
     static StringBuffer printTo(final StringBuffer sb, final QualifiedCoordinates qc,
                                 final int mask, final boolean decimalPrecision) {
         // local coords
@@ -829,19 +852,19 @@ public final class NavigationScreens {
             default: {
                 if ((mask & 1) != 0) {
                     final double lat;
-                    if (Config.cfmt != Config.COORDS_GC_LATLON) {
-                        lat = localQc.getLat();
-                    } else {
+                    if (Config.cfmt == Config.COORDS_GC_LATLON || Config.cfmt == Config.COORDS_GPX_LATLON) {
                         lat = qc.getLat();
+                    } else {
+                        lat = localQc.getLat();
                     }
                     sb.append(lat > 0D ? 'N' : 'S').append(' ');
                     append(sb, QualifiedCoordinates.LAT, lat, decimalPrecision);
                 } else if ((mask & 2) != 0) {
                     final double lon;
-                    if (Config.cfmt != Config.COORDS_GC_LATLON) {
-                        lon = localQc.getLon();
-                    } else {
+                    if (Config.cfmt == Config.COORDS_GC_LATLON || Config.cfmt == Config.COORDS_GPX_LATLON) {
                         lon = qc.getLon();
+                    } else {
+                        lon = localQc.getLon();
                     }
                     sb.append(lon > 0D ? 'E' : 'W').append(' ');
                     append(sb, QualifiedCoordinates.LON, lon, decimalPrecision);

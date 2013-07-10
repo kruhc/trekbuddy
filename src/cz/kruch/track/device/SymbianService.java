@@ -267,8 +267,7 @@ public final class SymbianService {
         }
 
         public synchronized void mark(int readlimit) {
-            // called only from TarInputStream.mark - how to handle? propagate to the service? why?
-            // usually called when filepos is 0 anyway...
+            // never called - it is wrapped by api.lang.BufferedInputStream
         }
 
         public boolean markSupported() {

@@ -13,6 +13,7 @@ import java.util.Vector;
  * 
  * 2010-06-22: Added alternative thread-based executor.
  * 2010-10-29: Removed.
+ * 2013-06-24: Added again for CN1.
  *
  * @author kruhc@seznam.cz
  */

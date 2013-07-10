@@ -31,6 +31,14 @@ public final class SymbianService {
     private static final String URL = "socket://127.0.0.1:20175";
     private static final byte[] PKT = new byte[8];
 
+    private static final byte ACTION_INACTIVITY = (byte) 0x00;
+    private static final byte ACTION_FILE_OPEN  = (byte) 0x01;
+    private static final byte ACTION_FILE_CLOSE = (byte) 0x02;
+    private static final byte ACTION_FILE_READ  = (byte) 0x03;
+    private static final byte ACTION_FILE_RESET = (byte) 0x04;
+    private static final byte ACTION_FILE_SKIP  = (byte) 0x05;
+    private static final byte ACTION_FILE_MARK  = (byte) 0x06;
+
     /**
      * Opens networked stream.
      *
@@ -130,7 +138,7 @@ public final class SymbianService {
         }
 
         public void setLights(int value) throws IOException {
-            sendPacket(output, (byte) 0x00, value);
+            sendPacket(output, ACTION_INACTIVITY, value);
         }
 
         public void close() {
@@ -181,7 +189,7 @@ public final class SymbianService {
                 this.input = connection.openDataInputStream();
 
                 // open remote file
-                sendPacketEx(output, (byte) 0x01, utf8name.length, utf8name);
+                sendPacketEx(output, ACTION_FILE_OPEN, utf8name.length, utf8name);
 
             } catch (IOException e) {
 
@@ -207,7 +215,7 @@ public final class SymbianService {
             final byte[] header = this.header;
 
             // send file read request
-            sendPacket(output, (byte) 0x03, len);
+            sendPacket(output, ACTION_FILE_READ, len);
 
             // read response header
             input.readFully(header);
@@ -238,10 +246,10 @@ public final class SymbianService {
 
         public long skip(long n) throws IOException {
             while (n > Integer.MAX_VALUE) {
-                sendPacket(output, (byte) 0x05, Integer.MAX_VALUE);
+                sendPacket(output, ACTION_FILE_SKIP, Integer.MAX_VALUE);
                 n -= Integer.MAX_VALUE;
             }
-            sendPacket(output, (byte) 0x05, (int) n);
+            sendPacket(output, ACTION_FILE_SKIP, (int) n);
             return n;
         }
 
@@ -251,7 +259,7 @@ public final class SymbianService {
 
         public void close() throws IOException {
             try {
-                sendPacket(output, (byte) 0x02, 0);
+                sendPacket(output, ACTION_FILE_CLOSE, 0);
             } catch (Exception e) {
                 // ignore
             }
@@ -259,7 +267,8 @@ public final class SymbianService {
         }
 
         public synchronized void mark(int readlimit) {
-            // any limit is supported ;-)
+            // called only from TarInputStream.mark - how to handle? propagate to the service? why?
+            // usually called when filepos is 0 anyway...
         }
 
         public boolean markSupported() {
@@ -267,7 +276,7 @@ public final class SymbianService {
         }
 
         public synchronized void reset() throws IOException {
-            sendPacket(output, (byte) 0x04, 0);
+            sendPacket(output, ACTION_FILE_RESET, 0);
         }
 
         private void destroy() {

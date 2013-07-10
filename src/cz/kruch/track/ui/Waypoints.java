@@ -80,6 +80,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
     private static final String SUFFIX_GPX_REM  = ".gpx.rem";
 //#endif
 
+    private static final int TAG_RTE            = 0x0001ba63; // rte
     private static final int TAG_TRK            = 0x0001c1ad; // trk
     private static final int TAG_TRKSEG         = 0xcc6aff88; // trkseg
     private static final int TAG_RTEPT          = 0x067cbba7; // "rtept"
@@ -2360,6 +2361,9 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                                     lat = Double.parseDouble(parser.getAttributeValue(null, ATTR_LAT));
                                     lon = Double.parseDouble(parser.getAttributeValue(null, ATTR_LON));
                                 } break;
+                                case TAG_RTE: {
+                                    v.startSegment();
+                                } break;
                                 case TAG_TRKSEG: {
                                     v.startSegment();
                                 } break;
@@ -2457,6 +2461,9 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                         case 0: {
                             final int tag = parser.getHash();
                             switch (tag) {
+                                case TAG_RTE: {
+                                    v.endSegment();
+                                } break;
                                 case TAG_TRKSEG: {
                                     v.endSegment();
                                 } break;

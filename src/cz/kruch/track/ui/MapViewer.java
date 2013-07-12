@@ -82,8 +82,6 @@ final class MapViewer {
 
     private int ci, li;
 
-    private int iprescale;
-
     MapViewer() {
         this.crosshairSize = NavigationScreens.crosshairs.getHeight();
         this.crosshairSize2 = this.crosshairSize >> 1;
@@ -170,9 +168,6 @@ final class MapViewer {
                 this.chx = 0 - crosshairSize2;
                 this.chy = 0 - crosshairSize2;
             }
-
-            // use current prescale
-            iprescale = Config.prescale;
 
             // update scale
             calculateScale();
@@ -300,10 +295,10 @@ final class MapViewer {
 
             // adjust boundaries and reposition crosshair on tile change
             if (slice != null) {
-                mWidth = slice.getWidth();
-                mHeight = slice.getHeight();
-                x0 = slice.getX();
-                y0 = slice.getY();
+                mWidth = scale(slice.getWidth());
+                mHeight = scale(slice.getHeight());
+                x0 = scale(slice.getX());
+                y0 = scale(slice.getY());
                 switch (direction) {
                     case Canvas.UP:
                         final int dy = mHeight - dHeight;
@@ -1072,23 +1067,10 @@ final class MapViewer {
             return;
         }
 
-        /*final */int m_x0 = slice.getX();
-        /*final */int m_y0 = slice.getY();
-        final int slice_w = slice.getWidth();
-        final int slice_h = slice.getHeight();
-
-        /*
-         * FIXME hack
-         *
-         * Fixes x-y scaled position for screen rendering. The error in x-y is caused
-         * by integer math in getSlice(). It is however necessary there because is ensures
-         * that real tile x-y is derived from scaled x-y. Hacks from the very start :(
-         */
-        if (iprescale > 100) {
-            final Map map = this.map;
-            m_x0 = map.getPSX(m_x0);
-            m_y0 = map.getPSY(m_y0);
-        }
+        final int m_x0 = scale(slice.getX());
+        final int m_y0 = scale(slice.getY());
+        final int slice_w = scale(slice.getWidth());
+        final int slice_h = scale(slice.getHeight());
 
         final int x_src;
         int w;
@@ -1518,15 +1500,13 @@ final class MapViewer {
         // have-all-images flag
         boolean gotAll = true;
 
-        /* synchronized to avoid race condition with render() */
-        synchronized (this) { // @threads ?:slices
-
             // local refs to vectors
             final NakedVector oldSlices = slices;
             final NakedVector newSlices = slices2;
 
             // assertion
             if (!newSlices.isEmpty()) {
+                newSlices.removeAllElements(); // avoid error spree
                 throw new IllegalStateException("New tiles collection not empty");
             }
 
@@ -1542,8 +1522,8 @@ final class MapViewer {
                 while (_x < xmax) {
                     final Slice s = ensureSlice(_x, _y, oldSlices, newSlices);
                     if (s != null) {
-                        _x = s.getX() + s.getWidth();
-                        _l = s.getY() + s.getHeight();
+                        _x = scale(s.getRightEnd()); // s.getX() + s.getWidth();
+                        _l = scale(s.getBottomEnd()); // s.getY() + s.getHeight();
                         if (s.getImage() == null) {
 //#ifdef __LOG__
                             if (log.isEnabled()) log.debug("image missing for slice " + s);
@@ -1551,6 +1531,9 @@ final class MapViewer {
                             gotAll = false;
                         }
                     } else {
+//#ifdef __LOG__
+                        if (log.isEnabled()) log.error("Out of map - no tile for " + _x + "-" + _y);
+//#endif
                         throw new IllegalStateException("Out of map - no tile for " + _x + "-" + _y);
                     }
                 }
@@ -1580,12 +1563,16 @@ final class MapViewer {
 //#endif
             }
 
+        /* synchronized to avoid race condition with render() */
+        synchronized (this) { // @threads ?:slices
+
             // gc cleanup
             oldSlices.removeAllElements();
 
             // exchange vectors
             slices = newSlices;
             slices2 = oldSlices;
+
         } // ~synchronized
 
         // loading flag
@@ -1607,13 +1594,21 @@ final class MapViewer {
         if (log.isEnabled()) log.debug("ensure slice for " + x + "-" + y);
 //#endif
 
+        // result
         Slice slice = null;
+
+        // descaled x,y for Slice.isWithin()
+        final int xu = descale(x);
+        final int yu = descale(y);
 
         // look for suitable slice in current set
         final Object[] oldSlicesArray = oldSlices.getData();
         for (int i = oldSlices.size(); --i >= 0; ) {
             final Slice s = (Slice) oldSlicesArray[i];
-            if (s.isWithin(x, y)) {
+            if (s.isWithin(xu, yu)) {
+//#ifdef __LOG__
+                if (log.isEnabled()) log.debug("slice found in current set; " + s);
+//#endif
                 slice = s;
                 break;
             }
@@ -1641,12 +1636,20 @@ final class MapViewer {
     }
 
     private Slice getSliceFor(final int px, final int py) {
-        // first look in current set
-        final Object[] slicesArray = this.slices.getData();
-        for (int i = slices.size(); --i >= 0; ) {
-            final Slice s = (Slice) slicesArray[i];
-            if (s.isWithin(px, py)) {
-                return s;
+
+        // descaled x,y for Slice.isWithin()
+        final int xu = descale(px);
+        final int yu = descale(py);
+
+        /* synchronized to avoid race condition with scroll() */
+        synchronized (this) { // @threads input(scroll)|?:slices
+            // first look in current set
+            final Object[] slicesArray = this.slices.getData();
+            for (int i = slices.size(); --i >= 0; ) {
+                final Slice s = (Slice) slicesArray[i];
+                if (s.isWithin(xu, yu)) {
+                    return s;
+                }
             }
         }
 
@@ -1662,6 +1665,14 @@ final class MapViewer {
         }
 
         return s;
+    }
+
+    private int scale(final int i) {
+        return map.scale(i);
+    }
+
+    private int descale(final int i) {
+        return map.descale(i);
     }
 
     private void calculateScale() {

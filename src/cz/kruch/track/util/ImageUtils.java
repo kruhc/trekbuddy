@@ -281,10 +281,17 @@ public final class ImageUtils {
 
     }
 
-//#ifdef __RIM50__
+    public static Image resizeImage(final java.io.InputStream stream,
+                                    final float prescale, final int x2) throws IOException {
 
-    public static Image RIMresizeImage(final java.io.InputStream stream,
-                                       final float prescale, final int x2) throws IOException {
+//#ifndef __RIM50__
+
+        final Image image = Image.createImage(stream);
+        final int destW = ExtraMath.prescale(prescale, image.getWidth()) << x2;
+        final int destH = ExtraMath.prescale(prescale, image.getHeight()) << x2;
+        return resizeImage(image, destW, destH, ImageUtils.FAST_RESAMPLE, true);
+
+//#else
 
 /*
         api.io.NakedByteArrayOutputStream baos = new api.io.NakedByteArrayOutputStream(8192);
@@ -349,8 +356,8 @@ public final class ImageUtils {
         scaled = null; // gc hint
 
         return Image.createRGBImage(rgb, destW, destH, false);
-    }
 
 //#endif
 
+    }
 }

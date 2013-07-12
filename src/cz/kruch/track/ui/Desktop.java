@@ -455,6 +455,9 @@ public final class Desktop implements CommandListener,
             cz.kruch.track.configuration.Config.initUserDatums(null/*resources*/);
         }
 
+        // config refresh
+        cz.kruch.track.configuration.Config.configChanged();
+
 //#ifdef __B2B__
 
         // b2b res init
@@ -2091,20 +2094,22 @@ public final class Desktop implements CommandListener,
 
         // anything to update?
         if (mask != MASK_NONE) {
+
             // notify map view that render event is about to happen...
             // so that it can start loading tiles asap...
-            // TODO MapView specific and very ugly
-/*
-            if ((mask & Desktop.MASK_MAP) != 0 && mode == VIEW_MAP) {
+            // hack MapView specific and very ugly
+
+            // does this update affect map screen?
+            final boolean mapscr = (mask & Desktop.MASK_MAP) != 0 && mode == VIEW_MAP;
+            
+//#ifndef __CN1__
+            
+            // prerender phase
+            if (mapscr) {
                 synchronized (loadingLock) {
                     if (!initializingMap && !loadingSlices) {
                         try {
-                            if (((MapView) views[VIEW_MAP]).prerender()) { // loading will start soon
-//#ifdef __LOG__
-                                if (log.isEnabled()) log.debug("tiles loading ahead");
-//#endif
-                                return;
-                            }
+                            loadingSlices = ((MapView) views[VIEW_MAP]).prerender(); // returns true if loading will start soon
                         } catch (Throwable t) { // should never happen
                             showError(null, t, null);
                             return;
@@ -2112,8 +2117,8 @@ public final class Desktop implements CommandListener,
                     }
                 }
             }
-*/
-            final boolean mapscr = (mask & Desktop.MASK_MAP) != 0 && mode == VIEW_MAP;
+
+//#endif
 
             // call render task
             screen.callSerially(newRenderTask(mask, mapscr));
@@ -2859,8 +2864,23 @@ public final class Desktop implements CommandListener,
 
         public void run() {
 
+//#ifdef __CN1__
+
             // prerender phase
-            GTR();
+            if (mapscr) {
+                synchronized (loadingLock) {
+                    if (!initializingMap && !loadingSlices) {
+                        try {
+                            loadingSlices = ((MapView) views[VIEW_MAP]).prerender(); // returns true if loading will start soon
+                        } catch (Throwable t) { // should never happen
+                            showError(null, t, null);
+                            return;
+                        }
+                    }
+                }
+            }
+            
+//#endif
 
             // render
             try {
@@ -2905,22 +2925,6 @@ public final class Desktop implements CommandListener,
 
                 // release task
                 releaseRenderTask(this);
-            }
-        }
-
-        private void GTR() {
-            synchronized (loadingLock) {
-                if (!initializingMap && !loadingSlices) {
-                    try {
-                        if (((MapView) views[VIEW_MAP]).prerender()) { // loading will start soon
-//#ifdef __LOG__
-                            if (log.isEnabled()) log.debug("tiles loading ahead");
-//#endif
-                        }
-                    } catch (Throwable t) { // should never happen
-                        showError(null, t, null);
-                    }
-                }
             }
         }
 
@@ -3383,7 +3387,7 @@ public final class Desktop implements CommandListener,
         private void execConfigChanged() {
 
             // force changes
-            Config.useDatum(Config.geoDatum);
+            Config.configChanged();
             synchronized (Desktop.renderLock) {
                 resetFont();
                 resetBar();

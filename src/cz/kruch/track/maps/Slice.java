@@ -9,9 +9,9 @@ import cz.kruch.track.ui.NavigationScreens;
 import javax.microedition.lcdui.Image;
 
 /**
- * Represents map tile.
+ * Map tile.
  *
- * @author Ales Pour <kruhc@seznam.cz>
+ * @author kruhc@seznam.cz
  */
 public class Slice {
     public static Image NO_IMAGE = Image.createImage(2, 2);
@@ -70,10 +70,22 @@ public class Slice {
         return (hy >> 20) & 0x00000fff;
     }
 
+    /** helps minimize rounding errors for expr := getX() + getWidth() */
+    public final int getRightEnd() {
+        return (wx & 0x000fffff) + ((wx >> 20) & 0x00000fff);
+    }
+
+    /** helps minimize rounding errors for expr := getY() + getHeight() */
+    public final int getBottomEnd() {
+        return (hy & 0x000fffff) + ((hy >> 20) & 0x00000fff);
+    }
+
+    /*
+     * x,y are demagnified & descaled
+     */
     public final boolean isWithin(final int x, final int y) {
-        final int _x = getX();
-        final int dx = x - _x;
-        if (x >= _x && dx < getWidth()) {
+        final int dx = x - getX();
+        if (dx >= 0 && dx < getWidth()) {
             final int dy = y - getY();
             if (dy >= 0 && dy < getHeight()) {
                 return true;
@@ -82,16 +94,8 @@ public class Slice {
         return false;
     }
 
-    public final long getXyLong() {
-        return (long) getX() << 20 | getY();
-    }
-
-    // TODO
-    public int hashCode() {
-        return super.hashCode();
-    }
-
     public boolean equals(Object object) {
+        if (object == this) return true;
         if (object instanceof Slice) {
             final Slice s = (Slice) object;
             return s.wx == wx && s.hy == hy;

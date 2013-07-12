@@ -71,7 +71,9 @@ final class TarLoader extends Map.Loader /*implements Atlas.Loader*/ {
 
     Slice getSlice(final int x, final int y) {
         final Slice slice = super.getSlice(x, y);
-        final long xy = getScaledXyLong(slice); // slice.getXyLong();
+        final long xu = slice.getX();
+        final long yu = slice.getY();
+        final long xy = xu << 20 | yu;
         final long[] pointers = this.pointers;
         for (int i = numberOfPointers; --i >= 0; ) {
             final long pointer = pointers[i];

@@ -21,7 +21,10 @@ import java.io.IOException;
 import java.io.InputStream;
 
 /**
- * Calibration support.
+ * Map calibration.
+ *
+ * Dimensions are scaled and magnified when set. Unlike Slice, they cannot
+ * be calculated on-the-fly because grid computation may not be linear.
  *
  * @author kruhc@seznam.cz
  */
@@ -48,6 +51,7 @@ abstract class Calibration {
 
     // map dimensions
     private int w, h;
+    private int wu, hu;
 
     // main (left-top) calibration point
     private int cxyx, cxyy;
@@ -63,12 +67,12 @@ abstract class Calibration {
     private Position proximite;
 
     // prescale and magnifier
-    private int iprescale, x2;
-    private float fprescale;
+    int iprescale, x2;
+    float fprescale;
 
     protected Calibration() {
         this.iprescale = Config.prescale;
-        this.fprescale = Config.prescale;
+        this.fprescale = ((float)Config.prescale) / 100f;
     }
 
     protected final void init(final String path) {
@@ -93,11 +97,11 @@ abstract class Calibration {
     }
 
     protected void setWidth(int width) {
-        this.w = prescale(width);
+        this.w = prescale(this.wu = width);
     }
 
     protected void setHeight(int height) {
-        this.h = prescale(height);
+        this.h = prescale(this.hu = height);
     }
 
     public ProjectionSetup getProjection() {
@@ -289,17 +293,28 @@ abstract class Calibration {
         computeInternals(this.xy, ll);
     }
 
-    private int prescale(final int i) {
+    public int prescale(final int i) {
         if (iprescale == 100) {
             return i;
         }
-/*
-        final float k = ((float) prescale) / 100;
-        return ExtraMath.round(k * i);
-*/
         return ExtraMath.prescale(fprescale, i);
     }
 
+    public int descale(final int i) {
+        if (iprescale == 100) {
+            return i;
+        }
+        return ExtraMath.descale(fprescale, i);
+    }
+
+    int getWidthUnscaled() {
+        return wu;
+    }
+
+    int getHeightUnscaled() {
+        return hu;
+    }
+    
     private Vector prescale(final Vector xy) {
         if (iprescale == 100) {
             return xy;

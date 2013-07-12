@@ -45,7 +45,6 @@ public final class Map implements Runnable {
     // map state
     private Calibration calibration;
     private volatile boolean isInUse;
-    private int x2;
 
     // special map properties // HACK
     boolean virtual;
@@ -231,12 +230,12 @@ public final class Map implements Runnable {
     /**
      * Gets slice into which given point falls.
      *
-     * @param x pixel x
-     * @param y pixel y
+     * @param x pixel x (scaled & magnified)
+     * @param y pixel y (scaled & magnified)
      * @return slice
      */
     public Slice getSlice(final int x, final int y) {
-        return loader.getSlice(x, y);
+        return loader.getSlice(descale(x), descale(y));
     }
 
     /**
@@ -289,9 +288,6 @@ public final class Map implements Runnable {
         if (log.isEnabled()) log.debug("about to load new slices");
 //#endif
 
-        // notify listener
-        listener.slicesLoading(null, null);
-
         // load images at background
         Desktop.getDiskWorker().enqueue(loader.use(list));
 
@@ -316,8 +312,6 @@ public final class Map implements Runnable {
                 }
                 loader = (Loader) factory.newInstance();
                 loader.init(this, path);
-            } else {
-                loader.x2 = 0;
             }
 
             // prepare loader
@@ -370,25 +364,16 @@ public final class Map implements Runnable {
         return null;
     }
 
-    /** @deprecated */
-    public void toggleMagnifier() {
-        x2 = ++x2 % 2;
-        calibration.magnify(x2);
-        loader.magnify(x2);
-    }
-
     public void setMagnifier(final int x2) {
-        this.x2 = x2;
         calibration.magnify(x2);
-        loader.magnify(x2);
     }
 
-    public int getPSX(final int x) {
-        return loader.getPSX(x);
+    public int scale(final int i) {
+        return calibration.prescale(i) << calibration.x2;
     }
 
-    public int getPSY(final int y) {
-        return loader.getPSY(y);
+    public int descale(final int i) {
+        return calibration.descale(i >> calibration.x2);
     }
 
     /**
@@ -413,9 +398,6 @@ public final class Map implements Runnable {
         protected boolean isTar, isTmi, isTmc;
 
         protected int tileWidth, tileHeight;
-        protected int x2, iprescale;
-        protected int scaledTileWidth, scaledTileHeight;
-        protected float fprescale;
 
         private Vector _list;
 
@@ -425,9 +407,6 @@ public final class Map implements Runnable {
 
         Loader() {
             this.tileWidth = this.tileHeight = Integer.MAX_VALUE;
-            this.scaledTileWidth = this.scaledTileHeight = Integer.MAX_VALUE;
-            this.iprescale = Config.prescale;
-            this.fprescale = Config.prescale;
 //            ((api.io.BufferedInputStream) bufferef()).setAutofill(true, -1);
         }
 
@@ -488,71 +467,15 @@ public final class Map implements Runnable {
                     throw new InvalidMapException("Root tile 0-0 missing");
                 }
             }
-            scaledTileWidth = prescale(tileWidth);
-            scaledTileHeight = prescale(tileHeight);
             onLoad();
         }
 
-        final void magnify(final int x2) {
-            if (this.x2 != x2) {
-                this.x2 = x2;
-                if (x2 == 0) {
-                    scaledTileWidth >>= 1;
-                    scaledTileHeight >>= 1;
-                } else {
-                    scaledTileWidth <<= 1;
-                    scaledTileHeight <<= 1;
-                }
-            }
-        }
-
-        // HACK sx is multiple scaled width
-        private int sx2x(final int sx) {
-            return sx / scaledTileWidth * tileWidth;
-        }
-
-        // HACK sy is multiple scaled height
-        private int sy2y(final int sy) {
-            return sy / scaledTileHeight * tileHeight;
-        }
-
-        // HACK
-        final long getScaledXyLong(final Slice slice) {
-            final long x = sx2x(slice.getX());
-            final long y = sy2y(slice.getY());
-            return x << 20 | y;
-        }
-        
-        // HACK
-        final void loadScaledSlice(final Slice slice) throws IOException {
-            // temp slice
-            final Slice ss = newSlice();
-            // required for JarLoader or DirLoader
-            ss.setRect(sx2x(slice.getX()), sy2y(slice.getY()), tileWidth, tileHeight);
-            // for TarLoader
-            if (isTar) {
-                ((TarSlice) ss).setBlockOffset(((TarSlice) slice).getBlockOffset());
-            }
-            // load slice
-            loadSlice(ss);
-            // set image
-            slice.setImage(ss.getImage());
-        }
-
         final Image scaleImage(final InputStream stream) throws IOException {
-            if (x2 == 0 && iprescale == 100) {
+            final Calibration mc = getMapCalibration();
+            if (mc.x2 == 0 && mc.iprescale == 100) {
                 return Image.createImage(stream);
             }
-//#ifdef __RIM50__
-            return ImageUtils.RIMresizeImage(stream, fprescale, x2);
-//#else
-            final Image image = Image.createImage(stream);
-            return ImageUtils.resizeImage(image,
-                                          prescale(image.getWidth()) << x2,
-                                          prescale(image.getHeight()) << x2,
-                                          ImageUtils.FAST_RESAMPLE,
-                                          true);
-//#endif
+            return ImageUtils.resizeImage(stream, mc.fprescale, mc.x2);
         }
 
         final long addSlice(final CharArrayTokenizer.Token token) throws InvalidMapException {
@@ -584,17 +507,20 @@ public final class Map implements Runnable {
             return new Slice();
         }
 
-        Slice getSlice(int x, int y) {
-            final Slice slice = newSlice();
+        /*
+         * x,y are demagnified & descaled
+         */
+        Slice getSlice(final int x, final int y) {
             final Calibration calibration = getMapCalibration();
-            final int mw = calibration.getWidth();
-            final int mh = calibration.getHeight();
-            final int tw = scaledTileWidth;
-            final int th = scaledTileHeight;
+            final int mw = calibration.getWidthUnscaled();
+            final int mh = calibration.getHeightUnscaled();
+            final int tw = tileWidth;
+            final int th = tileHeight;
             final int sx = (x / tw) * tw;
             final int sy = (y / th) * th;
             final int sw = sx + tw <= mw ? tw : mw - sx;
             final int sh = sy + th <= mh ? th : mh - sy;
+            final Slice slice = newSlice();
             slice.setRect(sx, sy, sw, sh);
 //#ifdef __LOG__
             if (log.isEnabled()) log.debug("slice for " + x + "-" + y + " is " + slice);
@@ -610,6 +536,8 @@ public final class Map implements Runnable {
 //#ifdef __LOG__
             if (log.isEnabled()) log.debug("slice loading task started for " + map.getPath());
 //#endif
+            // notify listener
+            map.listener.slicesLoading(null, null);
 
             // gc
             if (Config.forcedGc) {
@@ -707,21 +635,6 @@ public final class Map implements Runnable {
             throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_INVALID_SLICE_NAME) + name);
         }
 
-        private int prescale(final int i) {
-            if (iprescale == 100) {
-                return i;
-            }
-            return ExtraMath.prescale(fprescale, i);
-        }
-
-        private int getPSX(final int x) {
-            return prescale(sx2x(x) << x2);
-        }
-
-        private int getPSY(final int y) {
-            return prescale(sy2y(y) << x2);
-        }
-
         private Throwable loadImages(final Vector slices) {
             // assertions
             if (slices == null) {
@@ -743,7 +656,7 @@ public final class Map implements Runnable {
                         try {
                             // load image
                             try {
-                                loadScaledSlice(slice);
+                                loadSlice(slice);
                             } catch (IOException e) { // file not found or corrupted
 //#ifdef __LOG__
                                 e.printStackTrace();

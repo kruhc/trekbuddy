@@ -1024,10 +1024,11 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
                 Config.osdAlpha = gauge2.getValue() * gaugeAlphaScale;
                 Config.listFont = Integer.parseInt(getString(field1), 16);
                 Config.cmsCycle = getInt(field2);
-                Config.prescale = getInt(field3);
-                if (Config.prescale < 100 || Config.prescale > 270) {
+                final int prescale = getInt(field3);
+                if (prescale < 100 || prescale > 270) {
                     Desktop.showError(Resources.getString(Resources.DESKTOP_MSG_INVALID_INPUT) + ": " + getString(field3), null, null);
-                    return;
+                } else {
+                    Config.prescale = prescale;
                 }
                 Config.trailColor = itemLineColor[0];
                 Config.trailThick = itemLineThick[0];

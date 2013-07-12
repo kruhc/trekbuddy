@@ -31,17 +31,17 @@ public class DeviceControl extends TimerTask {
 
     public static void initialize() {
 //#ifdef __SYMBIAN__
-        if (instance == null) {
-            try {
-                if (cz.kruch.track.TrackingMIDlet.nokiaui14) {
-                    instance = (DeviceControl) Class.forName("cz.kruch.track.ui.nokia.NokiaUi14DeviceControl").newInstance();
-                } else {
-                    instance = (DeviceControl) Class.forName("cz.kruch.track.ui.nokia.S60DeviceControl").newInstance();
-                }
-            } catch (Throwable t) {
-                // ignore
-            }
+        if (cz.kruch.track.TrackingMIDlet.nokiaui14) {
+            instance = new cz.kruch.track.ui.nokia.NokiaUi14DeviceControl();
+        } else {
+            instance = new cz.kruch.track.ui.nokia.S60DeviceControl();
         }
+//#elifdef __RIM__
+        instance = new cz.kruch.track.ui.nokia.BlackberryDeviceControl();
+//#elifdef __ANDROID__
+        instance = new cz.kruch.track.ui.nokia.AndroidDeviceControl();
+//#elifdef __CN1__
+        instance = new cz.kruch.track.ui.nokia.CN1DeviceControl();
 //#elifdef __ALL__
         if (instance == null) {
             try {
@@ -97,23 +97,6 @@ public class DeviceControl extends TimerTask {
                 } else {
                     instance = (DeviceControl) Class.forName("cz.kruch.track.ui.nokia.NokiaDeviceControl").newInstance();
                 }
-            } catch (Throwable t) {
-                // ignore
-            }
-        }
-//#elifdef __RIM__
-        if (instance == null) {
-            try {
-                Class.forName("net.rim.device.api.system.Backlight");
-                instance = (DeviceControl) Class.forName("cz.kruch.track.ui.nokia.BlackberryDeviceControl").newInstance();
-            } catch (Throwable t) {
-                // ignore
-            }
-        }
-//#elifdef __ANDROID__
-        if (instance == null) {
-            try {
-                instance = (DeviceControl) Class.forName("cz.kruch.track.ui.nokia.AndroidDeviceControl").newInstance();
             } catch (Throwable t) {
                 // ignore
             }

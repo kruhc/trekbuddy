@@ -21,7 +21,11 @@ public final class ExtraMath {
     }
 
     public static int prescale(final float scale, final int i) {
-        return round((scale / 100) * i);
+        return round(i * (scale/* / 100*/)); // already normalized
+    }
+
+    public static int descale(final float scale, final int i) {
+        return round(i / (scale/* / 100*/)); // already normalized
     }
 
     public static int grade(final double d) {

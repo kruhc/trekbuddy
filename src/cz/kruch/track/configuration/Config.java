@@ -951,6 +951,10 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         }
     }
 
+    public static void configChanged() {
+        useDatum(geoDatum);
+    }
+
     public static void checkDataDir(final int configured) {
 //#ifdef __RIM__
         if (configured == 0) {
@@ -1137,9 +1141,6 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
 
         // inject the very basic datum
         Datum.WGS_84 = (Datum) datumMappings.get("map:WGS 84");
-
-        // setup defaults
-        useDatum(geoDatum);
     }
 
     public static void initUserDatums(final Vector resources) {
@@ -1221,7 +1222,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         }
     }
 
-    public static String useDatum(final String id) {
+    private static String useDatum(final String id) {
         for (int i = datums.size(); --i >= 0; ) {
             final Datum datum = (Datum) datums.elementAt(i);
             if (id.equals(datum.name)) {

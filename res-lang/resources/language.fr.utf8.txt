@@ -262,6 +262,7 @@
 3413=Cartes
 3414=Boussole (hps)
 3415=Cms
+3416=<GPX Lat/Lon>
 
 # formulaires/champs/valeurs de paramétrage (Bureau)
 3500=Bureau
@@ -271,7 +272,7 @@
 3504=Azimut des points de passage HPS vrai
 3505=Affichage basique
 3506=Affichage étendu
-3507=Echelle d'affichage
+3507=Affichage de l'échelle
 3508=Affichage sans arrière-plan
 3509=Police d'affichage moyenne
 3510=Police d'affichage grasse

@@ -261,6 +261,7 @@
 3413=mapas
 3414=brújula (hps)
 3415=cms
+3416=<GPX Lat/Lon>
 
 # settings forms/fields/values (Desktop)
 3500=Apariencia pantalla

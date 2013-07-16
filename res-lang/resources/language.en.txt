@@ -95,7 +95,7 @@
 1344=Failed to parse map projection
 1345=Failed to parse map datum
 1346=Failed to parse calibration file
-1347=Failed to parse SET file
+1347=Failed to parse index file
 1348=Invalid atlas URL
 1349=Invalid map URL
 1350=Invalid tile filename:
@@ -276,6 +276,7 @@
 3413=map
 3414=compass
 3415=cms
+3416=<GPX Lat/Lon>
 
 # settings forms/fields/values (Screen)
 3500=Desktop
@@ -355,7 +356,7 @@
 3700=Wpt Proximity
 3701=POI Proximity
 3702=Route Line
-3703=dotted
+3703=dashed
 #REMOVED 3704=red color
 3705=POI icons
 3706=Location SMS

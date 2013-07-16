@@ -30,10 +30,12 @@
     <property name="androidant.home" value="c:\J2ME\android-sdk-ant"/>
     <property name="microemu.home" value="z:\repository\microemu-google\microemulator"/>
     <property name="cn1.home" value="z:\apps\Codename One"/>
+    <property name="cn1.repository" value="z:\repository\cn1\CodenameOne"/>
     <property name="proguard3.home" value="z:\apps\proguard3.11"/>
     <property name="proguard4.home" value="z:\apps\proguard4.9"/>
 
     <property name="build.dir" value="r:\trekbuddy"/>
+    <property name="temp.dir" value="r:\java-temp"/>
 
     <property name="use.proguard" value="3"/>
 
@@ -119,6 +121,11 @@
     <path id="bootclasspath.cn1">
         <pathelement location="${cn1.home}\lib\CLDC11.jar"/>
         <pathelement location="${cn1.home}\lib\CodenameOne.jar"/>
+    </path>
+
+    <path id="bootclasspath.cn1-trunk">
+        <pathelement location="${cn1.repository}\CLDC11.jar"/>
+        <pathelement location="${cn1.repository}\dist\CodenameOne.jar"/>
     </path>
 
     <path id="bootclasspath.emulator">
@@ -548,6 +555,7 @@
         <antcall target="clean"/>
         <antcall target="a.pre.cn1-nb"/>
         <antcall target="prepare.cn1-nb"/>
+        <antcall target="compile.cn1-trunk"/>
     </target>
 
     <target name="emulator">
@@ -700,9 +708,15 @@
     <target name="a.pre.cn1">
         <mkdir dir="tmp/src"/>
         <wtkpreprocess srcdir="src" destdir="tmp/src" version="1"
+                       symbols="__CN1__,${pre.extra}"/>
+        <wtkpreprocess srcdir="cn1-compat/src" destdir="tmp/src" version="1"
+                       symbols="__CN1__,${pre.extra}"/>
+<!--
+        <wtkpreprocess srcdir="src" destdir="tmp/src" version="1"
                        symbols="__CN1__,__LOG__,${pre.extra}"/>
         <wtkpreprocess srcdir="cn1-compat/src" destdir="tmp/src" version="1"
                        symbols="__CN1__,__LOG__,${pre.extra}"/>
+-->
     </target>
 
     <target name="a.pre.cn1-emulator">
@@ -729,6 +743,7 @@
             <fileset dir="res-lang/resources">
                 <include name="language.en.res"/>
                 <include name="language.es.res"/>
+                <include name="language.fr.res"/>
                 <include name="language.pl.res"/>
             </fileset>
         </copy>
@@ -876,8 +891,34 @@
         </javac>
     </target>
 
-    <target name="prepare.cn1-nb" depends="remove.nonstd.src,remove.rim.src,remove.android.src,
+    <target name="compile.cn1-trunk">
+        <mkdir dir="tmp/build/classes"/>
+        <mkdir dir="tmp/ant"/>
+        <javac sourcepath=""
+               destdir="tmp/build/classes"
+               tempdir="tmp/ant"
+               fork="true"
+               target="1.5" debug="true"
+               bootclasspathref="bootclasspath.cn1-trunk">
+            <!--<compilerarg line="-Xlint:unchecked -Xmaxwarns 1000"/>-->
+            <compilerarg line="-Xlint:deprecation"/>
+            <src path="tmp/src"/>
+        </javac>
+    </target>
+
+    <target name="prepare.cn1-nb" depends="backup.cn1.src,remove.nonstd.src,
+                                           remove.rim.src,remove.android.src,
                                            remove.mmapi.src,remove.lapi.src">
+        <antcall target="restore.cn1.src"/>
+        <delete file="tmp/src/cz/kruch/track/ui/nokia/Midp2DeviceControl.java"/>
+    </target>
+
+    <target name="backup.cn1.src">
+        <copy file="tmp/src/cz/kruch/track/ui/nokia/CN1DeviceControl.java" todir="${temp.dir}"/>
+    </target>
+
+    <target name="restore.cn1.src">
+        <copy file="${temp.dir}/CN1DeviceControl.java" todir="tmp/src/cz/kruch/track/ui/nokia"/>
     </target>
 
     <target name="compile.emulator" depends="remove.symbian.src,remove.rim.src,remove.android.src">
@@ -898,7 +939,6 @@
         <delete file="tmp/src/api/file/MotorolaFile.java"/>
         <delete file="tmp/src/api/file/Motorola1000File.java"/>
         <delete file="tmp/src/api/file/SiemensFile.java"/>
-        <delete file="tmp/src/api/file/Cn1File.java"/>
         <delete file="tmp/src/cz/kruch/track/ui/nokia/NokiaDeviceControl.java"/>
         <delete file="tmp/src/cz/kruch/track/ui/nokia/NokiaUi14DeviceControl.java"/>
         <delete file="tmp/src/cz/kruch/track/ui/nokia/MotorolaDeviceControl.java"/>
@@ -908,6 +948,7 @@
         <delete file="tmp/src/cz/kruch/track/ui/nokia/SonyEricssonDeviceControl.java"/>
         <delete file="tmp/src/cz/kruch/track/ui/nokia/SamsungDeviceControl.java"/>
         <delete file="tmp/src/cz/kruch/track/ui/nokia/LgDeviceControl.java"/>
+        <delete file="tmp/src/cz/kruch/track/ui/nokia/CN1DeviceControl.java"/>
         <delete file="tmp/src/cz/kruch/track/location/MotorolaLocationProvider.java"/>
     </target>
 
@@ -915,13 +956,13 @@
         <delete file="tmp/src/api/file/MotorolaFile.java"/>
         <delete file="tmp/src/api/file/Motorola1000File.java"/>
         <delete file="tmp/src/api/file/SiemensFile.java"/>
-        <delete file="tmp/src/api/file/Cn1File.java"/>
         <delete file="tmp/src/cz/kruch/track/ui/nokia/MotorolaDeviceControl.java"/>
         <delete file="tmp/src/cz/kruch/track/ui/nokia/Motorola2DeviceControl.java"/>
         <delete file="tmp/src/cz/kruch/track/ui/nokia/SiemensDeviceControl.java"/>
         <delete file="tmp/src/cz/kruch/track/ui/nokia/SonyEricssonDeviceControl.java"/>
         <delete file="tmp/src/cz/kruch/track/ui/nokia/SamsungDeviceControl.java"/>
         <delete file="tmp/src/cz/kruch/track/ui/nokia/LgDeviceControl.java"/>
+        <delete file="tmp/src/cz/kruch/track/ui/nokia/CN1DeviceControl.java"/>
         <delete file="tmp/src/cz/kruch/track/location/MotorolaLocationProvider.java"/>
     </target>
 
@@ -1039,6 +1080,7 @@
             <fileset dir="res-lang">
                 <include name="resources/language.en.res"/>
                 <include name="resources/language.es.res"/>
+                <include name="resources/language.fr.res"/>
                 <include name="resources/language.pl.res"/>
             </fileset>
             <manifest>
@@ -1075,6 +1117,7 @@
             <fileset dir="res-lang">
                 <include name="resources/language.en.res"/>
                 <include name="resources/language.es.res"/>
+                <include name="resources/language.fr.res"/>
                 <include name="resources/language.pl.res"/>
             </fileset>
             <manifest>
@@ -1113,6 +1156,7 @@
             <fileset dir="res-lang">
                 <include name="resources/language.en.res"/>
                 <include name="resources/language.es.res"/>
+                <include name="resources/language.fr.res"/>
                 <include name="resources/language.pl.res"/>
             </fileset>
             <manifest>
@@ -1143,6 +1187,7 @@
             <fileset dir="res-lang">
                 <include name="resources/language.en.res"/>
                 <include name="resources/language.es.res"/>
+                <include name="resources/language.fr.res"/>
                 <include name="resources/language.pl.res"/>
             </fileset>
             <manifest>
@@ -1172,6 +1217,7 @@
             <fileset dir="res-lang">
                 <include name="resources/language.en.res"/>
                 <include name="resources/language.es.res"/>
+                <include name="resources/language.fr.res"/>
                 <include name="resources/language.pl.res"/>
             </fileset>
             <manifest>
@@ -1203,6 +1249,7 @@
             <fileset dir="res-lang/resources">
                 <include name="language.en.res"/>
                 <include name="language.es.res"/>
+                <include name="language.fr.res"/>
                 <include name="language.pl.res"/>
             </fileset>
             <fileset dir="z:\repository\cn1\Themes">

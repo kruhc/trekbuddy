@@ -2338,6 +2338,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
         double lat = -1D, lon = -1D;
         float alt = Float.NaN;
         long timestamp = 0;
+        int ptIdx = 0;
 
         final NakedVector links = new NakedVector(2, 2);
         final StringBuffer sb = new StringBuffer(16);
@@ -2471,43 +2472,50 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                         } break;
                         case 1: {
                             final int tag = parser.getHash();
+                            char type = 0;
                             switch (tag) {
                                 case TAG_WPT:
+                                    type = 'W';
+                                break;
                                 case TAG_RTEPT:
-                                case TAG_TRKPT: {
-                                    // anonymous wpt, trkpt or rtept
-                                    if (name == null || name.length == 0) {
-                                        sb.delete(0, sb.length());
-                                        NavigationScreens.append(sb, v.size() + 1, 10000);
-                                        name = sb.toString().toCharArray();
-                                    }
+                                    type = 'R';
+                                break;
+                                case TAG_TRKPT:
+                                    type = 'T';
+                                break;
+                            }
+                            if (type > 0) {
+                                // anonymous wpt, trkpt or rtept
+                                if (name == null || name.length == 0) {
+                                    sb.delete(0, sb.length()).append(type);
+                                    NavigationScreens.append(sb, ++ptIdx, 10000);
+                                    name = sb.toString().toCharArray();
+                                }
 
-                                    // create wpt
-                                    final Waypoint wpt;
-                                    final QualifiedCoordinates qc = QualifiedCoordinates.newInstance(lat, lon, alt);
-                                    if (gsbean != null || links.size() != 0) {
-                                        wpt = new ExtWaypoint(qc, name, cmt, sym, timestamp, gsbean, links);
-                                        gsbean = null;
-                                        links.removeAllElements();
-                                    } else if (timestamp != 0) {
-                                        wpt = new StampedWaypoint(qc, name, cmt, sym, timestamp);
-                                        timestamp = 0;
-                                    } else {
-                                        wpt = new Waypoint(qc, name, cmt, sym);
-                                    }
+                                // create wpt
+                                final Waypoint wpt;
+                                final QualifiedCoordinates qc = QualifiedCoordinates.newInstance(lat, lon, alt);
+                                if (gsbean != null || links.size() != 0) {
+                                    wpt = new ExtWaypoint(qc, name, cmt, sym, timestamp, gsbean, links);
+                                    gsbean = null;
+                                    links.removeAllElements();
+                                } else if (timestamp != 0) {
+                                    wpt = new StampedWaypoint(qc, name, cmt, sym, timestamp);
+                                    timestamp = 0;
+                                } else {
+                                    wpt = new Waypoint(qc, name, cmt, sym);
+                                }
 
-                                    // add wpt to list
-                                    v.addElement(wpt);
+                                // add wpt to list
+                                v.addElement(wpt);
 
-                                    // reset depth
-                                    depth = 0;
+                                // reset depth
+                                depth = 0;
 
-                                    // reset temps
-                                    alt = Float.NaN;
-                                    lat = lon = -1D;
-                                    name = cmt = sym = null;
-
-                                } break;
+                                // reset temps
+                                alt = Float.NaN;
+                                lat = lon = -1D;
+                                name = cmt = sym = null;
                             }
                         } break;
                         default:

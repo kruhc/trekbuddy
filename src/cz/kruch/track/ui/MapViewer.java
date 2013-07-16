@@ -963,14 +963,21 @@ final class MapViewer {
         x1 = x0 + scaleLength;
 
         // scale
-        final int cy = h - Desktop.osd.bh - 2;
+        final int cy = h - Desktop.osd.bh - 4;
         if (!Config.osdNoBackground) {
             graphics.drawImage(Desktop.barScale, x0 + 3 - 2, cy, Graphics.TOP | Graphics.LEFT);
         }
+        final int sh = 3;
+        graphics.setColor(255, 255, 255);
+        graphics.fillRect(x0, h - 6, scaleLength, sh);
         graphics.setColor(0);
-        graphics.drawLine(x0, h - 6, x0, h - 2);
-        graphics.drawLine(x0, h - 4, x1, h - 4);
-        graphics.drawLine(x1, h - 6, x1, h - 2);
+        graphics.drawRect(x0, h - 6, scaleLength, sh);
+        final float ssl = (float)scaleLength / 5;
+        final int ssli = ExtraMath.round(ssl);
+        for (int i = 0; i < 5; ) {
+            graphics.fillRect(x0 + ExtraMath.round(i * ssl), h - 6, ssli, sh);
+            i += 2;
+        }
         graphics.drawChars(sInfo, 0, sInfoLength,
                            x0 + 3, cy,
                            Graphics.LEFT | Graphics.TOP);

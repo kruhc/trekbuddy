@@ -30,45 +30,36 @@ public final class Jsr179OrientationProvider
         switch (((Integer) action).intValue()) {
             case 0: { // start
                 this.listener = (LocationListener) param;
-                cz.kruch.track.ui.Desktop.schedule(this, 1000, 1000);
+                cz.kruch.track.ui.Desktop.schedule(this, 0, 1000);
             } break;
             case 1: { // stop
                 cancel();
-            } break;
-            case 2: { // detect support
-                detect((String[]) param);
             } break;
         }
     }
 
     public void run() {
+        String status;
         try {
             javax.microedition.location.Orientation orientation = javax.microedition.location.Orientation.getOrientation();
             if (orientation != null) {
-                notifySenser((int) orientation.getCompassAzimuth());
-            }
-        } catch (Throwable t) {
-            cancel();
-        }
-    }
-
-    private void detect(String[] inout) {
-        try {
-            javax.microedition.location.Orientation orientation = javax.microedition.location.Orientation.getOrientation();
-            if (orientation == null) {
-                inout[0] = "not calibrated";
+                final int azimuth = (int) orientation.getCompassAzimuth();
+                notifySenser(azimuth);
+                status = "azimuth ok";
             } else {
-                inout[0] = "supported";
+                status = "not calibrated";
             }
         } catch (javax.microedition.location.LocationException e) {
             if (e.getMessage() != null) {
-                inout[0] = e.getMessage();
+                status = e.getMessage();
             } else {
-                inout[0] = "not supported";
+                status = "not supported";
             }
         } catch (Throwable t) {
-            inout[0] = t.toString();
+            cancel();
+            status = t.toString();
         }
+        cz.kruch.track.ui.nokia.DeviceControl.setSensorStatus(status);
     }
 
     private void notifySenser(final int heading) {

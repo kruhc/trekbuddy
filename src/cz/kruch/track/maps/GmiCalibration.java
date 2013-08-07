@@ -58,7 +58,11 @@ final class GmiCalibration extends Calibration {
                 }
                 break;
             }
-            if (line == LineReader.EMPTY_LINE) // '==' is ok
+//#ifndef __CN1__
+            if (line == LineReader.EMPTY_LINE) // '==' is OK
+//#else
+            if (line.equals(LineReader.EMPTY_LINE))
+//#endif
                 break;
 
             tokenizer.init(line, DELIM, false);

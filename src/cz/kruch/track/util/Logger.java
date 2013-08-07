@@ -19,10 +19,12 @@ public final class Logger {
     private boolean enabled;
 
     public static void out(String message) {
-//#ifndef __CN1__
-        System.out.println(message);
-//#else
+//#ifdef __ANDROID__
+        android.util.Log.i("TrekBuddy", message);
+//#elifdef __CN1__
         com.codename1.io.Log.p(message, com.codename1.io.Log.INFO);
+//#else
+        System.out.println(message);
 //#endif
     }
 

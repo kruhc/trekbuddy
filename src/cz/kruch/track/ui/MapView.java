@@ -987,7 +987,11 @@ final class MapView extends View {
         // default map?
         final String startupURL = Config.mapURL;
         if (startupURL == null || startupURL.length() == 0) {
+//#ifndef __CN1__
             return Desktop.DEFAULT_MAP_NAME == map.getName(); // '==' is OK
+//#else
+            return Desktop.DEFAULT_MAP_NAME.equals(map.getName());
+//#endif
         }
 
         // atlas

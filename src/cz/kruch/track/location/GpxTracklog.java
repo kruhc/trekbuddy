@@ -225,6 +225,9 @@ public final class GpxTracklog implements Runnable {
     }
 
     public void shutdown() {
+//#ifdef __LOG__
+        if (log.isEnabled()) log.debug("shutdown");
+//#endif
         synchronized (this) {
             go = false;
             notify();
@@ -292,7 +295,7 @@ public final class GpxTracklog implements Runnable {
                 serializer.startTag(DEFAULT_NAMESPACE, ELEMENT_GPX);
                 serializer.attribute(DEFAULT_NAMESPACE, ATTRIBUTE_VERSION, "1.1");
                 serializer.attribute(DEFAULT_NAMESPACE, ATTRIBUTE_CREATOR, creator);
-                if (type == LOG_TRK) { // '==' is ok
+                if (type == LOG_TRK) {
                     serializer.startTag(DEFAULT_NAMESPACE, ELEMENT_TRK);
                     serializer.startTag(DEFAULT_NAMESPACE, ELEMENT_TRKSEG);
                 }
@@ -313,6 +316,9 @@ public final class GpxTracklog implements Runnable {
     }
 
     public void close() {
+//#ifdef __LOG__
+        if (log.isEnabled()) log.debug("close; " + serializer);
+//#endif
 
         // close XML
         if (serializer != null) {
@@ -331,7 +337,7 @@ public final class GpxTracklog implements Runnable {
             }
             final HXmlSerializer s = this.serializer;
             try {
-                if (type == LOG_TRK) { // '==' is ok
+                if (type == LOG_TRK) {
                     s.endTag(DEFAULT_NAMESPACE, ELEMENT_TRKSEG);
                     s.endTag(DEFAULT_NAMESPACE, ELEMENT_TRK);
                 }
@@ -554,7 +560,11 @@ public final class GpxTracklog implements Runnable {
         final float course = l.getCourse();
         final float speed = l.getSpeed();
 //#ifdef __ANDROID__
+//#ifndef __BACKPORT__
         final int bpm = cz.kruch.track.sensor.ANTPlus.getInstance().getSensorBPM();
+//#else
+        final int bpm = -1;
+//#endif
         if (!Float.isNaN(course) || !Float.isNaN(speed) || l.isXdrBound() || Config.gpxGsmInfo || bpm > -1)
 //#else
         if (!Float.isNaN(course) || !Float.isNaN(speed) || l.isXdrBound() || Config.gpxGsmInfo)
@@ -599,7 +609,12 @@ public final class GpxTracklog implements Runnable {
         final String prefix = bean.getNs();
         final String ns;
         final String eleCache, eleShortL, eleLongL, eleHints, eleDate, eleFinder;
-        if (prefix == GS_1_0_PREFIX) { // '==' is OK
+//#ifndef __CN1__
+        if (prefix == GS_1_0_PREFIX) // '==' is OK
+//#else
+        if (prefix.equals(GS_1_0_PREFIX))
+//#endif
+        {
             ns = GS_1_0_NAMESPACE;
             eleShortL = ELEMENT_GS_SHORTL;
             eleLongL = ELEMENT_GS_LONGL;
@@ -611,7 +626,13 @@ public final class GpxTracklog implements Runnable {
                 serializer.attribute(DEFAULT_NAMESPACE, ATTRIBUTE_ID, bean.getId());
             }
             serializer.attribute(DEFAULT_NAMESPACE, ATTRIBUTE_AVAILABLE, "True");
-        } else if (prefix == AU_1_0_PREFIX) {
+        }
+//#ifndef __CN1__
+          else if (prefix == AU_1_0_PREFIX) // '==' is OK
+//#else
+          else if (prefix.equals(AU_1_0_PREFIX)) // '==' is OK
+//#endif
+        {
             ns = AU_1_0_NAMESPACE;
             eleShortL = ELEMENT_AU_SUMMARY;
             eleLongL = ELEMENT_AU_DESC;

@@ -99,6 +99,9 @@ public abstract class File {
             final File instance = (File) factory.newInstance();
             if (url != null) {
                 instance.fc = (StreamConnection) Connector.open(url, mode);
+//#ifdef __RIM__
+                ((net.rim.device.api.io.file.ExtendedFileConnection) instance.fc).setAutoEncryptionResolveMode(true);
+//#endif
             }
 
             return instance;

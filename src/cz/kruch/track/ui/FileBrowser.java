@@ -30,7 +30,6 @@ public final class FileBrowser implements CommandListener, Runnable, Comparator 
 
     private String title;
     private Callback callback;
-    private Displayable next;
 
     private Command cmdClose, cmdBack, cmdSelect;
 //#ifdef __B2B__
@@ -48,11 +47,9 @@ public final class FileBrowser implements CommandListener, Runnable, Comparator 
 //#endif
 
     public FileBrowser(final String title, final Callback callback,
-                       final Displayable next, final String folder,
-                       final String[] filter) {
+                       final String folder, final String[] filter) {
         this.title = Resources.prefixed(title);
         this.callback = callback;
-        this.next = next;
         this.folder = folder;
         this.filter = filter;
         this.cmdClose = new Command(Resources.getString(Resources.CMD_CLOSE), Desktop.BACK_CMD_TYPE, 1);
@@ -113,8 +110,16 @@ public final class FileBrowser implements CommandListener, Runnable, Comparator 
                     // maximum robustness here needed
                     try {
                         // try DataDir first
-                        final String folder = this.folder;
+//#ifdef __CN1__
+                        String dir = Config.getFolderURL(folder);
+                        if (folder.equals(Config.FOLDER_MAPS)) {
+                            if (com.codename1.ui.FriendlyAccess.getImplementation().hasExternalCard()) {
+                                dir = Config.cardDir.concat(Config.FOLDER_MAPS);
+                            }
+                        }
+//#else
                         final String dir = Config.getFolderURL(folder);
+//#endif
                         file = File.open(dir);
                         if (file.exists()) {
 
@@ -299,13 +304,7 @@ public final class FileBrowser implements CommandListener, Runnable, Comparator 
 
     private void quit(final Throwable throwable) {
         // gc hint
-        if (list != null) {
-            list.deleteAll();
-            list = null;
-        }
-        
-        // show parent
-        Desktop.display.setCurrent(next);
+        list = null;
 
         // we are done
         callback.invoke(throwable == null ? file : null, throwable, this);

@@ -41,7 +41,7 @@ public class DeviceControl extends TimerTask {
 //#elifdef __ANDROID__
         instance = new cz.kruch.track.ui.nokia.AndroidDeviceControl();
 //#elifdef __CN1__
-        instance = new cz.kruch.track.ui.nokia.CN1DeviceControl();
+        instance = new cz.kruch.track.ui.nokia.WPDeviceControl();
 //#elifdef __ALL__
         if (instance == null) {
             try {
@@ -166,6 +166,10 @@ public class DeviceControl extends TimerTask {
 
     public static String getSensorStatus() {
         return sensorStatus;
+    }
+
+    public static void setSensorStatus(String status) {
+        sensorStatus = status;
     }
 
 //#ifdef __RIM__
@@ -364,9 +368,6 @@ public class DeviceControl extends TimerTask {
             switch (action) {
                 case ACTION_START: {
                     try {
-                        final String[] status = new String[1];
-                        callback.invoke(new Integer(2), null, status);
-                        sensorStatus = status[0];
                         callback.invoke(new Integer(0), null, listener);
                     } catch (Throwable t) {
                         // ignore

@@ -51,6 +51,11 @@ public class Slice {
             }
         }
 //#endif
+//#ifdef __CN1__
+        if (image != null) {
+            com.codename1.ui.FriendlyAccess.getImplementation().execute("set-opaque", new Object[]{ image.getNativeImage().getImage() });
+        }
+//#endif
         this.image = image;
     }
 

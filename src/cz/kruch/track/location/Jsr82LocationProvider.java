@@ -161,7 +161,7 @@ public final class Jsr82LocationProvider extends SerialLocationProvider {
         }
     }
 
-    private final class Discoverer implements javax.bluetooth.DiscoveryListener, CommandListener {
+    private final class Discoverer implements javax.bluetooth.DiscoveryListener, CommandListener, Runnable {
 
         private final javax.bluetooth.UUID[] uuidSet = {
 //            new javax.bluetooth.UUID(0x1101)  // SPP
@@ -172,7 +172,7 @@ public final class Jsr82LocationProvider extends SerialLocationProvider {
         private javax.bluetooth.DiscoveryAgent agent;
         private javax.bluetooth.RemoteDevice device;
         private String btspp, btname;
-        private int transactionID;
+        private int transactionID, discType;
         private boolean inquiryCompleted;
         private boolean cancel;
         private boolean preknownUsed;
@@ -199,6 +199,60 @@ public final class Jsr82LocationProvider extends SerialLocationProvider {
             } catch (LocationException e) {
                 Desktop.display.setCurrent(Desktop.screen);
                 throw e;
+            }
+        }
+
+        public void run() {
+            // number of found
+            final int n = devices.size();
+
+            // add paired devices
+            final javax.bluetooth.RemoteDevice[] preknown = agent.retrieveDevices(javax.bluetooth.DiscoveryAgent.PREKNOWN);
+            if (preknown != null && preknown.length != 0) {
+                preknownUsed = true;
+                for (int N = preknown.length, i = 0; i < N; i++) {
+                    devices.addElement(preknown[i]);
+                    pane.append("*" + preknown[i].getBluetoothAddress(), null); // show bt adresses just to signal we are finding any
+                }
+            }
+            // update UI
+            pane.setTicker(new Ticker(Resources.getString(Resources.DESKTOP_MSG_RESOLVING_NAMES)));
+
+            // resolve names
+            for (int N = devices.size(), i = 0; i < N; i++) {
+                final javax.bluetooth.RemoteDevice remoteDevice = ((javax.bluetooth.RemoteDevice) devices.elementAt(i));
+                String name = resolveName(remoteDevice);
+                if (i >= n) {
+                    name = "*" + name;
+                }
+                pane.set(i, name, null);
+            }
+
+            // setup commands
+            pane.setTicker(null);
+            setupCommands(true);
+
+            // warn user or quit when devices are available
+            if (devices.size() == 0) {
+                if (cancel) {
+                    letsGo(false);
+                } else {
+                    final String codeStr;
+                    switch (discType) {
+                        case javax.bluetooth.DiscoveryListener.INQUIRY_COMPLETED:
+                            codeStr = "INQUIRY_COMPLETED";
+                            break;
+                        case javax.bluetooth.DiscoveryListener.INQUIRY_ERROR:
+                            codeStr = "INQUIRY_ERROR";
+                            break;
+                        case javax.bluetooth.DiscoveryListener.INQUIRY_TERMINATED:
+                            codeStr = "INQUIRY_TERMINATED";
+                            break;
+                        default:
+                            codeStr = "UNKNONW";
+                    }
+                    Desktop.showError(Resources.getString(Resources.DESKTOP_MSG_NO_DEVICES_DISCOVERED) + " (" + codeStr + ")", null, null);
+                }
             }
         }
 
@@ -390,60 +444,11 @@ public final class Jsr82LocationProvider extends SerialLocationProvider {
             // set flag
             inquiryCompleted = true;
 
-            // number of found
-            final int n = devices.size();
+            // remember completion typ
+            this.discType = discType;
 
-            // add paired devices
-            final javax.bluetooth.RemoteDevice[] preknown = agent.retrieveDevices(javax.bluetooth.DiscoveryAgent.PREKNOWN);
-            if (preknown != null && preknown.length != 0) {
-                preknownUsed = true;
-                for (int N = preknown.length, i = 0; i < N; i++) {
-                    devices.addElement(preknown[i]);
-                    pane.append(preknown[i].getBluetoothAddress()+ " *", null); // show bt adresses just to signal we are finding any
-                }
-            }
-
-            // update UI
-//            pane.deleteAll();
-            pane.setTicker(new Ticker(Resources.getString(Resources.DESKTOP_MSG_RESOLVING_NAMES)));
-
-            // resolve names
-            for (int N = devices.size(), i = 0; i < N; i++) {
-                final javax.bluetooth.RemoteDevice remoteDevice = ((javax.bluetooth.RemoteDevice) devices.elementAt(i));
-//                pane.append(resolveName(remoteDevice), null);
-                String name = resolveName(remoteDevice);
-                if (i >= n) {
-                    name += " *";
-                }
-                pane.set(i, name, null);
-            }
-
-            // setup commands
-            pane.setTicker(null);
-            setupCommands(true);
-
-            // warn user or quit when devices are available
-            if (devices.size() == 0) {
-                if (cancel) {
-                    letsGo(false);
-                } else {
-                    final String codeStr;
-                    switch (discType) {
-                        case javax.bluetooth.DiscoveryListener.INQUIRY_COMPLETED:
-                            codeStr = "INQUIRY_COMPLETED";
-                            break;
-                        case javax.bluetooth.DiscoveryListener.INQUIRY_ERROR:
-                            codeStr = "INQUIRY_ERROR";
-                            break;
-                        case javax.bluetooth.DiscoveryListener.INQUIRY_TERMINATED:
-                            codeStr = "INQUIRY_TERMINATED";
-                            break;
-                        default:
-                            codeStr = "UNKNONW";
-                    }
-                    Desktop.showError(Resources.getString(Resources.DESKTOP_MSG_NO_DEVICES_DISCOVERED) + " (" + codeStr + ")", null, null);
-                }
-            }
+            // finish in another thread
+            Desktop.getDiskWorker().enqueue(this);
         }
 
         public void commandAction(Command command, Displayable displayable) {

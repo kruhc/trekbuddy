@@ -181,9 +181,11 @@ final class InfoForm implements CommandListener {
         }
 //#ifdef __ANDROID__
         pane.append(newItem("BtSocketType", cz.kruch.track.location.AndroidBluetoothLocationProvider.sockType));
+//#ifndef __BACKPORT__
         sb.delete(0, sb.length())
                 .append("supported? ").append(cz.kruch.track.sensor.ANTPlus.isSupported());
         pane.append(newItem("ANT+", sb.toString()));
+//#endif
 //#endif
         sb.delete(0, sb.length())
                 .append(cz.kruch.track.fun.Camera.type)

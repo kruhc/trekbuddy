@@ -215,7 +215,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         if (state == 0) {
             state = 1;
             (new Thread(this)).start();
-        } else { // resumed from background
+        } else if (state == 2) { // resumed from background
             state = 1;
 //#if __ANDROID__ || __CN1__
             if (desktop != null) {

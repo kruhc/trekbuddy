@@ -369,6 +369,19 @@ public final class TarInputStream extends InputStream {
         return c;
     }
 
+//#ifdef __CN1__
+
+    /**
+     * Returns current entry size.
+     *
+     * @return entry size
+     */
+    public long getLength() {
+        return entrySize;
+    }
+
+//#endif
+
     /**
      * Reads entry header.
      *

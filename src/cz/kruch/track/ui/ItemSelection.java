@@ -14,17 +14,15 @@ import java.util.Enumeration;
 /**
  * Generic select-from-list form.
  *
- * @author Ales Pour <kruhc@seznam.cz>
+ * @author kruhc@seznam.cz
  */
 final class ItemSelection implements CommandListener {
     private final Callback callback;
-    private final Displayable next;
     private final String title;
 
-    ItemSelection(Displayable next, String title, Callback callback) {
-        this.callback = callback;
-        this.next = next;
+    ItemSelection(String title, Callback callback) {
         this.title = Resources.prefixed(title);
+        this.callback = callback;
     }
 
     public Displayable show(final Enumeration items, final String currentItem) {
@@ -55,9 +53,6 @@ final class ItemSelection implements CommandListener {
             final List list = (List) displayable;
             selected = list.getString(list.getSelectedIndex());
         }
-
-        // close selection
-        Desktop.showNext(displayable, next);
 
         // invoke callback
         callback.invoke(selected, null, this);

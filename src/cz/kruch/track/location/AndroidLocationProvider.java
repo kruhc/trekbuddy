@@ -37,8 +37,10 @@ public final class AndroidLocationProvider
     private android.location.LocationManager manager;
     private android.location.GpsStatus gpsStatus;
     private android.os.Looper looper;
-    private cz.kruch.track.event.Callback nmeaer;
     private TimerTask watcher;
+//#ifndef __BACKPORT__
+    private cz.kruch.track.event.Callback nmeaer;
+//#endif
 
     private volatile int sat, status;
     private volatile boolean hasNmea;
@@ -90,12 +92,14 @@ public final class AndroidLocationProvider
 
             // add listeners
             manager.addGpsStatusListener(this);
+//#ifndef __BACKPORT__
             try {
                 nmeaer = (Callback) Class.forName("cz.kruch.track.location.AndroidNmeaListener").newInstance();
                 nmeaer.invoke(new Integer(1), null, new Object[]{ this, manager });
             } catch (Exception e) {
                 // ignore
             }
+//#endif
 
             // get timing
             int interval = 0;
@@ -148,11 +152,13 @@ public final class AndroidLocationProvider
 
             // remove listeners and cancel updated
             manager.removeGpsStatusListener(this);
+//#ifndef __BACKPORT__
             try {
                 nmeaer.invoke(new Integer(0), null, manager);
             } catch (Exception e) {
                 // ignore
             }
+//#endif
             manager.removeUpdates(this);
             manager = null;
 
@@ -301,6 +307,8 @@ public final class AndroidLocationProvider
         }
     }
 
+//#ifndef __BACKPORT__
+
     public void onNmeaReceived(long timestamp, String nmea) {
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("onNmeaReceived");
@@ -420,6 +428,9 @@ public final class AndroidLocationProvider
             }
         }
     }
+
+//#endif /* !__BACKPORT__ */
+
 }
 
 //#endif

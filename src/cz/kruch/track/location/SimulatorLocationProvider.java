@@ -50,7 +50,7 @@ public final class SimulatorLocationProvider
     public int start() throws LocationException {
 //#ifndef __EMULATOR__
         (new FileBrowser(Resources.getString(Resources.DESKTOP_MSG_NMEA_PLAYBACK),
-                         this, Desktop.screen, Config.FOLDER_NMEA,
+                         this, Config.FOLDER_NMEA,
                          new String[]{ ".nmea" })).show();
 //#else
         try {
@@ -75,6 +75,9 @@ public final class SimulatorLocationProvider
                 file = null;
             }
         }
+
+        // restore screen after file browser
+        Desktop.display.setCurrent(Desktop.screen);
 
         (new Thread(this)).start();
     }

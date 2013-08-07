@@ -36,9 +36,21 @@ public final class ImageUtils {
     }
 
     public static Image createRGBImage(final int w, final int h, final int color) {
+//#ifdef __CN1__
+        final int a = (color >> 24) & 0xff;
+        final int r = (color >> 16) & 0xff;
+        final int g = (color >> 8) & 0xff;
+        final int b = (color) & 0xff;
+        final double scaleAlpha = (double)a / 255D;
+        final int pmColor = (a << 24) | ((int)(r * scaleAlpha) << 16) | ((int)(g * scaleAlpha) << 8 ) | (int)(b * scaleAlpha);
+//#endif
         final int[] shadow = new int[w * h];
         for (int i = shadow.length; --i >= 0; ) {
+//#ifndef __CN1__
             shadow[i] = color;
+//#else
+            shadow[i] = pmColor;
+//#endif
         }
         return Image.createRGBImage(shadow, w, h, true);
     }

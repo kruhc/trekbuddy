@@ -122,12 +122,17 @@ final class DeviceScreen extends GameCanvas implements Runnable {
 
     /** @Override */
     protected void hideNotify() {
-        eventing.clear();
+//#ifdef __LOG__
+        if (log.isEnabled()) log.debug("hideNotify");
+//#endif
         eventing.setActive(active = false);
     }
 
     /** @Override */
     protected void showNotify() {
+//#ifdef __LOG__
+        if (log.isEnabled()) log.debug("showNotify");
+//#endif
         eventing.setActive(active = true);
     }
 
@@ -982,6 +987,7 @@ final class DeviceScreen extends GameCanvas implements Runnable {
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("drawButton; " + g + " " + cmd);
 //#endif
+//#ifndef __CN1__
         g.setColor(BTN_COLOR);
         g.fillRoundRect(x, y, bw, bh, BTN_ARC, BTN_ARC);
         g.setColor(BTN_HICOLOR);
@@ -991,6 +997,12 @@ final class DeviceScreen extends GameCanvas implements Runnable {
         final int sw = Desktop.fontBtns.stringWidth(label);
         g.setColor(BTN_TXTCOLOR);
         g.drawString(label, x + ((bw - sw) >> 1), y + ((bh - fh) >> 1), Graphics.LEFT | Graphics.TOP);
+//#else
+        com.codename1.ui.FriendlyAccess.getImplementation().execute("draw-button", new Object[]{
+                com.codename1.ui.FriendlyAccess.getNativeGraphics(offscreen.getNativeImage()),
+                new Integer(x), new Integer(y), new Integer(bw), new Integer(bh), cmd.getLabel()
+        });
+//#endif
     }
 
     private Command pointerToCmd(final int x, final int y) {

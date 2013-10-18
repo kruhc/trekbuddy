@@ -184,7 +184,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
     public static int osdAlpha                  = 0xA0;
     public static int cmsCycle;
     public static int listFont                  = 0x200000;
-    public static int zoomSpotsMode             = 2; // autohide
+    public static int zoomSpotsMode             = 1; // always
     public static int guideSpotsMode            = 2; // autohide
     public static int prescale                  = 100; // 100%
     public static boolean forceTextFieldFocus;
@@ -202,7 +202,11 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
     public static int easyZoomMode;
 
     // group [Tweaks]
+//#ifndef __CN1__
     public static boolean siemensIo;
+//#else
+    public static boolean wp8Io;
+//#endif
 //#ifdef __ALT_RENDERER__
     public static boolean S60renderer           = true;
 //#endif
@@ -267,6 +271,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
     public static int nokiaBacklightLast = 1; // first backlight level, see NokiaDeviceControl
     public static double lat, lon;
     public static double latAny, lonAny;
+    public static boolean wptSessionMode;
 
     // runtime (not persisted)
     public static boolean dataDirAccess, dataDirExists;
@@ -325,10 +330,10 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
 
         dataDir = "file:///TrekBuddy/";
         cardDir = "file:///Card/TrekBuddy/";
+        desktopFontSize = 1;
         safeColors = true;
-        // TODO remove in release
-        zoomSpotsMode = 1;
-        guideSpotsMode = 0;
+        fullscreen = true;
+        wp8Io = true;
 
 //#else
 
@@ -514,7 +519,11 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
 
         // 0.9.69 extensions
         o2Depth = din.readInt();
+//#ifndef __CN1__
         siemensIo = din.readBoolean();
+//#else
+        wp8Io = din.readBoolean();
+//#endif
 
         // 0.9.70 extensions
         largeAtlases = din.readBoolean();
@@ -713,7 +722,11 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         dout.writeInt(units);
         /* since 0.9.69 */
         dout.writeInt(o2Depth);
+//#ifndef __CN1__
         dout.writeBoolean(siemensIo);
+//#else
+        dout.writeBoolean(wp8Io);
+//#endif
         /* since 0.9.70 */
         dout.writeBoolean(largeAtlases);
         dout.writeBoolean(gpxGsmInfo);
@@ -1013,8 +1026,13 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
                 datadir.mkdir();
                 dataDirExists = true;
             } catch (Exception e) {
+//#ifndef __CN1__
                 cz.kruch.track.ui.Desktop.showError("Failed to create " + getDataDir().substring(8 /* "file:///".length() */),
                                                     e, null);
+//#else
+                throw new api.lang.RuntimeException("Failed to create " + getDataDir().substring(8 /* "file:///".length() */),
+                                                    e);
+//#endif
             } finally {
                 File.closeQuietly(datadir);
             }
@@ -1096,6 +1114,12 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         lon = din.readDouble();
         latAny = din.readDouble();
         lonAny = din.readDouble();
+        try {
+            /* since 1.2.5 */
+            wptSessionMode = din.readBoolean();
+        } catch (Exception e) {
+            // ignore
+        }
 
 //#ifdef __LOG__
         if (log.isEnabled()) log.info("vars read");
@@ -1116,6 +1140,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         dout.writeDouble(lon);
         dout.writeDouble(latAny);
         dout.writeDouble(lonAny);
+        dout.writeBoolean(wptSessionMode);
 
 //#ifdef __LOG__
         if (log.isEnabled()) log.info("vars updated");
@@ -1271,15 +1296,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
     }
 
     public static String getFolderURL(String folder) {
-//-#ifndef __CN1__
         return getDataDir().concat(folder);
-//-#else
-//        if (FOLDER_MAPS.equals(folder)) {
-//            return cardDir.concat(folder);
-//        } else {
-//            return dataDir.concat(folder);
-//        }
-//-#endif
     }
 
     public static String getFileURL(String folder, String file) {
@@ -1342,14 +1359,11 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         return rss > 0;
     }
 
-    private static InputStream getResourceAsStream(String resource) {
+    private static InputStream getResourceAsStream(final String resource) {
 //#ifndef __CN1__
         return Config.class.getResourceAsStream(resource);
 //#else
-        if (resource.startsWith("/resources/")) {
-            resource = resource.substring("/resources".length());
-        }
-        return com.codename1.ui.Display.getInstance().getResourceAsStream(Config.class, resource);
+        return com.codename1.ui.FriendlyAccess.getResourceAsStream(resource);
 //#endif
     }
 

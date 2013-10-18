@@ -128,16 +128,11 @@ final class JarLoader extends Map.Loader /*implements Atlas.Loader*/ {
         throw new IllegalStateException("Not supported");
     }
 
-    private static InputStream getResourceAsStream(String resource) {
+    private static InputStream getResourceAsStream(final String resource) {
 //#ifndef __CN1__
         return JarLoader.class.getResourceAsStream(resource);
 //#else
-        if (resource.startsWith("/resources/set/")) {
-            resource = resource.substring("/resources/set".length());
-        } else if (resource.startsWith("/resources/")) {
-            resource = resource.substring("/resources".length());
-        }
-        return com.codename1.ui.Display.getInstance().getResourceAsStream(JarLoader.class, resource);
+        return com.codename1.ui.FriendlyAccess.getResourceAsStream(resource);
 //#endif
     }
 }

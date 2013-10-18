@@ -244,12 +244,13 @@ public final class SymbianService {
             throw new IOException("Invalid service response");
         }
 
-        public long skip(long n) throws IOException {
-            while (n > Integer.MAX_VALUE) {
+        public long skip(final long n) throws IOException {
+            long c = n;
+            while (c > Integer.MAX_VALUE) {
                 sendPacket(output, ACTION_FILE_SKIP, Integer.MAX_VALUE);
-                n -= Integer.MAX_VALUE;
+                c -= Integer.MAX_VALUE;
             }
-            sendPacket(output, ACTION_FILE_SKIP, (int) n);
+            sendPacket(output, ACTION_FILE_SKIP, (int) c);
             return n;
         }
 

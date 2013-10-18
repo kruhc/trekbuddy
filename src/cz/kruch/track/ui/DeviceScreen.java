@@ -998,7 +998,7 @@ final class DeviceScreen extends GameCanvas implements Runnable {
         g.setColor(BTN_TXTCOLOR);
         g.drawString(label, x + ((bw - sw) >> 1), y + ((bh - fh) >> 1), Graphics.LEFT | Graphics.TOP);
 //#else
-        com.codename1.ui.FriendlyAccess.getImplementation().execute("draw-button", new Object[]{
+        com.codename1.ui.FriendlyAccess.execute("draw-button", new Object[]{
                 com.codename1.ui.FriendlyAccess.getNativeGraphics(offscreen.getNativeImage()),
                 new Integer(x), new Integer(y), new Integer(bw), new Integer(bh), cmd.getLabel()
         });

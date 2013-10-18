@@ -11,20 +11,20 @@ final class WPDeviceControl extends DeviceControl {
     }
 
     void turnOn() {
-        com.codename1.ui.FriendlyAccess.getImplementation().execute("backlight", new Object[]{ true });
+        com.codename1.ui.FriendlyAccess.execute("backlight", new Object[]{ true });
     }
 
     void turnOff() {
-        com.codename1.ui.FriendlyAccess.getImplementation().execute("backlight", new Object[]{ false });
+        com.codename1.ui.FriendlyAccess.execute("backlight", new Object[]{ false });
     }
 
     void useTicker(final Object list, final String msg) {
         if (msg != null) {
-            com.codename1.ui.FriendlyAccess.getImplementation().execute("show-progress", new Object[]{ msg });
+            com.codename1.ui.FriendlyAccess.execute("show-progress", new Object[]{ msg });
             isTicker = true;
         } else {
             if (isTicker) {
-                com.codename1.ui.FriendlyAccess.getImplementation().execute("show-progress", new Object[]{ null });
+                com.codename1.ui.FriendlyAccess.execute("show-progress", new Object[]{ null });
                 isTicker = false;
             }
         }

@@ -11,7 +11,7 @@ import api.file.File;
 /**
  * Sound player.
  *
- * @author Ales Pour <kruhc@seznam.cz>
+ * @author kruhc@seznam.cz
  */
 public abstract class Playback implements Runnable {
 //#ifdef __LOG__
@@ -68,10 +68,12 @@ public abstract class Playback implements Runnable {
                                            final String userLink, final String defaultLink,
                                            final AlertType alert) throws Exception {
         Playback instance;
-//#ifndef __ANDROID__
-        instance = (Playback) Class.forName("cz.kruch.track.fun.Jsr135Playback").newInstance();
+//#ifdef __ANDROID__
+        instance = new AndroidPlayback();
+//#elifdef __CN1__
+        instance = new WPPlayback();
 //#else
-        instance = (Playback) Class.forName("cz.kruch.track.fun.AndroidPlayback").newInstance();
+        instance = (Playback) Class.forName("cz.kruch.track.fun.Jsr135Playback").newInstance();
 //#endif
         instance.baseFolder = baseFolder;
         instance.userLink = userLink;

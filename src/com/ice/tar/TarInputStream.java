@@ -141,10 +141,12 @@ public final class TarInputStream extends InputStream {
      */
     public long skip(long n) throws IOException {
 
+//#ifndef __CN1__
         if (cz.kruch.track.configuration.Config.siemensIo && n > 0) {
             n += this.streamOffset;
             this.streamOffset = 0;
         }
+//#endif
 
         long num = n;
 
@@ -153,7 +155,12 @@ public final class TarInputStream extends InputStream {
             long numRead;
 
             // use skip method
-            if (cz.kruch.track.maps.Map.useSkip || cz.kruch.track.configuration.Config.siemensIo) {
+//#ifndef __CN1__
+            if (cz.kruch.track.maps.Map.useSkip || cz.kruch.track.configuration.Config.siemensIo)
+//#else
+            if (cz.kruch.track.maps.Map.useSkip)
+//#endif
+            {
                 numRead = this.in.skip(num);
                 /*
                  * Check for SE bug, where skip() returns stream position,

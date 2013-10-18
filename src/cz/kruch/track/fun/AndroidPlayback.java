@@ -19,7 +19,7 @@ import java.net.URI;
  */
 final class AndroidPlayback extends Playback {
 //#ifdef __LOG__
-    private static final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("Jsr135Playback");
+    private static final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("AndroidPlayback");
 //#endif
     private static final String TAG = cz.kruch.track.TrackingMIDlet.APP_TITLE;
 

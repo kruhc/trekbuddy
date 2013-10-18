@@ -654,14 +654,11 @@ public final class Resources {
 
 //#endif
 
-    private static InputStream getResourceAsStream(String resource) {
+    private static InputStream getResourceAsStream(final String resource) {
 //#ifndef __CN1__
         return Resources.class.getResourceAsStream(resource);
 //#else
-        if (resource.startsWith("/resources/")) {
-            resource = resource.substring("/resources".length());
-        }
-        return com.codename1.ui.Display.getInstance().getResourceAsStream(Resources.class, resource);
+        return com.codename1.ui.FriendlyAccess.getResourceAsStream(resource);
 //#endif
     }
 }

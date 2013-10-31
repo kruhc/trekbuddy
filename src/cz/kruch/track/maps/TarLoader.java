@@ -99,14 +99,6 @@ final class TarLoader extends Map.Loader /*implements Atlas.Loader*/ {
 /*
         try {
 */
-            // open native file
-            nativeFile = File.open(map.getPath());
-
-            // do file existence check
-            if (!nativeFile.exists()) {
-                throw new IOException("File " + map.getPath() + " not found");
-            }
-
             // open stream
 //#ifdef __SYMBIAN__
             if (Config.useNativeService && Map.networkInputStreamAvailable) {
@@ -118,13 +110,22 @@ final class TarLoader extends Map.Loader /*implements Atlas.Loader*/ {
                 }
             }
 //#endif
+            /*
+             * On Symbian when service is used, we don not need native file connection,
+             * but for other platforms we do.
+             * Well, for Android it should not be needed too, but let's not make
+             * too many changes...
+             */
             if (in == null) {
+                nativeFile = File.open(map.getPath());
 //#ifdef __ANDROID__
                 in = new api.io.RandomAccessInputStream(map.getPath());
 //#else
                 in = nativeFile.openInputStream();
 //#endif
             }
+
+            // debug info
             Map.fileInputStreamClass = in.getClass().getName();
 
             /*
@@ -381,7 +382,12 @@ final class TarLoader extends Map.Loader /*implements Atlas.Loader*/ {
 //#ifdef __LOG__
                     if (log.isEnabled()) log.debug("reuse stream");
 //#endif
-                    if (streamOffset < tarIn.getStreamOffset() || Config.siemensIo || Config.lowmemIo) {
+//#ifndef __CN1__
+                    if (streamOffset < tarIn.getStreamOffset() || Config.siemensIo || Config.lowmemIo)
+//#else
+                    if (streamOffset < tarIn.getStreamOffset() || Config.lowmemIo)
+//#endif
+                    {
 //#ifdef __LOG__
                         if (log.isEnabled()) log.debug("but reset it first");
 //#endif

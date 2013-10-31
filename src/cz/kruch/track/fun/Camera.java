@@ -120,6 +120,8 @@ public abstract class Camera {
 
 //#endif /* !__ANDROID__ && !__CN1__ */
 
+//#if !__CN1__ && !__BACKPORT__
+
     private static Camera createRecorder(final Displayable next,
                                          final Callback callback,
                                          final long filestamp,
@@ -127,7 +129,10 @@ public abstract class Camera {
                                          final long timestamp) {
         Camera camera;
         try {
-//#if !__ANDROID__ && !__CN1__
+//#ifdef __ANDROID__
+            camera = new AndroidCamera();
+            type = TYPE_JSR234; // yes, this is a trick
+//#else
             fixJsr234();
             if (cz.kruch.track.TrackingMIDlet.jsr234) {
                 camera = (Camera) Class.forName("cz.kruch.track.fun.Jsr234Camera").newInstance();
@@ -136,9 +141,6 @@ public abstract class Camera {
                 camera = (Camera) Class.forName("cz.kruch.track.fun.Jsr135Camera").newInstance();
                 type = TYPE_JSR135;
             }
-//#else
-            camera = (Camera) Class.forName("cz.kruch.track.fun.AndroidCamera").newInstance();
-            type = TYPE_JSR234; // yes, this is a trick
 //#endif
         } catch (Exception e) {
 //#ifdef __LOG__
@@ -158,6 +160,8 @@ public abstract class Camera {
 
         return camera;
     }
+
+//#endif /* !__CN1__ && !__BACKPORT__ */
 
     /* assertion: should be called from bg */
     final void finished(final Object result, final Throwable throwable) {

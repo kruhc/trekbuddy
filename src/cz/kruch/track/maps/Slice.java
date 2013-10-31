@@ -39,6 +39,7 @@ public class Slice {
             return;
         }
 //#ifdef __ANDROID__
+//#ifdef __BACKPORT__
         if (image == null && this.image != null) {
             final android.graphics.Bitmap bitmap;
             if (this.image.isMutable()) {
@@ -51,9 +52,10 @@ public class Slice {
             }
         }
 //#endif
+//#endif
 //#ifdef __CN1__
         if (image != null) {
-            com.codename1.ui.FriendlyAccess.getImplementation().execute("set-opaque", new Object[]{ image.getNativeImage().getImage() });
+            com.codename1.ui.FriendlyAccess.execute("set-opaque", new Object[]{ image.getNativeImage().getImage() });
         }
 //#endif
         this.image = image;

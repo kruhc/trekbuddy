@@ -302,15 +302,30 @@ public final class FileBrowser implements CommandListener, Runnable, Comparator 
         }
     }
 
-    private void quit(final Throwable throwable) {
+    private void quit(Throwable throwable) {
         // gc hint
         list = null;
 
-        // we are done
-        callback.invoke(throwable == null ? file : null, throwable, this);
+        // result
+        String[] result = null;
+        if (throwable == null) {
+            if (file != null) {
+                result = new String[]{ file.getName(), file.getURL() };
+            }
+        }
+//#ifdef __SYMBIAN__
+        else if (throwable instanceof IOException && path != null && path.toLowerCase().endsWith(".tar")) {
+            throwable = null;
+            result = new String[]{ path, file.getURL().concat(path) };
+        }
+//#endif
 
-        // gc hint
+        // cleanup
+        File.closeQuietly(file);
         file = null;
+
+        // we are done
+        callback.invoke(throwable == null ? result : null, throwable, this);
     }
 
     /**

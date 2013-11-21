@@ -12,11 +12,10 @@ import java.io.IOException;
 //#ifdef __ANDROID__
 
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import org.microemu.android.device.AndroidImmutableImage;
 
-//#endif
-
-//#ifdef __RIM50__
+//#elifdef __RIM50__
 
 import net.rim.device.api.system.Bitmap;
 import net.rim.device.api.system.EncodedImage;
@@ -25,8 +24,24 @@ import net.rim.device.api.system.EncodedImage;
 
 public final class ImageUtils {
 
+//#ifdef __ANDROID__
+
+    private static final int DENSITY_BASELINE = 160;
+
+    private static final BitmapFactory.Options opts = new BitmapFactory.Options();
+
+    static {
+        opts.inPreferredConfig = Bitmap.Config.RGB_565;
+        opts.inTempStorage = new byte[16 * 1024];
+        opts.inPurgeable = true;
+        opts.inScaled = true;
+        opts.inDensity = DENSITY_BASELINE;
+    }
+
+//#endif
+
     public static Image getGoodIcon(final String resource) throws IOException {
-        Image img = Image.createImage(getRealResourcePath(resource));
+        Image img = Image.createImage(resource);
         if (img != null) {
             if (!Desktop.isHires() && (img.getWidth() > 20) || img.getHeight() > 20) {
                 img = resizeImage(img, 16, 16, ImageUtils.SLOW_RESAMPLE, false);
@@ -53,20 +68,6 @@ public final class ImageUtils {
 //#endif
         }
         return Image.createRGBImage(shadow, w, h, true);
-    }
-
-    public static String getRealResourcePath(final String resource) {
-//#ifndef __CN1__
-        return resource;
-//#else
-        if (resource.startsWith("/resources/set/")) {
-            return resource.substring("/resources/set".length());
-        } else if (resource.startsWith("/resources/")) {
-            return resource.substring("/resources".length());
-        } else {
-            return resource;
-        }
-//#endif
     }
 
     /**
@@ -110,12 +111,14 @@ public final class ImageUtils {
 
 //#ifdef __ANDROID__
 
-        Bitmap bitmap = ((AndroidImmutableImage) src).getBitmap();
-        Bitmap scaled = Bitmap.createScaledBitmap(bitmap, destW, destH,
-                                                  mode == SLOW_RESAMPLE || Config.tilesScaleFiltered);
+        final Bitmap bitmap = ((AndroidImmutableImage) src).getBitmap();
+        final Bitmap scaled = Bitmap.createScaledBitmap(bitmap, destW, destH,
+                                                        mode == SLOW_RESAMPLE || Config.tilesScaleFiltered);
+//#ifdef __BACKPORT__
         if (recycle && bitmap != null && !bitmap.isRecycled()) {
             bitmap.recycle();
         }
+//#endif
         return new AndroidImmutableImage(scaled);
 
 //-#elifdef __RIM__
@@ -295,13 +298,22 @@ public final class ImageUtils {
 
     public static Image resizeImage(final java.io.InputStream stream,
                                     final float prescale, final int x2) throws IOException {
-
 //#ifndef __RIM50__
+
+//#ifndef __ANDROID__
 
         final Image image = Image.createImage(stream);
         final int destW = ExtraMath.prescale(prescale, image.getWidth()) << x2;
         final int destH = ExtraMath.prescale(prescale, image.getHeight()) << x2;
         return resizeImage(image, destW, destH, ImageUtils.FAST_RESAMPLE, true);
+
+//#else
+
+        final BitmapFactory.Options opts = ImageUtils.opts;
+        opts.inTargetDensity = ExtraMath.prescale(prescale, DENSITY_BASELINE) << x2;
+        return new AndroidImmutableImage(BitmapFactory.decodeStream(stream, null, opts));
+
+//#endif
 
 //#else
 

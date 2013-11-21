@@ -317,7 +317,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
 
 //#elifdef __ANDROID__
 
-        /* default for Android (MicroEmu) */
+        /* defaults for Android (MicroEmu) */
         if (android.os.Build.MODEL.indexOf("BlackBerry") > -1) {
             cz.kruch.track.TrackingMIDlet.playbook = true;
         }
@@ -1001,9 +1001,14 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
                 if (dataDirExists) {
                     response(YesNoDialog.NO, null);
                 } else {
-                    (new YesNoDialog(Config.this, null,
-                                     "DataDir '" + getDataDir().substring(8 /* "file:///".length() */) + "' does not exists. Create it?",
-                                     null)).show();
+                    final StringBuffer sb = new StringBuffer(64);
+                    sb.append("DataDir '").append(getDataDir().substring(7 /* "file://".length() */)).append("' does not exists. Create it?");
+//#ifdef __ANDROID__
+                    if (System.getProperty("fileconn.dir.memorycard") == null) {
+                        sb.append("\n\nWarning: SD card not mounted!");
+                    }
+//#endif
+                    (new YesNoDialog(Config.this, null, sb.toString(), null)).show();
                 }
 //#else
                 response(YesNoDialog.YES, null);

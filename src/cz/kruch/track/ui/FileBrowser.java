@@ -76,6 +76,13 @@ public final class FileBrowser implements CommandListener, Runnable, Comparator 
         Desktop.getDiskWorker().enqueue(this);
     }
 
+    public String getCurrentURL() {
+        if (file == null) {
+            return null;
+        }
+        return file.getURL();
+    }
+
     public int compare(final Object o1, final Object o2) {
         final String s1 = (String) o1;
         final String s2 = (String) o2;

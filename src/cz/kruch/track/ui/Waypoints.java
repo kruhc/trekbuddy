@@ -263,6 +263,8 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
         } catch (Throwable t) {
             // ignore
         }
+
+        this.session = Config.wptSessionMode ? "" : null;
     }
 
     void show(final int hint) {
@@ -658,7 +660,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
             } else {
                 (new WaypointForm(this, qc, session, Resources.NAV_ITEM_PROJECT_NEW)).show();
             }
-//#ifndef __ANDROID__
+//#if !__ANDROID__ && !__CN1__
         } else if (itemFriendHere.equals(item)) {
             // do we have position?
             final Location location = navigator.getLocation();
@@ -722,7 +724,8 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
             _listingTitle = actionAddFieldNote;
             exec();
 
-//#ifndef __ANDROID__
+//#if !__ANDROID__ && !__CN1__
+
         } else if (source instanceof cz.kruch.track.fun.Friends) { // SMS received
 
             // get result
@@ -742,7 +745,9 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                 backend.setFileName(backend.getDefaultFileName());
             }
             addToStore(STORE_FRIENDS, backend.getFileName(), wpt);
+
 //#endif
+
         } else if (result instanceof Object[]) { // list or waypoint form origin
 
             // action type
@@ -769,7 +774,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
 
                     // action
                     switch (((Integer) action).intValue()) {
-//#ifndef __ANDROID__
+//#if !__ANDROID__ && !__CN1__
                         case Resources.NAV_CMD_SEND: {
                             // close nav UI
                             close();
@@ -780,7 +785,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                             final long time;
 
                             // get message type and location
-                            if (cz.kruch.track.fun.Friends.TYPE_IAH == type) { // == is OK
+                            if (cz.kruch.track.fun.Friends.TYPE_IAH == type) { // '==' is OK
                                 time = navigator.getLocation().getTimestamp();
                                 qc = navigator.getLocation().getQualifiedCoordinates()._clone();
                             } else { // Friends.TYPE_MYT
@@ -795,7 +800,9 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                         case Resources.NAV_ITEM_ENTER_CUSTOM:
                         case Resources.NAV_ITEM_RECORD_CURRENT:
                         case Resources.NAV_ITEM_PROJECT_NEW: {
-                            // add waypoint to memory store
+                            // update runtime cfg
+                            Config.wptSessionMode = ret[2] != null;
+                            // add waypoint to store
                             addToPrefferedStore(STORE_USER, (Waypoint) ret[1], (String) ret[2]);
                         } break;
 
@@ -907,6 +914,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                                 // update current store
                                 updateStore(currentName, currentWpts);
                             } break;
+
                             default:
                                 throw new IllegalArgumentException("Unknown wpt action: " + action);
                         }
@@ -957,6 +965,10 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("response; action = '" + _listingTitle + "'");
 //#endif
+//#ifdef __ANDROID__
+        // hack!!!
+        answer = YesNoDialog.YES; 
+//#endif
 
         final Object[] data = (Object[]) closure;
         if (answer == YesNoDialog.YES) {
@@ -993,14 +1005,14 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                     _parseWpt = null;
                 }
             } else {
-                if (_listingTitle == actionListWpts || _listingTitle == actionListTracks) { // == is OK
+                if (_listingTitle == actionListWpts || _listingTitle == actionListTracks) { // '==' is OK
                     actionListStore(_storeName, 2, Config.lazyGpxParsing);
 //#ifdef __B2B__
-                } else if (_listingTitle == actionResourceNavi) { // == is OK
+                } else if (_listingTitle == actionResourceNavi) { // '==' is OK
                     actionListStore(_storeName, 1, Config.lazyGpxParsing);
                     b2b_Action();
 //#endif
-                } else if (_listingTitle == actionListTargets) { // == is OK
+                } else if (_listingTitle == actionListTargets) { // '==' is OK
                     actionUpdateTarget(_storeName, _addWptStoreKey, _addWptSelf);
                 } else if (_listingTitle == actionAddFieldNote) {
                     _listingTitle = actionListWpts; // hack
@@ -1099,7 +1111,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
         final NakedVector v = new NakedVector(INITIAL_LIST_SIZE, INCREMENT_LIST_SIZE);
 
         // offer new file when selecting target
-        if (title == actionListTargets) { // == is OK
+        if (title == actionListTargets) { // '==' is OK
 
             // offer new file
             v.addElement(NEW_FILE_STORE);
@@ -1112,7 +1124,12 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
         }
 
         // list special stores first only when listing "wpts/" folder
-        if (folder == Config.FOLDER_WPTS && subfolder == null) { // == is OK
+//#ifndef __CN1__
+        if (folder == Config.FOLDER_WPTS && subfolder == null) // '==' is OK
+//#else
+        if (folder.equals(Config.FOLDER_WPTS) && subfolder == null)
+//#endif
+        {
 
             // add prefered stores
             listKnown(v, title == actionListTargets);
@@ -1338,7 +1355,12 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
 
             try {
                 // make sure we have backend ready // TODO why???
-                if (folder == Config.FOLDER_WPTS) {
+//#ifndef __CN1__
+                if (folder == Config.FOLDER_WPTS) // '==' is OK
+//#else
+                if (folder.equals(Config.FOLDER_WPTS))
+//#endif
+                {
                     getBackend(storeName, storeName);
                 }
                 
@@ -1722,16 +1744,25 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
         return true;
     }
 
-    private boolean isModifiable() { // '==' is OK
-        return (folder == Config.FOLDER_WPTS && currentWpts != Desktop.wpts) && isWriteable(currentName);
+    private boolean isModifiable() {
+//#ifndef __CN1__
+        return (folder == Config.FOLDER_WPTS && currentWpts != Desktop.wpts) && isWriteable(currentName); // '==' is OK
+//#else
+        return (folder.equals(Config.FOLDER_WPTS) && currentWpts != Desktop.wpts) && isWriteable(currentName);
+//#endif
     }
 
     private boolean isCache() {
+//#ifndef __CN1__
         return (folder == Config.FOLDER_WPTS); // '==' is OK
+//#else
+        return (folder.equals(Config.FOLDER_WPTS));
+//#endif
     }
 
     private void addToPrefferedStore(final Object storeKey, final Waypoint wpt,
                                      final String sessionKey) {
+
         if (sessionKey == null || sessionKey.length() == 0) {
 
             // update session
@@ -1774,8 +1805,8 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
         GpxTracklog gpx = (GpxTracklog) backends.get(storeKey);
         if (gpx == null) {
             gpx = new GpxTracklog(GpxTracklog.LOG_WPT, null/*this*/,
-                    navigator.getTracklogCreator(),
-                    navigator.getTracklogTime());
+                                  navigator.getTracklogCreator(),
+                                  navigator.getTracklogTime());
             if (STORE_USER.equals(storeKey)) {
                 gpx.setFilePrefix(PREFIX_USER);
             } else if (STORE_FRIENDS.equals(storeKey)) {
@@ -1953,9 +1984,9 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
 
         // add commands
         l.setSelectCommand(cmdOpen);
-        if (title == actionListWpts || title == actionListTracks || title.startsWith(actionListWpts) || title.startsWith(actionListTracks)) { // == is OK
+        if (title == actionListWpts || title == actionListTracks || title.startsWith(actionListWpts) || title.startsWith(actionListTracks)) { // '==' is OK
             l.addCommand(cmdBack);
-        } else if (title == actionListTargets) { // == is OK
+        } else if (title == actionListTargets) { // '==' is OK
             l.addCommand(cmdCancel);
         }
         l.setCommandListener(this);
@@ -2078,7 +2109,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
         if (subfolder == null) {
             return folder;
         }
-        return folder + subfolder;
+        return folder.concat(subfolder);
     }
 
     private float getDistanceHack(final Waypoint wpt) {
@@ -2112,7 +2143,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
 
     private void clearTicker() {
         if (list != null && tickerInUse) {
-//#ifdef __ANDROID__
+//#if __ANDROID__ || __CN1__
             // no harm if there is no ticker
             cz.kruch.track.ui.nokia.DeviceControl.setTicker(list.getUI(), null);
 //#else

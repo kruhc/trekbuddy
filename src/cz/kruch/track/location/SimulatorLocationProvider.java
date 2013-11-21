@@ -29,6 +29,8 @@ import cz.kruch.track.ui.Desktop;
 import cz.kruch.track.event.Callback;
 import cz.kruch.track.Resources;
 
+import javax.microedition.io.Connector;
+
 public final class SimulatorLocationProvider
         extends StreamReadingLocationProvider
         implements Runnable, Callback {
@@ -36,7 +38,7 @@ public final class SimulatorLocationProvider
     private static final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("Simulator");
 //#endif
 
-    private volatile File file;
+    private volatile String url;
     private int delay;
 
     public SimulatorLocationProvider() {
@@ -70,9 +72,9 @@ public final class SimulatorLocationProvider
 
         synchronized (this) {
             if (result != null) {
-                file = (File) result;
+                url = ((String[])result)[1];
             } else {
-                file = null;
+                url = null;
             }
         }
 
@@ -85,7 +87,7 @@ public final class SimulatorLocationProvider
     public void run() {
 
         // yes, thread is always started
-        if (file == null) {
+        if (url == null) {
 //#ifdef __LOG__
             if (log.isEnabled()) log.info("simulator task cancelled");
 //#endif
@@ -94,7 +96,7 @@ public final class SimulatorLocationProvider
         }
 
 //#ifdef __LOG__
-        if (log.isEnabled()) log.info("simulator task starting; url " + file.getURL());
+        if (log.isEnabled()) log.info("simulator task starting; file: " + url);
 //#endif
 
         // statistics
@@ -107,7 +109,7 @@ public final class SimulatorLocationProvider
         try {
 
             // open input
-            in = file.openInputStream();
+            in = Connector.openInputStream(url);
 
             while (isGo()) {
 
@@ -174,10 +176,6 @@ public final class SimulatorLocationProvider
 
             // close the stream
             File.closeQuietly(in);
-
-            // close file connection
-            File.closeQuietly(file);
-            file = null; // gc hint
 
             // zombie
             notifyListener(OUT_OF_SERVICE);

@@ -33,7 +33,7 @@ final class MapViewer {
 //#endif
 
 //#if __SYMBIAN__ || __RIM__ || __ANDROID__ || __CN1__
-    private static final int MAX_TRAIL_LENGTH = 2048;
+    private static final int MAX_TRAIL_LENGTH = 4096;
 //#else
     private static final int MAX_TRAIL_LENGTH = 1024;
 //#endif
@@ -824,6 +824,7 @@ final class MapViewer {
 //#endif        
 
         // paint course
+        final float course = this.course;
         if (!Float.isNaN(course)) {
             NavigationScreens.drawArrow(NavigationScreens.ARROW_COURSE,
                                         graphics, course,
@@ -833,6 +834,7 @@ final class MapViewer {
         }
 
         // paint navigation course
+        final float course2 = this.course2;
         if (!Float.isNaN(course2)) {
             NavigationScreens.drawArrow(NavigationScreens.ARROW_NAVI,
                                         graphics, course2,
@@ -952,15 +954,20 @@ final class MapViewer {
 
     private void drawScale(final Graphics graphics) {
         // position on screen
-        int h, x0, x1;
-        if (Desktop.screen.iconBarVisible() && NavigationScreens.guideSize > 0) {
+        int h, x0/*, x1*/;
+        if (Desktop.screen.iconBarVisible() && Config.guideSpotsMode == 1 && NavigationScreens.guideSize > 0) {
             h = Desktop.height - NavigationScreens.guideSize - 2 * 3;
+/*
             x0 = (Desktop.width - scaleLength) >> 1;
+*/
+            x0 = scaleDx;
         } else {
             h = Desktop.height;
             x0 = scaleDx;
         }
+/*
         x1 = x0 + scaleLength;
+*/
 
         // scale
         final int cy = h - Desktop.osd.bh - 4;
@@ -968,7 +975,7 @@ final class MapViewer {
             graphics.drawImage(Desktop.barScale, x0 + 3 - 2, cy, Graphics.TOP | Graphics.LEFT);
         }
         final int sh = 3;
-        graphics.setColor(255, 255, 255);
+        graphics.setColor(0x00f0f0f0);
         graphics.fillRect(x0, h - 6, scaleLength, sh);
         graphics.setColor(0);
         graphics.drawRect(x0, h - 6, scaleLength, sh);

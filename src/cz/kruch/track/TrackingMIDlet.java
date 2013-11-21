@@ -61,7 +61,8 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
 //#endif
 //#ifdef __LOG__
         logEnabled = hasFlag("log_enable");
-        cz.kruch.track.util.Logger.out("* platform is " + platform);
+        cz.kruch.track.util.Logger.out("* platform: " + platform);
+        cz.kruch.track.util.Logger.out("* version: " + version);
 //#endif
 
         // detect brand/device
@@ -299,7 +300,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
 //#endif
         api.file.File.initialize(sxg75 || android || iden || hasFlag("fs_traverse_bug"));
 //#ifdef __LOG__
-        cz.kruch.track.util.Logger.out("* FsType: " + api.file.File.fsType);
+        cz.kruch.track.util.Logger.out("* fs type: " + api.file.File.fsType);
 //#endif
 
 //#ifndef __B2B__

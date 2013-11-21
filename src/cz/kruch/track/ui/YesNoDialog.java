@@ -54,6 +54,13 @@ public final class YesNoDialog implements CommandListener, Runnable {
             ((TextBox) dialog).setString(item.toString()); // microemu TextBox.ctor bug workaround
 //#endif
             dialog.addCommand(new Command(Resources.getString(Resources.CMD_OK), Command.OK, 1));
+//#ifdef __ANDROID__
+            /*
+             * case: enter new filename for GPX
+             * behaviour: BACK sends TB to background; no way to enter filename on devices without Menu
+             */
+            dialog.addCommand(new Command(Resources.getString(Resources.CMD_OK), Command.BACK, 1));
+//#endif
 //#else
             dialog = new Alert(question, item.toString(), null, null);
 //#endif

@@ -307,9 +307,10 @@ public final class NavigationScreens {
         final Image image = arrows[type];
         final int size = arrowSize[type];
         final int size2 = arrowSize2[type];
+        final boolean full = arrowsFull[type];
         final int courseInt = ((int) course) % 360;
 
-        if (!arrowsFull[type]) {
+        if (!full) {
             int cr = courseInt / 90;
             int cwo = courseInt % 90;
             int ci = (cwo + 5) / 10;
@@ -1015,6 +1016,6 @@ public final class NavigationScreens {
     }
 
     private static Image createImage(final String resource) throws IOException {
-        return Image.createImage(cz.kruch.track.util.ImageUtils.getRealResourcePath(resource));
+        return Image.createImage(resource);
     }
 }

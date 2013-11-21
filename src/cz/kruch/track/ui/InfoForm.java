@@ -41,6 +41,9 @@ final class InfoForm implements CommandListener {
         pane.append(newItem(Resources.getString(Resources.INFO_ITEM_KEYS), ""));
         pane.append(newItem(null, Resources.getString((short) (Resources.INFO_ITEM_KEYS_MS + desktop.getMode()))));
         pane.addCommand(new Command(Resources.getString(Resources.INFO_CMD_DETAILS), Desktop.POSITIVE_CMD_TYPE, 0));
+//#ifdef __CN1__
+        pane.addCommand(new Command("Send Log", Desktop.POSITIVE_CMD_TYPE, 1));
+//#endif
         pane.addCommand(new Command(Resources.getString(Resources.CMD_CLOSE), Desktop.BACK_CMD_TYPE, 1));
         pane.setCommandListener(this);
 
@@ -149,6 +152,7 @@ final class InfoForm implements CommandListener {
                     .append(map.getName())
                     .append("; datum: ").append(map.getDatum())
                     .append("; projection: ").append(map.getProjection())
+                    .append("; tiles ").append(map.getTileWidth()).append('x').append(map.getTileHeight())
                     .append("; tmi/tmc? ");
             map.isTmx(sb);
 //#ifdef __BUILDER__
@@ -230,11 +234,15 @@ final class InfoForm implements CommandListener {
             details(pane);
 //#else
             // reuse does not work well in CN1 due to paint events cummulation
-            final Form pane = new Form(Resources.prefixed(Resources.getString(Resources.DESKTOP_CMD_INFO)));
-            details(pane);
-            pane.addCommand(new Command(Resources.getString(Resources.CMD_CLOSE), Desktop.BACK_CMD_TYPE, 1));
-            pane.setCommandListener(this);
-            Desktop.display.setCurrent(pane);
+            if (command.getPriority() == 0) {
+                final Form pane = new Form(Resources.prefixed(Resources.getString(Resources.DESKTOP_CMD_INFO)));
+                details(pane);
+                pane.addCommand(new Command(Resources.getString(Resources.CMD_CLOSE), Desktop.BACK_CMD_TYPE, 1));
+                pane.setCommandListener(this);
+                Desktop.display.setCurrent(pane);
+            } else {
+                com.codename1.ui.FriendlyAccess.execute("send-log", null);
+            }
 //#endif
         }
     }

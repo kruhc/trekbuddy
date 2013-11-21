@@ -10,7 +10,6 @@ import cz.kruch.track.fun.Camera;
 
 import api.file.File;
 import api.location.Datum;
-import api.location.ProjectionSetup;
 
 import javax.microedition.lcdui.CommandListener;
 import javax.microedition.lcdui.TextField;
@@ -121,12 +120,14 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
         pane.append(menuMisc, null);
 
         // add command and handling
-//#ifndef __ANDROID__
-        pane.addCommand(new Command(Resources.getString(Resources.CFG_CMD_SAVE), Command.SCREEN, 1));
-        pane.addCommand(new Command(Resources.getString(Resources.CMD_CLOSE), Desktop.BACK_CMD_TYPE, 1));
-//#else
+//#ifdef __ANDROID__
         pane.addCommand(new Command(Resources.getString(Resources.CMD_CLOSE), Command.OK, 1));
         pane.addCommand(new Command(Resources.getString(Resources.CFG_CMD_SAVE), Desktop.BACK_CMD_TYPE, 1));
+//#elifdef __CN1__
+        pane.addCommand(new Command(Resources.getString(Resources.CFG_CMD_SAVE), Desktop.BACK_CMD_TYPE, 1));
+//#else
+        pane.addCommand(new Command(Resources.getString(Resources.CFG_CMD_SAVE), Command.SCREEN, 1));
+        pane.addCommand(new Command(Resources.getString(Resources.CMD_CLOSE), Desktop.BACK_CMD_TYPE, 1));
 //#endif
         /* default SELECT command is of SCREEN type */
         pane.setCommandListener(this);
@@ -147,7 +148,6 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
             // map datum
             choice1 = newChoiceGroup(Resources.CFG_BASIC_GROUP_DEFAULT_DATUM,
                                      Desktop.CHOICE_POPUP_TYPE);
-            choice1.setFitPolicy(Choice.TEXT_WRAP_ON);
             for (int N = Config.datums.size(), i = 0; i < N; i++) {
                 final String id = ((Datum) Config.datums.elementAt(i)).name;
                 choice1.setSelectedIndex(choice1.append(id, null), Config.geoDatum.equals(id));
@@ -157,7 +157,6 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
             // coordinates format
             choice2 = newChoiceGroup(Resources.CFG_BASIC_GROUP_COORDS_FMT,
                                      Desktop.CHOICE_POPUP_TYPE);
-            choice2.setFitPolicy(Choice.TEXT_WRAP_ON);
             append(choice2, Resources.CFG_BASIC_FLD_COORDS_MAPLL);
             append(choice2, Resources.CFG_BASIC_FLD_COORDS_MAPGRID);
             append(choice2, Resources.CFG_BASIC_FLD_COORDS_GCLL);
@@ -170,7 +169,6 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
             // units format
             choice3 = newChoiceGroup(Resources.CFG_BASIC_GROUP_UNITS,
                                      Desktop.CHOICE_POPUP_TYPE);
-            choice3.setFitPolicy(Choice.TEXT_WRAP_ON);
             append(choice3, Resources.CFG_BASIC_FLD_UNITS_METRIC);
             append(choice3, Resources.CFG_BASIC_FLD_UNITS_IMPERIAL);
             append(choice3, Resources.CFG_BASIC_FLD_UNITS_NAUTICAL);
@@ -180,7 +178,6 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
             // startup screen
             choice4 = newChoiceGroup(Resources.CFG_BASIC_GROUP_START_SCREEN,
                                      Desktop.CHOICE_POPUP_TYPE);
-            choice4.setFitPolicy(Choice.TEXT_WRAP_ON);
             append(choice4, Resources.CFG_BASIC_FLD_SCREEN_MAP);
             append(choice4, Resources.CFG_BASIC_FLD_SCREEN_HPS);
             append(choice4, Resources.CFG_BASIC_FLD_SCREEN_CMS);
@@ -201,6 +198,7 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
 
             // desktop settings
             choice1 = newChoiceGroup(Resources.CFG_DESKTOP_GROUP, ChoiceGroup.MULTIPLE);
+//#ifndef __CN1__
             append(choice1, Resources.CFG_DESKTOP_FLD_FULLSCREEN);
             append(choice1, Resources.CFG_DESKTOP_FLD_SAFE_COLORS);
             append(choice1, Resources.CFG_DESKTOP_FLD_NO_SOUNDS);
@@ -225,6 +223,26 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
                 Config.easyZoomVolumeKeys,
                 Config.forceTextFieldFocus
             });
+//#else
+            append(choice1, Resources.CFG_DESKTOP_FLD_SAFE_COLORS);
+            append(choice1, Resources.CFG_DESKTOP_FLD_NO_SOUNDS);
+            append(choice1, Resources.CFG_DESKTOP_FLD_NO_QUESTIONS);
+            append(choice1, Resources.CFG_DESKTOP_FLD_TRAJECTORY);
+            append(choice1, Resources.CFG_DESKTOP_FLD_DEC_PRECISION);
+            append(choice1, Resources.CFG_DESKTOP_FLD_HPS_WPT_TRUE_AZI);
+            append(choice1, Resources.CFG_DESKTOP_FLD_EASYZOOM_VOLUME);
+            append(choice1, Resources.CFG_DESKTOP_FLD_FORCE_TF_FOCUS);
+            choice1.setSelectedFlags(new boolean[] {
+                Config.safeColors,
+                Config.noSounds,
+                Config.noQuestions,
+                Config.trailOn,
+                Config.decimalPrecision,
+                Config.hpsWptTrueAzimuth,
+                Config.easyZoomVolumeKeys,
+                Config.forceTextFieldFocus
+            });
+//#endif
             submenu.append(choice1);
 
             // OSD settings
@@ -316,7 +334,7 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
 
             // trail line
             submenu.append(itemLineCfg = createLineCfgItem(Resources.getString(Resources.CFG_DESKTOP_FLD_TRAIL_PREVIEW),
-                                                           0, Config.trailColor, Config.trailThick));
+                                                           0, Config.trailColor, Config.trailThick, Config.trackLineStyle));
             submenu.append(new Spacer(submenu.getWidth(), 4));
 
         } else if (menuNavigation.equals(section)) {
@@ -335,7 +353,6 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
 
             // wpts sorting
             choice3 = newChoiceGroup(Resources.CFG_NAVIGATION_GROUP_SORT, Desktop.CHOICE_POPUP_TYPE);
-            choice3.setFitPolicy(Choice.TEXT_WRAP_ON);
             append(choice3, Resources.CFG_NAVIGATION_FLD_SORT_BYPOS);
             append(choice3, Resources.CFG_NAVIGATION_FLD_SORT_BYNAME);
             append(choice3, Resources.CFG_NAVIGATION_FLD_SORT_BYDIST);
@@ -371,8 +388,8 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
             submenu.append(choice1);
 
             // route line
-            submenu.append(itemLineCfg = createLineCfgItem(null/*Resources.getString(Resources.CFG_NAVIGATION_GROUP_ROUTE_LINE)*/,
-                                                           0, Config.routeColor, Config.routeThick));
+            submenu.append(itemLineCfg = createLineCfgItem(Resources.getString(Resources.CFG_NAVIGATION_GROUP_ROUTE_LINE),
+                                                           0, Config.routeColor, Config.routeThick, Config.routeLineStyle));
             submenu.append(new Spacer(submenu.getWidth(), 4));
 
             // track line
@@ -387,8 +404,8 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
             submenu.append(choice6);
 
             // track line
-            submenu.append(itemLineCfg2 = createLineCfgItem(null/*Resources.getString(Resources.CFG_NAVIGATION_GROUP_TRACK_LINE)*/,
-                                                            1, Config.trackColor, Config.trackThick));
+            submenu.append(itemLineCfg2 = createLineCfgItem(Resources.getString(Resources.CFG_NAVIGATION_GROUP_TRACK_LINE),
+                                                            1, Config.trackColor, Config.trackThick, Config.trackLineStyle));
             submenu.append(new Spacer(submenu.getWidth(), 4));
 
             // 'Friends'
@@ -410,7 +427,6 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
             choice1 = newChoiceGroup(Resources.CFG_TWEAKS_GROUP, ChoiceGroup.MULTIPLE);
             append(choice1, Resources.CFG_TWEAKS_FLD_SIEMENS_IO);
             append(choice1, Resources.CFG_TWEAKS_FLD_LOWMEM_IO);
-//            append(choice1, Resources.CFG_TWEAKS_FLD_SAFE_RENDERER);
             append(choice1, Resources.CFG_TWEAKS_FLD_FORCED_GC);
             append(choice1, Resources.CFG_TWEAKS_FLD_POWER_SAVE);
             append(choice1, Resources.CFG_TWEAKS_FLD_1TILE_SCROLL);
@@ -421,9 +437,12 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
             append(choice1, Resources.CFG_TWEAKS_FLD_FILTERED_SCALING);
             append(choice1, Resources.CFG_TWEAKS_FLD_VERBOSE_LOADING);
             choice1.setSelectedFlags(new boolean[] {
+//#ifndef __CN1__
                 Config.siemensIo,
+//#else
+                Config.wp8Io,
+//#endif
                 Config.lowmemIo,
-//                Config.S60renderer,
                 Config.forcedGc,
                 Config.powerSave,
                 Config.oneTileScroll,
@@ -434,7 +453,7 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
                 Config.tilesScaleFiltered,
                 Config.verboseLoading
             });
-//#ifndef __ANDROID__
+//#if !__ANDROID__ && !__CN1__
             choice1.setSelectedIndex(choice1.append(Resources.getString(Resources.CFG_TWEAKS_FLD_S40_TICKER), null),
                                      Config.s40ticker);
 //#endif
@@ -446,7 +465,7 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
 
             // capture device and format
             if (cz.kruch.track.TrackingMIDlet.supportsVideoCapture()) {
-//#ifndef __ANDROID__
+//#if !__ANDROID__ && !__CN1__
                 submenu.append(field1 = newTextField(Resources.CFG_LOCATION_FLD_CAPTURE_LOCATOR,
                                                      Config.captureLocator, 18, TextField.URL));
 //#endif
@@ -460,7 +479,7 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
                         choiceSnapshotFormat.setSelectedIndex(idx, true);
                     }
                 }
-//#ifndef __ANDROID__
+//#if !__ANDROID__ && !__CN1__
                 submenu.append(fieldSnapshotFormat = new TextField(null, Config.snapshotFormat, 64, TextField.ANY));
                 if (Camera.type == Camera.TYPE_JSR135 && (Config.snapshotFormat == null || Config.snapshotFormat.length() == 0)) {
                     if (choiceSnapshotFormat.size() > 0) {
@@ -561,8 +580,10 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
                                                       ChoiceGroup.EXCLUSIVE);
                 choiceTracklogFormat.setSelectedIndex(choiceTracklogFormat.append(Config.TRACKLOG_FORMAT_GPX, null),
                                                       Config.TRACKLOG_FORMAT_GPX.equals(Config.tracklogFormat));
+//#ifndef __CN1__
                 choiceTracklogFormat.setSelectedIndex(choiceTracklogFormat.append(Config.TRACKLOG_FORMAT_NMEA, null),
                                                       Config.TRACKLOG_FORMAT_NMEA.equals(Config.tracklogFormat));
+//#endif
 
                 choiceGpx = newChoiceGroup(Resources.CFG_LOCATION_GROUP_GPX_OPTS,
                                            ChoiceGroup.MULTIPLE);
@@ -578,6 +599,10 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
                 fieldGpxDt = new TextField("GPX dt (s)", Integer.toString(Config.gpxDt), 5, /*TextField.*/NUMERIC);
                 fieldGpxDs = new TextField("GPX ds (m)", Integer.toString(Config.gpxDs), 5, /*TextField.*/NUMERIC);
             }
+
+            // used by multiple providers
+            fieldAltCorrection = newTextField(Resources.CFG_LOCATION_FLD_ALT_CORRECTION,
+                                              Float.toString(Config.altCorrection), 6, TextField.ANY/*DECIMAL*/);
 
             // provider specific
             if (cz.kruch.track.TrackingMIDlet.hasPorts()) {
@@ -603,6 +628,8 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
                 });
 //#elifdef __ANDROID__
                 // nothing for Android
+//#elifdef __CN1__
+                // nothing for WP8
 //#else
                 choiceInternal = newChoiceGroup(Resources.CFG_LOCATION_FLD_PROV_INTERNAL,
                                                 ChoiceGroup.MULTIPLE);
@@ -613,7 +640,7 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
                     Config.timeFix
                 });
 //#endif
-//#ifndef __ANDROID__
+//#if !__ANDROID__ && !__CN1__
                 choicePower = newChoiceGroup(Resources.CFG_LOCATION_GROUP_POWER,
                                              Desktop.CHOICE_POPUP_TYPE);
                 choicePower.append("NO_REQUIREMENT", null);
@@ -627,8 +654,6 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
                 fieldLocationTimings = newTextField(Resources.CFG_LOCATION_FLD_LOCATION_TIMINGS,
                                                     Config.getLocationTimings(Config.locationProvider), 4, TextField.NUMERIC);
 //#endif                
-                fieldAltCorrection = newTextField(Resources.CFG_LOCATION_FLD_ALT_CORRECTION,
-                                                  Float.toString(Config.altCorrection), 6, TextField.ANY/*DECIMAL*/);
             }
 //#ifdef __ALL__
             if (cz.kruch.track.TrackingMIDlet.hasFlag("provider_o2_germany")) {
@@ -669,7 +694,7 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
         }
 
         // add command and handling
-//#ifndef __ANDROID__
+//#if !__ANDROID__ && !__CN1__
         submenu.addCommand(new Command(Resources.getString(Resources.CMD_OK), Desktop.POSITIVE_CMD_TYPE, 0));
 //#endif
         submenu.addCommand(new Command(Resources.getString(Resources.CMD_BACK), Desktop.BACK_CMD_TYPE, 1));
@@ -719,12 +744,13 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
                     case Config.LOCATION_PROVIDER_JSR82:
                         appendWithNewlineAfter(submenu, createStreamChoice(provider, providerName));
                         appendWithNewlineAfter(submenu, fieldBtKeepalive);
+                        appendWithNewlineAfter(submenu, fieldAltCorrection);
                     break;
                     case Config.LOCATION_PROVIDER_JSR179:
 //#ifdef __ALL__
                     case Config.LOCATION_PROVIDER_MOTOROLA:
 //#endif
-//#ifndef __ANDROID__
+//#if !__ANDROID__ && !__CN1__
                         appendWithNewlineAfter(submenu, choiceInternal);
                         appendWithNewlineAfter(submenu, choicePower);
 //#endif
@@ -848,7 +874,7 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
     }
 
     private void subMenuCommandAction(Command command) {
-//#ifndef __ANDROID__
+//#if !__ANDROID__ && !__CN1__
         // grab values on OK
         if (command.getCommandType() != Desktop.BACK_CMD_TYPE) {
 //#endif
@@ -885,6 +911,9 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
                     Config.locationProvider = ((Integer) providers.elementAt(choiceProvider.getSelectedIndex())).intValue();
                 }
 
+                // altitude correction
+                Config.altCorrection = Float.parseFloat(getString(fieldAltCorrection));
+
                 // provider-specific
                 if (fieldSimulatorDelay != null) {
                     Config.simulatorDelay = getInt(fieldSimulatorDelay);
@@ -896,16 +925,17 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
                     Config.negativeAltFix = bbopts[1];
 //#elifdef __ANDROID__
                     // nothing for Android
+//#elifdef __CN1__
+                    // nothing for WP8
 //#else
                     final boolean[] iopts = getSelectedFlags(choiceInternal);
                     Config.assistedGps = iopts[0];
                     Config.timeFix = iopts[1];
 //#endif
-//#ifndef __ANDROID__
+//#if !__ANDROID__ && !__CN1__
                     Config.powerUsage = choicePower.getSelectedIndex();
 //#endif
                     Config.setLocationTimings(getString(fieldLocationTimings));
-                    Config.altCorrection = Float.parseFloat(getString(fieldAltCorrection));
                 }
                 if (fieldBtKeepalive != null) {
                     Config.btKeepAlive = getInt(fieldBtKeepalive);
@@ -990,6 +1020,7 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
 
                 // desktop
                 final boolean[] desktop = getSelectedFlags(choice1);
+//#ifndef __CN1__
                 Config.fullscreen = desktop[0];
                 Config.safeColors = desktop[1];
                 Config.noSounds = desktop[2];
@@ -1001,6 +1032,16 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
                 Config.hpsWptTrueAzimuth = desktop[8];
                 Config.easyZoomVolumeKeys = desktop[9];
                 Config.forceTextFieldFocus = desktop[10];
+//#else
+                Config.safeColors = desktop[0];
+                Config.noSounds = desktop[1];
+                Config.noQuestions = desktop[2];
+                Config.trailOn = desktop[3];
+                Config.decimalPrecision = desktop[4];
+                Config.hpsWptTrueAzimuth = desktop[5];
+                Config.easyZoomVolumeKeys = desktop[6];
+                Config.forceTextFieldFocus = desktop[7];
+//#endif
 
                 // OSD
                 final boolean[] osd = getSelectedFlags(choice2);
@@ -1056,9 +1097,12 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
 
                 // performance
                 final boolean[] perf = getSelectedFlags(choice1);
+//#ifndef __CN1__
                 Config.siemensIo = perf[0];
+//#else
+                Config.wp8Io = perf[0];
+//#endif
                 Config.lowmemIo = perf[1];
-//                Config.S60renderer = perf[2];
                 Config.forcedGc = perf[2];
                 Config.powerSave = perf[3];
                 Config.oneTileScroll = perf[4];
@@ -1068,7 +1112,7 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
                 Config.externalConfigBackup = perf[8];
                 Config.tilesScaleFiltered = perf[9];
                 Config.verboseLoading = perf[10];
-//#ifndef __ANDROID__
+//#if !__ANDROID__ && !__CN1__
                 Config.s40ticker = perf[11];
 //#endif
 //#ifdef __SYMBIAN__
@@ -1086,16 +1130,16 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
 
                 // multimedia
                 if (cz.kruch.track.TrackingMIDlet.supportsVideoCapture()) {
-//#ifndef __ANDROID__
+//#if !__ANDROID__ && !__CN1__
                     Config.captureLocator = getString(field1);
 //#endif
                     Config.snapshotFormatIdx = choiceSnapshotFormat.getSelectedIndex();
-//#ifndef __ANDROID__
+//#if !__ANDROID__ && !__CN1__
                     Config.snapshotFormat = getString(fieldSnapshotFormat);
 //#endif
                 }
             }
-//#ifndef __ANDROID__
+//#if !__ANDROID__ && !__CN1__
         }
 //#endif
 
@@ -1109,7 +1153,7 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
     private void mainMenuCommandAction(Command command) {
 
         // save?
-//#ifndef __ANDROID__
+//#if !__ANDROID__ && !__CN1__
         if (command.getCommandType() != Desktop.BACK_CMD_TYPE)
 //#else
         if (command.getCommandType() == Desktop.BACK_CMD_TYPE)
@@ -1124,8 +1168,10 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
                 PluginManager.getInstance().saveConfiguration();
 //#endif
 
+//#ifndef __CN1__
                 // show confirmation
                 Desktop.showConfirmation(Resources.getString(Resources.DESKTOP_MSG_CFG_UPDATED), Desktop.screen);
+//#endif
 
             } catch (ConfigurationException e) {
 
@@ -1223,26 +1269,29 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
     }
 
     private static ChoiceGroup newChoiceGroup(final short resourceId, final int type) {
-        return new ChoiceGroup(Resources.getString(resourceId), type);
+        final ChoiceGroup g = new ChoiceGroup(Resources.getString(resourceId), type);
+        g.setFitPolicy(Choice.TEXT_WRAP_OFF);
+        return g;
     }
 
     private static int append(final ChoiceGroup group, final short resourceId) {
         return group.append(Resources.getString(resourceId), null);
     }
 
-    private int[] itemLineColor = { 0, 0 };
-    private int[] itemLineThick = { 0, 0 };
-
-    private Image[] itemLineImage = { null, null };
+    final int[] itemLineColor = { 0, 0 };
+    final int[] itemLineThick = { 0, 0 };
+    final boolean[] itemLineDashed = { false, false };
+    final Image[] itemLineImage = { null, null };
 
     private Item createLineCfgItem(final String label, final int itemIdx,
-                                   final int color, final int thickness) {
-        final int sp = Desktop.isHires() ? 9 : 7;
+                                   final int color, final int thickness, final boolean dashed) {
+        final int sp = Desktop.isHires() ? 10 : 7;
         itemLineColor[itemIdx] = color;
         itemLineThick[itemIdx] = thickness;
+        itemLineDashed[itemIdx] = dashed;
         itemLineImage[itemIdx] = Image.createImage((int) ((float)submenu.getWidth() / 3),
                                                    sp + 5 + sp); // space + max trail thickness + space
-        itemLinePaint(itemLineImage[itemIdx], color, thickness);
+        itemLinePaint(itemLineImage[itemIdx], color, thickness, dashed);
 //#ifdef __RIM__
         final Item item = new StringItem(label, "<no preview>", Item.BUTTON);
 //#else
@@ -1253,14 +1302,18 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
         return item;
     }
     
-    private static void itemLinePaint(final Image image, final int color, final int thickness) {
-        final Graphics graphics = image.getGraphics();
+    static void itemLinePaint(final Image image, final int color, final int thickness, final boolean dashed) {
         final int w = image.getWidth();
         final int h = image.getHeight();
+        final Graphics graphics = image.getGraphics();
         graphics.setColor(0x40ffffff);
         graphics.fillRoundRect(0, 0, w, h, 5, 5);
         graphics.setColor(Config.COLORS_16[color]);
+        // TODO respect dashed flag
         graphics.fillRect(3, /*3 + 3*/h / 2 - thickness, w - 3 - 3, thickness * 2 + 1);
+//#ifdef __CN1__
+        ((javax.microedition.lcdui.game.ExtendedGraphics) com.codename1.ui.FriendlyAccess.getNativeGraphics(image.getNativeImage())).realize();
+//#endif
     }
 
     private final class LineCfgForm implements CommandListener, ItemStateListener {
@@ -1289,10 +1342,11 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
             } else if (item == gaugeThickness) {
                 itemLineThick[itemIdx] = gaugeThickness.getValue();
             }
-            itemLinePaint(itemLineImage[itemIdx], itemLineColor[itemIdx], itemLineThick[itemIdx]);
+            itemLinePaint(itemLineImage[itemIdx], itemLineColor[itemIdx], itemLineThick[itemIdx], itemLineDashed[itemIdx]);
             final Form form = (Form) Desktop.display.getCurrent();
-            form.delete(idx);
-            idx = form.append(itemLineImage[itemIdx]);
+//            form.delete(idx);
+//            idx = form.append(itemLineImage[itemIdx]);
+            ((ImageItem)form.get(idx)).setImage(itemLineImage[itemIdx]);
         }
 
         public void commandAction(Command command, Displayable displayable) {

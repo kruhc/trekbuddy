@@ -265,14 +265,23 @@ public final class Desktop implements CommandListener,
     }
 
     public static void schedule(TimerTask task, long delay) {
+//#ifdef __LOG__
+        if (log.isEnabled()) log.debug("schedule " + task + "; delay = " + delay);
+//#endif
         getTimer().schedule(task, delay);
     }
 
     public static void schedule(TimerTask task, long delay, long period) {
+//#ifdef __LOG__
+        if (log.isEnabled()) log.debug("schedule " + task + "; delay = " + delay + "; period = " + period);
+//#endif
         getTimer().schedule(task, delay, period);
     }
 
     public static void scheduleAtFixedRate(TimerTask task, long delay, long period) {
+//#ifdef __LOG__
+        if (log.isEnabled()) log.debug("schedule fixed " + task + "; delay = " + delay + "; period = " + period);
+//#endif
         getTimer().scheduleAtFixedRate(task, delay, period);
     }
 
@@ -389,6 +398,17 @@ public final class Desktop implements CommandListener,
         /*
          * ~from TrackingMIDlet.run
          */
+
+//#ifdef __CN1__
+
+        // start SD mirroring (resources and customizations)
+        try {
+            com.codename1.ui.FriendlyAccess.execute("mirror-sd", new Object[]{ Boolean.FALSE });
+        } catch (Throwable t) {
+            // ignore
+        }
+
+//#endif
 
         int localized = 0;
 
@@ -532,7 +552,9 @@ public final class Desktop implements CommandListener,
         };
         cz.kruch.track.TrackingMIDlet.getActivity().bindService(new Intent(cz.kruch.track.TrackingMIDlet.getActivity(), Runtime.class),
                                                                 svcConn, Context.BIND_AUTO_CREATE);
+//#ifndef __BACKPORT__
         cz.kruch.track.sensor.ANTPlus.initialize();
+//#endif
 //#else
         runtime = new Runtime();
 //#endif
@@ -572,14 +594,27 @@ public final class Desktop implements CommandListener,
         // finish screen splash
         screen.autohide();
 
-        // check DataDir structure
+//#ifndef __CN1__
+
+        // check/initialize DataDir structure
         if (Config.dataDirAccess) {
             Config.initDataDir();
         } else if (File.isFs()) {
             showError("DataDir [" + Config.getDataDir() + "] not accessible - fix it and restart", null, null);
         } else {
-            showWarning("JSR-75 not available", null, null);
+            showWarning("File API not available", null, null);
         }
+
+//#else
+
+        // finish SD mirroring
+        try {
+            com.codename1.ui.FriendlyAccess.execute("mirror-sd", new Object[]{ Boolean.TRUE });
+        } catch (Throwable t) {
+            showError("SD synchronization failed", t, null);
+        }
+
+//#endif
 
         // initialize waypoints
         Waypoints.initialize(this);
@@ -604,6 +639,17 @@ public final class Desktop implements CommandListener,
                 }
             }
         }
+
+//#ifdef __CN1__
+
+        // finish SD mirroring
+        try {
+            com.codename1.ui.FriendlyAccess.execute("mirror-sky", new Object[]{ Boolean.TRUE });
+        } catch (Throwable t) {
+            showError("SkyDrive synchronization failed", t, null);
+        }
+
+//#endif
 
         // finally initialized
         initialized = true;
@@ -776,9 +822,15 @@ public final class Desktop implements CommandListener,
         return timer;
     }
 
-    private static void resetFont() {
+    static void resetFont() {
 
-        synchronized (renderLock) { // @threads:?:?
+//#ifndef __CN1__
+
+        /*
+         * Old way memory friendly - release first then create new
+         */
+
+        synchronized (renderLock) { // @@threads:?:?
 
             final Font df = Font.getDefaultFont();
             font = null; // gc hint
@@ -805,14 +857,61 @@ public final class Desktop implements CommandListener,
             }
 
         } /* ~synchronized */
+
+//#else
+
+        /*
+         * Font creation outside of huge lock to avoid deadlock on WP8
+         */
+
+        final Font df = Font.getDefaultFont();
+        final Font newFont = Font.getFont(Font.FACE_MONOSPACE,
+                                          Config.osdBoldFont ? Font.STYLE_BOLD : Font.STYLE_PLAIN,
+                                          Config.desktopFontSize == 0 ? Font.SIZE_SMALL :
+                                            (Config.desktopFontSize == 1 ? Font.SIZE_MEDIUM : Font.SIZE_LARGE));
+        final Font newFontWpt = Font.getFont(Font.FACE_SYSTEM,
+                                        Config.osdBoldFont ? Font.STYLE_BOLD : Font.STYLE_PLAIN,
+                                        Font.SIZE_SMALL);
+        final Font newFontBtns = Font.getFont(df.getFace(), Font.STYLE_PLAIN, Font.SIZE_MEDIUM);
+        final Font newFontStringItems = Font.getFont(df.getFace(), df.getStyle(),
+                                                  isHires() ? Font.SIZE_MEDIUM : Font.SIZE_SMALL);
+        Font newFontLists;
+        try {
+            newFontLists = Font.getFont((Config.listFont >> 16) & 0x000000ff,
+                                        (Config.listFont >> 8) & 0x000000ff,
+                                        Config.listFont & 0x000000ff);
+        } catch (IllegalArgumentException e) {
+            newFontLists = df;
+        }
+
+        synchronized (renderLock) { // @threads:?:?
+            font = null; // gc hint
+            font = newFont;
+            fontWpt = null; // gc hint
+            fontWpt = newFontWpt;
+            fontBtns = null; // gc hint
+            fontBtns = newFontBtns;
+            fontStringItems = null;
+            fontStringItems = newFontStringItems;
+            fontLists = newFontLists;
+        } /* ~synchronized */
+
+//#endif
+
     }
 
-    private static void resetBar() {
+    static void resetBar() {
         // alpha
         int alpha = Config.osdAlpha;
         if (alpha > 0xff) {
             alpha = 0xff;
         }
+
+//#ifndef __CN1__
+
+        /*
+         * Better do it old way ie. release first and then create new to conserve memory
+         */
 
         synchronized (renderLock) { // @threads:?:?
 
@@ -837,6 +936,40 @@ public final class Desktop implements CommandListener,
             barScale = cz.kruch.track.util.ImageUtils.createRGBImage(w, h, color);
 
         } /* ~synchronized */
+
+//#else
+
+        /*
+         * Image creation outside of huge lock to avoid deadlock
+         */
+
+        // OSD/status bar
+        int color = alpha << 24 | (Config.osdBlackColor ? 0x00dfdfdf : 0x007f7f7f);
+        int h = font.getHeight();
+        int w = screen.getWidth();
+        final Image newBar = cz.kruch.track.util.ImageUtils.createRGBImage(w, h, color);
+
+        // wpt label bar
+        color = alpha << 24 | 0x00ffff00;
+        h = cz.kruch.track.TrackingMIDlet.getPlatform().startsWith("Nokia/6230i") ? font.getBaselinePosition() + 2 : font.getHeight();
+        final Image newBarWpt = cz.kruch.track.util.ImageUtils.createRGBImage(w, h, color);
+
+        // scale bar
+        color = alpha << 24 | 0x00ffffff;
+        h = font.getHeight();
+        w = font.stringWidth("99999 km") + 4;
+        final Image newBarScale = cz.kruch.track.util.ImageUtils.createRGBImage(w, h, color);
+
+        synchronized (renderLock) { // @threads:?:?
+            bar = null; // gc hint
+            bar = newBar;
+            barWpt = null; // gc hint
+            barWpt = newBarWpt;
+            barScale = null; // gc hint
+            barScale = newBarScale;
+        } /* ~synchronized */
+
+//#endif
 
         if (Config.forcedGc) {
             System.gc(); // conditional
@@ -1105,7 +1238,7 @@ public final class Desktop implements CommandListener,
 */
         } else if (command == cmdLoadMaps) {
             (new FileBrowser(Resources.getString(Resources.DESKTOP_MSG_SELECT_MAP), new Event(Event.EVENT_FILE_BROWSER_FINISHED, "map/atlas"),
-                             screen, Config.FOLDER_MAPS,
+                             Config.FOLDER_MAPS,
                              new String[]{ ".tba", ".idx", ".xml", ".tar", ".map", ".gmi" })).show();
 //#ifdef __HECL__
         } else if (command == cmdLive) {
@@ -1114,7 +1247,7 @@ public final class Desktop implements CommandListener,
 //#ifdef __B2B__
         } else if (command == cmdLoadGuide) {
             (new FileBrowser(Resources.getString(Resources.VENDOR_MSG_SELECT_GUIDE), new Event(Event.EVENT_FILE_BROWSER_FINISHED, "guide"),
-                             screen, "../../", null)).show();
+                             "../../", null)).show();
 //#endif
         } else if (command == cmdRun) {
             // start tracking
@@ -1397,6 +1530,7 @@ public final class Desktop implements CommandListener,
     }
 
     void updateNavigation(final QualifiedCoordinates from) {
+
         // got active wpt?
         if (wpts != null && wptIdx > -1) {
 
@@ -1415,8 +1549,12 @@ public final class Desktop implements CommandListener,
         }
     }
 
-    /* called from synchronized block in Event.execTrackingPositionUpdated */
-    private void updateRouting(final QualifiedCoordinates from) {
+    /* called from synchronized block (renderLock) in Event.execTrackingPositionUpdated */
+    private boolean updateRouting(final QualifiedCoordinates from) {
+        
+        // status
+        boolean reached = false;
+
         // route navigation?
         if (wpts != null && wptIdx > -1) {
 
@@ -1432,23 +1570,8 @@ public final class Desktop implements CommandListener,
                     // remember
                     reachedIdx = wptIdx;
 
-                    // flash screen
-/* this makes mess on S40, SonyEricsson, ... where else??
-                    cz.kruch.track.ui.nokia.DeviceControl.flashScreen();
-*/
-
-                    // play sound if set
-                    if (Config.wptAlertSound) {
-                        final String userLink = ((Waypoint) wpts.elementAt(wptIdx)).getLink(Waypoint.LINK_GENERIC_SOUND);
-                        cz.kruch.track.fun.Playback.play(Config.FOLDER_SOUNDS,
-                                                         userLink, Config.defaultWptSound,
-                                                         AlertType.ALARM);
-                    }
-
-                    // vibrate if set - overrides powerSave
-                    if (Config.wptAlertVibr) {
-                        display.vibrate(500);
-                    }
+                    // update result
+                    reached = true;
                 }
 
                 // find next wpt
@@ -1483,6 +1606,8 @@ public final class Desktop implements CommandListener,
                 }
             }
         }
+
+        return reached;
     }
 
     /**
@@ -1655,69 +1780,73 @@ public final class Desktop implements CommandListener,
         // 'route changed' flag
         boolean rchange = false;
 
-        // start navigation?
-        if (wpts != null) {
+        synchronized (Desktop.renderLock) {
 
-            // update state vars
-            Desktop.navigating = true;
-            Desktop.wpts = null; // gc hint
-            Desktop.wpts = wpts;
-            Desktop.wptsName = wptsName;
+            // start navigation?
+            if (wpts != null) {
 
-            if (toIndex < 0) { // forward routing
-                Desktop.wptIdx = fromIndex;
-                Desktop.wptEndIdx = toIndex;
-                Desktop.routeDir = 1;
-                Desktop.showall = false;
-            } else if (fromIndex < 0) { // backward routing
-                Desktop.wptIdx = toIndex;
-                Desktop.wptEndIdx = fromIndex;
-                Desktop.routeDir = -1;
-                Desktop.showall = false;
-            } else { // single wpt navigation
-                Desktop.wptIdx = toIndex;
-                Desktop.wptEndIdx = fromIndex;
+                // update state vars
+                Desktop.navigating = true;
+                Desktop.wpts = null; // gc hint
+                Desktop.wpts = wpts;
+                Desktop.wptsName = wptsName;
+
+                if (toIndex < 0) { // forward routing
+                    Desktop.wptIdx = fromIndex;
+                    Desktop.wptEndIdx = toIndex;
+                    Desktop.routeDir = 1;
+                    Desktop.showall = false;
+                } else if (fromIndex < 0) { // backward routing
+                    Desktop.wptIdx = toIndex;
+                    Desktop.wptEndIdx = fromIndex;
+                    Desktop.routeDir = -1;
+                    Desktop.showall = false;
+                } else { // single wpt navigation
+                    Desktop.wptIdx = toIndex;
+                    Desktop.wptEndIdx = fromIndex;
+                    Desktop.routeDir = 0;
+                }
+
+                // update navinfo
+                if (isTracking() && isLocation()) {
+                    updateNavigation(getLocation().getQualifiedCoordinates());
+                } else {
+                    updateNavigation(getPointer());
+                }
+
+                // detect route change
+                if (wpts.hashCode() != wptsId || wpts.size() != wptsSize) {
+                    // remember new route params
+                    wptsId = wpts.hashCode();
+                    wptsSize = wpts.size();
+                    // set flag
+                    rchange = true;
+                }
+            } else { /* no, navigation stoppped */
+
+                // reset global navigation info
+                Desktop.navigating = false;
                 Desktop.routeDir = 0;
-            }
+                Desktop.wptIdx = Desktop.reachedIdx = Desktop.wptEndIdx = -1;
 
-            // update navinfo
-            if (isTracking() && isLocation()) {
-                updateNavigation(getLocation().getQualifiedCoordinates());
-            } else {
-                updateNavigation(getPointer());
-            }
+                // reset local navigation info
+                wptsId = 0;
+                wptAzimuth = -1;
+                wptDistance = -1F;
+                wptHeightDiff = Float.NaN;
 
-            // detect route change
-            if (wpts.hashCode() != wptsId || wpts.size() != wptsSize) {
-                // remember new route params
-                wptsId = wpts.hashCode();
-                wptsSize = wpts.size();
-                // set flag
+                // set 'route changed' flag
                 rchange = true;
+
+                // hack this does not solve different routes for navigation and and showall
+                if (showall) {
+                    rchange = false;
+                } else {
+                    Desktop.wpts = null;
+                }
             }
-        } else { /* no, navigation stoppped */
 
-            // reset global navigation info
-            Desktop.navigating = false;
-            Desktop.routeDir = 0;
-            Desktop.wptIdx = Desktop.reachedIdx = Desktop.wptEndIdx = -1;
-
-            // reset local navigation info
-            wptsId = 0;
-            wptAzimuth = -1;
-            wptDistance = -1F;
-            wptHeightDiff = Float.NaN;
-
-            // set 'route changed' flag
-            rchange = true;
-
-            // hack this does not solve different routes for navigation and and showall
-            if (showall) {
-                rchange = false;
-            } else {
-                Desktop.wpts = null;
-            }
-        }
+        } /* ~synchronized */
 
         int mask = MASK_OSD;
 
@@ -1735,6 +1864,8 @@ public final class Desktop implements CommandListener,
     }
 
     Waypoint previousWpt() {
+
+        // be safe
         if (wpts != null) {
 
             // not at the first one yet?
@@ -1756,6 +1887,8 @@ public final class Desktop implements CommandListener,
     }
 
     Waypoint nextWpt() {
+
+        // be safe
         if (wpts != null) {
 
             // not at the last one yet?
@@ -2102,7 +2235,7 @@ public final class Desktop implements CommandListener,
             // does this update affect map screen?
             final boolean mapscr = (mask & Desktop.MASK_MAP) != 0 && mode == VIEW_MAP;
             
-//#ifndef __CN1__
+//-#ifndef __CN1__
             
             // prerender phase
             if (mapscr) {
@@ -2118,7 +2251,7 @@ public final class Desktop implements CommandListener,
                 }
             }
 
-//#endif
+//-#endif
 
             // call render task
             screen.callSerially(newRenderTask(mask, mapscr));
@@ -2864,8 +2997,8 @@ public final class Desktop implements CommandListener,
 
         public void run() {
 
-//#ifdef __CN1__
-
+//-#ifdef __CN1__
+/*
             // prerender phase
             if (mapscr) {
                 synchronized (loadingLock) {
@@ -2879,8 +3012,8 @@ public final class Desktop implements CommandListener,
                     }
                 }
             }
-            
-//#endif
+*/            
+//-#endif
 
             // render
             try {
@@ -2945,17 +3078,17 @@ public final class Desktop implements CommandListener,
     }
 
     // temps for atlas/map loading
-    private volatile String _target;
-    private volatile Map _map;
-    private volatile Atlas _atlas;
-    private volatile QualifiedCoordinates _qc; // WGS84
-    private volatile boolean _switch;
+    volatile String _target;
+    volatile Map _map;
+    volatile Atlas _atlas;
+    volatile QualifiedCoordinates _qc; // WGS84
+    volatile boolean _switch;
 
     void changeLayer() {
         if (atlas != null) {
             final Enumeration e = atlas.getLayers();
             if (e.hasMoreElements()) {
-                (new ItemSelection(screen, Resources.getString(Resources.DESKTOP_MSG_SELECT_LAYER),
+                (new ItemSelection(Resources.getString(Resources.DESKTOP_MSG_SELECT_LAYER),
                                    new Event(Event.EVENT_LAYER_SELECTION_FINISHED, "switch"))).show(e, atlas.getLayer());
             } else {
                 showInfo(Resources.getString(Resources.DESKTOP_MSG_NO_LAYERS), screen);
@@ -2967,7 +3100,7 @@ public final class Desktop implements CommandListener,
         if (atlas != null) {
             final Enumeration e = atlas.getMapNames();
             if (e.hasMoreElements()) {
-                (new ItemSelection(screen, Resources.getString(Resources.DESKTOP_MSG_SELECT_MAP),
+                (new ItemSelection(Resources.getString(Resources.DESKTOP_MSG_SELECT_MAP),
                                    new Event(Event.EVENT_MAP_SELECTION_FINISHED, "switch"))).show(e, map.getName());
             } else {
                 showInfo(Resources.getString(Resources.DESKTOP_MSG_NO_MAPS), screen);
@@ -3384,14 +3517,28 @@ public final class Desktop implements CommandListener,
             }
         }
 
+//#if __ANDROID__ || __CN1__
+
+        private void showLoading(final String busyText) {
+            cz.kruch.track.ui.nokia.DeviceControl.setTicker(Desktop.display.getCurrent(), busyText);
+        }
+
+//#endif
+
         private void execConfigChanged() {
 
-            // force changes
+            // config may have changed
             Config.configChanged();
-            synchronized (Desktop.renderLock) {
-                resetFont();
-                resetBar();
-            }
+//#ifdef __LOG__
+            if (log.isEnabled()) log.debug("config changed ok");
+//#endif
+
+            // UI setting may have changed
+            resetFont();
+            resetBar();
+//#ifdef __LOG__
+            if (log.isEnabled()) log.debug("UI elements reinit");
+//#endif
 
 //#ifdef __ANDROID__
             cz.kruch.track.TrackingMIDlet.getActivity().config.ignoreVolumeKeys = !Config.easyZoomVolumeKeys;
@@ -3412,9 +3559,13 @@ public final class Desktop implements CommandListener,
                 }
             }
 
+//#ifdef __LOG__
+            if (log.isEnabled()) log.debug("notify views");
+//#endif
+
             // notify views
             final View[] views = Desktop.this.views;
-            synchronized (Desktop.renderLock) {
+//            synchronized (Desktop.renderLock) {
                 for (int i = views.length; --i >= 0; ) {
                     try {
                         views[i].configChanged();
@@ -3425,7 +3576,7 @@ public final class Desktop implements CommandListener,
                         throw new api.lang.RuntimeException("Error in [config changed] in view #" + i, e);
                     }
                 }
-            } // ~synchronized
+//            } // ~synchronized
 
             // update screen
             Desktop.this.update(MASK_ALL);
@@ -3434,19 +3585,23 @@ public final class Desktop implements CommandListener,
 
         private void execFileBrowserFinished() {
 
+            // restore screen
+            Desktop.display.setCurrent(Desktop.screen);
+
             // had user selected anything?
             if (result != null) {
 
                 // user intention to load map or atlas
                 Desktop.this._switch = false;
 
-                // cast to file connection
-                final api.file.File file = (api.file.File) result;
-                final String name = file.getName();
-                final String url = file.getURL();
+                // cast to result
+                final String[] fileinfo = (String[]) result;
+                final String name = fileinfo[0];
+                final String url = fileinfo[1];
 
-                // close file connection
-                File.closeQuietly(file);
+//#ifdef __LOG__
+                if (log.isEnabled()) log.debug("selected file: " + name + "|" + url);
+//#endif
 
                 // to recover position when new map loaded
                 if (Desktop.this.map != null) {
@@ -3472,14 +3627,18 @@ public final class Desktop implements CommandListener,
                 // reset checksum
                 cz.kruch.track.io.CrcInputStream.doReset();
 //#endif
-                
+
+//#ifdef __CN1__
+                // skydrive
+                if (url.startsWith("file:///Skydrive/")) {
+                    com.codename1.ui.FriendlyAccess.execute("copy-map", new Object[]{
+                            url, new Event(Event.EVENT_FILE_BROWSER_FINISHED, "map/atlas") 
+                    });
+                    return;
+                }
+//#endif
+
                 // load map or atlas
-//                if ("atlas".equals(closure)) {
-//                    Desktop.this._target = "atlas";
-//                    Desktop.this.startOpenAtlas(url, name);
-//                } else if ("map".equals(closure)) {
-//                    Desktop.this._target = "map";
-//                    Desktop.this.startOpenMap(url, name);
                 if ("map/atlas".equals(closure)) {
                     final String nameLc = name.toLowerCase();
                     if (nameLc.endsWith(".tba")
@@ -3492,6 +3651,10 @@ public final class Desktop implements CommandListener,
                         Desktop.this._target = "map";
                         Desktop.this.startOpenMap(url, name);
                     }
+//#if __ANDROID__ || __CN1__
+                    // show progress
+                    showLoading(Resources.getString(Resources.NAV_MSG_TICKER_LOADING));
+//#endif
                 }
 //#ifdef __B2B__
                   else if ("guide".equals(closure)) {
@@ -3500,9 +3663,11 @@ public final class Desktop implements CommandListener,
                 }
 //#endif
             } else if (throwable != null) {
-                Desktop.showError("[1]", throwable, Desktop.screen);
-            }
 
+                // show error
+                Desktop.showError("[1]", throwable, Desktop.screen);
+                
+            }
         }
 
         private void execTracklog() {
@@ -3541,6 +3706,13 @@ public final class Desktop implements CommandListener,
 
         private void execAtlasOpened() {
 
+//#if __ANDROID__ || __CN1__
+
+            // hide progress
+            showLoading(null);
+
+//#endif
+
             // if opening ok
             if (throwable == null) {
 
@@ -3549,7 +3721,7 @@ public final class Desktop implements CommandListener,
                 Desktop.this._atlas = null;
 
                 // force user to select layer
-                (new ItemSelection(Desktop.screen, Resources.getString(Resources.DESKTOP_MSG_SELECT_LAYER),
+                (new ItemSelection(Resources.getString(Resources.DESKTOP_MSG_SELECT_LAYER),
                                    new Event(Event.EVENT_LAYER_SELECTION_FINISHED))).show(Desktop.this.atlas.getLayers(), null);
 
             } else {
@@ -3563,25 +3735,31 @@ public final class Desktop implements CommandListener,
                     Desktop.this._atlas = null;
                     Desktop.this._target = "map";
                     Desktop.this.startOpenMap(url, name);
-                    return;
+
+//#if __ANDROID__ || __CN1__
+                    // show progress
+                    showLoading(Resources.getString(Resources.NAV_MSG_TICKER_LOADING));
+//#endif
+
+                } else {
+
+                    // show a user error
+                    Desktop.showError(nullToString("[3] ", result), throwable, Desktop.screen);
+
+                    // cleanup
+                    cleanup(throwable);
                 }
-
-                // show a user error
-                Desktop.showError(nullToString("[3] ", result), throwable, Desktop.screen);
-
-                // cleanup
-                cleanup(throwable);
             }
 
         }
 
         private void execLayerSelectionFinished() {
 
-            // layer switch with '7'
-            Desktop.this._switch = "switch".equals(closure);
-
             // had user selected anything?
             if (result != null) {
+
+                // layer switch with '7'
+                Desktop.this._switch = "switch".equals(closure);
 
                 // layer name
                 final String layerName = (String) result;
@@ -3596,25 +3774,45 @@ public final class Desktop implements CommandListener,
                         Desktop.this.atlas.setLayer(layerName);
 
                         // force user to select default map
-                        (new ItemSelection(Desktop.screen, Resources.getString(Resources.DESKTOP_MSG_SELECT_MAP),
+                        (new ItemSelection(Resources.getString(Resources.DESKTOP_MSG_SELECT_MAP),
                                            new Event(Event.EVENT_MAP_SELECTION_FINISHED))).show(Desktop.this.atlas.getMapNames(), null);
 
                     } else { // layer switch
 
-                        // switch match
+                        // there may be no suitable alternate map for current coords
                         if (!Desktop.this.startAlternateMap(layerName, getPointer())) {
+
                             // let user to select any map
-                            final Displayable next = (new ItemSelection(Desktop.screen, Resources.getString(Resources.DESKTOP_MSG_SELECT_MAP),
+                            final Displayable next = (new ItemSelection(Resources.getString(Resources.DESKTOP_MSG_SELECT_MAP),
                                                                         new Event(Event.EVENT_MAP_SELECTION_FINISHED, layerName))).show(Desktop.this.atlas.getMapNames(layerName), null);
+
                             // warn user (in overlay dialog??)
                             showWarning(Resources.getString(Resources.DESKTOP_MSG_NO_MAP_FOR_POS) + " '" + layerName + "'.",
                                         null, next);                            
                         }
+//#if __ANDROID__ || __CN1__
+                          else {
+                            // show progress
+                            showLoading(Resources.getString(Resources.NAV_MSG_TICKER_LOADING));
+                        }
+//#endif
                     }
+
+                } else {
+
+                    // TODO does this ever happen?!?
+
+                    // restore screen
+                    Desktop.display.setCurrent(Desktop.screen);
+
                 }
+
             } else { // cancelled
 
-                // cleanup 
+                // restore screen
+                Desktop.display.setCurrent(Desktop.screen);
+                
+                // cleanup
                 cleanup(null);
 
             }
@@ -3623,11 +3821,14 @@ public final class Desktop implements CommandListener,
 
         private void execMapSelectionFinished() {
 
-            // map switch with '9'
-            Desktop.this._switch = "switch".equals(closure);
-
+            // restore screen
+            Desktop.display.setCurrent(Desktop.screen);
+            
             // had user selected anything?
             if (result != null) {
+
+                // map switch with '9'
+                Desktop.this._switch = "switch".equals(closure);
 
                 // trick - focus on these coords once the new map is loaded
                 if (Desktop.this.map != null) {
@@ -3646,6 +3847,11 @@ public final class Desktop implements CommandListener,
                 // background task
                 Desktop.this.startOpenMap(Desktop.this.atlas.getFileURL(name), name);
 
+//#if __ANDROID__ || __CN1__
+                // show progress
+                showLoading(Resources.getString(Resources.NAV_MSG_TICKER_LOADING));
+//#endif
+
             } else { // cancelled
 
                 // cleanup
@@ -3656,6 +3862,13 @@ public final class Desktop implements CommandListener,
         }
 
         private void execMapOpened() {
+
+//#if __ANDROID__ || __CN1__
+
+            // hide progress
+            showLoading(null);
+
+//#endif
 
             // opening was ok
             if (throwable == null) {
@@ -3850,10 +4063,8 @@ public final class Desktop implements CommandListener,
                     // reset views on fresh start
                     if (!Desktop.this._isProviderRestart()) {
                         final View[] views = Desktop.this.views;
-                        synchronized (Desktop.renderLock) {
-                            for (int i = views.length; --i >= 0; ) {
-                                views[i].trackingStarted();
-                            }
+                        for (int i = views.length; --i >= 0; ) {
+                            views[i].trackingStarted();
                         }
 //#ifdef __HECL__
                         cz.kruch.track.hecl.PluginManager.getInstance().trackingStarted();
@@ -3974,12 +4185,18 @@ public final class Desktop implements CommandListener,
                 // update trip stats
                 TripStatistics.locationUpdated(l);
 
-                // TODO ugly big lock
+                // current coords
+                final QualifiedCoordinates qc = l.getQualifiedCoordinates();
+
+                // wpt reached status
+                boolean wptReached = false;
+
+                // avoid conflict
                 synchronized (Desktop.renderLock) {
 
                     // update wpt navigation
                     try {
-                        Desktop.this.updateNavigation(l.getQualifiedCoordinates());
+                        Desktop.this.updateNavigation(qc);
                     } catch (Exception e) {
 //#ifdef __LOG__
                         e.printStackTrace();
@@ -3989,12 +4206,35 @@ public final class Desktop implements CommandListener,
 
                     // update route navigation
                     try {
-                        Desktop.this.updateRouting(l.getQualifiedCoordinates());
+                        wptReached = Desktop.this.updateRouting(qc);
                     } catch (Exception e) {
 //#ifdef __LOG__
                         e.printStackTrace();
 //#endif
                         throw new api.lang.RuntimeException("Error in [routing update]", e);
+                    }
+
+                } // ~synchronized
+
+                // was wpt reached?
+                if (wptReached) {
+
+                    // flash screen
+/* this makes mess on S40, SonyEricsson, ... where else??
+                    cz.kruch.track.ui.nokia.DeviceControl.flashScreen();
+*/
+
+                    // play sound if set
+                    if (Config.wptAlertSound) {
+                        final String userLink = ((Waypoint) wpts.elementAt(wptIdx)).getLink(Waypoint.LINK_GENERIC_SOUND);
+                        cz.kruch.track.fun.Playback.play(Config.FOLDER_SOUNDS,
+                                                         userLink, Config.defaultWptSound,
+                                                         AlertType.ALARM);
+                    }
+
+                    // vibrate if set - overrides powerSave
+                    if (Config.wptAlertVibr) {
+                        display.vibrate(500);
                     }
                 }
 
@@ -4013,7 +4253,7 @@ public final class Desktop implements CommandListener,
                         throw new api.lang.RuntimeException("Error in [location updated] in view #" + i, e);
                     }
                 }
-            } // ~synchronized
+            }
 
 //#ifdef __HECL__
             cz.kruch.track.hecl.PluginManager.getInstance().locationUpdated(l);
@@ -4034,21 +4274,19 @@ public final class Desktop implements CommandListener,
             // notify views
             int mask = MASK_NONE;
             final View[] views = Desktop.this.views;
-            synchronized (Desktop.renderLock) {
-                for (int i = views.length; --i >= 0; ) {
-                    try {
-                        final int m = views[i].orientationChanged(heading);
-                        if (i == mode) { // current view
-                            mask |= m;
-                        }
-                    } catch (Exception e) {
-    //#ifdef __LOG__
-                        e.printStackTrace();
-    //#endif
-                        throw new api.lang.RuntimeException("Error in [orientation changed] in view #" + i, e);
+            for (int i = views.length; --i >= 0; ) {
+                try {
+                    final int m = views[i].orientationChanged(heading);
+                    if (i == mode) { // current view
+                        mask |= m;
                     }
+                } catch (Exception e) {
+//#ifdef __LOG__
+                    e.printStackTrace();
+//#endif
+                    throw new api.lang.RuntimeException("Error in [orientation changed] in view #" + i, e);
                 }
-            } // ~synchronized
+            }
 
             // update screen
             Desktop.this.update(mask);

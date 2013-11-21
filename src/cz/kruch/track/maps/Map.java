@@ -79,6 +79,14 @@ public final class Map implements Runnable {
         return calibration.getHeight();
     }
 
+    public int getTileWidth() {
+        return loader.tileWidth;
+    }
+
+    public int getTileHeight() {
+        return loader.tileHeight;
+    }
+
     public ProjectionSetup getProjection() {
         return calibration.getProjection();
     }

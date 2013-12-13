@@ -31,6 +31,7 @@ import api.lang.Int;
 
 import java.io.InputStream;
 import java.io.IOException;
+import java.io.ByteArrayOutputStream;
 import java.util.Vector;
 import java.util.Hashtable;
 import java.util.Calendar;
@@ -443,7 +444,7 @@ final class ComputerView extends View
             final float dt = timestamp == 0 ? 0 : (t - timestamp);
 
             // update times
-            if (timestamp == 0 || dt >= 1000) {
+            if (dt >= 1000 || timestamp == 0) {
                 timestamp = t;
             }
             if (starttime == 0) { // first record
@@ -643,6 +644,22 @@ final class ComputerView extends View
         return super.configChanged();
     }
 
+//#if !__SYMBIAN__ && !__RIM__ && !__ANDROID__ && !__CN1__
+
+    /* only on dumphones to save memory */
+    void setVisible(final boolean b) {
+        super.setVisible(b);
+        if (b) {
+            colorifyBackground(Config.dayNight);
+        } else {
+            synchronized (this) {
+                backgroundImage = null;
+            }
+        }
+    }
+
+//#endif
+
     int handleAction(final int action, final boolean repeated) {
         if (repeated) {
             return Desktop.MASK_NONE;
@@ -662,7 +679,7 @@ final class ComputerView extends View
                         if (--profileIdx < 0) {
                             profileIdx = profilesNames.length - 1;
                         }
-                        _profileName = profilesNames[profileIdx];
+                        _task = profilesNames[profileIdx];
                     }
                     Desktop.getDiskWorker().enqueue(this);
                 } break;
@@ -671,7 +688,7 @@ final class ComputerView extends View
                         if (++profileIdx == profilesNames.length) {
                             profileIdx = 0;
                         }
-                        _profileName = profilesNames[profileIdx];
+                        _task = profilesNames[profileIdx];
                     }
                     Desktop.getDiskWorker().enqueue(this);
                 } break;
@@ -704,12 +721,16 @@ final class ComputerView extends View
         switch (keycode) {
             case Canvas.KEY_NUM7: {
                 if (!repeated) {
-                    navigator.previousWpt();
+                    synchronized (Desktop.renderLock) {
+                        navigator.previousWpt();
+                    }
                 }
             } break;
             case Canvas.KEY_NUM9: {
                 if (!repeated) {
-                    navigator.nextWpt();
+                    synchronized (Desktop.renderLock) {
+                        navigator.nextWpt();
+                    }
                 }
             } break;
         }
@@ -717,217 +738,207 @@ final class ComputerView extends View
         return Desktop.MASK_SCREEN;
     }
 
-    /* synchronized to avoid race-cond when rendering */
-    public synchronized void run() {
+    public void run() {
 
-        // regular run?
-        if (profiles != null) {
+        // run type
+        boolean isInitialization = false;
 
-            // shit happens sometimes TODO but why?!?
-            if (_profileName == null) {
-//#ifdef __ANDROID__
-                android.util.Log.e(cz.kruch.track.TrackingMIDlet.APP_TITLE, "profileName is null");
-//#endif
-                return;
-            }
+        // resulting update mask
+        int mask = Desktop.MASK_NONE;
 
-            // I/O active
+        // error occured
+        Throwable throwable = null;
+
+        // set I/O ahead
+        synchronized (this) {
             activeIO = true;
+            isInitialization = profiles == null;
+        }
 
-            // try to load new profile
-            try {
+        try {
 
-                // load new profile
-                loadViaCache(_profileName);
+            // regular run?
+            if (!isInitialization) {
 
-                // prepare profile
-                prepare(Config.dayNight);
-
-                // update desktop
-                navigator.update(Desktop.MASK_SCREEN);
-
-            } catch (Throwable t) {
-//#ifdef __LOG__
-                t.printStackTrace();
-//#endif
-                Desktop.showError(Resources.getString(Resources.DESKTOP_MSG_LOAD_PROFILE_FAILED), t, Desktop.screen);
-
-            } finally {
-
-                // TODO why??
-                _profileName = null;
-
-                // I/O active
-                activeIO = false;
-            }
-            
-        } else {
-
-            // not initialized yet
-            Hashtable ps = new Hashtable(4);
-
-            // try to load profiles
-            if (Config.dataDirExists) {
-
-                // I/O active
-                activeIO = true;
-
+                // what is the task?
                 try {
 
-                    // find profiles
-                    findProfiles(ps);
+                    // copy task
+                    final String task;
+                    synchronized (this) {
+                        task = _task;
+                        _task = null;
+                    }
 
-                    // got something?
-                    if (ps.size() > 0) {
+                    // try to load new profile
+                    if (task != null) {
 
-                        // finalize initialization
-                        initializeForProfiles();
+                        // load new profile
+                        loadViaCache(task, profiles);
+
+                        // prepare profile
+                        colorify(Config.dayNight);
+                    }
+
+                    // repaint hint
+                    mask = Desktop.MASK_SCREEN;
+
+                } catch (Throwable t) {
+//#ifdef __LOG__
+                    t.printStackTrace();
+//#endif
+                    // will report later
+                    throwable = t;
+
+                }
+
+            } else {
+
+                // not initialized yet
+                Hashtable ps = new Hashtable(4);
+
+                // try to load profiles
+                if (Config.dataDirExists) {
+
+                    try {
+
+                        // find profiles
+                        findProfiles(ps);
+
+                        // got something?
+                        if (ps.size() > 0) {
+
+                            // finalize initialization
+                            initializeForProfiles();
 
 //#ifdef __HECL__
-                        // initialize interp
-                        interp = new ControlledInterp(Config.FOLDER_PROFILES, false);
-                        interp.addFallback(this, iunits);
-                        interp.addCommand("print", new PrintCommand(this));
+                            // initialize interp
+                            interp = new ControlledInterp(Config.FOLDER_PROFILES, false);
+                            interp.addFallback(this, iunits);
+                            interp.addCommand("print", new PrintCommand(this));
 
-                        // debug help
-                        heclResults = new Hashtable(16);
-                        
-                        // find handlers
-                        try {
-                            interp.loadUserScripts(Config.getFolderURL(Config.FOLDER_PROFILES));
-                        } catch (Throwable t) {
+                            // debug help
+                            heclResults = new Hashtable(16);
+
+                            // find handlers
+                            try {
+                                interp.loadUserScripts(Config.getFolderURL(Config.FOLDER_PROFILES));
+                            } catch (Throwable t) {
 //#ifdef __LOG__
-                            t.printStackTrace();
-                            if (log.isEnabled()) log.error("failed to load user scripts: " + t);
+                                t.printStackTrace();
+                                if (log.isEnabled()) log.error("failed to load user scripts: " + t);
 //#endif
-                        }
+                            }
 
-                        // get handlers
-                        heclOnUpdated = interp.getHandlers(EVENT_ON_LOCATION_UPDATED);
-                        heclOnStart = interp.getHandlers(EVENT_ON_TRACKING_START);
-                        heclOnStop = interp.getHandlers(EVENT_ON_TRACKING_STOP);
-                        heclOnKey = interp.getHandlers(EVENT_ON_KEY_PRESS);
+                            // get handlers
+                            heclOnUpdated = interp.getHandlers(EVENT_ON_LOCATION_UPDATED);
+                            heclOnStart = interp.getHandlers(EVENT_ON_TRACKING_START);
+                            heclOnStop = interp.getHandlers(EVENT_ON_TRACKING_STOP);
+                            heclOnKey = interp.getHandlers(EVENT_ON_KEY_PRESS);
 //                        heclOnTimer = interp.getHandlers(EVENT_ON_TIMER);
-                        heclArgvOnUpdated = new Thing[]{ new Thing(EVENT_ON_LOCATION_UPDATED) };
-                        heclArgvOnStart = new Thing[]{ new Thing(EVENT_ON_TRACKING_START) };
-                        heclArgvOnStop = new Thing[]{ new Thing(EVENT_ON_TRACKING_STOP) };
-                        heclArgvOnKey = new Thing[]{ new Thing(EVENT_ON_KEY_PRESS), IntThing.create(0) };
+                            heclArgvOnUpdated = new Thing[]{ new Thing(EVENT_ON_LOCATION_UPDATED) };
+                            heclArgvOnStart = new Thing[]{ new Thing(EVENT_ON_TRACKING_START) };
+                            heclArgvOnStop = new Thing[]{ new Thing(EVENT_ON_TRACKING_STOP) };
+                            heclArgvOnKey = new Thing[]{ new Thing(EVENT_ON_KEY_PRESS), IntThing.create(0) };
 //                        heclArgvOnTimer = new Thing[]{ new Thing(EVENT_ON_TIMER), LongThing.create(0) };
 
-                        // turn on optimizations
-                        interp.optimize();
+                            // turn on optimizations
+                            interp.optimize();
 
 //#endif /* __HECL__ */
 
 //#ifdef __LOG__
-                        if (log.isEnabled()) log.debug("use profiles");
+                            if (log.isEnabled()) log.debug("use profiles");
 //#endif
 
-                        // use new set already
-                        profiles = ps;
+                            // default profile
+                            final String s;
 
-                        // look for default profile
-                        final String s;
-                        if (profiles.containsKey(Config.cmsProfile)) {
-                            s = Config.cmsProfile;
-                            for (int i = profilesNames.length; --i >= 0; ) {
-                                if (s.equals(profilesNames[i])) {
-                                    profileIdx = i; /* sync index */
-                                    break;
+                            // look for default profile
+                            if (ps.containsKey(Config.cmsProfile)) {
+                                s = Config.cmsProfile;
+                                for (int i = profilesNames.length; --i >= 0; ) {
+                                    if (s.equals(profilesNames[i])) {
+                                        profileIdx = i; /* sync index */
+                                        break;
+                                    }
                                 }
+                            } else if (ps.containsKey(CMS_SIMPLE_XML)) {
+                                s = CMS_SIMPLE_XML;
+                            } else {
+                                s = (String) ps.keys().nextElement();
                             }
-                        } else if (profiles.containsKey(CMS_SIMPLE_XML)) {
-                            s = CMS_SIMPLE_XML;
-                        } else {
-                            s = (String) profiles.keys().nextElement();
-                        }
-
 //#ifdef __LOG__
-                        if (log.isEnabled()) log.debug("start profile: " + s);
+                            if (log.isEnabled()) log.debug("start profile: " + s);
 //#endif
 
-                        // got some profile?
-                        if (s != null) {
+                            // got some profile?
+                            if (s != null) {
 
-                            // load default profile
-                            loadViaCache(s);
+                                // load default profile
+                                loadViaCache(s, ps);
 
-                            // prepare profile
-                            prepare(Config.dayNight);
+                                // prepare profile
+                                colorify(Config.dayNight);
 
-                            // this is initial profile
-                            initialProfile = s;
+                                // this is initial profile
+                                initialProfile = s;
+                            }
 
-                            // autoswitch
-                            if (Config.cmsCycle > 0) {
-                                Desktop.schedule(rotator = new Rotator(),
-                                                 Config.cmsCycle * 1000, Config.cmsCycle * 1000);
+                            // redraw
+                            if (isVisible) {
+                                mask = Desktop.MASK_SCREEN;
                             }
                         }
 
-                        // redraw
-                        if (isVisible) {
-                            navigator.update(Desktop.MASK_SCREEN);
-                        }
+                    } catch (Throwable t) {
+//#ifdef __LOG__
+                        t.printStackTrace();
+//#endif
+                        // save this error
+                        status = t.toString();
                     }
+                }
 
-                } catch (Throwable t) {
-//#ifdef __LOG__
-                    t.printStackTrace();
-//#endif
-                    // save this error
-                    status = t.toString();
-
-                } finally {
-
-                    // I/O active
-                    activeIO = false;
-
+                /* synchronized to avoid race with isUsable */
+                synchronized (this) {
+                    profiles = ps;
                 }
             }
 
-            // use new set
-            profiles = ps;
+        } finally {
+
+            // I/O done
+            synchronized (this) {
+                activeIO = false;
+            }
+        }
+
+        // update screen
+        if (mask != Desktop.MASK_NONE) {
+            navigator.update(mask);
+        }
+
+        // show an error if any
+        if (throwable != null) {
+            Desktop.showError(Resources.getString(Resources.DESKTOP_MSG_LOAD_PROFILE_FAILED),
+                              throwable, Desktop.screen);
+        }
+
+        // autoswitch during initialization
+        if (isInitialization && Config.cmsCycle > 0) {
+            Desktop.schedule(rotator = new Rotator(),
+                             Config.cmsCycle * 1000, Config.cmsCycle * 1000);
         }
     }
 
-    /* synchronized to avoid race-cond with rendering */
-    public synchronized void prepare(final int dayNight) {
+    private void colorify(final int dayNight) {
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("prepare: " + Config.cmsProfile);
 //#endif
 
-        // panel stuff
-        if (backgrounds != null) {
-
-            // get rid of existing panel
-            backgroundImage = null;
-
-            // prepare current screen background
-            final byte[] data = (byte[]) backgrounds.get(Config.cmsProfile);
-            if (data != null) {
-//#ifdef __LOG__
-                if (log.isEnabled()) log.debug("prepare panel for " + Config.cmsProfile);
-//#endif
-                // create image
-                try {
-
-                    // colorify panel
-                    colorifyPng(data, colors[dayNight * 4 + 1]);
-
-                    // create image
-                    backgroundImage = Image.createImage(data, 0, data.length);
-
-                } catch (Throwable t) {
-                    // ignore
-//#ifdef __LOG__
-                    if (log.isEnabled()) log.error("failure", t);
-                    t.printStackTrace();
-//#endif
-                }
-
-            }
-        }
+        // background stuff
+        colorifyBackground(dayNight);
 
         // areas stuff
         final Vector areas = this.areas;
@@ -941,14 +952,15 @@ final class ComputerView extends View
                 final Area area = (Area) areas.elementAt(i);
                 if (area.fontImpl == null || area.fontImpl instanceof Image) {
 
-                    // gc hint;
-                    area.fontImpl = null;
+                    // new font
+                    Object font;
+                    Image bitmap = null;
 
                     // set area's bitmap font
                     try {
 
                         // get cached bitmap font
-                        Image bitmap = (Image) cache.get(area.fontName);
+                        bitmap = (Image) cache.get(area.fontName);
                         if (bitmap == null) { // create fresh new
 //#ifdef __LOG__
                             if (log.isEnabled()) log.error("bitmap font image not colorified yet: " + area.fontName + "; colorify using " + Integer.toHexString(colors[dayNight * 4 + 1]) + " color");
@@ -972,90 +984,131 @@ final class ComputerView extends View
                             }
                         }
 
-                        // use it in the area
-                        area.fontImpl = bitmap;
-                        area.cw = bitmap.getWidth() / CHARSET.length;
-                        area.ch = (short) bitmap.getHeight();
+                        // use bitmap font
+                        font = bitmap;
 
                     } catch (Throwable t) {
-
-                        // fallback to ordinary font
-                        area.fontImpl = Desktop.font;
 //#ifdef __LOG__
                         if (log.isEnabled()) log.error("failure", t);
                         t.printStackTrace();
 //#endif
+
+                        // fallback to ordinary font
+                        font = Desktop.font;
+                    }
+
+                    /* synchronized to avoid race with render */
+                    synchronized (this) {
+                        area.fontImpl = null;
+                        area.fontImpl = font;
+                        if (bitmap != null) {
+                            area.cw = bitmap.getWidth() / CHARSET.length;
+                            area.ch = (short) bitmap.getHeight();
+                        }
                     }
                 }
             }
-
-            // gc hint
-            cache.clear();
         }
 
         // GC
         if (Config.forcedGc) {
             System.gc(); // conditional
         }
+
+//#ifdef __LOG__
+        if (log.isEnabled()) log.debug("prepare finished");
+//#endif
     }
 
-    private String _profileName;
+     private void colorifyBackground(final int dayNight) {
+
+         // panel stuff
+         if (backgrounds != null) {
+
+             // release current
+             synchronized (this) {
+                 backgroundImage = null;
+             }
+
+             // new bg image
+             Image img = null;
+
+             // prepare current screen background
+             final byte[] data = (byte[]) backgrounds.get(Config.cmsProfile);
+             if (data != null) {
+//#ifdef __LOG__
+                 if (log.isEnabled()) log.debug("prepare panel for " + Config.cmsProfile);
+//#endif
+                 // create image
+                 try {
+
+                     // colorify panel
+                     colorifyPng(data, colors[dayNight * 4 + 1]);
+
+                     // create image
+                     img = Image.createImage(data, 0, data.length);
+
+                 } catch (Throwable t) {
+                     // ignore
+//#ifdef __LOG__
+                     if (log.isEnabled()) log.error("failure", t);
+                     t.printStackTrace();
+//#endif
+                 }
+             }
+
+             // set current
+             synchronized (this) {
+                 backgroundImage = img;
+             }
+         }
+     }
+
+    private String _task;
 
     public void commandAction(Command command, Displayable displayable) {
-
-        // load new profile if selected
-        boolean load = false;
-        if (Desktop.CANCEL_CMD_TYPE != command.getCommandType()) {
-
-            // get selection
-            synchronized (this) {
-                final List list = (List) displayable;
-                _profileName = list.getString(profileIdx = list.getSelectedIndex());
-            }
-            load = true;
-        }
 
         // restore desktop
         Desktop.restore(displayable);
 
-        // enqueue load task
-        if (load) {
+        // load new profile if selected
+        if (Desktop.CANCEL_CMD_TYPE != command.getCommandType()) {
+
+            // list of profiles
+            final List list = (List) displayable;
+
+            // get selection
+            synchronized (this) {
+                profileIdx = list.getSelectedIndex();
+                _task = list.getString(profileIdx);
+            }
+
+            // load selected profile in background
             Desktop.getDiskWorker().enqueue(this);
         }
     }
 
-    /* synchronized to avoid race-cond with rendering */
-    synchronized int changeDayNight(final int dayNight) {
-        if (isUsable()) {
-/*
-            // get rid of bitmap fonts in all areas
-            for (final Enumeration seq = profiles.elements(); seq.hasMoreElements(); ) {
-                final Object o = seq.nextElement();
-                if (o instanceof Object[]) {
-                    final Vector v = (Vector) ((Object[]) o)[0];
-                    for (int N = v.size(), j = 0; j < N; j++) {
-                        final Area a = (Area) v.elementAt(j);
-                        if (a.fontImpl instanceof Image) {
-                            a.fontImpl = null;
-                        }
-                    }
-                }
-            }
-*/
+    int changeDayNight(final int dayNight) {
 
-            // update current profile
-            prepare(dayNight);
+        // colorize
+        if (isUsable()) {
+            colorify(dayNight);
         }
 
-        return Desktop.MASK_SCREEN;
+        return Desktop.MASK_NONE;
     }
 
-    /* synchronized to avoid race-cond when switching profile */
-    public synchronized void render(final Graphics graphics, final Font font,
-                                    final int mask) {
+    public void render(final Graphics graphics, final Font font, final int mask) {
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("render");
 //#endif
+
+        // is I/O in progress?
+        synchronized (this) {
+            if (activeIO) {
+                return;
+            }
+        }
 
         // local copies for faster access
         final int w = Desktop.width;
@@ -1066,15 +1119,24 @@ final class ComputerView extends View
 
         // got profile?
         if (isUsable() && status == null) {
-            final Object[] areas = this.areas.getData();
+
+            /* synchronized to avoid race with loadViaCache */
+            final Object[] areas;
+            final int[] colors;
+            final int units, N;
+            synchronized (this) {
+                areas = this.areas.getData();
+                colors = this.colors;
+                units = this.units.intValue();
+                N = this.areas.size();
+            }
+
             final CharArrayTokenizer tokenizer = this.tokenizer;
             final StringBuffer sb = this.sb;
             final Desktop navigator = this.navigator;
             final QualifiedCoordinates valueCoords = this.valueCoords;
             final float[] valuesFloat = this.valuesFloat;
-            final int[] colors = this.colors;
             final char[] text = this.text;
-            final int units = this.units.intValue();
             final int mode = Config.dayNight;
 
             int state = 0;
@@ -1083,11 +1145,13 @@ final class ComputerView extends View
             graphics.fillRect(0,0, w, h);
             graphics.setColor(colors[mode * 4 + 1]);
 
-            if (backgroundImage != null) {
-                graphics.drawImage(backgroundImage, 0, 0, Graphics.TOP | Graphics.LEFT);
+            synchronized (this) {
+                if (backgroundImage != null) {
+                    graphics.drawImage(backgroundImage, 0, 0, Graphics.TOP | Graphics.LEFT);
+                }
             }
 
-            for (int N = this.areas.size(), i = 0; i < N; i++) {
+            for (int i = 0; i < N; i++) {
                 final Area area = (Area) areas[i];
 //#ifdef __LOG__
 //                if (log.isEnabled()) log.debug("area - font: " + area.fontName + "; value: " + (area.value != null ? new String(area.value) : "") + "; script: " + area.script);
@@ -1537,14 +1601,16 @@ final class ComputerView extends View
                     if (l > MAX_TEXT_LENGTH) l = MAX_TEXT_LENGTH;
                     sb.getChars(0, l, text, 0);
                     graphics.setClip(area.x, area.y, area.w, area.h);
-                    if (area.fontImpl instanceof Font) {
-                        final Font f = (Font) area.fontImpl;
-                        final int xoffset = area.ralign ? area.w - f.charsWidth(text, 0, l) : 0;
-                        graphics.setFont(f);
-                        graphics.drawChars(text, 0, l, area.x + xoffset, area.y, 0);
-                    } else {
-                        final int xoffset = area.ralign ? area.w - (int)(area.cw * l) + (int)(narrowChars * (2D / 3D * area.cw)) : 0;
-                        drawChars(graphics, text, l, area.x + xoffset, area.y, area);
+                    synchronized (this) { /* synchronized to avoid race with colorify */
+                        if (area.fontImpl instanceof Font) {
+                            final Font f = (Font) area.fontImpl;
+                            final int xoffset = area.ralign ? area.w - f.charsWidth(text, 0, l) : 0;
+                            graphics.setFont(f);
+                            graphics.drawChars(text, 0, l, area.x + xoffset, area.y, 0);
+                        } else if (area.fontImpl instanceof Image) {
+                            final int xoffset = area.ralign ? area.w - (int)(area.cw * l) + (int)(narrowChars * (2D / 3D * area.cw)) : 0;
+                            drawChars(graphics, text, l, area.x + xoffset, area.y, area);
+                        }
                     }
                     graphics.setClip(0, 0, w, h);
                 } else if (img != null) {
@@ -1688,8 +1754,7 @@ final class ComputerView extends View
     }
 
     private static void drawChars(final Graphics graphics, final char[] value,
-                                  final int length, int x, int y,
-                                  final Area area) {
+                                  final int length, int x, int y, final Area area) {
         final Image image = (Image) area.fontImpl;
         final float cw = area.cw;
         final int scw = (int) (cw - cw / 5);
@@ -1756,8 +1821,9 @@ final class ComputerView extends View
         }
     }
 
-    private static void drawSlider(final Graphics graphics, final int value,
-                                   final Area area) {
+    /* synchronized to avoid race with colorify */
+    private synchronized static void drawSlider(final Graphics graphics, final int value,
+                                                final Area area) {
         final Image image = (Image) area.fontImpl;
         if (image != null) {
             final int iw = image.getWidth();
@@ -1775,7 +1841,7 @@ final class ComputerView extends View
         }
     }
 
-    private boolean isUsable() {
+    private synchronized boolean isUsable() {
         return profiles != null && profiles.size() != 0 && initialProfile != null;
     }
 
@@ -1868,56 +1934,58 @@ final class ComputerView extends View
 */
     }
 
-    private String loadViaCache(final String filename) {
+    private String loadViaCache(final String filename, final Hashtable profiles) {
+//#ifdef __LOG__
+        if (log.isEnabled()) log.debug("load via cache: " + filename);
+//#endif
 
-        // release current profile bitmap fonts
-        final Vector as = this.areas;
-        if (as != null) {
-            for (int i = as.size(); --i >= 0; ) {
-                final Area area = (Area) as.elementAt(i);
-                if (area.fontImpl instanceof Image) {
-                    area.fontImpl = null;
+        /* synchronized to avoid race with render */
+        synchronized (this) {
+
+            // release current profile bitmap fonts
+            final Vector as = this.areas;
+            if (as != null) {
+                for (int i = as.size(); --i >= 0; ) {
+                    final Area area = (Area) as.elementAt(i);
+                    if (area.fontImpl instanceof Image) {
+                        area.fontImpl = null;
+                    }
                 }
             }
         }
 
-        // gc hint
-        areas = null;
-        colors = null;
-        units = null;
+        // profile
+        final Object[] profile;
 
         // try cache
         final Object o = profiles.get(filename);
         if (o instanceof Object[]) {
-
 //#ifdef __LOG__
             if (log.isEnabled()) log.debug("found cached profile: " + filename);
 //#endif
-            // populate members
-            final Object[] cached = (Object[]) o;
-            areas = (NakedVector) cached[0];
-            colors = (int[]) cached[1];
-            units = (Integer) cached[2];
+            // use cached
+            profile = (Object[]) o;
 
         } else { // not found
 
 //#ifdef __LOG__
             if (log.isEnabled()) log.debug("load profile: " + filename);
 //#endif
-            // new vars
-            colors = new int[8];
-            areas = new NakedVector(4, 4);
-
             // load from file
-            load(filename);
-
-            // fix missing profile vars
-            if (units == null) {
-                units = new Integer(Config.units);
-            }
+            profile = (Object[]) load(filename);
 
             // cache
-            profiles.put(filename, new Object[]{ areas, colors, units });
+            profiles.put(filename, profile);
+        }
+
+        /* synchronized to avoid race with render */
+        synchronized (this) {
+            areas = null; // gc hint
+            areas = (NakedVector) profile[0];
+            colors = null; // gc hint
+            colors = (int[]) profile[1];
+            units = null; // gc hint
+            units = (Integer) profile[2];
         }
 
         // fallback hack
@@ -1925,13 +1993,6 @@ final class ComputerView extends View
 
         // remember last selection
         Config.cmsProfile = filename;
-/* back up during shutdown
-        try {
-            Config.update(Config.VARS_090);
-        } catch (ConfigurationException e) {
-            // ignore
-        }
-*/
 
         return filename;
     }
@@ -1952,7 +2013,7 @@ final class ComputerView extends View
                     if (filename.endsWith(".xml")) {
                         result = loadProfile(filename, in);
                     } else if (filename.endsWith(".png")) {
-                        result = loadFont(in, file.fileSize());
+                        result = loadFont(in);
                     }
                 } finally {
                     File.closeQuietly(in);
@@ -1995,8 +2056,14 @@ final class ComputerView extends View
 //#ifdef __LOG__
                     if (log.isEnabled()) log.debug("found file " + filename);
 //#endif
-                    if (candidate.startsWith("cms.") && (File.isOfType(candidate, ".xml"))) {
-                        v.addElement(File.idenFix(filename));
+                    if (candidate.startsWith("cms.")) {
+                        if (File.isOfType(candidate, ".xml")) {
+                            v.addElement(File.idenFix(filename));
+//#ifdef __RIM__
+                        } else if (candidate.endsWith(".xml.rem")) {
+                            v.addElement(File.resolveEncrypted(filename));
+//#endif
+                        }
                     }
                 }
                 profilesNames = FileBrowser.sort2array(v.elements(), null, null);
@@ -2018,9 +2085,14 @@ final class ComputerView extends View
 //#endif
     }
 
-     private String loadProfile(final String filename, final InputStream in) throws IOException, XmlPullParserException {
+     private Object[] loadProfile(final String filename, final InputStream in) throws IOException, XmlPullParserException {
          // XML parser
          final HXmlParser parser = new HXmlParser();
+
+         // new profile with defaults
+         NakedVector nareas = new NakedVector(8, 4);
+         Integer nunits = new Integer(Config.units);
+         int ncolors[] = new int[8];
 
          try {
              // set input
@@ -2110,10 +2182,10 @@ final class ComputerView extends View
                              if ("night".equals(parser.getAttributeValue(null, ATTR_MODE))) {
                                  offset = 4;
                              }
-                             colors[offset] = Integer.parseInt(parser.getAttributeValue(null, ATTR_BGCOLOR), 16);
-                             colors[offset + 1] = Integer.parseInt(parser.getAttributeValue(null, ATTR_FGCOLOR), 16);
-                             colors[offset + 2] = Integer.parseInt(parser.getAttributeValue(null, ATTR_NXCOLOR), 16);
-                             colors[offset + 3] = Integer.parseInt(parser.getAttributeValue(null, ATTR_PXCOLOR), 16);
+                             ncolors[offset] = Integer.parseInt(parser.getAttributeValue(null, ATTR_BGCOLOR), 16);
+                             ncolors[offset + 1] = Integer.parseInt(parser.getAttributeValue(null, ATTR_FGCOLOR), 16);
+                             ncolors[offset + 2] = Integer.parseInt(parser.getAttributeValue(null, ATTR_NXCOLOR), 16);
+                             ncolors[offset + 3] = Integer.parseInt(parser.getAttributeValue(null, ATTR_PXCOLOR), 16);
                          } else if (TAG_SCREEN.equals(tag)) {
                              final String background = parser.getAttributeValue(null, ATTR_BACKGROUND);
                              if (background != null) {
@@ -2127,7 +2199,7 @@ final class ComputerView extends View
                      case XmlPullParser.END_TAG: {
                          final String tag = parser.getName();
                          if (TAG_AREA.equals(tag)){
-                             areas.addElement(area);
+                             nareas.addElement(area);
                          }
                      } break;
                  }
@@ -2136,25 +2208,20 @@ final class ComputerView extends View
              HXmlParser.closeQuietly(parser);
          }
 
-         return filename;
+         return new Object[]{ nareas, ncolors, nunits };
      }
 
-     private static byte[] loadFont(final InputStream in, final long size) throws IOException {
-         final int length = (int) size;
-         final byte[] data = new byte[length];
-         int offset = 0;
-         int count = in.read(data, 0, length);
-         while (count > -1 && offset < length) {
-             offset += count;
-             count = in.read(data, offset, length - offset);
-         }
-
-         if (offset < length) {
-             throw new IOException("Incomplete read");
-         }
-
-         return data;
-     }
+    private static byte[] loadFont(final InputStream in) throws IOException {
+        final ByteArrayOutputStream baos = new ByteArrayOutputStream(4096);
+        final int N = 4096;
+        final byte[] buffer = new byte[N];
+        int count = in.read(buffer, 0, N);
+        while (count > -1) {
+            baos.write(buffer, 0, count);
+            count = in.read(buffer, 0, N);
+        }
+        return baos.toByteArray();
+    }
 
      private static void colorifyPng(final byte[] data, final int color) {
          final int length = data.length;
@@ -2429,10 +2496,9 @@ final class ComputerView extends View
 
 //#ifdef __HECL__
 
-    /* synchronized to avoid race-cond with hecl processing in render */
-    private /*static*/ synchronized void invokeHandlers(final Interp interp,
-                                                        final NakedVector handlers,
-                                                        final Thing[] argv) {
+    private /*static*/ void invokeHandlers(final Interp interp,
+                                           final NakedVector handlers,
+                                           final Thing[] argv) {
         if (interp == null || handlers == null || argv == null) {
             return;
         }

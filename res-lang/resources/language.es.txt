@@ -77,7 +77,7 @@
 1340=Pausado
 1341=Perfil(es) no encontrado(s)
 1342=Perfil
-1343=Archivo incorrecto. Inténtelo de nuevo.
+1343=Archivo incorrecto.\nInténtelo de nuevo.
 1344=Fallo en la proyección del mapa
 1345=Fallo en el datum del mapa
 1346=Fallo en el archivo de calibración

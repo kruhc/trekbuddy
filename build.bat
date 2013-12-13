@@ -25,3 +25,9 @@ echo        %0 public generic en_US
 goto end
 
 :end
+if "%ERRORLEVEL%"=="0" (
+    echo Build successful [%ERRORLEVEL%]
+) else (
+    echo Build failed! [%ERRORLEVEL%]
+)
+exit /B %ERRORLEVEL%

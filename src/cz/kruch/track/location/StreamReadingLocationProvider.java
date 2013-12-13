@@ -12,6 +12,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 
 import cz.kruch.track.util.NmeaParser;
+import cz.kruch.track.configuration.Config;
 
 /**
  * Base class for Serial/Bluetooth/Simulator providers.
@@ -175,13 +176,16 @@ abstract class StreamReadingLocationProvider extends LocationProvider {
         
         // combine
         final long datetime = rmc.date + rmc.timestamp;
+        final double lat = rmc.lat;
+        final double lon = rmc.lon;
+        final float alt = gga.altitude + Config.altCorrection;
         if (rmc.timestamp == gga.timestamp) { // good GPS unit
-            final QualifiedCoordinates qc = QualifiedCoordinates.newInstance(rmc.lat, rmc.lon, gga.altitude,
+            final QualifiedCoordinates qc = QualifiedCoordinates.newInstance(lat, lon, alt,
                                                                              NmeaParser.hdop * 5, NmeaParser.vdop * 5);
             location = Location.newInstance(qc, datetime, fix, gga.sat);
             location.updateFixQuality(gga.fix);
         } else { // "unpaired sentences"
-            location = Location.newInstance(QualifiedCoordinates.newInstance(rmc.lat, rmc.lon),
+            location = Location.newInstance(QualifiedCoordinates.newInstance(lat, lon),
                                             datetime, fix);
             mismatches++;
         }

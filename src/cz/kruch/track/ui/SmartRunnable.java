@@ -5,7 +5,7 @@ package cz.kruch.track.ui;
 import java.util.Vector;
 
 //#ifdef __CN1__
-//#define __EXECUTOR__
+//-#define __EXECUTOR__
 //#endif
 
 /**
@@ -57,17 +57,29 @@ final class SmartRunnable implements Runnable {
     }
 
     void setActive(boolean active) {
+//#ifdef __LOG__
+        if (log.isEnabled()) log.debug("set active: " + active + "; pending: " + pending + "; queue: " + runnables.size());
+//#endif
 
         // fire flag
-        final boolean fire;
+        boolean fire = false;
 
         // avoid collision with run()
         synchronized (this) {
             this.active = active;
+/*
             if (active && !pending && runnables.size() > 0) {
                 fire = pending = true;
             } else {
                 fire = false;
+            }
+*/
+            if (active) {
+                if (!pending && runnables.size() > 0) {
+                    fire = pending = true;
+                }
+            } else {
+                runnables.removeAllElements();
             }
         }
 
@@ -120,7 +132,7 @@ final class SmartRunnable implements Runnable {
             runnables.addElement(r);
             count++;
 //#ifdef __LOG__
-            if (log.isEnabled()) log.debug("task queued; count = " + count);
+            if (log.isEnabled()) log.debug("task " + r + " queued; count = " + count);
 //#endif
 
             // debug info
@@ -142,12 +154,6 @@ final class SmartRunnable implements Runnable {
 //#endif
         if (fire) {
             execute();
-        }
-    }
-
-    void clear() {
-        synchronized (this) {
-            runnables.removeAllElements();
         }
     }
 
@@ -190,7 +196,7 @@ final class SmartRunnable implements Runnable {
         // more work to do?
         synchronized (this) {
             if (active && runnables.size() > 0) {
-                fire = true;
+                fire = pending = true;
             } else {
                 fire = pending = false;
             }

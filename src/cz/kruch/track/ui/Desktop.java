@@ -4025,7 +4025,9 @@ public final class Desktop implements CommandListener,
             if (throwable == null) {
 
                 // update status
-                Desktop.status.setStatus((String) result);
+                synchronized (Desktop.renderLock) {
+                    Desktop.status.setStatus((String) result);
+                }
 
                 // status update
                 Desktop.this.update(MASK_ALL);

@@ -1,9 +1,15 @@
 package javax.microedition.lcdui;
 
+//#define __XAML__
+
+//#ifdef __XAML__
+//#else
 import com.codename1.ui.Component;
 import com.codename1.ui.Container;
 import com.codename1.ui.Label;
 import com.codename1.ui.layouts.BoxLayout;
+import com.codename1.ui.layouts.FlowLayout;
+//#endif
 
 public abstract class Item {
     public static final int BUTTON = 2;
@@ -25,21 +31,50 @@ public abstract class Item {
     public static final int PLAIN = 0;
 
     private String label;
+    private Command defaultCommand;
+    private ItemCommandListener itemCommandListener;
 
+//#ifdef __XAML__
+//#else
     private Component cn1Component;
+//#endif
 
     protected Item(String label) {
-        this(label, BoxLayout.X_AXIS);
+//        this(label, BoxLayout.X_AXIS);
+        this.label = label;
+//#ifdef __XAML__
+//#else
+        if (label != null) {
+            this.cn1Component = new Container();
+            ((Container) this.cn1Component).setLayout(new FlowLayout(Component.LEFT));
+            ((Container) this.cn1Component).addComponent(new Label(label));
+        }
+//#endif
     }
 
     protected Item(String label, int layout) {
         this.label = label;
+//#ifdef __XAML__
+//#else
         if (label != null) {
             this.cn1Component = new Container();
             ((Container) this.cn1Component).setLayout(new BoxLayout(layout));
             ((Container) this.cn1Component).addComponent(new Label(label));
         }
+//#endif
     }
+
+//#ifdef __XAML__
+
+    public Command MIDP_getDefaultCommand() {
+        return defaultCommand;
+    }
+
+    public ItemCommandListener MIDP_getItemCommandListener() {
+        return itemCommandListener;
+    }
+
+//#else
 
     Component getComponent() {
         return cn1Component;
@@ -64,22 +99,26 @@ public abstract class Item {
         }
     }
 
+//#endif
+
     public String getLabel() {
         return label;
     }
 
     public void setDefaultCommand(Command cmd) {
-        System.err.println("ERRO Item.setDefaultCommand not implemented");
+        com.codename1.io.Log.p("Item.setDefaultCommand not implemented properly", com.codename1.io.Log.ERROR);
 //        throw new Error("Item.setDefaultCommand not implemented");
+        this.defaultCommand = cmd;
     }
 
     public void setItemCommandListener(ItemCommandListener l) {
-        System.err.println("ERROR Item.setItemCommandListener not implemented");
+        com.codename1.io.Log.p("Item.setItemCommandListener not implemented properly", com.codename1.io.Log.ERROR);
 //        throw new Error("Item.setItemCommandListener not implemented");
+        this.itemCommandListener = l;
     }
 
     public void setLayout(int layout) {
-        System.err.println("ERROR Item.setLayout not implemented");
-//        throw new Error("not implemented");
+        com.codename1.io.Log.p("Item.setLayout not implemented", com.codename1.io.Log.ERROR);
+//        throw new Error("Item.setLayout not implemented");
     }
 }

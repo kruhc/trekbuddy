@@ -1,60 +1,68 @@
 package net.trekbuddy.midlet;
 
+/*
 import com.codename1.ui.plaf.UIManager;
 import com.codename1.ui.util.Resources;
+*/
 
 import javax.microedition.midlet.MIDlet;
+
+// need to force xmlvm to convert these
+import com.codename1.ui.BrowserComponent;
+import com.codename1.ui.animations.CommonTransitions;
+import com.codename1.ui.events.BrowserNavigationCallback;
 
 public class TrackingApp {
 
     private MIDlet midlet;
 
     public void init(Object context) {
-//        com.codename1.io.Log.setReportingLevel(com.codename1.io.Log.DEBUG);
-//        com.codename1.io.Log.getInstance().setFileWriteEnabled(true);
-//        com.codename1.io.Log.getInstance().setFileURL("cn1.log");
-//        com.codename1.io.Log.p("init", com.codename1.io.Log.INFO);
+//#ifdef __LOG__
+        com.codename1.io.Log.setReportingLevel(com.codename1.io.Log.DEBUG);
+//#else
+        com.codename1.io.Log.setReportingLevel(com.codename1.io.Log.INFO);
+//#endif
+        com.codename1.io.Log.setAutoflush(true);
+        com.codename1.io.Log.p("init", com.codename1.io.Log.INFO);
+/*
         try {
             Resources theme = Resources.openLayered("/theme");
+            com.codename1.io.Log.p("theme is " + theme.getThemeResourceNames()[0], com.codename1.io.Log.INFO);
             UIManager.getInstance().setThemeProps(theme.getTheme(theme.getThemeResourceNames()[0]));
+            UIManager.getInstance().getLookAndFeel().setDefaultDialogTransitionIn(CommonTransitions.createEmpty());
+            UIManager.getInstance().getLookAndFeel().setDefaultDialogTransitionOut(CommonTransitions.createEmpty());
+            UIManager.getInstance().getLookAndFeel().setDefaultFormTransitionIn(CommonTransitions.createEmpty());
+            UIManager.getInstance().getLookAndFeel().setDefaultFormTransitionOut(CommonTransitions.createEmpty());
+            UIManager.getInstance().getLookAndFeel().setDefaultTensileDrag(false);
         } catch (Throwable t) {
-//            com.codename1.io.Log.e(e);
+            com.codename1.io.Log.e(t);
         }
+*/
     }
 
     public void start() {
-//        com.codename1.io.Log.p("start", com.codename1.io.Log.INFO);
+        com.codename1.io.Log.p("start", com.codename1.io.Log.INFO);
         try {
-            midlet = new cz.kruch.track.TrackingMIDlet();
+            if (midlet == null) {
+                midlet = new cz.kruch.track.TrackingMIDlet();
+            }
             midlet.start();
         } catch (Throwable t) {
-//            com.codename1.io.Log.e(e);
+            com.codename1.io.Log.e(t);
         }
     }
 
     public void stop() {
-//        com.codename1.io.Log.p("stop", com.codename1.io.Log.INFO);
+        com.codename1.io.Log.p("stop", com.codename1.io.Log.INFO);
         midlet.pause();
     }
 
     public void destroy() {
-//        com.codename1.io.Log.p("destroy", com.codename1.io.Log.INFO);
+        com.codename1.io.Log.p("destroy", com.codename1.io.Log.INFO);
         try {
             midlet.destroy();
         } catch (Throwable t) {
-//            com.codename1.io.Log.e(e);
+            com.codename1.io.Log.e(t);
         }
-    }
-
-    private static void showError(final String message, final Throwable t) {
-//        com.codename1.ui.Dialog dlg = new com.codename1.ui.Dialog("TrekBuddy");
-//        if (message != null) {
-//            dlg.addComponent(new com.codename1.ui.Label(message));
-//        }
-//        if (t != null) {
-//            dlg.addComponent(new com.codename1.ui.Label(t.toString()));
-//        }
-//        dlg.show();
-        com.codename1.ui.Dialog.show("TrekBuddy", message + (t == null ? "" : t.toString()), "Close", null);
     }
 }

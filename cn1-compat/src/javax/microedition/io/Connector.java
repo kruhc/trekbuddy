@@ -20,10 +20,15 @@ public final class Connector {
         if (name.startsWith(FileConnection.FILE_PROTOCOL)) {
             return new FileConnection(name, mode);
         }
-        throw new Error("not implemented; " + name);
+        com.codename1.io.Log.p("Connector.open " + name + " not implemented", com.codename1.io.Log.ERROR);
+        throw new ConnectionNotFoundException("not supported; " + name);
     }
 
     public static InputStream openInputStream(String name) throws IOException {
-        throw new Error("Connector.openInputStream not implemented");
+        if (name.startsWith(FileConnection.FILE_PROTOCOL)) {
+            return new FileConnection(name, READ).openInputStream();
+        }
+        com.codename1.io.Log.p("Connector.openInputStream not implemented", com.codename1.io.Log.ERROR);
+        throw new ConnectionNotFoundException("not supported; " + name);
     }
 }

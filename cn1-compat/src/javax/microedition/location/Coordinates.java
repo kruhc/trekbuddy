@@ -39,10 +39,12 @@ public class Coordinates {
     }
 
     public float azimuthTo(Coordinates to) {
+        com.codename1.io.Log.p("Coordinates.azimuthTo not implemented", com.codename1.io.Log.ERROR);
         throw new Error("not implemented");
     }
 
     public float distance(Coordinates to) {
+        com.codename1.io.Log.p("Coordinates.distance not implemented", com.codename1.io.Log.ERROR);
         throw new Error("not implemented");
     }
 }

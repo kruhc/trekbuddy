@@ -17,7 +17,10 @@ public final class Font {
     private int face, style, size;
     private com.codename1.ui.Font cn1Font;
 
-    private Font(com.codename1.ui.Font cn1Font) {
+    private Font(com.codename1.ui.Font cn1Font, int face, int style, int size) {
+        this.face = face;
+        this.style = style;
+        this.size = size;
         this.cn1Font = cn1Font;
     }
 
@@ -35,20 +38,23 @@ public final class Font {
     }
 
     public static Font getDefaultFont() {
-        return new Font(com.codename1.ui.Font.getDefaultFont());
+        return new Font(com.codename1.ui.Font.getDefaultFont(), FACE_SYSTEM, STYLE_PLAIN, SIZE_MEDIUM);
     }
 
     public static Font getFont(int face, int style, int size) {
-        return new Font(com.codename1.ui.Font.createSystemFont(face, style, size));
+        return new Font(com.codename1.ui.Font.createSystemFont(face, style, size), face, style, size);
     }
 
     public int getHeight() {
-        // TODO
-        return 12;
+        return cn1Font.getHeight();
     }
 
     public int getFace() {
         return face;
+    }
+
+    public int getSize() {
+        return size;
     }
 
     public int getStyle() {
@@ -57,5 +63,9 @@ public final class Font {
 
     public int stringWidth(String str) {
         return cn1Font.stringWidth(str);
+    }
+
+    public com.codename1.ui.Font getNativeFont() {
+        return cn1Font;
     }
 }

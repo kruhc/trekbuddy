@@ -14,7 +14,7 @@ public class LocationProvider implements com.codename1.location.LocationListener
 
     public static LocationProvider getInstance(Criteria criteria) throws LocationException {
         if (cn1Manager == null) {
-            cn1Manager = com.codename1.location.LocationManager.getLocationManager();
+            cn1Manager = com.codename1.ui.FriendlyAccess.getLocationManager();
         }
         return new LocationProvider();
     }
@@ -29,11 +29,11 @@ public class LocationProvider implements com.codename1.location.LocationListener
     }
 
     public void reset() {
-        System.err.println("ERROR LocationProvider.reset not implemented");
+        com.codename1.io.Log.p("ERROR LocationProvider.reset not implemented", com.codename1.io.Log.DEBUG);
     }
 
     public void locationUpdated(com.codename1.location.Location location) {
-        System.err.println("WARN LocationProvider.locationUpdated; " + location);
+        com.codename1.io.Log.p("LocationProvider.locationUpdated; " + location, com.codename1.io.Log.DEBUG);
         if (listener != null) {
             QualifiedCoordinates qc = new QualifiedCoordinates(location.getLatitude(), location.getLongitude(),
                                                                (float) location.getAltitude(),
@@ -44,7 +44,7 @@ public class LocationProvider implements com.codename1.location.LocationListener
     }
 
     public void providerStateChanged(int newState) {
-        System.err.println("WARN LocationProvider.providerStateChanged; " + newState);
+        com.codename1.io.Log.p("LocationProvider.providerStateChanged; " + newState, com.codename1.io.Log.DEBUG);
         if (listener != null) {
             listener.providerStateChanged(this, newState);
         }

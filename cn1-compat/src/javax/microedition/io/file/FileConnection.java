@@ -38,22 +38,21 @@ public class FileConnection implements StreamConnection {
     }
 
     public DataInputStream openDataInputStream() throws IOException {
-        System.err.println("ERROR FileConnection.openDataInputStream not implemented");
+        com.codename1.io.Log.p("FileConnection.openDataInputStream not implemented", com.codename1.io.Log.ERROR);
         throw new Error("FileConnection.openDataInputStream not implemented");
     }
 
     public OutputStream openOutputStream() throws IOException {
-        System.err.println("ERROR FileConnection.openOutputStream not implemented");
-        throw new Error("FileConnection.openOutputStream not implemented");
+        return storage.openOutputStream(url);
     }
 
     public DataOutputStream openDataOutputStream() throws IOException {
-        System.err.println("ERROR FileConnection.openDataOutputStream not implemented");
+        com.codename1.io.Log.p("FileConnection.openDataOutputStream not implemented", com.codename1.io.Log.ERROR);
         throw new Error("FileConnection.openDataOutputStream not implemented");
     }
 
     public void close() throws IOException {
-        System.err.println("WARN FileConnection.close not implemented");
+        com.codename1.io.Log.p("FileConnection.close - nothing to do", com.codename1.io.Log.WARNING);
     }
 
     public Enumeration list() throws IOException {
@@ -61,27 +60,33 @@ public class FileConnection implements StreamConnection {
     }
 
     public Enumeration list(String pattern, boolean hidden) throws IOException {
-        System.err.println("FileConnection.list(...) not implemented");
+        com.codename1.io.Log.p("FileConnection.list(...) not implemented", com.codename1.io.Log.ERROR);
         throw new Error("FileConnection.list(...) not implemented");
     }
 
     public void create() throws IOException {
-        System.out.println("FileConnection.create " + url);
+        com.codename1.io.Log.p("FileConnection.create " + url + " - nothing to do", com.codename1.io.Log.WARNING);
         // nothing to do
     }
 
     public void delete() throws IOException {
-        System.out.println("FileConnection.delete " + url);
+//#ifdef __LOG__
+        com.codename1.io.Log.p("FileConnection.delete " + url, com.codename1.io.Log.DEBUG);
+//#endif
         storage.delete(url);
     }
 
     public void mkdir() throws IOException {
-        System.out.println("FileConnection.mkdir " + url);
+//#ifdef __LOG__
+        com.codename1.io.Log.p("FileConnection.mkdir " + url, com.codename1.io.Log.DEBUG);
+//#endif
         storage.mkdir(url);
     }
 
     public void rename(String newName) throws IOException {
-        System.out.println("WARN FileConnection.rename " + getPath() + " to " + newName);
+//#ifdef __LOG__
+        com.codename1.io.Log.p("FileConnection.rename " + getPath() + " to " + newName, com.codename1.io.Log.WARNING);
+//#endif
         storage.rename(getPath(), newName);
     }
 
@@ -90,17 +95,25 @@ public class FileConnection implements StreamConnection {
     }
 
     public long directorySize(boolean includeSubDirs) throws IOException {
-        System.err.println("WARN FileConnection.directorySize not implemented");
-        return -1; // -1 is valid value according to JSR-75
+        com.codename1.io.Log.p("FileConnection.directorySize not supported properly", com.codename1.io.Log.WARNING);
+        final String[] content = storage.listFiles(url);
+        if (content == null || content.length == 0) {
+            return -1;
+        }
+        return 1; // wrong but good enough for me now
     }
 
     public boolean exists() {
-        System.out.println("FileConnection.exists? " + url + "; " + storage.exists(url));
+//#ifdef __LOG__
+        com.codename1.io.Log.p("FileConnection.exists? " + url + "; " + storage.exists(url), com.codename1.io.Log.DEBUG);
+//#endif
         return storage.exists(url);
     }
 
     public boolean isDirectory() {
-        System.out.println("FileConnection.isDirectory? " + url + "; " + storage.exists(url));
+//#ifdef __LOG__
+        com.codename1.io.Log.p("FileConnection.isDirectory? " + url + "; " + storage.isDirectory(url), com.codename1.io.Log.DEBUG);
+//#endif
         return storage.isDirectory(url);
     }
 
@@ -109,7 +122,7 @@ public class FileConnection implements StreamConnection {
     }
 
     public String getName() {
-        return url.substring(url.lastIndexOf('/'));
+        return url.substring(url.lastIndexOf('/') + 1);
     }
 
     public String getPath() {
@@ -117,8 +130,7 @@ public class FileConnection implements StreamConnection {
     }
 
     public void setFileConnection(String path) throws IOException {
-        System.err.println("ERROR FileConnection.setFileConnection not implemented");
-        throw new Error("FileConnection.setFileConnection not implemented");
+        com.codename1.io.Log.p("FileConnection.setFileConnection not implemented", com.codename1.io.Log.ERROR);
 /*
         System.err.println(url);
         System.err.println(getPath());
@@ -147,7 +159,7 @@ public class FileConnection implements StreamConnection {
     }
 
     private Enumeration toEnumeration(final String[] items) {
-        final Vector array = new Vector();
+        final Vector<String> array = new Vector<String>();
         if (items != null) {
             for (int i = 0, N = items.length; i < N; i++) {
                 if (storage.isDirectory(url + items[i]) && !items[i].endsWith(PATH_SEPARATOR)) {

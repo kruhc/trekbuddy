@@ -11,8 +11,7 @@ public class AlertType {
     }
 
     public boolean playSound(Display display) {
-        System.err.println("ERROR AlertType.playSound not implemented");
-//        throw new Error("AlertType.playSound not implemented");
-        return false;
+        com.codename1.ui.FriendlyAccess.execute("play-sound", new Object[0]);
+        return true;
     }
 }

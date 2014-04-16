@@ -17,8 +17,8 @@ public abstract class MIDlet {
     protected abstract void destroyApp(boolean unconditional) throws MIDletStateChangeException;
 
     public final void notifyDestroyed() {
-        System.err.println("WARN MIDlet.notifyDestroyed");
-        System.exit(0);
+        //com.codename1.ui.Display.getInstance().exitApplication();
+        com.codename1.ui.FriendlyAccess.getImplementation().exitApplication();
     }
 
     // CN1 simulator

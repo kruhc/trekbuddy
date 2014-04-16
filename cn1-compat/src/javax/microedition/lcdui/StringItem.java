@@ -1,10 +1,14 @@
 package javax.microedition.lcdui;
 
-import com.codename1.ui.Label;
+//#define __XAML__
 
 public class StringItem extends Item {
 
-    private Label cn1Label;
+//#ifdef __XAML__
+    private String text;
+//#else
+    private com.codename1.ui.TextArea cn1Label;
+//#endif
 
     public StringItem(String label, String text) {
         this(label, text, PLAIN);
@@ -12,20 +16,33 @@ public class StringItem extends Item {
 
     public StringItem(String label, String text, int appearanceMode) {
         super(label);
-        this.cn1Label = new Label(text);
+//#ifdef __XAML__
+        this.text = text;
+//#else
+        this.cn1Label = new com.codename1.ui.TextArea(text == null ? "" : text);
+        cn1Label.setEditable(false);
         setContent(this.cn1Label);
+//#endif
     }
 
     public String getText() {
+//#ifdef __XAML__
+        return text;
+//#else
         return cn1Label.getText();
+//#endif
     }
 
     public void setText(String text) {
+//#ifdef __XAML__
+        this.text = text;
+//#else
         cn1Label.setText(text);
+//#endif
     }
 
     public void setFont(Font font) {
-        System.err.println("ERROR StringItem.setFont not implemented");
-//        throw new Error("not implemented");
+        com.codename1.io.Log.p("StringItem.setFont not implemented", com.codename1.io.Log.ERROR);
+//        throw new Error("StringItem.setFont not implemented");
     }
 }

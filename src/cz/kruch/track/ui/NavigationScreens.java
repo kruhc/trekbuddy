@@ -449,8 +449,8 @@ public final class NavigationScreens {
         final boolean visible = Config.zoomSpotsMode == 1 || (Config.zoomSpotsMode == 2 && Desktop.screen.beenPressed);
         if (visible && zooms != null && !Desktop.screen.isKeylock()) {
             final int size = NavigationScreens.zoomSize;
-            final int j = Desktop.width / 5;
-            final int i = Desktop.height / 10;
+            final int j = Desktop.width / 5;    // keep in sync with DeviceScreen.pointerToKey // TODO via constant!!
+            final int i = Desktop.height / 10;  // keep in sync with DeviceScreen.pointerToKey // TODO via constant!!
             final int insx = (j - size) >> 1;
             final int insy = (i - size) >> 1;
             final int i8y = i * 7 + insy;

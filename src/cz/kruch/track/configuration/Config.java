@@ -1048,7 +1048,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
                 FOLDER_SOUNDS, FOLDER_TRACKS, FOLDER_WPTS, FOLDER_GC
 //#ifdef __HECL__
                 , FOLDER_PLUGINS
-//#endif                    
+//#endif
             };
             File dir = null;
             /* create folder structure */

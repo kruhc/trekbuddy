@@ -110,12 +110,16 @@ public final class TarInputStream extends InputStream {
      * @return The number of available bytes for the current entry.
      */
     public int available() throws IOException {
-        /**
+        /*
+         * Remaining bytes in current entry.
+         */
+        final int rem = (int) (this.entrySize - this.entryOffset);
+        /*
          * Some implementation (eg. Motorola IDEN) requires file/tile size
          * to decode it correctly.
          */
         if (cz.kruch.track.configuration.Config.filesizeAvail) {
-            return (int) (this.entrySize - this.entryOffset);
+            return rem;
         }
         /*
          * Some implementations (eg. Nokia JRE) may return total number of bytes
@@ -126,7 +130,6 @@ public final class TarInputStream extends InputStream {
          */
         final int n = in.available();
         if (n > 0) {
-            final int rem = (int) (this.entrySize - this.entryOffset);
             return n <= rem ? n : rem; // inlined Math.min(n, rem)
         }
         return 0;

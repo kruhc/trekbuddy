@@ -1073,9 +1073,12 @@ final class DeviceScreen extends GameCanvas implements Runnable {
     }
 
     private int pointerToKey(final int x, final int y) {
-        final int j = x / (getWidth() / 5);
-        final int i = y / (getHeight() / 10);
+        final int j = (x * 5) / getWidth(); // x / (getWidth() / 5);
+        final int i = (y * 10) / getHeight(); // y / (getHeight() / 10);
         int key = 0;
+//#ifdef __LOG__
+        if (log.isEnabled()) log.debug("pointerToKey; i = " + i + "; j = " + j);
+//#endif
 
         switch (i) {
             case 0: {
@@ -1337,4 +1340,3 @@ final class DeviceScreen extends GameCanvas implements Runnable {
 //#endif
 
 }
-

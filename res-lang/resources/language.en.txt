@@ -172,6 +172,7 @@
 2106=Tracks
 2107=Field Notes
 2108=Project New Waypoint
+2109=End Session
 
 # navigation forms/fields (wpt form)
 2200=Waypoint
@@ -317,6 +318,7 @@
 3535=custom selector
 3536=Map zoom
 3537=force textfield focus
+3538=fixed crosshair
 
 # settings forms/fields/values (Location)
 3600=Provider
@@ -351,6 +353,7 @@
 3629=Power usage
 3630=address fix
 3631=time fix
+3632=allow extensions
 
 # settings forms/fields/values (Navigation)
 3700=Wpt Proximity

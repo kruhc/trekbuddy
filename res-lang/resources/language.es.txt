@@ -158,6 +158,7 @@
 2106=Tracks
 2107=Notas de Campo
 2108=Proyectar Nuevo WPt
+2109=Finalizar Sesión
 
 # navigation forms/fields (wpt form)
 2200=Waypoint 
@@ -301,7 +302,8 @@
 3534=plataforma por defecto
 3535=selección de pedido
 3536=Map zoom
-3537=force textfield focus
+3537=textfield foco furza
+3538=fija punto de mira
 
 # settings forms/fields/values (Location)
 3600=Proveedor
@@ -336,6 +338,7 @@
 3629=Control de consumo
 3630=address corrección
 3631=tiempo corrección
+3632=permitir extensiones
 
 # settings forms/fields/values (Navigation)
 3700=Proximidad a Wpt (m)

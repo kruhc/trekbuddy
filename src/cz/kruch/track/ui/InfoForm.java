@@ -42,7 +42,9 @@ final class InfoForm implements CommandListener {
         pane.append(newItem(null, Resources.getString((short) (Resources.INFO_ITEM_KEYS_MS + desktop.getMode()))));
         pane.addCommand(new Command(Resources.getString(Resources.INFO_CMD_DETAILS), Desktop.POSITIVE_CMD_TYPE, 0));
 //#ifdef __CN1__
-        pane.addCommand(new Command("Send Log", Desktop.POSITIVE_CMD_TYPE, 1));
+        pane.addCommand(new Command("File Manager", Desktop.POSITIVE_CMD_TYPE, 1));
+        pane.addCommand(new Command("Send Log", Desktop.POSITIVE_CMD_TYPE, 2));
+        pane.addCommand(new Command("Set Loglevel", Desktop.POSITIVE_CMD_TYPE, 3));
 //#endif
         pane.addCommand(new Command(Resources.getString(Resources.CMD_CLOSE), Desktop.BACK_CMD_TYPE, 1));
         pane.setCommandListener(this);
@@ -124,7 +126,10 @@ final class InfoForm implements CommandListener {
                 .append("; fsavail? ").append(cz.kruch.track.configuration.Config.filesizeAvail)
                 .append("; input class: ").append(cz.kruch.track.maps.Map.fileInputStreamClass)
 //#ifdef __SYMBIAN__
-                .append("; network stream? ").append(Config.useNativeService && cz.kruch.track.maps.Map.networkInputStreamAvailable)
+                .append("; nets? ").append(Config.useNativeService && cz.kruch.track.maps.Map.networkInputStreamAvailable)
+                .append("; nets url: ").append(cz.kruch.track.maps.Map.networkInputStreamInfo)
+                .append("; nets error: ").append(cz.kruch.track.maps.Map.networkInputStreamError)
+                .append("; nets apinfo: ").append(cz.kruch.track.device.ApSelector.debug)
 //#endif
                 .append("; card: ").append(System.getProperty("fileconn.dir.memorycard"));
         pane.append(newItem("Fs", sb.toString()));
@@ -174,7 +179,7 @@ final class InfoForm implements CommandListener {
 //#ifdef __RIM50__
                 .append("; bbs=").append(cz.kruch.track.location.Jsr179LocationProvider.bbStatus)
                 .append("; bbe=").append(cz.kruch.track.location.Jsr179LocationProvider.bbError)
-//#endif                
+//#endif
                 ;
         pane.append(newItem("ProviderStatus", sb.toString()));
         if (extras[1] != null) {
@@ -211,7 +216,12 @@ final class InfoForm implements CommandListener {
                 .append("; uncaught: ").append(SmartRunnable.uncaught)
                 .append("; maxtasks: ").append(SmartRunnable.maxQT)
                 .append("; merged: ").append(SmartRunnable.mergedRT).append('/').append(SmartRunnable.mergedKT)
-                .append("; events: ").append(Desktop.getEventWorker().getQueueSize()).append('/').append(Desktop.getDiskWorker().getQueueSize());
+//#if __SYMBIAN__ || __CN1__
+                .append("; events: ").append(Desktop.getEventWorker().getQueueSize()).append('/').append(Desktop.getDiskWorker().getQueueSize()).append(" (").append(Desktop.getEventWorker().getMaxQueueSize()).append('/').append(Desktop.getDiskWorker().getMaxQueueSize()).append(')')
+//#else
+                .append("; events: ").append(Desktop.getEventWorker().getQueueSize()).append('/').append(Desktop.getDiskWorker().getQueueSize())
+//#endif
+                ;
         pane.append(newItem("Debug", sb.toString()));
     }
 
@@ -233,7 +243,7 @@ final class InfoForm implements CommandListener {
             // show technical details
             details(pane);
 //#else
-            // reuse does not work well in CN1 due to paint events cummulation
+            // reuse does not work well in CN1 due to paint events cummulation // TODO no longer true
             if (command.getPriority() == 0) {
                 final Form pane = new Form(Resources.prefixed(Resources.getString(Resources.DESKTOP_CMD_INFO)));
                 details(pane);
@@ -241,7 +251,17 @@ final class InfoForm implements CommandListener {
                 pane.setCommandListener(this);
                 Desktop.display.setCurrent(pane);
             } else {
-                com.codename1.ui.FriendlyAccess.execute("send-log", null);
+                switch (command.getPriority()) {
+                    case 1:
+                        (new FileBrowser("File Manager", null, null, null)).show();
+                    break;
+                    case 2:
+                        com.codename1.ui.FriendlyAccess.execute("send-log", null);
+                    break;
+                    case 3:
+                        com.codename1.ui.FriendlyAccess.execute("set-loglevel", null);
+                    break;
+                }
             }
 //#endif
         }

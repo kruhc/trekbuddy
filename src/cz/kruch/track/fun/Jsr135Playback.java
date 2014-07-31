@@ -79,7 +79,7 @@ final class Jsr135Playback extends Playback implements PlayerListener {
 
         } catch (Throwable t) {
 //#ifdef __LOG__
-            if (log.isEnabled()) log.error("play failed: " + t);
+            log.error("play failed: " + t);
             t.printStackTrace();
 //#endif
             state.append("sound error: ").append(t.toString()).append(" -> ");
@@ -112,7 +112,7 @@ final class Jsr135Playback extends Playback implements PlayerListener {
         }
 //#ifdef __LOG__
         else {
-            if (log.isEnabled()) log.warn("unhandled event [" + event + "]; data " + eventData);
+            log.warn("unhandled event [" + event + "]; data " + eventData);
         }
 //#endif
     }

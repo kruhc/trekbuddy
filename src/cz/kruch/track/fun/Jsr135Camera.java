@@ -93,7 +93,7 @@ class Jsr135Camera extends Camera implements Runnable, CommandListener, PlayerLi
 
         } catch (Throwable t) {
 //#ifdef __LOG__
-            if (log.isEnabled()) log.error("camera failed: " + t);
+            log.error("camera failed: " + t);
             t.printStackTrace();
 //#endif
             state.append("open error: ").append(t.toString()).append(" -> ");

@@ -120,7 +120,7 @@ final class Jsr234Camera extends Jsr135Camera {
         }
 //#ifdef __LOG__
         else {
-            if (log.isEnabled()) log.warn("unhandled event " + event + "; data " + eventData);
+            log.warn("unhandled event " + event + "; data " + eventData);
         }
 //#endif
     }

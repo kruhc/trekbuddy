@@ -4,6 +4,8 @@ package cz.kruch.track.device;
 
 //#ifdef __SYMBIAN__
 
+import api.io.NakedByteArrayOutputStream;
+
 import javax.microedition.io.Connector;
 import javax.microedition.io.SocketConnection;
 import javax.microedition.io.StreamConnection;
@@ -11,6 +13,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.DataInputStream;
 import java.io.OutputStream;
+import java.util.Vector;
 
 /**
  * Designed to work for TarLoader and S60DeviceControl together with native service.
@@ -73,15 +76,16 @@ public final class SymbianService {
      */
     static void sendPacket(final OutputStream output,
                            final byte action, final int param) throws IOException {
-        PKT[0] = (byte)0xFF;
-        PKT[1] = (byte)0xEB;
-        PKT[2] = (byte)0x00;
-        PKT[3] = action;
-        PKT[4] = (byte)(param >> 24);
-        PKT[5] = (byte)(param >> 16);
-        PKT[6] = (byte)(param >> 8);
-        PKT[7] = (byte)(param);
-        output.write(PKT);
+        final byte[] pkt = PKT;
+        pkt[0] = (byte)0xFF;
+        pkt[1] = (byte)0xEB;
+        pkt[2] = (byte)0x00;
+        pkt[3] = action;
+        pkt[4] = (byte)(param >> 24);
+        pkt[5] = (byte)(param >> 16);
+        pkt[6] = (byte)(param >> 8);
+        pkt[7] = (byte)(param);
+        output.write(pkt);
         output.flush();
     }
 
@@ -112,11 +116,11 @@ public final class SymbianService {
         output.flush();
     }
 
-	static StreamConnection openConnection(final String url) throws IOException {
-        final SocketConnection connection = (SocketConnection) Connector.open(url, Connector.READ_WRITE);
+    static StreamConnection openConnection(final String url) throws IOException {
+        final SocketConnection connection = (SocketConnection) Connector.open(cz.kruch.track.maps.Map.networkInputStreamInfo = ApSelector.getURL(url), Connector.READ_WRITE);
         connection.setSocketOption(SocketConnection.DELAY, 0);
 //        connection.setSocketOption(SocketConnection.SNDBUF, 8); // request packet size
-//        connection.setSocketOption(SocketConnection.RCVBUF, 26280); // 18 * 1460
+        connection.setSocketOption(SocketConnection.RCVBUF, 64 * 1024); // 26280 = 18 * 1460
         return connection;
 	}
 
@@ -169,6 +173,7 @@ public final class SymbianService {
         private DataInputStream input;
         private OutputStream output;
         private final byte[] one, header;
+        private api.io.NakedByteArrayOutputStream cOutput = new NakedByteArrayOutputStream(32);
 
         NetworkedInputStream(String name) throws IOException {
             // get UTF-8 file name
@@ -179,7 +184,7 @@ public final class SymbianService {
 
             // buffers
             this.one = new byte[1];
-            this.header = new byte[4];
+            this.header = new byte[8];
 
             // init communication
             try {
@@ -215,7 +220,19 @@ public final class SymbianService {
             final byte[] header = this.header;
 
             // send file read request
-            sendPacket(output, ACTION_FILE_READ, len);
+            final OutputStream output = this.output;
+            final api.io.NakedByteArrayOutputStream cOutput = this.cOutput;
+            if (cOutput.size() > 0) {
+                sendPacket(cOutput, ACTION_FILE_READ, len);
+                try {
+                    output.write(cOutput.getBuf(), 0, cOutput.getCount());
+                    output.flush();
+                } finally {
+                    cOutput.reset();
+                }
+            } else {
+                sendPacket(output, ACTION_FILE_READ, len);
+            }
 
             // read response header
             input.readFully(header);
@@ -223,8 +240,8 @@ public final class SymbianService {
             // check header
             if (header[0] == (byte)0xFF && header[1] == (byte)0xEB && header[2] == (byte)0x01 && header[3] == (byte)0x03) {
 
-                // read data response size
-                final int n = len = input.readInt();
+                // data response size
+                final int n = len = (header[4] << 24) & 0xff000000 | (header[5] << 16) & 0x00ff0000 | (header[6] << 8) & 0x0000ff00 | (header[7]) & 0x000000ff;
 
                 // read data
                 while (len > 0) {
@@ -247,10 +264,12 @@ public final class SymbianService {
         public long skip(final long n) throws IOException {
             long c = n;
             while (c > Integer.MAX_VALUE) {
-                sendPacket(output, ACTION_FILE_SKIP, Integer.MAX_VALUE);
+//                sendPacket(output, ACTION_FILE_SKIP, Integer.MAX_VALUE);
+                sendPacket(cOutput, ACTION_FILE_SKIP, Integer.MAX_VALUE);
                 c -= Integer.MAX_VALUE;
             }
-            sendPacket(output, ACTION_FILE_SKIP, (int) c);
+//            sendPacket(output, ACTION_FILE_SKIP, (int) c);
+            sendPacket(cOutput, ACTION_FILE_SKIP, (int) c);
             return n;
         }
 
@@ -276,7 +295,8 @@ public final class SymbianService {
         }
 
         public synchronized void reset() throws IOException {
-            sendPacket(output, ACTION_FILE_RESET, 0);
+//            sendPacket(output, ACTION_FILE_RESET, 0);
+            sendPacket(cOutput, ACTION_FILE_RESET, 0);
         }
 
         private void destroy() {

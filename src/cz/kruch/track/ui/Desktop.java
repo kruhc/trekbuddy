@@ -10,6 +10,7 @@ import cz.kruch.track.fun.Friends;
 import cz.kruch.track.location.GpxTracklog;
 import cz.kruch.track.location.Waypoint;
 import cz.kruch.track.location.TripStatistics;
+import cz.kruch.track.location.Tracklog;
 import cz.kruch.track.maps.Map;
 import cz.kruch.track.maps.Atlas;
 import cz.kruch.track.util.CharArrayTokenizer;
@@ -29,10 +30,7 @@ import javax.microedition.lcdui.Image;
 import javax.microedition.lcdui.Form;
 import javax.microedition.lcdui.Choice;
 import javax.microedition.midlet.MIDlet;
-import javax.microedition.io.Connector;
 
-import java.io.IOException;
-import java.io.OutputStream;
 import java.util.Date;
 import java.util.Enumeration;
 import java.util.Timer;
@@ -40,7 +38,6 @@ import java.util.Vector;
 import java.util.TimerTask;
 
 import api.file.File;
-import api.io.BufferedOutputStream;
 import api.location.LocationProvider;
 import api.location.LocationListener;
 import api.location.Location;
@@ -131,6 +128,7 @@ public final class Desktop implements CommandListener,
 
     // LSM/MSK commands
     /*private */Command cmdRun, cmdRunLast, cmdStop;
+    /*private */Command cmdTracklog, cmdTracklogStart, cmdTracklogStop;
     /*private */Command cmdWaypoints;
 //#ifdef __HECL__
     /*private */Command cmdLive;
@@ -159,11 +157,9 @@ public final class Desktop implements CommandListener,
     private /*volatile*/ boolean providerRestart;
 
     // logs
-    private GpxTracklog tracklogGpx;
-    private File tracklogNmea;
-    private OutputStream nmeaOut;
-    private long trackstart;
-    private boolean tracklog;
+    private Tracklog tracklog;
+    private long tracklogStart;
+    private boolean isTracklog;
 
     // navigation // TODO move to Waypoints or Runtime
     /*public*/ static volatile Vector wpts;
@@ -293,6 +289,10 @@ public final class Desktop implements CommandListener,
         return diskWorker;
     }
 
+    static Worker getResponseWorker() {
+        return getDiskWorker();
+    }
+
     static Worker getEventWorker() {
         if (eventWorker == null) {
             eventWorker = new Worker("TrekBuddy [EventWorker]");
@@ -300,10 +300,6 @@ public final class Desktop implements CommandListener,
             eventWorker.start();
         }
         return eventWorker;
-    }
-
-    static Worker getResponseWorker() {
-        return getDiskWorker();
     }
 
 //#ifdef __HECL__
@@ -387,13 +383,7 @@ public final class Desktop implements CommandListener,
         }
 
         // load extra (touchscreen) graphics
-        if (screen.hasPointerEvents()) {
-            try {
-                NavigationScreens.initializeForTouch();
-            } catch (Throwable t) {
-                // ignore
-            }
-        }
+        NavigationScreens.initializeForTouch(screen.hasPointerEvents());
 
         /*
          * ~from TrackingMIDlet.run
@@ -614,6 +604,13 @@ public final class Desktop implements CommandListener,
             showError("SD synchronization failed", t, null);
         }
 
+        // trigger OneDrive mirroring
+        try {
+            com.codename1.ui.FriendlyAccess.execute("mirror-sky", new Object[]{ Boolean.TRUE });
+        } catch (Throwable t) {
+            showError("OneDrive synchronization failed", t, null);
+        }
+
 //#endif
 
         // initialize waypoints
@@ -640,17 +637,6 @@ public final class Desktop implements CommandListener,
             }
         }
 
-//#ifdef __CN1__
-
-        // finish SD mirroring
-        try {
-            com.codename1.ui.FriendlyAccess.execute("mirror-sky", new Object[]{ Boolean.TRUE });
-        } catch (Throwable t) {
-            showError("SkyDrive synchronization failed", t, null);
-        }
-
-//#endif
-
         // finally initialized
         initialized = true;
     }
@@ -670,11 +656,6 @@ public final class Desktop implements CommandListener,
             }
         }
         views[mode].setVisible(false);
-
-//#ifdef __ANDROID__
-        // force GC
-        System.gc(); // unconditional!!!
-//#endif
     }
 
     public void onForeground() {
@@ -760,7 +741,7 @@ public final class Desktop implements CommandListener,
         if (Config.btDeviceName.length() > 0) {
             String fitName = Config.btDeviceName;
             if (fitName.length() > 6) {
-                fitName = fitName.substring(0, 6) + "*";
+                fitName = fitName.substring(0, 6).concat("*");
             }
             this.cmdRunLast = new Command(Resources.getString(Resources.DESKTOP_CMD_START) + " " + fitName, POSITIVE_CMD_TYPE, 1);
             if (Config.locationProvider == Config.LOCATION_PROVIDER_JSR82) {
@@ -768,30 +749,31 @@ public final class Desktop implements CommandListener,
             }
         }
         screen.addCommand(this.cmdRun = new Command(Resources.getString(Resources.DESKTOP_CMD_START), POSITIVE_CMD_TYPE, 2));
-        screen.addCommand(this.cmdWaypoints = new Command(Resources.getString(Resources.DESKTOP_CMD_NAVIGATION), POSITIVE_CMD_TYPE, 3));
+        screen.addCommand(this.cmdWaypoints = new Command(Resources.getString(Resources.DESKTOP_CMD_NAVIGATION), POSITIVE_CMD_TYPE, 4));
 //#ifdef __B2B__
-        screen.addCommand(this.cmdLoadGuide = new Command(Resources.getString(Resources.VENDOR_CMD_LOAD_GUIDE), POSITIVE_CMD_TYPE, 4));
+        screen.addCommand(this.cmdLoadGuide = new Command(Resources.getString(Resources.VENDOR_CMD_LOAD_GUIDE), POSITIVE_CMD_TYPE, 5));
 //#else
         if (File.isFs()) {
-//            screen.addCommand(this.cmdLoadMap = new Command(Resources.getString(Resources.DESKTOP_CMD_LOAD_MAP), POSITIVE_CMD_TYPE, 5));
-//            screen.addCommand(this.cmdLoadAtlas = new Command(Resources.getString(Resources.DESKTOP_CMD_LOAD_ATLAS), POSITIVE_CMD_TYPE, 6));
-            screen.addCommand(this.cmdLoadMaps = new Command(Resources.getString(Resources.DESKTOP_CMD_MAPS), POSITIVE_CMD_TYPE, 5));
+            screen.addCommand(this.cmdLoadMaps = new Command(Resources.getString(Resources.DESKTOP_CMD_MAPS), POSITIVE_CMD_TYPE, 6));
 //#ifdef __HECL__
-            screen.addCommand(this.cmdLive = new Command(Resources.getString(Resources.DESKTOP_CMD_LIVE), POSITIVE_CMD_TYPE, 6));
+            screen.addCommand(this.cmdLive = new Command(Resources.getString(Resources.DESKTOP_CMD_LIVE), POSITIVE_CMD_TYPE, 7));
 //#endif
         }
 //#endif
-        screen.addCommand(this.cmdSettings = new Command(Resources.getString(Resources.DESKTOP_CMD_SETTINGS), POSITIVE_CMD_TYPE, 7));
-        screen.addCommand(this.cmdInfo = new Command(Resources.getString(Resources.DESKTOP_CMD_INFO), POSITIVE_CMD_TYPE, 8));
-        screen.addCommand(this.cmdExit = new Command(Resources.getString(Resources.DESKTOP_CMD_EXIT), EXIT_CMD_TYPE, 9/*1*/));
+        screen.addCommand(this.cmdSettings = new Command(Resources.getString(Resources.DESKTOP_CMD_SETTINGS), POSITIVE_CMD_TYPE, 8));
+        screen.addCommand(this.cmdInfo = new Command(Resources.getString(Resources.DESKTOP_CMD_INFO), POSITIVE_CMD_TYPE, 9));
+        screen.addCommand(this.cmdExit = new Command(Resources.getString(Resources.DESKTOP_CMD_EXIT), EXIT_CMD_TYPE, 10/*1*/));
 //#ifndef __ANDROID__
         if (Config.fullscreen && Config.hideBarCmd) {
             screen.addCommand(this.cmdHide = new Command("...", Command.CANCEL, 0));
         }
 //#endif
-        this.cmdPause = new Command(Resources.getString(Resources.DESKTOP_CMD_PAUSE), Config.fullscreen || cz.kruch.track.TrackingMIDlet.sonyEricsson || cz.kruch.track.TrackingMIDlet.jbed ? POSITIVE_CMD_TYPE : Command.STOP, 1);
-        this.cmdContinue = new Command(Resources.getString(Resources.DESKTOP_CMD_CONTINUE), Config.fullscreen || cz.kruch.track.TrackingMIDlet.sonyEricsson || cz.kruch.track.TrackingMIDlet.jbed ? POSITIVE_CMD_TYPE : Command.STOP, 1);
-        this.cmdStop = new Command(Resources.getString(Resources.DESKTOP_CMD_STOP), Config.fullscreen || cz.kruch.track.TrackingMIDlet.sonyEricsson || cz.kruch.track.TrackingMIDlet.jbed ? POSITIVE_CMD_TYPE : Command.STOP, 2);
+        final boolean uiTypeSome = Config.fullscreen || cz.kruch.track.TrackingMIDlet.sonyEricsson || cz.kruch.track.TrackingMIDlet.jbed;
+        this.cmdPause = new Command(Resources.getString(Resources.DESKTOP_CMD_PAUSE), uiTypeSome ? POSITIVE_CMD_TYPE : Command.STOP, 1);
+        this.cmdContinue = new Command(Resources.getString(Resources.DESKTOP_CMD_CONTINUE), uiTypeSome ? POSITIVE_CMD_TYPE : Command.STOP, 1);
+        this.cmdStop = new Command(Resources.getString(Resources.DESKTOP_CMD_STOP), uiTypeSome ? POSITIVE_CMD_TYPE : Command.STOP, 2);
+        this.cmdTracklogStart = new Command("Tracklog ".concat(Resources.getString(Resources.DESKTOP_CMD_START)), uiTypeSome ? POSITIVE_CMD_TYPE : POSITIVE_CMD_TYPE, 3);
+        this.cmdTracklogStop = new Command("Tracklog ".concat(Resources.getString(Resources.DESKTOP_CMD_STOP)), uiTypeSome ? POSITIVE_CMD_TYPE : POSITIVE_CMD_TYPE, 3);
 
         // handle commands
         screen.setCommandListener(this);
@@ -812,6 +794,7 @@ public final class Desktop implements CommandListener,
     }
 
     private static Timer getTimer() {
+//#ifndef __CN1__
         if (timer == null) {
 //#ifdef __ANDROID__
             timer = new Timer("TrekBuddy [Timer]");
@@ -820,6 +803,9 @@ public final class Desktop implements CommandListener,
 //#endif
         }
         return timer;
+//#else
+        return new Timer();
+//#endif
     }
 
     static void resetFont() {
@@ -1102,7 +1088,7 @@ public final class Desktop implements CommandListener,
 
     private boolean initDefaultMap() throws Throwable {
 //#ifdef __LOG__
-        if (log.isEnabled()) log.info("init default map");
+        if (log.isEnabled()) log.debug("init default map");
 //#endif
 
         // in-jar map
@@ -1120,7 +1106,7 @@ public final class Desktop implements CommandListener,
         _setInitializingMap(false);
 
 //#ifdef __LOG__
-        if (log.isEnabled()) log.info("~init default map");
+        if (log.isEnabled()) log.debug("~init default map");
 //#endif
 
         return true;
@@ -1199,18 +1185,18 @@ public final class Desktop implements CommandListener,
         _setInitializingMap(false);
 
 //#ifdef __LOG__
-        if (log.isEnabled()) log.info("~init map");
+        if (log.isEnabled()) log.debug("~init map");
 //#endif
 
         return true;
     }
 
     public void commandAction(Command command, Displayable displayable) {
-        if (screen.isKeylock()) {
-            showWarning(Resources.getString(Resources.DESKTOP_MSG_KEYS_LOCKED), null, null);
+        if (!initialized) {
             return;
         }
-        if (!initialized) {
+        if (screen.isKeylock()) {
+            showWarning(Resources.getString(Resources.DESKTOP_MSG_KEYS_LOCKED), null, null);
             return;
         }
         if (command == cmdInfo) {
@@ -1287,6 +1273,17 @@ public final class Desktop implements CommandListener,
             screen.addCommand(cmdPause);
             // update screen
             update(MASK_SCREEN);
+        } else if (command == cmdTracklogStart) {
+            // handle
+            isTracklog = true;
+            if (tracklogStart > 0) { // we need to update it to avoid overwriting already existing tracklog
+                tracklogStart = System.currentTimeMillis();
+            }
+            startTracklog();
+        } else if (command == cmdTracklogStop) {
+            // handle
+            isTracklog = false;
+            stopTracklog();
         } else { // hide-menubar-command command is used
             // try to hide menubar gently
             screen.setFullScreenMode(false);
@@ -1386,7 +1383,7 @@ public final class Desktop implements CommandListener,
 
             // set flag
             if (YesNoDialog.YES == answer) {
-                tracklog = true; // !
+                isTracklog = true; // !
             }
 
             // start runtime/tracking
@@ -1409,7 +1406,7 @@ public final class Desktop implements CommandListener,
 
     public void providerStateChanged(LocationProvider provider, int newState) {
 //#ifdef __LOG__
-        if (log.isEnabled()) log.info("location provider state changed; " + newState);
+        if (log.isEnabled()) log.debug("location provider state changed; " + newState);
 //#endif
 
 //        eventing.callSerially(newEvent(Event.EVENT_TRACKING_STATUS_CHANGED,
@@ -1469,21 +1466,9 @@ public final class Desktop implements CommandListener,
 //#endif
     }
 
-    public void tracklogStateChanged(LocationProvider provider, boolean isRecording) {
-//#ifdef __LOG__
-        if (log.isEnabled()) log.info("tracklog state changed; " + isRecording);
-//#endif
-//        eventing.callSerially(newEvent(Event.EVENT_TRACKLOG,
-//                              new Integer(isRecording ? GpxTracklog.CODE_RECORDING_START : GpxTracklog.CODE_RECORDING_STOP),
-//                              null, provider));
-        getEventWorker().enqueue(newEvent(Event.EVENT_TRACKLOG,
-                                          new Integer(isRecording ? GpxTracklog.CODE_RECORDING_START : GpxTracklog.CODE_RECORDING_STOP),
-                                          null, provider));
-    }
-
     public void orientationChanged(LocationProvider provider, int heading) {
 //#ifdef __LOG__
-        if (log.isEnabled()) log.info("orientation changed; " + heading);
+        if (log.isEnabled()) log.debug("orientation changed; " + heading);
 //#endif
 
 //        eventing.callSerially(newEvent(Event.EVENT_ORIENTATION_CHANGED,
@@ -1654,16 +1639,16 @@ public final class Desktop implements CommandListener,
      * @deprecated redesign
      */
     void saveLocation(Location l) {
-        if (tracklogGpx != null) {
-            tracklogGpx.insert(l);
+        if (tracklog != null) {
+            tracklog.insert(l);
         }
     }
 
     long getTracklogTime() {
-        if (trackstart == 0) {
+        if (tracklogStart == 0) {
             return System.currentTimeMillis();
         }
-        return trackstart;
+        return tracklogStart;
     }
 
     String getTracklogCreator() {
@@ -2226,7 +2211,7 @@ public final class Desktop implements CommandListener,
 //#endif
 
         // anything to update?
-        if (mask != MASK_NONE) {
+        if ((mask & MASK_ALL) != 0) { // ignore control bits (MASK_FPSCTRL, ...)
 
             // notify map view that render event is about to happen...
             // so that it can start loading tiles asap...
@@ -2234,34 +2219,39 @@ public final class Desktop implements CommandListener,
 
             // does this update affect map screen?
             final boolean mapscr = (mask & Desktop.MASK_MAP) != 0 && mode == VIEW_MAP;
-            
+
 //-#ifndef __CN1__
             
             // prerender phase
             if (mapscr) {
+//#ifdef __CN1__
+                boolean noRender = false;
+//#endif
                 synchronized (loadingLock) {
                     if (!initializingMap && !loadingSlices) {
                         try {
                             loadingSlices = ((MapView) views[VIEW_MAP]).prerender(); // returns true if loading will start soon
+//#ifdef __CN1__
+                            noRender = loadingSlices;
+//#endif
                         } catch (Throwable t) { // should never happen
                             showError(null, t, null);
                             return;
                         }
                     }
                 }
+//#ifdef __CN1__
+                if (noRender) {
+                    return;
+                }
+//#endif
             }
 
 //-#endif
 
             // call render task
             screen.callSerially(newRenderTask(mask, mapscr));
-
         }
-//#ifdef __LOG__
-          else {
-            if (log.isEnabled()) log.debug("update with mask 0");
-        }
-//#endif
     }
 
     static void restore(final Displayable displayable) {
@@ -2317,7 +2307,7 @@ public final class Desktop implements CommandListener,
             System.err.println("[TrekBuddy] " + message);
             t.printStackTrace();
 //#elifdef __LOG__
-            if (log.isEnabled()) log.error(message);
+            log.error(message);
             t.printStackTrace();
 //#endif
             final StringBuffer sb = new StringBuffer(message);
@@ -2355,7 +2345,7 @@ public final class Desktop implements CommandListener,
         }
 
         // by default
-        tracklog = false;
+        isTracklog = false;
 
         // start tracklog?
         switch (Config.tracklog) {
@@ -2366,7 +2356,7 @@ public final class Desktop implements CommandListener,
                 (new YesNoDialog(screen, this, new Boolean(last), Resources.getString(Resources.DESKTOP_MSG_START_TRACKLOG), null)).show();
             } break;
             case Config.TRACKLOG_ALWAYS: {
-                tracklog = true; // !
+                isTracklog = true; // !
                 startTrackingRuntime(last);
             } break;
         }
@@ -2466,10 +2456,7 @@ public final class Desktop implements CommandListener,
         osd.setProviderStatus(state);
 
         // update menu
-        screen.removeCommand(cmdRun);
-        screen.removeCommand(cmdRunLast);
-        screen.addCommand(cmdStop);
-        screen.addCommand(cmdPause);
+        setTrackingMenu();
 
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("~start tracking");
@@ -2509,10 +2496,7 @@ public final class Desktop implements CommandListener,
         browsing = false;
 
         // update menu
-        screen.removeCommand(cmdRun);
-        screen.removeCommand(cmdRunLast);
-        screen.addCommand(cmdStop);
-        screen.addCommand(cmdPause);
+        setTrackingMenu();
 
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("~start tracking");
@@ -2557,6 +2541,9 @@ public final class Desktop implements CommandListener,
         // stop tracklog
         stopTracklog();
 
+        // clear flag
+        isTracklog = false;
+
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("restore UI");
 //#endif
@@ -2575,7 +2562,7 @@ public final class Desktop implements CommandListener,
         Waypoints.getInstance().trackingStopped();
 
         // notify views (if start was propagated too - this is hack)
-        if (trackstart > 0) {
+        if (tracklogStart > 0) {
             final View[] views = this.views;
             for (int i = views.length; --i >= 0; ) {
                 views[i].trackingStopped();
@@ -2590,23 +2577,41 @@ public final class Desktop implements CommandListener,
         }
 
         // forget track start
-        trackstart = 0;
+        tracklogStart = 0;
 
         // request screen update
         update(MASK_OSD | MASK_CROSSHAIR);
 
         // update menu
-        screen.removeCommand(cmdStop);
-        screen.removeCommand(cmdPause);
-        screen.removeCommand(cmdContinue);
-        screen.addCommand(cmdRun);
-        if (Config.locationProvider == Config.LOCATION_PROVIDER_JSR82) {
-            screen.addCommand(cmdRunLast);
-        }
+        setIdleMenu();
 
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("~after tracking");
 //#endif
+    }
+
+    private void setTrackingMenu() {
+        screen.removeCommand(cmdRun);
+        screen.removeCommand(cmdRunLast);
+        screen.addCommand(cmdStop);
+        screen.addCommand(cmdPause);
+        if (isTracklog) {
+            screen.addCommand(cmdTracklog = cmdTracklogStop);
+        } else {
+            screen.addCommand(cmdTracklog = cmdTracklogStart);
+        }
+    }
+
+    private void setIdleMenu() {
+        screen.removeCommand(cmdStop);
+        screen.removeCommand(cmdPause);
+        screen.removeCommand(cmdContinue);
+        screen.removeCommand(cmdTracklogStart);
+        screen.removeCommand(cmdTracklogStop);
+        screen.addCommand(cmdRun);
+        if (Config.locationProvider == Config.LOCATION_PROVIDER_JSR82) {
+            screen.addCommand(cmdRunLast);
+        }
     }
 
     private boolean stopTracking() {
@@ -2618,7 +2623,7 @@ public final class Desktop implements CommandListener,
         if (runtime.getProvider() == null) {
 //            throw new IllegalStateException("Tracking already stopped");
 //#ifdef __LOG__
-            if (log.isEnabled()) log.error("tracking already stopped");
+            log.error("tracking already stopped");
 //#endif
             return false;
         }
@@ -2626,7 +2631,7 @@ public final class Desktop implements CommandListener,
         // already stopping?
         if (!runtime.getProvider().isGo()) {
 //#ifdef __LOG__
-            if (log.isEnabled()) log.error("tracking already stopping");
+            log.error("tracking already stopping");
 //#endif
             return false;
         }
@@ -2651,12 +2656,12 @@ public final class Desktop implements CommandListener,
 //#endif
 
         // tracklog enabled
-        if (tracklog) {
+        if (isTracklog) {
 //#ifdef __LOG__
             if (log.isEnabled()) log.debug("yes do start it");
 //#endif
             // GPX tracklog?
-            final boolean isGpx = Config.TRACKLOG_FORMAT_GPX.equals(Config.tracklogFormat);
+            final boolean isGpxFormat = Config.TRACKLOG_FORMAT_GPX.equals(Config.tracklogFormat);
 
             // restart?
             if (_isProviderRestart()) {
@@ -2664,14 +2669,15 @@ public final class Desktop implements CommandListener,
                 if (log.isEnabled()) log.debug("already running");
 //#endif
                 // break segment for GPX
-                if (isGpx) {
+                if (isGpxFormat) {
 
                     // assertion
-                    if (tracklogGpx == null) {
-                        throw new IllegalStateException("GPX tracklog not started");
+                    if (tracklog == null) {
+                        throw new IllegalStateException("Tracklog not started");
                     }
+
                     // break trkseg
-                    tracklogGpx.insert(Boolean.TRUE);
+                    tracklog.insert(Boolean.TRUE);
                 }
 
             } else { // fresh new start
@@ -2679,51 +2685,23 @@ public final class Desktop implements CommandListener,
                 // clear error
                 tracklogError = null;
 
-                // GPX
-                if (isGpx) {
-
-                    // assertion
-                    if (tracklogGpx != null) {
-                        throw new IllegalStateException("GPX tracklog already started");
-                    }
-
-                    // start new tracklog
-                    tracklogGpx = new GpxTracklog(GpxTracklog.LOG_TRK,
-                                          new Event(Event.EVENT_TRACKLOG),
-                                          getTracklogCreator(),
-                                          trackstart);
-                    tracklogGpx.setFilePrefix(null);
-                    tracklogGpx.start();
-//#ifdef __LOG__
-                    if (log.isEnabled()) log.debug("starting tracklog " + tracklogGpx.getFileName());
-//#endif
-
-                } else {
-
-                    try {
-                        // create file
-                        tracklogNmea = File.open(Config.getFileURL(Config.FOLDER_NMEA, GpxTracklog.dateToFileDate(trackstart) + ".nmea"), Connector.READ_WRITE);
-                        if (tracklogNmea.exists()) {
-                            tracklogNmea.delete();
-                        }
-                        tracklogNmea.create();
-
-                        // create output
-                        nmeaOut = new BufferedOutputStream(tracklogNmea.openOutputStream(), 4096, true);
-
-                        // inject observer
-                        runtime.getProvider().setObserver(nmeaOut);
-
-                        // notify itself ;-)
-                        (new Event(Event.EVENT_TRACKLOG)).invoke(new Integer(GpxTracklog.CODE_RECORDING_START), null, this);
-
-                    } catch (Exception e) {
-
-                        // notify itself ;-)
-                        (new Event(Event.EVENT_TRACKLOG)).invoke(null, e, this);
-
-                    }
+                // assertion
+                if (tracklog != null) {
+                    throw new IllegalStateException("Tracklog already started");
                 }
+
+                // start new tracklog
+                final Event event = new Event(Event.EVENT_TRACKLOG_STATUS_CHANGED);
+                if (isGpxFormat) {
+                    tracklog = new GpxTracklog(GpxTracklog.LOG_TRK, event,
+                                               getTracklogCreator(), tracklogStart);
+                } else {
+                    tracklog = new Tracklog(event, runtime, tracklogStart);
+                }
+                tracklog.start();
+//#ifdef __LOG__
+                if (log.isEnabled()) log.debug("starting tracklog...");
+//#endif
             }
         }
     }
@@ -2756,35 +2734,20 @@ public final class Desktop implements CommandListener,
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("stop tracklog");
 //#endif
-        if (tracklogGpx != null) {
+        if (tracklog != null) {
 //#ifdef __LOG__
-            if (log.isEnabled()) log.debug("stopping GPX tracklog");
+            if (log.isEnabled()) log.debug("stopping tracklog");
 //#endif
-            try {
-                if (tracklogGpx.isAlive()) {
-                    tracklogGpx.shutdown();
-                }
-                tracklogGpx.join();
-            } catch (InterruptedException e) {
-                // ignore - should not happen
-            }
-            tracklogGpx = null; // GC hint
-        } else if (tracklogNmea != null) {
-//#ifdef __LOG__
-            if (log.isEnabled()) log.debug("stopping NMEA tracklog");
-//#endif
-            File.closeQuietly(nmeaOut);
-            nmeaOut = null;
-            File.closeQuietly(tracklogNmea);
-            tracklogNmea = null;
+            tracklog.stop();
+            tracklog = null; // GC hint
         }
     }
 
-    private synchronized void handlePause(final boolean pause) {
+    private /*synchronized*/ void handlePause(final boolean pause) { // 2014-07-27: why was synchronized?
         if (pause && pauseTask == null) {
             schedule(pauseTask = new PauseTask(), 0, 1000);
-            if (tracklogGpx != null) {
-                tracklogGpx.insert(Boolean.TRUE);
+            if (tracklog != null) {
+                tracklog.insert(Boolean.TRUE);
             }
         } else if (!pause && pauseTask != null) {
             pauseTask.cancel();
@@ -2809,42 +2772,51 @@ public final class Desktop implements CommandListener,
         g.drawString(text, x + ((w - sw) >> 1), y + ((h - sh) >> 1), Graphics.TOP | Graphics.LEFT);
     }
 
-    static final class PauseTask extends TimerTask {
+    /*static*/ final class PauseTask extends TimerTask {
 
         private StringBuffer sb;
+        private String msg, text;
         private long since;
 
         public PauseTask() {
             this.sb = new StringBuffer(64);
             this.since = System.currentTimeMillis();
+            this.msg = Resources.getString(Resources.DESKTOP_MSG_PAUSED);
         }
 
         public synchronized String getText() {
-            return sb.toString();
+            return text;
         }
 
         public void run() {
             final long now = System.currentTimeMillis();
-            synchronized (this) {
-                final StringBuffer sb = this.sb;
-                sb.delete(0, sb.length());
-                int diff = (int) (now - since) / 1000;
-                if (diff < 360000) {
-                    final int ss = diff % 60;
-                    diff /= 60;
-                    final int mm = diff % 60;
-                    diff /= 60;
-                    sb.append(Resources.getString(Resources.DESKTOP_MSG_PAUSED)).append(' ');
-                    NavigationScreens.append(sb, diff, 10).append(':');
-                    NavigationScreens.append(sb, mm, 10).append(':');
-                    NavigationScreens.append(sb, ss, 10);
-                } else {
-                    sb.append("99:99:99");
-                }
+            final StringBuffer sb = this.sb;
+            sb.delete(0, sb.length());
+            sb.append(msg).append(' ');
+            int diff = (int) (now - since) / 1000;
+            if (diff < 360000) {
+                final int ss = diff % 60;
+                diff /= 60;
+                final int mm = diff % 60;
+                diff /= 60;
+                NavigationScreens.append(sb, diff, 10).append(':');
+                NavigationScreens.append(sb, mm, 10).append(':');
+                NavigationScreens.append(sb, ss, 10);
+            } else {
+                sb.append("99:99:99");
             }
+/*
+            final String text;
+*/
+            synchronized (this) {
+                this.text = /*text = */sb.toString();
+            }
+/*
             final DeviceScreen screen = Desktop.screen;
-            drawPause(screen.getGraphics(), screen, getText());
+            drawPause(screen.getGraphics(), screen, text);
             screen.flushGraphics();
+*/
+            Desktop.this.update(MASK_SCREEN);
         }
     }
 
@@ -3047,7 +3019,7 @@ public final class Desktop implements CommandListener,
             } catch (Throwable t) {
 //#ifdef __LOG__
                 t.printStackTrace();
-                if (Desktop.log.isEnabled()) Desktop.log.error("render failure", t);
+                Desktop.log.error("render failed", t);
 //#endif
 //#ifdef __ANDROID__
                 android.util.Log.e(TAG, "render failure", t);
@@ -3343,7 +3315,7 @@ public final class Desktop implements CommandListener,
 
         public static final int EVENT_CONFIGURATION_CHANGED         = 0;
         public static final int EVENT_FILE_BROWSER_FINISHED         = 1;
-        public static final int EVENT_TRACKLOG                      = 2;
+        public static final int EVENT_TRACKLOG_STATUS_CHANGED       = 2;
         public static final int EVENT_ATLAS_OPENED                  = 3;
         public static final int EVENT_LAYER_SELECTION_FINISHED      = 4;
         public static final int EVENT_MAP_SELECTION_FINISHED        = 5;
@@ -3456,8 +3428,8 @@ public final class Desktop implements CommandListener,
                     case EVENT_FILE_BROWSER_FINISHED: {
                         execFileBrowserFinished();
                     } break;
-                    case EVENT_TRACKLOG: {
-                        execTracklog();
+                    case EVENT_TRACKLOG_STATUS_CHANGED: {
+                        execTracklogStatusChanged();
                     } break;
                     case EVENT_ATLAS_OPENED: {
                         execAtlasOpened();
@@ -3630,7 +3602,7 @@ public final class Desktop implements CommandListener,
 
 //#ifdef __CN1__
                 // skydrive
-                if (url.startsWith("file:///Skydrive/")) {
+                if (url.startsWith("file:///OneDrive/")) {
                     com.codename1.ui.FriendlyAccess.execute("copy-map", new Object[]{
                             url, new Event(Event.EVENT_FILE_BROWSER_FINISHED, "map/atlas") 
                     });
@@ -3670,7 +3642,7 @@ public final class Desktop implements CommandListener,
             }
         }
 
-        private void execTracklog() {
+        private void execTracklogStatusChanged() {
 
             // everything ok?
             if (throwable == null) {
@@ -3679,9 +3651,17 @@ public final class Desktop implements CommandListener,
                     switch (c) {
                         case GpxTracklog.CODE_RECORDING_START:
                             osd.setRecording(true);
+                            screen.removeCommand(cmdTracklog);
+                            if (isTracking()) {
+                                screen.addCommand(cmdTracklog = cmdTracklogStop);
+                            }
                             break;
                         case GpxTracklog.CODE_RECORDING_STOP:
                             osd.setRecording(false);
+                            screen.removeCommand(cmdTracklog);
+                            if (isTracking()) {
+                                screen.addCommand(cmdTracklog = cmdTracklogStart);
+                            }
                             break;
                     }
                 }
@@ -4053,8 +4033,8 @@ public final class Desktop implements CommandListener,
 
                 case LocationProvider._STARTING: {
 
-					// remember track start
-					Desktop.this.trackstart = System.currentTimeMillis();
+					// remember tracking start
+					Desktop.this.tracklogStart = System.currentTimeMillis();
 
                     // reset trip stats
                     TripStatistics.reset();
@@ -4174,8 +4154,8 @@ public final class Desktop implements CommandListener,
             l.validateEx();
 
             // update tracklog
-            if (Desktop.this.tracklogGpx != null) {
-                Desktop.this.tracklogGpx.locationUpdated(l);
+            if (Desktop.this.tracklog != null) {
+                Desktop.this.tracklog.locationUpdated(l);
             }
 
             // update mask
@@ -4191,7 +4171,8 @@ public final class Desktop implements CommandListener,
                 final QualifiedCoordinates qc = l.getQualifiedCoordinates();
 
                 // wpt reached status
-                boolean wptReached = false;
+                boolean wptReached;
+                final int wptIdx = Desktop.wptIdx;
 
                 // avoid conflict
                 synchronized (Desktop.renderLock) {

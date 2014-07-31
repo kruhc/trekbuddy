@@ -49,8 +49,12 @@ public final class Logger {
         this.enabled = cz.kruch.track.TrackingMIDlet.isLogEnabled();
     }
 
-    public boolean isEnabled() {
+    public boolean isEnabled() { // effectively isDebugEnabled()
+//#ifndef __CN1__
         return enabled;
+//#else
+        return com.codename1.io.Log.getLevel() == com.codename1.io.Log.DEBUG; 
+//#endif
     }
 
     public void debug(String message) {

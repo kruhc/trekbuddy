@@ -75,6 +75,7 @@ final class ComputerView extends View
 //#endif
 
     // xml tags and attrs
+    private static final String TAG_CMS         = "cms";
     private static final String TAG_UNITS       = "units";
     private static final String TAG_FONT        = "font";
     private static final String TAG_COLORS      = "colors";
@@ -97,6 +98,7 @@ final class ComputerView extends View
     private static final String ATTR_H          = "h";
     private static final String ATTR_ALIGN      = "align";
     private static final String ATTR_IMAGE      = "image";
+    private static final String ATTR_UNDEFVAL   = "undefval";
 
     // special values
     private static final String TOKEN_COORDS        = "coords";
@@ -238,6 +240,7 @@ final class ComputerView extends View
         CHARSET = "0123456789 +-.:/°\"\'hkmps".toCharArray();
     }
     private static final char[] DELIMITERS  = { '{', '}' };
+    private static final char UNDEF_VAL     = '?';
 
     private static final String CMS_SIMPLE_XML  = "cms.simple.xml";
     private static final String SIGN_HEXA       = "0x1E";
@@ -299,6 +302,7 @@ final class ComputerView extends View
     private NakedVector areas;
     private Image backgroundImage;
     private int[] colors;
+    private Character undefVal;
 
     /* graphics - shared among profiles */
     private Hashtable fonts, backgrounds;
@@ -826,7 +830,7 @@ final class ComputerView extends View
                             } catch (Throwable t) {
 //#ifdef __LOG__
                                 t.printStackTrace();
-                                if (log.isEnabled()) log.error("failed to load user scripts: " + t);
+                                log.error("failed to load user scripts: " + t);
 //#endif
                             }
 
@@ -963,7 +967,7 @@ final class ComputerView extends View
                         bitmap = (Image) cache.get(area.fontName);
                         if (bitmap == null) { // create fresh new
 //#ifdef __LOG__
-                            if (log.isEnabled()) log.error("bitmap font image not colorified yet: " + area.fontName + "; colorify using " + Integer.toHexString(colors[dayNight * 4 + 1]) + " color");
+                            if (log.isEnabled()) log.debug("bitmap font image not colorified yet: " + area.fontName + "; colorify using " + Integer.toHexString(colors[dayNight * 4 + 1]) + " color");
 //#endif
 
                             // get raw data
@@ -989,7 +993,7 @@ final class ComputerView extends View
 
                     } catch (Throwable t) {
 //#ifdef __LOG__
-                        if (log.isEnabled()) log.error("failure", t);
+                        log.error("colorify failed", t);
                         t.printStackTrace();
 //#endif
 
@@ -1051,7 +1055,7 @@ final class ComputerView extends View
                  } catch (Throwable t) {
                      // ignore
 //#ifdef __LOG__
-                     if (log.isEnabled()) log.error("failure", t);
+                     log.error("colorifyBs failed", t);
                      t.printStackTrace();
 //#endif
                  }
@@ -1124,11 +1128,13 @@ final class ComputerView extends View
             final Object[] areas;
             final int[] colors;
             final int units, N;
+            final char undefVal;
             synchronized (this) {
                 areas = this.areas.getData();
                 colors = this.colors;
                 units = this.units.intValue();
                 N = this.areas.size();
+                undefVal = this.undefVal.charValue();
             }
 
             final CharArrayTokenizer tokenizer = this.tokenizer;
@@ -1298,7 +1304,7 @@ final class ComputerView extends View
                                     case VALUE_WPT_AZI: {
                                         final int azi = navigator.getWptAzimuth();
                                         if (azi < 0) {
-                                            sb.append('?');
+                                            sb.append(undefVal);
                                         } else {
                                             NavigationScreens.append(sb, azi);
                                         }
@@ -1306,7 +1312,7 @@ final class ComputerView extends View
                                     case VALUE_WPT_DIST: {
                                         float dist = navigator.getWptDistance();
                                         if (dist < 0F) {
-                                            sb.append('?');
+                                            sb.append(undefVal);
                                         } else {
                                             dist = asDistance(units, dist);
                                             NavigationScreens.append(sb, dist, 0);
@@ -1344,7 +1350,7 @@ final class ComputerView extends View
                                     case VALUE_WPT_VMG: {
                                         final int azi = navigator.getWptAzimuth();
                                         if (azi < 0) {
-                                            sb.append('?');
+                                            sb.append(undefVal);
                                         } else {
                                             double vmg = fromKmh(units, spdavgShort/*valuesFloat[VALUE_SPD]*/ * (float)(Math.cos(Math.toRadians(valuesFloat[VALUE_COURSE] - azi))));
                                             NavigationScreens.append(sb, vmg, 1);
@@ -1358,7 +1364,7 @@ final class ComputerView extends View
                                             alt = wpt.getQualifiedCoordinates().getAlt();
                                         }
                                         if (Float.isNaN(alt)) {
-                                            sb.append('?');
+                                            sb.append(undefVal);
                                         } else {
                                             alt = asAltitude(units, alt);
                                             NavigationScreens.append(sb, (int) alt);
@@ -1462,7 +1468,7 @@ final class ComputerView extends View
                                             wptAlt = wpt.getQualifiedCoordinates().getAlt();
                                         }
                                         if (Float.isNaN(wptAlt)) {
-                                            sb.append('?');
+                                            sb.append(undefVal);
                                         } else {
                                             float diff = asAltitude(units, wptAlt - valuesFloat[VALUE_ALT]);
                                             NavigationScreens.append(sb, (int) diff);
@@ -1529,7 +1535,7 @@ final class ComputerView extends View
                                         if (value != null && !value.isNaN()) {
                                             NavigationScreens.append(sb, value.floatValue(), 1);
                                         } else {
-                                            sb.append('?');
+                                            sb.append(undefVal);
                                         }
                                     } break;
 //#endif
@@ -1554,7 +1560,7 @@ final class ComputerView extends View
                                                     sb.append(thing);
                                                 }
                                             } else {
-                                                sb.append('?');
+                                                sb.append(undefVal);
                                             }
                                         } catch (Throwable t) {
 //#ifdef __LOG__
@@ -1986,6 +1992,8 @@ final class ComputerView extends View
             colors = (int[]) profile[1];
             units = null; // gc hint
             units = (Integer) profile[2];
+            undefVal = null; // gc hint
+            undefVal = (Character) profile[3];
         }
 
         // fallback hack
@@ -2020,7 +2028,7 @@ final class ComputerView extends View
                 }
 //#ifdef __LOG__
             } else {
-                if (log.isEnabled()) log.warn("file " + filename + " does not exist");
+                log.warn("file " + filename + " does not exist");
 //#endif
             }
         } catch (Throwable t) {
@@ -2072,7 +2080,7 @@ final class ComputerView extends View
                 }
             } else {
 //#ifdef __LOG__
-                if (log.isEnabled()) log.warn("folder ui-profiles does not exist");
+                log.warn("folder ui-profiles does not exist");
 //#endif
                 status = "Folder ui-profiles does not exist.";
             }
@@ -2093,6 +2101,7 @@ final class ComputerView extends View
          NakedVector nareas = new NakedVector(8, 4);
          Integer nunits = new Integer(Config.units);
          int ncolors[] = new int[8];
+         Character nundefval = new Character(UNDEF_VAL);
 
          try {
              // set input
@@ -2146,11 +2155,11 @@ final class ComputerView extends View
                          } else if (TAG_UNITS.equals(tag)) {
                              final String system = parser.getAttributeValue(null, ATTR_SYSTEM);
                              if ("metric".equals(system)) {
-                                 units = new Integer(Config.UNITS_METRIC);
+                                 nunits = new Integer(Config.UNITS_METRIC);
                              } else if ("imperial".equals(system)) {
-                                 units = new Integer(Config.UNITS_IMPERIAL);
+                                 nunits = new Integer(Config.UNITS_IMPERIAL);
                              } else if ("nautical".equals(system)) {
-                                 units = new Integer(Config.UNITS_NAUTICAL);
+                                 nunits = new Integer(Config.UNITS_NAUTICAL);
                              }
                          } else if (TAG_FONT.equals(tag)) {
                              final String name = parser.getAttributeValue(null, ATTR_NAME);
@@ -2194,6 +2203,11 @@ final class ComputerView extends View
                                      backgrounds.put(filename, image);
                                  }
                              }
+                         } else if (TAG_CMS.equals(tag)) {
+                             final String uvs = parser.getAttributeValue(null, ATTR_UNDEFVAL);
+                             if (uvs != null && uvs.length() != 0) {
+                                 nundefval = new Character(uvs.charAt(0));
+                             }
                          }
                      } break;
                      case XmlPullParser.END_TAG: {
@@ -2208,7 +2222,7 @@ final class ComputerView extends View
              HXmlParser.closeQuietly(parser);
          }
 
-         return new Object[]{ nareas, ncolors, nunits };
+         return new Object[]{ nareas, ncolors, nunits, nundefval };
      }
 
     private static byte[] loadFont(final InputStream in) throws IOException {

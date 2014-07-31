@@ -1,4 +1,4 @@
-﻿# commandes courantes 
+# commandes courantes 
 0000=OK 
 0001=Retour 
 0002=Fermer 
@@ -157,7 +157,8 @@
 2105=Stop 
 2106=Traces 
 2107=Repères 
-2108=Nouveau projet Waypoint 
+2108=Nouveau projet Waypoint
+2109=Fin de session 
 
 # formulaires de navigation / domaines (formulaire des points de passage) 
 2200=Point de passage 
@@ -302,7 +303,8 @@
 3534=Plateforme par défaut 
 3535=Filtre personnalisé 
 3536=Zoom Carte 
-3537=Forcer champ de texte 
+3537=Forcer champ de texte
+3538=Crosshair fixe 
 
 # formulaires/champs/valeurs de paramétrage (Emplacement) 
 3600=Fournisseur 
@@ -336,7 +338,8 @@
 3628=Forcer la recherche 
 3629=Contrôle de la consommation 
 3630=Correction de la position 
-3631=Correction de temps 
+3631=Correction de temps
+3632=Autoriser les extensions 
 
 # formulaires/champs/valeurs de paramétrage (Navigation) 
 3700=Proximité du point de passage (m) 

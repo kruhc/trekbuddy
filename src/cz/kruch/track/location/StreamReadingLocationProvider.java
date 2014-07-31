@@ -74,7 +74,7 @@ abstract class StreamReadingLocationProvider extends LocationProvider {
             final int l = nextSentence(in, observer);
             if (l == -1) {
 //#ifdef __LOG__
-                if (log.isEnabled()) log.warn("end of stream");
+                log.warn("end of stream");
 //#endif
                 return null;
             }
@@ -90,20 +90,20 @@ abstract class StreamReadingLocationProvider extends LocationProvider {
                 switch (record.type) {
                     case NmeaParser.HEADER_GGA: {
 //#ifdef __LOG__
-                        if (log.isEnabled()) log.info("got GGA");
+                        if (log.isEnabled()) log.debug("got GGA");
 //#endif
                         gga = record;
                         hack_rmc_count = 0;
                     } break;
                     case NmeaParser.HEADER_GSA: {
 //#ifdef __LOG__
-                        if (log.isEnabled()) log.info("got GSA");
+                        if (log.isEnabled()) log.debug("got GSA");
 //#endif
                         gsa = record;
                     } break;
                     case NmeaParser.HEADER_RMC: {
 //#ifdef __LOG__
-                        if (log.isEnabled()) log.info("got RMC");
+                        if (log.isEnabled()) log.debug("got RMC");
 //#endif
                         rmc = record;
                         if (hack_rmc_count++ >= 3) { // use GSA as GGA (alt missing, though)
@@ -116,7 +116,7 @@ abstract class StreamReadingLocationProvider extends LocationProvider {
                     } break;
                     case NmeaParser.HEADER_XDR: {
 //#ifdef __LOG__
-                        if (log.isEnabled()) log.info("got XDR");
+                        if (log.isEnabled()) log.debug("got XDR");
 //#endif
                         xdr = true;
                     } break;
@@ -125,7 +125,7 @@ abstract class StreamReadingLocationProvider extends LocationProvider {
                 }
             } else {
 //#ifdef __LOG__
-                if (log.isEnabled()) log.warn("Invalid NMEA!");
+                log.warn("Invalid NMEA!");
 //#endif
                 if (NmeaParser.getType(line, l) != -1) {
                     checksums++;
@@ -142,13 +142,13 @@ abstract class StreamReadingLocationProvider extends LocationProvider {
                     gga = null;
                     syncs++;
 //#ifdef __LOG__
-                    if (log.isEnabled()) log.warn("sync error");
+                    log.warn("sync error");
 //#endif
                 } else if (i < 0) {
                     rmc = null;
                     syncs++;
 //#ifdef __LOG__
-                    if (log.isEnabled()) log.warn("sync error");
+                    log.warn("sync error");
 //#endif
                 }
             }

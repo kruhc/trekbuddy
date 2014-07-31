@@ -42,7 +42,7 @@ public final class Jsr179LocationProvider
     public int start() throws LocationException {
         try {
             // get listener params
-            CharArrayTokenizer tokenizer = new CharArrayTokenizer();
+            final CharArrayTokenizer tokenizer = new CharArrayTokenizer();
             tokenizer.init(Config.getLocationTimings(Config.LOCATION_PROVIDER_JSR179),
                            CharArrayTokenizer.DEFAULT_DELIMS, false);
             interval = tokenizer.nextInt();
@@ -68,12 +68,12 @@ public final class Jsr179LocationProvider
         try {
             // common criteria
 //#ifdef __RIM50__
-            final net.rim.device.api.gps.BlackBerryCriteria criteria = new net.rim.device.api.gps.BlackBerryCriteria();
-            final int mode = Config.assistedGps ? net.rim.device.api.gps.GPSInfo.GPS_MODE_ASSIST : net.rim.device.api.gps.GPSInfo.GPS_MODE_AUTONOMOUS;
-            criteria.setMode(mode);
+            net.rim.device.api.gps.BlackBerryCriteria criteria = new net.rim.device.api.gps.BlackBerryCriteria();
+            criteria.setMode(Config.assistedGps ? net.rim.device.api.gps.GPSInfo.GPS_MODE_ASSIST : net.rim.device.api.gps.GPSInfo.GPS_MODE_AUTONOMOUS); // use assisted or autonomous for first fix
+            criteria.setSubsequentMode(net.rim.device.api.gps.GPSInfo.GPS_MODE_AUTONOMOUS); // then just use autonomous
             criteria.setSatelliteInfoRequired(true, false);
 //#else
-            final javax.microedition.location.Criteria criteria = new javax.microedition.location.Criteria();
+            javax.microedition.location.Criteria criteria = new javax.microedition.location.Criteria();
             criteria.setCostAllowed(Config.assistedGps);
             criteria.setPreferredPowerConsumption(Config.powerUsage);
 //#endif
@@ -84,6 +84,7 @@ public final class Jsr179LocationProvider
             impl = javax.microedition.location.LocationProvider.getInstance(criteria);
             if (impl == null) {
                 impl = javax.microedition.location.LocationProvider.getInstance(null);
+                criteria = null;
                 setThrowable(new LocationException("Default criteria used"));
             }
             if (impl == null) {
@@ -109,15 +110,18 @@ public final class Jsr179LocationProvider
                          * (when you enter building etc).
                          * The following code helps in these two possible scenarios:
                          * a) if you restore good GPS view within 1 min, locations start coming
-                         * b) if GPS view is still bad after1 1 min, the provider changes
+                         * b) if GPS view is still bad after 1 min, the provider changes
                          *    its state to UNAVAILABLE (and lastGood is reseted to 0 - see providerStateChanged,
                          *    and thus there will be no more reset attemps.
+                         * 2014-01-14: also see http://supportforums.blackberry.com/t5/Java-Development/Location-APIs-Start-to-finish/ta-p/571949
                          */
                         wait(15 * 1000);
                         if (lastGood > 0 && (System.currentTimeMillis() - lastGood) > (60 * 1000)) {
                             lastGood = 0;
                             impl.setLocationListener(null, -1, -1, -1);
                             impl.reset();
+                            impl = null;
+                            impl = javax.microedition.location.LocationProvider.getInstance(criteria);
                             impl.setLocationListener(this, interval, timeout, maxage);
                             restarts++;
                         }
@@ -166,12 +170,17 @@ public final class Jsr179LocationProvider
                                 javax.microedition.location.Location l) {
 //#ifdef __RIM50__
 
-        // get satellites info
+        // use extended location info
         final net.rim.device.api.gps.BlackBerryLocation bbl = (net.rim.device.api.gps.BlackBerryLocation) l;
         bbError = bbl.getError();
         bbStatus = bbl.getStatus();
+
+        // continue flag
+        boolean hasSomething = false;
+
+        // get satellites info
         switch (bbStatus) {
-            case net.rim.device.api.gps.BlackBerryLocation.GPS_FIX_UNAVAILABLE:
+//            case net.rim.device.api.gps.BlackBerryLocation.GPS_FIX_UNAVAILABLE:
             case net.rim.device.api.gps.BlackBerryLocation.GPS_FIX_PARTIAL:
             case net.rim.device.api.gps.BlackBerryLocation.GPS_FIX_COMPLETE:
                 int sat = 0;
@@ -190,11 +199,21 @@ public final class Jsr179LocationProvider
                 NmeaParser.satv = bbl.getSatelliteCount();
                 NmeaParser.sata = sat;
                 NmeaParser.resetPrnSnr();
+                hasSomething = true;
             break;
         }
 
         // let's assume provider is in AVAILABLE state
+        /*
+         * 2014-01-14: can be also TEMPORARILY_UNAVAILABLE and fix PARTIAL
+         * (only sat info), typically after cold start (tested on 9700)
+         */
         lastGood = System.currentTimeMillis();
+
+        // if we have nothing, just quit
+        if (!hasSomething) {
+            return;
+        }
 
 //#endif
 
@@ -207,26 +226,28 @@ public final class Jsr179LocationProvider
         // result
         final Location location;
 
+        // fixable vars
+        long timestamp = l.getTimestamp();
+//#ifdef __RIM__
+        // nothing to do?
+//#else
+        if (timestamp == 0 && Config.timeFix) { // TODO what devices?
+            timestamp = System.currentTimeMillis();
+        }
+//#endif
+
         // valid location?
         if (l.isValid()) {
 
             // fixable vars
             final javax.microedition.location.QualifiedCoordinates xc = l.getQualifiedCoordinates();
-            long timestamp = l.getTimestamp();
             float alt = xc.getAltitude() + Config.altCorrection;
 //#ifdef __RIM__
             if (Config.negativeAltFix) {
                 alt *= -1;
             }
-//#else
-            if (timestamp == 0 && Config.timeFix) { // TODO what devices?
-                timestamp = System.currentTimeMillis();
-            }
 //#endif
             float speed = l.getSpeed();
-            if (cz.kruch.track.TrackingMIDlet.sonim) {
-                speed /= 2;
-            }
 
             // enhance with raw NMEA
             int sat = 0;
@@ -249,6 +270,35 @@ public final class Jsr179LocationProvider
                 }
             }
 
+//#ifdef __ALL__
+
+            // Sonim hacks
+            if (cz.kruch.track.TrackingMIDlet.sonim) {
+                speed /= 2;
+                if (sat == 0) {
+                    final String ss = System.getProperty("gps.satellites");
+                    if (ss != null) {
+                        try {
+                            sat = Integer.parseInt(ss);
+                        } catch (Exception e) {
+                            // ignore
+                        }
+                    }
+                }
+                if (extraFix == 0) {
+                    final String sf = System.getProperty("gps.fix");
+                    if (sf != null) {
+                        try {
+                            extraFix = Integer.parseInt(sf);
+                        } catch (Exception e) {
+                            // ignore
+                        }
+                    }
+                }
+            }
+
+//#endif
+
             // create up-to-date coordinates
             final QualifiedCoordinates qc = QualifiedCoordinates.newInstance(xc.getLatitude(),
                                                                              xc.getLongitude(),
@@ -258,26 +308,17 @@ public final class Jsr179LocationProvider
 
             // create location
 //#ifdef __RIM50__
-            location = Location.newInstance(qc, timestamp, bbStatus == net.rim.device.api.gps.BlackBerryLocation.GPS_FIX_COMPLETE ? 1 : 0, sat);
-//#else            
-            location = Location.newInstance(qc, timestamp, 1, sat);
+            final int fix = bbStatus == net.rim.device.api.gps.BlackBerryLocation.GPS_FIX_COMPLETE ? 1 : 0;
+//#else
+            final int fix = 1;
 //#endif
+            location = Location.newInstance(qc, timestamp, fix, sat);
             location.setCourse(l.getCourse());
             location.setSpeed(speed);
             location.updateFix(extraFix);
             location.updateFixQuality(extraFixQuality);
 
         } else {
-
-            // fixable vars
-            long timestamp = l.getTimestamp();
-//#ifdef __RIM__
-            // nothing to do?
-//#else
-            if (timestamp == 0 && Config.timeFix) { // TODO what devices?
-                timestamp = System.currentTimeMillis();
-            }
-//#endif
 
             // create invalid location
             location = Location.newInstance(QualifiedCoordinates.INVALID, timestamp, 0);

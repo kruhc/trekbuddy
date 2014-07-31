@@ -143,21 +143,39 @@ public final class NavigationScreens {
         selectedSize2 = selected.getHeight() >> 1;
     }
 
-    public static void initializeForTouch() throws IOException { // 2nd init for touchscreens
+    static void initializeForTouch(final boolean hasPointerEvents) {
+
+        // is touch screen?
+        if (hasPointerEvents) {
+
         // init image cache
 //#if !__SYMBIAN__ && !__RIM__ && !__ANDROID__ && !__CN1__
-        if (Config.zoomSpotsMode != 0)
+            if (Config.zoomSpotsMode != 0)
 //#endif
-        {
-            zooms = createImage(RES_ZOOMS);
-            zoomSize = zooms.getHeight();
-        }
+            {
+                try {
+                    zooms = createImage(RES_ZOOMS);
+                    zoomSize = zooms.getHeight();
+                } catch (Throwable t) {
+                    // ignore
+                }
+            }
 //#if !__SYMBIAN__ && !__RIM__ && !__ANDROID__ && !__CN1__
-        if (Config.guideSpotsMode != 0)
+            if (Config.guideSpotsMode != 0)
 //#endif
-        {
-            guides = createImage(RES_GUIDES);
-            guideSize = guides.getHeight();
+            {
+                try {
+                    guides = createImage(RES_GUIDES);
+                    guideSize = guides.getHeight();
+                } catch (Throwable t) {
+                    // ignore
+                }
+            }
+
+        } else {
+
+            // no spots at all
+            Config.zoomSpotsMode = Config.guideSpotsMode = 0;
         }
     }
 
@@ -710,10 +728,10 @@ public final class NavigationScreens {
         double l = Math.abs(value);
         int h = (int) Math.floor(l);
         l -= h;
-        l *= 60D;
+        l *= 60;
         int m = (int) Math.floor(l);
         l -= m;
-        l *= 60D;
+        l *= 60;
         int s = (int) Math.floor(l);
         int ss = 0;
 
@@ -767,10 +785,10 @@ public final class NavigationScreens {
         double l = Math.abs(value);
         int h = (int) Math.floor(l);
         l -= h;
-        l *= 60D;
+        l *= 60;
         int m = (int) Math.floor(l);
         l -= m;
-        l *= 1000D;
+        l *= 1000;
         int dec = (int) Math.floor(l);
         if ((l - dec) > 0.5D) {
             dec++;
@@ -807,8 +825,8 @@ public final class NavigationScreens {
                                            final double value, final boolean hp) {
         double l = Math.abs(value);
         int h = (int) Math.floor(l);
-        l -= h;
-        l *= 1000000D;
+        l *= 1000000;
+        l -= h * 1000000;
         int hh = (int) Math.floor(l);
 
         if (type == QualifiedCoordinates.LON && h < 100) {
@@ -818,6 +836,11 @@ public final class NavigationScreens {
             sb.append('0');
         }
         append(sb, h).append('.');
+        int lz = 10;
+        while ((hh * lz) < 1000000) {
+            sb.append('0');
+            lz *= 10;
+        }
         append(sb, hh).append(SIGN);
 
         return sb;

@@ -215,7 +215,11 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         // initial launch?
         if (state == 0) {
             state = 1;
+//#ifndef __CN1__
             (new Thread(this)).start();
+//#else
+            api.lang.ThreadPool.QueueUserWorkItem(this);
+//#endif
         } else if (state == 2) { // resumed from background
             state = 1;
 //#if __ANDROID__ || __CN1__
@@ -344,11 +348,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
 
 //#ifdef __LOG__
     public static boolean isLogEnabled() {
-//#ifndef __CN1__
         return logEnabled;
-//#else
-        return true;
-//#endif
     }
 //#endif
 

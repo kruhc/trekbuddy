@@ -89,14 +89,14 @@ public final class SimulatorLocationProvider
         // yes, thread is always started
         if (url == null) {
 //#ifdef __LOG__
-            if (log.isEnabled()) log.info("simulator task cancelled");
+            if (log.isEnabled()) log.debug("simulator task cancelled");
 //#endif
             notifyListener(LocationProvider.OUT_OF_SERVICE);
             return;
         }
 
 //#ifdef __LOG__
-        if (log.isEnabled()) log.info("simulator task starting; file: " + url);
+        if (log.isEnabled()) log.debug("simulator task starting; file: " + url);
 //#endif
 
         // statistics
@@ -122,7 +122,7 @@ public final class SimulatorLocationProvider
 
                 } catch (Throwable t) {
 //#ifdef __LOG__
-                    if (log.isEnabled()) log.warn("Failed to get location.", t);
+                    if (log.isEnabled()) log.debug("Failed to get location.", t);
                     t.printStackTrace();
 //#endif
 
@@ -160,7 +160,7 @@ public final class SimulatorLocationProvider
 
         } catch (Throwable t) {
 //#ifdef __LOG__
-            if (log.isEnabled()) log.warn("I/O error? ", t);
+            if (log.isEnabled()) log.debug("I/O error? ", t);
             t.printStackTrace();
 //#endif
 
@@ -182,7 +182,7 @@ public final class SimulatorLocationProvider
         }
 
 //#ifdef __LOG__
-        if (log.isEnabled()) log.info("simulator task ended");
+        if (log.isEnabled()) log.debug("simulator task ended");
 //#endif
     }
 }

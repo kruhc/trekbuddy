@@ -4,11 +4,8 @@ package cz.kruch.track.location;
 
 import api.location.QualifiedCoordinates;
 import api.location.Location;
-import api.file.File;
-import api.io.BufferedOutputStream;
 
 import java.io.IOException;
-import java.io.OutputStream;
 import java.util.Date;
 import java.util.Calendar;
 import java.util.TimeZone;
@@ -19,8 +16,6 @@ import java.util.Vector;
 
 import org.kxml2.io.HXmlSerializer;
 
-import javax.microedition.io.Connector;
-
 import cz.kruch.track.configuration.Config;
 import cz.kruch.track.event.Callback;
 import cz.kruch.track.ui.NavigationScreens;
@@ -28,13 +23,13 @@ import cz.kruch.track.Resources;
 import cz.kruch.track.util.NmeaParser;
 
 /**
- * GPX.
+ * GPX Tracklog.
  *
  * @author kruhc@seznam.cz
  */
-public final class GpxTracklog implements Runnable {
+public final class GpxTracklog extends Tracklog {
 //#ifdef __LOG__
-    private static final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("Gpx");
+    private static final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("GpxTracklog");
 //#endif
 
     private static final String DEFAULT_NAMESPACE   = null; // this is wrong but KXML handles it well :-)
@@ -62,9 +57,6 @@ public final class GpxTracklog implements Runnable {
 
     public static final int LOG_WPT = 0;
     public static final int LOG_TRK = 1;
-
-    public static final int CODE_RECORDING_STOP    = 0;
-    public static final int CODE_RECORDING_START   = 1;
 
     private static final String ELEMENT_GPX             = "gpx";
     private static final String ELEMENT_TRK             = "trk";
@@ -137,10 +129,8 @@ public final class GpxTracklog implements Runnable {
     private final StringBuffer sb;
     private final char[] sbChars;
     
-    private Callback callback;
     private String creator;
-    private String url, fileDate, fileName, filePrefix;
-    private long time;
+    private String filePrefix;
     private int type;
 
     private Object queue;
@@ -150,20 +140,18 @@ public final class GpxTracklog implements Runnable {
     private Location refLocation;
     private float refCourse, courseDeviation;
     private int /*imgNum, */ptCount;
-    private volatile int onhold;
-    private boolean force;
 
-    private File file;
+    private volatile int onhold;
+    private volatile boolean force;
+
     private HXmlSerializer serializer;
 
     private Thread thread;
 
     public GpxTracklog(int type, Callback callback, String creator, long time) {
+        super(callback, time);
         this.type = type;
-        this.callback = callback;
         this.creator = creator;
-        this.time = time;
-        this.fileDate = dateToFileDate(time);
 /*
         this.tzOffset = tzOffset(calendar);
 */
@@ -173,102 +161,57 @@ public final class GpxTracklog implements Runnable {
         this.sbChars = new char[32];
     }
 
-    public long getTime() {
-        return time;
+    public void setFilePrefix(String filePrefix) {
+        this.filePrefix = filePrefix;
     }
-
-    public String getCreator() {
-        return creator;
-    }
-
+    
+    /** @Override */
     public String getDefaultFileName() {
         final StringBuffer sb = getSb();
         if (filePrefix != null) {
             sb.append(filePrefix);
         }
-        return sb.append(fileDate).append(".gpx").toString();
+        return sb.append(dateToFileDate(fileTime)).append(".gpx").toString();
     }
 
-    public String getFileName() {
-        return fileName;
+    /** @Override */
+    protected String getFileFolder() {
+        return type == LOG_TRK ? Config.FOLDER_TRACKS : Config.FOLDER_WPTS;
     }
 
-    public String getURL() {
-        return url;
-    }
-
-    public void setFilePrefix(String filePrefix) {
-        this.filePrefix = filePrefix;
-    }
-
-    public void setFileName(String fileName) {
-        this.fileName = fileName;
-    }
-
-    public boolean isAlive() {
-        if (thread != null) {
-            return thread.isAlive();
-        }
-        return false;
-    }
-
+    /** @Override */
     public void start() {
         go = true;
-        thread = new Thread(this, "[TrekBuddy] GPX tracklog");
+        thread = new Thread(this, "[TrekBuddy] Tracklog");
         thread.start();
     }
 
-    public void join() throws InterruptedException {
+    /** @Override */
+    public void stop() {
         if (thread != null) {
-            thread.join();
-        }
-    }
-
-    public void shutdown() {
-//#ifdef __LOG__
-        if (log.isEnabled()) log.debug("shutdown");
-//#endif
-        synchronized (this) {
-            go = false;
-            notify();
-        }
-    }
-
-    public Throwable open() {
-        
-        // local vars
-        Throwable throwable = null;
-
-        // construct path
-        if (fileName == null) {
-            fileName = getDefaultFileName();
-        }
-        url = Config.getFileURL(type == LOG_TRK ? Config.FOLDER_TRACKS : Config.FOLDER_WPTS, fileName);
-
-        // try to open and create a file - isolated operation
-        try {
-            file = File.open(url, Connector.READ_WRITE);
-            if (file.exists()) {
-                file.delete();
+            synchronized (this) {
+                go = false;
+                notify();
             }
-            file.create();
-//#ifdef __LOG__
-            if (log.isEnabled()) log.debug("file created");
-//#endif
-        } catch (Exception e) {
-            throwable = e;
-//#ifdef __LOG__
-            if (log.isEnabled()) log.error("failed to open file: " + e);
-//#endif
-            // cleanup - safe operation
-            close();
+            try {
+                thread.join();
+            } catch (InterruptedException e) {
+                // should not happen
+            }
+            thread = null;
         }
+    }
+
+    /** @Override */
+    public Throwable open() {
+
+        // open file
+        Throwable throwable = super.open();
 
         // file ready?
         if (throwable == null) {
+
             try {
-                // output stream
-                final OutputStream output = new BufferedOutputStream(file.openOutputStream(), 4096, true);
 
                 // init serializer
                 final HXmlSerializer serializer = this.serializer = new HXmlSerializer();
@@ -303,6 +246,8 @@ public final class GpxTracklog implements Runnable {
                 if (log.isEnabled()) log.debug("output ready...");
 //#endif
             } catch (Exception e) {
+
+                // result
                 throwable = e;
 //#ifdef __LOG__
                 if (log.isEnabled()) log.debug("write prolog failed: " + e);
@@ -315,6 +260,7 @@ public final class GpxTracklog implements Runnable {
         return throwable;
     }
 
+    /** @Override */
     public void close() {
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("close; " + serializer);
@@ -354,11 +300,17 @@ public final class GpxTracklog implements Runnable {
         }
 
         // close file
-        File.closeQuietly(file);
-        file = null; // gc hint
+        super.close();
     }
 
+    /** @Override */
     public void run() {
+
+        // executed as flusher task?
+        if (flusher == this) {
+            insert(Boolean.FALSE);
+            return;
+        }
 
         // open
         final Throwable status = open();
@@ -369,7 +321,7 @@ public final class GpxTracklog implements Runnable {
 //#ifdef __LOG__
                 if (log.isEnabled()) log.debug("starting flusher");
 //#endif
-                cz.kruch.track.ui.Desktop.schedule(flusher = new Flusher(this), 60000L, 60000L);
+                cz.kruch.track.ui.Desktop.schedule(flusher = this, 60000L, 60000L);
             }
 
 //#ifdef __LOG__
@@ -378,9 +330,10 @@ public final class GpxTracklog implements Runnable {
             // signal recording start
             callback.invoke(new Integer(CODE_RECORDING_START), null, this);
 
-            // pop items until end
+            // process items until end
             while (true) {
 
+                // pop item
                 final Object item;
                 synchronized (this) {
                     while (go && queue == null) {
@@ -396,6 +349,7 @@ public final class GpxTracklog implements Runnable {
                         break;
                 }
 
+                // handle item
                 try {
 
                     if (item instanceof Location) {
@@ -430,10 +384,11 @@ public final class GpxTracklog implements Runnable {
 
                 } catch (Throwable t) {
 //#ifdef __LOG__
-                    if (log.isEnabled()) log.error("loop error: " + t);
+                    log.error("loop error: " + t);
 //#endif
                     // quit loop
                     go = false;
+
                     // signal fatal error
                     callback.invoke(null, t, this);
                 }
@@ -457,7 +412,7 @@ public final class GpxTracklog implements Runnable {
         } else {
 
             // signal failure
-            callback.invoke(Resources.getString(Resources.DESKTOP_MSG_START_TRACKLOG_FAILED)+ ": " + url, status, this);
+            callback.invoke(Resources.getString(Resources.DESKTOP_MSG_START_TRACKLOG_FAILED)+ ": " + getURL(), status, this);
 
         }
     }
@@ -557,49 +512,47 @@ public final class GpxTracklog implements Runnable {
         /*
          * extensions - nmea:rmc, nmea:xdr and gsm
          */
-        final float course = l.getCourse();
-        final float speed = l.getSpeed();
-//#ifdef __ANDROID__
-//#ifndef __BACKPORT__
-        final int bpm = cz.kruch.track.sensor.ANTPlus.getInstance().getSensorBPM();
-//#else
-        final int bpm = -1;
+        if (Config.gpxAllowExtensions) {
+            final float course = l.getCourse();
+            final float speed = l.getSpeed();
+//#ifndef __ANDROID__
+            final boolean specCondition = !Float.isNaN(course) || !Float.isNaN(speed) || l.isXdrBound();
+//#elifndef __BACKPORT__ // Android 2+
+            final int bpm = cz.kruch.track.sensor.ANTPlus.getInstance().getSensorBPM();
+            final boolean specCondition = !Float.isNaN(course) || !Float.isNaN(speed) || l.isXdrBound() || bpm > -1;
 //#endif
-        if (!Float.isNaN(course) || !Float.isNaN(speed) || l.isXdrBound() || Config.gpxGsmInfo || bpm > -1)
-//#else
-        if (!Float.isNaN(course) || !Float.isNaN(speed) || l.isXdrBound() || Config.gpxGsmInfo)
+            if (specCondition || Config.gpxGsmInfo) {
+                serializer.startTag(DEFAULT_NAMESPACE, ELEMENT_EXTENSIONS);
+//#ifdef __ANDROID__ && !__BACKPORT__ 
+                if (bpm > -1) {
+                    serializer.startTag(GARMIN_EXT_NAMESPACE, ELEMENT_TRKPTEXT);
+                    serializeElement(serializer, (new Integer(bpm)).toString(), GARMIN_EXT_NAMESPACE, ELEMENT_HR);
+                    serializer.endTag(GARMIN_EXT_NAMESPACE, ELEMENT_TRKPTEXT);
+                }
 //#endif
-        {
-            serializer.startTag(DEFAULT_NAMESPACE, ELEMENT_EXTENSIONS);
-//#ifdef __ANDROID__
-            if (bpm > -1) {
-                serializer.startTag(GARMIN_EXT_NAMESPACE, ELEMENT_TRKPTEXT);
-                serializeElement(serializer, (new Integer(bpm)).toString(), GARMIN_EXT_NAMESPACE, ELEMENT_HR);
-                serializer.endTag(GARMIN_EXT_NAMESPACE, ELEMENT_TRKPTEXT);
-            }
-//#endif
-            if (!Float.isNaN(course)) {
-                serializer.startTag(NMEA_NAMESPACE, ELEMENT_COURSE);
-                i = doubleToChars(course, 1);
-                serializer.text(sbChars, 0, i);
-                serializer.endTag(NMEA_NAMESPACE, ELEMENT_COURSE);
-            }
-            if (!Float.isNaN(speed)) {
-                serializer.startTag(NMEA_NAMESPACE, ELEMENT_SPEED);
-                i = doubleToChars(speed, 1);
-                serializer.text(sbChars, 0, i);
-                serializer.endTag(NMEA_NAMESPACE, ELEMENT_SPEED);
-            }
+                if (!Float.isNaN(course)) {
+                    serializer.startTag(NMEA_NAMESPACE, ELEMENT_COURSE);
+                    i = doubleToChars(course, 1);
+                    serializer.text(sbChars, 0, i);
+                    serializer.endTag(NMEA_NAMESPACE, ELEMENT_COURSE);
+                }
+                if (!Float.isNaN(speed)) {
+                    serializer.startTag(NMEA_NAMESPACE, ELEMENT_SPEED);
+                    i = doubleToChars(speed, 1);
+                    serializer.text(sbChars, 0, i);
+                    serializer.endTag(NMEA_NAMESPACE, ELEMENT_SPEED);
+                }
 //#ifdef __NMEA_XDR__
-            if (l.isXdrBound()) {
-                serializeXdr(serializer);
-            }
+                if (l.isXdrBound()) {
+                    serializeXdr(serializer);
+                }
 //#endif
-            if (Config.gpxGsmInfo) {
-                serializeElement(serializer, cz.kruch.track.ui.nokia.DeviceControl.getGsmCellId(), GSM_NAMESPACE, ELEMENT_CELLID);
-                serializeElement(serializer, cz.kruch.track.ui.nokia.DeviceControl.getGsmLac(), GSM_NAMESPACE, ELEMENT_LAC);
+                if (Config.gpxGsmInfo) {
+                    serializeElement(serializer, cz.kruch.track.ui.nokia.DeviceControl.getGsmCellId(), GSM_NAMESPACE, ELEMENT_CELLID);
+                    serializeElement(serializer, cz.kruch.track.ui.nokia.DeviceControl.getGsmLac(), GSM_NAMESPACE, ELEMENT_LAC);
+                }
+                serializer.endTag(DEFAULT_NAMESPACE, ELEMENT_EXTENSIONS);
             }
-            serializer.endTag(DEFAULT_NAMESPACE, ELEMENT_EXTENSIONS);
         }
         serializer.endTag(DEFAULT_NAMESPACE, ELEMENT_TRKPT);
     }
@@ -699,11 +652,14 @@ public final class GpxTracklog implements Runnable {
                 serializer.endTag(DEFAULT_NAMESPACE, ELEMENT_LINK);
             }
         }
-        if (wpt.getUserObject() instanceof GroundspeakBean) {
-            if (((GroundspeakBean) wpt.getUserObject()).isParsed()) {
-                serializer.startTag(DEFAULT_NAMESPACE, ELEMENT_EXTENSIONS);
-                serializeGs((GroundspeakBean) wpt.getUserObject());
-                serializer.endTag(DEFAULT_NAMESPACE, ELEMENT_EXTENSIONS);
+        if (Config.gpxAllowExtensions) {
+            if (wpt.getUserObject() instanceof GroundspeakBean) {
+                final GroundspeakBean groundspeakBean = (GroundspeakBean) wpt.getUserObject();
+                if (groundspeakBean.isParsed()) {
+                    serializer.startTag(DEFAULT_NAMESPACE, ELEMENT_EXTENSIONS);
+                    serializeGs(groundspeakBean);
+                    serializer.endTag(DEFAULT_NAMESPACE, ELEMENT_EXTENSIONS);
+                }
             }
         }
         serializer.endTag(DEFAULT_NAMESPACE, ELEMENT_WPT);
@@ -946,20 +902,6 @@ public final class GpxTracklog implements Runnable {
         return sb.delete(0, sb.length());
     }
 
-    public static String dateToFileDate(final long time) {
-        final Calendar calendar = Calendar.getInstance(TimeZone.getDefault());
-        calendar.setTime(new Date(time));
-        final StringBuffer sb = new StringBuffer(32);
-        NavigationScreens.append(sb, calendar.get(Calendar.YEAR));
-        appendTwoDigitStr(sb, calendar.get(Calendar.MONTH) + 1);
-        appendTwoDigitStr(sb, calendar.get(Calendar.DAY_OF_MONTH)).append('-');
-        appendTwoDigitStr(sb, calendar.get(Calendar.HOUR_OF_DAY));
-        appendTwoDigitStr(sb, calendar.get(Calendar.MINUTE));
-        appendTwoDigitStr(sb, calendar.get(Calendar.SECOND));
-
-        return sb.toString();
-    }
-
 /*
     private static String tzOffset(final Calendar calendar) {
         final int tOffset = calendar.getTimeZone().getRawOffset();
@@ -976,15 +918,6 @@ public final class GpxTracklog implements Runnable {
     }
 */
 
-    private static StringBuffer appendTwoDigitStr(final StringBuffer sb, final int i) {
-        if (i < 10) {
-            sb.append('0');
-        }
-        NavigationScreens.append(sb, i);
-
-        return sb;
-    }
-
     private static StringBuffer appendFractional(final StringBuffer sb, int i) {
         int f = i / 100;
         sb.append(f);
@@ -999,22 +932,5 @@ public final class GpxTracklog implements Runnable {
         }
 
         return sb;
-    }
-
-    private static final class Flusher extends TimerTask {
-
-        private GpxTracklog tracklog;
-
-        /* to avoid $1 */
-        public Flusher(GpxTracklog tracklog) {
-            this.tracklog = tracklog;
-        }
-
-        public void run() {
-//#ifdef __LOG__
-            if (log.isEnabled()) log.debug("trigger flush at " + new Date());
-//#endif
-            tracklog.insert(Boolean.FALSE);
-        }
     }
 }

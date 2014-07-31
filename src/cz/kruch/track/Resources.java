@@ -191,6 +191,7 @@ public final class Resources {
     public static final short NAV_ITEM_TRACKS                   = 2106;
     public static final short NAV_ITEM_FIELD_NOTES              = 2107;
     public static final short NAV_ITEM_PROJECT_NEW              = 2108;
+    public static final short NAV_ITEM_END_SESSION              = 2109;
     /* navigation - messages */
     public static final short NAV_MSG_LOAD_INJAR_FAILED         = 2300;
     public static final short NAV_MSG_LIST_STORES_FAILED        = 2301;
@@ -329,6 +330,7 @@ public final class Resources {
     public static final short CFG_DESKTOP_FLD_MODE_CUSTOM       = 3535;
     public static final short CFG_DESKTOP_FLD_MAP_PRESCALE      = 3536;
     public static final short CFG_DESKTOP_FLD_FORCE_TF_FOCUS    = 3537;
+    public static final short CFG_DESKTOP_FLD_FIXED_CROSSHAIR   = 3538;
     /* settings - Location */
     public static final short CFG_LOCATION_GROUP_PROVIDER       = 3600;
     public static final short CFG_LOCATION_GROUP_TRACKLOG       = 3601;
@@ -358,10 +360,11 @@ public final class Resources {
     public static final short CFG_LOCATION_FLD_NEGATIVE_ALT_FIX = 3625;
     public static final short CFG_LOCATION_FLD_NMEA_MS_ROUNDING = 3626;
     public static final short CFG_LOCATION_FLD_ASSISTED_GPS     = 3627;
-    public static final short CFG_LOCATION_FLD_DO_SERVICE_SEARCH = 3628;
+    public static final short CFG_LOCATION_FLD_DO_SERVICE_SEARCH    = 3628;
     public static final short CFG_LOCATION_GROUP_POWER          = 3629;
     public static final short CFG_LOCATION_FLD_ADDRESS_FIX      = 3630;
     public static final short CFG_LOCATION_FLD_TIME_FIX         = 3631;
+    public static final short CFG_LOCATION_FLD_GPX_ALLOW_EXTENSIONS = 3632;
     /* settings - navigation */
     public static final short CFG_NAVIGATION_FLD_WPT_PROXIMITY  = 3700;
     public static final short CFG_NAVIGATION_FLD_POI_PROXIMITY  = 3701;

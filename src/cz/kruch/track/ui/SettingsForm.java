@@ -210,6 +210,7 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
             append(choice1, Resources.CFG_DESKTOP_FLD_HPS_WPT_TRUE_AZI);
             append(choice1, Resources.CFG_DESKTOP_FLD_EASYZOOM_VOLUME);
             append(choice1, Resources.CFG_DESKTOP_FLD_FORCE_TF_FOCUS);
+            append(choice1, Resources.CFG_DESKTOP_FLD_FIXED_CROSSHAIR);
             choice1.setSelectedFlags(new boolean[] {
                 Config.fullscreen,
                 Config.safeColors,
@@ -221,7 +222,8 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
                 Config.decimalPrecision,
                 Config.hpsWptTrueAzimuth,
                 Config.easyZoomVolumeKeys,
-                Config.forceTextFieldFocus
+                Config.forceTextFieldFocus,
+                Config.fixedCrosshair
             });
 //#else
             append(choice1, Resources.CFG_DESKTOP_FLD_SAFE_COLORS);
@@ -232,6 +234,7 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
             append(choice1, Resources.CFG_DESKTOP_FLD_HPS_WPT_TRUE_AZI);
             append(choice1, Resources.CFG_DESKTOP_FLD_EASYZOOM_VOLUME);
             append(choice1, Resources.CFG_DESKTOP_FLD_FORCE_TF_FOCUS);
+            append(choice1, Resources.CFG_DESKTOP_FLD_FIXED_CROSSHAIR);
             choice1.setSelectedFlags(new boolean[] {
                 Config.safeColors,
                 Config.noSounds,
@@ -240,7 +243,8 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
                 Config.decimalPrecision,
                 Config.hpsWptTrueAzimuth,
                 Config.easyZoomVolumeKeys,
-                Config.forceTextFieldFocus
+                Config.forceTextFieldFocus,
+                Config.fixedCrosshair
             });
 //#endif
             submenu.append(choice1);
@@ -514,6 +518,7 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
             choice3.append("8K", null);
             choice3.append("16K", null);
             choice3.append("32K", null);
+            choice3.append("64K", null);
             int ibs = (Config.inputBufferSize / 4096) >> 1, ibsi = 0;
             while (ibs > 0) {
                 ibs >>= 1;
@@ -590,10 +595,12 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
                 append(choiceGpx, Resources.CFG_LOCATION_FLD_GPX_LOG_VALID);
                 append(choiceGpx, Resources.CFG_LOCATION_FLD_GPX_LOG_GSM);
                 append(choiceGpx, Resources.CFG_LOCATION_FLD_GPX_LOG_TIME_MS);
+                append(choiceGpx, Resources.CFG_LOCATION_FLD_GPX_ALLOW_EXTENSIONS);
                 choiceGpx.setSelectedFlags(new boolean[] {
                     Config.gpxOnlyValid,
                     Config.gpxGsmInfo,
-                    Config.gpxSecsDecimal
+                    Config.gpxSecsDecimal,
+                    Config.gpxAllowExtensions
                 });
 
                 fieldGpxDt = new TextField("GPX dt (s)", Integer.toString(Config.gpxDt), 5, /*TextField.*/NUMERIC);
@@ -971,6 +978,7 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
                     Config.gpxOnlyValid = opts[0];
                     Config.gpxGsmInfo = opts[1];
                     Config.gpxSecsDecimal = opts[2];
+                    Config.gpxAllowExtensions = opts[3];
                     Config.gpxDt = getInt(fieldGpxDt);
                     Config.gpxDs = getInt(fieldGpxDs);
                 }
@@ -1032,6 +1040,7 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
                 Config.hpsWptTrueAzimuth = desktop[8];
                 Config.easyZoomVolumeKeys = desktop[9];
                 Config.forceTextFieldFocus = desktop[10];
+                Config.fixedCrosshair = desktop[11];
 //#else
                 Config.safeColors = desktop[0];
                 Config.noSounds = desktop[1];
@@ -1041,6 +1050,7 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
                 Config.hpsWptTrueAzimuth = desktop[5];
                 Config.easyZoomVolumeKeys = desktop[6];
                 Config.forceTextFieldFocus = desktop[7];
+                Config.fixedCrosshair = desktop[8];
 //#endif
 
                 // OSD

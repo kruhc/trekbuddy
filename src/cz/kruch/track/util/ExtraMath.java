@@ -80,6 +80,16 @@ public final class ExtraMath {
         return net.rim.device.api.util.MathUtilities.pow(arg1, arg2);
     }
 
+//#elifdef __CN1__
+
+    public static double ln(double value) {
+        throw new RuntimeException("override");
+    }
+
+    public static double pow(final double arg1, final double arg2) {
+        throw new RuntimeException("override");
+    }
+
 //#else
 
     private static final double[] N = {
@@ -242,7 +252,25 @@ public final class ExtraMath {
     public static double acos(final double arg) {
         return net.rim.device.api.util.MathUtilities.acos(arg);
     }
-    
+
+//#elifdef __CN1__
+
+    public static double atan(final double arg) {
+        throw new RuntimeException("override");
+    }
+
+    public static double atan2(double arg1, final double arg2) {
+        throw new RuntimeException("override");
+    }
+
+    public static double asin(double arg) {
+        throw new RuntimeException("override");
+    }
+
+    public static double acos(final double arg) {
+        throw new RuntimeException("override");
+    }
+
 //#else
 
     // constants

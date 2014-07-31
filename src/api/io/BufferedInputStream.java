@@ -36,11 +36,19 @@ import java.io.IOException;
  *
  * @see BufferedOutputStream
  */
-public class BufferedInputStream extends InputStream {
+public class BufferedInputStream
+//#ifndef __CN1__
+            extends InputStream
+//#else
+            extends FilterInputStream
+//#endif
+                                      {
     /***
      * The source input stream that is buffered.
      */
+//#ifndef __CN1__
     protected volatile InputStream in;
+//#endif
 
     /**
      * The buffer containing the current bytes read from the target InputStream.
@@ -76,7 +84,11 @@ public class BufferedInputStream extends InputStream {
      * @param in the InputStream the buffer reads from.
      */
     public BufferedInputStream(InputStream in) {
+//#ifndef __CN1__
         this.in = in;
+//#else
+        super(in);
+//#endif
         this.buf = new byte[8192];
     }
 
@@ -90,7 +102,11 @@ public class BufferedInputStream extends InputStream {
      * @throws IllegalArgumentException if {@code size < 0}.
      */
     public BufferedInputStream(InputStream in, int size) {
+//#ifndef __CN1__
         this.in = in;
+//#else
+        super(in);
+//#endif
         if (size <= 0) {
             // K0058=size must be > 0
             throw new IllegalArgumentException("Size must be > 0"); //$NON-NLS-1$
@@ -132,11 +148,15 @@ public class BufferedInputStream extends InputStream {
 /* // HACK
         buf = null;
 */
+//#ifndef __CN1__
         InputStream localIn = in;
         in = null;
         if (localIn != null) {
             localIn.close();
         }
+//#else
+        super.close();
+//#endif
     }
 
     private int fillbuf(InputStream localIn, byte[] localBuf)
@@ -429,8 +449,12 @@ public class BufferedInputStream extends InputStream {
      * @return this
      */
     public InputStream setInputStream(InputStream in) {
+//#ifndef __CN1__
         this.in = null; // gc hint
         this.in = in;
+//#else
+        super.setInputStream(in);
+//#endif
         pos = count = marklimit = 0;
         markpos = -1;
         return this;

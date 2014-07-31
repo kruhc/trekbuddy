@@ -761,7 +761,7 @@ final class MapViewer {
         final Map map = this.map;
 
         // clear bg
-        if (Config.oneTileScroll || map.getWidth() < Desktop.width || map.getHeight() < Desktop.height) {
+        if (Config.oneTileScroll || map.getWidth() < Desktop.width || map.getHeight() < Desktop.height || chx != chx0 || chy != chy0) {
             graphics.setColor(0x0);
             graphics.fillRect(0, 0, Desktop.width, Desktop.height);
         } else if (map.isVirtual()) {
@@ -806,12 +806,20 @@ final class MapViewer {
         final int crosshairSize2 = this.crosshairSize2;
 
         // paint crosshair
+        final int csx, csy;
+        if (Config.fixedCrosshair) {
+            csx = chx0;
+            csy = chy0;
+        } else {
+            csx = chx;
+            csy = chy;
+        }
 //#ifdef __ALT_RENDERER__
         if (Config.S60renderer) { // S60 renderer
 //#endif
-            graphics.setClip(chx, chy, crosshairSize, crosshairSize);
+            graphics.setClip(csx, csy, crosshairSize, crosshairSize);
             graphics.drawImage(NavigationScreens.crosshairs,
-                               chx - ci * crosshairSize, chy,
+                               csx - ci * crosshairSize, csy,
                                Graphics.TOP | Graphics.LEFT);
             graphics.setClip(0, 0, Desktop.width, Desktop.height);
 //#ifdef __ALT_RENDERER__
@@ -819,7 +827,7 @@ final class MapViewer {
             graphics.drawRegion(NavigationScreens.crosshairs,
                                 ci * crosshairSize, 0, crosshairSize, crosshairSize,
                                 Sprite.TRANS_NONE,
-                                chx, chy, Graphics.TOP | Graphics.LEFT);
+                                csx, csy, Graphics.TOP | Graphics.LEFT);
         }
 //#endif        
 
@@ -828,8 +836,8 @@ final class MapViewer {
         if (!Float.isNaN(course)) {
             NavigationScreens.drawArrow(NavigationScreens.ARROW_COURSE,
                                         graphics, course,
-                                        chx + crosshairSize2,
-                                        chy + crosshairSize2,
+                                        csx + crosshairSize2,
+                                        csy + crosshairSize2,
                                         Graphics.TOP | Graphics.LEFT);
         }
 
@@ -838,8 +846,8 @@ final class MapViewer {
         if (!Float.isNaN(course2)) {
             NavigationScreens.drawArrow(NavigationScreens.ARROW_NAVI,
                                         graphics, course2,
-                                        chx + crosshairSize2,
-                                        chy + crosshairSize2,
+                                        csx + crosshairSize2,
+                                        csy + crosshairSize2,
                                         Graphics.TOP | Graphics.LEFT);
         }
 
@@ -1120,12 +1128,19 @@ final class MapViewer {
 
         if (w > 0 && h > 0) {
             if (img != Slice.NO_IMAGE) {
+                final int fchx, fchy;
+                if (Config.fixedCrosshair) {
+                    fchx = chx - chx0;
+                    fchy = chy - chy0;
+                } else {
+                    fchx = fchy = 0;
+                }
 //#ifdef __ALT_RENDERER__
                 if (Config.S60renderer) { // S60 renderer
 //#endif
                     graphics.drawImage(img,
-                                       - x_src + x_dest,
-                                       - y_src + y_dest,
+                                       - x_src + x_dest - fchx,
+                                       - y_src + y_dest - fchy,
                                        Graphics.TOP | Graphics.LEFT);
 //#ifdef __ALT_RENDERER__
                 } else {
@@ -1212,7 +1227,7 @@ final class MapViewer {
         }
 
         // draw line from last trailpoint to current position
-        if (!Desktop.browsing && Desktop.synced) {
+        if (Desktop.synced && !Desktop.browsing) {
             final Position p0 = arrayXY[idx0];
             final int x0 = p0.getX() - x;
             final int y0 = p0.getY() - y;
@@ -1546,7 +1561,7 @@ final class MapViewer {
                         }
                     } else {
 //#ifdef __LOG__
-                        if (log.isEnabled()) log.error("Out of map - no tile for " + _x + "-" + _y);
+                        log.error("Out of map - no tile for " + _x + "-" + _y);
 //#endif
                         throw new IllegalStateException("Out of map - no tile for " + _x + "-" + _y);
                     }

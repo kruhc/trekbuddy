@@ -107,6 +107,7 @@ final class TarLoader extends Map.Loader /*implements Atlas.Loader*/ {
                     Map.networkInputStreamAvailable = true;
                 } catch (Exception e) { // IOE or SE = service not running/available
                     Map.networkInputStreamAvailable = false;
+                    Map.networkInputStreamError = e.toString();
                 }
             }
 //#endif
@@ -126,7 +127,11 @@ final class TarLoader extends Map.Loader /*implements Atlas.Loader*/ {
             }
 
             // debug info
+//#ifndef __CN1__
             Map.fileInputStreamClass = in.getClass().getName();
+//#else
+            Map.fileInputStreamClass = in.toString(); // see InputStreamWrapper.cs
+//#endif
 
             /*
             * test quality of File API
@@ -185,85 +190,76 @@ final class TarLoader extends Map.Loader /*implements Atlas.Loader*/ {
             */
 
             // try tar metainfo file first
-            if (pointers == null) {
+            if (calEntryName == null || pointers == null) {
                 loadTmc(map);
             }
-            if (pointers == null) {
+            if (calEntryName == null || pointers == null) {
                 loadTmi(map);
             }
 
             // open tar inputstream
             tarIn = new TarInputStream(in);
 
-            // do not have calibration or slices yet
-            if (getMapCalibration() == null || pointers == null) {
+            /*
+             * NOTE: map from atlas has calibration but not pointers nor calibration entry info
+             */
+
+            // have no meta yet
+            if (calEntryName == null || pointers == null) {
 
                 // local ref
                 final String path = map.getPath();
 
-                // changes during loading - we need to remember initial state
-                final boolean gotSlices = pointers != null;
+                // iterate over tar
+                TarEntry entry = tarIn.getNextEntry();
+                while (entry != null) {
+
+                    // get entry name
+                    final CharArrayTokenizer.Token entryName = entry.getName();
+
+                    // slice
+                    if (entryName.startsWith(SET_DIR_PREFIX)
+                        && (entryName.endsWith(EXT_PNG) || entryName.endsWith(EXT_JPG))) {
+
+                        // add slice
+                        registerSlice(entryName, (int) (entry.getPosition() / TarInputStream.DEFAULT_RCDSIZE));
+
+                    } else if (calEntryName == null
+                        && Calibration.isCalibration(entryName)) { // calibration
 //#ifdef __LOG__
-                if (log.isEnabled()) log.debug("calibration or slices missing; " + gotSlices);
+                        if (log.isEnabled()) log.debug("do not have calibration yet");
 //#endif
-
-                // need only calibration?
-                if (gotSlices && calEntryName != null) {
-//#ifdef __LOG__
-                    if (log.isEnabled()) log.debug("calibration " + calEntryName + " is at block " + calBlockOffset);
-//#endif
-
-                    // skip to calibration
-                    if (calBlockOffset > 0) {
-                        tarIn.skip(calBlockOffset * TarInputStream.DEFAULT_RCDSIZE);
-                    }
-                    tarIn.getNextEntry();
-
-                    // try this root entry as a calibration
-                    map.setCalibration(Calibration.newInstance(tarIn, path, calEntryName));
-
-                } else { // do a full scan
-
-                    // iterate over tar
-                    TarEntry entry = tarIn.getNextEntry();
-                    while (entry != null) {
-
-                        // get entry name
-                        final CharArrayTokenizer.Token entryName = entry.getName();
-
-                        if (!gotSlices && entryName.startsWith(SET_DIR_PREFIX)
-                            && (entryName.endsWith(EXT_PNG) || entryName.endsWith(EXT_JPG))) { // slice
-
-                            // add slice
-                            registerSlice(entryName, (int) (entry.getPosition() / TarInputStream.DEFAULT_RCDSIZE));
-
-                        } else if (entryName.indexOf(File.PATH_SEPCHAR) == -1
-                            && getMapCalibration() == null) { // no calibration yet
-//#ifdef __LOG__
-                            if (log.isEnabled()) log.debug("do not have calibration yet");
-//#endif
-                            // try this root entry as a calibration
+                        // try entry as a calibration
+                        if (getMapCalibration() == null) {
                             map.setCalibration(Calibration.newInstance(tarIn, path, entryName.toString()));
-
-                            // remember
-                            calEntryName = entryName.toString();
-                            calBlockOffset = (int)(entry.getPosition() / TarInputStream.DEFAULT_RCDSIZE);
-
-                            // skip the rest if we already have them
-                            if (gotSlices && getMapCalibration() != null) {
-//#ifdef __LOG__
-                                if (log.isEnabled()) log.debug("calibration is all we need");
-//#endif
-                                break;
-                            }
                         }
 
-                        // next
-                        entry = tarIn.getNextEntry();
+                        // remember
+                        calEntryName = entryName.toString();
+                        calBlockOffset = (int)(entry.getPosition() / TarInputStream.DEFAULT_RCDSIZE);
                     }
+
+                    // next
+                    entry = tarIn.getNextEntry();
                 }
             }
 
+            // load calibration for single map
+            if (getMapCalibration() == null) {
+
+                // local ref
+                final String path = map.getPath();
+
+                // skip to calibration
+                if (calBlockOffset > 0) {
+                    tarIn.skip(calBlockOffset * TarInputStream.DEFAULT_RCDSIZE);
+                }
+                tarIn.getNextEntry();
+
+                // try entry as a calibration
+                map.setCalibration(Calibration.newInstance(tarIn, path, calEntryName));
+            }
+        
             // trim pointers
             if (pointers != null) {
                 trimPointers();
@@ -668,9 +664,6 @@ final class TarLoader extends Map.Loader /*implements Atlas.Loader*/ {
 
         try {
             // check for .tmi existence
-//            final String path = map.getPath();
-//            final String tmiPath = path.substring(0, path.lastIndexOf('.')) + ".tmi";
-//            file = File.open(tmiPath);
             file = getMetaFile(".tmi", Connector.READ);
             if (file.exists()) {
 //#ifdef __LOG__
@@ -709,7 +702,8 @@ final class TarLoader extends Map.Loader /*implements Atlas.Loader*/ {
 //#endif
 
                         // add slice
-                        if (token.startsWith(SET_DIR_PREFIX) && (token.endsWith(EXT_PNG) || token.endsWith(EXT_JPG))) {
+                        if (token.startsWith(SET_DIR_PREFIX)
+                                && (token.endsWith(EXT_PNG) || token.endsWith(EXT_JPG))) {
 
                             // entry is slice
                             registerSlice(token, block);

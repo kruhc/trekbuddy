@@ -31,8 +31,8 @@
     <property name="microemu.home" value="z:\repository\microemu-google\microemulator"/>
     <property name="cn1.home" value="z:\apps\Codename One"/>
     <property name="cn1.repository" value="z:\repository\cn1\CodenameOne"/>
-    <property name="proguard3.home" value="z:\apps\proguard3.11"/>
-    <property name="proguard4.home" value="z:\apps\proguard4.9"/>
+    <property name="proguard3.home" value="z:\apps\proguard\3.11"/>
+    <property name="proguard4.home" value="z:\apps\proguard\4.11"/>
 
     <property name="build.dir" value="r:\trekbuddy"/>
     <property name="temp.dir" value="r:\java-temp"/>
@@ -62,6 +62,7 @@
         <pathelement location="lib\siemens-file.jar"/>
         <pathelement location="lib\siemens-game.jar"/>
         <pathelement location="lib\samsung-apis.jar"/>
+        <pathelement location="lib\SonimLibrary.jar"/>
     </path>
 
     <path id="bootclasspath.symbian">
@@ -74,6 +75,7 @@
         <pathelement location="${wtk.home}\lib\wma11.jar"/>
         <pathelement location="${wtk.home}\lib\mmapi.jar"/>
         <pathelement location="lib\nokia-ui-devicecontrol.jar"/>
+        <pathelement location="lib\nokia-iapinfo.jar"/>
     </path>
 
     <path id="bootclasspath.std">
@@ -137,6 +139,7 @@
         <pathelement location="${wtk.home}\lib\jsr234.jar"/>
         <pathelement location="${wtk.home}\lib\wma11.jar"/>
         <pathelement location="${wtk.home}\lib\mmapi.jar"/>
+        <!--
         <pathelement location="lib\lg-mmpp.jar"/>
         <pathelement location="lib\motorola-ext.jar"/>
         <pathelement location="lib\motorola-file.jar"/>
@@ -146,6 +149,7 @@
         <pathelement location="lib\siemens-file.jar"/>
         <pathelement location="lib\siemens-game.jar"/>
         <pathelement location="lib\samsung-apis.jar"/>
+        -->
     </path>
 
     <target name="standard">
@@ -226,7 +230,7 @@
     <target name="symbian">
         <property name="suffix" value="-symbian"/>
         <property name="dist.dir" value="symbian"/>
-        <property name="libraryjars" value="${wtk.home}\lib\cldcapi11.jar;${wtk.home}\lib\midpapi20.jar;${wtk.home}\lib\jsr75.jar;${wtk.home}\lib\jsr082.jar;${wtk.home}\lib\jsr179.jar;${wtk.home}\lib\jsr234.jar;${wtk.home}\lib\wma11.jar;${wtk.home}\lib\mmapi.jar;lib\nokia-ui-devicecontrol.jar"/>
+        <property name="libraryjars" value="${wtk.home}\lib\cldcapi11.jar;${wtk.home}\lib\midpapi20.jar;${wtk.home}\lib\jsr75.jar;${wtk.home}\lib\jsr082.jar;${wtk.home}\lib\jsr179.jar;${wtk.home}\lib\jsr234.jar;${wtk.home}\lib\wma11.jar;${wtk.home}\lib\mmapi.jar;lib\nokia-ui-devicecontrol.jar;lib\nokia-iapinfo.jar"/>
         <property name="classpath.preverify" value="${libraryjars}"/>
         <antcall target="clean"/>
         <antcall target="a.pre.symbian"/>
@@ -329,7 +333,7 @@
              inheritAll="false" inheritRefs="false">
             <property name="target.version" value="any"/>
             <property name="sdk.version" value="2.2"/>
-            <property name="api.level" value="5"/>
+            <property name="api.level" value="10"/>
             <property name="dist.dir" value="android"/>
 	    </ant>
         <antcall target="a.pre.android"/>
@@ -347,7 +351,7 @@
              inheritAll="false" inheritRefs="false">
             <property name="target.version" value="any"/>
             <property name="sdk.version" value="2.2"/>
-            <property name="api.level" value="5"/>
+            <property name="api.level" value="10"/>
             <property name="dist.dir" value="android"/>
             <property name="javac.debug" value="true"/>
             <property name="javac.debuglevel" value="source,lines"/>
@@ -371,7 +375,7 @@
              inheritAll="false" inheritRefs="false">
             <property name="target.version" value="any"/>
             <property name="sdk.version" value="2.2"/>
-            <property name="api.level" value="5"/>
+            <property name="api.level" value="10"/>
             <property name="dist.dir" value="android"/>
 	    </ant>
         <antcall target="a.pre.android-offline"/>
@@ -389,7 +393,7 @@
              inheritAll="false" inheritRefs="false">
             <property name="target.version" value="any-offline"/>
             <property name="sdk.version" value="2.2"/>
-            <property name="api.level" value="5"/>
+            <property name="api.level" value="10"/>
             <property name="dist.dir" value="android-offline"/>
             <property name="javac.debug" value="true"/>
             <property name="javac.debuglevel" value="source,lines"/>
@@ -450,23 +454,26 @@
           <fileset dir="dist/${vendor.dir}/playbook" excludes="build.log"/>
         </delete>
         <copy file="dist\public\android\trekbuddy.apk" todir="dist\public\playbook"/>
-        <java classname="net.rim.tools.apk2bar.verifier.Apk2BarVerifier"
+        <java classname="net.rim.tools.apk2bar.Apk2BarVerifier"
               fork="true"
               failonerror="true"
               maxmemory="512m">
             <arg line="dist\public\playbook\trekbuddy.apk ${android.home}"/>
             <classpath>
-                <pathelement location="${android.home}\lib\Apk2Bar-1.0.3.jar"/>
+                <pathelement location="${android.home}\lib\BARPackager.jar"/>
+                <pathelement location="${android.home}\lib\Apk2Bar.jar"/>
+                <!--pathelement location="${android.home}\lib\Apk2Bar-1.0.3.jar"/-->
             </classpath>
         </java>
-        <java classname="net.rim.tools.apk2bar.Apk2bar"
+        <java classname="net.rim.tools.apk2bar.Apk2Bar"
               fork="true"
               failonerror="true"
               maxmemory="512m">
             <arg line="dist\public\playbook\trekbuddy.apk ${android.home} -a kruch"/>
             <classpath>
                 <pathelement location="${android.home}\lib\BARPackager.jar"/>
-                <pathelement location="${android.home}\lib\Apk2Bar-1.0.3.jar"/>
+                <pathelement location="${android.home}\lib\Apk2Bar.jar"/>
+                <!--pathelement location="${android.home}\lib\Apk2Bar-1.0.3.jar"/-->
             </classpath>
         </java>
         <unzip src="dist\public\playbook\trekbuddy.bar" dest="dist\public\playbook">
@@ -476,17 +483,24 @@
         </unzip>
         <barManifest infile="dist\public\playbook\META-INF\MANIFEST.MF"
                      outfile="dist\public\playbook\trekbuddy.MF"
-                     appVersion="${version}.${build_version}"/>
-        <java classname="net.rim.tools.apk2bar.Apk2bar"
+                     appVersion="${version}.0.${build_version}"/>
+        <java classname="net.rim.tools.apk2bar.Apk2Bar"
               fork="true"
               failonerror="true"
               maxmemory="512m">
             <arg line="dist\public\playbook\trekbuddy.apk ${android.home} -m -a kruch"/>
             <classpath>
                 <pathelement location="${android.home}\lib\BARPackager.jar"/>
-                <pathelement location="${android.home}\lib\Apk2Bar-1.0.3.jar"/>
+                <pathelement location="${android.home}\lib\Apk2Bar.jar"/>
+                <!--pathelement location="${android.home}\lib\Apk2Bar-1.0.3.jar"/-->
             </classpath>
         </java>
+        <!--
+        <input message="sign bar?" validargs="y,n" addproperty="do.sign.response"/>
+        <condition property="do.sign">
+            <equals arg1="n" arg2="${do.sign.response}"/>
+        </condition>
+        -->
     </target>
 
     <target name="playbook.signed">
@@ -547,21 +561,22 @@
         <antcall target="dist" inheritall="true"/>
     </target>
 
-    <target name="cn1-nb">
-        <property name="suffix" value="-cn1"/>
-        <property name="dist.dir" value="cn1-nb"/>
-        <property name="libraryjars" value="${cn1.home}\lib\CLDC11.jar;${cn1.home}\lib\CodenameOne.jar"/>
+    <target name="wp">
+        <property name="suffix" value="-wp"/>
+        <property name="dist.dir" value="wp"/>
+        <property name="libraryjars" value="${cn1.repository}\CLDC11.jar;${cn1.repository}\dist\CodenameOne.jar"/>
         <property name="classpath.preverify" value="${libraryjars}"/>
         <antcall target="clean"/>
         <antcall target="a.pre.cn1-nb"/>
         <antcall target="prepare.cn1-nb"/>
         <antcall target="compile.cn1-trunk"/>
+        <antcall target="cn1-trunk.pack"/>
     </target>
 
     <target name="emulator">
         <property name="suffix" value="-emulator"/>
         <property name="dist.dir" value="emulator"/>
-        <property name="libraryjars" value="${wtk.home}\lib\cldcapi11.jar;${wtk.home}\lib\midpapi20.jar;${wtk.home}\lib\jsr75.jar;${wtk.home}\lib\jsr082.jar;${wtk.home}\lib\jsr179.jar;${wtk.home}\lib\jsr234.jar;${wtk.home}\lib\wma11.jar;lib\motorola-location.jar"/>
+        <property name="libraryjars" value="${wtk.home}\lib\cldcapi11.jar;${wtk.home}\lib\midpapi20.jar;${wtk.home}\lib\jsr75.jar;${wtk.home}\lib\jsr082.jar;${wtk.home}\lib\jsr179.jar;${wtk.home}\lib\jsr234.jar;${wtk.home}\lib\wma11.jar"/>
         <property name="classpath.preverify" value="${libraryjars}"/>
         <antcall target="clean"/>
         <antcall target="a.pre.emulator"/>
@@ -569,12 +584,14 @@
         <antcall target="a.pack" inheritall="true"/>
 <!--
         <antcall target="emulator.obfuscate" inheritall="true"/>
-        <antcall target="preverify" inheritall="true"/>
 -->
         <move file="tmp/trekbuddy${suffix}.jar"
               tofile="tmp/trekbuddy${suffix}-obfuscated.jar"/>
+        <antcall target="preverify" inheritall="true"/>
+<!--    // WTK emulator requires preverified code
         <move file="tmp/trekbuddy${suffix}-obfuscated.jar"
               tofile="tmp/preverified/trekbuddy${suffix}-obfuscated.jar"/>
+-->
         <antcall target="dist" inheritall="true"/>
     </target>
 
@@ -705,18 +722,18 @@
                        symbols="__HECL__,__ANDROID__,__BACKPORT__,${pre.extra}"/>
     </target>
 
-    <target name="a.pre.cn1">
+    <target name="a.pre.cn1" depends="a.pre.hecl-android-offline">
         <mkdir dir="tmp/src"/>
-        <wtkpreprocess srcdir="src" destdir="tmp/src" version="1"
-                       symbols="__CN1__,${pre.extra}"/>
-        <wtkpreprocess srcdir="cn1-compat/src" destdir="tmp/src" version="1"
-                       symbols="__CN1__,${pre.extra}"/>
 <!--
+        <wtkpreprocess srcdir="cn1-compat/src" destdir="tmp/src" version="1"
+                       symbols="__CN1__,${pre.extra}"/>
         <wtkpreprocess srcdir="src" destdir="tmp/src" version="1"
-                       symbols="__CN1__,__LOG__,${pre.extra}"/>
+                       symbols="__HECL__,__CN1__,__NO_NET__,${pre.extra}"/>
+-->
         <wtkpreprocess srcdir="cn1-compat/src" destdir="tmp/src" version="1"
                        symbols="__CN1__,__LOG__,${pre.extra}"/>
--->
+        <wtkpreprocess srcdir="src" destdir="tmp/src" version="1"
+                       symbols="__HECL__,__CN1__,__NO_NET__,__LOG__,${pre.extra}"/>
     </target>
 
     <target name="a.pre.cn1-emulator">
@@ -858,7 +875,7 @@
                destdir="tmp/build/classes"
                tempdir="tmp/ant"
                fork="true"
-               target="1.5" debug="true" debuglevel="source,lines"
+               target="1.5" source="1.5" debug="true" debuglevel="source,lines"
                bootclasspathref="bootclasspath.android20"/>
     </target>
 
@@ -871,7 +888,7 @@
                destdir="tmp/build/classes"
                tempdir="tmp/ant"
                fork="true"
-               target="1.5"
+               target="1.5" source="1.5"
                bootclasspathref="bootclasspath.android16"/>
     </target>
 
@@ -883,7 +900,7 @@
                destdir="tmp/build/classes"
                tempdir="tmp/ant"
                fork="true"
-               target="1.5" debug="true"
+               target="1.5" source="1.5" debug="true"
                bootclasspathref="bootclasspath.cn1">
             <compilerarg line="-Xlint:unchecked -Xmaxwarns 1000"/>
             <src path="tmp/src"/>
@@ -898,7 +915,7 @@
                destdir="tmp/build/classes"
                tempdir="tmp/ant"
                fork="true"
-               target="1.5" debug="true"
+               target="1.5" source="1.5" debug="true"
                bootclasspathref="bootclasspath.cn1-trunk">
             <!--<compilerarg line="-Xlint:unchecked -Xmaxwarns 1000"/>-->
             <compilerarg line="-Xlint:deprecation"/>
@@ -914,14 +931,16 @@
     </target>
 
     <target name="backup.cn1.src">
-        <copy file="tmp/src/cz/kruch/track/ui/nokia/CN1DeviceControl.java" todir="${temp.dir}"/>
+        <copy file="tmp/src/cz/kruch/track/ui/nokia/WPDeviceControl.java" todir="${temp.dir}"/>
+        <copy file="tmp/src/cz/kruch/track/fun/WPPlayback.java" todir="${temp.dir}"/>
     </target>
 
     <target name="restore.cn1.src">
-        <copy file="${temp.dir}/CN1DeviceControl.java" todir="tmp/src/cz/kruch/track/ui/nokia"/>
+        <copy file="${temp.dir}/WPDeviceControl.java" todir="tmp/src/cz/kruch/track/ui/nokia"/>
+        <copy file="${temp.dir}/WPPlayback.java" todir="tmp/src/cz/kruch/track/fun"/>
     </target>
 
-    <target name="compile.emulator" depends="remove.symbian.src,remove.rim.src,remove.android.src">
+    <target name="compile.emulator" depends="remove.symbian.src,remove.rim.src,remove.android.src,remove.nonmidp.src">
         <mkdir dir="tmp/build/classes"/>
         <mkdir dir="tmp/ant"/>
         <javac srcdir="tmp/src"
@@ -948,7 +967,8 @@
         <delete file="tmp/src/cz/kruch/track/ui/nokia/SonyEricssonDeviceControl.java"/>
         <delete file="tmp/src/cz/kruch/track/ui/nokia/SamsungDeviceControl.java"/>
         <delete file="tmp/src/cz/kruch/track/ui/nokia/LgDeviceControl.java"/>
-        <delete file="tmp/src/cz/kruch/track/ui/nokia/CN1DeviceControl.java"/>
+        <delete file="tmp/src/cz/kruch/track/ui/nokia/WPDeviceControl.java"/>
+        <delete file="tmp/src/cz/kruch/track/ui/nokia/SonimDeviceControl.java"/>
         <delete file="tmp/src/cz/kruch/track/location/MotorolaLocationProvider.java"/>
     </target>
 
@@ -962,7 +982,8 @@
         <delete file="tmp/src/cz/kruch/track/ui/nokia/SonyEricssonDeviceControl.java"/>
         <delete file="tmp/src/cz/kruch/track/ui/nokia/SamsungDeviceControl.java"/>
         <delete file="tmp/src/cz/kruch/track/ui/nokia/LgDeviceControl.java"/>
-        <delete file="tmp/src/cz/kruch/track/ui/nokia/CN1DeviceControl.java"/>
+        <delete file="tmp/src/cz/kruch/track/ui/nokia/WPDeviceControl.java"/>
+        <delete file="tmp/src/cz/kruch/track/ui/nokia/SonimDeviceControl.java"/>
         <delete file="tmp/src/cz/kruch/track/location/MotorolaLocationProvider.java"/>
     </target>
 
@@ -1018,6 +1039,7 @@
     <target name="remove.android2.src">
         <delete file="tmp/src/cz/kruch/track/location/AndroidNmeaListener.java" verbose="true"/>
         <delete file="tmp/src/cz/kruch/track/fun/AndroidCamera.java" verbose="true"/>
+        <delete file="tmp/src/cz/kruch/track/sensor/ANTPlus.java" verbose="true"/>
     </target>
 
     <target name="remove.mmapi.src">
@@ -1271,6 +1293,18 @@
         </wtkpackage>
     </target>
 
+    <target name="cn1-trunk.pack">
+        <!-- just update localization files that may have changed... -->
+        <copy todir="c:\Users\pour\Documents\Visual Studio 2013\Projects\TrackingApp\TrackingApp\res">
+            <fileset dir="res-lang/resources">
+                <include name="language.en.res"/>
+                <include name="language.es.res"/>
+                <include name="language.fr.res"/>
+                <include name="language.pl.res"/>
+            </fileset>
+        </copy>
+    </target>
+
     <target name="obfuscate3">
 	    <java jar="${proguard3.home}\lib\proguard.jar" fork="true">
             <arg value="-injars tmp/trekbuddy${suffix}.jar"/>
@@ -1430,6 +1464,7 @@
             <arg value="-whyareyoukeeping class net.trekbuddy.midlet.IRuntime"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.maps.io.FileInput"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.io.CrcInputStream"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.maps.NoMapLoader"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.ui.SmartList"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.util.Logger"/>
             <arg value="-whyareyoukeeping class api.io.BufferedOutputStream"/>
@@ -1586,6 +1621,10 @@
     </target>
 
     <target name="sign.and.update">
+        <echo message="certificate expired"/>
+    </target>
+
+    <target name="sign.and.update.2013">
         <java jar="${wtk.home}\bin\JadTool.jar" fork="true">
             <arg line="-addcert -certnum 1 -alias 'trekbuddy2013' -keystore keystores\trekbuddy2013.jks -inputjad dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad -outputjad dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad"/>
         </java>
@@ -1626,14 +1665,14 @@
         <replace file="${basedir}\dist\${vendor.dir}\${dist.dir}\trekbuddy${suffix}.alx" token="@SUFFIX@" value="${suffix}"/>
         <replace file="${basedir}\dist\${vendor.dir}\${dist.dir}\trekbuddy${suffix}.alx" token="@BBVERSION@" value="${rim.bb.version}"/>
         <replace file="${basedir}\dist\${vendor.dir}\${dist.dir}\trekbuddy${suffix}.alx" token="@DESCRIPTION@" value="${description}"/>
-        <replace file="${basedir}\dist\${vendor.dir}\${dist.dir}\trekbuddy${suffix}.alx" token="@VERSION@" value="${version}.${build_version}"/>
+        <replace file="${basedir}\dist\${vendor.dir}\${dist.dir}\trekbuddy${suffix}.alx" token="@VERSION@" value="${version}.0.${build_version}"/>
         <replace file="${basedir}\dist\${vendor.dir}\${dist.dir}\trekbuddy${suffix}.alx" token="@VENDOR@" value="${vendor}"/>
         <replace file="${basedir}\dist\${vendor.dir}\${dist.dir}\trekbuddy${suffix}.alx" token="@MODULES@" value="trekbuddy${suffix}.cod"/>
     </target>
 
     <target name="rim.sign">
         <echo>Signing rim.home=${rim42.home}</echo>
-        <java fork="yes" jar="${rim42.home}/bin/SignatureTool.jar">
+        <java fork="yes" jar="${rim42.home}/bin/SignatureTool.jar" failonerror="true">
            <arg line="-a -c -s -p changeit ${basedir}\dist\${vendor.dir}\${dist.dir}\trekbuddy${suffix}.cod"/>
         </java>
     </target>
@@ -1685,7 +1724,7 @@
         <replace file="${rim.ota.dir}\trekbuddy${suffix}.alx" token="@SUFFIX@" value="${suffix}"/>
         <replace file="${rim.ota.dir}\trekbuddy${suffix}.alx" token="@BBVERSION@" value="${rim.bb.version}"/>
         <replace file="${rim.ota.dir}\trekbuddy${suffix}.alx" token="@DESCRIPTION@" value="${description}"/>
-        <replace file="${rim.ota.dir}\trekbuddy${suffix}.alx" token="@VERSION@" value="${version}.${build_version}"/>
+        <replace file="${rim.ota.dir}\trekbuddy${suffix}.alx" token="@VERSION@" value="${version}.0.${build_version}"/>
         <replace file="${rim.ota.dir}\trekbuddy${suffix}.alx" token="@VENDOR@" value="${vendor}"/>
         <replace file="${rim.ota.dir}\trekbuddy${suffix}.alx" token="@MODULES@" value="${rim.cod.modules}"/>
         <zip destfile="${rim.ota.dir}\trekbuddy${suffix}.zip"

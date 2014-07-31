@@ -604,8 +604,8 @@ final class MapView extends View {
         if (mapViewer.hasMap()) {
 
             // draw map
-/* always redraw 'background'
-                if ((mask & MASK_MAP) != 0) {
+/* always redraw 'background' // TODO review!!!
+                if ((mask & Desktop.MASK_MAP) != 0) {
 */
             // whole map redraw requested
             mapViewer.render(g);
@@ -642,6 +642,10 @@ final class MapView extends View {
             if (Desktop.screen.isKeylock()) {
                 NavigationScreens.drawKeylockStatus(g);
             }
+
+            /*
+            drawGrid(g);
+            */
 
             // draw zoom spots
             if (navigator.isAtlas()) {
@@ -800,17 +804,20 @@ final class MapView extends View {
                     setBasicOSD(qc, onMap);
                     Desktop.osd.setSat(l.getSat());
 
-                    // arrows
+                    // course arrow
                     final float course = l.getCourse();
                     if (!Float.isNaN(course)) {
                         mapViewer.setCourse(course);
                     }
-                    if (Desktop.wpts != null) {
+
+                    // navi arrow
+                    final boolean navigating = Desktop.navigating && Desktop.wpts != null && Desktop.wptIdx != -1;
+                    if (navigating) {
                         mapViewer.setNavigationCourse(navigator.wptAzimuth);
                     }
 
-                    // OSD extended and course arrow - navigating?
-                    if (Desktop.navigating && Desktop.wpts != null) {
+                    // OSD extended with navi or tracking info
+                    if (navigating) {
 
                         // get navigation info
                         final StringBuffer extInfo = Desktop.osd._getSb();
@@ -1003,5 +1010,116 @@ final class MapView extends View {
             return mapPath.equals(startupURL);
         }
     }
+/*
+    void drawGrid(Graphics g) {
+        {
+            final float dj = (float)Desktop.screen.getWidth() / 5f;
+            final float di = (float)Desktop.screen.getHeight() / 10f;
+
+            for (int i = 0; i <= 10; i++)
+            for (int j = 0; j <= 4; j++)
+            switch (i) {
+                case 0: {
+                    switch (j) {
+                        case 0:
+                            drawGridBox(g, "1", j * dj, i * di, dj, di);
+                            break;
+                        case 1:
+                        case 2:
+                        case 3:
+                            drawGridBox(g, "UP", j * dj, i * di, dj, di);
+                            break;
+                        case 4:
+                            drawGridBox(g, "3", j * dj, i * di, dj, di);
+                            break;
+                    }
+                } break;
+                case 1: {
+                    switch (j) {
+                        case 1:
+                        case 2:
+                        case 3:
+                            drawGridBox(g, "UP", j * dj, i * di, dj, di);
+                            break;
+                    }
+                } break;
+                case 2:
+                case 3:
+                case 4:
+                case 5: {
+                    switch (j) {
+                        case 0:
+                            drawGridBox(g, "LEFT", j * dj, i * di, dj, di);
+                            break;
+                        case 1:
+                        case 2:
+                        case 3:
+                            drawGridBox(g, "5", j * dj, i * di, dj, di);
+                            break;
+                        case 4:
+                            drawGridBox(g, "RIGHT", j * dj, i * di, dj, di);
+                            break;
+                    }
+                } break;
+                case 6: {
+                    switch (j) {
+                        case 1:
+                        case 2:
+                        case 3:
+                            drawGridBox(g, "DOWN", j * dj, i * di, dj, di);
+                            break;
+                    }
+                } break;
+                case 7: {
+                    switch (j) {
+                        case 0:
+                            drawGridBox(g, "7", j * dj, i * di, dj, di);
+                            break;
+                        case 1:
+                        case 2:
+                        case 3:
+                            drawGridBox(g, "DOWN", j * dj, i * di, dj, di);
+                            break;
+                        case 4:
+                            drawGridBox(g, "9", j * dj, i * di, dj, di);
+                            break;
+                    }
+                } break;
+                case 8:
+                    // space!!!
+                    break;
+                case 9:
+                case 10: {
+                    switch (j) {
+                        case 0:
+                            drawGridBox(g, "*", j * dj, i * di, dj, di);
+                            break;
+                        case 1:
+                            drawGridBox(g, "", j * dj, i * di, dj, di);
+                            break;
+                        case 2:
+                            drawGridBox(g, "", j * dj, i * di, dj, di);
+                            break;
+                        case 3:
+                            drawGridBox(g, "", j * dj, i * di, dj, di);
+                            break;
+                        case 4:
+                            drawGridBox(g, "#", j * dj, i * di, dj, di);
+                            break;
+                    }
+                } break;
+            }
+        }
+    }
+
+    void drawGridBox(Graphics g, String label, float x, float y, float w, float h) {
+        g.setColor(0x40ff0000);
+        g.fillRect((int)x, (int)y, (int)w, (int)h);
+        g.setColor(0x4000ff00);
+        g.fillRect((int)x + 2, (int)y + 2, (int)w - 4, (int)h - 4);
+        g.setColor(0x000000ff);
+        g.drawString(label, (int)x + 2, (int)y + 2, 0);
+    }
+*/
 }
 

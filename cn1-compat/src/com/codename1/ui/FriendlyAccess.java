@@ -4,12 +4,17 @@ import java.io.InputStream;
 
 public class FriendlyAccess {
 
+    private static com.codename1.impl.CodenameOneImplementation impl;
+
     public static com.codename1.impl.CodenameOneImplementation getImplementation() {
-        return Display.getInstance().getImplementation();
+        if (impl == null) {
+            impl = Display.getInstance().getImplementation();
+        }
+        return impl;
     }
 
     public static com.codename1.location.LocationManager getLocationManager() {
-        return Display.getInstance().getLocationManager();        
+        return getImplementation().getLocationManager();        
     }
 
     public static InputStream getResourceAsStream(final String resource) {

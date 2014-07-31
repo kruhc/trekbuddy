@@ -188,6 +188,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
     public static int guideSpotsMode            = 2; // autohide
     public static int prescale                  = 100; // 100%
     public static boolean forceTextFieldFocus;
+    public static boolean fixedCrosshair;
 
     // [Units]
     public static int units;
@@ -259,6 +260,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
     public static boolean wptAlertSound         = true;
     public static boolean wptAlertVibr          /*= true*/;
     public static boolean mobEnabled            = true;
+    public static boolean gpxAllowExtensions = true;
 
     // hidden
     public static String btDeviceName   = EMPTY_STRING;
@@ -651,6 +653,10 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
             // 1.2.3 change
             fpsControl = din.readInt();
 
+            // 1.2.6 changes
+            fixedCrosshair = din.readBoolean();
+            gpxAllowExtensions = din.readBoolean();
+
         } catch (Exception e) {
 
             // 1.2.0 fallback
@@ -662,7 +668,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         }
 
 //#ifdef __LOG__
-        if (log.isEnabled()) log.info("configuration read");
+        if (log.isEnabled()) log.debug("configuration read");
 //#endif
     }
 
@@ -825,8 +831,12 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         /* since 1.2.3 */
         dout.writeInt(fpsControl);
 
+        /* since 1.2.6 */
+        dout.writeBoolean(fixedCrosshair);
+        dout.writeBoolean(gpxAllowExtensions);
+
 //#ifdef __LOG__
-        if (log.isEnabled()) log.info("configuration updated");
+        if (log.isEnabled()) log.debug("configuration updated");
 //#endif
     }
 
@@ -992,7 +1002,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
 
     public void run() {
 //#ifdef __LOG__
-        if (log.isEnabled()) log.info("run; action = " + action);
+        if (log.isEnabled()) log.debug("run; action = " + action);
 //#endif
 
         switch (action) {
@@ -1022,7 +1032,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
 
     public void response(int answer, Object closure) {
 //#ifdef __LOG__
-        if (log.isEnabled()) log.info("response; answer: " + answer + "; closure " + closure);
+        if (log.isEnabled()) log.debug("response; answer: " + answer + "; closure " + closure);
 //#endif
         if (answer == YesNoDialog.YES) {
             File datadir = null;
@@ -1127,7 +1137,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         }
 
 //#ifdef __LOG__
-        if (log.isEnabled()) log.info("vars read");
+        if (log.isEnabled()) log.debug("vars read");
 //#endif
     }
 
@@ -1148,7 +1158,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         dout.writeBoolean(wptSessionMode);
 
 //#ifdef __LOG__
-        if (log.isEnabled()) log.info("vars updated");
+        if (log.isEnabled()) log.debug("vars updated");
 //#endif
     }
 

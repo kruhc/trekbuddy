@@ -146,7 +146,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
     private final Object[] idx;
     private int entry, depth, sort, mobs;
 
-    private volatile String session;
+    private volatile String session, sessionStoreName;
 
     private String itemWptsStores, itemTracksStores,
                    itemRecordCurrent, itemEnterCustom, itemProjectNew,
@@ -222,7 +222,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
         this.itemFriendThere = Resources.getString(Resources.NAV_ITEM_SMS_MYT);
         this.itemStop = Resources.getString(Resources.NAV_ITEM_STOP);
         this.itemFieldNotes = Resources.getString(Resources.NAV_ITEM_FIELD_NOTES);
-        this.itemEndSession = "End Session";//Resources.getString(Resources.NAV_ITEM_FIELD_NOTES);
+        this.itemEndSession = Resources.getString(Resources.NAV_ITEM_END_SESSION);
 
         this.actionListWpts = Resources.getString(Resources.NAV_ITEM_WAYPOINTS);
         this.actionListTracks = Resources.getString(Resources.NAV_ITEM_TRACKS);
@@ -510,6 +510,27 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                                 }
                             }
                         }
+//#ifdef __CN1__
+//                          else { // Load External GPX
+//                            (new FileBrowser("Load GPX", new Callback() {
+//                                public void invoke(Object result, Throwable throwable, Object source) {
+//                                    if (result != null) {
+//                                        final String[] info = (String[]) result;
+//                                        final Object o = com.codename1.ui.FriendlyAccess.execute("copy-gpx", new Object[]{ info[0], info[1], folder });
+//                                        if (o instanceof String) {
+//                                            Desktop.showInfo("RESULT: " + (String)o, null);
+//                                        } else if (o instanceof Exception) {
+//                                            Desktop.showError("Failed to download GPX", (Exception)o, Desktop.screen);
+//                                        } else {
+//                                            Desktop.showError("Unexpected response: " + o, null, Desktop.screen);
+//                                        }
+//                                    } else {
+//                                        Desktop.display.setCurrent(Desktop.screen);
+//                                    }
+//                                }
+//                            }, null, new String[]{ ".gpx" })).show();
+//                        }
+//#endif
 //#ifdef __ANDROID__
                         } catch (ArrayIndexOutOfBoundsException e) {
                             // no item selected - ignore
@@ -1181,6 +1202,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
             appendCached(v, cachedDisk, title == actionListTargets);
 //        }
 
+//#ifndef __CN1__
         // got anything?
         if (v.size() == 0) {
 
@@ -1200,7 +1222,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
             Desktop.showInfo(Resources.getString(Resources.NAV_MSG_NO_STORES), list.getUI());
 
         } else {
-
+//#endif
             try {
 
                 // sort file stores (leaves memory stores at the beginning)
@@ -1221,7 +1243,9 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
 //#endif
                 Desktop.showError("Failed to list landmark files", t, list.getUI());
             }
+//#ifndef __CN1__
         }
+//#endif
     }
 
     /**
@@ -1566,6 +1590,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
         } else {
             if ("".equals(session)) {
                 session = (String)useKey;
+                sessionStoreName = name;
             }
             addToStore(useKey, name, wpt);
         }
@@ -1781,7 +1806,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
         } else { // session mode
 
             // add to current user store
-            addToStore(sessionKey, null, wpt);
+            addToStore(sessionKey, sessionStoreName, wpt);
 
         }
     }
@@ -1862,7 +1887,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
         wpts.addElement(wpt);
 
         // update active sorted list
-        if (storeKey.equals(sortedName)) {
+        if (storeName != null && sortedName != null && storeName.equals(sortedName)) {
             sortedWpts.addElement(wpt);
             sortWaypoints(null, wpts, true);
         }
@@ -1973,6 +1998,10 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
             try {
                 l = new ExtList(title, List.IMPLICIT, names2strings(stores), null);
                 l.setFitPolicy(Choice.TEXT_WRAP_OFF);
+//#ifdef __CN1__
+                ((javax.microedition.lcdui.List) l).setContextObject(getStoresFolder());
+//                l.addCommand(new Command("Browse", Desktop.POSITIVE_CMD_TYPE, 1));
+//#endif
             } catch (Throwable t) {
                 // ignore - can be IllegalArgumentException due to 255 limit etc
             }

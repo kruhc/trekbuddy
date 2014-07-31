@@ -108,7 +108,7 @@ public final class FileBrowser implements CommandListener, Runnable, Comparator 
         try {
             if (depth == 0) {
 //#ifdef __LOG__
-                if (log.isEnabled()) log.debug("fresh start");
+                if (log.isEnabled()) log.debug("fresh start; history = " + history);
 //#endif
 
                 // fresh start
@@ -118,10 +118,18 @@ public final class FileBrowser implements CommandListener, Runnable, Comparator 
                     try {
                         // try DataDir first
 //#ifdef __CN1__
-                        String dir = Config.getFolderURL(folder);
-                        if (folder.equals(Config.FOLDER_MAPS)) {
-                            if (com.codename1.ui.FriendlyAccess.getImplementation().hasExternalCard()) {
-                                dir = Config.cardDir.concat(Config.FOLDER_MAPS);
+                        String dir;
+//#ifdef __LOG__
+                        if (log.isEnabled()) log.debug("folder: " + folder);
+//#endif
+                        if (folder == null) { // generic file manager
+                            dir = Config.getDataDir();
+                        } else {
+                            dir = Config.getFolderURL(folder);
+                            if (folder.equals(Config.FOLDER_MAPS)) {
+                                if (com.codename1.ui.FriendlyAccess.getImplementation().hasExternalCard()) {
+                                    dir = Config.cardDir.concat(Config.FOLDER_MAPS);
+                                }
                             }
                         }
 //#else
@@ -215,12 +223,17 @@ public final class FileBrowser implements CommandListener, Runnable, Comparator 
 //#endif                    
                         show(file);
                 } else { // otherwise we got a file selected
+//#ifdef __CN1__
+                    if (isManager())
+                        /* nothing to do??? */;
+                    else
+//#endif
                     quit(null);
                 }
             }
         } catch (Throwable t) {
 //#ifdef __LOG__
-            if (log.isEnabled()) log.error("browse error", t);
+            log.error("browse error", t);
 //#endif
 
             // quit with throwable
@@ -254,6 +267,9 @@ public final class FileBrowser implements CommandListener, Runnable, Comparator 
 //#endif
         } else {
             depth--;
+//#ifdef __LOG__
+            if (log.isEnabled()) log.debug("back; depth = " + depth);
+//#endif
             if (depth < 0) {
                 quit(null);
             } else {
@@ -265,6 +281,14 @@ public final class FileBrowser implements CommandListener, Runnable, Comparator 
             }
         }
     }
+
+//#ifdef __CN1__
+
+    private boolean isManager() {
+        return callback == null;
+    }
+
+//#endif
 
     private void show(final File holder) {
 //#ifdef __LOG__
@@ -301,6 +325,12 @@ public final class FileBrowser implements CommandListener, Runnable, Comparator 
             list.addCommand(depth == 0 ? cmdClose : cmdBack);
             list.setCommandListener(this);
 
+//#ifdef __CN1__
+            if (isManager()) {
+                list.setContextObject(this);
+            }
+//#endif
+
             // show
             Desktop.display.setCurrent(list);
 
@@ -308,6 +338,14 @@ public final class FileBrowser implements CommandListener, Runnable, Comparator 
             quit(t);
         }
     }
+
+//#ifdef __CN1__
+
+    public void quit() {
+        quit(null);
+    }
+
+//#endif
 
     private void quit(Throwable throwable) {
         // gc hint
@@ -332,6 +370,11 @@ public final class FileBrowser implements CommandListener, Runnable, Comparator 
         file = null;
 
         // we are done
+//#ifdef __CN1__
+        if (isManager())
+            Desktop.display.setCurrent(Desktop.screen);
+        else
+//#endif
         callback.invoke(throwable == null ? result : null, throwable, this);
     }
 

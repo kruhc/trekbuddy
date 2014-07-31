@@ -14,9 +14,6 @@ public interface LocationListener {
     public void providerStateChanged(LocationProvider provider,
                                      int newState);
 
-    public void tracklogStateChanged(LocationProvider provider,
-                                     boolean isRecording);
-
     public void orientationChanged(LocationProvider provider,
                                    int heading);
 }

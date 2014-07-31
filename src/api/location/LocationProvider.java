@@ -176,16 +176,6 @@ public abstract class LocationProvider {
         notifyListener(location);
     }
 
-    protected final void notifyListener(final boolean isRecording) {
-        if (listener != null) {
-            try {
-                listener.tracklogStateChanged(this, isRecording);
-            } catch (Throwable t) {
-                setThrowable(t);
-            }
-        }
-    }
-
     protected final void notifyListener(final int newState) {
         if (listener != null) {
             try {

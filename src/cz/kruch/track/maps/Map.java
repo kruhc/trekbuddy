@@ -11,10 +11,8 @@ import cz.kruch.track.ui.Position;
 import cz.kruch.track.ui.Desktop;
 import cz.kruch.track.util.CharArrayTokenizer;
 import cz.kruch.track.util.ImageUtils;
-import cz.kruch.track.util.ExtraMath;
 import cz.kruch.track.Resources;
 
-import api.io.BufferedInputStream;
 import api.location.QualifiedCoordinates;
 import api.location.Datum;
 import api.location.ProjectionSetup;
@@ -193,7 +191,7 @@ public final class Map implements Runnable {
      */
     public void dispose() {
 //#ifdef __LOG__
-        if (log.isEnabled()) log.info("dispose map " + getPath());
+        if (log.isEnabled()) log.debug("dispose map " + getPath());
 //#endif
 
         // no longer in use
@@ -224,7 +222,7 @@ public final class Map implements Runnable {
      */
     public void close() {
 //#ifdef __LOG__
-        if (log.isEnabled()) log.info("close map " + getPath());
+        if (log.isEnabled()) log.debug("close map " + getPath());
 //#endif
 
         // dispose first
@@ -395,7 +393,11 @@ public final class Map implements Runnable {
         protected static final char[] EXT_PNG = { '.', 'p', 'n', 'g' };
         protected static final char[] EXT_JPG = { '.', 'j', 'p', 'g' };
 
-        private BufferedInputStream bufferedIn;
+//#ifndef __CN1__
+        private api.io.BufferedInputStream bufferedIn;
+//#else
+        private api.io.FilterInputStream bufferedIn;
+//#endif
 
         protected Map map;
         protected String basename;
@@ -428,13 +430,17 @@ public final class Map implements Runnable {
         final void prepare() throws IOException {
             if (bufferedIn == null) {
 //#ifdef __SYMBIAN__
+                final int size;
                 if (isTar && Config.useNativeService && Map.networkInputStreamAvailable) {
-                    bufferedIn = new BufferedInputStream(null, 26280 - 8); // 26280 = 18 * 1460 (MSS) is good for network
+                    size = 26280 - 8; // 26280 = 18 * 1460 (MSS) is good for network
                 } else {
-                    bufferedIn = new BufferedInputStream(null, Config.inputBufferSize);
+                    size = Config.inputBufferSize;
                 }
+                bufferedIn = new api.io.BufferedInputStream(null, size);
+//#elifdef __CN1__
+                bufferedIn = new api.io.FilterInputStream(null);
 //#else
-                bufferedIn = new BufferedInputStream(null, Config.inputBufferSize);
+                bufferedIn = new api.io.BufferedInputStream(null, Config.inputBufferSize);
 //#endif
             }
         }
@@ -444,7 +450,19 @@ public final class Map implements Runnable {
 
         final protected File getMetaFile(final String ext, final int mode) throws IOException {
             final String path = map.getPath();
+//#ifndef __CN1__
             final String sibPath = path.substring(0, path.lastIndexOf('.')).concat(ext);
+//#else
+            String sibPath = path.substring(0, path.lastIndexOf('.')).concat(ext);
+            if (path.startsWith("file:///Card/")) {
+                sibPath = sibPath.substring(13); // "file:///Card/".length()
+                final int idx = sibPath.indexOf("TrekBuddy/maps/");
+                if (idx > -1) {
+                    sibPath = sibPath.substring(idx + 15); // "TrekBuddy/maps/".length()
+                }
+                sibPath = "file:///Local/".concat(sibPath.replace('/', '_'));
+            }
+//#endif
             return File.open(sibPath, mode);
         }
 
@@ -748,6 +766,8 @@ public final class Map implements Runnable {
     public static int fileInputStreamResetable;
 //#ifdef __SYMBIAN__
     public static boolean networkInputStreamAvailable = true;
+    public static String networkInputStreamError;
+    public static String networkInputStreamInfo;
 //#endif
     /* behaviour flags */
     public static boolean useReset = true;

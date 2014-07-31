@@ -104,7 +104,7 @@ final class DeviceScreen extends GameCanvas implements Runnable {
         splash();
 //#ifdef __ALL__
         if (Config.uiNoCommands) {
-            this.commands = new Command[10];
+            this.commands = new Command[11];
             if (Config.safeColors) {
                 this.colorBackSel = 0x000a3b76;
                 this.colorBackUnsel = 0x00ffffff;
@@ -324,7 +324,7 @@ final class DeviceScreen extends GameCanvas implements Runnable {
 
     protected void sizeChanged(int w, int h) {
 //#ifdef __LOG__
-        if (log.isEnabled()) log.info("size changed: " + w + "x" + h);
+        if (log.isEnabled()) log.debug("size changed: " + w + "x" + h);
 //#endif
 
         // current graphics probably no longer valid (RIM, ANDROID)
@@ -349,7 +349,7 @@ final class DeviceScreen extends GameCanvas implements Runnable {
         }
 
 //#ifdef __LOG__
-        if (log.isEnabled()) log.info("~size changed");
+        if (log.isEnabled()) log.debug("~size changed");
 //#endif
     }
 
@@ -940,12 +940,15 @@ final class DeviceScreen extends GameCanvas implements Runnable {
         final int w = getWidth();
         final int h = getHeight();
         final int dx, dy, bh, bw;
+        final int mode;
         if (w <= h) { // portrait
+            mode = 0;
             dx = Desktop.fontBtns.getHeight();
             dy = h / VROWS;
             bh = dy << 1;
             bw = (w - 3 * dx) >> 1;
         } else { // landscape (= old portrait layout)
+            mode = 1;
             dx = dy = h / VROWS;
             bh = dy << 1;
             bw = (w - 3 * dx) >> 1;
@@ -956,32 +959,30 @@ final class DeviceScreen extends GameCanvas implements Runnable {
         final int c = g.getColor();
         g.setFont(Desktop.fontBtns);
         if (delegate.isTracking()) {
-            drawButton(g, delegate.cmdStop, dx, dy, bw, bh);
-            drawButton(g, Desktop.paused ? delegate.cmdContinue : delegate.cmdPause, dx + bw + dx, dy, bw, bh);
+            drawButton(g, mode, delegate.cmdStop, dx, dy, bw, bh);
+            drawButton(g, mode, Desktop.paused ? delegate.cmdContinue : delegate.cmdPause, dx + bw + dx, dy, bw, bh);
         } else {
-            drawButton(g, delegate.cmdRun, dx, dy, bw, bh);
+            drawButton(g, mode, delegate.cmdRun, dx, dy, bw, bh);
             if (Config.locationProvider == Config.LOCATION_PROVIDER_JSR82 && delegate.cmdRunLast != null) {
-                drawButton(g, delegate.cmdRunLast, dx + bw + dx, dy, bw, bh);
+                drawButton(g, mode, delegate.cmdRunLast, dx + bw + dx, dy, bw, bh);
             }
         }
 //#ifndef __B2B__
-        if (api.file.File.isFs()) {
-//            drawButton(g, delegate.cmdLoadMap, dx, (dy << 1) + bh, bw, bh);
-//            drawButton(g, delegate.cmdLoadAtlas, dx + bw + dx, (dy << 1) + bh, bw, bh);
-            drawButton(g, delegate.cmdLoadMaps, dx, (dy << 1) + bh, bw, bh);
-//#ifdef __HECL__
-            drawButton(g, delegate.cmdLive, dx + bw + dx, (dy << 1) + bh, bw, bh);
+        drawButton(g, mode, delegate.cmdLoadMaps, dx, (dy << 1) + bh, bw, bh);
+        drawButton(g, mode, delegate.cmdLive, dx + bw + dx, (dy << 1) + bh, bw, bh);
 //#endif
+        drawButton(g, mode, delegate.cmdSettings, dx, 3 * dy + (bh << 1), bw, bh);
+        drawButton(g, mode, delegate.cmdInfo, dx + bw + dx, 3 * dy + (bh << 1), bw, bh);
+        drawButton(g, mode, delegate.cmdWaypoints, dx, (dy << 2) + 3 * bh, bw, bh);
+        if (delegate.isTracking()) {
+            drawButton(g, mode, delegate.cmdTracklog, dx + bw + dx, (dy << 2) + 3 * bh, bw, bh);
+        } else {
+            drawButton(g, mode, delegate.cmdExit, dx + bw + dx, (dy << 2) + 3 * bh, bw, bh);
         }
-//#endif        
-        drawButton(g, delegate.cmdSettings, dx, 3 * dy + (bh << 1), bw, bh);
-        drawButton(g, delegate.cmdInfo, dx + bw + dx, 3 * dy + (bh << 1), bw, bh);
-        drawButton(g, delegate.cmdWaypoints, dx, (dy << 2) + 3 * bh, bw, bh);
-        drawButton(g, delegate.cmdExit, dx + bw + dx, (dy << 2) + 3 * bh, bw, bh);
         g.setColor(c);
     }
 
-    private void drawButton(final Graphics g, final Command cmd,
+    private void drawButton(final Graphics g, final int mode, final Command cmd,
                             final int x, final int y,
                             final int bw, final int bh) {
 //#ifdef __LOG__
@@ -993,10 +994,21 @@ final class DeviceScreen extends GameCanvas implements Runnable {
         g.setColor(BTN_HICOLOR);
         g.drawRoundRect(x, y, bw, bh, BTN_ARC, BTN_ARC);
         final String label = cmd.getLabel();
+        final int wordIdx = label.indexOf(' ');
         final int fh = Desktop.fontBtns.getHeight();
-        final int sw = Desktop.fontBtns.stringWidth(label);
+        final int lspace = (bh - (fh << 1)) / 3;
         g.setColor(BTN_TXTCOLOR);
-        g.drawString(label, x + ((bw - sw) >> 1), y + ((bh - fh) >> 1), Graphics.LEFT | Graphics.TOP);
+        if (mode == 1 || wordIdx == -1 || lspace < 0) { // landscape or single-word or not enough space for 2 lines
+            final int sw = Desktop.fontBtns.stringWidth(label);
+            g.drawString(label, x + ((bw - sw) >> 1), y + ((bh - fh) >> 1), Graphics.LEFT | Graphics.TOP);
+        } else { // portrait and 2-word label
+            final String label0 = label.substring(0, wordIdx);
+            final String label1 = label.substring(wordIdx);
+            final int sw0 = Desktop.fontBtns.stringWidth(label0);
+            final int sw1 = Desktop.fontBtns.stringWidth(label1);
+            g.drawString(label0, x + ((bw - sw0) >> 1), y + lspace, Graphics.LEFT | Graphics.TOP);
+            g.drawString(label1, x + ((bw - sw1) >> 1), y + (lspace << 1) + fh, Graphics.LEFT | Graphics.TOP);
+        }
 //#else
         com.codename1.ui.FriendlyAccess.execute("draw-button", new Object[]{
                 com.codename1.ui.FriendlyAccess.getNativeGraphics(offscreen.getNativeImage()),
@@ -1036,16 +1048,10 @@ final class DeviceScreen extends GameCanvas implements Runnable {
                 case 4:
                 case 5: {
 //#ifndef __B2B__
-                    if (api.file.File.isFs()) {
-                        if (xL) {
-//                            cmd = delegate.cmdLoadMap;
-                            cmd = delegate.cmdLoadMaps;
-                        } else if (xR) {
-//                            cmd = delegate.cmdLoadAtlas;
-//#ifdef __HECL__
-                            cmd = delegate.cmdLive;
-//#endif
-                        }
+                    if (xL) {
+                        cmd = delegate.cmdLoadMaps;
+                    } else if (xR) {
+                        cmd = delegate.cmdLive;
                     }
 //#endif
                 } break;
@@ -1062,7 +1068,11 @@ final class DeviceScreen extends GameCanvas implements Runnable {
                     if (xL) {
                         cmd = delegate.cmdWaypoints;
                     } else if (xR) {
-                        cmd = delegate.cmdExit;
+                        if (delegate.isTracking()) {
+                            cmd = delegate.cmdTracklog;
+                        } else {
+                            cmd = delegate.cmdExit;
+                        }
                     }
                 } break;
             }
@@ -1238,6 +1248,9 @@ final class DeviceScreen extends GameCanvas implements Runnable {
         }
 
         public void run() {
+//#ifdef __LOG__
+            if (log.isEnabled()) log.debug("anyTask [" + type + "] run");
+//#endif
             switch (type) {
                 case TASK_COMMAND: {
                     delegate.commandAction((Command) arg, DeviceScreen.this);

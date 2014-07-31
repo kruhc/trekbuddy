@@ -33,6 +33,9 @@ public final class Worker extends Thread {
 
     private final Vector tasks;
 	private boolean go;
+//#if __SYMBIAN__ || __CN1__
+    private int maxSize;
+//#endif
 
     public Worker(String name) {
         super(name);
@@ -43,6 +46,12 @@ public final class Worker extends Thread {
     public synchronized int getQueueSize() {
         return tasks.size();
     }
+
+//#if __SYMBIAN__ || __CN1__
+    public synchronized int getMaxQueueSize() {
+        return maxSize;
+    }
+//#endif
 
     public void destroy() {
         synchronized (this) {
@@ -70,6 +79,11 @@ public final class Worker extends Thread {
         synchronized (this) {
             if (go) {
                 tasks.addElement(r);
+//#if __SYMBIAN__ || __CN1__
+                if (tasks.size() > maxSize) {
+                    maxSize = tasks.size();
+                }
+//#endif
                 notify();
             }
         }
@@ -94,10 +108,14 @@ public final class Worker extends Thread {
         if (log.isEnabled()) log.debug("thread starting...");
 //#endif
 
+        // local ref
         final Vector tasks = this.tasks;
         Runnable task = null;
 
+        // process items until end
         while (true) {
+
+            // pop item
             synchronized (this) {
                 while (go && tasks.size() == 0) {
                     try {
@@ -105,9 +123,6 @@ public final class Worker extends Thread {
                     } catch (InterruptedException e) {
                         // ignore
                     }
-//#ifdef __LOG__
-                    if (log.isEnabled()) log.debug("wokeup; go? " + go + " tasks? " + tasks.size());
-//#endif
                 }
                 if (tasks.size() > 0) {
                     task = (Runnable) tasks.elementAt(0);
@@ -122,11 +137,10 @@ public final class Worker extends Thread {
 //#endif
 
             try {
+
                 // run task
                 task.run();
-//#ifdef __LOG__
-                if (log.isEnabled()) log.debug("task finished successfully");
-//#endif
+
             } catch (Throwable t) {
 //#ifdef __LOG__
                 t.printStackTrace();

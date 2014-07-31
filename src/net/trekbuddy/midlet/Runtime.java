@@ -20,9 +20,9 @@ import cz.kruch.track.Resources;
 
 public final class Runtime
 //#ifdef __ANDROID__
-                            extends Service
+                            extends Service implements IRuntime 
 //#endif
-                            implements IRuntime {
+                                                                {
 //#ifdef __ANDROID__
 
     private static final String TAG = cz.kruch.track.TrackingMIDlet.APP_TITLE;

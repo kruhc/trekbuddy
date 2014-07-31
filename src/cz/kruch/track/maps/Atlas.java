@@ -226,7 +226,7 @@ public final class Atlas implements Runnable {
      */
     public void close() {
 //#ifdef __LOG__
-        if (log.isEnabled()) log.info("close atlas");
+        if (log.isEnabled()) log.debug("close atlas");
 //#endif
 
         // destroy all cached maps

@@ -62,6 +62,7 @@ final class DeviceScreen extends GameCanvas implements Runnable {
 
     // touch ops
     private volatile boolean touchMenuActive, cmdExec;
+    private volatile int pointersCount;
 
     // menu appearance
     volatile boolean beenPressed; // TODO review visibility
@@ -126,6 +127,7 @@ final class DeviceScreen extends GameCanvas implements Runnable {
         if (log.isEnabled()) log.debug("hideNotify");
 //#endif
         eventing.setActive(active = false);
+        pointersCount = 0;
     }
 
     /** @Override */
@@ -134,6 +136,7 @@ final class DeviceScreen extends GameCanvas implements Runnable {
         if (log.isEnabled()) log.debug("showNotify");
 //#endif
         eventing.setActive(active = true);
+        pointersCount = 0;
     }
 
     /** @Override */
@@ -363,6 +366,12 @@ final class DeviceScreen extends GameCanvas implements Runnable {
             return;
         }
 
+        // avoid multitouch
+        if (pointersCount++ > 0) {
+            cancelKeyRepeated(); // stop repeated key action (such as scrolling or magnification)
+            return;
+        }
+        
         // set helpers
 		gx = x;
 		gy = y;
@@ -425,6 +434,11 @@ final class DeviceScreen extends GameCanvas implements Runnable {
 
         // happens on android sometimes?!?
         if (cz.kruch.track.TrackingMIDlet.state != 1) {
+            return;
+        }
+
+        // avoid multitouch
+        if (--pointersCount > 0) {
             return;
         }
 
@@ -497,6 +511,11 @@ final class DeviceScreen extends GameCanvas implements Runnable {
             return;
         }
 
+        // avoid multitouch
+        if (pointersCount > 1) {
+            return;
+        }
+
         // difference
         final int adx = Math.abs(x - gx);
         final int ady = Math.abs(y - gy);
@@ -512,6 +531,50 @@ final class DeviceScreen extends GameCanvas implements Runnable {
             delegate.handleMove(x, y);
         }
     }
+
+//#ifdef __ANDROID__
+
+    private float scale = Float.NaN;
+
+    protected void pointerScaled(int x, int y) {
+//#ifdef __LOG__
+        if (log.isEnabled()) log.debug("pointerScaled; " + x + "-" + y);
+//#endif
+
+        // happens on android sometimes?!?
+        if (cz.kruch.track.TrackingMIDlet.state != 1) {
+            return;
+        }
+
+        // ignore the event when menu was on or keylocked
+        if (cmdExec || keylock) {
+            return;
+        }
+
+        // detect change
+        final float cs = (float)x / 1000;
+        int mag = 0;
+        if (Float.isNaN(scale)) {
+            scale = cs;
+        } else {
+            final float ds = scale / cs;
+            System.out.println("ds = " + ds);
+            if (ds < 0.75) {
+                mag = 1;
+            } else if (ds > 1.25) {
+                mag = -1;
+                scale = cs;
+            }
+        }
+
+        // handle magnification
+        if (mag != 0) {
+            scale = cs;
+            delegate.handleMagnify(mag);
+        }
+    }
+
+//#endif
 
     protected void keyPressed(int i) {
 //#ifdef __LOG__
@@ -1108,11 +1171,11 @@ final class DeviceScreen extends GameCanvas implements Runnable {
             } break;
             case 1: {
                 switch (j) {
-                    case 1:
-                    case 2:
-                    case 3:
-                        key = getKeyCode(Canvas.UP);
-                        break;
+//                    case 1:
+//                    case 2:
+//                    case 3:
+//                        key = getKeyCode(Canvas.UP);
+//                        break;
                 }
             } break;
             case 2:
@@ -1134,13 +1197,13 @@ final class DeviceScreen extends GameCanvas implements Runnable {
                 }
             } break;
             case 6: {
-                switch (j) {
-                    case 1:
-                    case 2:
-                    case 3:
-                        key = getKeyCode(Canvas.DOWN);
-                        break;
-                }
+//                switch (j) {
+//                    case 1:
+//                    case 2:
+//                    case 3:
+//                        key = getKeyCode(Canvas.DOWN);
+//                        break;
+//                }
             } break;
             case 7: {
                 switch (j) {

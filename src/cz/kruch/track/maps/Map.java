@@ -93,6 +93,10 @@ public final class Map implements Runnable {
         return calibration.getDatum();
     }
 
+    public double getVerticalScale() {
+        return calibration.getVerticalScale();
+    }
+
     public int getBgColor() {
         return bgColor;
     }

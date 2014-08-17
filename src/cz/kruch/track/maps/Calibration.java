@@ -116,6 +116,13 @@ abstract class Calibration {
         return datum;
     }
 
+    public double getVerticalScale() {
+        final QualifiedCoordinates qc0 = transform(wu >> 2, 0);
+        final QualifiedCoordinates qc1 = transform(wu >> 2, hu - 1);
+        final double dist = qc0.distance(qc1);
+        return dist / hu;
+    }
+
     final void magnify(final int x2) {
         if (this.x2 != x2) {
             this.x2 = x2;
@@ -163,6 +170,7 @@ abstract class Calibration {
         final double v = cgpv + (nk0 * dx) - (dy * (gridLVscale + dx * vScale));
 
         // get local coordinates
+        final ProjectionSetup projectionSetup = this.projectionSetup;
         if (projectionSetup.isCartesian()) {
             final CartesianCoordinates cc = CartesianCoordinates.newInstance(projectionSetup.zone, h, v);
             localQc = Mercator.MercatortoLL(cc, getDatum().ellipsoid, projectionSetup);

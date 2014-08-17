@@ -344,7 +344,7 @@ public final class GpxTracklog extends Tracklog {
                         }
                     }
                     item = queue;
-                    queue = null; // gc hint
+                    queue = null;
                     if (!go)
                         break;
                 }
@@ -523,7 +523,7 @@ public final class GpxTracklog extends Tracklog {
 //#endif
             if (specCondition || Config.gpxGsmInfo) {
                 serializer.startTag(DEFAULT_NAMESPACE, ELEMENT_EXTENSIONS);
-//#ifdef __ANDROID__ && !__BACKPORT__ 
+//#if __ANDROID__ && !__BACKPORT__ 
                 if (bpm > -1) {
                     serializer.startTag(GARMIN_EXT_NAMESPACE, ELEMENT_TRKPTEXT);
                     serializeElement(serializer, (new Integer(bpm)).toString(), GARMIN_EXT_NAMESPACE, ELEMENT_HR);

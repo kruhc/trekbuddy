@@ -104,6 +104,8 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
     public static final String EMPTY_STRING         = "";
     public static final String NO_MAP_RESOURCE      = "/resources/no-map.xml";
 
+    public static final String FAKE_WORLD_BUILT_IN  = "world (built-in)";
+
     /*
      * Configuration params, initialized to default values.
      */
@@ -200,7 +202,9 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
     public static int extListMode;
 
     // group [Easyzoom]
+/* obsolete since 1.27
     public static int easyZoomMode;
+*/
 
     // group [Tweaks]
 //#ifndef __CN1__
@@ -298,6 +302,8 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
 
     private static final int ACTION_INITDATADIR     = 0;
     private static final int ACTION_PERSISTCFG      = 1;
+    private static final int ACTION_UPDATEMAINCFG   = 2;
+    private static final int ACTION_UPDATEVARSCFG   = 3;
 
     private int action;
 
@@ -605,7 +611,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
 
         try {
             // 1.0.10 change
-            easyZoomMode = din.readInt();
+            /*easyZoomMode = */din.readInt();
 
             // 1.0.11 change
             easyZoomVolumeKeys = din.readBoolean();
@@ -791,7 +797,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         /* since 1.0.5 */
         dout.writeBoolean(externalConfigBackup);
         /* since 1.0.10 */
-        dout.writeInt(easyZoomMode);
+        dout.writeInt(0/*easyZoomMode*/);
         /* since 1.0.11 */
         dout.writeBoolean(easyZoomVolumeKeys);
         dout.writeBoolean(false/*showZoomSpots.booleanValue()*/);
@@ -927,6 +933,18 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         }
     }
 
+    public static void updateInBackground(final String rms) {
+        int action = -1;
+        if (CONFIG_090.equals(rms)) {
+            action = ACTION_UPDATEMAINCFG;
+        } else if (VARS_090.equals(rms)) {
+            action = ACTION_UPDATEVARSCFG;
+        }
+        if (action > -1) {
+            cz.kruch.track.ui.Desktop.getDiskWorker().enqueue(new Config(action));
+        }
+    }
+
     public static void update(final String rms) throws ConfigurationException {
         update(rms, null);
     }
@@ -1027,6 +1045,24 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
             case ACTION_PERSISTCFG: {
                 dump();
             } break;
+            case ACTION_UPDATEMAINCFG: {
+                try {
+                    update(CONFIG_090);
+                } catch (ConfigurationException e) {
+//#ifdef __LOG__
+                    log.error("failed to update ".concat(CONFIG_090));
+//#endif
+                }
+            } break;
+            case ACTION_UPDATEVARSCFG: {
+                try {
+                    update(VARS_090);
+                } catch (ConfigurationException e) {
+//#ifdef __LOG__
+                    log.error("failed to update ".concat(VARS_090));
+//#endif
+                }
+            } break;
         }
     }
 
@@ -1060,8 +1096,9 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
                 , FOLDER_PLUGINS
 //#endif
             };
-            File dir = null;
+
             /* create folder structure */
+            File dir = null;
             for (int i = folders.length; --i >= 0; ) {
                 try {
                     dir = File.open(getFolderURL(folders[i]), Connector.READ_WRITE);
@@ -1074,6 +1111,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
                     File.closeQuietly(dir);
                 }
             }
+
             /* create default files */
             File file = null;
             try {
@@ -1092,10 +1130,25 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
                     File.closeQuietly(in);
                 }
             } catch (Throwable t) { // IOE or SEC
-                // ignore
+//#ifdef __LOG__
+                log.error("failed to create no-map.xml file", t);
+//#endif
             } finally {
                 File.closeQuietly(file);
             }
+            try {
+                file = File.open(Config.getFileURL(Config.FOLDER_MAPS, FAKE_WORLD_BUILT_IN), Connector.READ_WRITE);
+                if (!file.exists()) {
+                    file.create();
+                }
+            } catch (Throwable t) { // IOE or SEC
+//#ifdef __LOG__
+                log.error("failed to create world (built-in) file", t);
+//#endif
+            } finally {
+                File.closeQuietly(file);
+            }
+
             /* find default files */
             try {
                 dir = File.open(Config.getFolderURL(Config.FOLDER_SOUNDS));

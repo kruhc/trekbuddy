@@ -230,11 +230,7 @@ final class MapView extends View {
             }
             // not too frequent, reduce code size
 //            QualifiedCoordinates.releaseInstance(qc);
-            try {
-                Config.update(Config.VARS_090);
-            } catch (ConfigurationException e) {
-                // ignore
-            }
+            Config.updateInBackground(Config.VARS_090);
         }
 
         // set the map
@@ -388,7 +384,7 @@ final class MapView extends View {
                 } else {
 
                     // trigger bitmap zoom
-                    toogleMagnifier();
+                    toggleMagnifier();
                     mask = Desktop.MASK_ALL;
                 }
 
@@ -470,7 +466,7 @@ final class MapView extends View {
                         Desktop.showWarning(navigator._getLoadingResultText(), null, Desktop.screen);
                     }
                 } else { // trigger bitmap zoom
-                    toogleMagnifier();
+                    toggleMagnifier();
                     mask = Desktop.MASK_ALL;
                 }
             }
@@ -487,6 +483,7 @@ final class MapView extends View {
                     break;
             case Canvas.KEY_NUM7: {
                 scrolls = 0;
+/* obsolete since 1.27
                 switch (Config.easyZoomMode) {
                     case Config.EASYZOOM_OFF: {
                         if (!repeated) {
@@ -494,16 +491,19 @@ final class MapView extends View {
                         }
                     } break;
                     case Config.EASYZOOM_LAYERS: {
+*/
                         if (!repeated) {
                             navigator.zoom(-1);
                         } else {
                             navigator.changeLayer();
                         }
+/*
                     } break;
                     case Config.EASYZOOM_MAPS: {
                         // TODO
                     } break;
                 }
+*/
             } break;
 
 //#ifdef __ANDROID__
@@ -517,6 +517,7 @@ final class MapView extends View {
                     break;
             case Canvas.KEY_NUM9: {
                 scrolls = 0;
+/* obsolete since 1.27
                 switch (Config.easyZoomMode) {
                     case Config.EASYZOOM_OFF: {
                         if (!repeated) {
@@ -524,16 +525,19 @@ final class MapView extends View {
                         }
                     } break;
                     case Config.EASYZOOM_LAYERS: {
+*/
                         if (!repeated) {
                             navigator.zoom(1);
                         } else {
                             navigator.changeMap();
                         }
+/*
                     } break;
                     case Config.EASYZOOM_MAPS: {
                         // TODO
                     } break;
                 }
+*/
             } break;
         }
 
@@ -643,9 +647,9 @@ final class MapView extends View {
                 NavigationScreens.drawKeylockStatus(g);
             }
 
-            /*
+/*
             drawGrid(g);
-            */
+*/
 
             // draw zoom spots
             if (navigator.isAtlas()) {
@@ -869,7 +873,7 @@ final class MapView extends View {
         return mask;
     }
 
-    private int toogleMagnifier() {
+    private int toggleMagnifier() {
         // map needed
         if (!mapViewer.hasMap()) {
             return Desktop.MASK_NONE;
@@ -899,6 +903,19 @@ final class MapView extends View {
             extInfo.append(' ').append(NavigationScreens.DELTA_d).append('=');
             NavigationScreens.printAltitude(extInfo, navigator.wptHeightDiff);
         }
+    }
+
+    int magnify(final int direction) {
+        // map needed
+        if (!mapViewer.hasMap()) {
+            return Desktop.MASK_NONE;
+        }
+
+        // convert to toggle
+        if ((x2 == 0 && direction == 1) || (x2 == 1 && direction == -1)) {
+            return toggleMagnifier();
+        }
+        return Desktop.MASK_NONE;
     }
 
     // TODO fix visibility
@@ -1010,6 +1027,7 @@ final class MapView extends View {
             return mapPath.equals(startupURL);
         }
     }
+
 /*
     void drawGrid(Graphics g) {
         {
@@ -1035,13 +1053,13 @@ final class MapView extends View {
                     }
                 } break;
                 case 1: {
-                    switch (j) {
-                        case 1:
-                        case 2:
-                        case 3:
-                            drawGridBox(g, "UP", j * dj, i * di, dj, di);
-                            break;
-                    }
+//                    switch (j) {
+//                        case 1:
+//                        case 2:
+//                        case 3:
+//                            drawGridBox(g, "UP", j * dj, i * di, dj, di);
+//                            break;
+//                    }
                 } break;
                 case 2:
                 case 3:
@@ -1062,13 +1080,13 @@ final class MapView extends View {
                     }
                 } break;
                 case 6: {
-                    switch (j) {
-                        case 1:
-                        case 2:
-                        case 3:
-                            drawGridBox(g, "DOWN", j * dj, i * di, dj, di);
-                            break;
-                    }
+//                    switch (j) {
+//                        case 1:
+//                        case 2:
+//                        case 3:
+//                            drawGridBox(g, "DOWN", j * dj, i * di, dj, di);
+//                            break;
+//                    }
                 } break;
                 case 7: {
                     switch (j) {

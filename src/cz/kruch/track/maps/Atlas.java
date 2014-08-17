@@ -6,12 +6,12 @@ import cz.kruch.track.Resources;
 import cz.kruch.track.util.CharArrayTokenizer;
 import cz.kruch.track.ui.Desktop;
 
-import java.io.IOException;
 import java.util.Enumeration;
 import java.util.Hashtable;
 
 import api.file.File;
 import api.location.QualifiedCoordinates;
+import api.lang.Int;
 
 /**
  * Atlas representation and handling.
@@ -64,6 +64,10 @@ public final class Atlas implements Runnable {
         current = layer;
     }
 
+    public Hashtable getMaps() {
+        return maps;
+    }
+    
     public Enumeration getMapNames() {
         return getMapNames(current);
     }
@@ -125,8 +129,94 @@ public final class Atlas implements Runnable {
         return null;
     }
 
-    public Hashtable getMaps() {
-        return maps;
+    public String getNextLayer(final Map currentMap, final int direction,
+                               final QualifiedCoordinates coords, final Int eventType) {
+        
+        // try current layer first
+        String mapName = getNextLayer(current, currentMap, direction, coords);
+        String layerName = null;
+
+        // try other layers - first one wins
+        if (mapName == null) {
+            final Enumeration e = layers.keys();
+            while (e.hasMoreElements()) {
+                final String name = (String) e.nextElement();
+                if (name.equals(current)) {
+                    continue;
+                }
+                mapName = getNextLayer(name, currentMap, direction, coords);
+                if (mapName != null) {
+                    layerName = name;
+                    eventType.setValue(4); // 4 = EVENT_LAYER_SELECTION_FINISHED
+                    break;
+                }
+            }
+        } else {
+            layerName = mapName;
+            eventType.setValue(5); // 5 = EVENT_MAP_SELECTION_FINISHED
+        }
+
+        return layerName;
+    }
+
+    public String getNextLayer(final String layerName, final Map currentMap,
+                               final int direction, final QualifiedCoordinates coords) {
+//#ifdef __LOG__
+        if (log.isEnabled()) log.debug("getNextLayer; " + layerName);
+//#endif
+
+        // current map scale
+        final double currentScale = currentMap.getVerticalScale();
+        double nextScale = direction == 1 ? 0D : Double.MAX_VALUE;
+        String nextMap = null;
+
+        // get current layer collection
+        final Hashtable layer = (Hashtable) layers.get(layerName);
+        final Enumeration e = layer.keys();
+        while (e.hasMoreElements()) {
+            final Object map = e.nextElement();
+            final Calibration calibration = (Calibration) layer.get(map);
+            final double scale = calibration.getVerticalScale();
+//#ifdef __LOG__
+            if (log.isEnabled()) {
+                log.debug("\tmap " + map + "; scale " + scale);
+                log.debug("\t\tratio: " + (scale / currentScale));
+            }
+//#endif
+            if (direction == 1) {
+                if (scale / currentScale < 0.75D) {
+//#ifdef __LOG__
+                    if (log.isEnabled()) log.debug("\t\t" + (scale / currentScale) + " < 0.75");
+//#endif
+                    if (scale > nextScale) {
+//#ifdef __LOG__
+                        if (log.isEnabled()) log.debug("\t\tnextScale = " + nextScale + " - use");
+//#endif
+                        nextScale = scale;
+                        nextMap = (String) map;
+                    }
+                }
+            } else if (direction == -1) {
+                if (scale / currentScale > 1.25D) {
+//#ifdef __LOG__
+                    if (log.isEnabled()) log.debug("\t\t" + (scale / currentScale) + " > 1.25");
+//#endif
+                    if (scale < nextScale) {
+//#ifdef __LOG__
+                        if (log.isEnabled()) log.debug("\t\tnextScale = " + nextScale + " - use");
+//#endif
+                        nextScale = scale;
+                        nextMap = (String) map;
+                    }
+                }
+            }
+        }
+
+//#ifdef __LOG__
+        if (log.isEnabled()) log.debug("nextMap: "  + nextMap);
+//#endif
+
+        return nextMap;
     }
 
     public static String atlasURLtoFileURL(final String url) {
@@ -213,6 +303,7 @@ public final class Atlas implements Runnable {
 //#ifdef __LOG__
             if (log.isEnabled()) log.debug("atlas opened");
 //#endif
+
         } catch (Throwable t) {
             return t;
         }
@@ -247,7 +338,7 @@ public final class Atlas implements Runnable {
         layers = null;
     }
 
-    Hashtable getLayerCollection(final Atlas atlas, final String cName) {
+    static Hashtable getLayerCollection(final Atlas atlas, final String cName) {
         Hashtable collection = (Hashtable) atlas.layers.get(cName);
         if (collection == null) {
             collection = new Hashtable();

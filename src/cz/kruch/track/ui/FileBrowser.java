@@ -410,6 +410,9 @@ public final class FileBrowser implements CommandListener, Runnable, Comparator 
                     }
 //#endif
                 }
+                if (Config.FAKE_WORLD_BUILT_IN.equals(candidate)) {
+                  v.addElement(candidate);
+                }
             } else {
                 v.addElement(item);
             }

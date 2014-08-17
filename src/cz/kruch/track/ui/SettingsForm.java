@@ -39,7 +39,7 @@ import cz.kruch.track.hecl.PluginManager;
  *
  * @author kruhc@seznam.cz
  */
-final class SettingsForm implements CommandListener, ItemStateListener, ItemCommandListener {
+final class SettingsForm implements CommandListener, ItemStateListener, ItemCommandListener, Runnable {
     private static final int MAX_URL_LENGTH = 256;
 
     private final String menuBasic;
@@ -101,6 +101,29 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
             NUMERIC = TextField.ANY;
         } else {
             NUMERIC = TextField.NUMERIC;
+        }
+    }
+
+    public void run() {
+        try {
+            // update config
+            Config.update(Config.CONFIG_090);
+
+//#ifdef __HECL__
+            // update plugins configurations
+            PluginManager.getInstance().saveConfiguration();
+//#endif
+
+//#ifndef __CN1__
+            // show confirmation
+            Desktop.showConfirmation(Resources.getString(Resources.DESKTOP_MSG_CFG_UPDATED), Desktop.screen);
+//#endif
+
+        } catch (ConfigurationException e) {
+
+            // show error
+            Desktop.showError(Resources.getString(Resources.DESKTOP_MSG_CFG_UPDATE_FAILED), e, Desktop.screen);
+
         }
     }
 
@@ -301,6 +324,7 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
             }
 
             // easyzoom
+/* obsolete since 1.27
             choice5 = newChoiceGroup(Resources.CFG_DESKTOP_GROUP_EASYZOOM,
                                      Desktop.CHOICE_POPUP_TYPE);
             append(choice5, Resources.CFG_DESKTOP_FLD_EASYZOOM_OFF);
@@ -308,6 +332,7 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
 //            append(choice5, Resources.CFG_DESKTOP_FLD_EASYZOOM_MAPS);
             choice5.setSelectedIndex(Config.easyZoomMode, true);
             submenu.append(choice5);
+*/
 
             // desktop font
             submenu.append(gauge1 = new Gauge(Resources.getString(Resources.CFG_DESKTOP_FLD_FONT_SIZE), true,
@@ -1070,7 +1095,9 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
                 }
 
                 // UI misc
+/* obsolete since 1.27
                 Config.easyZoomMode = choice5.getSelectedIndex();
+*/
                 Config.desktopFontSize = gauge1.getValue();
                 Config.osdAlpha = gauge2.getValue() * gaugeAlphaScale;
                 Config.listFont = Integer.parseInt(getString(field1), 16);
@@ -1169,26 +1196,8 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
         if (command.getCommandType() == Desktop.BACK_CMD_TYPE)
 //#endif
         {
-            try {
-                // update config
-                Config.update(Config.CONFIG_090);
-
-//#ifdef __HECL__
-                // update plugins configurations
-                PluginManager.getInstance().saveConfiguration();
-//#endif
-
-//#ifndef __CN1__
-                // show confirmation
-                Desktop.showConfirmation(Resources.getString(Resources.DESKTOP_MSG_CFG_UPDATED), Desktop.screen);
-//#endif
-
-            } catch (ConfigurationException e) {
-
-                // show error
-                Desktop.showError(Resources.getString(Resources.DESKTOP_MSG_CFG_UPDATE_FAILED), e, Desktop.screen);
-
-            }
+            // update cfg
+            Desktop.getDiskWorker().enqueue(this);
         }
 
         // notify that we are done
@@ -1337,7 +1346,7 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
         public void show(final String label) {
             final Form form = new Form(label);
             form.append(gaugeColor = new Gauge(Resources.getString(Resources.CFG_DESKTOP_FLD_COLOR), true, 15, itemLineColor[itemIdx]));
-            form.append(gaugeThickness = new Gauge(Resources.getString(Resources.CFG_DESKTOP_FLD_THICKNESS), true, 3, itemLineThick[itemIdx]));
+            form.append(gaugeThickness = new Gauge(Resources.getString(Resources.CFG_DESKTOP_FLD_THICKNESS), true, 5, itemLineThick[itemIdx]));
             form.append(new Spacer(form.getWidth(), 7));
             idx = form.append(itemLineImage[itemIdx]);
             form.addCommand(new Command(Resources.getString(Resources.CMD_CLOSE), Desktop.BACK_CMD_TYPE, 1));

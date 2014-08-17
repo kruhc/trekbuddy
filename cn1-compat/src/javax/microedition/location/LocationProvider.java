@@ -33,7 +33,8 @@ public class LocationProvider implements com.codename1.location.LocationListener
     }
 
     public void locationUpdated(com.codename1.location.Location location) {
-        com.codename1.io.Log.p("LocationProvider.locationUpdated; " + location, com.codename1.io.Log.DEBUG);
+        com.codename1.io.Log.p("LocationProvider.locationUpdated:", com.codename1.io.Log.DEBUG);
+        com.codename1.io.Log.p(location.toString(), com.codename1.io.Log.DEBUG);
         if (listener != null) {
             QualifiedCoordinates qc = new QualifiedCoordinates(location.getLatitude(), location.getLongitude(),
                                                                (float) location.getAltitude(),

@@ -52,7 +52,7 @@ public class FileConnection implements StreamConnection {
     }
 
     public void close() throws IOException {
-        com.codename1.io.Log.p("FileConnection.close - nothing to do", com.codename1.io.Log.WARNING);
+        com.codename1.io.Log.p("FileConnection.close - nothing to do (???)", com.codename1.io.Log.DEBUG);
     }
 
     public Enumeration list() throws IOException {

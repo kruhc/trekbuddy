@@ -269,11 +269,7 @@ public final class Jsr82LocationProvider extends SerialLocationProvider {
                 // update bt device info
                 Config.btDeviceName = btname;
                 Config.btServiceUrl = btspp;
-                try {
-                    Config.update(Config.VARS_090);
-                } catch (ConfigurationException e) {
-                    Desktop.showError(Resources.getString(Resources.DESKTOP_MSG_CFG_UPDATE_FAILED), e, null);
-                }
+                Config.updateInBackground(Config.VARS_090);
 
                 // start
                 Jsr82LocationProvider.this.url = btspp;

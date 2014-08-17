@@ -89,18 +89,22 @@ final class NoMapLoader extends Map.Loader /*implements Atlas.Loader*/ {
 
         } catch (XmlPullParserException e) {
 
+            // rethrow wrapped
             throw new IOException(e.toString());
 
         } finally {
+
+            // cleanup
             HXmlParser.closeQuietly(parser);
             File.closeQuietly(in);
+
         }
     }
 
     private static void parse(final HXmlParser parser, final Atlas atlas) throws IOException, XmlPullParserException {
 
         String name = null;
-        double minlat = Double.NaN, minlon = Double.NaN, maxlat = Double.NaN, maxlon = Double.NaN;
+//        double minlat = Double.NaN, minlon = Double.NaN, maxlat = Double.NaN, maxlon = Double.NaN;
 
         for (int depth = 0, eventType = parser.next(); eventType != XmlPullParser.END_DOCUMENT; eventType = parser.next()) {
             switch (eventType) {
@@ -212,7 +216,7 @@ final class NoMapLoader extends Map.Loader /*implements Atlas.Loader*/ {
             sb.append('[').append(idx).append("]  1px : ").append(findLayerScale(cal, maxlon - minlon)).append('m');
 
             // add new layer and its map
-            final Hashtable layerCollection = atlas.getLayerCollection(atlas, sb.toString());
+            final Hashtable layerCollection = Atlas.getLayerCollection(atlas, sb.toString());
             layerCollection.put(BASENAME, cal);
             idx++;
 

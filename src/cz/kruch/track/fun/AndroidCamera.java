@@ -181,11 +181,33 @@ final class AndroidCamera extends Camera implements CommandListener,
             // set picture size
             android.hardware.Camera.Parameters p = camera.getParameters();
             try {
-                android.hardware.Camera.Size size = p.getSupportedPictureSizes().get(Config.snapshotFormatIdx);
+                final android.hardware.Camera.Size size = p.getSupportedPictureSizes().get(Config.snapshotFormatIdx);
                 p.setPictureSize(size.width, size.height);
                 Log.i(TAG, "set resolution to " + size.width + "x" + size.height);
             } catch (Exception e) {
                 Log.w(TAG, "failed to set resolution; index " + Config.snapshotFormatIdx, e);
+            }
+
+            // set preview size
+            if (android.os.Build.VERSION.SDK_INT >= 14) {
+                try {
+                    final android.hardware.Camera.Size size = p.getSupportedPreviewSizes().get(0);
+                    p.setPreviewSize(size.width, size.height);
+                    Log.i(TAG, "set preview size to " + size.width + "x" + size.height);
+                } catch (Exception e) {
+                    Log.w(TAG, "failed to set preview size", e);
+                }
+            }
+
+            // set continuous autofocus
+            if (android.os.Build.VERSION.SDK_INT >= 14) { // on 4.x use continuous autofocus
+                try {
+                    p.setFocusMode("continuous-picture"); // value of FOCUS_MODE_CONTINUOUS_PICTURE
+                    Log.i(TAG, "use continuous-picture camera mode");
+                    state.append("continuous-picture mode -> ");
+                } catch (Exception e) {
+                     Log.w(TAG, "failed to set continuous autofocus", e);
+                }
             }
 
             // geotag
@@ -196,11 +218,17 @@ final class AndroidCamera extends Camera implements CommandListener,
                     p.setGpsAltitude(gpsCoords.getAlt());
                 }
                 p.setGpsTimestamp(gpsTimestamp / 1000);
+            }
+
+            // set params
+            try {
                 camera.setParameters(p);
+            } catch (Exception e) {
+                Log.e(TAG, "set parameters failed", e);
             }
 
             try {
-                
+
                 // set preview
                 camera.setPreviewDisplay(holder);
 
@@ -209,6 +237,7 @@ final class AndroidCamera extends Camera implements CommandListener,
 
                 // set autofocus
                 if (android.os.Build.VERSION.SDK_INT >= 14) { // on 4.x use continuous autofocus
+/* moved to initialization before activating preview
                     try {
                         p = camera.getParameters();
                         p.setFocusMode("continuous-picture"); // value of FOCUS_MODE_CONTINUOUS_PICTURE
@@ -218,6 +247,7 @@ final class AndroidCamera extends Camera implements CommandListener,
                     } catch (Exception e) {
                          // ignore
                     }
+*/
                 } else { // use manual autofocus
                     camera.autoFocus(this);
                     Log.i(TAG, "use autofocus camera mode");

@@ -96,6 +96,7 @@
         <pathelement location="${microemu.home}\microemu-android\microemu-android-ant.jar"/>
         <pathelement location="${android20.home}\android.jar"/>
         <pathelement location="${androidant.home}\lib\antlib.jar"/>
+        <pathelement location="${microemu.home}\microemu-android\antplus_demo.jar"/>
     </path>
 
     <path id="bootclasspath.android16">
@@ -105,6 +106,7 @@
         <pathelement location="${microemu.home}\microemu-android\microemu-android-ant.jar"/>
         <pathelement location="${android16.home}\android.jar"/>
         <pathelement location="${androidant.home}\lib\antlib.jar"/>
+        <pathelement location="${microemu.home}\microemu-android\antplus_demo.jar"/>
         <pathelement location="${microemu.home}\microemu-android\lib\backport-android-bluetooth2.jar"/>
     </path>
 
@@ -235,7 +237,7 @@
         <antcall target="clean"/>
         <antcall target="a.pre.symbian"/>
         <antcall target="compile.symbian"/>
-        <antcall target="a.pack" inheritall="true"/>
+        <antcall target="symbian.pack" inheritall="true"/>
         <antcall target="obfuscate${use.proguard}" inheritall="true"/>
         <antcall target="preverify" inheritall="true"/>
         <antcall target="dist.symbian" inheritall="true"/>
@@ -326,7 +328,7 @@
     <target name="android">
         <property name="suffix" value="-android"/>
         <property name="dist.dir" value="android"/>
-        <property name="libraryjars" value="${microemu.home}\microemu-cldc\target\microemu-cldc-3.0.0-SNAPSHOT.jar;${microemu.home}\microemu-midp\target\microemu-midp-3.0.0-SNAPSHOT.jar;${microemu.home}\microemu-extensions\microemu-jsr-75\target\microemu-jsr-75-3.0.0-SNAPSHOT.jar;${android20.home}\android.jar;${microemu.home}\microemu-android\microemu-android-ant.jar;${androidant.home}\lib\antlib.jar"/>
+        <property name="libraryjars" value="${microemu.home}\microemu-cldc\target\microemu-cldc-3.0.0-SNAPSHOT.jar;${microemu.home}\microemu-midp\target\microemu-midp-3.0.0-SNAPSHOT.jar;${microemu.home}\microemu-extensions\microemu-jsr-75\target\microemu-jsr-75-3.0.0-SNAPSHOT.jar;${android20.home}\android.jar;${microemu.home}\microemu-android\microemu-android-ant.jar;${androidant.home}\lib\antlib.jar;${microemu.home}\microemu-android\antplus_demo.jar"/>
         <antcall target="clean"/>
         <ant dir="${microemu.home}/microemu-android"
              antfile="build-trekbuddy.xml" target="clean"
@@ -368,7 +370,7 @@
     <target name="android-offline">
         <property name="suffix" value="-android"/>
         <property name="dist.dir" value="android-offline"/>
-        <property name="libraryjars" value="${microemu.home}\microemu-cldc\target\microemu-cldc-3.0.0-SNAPSHOT.jar;${microemu.home}\microemu-midp\target\microemu-midp-3.0.0-SNAPSHOT.jar;${microemu.home}\microemu-extensions\microemu-jsr-75\target\microemu-jsr-75-3.0.0-SNAPSHOT.jar;${android20.home}\android.jar;${microemu.home}\microemu-android\microemu-android-ant.jar;${androidant.home}\lib\antlib.jar"/>
+        <property name="libraryjars" value="${microemu.home}\microemu-cldc\target\microemu-cldc-3.0.0-SNAPSHOT.jar;${microemu.home}\microemu-midp\target\microemu-midp-3.0.0-SNAPSHOT.jar;${microemu.home}\microemu-extensions\microemu-jsr-75\target\microemu-jsr-75-3.0.0-SNAPSHOT.jar;${android20.home}\android.jar;${microemu.home}\microemu-android\microemu-android-ant.jar;${androidant.home}\lib\antlib.jar;${microemu.home}\microemu-android\antplus_demo.jar"/>
         <antcall target="clean"/>
         <ant dir="${microemu.home}/microemu-android"
              antfile="build-trekbuddy.xml" target="clean"
@@ -410,7 +412,7 @@
     <target name="android-backport">
         <property name="suffix" value="-android"/>
         <property name="dist.dir" value="android-backport"/>
-        <property name="libraryjars" value="${microemu.home}\microemu-cldc\target\microemu-cldc-3.0.0-SNAPSHOT.jar;${microemu.home}\microemu-midp\target\microemu-midp-3.0.0-SNAPSHOT.jar;${microemu.home}\microemu-extensions\microemu-jsr-75\target\microemu-jsr-75-3.0.0-SNAPSHOT.jar;${android20.home}\android.jar;${microemu.home}\microemu-android\lib\backport-android-bluetooth2.jar;${microemu.home}\microemu-android\microemu-android-ant.jar;${androidant.home}\lib\antlib.jar"/>
+        <property name="libraryjars" value="${microemu.home}\microemu-cldc\target\microemu-cldc-3.0.0-SNAPSHOT.jar;${microemu.home}\microemu-midp\target\microemu-midp-3.0.0-SNAPSHOT.jar;${microemu.home}\microemu-extensions\microemu-jsr-75\target\microemu-jsr-75-3.0.0-SNAPSHOT.jar;${android20.home}\android.jar;${microemu.home}\microemu-android\lib\backport-android-bluetooth2.jar;${microemu.home}\microemu-android\microemu-android-ant.jar;${androidant.home}\lib\antlib.jar;${microemu.home}\microemu-android\antplus_demo.jar"/>
         <antcall target="clean"/>
         <ant dir="${microemu.home}/microemu-android"
              antfile="build-trekbuddy.xml" target="clean"
@@ -1219,6 +1221,41 @@
         </wtkpackage>
     </target>
 
+    <target name="symbian.pack" depends="create.tmp.jad">
+        <wtkpackage jarfile="tmp/trekbuddy${suffix}.jar"
+                    jadfile="tmp/trekbuddy${suffix}.jad"
+                    config="CLDC-${wtk.cldc.version}"
+                    profile="MIDP-${wtk.midp.version}">
+            <fileset dir="tmp/build/classes"/>
+            <fileset dir="res">
+                <include name="**/datums.txt"/>
+                <include name="**/no-map.xml"/>
+                <include name="**/world.*"/>
+                <include name="**/set/**"/>
+                <include name="**/*.png"/>
+                <include name="**/*.svg"/>
+            </fileset>
+            <fileset dir="res-extra">
+                <include name="**/*.png"/>
+            </fileset>
+            <fileset dir="res-lang">
+                <include name="resources/language.en.res"/>
+                <include name="resources/language.es.res"/>
+                <include name="resources/language.fr.res"/>
+                <include name="resources/language.pl.res"/>
+                <include name="resources/language.cs.res"/>
+            </fileset>
+            <manifest>
+                <attribute name="Built-By" value="kruhc@seznam.cz"/>
+                <attribute name="Content-Folder" value="Applications"/>
+                <!--<attribute name="Nokia-Scalable-Icon-MIDlet-1" value="/resources/icon.svg"/>-->
+                <attribute name="Nokia-MIDlet-Category" value="Application"/>
+                <attribute name="Nokia-MIDlet-No-Exit" value="true"/>
+                <attribute name="FlipInsensitive" value="True"/>
+            </manifest>
+        </wtkpackage>
+    </target>
+
     <target name="android.pack" depends="create.tmp.jad">
         <wtkpackage jarfile="tmp/trekbuddy${suffix}.jar"
                     jadfile="tmp/trekbuddy${suffix}.jad"
@@ -1241,6 +1278,7 @@
                 <include name="resources/language.es.res"/>
                 <include name="resources/language.fr.res"/>
                 <include name="resources/language.pl.res"/>
+                <include name="resources/language.cs.res"/>
             </fileset>
             <manifest>
                 <attribute name="Built-By" value="kruhc@seznam.cz"/>
@@ -1301,6 +1339,7 @@
                 <include name="language.es.res"/>
                 <include name="language.fr.res"/>
                 <include name="language.pl.res"/>
+                <include name="language.cs.res"/>
             </fileset>
         </copy>
     </target>
@@ -1458,6 +1497,7 @@
             <arg value="-keepnames class api.io.RandomAccessInputStream"/>
             <arg value="-keepnames class net.trekbuddy.midlet.Runtime"/>
             <arg value="-keepnames class net.trekbuddy.midlet.IRuntime"/>
+            <arg value="-keepnames class com.dsi.ant.**"/>
             <arg value="-keepnames class cz.** extends java.lang.Exception"/>
             <arg value="-keepnames class api.** extends java.lang.Exception"/>
             <arg value="-keepnames class org.** extends java.lang.Exception"/>
@@ -1622,20 +1662,25 @@
 
     <target name="sign.and.update">
         <echo message="certificate expired"/>
+        <copy file="dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad"
+              tofile="dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}-expired.jad"/>
+        <antcall target="sign.and.update.2013"/>
     </target>
 
     <target name="sign.and.update.2013">
+        <property name="jarfile" value="dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jar"/>
+        <property name="jadfile" value="dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}-expired.jad"/>
         <java jar="${wtk.home}\bin\JadTool.jar" fork="true">
-            <arg line="-addcert -certnum 1 -alias 'trekbuddy2013' -keystore keystores\trekbuddy2013.jks -inputjad dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad -outputjad dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad"/>
+            <arg line="-addcert -certnum 1 -alias 'trekbuddy2013' -keystore keystores\trekbuddy2013.jks -inputjad ${jadfile} -outputjad ${jadfile}"/>
         </java>
         <java jar="${wtk.home}\bin\JadTool.jar" fork="true">
-            <arg line="-addcert -certnum 2 -alias 'trekbuddy2013' -keystore keystores\trekbuddy2013.jks -inputjad dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad -outputjad dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad"/>
+            <arg line="-addcert -certnum 2 -alias 'trekbuddy2013' -keystore keystores\trekbuddy2013.jks -inputjad ${jadfile} -outputjad ${jadfile}"/>
         </java>
         <java jar="${wtk.home}\bin\JadTool.jar" fork="true">
-            <arg line="-addcert -certnum 3 -alias 'trekbuddy2013' -keystore keystores\trekbuddy2013.jks -inputjad dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad -outputjad dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad"/>
+            <arg line="-addcert -certnum 3 -alias 'trekbuddy2013' -keystore keystores\trekbuddy2013.jks -inputjad ${jadfile} -outputjad ${jadfile}"/>
         </java>
         <java jar="${wtk.home}\bin\JadTool.jar" fork="true">
-            <arg line="-addcert -certnum 4 -alias 'trekbuddy2013' -keystore keystores\trekbuddy2013.jks -inputjad dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad -outputjad dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad"/>
+            <arg line="-addcert -certnum 4 -alias 'trekbuddy2013' -keystore keystores\trekbuddy2013.jks -inputjad ${jadfile} -outputjad ${jadfile}"/>
         </java>
 
         <!-- Thawte Premium Server CA w/ SN: 1 -->
@@ -1644,14 +1689,14 @@
         <!--echo file="dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad" append="true">MIDlet-Certificate-1-4: MIIDNjCCAp+gAwIBAgIQNhIilsXjOKUgodJfTNcJVDANBgkqhkiG9w0BAQUFADCBzjELMAkGA1UEBhMCWkExFTATBgNVBAgTDFdlc3Rlcm4gQ2FwZTESMBAGA1UEBxMJQ2FwZSBUb3duMR0wGwYDVQQKExRUaGF3dGUgQ29uc3VsdGluZyBjYzEoMCYGA1UECxMfQ2VydGlmaWNhdGlvbiBTZXJ2aWNlcyBEaXZpc2lvbjEhMB8GA1UEAxMYVGhhd3RlIFByZW1pdW0gU2VydmVyIENBMSgwJgYJKoZIhvcNAQkBFhlwcmVtaXVtLXNlcnZlckB0aGF3dGUuY29tMB4XDTk2MDgwMTAwMDAwMFoXDTIxMDEwMTIzNTk1OVowgc4xCzAJBgNVBAYTAlpBMRUwEwYDVQQIEwxXZXN0ZXJuIENhcGUxEjAQBgNVBAcTCUNhcGUgVG93bjEdMBsGA1UEChMUVGhhd3RlIENvbnN1bHRpbmcgY2MxKDAmBgNVBAsTH0NlcnRpZmljYXRpb24gU2VydmljZXMgRGl2aXNpb24xITAfBgNVBAMTGFRoYXd0ZSBQcmVtaXVtIFNlcnZlciBDQTEoMCYGCSqGSIb3DQEJARYZcHJlbWl1bS1zZXJ2ZXJAdGhhd3RlLmNvbTCBnzANBgkqhkiG9w0BAQEFAAOBjQAwgYkCgYEA0jY2aovXwlue2oFBYo847kkEVdbQ7xwblRZH7xhINTpS9CtqBo87L+pW46+GjZ4X9560ZXUCTe/LCaIhUdib0GfQug2SBhRz1JPLlyoAnFxODLz6FVL88kRu2hFKbgifLy3j+ao6hnO2RlNYyIkFvYMRuHM/qgeN9EJN50CdHDcCAwEAAaMTMBEwDwYDVR0TAQH/BAUwAwEB/zANBgkqhkiG9w0BAQUFAAOBgQBlkKyID1bZ5jA01CbH0FDxkt5r1DmICSLGpmODA/eZd9iy5Ri4XWPz1HP7bJyZePFLeH0ZJMMrAoT4vCLZiiLXoPxx7JGHIPG47LHlVYCsPVLIOQ7C8MAFT9aCdYy9X9LcdpoFEsmvcsPcJX6kTY4XpeCHf+GaWuFg3GQjPEIuTQ==</echo-->
 
         <java jar="${wtk.home}\bin\JadTool.jar" fork="true">
-            <arg line="-addjarsig -alias 'trekbuddy2013' -keystore keystores\trekbuddy2013.jks -keypass changeit -jarfile dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jar -inputjad dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad -outputjad dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad"/>
+            <arg line="-addjarsig -alias 'trekbuddy2013' -keystore keystores\trekbuddy2013.jks -keypass changeit -jarfile ${jarfile} -inputjad ${jadfile} -outputjad ${jadfile}"/>
         </java>
 
         <fixcrlf srcdir="dist/${vendor.dir}/${dist.dir}"
                  eol="crlf" eof="remove" encoding="UTF-8"
-                 includes="trekbuddy${suffix}.jad"/>
+                 includes="trekbuddy${suffix}-expired.jad"/>
         <java jar="${wtk.home}\bin\JadTool.jar" fork="true">
-            <arg line="-showcert -all -inputjad dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad"/>
+            <arg line="-showcert -all -inputjad ${jadfile}"/>
         </java>
     </target>
 

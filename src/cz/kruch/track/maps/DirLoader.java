@@ -195,7 +195,7 @@ final class DirLoader extends Map.Loader /*implements Atlas.Loader*/ {
 //#endif
 
                     // get map collection for current layer
-                    final Hashtable layerCollection = atlas.getLayerCollection(atlas, layerEntry.substring(0, layerEntry.length() - 1));
+                    final Hashtable layerCollection = Atlas.getLayerCollection(atlas, layerEntry.substring(0, layerEntry.length() - 1));
 
                     // set file connection
                     file.setFileConnection(layerEntry);

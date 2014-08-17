@@ -518,8 +518,8 @@ final class TarLoader extends Map.Loader /*implements Atlas.Loader*/ {
                                 if (log.isEnabled()) log.debug("calibration loaded: " + calibration + "; layer = " + lName + "; mName = " + mName);
 //#endif
                                 // save calibration for given map - only one calibration per map allowed :-)
-                                if (!atlas.getLayerCollection(atlas, lName).contains(mName)) {
-                                    atlas.getLayerCollection(atlas, lName).put(mName, calibration);
+                                if (!Atlas.getLayerCollection(atlas, lName).contains(mName)) {
+                                    Atlas.getLayerCollection(atlas, lName).put(mName, calibration);
                                 }
                             }
                         }

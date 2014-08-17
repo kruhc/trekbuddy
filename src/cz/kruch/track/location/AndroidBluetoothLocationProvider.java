@@ -34,6 +34,8 @@ public class AndroidBluetoothLocationProvider
 
     private volatile String url;
 
+    private BluetoothDevice device;
+
     public AndroidBluetoothLocationProvider() throws LocationException {
         super("Bluetooth");
     }
@@ -80,7 +82,7 @@ public class AndroidBluetoothLocationProvider
         // let's roll
         baby();
 
-        // required thread state
+        // required thread state (2.x only???)
         android.os.Looper.prepare();
 
         try {
@@ -90,12 +92,8 @@ public class AndroidBluetoothLocationProvider
 
         } catch (Throwable t) {
 
-//#ifdef __LOG__
-            t.printStackTrace();
-//#endif
-
             // record
-            setStatus("top level error");
+            setStatus("main loop error");
             setThrowable(t);
 
         } finally {
@@ -115,35 +113,43 @@ public class AndroidBluetoothLocationProvider
         InputStream stream = null;
 
         try {
-            // debug
-            setStatus("check Bluetooth status");
 
-            // BT on?
-            final BluetoothAdapter adapter = BluetoothAdapter.getDefaultAdapter();
-            if (adapter == null || !adapter.isEnabled()) {
+            // initialize
+            if (device == null) {
 
-                // no restart
-                setThrowable(new RuntimeException(Resources.getString(Resources.DESKTOP_MSG_BT_OFF)));
+                // debug
+                setStatus("check Bluetooth status");
 
-                // notify user
-                Desktop.showError(Resources.getString(Resources.DESKTOP_MSG_BT_OFF), null, null);
+                // BT on?
+                final BluetoothAdapter adapter = BluetoothAdapter.getDefaultAdapter();
+                if (adapter == null || !adapter.isEnabled()) {
 
-                // nicer way of quiting 
-                return;
+                    // no restart
+                    setThrowable(new RuntimeException(Resources.getString(Resources.DESKTOP_MSG_BT_OFF)));
+
+                    // notify user
+                    Desktop.showError(Resources.getString(Resources.DESKTOP_MSG_BT_OFF), null, null);
+
+                    // nicer way of quiting
+                    return;
+                }
+
+                // debug
+                setStatus("getting device");
+                
+                // get device
+                this.device = adapter.getRemoteDevice(url);
             }
 
             // debug
-            setStatus("opening connection");
+            setStatus("creating socket");
 
-            // get device, create socket, connect
-            final BluetoothDevice device = BluetoothAdapter.getDefaultAdapter().getRemoteDevice(url);
+            // create socket
+            final BluetoothDevice device = this.device;
             try {
                 socket = (BluetoothSocket) device.getClass().getMethod("createInsecureRfcommSocketToServiceRecord", new Class[]{ java.util.UUID.class }).invoke(device, SPP_UUID);
                 sockType = "Insecure";
             } catch (Throwable t) {
-//#ifdef __LOG__
-                t.printStackTrace();
-//#endif
                 android.util.Log.e(cz.kruch.track.TrackingMIDlet.APP_TITLE, "createInsecureRfcommSocketToServiceRecord", t);
             }
             if (socket == null) {
@@ -152,9 +158,6 @@ public class AndroidBluetoothLocationProvider
                     socket = (BluetoothSocket) device.getClass().getMethod("createRfcommSocket", new Class[]{ int.class }).invoke(device, Integer.valueOf(1));
                     sockType = "Unspecified";
                 } catch (Throwable t) {
-//#ifdef __LOG__
-                    t.printStackTrace();
-//#endif
                     android.util.Log.e(cz.kruch.track.TrackingMIDlet.APP_TITLE, "createRfcommSocket", t);
                 }
             }
@@ -162,6 +165,12 @@ public class AndroidBluetoothLocationProvider
                 socket = device.createRfcommSocketToServiceRecord(SPP_UUID);
                 sockType = "Secure";
             }
+            android.util.Log.i(cz.kruch.track.TrackingMIDlet.APP_TITLE, "socketType: " + sockType);
+
+            // debug
+            setStatus("connecting");
+
+            // connect the device; as per dev guide, call cancelDiscovery first - it helps and should be safe ;-)
             socket.connect();
 
             // debug
@@ -190,9 +199,6 @@ public class AndroidBluetoothLocationProvider
                     location = nextLocation(stream, observer);
 
                 } catch (IOException e) {
-//#ifdef __LOG__
-                    e.printStackTrace();
-//#endif
 
                     // record
                     setStatus("I/O error");
@@ -203,9 +209,6 @@ public class AndroidBluetoothLocationProvider
                      */
 
                 } catch (Throwable t) {
-//#ifdef __LOG__
-                    t.printStackTrace();
-//#endif
 
                     // stop request?
                     if (t instanceof InterruptedException) {
@@ -253,7 +256,7 @@ public class AndroidBluetoothLocationProvider
             setStatus("closing stream and connection");
 
             // cleanup
-            synchronized (this) {
+            /*synchronized (this)*/ { // 2014-08-02: no keep-alive nor watcher -> no need to synchronize
 
                 // close input stream
                 if (stream != null) {
@@ -275,6 +278,10 @@ public class AndroidBluetoothLocationProvider
                     socket = null;
                 }
 
+                // forget device when stopping
+                if (!isGo()) {
+                    device = null;
+                }
             }
 
             // debug
@@ -283,11 +290,25 @@ public class AndroidBluetoothLocationProvider
         }
     }
 
+    protected void setStatus(Object status) {
+        super.setStatus(status);
+        if (status != null) {
+            android.util.Log.i(cz.kruch.track.TrackingMIDlet.APP_TITLE, "status: " + status);
+        }
+    }
+
+    protected void setThrowable(Throwable throwable) {
+        super.setThrowable(throwable);
+        if (throwable != null) {
+            android.util.Log.e(cz.kruch.track.TrackingMIDlet.APP_TITLE, "exception occured", throwable);
+        }
+    }
+
     private final class Discoverer implements CommandListener, Runnable {
 
         private String btaddres, btname;
 
-        private final Vector devices = new Vector();
+        private final Vector<BluetoothDevice> devices = new Vector<BluetoothDevice>();
 
         private final Command cmdBack = new Command(Resources.getString(Resources.CMD_CANCEL), Desktop.CANCEL_CMD_TYPE, 1);
         private final Command cmdConnect = new Command(Resources.getString(Resources.DESKTOP_CMD_CONNECT), Command.SCREEN, 0);
@@ -305,14 +326,15 @@ public class AndroidBluetoothLocationProvider
         }
 
         public void run() {
+
             // quit status
             boolean quit = true;
 
-            // required thread state
+            // required thread state (2.x only???)
             android.os.Looper.prepare();
 
             // BT supported and turned on check
-            BluetoothAdapter adapter = BluetoothAdapter.getDefaultAdapter();
+            final BluetoothAdapter adapter = BluetoothAdapter.getDefaultAdapter();
             if (adapter == null || !adapter.isEnabled()) {
 
                 // notify user
@@ -321,10 +343,10 @@ public class AndroidBluetoothLocationProvider
             } else {
 
                 // find paired devices
-                java.util.Set paired = BluetoothAdapter.getDefaultAdapter().getBondedDevices();
+                final java.util.Set<BluetoothDevice> paired = adapter.getBondedDevices();
                 if (paired.size() > 0) {
-                    for (java.util.Iterator it = paired.iterator(); it.hasNext(); ) {
-                        final BluetoothDevice device = (BluetoothDevice) it.next();
+                    for (java.util.Iterator<BluetoothDevice> it = paired.iterator(); it.hasNext(); ) {
+                        final BluetoothDevice device = it.next();
                         devices.addElement(device);
                         pane.append(device.getName(), null);
                     }
@@ -352,16 +374,11 @@ public class AndroidBluetoothLocationProvider
                 // update bt device info
                 Config.btDeviceName = btname;
                 Config.btServiceUrl = btaddres;
-                try {
-                    Config.update(Config.VARS_090);
-                } catch (ConfigurationException e) {
-                    Desktop.showError(Resources.getString(Resources.DESKTOP_MSG_CFG_UPDATE_FAILED), e, null);
-                }
+                Config.updateInBackground(Config.VARS_090);
 
                 // start
                 AndroidBluetoothLocationProvider.this.url = btaddres;
-                final Thread thread = new Thread(AndroidBluetoothLocationProvider.this);
-                thread.start();
+                (new Thread(AndroidBluetoothLocationProvider.this)).start();
 
             } else {
                 notifyListener(LocationProvider._CANCELLED);
@@ -383,7 +400,7 @@ public class AndroidBluetoothLocationProvider
             final int type = command.getCommandType();
             if (type == Command.SCREEN) {
                 btname = pane.getString(pane.getSelectedIndex());
-                btaddres = ((BluetoothDevice) devices.elementAt(pane.getSelectedIndex())).getAddress();
+                btaddres = devices.elementAt(pane.getSelectedIndex()).getAddress();
                 letsGo(true);
             } else if (type == Desktop.CANCEL_CMD_TYPE)  {
                 letsGo(false);

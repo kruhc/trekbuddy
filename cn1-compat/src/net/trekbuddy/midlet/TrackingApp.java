@@ -17,6 +17,7 @@ public class TrackingApp {
     private MIDlet midlet;
 
     public void init(Object context) {
+/* 2014-06-09: moved to App.cs        
 //#ifdef __LOG__
         com.codename1.io.Log.setReportingLevel(com.codename1.io.Log.DEBUG);
 //#else
@@ -24,6 +25,7 @@ public class TrackingApp {
 //#endif
         com.codename1.io.Log.setAutoflush(true);
         com.codename1.io.Log.p("init", com.codename1.io.Log.INFO);
+*/
 /*
         try {
             Resources theme = Resources.openLayered("/theme");

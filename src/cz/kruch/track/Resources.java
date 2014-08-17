@@ -431,6 +431,8 @@ public final class Resources {
     private static short[] keymap0, keymap1;
     private static short keymapSize;
 
+    public static String locale;
+
     private Resources() {
     }
 
@@ -439,7 +441,7 @@ public final class Resources {
 
 //#ifndef __LOCALE_PL__
         // read default resources
-        String locale = System.getProperty("microedition.locale");
+        locale = System.getProperty("microedition.locale");
         if (locale != null && locale.length() != 0) { // locale not empty
             locale = locale.replace('-', '_');
             final int vidx = locale.indexOf('_');

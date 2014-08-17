@@ -1119,7 +1119,7 @@ final class ComputerView extends View
         final int h = Desktop.height;
 
         // default settings
-        graphics.setFont(Desktop.font);
+        graphics.setFont(font);
 
         // got profile?
         if (isUsable() && status == null) {

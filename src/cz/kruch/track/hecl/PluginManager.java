@@ -533,11 +533,11 @@ public final class PluginManager implements CommandListener, Runnable, Comparato
         final int type = command.getCommandType();
         if (Desktop.BACK_CMD_TYPE == type || Desktop.CANCEL_CMD_TYPE == type) {
             final Displayable next;
-            if (displayable instanceof List) {
+//            if (displayable instanceof List) {
                 next = Desktop.screen;
-            } else {
-                next = pane;
-            }
+//            } else {
+//                next = pane;
+//            }
             Desktop.display.setCurrent(next);
             pane = null;
             if (_actionPlugin != null) {
@@ -549,28 +549,30 @@ public final class PluginManager implements CommandListener, Runnable, Comparato
             if (displayable instanceof List) {
                 final List list = (List) displayable;
                 final Plugin plugin = (Plugin) plugins.elementAt(list.getSelectedIndex());
-                final Form box = new Form(plugin.getFullName());
-                final String status;
-                if (plugin.hasError()) {
-                    status = (new StringBuffer(plugin.getError())
-                            .append(" [").append(plugin.getErrorTime()).append("]")).toString();
-                } else {
-                    status = STATUS_OK;
-                }
-                box.append(new StringItem("Status", status));
-                box.append(new StringItem("Message", plugin.getDetail()));
-                final Vector actions = plugin.getActions();
-                if (actions != null) {
-                    for (int i = 0, N = actions.size(); i < N; i++) {
-                        box.addCommand(new Command(actions.elementAt(i).toString(), Desktop.POSITIVE_CMD_TYPE, i));
+                if (plugin.isEnabled()) {
+                    final Form box = new Form(plugin.getFullName());
+                    final String status;
+                    if (plugin.hasError()) {
+                        status = (new StringBuffer(plugin.getError())
+                                .append(" [").append(plugin.getErrorTime()).append("]")).toString();
+                    } else {
+                        status = STATUS_OK;
                     }
-                    _actionPlugin = plugin;
-                    _actionPlugin.setVisible(box);
+                    box.append(new StringItem("Status", status));
+                    box.append(new StringItem("Message", plugin.getDetail()));
+                    final Vector actions = plugin.getActions();
+                    if (actions != null) {
+                        for (int i = 0, N = actions.size(); i < N; i++) {
+                            box.addCommand(new Command(actions.elementAt(i).toString(), Desktop.POSITIVE_CMD_TYPE, i));
+                        }
+                        _actionPlugin = plugin;
+                        _actionPlugin.setVisible(box);
+                    }
+                    box.addCommand(new Command(Resources.getString(Resources.CMD_CLOSE), Desktop.BACK_CMD_TYPE, 1));
+                    box.setCommandListener(this);
+                    Desktop.display.setCurrent(box);
+                    pane = displayable;
                 }
-                box.addCommand(new Command(Resources.getString(Resources.CMD_CLOSE), Desktop.BACK_CMD_TYPE, 1));
-                box.setCommandListener(this);
-                Desktop.display.setCurrent(box);
-                pane = displayable;
             } else {
                 _actionForm = (Form) displayable;
                 _actionCommand = command.getLabel();

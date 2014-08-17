@@ -240,9 +240,9 @@ final class MapViewer {
 
         int mWidth = map.getWidth();
         int mHeight = map.getHeight();
+        boolean dirty = false;
         final int x0;
         final int y0;
-        boolean dirty = false;
 
         // scrolling-specific init
         if (!ots) {
@@ -1000,8 +1000,12 @@ final class MapViewer {
 
     private void drawPoi(final Graphics graphics, final Position position,
                          final byte status, final int idx) {
-        final int x = position.getX() - this.x;
-        final int y = position.getY() - this.y;
+        int x = position.getX() - this.x;
+        int y = position.getY() - this.y;
+        if (Config.fixedCrosshair) {
+            x -= chx - chx0;
+            y -= chy - chy0;
+        }
 
         // on screen?
         if (x > 0 && x < Desktop.width && y > 0 && y < Desktop.height) {
@@ -1295,14 +1299,13 @@ final class MapViewer {
                 p0 = p1;
             }
         }
-
     }
 
-    private static void drawLineSegment(final Graphics graphics,
-                                        int x0, int y0,
-                                        int x1, int y1,
-                                        final int flags,
-                                        final int w, final int h) {
+    private void drawLineSegment(final Graphics graphics,
+                                 int x0, int y0,
+                                 int x1, int y1,
+                                 final int flags,
+                                 final int w, final int h) {
 //#ifdef __CLIP__
         final boolean p0IsWithin = x0 >=0 && x0 < w && y0 >=0 && y0 < h;
         final boolean p1IsWithin = x1 >=0 && x1 < w && y1 >=0 && y1 < h;
@@ -1418,6 +1421,14 @@ final class MapViewer {
             }
         }
 //#endif
+        if (Config.fixedCrosshair) {
+            final int dx = chx - chx0;
+            final int dy = chy - chy0;
+            x0 -= dx;
+            x1 -= dx;
+            y0 -= dy;
+            y1 -= dy;
+        }
         clipLineSegment(graphics, x0, y0, x1, y1, flags);
     }
 

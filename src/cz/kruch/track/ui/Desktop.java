@@ -43,6 +43,7 @@ import api.location.LocationListener;
 import api.location.Location;
 import api.location.QualifiedCoordinates;
 import api.location.LocationException;
+import api.lang.Int;
 
 //#ifdef __ANDROID__
 import android.content.ComponentName;
@@ -133,7 +134,7 @@ public final class Desktop implements CommandListener,
 //#ifdef __HECL__
     /*private */Command cmdLive;
 //#endif
-    /*private */Command cmdLoadMaps/*, cmdLoadMap, cmdLoadAtlas*/;
+    /*private */Command cmdLoadMaps;
 //#ifdef __B2B__
     /*private */Command cmdLoadGuide;
 //#endif
@@ -354,7 +355,7 @@ public final class Desktop implements CommandListener,
         consoleInit(g);
 
         // show copyright(s)
-        consoleShow(g, consoleLineY, "TrekBuddy \u00a9 2013 KrUcH");
+        consoleShow(g, consoleLineY, "TrekBuddy \u00a9 2006-2014 KrUcH");
         consoleLineY += consoleLineHeight;
         final String lc = Resources.getString(Resources.BOOT_LOCAL_COPY);
         if (lc != null && lc.length() > 0) {
@@ -772,8 +773,17 @@ public final class Desktop implements CommandListener,
         this.cmdPause = new Command(Resources.getString(Resources.DESKTOP_CMD_PAUSE), uiTypeSome ? POSITIVE_CMD_TYPE : Command.STOP, 1);
         this.cmdContinue = new Command(Resources.getString(Resources.DESKTOP_CMD_CONTINUE), uiTypeSome ? POSITIVE_CMD_TYPE : Command.STOP, 1);
         this.cmdStop = new Command(Resources.getString(Resources.DESKTOP_CMD_STOP), uiTypeSome ? POSITIVE_CMD_TYPE : Command.STOP, 2);
-        this.cmdTracklogStart = new Command("Tracklog ".concat(Resources.getString(Resources.DESKTOP_CMD_START)), uiTypeSome ? POSITIVE_CMD_TYPE : POSITIVE_CMD_TYPE, 3);
-        this.cmdTracklogStop = new Command("Tracklog ".concat(Resources.getString(Resources.DESKTOP_CMD_STOP)), uiTypeSome ? POSITIVE_CMD_TYPE : POSITIVE_CMD_TYPE, 3);
+        // let's make boowoo happy
+        final String tstl, tspl;
+        if ("fr".equals(Resources.locale)) {
+            tstl = Resources.getString(Resources.DESKTOP_CMD_START).concat(" Tracklog");
+            tspl = Resources.getString(Resources.DESKTOP_CMD_STOP).concat(" Tracklog");
+        } else {
+            tstl = "Tracklog ".concat(Resources.getString(Resources.DESKTOP_CMD_START));
+            tspl = "Tracklog ".concat(Resources.getString(Resources.DESKTOP_CMD_STOP));
+        }
+        this.cmdTracklogStart = new Command(tstl, uiTypeSome ? POSITIVE_CMD_TYPE : Command.STOP, 3);
+        this.cmdTracklogStop = new Command(tspl, uiTypeSome ? POSITIVE_CMD_TYPE : Command.STOP, 3);
 
         // handle commands
         screen.setCommandListener(this);
@@ -1212,16 +1222,6 @@ public final class Desktop implements CommandListener,
             (new SettingsForm(new Event(Event.EVENT_CONFIGURATION_CHANGED))).show();
         } else if (command == cmdWaypoints) {
             Waypoints.getInstance().show(0);
-/*
-        } else if (command == cmdLoadMap) {
-            (new FileBrowser(Resources.getString(Resources.DESKTOP_MSG_SELECT_MAP), new Event(Event.EVENT_FILE_BROWSER_FINISHED, "map"),
-                             screen, Config.FOLDER_MAPS,
-                             new String[]{ ".map", ".gmi", ".tar", ".xml" })).show();
-        } else if (command == cmdLoadAtlas) {
-            (new FileBrowser(Resources.getString(Resources.DESKTOP_MSG_SELECT_ATLAS), new Event(Event.EVENT_FILE_BROWSER_FINISHED, "atlas"),
-                             screen, Config.FOLDER_MAPS,
-                             new String[]{ ".tba", ".idx", ".tar", ".xml" })).show();
-*/
         } else if (command == cmdLoadMaps) {
             (new FileBrowser(Resources.getString(Resources.DESKTOP_MSG_SELECT_MAP), new Event(Event.EVENT_FILE_BROWSER_FINISHED, "map/atlas"),
                              Config.FOLDER_MAPS,
@@ -2199,6 +2199,14 @@ public final class Desktop implements CommandListener,
         }
     }
 
+    // TODO hacky!!!!
+    void handleMagnify(int direction) {
+        if (views == null) return; // too early invocation
+        if (mode == VIEW_MAP) {
+            update(((MapView) views[mode]).magnify(direction));
+        }
+    }
+
     void update(final int mask) {
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("update " + Integer.toBinaryString(mask) + "; state: " + cz.kruch.track.TrackingMIDlet.state);
@@ -2380,7 +2388,7 @@ public final class Desktop implements CommandListener,
             switch (Config.locationProvider) {
                 case Config.LOCATION_PROVIDER_JSR82:
 //#ifdef __ANDROID__
-                    providerClass = Class.forName("cz.kruch.track.location.AndroidBluetoothLocationProvider");
+                    providerClass = cz.kruch.track.location.AndroidBluetoothLocationProvider.class;
 //#else
                     providerClass = Class.forName("cz.kruch.track.location.Jsr82LocationProvider");
 //#endif
@@ -2388,7 +2396,7 @@ public final class Desktop implements CommandListener,
                 break;
                 case Config.LOCATION_PROVIDER_JSR179:
 //#ifdef __ANDROID__
-                    providerClass = Class.forName("cz.kruch.track.location.AndroidLocationProvider");
+                    providerClass = cz.kruch.track.location.AndroidLocationProvider.class;
 //#else
                     providerClass = Class.forName("cz.kruch.track.location.Jsr179LocationProvider");
 //#endif
@@ -2474,7 +2482,7 @@ public final class Desktop implements CommandListener,
         LocationProvider provider;
         try {
 //#ifdef __ANDROID__
-            provider = (LocationProvider) Class.forName("cz.kruch.track.location.AndroidBluetoothLocationProvider").newInstance();
+            provider = new cz.kruch.track.location.AndroidBluetoothLocationProvider();
 //#else
             provider = (LocationProvider) Class.forName("cz.kruch.track.location.Jsr82LocationProvider").newInstance();
 //#endif
@@ -3080,40 +3088,20 @@ public final class Desktop implements CommandListener,
         }
     }
 
-    void zoom(int direction) {
+    void zoom(final int direction) {
+
+        // only if atlas is used
         if (atlas != null) {
-            final Enumeration e = atlas.getLayers();
-            if (e.hasMoreElements()) {
-                final String[] layers = FileBrowser.sort2array(e, null, null);
-                final String layer = atlas.getLayer();
-                for (int N = layers.length, i = 0; i < N; i++) {
-                    if (layer.equals(layers[i])) {
-                        final QualifiedCoordinates qc = getPointer();
-                        String nextLayer = null;
-                        if (direction == 1 && (i + 1) < N) {
-                            for (i = i + 1; i < N; i++) {
-                                if (atlas.getFileURL(layers[i], qc) != null) {
-                                    nextLayer = layers[i];
-                                    break;
-                                }
-                            }
-                        } else if (direction == -1 && i > 0) {
-                            for (i = i - 1; i >= 0; i--) {
-                                if (atlas.getFileURL(layers[i], qc) != null) {
-                                    nextLayer = layers[i];
-                                    break;
-                                }
-                            }
-                        }
-                        if (nextLayer != null) {
-                            (new Event(Event.EVENT_LAYER_SELECTION_FINISHED, "switch")).invoke(nextLayer, null, this);
-                        }
-                        break;
-                    }
-                }
-                // give feedback
-                vibrate(50);
+
+            // next layer name
+            final Int eventType = new Int(-1);
+            final String nextLayer = atlas.getNextLayer(map, direction, getPointer(), eventType);
+            if (nextLayer != null) {
+                (new Event(eventType.intValue(), "switch")).invoke(nextLayer, null, this);
             }
+
+            // give feedback
+            vibrate(50);
         }
     }
 
@@ -3621,7 +3609,11 @@ public final class Desktop implements CommandListener,
                         Desktop.this.startOpenAtlas(url, name);
                     } else {
                         Desktop.this._target = "map";
-                        Desktop.this.startOpenMap(url, name);
+                        if (Config.FAKE_WORLD_BUILT_IN.equals(name)) {
+                            Desktop.this.startOpenMap("trekbuddy.jar", DEFAULT_MAP_NAME);
+                        } else {
+                            Desktop.this.startOpenMap(url, name);
+                        }
                     }
 //#if __ANDROID__ || __CN1__
                     // show progress
@@ -3769,13 +3761,16 @@ public final class Desktop implements CommandListener,
                             // warn user (in overlay dialog??)
                             showWarning(Resources.getString(Resources.DESKTOP_MSG_NO_MAP_FOR_POS) + " '" + layerName + "'.",
                                         null, next);                            
-                        }
+                        } else {
+
+                            // restore screen
+                            Desktop.display.setCurrent(Desktop.screen);
+
 //#if __ANDROID__ || __CN1__
-                          else {
                             // show progress
                             showLoading(Resources.getString(Resources.NAV_MSG_TICKER_LOADING));
-                        }
 //#endif
+                        }
                     }
 
                 } else {

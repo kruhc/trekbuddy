@@ -233,7 +233,7 @@ public final class Runtime
         Log.d(TAG, "[svc] restartTracking");
 //#endif
         final Thread thread = new Thread((Runnable) provider);
-//#ifdef __ALL__
+//#if __ALL__ && !__SYMBIAN__
         if (cz.kruch.track.TrackingMIDlet.samsung) {
             thread.setPriority(Thread.MIN_PRIORITY);
         }

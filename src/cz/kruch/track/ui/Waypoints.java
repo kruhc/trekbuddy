@@ -147,6 +147,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
     private int entry, depth, sort, mobs;
 
     private volatile String session, sessionStoreName;
+    private volatile int sessionUsage;
 
     private String itemWptsStores, itemTracksStores,
                    itemRecordCurrent, itemEnterCustom, itemProjectNew,
@@ -379,7 +380,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                 if (navigator.getNavigateTo() != null) {
                     pane.append(itemStop, iconStop);
                 }
-                if (session != null) {
+                if (session != null && sessionUsage != 0) {
                     pane.append(itemEndSession, iconStop);
                 }
                 pane.setSelectedIndex(0, true);
@@ -821,8 +822,16 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                         case Resources.NAV_ITEM_ENTER_CUSTOM:
                         case Resources.NAV_ITEM_RECORD_CURRENT:
                         case Resources.NAV_ITEM_PROJECT_NEW: {
+                            // session is checked?
+                            final boolean isSession = ret[2] != null;
                             // update runtime cfg
-                            Config.wptSessionMode = ret[2] != null;
+                            Config.wptSessionMode = isSession;
+                            // update usage counter
+                            if (isSession) {
+                                sessionUsage++;
+                            } else {
+                                sessionUsage = 0;
+                            }
                             // add waypoint to store
                             addToPrefferedStore(STORE_USER, (Waypoint) ret[1], (String) ret[2]);
                         } break;

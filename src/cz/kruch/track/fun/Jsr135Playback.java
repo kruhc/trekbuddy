@@ -62,6 +62,10 @@ final class Jsr135Playback extends Playback implements PlayerListener {
             player.addPlayerListener(this);
             player.realize();
             state.append("x-realized -> ");
+//#ifdef __SYMBIAN__
+            player.prefetch();
+            state.append("x-prefetched -> ");
+//#endif
 
             // get volume control and set it to max
             control = player.getControl("VolumeControl");
@@ -121,7 +125,7 @@ final class Jsr135Playback extends Playback implements PlayerListener {
         int level = 0;
         if (control instanceof VolumeControl) {
             try {
-                VolumeControl ctrl = (VolumeControl) control;
+                final VolumeControl ctrl = (VolumeControl) control;
                 level = ctrl.getLevel();
                 ctrl.setLevel(volume);
             } catch (Exception e) {
@@ -135,7 +139,7 @@ final class Jsr135Playback extends Playback implements PlayerListener {
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("on close");
 //#endif
-        state.append("cleaned up");
+        state.append("cleaned up -> ");
 
         // close input
         if (in != null) {

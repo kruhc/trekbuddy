@@ -47,7 +47,7 @@ public abstract class File {
 //#endif
         } catch (Throwable t) {
         }
-//#ifdef __ALL__
+//#if __ALL__ && !__SYMBIAN__
         if (factory == null) {
             try {
                 Class.forName("com.siemens.mp.io.file.FileConnection");

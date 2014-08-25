@@ -160,21 +160,18 @@ public class SerialLocationProvider
         reset();
 
         try {
-            // debug
-            setStatus("opening connection");
-
-            // open connection
-            connection = (StreamConnection) Connector.open(url, rw);
 
             // debug
-            setStatus("opening input stream");
+            setStatus("opening connection and stream");
 
-            // open stream for reading
+            // opend connection and stream
             synchronized (lock) {
+                connection = (StreamConnection) Connector.open(url, rw);
                 stream = connection.openInputStream();
             }
 
 //#ifdef __ALL__
+
             // HGE-100 start
             if (isHge100) {
                 synchronized (lock) {
@@ -183,10 +180,11 @@ public class SerialLocationProvider
                     hge.flush();
                 }
             }
+
 //#endif
 
             // debug
-            setStatus("stream opened");
+            setStatus("connection and stream opened");
 
             // start keep-alive
             startKeepAlive();
@@ -200,6 +198,7 @@ public class SerialLocationProvider
             // read data until error or stop request
             while (isGo()) {
 
+                // location instance
                 Location location = null;
 
                 try {
@@ -208,9 +207,6 @@ public class SerialLocationProvider
                     location = nextLocation(stream, observer);
 
                 } catch (IOException e) {
-//#ifdef __LOG__
-                    e.printStackTrace();
-//#endif
 
                     // record if happened unexpectedly
                     if (isGo()) {
@@ -223,9 +219,6 @@ public class SerialLocationProvider
                      */
 
                 } catch (Throwable t) {
-//#ifdef __LOG__
-                    t.printStackTrace();
-//#endif
 
                     // stop request?
                     if (t instanceof InterruptedException) {
@@ -259,12 +252,13 @@ public class SerialLocationProvider
                 // notify listener
                 notifyListener2(location);
 
-//#ifdef __ALL__
+//#if __ALL__ && !__SYMBIAN__
                 // free CPU on Samsung
                 if (cz.kruch.track.TrackingMIDlet.samsung) {
                     Thread.yield();
                 }
 //#endif
+
             } // for (; go ;)
 
         } finally {
@@ -273,8 +267,9 @@ public class SerialLocationProvider
             setStatus("stopping");
 
 //#ifdef __ALL__
+
             // HGE-100 stop
-            synchronized (lock) {
+            if (isHge100) {
                 if (hge != null) {
                     try {
                         hge.write("$STO\r\n".getBytes());
@@ -284,7 +279,8 @@ public class SerialLocationProvider
                     }
                 }
             }
-//#endif            
+
+//#endif
             
             // stop watcher
             stopWatcher();
@@ -295,7 +291,8 @@ public class SerialLocationProvider
             // debug
             setStatus("closing stream and connection");
 
-            // close input stream
+            // close input stream and connection
+            int ioc = 0;
             synchronized (lock) {
                 if (stream != null) {
                     try {
@@ -304,26 +301,31 @@ public class SerialLocationProvider
                         // ignore
                     }
                     stream = null;
+                    ioc++;
                 }
-            }
-
-            // close connection
-            if (connection != null) {
-                try {
-                    connection.close();
-                } catch (Exception e) {
-                    // ignore
+                if (connection != null) {
+                    try {
+                        connection.close();
+                    } catch (Exception e) {
+                        // ignore
+                    }
+                    connection = null;
+                    ioc++;
                 }
-                connection = null;
             }
 
             // debug
             setStatus("stream and connection closed");
 
 //#ifndef __RIM__
+
             /* native finalizers? */
-            System.gc(); // unconditional!!!
-//#endif            
+            if (ioc > 0) {
+                System.gc(); // unconditional!!!
+            }
+
+//#endif
+
         }
     }
 
@@ -364,7 +366,7 @@ public class SerialLocationProvider
                     // debug
                     setStatus("forced stream close");
 
-                    // close stream
+                    // close stream and connection
                     synchronized (lock) {
                         if (stream != null) {
                             try {
@@ -372,15 +374,28 @@ public class SerialLocationProvider
                             } catch (Exception e) {
                                 // ignore
                             }
+                            stream = null;
+                        }
+                        if (connection != null) {
+                            try {
+                                connection.close();
+                            } catch (Exception e) {
+                                // ignore
+                            }
+                            connection = null;
                         }
                     }
 
                     // debug
                     setStatus("stream forcibly closed");
+
 //#ifndef __RIM__
+
                     /* native finalizers?!? */
                     System.gc(); // unconditional!!!
+
 //#endif
+
                 } break;
             }
         }

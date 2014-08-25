@@ -256,7 +256,7 @@ abstract class StreamReadingLocationProvider extends LocationProvider {
                 // starting at the beginning
                 btlineOffset = 0;
 
-//#ifdef __ALL__
+//#if __ALL__ && !__SYMBIAN__
                 // free CPU on Samsung
                 if (cz.kruch.track.TrackingMIDlet.samsung) {
                     Thread.yield();

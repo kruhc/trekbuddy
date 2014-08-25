@@ -274,7 +274,7 @@ public final class Jsr82LocationProvider extends SerialLocationProvider {
                 // start
                 Jsr82LocationProvider.this.url = btspp;
                 final Thread thread = new Thread(Jsr82LocationProvider.this);
-//#ifdef __ALL__
+//#if __ALL__ && !__SYMBIAN__
                 if (cz.kruch.track.TrackingMIDlet.samsung) {
                     thread.setPriority(Thread.MIN_PRIORITY);
                 }

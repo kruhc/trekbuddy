@@ -270,7 +270,7 @@ public final class Jsr179LocationProvider
                 }
             }
 
-//#ifdef __ALL__
+//#if __ALL__ && !__SYMBIAN__
 
             // Sonim hacks
             if (cz.kruch.track.TrackingMIDlet.sonim) {

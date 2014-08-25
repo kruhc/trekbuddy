@@ -123,7 +123,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
     public static int locationProvider      = -1;
 
     // group [DataDir]
-    public static String dataDir;
+    private static String dataDir;
 //#ifdef __CN1__
     public static String cardDir;
 //#endif
@@ -372,6 +372,10 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
             forcedGc = true;
         } else if (cz.kruch.track.TrackingMIDlet.samsung) {
             dataDir = getDefaultDataDir("file:///Mmc/", "trekbuddy/");
+            if (cz.kruch.track.TrackingMIDlet.b2710) {
+                lowmemIo = true;
+                largeAtlases = true;
+            }
         } else if (cz.kruch.track.TrackingMIDlet.uiq) {
             dataDir = getDefaultDataDir("file:///Ms/", "Other/TrekBuddy/");
             fullscreen = true;
@@ -383,7 +387,6 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         }
         if (cz.kruch.track.TrackingMIDlet.symbian) {
             useNativeService = false; // !cz.kruch.track.TrackingMIDlet.s60rdfp2;
-            verboseLoading = true;
         } else if (cz.kruch.track.TrackingMIDlet.nokia) {
             safeColors = true;
             captureLocator = "capture://image";
@@ -461,7 +464,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         geoDatum = din.readUTF();
         /*tracklogsOn = */din.readBoolean(); // bc
         tracklogFormat = din.readUTF();
-        dataDir = din.readUTF();
+        setDataDir(din.readUTF());
         captureLocator = din.readUTF();
         snapshotFormat = din.readUTF();
         btDeviceName = din.readUTF();
@@ -634,7 +637,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
             tilesScaleFiltered = din.readBoolean();
 
             // 1.1.2 change
-            verboseLoading = din.readBoolean();
+            /*verboseLoading = */din.readBoolean(); // reconfirm in 1.27
 
             // 1.1.4 change
 //#ifndef __ANDROID__
@@ -659,10 +662,13 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
             // 1.2.3 change
             fpsControl = din.readInt();
 
-            // 1.2.6 changes
+            // 1.26 changes
             fixedCrosshair = din.readBoolean();
             gpxAllowExtensions = din.readBoolean();
 
+            // 1.27 changes
+            verboseLoading = din.readBoolean(); // reconfirm
+            
         } catch (Exception e) {
 
             // 1.2.0 fallback
@@ -814,7 +820,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         dout.writeInt(prescale);
         dout.writeBoolean(tilesScaleFiltered);
         /* since 1.1.2 */
-        dout.writeBoolean(verboseLoading);
+        dout.writeBoolean(false/*verboseLoading*/); // reconfirm in 1.27
         /* since 1.1.4 */
 //#ifndef __ANDROID__
         dout.writeBoolean(s40ticker);
@@ -837,9 +843,12 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         /* since 1.2.3 */
         dout.writeInt(fpsControl);
 
-        /* since 1.2.6 */
+        /* since 1.26 */
         dout.writeBoolean(fixedCrosshair);
         dout.writeBoolean(gpxAllowExtensions);
+
+        /* since 1.27 */
+        dout.writeBoolean(verboseLoading);
 
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("configuration updated");
@@ -1339,11 +1348,6 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
     }
 
     public static String getDataDir() {
-        if (dataDir != null) {
-            if (!dataDir.endsWith(File.PATH_SEPARATOR)) {
-                dataDir += File.PATH_SEPARATOR; 
-            }
-        }
         return dataDir;
     }
 
@@ -1359,6 +1363,9 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
 //            }
 //#endif
             dir = dir.trim();
+            if (!dir.endsWith(File.PATH_SEPARATOR)) {
+                dir += File.PATH_SEPARATOR;
+            }
         }
         dataDir = dir;
     }
@@ -1368,7 +1375,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
     }
 
     public static String getFileURL(String folder, String file) {
-        return (new StringBuffer(32).append(getFolderURL(folder)).append(file)).toString();
+        return getFolderURL(folder).concat(file);
     }
 
     public static String getLocationTimings(final int provider) {

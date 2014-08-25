@@ -382,12 +382,42 @@ public final class TarInputStream extends InputStream {
 //#ifdef __CN1__
 
     /**
+     * Return current underlying stream.
+     *
+     * @return current underlying stream
+     */
+    public InputStream getInputStream() {
+        return in;
+    }
+
+    /**
      * Returns current entry size.
      *
      * @return entry size
      */
     public long getLength() {
         return entrySize;
+    }
+
+    /**
+     * Sets offsets.
+     *
+     * @param streamOffset underlying stream offset
+     * @param entryOffset curent entry offset
+     */
+    public void setOffsets(final long streamOffset, final long entryOffset) {
+        this.streamOffset = streamOffset;
+        this.entryOffset = entryOffset;
+    }
+
+    /**
+     * Advances offsets.
+     *
+     * @param inc number of bytes to advance by
+     */
+    public void advanceOffsets(final int inc) {
+        this.streamOffset += inc;
+        this.entryOffset += inc;
     }
 
 //#endif

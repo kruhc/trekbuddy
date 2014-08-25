@@ -9,7 +9,7 @@ import java.io.InputStream;
 import java.io.IOException;
 import java.io.RandomAccessFile;
 
-public class RandomAccessInputStream extends InputStream {
+public final class RandomAccessInputStream extends InputStream {
 
     private RandomAccessFile file;
 
@@ -30,7 +30,6 @@ public class RandomAccessInputStream extends InputStream {
     }
 
     public long skip(long n) throws IOException {
-//        return file.skipBytes((int) n);
         if (n > 0) {
             file.seek(file.getFilePointer() + n);
         }
@@ -42,19 +41,23 @@ public class RandomAccessInputStream extends InputStream {
     }
 
     public void close() throws IOException {
-        file.close();
+        try {
+            file.close();
+        } finally {
+            file = null;
+        }
     }
 
     public synchronized void mark(int marklimit) {
         // OK
     }
 
-    public synchronized void reset() throws IOException {
-        file.seek(0);
+    public boolean markSupported() {
+        return false; // hack
     }
 
-    public boolean markSupported() {
-        return true;
+    public synchronized void reset() throws IOException {
+        file.seek(0);
     }
 }
 

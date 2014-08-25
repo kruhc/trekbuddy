@@ -31,6 +31,9 @@ final class Jsr135Playback extends Playback implements PlayerListener {
     boolean playSounds() {
 
         // must be called from background on S^3
+        /*
+         * 2014-08-25: When called for wpt reached, it is already called from event worker thread.
+         */
         cz.kruch.track.ui.Desktop.getDiskWorker().enqueue(this);
 
         // no way to tell what will happen, so be positive
@@ -54,18 +57,16 @@ final class Jsr135Playback extends Playback implements PlayerListener {
             if (cz.kruch.track.TrackingMIDlet.nokia || cz.kruch.track.TrackingMIDlet.jp6plus) { // both S40 and S60, also SE JP6+
 //#endif
                 player = Manager.createPlayer(url);
-//#ifndef __RIM__            
+//#ifndef __RIM__
             } else {
                 player = Manager.createPlayer(in = Connector.openInputStream(url), getContentType(url));
             }
 //#endif
+
+            // add listener and begin init
             player.addPlayerListener(this);
             player.realize();
             state.append("x-realized -> ");
-//#ifdef __SYMBIAN__
-            player.prefetch();
-            state.append("x-prefetched -> ");
-//#endif
 
             // get volume control and set it to max
             control = player.getControl("VolumeControl");
@@ -86,7 +87,7 @@ final class Jsr135Playback extends Playback implements PlayerListener {
             log.error("play failed: " + t);
             t.printStackTrace();
 //#endif
-            state.append("sound error: ").append(t.toString()).append(" -> ");
+            state.append("error: ").append(t.toString()).append(" -> ");
 
             // abort
             if (player != null) {
@@ -101,16 +102,27 @@ final class Jsr135Playback extends Playback implements PlayerListener {
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("event " + event + "; data " + eventData);
 //#endif
-        state.append(event).append('(').append(eventData instanceof Control ? "ctrl" : eventData).append(')').append(" -> ");
+        state.append("event: ").append(event).append('(').append(eventData instanceof Control ? "ctrl" : eventData).append(')').append(" -> ");
 
         if (event.equals(PlayerListener.CLOSED)) {
+
+            // update state
             state.append("x-closed -> ");
+
+            // unregister
+            player.removePlayerListener(this);
+
             // cleanup
             cleanup();
+
         } else if (event.equals(PlayerListener.END_OF_MEDIA) || event.equals(PlayerListener.ERROR) || event.equals(PlayerListener.STOPPED)) {
+
             // restore volume
             setVolume(level);
+
+            // update state
             state.append("x-closing -> ");
+
             // close player
             player.close();
         }
@@ -145,7 +157,7 @@ final class Jsr135Playback extends Playback implements PlayerListener {
         if (in != null) {
             try {
                 in.close();
-            } catch (IOException e) {
+            } catch (Exception e) {
                 // ignore
             }
             in = null; // gc hint

@@ -11,6 +11,7 @@ import cz.kruch.track.ui.Position;
 import cz.kruch.track.ui.Desktop;
 import cz.kruch.track.util.CharArrayTokenizer;
 import cz.kruch.track.util.ImageUtils;
+import cz.kruch.track.util.NakedVector;
 import cz.kruch.track.Resources;
 
 import api.location.QualifiedCoordinates;
@@ -379,10 +380,12 @@ public final class Map implements Runnable {
     }
 
     public int scale(final int i) {
+        final Calibration calibration = this.calibration;
         return calibration.prescale(i) << calibration.x2;
     }
 
     public int descale(final int i) {
+        final Calibration calibration = this.calibration;
         return calibration.descale(i >> calibration.x2);
     }
 
@@ -562,6 +565,9 @@ public final class Map implements Runnable {
             return basename != null;
         }
 
+        void sortSlices(Vector list) {
+        }
+
         public void run() {
 //#ifdef __LOG__
             if (log.isEnabled()) log.debug("slice loading task started for " + map.getPath());
@@ -573,6 +579,9 @@ public final class Map implements Runnable {
             if (Config.forcedGc) {
                 System.gc(); // conditional
             }
+
+            // sort slices by loading order; not needed on platforms with random file access
+            sortSlices(_list);
 
             // load images
             final Throwable throwable = loadImages(_list);
@@ -671,15 +680,25 @@ public final class Map implements Runnable {
                 throw new IllegalArgumentException("Slice list is null");
             }
 
+            // locals
+            final Object[] array = ((NakedVector) slices).getData();
+            final boolean mapIsInUse = map.isInUse;
+            final boolean verboseLoading = Config.verboseLoading;
+            final StringBuffer sb;
+            if (verboseLoading) {
+                sb = new StringBuffer(64);
+            } else {
+                sb = null;
+            }
+
             // load images for given slices
             try {
-                final StringBuffer sb = new StringBuffer(64);
-                for (int N = slices.size(), i = 0; i < N && map.isInUse; i++) {
-                    final Slice slice = (Slice) slices.elementAt(i);
+                for (int N = slices.size(), i = 0; i < N && mapIsInUse; i++) {
+                    final Slice slice = (Slice) array[i];
                     if (slice.getImage() == null) {
 
                         // notify
-                        if (Config.verboseLoading) {
+                        if (verboseLoading) {
                             map.listener.loadingChanged(slice.appendInfo(sb.delete(0, sb.length()).append("Loading ")).toString(), null);
                         }
 
@@ -712,7 +731,7 @@ public final class Map implements Runnable {
                         } finally {
 
                             // notify
-                            if (Config.verboseLoading) {
+                            if (verboseLoading) {
                                 map.listener.loadingChanged(null, null);
                             }
                         }

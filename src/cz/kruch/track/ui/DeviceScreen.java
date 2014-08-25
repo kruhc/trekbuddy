@@ -356,9 +356,31 @@ final class DeviceScreen extends GameCanvas implements Runnable {
 //#endif
     }
 
+//#ifdef __CN1__
+
+    public void buttonPressed(int x, int y) {
+//#ifdef __LOG__
+        if (log.isEnabled()) log.debug("buttonPressed; " + x + "-" + y + "; count = " + pointersCount);
+//#endif
+
+        // touch
+        if (touchMenuActive) {
+            // as if pressed
+            pointerPressed(x, y);
+            // clear fake press
+            pointersCount = 0;
+        } else {
+//#ifdef __LOG__
+            log.error("button pressed when touch menu is not active");
+//#endif
+        }
+    }
+
+//#endif // __CN1__
+
     protected void pointerPressed(int x, int y) {
 //#ifdef __LOG__
-        if (log.isEnabled()) log.debug("pointerPressed; " + x + "-" + y);
+        if (log.isEnabled()) log.debug("pointerPressed; " + x + "-" + y + "; count = " + pointersCount);
 //#endif
 
         // happens on android sometimes?!?
@@ -429,7 +451,7 @@ final class DeviceScreen extends GameCanvas implements Runnable {
 
     protected void pointerReleased(int x, int y) {
 //#ifdef __LOG__
-        if (log.isEnabled()) log.debug("pointerReleased; " + x + "-" + y);
+        if (log.isEnabled()) log.debug("pointerReleased; " + x + "-" + y + "; count = " + pointersCount);
 //#endif
 
         // happens on android sometimes?!?
@@ -498,7 +520,7 @@ final class DeviceScreen extends GameCanvas implements Runnable {
 
     protected void pointerDragged(int x, int y) {
 //#ifdef __LOG__
-        if (log.isEnabled()) log.debug("pointerDragged; " + x + "-" + y);
+        if (log.isEnabled()) log.debug("pointerDragged; " + x + "-" + y + "; count = " + pointersCount);
 //#endif
 
         // happens on android sometimes?!?
@@ -532,7 +554,7 @@ final class DeviceScreen extends GameCanvas implements Runnable {
         }
     }
 
-//#ifdef __ANDROID__
+//#if __ANDROID__ || __CN1__
 
     private float scale = Float.NaN;
 
@@ -558,7 +580,9 @@ final class DeviceScreen extends GameCanvas implements Runnable {
             scale = cs;
         } else {
             final float ds = scale / cs;
-            System.out.println("ds = " + ds);
+//#ifdef __LOG__
+            if (log.isEnabled()) log.debug("ds = " + ds);
+//#endif
             if (ds < 0.75) {
                 mag = 1;
             } else if (ds > 1.25) {
@@ -1346,73 +1370,4 @@ final class DeviceScreen extends GameCanvas implements Runnable {
             }
         }
     }
-
-//#ifdef __NOTDEF__
-
-    private final class CommandTask implements Runnable {
-
-        private Command cmd;
-
-        public CommandTask(Command cmd) {
-            this.cmd = cmd;
-        }
-
-        public void run() {
-            DeviceScreen.this.delegate.commandAction(cmd, DeviceScreen.this);
-        }
-    }
-
-    private final class RepaintTask extends TimerTask {
-
-        /* to avoid $1 */
-        public RepaintTask() {
-        }
-
-        public void run() {
-            if (Config.guideSpotsMode > 1) {
-                final int dy = (NavigationScreens.guideSize + 2 * 3) / 10;
-                try {
-                    NavigationScreens.gdOffset = 0;
-                    for (int i = 0; i < 9; i++) {
-                        NavigationScreens.gdOffset += dy;
-                        delegate.update(Desktop.MASK_SCREEN);
-                        try {
-                            Thread.sleep(25 - i);
-                        } catch (InterruptedException e) {
-                            // ignore
-                        }
-                    }
-                } finally {
-                    NavigationScreens.gdOffset = 0;
-                }
-            }
-            beenPressed = false;
-            delegate.update(Desktop.MASK_SCREEN);
-        }
-    }
-
-    private final class KeyCheckTimerTask extends TimerTask {
-
-        /* to avoid $1 */
-        public KeyCheckTimerTask() {
-        }
-
-        /*
-        * "A key's bit will be 1 if the key is currently down or has
-        * been pressed at least once since the last time this method
-        * was called."
-        *
-        * Therefore the dummy getKeyStates() call before invoking run().
-        */
-        public void run() {
-/* must correspond with DeviceScreen.run()!!!
-            getKeyStates(); // trick
-*/
-            callSerially(DeviceScreen.this);
-            firedKeyRepeated();
-        }
-    }
-
-//#endif
-
 }

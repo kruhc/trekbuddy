@@ -46,7 +46,7 @@ import javax.microedition.io.Connector;
  *
  * @author kruhc@seznam.cz
  */
-final class TarLoader extends Map.Loader /*implements Atlas.Loader*/ {
+final class TarLoader extends Map.Loader /*implements Atlas.Loader*/ implements api.util.Comparator {
 
     /*
      * Map.Loader contract.
@@ -89,6 +89,10 @@ final class TarLoader extends Map.Loader /*implements Atlas.Loader*/ {
         return pointers != null;
     }
 
+    void sortSlices(java.util.Vector list) {
+        cz.kruch.track.ui.FileBrowser.sort(((cz.kruch.track.util.NakedVector) list).getData(), this, 0, list.size() - 1);
+    }
+
     void loadMeta() throws IOException {
         // local ref
         final Map map = this.map;
@@ -112,19 +116,22 @@ final class TarLoader extends Map.Loader /*implements Atlas.Loader*/ {
             }
 //#endif
             /*
-             * On Symbian when service is used, we don not need native file connection,
+             * On Symbian when service is used, we do not need native file connection,
              * but for other platforms we do.
-             * Well, for Android it should not be needed too, but let's not make
-             * too many changes...
              */
+//#ifdef __ANDROID__
+            in = new api.io.RandomAccessInputStream(map.getPath());
+//#else
             if (in == null) {
                 nativeFile = File.open(map.getPath());
-//#ifdef __ANDROID__
-                in = new api.io.RandomAccessInputStream(map.getPath());
-//#else
                 in = nativeFile.openInputStream();
-//#endif
             }
+//#endif
+//#ifdef __RIM50__
+            if (in instanceof net.rim.device.api.io.Seekable) {
+                in = new api.io.SeekableInputStream(in);
+            }
+//#endif
 
             // debug info
 //#ifndef __CN1__
@@ -440,6 +447,16 @@ final class TarLoader extends Map.Loader /*implements Atlas.Loader*/ {
             slice.setImage(Slice.NO_IMAGE);
 
         }
+    }
+
+    /*
+     * Comparator contract.
+     */
+
+    public int compare(Object o1, Object o2) {
+        final TarSlice ts1 = (TarSlice) o1;
+        final TarSlice ts2 = (TarSlice) o2;
+        return ts1.getBlockOffset() - ts2.getBlockOffset();
     }
 
     /*

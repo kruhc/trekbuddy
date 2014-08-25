@@ -550,8 +550,10 @@ public final class Desktop implements CommandListener,
         runtime = new Runtime();
 //#endif
 
+//#ifndef __CN1__
         // show boot progress for a while
         consoleDelay(tStart);
+//#endif
 
 //#ifdef __CN1__
         // hack MI clear
@@ -4366,6 +4368,8 @@ public final class Desktop implements CommandListener,
         }
     }
 
+//#ifndef __CN1__
+
     private static void consoleDelay(final long tStart) {
         final long delay;
         if (!consoleLogo) {
@@ -4381,6 +4385,8 @@ public final class Desktop implements CommandListener,
             }
         }
     }
+
+//#endif
 
     /// ~ CONSOLE
 

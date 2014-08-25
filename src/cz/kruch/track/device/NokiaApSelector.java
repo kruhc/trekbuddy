@@ -51,7 +51,7 @@ class NokiaApSelector extends ApSelector {
                 }
             }
         } catch (Exception e) {
-            // ignore
+            sb.append("IAP error: ").append(e.toString());
         }
     }
 

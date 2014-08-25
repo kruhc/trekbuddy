@@ -26,6 +26,10 @@ public abstract class Playback implements Runnable {
     abstract boolean playSounds();
     abstract boolean sound(String url);
 
+//#if !__ANDROID__ && !__CN1__
+    private static Class factory;
+//#endif
+
     protected Playback() {
         state = new StringBuffer(128);
     }
@@ -73,7 +77,10 @@ public abstract class Playback implements Runnable {
 //#elifdef __CN1__
         instance = new WPPlayback();
 //#else
-        instance = (Playback) Class.forName("cz.kruch.track.fun.Jsr135Playback").newInstance();
+        if (factory == null) {
+            factory = Class.forName("cz.kruch.track.fun.Jsr135Playback");
+        }
+        instance = (Playback) factory.newInstance();
 //#endif
         instance.baseFolder = baseFolder;
         instance.userLink = userLink;

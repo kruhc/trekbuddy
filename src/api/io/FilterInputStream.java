@@ -1,6 +1,6 @@
 package api.io;
 
-//#ifdef __CN1__
+//#if __CN1__ || __RIM50__
 
 import java.io.InputStream;
 import java.io.IOException;

@@ -27,7 +27,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
     public static boolean sonyEricsson, sonyEricssonEx, nokia, siemens, lg, motorola, samsung, sonim;
     public static boolean j9, jbed, jblend, intent, wm, palm, rim, symbian, s60nd, s60rdfp2, uiq,
                           brew, android, playbook, iden, jp6plus;
-    public static boolean sxg75, a780/*, s65*/;
+    public static boolean sxg75, a780/*, s65*/, b2710;
 
     // diagnostics
 
@@ -91,12 +91,13 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         jbed = platform.startsWith("Jbed");
         intent = platform.startsWith("intent");
         palm = platform.startsWith("Palm OS");
+        sonim = platform.startsWith("Sonim");
         sxg75 = "SXG75".equals(platform);
         brew = sxg75 || "BENQ-M7".equals(platform);
         a780 = "j2me".equals(platform);
+        b2710 = samsung && platform.indexOf("B2710") > -1;
         /*s65 = "S65".equals(platform);*/
-        sonim = platform.startsWith("Sonim");
-        System.getProperty("com.nokia.targetdebug"); // for ODD
+        // System.getProperty("com.nokia.targetdebug"); // for ODD
 //#endif
 
 //#ifndef __ANDROID__
@@ -349,6 +350,10 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
 //#ifdef __LOG__
     public static boolean isLogEnabled() {
         return logEnabled;
+    }
+//#elifdef __CN1__
+    public static boolean isLogEnabled() {
+        return false;
     }
 //#endif
 

@@ -2413,10 +2413,12 @@ public final class Desktop implements CommandListener,
                     providerName = "Simulator";
                 break;
 //#ifdef __ALL__
+//#ifndef __SYMBIAN__
                 case Config.LOCATION_PROVIDER_MOTOROLA:
                     providerClass = Class.forName("cz.kruch.track.location.MotorolaLocationProvider");
                     providerName = "Motorola";
                 break;
+//#endif
                 case Config.LOCATION_PROVIDER_O2GERMANY:
                     providerClass = Class.forName("cz.kruch.track.location.O2GermanyLocationProvider");
                     providerName = "O2 Germany";
@@ -4204,17 +4206,17 @@ public final class Desktop implements CommandListener,
                     cz.kruch.track.ui.nokia.DeviceControl.flashScreen();
 */
 
+                    // vibrate if set - overrides powerSave
+                    if (Config.wptAlertVibr) {
+                        display.vibrate(500);
+                    }
+                    
                     // play sound if set
                     if (Config.wptAlertSound) {
                         final String userLink = ((Waypoint) wpts.elementAt(wptIdx)).getLink(Waypoint.LINK_GENERIC_SOUND);
                         cz.kruch.track.fun.Playback.play(Config.FOLDER_SOUNDS,
                                                          userLink, Config.defaultWptSound,
                                                          AlertType.ALARM);
-                    }
-
-                    // vibrate if set - overrides powerSave
-                    if (Config.wptAlertVibr) {
-                        display.vibrate(500);
                     }
                 }
 
@@ -4316,7 +4318,7 @@ public final class Desktop implements CommandListener,
      */
 
     // vars
-    private static short consoleErrors, consoleSkips;
+    private static int consoleErrors, consoleSkips;
     private static boolean consoleLogo;
 
     private static void consoleInit(final Graphics g) {

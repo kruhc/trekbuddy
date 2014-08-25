@@ -66,7 +66,7 @@ final class BlackberryDeviceControl extends DeviceControl {
         synchronized (store) {
             final String value = (String) store.getContents();
             if (value != null && value.length() != 0) {
-                cz.kruch.track.configuration.Config.dataDir = value;
+                cz.kruch.track.configuration.Config.setDataDir(value);
             }
         }
     }
@@ -74,7 +74,7 @@ final class BlackberryDeviceControl extends DeviceControl {
     /** @Override */
     void saveDatadir() {
         synchronized (store) {
-            store.setContents(cz.kruch.track.configuration.Config.dataDir);
+            store.setContents(cz.kruch.track.configuration.Config.getDataDir());
             store.commit();
         }
     }

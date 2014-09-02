@@ -162,11 +162,11 @@ public class SerialLocationProvider
         try {
 
             // debug
-            setStatus("opening connection and stream");
+            setStatus("opening connection/stream");
 
-            // opend connection and stream
+            // open connection and stream
+            connection = (StreamConnection) Connector.open(url, rw, true);
             synchronized (lock) {
-                connection = (StreamConnection) Connector.open(url, rw);
                 stream = connection.openInputStream();
             }
 
@@ -184,7 +184,7 @@ public class SerialLocationProvider
 //#endif
 
             // debug
-            setStatus("connection and stream opened");
+            setStatus("connection/stream opened");
 
             // start keep-alive
             startKeepAlive();
@@ -295,29 +295,18 @@ public class SerialLocationProvider
             int ioc = 0;
             synchronized (lock) {
                 if (stream != null) {
-                    try {
-                        stream.close();
-                    } catch (Exception e) {
-                        // ignore
-                    }
+                    api.file.File.closeQuietly(stream);
                     stream = null;
                     ioc++;
                 }
-                if (connection != null) {
-                    try {
-                        connection.close();
-                    } catch (Exception e) {
-                        // ignore
-                    }
-                    connection = null;
-                    ioc++;
-                }
             }
+            api.file.File.closeQuietly(connection);
+            connection = null;
 
             // debug
             setStatus("stream and connection closed");
 
-//#ifndef __RIM__
+//#if !__RIM__ && !__SYMBIAN__
 
             /* native finalizers? */
             if (ioc > 0) {
@@ -364,32 +353,18 @@ public class SerialLocationProvider
 
                 case MODE_KILLER: {
                     // debug
-                    setStatus("forced stream close");
+                    setStatus("forced stream/connection close");
 
-                    // close stream and connection
+                    // close stream
                     synchronized (lock) {
-                        if (stream != null) {
-                            try {
-                                stream.close(); // hopefully forces a thread blocked in read() to receive IOException
-                            } catch (Exception e) {
-                                // ignore
-                            }
-                            stream = null;
-                        }
-                        if (connection != null) {
-                            try {
-                                connection.close();
-                            } catch (Exception e) {
-                                // ignore
-                            }
-                            connection = null;
-                        }
+                        api.file.File.closeQuietly(stream); // hopefully forces a thread blocked in read() to receive IOException
+                        stream = null;
                     }
 
                     // debug
-                    setStatus("stream forcibly closed");
+                    setStatus("stream/connection forcibly closed");
 
-//#ifndef __RIM__
+//#if !__RIM__ && !__SYMBIAN__
 
                     /* native finalizers?!? */
                     System.gc(); // unconditional!!!

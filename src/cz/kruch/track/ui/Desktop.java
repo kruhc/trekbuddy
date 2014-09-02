@@ -297,7 +297,6 @@ public final class Desktop implements CommandListener,
     static Worker getEventWorker() {
         if (eventWorker == null) {
             eventWorker = new Worker("TrekBuddy [EventWorker]");
-            eventWorker.setPriority(Thread.MAX_PRIORITY);
             eventWorker.start();
         }
         return eventWorker;
@@ -795,8 +794,8 @@ public final class Desktop implements CommandListener,
         return mode;
     }
 
-    public static boolean isHires() {
-        return screen.isHires();
+    public static int getHiresLevel() {
+        return screen.getHiresLevel();
     }
 
     public static void vibrate(final int ms) {
@@ -844,7 +843,7 @@ public final class Desktop implements CommandListener,
             fontBtns = Font.getFont(df.getFace(), Font.STYLE_PLAIN, Font.SIZE_MEDIUM);
             fontStringItems = null;
             fontStringItems = Font.getFont(df.getFace(), df.getStyle(),
-                                           isHires() ? Font.SIZE_MEDIUM : Font.SIZE_SMALL);
+                                           getHiresLevel() > 0 ? Font.SIZE_MEDIUM : Font.SIZE_SMALL);
             fontLists = null; // gc hint
             try {
                 fontLists = Font.getFont((Config.listFont >> 16) & 0x000000ff,
@@ -872,7 +871,7 @@ public final class Desktop implements CommandListener,
                                         Font.SIZE_SMALL);
         final Font newFontBtns = Font.getFont(df.getFace(), Font.STYLE_PLAIN, Font.SIZE_MEDIUM);
         final Font newFontStringItems = Font.getFont(df.getFace(), df.getStyle(),
-                                                  isHires() ? Font.SIZE_MEDIUM : Font.SIZE_SMALL);
+                                                  getHiresLevel() > 0 ? Font.SIZE_MEDIUM : Font.SIZE_SMALL);
         Font newFontLists;
         try {
             newFontLists = Font.getFont((Config.listFont >> 16) & 0x000000ff,
@@ -2803,7 +2802,7 @@ public final class Desktop implements CommandListener,
         public void run() {
             final long now = System.currentTimeMillis();
             final StringBuffer sb = this.sb;
-            sb.delete(0, sb.length());
+            sb.setLength(0);
             sb.append(msg).append(' ');
             int diff = (int) (now - since) / 1000;
             if (diff < 360000) {

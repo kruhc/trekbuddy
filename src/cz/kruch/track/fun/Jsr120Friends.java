@@ -101,7 +101,7 @@ final class Jsr120Friends extends Friends implements MessageListener, Runnable {
         sb.append(message.replace(',', ' ').replace('*', ' '));
         sb.append('*').append('0').append('0');
         final String text = sb.toString();
-        sb.delete(0, sb.length());
+        sb.setLength(0);
         sb.append(SMS_PROTOCOL).append(phone).append(PORT);
         final String url = sb.toString();
 

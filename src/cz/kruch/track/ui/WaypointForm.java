@@ -111,13 +111,13 @@ final class WaypointForm implements CommandListener, ItemCommandListener, ItemSt
         // altitude
         final float alt = wpt.getQualifiedCoordinates().getAlt();
         if (!Float.isNaN(alt)) {
-            sb.delete(0, sb.length());
+            sb.setLength(0);
             NavigationScreens.printAltitude(sb, alt);
             appendStringItem(Resources.getString(Resources.NAV_FLD_ALT), sb.toString());
         }
 
         // distance
-        sb.delete(0, sb.length());
+        sb.setLength(0);
         NavigationScreens.printDistance(sb, distance);
         appendStringItem(Resources.getString(Resources.NAV_FLD_DISTANCE), sb.toString());
 
@@ -223,7 +223,7 @@ final class WaypointForm implements CommandListener, ItemCommandListener, ItemSt
         appendWithNewlineAfter(Resources.getString(Resources.NAV_FLD_LOC), sb.toString());
 
         // altitude
-        sb.delete(0, sb.length());
+        sb.setLength(0);
         NavigationScreens.printAltitude(sb, location.getQualifiedCoordinates().getAlt());
         appendWithNewlineAfter(Resources.getString(Resources.NAV_FLD_ALT), sb.toString());
 
@@ -443,7 +443,7 @@ final class WaypointForm implements CommandListener, ItemCommandListener, ItemSt
         latHash = fieldLat.getString().trim().hashCode();
 
         // lon/northing
-        sb.delete(0, sb.length());
+        sb.setLength(0);
         NavigationScreens.printTo(sb, qc, QualifiedCoordinates.LON, true);
         appendWithNewlineAfter(this.fieldLon = createTextField(labelY, sb.toString(), 14, TextField.ANY));
         lonHash = fieldLon.getString().trim().hashCode();
@@ -452,7 +452,7 @@ final class WaypointForm implements CommandListener, ItemCommandListener, ItemSt
         if (standalone) {
 
             // altitude
-            sb.delete(0, sb.length());
+            sb.setLength(0);
             NavigationScreens.printAltitude(sb, qc.getAlt());
             appendWithNewlineAfter(this.fieldAlt = createTextField(Resources.NAV_FLD_ALT, sb.toString(), 8));
 

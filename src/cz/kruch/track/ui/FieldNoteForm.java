@@ -59,7 +59,7 @@ final class FieldNoteForm implements CommandListener {
         this.note[1] = sb.toString();
 
         // default note text
-        sb.delete(0, sb.length());
+        sb.setLength(0);
         appendTwoDigitStr(sb, calendar.get(Calendar.HOUR_OF_DAY)).append(':');
         appendTwoDigitStr(sb, calendar.get(Calendar.MINUTE)).append(' ');
         this.note[3] = sb.toString();

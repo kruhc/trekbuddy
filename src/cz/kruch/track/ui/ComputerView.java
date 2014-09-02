@@ -1169,7 +1169,7 @@ final class ComputerView extends View
                 Image img = null;
 
                 // prepare text buffer
-                sb.delete(0, sb.length());
+                sb.setLength(0);
 
                 // template or script?
                 if (area.value != null) {

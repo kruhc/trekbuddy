@@ -899,7 +899,8 @@ public final class GpxTracklog extends Tracklog {
     }
 
     private StringBuffer getSb() {
-        return sb.delete(0, sb.length());
+        sb.setLength(0);
+        return sb;
     }
 
 /*

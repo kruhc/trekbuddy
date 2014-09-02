@@ -795,7 +795,7 @@ public final class PluginManager implements CommandListener, Runnable, Comparato
 
     private org.hecl.Command handlerFor(final String ns, final String procname,
                                         final StringBuffer sb) {
-        sb.delete(0, sb.length());
+        sb.setLength(0);
         sb.append(ns).append(NAMESPACE_SEPARATOR).append(procname);
         return firstUnknown(sb.toString());
     }

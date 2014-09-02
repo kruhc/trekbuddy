@@ -86,7 +86,7 @@ public final class YesNoDialog implements CommandListener, Runnable {
         // grab input
         if (item instanceof StringBuffer) {
             final StringBuffer sb = (StringBuffer) item;
-            sb.delete(0, sb.length());
+            sb.setLength(0);
 //#ifndef __CN1__
             sb.append(((TextBox) displayable).getString());
 //#else

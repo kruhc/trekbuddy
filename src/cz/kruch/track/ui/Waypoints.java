@@ -1691,7 +1691,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                 final Vector fieldNotes = this.fieldNotes;
                 final StringBuffer sb = new StringBuffer(128);
                 for (int N = fieldNotes.size(), i = 0; i < N; i++) {
-                    sb.delete(0, sb.length());
+                    sb.setLength(0);
                     FieldNoteForm.format((String[]) fieldNotes.elementAt(i), sb);
                     sb.append("\r\n");
                     out.write(sb.toString().getBytes("UTF-8"));
@@ -1752,7 +1752,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
         final List l = notes = new List(itemFieldNotes, List.IMPLICIT);
         l.setFitPolicy(Choice.TEXT_WRAP_OFF);
         for (int N = data.size(), i = 0; i < N; i++) {
-            sb.delete(0, sb.length());
+            sb.setLength(0);
             l.append(FieldNoteForm.format((String[]) data.elementAt(i), sb), null);
         }
         for (int N = l.size(), i = 0; i < N; i++) {
@@ -2556,7 +2556,8 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                             if (type > 0) {
                                 // anonymous wpt, trkpt or rtept
                                 if (name == null || name.length == 0) {
-                                    sb.delete(0, sb.length()).append(type);
+                                    sb.setLength(0);
+                                    sb.append(type);
                                     NavigationScreens.append(sb, ++ptIdx, 10000);
                                     name = sb.toString().toCharArray();
                                 }

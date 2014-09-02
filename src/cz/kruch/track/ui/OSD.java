@@ -133,7 +133,8 @@ final class OSD extends Bar {
     }
 
     public StringBuffer _getSb() {
-        return sb.delete(0, sb.length());
+        sb.setLength(0);
+        return sb;
     }
 
     public void setProviderStatus(int providerStatus) {

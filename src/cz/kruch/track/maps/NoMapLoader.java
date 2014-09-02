@@ -201,7 +201,7 @@ final class NoMapLoader extends Map.Loader /*implements Atlas.Loader*/ {
         while (iscale < scales.length) {
 
             // create fake map path
-            sb.delete(0, sb.length());
+            sb.setLength(0);
             sb.append(idx).append('/').append(BASENAME).append('/').append(BASENAME).append(FILE_SUFFIX);
 
             // calculate map dimensions
@@ -212,7 +212,7 @@ final class NoMapLoader extends Map.Loader /*implements Atlas.Loader*/ {
                                                           minlat, minlon, maxlat, maxlon);
 
             // create leayer name
-            sb.delete(0, sb.length());
+            sb.setLength(0);
             sb.append('[').append(idx).append("]  1px : ").append(findLayerScale(cal, maxlon - minlon)).append('m');
 
             // add new layer and its map
@@ -232,10 +232,10 @@ final class NoMapLoader extends Map.Loader /*implements Atlas.Loader*/ {
         StringBuffer sb = new StringBuffer(16);
         int w = MIN_MAP_WIDTH, h = MIN_MAP_HEIGHT, idx = 0;
         while (w <= 0xfffff) {
-            sb.delete(0, sb.length());
+            sb.setLength(0);
             sb.append(idx).append('/').append(BASENAME).append('/').append(BASENAME).append(FILE_SUFFIX);
             final Calibration cal = createFakeCalibration(sb.toString(), w, h, minlat, minlon, maxlat, maxlon);
-            sb.delete(0, sb.length());
+            sb.setLength(0);
             sb.append('[').append(idx).append("]  1 : ").append(findLayerScale(cal, maxlon - minlon));
             final Hashtable layerCollection = atlas.getLayerCollection(atlas, sb.toString());
             layerCollection.put(BASENAME, cal);

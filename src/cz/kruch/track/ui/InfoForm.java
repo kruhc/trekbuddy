@@ -75,7 +75,7 @@ final class InfoForm implements CommandListener {
         sb.append(totalMemory).append('/').append(freeMemory);
         pane.append(newItem("Memory", sb.toString()));
 //#endif
-        sb.delete(0, sb.length());
+        getSb(sb);
         if (File.fsType == File.FS_JSR75 || File.fsType == File.FS_SXG75)
             sb.append("75 ");
         if (cz.kruch.track.TrackingMIDlet.jsr82)
@@ -96,16 +96,16 @@ final class InfoForm implements CommandListener {
         if (cz.kruch.track.TrackingMIDlet.getFlags() != null) {
             pane.append(newItem("AppFlags", cz.kruch.track.TrackingMIDlet.getFlags()));
         }
-        sb.delete(0, sb.length())
+        getSb(sb)
                 .append(System.getProperty("microedition.locale"))
                 .append(' ').append(System.getProperty("microedition.encoding"));
         pane.append(newItem("I18n", sb.toString()));
-        sb.delete(0, sb.length())
+        getSb(sb)
                 .append(TimeZone.getDefault().getID())
                 .append("; ").append(TimeZone.getDefault().useDaylightTime())
                 .append("; ").append(TimeZone.getDefault().getRawOffset());
         pane.append(newItem("TimeZone", sb.toString()));
-        sb.delete(0, sb.length())
+        getSb(sb)
                 .append(cz.kruch.track.ui.nokia.DeviceControl.getName())
 //#ifndef __ANDROID__
                 .append(' ').append(System.getProperty("com.nokia.mid.ui.version"))
@@ -119,7 +119,7 @@ final class InfoForm implements CommandListener {
         }
 //#endif
         pane.append(newItem("DeviceCtrl", sb.toString()));
-        sb.delete(0, sb.length())
+        getSb(sb)
                 .append(File.fsType)
                 .append("; resetable? ").append(cz.kruch.track.maps.Map.fileInputStreamResetable)
                 .append("; buffer size: ").append(cz.kruch.track.configuration.Config.inputBufferSize)
@@ -136,7 +136,7 @@ final class InfoForm implements CommandListener {
 //#ifndef __ANDROID__
         pane.append(newItem("Orientation", cz.kruch.track.ui.nokia.DeviceControl.getSensorStatus()));
 //#endif
-        sb.delete(0, sb.length())
+        getSb(sb)
                 .append(Desktop.width).append('x').append(Desktop.height)
 //#ifdef __ANDROID__
                 .append("; dpi? ").append((int)DeviceScreen.xdpi).append('/')
@@ -153,7 +153,7 @@ final class InfoForm implements CommandListener {
         if (map == null) {
             pane.append(newItem("Map", ""));
         } else {
-            sb.delete(0, sb.length())
+            getSb(sb)
                     .append(map.getName())
                     .append("; datum: ").append(map.getDatum())
                     .append("; projection: ").append(map.getProjection())
@@ -165,7 +165,7 @@ final class InfoForm implements CommandListener {
 //#endif
             pane.append(newItem("Map", sb.toString()));
         }
-        sb.delete(0, sb.length())
+        getSb(sb)
                 .append((extras[0] == null ? "" : extras[0].toString()))
                 .append("; st=").append(api.location.LocationProvider.stalls)
                 .append("; rs=").append(api.location.LocationProvider.restarts)
@@ -191,12 +191,12 @@ final class InfoForm implements CommandListener {
 //#ifdef __ANDROID__
         pane.append(newItem("BtSocketType", cz.kruch.track.location.AndroidBluetoothLocationProvider.sockType));
 //#ifndef __BACKPORT__
-        sb.delete(0, sb.length())
+        getSb(sb)
                 .append("supported? ").append(cz.kruch.track.sensor.ANTPlus.isSupported());
         pane.append(newItem("ANT+", sb.toString()));
 //#endif
 //#endif
-        sb.delete(0, sb.length())
+        getSb(sb)
                 .append(cz.kruch.track.fun.Camera.type)
                 .append("; encodings: ").append(System.getProperty("video.snapshot.encodings"))
                 .append("; resolutions: ").append(System.getProperty("camera.resolutions"));
@@ -207,11 +207,11 @@ final class InfoForm implements CommandListener {
         if (cz.kruch.track.fun.Playback.state != null) {
             pane.append(newItem("Playback", cz.kruch.track.fun.Playback.state.toString()));
         }
-        sb.delete(0, sb.length())
+        getSb(sb)
                 .append(cz.kruch.track.TrackingMIDlet.hasPorts())
                 .append("; ").append(System.getProperty("microedition.commports"));
         pane.append(newItem("Ports", sb.toString()));
-        sb.delete(0, sb.length())
+        getSb(sb)
                 .append("pauses: ").append(cz.kruch.track.TrackingMIDlet.pauses)
                 .append("; uncaught: ").append(SmartRunnable.uncaught)
                 .append("; maxtasks: ").append(SmartRunnable.maxQT)
@@ -265,6 +265,11 @@ final class InfoForm implements CommandListener {
             }
 //#endif
         }
+    }
+
+    private static StringBuffer getSb(final StringBuffer sb) {
+        sb.setLength(0);
+        return sb;
     }
 
     private static StringItem newItem(final String label, final String text) {

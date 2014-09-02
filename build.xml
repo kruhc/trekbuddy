@@ -33,6 +33,7 @@
     <property name="cn1.repository" value="z:\repository\cn1\CodenameOne"/>
     <property name="proguard3.home" value="z:\apps\proguard\3.11"/>
     <property name="proguard4.home" value="z:\apps\proguard\4.11"/>
+    <property name="proguard5.home" value="z:\apps\proguard\5.0"/>
 
     <property name="build.dir" value="r:\trekbuddy"/>
     <property name="temp.dir" value="r:\java-temp"/>
@@ -172,7 +173,7 @@
     <target name="standard-lite">
         <property name="suffix" value="-lite"/>
         <property name="dist.dir" value="standard-lite"/>
-        <property name="libraryjars" value="${wtk.home}\lib\cldcapi11.jar;${wtk.home}\lib\midpapi20.jar;${wtk.home}\lib\jsr75.jar;${wtk.home}\lib\jsr082.jar;${wtk.home}\lib\jsr179.jar;${wtk.home}\lib\jsr234.jar;${wtk.home}\lib\wma11.jar;lib\motorola-location.jar"/>
+        <property name="libraryjars" value="${wtk.home}\lib\cldcapi11.jar;${wtk.home}\lib\midpapi20.jar;${wtk.home}\lib\jsr75.jar;${wtk.home}\lib\jsr082.jar;${wtk.home}\lib\jsr179.jar;${wtk.home}\lib\jsr234.jar;${wtk.home}\lib\wma11.jar;${wtk.home}\lib\mmapi.jar;lib\motorola-location.jar"/>
         <property name="classpath.preverify" value="${libraryjars}"/>
         <antcall target="clean"/>
         <antcall target="a.pre.standard-lite"/>
@@ -187,7 +188,7 @@
     <target name="b2b-lite">
         <property name="suffix" value=""/>
         <property name="dist.dir" value="b2b-lite"/>
-        <property name="libraryjars" value="${wtk.home}\lib\cldcapi11.jar;${wtk.home}\lib\midpapi20.jar;${wtk.home}\lib\jsr75.jar;${wtk.home}\lib\jsr082.jar;${wtk.home}\lib\jsr179.jar;${wtk.home}\lib\jsr234.jar;${wtk.home}\lib\wma11.jar;lib\motorola-location.jar"/>
+        <property name="libraryjars" value="${wtk.home}\lib\cldcapi11.jar;${wtk.home}\lib\midpapi20.jar;${wtk.home}\lib\jsr75.jar;${wtk.home}\lib\jsr082.jar;${wtk.home}\lib\jsr179.jar;${wtk.home}\lib\jsr234.jar;${wtk.home}\lib\wma11.jar;${wtk.home}\lib\mmapi.jar;lib\motorola-location.jar"/>
         <property name="classpath.preverify" value="${libraryjars}"/>
         <antcall target="clean"/>
         <antcall target="a.pre.b2b-lite"/>
@@ -202,7 +203,7 @@
     <target name="b2b-builder">
         <property name="suffix" value="-builder"/>
         <property name="dist.dir" value="b2b-builder"/>
-        <property name="libraryjars" value="${wtk.home}\lib\cldcapi11.jar;${wtk.home}\lib\midpapi20.jar;${wtk.home}\lib\jsr75.jar;${wtk.home}\lib\jsr082.jar;${wtk.home}\lib\jsr179.jar;${wtk.home}\lib\jsr234.jar;${wtk.home}\lib\wma11.jar;lib\motorola-location.jar"/>
+        <property name="libraryjars" value="${wtk.home}\lib\cldcapi11.jar;${wtk.home}\lib\midpapi20.jar;${wtk.home}\lib\jsr75.jar;${wtk.home}\lib\jsr082.jar;${wtk.home}\lib\jsr179.jar;${wtk.home}\lib\jsr234.jar;${wtk.home}\lib\wma11.jar;${wtk.home}\lib\mmapi.jar;lib\motorola-location.jar"/>
         <property name="classpath.preverify" value="${libraryjars}"/>
         <antcall target="clean"/>
         <antcall target="a.pre.b2b-builder"/>
@@ -217,7 +218,7 @@
     <target name="basic">
         <property name="suffix" value="-basic"/>
         <property name="dist.dir" value="basic"/>
-        <property name="libraryjars" value="${wtk.home}\lib\cldcapi11.jar;${wtk.home}\lib\midpapi20.jar;${wtk.home}\lib\jsr75.jar;${wtk.home}\lib\jsr082.jar;${wtk.home}\lib\jsr179.jar;${wtk.home}\lib\jsr234.jar;${wtk.home}\lib\wma11.jar"/>
+        <property name="libraryjars" value="${wtk.home}\lib\cldcapi11.jar;${wtk.home}\lib\midpapi20.jar;${wtk.home}\lib\jsr75.jar;${wtk.home}\lib\jsr082.jar;${wtk.home}\lib\jsr179.jar;${wtk.home}\lib\jsr234.jar;${wtk.home}\lib\wma11.jar;${wtk.home}\lib\mmapi.jar"/>
         <property name="classpath.preverify" value="${libraryjars}"/>
         <antcall target="clean"/>
         <antcall target="a.pre.std"/>
@@ -247,7 +248,7 @@
     <target name="j9">
         <property name="suffix" value="-j9"/>
         <property name="dist.dir" value="j9"/>
-        <property name="libraryjars" value="${wtk.home}\lib\cldcapi11.jar;${wtk.home}\lib\midpapi20.jar;${wtk.home}\lib\jsr75.jar;${wtk.home}\lib\jsr082.jar;${wtk.home}\lib\jsr179.jar;${wtk.home}\lib\jsr234.jar;${wtk.home}\lib\wma11.jar"/>
+        <property name="libraryjars" value="${wtk.home}\lib\cldcapi11.jar;${wtk.home}\lib\midpapi20.jar;${wtk.home}\lib\jsr75.jar;${wtk.home}\lib\jsr082.jar;${wtk.home}\lib\jsr179.jar;${wtk.home}\lib\jsr234.jar;${wtk.home}\lib\wma11.jar;${wtk.home}\lib\mmapi.jar"/>
         <property name="classpath.preverify" value="${libraryjars}"/>
         <antcall target="clean"/>
         <antcall target="a.pre.j9"/>
@@ -575,10 +576,22 @@
         <antcall target="cn1-trunk.pack"/>
     </target>
 
+    <target name="wp-nolog">
+        <property name="suffix" value="-wp"/>
+        <property name="dist.dir" value="wp"/>
+        <property name="libraryjars" value="${cn1.repository}\CLDC11.jar;${cn1.repository}\dist\CodenameOne.jar"/>
+        <property name="classpath.preverify" value="${libraryjars}"/>
+        <antcall target="clean"/>
+        <antcall target="a.pre.cn1-nb-nolog"/>
+        <antcall target="prepare.cn1-nb"/>
+        <antcall target="compile.cn1-trunk"/>
+        <antcall target="cn1-trunk.pack"/>
+    </target>
+
     <target name="emulator">
         <property name="suffix" value="-emulator"/>
         <property name="dist.dir" value="emulator"/>
-        <property name="libraryjars" value="${wtk.home}\lib\cldcapi11.jar;${wtk.home}\lib\midpapi20.jar;${wtk.home}\lib\jsr75.jar;${wtk.home}\lib\jsr082.jar;${wtk.home}\lib\jsr179.jar;${wtk.home}\lib\jsr234.jar;${wtk.home}\lib\wma11.jar"/>
+        <property name="libraryjars" value="${wtk.home}\lib\cldcapi11.jar;${wtk.home}\lib\midpapi20.jar;${wtk.home}\lib\jsr75.jar;${wtk.home}\lib\jsr082.jar;${wtk.home}\lib\jsr179.jar;${wtk.home}\lib\jsr234.jar;${wtk.home}\lib\wma11.jar;${wtk.home}\lib\mmapi.jar"/>
         <property name="classpath.preverify" value="${libraryjars}"/>
         <antcall target="clean"/>
         <antcall target="a.pre.emulator"/>
@@ -724,6 +737,20 @@
                        symbols="__HECL__,__ANDROID__,__BACKPORT__,${pre.extra}"/>
     </target>
 
+    <target name="a.pre.cn1-nolog" depends="a.pre.hecl-android-offline">
+        <mkdir dir="tmp/src"/>
+<!--
+        <wtkpreprocess srcdir="cn1-compat/src" destdir="tmp/src" version="1"
+                       symbols="__CN1__,${pre.extra}"/>
+        <wtkpreprocess srcdir="src" destdir="tmp/src" version="1"
+                       symbols="__HECL__,__CN1__,__NO_NET__,${pre.extra}"/>
+-->
+        <wtkpreprocess srcdir="cn1-compat/src" destdir="tmp/src" version="1"
+                       symbols="__CN1__,${pre.extra}"/>
+        <wtkpreprocess srcdir="src" destdir="tmp/src" version="1"
+                       symbols="__HECL__,__CN1__,__NO_NET__,${pre.extra}"/>
+    </target>
+
     <target name="a.pre.cn1" depends="a.pre.hecl-android-offline">
         <mkdir dir="tmp/src"/>
 <!--
@@ -747,6 +774,28 @@
     </target>
 
     <target name="a.pre.cn1-nb" depends="a.pre.cn1">
+        <copy todir="tmp/src">
+            <fileset dir="res/resources">
+                <include name="datums.txt"/>
+                <include name="no-map.xml"/>
+                <include name="world.*"/>
+                <include name="*.png"/>
+                <include name="*.svg"/>
+            </fileset>
+            <fileset dir="res/resources/set"/>
+            <fileset dir="res-extra/resources">
+                <include name="*.png"/>
+            </fileset>
+            <fileset dir="res-lang/resources">
+                <include name="language.en.res"/>
+                <include name="language.es.res"/>
+                <include name="language.fr.res"/>
+                <include name="language.pl.res"/>
+            </fileset>
+        </copy>
+    </target>
+
+    <target name="a.pre.cn1-nb-nolog" depends="a.pre.cn1-nolog">
         <copy todir="tmp/src">
             <fileset dir="res/resources">
                 <include name="datums.txt"/>
@@ -1001,6 +1050,7 @@
 
     <target name="remove.rim.src">
         <delete file="tmp/src/cz/kruch/track/ui/nokia/BlackberryDeviceControl.java"/>
+        <delete file="tmp/src/api/io/SeekableInputStream.java"/>
     </target>
 
     <target name="remove.android.src">
@@ -1248,7 +1298,7 @@
             <manifest>
                 <attribute name="Built-By" value="kruhc@seznam.cz"/>
                 <attribute name="Content-Folder" value="Applications"/>
-                <!--<attribute name="Nokia-Scalable-Icon-MIDlet-1" value="/resources/icon.svg"/>-->
+                <attribute name="Nokia-Scalable-Icon-MIDlet-1" value="/resources/icon.svg"/>
                 <attribute name="Nokia-MIDlet-Category" value="Application"/>
                 <attribute name="Nokia-MIDlet-No-Exit" value="true"/>
                 <attribute name="FlipInsensitive" value="True"/>
@@ -1358,18 +1408,19 @@
             <arg value="-keepnames class cz.** extends java.lang.Exception"/>
             <arg value="-keepnames class api.** extends java.lang.Exception"/>
             <arg value="-keepnames class org.** extends java.lang.Exception"/>
+            <arg value="-whyareyoukeeping class api.io.BufferedOutputStream"/>
             <arg value="-whyareyoukeeping class net.trekbuddy.midlet.IRuntime"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.maps.io.FileInput"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.maps.io.LoaderIO"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.maps.J2NCalibration"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.io.CrcInputStream"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.util.Logger"/>
-            <arg value="-whyareyoukeeping class api.io.BufferedOutputStream"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.hecl.ControlledInterp"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.hecl.PluginManager"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.ui.KeyCheckTimerTask"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.ui.nokia.NokiaUi14DeviceControl"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.ui.nokia.S60DeviceControl"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.device.NokiaApSelector"/>
             <arg value="-printmapping dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.map"/>
             <arg value="-printseeds"/>
             <arg value="-printusage dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.dco"/>
@@ -1390,15 +1441,16 @@
             <arg value="-allowaccessmodification"/>
 -->
             <arg value="-keep class * implements javax.microedition.midlet.MIDlet"/>
+            <arg value="-keepnames class api.io.SeekableInputStream"/>
             <arg value="-keepnames class cz.** extends java.lang.Exception"/>
             <arg value="-keepnames class api.** extends java.lang.Exception"/>
             <arg value="-keepnames class org.** extends java.lang.Exception"/>
+            <arg value="-whyareyoukeeping class api.io.BufferedOutputStream"/>
             <arg value="-whyareyoukeeping class net.trekbuddy.midlet.IRuntime"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.maps.io.FileInput"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.maps.io.LoaderIO"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.io.CrcInputStream"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.util.Logger"/>
-            <arg value="-whyareyoukeeping class api.io.BufferedOutputStream"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.hecl.ControlledInterp"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.hecl.PluginManager"/>
             <arg value="-printmapping dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.map"/>
@@ -1424,12 +1476,12 @@
             <arg value="-keepnames class cz.** extends java.lang.Exception"/>
             <arg value="-keepnames class api.** extends java.lang.Exception"/>
             <arg value="-keepnames class org.** extends java.lang.Exception"/>
+            <arg value="-whyareyoukeeping class api.io.BufferedOutputStream"/>
             <arg value="-whyareyoukeeping class net.trekbuddy.midlet.IRuntime"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.maps.io.FileInput"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.maps.io.LoaderIO"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.io.CrcInputStream"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.util.Logger"/>
-            <arg value="-whyareyoukeeping class api.io.BufferedOutputStream"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.hecl.ControlledInterp"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.hecl.PluginManager"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.ui.KeyCheckTimerTask"/>
@@ -1461,12 +1513,12 @@
             <arg value="-keepnames class cz.** extends java.lang.Exception"/>
             <arg value="-keepnames class api.** extends java.lang.Exception"/>
             <arg value="-keepnames class org.** extends java.lang.Exception"/>
+            <arg value="-whyareyoukeeping class api.io.BufferedOutputStream"/>
             <arg value="-whyareyoukeeping class net.trekbuddy.midlet.IRuntime"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.maps.io.FileInput"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.maps.io.LoaderIO"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.io.CrcInputStream"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.util.Logger"/>
-            <arg value="-whyareyoukeeping class api.io.BufferedOutputStream"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.hecl.ControlledInterp"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.hecl.PluginManager"/>
             <arg value="-printmapping dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.map"/>
@@ -1501,13 +1553,13 @@
             <arg value="-keepnames class cz.** extends java.lang.Exception"/>
             <arg value="-keepnames class api.** extends java.lang.Exception"/>
             <arg value="-keepnames class org.** extends java.lang.Exception"/>
+            <arg value="-whyareyoukeeping class api.io.BufferedOutputStream"/>
             <arg value="-whyareyoukeeping class net.trekbuddy.midlet.IRuntime"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.maps.io.FileInput"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.io.CrcInputStream"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.maps.NoMapLoader"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.ui.SmartList"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.util.Logger"/>
-            <arg value="-whyareyoukeeping class api.io.BufferedOutputStream"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.hecl.ControlledInterp"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.hecl.PluginManager"/>
             <arg value="-printmapping dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.map"/>
@@ -1540,12 +1592,12 @@
             <arg value="-keepnames class cz.** extends java.lang.Exception"/>
             <arg value="-keepnames class api.** extends java.lang.Exception"/>
             <arg value="-keepnames class org.** extends java.lang.Exception"/>
+            <arg value="-whyareyoukeeping class api.io.BufferedOutputStream"/>
             <arg value="-whyareyoukeeping class net.trekbuddy.midlet.IRuntime"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.maps.io.FileInput"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.maps.io.LoaderIO"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.io.CrcInputStream"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.util.Logger"/>
-            <arg value="-whyareyoukeeping class api.io.BufferedOutputStream"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.hecl.ControlledInterp"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.hecl.PluginManager"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.ui.nokia.NokiaUi14DeviceControl"/>
@@ -1557,7 +1609,42 @@
         </java>
     </target>
 
-	<target name="preverify">
+    <target name="obfuscate5">
+        <java jar="${proguard5.home}\lib\proguard.jar" fork="true">
+            <jvmarg value="-Dmaximum.inlined.code.length=4"/>
+            <jvmarg value="-Doptimize.conservatively=true"/>
+            <arg value="-injars tmp/trekbuddy${suffix}.jar"/>
+            <arg value="-outjars tmp/trekbuddy${suffix}-obfuscated.jar"/>
+            <arg value="-libraryjars ${libraryjars}"/>
+            <arg value="-dontpreverify"/> <!-- preverified elsewhere; this is 4.x flag -->
+            <arg value="-dontusemixedcaseclassnames"/>
+            <arg value="-dontskipnonpubliclibraryclasses"/>
+            <arg value="-repackageclasses ''"/>
+            <arg value="-overloadaggressively"/>
+            <arg value="-allowaccessmodification"/>
+            <arg value="-keep class * implements javax.microedition.midlet.MIDlet"/>
+            <arg value="-keepnames class cz.** extends java.lang.Exception"/>
+            <arg value="-keepnames class api.** extends java.lang.Exception"/>
+            <arg value="-keepnames class org.** extends java.lang.Exception"/>
+            <arg value="-whyareyoukeeping class api.io.BufferedOutputStream"/>
+            <arg value="-whyareyoukeeping class net.trekbuddy.midlet.IRuntime"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.maps.io.FileInput"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.maps.io.LoaderIO"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.io.CrcInputStream"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.util.Logger"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.hecl.ControlledInterp"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.hecl.PluginManager"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.ui.KeyCheckTimerTask"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.ui.nokia.NokiaUi14DeviceControl"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.ui.nokia.S60DeviceControl"/>
+            <arg value="-printmapping dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.map"/>
+            <arg value="-printseeds"/>
+            <arg value="-printusage dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.dco"/>
+            <arg value="-verbose"/>
+        </java>
+    </target>
+
+    <target name="preverify">
 	    <exec executable="${wtk.home}\bin\preverify1.1.exe">
             <arg line="-classpath ${classpath.preverify} -d tmp/preverified tmp/trekbuddy${suffix}-obfuscated.jar"/>
 	    </exec>

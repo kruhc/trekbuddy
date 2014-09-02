@@ -53,10 +53,8 @@ final class Jsr234Camera extends Jsr135Camera {
             }
         }
         if (res != null) {
-            final StringBuffer sb = new StringBuffer(16);
             for (int N = res.length, i = 0; i < N; ) {
-                sb.delete(0, sb.length());
-                v.addElement(sb.append(res[i]).append('x').append(res[i + 1]).toString());
+                v.addElement((new StringBuffer(16)).append(res[i]).append('x').append(res[i + 1]).toString());
                 i += 2;
             }
         }
@@ -246,7 +244,7 @@ final class Jsr234Camera extends Jsr135Camera {
             sb.insert(0, cz.kruch.track.location.GpxTracklog.dateToFileDate(filestamp));
             sb.insert(0, FOLDER_PREFIX);
         } catch (Exception e) {
-            sb.delete(0, sb.length());
+            sb.setLength(0);
             sb.append(relPath);
         } finally {
             try {

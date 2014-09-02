@@ -43,8 +43,20 @@ public final class ImageUtils {
     public static Image getGoodIcon(final String resource) throws IOException {
         Image img = Image.createImage(resource);
         if (img != null) {
-            if (!Desktop.isHires() && (img.getWidth() > 20) || img.getHeight() > 20) {
-                img = resizeImage(img, 16, 16, ImageUtils.SLOW_RESAMPLE, false);
+            switch (Desktop.getHiresLevel()) {
+                case 0:
+                    if (img.getWidth() > 16 || img.getHeight() > 16) {
+                        img = resizeImage(img, 16, 16, ImageUtils.SLOW_RESAMPLE, false);
+                    }
+                    break;
+                case 1:
+                    // 24?
+                    break;
+                case 2:
+                    if (img.getWidth() < 32 || img.getHeight() < 32) {
+                        img = resizeImage(img, 32, 32, ImageUtils.SLOW_RESAMPLE, false);
+                    }
+                    break;
             }
         }
         return img;

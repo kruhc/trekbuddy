@@ -22,10 +22,8 @@ final class DirLoader extends Map.Loader /*implements Atlas.Loader*/ {
      */
 
     private String dir;
-    private final StringBuffer snsb;
 
     DirLoader() {
-        this.snsb = new StringBuffer(64);
     }
 
     void init(final Map map, final String url) throws IOException {
@@ -132,7 +130,7 @@ final class DirLoader extends Map.Loader /*implements Atlas.Loader*/ {
 
     void loadSlice(final Slice slice) throws IOException {
         // path sb
-        final StringBuffer sb = snsb.delete(0, snsb.length());
+        final StringBuffer sb = new StringBuffer(64);
 
         // construct slice path
         sb.append(dir).append(SET_DIR_PREFIX).append(basename);
@@ -183,9 +181,6 @@ final class DirLoader extends Map.Loader /*implements Atlas.Loader*/ {
             // open atlas dir
             file = File.open(baseUrl);
 
-            // pooled path holder
-            final StringBuffer sb = new StringBuffer(32);
-
             // iterate over layers
             for (final Enumeration le = file.list(); le.hasMoreElements();) {
                 final String layerEntry = (String) le.nextElement();
@@ -219,7 +214,7 @@ final class DirLoader extends Map.Loader /*implements Atlas.Loader*/ {
                                     if (Calibration.isCalibration(fileEntry)) {
 
                                         // create URL
-                                        final String path = escape(sb.delete(0, sb.length()).append(file.getURL()).append(fileEntry).toString());
+                                        final String path = escape((new StringBuffer(64)).append(file.getURL()).append(fileEntry).toString());
 
                                         // load map calibration file
                                         InputStream in = null;

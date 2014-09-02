@@ -684,12 +684,6 @@ public final class Map implements Runnable {
             final Object[] array = ((NakedVector) slices).getData();
             final boolean mapIsInUse = map.isInUse;
             final boolean verboseLoading = Config.verboseLoading;
-            final StringBuffer sb;
-            if (verboseLoading) {
-                sb = new StringBuffer(64);
-            } else {
-                sb = null;
-            }
 
             // load images for given slices
             try {
@@ -699,7 +693,7 @@ public final class Map implements Runnable {
 
                         // notify
                         if (verboseLoading) {
-                            map.listener.loadingChanged(slice.appendInfo(sb.delete(0, sb.length()).append("Loading ")).toString(), null);
+                            map.listener.loadingChanged(slice.appendInfo((new StringBuffer(64)).append("Loading ")).toString(), null);
                         }
 
                         try {

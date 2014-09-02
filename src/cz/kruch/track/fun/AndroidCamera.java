@@ -63,9 +63,8 @@ final class AndroidCamera extends Camera implements CommandListener,
             System.runFinalization(); // force JNI cleanup
         }
         if (sizes != null) {
-            StringBuffer sb = new StringBuffer(16);
             for (android.hardware.Camera.Size size : sizes) {
-                v.addElement(sb.delete(0, sb.length()).append(size.width).append('x').append(size.height).toString());
+                v.addElement((new StringBuffer(16)).append(size.width).append('x').append(size.height).toString());
             }
         }
     }

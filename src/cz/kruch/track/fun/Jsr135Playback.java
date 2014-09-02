@@ -9,7 +9,6 @@ import javax.microedition.media.Manager;
 import javax.microedition.media.control.VolumeControl;
 import javax.microedition.io.Connector;
 import java.io.InputStream;
-import java.io.IOException;
 
 /**
  * JSR-135 sound player.
@@ -24,6 +23,7 @@ final class Jsr135Playback extends Playback implements PlayerListener {
     private Control control;
     private InputStream in;
     private int level;
+    private boolean closing;
 
     Jsr135Playback() {
     }
@@ -33,8 +33,18 @@ final class Jsr135Playback extends Playback implements PlayerListener {
         // must be called from background on S^3
         /*
          * 2014-08-25: When called for wpt reached, it is already called from event worker thread.
+         * 2014-08-26: Using Disk Worker may block stopping Serial/Bluetooth location provider
+         *             when audio hangs. It is better not to use any worker because MMAPI seems
+         *             unrealiable on most devices.
          */
-        cz.kruch.track.ui.Desktop.getDiskWorker().enqueue(this);
+        final Thread at = new Thread(this);
+//#ifdef __SYMBIAN__
+        at.setPriority(Thread.MAX_PRIORITY); // helps avoid interruption???
+//#endif
+        at.start();
+//#ifdef __SYMBIAN__
+        Thread.yield(); // give audio thread a chance before others (mainly disk worker)
+//#endif
 
         // no way to tell what will happen, so be positive
         return true;
@@ -102,23 +112,34 @@ final class Jsr135Playback extends Playback implements PlayerListener {
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("event " + event + "; data " + eventData);
 //#endif
+//#ifdef __RIM__
+        if (event != null && !event.startsWith("com.rim")) // do not log RIM-specific event
+//#endif
         state.append("event: ").append(event).append('(').append(eventData instanceof Control ? "ctrl" : eventData).append(')').append(" -> ");
 
-        if (event.equals(PlayerListener.CLOSED)) {
+        if (PlayerListener.CLOSED.equals(event)) {
 
             // update state
             state.append("x-closed -> ");
 
-            // unregister
-            player.removePlayerListener(this);
+        } else if (PlayerListener.END_OF_MEDIA.equals(event) || PlayerListener.ERROR.equals(event) || PlayerListener.STOPPED.equals(event)) {
 
-            // cleanup
-            cleanup();
-
-        } else if (event.equals(PlayerListener.END_OF_MEDIA) || event.equals(PlayerListener.ERROR) || event.equals(PlayerListener.STOPPED)) {
+            // process only once when any of the above events occur
+            if (closing) {
+                return;
+            }
+            closing = true;
 
             // restore volume
-            setVolume(level);
+            if (level != 100) {
+                setVolume(level);
+                state.append("x-volume(").append(level).append(") -> ");
+            }
+            control = null; // gc hint
+
+            // close input if provided
+            api.file.File.closeQuietly(in);
+            in = null; // gc hint
 
             // update state
             state.append("x-closing -> ");
@@ -133,7 +154,7 @@ final class Jsr135Playback extends Playback implements PlayerListener {
 //#endif
     }
 
-    private int setVolume(int volume) {
+    private int setVolume(final int volume) {
         int level = 0;
         if (control instanceof VolumeControl) {
             try {
@@ -145,26 +166,6 @@ final class Jsr135Playback extends Playback implements PlayerListener {
             }
         }
         return level;
-    }
-
-    private void cleanup() {
-//#ifdef __LOG__
-        if (log.isEnabled()) log.debug("on close");
-//#endif
-        state.append("cleaned up -> ");
-
-        // close input
-        if (in != null) {
-            try {
-                in.close();
-            } catch (Exception e) {
-                // ignore
-            }
-            in = null; // gc hint
-        }
-
-        // other resources
-        control = null; // gc hint
     }
 
     private static String getContentType(final String url) {

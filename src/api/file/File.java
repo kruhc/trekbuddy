@@ -4,6 +4,7 @@ package api.file;
 
 import javax.microedition.io.Connector;
 import javax.microedition.io.StreamConnection;
+import javax.microedition.io.Connection;
 import java.util.Enumeration;
 import java.io.InputStream;
 import java.io.IOException;
@@ -167,6 +168,16 @@ public abstract class File {
         if (file != null) {
             try {
                 file.close();
+            } catch (Exception e) { // NPE or IOE
+                // ignore
+            }
+        }
+    }
+
+    public static void closeQuietly(final Connection connection) {
+        if (connection != null) {
+            try {
+                connection.close();
             } catch (Exception e) { // NPE or IOE
                 // ignore
             }

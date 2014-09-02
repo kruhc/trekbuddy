@@ -373,6 +373,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         } else if (cz.kruch.track.TrackingMIDlet.samsung) {
             dataDir = getDefaultDataDir("file:///Mmc/", "trekbuddy/");
             if (cz.kruch.track.TrackingMIDlet.b2710) {
+                desktopFontSize = 2; 
                 lowmemIo = true;
                 largeAtlases = true;
             }

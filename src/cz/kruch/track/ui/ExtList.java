@@ -25,12 +25,8 @@ final class ExtList extends List implements UiList {
         int iconSize;
         try {
             iconSize = getFont(0).getHeight();
-        } catch (Throwable t) { // happens on Android, because of incomplete List implementation 
-            if (Desktop.isHires()) {
-                iconSize = 24;
-            } else {
-                iconSize = 16;
-            }
+        } catch (Throwable t) { // happens on Android, because of incomplete List implementation
+            iconSize = 16 + Desktop.getHiresLevel() * 8;
         }
         if (iconSize < NavigationScreens.wptSize2 << 1) {
             this.awpt = ImageUtils.resizeImage(NavigationScreens.waypoint,

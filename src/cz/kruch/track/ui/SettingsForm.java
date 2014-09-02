@@ -1304,7 +1304,7 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
 
     private Item createLineCfgItem(final String label, final int itemIdx,
                                    final int color, final int thickness, final boolean dashed) {
-        final int sp = Desktop.isHires() ? 10 : 7;
+        final int sp = 7 + Desktop.getHiresLevel() * 3;
         itemLineColor[itemIdx] = color;
         itemLineThick[itemIdx] = thickness;
         itemLineDashed[itemIdx] = dashed;

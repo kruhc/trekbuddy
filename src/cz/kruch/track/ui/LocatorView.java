@@ -223,14 +223,8 @@ final class LocatorView extends View {
 
         // draw compas
         float course;
-        int ifh, efh;
-        if (Desktop.isHires()) {
-            ifh = 8;
-            efh = 11;
-        } else {
-            ifh = 4;
-            efh = 7;
-        }
+        final int hires = Desktop.getHiresLevel(); 
+        final int ifh = 4 + hires * 4, efh = 7 + hires * 4;
 
         // draw internal compass value
         if (orientation != -1) {
@@ -289,7 +283,7 @@ final class LocatorView extends View {
 
             // print course
             graphics.setColor(fgColor);
-            sb.delete(0, sb.length());
+            sb.setLength(0);
             NavigationScreens.append(sb, (int) course).append(NavigationScreens.SIGN);
             final int cl = sb.length();
             sb.getChars(0, cl, sbChars, 0);
@@ -358,12 +352,12 @@ final class LocatorView extends View {
             graphics.setColor(fgColor);
 
             // draw lat/lon
-            sb.delete(0, sb.length());
+            sb.setLength(0);
             NavigationScreens.printTo(sb, coordsAvg, QualifiedCoordinates.LAT, true);
             int l = sb.length();
             sb.getChars(0, l, sbChars, 0);
             graphics.drawChars(sbChars, 0, l, OSD.BORDER, 0, Graphics.LEFT | Graphics.TOP);
-            sb.delete(0, sb.length());
+            sb.setLength(0);
             NavigationScreens.printTo(sb, coordsAvg, QualifiedCoordinates.LON, true);
             l = sb.length();
             sb.getChars(0, l, sbChars, 0);
@@ -380,7 +374,7 @@ final class LocatorView extends View {
                         hAccuracy /= 0.3048F;
                     } break;
                 }
-                sb.delete(0, sb.length());
+                sb.setLength(0);
                 sb.append(NavigationScreens.PLUSMINUS);
                 if (hAccuracy >= 10F) {
                     NavigationScreens.append(sb, (int) hAccuracy);
@@ -445,7 +439,7 @@ final class LocatorView extends View {
                                             Graphics.LEFT | Graphics.TOP);
 
                 // construct distance string
-                sb.delete(0, sb.length());
+                sb.setLength(0);
                 NavigationScreens.printDistance(sb, distance);
                 l = sb.length();
                 sb.getChars(0, l, sbChars, 0);
@@ -461,7 +455,7 @@ final class LocatorView extends View {
                 }
                 
                 // draw azimuth
-                sb.delete(0, sb.length());
+                sb.setLength(0);
                 NavigationScreens.append(sb, (int) bearing).append(NavigationScreens.SIGN);
                 l = sb.length();
                 sb.getChars(0, l, sbChars, 0);

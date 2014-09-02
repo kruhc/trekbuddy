@@ -257,12 +257,26 @@ final class DeviceScreen extends GameCanvas implements Runnable {
     static final float ydpi = Float.parseFloat(System.getProperty("microemu.display.ydpi"));
 //#endif
 
-    boolean isHires() {
+    int getHiresLevel() {
+        int level = 0;
 //#ifdef __ANDROID__
-        return xdpi > 160 || ydpi > 160;
+        if (xdpi > 160 || ydpi > 160) {
+            if (xdpi > 240 || ydpi > 240) {
+                level = 2;
+            } else {
+                level = 1;
+            }
+        }
 //#else
-        return getHeight() > 480 || getWidth() > 480;
+        if (getHeight() > 480 || getWidth() > 480) {
+            if (getHeight() > 720 || getWidth() > 720) {
+                level = 2;
+            } else {
+                level = 1;
+            }
+        }
 //#endif
+        return level;
     }
 
     boolean isHiresGui() {
@@ -363,12 +377,15 @@ final class DeviceScreen extends GameCanvas implements Runnable {
         if (log.isEnabled()) log.debug("buttonPressed; " + x + "-" + y + "; count = " + pointersCount);
 //#endif
 
-        // touch
+        // should happen only when touch menu is on
         if (touchMenuActive) {
+
             // as if pressed
             pointerPressed(x, y);
+
             // clear fake press
             pointersCount = 0;
+
         } else {
 //#ifdef __LOG__
             log.error("button pressed when touch menu is not active");
@@ -458,6 +475,13 @@ final class DeviceScreen extends GameCanvas implements Runnable {
         if (cz.kruch.track.TrackingMIDlet.state != 1) {
             return;
         }
+
+//#if __ANDROID__ || __CN1__
+
+        // end of pinch no matter what
+        scale = Float.NaN;
+
+//#endif
 
         // avoid multitouch
         if (--pointersCount > 0) {
@@ -575,26 +599,31 @@ final class DeviceScreen extends GameCanvas implements Runnable {
 
         // detect change
         final float cs = (float)x / 1000;
-        int mag = 0;
         if (Float.isNaN(scale)) {
+
+            // start of pinch
             scale = cs;
+
         } else {
+
+            // calculate percentual change
             final float ds = scale / cs;
-//#ifdef __LOG__
-            if (log.isEnabled()) log.debug("ds = " + ds);
-//#endif
+
+            // check difference
+            int mag = 0;
             if (ds < 0.75) {
                 mag = 1;
             } else if (ds > 1.25) {
                 mag = -1;
-                scale = cs;
             }
-        }
 
-        // handle magnification
-        if (mag != 0) {
-            scale = cs;
-            delegate.handleMagnify(mag);
+            // is magnification
+            if (mag != 0) {
+                // use as new base
+                scale = cs;
+                // handle magnification
+                delegate.handleMagnify(mag);
+            }
         }
     }
 

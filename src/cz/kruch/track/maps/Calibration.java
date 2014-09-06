@@ -38,6 +38,10 @@ abstract class Calibration {
     public static final String XML_EXT = ".xml";
 //    public static final String J2N_EXT = ".j2n";
 
+    private static final char[] OZI_EXT_C = { '.', 'm', 'a', 'p' };
+    private static final char[] GMI_EXT_C = { '.', 'g', 'm', 'i' };
+    private static final char[] XML_EXT_C = { '.', 'x', 'm', 'l' };
+
     // map path and filename
     private String path;
     protected String imgname;
@@ -449,15 +453,15 @@ abstract class Calibration {
     public static boolean isCalibration(String url) {
         url = url.toLowerCase();
         return url.endsWith(Calibration.OZI_EXT)
-                || url.endsWith(Calibration.GMI_EXT)
-                || url.endsWith(Calibration.XML_EXT);
+                || url.endsWith(Calibration.GMI_EXT);
+//                || url.endsWith(Calibration.XML_EXT);
 //                || url.endsWith(Calibration.J2N_EXT);
     }
 
     public static boolean isCalibration(CharArrayTokenizer.Token token) {
-        return token.endsWith(Calibration.OZI_EXT)
-                || token.endsWith(Calibration.GMI_EXT)
-                || token.endsWith(Calibration.XML_EXT);
+        return token.endsWith(Calibration.OZI_EXT_C)
+                || token.endsWith(Calibration.GMI_EXT_C);
+//                || token.endsWith(Calibration.XML_EXT_C);
 //                || token.endsWith(Calibration.J2N_EXT);
     }
 

@@ -211,7 +211,7 @@ public final class TarEntry {
      */
     public TarEntry() {
         this.name = new CharArrayTokenizer.Token();
-        this.name.init(new char[100], 0, 100);
+        this.name.init(new char[NAMELEN], 0, NAMELEN);
     }
 
     /**
@@ -369,9 +369,10 @@ public final class TarEntry {
      * @return token
      */
     private CharArrayTokenizer.Token parseEntryName(final byte[] header) {
-        final char[] array = this.name.array;
+        final CharArrayTokenizer.Token name = this.name;
+        final char[] array = name.array;
         int i = 0;
-        for (; i < 100; i++) {
+        for (; i < NAMELEN; i++) {
             final byte b = header[i];
             if (b == 0) {
                 break;
@@ -416,7 +417,7 @@ public final class TarEntry {
 //        }
 
         int i = 0;
-        for (; i < 100; i++) {
+        for (; i < NAMELEN; i++) {
             final byte b = header[i];
             if (b == 0) {
                 break;

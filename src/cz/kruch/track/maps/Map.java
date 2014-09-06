@@ -94,10 +94,6 @@ public final class Map implements Runnable {
         return calibration.getDatum();
     }
 
-    public double getVerticalScale() {
-        return calibration.getVerticalScale();
-    }
-
     public int getBgColor() {
         return bgColor;
     }
@@ -389,6 +385,59 @@ public final class Map implements Runnable {
         return calibration.descale(i >> calibration.x2);
     }
 
+    /*
+     * Accessors for zooming.
+     */
+
+    double getVerticalScale() {
+        return calibration.getVerticalScale();
+    }
+
+    Calibration getCalibration() {
+        return calibration;
+    }
+
+    /* (non-javadoc) public only for loading just to get calibration */
+    Throwable loadCalibration() {
+        try {
+            // create loader
+            if (loader == null) {
+                final Class factory = Class.forName("cz.kruch.track.maps.TarLoader");
+                loader = (Loader) factory.newInstance();
+                loader.init(this, path);
+            }
+
+            // loads just calibration
+            loader.loadCalibration();
+
+            // check map for consistency
+            if (calibration == null) {
+                throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_NO_CALIBRATION), getName());
+            }
+
+        } catch (Throwable t) {
+
+            // cleanup
+            if (loader != null) {
+                try {
+                    loader.dispose(true);
+                } catch (Exception e) {
+                    // ignore
+                }
+                loader = null; // gc hint
+            }
+
+            // propagate map name
+            if (t instanceof InvalidMapException) {
+                ((InvalidMapException) t).setName(getName());
+            }
+
+            return t;
+        }
+
+        return null;
+    }
+
     /**
      * Map loader.
      */
@@ -432,6 +481,10 @@ public final class Map implements Runnable {
 //#ifdef __SUPPORT_GPSKA__
             this.isGPSka = url.toLowerCase().endsWith(Calibration.XML_EXT);
 //#endif            
+        }
+
+        void loadCalibration() throws IOException {
+            throw new java.lang.RuntimeException("override");
         }
 
         final void prepare() throws IOException {

@@ -324,15 +324,13 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
             }
 
             // easyzoom
-/* obsolete since 1.27
             choice5 = newChoiceGroup(Resources.CFG_DESKTOP_GROUP_EASYZOOM,
                                      Desktop.CHOICE_POPUP_TYPE);
             append(choice5, Resources.CFG_DESKTOP_FLD_EASYZOOM_OFF);
             append(choice5, Resources.CFG_DESKTOP_FLD_EASYZOOM_LAYERS);
-//            append(choice5, Resources.CFG_DESKTOP_FLD_EASYZOOM_MAPS);
+            choice5.append("auto", null);
             choice5.setSelectedIndex(Config.easyZoomMode, true);
             submenu.append(choice5);
-*/
 
             // desktop font
             submenu.append(gauge1 = new Gauge(Resources.getString(Resources.CFG_DESKTOP_FLD_FONT_SIZE), true,
@@ -1095,9 +1093,7 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
                 }
 
                 // UI misc
-/* obsolete since 1.27
                 Config.easyZoomMode = choice5.getSelectedIndex();
-*/
                 Config.desktopFontSize = gauge1.getValue();
                 Config.osdAlpha = gauge2.getValue() * gaugeAlphaScale;
                 Config.listFont = Integer.parseInt(getString(field1), 16);

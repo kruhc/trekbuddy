@@ -67,7 +67,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
     /* easyzoom */
     public static final int EASYZOOM_OFF            = 0;
     public static final int EASYZOOM_LAYERS         = 1;
-    public static final int EASYZOOM_MAPS           = 2;
+    public static final int EASYZOOM_AUTO           = 2;
 
     /* listmode */
     public static final int LISTMODE_DEFAULT        = 0;
@@ -202,9 +202,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
     public static int extListMode;
 
     // group [Easyzoom]
-/* obsolete since 1.27
-    public static int easyZoomMode;
-*/
+    public static int easyZoomMode              = EASYZOOM_AUTO;
 
     // group [Tweaks]
 //#ifndef __CN1__
@@ -262,9 +260,9 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
     public static boolean preferGsName          = true;
     public static int sort;
     public static boolean wptAlertSound         = true;
-    public static boolean wptAlertVibr          /*= true*/;
+    public static boolean wptAlertVibr;
     public static boolean mobEnabled            = true;
-    public static boolean gpxAllowExtensions = true;
+    public static boolean gpxAllowExtensions    = true;
 
     // hidden
     public static String btDeviceName   = EMPTY_STRING;
@@ -669,6 +667,9 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
 
             // 1.27 changes
             verboseLoading = din.readBoolean(); // reconfirm
+
+            // 1.28 changes
+            easyZoomMode = din.readInt(); // reconfirm
             
         } catch (Exception e) {
 
@@ -850,6 +851,9 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
 
         /* since 1.27 */
         dout.writeBoolean(verboseLoading);
+
+        /* since 1.28 */
+        dout.writeInt(easyZoomMode);
 
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("configuration updated");

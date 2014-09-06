@@ -413,19 +413,20 @@ public final class CharArrayTokenizer {
         }
 
         public boolean endsWith(final char[] s) {
+            final int tl = this.length;
             final int sl = s.length;
-            if (sl <= length) {
+            if (sl <= tl) {
                 final char[] array = this.array;
-                int affset = this.begin + this.length - sl;
-                int offset = 0;
+                int affset = this.begin + tl - 1;
+                int offset = sl - 1;
                 boolean cond = true;
 
-                while (offset < sl) {
+                while (offset >= 0) {
                     if (array[affset] != s[offset]) {
                         cond = false; break;
                     }
-                    affset++;
-                    offset++;
+                    affset--;
+                    offset--;
                 }
 
                 return cond;
@@ -455,28 +456,6 @@ public final class CharArrayTokenizer {
             }
 
             return cond;
-        }
-
-        /** @deprecated */
-        public boolean endsWith(final String s) {
-            final int sl = s.length();
-            if (sl > length) {
-                return false;
-            }
-
-            final char[] array = this.array;
-            final int start = this.begin + this.length - sl;
-            int offset = 0;
-
-            while (offset < sl) {
-                final char b = array[start + offset];
-                if (b != s.charAt(offset)) {
-                    return false;
-                }
-                offset++;
-            }
-
-            return true;
         }
 
         public boolean equals(final String s) {

@@ -130,32 +130,20 @@ public class FileConnection implements StreamConnection {
     }
 
     public void setFileConnection(String path) throws IOException {
-        com.codename1.io.Log.p("FileConnection.setFileConnection not implemented", com.codename1.io.Log.ERROR);
-/*
-        System.err.println(url);
-        System.err.println(getPath());
-        System.err.println(path);
-        if (path == null) {
-            return;
-        } else if ("..".equals(path)) {
+        com.codename1.io.Log.p("FileConnection.setFileConnection: " + path + "; current = " + url, com.codename1.io.Log.DEBUG);
+        if ("..".equals(path)) {
             final int idx = url.lastIndexOf(PATH_SEPCHAR, url.length() - 1 - 1);
             if (idx > FILE_PROTOCOL.length()) {
                 url = url.substring(0, idx + 1);
             }
-            System.err.println("path is .., now: " + url);
-        } else {
-            url += path;
-            System.err.println("path is now: " + url);
+        } else if (path != null && path.length() != 0) {
+            url = url.concat(path);
         }
-*/
+        com.codename1.io.Log.p("FileConnection.setFileConnection; url is now " + url, com.codename1.io.Log.DEBUG);
     }
 
     public void setHidden(boolean hidden) throws IOException {
         storage.setHidden(getPath(), hidden);
-    }
-
-    public static boolean isDir(String path) {
-        return storage.isDirectory(path);
     }
 
     private Enumeration toEnumeration(final String[] items) {

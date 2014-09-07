@@ -135,7 +135,7 @@ public abstract class File {
     }
 
     public static boolean isBrokenTraversal() {
-        return fsType == FS_SXG75 || fsType == FS_MOTOROLA || fsType == FS_MOTOROLA1000 || fsType == FS_CN1;
+        return fsType == FS_SXG75 || fsType == FS_MOTOROLA || fsType == FS_MOTOROLA1000 /*|| fsType == FS_CN1*/;
     }
 
     public static boolean isOfType(final String filename, final String extension) {

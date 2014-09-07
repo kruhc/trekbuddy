@@ -92,7 +92,7 @@ final class Jsr75File extends File {
     }
 
     public void setFileConnection(String path) throws IOException {
-        if (fsType == FS_JSR75) {
+        if (fsType == FS_JSR75 || fsType == FS_CN1) {
             ((FileConnection) fc).setFileConnection(path);
         } else {
             traverse(path);

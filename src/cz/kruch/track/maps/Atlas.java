@@ -4,6 +4,7 @@ package cz.kruch.track.maps;
 
 import cz.kruch.track.Resources;
 import cz.kruch.track.util.CharArrayTokenizer;
+import cz.kruch.track.util.NakedVector;
 import cz.kruch.track.ui.Desktop;
 
 import java.util.Enumeration;
@@ -12,13 +13,14 @@ import java.util.Hashtable;
 import api.file.File;
 import api.location.QualifiedCoordinates;
 import api.lang.Int;
+import api.util.Comparator;
 
 /**
  * Atlas representation and handling.
  *
  * @author kruhc@seznam.cz
  */
-public final class Atlas implements Runnable {
+public final class Atlas implements Runnable, Comparator {
 //#ifdef __LOG__
     private static final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("Atlas");
 //#endif
@@ -36,12 +38,19 @@ public final class Atlas implements Runnable {
     // special properties
     boolean virtual;
 
+    // comparator temp
+    private volatile int direction;
+
     public Atlas(String url, String name, /*StateListener*/Desktop listener) {
         this.url = url;
         this.name = name;
         this.listener = listener;
         this.layers = new Hashtable();
         this.maps = new Hashtable();
+    }
+
+    public int size() {
+        return layers.size();
     }
 
     public String getURL() {
@@ -78,6 +87,10 @@ public final class Atlas implements Runnable {
 
     public Calibration getMapCalibration(final String mapName) {
         return (Calibration) (((Hashtable) layers.get(current)).get(mapName));
+    }
+
+    private Calibration getMapCalibration(final String layerName, final String mapName) {
+        return (Calibration) (((Hashtable) layers.get(layerName)).get(mapName));
     }
 
     public String getMapURL(final String mapPath, final String mapName) {
@@ -131,6 +144,61 @@ public final class Atlas implements Runnable {
 
     public String getNextLayer(final Map currentMap, final int direction,
                                final QualifiedCoordinates coords, final Int eventType) {
+        String result = null;
+        switch (cz.kruch.track.configuration.Config.easyZoomMode) {
+            case cz.kruch.track.configuration.Config.EASYZOOM_LAYERS:
+                result = getNextLayerLayers(currentMap, direction, coords, eventType);
+                break;
+            case cz.kruch.track.configuration.Config.EASYZOOM_AUTO:
+                result = getNextLayerAuto(currentMap, direction, coords, eventType);
+                break;
+        }
+        return result;
+    }
+
+    private String getNextLayerLayers(final Map currentMap, final int direction,
+                                      final QualifiedCoordinates coords, final Int eventType) {
+        String layerName = null;
+        final Enumeration e = getLayers();
+        if (e.hasMoreElements()) {
+            final String[] layers = cz.kruch.track.ui.FileBrowser.sort2array(e, null, null);
+            final String layer = getLayer();
+            for (int N = layers.length, i = 0; i < N; i++) {
+                if (layer.equals(layers[i])) {
+                    String nextLayer = null;
+                    if (direction == 1 && (i + 1) < N) {
+                        for (i = i + 1; i < N; i++) {
+                            if (getFileURL(layers[i], coords) != null) {
+                                nextLayer = layers[i];
+                                break;
+                            }
+                        }
+                    } else if (direction == -1 && i > 0) {
+                        for (i = i - 1; i >= 0; i--) {
+                            if (getFileURL(layers[i], coords) != null) {
+                                nextLayer = layers[i];
+                                break;
+                            }
+                        }
+                    }
+                    if (nextLayer != null) {
+                        layerName = nextLayer;
+                        eventType.setValue(4); // 4 = EVENT_LAYER_SELECTION_FINISHED
+                    }
+                    break;
+                }
+            }
+        }
+
+//#ifdef __LOG__
+        if (log.isEnabled()) log.debug("selected next layer/map: " + layerName + "; " + eventType);
+//#endif
+
+        return layerName;
+    }
+
+    private String getNextLayerAuto(final Map currentMap, final int direction,
+                                    final QualifiedCoordinates coords, final Int eventType) {
         
         // try current layer first
         String mapName = getNextLayer(current, currentMap, direction, coords);
@@ -138,31 +206,62 @@ public final class Atlas implements Runnable {
 
         // try other layers - first one wins
         if (mapName == null) {
+
+            // collect candidates
+            final Hashtable candidates = new Hashtable(4);
             final Enumeration e = layers.keys();
             while (e.hasMoreElements()) {
+
+                // layer name
                 final String name = (String) e.nextElement();
+
+                // ignore current layer
                 if (name.equals(current)) {
                     continue;
                 }
+
+                // look for suitable layer
                 mapName = getNextLayer(name, currentMap, direction, coords);
                 if (mapName != null) {
-                    layerName = name;
-                    eventType.setValue(4); // 4 = EVENT_LAYER_SELECTION_FINISHED
-                    break;
+                    candidates.put(getMapCalibration(name, mapName), new String[]{ name, mapName });
                 }
+            }
+
+            // pick best candidate
+            if (candidates.size() > 0) {
+
+                // sort candidates
+                this.direction = direction;
+                final Enumeration calibrations = candidates.keys();
+                final NakedVector nv = new NakedVector(candidates.size(), 0);
+                while (calibrations.hasMoreElements()) {
+                    nv.addElement(calibrations.nextElement());
+                }
+                final Object[] nvd = nv.getData();
+                cz.kruch.track.ui.FileBrowser.sort(nvd, this, 0, nv.size() - 1);
+
+                // first one is the closest
+                final Calibration candidate = (Calibration) nvd[0];
+                final String[] names = (String[]) candidates.get(candidate);
+                layerName = names[0];
+                eventType.setValue(4); // 4 = EVENT_LAYER_SELECTION_FINISHED
             }
         } else {
             layerName = mapName;
             eventType.setValue(5); // 5 = EVENT_MAP_SELECTION_FINISHED
         }
 
+//#ifdef __LOG__
+        if (log.isEnabled()) log.debug("selected next layer/map: " + layerName + "; " + eventType);
+//#endif
+
         return layerName;
     }
 
-    public String getNextLayer(final String layerName, final Map currentMap,
-                               final int direction, final QualifiedCoordinates coords) {
+    private String getNextLayer(final String layerName, final Map currentMap,
+                                final int direction, final QualifiedCoordinates coords) {
 //#ifdef __LOG__
-        if (log.isEnabled()) log.debug("getNextLayer; " + layerName);
+        if (log.isEnabled()) log.debug("getNextLayer; " + layerName + "; direction: " + direction);
 //#endif
 
         // current map scale
@@ -170,12 +269,15 @@ public final class Atlas implements Runnable {
         double nextScale = direction == 1 ? 0D : Double.MAX_VALUE;
         String nextMap = null;
 
-        // get current layer collection
+        // get layer collection
         final Hashtable layer = (Hashtable) layers.get(layerName);
         final Enumeration e = layer.keys();
         while (e.hasMoreElements()) {
             final Object map = e.nextElement();
             final Calibration calibration = (Calibration) layer.get(map);
+            if (!calibration.isWithin(coords) || calibration == currentMap.getCalibration()) { // '==' is OK
+                continue;
+            }
             final double scale = calibration.getVerticalScale();
 //#ifdef __LOG__
             if (log.isEnabled()) {
@@ -184,7 +286,7 @@ public final class Atlas implements Runnable {
             }
 //#endif
             if (direction == 1) {
-                if (scale / currentScale < 0.75D) {
+                if (scale / currentScale < 0.85D) {
 //#ifdef __LOG__
                     if (log.isEnabled()) log.debug("\t\t" + (scale / currentScale) + " < 0.75");
 //#endif
@@ -197,7 +299,7 @@ public final class Atlas implements Runnable {
                     }
                 }
             } else if (direction == -1) {
-                if (scale / currentScale > 1.25D) {
+                if (scale / currentScale > 1.15D) {
 //#ifdef __LOG__
                     if (log.isEnabled()) log.debug("\t\t" + (scale / currentScale) + " > 1.25");
 //#endif
@@ -217,6 +319,17 @@ public final class Atlas implements Runnable {
 //#endif
 
         return nextMap;
+    }
+
+    public int compare(Object o1, Object o2) {
+        final Calibration c1 = (Calibration) o1;
+        final Calibration c2 = (Calibration) o2;
+        if (direction == -1) {
+            return c1.getVerticalScale() < c2.getVerticalScale() ? -1 : 1;
+        } else if (direction == 1) {
+            return c1.getVerticalScale() > c2.getVerticalScale() ? -1 : 1;
+        }
+        return 0;  //To change body of implemented methods use File | Settings | File Templates.
     }
 
     public static String atlasURLtoFileURL(final String url) {

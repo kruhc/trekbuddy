@@ -4,6 +4,8 @@ package cz.kruch.track.ui.nokia;
 
 //#ifdef __ANDROID__
 
+import cz.kruch.track.configuration.Config;
+
 final class AndroidDeviceControl
         extends DeviceControl
         implements android.hardware.SensorEventListener {
@@ -14,37 +16,105 @@ final class AndroidDeviceControl
 
     private api.location.LocationListener listener;
 
-    private int wake;
+    private final int[] values;
 
     AndroidDeviceControl() {
         this.name = "Android";
+        this.values = new int[]{ 0, 10, 25, 50, 100 };
     }
 
-    /** @Override */
+    @Override
     boolean isSchedulable() {
         return true;
     }
 
-    /** @Override */
+    @Override
     boolean forceOff() {
         return true;
     }
 
-    /** @Override */
+    @Override
     void turnOn() {
         if (wl == null) {
-            wl = ((android.os.PowerManager) cz.kruch.track.TrackingMIDlet.getActivity().getSystemService(android.content.Context.POWER_SERVICE)).newWakeLock((wake++ % 2 == 0 ? android.os.PowerManager.SCREEN_DIM_WAKE_LOCK : android.os.PowerManager.SCREEN_BRIGHT_WAKE_LOCK) | android.os.PowerManager.ON_AFTER_RELEASE, "TrekBuddy");
+            wl = ((android.os.PowerManager) cz.kruch.track.TrackingMIDlet.getActivity().getSystemService(android.content.Context.POWER_SERVICE)).newWakeLock(android.os.PowerManager.SCREEN_DIM_WAKE_LOCK | android.os.PowerManager.ON_AFTER_RELEASE, "TrekBuddy");
         }
+//        android.util.Log.i("TrekBuddy", "[app] wake lock refresh");
         wl.acquire();
         wl.release();
     }
 
-    /** @Override */
+    @Override
     void turnOff() {
+//        android.util.Log.i("TrekBuddy", "[app] wake lock off");
         wl = null;
      }
 
-    /** @Override */
+    @Override
+    void sync() {
+//        android.util.Log.i("TrekBuddy", "[app] sync; presses " + presses);
+        if (presses == 0) {
+            if (Config.nokiaBacklightLast != 0) {
+                invertLevel();
+                confirm();
+            }
+        }
+        presses = 0;
+    }
+
+    @Override
+    void nextLevel() {
+        if (++backlight == values.length) {
+            backlight = 0;
+        }
+        setLights();
+        Config.nokiaBacklightLast = backlight;
+        Config.updateInBackground(Config.VARS_090);
+//        android.util.Log.i("TrekBuddy", "[app] next level idx " + backlight);
+    }
+
+    @Override
+    String level() {
+        return Integer.toString(values[backlight]) + "%";
+    }
+
+    private void invertLevel() {
+//        android.util.Log.i("TrekBuddy", "[app] invert level");
+        if (backlight == 0) {
+            backlight = Config.nokiaBacklightLast;
+        } else {
+            backlight = 0;
+        }
+        setLights();
+    }
+
+    private void setLights() {
+//        android.util.Log.i("TrekBuddy", "[app] set brightness to level " + backlight + " (idx)");
+        if (backlight == 0) {
+//            android.util.Log.i("TrekBuddy", "[app] task = " + task);
+            if (task != null) {
+                task.cancel();
+                task = null;
+            }
+        } else {
+            final float value = ((float) values[backlight]) / 100;
+//            android.util.Log.i("TrekBuddy", "[app] set screenBrightness to: " + value);
+            cz.kruch.track.TrackingMIDlet.getActivity().post(new Runnable() {
+                @Override
+                public void run() {
+                    final android.view.WindowManager.LayoutParams layout = cz.kruch.track.TrackingMIDlet.getActivity().getWindow().getAttributes();
+                    layout.screenBrightness = value;
+                    cz.kruch.track.TrackingMIDlet.getActivity().getWindow().setAttributes(layout);
+                }
+            });
+//            android.util.Log.i("TrekBuddy", "[app] task = " + task);
+            if (task == null) {
+                cz.kruch.track.ui.Desktop.scheduleAtFixedRate(task = new DeviceControl(),
+                                                              REFRESH_PERIOD, REFRESH_PERIOD);
+            }
+        }
+    }
+
+    @Override
     void useTicker(final Object list, final String msg) {
         cz.kruch.track.TrackingMIDlet.getActivity().post(new Runnable() {
             public void run() {
@@ -61,7 +131,7 @@ final class AndroidDeviceControl
         });
     }
 
-    /** @Override */
+    @Override
     void sense(final api.location.LocationListener listener) {
         this.listener = listener;
         final android.hardware.SensorManager sm = (android.hardware.SensorManager) cz.kruch.track.TrackingMIDlet.getActivity().getSystemService(android.content.Context.SENSOR_SERVICE);
@@ -71,7 +141,7 @@ final class AndroidDeviceControl
         }
     }
 
-    /** @Override */
+    @Override
     void nonsense(final api.location.LocationListener listener) {
         final android.hardware.SensorManager sm = (android.hardware.SensorManager) cz.kruch.track.TrackingMIDlet.getActivity().getSystemService(android.content.Context.SENSOR_SERVICE);
         if (sensor != null) {
@@ -81,13 +151,13 @@ final class AndroidDeviceControl
         this.listener = null;
     }
 
-    /** @Override */
+    @Override
     public void onSensorChanged(android.hardware.SensorEvent event) {
         // notify
         notifySenser((int) event.values[0]);
     }
 
-    /** @Override */
+    @Override
     public void onAccuracyChanged(android.hardware.Sensor sensor, int accuracy) {
         // TODO
     }

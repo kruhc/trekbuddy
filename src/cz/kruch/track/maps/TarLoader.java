@@ -10,6 +10,8 @@ import java.io.InputStream;
 import java.io.IOException;
 import java.io.DataOutputStream;
 import java.io.DataInputStream;
+import java.util.Enumeration;
+import java.util.Hashtable;
 
 import com.ice.tar.TarInputStream;
 import com.ice.tar.TarEntry;
@@ -96,42 +98,13 @@ final class TarLoader extends Map.Loader /*implements Atlas.Loader*/ implements 
     void loadMeta() throws IOException {
         // local ref
         final Map map = this.map;
-
-        // input stream
-        InputStream in = null;
+        final String path = map.getPath();
 
 /*
         try {
 */
-            // open stream
-//#ifdef __SYMBIAN__
-            if (Config.useNativeService && Map.networkInputStreamAvailable) {
-                try {
-                    in = cz.kruch.track.device.SymbianService.openInputStream(map.getPath());
-                    Map.networkInputStreamAvailable = true;
-                } catch (Exception e) { // IOE or SE = service not running/available
-                    Map.networkInputStreamAvailable = false;
-                    Map.networkInputStreamError = e.toString();
-                }
-            }
-//#endif
-            /*
-             * On Symbian when service is used, we do not need native file connection,
-             * but for other platforms we do.
-             */
-//#ifdef __ANDROID__
-            in = new api.io.RandomAccessInputStream(map.getPath());
-//#else
-            if (in == null) {
-                nativeFile = File.open(map.getPath());
-                in = nativeFile.openInputStream();
-            }
-//#endif
-//#ifdef __RIM50__
-            if (in instanceof net.rim.device.api.io.Seekable) {
-                in = new api.io.SeekableInputStream(in);
-            }
-//#endif
+            // input stream
+            final InputStream in = getInputStream(path);
 
             // debug info
 //#ifndef __CN1__
@@ -214,9 +187,6 @@ final class TarLoader extends Map.Loader /*implements Atlas.Loader*/ implements 
             // have no meta yet
             if (calEntryName == null || pointers == null) {
 
-                // local ref
-                final String path = map.getPath();
-
                 // iterate over tar
                 TarEntry entry = tarIn.getNextEntry();
                 while (entry != null) {
@@ -253,9 +223,6 @@ final class TarLoader extends Map.Loader /*implements Atlas.Loader*/ implements 
 
             // load calibration for single map
             if (getMapCalibration() == null) {
-
-                // local ref
-                final String path = map.getPath();
 
                 // skip to calibration
                 if (calBlockOffset > 0) {
@@ -297,6 +264,61 @@ final class TarLoader extends Map.Loader /*implements Atlas.Loader*/ implements 
                 tarIn.setStreamOffset(0);
 
             }
+/*
+        } finally {
+
+            // close stream when not reused
+            if (nativeIn == null) {
+                try {
+                    in.close();
+                } catch (Exception e) { // NPE or IOE
+                    // ignore
+                }
+            }
+
+        }
+*/
+    }
+
+    /** @Override */
+    void loadCalibration() throws IOException {
+        // local ref
+        final String path = map.getPath();
+
+/*
+        try {
+*/
+            // input stream
+            final InputStream in = getInputStream(path);
+
+            // open tar inputstream
+            tarIn = new TarInputStream(in);
+
+            // iterate over tar
+            TarEntry entry = tarIn.getNextEntry();
+            while (entry != null) {
+
+                // get entry name
+                final CharArrayTokenizer.Token entryName = entry.getName();
+
+                if (Calibration.isCalibration(entryName)) { // calibration
+//#ifdef __LOG__
+                    if (log.isEnabled()) log.debug("do not have calibration yet");
+//#endif
+                    // we found calibration
+                    map.setCalibration(Calibration.newInstance(tarIn, path, entryName.toString()));
+
+                    break;
+                }
+
+                // next
+                entry = tarIn.getNextEntry();
+            }
+
+            // for disposal to work as usual
+            nativeIn = in;
+
+
 /*
         } finally {
 
@@ -449,115 +471,44 @@ final class TarLoader extends Map.Loader /*implements Atlas.Loader*/ implements 
         }
     }
 
-    /*
-     * Comparator contract.
-     */
-
-    public int compare(Object o1, Object o2) {
-        final TarSlice ts1 = (TarSlice) o1;
-        final TarSlice ts2 = (TarSlice) o2;
-        return ts1.getBlockOffset() - ts2.getBlockOffset();
-    }
-
-    /*
-     * Atlas.Loader contract.
-     */
-
-    public void loadIndex(final Atlas atlas, final String url, final String baseUrl) throws IOException {
-        // vars
-        File file = null;
+    private InputStream getInputStream(String path) throws IOException {
+        // result
         InputStream in = null;
-        TarInputStream tar = null;
 
-        try {
-            // open stream
-            file = File.open(url);
-            tar = new TarInputStream(in = file.openInputStream());
+//#ifdef __SYMBIAN__
 
-            // local vars
-            final char[] delims = { File.PATH_SEPCHAR };
-            final CharArrayTokenizer tokenizer = new CharArrayTokenizer();
-
-            // iterate over archive
-            TarEntry entry = tar.getNextEntry();
-            while (entry != null) {
-
-                // entry name
-                final CharArrayTokenizer.Token entryName = entry.getName();
-
-                // HACK this could be map
-                if (entryName.startsWith(SET_DIR_PREFIX)) {
-                    throw new InvalidMapException("ATLAS->MAP");
-                }
-
-                // search for plain files
-                if (!entry.isDirectory()) {
-
-                    // tokenize
-                    final int indexOf = entryName.lastIndexOf('.');
-                    if (indexOf > -1) {
-
-                        // get layer and map name
-                        String lName = null;
-                        String mName = null;
-                        tokenizer.init(entryName, delims, false);
-                        if (tokenizer.hasMoreTokens()) {
-                            lName = tokenizer.next2().toString();
-                            if (tokenizer.hasMoreTokens()) {
-                                mName = tokenizer.next2().toString();
-                            }
-                        }
-
-                        // got layer and map name?
-                        if (lName != null && mName != null) {
-
-                            // construct URLs
-                            final String realUrl = entryName.toString();
-                            final String fakeUrl;
-
-                            // idx is tar-made index for untarred atlases
-                            if (url.endsWith(".idx") || url.endsWith(".IDX")) {
-                                fakeUrl = escape(realUrl);
-                            } else {
-                                final StringBuffer sb = new StringBuffer(32);
-                                fakeUrl = escape(sb.append(baseUrl).append(lName).append(File.PATH_SEPCHAR).append(mName).append(File.PATH_SEPCHAR).append(mName).append(".tar").toString());
-                            }
-
-                            // load map calibration file
-                            final Calibration calibration = Calibration.newInstance(tar, fakeUrl, realUrl);
-
-                            // found calibration file?
-                            if (calibration != null) {
-//#ifdef __LOG__
-                                if (log.isEnabled()) log.debug("calibration loaded: " + calibration + "; layer = " + lName + "; mName = " + mName);
-//#endif
-                                // save calibration for given map - only one calibration per map allowed :-)
-                                if (!Atlas.getLayerCollection(atlas, lName).contains(mName)) {
-                                    Atlas.getLayerCollection(atlas, lName).put(mName, calibration);
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // next entry
-                entry = null; // gc hint
-                entry = tar.getNextEntry();
+        // open network stream
+        if (Config.useNativeService && Map.networkInputStreamAvailable) {
+            try {
+                in = cz.kruch.track.device.SymbianService.openInputStream(path);
+                Map.networkInputStreamAvailable = true;
+            } catch (Exception e) { // IOE or SE = service not running/available
+                Map.networkInputStreamAvailable = false;
+                Map.networkInputStreamError = e.toString();
             }
-
-        } finally {
-
-            // dispose tar stream
-            if (tar != null) {
-                tar.setInputStream(null);
-            }
-
-            // close input stream
-            File.closeQuietly(in);
-
-            // close native file
-            File.closeQuietly(file);
         }
+
+//#endif
+
+        /*
+         * On Symbian when service is used, we do not need native file connection,
+         * but for other platforms we do. Except Android.
+         */
+//#ifdef __ANDROID__
+        in = new api.io.RandomAccessInputStream(path);
+//#else
+        if (in == null) {
+            nativeFile = File.open(path);
+            in = nativeFile.openInputStream();
+        }
+//#endif
+//#ifdef __RIM50__
+        if (in instanceof net.rim.device.api.io.Seekable) {
+            in = new api.io.SeekableInputStream(in);
+        }
+//#endif
+
+        return in;
     }
 
     private void loadTmc(final Map map) throws IOException {
@@ -811,5 +762,194 @@ final class TarLoader extends Map.Loader /*implements Atlas.Loader*/ implements 
             pointers = null; // gc hint
             pointers = array;
         }
+    }
+
+    /*
+     * Comparator contract.
+     */
+
+    public int compare(Object o1, Object o2) {
+        final TarSlice ts1 = (TarSlice) o1;
+        final TarSlice ts2 = (TarSlice) o2;
+        return ts1.getBlockOffset() - ts2.getBlockOffset();
+    }
+
+    /*
+     * Atlas.Loader contract.
+     */
+
+    public void loadIndex(final Atlas atlas, final String url, final String baseUrl) throws IOException {
+        // vars
+        File file = null;
+        InputStream in = null;
+        TarInputStream tar = null;
+
+        try {
+            // open stream
+            file = File.open(url);
+            tar = new TarInputStream(in = file.openInputStream());
+
+            // local vars
+            final char[] delims = { File.PATH_SEPCHAR };
+            final CharArrayTokenizer tokenizer = new CharArrayTokenizer();
+
+            // iterate over archive
+            TarEntry entry = tar.getNextEntry();
+            while (entry != null) {
+
+                // entry name
+                final CharArrayTokenizer.Token entryName = entry.getName();
+//#ifdef __LOG__
+                if (log.isEnabled()) log.debug("entry: " + entryName.toString());
+//#endif
+
+                // HACK this could be map
+                if (entryName.startsWith(SET_DIR_PREFIX)) {
+                    throw new InvalidMapException("ATLAS->MAP");
+                }
+
+                // search for plain files
+                if (!entry.isDirectory()) {
+
+                    // tokenize
+                    final int indexOf = entryName.lastIndexOf('.');
+                    if (indexOf > -1) {
+
+                        // get layer and map name
+                        String lName = null;
+                        String mName = null;
+                        tokenizer.init(entryName, delims, false);
+                        if (tokenizer.hasMoreTokens()) {
+                            lName = tokenizer.next2().toString();
+                            if (tokenizer.hasMoreTokens()) {
+                                mName = tokenizer.next2().toString();
+                            }
+                        }
+
+                        // got layer and map name?
+                        if (lName != null && mName != null) {
+
+                            // construct URLs
+                            final String realUrl = entryName.toString();
+                            final String fakeUrl;
+
+                            // idx is tar-made index for untarred atlases
+                            if (url.endsWith(".idx") || url.endsWith(".IDX")) {
+                                fakeUrl = escape(realUrl);
+                            } else {
+                                final StringBuffer sb = new StringBuffer(32);
+                                fakeUrl = escape(sb.append(baseUrl).append(lName).append(File.PATH_SEPCHAR).append(mName).append(File.PATH_SEPCHAR).append(mName).append(".tar").toString());
+                            }
+
+                            // load map calibration file
+                            final Calibration calibration = Calibration.newInstance(tar, fakeUrl, realUrl);
+
+                            // found calibration file?
+                            if (calibration != null) {
+//#ifdef __LOG__
+                                if (log.isEnabled()) log.debug("calibration loaded: " + calibration + "; layer = " + lName + "; mName = " + mName);
+//#endif
+                                // save calibration for given map - only one calibration per map allowed :-)
+                                if (!Atlas.getLayerCollection(atlas, lName).contains(mName)) {
+                                    Atlas.getLayerCollection(atlas, lName).put(mName, calibration);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // next entry
+                entry = null; // gc hint
+                entry = tar.getNextEntry();
+            }
+
+        } finally {
+
+            // dispose tar stream
+            if (tar != null) {
+                tar.setInputStream(null);
+            }
+
+            // close input stream
+            File.closeQuietly(in);
+
+            // close native file
+            File.closeQuietly(file);
+        }
+
+        // since 1.28
+        if (atlas.size() == 0) {
+            createIndex(atlas, baseUrl);
+        }
+    }
+
+    private void createIndex(final Atlas atlas, final String baseUrl) throws IOException {
+        // file
+        File file = null;
+
+        try {
+            // open atlas dir
+            file = File.open(baseUrl);
+
+            // iterate over layers
+            for (final Enumeration le = file.list(); le.hasMoreElements();) {
+                final String lEntry = (String) le.nextElement();
+                if (File.isDir(lEntry)) {
+//#ifdef __LOG__
+                    if (log.isEnabled()) log.debug("found layer: " + lEntry);
+//#endif
+                    // get layer name
+                    final String lName = lEntry.substring(0, lEntry.lastIndexOf('/'));
+
+                    // set file connection
+                    file.setFileConnection(lEntry);
+
+                    // iterate over layer
+                    for (final Enumeration me = file.list(); me.hasMoreElements();) {
+                        final String mEntry = (String) me.nextElement();
+                        if (File.isDir(mEntry)) {
+//#ifdef __LOG__
+                            if (log.isEnabled()) log.debug("found map: " + mEntry);
+//#endif
+                            // get map name
+                            final String mName = mEntry.substring(0, mEntry.lastIndexOf('/'));
+
+                            // create URL
+                            final String fakeUrl = escape((new StringBuffer(64)).append(file.getURL()).append(mEntry).append(mName).append(".tar").toString());
+
+                            // load map calibration file
+                            final Calibration calibration = readCalibration(fakeUrl, mName);
+
+                            // found calibration file?
+                            if (calibration != null) {
+//#ifdef __LOG__
+                                if (log.isEnabled()) log.debug("calibration loaded: " + calibration + "; layer = " + lName + "; mName = " + mName);
+//#endif
+                                // save calibration for given map - only one calibration per map allowed :-)
+                                if (!Atlas.getLayerCollection(atlas, lName).contains(mName)) {
+                                    Atlas.getLayerCollection(atlas, lName).put(mName, calibration);
+                                }
+                            }
+                        }
+                    }
+
+                    // go back to atlas root
+                    file.setFileConnection(File.PARENT_DIR);
+                }
+            }
+
+        } finally {
+
+            // close file
+            File.closeQuietly(file);
+        }
+    }
+
+    private static Calibration readCalibration(String url, String name) {
+        final Map temp = new Map(url, name, null);
+        temp.loadCalibration();
+        final Calibration result = temp.getCalibration();
+        temp.close();
+        return result;
     }
 }

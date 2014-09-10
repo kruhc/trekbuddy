@@ -515,11 +515,11 @@ public final class GpxTracklog extends Tracklog {
         if (Config.gpxAllowExtensions) {
             final float course = l.getCourse();
             final float speed = l.getSpeed();
-//#ifndef __ANDROID__
-            final boolean specCondition = !Float.isNaN(course) || !Float.isNaN(speed) || l.isXdrBound();
-//#elifndef __BACKPORT__ // Android 2+
+//#if __ANDROID__ && !__BACKPORT__
             final int bpm = cz.kruch.track.sensor.ANTPlus.getInstance().getSensorBPM();
             final boolean specCondition = !Float.isNaN(course) || !Float.isNaN(speed) || l.isXdrBound() || bpm > -1;
+//#else
+            final boolean specCondition = !Float.isNaN(course) || !Float.isNaN(speed) || l.isXdrBound();
 //#endif
             if (specCondition || Config.gpxGsmInfo) {
                 serializer.startTag(DEFAULT_NAMESPACE, ELEMENT_EXTENSIONS);
@@ -790,7 +790,7 @@ public final class GpxTracklog extends Tracklog {
             bLog = true;
         }
 
-        // still no condition met - try ds criteria and course deviation
+        // ds criteria and course deviation
         if (!bLog && fix > 0) {
             
             // check logging criteria
@@ -799,7 +799,7 @@ public final class GpxTracklog extends Tracklog {
                 // compute dist from reference location
                 final float r = location.getQualifiedCoordinates().distance(refLocation.getQualifiedCoordinates());
 
-                // calculate course deviation
+                // calculate course deviation (cumulative
                 final float speed = location.getSpeed();
                 final float course = location.getCourse();
                 if (!Float.isNaN(course) && !Float.isNaN(speed) && speed > MIN_SPEED_WALK) {
@@ -833,8 +833,7 @@ public final class GpxTracklog extends Tracklog {
                 if (bLog) {
                     onhold = 0;
                 } else if (dt >= 60 * 1000) { // no movement for 1 min
-                    final float ds = location.getQualifiedCoordinates().distance(refLocation.getQualifiedCoordinates());
-                    if (ds < 50) { // should always be true
+                    if (r < 50) { // should always be true
                         if (onhold++ == 0) {
                             bLog = true;
                         }

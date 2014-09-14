@@ -17,6 +17,10 @@ public final class Connector {
     }
 
     public static Connection open(String name, int mode) throws IOException {
+        return open(name, mode, false);
+    }
+
+    public static Connection open(String name, int mode, boolean timeouts) throws IOException {
         if (name.startsWith(FileConnection.FILE_PROTOCOL)) {
             return new FileConnection(name, mode);
         }

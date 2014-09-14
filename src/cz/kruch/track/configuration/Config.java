@@ -1388,7 +1388,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
             return locationTimings;
         }
 
-//#ifdef __ANDROID__
+//#if __ANDROID__ || __CN1__
         String timings = "0";
 //#else
         String timings = "1,-1,-1";

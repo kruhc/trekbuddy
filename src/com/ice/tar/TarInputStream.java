@@ -165,6 +165,7 @@ public final class TarInputStream extends InputStream {
 //#endif
             {
                 numRead = this.in.skip(num);
+//#ifndef __CN1__
                 /*
                  * Check for SE bug, where skip() returns stream position,
                  * ie. return value of seek() :-)
@@ -173,6 +174,7 @@ public final class TarInputStream extends InputStream {
                 if (numRead == this.streamOffset + num) {
                     numRead = num; // trick - 'for' cycle will quit
                 }
+//#endif
             } else { // use read to 'skip' - misuse header buffer here ;-)
                 numRead = this.in.read(headerBuffer, 0, num > DEFAULT_RCDSIZE ? DEFAULT_RCDSIZE : (int) num);
             }

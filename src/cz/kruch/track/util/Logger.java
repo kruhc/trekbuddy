@@ -36,14 +36,6 @@ public final class Logger {
 //#endif
     }
 
-//#ifdef __CN1__
-
-    public static void showLog() {
-        com.codename1.io.Log.showLog();
-    }
-
-//#endif
-
     public Logger(String componentName) {
         this.cname = componentName;
         this.enabled = cz.kruch.track.TrackingMIDlet.isLogEnabled();

@@ -25,12 +25,6 @@ public class FriendlyAccess {
         return getImplementation().execute(action, params);
     }
 
-    // DO NOT USE, this was experiment
-    public static void flushGraphics() {
-        getImplementation().paintDirty();
-        getImplementation().flushGraphics();
-    }
-
     // returns global native graphics
     public static Object getNativeGraphics() {
         return getImplementation().getNativeGraphics();

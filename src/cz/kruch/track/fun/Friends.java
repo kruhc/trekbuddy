@@ -4,9 +4,7 @@ package cz.kruch.track.fun;
 
 import api.location.QualifiedCoordinates;
 
-import cz.kruch.track.ui.Desktop;
 import cz.kruch.track.ui.NavigationScreens;
-import cz.kruch.track.util.CharArrayTokenizer;
 
 import javax.microedition.lcdui.Displayable;
 
@@ -27,13 +25,11 @@ public abstract class Friends {
     static final char SEPARATOR_CHAR = ',';
 
     public static Friends createInstance() throws Exception {
-//        Friends instance;
-//#ifdef __ANDROID__
+//#if __ANDROID__ || __CN1__
         throw new RuntimeException("Not supported");
 //#else
         return (Friends) Class.forName("cz.kruch.track.fun.Jsr120Friends").newInstance();
 //#endif
-//        return instance;
     }
 
     public abstract void start() throws IOException;
@@ -103,7 +99,7 @@ public abstract class Friends {
             }
         }
 
-        StringBuffer sb = new StringBuffer(32);
+        final StringBuffer sb = new StringBuffer(32);
         if (type == QualifiedCoordinates.LON && d < 100) {
             sb.append('0');
         }
@@ -137,13 +133,13 @@ public abstract class Friends {
         if (s.startsWith("SMS")) {
             s = s.substring(3).trim();
         }
-        return "(" + s + ") ";
+        return "(".concat(s).concat(") ");
     }
 
 //#ifdef __LOG__
     static void debug(String text) {
         // decode
-        CharArrayTokenizer tokenizer = new CharArrayTokenizer();
+        cz.kruch.track.util.CharArrayTokenizer tokenizer = new cz.kruch.track.util.CharArrayTokenizer();
         tokenizer.init(text, new char[]{ ',', '*' }, false);
         String header = tokenizer.next().toString();
         String type = null;
@@ -177,7 +173,7 @@ public abstract class Friends {
                     = new cz.kruch.track.location.StampedWaypoint(QualifiedCoordinates.newInstance(lat, lon), null, chat, time);
 
         } else {
-            Desktop.showWarning(cz.kruch.track.Resources.getString(cz.kruch.track.Resources.DESKTOP_MSG_UNKNOWN_SMS) + " '" + text + "'", null, null);
+            cz.kruch.track.ui.Desktop.showWarning(cz.kruch.track.Resources.getString(cz.kruch.track.Resources.DESKTOP_MSG_UNKNOWN_SMS) + " '" + text + "'", null, null);
         }
     }
 //#endif

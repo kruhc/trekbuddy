@@ -43,11 +43,26 @@ public final class Jsr179LocationProvider
         try {
             // get listener params
             final CharArrayTokenizer tokenizer = new CharArrayTokenizer();
+//#ifndef __CN1__
             tokenizer.init(Config.getLocationTimings(Config.LOCATION_PROVIDER_JSR179),
                            CharArrayTokenizer.DEFAULT_DELIMS, false);
             interval = tokenizer.nextInt();
             timeout = tokenizer.nextInt();
             maxage = tokenizer.nextInt();
+//#else
+            // TODO
+/*
+            int interval = 0;
+            try {
+                interval = Integer.parseInt(Config.getLocationTimings(Config.LOCATION_PROVIDER_JSR179)) * 1000;
+                if (interval <= 1000) {
+                    interval = 0;
+                }
+            } catch (NumberFormatException e) {
+                // ignore
+            }
+*/
+//#endif
         } catch (Exception e) {
             throw new LocationException(e);
         }

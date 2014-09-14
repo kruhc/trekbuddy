@@ -221,7 +221,51 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
 
             // desktop settings
             choice1 = newChoiceGroup(Resources.CFG_DESKTOP_GROUP, ChoiceGroup.MULTIPLE);
-//#ifndef __CN1__
+//#ifdef __ANDROID__
+            append(choice1, Resources.CFG_DESKTOP_FLD_FULLSCREEN);
+            append(choice1, Resources.CFG_DESKTOP_FLD_SAFE_COLORS);
+            append(choice1, Resources.CFG_DESKTOP_FLD_NO_SOUNDS);
+            append(choice1, Resources.CFG_DESKTOP_FLD_NO_QUESTIONS);
+            append(choice1, Resources.CFG_DESKTOP_FLD_TRAJECTORY);
+            append(choice1, Resources.CFG_DESKTOP_FLD_DEC_PRECISION);
+            append(choice1, Resources.CFG_DESKTOP_FLD_HPS_WPT_TRUE_AZI);
+            append(choice1, Resources.CFG_DESKTOP_FLD_EASYZOOM_VOLUME);
+            append(choice1, Resources.CFG_DESKTOP_FLD_FORCE_TF_FOCUS);
+            append(choice1, Resources.CFG_DESKTOP_FLD_FIXED_CROSSHAIR);
+            choice1.setSelectedFlags(new boolean[] {
+                Config.fullscreen,
+                Config.safeColors,
+                Config.noSounds,
+                Config.noQuestions,
+                Config.trailOn,
+                Config.decimalPrecision,
+                Config.hpsWptTrueAzimuth,
+                Config.easyZoomVolumeKeys,
+                Config.forceTextFieldFocus,
+                Config.fixedCrosshair
+            });
+//#elifdef __CN1__
+            append(choice1, Resources.CFG_DESKTOP_FLD_SAFE_COLORS);
+            append(choice1, Resources.CFG_DESKTOP_FLD_NO_SOUNDS);
+            append(choice1, Resources.CFG_DESKTOP_FLD_NO_QUESTIONS);
+            append(choice1, Resources.CFG_DESKTOP_FLD_TRAJECTORY);
+            append(choice1, Resources.CFG_DESKTOP_FLD_DEC_PRECISION);
+            append(choice1, Resources.CFG_DESKTOP_FLD_HPS_WPT_TRUE_AZI);
+            append(choice1, Resources.CFG_DESKTOP_FLD_EASYZOOM_VOLUME);
+            append(choice1, Resources.CFG_DESKTOP_FLD_FORCE_TF_FOCUS);
+            append(choice1, Resources.CFG_DESKTOP_FLD_FIXED_CROSSHAIR);
+            choice1.setSelectedFlags(new boolean[] {
+                Config.safeColors,
+                Config.noSounds,
+                Config.noQuestions,
+                Config.trailOn,
+                Config.decimalPrecision,
+                Config.hpsWptTrueAzimuth,
+                Config.easyZoomVolumeKeys,
+                Config.forceTextFieldFocus,
+                Config.fixedCrosshair
+            });
+//#else
             append(choice1, Resources.CFG_DESKTOP_FLD_FULLSCREEN);
             append(choice1, Resources.CFG_DESKTOP_FLD_SAFE_COLORS);
             append(choice1, Resources.CFG_DESKTOP_FLD_NO_SOUNDS);
@@ -241,27 +285,6 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
                 Config.noQuestions,
                 Config.uiNoCommands,
                 Config.uiNoItemCommands,
-                Config.trailOn,
-                Config.decimalPrecision,
-                Config.hpsWptTrueAzimuth,
-                Config.easyZoomVolumeKeys,
-                Config.forceTextFieldFocus,
-                Config.fixedCrosshair
-            });
-//#else
-            append(choice1, Resources.CFG_DESKTOP_FLD_SAFE_COLORS);
-            append(choice1, Resources.CFG_DESKTOP_FLD_NO_SOUNDS);
-            append(choice1, Resources.CFG_DESKTOP_FLD_NO_QUESTIONS);
-            append(choice1, Resources.CFG_DESKTOP_FLD_TRAJECTORY);
-            append(choice1, Resources.CFG_DESKTOP_FLD_DEC_PRECISION);
-            append(choice1, Resources.CFG_DESKTOP_FLD_HPS_WPT_TRUE_AZI);
-            append(choice1, Resources.CFG_DESKTOP_FLD_EASYZOOM_VOLUME);
-            append(choice1, Resources.CFG_DESKTOP_FLD_FORCE_TF_FOCUS);
-            append(choice1, Resources.CFG_DESKTOP_FLD_FIXED_CROSSHAIR);
-            choice1.setSelectedFlags(new boolean[] {
-                Config.safeColors,
-                Config.noSounds,
-                Config.noQuestions,
                 Config.trailOn,
                 Config.decimalPrecision,
                 Config.hpsWptTrueAzimuth,
@@ -1051,7 +1074,28 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
 
                 // desktop
                 final boolean[] desktop = getSelectedFlags(choice1);
-//#ifndef __CN1__
+//#ifdef __ANDROID__
+                Config.fullscreen = desktop[0];
+                Config.safeColors = desktop[1];
+                Config.noSounds = desktop[2];
+                Config.noQuestions = desktop[3];
+                Config.trailOn = desktop[4];
+                Config.decimalPrecision = desktop[5];
+                Config.hpsWptTrueAzimuth = desktop[6];
+                Config.easyZoomVolumeKeys = desktop[7];
+                Config.forceTextFieldFocus = desktop[8];
+                Config.fixedCrosshair = desktop[9];
+//#elifdef __CN1__
+                Config.safeColors = desktop[0];
+                Config.noSounds = desktop[1];
+                Config.noQuestions = desktop[2];
+                Config.trailOn = desktop[3];
+                Config.decimalPrecision = desktop[4];
+                Config.hpsWptTrueAzimuth = desktop[5];
+                Config.easyZoomVolumeKeys = desktop[6];
+                Config.forceTextFieldFocus = desktop[7];
+                Config.fixedCrosshair = desktop[8];
+//#else
                 Config.fullscreen = desktop[0];
                 Config.safeColors = desktop[1];
                 Config.noSounds = desktop[2];
@@ -1064,16 +1108,6 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
                 Config.easyZoomVolumeKeys = desktop[9];
                 Config.forceTextFieldFocus = desktop[10];
                 Config.fixedCrosshair = desktop[11];
-//#else
-                Config.safeColors = desktop[0];
-                Config.noSounds = desktop[1];
-                Config.noQuestions = desktop[2];
-                Config.trailOn = desktop[3];
-                Config.decimalPrecision = desktop[4];
-                Config.hpsWptTrueAzimuth = desktop[5];
-                Config.easyZoomVolumeKeys = desktop[6];
-                Config.forceTextFieldFocus = desktop[7];
-                Config.fixedCrosshair = desktop[8];
 //#endif
 
                 // OSD

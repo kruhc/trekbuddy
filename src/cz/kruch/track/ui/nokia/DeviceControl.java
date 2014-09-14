@@ -42,7 +42,8 @@ public class DeviceControl extends TimerTask {
         instance = new cz.kruch.track.ui.nokia.AndroidDeviceControl();
 //#elifdef __CN1__
         instance = new cz.kruch.track.ui.nokia.WPDeviceControl();
-//#elifdef __ALL__
+//#else
+  //#ifdef __ALL__
         if (instance == null) {
             try {
                 Class.forName("com.samsung.util.LCDLight");
@@ -109,7 +110,7 @@ public class DeviceControl extends TimerTask {
                 // ignore
             }
         }
-//#endif
+  //#endif /* __ALL__ */
         if (instance == null) {
             try {
                 instance = (DeviceControl) Class.forName("cz.kruch.track.ui.nokia.Midp2DeviceControl").newInstance();
@@ -117,6 +118,7 @@ public class DeviceControl extends TimerTask {
                 // ignore
             }
         }
+//#endif
     }
 
     public static void destroy() {
@@ -196,12 +198,12 @@ public class DeviceControl extends TimerTask {
     // default implementation
     //
 
-//#ifndef __ANDROID__
+//#if !__ANDROID__ && !__CN1__
     private cz.kruch.track.event.Callback sensor;
 //#endif
 
     void sense(final api.location.LocationListener listener) {
-//#ifndef __ANDROID__
+//#if !__ANDROID__ && !__CN1__
         if (cz.kruch.track.TrackingMIDlet.jsr179) {
             try {
                 sensor = (cz.kruch.track.event.Callback) Class.forName("cz.kruch.track.location.Jsr179OrientationProvider").newInstance();
@@ -214,7 +216,7 @@ public class DeviceControl extends TimerTask {
     }
 
     void nonsense(final api.location.LocationListener listener) {
-//#ifndef __ANDROID__
+//#if !__ANDROID__ && !__CN1__
         if (sensor != null) {
             SensorAction.exec(SensorAction.ACTION_STOP, sensor, listener);
             sensor = null; // gc hint
@@ -348,7 +350,7 @@ public class DeviceControl extends TimerTask {
     // sensor helper
     //
 
-//#ifndef __ANDROID__
+//#if !__ANDROID__ && !__CN1__
 
     private static class SensorAction implements Runnable {
         static final int ACTION_START = 0;

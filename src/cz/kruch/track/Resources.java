@@ -71,6 +71,8 @@ public final class Resources {
 //#ifdef __HECL__
     public static final short DESKTOP_CMD_LIVE                  = 1014;
 //#endif    
+    public static final short DESKTOP_CMD_TRACKLOG_START        = 1015;
+    public static final short DESKTOP_CMD_TRACKLOG_STOP         = 1016;
     /* desktop - messages */
     public static final short DESKTOP_MSG_FRIENDS_FAILED        = 1300;
     public static final short DESKTOP_MSG_WANT_QUIT             = 1301;
@@ -331,6 +333,7 @@ public final class Resources {
     public static final short CFG_DESKTOP_FLD_MAP_PRESCALE      = 3536;
     public static final short CFG_DESKTOP_FLD_FORCE_TF_FOCUS    = 3537;
     public static final short CFG_DESKTOP_FLD_FIXED_CROSSHAIR   = 3538;
+    public static final short CFG_DESKTOP_FLD_EASYZOOM_AUTO     = 3539;
     /* settings - Location */
     public static final short CFG_LOCATION_GROUP_PROVIDER       = 3600;
     public static final short CFG_LOCATION_GROUP_TRACKLOG       = 3601;

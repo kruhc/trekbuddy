@@ -1,0 +1,72 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Deployment xmlns="http://schemas.microsoft.com/windowsphone/2012/deployment" AppPlatformVersion="8.0">
+  <DefaultLanguage xmlns="" code="en-US" />
+  <Languages xmlns="">
+    <Language code="cs" />
+    <Language code="pl" />
+  </Languages>
+  <App xmlns="" ProductID="{669b4266-bdde-40c6-8826-9d17151d127c}" Title="TrekBuddy" RuntimeType="Silverlight" Version="1.29u1" Genre="apps.normal" Author="kruch" Description="Not yet completed port of Java version." Publisher="kruch" PublisherID="{c62c6d07-91ca-4acc-8741-308c0f82a38b}">
+    <IconPath IsRelative="true" IsResource="false">Assets\ApplicationIcon.png</IconPath>
+    <Capabilities>
+      <Capability Name="ID_CAP_NETWORKING" />
+      <Capability Name="ID_CAP_SENSORS" />
+      <Capability Name="ID_CAP_LOCATION" />
+      <Capability Name="ID_CAP_REMOVABLE_STORAGE" />
+      <Capability Name="ID_CAP_MEDIALIB_AUDIO" />
+      <Capability Name="ID_CAP_MEDIALIB_PHOTO" />
+      <Capability Name="ID_CAP_MEDIALIB_PLAYBACK" />
+      <Capability Name="ID_CAP_WEBBROWSERCOMPONENT" />
+    </Capabilities>
+    <Tasks>
+      <DefaultTask Name="_default" NavigationPage="MainPage.xaml">
+        <BackgroundExecution>
+          <ExecutionType Name="LocationTracking" />
+        </BackgroundExecution>
+      </DefaultTask>
+      <ExtendedTask Name="BackgroundTask">
+        <BackgroundServiceAgent Specifier="AudioPlayerAgent" Name="TrekBuddy.AudioPlaybackAgent" Source="TrekBuddy.AudioPlaybackAgent" Type="AudioPlaybackAgent.AudioPlayer" />
+      </ExtendedTask>
+    </Tasks>
+    <Tokens>
+      <PrimaryToken TokenID="TrackingAppToken" TaskName="_default">
+        <TemplateFlip>
+          <SmallImageURI IsRelative="true" IsResource="false">Assets\Tiles\FlipCycleTileSmall.png</SmallImageURI>
+          <Count>0</Count>
+          <BackgroundImageURI IsRelative="true" IsResource="false">Assets\Tiles\FlipCycleTileMedium.png</BackgroundImageURI>
+          <Title>TrekBuddy</Title>
+          <BackContent>
+          </BackContent>
+          <BackBackgroundImageURI>
+          </BackBackgroundImageURI>
+          <BackTitle>
+          </BackTitle>
+          <DeviceLockImageURI>
+          </DeviceLockImageURI>
+          <HasLarge>
+          </HasLarge>
+        </TemplateFlip>
+      </PrimaryToken>
+    </Tokens>
+    <Extensions>
+      <FileTypeAssociation TaskID="_default" Name="Maps" NavUriFragment="fileToken=%s">
+        <Logos>
+          <Logo Size="small" IsRelative="true">Assets\Tiles\FlipCycleTileSmall.png</Logo>
+          <Logo Size="medium" IsRelative="true">Assets\Tiles\FlipCycleTileMedium.png</Logo>
+          <Logo Size="large" IsRelative="true">Assets\Tiles\FlipCycleTileLarge.png</Logo>
+        </Logos>
+        <SupportedFileTypes>
+          <FileType ContentType="application/octet-stream">.res</FileType>
+          <FileType ContentType="application/octet-stream">.tar</FileType>
+          <FileType ContentType="application/octet-stream">.tmc</FileType>
+          <FileType ContentType="text/plain">.tmi</FileType>
+          <FileType ContentType="application/xml">.gpx</FileType>
+        </SupportedFileTypes>
+      </FileTypeAssociation>
+    </Extensions>
+    <ScreenResolutions>
+      <ScreenResolution Name="ID_RESOLUTION_WVGA" />
+      <ScreenResolution Name="ID_RESOLUTION_WXGA" />
+      <ScreenResolution Name="ID_RESOLUTION_HD720P" />
+    </ScreenResolutions>
+  </App>
+</Deployment>

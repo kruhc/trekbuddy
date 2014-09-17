@@ -1,0 +1,23 @@
+﻿<UserControl x:Class="TrackingApp.Alert"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    FontFamily="{StaticResource PhoneFontFamilyNormal}"
+    FontSize="{StaticResource PhoneFontSizeNormal}"
+    Foreground="{StaticResource PhoneForegroundBrush}"
+    d:DesignHeight="480" d:DesignWidth="480">
+
+    <Canvas x:Name="background" HorizontalAlignment="Stretch" VerticalAlignment="Stretch" Background="#80000000">
+        <StackPanel x:Name="panel" HorizontalAlignment="Center" VerticalAlignment="Center" Background="Black">
+            <TextBlock x:Name="title" Text="Title" HorizontalAlignment="Center" VerticalAlignment="Center" Style="{StaticResource PhoneTextTitle2Style}" Foreground="LightCyan" Margin="20,5,20,5"/>
+            <Line x:Name="separator" Stroke="LightCyan" StrokeThickness="3" HorizontalAlignment="Stretch" X2="{Binding ActualWidth, ElementName=panel, Mode=OneWay}" />
+            <ScrollViewer Name="scroll" HorizontalAlignment="Center" VerticalAlignment="Center">
+                <TextBlock x:Name="text" Text="Message" HorizontalAlignment="Center" VerticalAlignment="Center" FontSize="{StaticResource PhoneFontSizeMediumLarge}" Margin="10,15,10,10" TextWrapping="Wrap"/>
+            </ScrollViewer>
+            <StackPanel x:Name="buttons" Orientation="Horizontal" HorizontalAlignment="Center" Margin="5">
+            </StackPanel>
+        </StackPanel>
+    </Canvas>
+</UserControl>

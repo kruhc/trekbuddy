@@ -351,7 +351,7 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
                                      Desktop.CHOICE_POPUP_TYPE);
             append(choice5, Resources.CFG_DESKTOP_FLD_EASYZOOM_OFF);
             append(choice5, Resources.CFG_DESKTOP_FLD_EASYZOOM_LAYERS);
-            choice5.append("auto", null);
+            append(choice5, Resources.CFG_DESKTOP_FLD_EASYZOOM_AUTO);
             choice5.setSelectedIndex(Config.easyZoomMode, true);
             submenu.append(choice5);
 
@@ -559,7 +559,13 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
             submenu.append(choice4);
 
             // I/O read buffer size
-            choice3 = new ChoiceGroup("Read buffer size", Desktop.CHOICE_POPUP_TYPE);
+            final String title;
+            if ("fr".equals(Resources.locale)) {
+                title = "Taille mémoire tampon";
+            } else {
+                title = "Read buffer size";
+            }
+            choice3 = new ChoiceGroup(title, Desktop.CHOICE_POPUP_TYPE);
             choice3.append("4K", null);
             choice3.append("8K", null);
             choice3.append("16K", null);
@@ -896,7 +902,7 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
     public void commandAction(Command command, Item item) {
 //#ifdef __HECL__
         if (menuPlugins.equals(section))
-            (new PluginForm(PluginManager.getInstance().getPlugin(command.getPriority()))).show();
+            (new PluginForm(PluginManager.getInstance().getPlugin(command.getPriority()))).show(submenu);
         else
 //#endif
         (new LineCfgForm(item == itemLineCfg ? 0 : 1)).show(item.getLabel());
@@ -1414,24 +1420,26 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
 
 //#ifdef __HECL__
 
-    private final class PluginForm implements CommandListener {
+    private static final class PluginForm implements CommandListener {
 
         private PluginManager.Plugin plugin;
+        private Displayable nextDisplayable;
 
         public PluginForm(PluginManager.Plugin plugin) {
             this.plugin = plugin;
         }
 
-        public void show() {
+        public void show(final Displayable nextDisplayable) {
             try {
                 final Form form = new Form(plugin.getFullName());
                 plugin.appendOptions(form);
+                this.nextDisplayable = nextDisplayable; 
                 form.addCommand(new Command(Resources.getString(Resources.CMD_OK), Desktop.POSITIVE_CMD_TYPE, 0));
                 form.addCommand(new Command(Resources.getString(Resources.CMD_CLOSE), Desktop.BACK_CMD_TYPE, 1));
                 form.setCommandListener(this);
                 Desktop.display.setCurrent(form);
             } catch (Throwable t) {
-                Desktop.showError("Error showing plugin configuration tab", t, submenu);
+                Desktop.showError("Error showing plugin configuration tab", t, null);
             }
         }
 
@@ -1439,7 +1447,7 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
             if (command.getCommandType() != Desktop.BACK_CMD_TYPE) {
                 plugin.grabOptions((Form) displayable);
             }
-            Desktop.display.setCurrent(submenu);
+            Desktop.display.setCurrent(nextDisplayable);
         }
     }
 

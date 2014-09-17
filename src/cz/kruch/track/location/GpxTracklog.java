@@ -133,16 +133,15 @@ public final class GpxTracklog extends Tracklog {
     private String filePrefix;
     private int type;
 
-    private Object queue;
-    private TimerTask flusher;
+    private Vector queue;
     private boolean go;
 
     private Location refLocation;
     private float refCourse, courseDeviation;
     private int /*imgNum, */ptCount;
 
+    private volatile TimerTask flusher;
     private volatile int onhold;
-    private volatile boolean force;
 
     private HXmlSerializer serializer;
 
@@ -159,6 +158,7 @@ public final class GpxTracklog extends Tracklog {
         this.date = new Date();
         this.sb = new StringBuffer(32);
         this.sbChars = new char[32];
+        this.queue = new Vector(16);
     }
 
     public void setFilePrefix(String filePrefix) {
@@ -333,21 +333,31 @@ public final class GpxTracklog extends Tracklog {
             // process items until end
             while (true) {
 
-                // pop item
-                final Object item;
+                // local ref
+                final Vector queue = this.queue;
+                Object item = null;
+
+                // wait for item
                 synchronized (this) {
-                    while (go && queue == null) {
+                    while (go && queue.isEmpty()) {
                         try {
                             wait();
                         } catch (InterruptedException e) {
                             // ignore
                         }
                     }
-                    item = queue;
-                    queue = null;
-                    if (!go)
+                    if (queue.size() > 0) {
+                        item = queue.elementAt(0);
+                        queue.removeElementAt(0);
+                    }
+                    if (!go) {
                         break;
+                    }
                 }
+
+//#ifdef __LOG__
+                if (log.isEnabled()) log.debug("handle queue item; " + item);
+//#endif
 
                 // handle item
                 try {
@@ -359,9 +369,11 @@ public final class GpxTracklog extends Tracklog {
                         serializeTrkpt(l);
                         Location.releaseInstance(l);
 
-                        // break segment
+                        // break segment in case of no movement
                         if (onhold == 1) {
-                            queue = Boolean.TRUE;
+                            synchronized (this) {
+                                queue.addElement(Boolean.TRUE);
+                            }
                         }
 
                         /*
@@ -377,7 +389,7 @@ public final class GpxTracklog extends Tracklog {
                             ptCount = 0;
                         }
 
-                        // flush
+                        // flush to increase chance of having at least complete segment
                         serializer.flush();
 
                     }
@@ -473,40 +485,7 @@ public final class GpxTracklog extends Tracklog {
         final int sat = l.getSat();
         if (sat > 0) {
             serializer.startTag(DEFAULT_NAMESPACE, ELEMENT_SAT);
-            switch (sat) {
-                case 3: {
-                    serializer.text("3");
-                } break;
-                case 4: {
-                    serializer.text("4");
-                } break;
-                case 5: {
-                    serializer.text("5");
-                } break;
-                case 6: {
-                    serializer.text("6");
-                } break;
-                case 7: {
-                    serializer.text("7");
-                } break;
-                case 8: {
-                    serializer.text("8");
-                } break;
-                case 9: {
-                    serializer.text("9");
-                } break;
-                case 10: {
-                    serializer.text("10");
-                } break;
-                case 11: {
-                    serializer.text("11");
-                } break;
-                case 12: {
-                    serializer.text("12");
-                } break;
-                default:
-                    serializer.text(Integer.toString(sat));
-            }
+            serializer.text(Integer.toString(sat));
             serializer.endTag(DEFAULT_NAMESPACE, ELEMENT_SAT);
         }
         /*
@@ -712,54 +691,40 @@ public final class GpxTracklog extends Tracklog {
 
 //#endif
 
-/*
-    public void insert(final Waypoint waypoint) {
-        synchronized (this) {
-            freeLocationInQueue();
-            queue = waypoint;
-            notify();
-        }
-    }
-
-*/
     public void insert(final Location location) {
+        final Location clone = location._clone();
         synchronized (this) {
-            freeLocationInQueue();
-            force = true;
-            queue = location._clone();
+            queue.addElement(clone);
             notify();
         }
     }
 
     public void insert(final Boolean b) {
         synchronized (this) {
-            freeLocationInQueue();
-            force = b.booleanValue();
-            queue = b;
+            queue.addElement(b);
             notify();
         }
     }
 
     public void locationUpdated(final Location location) {
-        synchronized (this) {
-            final Location l = check(location);
-            if (l != null) {
-                freeLocationInQueue();
-                queue = location._clone();
+        /*
+         * Can be called outside lock, ref location changed only in check()
+         * and that is called only from here.
+         */
+        final Location l = check(location);
+        if (l != null) {
+            final Location clone = location._clone();
+            synchronized (this) {
+                queue.addElement(clone);
                 notify();
             }
         }
     }
 
-    /** must be called from synchronized method */
-    private void freeLocationInQueue() {
-        if (queue instanceof Location) { // processing thread did not make it - forget it
-            Location.releaseInstance((Location) queue);
-            queue = null;
-        }
-    }
-
     private Location check(final Location location) {
+//#ifdef __LOG__
+        if (log.isEnabled()) log.debug("check {" + location.getFix() + ";" + location.getTimestamp() + "}");
+//#endif
 
         // check fix constraint first
         final int fix = location.getFix();
@@ -775,20 +740,20 @@ public final class GpxTracklog extends Tracklog {
         // log flag
         boolean bLog = false;
 
-        // startup init
+        // startup condition
         if (refLocation == null) {
             refLocation = location._clone();
-            bLog = true;
-        } else if (force) {
-            force = false;
             bLog = true;
         }
 
         // dt criteria
-        final long dt = (location.getTimestamp() - refLocation.getTimestamp()) / 1000;
-        if (dt >= (Config.gpxDt)) {
+        final long dt = location.getTimestamp() - refLocation.getTimestamp();
+        if (dt >= (Config.gpxDt * 1000)) {
             bLog = true;
         }
+//#ifdef __LOG__
+        if (log.isEnabled()) log.debug("\tdt = " + dt + " ms");
+//#endif
 
         // ds criteria and course deviation
         if (!bLog && fix > 0) {
@@ -832,7 +797,7 @@ public final class GpxTracklog extends Tracklog {
                 // stop for too long
                 if (bLog) {
                     onhold = 0;
-                } else if (dt >= 60 * 1000) { // no movement for 1 min
+                } else if (dt >= 60000) { // no movement for 1 min
                     if (r < 50) { // should always be true
                         if (onhold++ == 0) {
                             bLog = true;

@@ -275,8 +275,10 @@ public final class Map implements Runnable {
 //#ifdef __LOG__
         if (log.isEnabled()) {
             log.debug("map loading finished for " + getPath() + "; " + throwable);
-            log.debug("  tile basename: " + loader.basename);
-            log.debug("  tile dimensions: " + loader.tileWidth + "x" + loader.tileHeight);
+            if (loader != null) { // may be null when loading fails
+                log.debug("  tile basename: " + loader.basename);
+                log.debug("  tile dimensions: " + loader.tileWidth + "x" + loader.tileHeight);
+            }
         }
 //#endif
 

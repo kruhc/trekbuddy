@@ -1,0 +1,457 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProductVersion>10.0.20506</ProductVersion>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{669B4266-BDDE-40C6-8826-9D17151D127C}</ProjectGuid>
+    <ProjectTypeGuids>{C089C8C0-30E0-4E22-80C0-CE093F111A43};{fae04ec0-301f-11d3-bf4b-00c04f79efbc}</ProjectTypeGuids>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>TrackingApp</RootNamespace>
+    <AssemblyName>TrekBuddy.WindowsPhone</AssemblyName>
+    <TargetFrameworkIdentifier>WindowsPhone</TargetFrameworkIdentifier>
+    <TargetFrameworkVersion>v8.0</TargetFrameworkVersion>
+    <SilverlightVersion>$(TargetFrameworkVersion)</SilverlightVersion>
+    <SilverlightApplication>true</SilverlightApplication>
+    <SupportedCultures>cs%3bpl</SupportedCultures>
+    <XapOutputs>true</XapOutputs>
+    <GenerateSilverlightManifest>true</GenerateSilverlightManifest>
+    <XapFilename>TrekBuddy.xap</XapFilename>
+    <SilverlightManifestTemplate>Properties\AppManifest.xml</SilverlightManifestTemplate>
+    <SilverlightAppEntry>TrackingApp.App</SilverlightAppEntry>
+    <ValidateXaml>true</ValidateXaml>
+    <MinimumVisualStudioVersion>11.0</MinimumVisualStudioVersion>
+    <ThrowErrorsInValidation>true</ThrowErrorsInValidation>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>Bin\Debug</OutputPath>
+    <DefineConstants>TRACE;DEBUG;SILVERLIGHT;WINDOWS_PHONE;LOG</DefineConstants>
+    <NoStdLib>true</NoStdLib>
+    <NoConfig>true</NoConfig>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <NoWarn>0168</NoWarn>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>Bin\Release</OutputPath>
+    <DefineConstants>TRACE;SILVERLIGHT;WINDOWS_PHONE;LOG</DefineConstants>
+    <NoStdLib>true</NoStdLib>
+    <NoConfig>true</NoConfig>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+    <NoWarn>0168</NoWarn>
+    <RunCodeAnalysis>false</RunCodeAnalysis>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|x86' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>Bin\x86\Debug</OutputPath>
+    <DefineConstants>DEBUG;TRACE;SILVERLIGHT;WINDOWS_PHONE</DefineConstants>
+    <NoStdLib>true</NoStdLib>
+    <NoConfig>true</NoConfig>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|x86' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>Bin\x86\Release</OutputPath>
+    <DefineConstants>TRACE;SILVERLIGHT;WINDOWS_PHONE</DefineConstants>
+    <NoStdLib>true</NoStdLib>
+    <NoConfig>true</NoConfig>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|ARM' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>Bin\ARM\Debug</OutputPath>
+    <DefineConstants>DEBUG;TRACE;SILVERLIGHT;WINDOWS_PHONE</DefineConstants>
+    <NoStdLib>true</NoStdLib>
+    <NoConfig>true</NoConfig>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|ARM' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>Bin\ARM\Release</OutputPath>
+    <DefineConstants>TRACE;SILVERLIGHT;WINDOWS_PHONE</DefineConstants>
+    <NoStdLib>true</NoStdLib>
+    <NoConfig>true</NoConfig>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>2</WarningLevel>
+    <NoWarn>0108;0162;0164;0219</NoWarn>
+    <RunCodeAnalysis>false</RunCodeAnalysis>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release ARM|AnyCPU'">
+    <OutputPath>bin\Release ARM\</OutputPath>
+    <DefineConstants>SILVERLIGHT;WINDOWS_PHONE</DefineConstants>
+    <Optimize>true</Optimize>
+    <WarningLevel>2</WarningLevel>
+    <NoWarn>0108;0162;0164;0219</NoWarn>
+    <NoStdLib>true</NoStdLib>
+    <DebugType>pdbonly</DebugType>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <RunCodeAnalysis>true</RunCodeAnalysis>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>ManagedMinimumRules.ruleset</CodeAnalysisRuleSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release ARM|x86'">
+    <OutputPath>bin\x86\Release ARM\</OutputPath>
+    <DefineConstants>TRACE;SILVERLIGHT;WINDOWS_PHONE</DefineConstants>
+    <Optimize>true</Optimize>
+    <NoStdLib>true</NoStdLib>
+    <DebugType>pdbonly</DebugType>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>ManagedMinimumRules.ruleset</CodeAnalysisRuleSet>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release ARM|ARM'">
+    <OutputPath>bin\ARM\Release ARM\</OutputPath>
+    <DefineConstants>SILVERLIGHT;WINDOWS_PHONE</DefineConstants>
+    <Optimize>true</Optimize>
+    <NoStdLib>true</NoStdLib>
+    <DebugType>pdbonly</DebugType>
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <ErrorReport>prompt</ErrorReport>
+    <CodeAnalysisRuleSet>ManagedMinimumRules.ruleset</CodeAnalysisRuleSet>
+    <WarningLevel>2</WarningLevel>
+    <NoWarn>0108;0162;0164;0219</NoWarn>
+  </PropertyGroup>
+  <PropertyGroup>
+    <TransformOutOfDateOnly>false</TransformOutOfDateOnly>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="Common\CardStorage.cs" />
+    <Compile Include="Common\CN1Extensions.cs" />
+    <Compile Include="Common\FileBrowserHelper.cs" />
+    <Compile Include="Common\FilePI.cs" />
+    <Compile Include="Common\FontPI.cs" />
+    <Compile Include="Common\InputStreamWrapper.cs" />
+    <Compile Include="Common\LocalStorage.cs" />
+    <Compile Include="Common\LocationManager.cs" />
+    <Compile Include="LogLevelSetting.xaml.cs">
+      <DependentUpon>LogLevelSetting.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Common\NETExtensions.cs" />
+    <Compile Include="Common\OutputStreamProxy.cs" />
+    <Compile Include="Common\PlatformHelper.cs" />
+    <Compile Include="Common\RecordStorePI.cs" />
+    <Compile Include="Common\SharpZipLibExtensions.cs" />
+    <Compile Include="Common\SkydriveStorage.cs" />
+    <Compile Include="Common\TarInfo.cs" />
+    <Compile Include="Common\UISynchronizationContext.cs" />
+    <Compile Include="Common\UnusedOrObsoletePI.cs" />
+    <Compile Include="MIDP\Alert.xaml.cs">
+      <DependentUpon>Alert.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="App.xaml.cs">
+      <DependentUpon>App.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="MIDP\ChoiceGroup.xaml.cs">
+      <DependentUpon>ChoiceGroup.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="MIDP\Form.xaml.cs">
+      <DependentUpon>Form.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="MIDP\Gauge.xaml.cs">
+      <DependentUpon>Gauge.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="MIDP\ImageItem.xaml.cs">
+      <DependentUpon>ImageItem.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Common\Launcher.cs" />
+    <Compile Include="MIDP\List.xaml.cs">
+      <DependentUpon>List.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="LocalizedStrings.cs" />
+    <Compile Include="MainPage.xaml.cs">
+      <DependentUpon>MainPage.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="NonLinearNavigationService.cs" />
+    <Compile Include="ProgressBarWithText.xaml.cs">
+      <DependentUpon>ProgressBarWithText.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Properties\AssemblyInfo.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>AssemblyInfo.tt</DependentUpon>
+    </Compile>
+    <Compile Include="Resources\AppResources.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>AppResources.resx</DependentUpon>
+    </Compile>
+    <Compile Include="MIDP\StringItem.xaml.cs">
+      <DependentUpon>StringItem.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="MIDP\TextField.xaml.cs">
+      <DependentUpon>TextField.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Sources.Win8\SilverlightImplementationFactory.cs" />
+    <Compile Include="Common\TrekbuddyExtensions.cs" />
+    <Compile Include="Sources.Win8\SilverlightImplementation.cs" />
+  </ItemGroup>
+  <ItemGroup>
+    <ApplicationDefinition Include="App.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </ApplicationDefinition>
+    <Page Include="LogLevelSetting.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="MIDP\Alert.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="MIDP\ChoiceGroup.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="MIDP\Form.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="MIDP\Gauge.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="MIDP\ImageItem.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="MIDP\List.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="MainPage.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="ProgressBarWithText.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="MIDP\StringItem.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="MIDP\TextField.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Audio\MIDPAlert.mp3">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Icons\feature.settings.png" />
+    <None Include="README_FIRST.txt" />
+    <Content Include="Toolkit.Content\ApplicationBar.Add.png" />
+    <Content Include="Toolkit.Content\ApplicationBar.Cancel.png" />
+    <Content Include="Toolkit.Content\ApplicationBar.Check.png" />
+    <Content Include="Toolkit.Content\ApplicationBar.Delete.png" />
+    <Content Include="Toolkit.Content\ApplicationBar.Select.png" />
+    <None Include="packages.config" />
+    <None Include="poznamky.txt" />
+    <None Include="Properties\AppManifest.xml">
+      <SubType>Designer</SubType>
+    </None>
+    <None Include="Properties\AssemblyInfo.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>AssemblyInfo.cs</LastGenOutput>
+    </None>
+    <None Include="Properties\WMAppManifest.xml">
+      <SubType>Designer</SubType>
+    </None>
+    <Content Include="res\language.en.res" />
+    <Content Include="res\language.es.res" />
+    <Content Include="res\language.pl.res" />
+    <Content Include="res\language.cs.res" />
+    <Content Include="res\world.map" />
+    <Content Include="res\world.set" />
+    <Content Include="res\language.fr.res" />
+    <None Include="TrackingApp_2014_07_27_17_36_54.sap" />
+    <None Include="TrackingApp_2014_07_27_17_38_48.sap" />
+    <None Include="TrackingApp_2014_07_27_17_48_59.sap" />
+    <None Include="TrackingApp_2014_07_27_17_56_45.sap" />
+    <None Include="TrackingApp_2014_07_27_18_26_52.sap" />
+    <None Include="TrackingApp_2014_07_27_18_44_42.sap" />
+    <None Include="TrackingApp_2014_08_23_19_18_51.sap" />
+    <None Include="TrackingApp_2014_08_23_19_27_55.sap" />
+    <None Include="TrackingApp_2014_08_23_20_36_55.sap" />
+    <None Include="TrackingApp_2014_08_23_20_37_46.sap" />
+    <None Include="TrackingApp_2014_08_23_20_41_34.sap" />
+    <None Include="TrackingApp_2014_08_23_20_52_58.sap" />
+    <None Include="TrackingApp_2014_08_23_21_09_12.sap" />
+    <None Include="TrackingApp_2014_08_23_21_12_33.sap" />
+    <None Include="TrackingApp_2014_08_23_21_14_36.sap" />
+    <None Include="TrackingApp_2014_08_23_21_17_17.sap" />
+    <None Include="TrackingApp_2014_08_23_21_26_08.sap" />
+    <None Include="TrackingApp_2014_08_23_21_36_15.sap" />
+    <None Include="TrackingApp_2014_08_24_02_34_33.sap" />
+    <None Include="TrackingApp_2014_08_24_02_35_27.sap" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="Assets\AlignmentGrid.png" />
+    <Content Include="Assets\ApplicationIcon.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Assets\Tiles\FlipCycleTileLarge.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Assets\Tiles\FlipCycleTileMedium.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Assets\Tiles\FlipCycleTileSmall.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Assets\Tiles\IconicTileMediumLarge.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Assets\Tiles\IconicTileSmall.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="res\arrows.png" />
+    <Content Include="res\bullets.png" />
+    <Content Include="res\crosshairs.png" />
+    <Content Include="res\datums.txt" />
+    <Content Include="res\guides.png" />
+    <Content Include="res\icon.png" />
+    <Content Include="res\icon.svg" />
+    <Content Include="res\log.any.png" />
+    <Content Include="res\log.dnf.png" />
+    <Content Include="res\log.foundit.png" />
+    <Content Include="res\log.nm.png" />
+    <Content Include="res\log.om.png" />
+    <Content Include="res\log.wn.png" />
+    <Content Include="res\nav.sms-him.png" />
+    <Content Include="res\nav.sms-myt.png" />
+    <Content Include="res\nav.stop.png" />
+    <Content Include="res\nav.tracks.png" />
+    <Content Include="res\nav.wpt-cust.png" />
+    <Content Include="res\nav.wpt-gps.png" />
+    <Content Include="res\nav.wpt-proj.png" />
+    <Content Include="res\nav.wpts.png" />
+    <Content Include="res\naviws.png" />
+    <Content Include="res\nlock.png" />
+    <Content Include="res\no-map.xml" />
+    <Content Include="res\plugin.err.png" />
+    <Content Include="res\plugin.not.png" />
+    <Content Include="res\plugin.ok.png" />
+    <Content Include="res\pois.png" />
+    <Content Include="res\selected.png" />
+    <Content Include="res\symbols.png" />
+    <Content Include="res\set\world_0_0.png" />
+    <Content Include="res\set\world_0_320.png" />
+    <Content Include="res\set\world_0_640.png" />
+    <Content Include="res\set\world_1200_0.png" />
+    <Content Include="res\set\world_1200_320.png" />
+    <Content Include="res\set\world_1200_640.png" />
+    <Content Include="res\set\world_240_0.png" />
+    <Content Include="res\set\world_240_320.png" />
+    <Content Include="res\set\world_240_640.png" />
+    <Content Include="res\set\world_480_0.png" />
+    <Content Include="res\set\world_480_320.png" />
+    <Content Include="res\set\world_480_640.png" />
+    <Content Include="res\set\world_720_0.png" />
+    <Content Include="res\set\world_720_320.png" />
+    <Content Include="res\set\world_720_640.png" />
+    <Content Include="res\set\world_960_0.png" />
+    <Content Include="res\set\world_960_320.png" />
+    <Content Include="res\set\world_960_640.png" />
+    <Content Include="res\wpt.png" />
+    <Content Include="res\zooms.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Resources\AppResources.cs.resx" />
+    <EmbeddedResource Include="Resources\AppResources.pl.resx" />
+    <EmbeddedResource Include="Resources\AppResources.resx">
+      <Generator>PublicResXFileCodeGenerator</Generator>
+      <LastGenOutput>AppResources.Designer.cs</LastGenOutput>
+    </EmbeddedResource>
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="Microsoft.Live, Version=5.6.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL" />
+    <Reference Include="Microsoft.Live.Controls, Version=5.6.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL" />
+    <Reference Include="Microsoft.Phone.Controls.Toolkit, Version=8.0.1.0, Culture=neutral, PublicKeyToken=b772ad94eb9ca604, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\packages\WPtoolkit.4.2013.08.16\lib\wp8\Microsoft.Phone.Controls.Toolkit.dll</HintPath>
+    </Reference>
+    <Reference Include="SharpZipLib.WindowsPhone7">
+      <HintPath>..\..\SharpZipLib.Silverlight.0.86.0.518\SharpZipLib.WindowsPhone7.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\AudioPlaybackAgent\TrekBuddy.AudioPlaybackAgent.csproj">
+      <Project>{8268AFF2-84DC-4D04-975C-8566D2A984B1}</Project>
+      <Name>TrekBuddy.AudioPlaybackAgent</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\CodenameOne-shrinked\CodenameOne-shrinked.csproj">
+      <Project>{4b70ff7a-9f37-41fa-8bfd-d6c3e8bb026b}</Project>
+      <Name>CodenameOne-shrinked</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\TrekBuddy.Java\TrekBuddy.Midlet.csproj">
+      <Project>{F3C959E1-4A75-4F64-A0A1-FD6B881471E8}</Project>
+      <Name>TrekBuddy.Midlet</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\Xmlvm\Xmlvm.csproj">
+      <Project>{78C74168-EF21-4D1D-BD91-8B0B620CBF59}</Project>
+      <Name>Xmlvm</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <Service Include="{508349B6-6B84-4DF5-91F0-309BEEBAD82D}" />
+  </ItemGroup>
+  <PropertyGroup>
+    <VisualStudioVersion Condition="'$(VisualStudioVersion)' == ''">10.0</VisualStudioVersion>
+    <VSToolsPath Condition="'$(VSToolsPath)' == ''">$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v12.0</VSToolsPath>
+  </PropertyGroup>
+  <Import Project="$(MSBuildExtensionsPath)\Microsoft\$(TargetFrameworkIdentifier)\$(TargetFrameworkVersion)\Microsoft.$(TargetFrameworkIdentifier).$(TargetFrameworkVersion).Overrides.targets" />
+  <Import Project="$(MSBuildExtensionsPath)\Microsoft\$(TargetFrameworkIdentifier)\$(TargetFrameworkVersion)\Microsoft.$(TargetFrameworkIdentifier).CSharp.targets" />
+  <Import Project="$(VSToolsPath)\TextTemplating\Microsoft.TextTemplating.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it.
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+  <ProjectExtensions />
+</Project>

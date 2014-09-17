@@ -1,0 +1,18 @@
+﻿<UserControl x:Class="TrackingApp.ProgressBarWithText"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    FontFamily="{StaticResource PhoneFontFamilyNormal}"
+    FontSize="{StaticResource PhoneFontSizeMedium}"
+    Foreground="{StaticResource PhoneForegroundBrush}"
+    d:DesignHeight="720" d:DesignWidth="480">
+
+    <Canvas x:Name="background" HorizontalAlignment="Stretch" VerticalAlignment="Top" Background="#80000000">
+        <StackPanel x:Name="panel" HorizontalAlignment="Center" VerticalAlignment="Center" Background="Black">
+            <ProgressBar x:Name="bar" IsIndeterminate="True" Height="12" HorizontalAlignment="Stretch" VerticalAlignment="Center" Margin="0,10,0,0" Opacity="1.0"/>
+            <TextBlock x:Name="label" Text="Synchronizing, please wait..." FontWeight="Light" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="20,0,20,10" MinWidth="240"/>
+        </StackPanel>
+    </Canvas>
+</UserControl>

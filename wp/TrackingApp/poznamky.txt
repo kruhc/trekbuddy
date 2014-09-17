@@ -1,0 +1,59 @@
+﻿* TASKS
+	--# test PhotoChooserTask with fake JPG (ZIP)
+	--# ve verzi zmenit 'b'->'u'
+	--# no SD sync
+	# add commands to Waypoints and Tracks
+		-> or one command with another fake root Pictures??? yes!!! same for resources and cms
+		-> add general fake root Pictures???
+	# podpora .zip (resources, cms) na OneDrive
+		-- [ZIP is reserved for SD!!!] http://msdn.microsoft.com/en-us/library/windowsphone/develop/jj207065%28v=vs.105%29.aspx
+	# add command to Info to load ZIP packages {resources, cms} 
+		- autodetect content??
+	# create WP FAQ
+
+* rendering
+	+ try not using composite thread
+	# review canvas switch at the end of DrawMutableImage.perform() for !__CT_RENDER
+	# cl0 je asi zbytecny, protoze - FIXED - fullscreen flickering je ASI proto, ze se vykresli obrazovka i bez jedinyho slicu!!!
+
+* toStream() - use (Java)InputStreamProxy to avoid double allocations but it requires Length {get} and Position {set} to work correctly
+  * com.ice.tar.TarInputStream->api.io.FilterInputStream->net.trekbuddy.wp8.InputStreamWrapper->{System.IO.IsolatedStorage.IsolatedStorageFileStream,}
+
+rem * onedrive
+rem	- respektovat kdyz uzivatel nechce vytvorit folders na onedrive (ItemExist atd)
+rem	- sync resourcu a cms
+
+---------------------- CODE SNIPPETS ----------------------
+
+  #if _SEND_LOG
+                        EmailComposeTask task = new EmailComposeTask();
+                        task.Subject = "TrekBuddy WP8 log";
+                        task.Body = String.Format("version: {0}\ndate: {1}\n\n", System.Reflection.Assembly.GetExecutingAssembly().GetName().Version, DateTime.Now);
+                        string content = (com.codename1.io.Log.getLogContent() as java.lang.String).toCSharp();
+#if _SEND_COMPRESSED_LOG
+                        if (content.Length > 128*1024) // uncompressed
+                        {
+                            content = content.Substring(content.Length - 128*1024);
+                        }
+                        MemoryStream ms = new MemoryStream(8*1024);
+                        using (ZipOutputStream zip = new ZipOutputStream(ms))
+                        {
+                            zip.SetLevel(5);
+                            ZipEntry entry = new ZipEntry("trekbuddy.log");
+                            zip.PutNextEntry(entry);
+                            byte[] utf16bytes = System.Text.Encoding.Unicode.GetBytes(content);
+                            byte[] utf8 = System.Text.Encoding.Convert(System.Text.Encoding.Unicode, System.Text.Encoding.UTF8, utf16bytes);
+                            zip.Write(utf8, 0, utf8.Length);
+                            zip.CloseEntry();
+                        }
+                        content = "-----BEGIN ARCHIVE-----\n" + Convert.ToBase64String(ms.ToArray()) + "\n-----END ARCHIVE-----\n";
+#else
+                        if (content.Length > 24576) // 24 kB
+                        {
+                            content = content.Substring(content.Length - 24576);
+                        }
+#endif
+                        task.Body += content;
+                        task.To = "kruhc@seznam.cz";
+                        task.Show();
+#endif

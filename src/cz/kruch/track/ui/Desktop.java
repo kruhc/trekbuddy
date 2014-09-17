@@ -774,17 +774,8 @@ public final class Desktop implements CommandListener,
         this.cmdPause = new Command(Resources.getString(Resources.DESKTOP_CMD_PAUSE), uiTypeSome ? POSITIVE_CMD_TYPE : Command.STOP, 1);
         this.cmdContinue = new Command(Resources.getString(Resources.DESKTOP_CMD_CONTINUE), uiTypeSome ? POSITIVE_CMD_TYPE : Command.STOP, 1);
         this.cmdStop = new Command(Resources.getString(Resources.DESKTOP_CMD_STOP), uiTypeSome ? POSITIVE_CMD_TYPE : Command.STOP, 2);
-        // let's make boowoo happy
-        final String tstl, tspl;
-        if ("fr".equals(Resources.locale)) {
-            tstl = Resources.getString(Resources.DESKTOP_CMD_START).concat(" Tracklog");
-            tspl = Resources.getString(Resources.DESKTOP_CMD_STOP).concat(" Tracklog");
-        } else {
-            tstl = "Tracklog ".concat(Resources.getString(Resources.DESKTOP_CMD_START));
-            tspl = "Tracklog ".concat(Resources.getString(Resources.DESKTOP_CMD_STOP));
-        }
-        this.cmdTracklogStart = new Command(tstl, uiTypeSome ? POSITIVE_CMD_TYPE : Command.STOP, 3);
-        this.cmdTracklogStop = new Command(tspl, uiTypeSome ? POSITIVE_CMD_TYPE : Command.STOP, 3);
+        this.cmdTracklogStart = new Command(Resources.getString(Resources.DESKTOP_CMD_TRACKLOG_START), uiTypeSome ? POSITIVE_CMD_TYPE : Command.STOP, 3);
+        this.cmdTracklogStop = new Command(Resources.getString(Resources.DESKTOP_CMD_TRACKLOG_STOP), uiTypeSome ? POSITIVE_CMD_TYPE : Command.STOP, 3);
 
         // handle commands
         screen.setCommandListener(this);
@@ -2390,6 +2381,8 @@ public final class Desktop implements CommandListener,
                 case Config.LOCATION_PROVIDER_JSR82:
 //#ifdef __ANDROID__
                     providerClass = cz.kruch.track.location.AndroidBluetoothLocationProvider.class;
+//#elifdef __CN1__
+                    if (true) throw new RuntimeException("not supported");
 //#else
                     providerClass = Class.forName("cz.kruch.track.location.Jsr82LocationProvider");
 //#endif
@@ -2486,6 +2479,8 @@ public final class Desktop implements CommandListener,
         try {
 //#ifdef __ANDROID__
             provider = new cz.kruch.track.location.AndroidBluetoothLocationProvider();
+//#elifdef __CN1__
+            if (true) throw new RuntimeException("not supported");
 //#else
             provider = (LocationProvider) Class.forName("cz.kruch.track.location.Jsr82LocationProvider").newInstance();
 //#endif
@@ -3110,26 +3105,28 @@ public final class Desktop implements CommandListener,
 
     boolean startAlternateMap(final String layerName, final QualifiedCoordinates qc) {
 
-        synchronized (loadingLock) {
+        // find map for given coords
+        final String mapUrl = atlas.getFileURL(layerName, qc);
+        final String mapName = atlas.getMapName(layerName, qc);
 
-            // already in progress check
-            if (initializingMap) {
+        // got map for given coordinates?
+        if (mapUrl != null) {
+
+            // need to synchronize
+            synchronized (loadingLock) {
+
+                // check if there is no loading already
+                if (initializingMap || loadingSlices) {
 //#ifdef __LOG__
-                if (log.isEnabled()) log.debug("some alternate map being loaded");
+                    if (log.isEnabled()) log.debug("another map already being loaded");
 //#endif
-                return true;
-            }
-
-            // find map for given coords
-            final String mapUrl = atlas.getFileURL(layerName, qc);
-            final String mapName = atlas.getMapName(layerName, qc);
-
-            // got map for given coordinates?
-            if (mapUrl != null) {
+                    return true; // TODO shouldn't it be false?
+                }
 //#ifdef __LOG__
                 if (log.isEnabled()) log.debug("loading alternate map " + mapUrl);
 //#endif
-                // 'switch' flag
+
+                // set 'switch' flag
                 _switch = true;
 
                 // focus on these coords once the new map is loaded
@@ -3140,11 +3137,11 @@ public final class Desktop implements CommandListener,
 
                 // start loading task
                 startOpenMap(mapUrl, mapName);
-            }
 
-            return mapUrl != null;
+            } // ~synchronized
+        }
 
-        } // ~synchronized
+        return mapUrl != null;
     }
 
     /*private*/ void startOpenMap(final String url, final String name) { // Event visibility to avoid synthetic accessors
@@ -3960,6 +3957,10 @@ public final class Desktop implements CommandListener,
                 }
                 
             } else {
+
+//#ifdef __LOG__
+                if (log.isEnabled()) log.debug("map opening failed: " + throwable);
+//#endif
 
                 // update loading result
                 Desktop.this._updateLoadingResult(Resources.getString(Resources.DESKTOP_MSG_LOAD_MAP_FAILED), throwable);

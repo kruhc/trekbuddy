@@ -110,7 +110,21 @@ namespace net.trekbuddy.wp8
         {
             long nx = brokenSkip ? n << 32 : n;
             long before = internalStream.Position;
-            internalStream.Seek(nx, SeekOrigin.Current);
+            try
+            {
+                internalStream.Seek(nx, SeekOrigin.Current);
+            }
+            catch (NotSupportedException e)
+            {
+                if ("Stream does not support writing." == e.Message)
+                {
+                    throw new IOException("Incomplete file");
+                }
+                else
+                {
+                    throw e;
+                }
+            }
             long after = internalStream.Position;
             if (n > 0 && after == before)
             {

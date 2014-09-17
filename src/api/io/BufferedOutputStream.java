@@ -65,13 +65,9 @@ public final class BufferedOutputStream extends OutputStream {
     }
 
     public void close() throws IOException {
-        try {
-            flush();
-        } catch (IOException e) {
-            // ignored
-        }
+        flush();
         out.close();
-        out = null; // gc hint
+        out = null;
     }
 
     /*

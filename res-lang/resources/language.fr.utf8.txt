@@ -1,4 +1,4 @@
-# commandes courantes 
+﻿# commandes courantes 
 0000=OK 
 0001=Retour 
 0002=Fermer 
@@ -32,6 +32,8 @@
 1012=Ouvrir 
 1013=Sélection
 1014=Plugins 
+1015=Enregistrer trace
+1016=Arrêter trace
 
 # messages du bureau 
 1300=Erreur d'initialisation du partage d'emplacement 
@@ -305,6 +307,7 @@
 3536=Zoom Carte 
 3537=Forcer champ de texte
 3538=Crosshair fixe 
+3539=Automatique
 
 # formulaires/champs/valeurs de paramétrage (Emplacement) 
 3600=Fournisseur 

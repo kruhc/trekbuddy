@@ -46,6 +46,8 @@
 1012=Open
 1013=Select
 1014=Extras
+1015=Tracklog Start
+1016=Tracklog Stop
 
 # desktop messages
 1300=Failed to init location sharing
@@ -319,6 +321,7 @@
 3536=Map zoom
 3537=force textfield focus
 3538=fixed crosshair
+3539=auto
 
 # settings forms/fields/values (Location)
 3600=Provider

@@ -832,12 +832,12 @@ final class TarLoader extends Map.Loader /*implements Atlas.Loader*/ implements 
                             // construct URLs
                             final String realUrl = entryName.toString();
                             final String fakeUrl;
+                            final StringBuffer sb = new StringBuffer(32);
 
                             // idx is tar-made index for untarred atlases
                             if (url.endsWith(".idx") || url.endsWith(".IDX")) {
-                                fakeUrl = escape(realUrl);
+                                fakeUrl = escape(sb.append(baseUrl).append(realUrl).toString());
                             } else {
-                                final StringBuffer sb = new StringBuffer(32);
                                 fakeUrl = escape(sb.append(baseUrl).append(lName).append(File.PATH_SEPCHAR).append(mName).append(File.PATH_SEPCHAR).append(mName).append(".tar").toString());
                             }
 

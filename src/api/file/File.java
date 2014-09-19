@@ -222,7 +222,8 @@ public abstract class File {
     public abstract String getPath();
     public abstract void setFileConnection(String path) throws IOException;
 
-    protected final void traverse(String path) throws IOException {
+    final void traverse(String path) throws IOException {
+
         // get current path
         String url = getURL();
 

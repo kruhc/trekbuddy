@@ -442,6 +442,7 @@
             <property name="dist.dir" value="android-backport"/>
             <property name="javac.debug" value="true"/>
             <property name="javac.debuglevel" value="source,lines"/>
+            <property name="is.backport" value="true"/>
             <!--
             <property name="do.obfuscate" value="true"/>
             -->
@@ -564,10 +565,27 @@
         <antcall target="dist" inheritall="true"/>
     </target>
 
-    <target name="wp">
+    <target name="wp.full">
+        <echo message="Use 'wp-shrinked' target!"/>
         <property name="suffix" value="-wp"/>
         <property name="dist.dir" value="wp"/>
         <property name="libraryjars" value="${cn1.repository}\CLDC11.jar;${cn1.repository}\dist\CodenameOne.jar"/>
+        <property name="classpath.preverify" value="${libraryjars}"/>
+        <antcall target="clean"/>
+        <antcall target="a.pre.cn1-nb"/>
+        <antcall target="prepare.cn1-nb"/>
+        <antcall target="compile.cn1-trunk"/>
+        <antcall target="cn1-trunk.pack"/>
+        <!-- creates shrinked CN1 dist -->
+        <antcall target="wp.pack"/>
+        <antcall target="obfuscate5.wp" inheritall="true"/>
+        <antcall target="wp.repack"/>
+    </target>
+
+    <target name="wp-shrinked">
+        <property name="suffix" value="-wp"/>
+        <property name="dist.dir" value="wp"/>
+        <property name="libraryjars" value="${cn1.repository}\CLDC11.jar;${cn1.repository}\dist\CodenameOne-shrinked.jar"/>
         <property name="classpath.preverify" value="${libraryjars}"/>
         <antcall target="clean"/>
         <antcall target="a.pre.cn1-nb"/>
@@ -1102,7 +1120,7 @@
     </target>
 
     <target name="remove.lapi.src">
-        <delete file="tmp/src/cz/kruch/track/location/SerialLocationProvider.java"/>
+        <!--delete file="tmp/src/cz/kruch/track/location/SerialLocationProvider.java"/-->
         <delete file="tmp/src/cz/kruch/track/location/Jsr82LocationProvider.java"/>
         <delete file="tmp/src/cz/kruch/track/location/Jsr179OrientationProvider.java"/>
         <delete file="tmp/src/cz/kruch/track/location/O2GermanyLocationProvider.java"/>
@@ -1394,6 +1412,36 @@
         </copy>
     </target>
 
+    <target name="wp.pack">
+        <unzip src="${cn1.repository}\dist\CodenameOne.jar" dest="tmp/build/classes"/>
+        <jar jarfile="tmp/trekbuddy${suffix}.jar">
+            <fileset dir="tmp/build/classes"/>
+        </jar>
+    </target>
+
+    <target name="wp.repack">
+        <delete includeemptydirs="true">
+            <fileset dir="tmp/build/classes"/>
+        </delete>
+        <unzip src="tmp/trekbuddy${suffix}-obfuscated.jar" dest="tmp/build/classes"/>
+<!--
+        <delete includeemptydirs="true" >
+            <fileset dir="tmp/build/classes" includes="CN1Resource.res"/>
+        </delete>
+-->
+        <jar jarfile="tmp/CodenameOne-shrinked.jar">
+            <fileset dir="tmp/build/classes">
+                <include name="com/codename1/**/*"/>
+            </fileset>
+        </jar>
+        <jar jarfile="tmp/trekbuddy${suffix}-shrinked.jar">
+            <fileset dir="tmp/build/classes">
+                <exclude name="com/codename1/**/*"/>
+                <exclude name="CN1Resource.res"/>
+            </fileset>
+        </jar>
+    </target>
+
     <target name="obfuscate3">
 	    <java jar="${proguard3.home}\lib\proguard.jar" fork="true">
             <arg value="-injars tmp/trekbuddy${suffix}.jar"/>
@@ -1604,6 +1652,51 @@
             <arg value="-whyareyoukeeping class cz.kruch.track.ui.nokia.S60DeviceControl"/>
             <arg value="-printmapping dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.map"/>
             <arg value="-printseeds"/>
+            <arg value="-printusage dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.dco"/>
+            <arg value="-verbose"/>
+        </java>
+    </target>
+
+    <target name="obfuscate5.wp">
+        <java jar="${proguard5.home}\lib\proguard.jar" fork="true">
+            <arg value="-injars tmp/trekbuddy${suffix}.jar"/>
+            <arg value="-outjars tmp/trekbuddy${suffix}-obfuscated.jar"/>
+            <arg value="-libraryjars ${cn1.repository}\CLDC11.jar;${cn1.repository}\..\Factory\dist\Factory.jar"/>
+            <arg value="-dontpreverify"/> <!-- not preverified; this is 4.x flag -->
+            <arg value="-dontoptimize"/>
+            <arg value="-dontobfuscate"/>
+            <arg value="-keepnames class *"/>
+            <arg value="-keep class * implements javax.microedition.midlet.MIDlet"/>
+            <arg value="-keep class net.trekbuddy.midlet.TrackingApp { *; }"/>
+            <arg value="-keep class javax.*"/>
+            <arg value="-keep class api.*"/>
+            <arg value="-keep class com.ice.*"/>
+            <arg value="-keep class cz.*"/>
+            <arg value="-keep class net.*"/>
+            <arg value="-keep class org.kxml2.*"/>
+            <arg value="-keep class org.xmlpull.*"/>
+            <arg value="-keep class com.codename1.location.Location { *; }"/>
+            <arg value="-keep class com.codename1.location.LocationManager { *; }"/>
+            <arg value="-keep class com.codename1.location.LocationListener { *; }"/>
+            <arg value="-keep class com.codename1.io.FileSystemStorage { *; }"/>
+            <arg value="-keep class com.codename1.io.Log {
+                public static final int *;
+                public void set*(...);
+                public void closeWriter();
+            }"/>
+            <arg value="-keep class com.codename1.ui.Display { public void init(); }"/>
+            <arg value="-keep class com.codename1.ui.Font { *; }"/>
+            <arg value="-keep class com.codename1.ui.Image { *; }"/>
+            <arg value="-keep class com.codename1.ui.IndexedImage { *; }"/>
+            <arg value="-keep class com.codename1.ui.RGBImage { *; }"/>
+            <arg value="-keep class com.codename1.io.Util { public void setImplementation(...); }"/>
+            <arg value="-keep class com.codename1.impl.CodenameOneImplementation {
+                public abstract &lt;methods&gt;;
+                public void flashBacklight(int);
+                public boolean shouldWriteUTFAsGetBytes();
+                public void draw*(...);
+                public void fill*(...);
+            }"/>
             <arg value="-printusage dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.dco"/>
             <arg value="-verbose"/>
         </java>

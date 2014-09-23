@@ -65,8 +65,10 @@ public class FileConnection implements StreamConnection {
     }
 
     public void create() throws IOException {
-        com.codename1.io.Log.p("FileConnection.create " + url + " - nothing to do", com.codename1.io.Log.WARNING);
-        // nothing to do
+        com.codename1.io.Log.p("FileConnection.create " + url, com.codename1.io.Log.DEBUG);
+        com.codename1.ui.FriendlyAccess.execute("create-file", new Object[] {
+            url
+        });
     }
 
     public void delete() throws IOException {

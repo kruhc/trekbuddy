@@ -288,6 +288,23 @@ public final class FileBrowser implements CommandListener, Runnable, Comparator 
         return callback == null;
     }
 
+    public void refresh() {
+//#ifdef __LOG__
+        if (log.isEnabled()) log.debug("refresh; depth = " + depth + "; file = " + (file == null ? "null" : file.getURL()));
+//#endif
+        try {
+            final Enumeration items = file == null ? File.listRoots() : file.list();
+            final String head = depth > 0 ? File.PARENT_DIR : null;
+            final String[] sorted = sort2array(items, head, filter);
+            list.deleteAll();
+            for (String item : sorted) {
+                list.append(item, null);
+            }
+        } catch (Throwable t) {
+            quit(t);
+        }
+    }
+
 //#endif
 
     private void show(final File holder) {

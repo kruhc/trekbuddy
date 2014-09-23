@@ -15,6 +15,11 @@ import api.file.File;
 
 import javax.microedition.io.Connector;
 
+/**
+ * Loader for unpacked atlases.
+ *
+ * @author kruhc@seznam.cz
+ */
 final class DirLoader extends Map.Loader /*implements Atlas.Loader*/ {
 
     /*

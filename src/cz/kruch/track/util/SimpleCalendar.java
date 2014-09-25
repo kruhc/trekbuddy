@@ -13,7 +13,7 @@ import java.util.Date;
 public final class SimpleCalendar {
     private final Calendar calendar;
     private volatile Date date;
-    private volatile int fieldHour, fieldMin, fieldSec;
+    private volatile int fieldHour, fieldMin, fieldSec, fieldMs;
     private volatile long last;
 
     public SimpleCalendar(Calendar calendar) {
@@ -33,14 +33,22 @@ public final class SimpleCalendar {
 
     public void setTime(long millis) {
         if (date != null) {
-            final int dt = (int) (millis - last) / 1000;
+            final long diff = millis - last;
+            final int dt = (int) (diff / 1000);
             final int h = dt / 3600;
             final int m = (dt % 3600) / 60;
             final int s = (dt % 3600) % 60;
+            final int ms = (int) (diff % 1000);
             int hour = fieldHour;
             int minute = fieldMin;
             int second = fieldSec;
+            int millisecond = fieldMs;
             if (dt > 0) {
+                millisecond += ms;
+                if (millisecond > 999) {
+                    millisecond -= 1000;
+                    second++;
+                }
                 second += s;
                 if (second > 59) {
                     second -= 60;
@@ -58,6 +66,11 @@ public final class SimpleCalendar {
                     return;
                 }
             } else if (dt < 0) {
+                millisecond += ms;
+                if (millisecond < 0) {
+                    millisecond += 1000;
+                    second--;
+                }
                 second += s;
                 if (second < 0) {
                     second += 60;
@@ -78,14 +91,16 @@ public final class SimpleCalendar {
             fieldHour = hour;
             fieldMin = minute;
             fieldSec = second;
+            fieldMs = millisecond;
         } else {
             date = new Date(millis);
             calendar.setTime(date);
             fieldHour = calendar.get(Calendar.HOUR_OF_DAY);
             fieldMin = calendar.get(Calendar.MINUTE);
             fieldSec = calendar.get(Calendar.SECOND);
+            fieldMs = calendar.get(Calendar.MILLISECOND);
         }
-        last = (millis / 1000) * 1000; // TODO why round?
+        last = millis;
     }
 
     public int get(final int field) {

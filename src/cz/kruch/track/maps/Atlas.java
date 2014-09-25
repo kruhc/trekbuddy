@@ -261,7 +261,7 @@ public final class Atlas implements Runnable, Comparator {
     private String getNextLayer(final String layerName, final Map currentMap,
                                 final int direction, final QualifiedCoordinates coords) {
 //#ifdef __LOG__
-        if (log.isEnabled()) log.debug("getNextLayer; " + layerName + "; direction: " + direction);
+        if (log.isEnabled()) log.debug("getNextLayer; " + layerName);
 //#endif
 
         // current map scale
@@ -269,19 +269,29 @@ public final class Atlas implements Runnable, Comparator {
         double nextScale = direction == 1 ? 0D : Double.MAX_VALUE;
         String nextMap = null;
 
-        // get layer collection
+        // get layer for name
         final Hashtable layer = (Hashtable) layers.get(layerName);
+
+        // check maps in the layer
         final Enumeration e = layer.keys();
         while (e.hasMoreElements()) {
             final Object map = e.nextElement();
             final Calibration calibration = (Calibration) layer.get(map);
+/* for debugging
+            cz.kruch.track.ui.Position p = calibration.transform(coords);
+            if (log.isEnabled()) log.debug(p.getX() + ","  + p.getY() + " -- " + calibration.getWidth() + "," + calibration.getHeight());
+*/
+
+            // ignore maps not covering position and also current map :)
             if (!calibration.isWithin(coords) || calibration == currentMap.getCalibration()) { // '==' is OK
                 continue;
             }
+
+            // compare scale
             final double scale = calibration.getVerticalScale();
 //#ifdef __LOG__
             if (log.isEnabled()) {
-                log.debug("\tmap " + map + "; scale " + scale);
+                log.debug("\tmap " + map + "; scale " + scale + "; direction: " + direction);
                 log.debug("\t\tratio: " + (scale / currentScale));
             }
 //#endif

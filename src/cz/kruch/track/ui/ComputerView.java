@@ -1330,7 +1330,7 @@ final class ComputerView extends View
                                                 if (vmg > 0F) {
                                                     final long dt = (long) (1000 * (dist / (vmg / 3.6F)));
                                                     final long eta;
-                                                    if (dt >= 0F) {
+                                                    if (dt >= 0F) { // TODO isn't this always true because both dist and vmg are > 0 ???
                                                         eta = timestamp + dt;
                                                     } else {
                                                         eta = timestamp + 2 * -dt;

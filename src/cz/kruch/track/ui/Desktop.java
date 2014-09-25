@@ -199,7 +199,7 @@ public final class Desktop implements CommandListener,
      * @param midlet midlet instance
      */
     public Desktop(MIDlet midlet) {
-        // UI
+        // default UI
         POSITIVE_CMD_TYPE = Command.SCREEN;
         EXIT_CMD_TYPE = POSITIVE_CMD_TYPE;
         SELECT_CMD_TYPE = Command.ITEM;
@@ -209,30 +209,29 @@ public final class Desktop implements CommandListener,
         ITEM_CMD_TYPE = Command.ITEM;
 
         // platform-specific hacks
-//#ifdef __ALL__
-        if (cz.kruch.track.TrackingMIDlet.sonyEricssonEx) {
-            CANCEL_CMD_TYPE = Command.BACK;
-        }
-        if (cz.kruch.track.TrackingMIDlet.symbian) {
-            SELECT_CMD_TYPE = Command.SCREEN; 
-            ITEM_CMD_TYPE = Command.SCREEN;
-        }
-        if (cz.kruch.track.TrackingMIDlet.uiq) {
-            BACK_CMD_TYPE = Command.EXIT;
-        }
-        if ("Exit".equals(midlet.getAppProperty(cz.kruch.track.TrackingMIDlet.JAD_UI_RIGHT_KEY))) {
-            EXIT_CMD_TYPE = Command.EXIT;
-        }
-//#elifdef __J9__
-        POSITIVE_CMD_TYPE = Command.ITEM;
-        EXIT_CMD_TYPE = Command.ITEM;
-//#elifdef __RIM__
+//#ifdef __RIM__
         EXIT_CMD_TYPE = Command.EXIT;
         SELECT_CMD_TYPE = Command.SCREEN;
         BACK_CMD_TYPE = Command.EXIT;
         CANCEL_CMD_TYPE = Command.EXIT;
+//#elifdef __SYMBIAN__
+        SELECT_CMD_TYPE = Command.SCREEN;
+        ITEM_CMD_TYPE = Command.SCREEN;
+        if (cz.kruch.track.TrackingMIDlet.uiq) {
+            BACK_CMD_TYPE = Command.EXIT;
+        }
 //#elifdef __ANDROID__
         CANCEL_CMD_TYPE = Command.BACK;
+//#elifdef __J9__
+        POSITIVE_CMD_TYPE = Command.ITEM;
+        EXIT_CMD_TYPE = Command.ITEM;
+//#elifdef __ALL__
+        if (cz.kruch.track.TrackingMIDlet.sonyEricssonEx) {
+            CANCEL_CMD_TYPE = Command.BACK;
+        }
+        if ("Exit".equals(midlet.getAppProperty(cz.kruch.track.TrackingMIDlet.JAD_UI_RIGHT_KEY))) {
+            EXIT_CMD_TYPE = Command.EXIT;
+        }
 //#endif
 
         // init static members

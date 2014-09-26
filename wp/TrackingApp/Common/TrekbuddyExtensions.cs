@@ -972,7 +972,7 @@ namespace net.trekbuddy.wp8
             Canvas.SetTop(i, y);
             updateClip(i, x, y);
             i.Width = w;
-            i.Height = h;
+            i.MinHeight = h;
             i.Content = label;
             i.FontSize = (double)Application.Current.Resources["PhoneFontSizeMediumLarge"];
             i.FontFamily = (FontFamily)Application.Current.Resources["PhoneFontFamilySemiLight"];
@@ -982,9 +982,6 @@ namespace net.trekbuddy.wp8
             i.ManipulationCompleted += i_ManipulationCompleted;
             //add(i);
             cl.Children.Add(i);
-#if LOG_RENDER
-            CN1Extensions.Log("SLI.DrawRect perform");
-#endif
         }
 
         void i_ManipulationCompleted(object sender, System.Windows.Input.ManipulationCompletedEventArgs e)

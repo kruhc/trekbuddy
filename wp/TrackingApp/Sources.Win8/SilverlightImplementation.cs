@@ -44,7 +44,7 @@ namespace com.codename1.impl
         private readonly NativeGraphics globalGraphics = new NativeGraphics();
         private NativeFont defaultFont;
         private LocationManager locationManager;
-        private int displayWidth = -1, displayHeight = -1, fpX, fpY;
+        private int displayWidth = -1, displayHeight = -1/*, fpX, fpY*/;
         private bool isPinch;
 #if __CT_RENDER
         private List<OperationPending> ctPaints;
@@ -2007,7 +2007,7 @@ namespace com.codename1.impl
         public WriteableBitmap wbmp;
         public Image cl0, cl1;
 #else
-        public Canvas cl0, cl1;
+        /*public Canvas cl0, cl1;*/
 #endif
 
         public override void @this()

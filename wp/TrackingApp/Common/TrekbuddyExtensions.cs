@@ -527,6 +527,22 @@ namespace net.trekbuddy.wp8
                         popup.IsOpen = true; 
                     }
                     break;
+                case "create-file":
+                    {
+                        // move to FilePI.cs when/if Storage API is extended
+                        string path = SilverlightImplementation.relativePath(SilverlightImplementation.nativePath(n2[0] as java.lang.String));
+#if LOG
+                        CN1Extensions.Log("create local file {0}", path);
+#endif
+                        using (IsolatedStorageFile store = IsolatedStorageFile.GetUserStoreForApplication())
+                        {
+                            using (IsolatedStorageFileStream unused = store.CreateFile(path))
+                            {
+                                // nothing to do
+                            }
+                        }
+                    } 
+                    break;
             }
             return javaResult;
         }

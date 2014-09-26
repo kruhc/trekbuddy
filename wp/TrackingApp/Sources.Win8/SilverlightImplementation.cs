@@ -255,7 +255,10 @@ namespace com.codename1.impl
         {
             displayHeight = (int)cl.ActualHeight;
             displayWidth = (int)cl.ActualWidth;
-            cz.kruch.track.ui.Desktop._fscreen.sizeChanged(displayWidth, displayHeight);
+            if (cz.kruch.track.ui.Desktop._fscreen != null) 
+            {
+                cz.kruch.track.ui.Desktop._fscreen.sizeChanged(displayWidth, displayHeight);
+            }
         }
 
         #endregion

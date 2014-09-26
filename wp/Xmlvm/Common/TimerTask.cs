@@ -45,8 +45,11 @@ namespace java.util
                 if (period == System.Threading.Timeout.Infinite)
                 {
                     System.Diagnostics.Debug.WriteLine("Disposing one-shot timer; {0}", this);
-                    nt.Dispose();
-                    nt = null;
+                    if (nt != null) // check is necessary, may be cancelled during long execution... ???
+                    {
+                        nt.Dispose();
+                        nt = null;
+                    }
                 }
             }
         }

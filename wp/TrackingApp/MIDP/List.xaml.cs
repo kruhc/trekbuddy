@@ -118,12 +118,14 @@ namespace TrackingApp
         {
             if (FileBrowserHelper.IsActive(contextObject))
             {
-                if (FileBrowserHelper.IsFile((((sender as StackPanel).Children[1] as TextBlock).Text)))
+                string filename = (((sender as StackPanel).Children[1] as TextBlock).Text);
+                string[] cmds = FileBrowserHelper.GetContextCommands(contextObject, filename);
+                if (cmds != null && cmds.Length != 0)
                 {
                     ContextMenu ctxMenu = new ContextMenu();
                     ctxMenu.IsFadeEnabled = false;
                     ctxMenu.IsZoomEnabled = false;
-                    foreach (string cmd in FileBrowserHelper.GetContextCommands(contextObject))
+                    foreach (string cmd in cmds)
                     {
                         MenuItem ctxMenuItem = new MenuItem()
                         {

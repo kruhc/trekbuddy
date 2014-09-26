@@ -15,6 +15,7 @@ namespace TrackingApp
         private static string CMD_DELETE = AppResources.CommandDelete;
 
         private static readonly string[] FB_CMDS = { CMD_UPLOAD, CMD_DELETE };
+        private static readonly string[] FF_CMDS = { CMD_DELETE };
         private static readonly string[] WY_CMDS = { CMD_UPLOAD };
 
         private FileBrowserHelper()
@@ -45,7 +46,7 @@ namespace TrackingApp
             return !name.EndsWith("/") && !name.Equals("..");
         }
 
-        public static string[] GetContextCommands(object contextObject)
+        public static string[] GetContextCommands(object contextObject, string fileName)
         {
             if (contextObject is java.lang.String)
             {
@@ -53,9 +54,29 @@ namespace TrackingApp
             }
             else if (contextObject is cz.kruch.track.ui.FileBrowser)
             {
-                return FB_CMDS;
+                if (".." == fileName)
+                {
+                    return null;
+                }
+                string url = GetCurrentUrl(contextObject);
+                bool isdir;
+                SilverlightImplementation.FsType fsType;
+                string natPath = SilverlightImplementation.nativePath(url.toJava());
+                string path = SilverlightImplementation.relativePath(natPath, out fsType, out isdir);
+                if (fsType == SilverlightImplementation.FsType.Local)
+                {
+                    if (fileName.EndsWith("/"))
+                    {
+                        return FF_CMDS;
+                    }
+                    else
+                    {
+                        return FB_CMDS;
+                    }
+                }
+                return null;
             }
-            throw new ArgumentException("contextObject");
+            throw new ArgumentException("contextObject: " + contextObject);
         }
 
         private static string GetCurrentUrl(object contextObject)
@@ -136,7 +157,18 @@ namespace TrackingApp
                                         AppResources.ApplicationTitle, MessageBoxButton.OK);
                     }
             } else if (cmd == CMD_DELETE) {
-                MessageBox.Show("Not implemented yet :-(", AppResources.ApplicationTitle, MessageBoxButton.OK);
+                if (item.EndsWith("/")) 
+                {
+                    net.trekbuddy.wp8.LocalStorage.DeleteFolder(path);
+                }
+                else
+                {
+                    net.trekbuddy.wp8.LocalStorage.DeleteFile(path);
+                }
+#if LOG
+                CN1Extensions.Log("FileBrowserHelper.action delete; {0}", path);
+#endif
+                (contextObject as cz.kruch.track.ui.FileBrowser).refresh();
             }
         }
 

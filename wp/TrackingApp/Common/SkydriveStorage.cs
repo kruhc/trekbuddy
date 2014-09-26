@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using Microsoft.Live;
+using Microsoft.Phone.BackgroundTransfer;
 using Microsoft.Phone.Net.NetworkInformation;
 
 using com.codename1.impl;
@@ -87,12 +88,33 @@ namespace net.trekbuddy.wp8
             return instance;
         }
 
+        private void Invalidate()
+        {
+            ResetClient();
+            client = null;
+            instance = null;
+        }
+
         private SkydriveStorage(LiveConnectClient client)
         {
             this.client = client;
+            this.ResetClient();
             this.fileIds = new Dictionary<string, string>(16);
             this.fileIds[""] = "me/skydrive";
             this.fileSizes = new Dictionary<string, int>(16);
+        }
+
+        private void ResetClient()
+        {
+            this.client.BackgroundTransferPreferences = BackgroundTransferPreferences.AllowCellularAndBattery;
+            foreach (BackgroundTransferRequest request in BackgroundTransferService.Requests)
+            {
+#if LOG
+                CN1Extensions.Log("Cancelling pending request {0}", request.RequestUri);
+#endif
+                BackgroundTransferService.Remove(request);
+                request.Dispose();
+            }
         }
 
         private static async Task<LiveConnectClient> InitializeAsync()
@@ -176,6 +198,11 @@ namespace net.trekbuddy.wp8
                 try
                 {
                     result = skydrive.ListFiles(nativePath).SafeWait("Sky.listSkydriveFiles failed; ").ToArray();
+                }
+                catch (LiveConnectException e)
+                {
+                    skydrive.Invalidate();
+                    throw;
                 }
                 finally
                 {
@@ -261,13 +288,16 @@ namespace net.trekbuddy.wp8
 
             string fileName = null, relPath = null, folderPath = null;
             GetTargetRelPath(source, targetPath, out fileName, out relPath, out folderPath);
-            destPath = targetPath + "/" + relPath + "/" + fileName;
+            if (!string.IsNullOrEmpty(relPath))
+            {
+                targetPath += "/" + relPath;
+            }
+            destPath = String.Format("{0}/{1}", targetPath, fileName);
 
             UIHelper.showProgressBar(AppResources.OneDriveCopyingFileProgress);
             try
             {
-                skydrive.CopyFile(fileName, skydrive.fileIds[folderPath + "/" + fileName], 
-                    Path.Combine(targetPath, relPath)).SafeWait();
+                skydrive.CopyFile(fileName, skydrive.fileIds[folderPath + "/" + fileName], targetPath).SafeWait();
             }
             finally
             {
@@ -277,7 +307,7 @@ namespace net.trekbuddy.wp8
             return true;
         }
 
-        private static void GetTargetRelPath(Uri source, string pathBase, 
+        private static void GetTargetRelPath(Uri source, string pathBase,
             out string fileName, out string relPath, out string folderPath)
         {
             fileName = Path.GetFileName(source.LocalPath);
@@ -312,7 +342,7 @@ namespace net.trekbuddy.wp8
             string[] fragments = path.Split('/');
             string partial = "", parent = "", id = null;
             int idx = 0, N = fragments.Length;
-            for ( ; idx < N; idx++)
+            for (; idx < N; idx++)
             {
                 parent = partial;
                 if (String.IsNullOrEmpty(partial))
@@ -334,7 +364,7 @@ namespace net.trekbuddy.wp8
                     break;
                 }
             }
-            for ( ; idx < N; )
+            for (; idx < N; )
             {
                 await ListFiles(parent).ConfigureAwait(false);
                 if (fileIds.ContainsKey(partial))
@@ -385,7 +415,7 @@ namespace net.trekbuddy.wp8
             var progressHandler = new Progress<LiveOperationProgress>((progress) =>
             {
                 System.Diagnostics.Debug.WriteLine("Progress: {0} ", progress.ProgressPercentage);
-                UIHelper.updateProgressBar(String.Format(AppResources.OneDriveUploadingProgressPercent, 
+                UIHelper.updateProgressBar(String.Format(AppResources.OneDriveUploadingProgressPercent,
                                            displayPath, (int)progress.ProgressPercentage));
             });
 
@@ -480,13 +510,15 @@ namespace net.trekbuddy.wp8
 
         private async Task CopyFile(string name, string id, string targetPath, DateTime? remoteUpdated = null)
         {
-            string destPath = Path.Combine(targetPath, name);
-            int fileSize = fileSizes[id];
-            long realSize = 0;
+            string destPath = string.Format("{0}/{1}", targetPath, name); // Path.Combine(targetPath, name);
+            int fileSize = -1;
+            fileSizes.TryGetValue(id, out fileSize);
+
 #if LOG
-            CN1Extensions.Log("Downloading file {0} of size {1} to {2}", name, fileSize, destPath);
+            CN1Extensions.Log("Copy file {0}[{1},{2}] of size {3} to {4}", name, id, remoteUpdated, fileSize, destPath);
 #endif
 
+            // compare timestamps
             if (remoteUpdated.HasValue)
             {
                 using (IsolatedStorageFile instance = IsolatedStorageFile.GetUserStoreForApplication())
@@ -495,7 +527,7 @@ namespace net.trekbuddy.wp8
                     {
                         DateTimeOffset localUpdated = instance.GetLastWriteTime(destPath);
 #if LOG
-                        CN1Extensions.Log("File {0} exists, last updated {1}, remote updated {2}", name, localUpdated,remoteUpdated);
+                        CN1Extensions.Log("File {0} exists, last updated {1}, remote updated {2}", name, localUpdated, remoteUpdated);
 #endif
                         if (localUpdated.CompareTo(new DateTimeOffset(remoteUpdated.Value)) > 0)
                         {
@@ -508,6 +540,74 @@ namespace net.trekbuddy.wp8
                 }
             }
 
+#if true
+
+            // show progress
+            UIHelper.updateProgressBar(String.Format(AppResources.OneDriveDownloadingProgressPercent, name, 0));
+            var progressHandler = new Progress<LiveOperationProgress>((progress) =>
+                {
+#if LOG
+                    CN1Extensions.Log("Background progress: {0} ", progress.ProgressPercentage);
+#endif
+                    UIHelper.updateProgressBar(String.Format(AppResources.OneDriveDownloadingProgressPercent,
+                                                name, (int)progress.ProgressPercentage));
+                });
+
+            // disable screensaver (if enabled)
+            bool ss = Microsoft.Phone.Shell.PhoneApplicationService.Current.UserIdleDetectionMode == Microsoft.Phone.Shell.IdleDetectionMode.Enabled;
+            if (ss)
+            {
+                Microsoft.Phone.Shell.PhoneApplicationService.Current.UserIdleDetectionMode = Microsoft.Phone.Shell.IdleDetectionMode.Disabled;
+            }
+
+            // download file
+            var ct = new CancellationToken();
+            LiveOperationResult result = await client.BackgroundDownloadAsync(id + "/content", new Uri("/shared/transfers/" + name, UriKind.RelativeOrAbsolute),
+                ct, progressHandler).ConfigureAwait(false);
+#if LOG
+            CN1Extensions.Log("Download completed? {0}, details: {1} ", result.RawResult, result.Result);
+#endif
+
+            // restore screensaver (if was enabled)
+            if (ss)
+            {
+                Microsoft.Phone.Shell.PhoneApplicationService.Current.UserIdleDetectionMode = Microsoft.Phone.Shell.IdleDetectionMode.Enabled;
+            }
+
+            // move to target destination
+            object downloadLocation;
+            if (result.Result.TryGetValue("downloadLocation", out downloadLocation))
+            {
+                using (IsolatedStorageFile instance = IsolatedStorageFile.GetUserStoreForApplication())
+                {
+                    if (!instance.DirectoryExists(targetPath))
+                    {
+#if LOG
+                        CN1Extensions.Log("Target folder {0} does not exist yet", targetPath);
+#endif
+                        instance.CreateDirectory(targetPath);
+                    }
+                    if (instance.FileExists(destPath))
+                    {
+#if LOG
+                        CN1Extensions.Log("Target file {0} already exist", destPath);
+#endif
+                        instance.DeleteFile(destPath);
+                    }
+                    instance.MoveFile((string) downloadLocation, destPath);
+#if LOG
+                    CN1Extensions.Log("File {0} moved from transfers to {1}", downloadLocation, destPath);
+#endif
+                }
+            }
+            else 
+            {
+                throw new IOException(String.Format("Download of {0} failed", name));
+            }
+
+#else // old way of downloading
+
+            // create target folder
             using (IsolatedStorageFile instance = IsolatedStorageFile.GetUserStoreForApplication())
             {
                 if (!instance.DirectoryExists(targetPath))
@@ -519,6 +619,7 @@ namespace net.trekbuddy.wp8
                 }
             }
 
+            // show progress
             UIHelper.updateProgressBar(String.Format(AppResources.OneDriveDownloadingProgressPercent, name, 0));
             var progressHandler = new Progress<LiveOperationProgress>((progress) =>
                 {
@@ -526,12 +627,21 @@ namespace net.trekbuddy.wp8
 #if LOG
                     CN1Extensions.Log("Progress: {0}, total: {1} ", progress.ProgressPercentage, totalProgress);
 #endif
-                    UIHelper.updateProgressBar(String.Format(AppResources.OneDriveDownloadingProgressPercent, 
-                                               name, (int)/*progress.ProgressPercentage*/totalProgress));
+                    UIHelper.updateProgressBar(String.Format(AppResources.OneDriveDownloadingProgressPercent,
+                                                name, (int)/*progress.ProgressPercentage*/totalProgress));
                 });
 
+            // disable screensaver (if enabled)
+            bool ss = Microsoft.Phone.Shell.PhoneApplicationService.Current.UserIdleDetectionMode == Microsoft.Phone.Shell.IdleDetectionMode.Enabled;
+            if (ss)
+            {
+                Microsoft.Phone.Shell.PhoneApplicationService.Current.UserIdleDetectionMode = Microsoft.Phone.Shell.IdleDetectionMode.Disabled;
+            }
+
+            // download file
             var ct = new CancellationToken();
-            LiveDownloadOperationResult result = await client.DownloadAsync(id + "/content", ct, progressHandler).ConfigureAwait(false);
+            LiveDownloadOperationResult result = await client.DownloadAsync(id + "/content",
+                ct, progressHandler).ConfigureAwait(false);
             using (IsolatedStorageFile instance = IsolatedStorageFile.GetUserStoreForApplication())
             {
                 using (Stream output = instance.OpenFile(destPath, FileMode.Create, FileAccess.Write))
@@ -542,9 +652,18 @@ namespace net.trekbuddy.wp8
                     }
                 }
             }
+
+            // restore screensaver (if was enabled)
+            if (ss)
+            {
+                Microsoft.Phone.Shell.PhoneApplicationService.Current.UserIdleDetectionMode = Microsoft.Phone.Shell.IdleDetectionMode.Enabled;
+            }
+
 #if LOG
             CN1Extensions.Log("Downloading file {0} finished", name);
 #endif
+
+            // get downloaded file size
             using (IsolatedStorageFile instance = IsolatedStorageFile.GetUserStoreForApplication())
             {
                 using (IsolatedStorageFileStream stream = instance.OpenFile(destPath, FileMode.Open, FileAccess.Read))
@@ -555,6 +674,9 @@ namespace net.trekbuddy.wp8
 #if LOG
             CN1Extensions.Log("Downloaded file {0} of size {1}, expected {2}", destPath, realSize, fileSize);
 #endif
+
+#endif // old way of downloading
+
         }
     }
 }

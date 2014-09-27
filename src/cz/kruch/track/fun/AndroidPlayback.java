@@ -28,8 +28,8 @@ final class AndroidPlayback extends Playback {
 
     boolean playSounds() {
 
-        // better be called from background
-        cz.kruch.track.ui.Desktop.getDiskWorker().enqueue(this);
+        // better be called on background
+        (new Thread(this)).start();
 
         // no way to tell what will happen, so be positive
         return true;
@@ -46,10 +46,33 @@ final class AndroidPlayback extends Playback {
         // player
         MediaPlayer player = null;
 
+        // duration measurement
+        final long t0 = System.currentTimeMillis();
+
         try {
             // create player
             player = new MediaPlayer();
+            player.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
+                
+                @Override
+                public void onCompletion(MediaPlayer mp) {
+
+                    // release player
+                    mp.release();
+                    
+                    // log duration
+                    final long t1 = System.currentTimeMillis();
+                    state.append("x-on completion (" + (t1 - t0) + " ms) -> ");
+
+                    // signal
+                    synchronized (this) {
+                        notify();
+                    }
+                }
+            });
+            state.append("x-set listener -> ");
             player.setDataSource(new RandomAccessFile(new File(new URI(url)), "r").getFD());
+            state.append("x-set datasource -> ");
             player.prepare();
             state.append("x-prepared -> ");
 
@@ -60,10 +83,16 @@ final class AndroidPlayback extends Playback {
             // success
             result = true;
 
+            // wait for end
+            synchronized (this) {
+                wait(5000); // allow max 5 secs for playback
+            }
+            state.append("x-finished -> ");
+
         } catch (Throwable t) {
             
             // log error
-            Log.e(TAG, "MediaPlayer failed", t);
+            Log.e(TAG, "playback failed", t);
             state.append("sound error: ").append(t.toString()).append(" -> ");
 
             // cleanup

@@ -37,14 +37,7 @@ final class Jsr135Playback extends Playback implements PlayerListener {
          *             when audio hangs. It is better not to use any worker because MMAPI seems
          *             unrealiable on most devices.
          */
-        final Thread at = new Thread(this);
-//#ifdef __SYMBIAN__
-        at.setPriority(Thread.MAX_PRIORITY); // helps avoid interruption???
-//#endif
-        at.start();
-//#ifdef __SYMBIAN__
-        Thread.yield(); // give audio thread a chance before others (mainly disk worker)
-//#endif
+        (new Thread(this)).start();
 
         // no way to tell what will happen, so be positive
         return true;
@@ -92,9 +85,15 @@ final class Jsr135Playback extends Playback implements PlayerListener {
             // success
             result = true;
 
+            // wait for end
+            synchronized (this) {
+                wait(5000); // allow max 5 secs for playback
+            }
+            state.append("x-finished -> ");
+
         } catch (Throwable t) {
 //#ifdef __LOG__
-            log.error("play failed: " + t);
+            log.error("playback failed: " + t);
             t.printStackTrace();
 //#endif
             state.append("error: ").append(t.toString()).append(" -> ");
@@ -121,6 +120,11 @@ final class Jsr135Playback extends Playback implements PlayerListener {
 
             // update state
             state.append("x-closed -> ");
+
+            // signal end
+            synchronized (this) {
+                notify();
+            }
 
         } else if (PlayerListener.END_OF_MEDIA.equals(event) || PlayerListener.ERROR.equals(event) || PlayerListener.STOPPED.equals(event)) {
 

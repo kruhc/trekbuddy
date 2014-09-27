@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using Microsoft.Live;
 using Microsoft.Phone.BackgroundTransfer;
+using Microsoft.Phone.Info;
 using Microsoft.Phone.Net.NetworkInformation;
 
 using com.codename1.impl;
@@ -106,7 +107,6 @@ namespace net.trekbuddy.wp8
 
         private void ResetClient()
         {
-            this.client.BackgroundTransferPreferences = BackgroundTransferPreferences.AllowCellularAndBattery;
             foreach (BackgroundTransferRequest request in BackgroundTransferService.Requests)
             {
 #if LOG
@@ -154,7 +154,8 @@ namespace net.trekbuddy.wp8
                 string type = (string)content["type"];
                 string filename = (string)content["name"];
                 string fileId = (string)content["id"];
-                int fileSize = (int)content["size"];
+                object fileSizeObj = content["size"];
+                int fileSize = fileSizeObj is Int32 ? (int)fileSizeObj : -1;
 #if LOG
                 CN1Extensions.Log("item {0} type {1} id {2} size {3}", filename, type, fileId, fileSize);
 #endif
@@ -197,7 +198,8 @@ namespace net.trekbuddy.wp8
                 UIHelper.showProgressBar(AppResources.OneDriveListingFolderProgress);
                 try
                 {
-                    result = skydrive.ListFiles(nativePath).SafeWait("Sky.listSkydriveFiles failed; ").ToArray();
+                    List<string> list = skydrive.ListFiles(nativePath).SafeWait<List<string>>("Sky.listSkydriveFiles failed; ");
+                    result = list.ToArray();
                 }
                 catch (LiveConnectException e)
                 {
@@ -225,7 +227,7 @@ namespace net.trekbuddy.wp8
             UIHelper.showProgressBar(AppResources.OneDriveUploadingProgress);
             try
             {
-                result = skydrive.UploadFileImpl(localPath, targetItem, targetPath).SafeWait();
+                result = skydrive.UploadFileImpl(localPath, targetItem, targetPath).SafeWait<bool>();
             }
             finally
             {
@@ -243,7 +245,7 @@ namespace net.trekbuddy.wp8
                 return null;
             }
 
-            return skydrive.CreateFolder(fullPath, parentId, forceCreation).SafeWait();
+            return skydrive.CreateFolder(fullPath, parentId, forceCreation).SafeWait<string>();
         }
 
         internal static bool CopyFolder(Uri source, string targetPath, out string destPath)
@@ -558,6 +560,16 @@ namespace net.trekbuddy.wp8
             if (ss)
             {
                 Microsoft.Phone.Shell.PhoneApplicationService.Current.UserIdleDetectionMode = Microsoft.Phone.Shell.IdleDetectionMode.Disabled;
+            }
+
+            // set strategy
+            if (DeviceStatus.PowerSource == PowerSource.Battery)
+            {
+                client.BackgroundTransferPreferences = BackgroundTransferPreferences.AllowCellularAndBattery;
+            }
+            else
+            {
+                client.BackgroundTransferPreferences = BackgroundTransferPreferences.None;
             }
 
             // download file

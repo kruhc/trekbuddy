@@ -5,7 +5,7 @@
     <Language code="cs" />
     <Language code="pl" />
   </Languages>
-  <App xmlns="" ProductID="{669b4266-bdde-40c6-8826-9d17151d127c}" Title="TrekBuddy" RuntimeType="Silverlight" Version="1.29u1" Genre="apps.normal" Author="kruch" Description="Not yet completed port of Java version." Publisher="kruch" PublisherID="{c62c6d07-91ca-4acc-8741-308c0f82a38b}">
+  <App xmlns="" ProductID="{669b4266-bdde-40c6-8826-9d17151d127c}" Title="TrekBuddy" RuntimeType="Silverlight" Version="1.30u1" Genre="apps.normal" Author="kruch" Description="Not yet completed port of Java version." Publisher="kruch" PublisherID="{c62c6d07-91ca-4acc-8741-308c0f82a38b}">
     <IconPath IsRelative="true" IsResource="false">Assets\ApplicationIcon.png</IconPath>
     <Capabilities>
       <Capability Name="ID_CAP_NETWORKING" />

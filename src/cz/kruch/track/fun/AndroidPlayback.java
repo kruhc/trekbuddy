@@ -17,11 +17,13 @@ import java.net.URI;
  *
  * @author kruhc@seznam.cz
  */
-final class AndroidPlayback extends Playback {
+final class AndroidPlayback extends Playback implements MediaPlayer.OnCompletionListener {
 //#ifdef __LOG__
     private static final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("AndroidPlayback");
 //#endif
     private static final String TAG = cz.kruch.track.TrackingMIDlet.APP_TITLE;
+
+    private long t0;
 
     AndroidPlayback() {
     }
@@ -47,29 +49,12 @@ final class AndroidPlayback extends Playback {
         MediaPlayer player = null;
 
         // duration measurement
-        final long t0 = System.currentTimeMillis();
+        t0 = System.currentTimeMillis();
 
         try {
             // create player
             player = new MediaPlayer();
-            player.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
-                
-                @Override
-                public void onCompletion(MediaPlayer mp) {
-
-                    // release player
-                    mp.release();
-                    
-                    // log duration
-                    final long t1 = System.currentTimeMillis();
-                    state.append("x-on completion (" + (t1 - t0) + " ms) -> ");
-
-                    // signal
-                    synchronized (this) {
-                        notify();
-                    }
-                }
-            });
+            player.setOnCompletionListener(this);
             state.append("x-set listener -> ");
             player.setDataSource(new RandomAccessFile(new File(new URI(url)), "r").getFD());
             state.append("x-set datasource -> ");
@@ -102,6 +87,22 @@ final class AndroidPlayback extends Playback {
         }
 
         return result;
+    }
+
+    @Override
+    public void onCompletion(MediaPlayer mp) {
+
+        // release player
+        mp.release();
+
+        // log duration
+        final long t1 = System.currentTimeMillis();
+        state.append("x-on completion (").append(t1 - t0).append(" ms) -> ");
+
+        // signal
+        synchronized (this) {
+            notify();
+        }
     }
 }
 

@@ -36,7 +36,7 @@ namespace net.trekbuddy.wp8
         const string FOLDER_UI_PROFILES = @"TrekBuddy\ui-profiles";
         const string FOLDER_WPTS        = @"TrekBuddy\wpts";
 
-        const string ALERT_SOUND        = "MIDPAlert.mp3";
+        const string ALERT_SOUND        = "MIDPAlert.wav";
 
         private static Exception noUiMirrorError;
 
@@ -291,7 +291,7 @@ namespace net.trekbuddy.wp8
                         {
                             player.Stop();
                         }
-                        player.Track = new AudioTrack(new Uri(path, UriKind.Relative), "unknown", null, null, null);
+                        player.Track = new AudioTrack(new Uri(path, UriKind.RelativeOrAbsolute), "unknown", null, null, null);
                         player.Play();
 #if LOG
                         CN1Extensions.Log("error? {0}", player.Error);
@@ -997,7 +997,7 @@ namespace net.trekbuddy.wp8
             e.Handled = true;
         }
 
-        static void i_Click(object sender, RoutedEventArgs e)
+        void i_Click(object sender, RoutedEventArgs e)
         {
 #if LOG
             CN1Extensions.Log("DrawButton click");
@@ -1006,7 +1006,7 @@ namespace net.trekbuddy.wp8
             double x = (double)button.GetValue(Canvas.LeftProperty);
             double y = (double)button.GetValue(Canvas.TopProperty);
             //cz.kruch.track.ui.Desktop._fscreen.pointerPressed((int)(x + button.Width / 2), (int)(y + button.Height / 2));
-            cz.kruch.track.ui.Desktop._fscreen.buttonPressed((int)(x + button.Width / 2), (int)(y + button.Height / 2));
+            cz.kruch.track.ui.Desktop._fscreen.buttonPressed((int)(x + button.Width / 2), (int)(y + /*button.Height*/h / 2));
         }
 
 #if __USE_WBMP

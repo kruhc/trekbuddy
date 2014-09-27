@@ -19,8 +19,11 @@ final class WPPlayback extends Playback {
 
     boolean playSounds() {
 
-        // better be called from background
-        cz.kruch.track.ui.Desktop.getDiskWorker().enqueue(this);
+        // need not be called on background, we are using background audio player
+        /*
+         * 2014-08-25: When called for wpt reached, it is already called from event worker thread.
+         */
+        run(); // api.lang.ThreadPool.QueueUserWorkItem(this);
 
         // no way to tell what will happen, so be positive
         return true;

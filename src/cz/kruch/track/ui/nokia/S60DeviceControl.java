@@ -47,17 +47,27 @@ final class S60DeviceControl extends NokiaDeviceControl {
 
     /** @Override */
     protected void handleInvert() {
-        if (backlight == 0) {
-            if (task != null) {
-                task.cancel();
-                task = null;
+
+        ensureInitialized();
+
+        if (inactivity != null) {
+            try {
+                inactivity.setLights(values[backlight]);
+            } catch (Exception e) { // IOE or SE
+                lastError = "Service not accessible. " + e.toString();
             }
         } else {
-            ensureInitialized();
-            super.setLights();
-            if (task == null) {
-                cz.kruch.track.ui.Desktop.scheduleAtFixedRate(task = new DeviceControl(),
-                                                              REFRESH_PERIOD, REFRESH_PERIOD);
+            if (backlight == 0) {
+                if (task != null) {
+                    task.cancel();
+                    task = null;
+                }
+            } else {
+                super.setLights();
+                if (task == null) {
+                    cz.kruch.track.ui.Desktop.scheduleAtFixedRate(task = new DeviceControl(),
+                                                                  REFRESH_PERIOD, REFRESH_PERIOD);
+                }
             }
         }
     }

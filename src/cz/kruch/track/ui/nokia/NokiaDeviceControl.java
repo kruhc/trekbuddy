@@ -57,7 +57,10 @@ class NokiaDeviceControl extends DeviceControl {
 
     /** @Override */
     String level() {
-        return Integer.toString(values[backlight]) + "%";
+        if (backlight == 0) {
+            return "off";
+        }
+        return Integer.toString(values[backlight]).concat("%");
     }
 
     /** @Override */

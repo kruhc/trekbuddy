@@ -99,13 +99,6 @@ final class MapView extends View {
     /**
      * @deprecated hack
      */
-    Position getPosition() {
-        return mapViewer.getPosition();
-    }
-
-    /**
-     * @deprecated hack
-     */
     void setPosition(Position position) {
         mapViewer.setPosition(position);
     }
@@ -228,8 +221,6 @@ final class MapView extends View {
                 Config.lat = qc.getLat();
                 Config.lon = qc.getLon();
             }
-            // not too frequent, reduce code size
-//            QualifiedCoordinates.releaseInstance(qc);
             Config.updateInBackground(Config.VARS_090);
         }
 
@@ -242,14 +233,10 @@ final class MapView extends View {
             if (map.isWithin(qc)) {
                 setPosition(map.transform(qc));
             } else {
-                // not too frequent, reduce code size
-//                QualifiedCoordinates.releaseInstance(qc);
                 qc = QualifiedCoordinates.newInstance(Config.lat, Config.lon);
                 if (map.isWithin(qc)) {
                     setPosition(map.transform(qc));
                 }
-                // not too frequent, reduce code size
-//                QualifiedCoordinates.releaseInstance(qc);
             }
         }
     }
@@ -396,7 +383,7 @@ final class MapView extends View {
 
                 // calculate number of scrolls
                 int steps = 1;
-                if (navigator._getLoadingSlices() || navigator._getInitializingMap()) {
+                if (navigator._isLoading()) {
                     steps = 0;
                 } else if (repeated) {
                     steps = getScrolls();
@@ -721,7 +708,7 @@ final class MapView extends View {
     private void loadSiblingMap(final int action) {
 
         // find sibling in atlas
-        if (navigator.isAtlas() && !navigator._getInitializingMap() && !navigator._getLoadingSlices()) {
+        if (navigator.isAtlas() && !navigator._isLoading()) {
 
             // bounds hit?
             final char neighbour = mapViewer.boundsHit(action);
@@ -772,7 +759,7 @@ final class MapView extends View {
         Desktop.synced = false;
 
         // tracking?
-        if (!Desktop.browsing && !navigator._getInitializingMap()) {
+        if (!Desktop.browsing && !navigator._isLoading()) {
 
 //#ifdef __LOG__
             if (log.isEnabled()) log.debug("tracking...");
@@ -847,7 +834,7 @@ final class MapView extends View {
                     } else { // off current map
 
                         // load sibling map, if exists
-                        if (navigator.isAtlas() && !navigator._getInitializingMap() && !navigator._getLoadingSlices()) {
+                        if (navigator.isAtlas() && !navigator._isLoading()) {
 
                             // switch alternate map
                             navigator.startAlternateMap(navigator.getAtlas().getLayer(), qc);
@@ -918,8 +905,7 @@ final class MapView extends View {
         return Desktop.MASK_NONE;
     }
 
-    // TODO fix visibility
-    static void setBasicOSD(QualifiedCoordinates qc, boolean onMap) {
+    /*private */void setBasicOSD(QualifiedCoordinates qc, boolean onMap) { // TODO fix visibility
         Desktop.osd.setInfo(qc, onMap);
     }
 

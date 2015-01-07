@@ -74,7 +74,10 @@ final class AndroidDeviceControl
 
     @Override
     String level() {
-        return Integer.toString(values[backlight]) + "%";
+        if (backlight == 0) {
+            return "off";
+        }
+        return Integer.toString(values[backlight]).concat("%");
     }
 
     private void invertLevel() {
@@ -119,8 +122,13 @@ final class AndroidDeviceControl
         cz.kruch.track.TrackingMIDlet.getActivity().post(new Runnable() {
             public void run() {
                 if (msg != null) {
-                    ticker = android.app.ProgressDialog.show(cz.kruch.track.TrackingMIDlet.getActivity(),
-                                                             "", msg, true);
+                    if (ticker == null) {
+                        ticker = android.app.ProgressDialog.show(cz.kruch.track.TrackingMIDlet.getActivity(),
+                                                                 "", msg, true);
+                    } else { // should not happen but happens... :(
+                        android.util.Log.w("TrekBuddy", "[app] progress dialog already shown");
+                        ticker.setMessage(msg);
+                    }
                 } else {
                     if (ticker != null) {
                         ticker.dismiss();

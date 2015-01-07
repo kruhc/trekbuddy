@@ -164,15 +164,24 @@ public final class TarInputStream extends InputStream {
             if (cz.kruch.track.maps.Map.useSkip)
 //#endif
             {
-                numRead = this.in.skip(num);
+                long num2 = num;
+//#ifdef __ALL__
+                /*
+                 * let's skip by 2GB max on dumb and S60 devices, may help with proprietary limitations
+                 */
+                if (num2 > Integer.MAX_VALUE) {
+                    num2 = Integer.MAX_VALUE;
+                }
+//#endif
+                numRead = this.in.skip(num2);
 //#ifndef __CN1__
                 /*
                  * Check for SE bug, where skip() returns stream position,
                  * ie. return value of seek() :-)
                  * Fortunately this is also compatible with broken Siemens skip() :-)
                  */
-                if (numRead == this.streamOffset + num) {
-                    numRead = num; // trick - 'for' cycle will quit
+                if (numRead == this.streamOffset + num2) {
+                    numRead = num2; // trick - 'for' cycle will quit
                 }
 //#endif
             } else { // use read to 'skip' - misuse header buffer here ;-)
@@ -297,7 +306,7 @@ public final class TarInputStream extends InputStream {
             }
 
             if (numToSkip > 0) {
-                this.skip(numToSkip);
+                skip(numToSkip);
             }
         }
 

@@ -489,9 +489,6 @@ public final class Desktop implements CommandListener,
                 }
             }
         } catch (Throwable t) {
-//#ifdef __LOG__
-            t.printStackTrace();
-//#endif
             // keep clean
             map = null;
             atlas = null;
@@ -1912,21 +1909,15 @@ public final class Desktop implements CommandListener,
      * why? callback access mixed with event access?
      */
 
-    boolean _getLoadingSlices() {
+    boolean _isLoading() {
         synchronized (loadingLock) {
-            return loadingSlices;
+            return loadingSlices || initializingMap;
         }
     }
 
     private void _setLoadingSlices(final boolean b) {
         synchronized (loadingLock) {
             loadingSlices = b;
-        }
-    }
-
-    boolean _getInitializingMap() {
-        synchronized (loadingLock) {
-            return initializingMap;
         }
     }
 
@@ -3732,6 +3723,11 @@ public final class Desktop implements CommandListener,
                 // layer switch with '7'
                 Desktop.this._switch = "switch".equals(closure);
 
+                // check if there is not loading already in progress (doubleclick issue fix)
+                if (Desktop.this._switch && Desktop.this._isLoading()) {
+                    return;
+                }
+
                 // layer name
                 final String layerName = (String) result;
 
@@ -3759,7 +3755,8 @@ public final class Desktop implements CommandListener,
 
                             // warn user (in overlay dialog??)
                             showWarning(Resources.getString(Resources.DESKTOP_MSG_NO_MAP_FOR_POS) + " '" + layerName + "'.",
-                                        null, next);                            
+                                        null, next);
+
                         } else {
 
                             // restore screen
@@ -3803,6 +3800,11 @@ public final class Desktop implements CommandListener,
 
                 // map switch with '9'
                 Desktop.this._switch = "switch".equals(closure);
+
+                // check if there is not loading already in progress (doubleclick issue fix)
+                if (Desktop.this._switch && Desktop.this._isLoading()) {
+                    return;
+                }
 
                 // trick - focus on these coords once the new map is loaded
                 if (Desktop.this.map != null) {
@@ -3848,6 +3850,7 @@ public final class Desktop implements CommandListener,
             if (throwable == null) {
 
                 try {
+
                     // destroy existing map definitely if it is standalone
                     if (Desktop.this.atlas == null && Desktop.this.map != null) {
 //#ifdef __LOG__
@@ -3914,15 +3917,13 @@ public final class Desktop implements CommandListener,
 
                     // update OSD & navigation UI
                     synchronized (Desktop.renderLock) {
-                        QualifiedCoordinates qc = Desktop.this.map.transform(mapView.getPosition());
-                        MapView.setBasicOSD(qc, true);
+                        final QualifiedCoordinates qc = mapView.getPointer();
+                        mapView.setBasicOSD(qc, true);
                         Desktop.this.updateNavigation(qc);
-                        QualifiedCoordinates.releaseInstance(qc);
-                        qc = null; // gc hint
-                        mapView.updateNavigationInfo(); // TODO ugly
+                        mapView.updateNavigationInfo();
                     }
 
-                    // TODO -- ugly code ends
+                    // TODO --- ugly code ends
 
                     // map is ready
                     Desktop.this._setInitializingMap(false);
@@ -3942,10 +3943,8 @@ public final class Desktop implements CommandListener,
                         }
                         dialog.show();
                     }
+
                 } catch (Throwable t) {
-//#ifdef __LOG__
-                    t.printStackTrace();
-//#endif
 
                     // show user the error
                     Desktop.showError(Resources.getString(Resources.DESKTOP_MSG_USE_MAP_FAILED), t, Desktop.screen);

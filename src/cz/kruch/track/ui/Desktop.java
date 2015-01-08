@@ -2217,7 +2217,7 @@ public final class Desktop implements CommandListener,
 //#ifdef __CN1__
                 boolean noRender = false;
 //#endif
-                synchronized (loadingLock) {
+                synchronized (loadingLock) { // locked for atomicity
                     if (!initializingMap && !loadingSlices) {
                         try {
                             loadingSlices = ((MapView) views[VIEW_MAP]).prerender(); // returns true if loading will start soon

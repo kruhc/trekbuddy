@@ -33,7 +33,7 @@
     <property name="cn1.repository" value="z:\repository\cn1\CodenameOne"/>
     <property name="proguard3.home" value="z:\apps\proguard\3.11"/>
     <property name="proguard4.home" value="z:\apps\proguard\4.11"/>
-    <property name="proguard5.home" value="z:\apps\proguard\5.0"/>
+    <property name="proguard5.home" value="z:\apps\proguard\5.1"/>
 
     <property name="build.dir" value="r:\trekbuddy"/>
     <property name="temp.dir" value="r:\java-temp"/>
@@ -1741,14 +1741,14 @@
 	    <exec executable="${wtk.home}\bin\preverify1.1.exe">
             <arg line="-classpath ${classpath.preverify} -d tmp/preverified tmp/trekbuddy${suffix}-obfuscated.jar"/>
 	    </exec>
-	</target>
+    </target>
 
-	<target name="rim.preverify">
+    <target name="rim.preverify">
         <echo>Using ${classpath.preverify} for preverification...</echo>
-  	    <exec executable="${rim.home}\bin\preverify.exe">
-		    <arg line="-classpath '${classpath.preverify}' -d tmp/preverified tmp/trekbuddy${suffix}-obfuscated.jar"/>
+        <exec executable="${rim.home}\bin\preverify.exe">
+            <arg line="-classpath '${classpath.preverify}' -d tmp/preverified tmp/trekbuddy${suffix}-obfuscated.jar"/>
         </exec>
-	</target>
+    </target>
 
     <target name="dist">
         <delete>

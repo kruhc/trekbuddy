@@ -2,7 +2,11 @@
 
 if "%1"=="" goto help
 if not exist properties\build-%1.properties goto vendor
+
 if "%ANT_HOME%"=="" set ANT_HOME=z:\apps\apache-ant-1.8.2
+
+rem override
+set JAVA_HOME=c:\Program Files (x86)\Java\jdk1.7.0_71
 
 set RESOURCE_LANG=en
 echo Using locale '%RESOURCE_LANG%'

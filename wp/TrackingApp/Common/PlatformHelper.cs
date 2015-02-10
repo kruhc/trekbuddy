@@ -38,6 +38,9 @@ namespace com.codename1.impl
                 }
             }
 #endif
+#if LOG
+            long t0 = System.Environment.TickCount;
+#endif
 #if !__SMART_MS
             sbyte[] buffer = new sbyte[cz.kruch.track.configuration.Config._finputBufferSize];
             global::org.xmlvm._nArrayAdapter<sbyte> ad = new global::org.xmlvm._nArrayAdapter<sbyte>(buffer);
@@ -94,6 +97,10 @@ namespace com.codename1.impl
                 }
                 stream.Seek(0, SeekOrigin.Begin);
             }
+#endif
+#if LOG
+            long t1 = System.Environment.TickCount;
+            TrackingApp.CN1Extensions.Log("PlatformHelper.toStream: {0} from {1}", (t1 - t0), javaStream);
 #endif
             return stream;
         }

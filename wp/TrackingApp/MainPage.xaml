@@ -14,7 +14,9 @@
     shell:SystemTray.IsVisible="True">
 
     <!--LayoutRoot is the root grid where all page content is placed-->
+    <screenSizeSupport:ZoomBox xmlns:screenSizeSupport="clr-namespace:ScreenSizeSupport;assembly=ScreenSizeSupport" ZoomFactor="{Binding DisplayInformationEx.ZoomFactor, Source={StaticResource DisplayInformationEmulator}}">
     <Canvas x:Name="LayoutRoot" Background="Black">
     </Canvas>
+    </screenSizeSupport:ZoomBox>
 
 </phone:PhoneApplicationPage>

@@ -16,6 +16,9 @@ using TrackingApp.Resources;
 //using com.codename1.ui;
 using org.xmlvm;
 
+using ScreenSizeSupport;
+using ScreenSizeSupport.Primitives;
+
 namespace TrackingApp
 {
     public partial class App : Application
@@ -25,6 +28,9 @@ namespace TrackingApp
         /// </summary>
         /// <returns>The root frame of the Phone Application.</returns>
         public static PhoneApplicationFrame RootFrame { get; private set; }
+
+        // Zoom factor for 720p+ devices
+        public static DisplayInformationEmulator DisplayInformationEmulator { get; private set; }
 
         /// <summary>
         /// Backgroung flag.
@@ -44,6 +50,27 @@ namespace TrackingApp
 
             // Standard XAML initialization
             InitializeComponent();
+
+            // Setup for ZoomBox
+            bool wp8wvga = true;
+            if (!System.IO.IsolatedStorage.IsolatedStorageSettings.ApplicationSettings.TryGetValue<bool>("wp8wvga", out wp8wvga))
+            {
+                System.Diagnostics.Debug.WriteLine("App.Launching; wp8wvga setting not present");
+                wp8wvga = true;
+            }
+            DisplayInformationEmulator = Resources["DisplayInformationEmulator"] as DisplayInformationEmulator;
+            double scaleFactor;
+            if (wp8wvga)
+            {
+                scaleFactor = 1.0;
+            }
+            else
+            {
+                scaleFactor = ((double)Application.Current.Host.Content.ScaleFactor) / 100.0;
+            }
+            System.Diagnostics.Debug.WriteLine("App.Launching; using scale factor {0}", scaleFactor);
+            DisplayInformationEmulator.DisplayInformationEx.ZoomFactor = scaleFactor;
+            cz.kruch.track.ui.DeviceScreen._fscaleFactor = scaleFactor;
 
             // Phone-specific initialization
             InitializePhoneApplication();
@@ -112,6 +139,7 @@ namespace TrackingApp
         private void Application_Closing(object sender, ClosingEventArgs e)
         {
             System.Diagnostics.Debug.WriteLine("App.Closing");
+            System.IO.IsolatedStorage.IsolatedStorageSettings.ApplicationSettings["wp8wvga"] = cz.kruch.track.configuration.Config._fwp8wvga;
             instance.destroy();
         }
 

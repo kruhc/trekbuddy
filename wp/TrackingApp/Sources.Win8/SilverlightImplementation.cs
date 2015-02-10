@@ -44,7 +44,7 @@ namespace com.codename1.impl
         private readonly NativeGraphics globalGraphics = new NativeGraphics();
         private NativeFont defaultFont;
         private LocationManager locationManager;
-        private int displayWidth = -1, displayHeight = -1/*, fpX, fpY*/;
+        private int displayWidth, displayHeight/*, fpX, fpY*/;
         private bool isPinch;
 #if __CT_RENDER
         private List<OperationPending> ctPaints;
@@ -114,6 +114,7 @@ namespace com.codename1.impl
                 app.ManipulationCompleted += app_ManipulationCompleted;
                 //app.SupportedOrientations = SupportedPageOrientation.PortraitOrLandscape; // moved to MainPage.xaml
                 app.OrientationChanged += app_OrientationChanged;
+                app.SizeChanged += app_SizeChanged;        
 #if __CT_RENDER
                 CompositionTarget.Rendering += CompositionTarget_Rendering;
 #endif
@@ -255,7 +256,23 @@ namespace com.codename1.impl
         {
             displayHeight = (int)cl.ActualHeight;
             displayWidth = (int)cl.ActualWidth;
+#if LOG
+            TrackingApp.CN1Extensions.Log("Impl.app_OrientationChanged; {0}x{1}", cl.ActualWidth, cl.ActualHeight);
+#endif
             if (cz.kruch.track.ui.Desktop._fscreen != null) 
+            {
+                cz.kruch.track.ui.Desktop._fscreen.sizeChanged(displayWidth, displayHeight);
+            }
+        }
+
+        void app_SizeChanged(object sender, SizeChangedEventArgs e)
+        {
+            displayHeight = (int)cl.ActualHeight;
+            displayWidth = (int)cl.ActualWidth;
+#if LOG
+            TrackingApp.CN1Extensions.Log("Impl.app_SizeChanged; {0}x{1}", cl.ActualWidth, cl.ActualHeight);
+#endif
+            if (cz.kruch.track.ui.Desktop._fscreen != null)
             {
                 cz.kruch.track.ui.Desktop._fscreen.sizeChanged(displayWidth, displayHeight);
             }
@@ -286,7 +303,7 @@ namespace com.codename1.impl
 #endif
             UISynchronizationContext.Dispatcher.InvokeAsync(n1.run);
             /*
-             * why not run directly? how shouldit really behave?
+             * why not run directly? how should it really behave?
              */
         }
 
@@ -297,26 +314,29 @@ namespace com.codename1.impl
 
         public override int getDisplayWidth()
         {
-            if (displayWidth < 0)
-            {
-                UISynchronizationContext.Dispatcher.InvokeSync(() => // justified
-                {
-                    displayWidth = (int)cl.ActualWidth;
-                });
-            }
+            updateDimensions();
             return displayWidth;
         }
 
         public override int getDisplayHeight()
         {
-            if (displayHeight < 0)
+            updateDimensions();
+            return displayHeight;
+        }
+
+        private void updateDimensions()
+        {
+            if (displayWidth == 0 || displayHeight == 0)
             {
                 UISynchronizationContext.Dispatcher.InvokeSync(() => // justified
                 {
+                    displayWidth = (int)cl.ActualWidth;
                     displayHeight = (int)cl.ActualHeight;
                 });
+#if LOG
+                TrackingApp.CN1Extensions.Log("Impl.updateDimensions; {0}x{1}", displayWidth, displayHeight);
+#endif
             }
-            return displayHeight;
         }
 
         public override void vibrate(int n1)
@@ -332,7 +352,9 @@ namespace com.codename1.impl
 
         public override void flushGraphics(int n1, int n2, int n3, int n4)
         {
-            /*if (n1 == 0 && n2 == 0 && n3 == getDisplayWidth() && n4 == getDisplayHeight())
+            // TODO
+/*
+            if (n1 == 0 && n2 == 0 && n3 == getDisplayWidth() && n4 == getDisplayHeight())
             {
                 flushGraphics();
                 return;
@@ -340,7 +362,8 @@ namespace com.codename1.impl
             List<OperationPending> currentPaints = new List<OperationPending>();
             currentPaints.AddRange(globalGraphics.pendingPaints);
             globalGraphics.pendingPaints.Clear();
-            paintCurrent(currentPaints, n1, n2, n3, n4);*/
+            paintCurrent(currentPaints, n1, n2, n3, n4);
+*/
             flushGraphics();
         }
 
@@ -380,7 +403,14 @@ namespace com.codename1.impl
                 }
 #endif
 #if !__CT_RENDER
-                paintCurrent(currentPaints);
+                if (UISynchronizationContext.Dispatcher.CheckAccess()) 
+                {
+                    paintCurrentImpl(currentPaints);
+                }
+                else
+                {
+                    paintCurrent(currentPaints);
+                }
 #endif
             }
 #if LOG

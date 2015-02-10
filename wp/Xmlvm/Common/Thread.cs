@@ -2171,6 +2171,7 @@ public Thread()
 {
     internalThread = new global::System.Threading.Thread(runImplInternal);
     internalThread.IsBackground = true;
+    _fthreadId = internalThread.ManagedThreadId;
 }
 
 //[global::System.ThreadStatic]

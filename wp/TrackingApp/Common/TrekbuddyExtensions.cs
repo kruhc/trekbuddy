@@ -660,16 +660,7 @@ namespace net.trekbuddy.wp8
                     }
                 }
             });
-            try
-            {
-                task.Wait();
-            }
-            catch (AggregateException ae)
-            {
-                CN1Extensions.Log(ae.Flatten().InnerException.ToString(), CN1Extensions.Level.ERROR);
-                //throw new global::org.xmlvm._nExceptionAdapter(ae.Flatten().InnerException.ToJavaException());
-                throw ae.Flatten().InnerException;
-            }
+            task.SafeWait();
         }
 /*
         private static void CopyToLocal(SkydriveStorage storage, string path, string pattern, bool includeSubfolders = false)
@@ -820,16 +811,7 @@ namespace net.trekbuddy.wp8
                     }
                 }
             });
-            try
-            {
-                task.Wait();
-            }
-            catch (AggregateException ae)
-            {
-                CN1Extensions.Log(ae.Flatten().InnerException.ToString(), CN1Extensions.Level.ERROR);
-                //throw new global::org.xmlvm._nExceptionAdapter(ae.Flatten().InnerException.ToJavaException());
-                throw ae.Flatten().InnerException;
-            }
+            task.SafeWait();
         }
 
         public static int? loadLoglevel()
@@ -974,7 +956,14 @@ namespace net.trekbuddy.wp8
             i.Width = w;
             i.MinHeight = h;
             i.Content = label;
-            i.FontSize = (double)Application.Current.Resources["PhoneFontSizeMediumLarge"];
+            if (App.DisplayInformationEmulator.DisplayInformationEx.ZoomFactor > 1.0)
+            {
+                i.FontSize = (double)Application.Current.Resources["PhoneFontSizeLarge"];
+            }
+            else
+            {
+                i.FontSize = (double)Application.Current.Resources["PhoneFontSizeMediumLarge"];
+            }
             i.FontFamily = (FontFamily)Application.Current.Resources["PhoneFontFamilySemiLight"];
             i.Background = (Brush)Application.Current.Resources["PhoneBackgroundBrush"];
             i.Click += i_Click;

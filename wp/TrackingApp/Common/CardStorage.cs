@@ -49,14 +49,14 @@ namespace net.trekbuddy.wp8
             });
             try
             {
-                task.Wait();
+                task.FastWait();
             }
-            catch (AggregateException ae)
+            catch (Exception e)
             {
 #if LOG
-                CN1Extensions.Log("CardStorage.init failed: {0}", ae.Flatten().InnerException.Message);
+                CN1Extensions.Log("CardStorage.init failed: {0}", e.Message);
 #endif
-                throw ae.Flatten().InnerException;
+                throw e;
             }
 #if LOG
             CN1Extensions.Log("CardStorage.init result: {0}", task.Result);
@@ -128,13 +128,13 @@ namespace net.trekbuddy.wp8
             });
             try
             {
-                task.Wait();
+                task.FastWait();
             }
-            catch (AggregateException ae)
+            catch (Exception e)
             {
                 // ignore
 #if LOG
-                CN1Extensions.Log("CardStorage.exists failed; {0}", ae.Flatten().InnerException.Message);
+                CN1Extensions.Log("CardStorage.exists failed; {0}", e.Message);
 #endif
             }
             return result;
@@ -152,15 +152,7 @@ namespace net.trekbuddy.wp8
                     return await file.OpenForReadAsync().ConfigureAwait(false);
                 }
             });
-            try
-            {
-                task.Wait();
-            }
-            catch (AggregateException ae)
-            {
-                throw ae.Flatten().InnerException;
-            }
-            return task.Result;
+            return task.FastWait();
         }
 
         public static bool CopyFile(Uri source, string destPath, out string destName)
@@ -175,20 +167,13 @@ namespace net.trekbuddy.wp8
                     {
                         using (ExternalStorageFile file = await CardStorage.Card.GetFileAsync(source.AbsolutePath).ConfigureAwait(false))
                         {
-                            using (Stream input = await file.OpenForReadAsync())
+                            using (Stream input = await file.OpenForReadAsync().ConfigureAwait(false))
                             {
                                 input.CopyTo(output);
                             }
                         }
                     });
-                    try
-                    {
-                        task.Wait();
-                    }
-                    catch (AggregateException ae)
-                    {
-                        throw ae.Flatten().InnerException;
-                    }
+                    task.FastWait();
                 }
             }
             return true;

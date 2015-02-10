@@ -310,26 +310,6 @@
     <Content Include="res\world.map" />
     <Content Include="res\world.set" />
     <Content Include="res\language.fr.res" />
-    <None Include="TrackingApp_2014_07_27_17_36_54.sap" />
-    <None Include="TrackingApp_2014_07_27_17_38_48.sap" />
-    <None Include="TrackingApp_2014_07_27_17_48_59.sap" />
-    <None Include="TrackingApp_2014_07_27_17_56_45.sap" />
-    <None Include="TrackingApp_2014_07_27_18_26_52.sap" />
-    <None Include="TrackingApp_2014_07_27_18_44_42.sap" />
-    <None Include="TrackingApp_2014_08_23_19_18_51.sap" />
-    <None Include="TrackingApp_2014_08_23_19_27_55.sap" />
-    <None Include="TrackingApp_2014_08_23_20_36_55.sap" />
-    <None Include="TrackingApp_2014_08_23_20_37_46.sap" />
-    <None Include="TrackingApp_2014_08_23_20_41_34.sap" />
-    <None Include="TrackingApp_2014_08_23_20_52_58.sap" />
-    <None Include="TrackingApp_2014_08_23_21_09_12.sap" />
-    <None Include="TrackingApp_2014_08_23_21_12_33.sap" />
-    <None Include="TrackingApp_2014_08_23_21_14_36.sap" />
-    <None Include="TrackingApp_2014_08_23_21_17_17.sap" />
-    <None Include="TrackingApp_2014_08_23_21_26_08.sap" />
-    <None Include="TrackingApp_2014_08_23_21_36_15.sap" />
-    <None Include="TrackingApp_2014_08_24_02_34_33.sap" />
-    <None Include="TrackingApp_2014_08_24_02_35_27.sap" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="Assets\AlignmentGrid.png" />
@@ -429,6 +409,10 @@
     <ProjectReference Include="..\CodenameOne-shrinked\CodenameOne-shrinked.csproj">
       <Project>{4b70ff7a-9f37-41fa-8bfd-d6c3e8bb026b}</Project>
       <Name>CodenameOne-shrinked</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\ScreenSizeSupport\ScreenSizeSupport.csproj">
+      <Project>{949a23fd-3917-495b-80fb-2465fe68b8a8}</Project>
+      <Name>ScreenSizeSupport</Name>
     </ProjectReference>
     <ProjectReference Include="..\TrekBuddy.Java\TrekBuddy.Midlet.csproj">
       <Project>{F3C959E1-4A75-4F64-A0A1-FD6B881471E8}</Project>

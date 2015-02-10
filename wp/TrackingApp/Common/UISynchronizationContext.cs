@@ -39,6 +39,11 @@ namespace net.trekbuddy.wp8.ui
             this.context = new DispatcherSynchronizationContext(dispatcher);
         }
 
+        public bool CheckAccess()
+        {
+            return dispatcher.CheckAccess();
+        }
+
         /*
          * MS implementation does pretty much the same
          */

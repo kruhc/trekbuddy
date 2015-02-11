@@ -571,16 +571,7 @@ namespace com.codename1.impl
 #if LOG
             TrackingApp.CN1Extensions.Log("Impl.create image from array");
 #endif
-            Stream s;
-            if (n1.Length != n3 || n2 != 0)
-            {
-                s = new MemoryStream(toByteArray(n1.getCSharpArray()), n2, n3);
-            }
-            else
-            {
-                s = new MemoryStream(toByteArray(n1.getCSharpArray()));
-            }
-            return createImage(s);
+            return createImage(new MemoryStream(toByteArray(n1.getCSharpArray()), n2, n3, false, true));
         }
 
         private static global::System.Object createImage(Stream stream)
@@ -591,13 +582,32 @@ namespace com.codename1.impl
 #endif
             BitmapSource bi = null;
             int bw = 0, bh = 0;
+            bool tryPng = stream is MemoryStream;
+            if (tryPng)
+            {
+                tryPng = TrackingApp.ImageHelper.TryExtractPngDimensions(stream, out bw, out bh);
+#if LOG
+                if (tryPng)
+                {
+                    long te = System.Environment.TickCount;
+                    TrackingApp.CN1Extensions.Log("Impl.create image extracted w x h in {0} ms: {1} x {2}", (te - t0), bw, bh);
+                }
+#endif
+            }
             UISynchronizationContext.Dispatcher.InvokeSync(() => // justified
             {
                 BitmapImage bitmapImage = new BitmapImage();
-                bitmapImage.CreateOptions = BitmapCreateOptions.None;
+                bitmapImage.CreateOptions = BitmapCreateOptions.IgnoreImageCache;
+                if (tryPng)
+                {
+                    bitmapImage.CreateOptions |= BitmapCreateOptions.BackgroundCreation | BitmapCreateOptions.DelayCreation;
+                }
                 bitmapImage.SetSource(stream);
-                bw = bitmapImage.PixelWidth;
-                bh = bitmapImage.PixelHeight;
+                if (!tryPng) 
+                {
+                    bw = bitmapImage.PixelWidth;
+                    bh = bitmapImage.PixelHeight;
+                }
 #if __USE_WBMP
                 bi = new WriteableBitmap(bitmapImage);
 #else
@@ -1955,7 +1965,7 @@ namespace com.codename1.impl
     {
         public List<OperationPending> pendingPaintsList = new List<OperationPending>();
 #if __RE_SPIN
-        public SpinLock nextPaintsLock = new SpinLock();
+        public SpinLock nextPaintsLock = new SpinLock(false);
 #endif
         public int clipX, clipY, clipW, clipH;
         public bool clipSet;
@@ -1978,6 +1988,9 @@ namespace com.codename1.impl
         }
 
         public virtual void paint(OperationPending o) {
+#if LOG
+            TrackingApp.CN1Extensions.Log("NativeGraphics.paint; {0}", o);
+#endif
 #if __RE_SPIN
             bool lockTaken = false;
             try
@@ -2034,7 +2047,7 @@ namespace com.codename1.impl
         public bool opaque;
         public List<OperationPending> imagePaints = new List<OperationPending>();
 #if __MI_SPIN
-        public SpinLock imagePaintsLock = new SpinLock();
+        public SpinLock imagePaintsLock = new SpinLock(false);
 #endif
 #if __USE_WBMP
         public WriteableBitmap wbmp;
@@ -2073,6 +2086,9 @@ namespace com.codename1.impl
 
         public override void paint(OperationPending o)
         {
+#if LOG
+            TrackingApp.CN1Extensions.Log("Impl.mutableImageGraphics paint; flushable? {0}; {1}", flushable, o);
+#endif
             if (flushable)
             {
                 pendingPaints.Add(o);

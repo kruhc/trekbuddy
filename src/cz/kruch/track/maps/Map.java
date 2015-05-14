@@ -756,12 +756,18 @@ public final class Map implements Runnable {
                             try {
                                 loadSlice(slice);
                             } catch (IOException e) { // file not found or corrupted
+//#ifdef __ANDROID__
+                                android.util.Log.e(cz.kruch.track.TrackingMIDlet.APP_TITLE, "Tile loading failed", e);
+//#endif
 //#ifdef __LOG__
                                 e.printStackTrace();
                                 if (log.isEnabled()) log.debug("image loading failed: " + e);
 //#endif
                                 slice.setImage(Slice.NO_IMAGE);
                             } catch (Throwable t) { // typically out of memory
+//#ifdef __ANDROID__
+                                android.util.Log.e(cz.kruch.track.TrackingMIDlet.APP_TITLE, "Tile loading failed", t);
+//#endif
 //#ifdef __LOG__
                                 t.printStackTrace();
                                 if (log.isEnabled()) log.debug("image loading failed: " + t);

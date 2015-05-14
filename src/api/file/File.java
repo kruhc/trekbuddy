@@ -10,11 +10,11 @@ import java.io.InputStream;
 import java.io.IOException;
 import java.io.OutputStream;
 
- /**
-  * File abstraction.
-  *
-  * @author Ales Pour <kruhc@seznam.cz>
-  */
+/**
+ * File abstraction.
+ *
+ * @author Ales Pour <kruhc@seznam.cz>
+ */
 public abstract class File {
 
     public static final String FILE_PROTOCOL    = "file://";
@@ -108,7 +108,7 @@ public abstract class File {
             return instance;
 
         } catch (Exception e) {
-            throw new IllegalStateException("File API error: " + e.toString());
+            throw new IllegalStateException(getExceptionMessage("Open failed. ", e.toString(), url));
         }
     }
 
@@ -251,8 +251,8 @@ public abstract class File {
         // open new connection
         try {
             fc = (StreamConnection) Connector.open(url + path, Connector.READ);
-        } catch (IOException e) {
-            throw new IOException(e.getMessage() + " [" + url + path + "]");
+        } catch (Exception e) {
+            throw new IllegalStateException(getExceptionMessage("Traverse failed. ", e.getMessage(), url + path));
         }
     }
 
@@ -305,5 +305,13 @@ public abstract class File {
             path = sb.toString();
         }
         return path;
+    }
+
+    private static String getExceptionMessage(final String intro,
+                                              final String message,
+                                              final String url) {
+        final StringBuffer sb = new StringBuffer(64);
+        sb.append(intro).append(message).append(" (").append(url).append(')');
+        return sb.toString();        
     }
 }

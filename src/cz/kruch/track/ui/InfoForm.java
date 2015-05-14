@@ -123,7 +123,8 @@ final class InfoForm implements CommandListener {
                 .append(File.fsType)
                 .append("; resetable? ").append(cz.kruch.track.maps.Map.fileInputStreamResetable)
                 .append("; buffer size: ").append(cz.kruch.track.configuration.Config.inputBufferSize)
-                .append("; fsavail? ").append(cz.kruch.track.configuration.Config.filesizeAvail)
+                .append("; fs avail? ").append(cz.kruch.track.configuration.Config.filesizeAvail)
+                .append("; traverse bug? ").append(File.isBrokenTraversal())
                 .append("; input class: ").append(cz.kruch.track.maps.Map.fileInputStreamClass)
 //#ifdef __SYMBIAN__
                 .append("; nets? ").append(Config.useNativeService && cz.kruch.track.maps.Map.networkInputStreamAvailable)
@@ -139,8 +140,11 @@ final class InfoForm implements CommandListener {
         getSb(sb)
                 .append(Desktop.width).append('x').append(Desktop.height)
 //#ifdef __ANDROID__
-                .append("; dpi? ").append((int)DeviceScreen.xdpi).append('/')
+                .append("; dpi: ").append((int)DeviceScreen.xdpi).append('/')
                                   .append((int)DeviceScreen.ydpi)
+//#endif
+//#ifdef __CN1__
+                .append("; scaleFactor: ").append(DeviceScreen.scaleFactor)
 //#endif
 //#ifdef __ALT_RENDERER__
                 .append("; safe renderer? ").append(Config.S60renderer)

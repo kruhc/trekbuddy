@@ -229,6 +229,9 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
     public static boolean externalConfigBackup;
     public static boolean tilesScaleFiltered;
     public static boolean verboseLoading;
+//#ifdef __CN1__
+    public static boolean wp8wvga = true;
+//#endif
     public static int heclOpt                   = 1;
     public static int inputBufferSize           = 4096;
     public static int fpsControl;
@@ -670,7 +673,12 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
 
             // 1.28 changes
             easyZoomMode = din.readInt(); // reconfirm
-            
+
+            // 1.31 changes
+//#ifdef __CN1__
+            wp8wvga = din.readBoolean();
+//#endif
+
         } catch (Exception e) {
 
             // 1.2.0 fallback
@@ -854,6 +862,11 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
 
         /* since 1.28 */
         dout.writeInt(easyZoomMode);
+
+        /* since 1.31 */
+//#ifdef __CN1__
+        dout.writeBoolean(wp8wvga);
+//#endif
 
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("configuration updated");
@@ -1088,7 +1101,9 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
             File datadir = null;
             try {
                 datadir = File.open(getDataDir(), Connector.WRITE);
-                datadir.mkdir();
+                if (!datadir.exists()) {
+                    datadir.mkdir();
+                }
                 dataDirExists = true;
             } catch (Exception e) {
 //#ifndef __CN1__
@@ -1280,7 +1295,6 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
             CharArrayTokenizer.Token line = reader.readToken(false);
             while (line != null) {
                 initDatum(tokenizer, line, delims);
-                line = null; // gc hint
                 line = reader.readToken(false);
             }
         } catch (Throwable t) {

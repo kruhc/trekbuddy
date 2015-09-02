@@ -1399,4 +1399,8 @@ final class DeviceScreen extends GameCanvas implements Runnable {
             }
         }
     }
+    
+//#ifdef __CN1__
+    public static double scaleFactor;
+//#endif
 }

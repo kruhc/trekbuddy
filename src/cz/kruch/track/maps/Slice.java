@@ -39,23 +39,28 @@ public class Slice {
             return;
         }
 //#ifdef __ANDROID__
-//#ifdef __BACKPORT__
         if (image == null && this.image != null) {
-            final android.graphics.Bitmap bitmap;
-            if (this.image.isMutable()) {
-                bitmap = ((org.microemu.android.device.AndroidMutableImage) this.image).getBitmap();
-            } else {
-                bitmap = ((org.microemu.android.device.AndroidImmutableImage) this.image).getBitmap();
-            }
-            if (bitmap != null && !bitmap.isRecycled()) {
-                bitmap.recycle();
+            /*
+             * Bitmap recycling is recommended for 2.3.3 (API level 10) and lower.
+             */
+            if (android.os.Build.VERSION.SDK_INT <= 10) {
+                final android.graphics.Bitmap bitmap;
+                if (this.image.isMutable()) {
+                    bitmap = ((org.microemu.android.device.AndroidMutableImage) this.image).getBitmap();
+                } else {
+                    bitmap = ((org.microemu.android.device.AndroidImmutableImage) this.image).getBitmap();
+                }
+                if (bitmap != null && !bitmap.isRecycled()) {
+                    bitmap.recycle();
+                }
             }
         }
-//#endif
 //#endif
 //#ifdef __CN1__
         if (image != null) {
             com.codename1.ui.FriendlyAccess.execute("set-opaque", new Object[]{ image.getNativeImage().getImage() });
+        } else if (this.image != null) {
+            com.codename1.ui.FriendlyAccess.execute("dispose-image", new Object[]{ this.image.getNativeImage().getImage() });
         }
 //#endif
         this.image = image;

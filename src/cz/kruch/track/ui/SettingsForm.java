@@ -511,6 +511,10 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
             choice1.setSelectedIndex(choice1.append(Resources.getString(Resources.CFG_TWEAKS_FLD_USE_TBSVC), null),
                                      Config.useNativeService);
 //#endif
+//#ifdef __CN1__
+            choice1.setSelectedIndex(choice1.append("WP8 WVGA", null),
+                                     Config.wp8wvga);
+//#endif
             submenu.append(choice1);
 
             // capture device and format
@@ -1191,7 +1195,9 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
 //#ifdef __SYMBIAN__
                 Config.useNativeService = perf[12];
 //#endif
-
+//#ifdef __CN1__
+                Config.wp8wvga = perf[11];
+//#endif
                 // HECL
                 Config.heclOpt = choice2.getSelectedIndex();
 

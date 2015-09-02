@@ -272,6 +272,8 @@ final class MapView extends View {
         int mask = Desktop.MASK_NONE;
 
         // set browsing mode
+        Desktop.browsing = true;
+        Desktop.navigating = false;
         browsingOn(false);
 
         // update position and update OSD
@@ -379,6 +381,7 @@ final class MapView extends View {
 
                 // cursor movement breaks real-time tracking
                 Desktop.browsing = true;
+                Desktop.navigating = false;
                 browsingOn(false);
 
                 // calculate number of scrolls
@@ -577,7 +580,7 @@ final class MapView extends View {
     }
 
     QualifiedCoordinates getPointer() {
-        return navigator.getMap().transform(mapViewer.getPosition()); // mapViewer may have no map when in bg
+        return navigator.getMap().transform(mapViewer.getPosition()); // mapViewer may have no map when in background
     }
 
     void render(final Graphics g, final Font f, final int mask) {
@@ -774,19 +777,15 @@ final class MapView extends View {
                 // minimum UI update
                 mask = Desktop.MASK_OSD;
 
-                // move on map if we get fix
+                // refresh view when we have fix
                 if (l.getFix() > 0) {
-
-//#ifdef __LOG__
-                    if (log.isEnabled()) log.debug("have fix");
-//#endif
 
                     // more UI updates
                     mask |= Desktop.MASK_CROSSHAIR;
 
                     // get wgs84 and local coordinates
-                    final Map map = navigator.getMap(); // mapViewer may have no map when in bg // !!! not true since 1.1.2
-                    QualifiedCoordinates qc = l.getQualifiedCoordinates();
+                    final Map map = navigator.getMap(); // mapViewer may have no map when in background // !!! not true since 1.1.2
+                    final QualifiedCoordinates qc = l.getQualifiedCoordinates();
 
                     // on map detection
                     final boolean onMap = Desktop.synced = map.isWithin(qc);
@@ -801,14 +800,12 @@ final class MapView extends View {
                         mapViewer.setCourse(course);
                     }
 
-                    // navi arrow
-                    final boolean navigating = Desktop.navigating && Desktop.wpts != null && Desktop.wptIdx != -1;
-                    if (navigating) {
-                        mapViewer.setNavigationCourse(navigator.wptAzimuth);
-                    }
+                    // navi info update
+                    if (Desktop.navigating && Desktop.wpts != null && Desktop.wptIdx != -1) {
 
-                    // OSD extended with navi or tracking info
-                    if (navigating) {
+                        // use last coordinates
+                        navigator.updateNavigation(qc);
+                        mapViewer.setNavigationCourse(navigator.wptAzimuth);
 
                         // get navigation info
                         final StringBuffer extInfo = Desktop.osd._getSb();

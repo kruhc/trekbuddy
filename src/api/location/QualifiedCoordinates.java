@@ -11,7 +11,7 @@ import cz.kruch.track.util.ExtraMath;
  */
 public final class QualifiedCoordinates implements GeodeticPosition {
 
-    public static QualifiedCoordinates INVALID = newInstance(Double.NaN, Double.NaN);
+    public static final QualifiedCoordinates INVALID;
 
     public static final int UNKNOWN = 0;
     public static final int LAT = 1;
@@ -26,12 +26,22 @@ public final class QualifiedCoordinates implements GeodeticPosition {
     private float alt;
     private float hAccuracy, vAccuracy;
 
+    static {
+        INVALID = new QualifiedCoordinates();
+        INVALID.lat = Double.NaN;
+        INVALID.lon = Double.NaN;
+    }
+
     /*
      * POOL
      */
 
+//#ifndef __NOBJPOOL__
+
     private static final QualifiedCoordinates[] pool = new QualifiedCoordinates[8];
     private static int countFree;
+
+//#endif
 
     public static QualifiedCoordinates newInstance(final double lat, final double lon) {
         return newInstance(lat, lon, Float.NaN, Float.NaN, Float.NaN);
@@ -41,17 +51,19 @@ public final class QualifiedCoordinates implements GeodeticPosition {
         return newInstance(lat, lon, alt, Float.NaN, Float.NaN);
     }
 
-    public static synchronized QualifiedCoordinates newInstance(final double lat,
-                                                                final double lon,
-                                                                final float alt,
-                                                                final float hAccuracy,
-                                                                final float vAccuracy) {
-        final QualifiedCoordinates result;
-        if (countFree == 0) {
+    public static QualifiedCoordinates newInstance(final double lat, final double lon, final float alt,
+                                                   final float hAccuracy, final float vAccuracy) {
+        QualifiedCoordinates result = null;
+//#ifndef __NOBJPOOL__
+        synchronized (pool) {
+            if (countFree > 0) {
+                result = pool[--countFree];
+                pool[countFree] = null;
+            }
+        }
+//#endif
+        if (result == null) {
             result = new QualifiedCoordinates();
-        } else {
-            result = pool[--countFree];
-            pool[countFree] = null;
         }
         result.lat = lat;
         result.lon = lon;
@@ -62,12 +74,16 @@ public final class QualifiedCoordinates implements GeodeticPosition {
         return result;
     }
 
-    public static synchronized void releaseInstance(final QualifiedCoordinates qc) {
+    public static void releaseInstance(final QualifiedCoordinates qc) {
+//#ifndef __NOBJPOOL__
         if (qc != null && qc != INVALID) {
-            if (countFree < pool.length) {
-                pool[countFree++] = qc;
+            synchronized (pool) {
+                if (countFree < pool.length) {
+                    pool[countFree++] = qc;
+                }
             }
         }
+//#endif
     }
 
     /*

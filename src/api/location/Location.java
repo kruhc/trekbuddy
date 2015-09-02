@@ -20,8 +20,12 @@ public final class Location {
      * POOL
      */
 
+//#ifndef __NOBJPOOL__
+
     private static final Location[] pool = new Location[8];
     private static int countFree;
+
+//#endif
 
     public static Location newInstance(final QualifiedCoordinates coordinates,
                                        final long timestamp,
@@ -29,16 +33,19 @@ public final class Location {
         return newInstance(coordinates, timestamp, fix, 0);
     }
 
-    public static synchronized Location newInstance(final QualifiedCoordinates coordinates,
-                                                    final long timestamp,
-                                                    final int fix, final int sat) {
-        final Location result;
-
-        if (countFree == 0) {
+    public static Location newInstance(final QualifiedCoordinates coordinates,
+                                       final long timestamp, final int fix, final int sat) {
+        Location result = null;
+//#ifndef __NOBJPOOL__
+        synchronized (pool) {
+            if (countFree > 0) {
+                result = pool[--countFree];
+                pool[countFree] = null;
+            }
+        }
+//#endif
+        if (result == null) {
             result = new Location();
-        } else {
-            result = pool[--countFree];
-            pool[countFree] = null;
         }
         result.coordinates = coordinates;
         result.timestamp = timestamp;
@@ -48,14 +55,18 @@ public final class Location {
         return result;
     }
 
-    public static synchronized void releaseInstance(final Location location) {
+    public static void releaseInstance(final Location location) {
+//#ifndef __NOBJPOOL__
         if (location != null) {
             QualifiedCoordinates.releaseInstance(location.coordinates);
             location.coordinates = null;
-            if (countFree < pool.length) {
-                pool[countFree++] = location;
+            synchronized (pool) {
+                if (countFree < pool.length) {
+                    pool[countFree++] = location;
+                }
             }
         }
+//#endif
     }
 
     /*

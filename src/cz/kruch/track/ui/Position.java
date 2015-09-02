@@ -13,27 +13,42 @@ public final class Position {
      * POOL
      */
 
+//#ifndef __NOBJPOOL__
+
     private static final Position[] pool = new Position[4];
     private static int countFree;
 
-    public static synchronized Position newInstance(final int x, final int y) {
-        final Position result;
+//#endif
 
-        if (countFree == 0) {
-            result = new Position(x, y);
-        } else {
-            result = pool[--countFree];
-            pool[countFree] = null;
-            result.setXy(x, y);
+    public static Position newInstance(final int x, final int y) {
+        Position result = null;
+//#ifndef __NOBJPOOL__
+        synchronized (pool) {
+            if (countFree > 0) {
+                result = pool[--countFree];
+                pool[countFree] = null;
+            }
         }
+//#endif
+        if (result == null) {
+            result = new Position();
+        }
+        result.x = x;
+        result.y = y;
 
         return result;
     }
 
-    public static synchronized void releaseInstance(final Position p) {
-        if (p != null && countFree < pool.length) {
-            pool[countFree++] = p;
+    public static void releaseInstance(final Position p) {
+//#ifndef __NOBJPOOL__
+        if (p != null) {
+            synchronized (pool) {
+                if (countFree < pool.length) {
+                    pool[countFree++] = p;
+                }
+            }
         }
+//#endif
     }
 
     /*
@@ -41,6 +56,9 @@ public final class Position {
      */
 
     private int x, y;
+
+    private Position() {
+    }
 
     public Position(int x, int y) {
         this.x = x;

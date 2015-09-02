@@ -31,7 +31,7 @@ public final class Worker extends Thread {
 //#endif
     }
 
-    private final Vector tasks;
+    private final NakedVector tasks;
 	private boolean go;
 //#if __SYMBIAN__ || __CN1__
     private int maxSize;
@@ -39,7 +39,7 @@ public final class Worker extends Thread {
 
     public Worker(String name) {
         super(name);
-        this.tasks = new Vector(16);
+        this.tasks = new NakedVector(16);
         this.go = true;
     }
 

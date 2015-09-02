@@ -161,8 +161,24 @@ final class AndroidDeviceControl
 
     @Override
     public void onSensorChanged(android.hardware.SensorEvent event) {
-        // notify
-        notifySenser((int) event.values[0]);
+//        android.util.Log.w("TrekBuddy", "[app] azimuth = " + event.values[0] + "; orientation = " + cz.kruch.track.TrackingMIDlet.getActivity().orientation);
+        int azimuth = (int) event.values[0];
+        switch (cz.kruch.track.TrackingMIDlet.getActivity().orientation) {
+            case 0: // portrait
+                // nothing to do
+                break;
+            case 1: // landscape
+                azimuth = (azimuth + 90) % 360;
+                break;
+            case 2: // portrait reversed
+                azimuth = (azimuth + 180) % 360;
+                break;
+            case 3: // landscape reversed
+                azimuth = (azimuth + 270) % 360;
+                break;
+        }
+//        android.util.Log.w("TrekBuddy", "[app] fixed azimuth = " + azimuth);
+        notifySenser(azimuth);
     }
 
     @Override

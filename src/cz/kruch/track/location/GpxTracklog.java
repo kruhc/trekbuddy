@@ -21,6 +21,7 @@ import cz.kruch.track.event.Callback;
 import cz.kruch.track.ui.NavigationScreens;
 import cz.kruch.track.Resources;
 import cz.kruch.track.util.NmeaParser;
+import cz.kruch.track.util.NakedVector;
 
 /**
  * GPX Tracklog.
@@ -133,7 +134,7 @@ public final class GpxTracklog extends Tracklog {
     private String filePrefix;
     private int type;
 
-    private Vector queue;
+    private NakedVector queue;
     private boolean go;
 
     private Location refLocation;
@@ -158,7 +159,7 @@ public final class GpxTracklog extends Tracklog {
         this.date = new Date();
         this.sb = new StringBuffer(32);
         this.sbChars = new char[32];
-        this.queue = new Vector(16);
+        this.queue = new NakedVector(16);
     }
 
     public void setFilePrefix(String filePrefix) {
@@ -334,7 +335,7 @@ public final class GpxTracklog extends Tracklog {
             while (true) {
 
                 // local ref
-                final Vector queue = this.queue;
+                final NakedVector queue = this.queue;
                 Object item = null;
 
                 // wait for item
@@ -347,8 +348,7 @@ public final class GpxTracklog extends Tracklog {
                         }
                     }
                     if (queue.size() > 0) {
-                        item = queue.elementAt(0);
-                        queue.removeElementAt(0);
+                        item = queue.popAt(0);
                     }
                     if (!go) {
                         break;

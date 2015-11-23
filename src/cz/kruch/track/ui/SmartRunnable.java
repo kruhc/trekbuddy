@@ -2,6 +2,8 @@
 
 package cz.kruch.track.ui;
 
+import cz.kruch.track.util.NakedVector;
+
 import java.util.Vector;
 
 //#ifdef __CN1__
@@ -26,13 +28,13 @@ final class SmartRunnable implements Runnable {
     static int uncaught, mergedRT, mergedKT, maxQT;
 
     // task queue
-    private final Vector runnables;
+    private final NakedVector runnables;
 
     // state vars
     private boolean pending, active;
 
     SmartRunnable() {
-        this.runnables = new Vector(16);
+        this.runnables = new NakedVector(16);
         this.active = true;
 //#ifdef __EXECUTOR__
         final Thread executor = new Thread("TrekBuddy [CallSerially]") {
@@ -158,15 +160,13 @@ final class SmartRunnable implements Runnable {
     }
 
     public void run() {
-        final Vector runnables = this.runnables;
+        final NakedVector runnables = this.runnables;
         final Runnable r;
 
         // pop task
         synchronized (this) {
             if (runnables.size() > 0) {
-                r = (Runnable) runnables.elementAt(0);
-                runnables.setElementAt(null, 0); // helps GC?
-                runnables.removeElementAt(0);
+                r = (Runnable) runnables.popAt(0);
             } else { // should never happen
                 r = null;
             }
@@ -212,13 +212,13 @@ final class SmartRunnable implements Runnable {
     }
 
     private void execute() {
-//#ifndef __EXECUTOR__
-        Desktop.display.callSerially(this);
-//#else
+//#ifdef __EXECUTOR__
         synchronized (this) {
             this.notify();
         }
         Thread.yield();
+//#else
+        Desktop.display.callSerially(this);
 //#endif
     }
 }

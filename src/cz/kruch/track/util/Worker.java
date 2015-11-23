@@ -109,7 +109,7 @@ public final class Worker extends Thread {
 //#endif
 
         // local ref
-        final Vector tasks = this.tasks;
+        final NakedVector tasks = this.tasks;
         Runnable task = null;
 
         // process items until end
@@ -125,8 +125,7 @@ public final class Worker extends Thread {
                     }
                 }
                 if (tasks.size() > 0) {
-                    task = (Runnable) tasks.elementAt(0);
-                    tasks.removeElementAt(0);
+                    task = (Runnable) tasks.popAt(0);
                 }
                 if (!go)
                     break;

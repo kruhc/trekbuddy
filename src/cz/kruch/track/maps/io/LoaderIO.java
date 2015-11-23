@@ -2,6 +2,8 @@
 
 package cz.kruch.track.maps.io;
 
+import cz.kruch.track.util.NakedVector;
+
 import java.util.Vector;
 
 /**
@@ -18,11 +20,11 @@ public final class LoaderIO extends Thread {
 
     private static LoaderIO instance;
 
-    private final Vector tasks;
+    private final NakedVector tasks;
     private boolean go;
 
     private LoaderIO() {
-        this.tasks = new Vector(16);
+        this.tasks = new NakedVector(16);
         this.go = true;
     }
 
@@ -65,7 +67,7 @@ public final class LoaderIO extends Thread {
         if (log.isEnabled()) log.debug("I/O thread starting...");
 //#endif
 
-        final Vector tasks = this.tasks;
+        final NakedVector tasks = this.tasks;
 
         while (true) {
 
@@ -80,9 +82,7 @@ public final class LoaderIO extends Thread {
                     }
                 }
                 if (tasks.size() > 0) {
-                    task = (Runnable) tasks.elementAt(0);
-                    tasks.setElementAt(null, 0);
-                    tasks.removeElementAt(0);
+                    task = (Runnable) tasks.popAt(0);
                 }
                 if (!go) break;
             }

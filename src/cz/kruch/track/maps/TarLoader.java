@@ -515,6 +515,9 @@ final class TarLoader extends Map.Loader /*implements Atlas.Loader*/ implements 
         // var
         File file = null;
 
+        // reset flag
+        isTmc = false;
+
         try {
             // check for .tmc existence
             file = getMetaFile(".tmc", Connector.READ);
@@ -627,6 +630,9 @@ final class TarLoader extends Map.Loader /*implements Atlas.Loader*/ implements 
         // var
         File file = null;
 
+        // reset flag
+        isTmi = false;
+
         try {
             // check for .tmi existence
             file = getMetaFile(".tmi", Connector.READ);
@@ -634,8 +640,10 @@ final class TarLoader extends Map.Loader /*implements Atlas.Loader*/ implements 
 //#ifdef __LOG__
                 if (log.isEnabled()) log.debug("gonna use tmi");
 //#endif
-                // helper member
+//#ifndef __CN1__
+                // size guess
                 hintTmiFileSize = (int) file.fileSize();
+//#endif
 
                 // each line is a slice filename
                 LineReader reader = null;

@@ -129,4 +129,31 @@ public class NakedVector extends Vector {
         }
         super.elementData[index] = object;
     }
+
+    /*
+     * Extension methods
+     */
+
+    /*
+     * elementAt(int) + removeElementAt(int)
+     */
+    public Object popAt(int index) {
+        int elementCount = super.elementCount;
+        if (index >= elementCount) {
+          throw new ArrayIndexOutOfBoundsException(index + " >= " + elementCount);
+        }
+        if (index < 0) {
+          throw new ArrayIndexOutOfBoundsException(index);
+        }
+        final Object[] elementData = super.elementData;
+        final Object object = elementData[index];
+        final int j = elementCount - index - 1;
+        if (j > 0) {
+          System.arraycopy(elementData, index + 1, elementData, index, j);
+        }
+        elementCount--;
+        elementData[elementCount] = null;
+        super.elementCount = elementCount;
+        return object;
+    }
 }

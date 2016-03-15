@@ -39,7 +39,7 @@ public final class LineReader extends InputStreamReader {
         this(in, DEFAULT_BUFF_SIZE);
     }
 
-    public String readLine(boolean ignoreLF) throws IOException {
+    public String readLine(final boolean ignoreLF) throws IOException {
         final CharArrayTokenizer.Token result = readToken(ignoreLF);
         if (result != null) {
             if (!result.isEmpty()) {

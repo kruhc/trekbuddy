@@ -20,7 +20,7 @@ import javax.microedition.io.Connector;
  *
  * @author kruhc@seznam.cz
  */
-final class DirLoader extends Map.Loader /*implements Atlas.Loader*/ {
+final class DirLoader extends /*Map.*/Loader /*implements Atlas.Loader*/ {
 
     /*
      * Map.Loader contract.
@@ -253,6 +253,17 @@ final class DirLoader extends Map.Loader /*implements Atlas.Loader*/ {
 
                     // go back to atlas root
                     file.setFileConnection(File.PARENT_DIR);
+
+                } else if (layerEntry.endsWith(".tba")) {
+
+                    // load atlas descriptor
+                    file.setFileConnection(layerEntry);
+                    final InputStream in = file.openInputStream();
+                    try {
+                        loadDesc(atlas, in);
+                    } finally {
+                        File.closeQuietly(in);
+                    }
                 }
             }
 

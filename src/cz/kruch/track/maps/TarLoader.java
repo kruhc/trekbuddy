@@ -11,7 +11,6 @@ import java.io.IOException;
 import java.io.DataOutputStream;
 import java.io.DataInputStream;
 import java.util.Enumeration;
-import java.util.Hashtable;
 
 import com.ice.tar.TarInputStream;
 import com.ice.tar.TarEntry;
@@ -48,7 +47,7 @@ import javax.microedition.io.Connector;
  *
  * @author kruhc@seznam.cz
  */
-final class TarLoader extends Map.Loader /*implements Atlas.Loader*/ implements api.util.Comparator {
+final class TarLoader extends /*Map.*/Loader /*implements Atlas.Loader*/ implements api.util.Comparator {
 
     /*
      * Map.Loader contract.
@@ -862,6 +861,12 @@ final class TarLoader extends Map.Loader /*implements Atlas.Loader*/ implements 
                                     Atlas.getLayerCollection(atlas, lName).put(mName, calibration);
                                 }
                             }
+
+                        } else if (entryName.endsWith(EXT_TBA)) {
+
+                            // loade atlas descriptor
+                            loadDesc(atlas, tar);
+
                         }
                     }
                 }

@@ -27,6 +27,7 @@ final class LocatorView extends View {
         "1000 m", "500 m", "250 m", "100 m", "50 m", "25 m", "10 m", "5 m"
     };
 
+    private static final int COLOR_CROSSHAIR    = 0x00808080;
     private static final int COLOR_RANGE        = 0x00808080;
     private static final int COLOR_NO_POSITION  = 0x00FF0000;
     private static final int COLOR_MIDST        = 0x00E0E000;
@@ -37,13 +38,12 @@ final class LocatorView extends View {
     private int orientation;
 
     private final int[] rangeIdx;
-
     private int term, mode;
 
     private int dx, dy;
     private int lineLength;
 
-    private final int navigationStrWidth, courseStrWidth;
+    private int navigationStrWidth, courseStrWidth;
 
     private final int[] center, vertex;
     private final int[] triangle0, triangle1, triangle2;
@@ -56,9 +56,6 @@ final class LocatorView extends View {
         this.lastCourse = new float[2];
         this.orientation = -1;
         this.rangeIdx = new int[]{ 2, 2 };
-        this.navigationStrWidth = Math.max(Desktop.font.stringWidth(MSG_NO_WAYPOINT),
-                                           Desktop.font.stringWidth("9.999 M"));
-        this.courseStrWidth = Desktop.font.stringWidth("359\u00b0");
         this.center = new int[2];
         this.vertex = new int[2];
         this.triangle0 = new int[2];
@@ -67,6 +64,7 @@ final class LocatorView extends View {
         this.sb = new StringBuffer(32);
         this.sbChars = new char[32];
         reset();
+        resetFont();
     }
 
     void sizeChanged(int w, int h) {
@@ -109,10 +107,15 @@ final class LocatorView extends View {
     }
 
     int handleAction(final int action, final boolean repeated) {
+        // ignore repeated
         if (repeated) {
             return Desktop.MASK_NONE;
         }
 
+        // result repaint mask
+        int mask = Desktop.MASK_ALL;
+
+        // handle action
         switch (action) {
             case Canvas.LEFT:
                 if (rangeIdx[term] > 0) {
@@ -131,9 +134,11 @@ final class LocatorView extends View {
             case Canvas.FIRE: {
                 mode++;
             } break;
+            default:
+                mask = Desktop.MASK_NONE;
         }
 
-        return Desktop.MASK_ALL;
+        return mask;
     }
 
     int handleKey(final int keycode, final boolean repeated) {
@@ -184,8 +189,8 @@ final class LocatorView extends View {
 
     void render(final Graphics graphics, final Font font, final int mask) {
         // local references for faster access
-        final OSD osd = Desktop.osd;
         final StringBuffer sb = this.sb;
+        final OSD osd = Desktop.osd;
         final int w = Desktop.width;
         final int h = Desktop.height;
         final int wHalf = w >> 1;
@@ -197,6 +202,8 @@ final class LocatorView extends View {
         final int fh = osd.bh;
         final int orientation = this.orientation;
         final char[] sbChars = this.sbChars;
+        final float a = DeviceScreen.density;
+        final int ai = ExtraMath.round(a);
 
         // main colors
         final int bgColor, fgColor, wptColor;
@@ -217,13 +224,23 @@ final class LocatorView extends View {
         graphics.setStrokeStyle(Graphics.SOLID);
 
         // draw crosshair
-        graphics.setColor(0x00404040);
+        graphics.setColor(COLOR_CROSSHAIR);
+//#if __ANDROID__ || __CN1__
+        graphics.setAliasing(false);
+        if (a > 1.0f)
+            graphics.setStrokeWidth(1 + a / 2);
+//#endif
         graphics.drawLine(wHalf, dy, wHalf, h - dy);
         graphics.drawLine(dx, hHalf, w - dx, hHalf);
+//#if __ANDROID__ || __CN1__
+        graphics.setAliasing(true);
+        if (a > 1.0f)
+            graphics.setStrokeWidth(1);
+//#endif
 
         // draw compas
         float course;
-        final int hires = Desktop.getHiresLevel(); 
+        final int hires = Desktop.getHiresLevel();
         final int ifh = 4 + hires * 4, efh = 7 + hires * 4;
 
         // draw internal compass value
@@ -261,7 +278,7 @@ final class LocatorView extends View {
         } /* ~ */
 
         // compas boundary
-        graphics.setColor(0x00005050);
+        graphics.setColor(0x00008080);
         graphics.drawArc(dx + fh, dy + fh,
                          lineLength - (fh << 1),
                          lineLength - (fh << 1),
@@ -485,16 +502,56 @@ final class LocatorView extends View {
                                              Graphics.LEFT | Graphics.TOP);
 
         // draw range
+        final int cy = h - Desktop.osd.bh - (int)Math.ceil(4 * (a * 2)); // same Y coordinate as scale on map screen
+        final int rsy = h - (int)Math.floor(4 * (a * 2)) + 1 + ai;
+        final int rsy0 = rsy - 1 - ai;
+        final int rsy1 = rsy + 1 + ai;
         graphics.setColor(COLOR_RANGE);
-        graphics.drawLine(dx, h - 4, dx, h - 2);
-        graphics.drawLine(dx, h - 3, wHalf, h - 3);
-        graphics.drawLine(wHalf, h - 4, wHalf, h - 2);
+//#if __ANDROID__ || __CN1__
+        graphics.setAliasing(false);
+//#endif
+        graphics.drawLine(dx, rsy0, dx, rsy1);
+//#if __ANDROID__ || __CN1__
+        if (a > 1.0f)
+            graphics.setStrokeWidth(1 + a);
+//#endif
+        graphics.drawLine(dx + 1, rsy, wHalf - 1, rsy);
+//#if __ANDROID__ || __CN1__
+        if (a > 1.0f)
+            graphics.setStrokeWidth(1);
+//#endif
+        graphics.drawLine(wHalf, rsy0, wHalf, rsy1);
+//#if __ANDROID__ || __CN1__
+        graphics.setAliasing(true);
+//#endif
         graphics.drawString(RANGES_STR[rangeIdx],
-                            dx + 3, h - fh - 2,
+                            dx + 3, cy/*rsy - fh*/,
                             Graphics.LEFT | Graphics.TOP);
+
+        // draw keylock status
+        if (Desktop.screen.isKeylock()) {
+            NavigationScreens.drawKeylockStatus(graphics);
+        }
 
         // draw zoom spots
         NavigationScreens.drawZoomSpots(graphics);
+        
+        // draw visual guides only when autohide to prevent screen obstruction
+        if (Desktop.screen.isKeylock() && Config.guideSpotsMode == 2) {
+            NavigationScreens.drawGuideSpots(graphics, true);
+        }
+    }
+
+    int configChanged() {
+        resetFont();
+        return super.configChanged();
+    }
+
+    private void resetFont() {
+        final Font font = Desktop.font;
+        this.navigationStrWidth = Math.max(font.stringWidth(MSG_NO_WAYPOINT),
+                                           font.stringWidth("9.999 M"));
+        this.courseStrWidth = font.stringWidth("359\u00b0");
     }
 
     private void reset() {

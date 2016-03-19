@@ -3,6 +3,7 @@
 package cz.kruch.track.ui;
 
 import javax.microedition.lcdui.Graphics;
+import javax.microedition.lcdui.Font;
 
 import api.location.LocationProvider;
 import api.location.QualifiedCoordinates;
@@ -32,7 +33,7 @@ final class OSD extends Bar {
     int semaforX, semaforY;
 
     private final StringBuffer sb;
-    private final int rw, mmw, nsatw, nsatw2;
+    private int rw, mmw, nsatw, nsatw2;
 
     private final char[] cInfo, cExtInfo;
     private int cInfoLength, cExtInfoLength;
@@ -40,14 +41,20 @@ final class OSD extends Bar {
     OSD(int gx, int gy, int width, int height) {
         super(gx, gy, width, height);
         this.providerStatus = LocationProvider.OUT_OF_SERVICE;
-        this.rw = Desktop.font.charWidth('R');
-        this.mmw = Desktop.font.stringWidth("<>");
-        this.nsatw = Desktop.font.stringWidth("5*");
-        this.nsatw2 = Desktop.font.stringWidth("15*");
         this.sb = new StringBuffer(64);
         this.cInfo = new char[64];
         this.cExtInfo = new char[64];
         resize(width, height);
+        resetFont();
+    }
+
+    public void resetFont() {
+        super.resetFont();
+        final Font font = Desktop.font;
+        this.rw = font.charWidth('R');
+        this.mmw = font.stringWidth("<>");
+        this.nsatw = font.stringWidth("5*");
+        this.nsatw2 = font.stringWidth("15*");
     }
 
     public void resize(int width, int height) {
@@ -73,10 +80,28 @@ final class OSD extends Bar {
         // draw info + extended info bg
         if (!Config.osdNoBackground) {
             if (isBasicInfo) {
+//--//#ifndef __CN1__
+//#if !__ANDROID__ && !__CN1__
                 graphics.drawImage(Desktop.bar, gx, gy, Graphics.TOP | Graphics.LEFT);
+//#else
+                final int cc = graphics.getColor();
+                graphics.setARGBColor(Desktop.bar_c);
+                graphics.fillRect(gx, gy, Desktop.bar_w, Desktop.bar_h);
+                graphics.setColor(cc);
+                graphics.setAlpha(0xff);
+//#endif
             }
             if (isExtInfo && cExtInfoLength > 0) {
+//--//#ifndef __CN1__
+//#if !__ANDROID__ && !__CN1__
                 graphics.drawImage(Desktop.bar, gx, gy + (isBasicInfo ? bh : 0), Graphics.TOP | Graphics.LEFT);
+//#else
+                final int cc = graphics.getColor();
+                graphics.setARGBColor(Desktop.bar_c);
+                graphics.fillRect(gx, gy + (isBasicInfo ? bh : 0), Desktop.bar_w, Desktop.bar_h);
+                graphics.setColor(cc);
+                graphics.setAlpha(0xff);
+//#endif
             }
         }
 

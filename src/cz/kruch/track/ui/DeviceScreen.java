@@ -234,7 +234,7 @@ final class DeviceScreen extends GameCanvas implements Runnable {
 //#endif
 
     void splash() {
-        if (Config.guideSpotsMode > 0 || Config.zoomSpotsMode > 0) {
+        if (Config.guideSpotsMode > 1 || Config.zoomSpotsMode > 1) {
             beenPressed = true;
         }
     }
@@ -253,19 +253,22 @@ final class DeviceScreen extends GameCanvas implements Runnable {
 
 //#ifdef __ANDROID__
     static final float density = Float.parseFloat(System.getProperty("microemu.display.density"));
+    static final float densityDpi = Float.parseFloat(System.getProperty("microemu.display.densityDpi"));
     static final float xdpi = Float.parseFloat(System.getProperty("microemu.display.xdpi"));
     static final float ydpi = Float.parseFloat(System.getProperty("microemu.display.ydpi"));
+//#else
+    static final float density = 1.0f;
 //#endif
 
     int getHiresLevel() {
         int level = 0;
 //#ifdef __ANDROID__
-        if (xdpi > 160 || ydpi > 160) {
-            if (xdpi > 240 || ydpi > 240) {
-                level = 2;
-            } else {
-                level = 1;
-            }
+        if (xdpi > 320 || ydpi > 320) {
+            level = 3;
+        } else if (xdpi > 240 || ydpi > 240) {
+            level = 2;
+        } else if (xdpi > 160 || ydpi > 160) {
+            level = 1;
         }
 //#else
         if (getHeight() > 480 || getWidth() > 480) {
@@ -281,7 +284,7 @@ final class DeviceScreen extends GameCanvas implements Runnable {
 
     boolean isHiresGui() {
 //#ifdef __ANDROID__
-        return density > 1.0f;
+        return density >= 1.5f;
 //#else
         return getHeight() > 480 || getWidth() > 480;
 //#endif
@@ -343,6 +346,8 @@ final class DeviceScreen extends GameCanvas implements Runnable {
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("size changed: " + w + "x" + h);
 //#endif
+        // CN1 only?
+        super.sizeChanged(w, h);
 
         // current graphics probably no longer valid (RIM, ANDROID)
         graphics = null;
@@ -351,7 +356,7 @@ final class DeviceScreen extends GameCanvas implements Runnable {
         gdiff = Math.min(w / 15, h / 15);
 
         // adjust UI
-        BTN_ARC = isHiresGui() ? 25 : 10;
+        BTN_ARC = isHiresGui() ? 15 : 10;
 
         // too early invocation? happens on Belle :-$
         if (delegate == null) {
@@ -427,7 +432,6 @@ final class DeviceScreen extends GameCanvas implements Runnable {
             // ops flags
             touchMenuActive = false;
             cmdExec = true;
-            beenPressed = false;
 
             // update screen anyway
             delegate.update(Desktop.MASK_SCREEN);
@@ -444,7 +448,6 @@ final class DeviceScreen extends GameCanvas implements Runnable {
 
             // ops flags
             cmdExec = false;
-            beenPressed = true;
 
             // resolve coordinates to keypress
             final int key = pointerToKey(x, y);
@@ -455,13 +458,6 @@ final class DeviceScreen extends GameCanvas implements Runnable {
 
                 // help repetition
                 emulateKeyRepeated(key);
-            }
-
-            // show bar on keylock or center hit - update not invoked
-            if (keylock || key == Canvas.KEY_NUM5) {
-
-                // repaint screen to show icon bar
-                delegate.update(Desktop.MASK_SCREEN);
             }
         }
     }
@@ -476,26 +472,26 @@ final class DeviceScreen extends GameCanvas implements Runnable {
             return;
         }
 
-//#if __ANDROID__ || __CN1__
-
-        // end of pinch no matter what
-        scale = Float.NaN;
-
-//#endif
-
         // avoid multitouch
         if (--pointersCount > 0) {
             return;
         }
+
+//#if __ANDROID__ || __CN1__
+
+        // end of pinch no matter what
+        if (!Float.isNaN(scale)) {
+            scale = Float.NaN;
+            return;
+        }
+
+//#endif
 
         // clear helpers
 		gx = gy = 0;
 
         // stop key checker
         cancelKeyRepeated();
-
-        // delayed repaint for menu autohide
-        autohide();
 
         // ignore the event when menu was on
         if (cmdExec) {
@@ -531,14 +527,22 @@ final class DeviceScreen extends GameCanvas implements Runnable {
 
         } else {
 
+            // show action icons (if autohiding)
+            splash();
+            if (beenPressed) {
+                delegate.update(Desktop.MASK_SCREEN);
+            }
+            
             // end of drag?
             if (_getInMove()) {
                 _setInMove(false);
                 delegate.handleStall(x, y);
-            } else {
-                // usual handling
+            } else { // usual handling
                 keyReleased(key);
             }
+
+            // trigger icon spots autohide
+            autohide();
         }
     }
 
@@ -575,6 +579,7 @@ final class DeviceScreen extends GameCanvas implements Runnable {
             _setInKey(0);
             _setInMove(true);
             delegate.handleMove(x, y);
+            beenPressed = false; // to hide action icons when dragging
         }
     }
 

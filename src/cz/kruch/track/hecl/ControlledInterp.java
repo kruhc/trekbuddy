@@ -10,6 +10,7 @@ import org.hecl.HeclException;
 import org.hecl.CodeThing;
 import org.hecl.NumberThing;
 import org.hecl.FloatThing;
+import org.hecl.RealThing;
 
 import java.util.Enumeration;
 import java.util.Hashtable;
@@ -37,7 +38,13 @@ public class ControlledInterp extends Interp {
         public Thing get(String varname, int units);
     }
 
+    public interface Proxy {
+        public ControlledInterp getInterp();
+    }
+
     String basedir;
+    Hashtable orphanes;
+
     private Lookup fallback;
     private Hashtable codes;
     private Int key, units;
@@ -73,6 +80,10 @@ public class ControlledInterp extends Interp {
     public void addFallback(final Lookup fallback, final Int units) {
         this.fallback = fallback;
         this.units = units;
+    }
+
+    public void addOrphans(final Hashtable orphans) {
+        this.orphanes = orphans;
     }
 
     public void optimize() {
@@ -160,7 +171,7 @@ public class ControlledInterp extends Interp {
         key.setValue(in.hashCode());
         CodeThing thing = (CodeThing) codes.get(key);
         if (thing == null) {
-            codes.put(key._clone() ,thing = CodeThing.get(this, in));
+            codes.put(key._clone(), thing = CodeThing.get(this, in));
         }
         return thing.run(this);
     }
@@ -170,16 +181,18 @@ public class ControlledInterp extends Interp {
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("interp get var: " + varname);
 //#endif
-        
+
         if (fallback != null) {
-            final Thing res = fallback.get(varname, units.intValue());
-            if (res != null) {
+            final Thing builtin = fallback.get(varname, units.intValue());
+            if (builtin != null) {
 //#ifdef __LOG__
-                if (log.isEnabled()) log.debug("interp " + varname + " is built-in var: " + res);
+                if (log.isEnabled()) log.debug("interp " + varname + " is built-in var: " + builtin);
 //#endif
-                return res;
+                return builtin;
             }
         }
+
+        Thing result = null;
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("interp get " + varname);
 //#endif
@@ -187,12 +200,12 @@ public class ControlledInterp extends Interp {
 //#ifdef __LOG__
             if (log.isEnabled()) log.debug("interp var " + varname + " found at level " + (level < 0 ? stack.size() - 1 : level));
 //#endif
-            return super.getVar(varname, level);
-        } else {
+            result = super.getVar(varname, level);
+        } else if (super.existsVar(varname, 0)) {
 //#ifdef __LOG__
             if (log.isEnabled()) log.debug("interp var " + varname + " trying for global");
 //#endif
-            return super.getVar(varname, 0);
+            result = super.getVar(varname, 0);
         }
 /*
 //#ifdef __LOG__
@@ -218,6 +231,7 @@ public class ControlledInterp extends Interp {
 
         return super.getVar(varname, level);
 */
+        return result;
     }
 
     /* @overriden */
@@ -262,7 +276,10 @@ public class ControlledInterp extends Interp {
     }
 
     public synchronized Thing resolveVar(final String varname) throws HeclException {
-        return super.getVar(varname, 0);
+        if (super.existsVar(varname, 0)) {
+            return super.getVar(varname, 0);
+        }
+        return null;
     }
 
     public synchronized Thing evalNoncaching(final Thing in) throws HeclException {
@@ -340,13 +357,19 @@ public class ControlledInterp extends Interp {
             final String var = argv[1].toString();
             if (interp.existsVar(var, 0)) { // var already exists?
 //#ifdef __LOG__
-                if (log.isEnabled()) log.debug("varcmd " + var + " already declared");
+                if (log.isEnabled()) log.debug("var " + var + " already declared");
 //#endif
             } else { // var does not exists - declare it global
 //#ifdef __LOG__
-                if (log.isEnabled()) log.debug("varcmd " + var + " being declared");
+                if (log.isEnabled()) log.debug("var " + var + " being declared with value " + argv[2].getVal().getStringRep());
 //#endif
                 interp.setVar(var, argv[2], 0);
+                if (interp instanceof ControlledInterp) {
+                    final Hashtable orphanes = ((ControlledInterp) interp).orphanes;
+                    if (orphanes != null && orphanes.containsKey(var)) {
+                        interp.getVar(var, 0).setVal((RealThing) orphanes.get(var));
+                    }
+                }
             }
             return null;
         }

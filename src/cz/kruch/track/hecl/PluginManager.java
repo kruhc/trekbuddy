@@ -13,6 +13,7 @@ import api.util.Comparator;
 import java.util.Enumeration;
 import java.util.Vector;
 import java.util.Date;
+import java.util.Hashtable;
 import java.io.IOException;
 import java.io.DataOutputStream;
 import java.io.DataInputStream;
@@ -213,13 +214,13 @@ public final class PluginManager implements CommandListener, Runnable, Comparato
         static final Thing[] procVoidArgv = { Thing.emptyThing() };
 
         private String filename;
+        private ControlledInterp interp;
 
         org.hecl.Command procGetStatus, procGetDetail,
                          eventOnTrackingStart, eventOnTrackingStop, eventOnLocationUpdated;
 
-        private ControlledInterp interp;
-
         public HeclPlugin(String filename) {
+            this.ns = filename.substring(5, filename.length() - 4); // 5: "live.".length, 4: ".hcl".length
             this.filename = filename;
         }
 
@@ -302,9 +303,18 @@ public final class PluginManager implements CommandListener, Runnable, Comparato
 
         public Thing getVar(String name) {
             try {
-                return interp.resolveVar(name);
+                Thing result = interp.resolveVar(name);
+                if (result == null && PluginManager.instance.proxy != null && PluginManager.instance.proxy.getInterp() != null) {
+                    result = PluginManager.instance.proxy.getInterp().resolveVar(name);
+                }
+                return result;
             } catch (Throwable t) {
+//#ifdef __ANDROID__
+                android.util.Log.d(TAG, "plugin getVar failed [" + name +"]", t);
+//#elifdef __SYMBIAN__
+                System.err.println("[TrekBuddy] plugin getVar failed");
                 t.printStackTrace();
+//#endif
             }
             return null;
         }
@@ -354,10 +364,6 @@ public final class PluginManager implements CommandListener, Runnable, Comparato
             }
         }
 
-        String getNs() {
-            return filename.substring(5, filename.length() - 4); // 5: "live.".length, 4: ".hcl".length
-        }
-
         protected void loadOptions(final DataInputStream in) throws IOException {
             int i = in.readInt();
             enabled = in.readBoolean();
@@ -385,6 +391,18 @@ public final class PluginManager implements CommandListener, Runnable, Comparato
                 final Thing optionVar = getVar(optionName);
                 if (optionVar != null) {
                     optionVar.setVal(rt);
+//#ifdef __ANDROID__
+                    android.util.Log.d(TAG, "set value for " + optionName + " [" + rt.getStringRep() + "]");
+//#endif
+                } else {
+                    final PluginManager instance = PluginManager.instance;
+                    if (instance.orphanOptions == null) {
+                        instance.orphanOptions = new Hashtable(4);
+                    }
+                    instance.orphanOptions.put(optionName, rt);
+//#ifdef __ANDROID__
+                    android.util.Log.d(TAG, "saved orphan option " + optionName + " [" + rt.getStringRep() + "]");
+//#endif
                 }
             }
         }
@@ -421,19 +439,23 @@ public final class PluginManager implements CommandListener, Runnable, Comparato
 
         private Thing invoke(final org.hecl.Command command, final Thing[] argv) {
             try {
-                return command.cmdCode(interp, argv);
+                return command.cmdCode(PluginManager.instance.interp, argv);
             } catch (Throwable t) {
-                t.printStackTrace();
+//#ifdef __ANDROID__
+                android.util.Log.d(TAG, "plugin invoke failed [" + command +"]", t);
+//#endif                
                 return new Thing("{ERROR: " + command + "} " + t.toString());
             }
         }
     }
 
-    private static PluginManager instance;
+    /*private*/ static PluginManager instance;
 
     private ControlledInterp interp;
     private NakedVector plugins;
     private ControlledInterp.Lookup fallback;
+    /*private*/ ControlledInterp.Proxy proxy;
+    /*private*/ Hashtable orphanOptions;
 
     private Displayable pane;
     private Image iconOK, iconUnknown, iconError;
@@ -480,6 +502,10 @@ public final class PluginManager implements CommandListener, Runnable, Comparato
 
     public NakedVector getPlugins() {
         return plugins;
+    }
+
+    public Hashtable getOrphanOptions() {
+        return orphanOptions;
     }
 
     public int size() {
@@ -600,6 +626,10 @@ public final class PluginManager implements CommandListener, Runnable, Comparato
 
     public void addFallback(final ControlledInterp.Lookup fallback) {
         this.fallback = fallback;
+    }
+
+    public void addProxy(final ControlledInterp.Proxy proxy) {
+        this.proxy = proxy;
     }
 
     public void run() {

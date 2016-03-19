@@ -35,6 +35,10 @@ public final class Atlas implements Runnable, Comparator {
     private String current;
     private Hashtable maps;
 
+    // atlas attributes
+    private String version;
+    private int preferredZoomMode;
+    
     // special properties
     boolean virtual;
 
@@ -47,6 +51,7 @@ public final class Atlas implements Runnable, Comparator {
         this.listener = listener;
         this.layers = new Hashtable();
         this.maps = new Hashtable();
+        this.preferredZoomMode = -1;
     }
 
     public int size() {
@@ -60,7 +65,23 @@ public final class Atlas implements Runnable, Comparator {
     public String getName() {
         return name;
     }
-    
+
+    public int getPreferredZoomMode() {
+        return preferredZoomMode;
+    }
+
+    void setPreferredZoomMode(int preferredZoomMode) {
+        this.preferredZoomMode = preferredZoomMode;
+    }
+
+    public String getVersion() {
+        return version;
+    }
+
+    void setVersion(String version) {
+        this.version = version;
+    }
+
     public Enumeration getLayers() {
         return layers.keys();
     }
@@ -143,9 +164,10 @@ public final class Atlas implements Runnable, Comparator {
     }
 
     public String getNextLayer(final Map currentMap, final int direction,
-                               final QualifiedCoordinates coords, final Int eventType) {
+                                 final QualifiedCoordinates coords, final Int eventType) {
         String result = null;
-        switch (cz.kruch.track.configuration.Config.easyZoomMode) {
+        int mode = preferredZoomMode > -1 ? preferredZoomMode : cz.kruch.track.configuration.Config.easyZoomMode;
+        switch (mode) {
             case cz.kruch.track.configuration.Config.EASYZOOM_LAYERS:
                 result = getNextLayerLayers(currentMap, direction, coords, eventType);
                 break;
@@ -243,8 +265,14 @@ public final class Atlas implements Runnable, Comparator {
                 // first one is the closest
                 final Calibration candidate = (Calibration) nvd[0];
                 final String[] names = (String[]) candidates.get(candidate);
+                /* fixed 2016-03-03: we know exactly which map to load */
+                /*
                 layerName = names[0];
                 eventType.setValue(4); // 4 = EVENT_LAYER_SELECTION_FINISHED
+                */
+                setLayer(names[0]); // this is all what layer change does besides map selection, see Desktop.execLayerSelectionFinished()
+                layerName = names[1];
+                eventType.setValue(5); // 5 = EVENT_MAP_SELECTION_FINISHED
             }
         } else {
             layerName = mapName;
@@ -298,7 +326,7 @@ public final class Atlas implements Runnable, Comparator {
             if (direction == 1) {
                 if (scale / currentScale < 0.85D) {
 //#ifdef __LOG__
-                    if (log.isEnabled()) log.debug("\t\t" + (scale / currentScale) + " < 0.75");
+                    if (log.isEnabled()) log.debug("\t\t" + (scale / currentScale) + " < 0.85");
 //#endif
                     if (scale > nextScale) {
 //#ifdef __LOG__
@@ -420,7 +448,7 @@ public final class Atlas implements Runnable, Comparator {
             } else {
                 throw new InvalidMapException("Unsupported format");
             }
-            final Map.Loader loader = (Map.Loader) factory.newInstance();
+            final /*Map.*/Loader loader = (/*Map.*/Loader) factory.newInstance();
             loader.loadIndex(this, url, baseUrl);
 
 //#ifdef __LOG__

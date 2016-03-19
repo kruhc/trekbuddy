@@ -66,7 +66,9 @@ public final class Desktop implements CommandListener,
 //#ifdef __LOG__
     private static final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("Desktop");
 //#endif
+//#ifdef __ANDROID__
     private static final String TAG = cz.kruch.track.TrackingMIDlet.APP_TITLE;
+//#endif
 
     // dialog timeouts
     private static final int INFO_DIALOG_TIMEOUT    = 1000;
@@ -107,7 +109,14 @@ public final class Desktop implements CommandListener,
     private boolean boot, initialized;
 
     // common desktop components
+//--//#ifndef __CN1__
+//#if !__ANDROID__ && !__CN1__
     static Image bar, barWpt, barScale;
+//#else
+    static int bar_c, bar_w, bar_h;
+    static int barWpt_c, barWpt_w, barWpt_h;
+    static int barScale_c, barScale_w, barScale_h;
+//#endif
     static OSD osd; // TODO should move to MapView
     static Status status; // TODO should move to MapView 
 
@@ -330,6 +339,12 @@ public final class Desktop implements CommandListener,
 //#endif
 //#ifdef __ANDROID__
         android.util.Log.i(TAG, "[app] starting");
+//#ifdef __NOBJPOOL__
+        android.util.Log.i(TAG, "[app] * object pooling used? no");
+//#endif
+        if (android.os.Build.VERSION.SDK_INT <= 10) {
+            android.util.Log.i(TAG, "[app] * bitmap recycling used? yes");
+        }
 //#endif
 
 //#ifdef __B2B__
@@ -353,7 +368,7 @@ public final class Desktop implements CommandListener,
         consoleInit(g);
 
         // show copyright(s)
-        consoleShow(g, consoleLineY, "TrekBuddy \u00a9 2006-2014 KrUcH");
+        consoleShow(g, consoleLineY, "TrekBuddy \u00a9 2006-2016 KrUcH");
         consoleLineY += consoleLineHeight;
         final String lc = Resources.getString(Resources.BOOT_LOCAL_COPY);
         if (lc != null && lc.length() > 0) {
@@ -614,13 +629,19 @@ public final class Desktop implements CommandListener,
         // initialize waypoints
         Waypoints.initialize(this);
 
-        // loads CMS profiles // TODO move to resetGui???
-        ((Runnable) views[VIEW_CMS]).run();
-
 //#ifdef __HECL__
         // load plugins
-        cz.kruch.track.hecl.PluginManager.getInstance().addFallback((cz.kruch.track.hecl.ControlledInterp.Lookup) views[VIEW_CMS]);
+        cz.kruch.track.hecl.PluginManager.getInstance().addFallback((ComputerView) views[VIEW_CMS]);
+        cz.kruch.track.hecl.PluginManager.getInstance().addProxy((ComputerView) views[VIEW_CMS]);
         cz.kruch.track.hecl.PluginManager.getInstance().run();
+//#endif
+
+        // loads CMS profiles // TODO move to resetGui???
+        ((ComputerView) views[VIEW_CMS]).run();
+
+//#ifdef __HECL__
+        // plugins can access CMS
+//        cz.kruch.track.hecl.PluginManager.getInstance().addDelegate(((ComputerView) views[VIEW_CMS]).interp);
 //#endif
 
         // initialize groupware
@@ -808,6 +829,11 @@ public final class Desktop implements CommandListener,
 
     static void resetFont() {
 
+//#ifdef __ANDROID__
+        // reset cache
+        cz.kruch.track.TrackingMIDlet.getActivity().getEmulatorContext().getDeviceFontManager().init();
+//#endif
+
 //#ifndef __CN1__
 
         /*
@@ -891,7 +917,8 @@ public final class Desktop implements CommandListener,
             alpha = 0xff;
         }
 
-//#ifndef __CN1__
+//--//#ifndef __CN1__
+//#if !__ANDROID__ && !__CN1__
 
         /*
          * Better do it old way ie. release first and then create new to conserve memory
@@ -921,36 +948,24 @@ public final class Desktop implements CommandListener,
 
         } /* ~synchronized */
 
-//#else
-
-        /*
-         * Image creation outside of huge lock to avoid deadlock
-         */
-
-        // OSD/status bar
-        int color = alpha << 24 | (Config.osdBlackColor ? 0x00dfdfdf : 0x007f7f7f);
-        int h = font.getHeight();
-        int w = screen.getWidth();
-        final Image newBar = cz.kruch.track.util.ImageUtils.createRGBImage(w, h, color);
-
-        // wpt label bar
-        color = alpha << 24 | 0x00ffff00;
-        h = cz.kruch.track.TrackingMIDlet.getPlatform().startsWith("Nokia/6230i") ? font.getBaselinePosition() + 2 : font.getHeight();
-        final Image newBarWpt = cz.kruch.track.util.ImageUtils.createRGBImage(w, h, color);
-
-        // scale bar
-        color = alpha << 24 | 0x00ffffff;
-        h = font.getHeight();
-        w = font.stringWidth("99999 km") + 4;
-        final Image newBarScale = cz.kruch.track.util.ImageUtils.createRGBImage(w, h, color);
+//#else // __ANDROID__ || __CN1__
 
         synchronized (renderLock) { // @threads:?:?
-            bar = null; // gc hint
-            bar = newBar;
-            barWpt = null; // gc hint
-            barWpt = newBarWpt;
-            barScale = null; // gc hint
-            barScale = newBarScale;
+
+            // OSD/status bar
+            bar_c = alpha << 24 | (Config.osdBlackColor ? 0x00dfdfdf : 0x007f7f7f);
+            bar_h = font.getHeight();
+            bar_w = screen.getWidth();
+
+            // wpt label bar
+            barWpt_c = alpha << 24 | 0x00ffff00;
+            barWpt_h = bar_h;
+            barWpt_w = bar_w;
+
+            // scale bar
+            barScale_c = alpha << 24 | 0x00ffffff;
+            barScale_h = bar_h;
+            barScale_w = font.stringWidth("99999 km") + 4;
         } /* ~synchronized */
 
 //#endif
@@ -970,7 +985,9 @@ public final class Desktop implements CommandListener,
         // thread-based refs
         timer = null;
         eventWorker = diskWorker = liveWorker = null;
-        rtCountFree = countFree = 0;
+//#ifndef __NOBJPOOL__
+        rtCountFree = evCountFree = 0;
+//#endif
         // navigation refs
         wpts = null;
         wptsName = null;
@@ -981,8 +998,10 @@ public final class Desktop implements CommandListener,
         cz.kruch.track.hecl.PluginManager.jvmReset();
 //#endif
         // pools
+//#ifndef __NOBJPOOL__
         java.util.Arrays.fill(rtPool, null);
-        java.util.Arrays.fill(pool, null);
+        java.util.Arrays.fill(evPool, null);
+//#endif
 //#endif
         // navigation reset
         wptIdx = wptEndIdx = reachedIdx = -1;
@@ -1205,7 +1224,7 @@ public final class Desktop implements CommandListener,
             } else {
                 extras = new Object[]{ providerStatus, providerError, tracklogError };
             }
-            form.show(this, map, extras);
+            form.show(this, atlas, map, extras);
         } else if (command == cmdSettings) {
             (new SettingsForm(new Event(Event.EVENT_CONFIGURATION_CHANGED))).show();
         } else if (command == cmdWaypoints) {
@@ -2166,16 +2185,17 @@ public final class Desktop implements CommandListener,
 
     // TODO hacky!!!!
     void handleMove(int x, int y) {
-        if (views == null) return; // too early invocation
+        if (views == null)
+            return; // too early invocation
         if (mode == VIEW_MAP) {
-            Desktop.browsing = true;
             update(((MapView) views[mode]).moveTo(x, y) | MASK_FPSCTRL);
         }
     }
 
     // TODO hacky!!!!
     void handleStall(int x, int y) {
-        if (views == null) return; // too early invocation
+        if (views == null)
+            return; // too early invocation
         if (mode == VIEW_MAP) {
             update(((MapView) views[mode]).moveTo(-1, -1));
         }
@@ -2183,7 +2203,8 @@ public final class Desktop implements CommandListener,
 
     // TODO hacky!!!!
     void handleMagnify(int direction) {
-        if (views == null) return; // too early invocation
+        if (views == null)
+            return; // too early invocation
         if (mode == VIEW_MAP) {
             update(((MapView) views[mode]).magnify(direction));
         }
@@ -2893,31 +2914,39 @@ public final class Desktop implements CommandListener,
      * POOL
      */
 
+//#ifndef __NOBJPOOL__
+
     private static final RenderTask[] rtPool = new RenderTask[16];
     private static int rtCountFree;
 
-    private RenderTask newRenderTask(final int m, final boolean y) {
-        final RenderTask result;
+//#endif
 
+    private RenderTask newRenderTask(final int m, final boolean y) {
+        RenderTask result = null;
+//#ifndef __NOBJPOOL__
         synchronized (rtPool) {
-            if (rtCountFree == 0) {
-                result = new RenderTask(m, y);
-            } else {
+            if (rtCountFree > 0) {
                 result = rtPool[--rtCountFree];
                 rtPool[rtCountFree] = null;
-                result.set(m, y);
             }
         }
+//#endif
+        if (result == null) {
+            result = new RenderTask();
+        }
+        result.set(m, y);
 
         return result;
     }
 
     /*private*/ void releaseRenderTask(final RenderTask task) { // RenderTask visibility to avoid synthetic accessors
+//#ifndef __NOBJPOOL__
         synchronized (rtPool) {
             if (rtCountFree < rtPool.length) {
                 rtPool[rtCountFree++] = task;
             }
         }
+//#endif
     }
 
     /*
@@ -2939,6 +2968,9 @@ public final class Desktop implements CommandListener,
     final class RenderTask implements Runnable {
         private int mask;
         private boolean mapscr;
+
+        RenderTask() {
+        }
 
         public RenderTask(final int m, final boolean y) {
             this.mask = m;
@@ -2993,7 +3025,10 @@ public final class Desktop implements CommandListener,
 
 //#ifdef __CN1__
                 // clear paint operations
-                Desktop.screen.clearGraphics();
+                //Desktop.screen.clearGraphics();
+                // using wipe
+                g.setColor(0x0);
+                g.fillRect(0, 0, Desktop.width, Desktop.height);
 //#endif
 
                 // render current view
@@ -3254,32 +3289,40 @@ public final class Desktop implements CommandListener,
      * POOL
      */
 
-    private static final Event[] pool = new Event[8];
-    private static int countFree;
+//#ifndef __NOBJPOOL__
+
+    private static final Event[] evPool = new Event[8];
+    private static int evCountFree;
+
+//#endif
 
     private Event newEvent(final int code, final Object result,
                            final Throwable throwable, final Object closure) {
-        final Event event;
-
-        synchronized (pool) {
-            if (countFree == 0) {
-                event = new Event(code, result, throwable, closure);
-            } else {
-                event = pool[--countFree];
-                pool[countFree] = null;
-                event.set(code, result, throwable, closure);
+        Event event = null;
+//#ifndef __NOBJPOOL__
+        synchronized (evPool) {
+            if (evCountFree > 0) {
+                event = evPool[--evCountFree];
+                evPool[evCountFree] = null;
             }
         }
+//#endif
+        if (event == null) {
+            event = new Event();
+        }
+        event.set(code, result, throwable, closure);
 
         return event;
     }
 
     /*private*/ void releaseEvent(final Event event) { // Event visibility to avoid synthetic accessors
-        synchronized (pool) {
-            if (countFree < pool.length) {
-                pool[countFree++] = event;
+//#ifndef __NOBJPOOL__
+        synchronized (evPool) {
+            if (evCountFree < evPool.length) {
+                evPool[evCountFree++] = event;
             }
         }
+//#endif
     }
 
     /*
@@ -3311,17 +3354,20 @@ public final class Desktop implements CommandListener,
 
         private boolean release;
 
-        public Event(final int code) {
+        Event() {
+        }
+
+        Event(final int code) {
             this.code = code;
             this.release = true;
         }
 
-        public Event(final int code, final Object closure) {
+        Event(final int code, final Object closure) {
             this(code);
             this.closure = closure;
         }
 
-        public Event(final int code, final Object result,
+        Event(final int code, final Object result,
                      final Throwable throwable, final Object closure) {
             this(code, closure);
             this.result = result;
@@ -3483,16 +3529,26 @@ public final class Desktop implements CommandListener,
             if (log.isEnabled()) log.debug("config changed ok");
 //#endif
 
+//#ifdef __ANDROID__
+            final org.microemu.android.MicroEmulatorActivity activity = cz.kruch.track.TrackingMIDlet.getActivity();
+            activity.config.ignoreVolumeKeys = !Config.easyZoomVolumeKeys;
+            activity.config.ignoreTextFieldFocus = !Config.forceTextFieldFocus;
+            if (activity.windowFullscreen != Config.fullscreen) {
+                android.util.Log.d(TAG, "[app] persist fullscreen style change; current setting is " + Config.fullscreen);
+                final android.content.SharedPreferences settings = activity.getPreferences(0);
+                final android.content.SharedPreferences.Editor editor = settings.edit();
+                editor.putBoolean("fullscreen", Config.fullscreen);
+                editor.commit();
+            }
+//#endif
+
             // UI setting may have changed
             resetFont();
             resetBar();
+            osd.resetFont();
+            status.resetFont();
 //#ifdef __LOG__
-            if (log.isEnabled()) log.debug("UI elements reinit");
-//#endif
-
-//#ifdef __ANDROID__
-            cz.kruch.track.TrackingMIDlet.getActivity().config.ignoreVolumeKeys = !Config.easyZoomVolumeKeys;
-            cz.kruch.track.TrackingMIDlet.getActivity().config.ignoreTextFieldFocus = !Config.forceTextFieldFocus;
+            if (log.isEnabled()) log.debug("UI elements reset");
 //#endif
 
             // runtime ops

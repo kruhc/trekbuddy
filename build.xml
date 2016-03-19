@@ -17,8 +17,6 @@
     <property name="permission.attribute" value="MIDlet-Permissions-Opt"/>
 
     <property name="wtk.home" value="c:\J2ME\WTK2.5.2_01"/>
-    <property name="wtk3.home" value="c:\J2ME\JavaME3.0"/>
-    <property name="motorola.home" value="c:\J2ME\Motorola\SDKv6.2\EmulatorM.3"/>
     <property name="garnet.home" value="c:\J2ME\Garnet\PalmOS JVM 5.7.2\Tools"/>
     <property name="rim41.home" value="c:\J2ME\RIM\JDE 4.1.0"/>
     <property name="rim42.home" value="c:\J2ME\RIM\JDE 4.2.1"/>
@@ -33,7 +31,7 @@
     <property name="cn1.repository" value="z:\repository\cn1\CodenameOne"/>
     <property name="proguard3.home" value="z:\apps\proguard\3.11"/>
     <property name="proguard4.home" value="z:\apps\proguard\4.11"/>
-    <property name="proguard5.home" value="z:\apps\proguard\5.1"/>
+    <property name="proguard5.home" value="z:\apps\proguard\5.2.1"/>
 
     <property name="build.dir" value="r:\trekbuddy"/>
     <property name="temp.dir" value="r:\java-temp"/>
@@ -342,7 +340,7 @@
         <antcall target="a.pre.android"/>
         <antcall target="compile.android"/>
         <antcall target="android.pack" inheritall="true"/>
-        <antcall target="obfuscate4.android" inheritall="true"/>
+        <antcall target="obfuscate5.android" inheritall="true"/>
 <!-- not needed, so rename the jar as if it happened
         <antcall target="preverify" inheritall="true"/>
 -->
@@ -766,7 +764,7 @@
         <wtkpreprocess srcdir="cn1-compat/src" destdir="tmp/src" version="1"
                        symbols="__CN1__,${pre.extra}"/>
         <wtkpreprocess srcdir="src" destdir="tmp/src" version="1"
-                       symbols="__HECL__,__CN1__,__NO_NET__,${pre.extra}"/>
+                       symbols="__HECL__,__CN1__,__NO_NET__,__NOBJPOOL__,${pre.extra}"/>
     </target>
 
     <target name="a.pre.cn1" depends="a.pre.hecl-android-offline">
@@ -780,7 +778,7 @@
         <wtkpreprocess srcdir="cn1-compat/src" destdir="tmp/src" version="1"
                        symbols="__CN1__,__LOG__,${pre.extra}"/>
         <wtkpreprocess srcdir="src" destdir="tmp/src" version="1"
-                       symbols="__HECL__,__CN1__,__NO_NET__,__LOG__,${pre.extra}"/>
+                       symbols="__HECL__,__CN1__,__NO_NET__,__NOBJPOOL__,__ALT_RENDERER__,__LOG__,${pre.extra}"/>
     </target>
 
     <target name="a.pre.cn1-emulator">
@@ -1650,6 +1648,49 @@
             <arg value="-whyareyoukeeping class cz.kruch.track.hecl.PluginManager"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.ui.nokia.NokiaUi14DeviceControl"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.ui.nokia.S60DeviceControl"/>
+            <arg value="-printmapping dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.map"/>
+            <arg value="-printseeds"/>
+            <arg value="-printusage dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.dco"/>
+            <arg value="-verbose"/>
+        </java>
+    </target>
+
+    <target name="obfuscate5.android">
+	    <java jar="${proguard5.home}\lib\proguard.jar" fork="true">
+            <jvmarg value="-Dmaximum.inlined.code.length=4"/>
+            <jvmarg value="-Doptimize.conservatively=true"/>
+            <arg value="-injars tmp/trekbuddy${suffix}.jar"/>
+            <arg value="-outjars tmp/trekbuddy${suffix}-obfuscated.jar"/>
+            <arg value="-libraryjars ${libraryjars}"/>
+            <arg value="-dontpreverify"/> <!-- not preverified; this is 4.x flag -->
+            <arg value="-optimizations !code/simplification/arithmetic"/> <!-- dalvik 1.0/1.5 issue workaround -->
+            <arg value="-dontusemixedcaseclassnames"/>
+            <arg value="-dontskipnonpubliclibraryclasses"/>
+            <arg value="-repackageclasses ''"/>
+            <arg value="-allowaccessmodification"/>
+<!-- leaving this optimization to dx? "Dalvik VM also can't handle aggressive overloading" (ProGuard Manual)
+            <arg value="-overloadaggressively"/>
+-->
+            <arg value="-renamesourcefileattribute TrekBuddy"/>
+            <arg value="-keepattributes SourceFile,LineNumberTable"/>
+            <arg value="-keep class * implements javax.microedition.midlet.MIDlet"/>
+            <arg value="-keepnames class api.io.RandomAccessInputStream"/>
+            <arg value="-keepnames class net.trekbuddy.midlet.Runtime"/>
+            <arg value="-keepnames class net.trekbuddy.midlet.IRuntime"/>
+            <arg value="-keepnames class com.dsi.ant.**"/>
+            <arg value="-keepnames class cz.** extends java.lang.Exception"/>
+            <arg value="-keepnames class api.** extends java.lang.Exception"/>
+            <arg value="-keepnames class org.** extends java.lang.Exception"/>
+            <arg value="-whyareyoukeeping class api.io.BufferedOutputStream"/>
+            <arg value="-whyareyoukeeping class net.trekbuddy.midlet.IRuntime"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.maps.io.FileInput"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.io.CrcInputStream"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.maps.NoMapLoader"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.ui.SmartList"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.ui.nokia.AndroidDeviceControl"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.util.Logger"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.hecl.ControlledInterp"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.hecl.PluginManager"/>
             <arg value="-printmapping dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.map"/>
             <arg value="-printseeds"/>
             <arg value="-printusage dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.dco"/>

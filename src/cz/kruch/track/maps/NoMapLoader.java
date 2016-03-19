@@ -29,7 +29,7 @@ import cz.kruch.track.configuration.Config;
  *
  * @author kruhc@seznam.cz
  */
-final class NoMapLoader extends Map.Loader /*implements Atlas.Loader*/ {
+final class NoMapLoader extends /*Map.*/Loader /*implements Atlas.Loader*/ {
 
     private static final String TAG_METADATA    = "metadata";
     private static final String TAG_NAME        = "name";

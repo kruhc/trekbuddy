@@ -12,6 +12,7 @@ import java.util.TimeZone;
 
 import cz.kruch.track.configuration.Config;
 import cz.kruch.track.maps.Map;
+import cz.kruch.track.maps.Atlas;
 import cz.kruch.track.Resources;
 
 import api.file.File;
@@ -24,13 +25,15 @@ import api.file.File;
 final class InfoForm implements CommandListener {
 
     private Object[] extras;
+    private Atlas atlas;
     private Map map;
 
     InfoForm() {
     }
 
-    public void show(Desktop desktop, Map map, Object[] extras) {
+    public void show(final Desktop desktop, final Atlas atlas, final Map map, final Object[] extras) {
         // members
+        this.atlas = atlas;
         this.map = map;
         this.extras = extras;
 
@@ -142,6 +145,8 @@ final class InfoForm implements CommandListener {
 //#ifdef __ANDROID__
                 .append("; dpi: ").append((int)DeviceScreen.xdpi).append('/')
                                   .append((int)DeviceScreen.ydpi)
+                .append("; density: ").append(DeviceScreen.density).append('/')
+                                      .append((int)DeviceScreen.densityDpi)
 //#endif
 //#ifdef __CN1__
                 .append("; scaleFactor: ").append(DeviceScreen.scaleFactor)
@@ -154,6 +159,15 @@ final class InfoForm implements CommandListener {
                 .append("; isDoubleBuffered? ").append(Desktop.screen.isDoubleBuffered())
                 .append("; skips? ").append(Desktop.skips);
         pane.append(newItem("Desktop", sb.toString()));
+        if (atlas == null) {
+            pane.append(newItem("Atlas", ""));
+        } else {
+            getSb(sb)
+                    .append(atlas.getName())
+                    .append("; version: ").append(atlas.getVersion())
+                    .append("; zoom: ").append(atlas.getPreferredZoomMode());
+            pane.append(newItem("Atlas", sb.toString()));
+        }
         if (map == null) {
             pane.append(newItem("Map", ""));
         } else {

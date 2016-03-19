@@ -57,6 +57,11 @@ public final class ImageUtils {
                         img = resizeImage(img, 32, 32, ImageUtils.SLOW_RESAMPLE, false);
                     }
                     break;
+                case 3:
+                    if (img.getWidth() < 40 || img.getHeight() < 40) {
+                        img = resizeImage(img, 40, 40, ImageUtils.SLOW_RESAMPLE, false);
+                    }
+                    break;
             }
         }
         return img;

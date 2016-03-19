@@ -50,8 +50,10 @@ final class ExtList extends List implements UiList {
 
     public void setData(NakedVector data) {
         this.items = data;
+        reitem();
     }
 
+/*
     public void setAll(String[] stringElements) {
 //#ifndef __ANDROID__
         for (int i = 0, N = stringElements.length; i < N; i++) {
@@ -60,6 +62,26 @@ final class ExtList extends List implements UiList {
 //#else
         deleteAll();
         appendAll(stringElements, null);
+//#endif
+    }
+*/
+
+    private void reitem() {
+        if (items == null) {
+            return;
+        }
+        final Object[] data = items.getData();
+//#ifndef __ANDROID__
+        for (int i = 0, N = items.size(); i < N; i++) {
+            set(i, data[i].toString(), null);
+        }
+//#else
+        final String[] strings = new String[items.size()];
+        for (int i = 0, N = items.size(); i < N; i++) {
+            strings[i] = data[i].toString();
+        }
+        deleteAll();
+        appendAll(strings, null);
 //#endif
     }
 
@@ -132,5 +154,6 @@ final class ExtList extends List implements UiList {
     }
 
     public void repaint() {
+        reitem();
     }
 }

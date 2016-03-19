@@ -72,12 +72,16 @@ public final class Datum {
         final double rn = feer / Math.sqrt(v);
         final double rm = feer * (1D - fees) / Math.sqrt(v * v * v); // sqrt(v^3) = pow(v, 1.5)
 
-        dlat = ((((((sign * dx) * slat * clon + (sign * dy) * slat * slon) - (sign * dz) * clat)
-                + (da * ((rn * fees * slat * clat) / feer)))
-                + (df * (rm * bda + rn / bda) * slat * clat)))
+        final double sign_x_dx = sign * dx;
+        final double sign_x_dy = sign * dy;
+        final double slat_x_clat = slat * clat;
+
+        dlat = (((((sign_x_dx * slat * clon + sign_x_dy * slat * slon) - (sign * dz) * clat)
+                + (da * ((rn * fees * slat_x_clat) / feer)))
+                + (df * (rm * bda + rn / bda) * slat_x_clat)))
                 / (rm /* + from.h*/);
 
-        dlon = ((sign * dx) * slon - (sign * dy) * clon) / ((rn /* + from.h*/) * clat);
+        dlon = (sign_x_dx * slon - sign_x_dy * clon) / ((rn /* + from.h*/) * clat);
 
 /*
         dh = (- dx * clat * clon) + (- dy * clat * slon) + (- dz * slat)

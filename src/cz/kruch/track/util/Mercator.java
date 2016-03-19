@@ -355,10 +355,14 @@ public final class Mercator {
                                   + (15 * eccSquared2 / 256 + 45 * eccSquared3 / 1024) * Math.sin(4 * latOriginRad)
                                   - (35 * eccSquared3 / 3072) * Math.sin(6 * latOriginRad));
 
-                final double easting = setup.falseEasting + setup.k0 * N * (A + ((1 - T + C) * A * A * A / 6)
-                                       + ((5 - 18 * T + T * T + 72 * C - 58 * eccPrimeSquared) * A * A * A * A * A / 120));
-                final double northing = setup.falseNorthing + setup.k0 * (M - Mo + N * temp_tanLatRad * (A * A / 2 + ((5 - T + 9 * C + 4 * C * C) * A * A * A * A / 24)
-                                        + ((61 - 58 * T + T * T + 600 * C - 330 * eccPrimeSquared) * A * A * A * A * A * A / 720)));
+                final double T2 = T * T;
+                final double A2 = A * A;
+                final double A3 = A2 * A;
+
+                final double easting = setup.falseEasting + setup.k0 * N * (A + ((1 - T + C) * A3 / 6)
+                                       + ((5 - 18 * T + T2 + 72 * C - 58 * eccPrimeSquared) * A3 * A2 / 120));
+                final double northing = setup.falseNorthing + setup.k0 * (M - Mo + N * temp_tanLatRad * (A2 / 2 + ((5 - T + 9 * C + 4 * C * C) * A3 * A / 24)
+                                        + ((61 - 58 * T + T2 + 600 * C - 330 * eccPrimeSquared) * A3 * A3 / 720)));
 
                 coords = CartesianCoordinates.newInstance(setup.zone, easting, northing);
 
@@ -634,11 +638,14 @@ public final class Mercator {
                                   - (35 * eccSquared3 / 3072) * Math.sin(6 * latOriginRad));
                 final double Mi = Mo + (utm.northing - setup.falseNorthing) / setup.k0;
 
-                final double mu = Mi / (a * (1 - eccSquared / 4 - 3 * eccSquared * eccSquared / 64 - 5 * eccSquared * eccSquared * eccSquared / 256));
-                final double phi1Rad = mu + (3 * e1 / 2 - 27 * e1 * e1 * e1 / 32) * Math.sin(2 * mu)
-                                       + (21 * e1 * e1 / 16 - 55 * e1 * e1 * e1 * e1 / 32) * Math.sin(4 * mu)
-                                       + (151 * e1 * e1 * e1 / 96) * Math.sin(6 * mu)
-                                       + (1097 * e1 * e1 * e1 * e1 / 512) * Math.sin(8 * mu);
+                final double e13 = e1 * e1 * e1;
+                final double e14 = e13 * e1;
+
+                final double mu = Mi / (a * (1 - eccSquared / 4 - 3 * eccSquared2 / 64 - 5 * eccSquared3 / 256));
+                final double phi1Rad = mu + (3 * e1 / 2 - 27 * e13 / 32) * Math.sin(2 * mu)
+                                       + (21 * e1 * e1 / 16 - 55 * e14 / 32) * Math.sin(4 * mu)
+                                       + (151 * e13 / 96) * Math.sin(6 * mu)
+                                       + (1097 * e14 / 512) * Math.sin(8 * mu);
 
                 final double temp_sinPhi1 = Math.sin(phi1Rad);
                 final double temp_tanPhi1 = Math.tan(phi1Rad);
@@ -656,15 +663,20 @@ public final class Mercator {
                 final double R1 = a * (1 - eccSquared) / v;
                 final double D = (utm.easting - setup.falseEasting) / (N1 * setup.k0);
 
+                final double D2 = D * D;
+                final double D4 = D2 * D2;
+                final double C12 = C1 * C1;
+                final double T12 = T1 * T1;
+
                 double lat;
                 double lon;
 
-                lat = phi1Rad - (N1 * temp_tanPhi1 / R1) * (D * D / 2 - (5 + 3 * T1 + 10 * C1 - 4 * C1 * C1 - 9 * eccPrimeSquared) * D * D * D * D / 24
-                        + (61 + 90 * T1 + 298 * C1 + 45 * T1 * T1 - 252 * eccPrimeSquared - 3 * C1 * C1) * D * D * D * D * D * D / 720);
+                lat = phi1Rad - (N1 * temp_tanPhi1 / R1) * (D2 / 2 - (5 + 3 * T1 + 10 * C1 - 4 * C12 - 9 * eccPrimeSquared) * D4 / 24
+                        + (61 + 90 * T1 + 298 * C1 + 45 * T12 - 252 * eccPrimeSquared - 3 * C12) * D4 * D2 / 720);
                 lat = Math.toDegrees(lat);
 
-                lon = (D - (1 + 2 * T1 + C1) * D * D * D / 6 + (5 - 2 * C1 + 28 * T1 - 3 * C1 * C1 + 8 * eccPrimeSquared + 24 * T1 * T1)
-                        * D * D * D * D * D / 120) / temp_cosPhi1;
+                lon = (D - (1 + 2 * T1 + C1) * D * D * D / 6 + (5 - 2 * C1 + 28 * T1 - 3 * C12 + 8 * eccPrimeSquared + 24 * T12)
+                        * D4 * D / 120) / temp_cosPhi1;
                 lon = setup.lonOrigin + Math.toDegrees(lon);
 
                 qc = QualifiedCoordinates.newInstance(lat, lon);

@@ -11,7 +11,7 @@ import java.io.InputStream;
 
 import api.file.File;
 
-final class JarLoader extends Map.Loader /*implements Atlas.Loader*/ {
+final class JarLoader extends /*Map.*/Loader /*implements Atlas.Loader*/ {
     private static final String DEFAULT_OZI_MAP = "/resources/world.map";
     private static final String RESOURCES_SET_DIR = "/resources/set/";
     private static final String RESOURCES_SET_FILE = "/resources/world.set";

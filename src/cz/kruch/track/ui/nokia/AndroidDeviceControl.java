@@ -35,23 +35,25 @@ final class AndroidDeviceControl
 
     @Override
     void turnOn() {
+        android.util.Log.d("TrekBuddy", "[app] turn backlight on");
         if (wl == null) {
-            wl = ((android.os.PowerManager) cz.kruch.track.TrackingMIDlet.getActivity().getSystemService(android.content.Context.POWER_SERVICE)).newWakeLock(android.os.PowerManager.SCREEN_DIM_WAKE_LOCK | android.os.PowerManager.ON_AFTER_RELEASE, "TrekBuddy");
+            android.util.Log.i("TrekBuddy", "[app] new wake lock");
+            wl = ((android.os.PowerManager) cz.kruch.track.TrackingMIDlet.getActivity().getSystemService(android.content.Context.POWER_SERVICE)).newWakeLock(android.os.PowerManager.SCREEN_BRIGHT_WAKE_LOCK | android.os.PowerManager.ACQUIRE_CAUSES_WAKEUP | android.os.PowerManager.ON_AFTER_RELEASE, "TrekBuddy");
+        } else if (wl.isHeld()) {
+            android.util.Log.w("TrekBuddy", "[app] wake lock still held - should never happen");
+            wl.release();
         }
-//        android.util.Log.i("TrekBuddy", "[app] wake lock refresh");
         wl.acquire();
         wl.release();
     }
 
     @Override
     void turnOff() {
-//        android.util.Log.i("TrekBuddy", "[app] wake lock off");
-        wl = null;
+        android.util.Log.i("TrekBuddy", "[app] backlight turn off - nothing to do");
      }
 
     @Override
     void sync() {
-//        android.util.Log.i("TrekBuddy", "[app] sync; presses " + presses);
         if (presses == 0) {
             if (Config.nokiaBacklightLast != 0) {
                 invertLevel();
@@ -69,7 +71,6 @@ final class AndroidDeviceControl
         setLights();
         Config.nokiaBacklightLast = backlight;
         Config.updateInBackground(Config.VARS_090);
-//        android.util.Log.i("TrekBuddy", "[app] next level idx " + backlight);
     }
 
     @Override
@@ -81,7 +82,6 @@ final class AndroidDeviceControl
     }
 
     private void invertLevel() {
-//        android.util.Log.i("TrekBuddy", "[app] invert level");
         if (backlight == 0) {
             backlight = Config.nokiaBacklightLast;
         } else {
@@ -91,16 +91,15 @@ final class AndroidDeviceControl
     }
 
     private void setLights() {
-//        android.util.Log.i("TrekBuddy", "[app] set brightness to level " + backlight + " (idx)");
+        android.util.Log.i("TrekBuddy", "[app] set brightness to level " + backlight + " (idx)");
         if (backlight == 0) {
-//            android.util.Log.i("TrekBuddy", "[app] task = " + task);
             if (task != null) {
                 task.cancel();
                 task = null;
             }
         } else {
             final float value = ((float) values[backlight]) / 100;
-//            android.util.Log.i("TrekBuddy", "[app] set screenBrightness to: " + value);
+            android.util.Log.i("TrekBuddy", "[app] set screenBrightness to: " + value);
             cz.kruch.track.TrackingMIDlet.getActivity().post(new Runnable() {
                 @Override
                 public void run() {
@@ -109,7 +108,6 @@ final class AndroidDeviceControl
                     cz.kruch.track.TrackingMIDlet.getActivity().getWindow().setAttributes(layout);
                 }
             });
-//            android.util.Log.i("TrekBuddy", "[app] task = " + task);
             if (task == null) {
                 cz.kruch.track.ui.Desktop.scheduleAtFixedRate(task = new DeviceControl(),
                                                               REFRESH_PERIOD, REFRESH_PERIOD);

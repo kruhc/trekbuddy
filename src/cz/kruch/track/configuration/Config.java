@@ -343,6 +343,9 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         safeColors = true;
         fullscreen = true;
         wp8Io = true;
+//#ifdef __ALT_RENDERER__
+        S60renderer = false; // drawRegion supported well
+//#endif
 
 //#else
 

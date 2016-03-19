@@ -926,6 +926,9 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
                             } break;
 
                             case Resources.NAV_CMD_UPDATE: {
+                                // update list
+                                list.repaint();
+
                                 // update current store
                                 updateStore(currentName, currentWpts);
                             } break;
@@ -2005,7 +2008,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
         UiList l = null;
         if (useNativeList) {
             try {
-                l = new ExtList(title, List.IMPLICIT, names2strings(stores), null);
+                l = new ExtList(title, List.IMPLICIT/*, names2strings(stores), null*/);
                 l.setFitPolicy(Choice.TEXT_WRAP_OFF);
 //#ifdef __CN1__
                 ((javax.microedition.lcdui.List) l).setContextObject(getStoresFolder());
@@ -2067,7 +2070,7 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
         UiList l = null;
         if (useNativeList) {
             try {
-                l = new ExtList(title, List.IMPLICIT, wpts2strings(sortedWpts), null);
+                l = new ExtList(title, List.IMPLICIT/*, wpts2strings(sortedWpts), null*/);
                 l.setFitPolicy(Choice.TEXT_WRAP_OFF);
             } catch (Throwable t) {
                 // ignore - can be IllegalArgumentException due to 255 limit etc
@@ -2256,10 +2259,12 @@ public final class Waypoints implements CommandListener, Runnable, Callback,
             // sort
             sortWaypoints(list, wpts, tickerInUse);
 
+/*
             // update list
             if (list instanceof ExtList) { // FIXME
                 ((ExtList) list).setAll(wpts2strings(sortedWpts));
             }
+*/
 
             // sort
             switch (sort) {

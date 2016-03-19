@@ -39,7 +39,7 @@ public class DeviceControl extends TimerTask {
 //#elifdef __RIM__
         instance = new cz.kruch.track.ui.nokia.BlackberryDeviceControl();
 //#elifdef __ANDROID__
-        instance = new cz.kruch.track.ui.nokia.AndroidDeviceControl();
+        instance = new cz.kruch.track.ui.nokia.Android4DeviceControl();
 //#elifdef __CN1__
         instance = new cz.kruch.track.ui.nokia.WPDeviceControl();
 //#else

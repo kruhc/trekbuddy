@@ -978,21 +978,39 @@ final class MapViewer {
 */
 
         // scale
-        final int cy = h - Desktop.osd.bh - 4;
+        final float a = DeviceScreen.density;
+        final int cy = h - Desktop.osd.bh - (int)Math.ceil(4 * (a * 2));
         if (!Config.osdNoBackground) {
+//--//#ifndef __CN1__
+//#if !__ANDROID__ && !__CN1__
             graphics.drawImage(Desktop.barScale, x0 + 3 - 2, cy, Graphics.TOP | Graphics.LEFT);
+//#else
+            graphics.setAliasing(false);
+            final int cc = graphics.getColor();
+            graphics.setARGBColor(Desktop.barScale_c);
+            graphics.fillRect(x0 + 3 - 2, cy, Desktop.barScale_w, Desktop.barScale_h);
+            graphics.setColor(cc);
+            graphics.setAlpha(0xff);
+//#endif
         }
-        final int sh = 3;
+//#if __ANDROID__ || __CN1__
+        graphics.setAliasing(false);
+//#endif
+        final int sh = (int)Math.floor(3 * a);
+        final int sy = h - (int)Math.ceil(4 * (a * 2));
         graphics.setColor(0x00f0f0f0);
-        graphics.fillRect(x0, h - 6, scaleLength, sh);
+        graphics.fillRect(x0, sy, scaleLength, sh);
         graphics.setColor(0);
-        graphics.drawRect(x0, h - 6, scaleLength, sh);
+        graphics.drawRect(x0, sy, scaleLength, sh);
         final float ssl = (float)scaleLength / 5;
         final int ssli = ExtraMath.round(ssl);
         for (int i = 0; i < 5; ) {
-            graphics.fillRect(x0 + ExtraMath.round(i * ssl), h - 6, ssli, sh);
+            graphics.fillRect(x0 + ExtraMath.round(i * ssl), sy, ssli, sh);
             i += 2;
         }
+//#if __ANDROID__ || __CN1__
+        graphics.setAliasing(true);
+//#endif
         graphics.drawChars(sInfo, 0, sInfoLength,
                            x0 + 3, cy,
                            Graphics.LEFT | Graphics.TOP);
@@ -1060,27 +1078,47 @@ final class MapViewer {
 */
                 }
                 if (text != null) {
+//--//#ifndef __CN1__
+//#if !__ANDROID__ && !__CN1__
                     final int fh = Desktop.barWpt.getHeight();
                     final int bwMax = Desktop.barWpt.getWidth();
+//#else
+                    final int fh = Desktop.barWpt_h;
+                    final int bwMax = Desktop.barWpt_w;
+//#endif
                     int bw = Desktop.fontWpt.stringWidth(text) + 2;
+//#if __ANDROID__ && __CN1__
+                    // TODO more horizontal padding on hi-res screen
+//#endif
                     if (bw > bwMax) {
                         bw = bwMax;
                     }
+                    final int xpoit = x + 3;
+                    final int ypoit = y - fh - 3;
+//--//#ifndef __CN1__
+//#if !__ANDROID__ && !__CN1__
 //#ifdef __ALT_RENDERER__
                     if (Config.S60renderer) { // S60 renderer
 //#endif
-                        graphics.setClip(x + 3, y - fh - 3, bw, fh);
-                        graphics.drawImage(Desktop.barWpt, x + 3, y - fh - 3,
+                        graphics.setClip(xpoit, ypoit, bw, fh);
+                        graphics.drawImage(Desktop.barWpt, xpoit, ypoit,
                                            Graphics.TOP | Graphics.LEFT);
                         graphics.setClip(0, 0, Desktop.width, Desktop.height);
 //#ifdef __ALT_RENDERER__
                     } else {
                         graphics.drawRegion(Desktop.barWpt, 0, 0, bw, fh,
-                                            Sprite.TRANS_NONE, x + 3, y - fh - 3,
+                                            Sprite.TRANS_NONE, xpoit, ypoit,
                                             Graphics.TOP | Graphics.LEFT);
                     }
 //#endif
-                    graphics.drawString(text, x + 3 + 1, y - fh - 3 - 1,
+//#else
+                    final int cc = graphics.getColor();
+                    graphics.setARGBColor(Desktop.barWpt_c);
+                    graphics.fillRect(xpoit, ypoit, bw, fh);
+                    graphics.setColor(cc);
+                    graphics.setAlpha(0xff);
+//#endif
+                    graphics.drawString(text, xpoit + 1, y - fh,
                                         Graphics.TOP | Graphics.LEFT);
                 }
             }
@@ -1589,7 +1627,7 @@ final class MapViewer {
             final Object[] oldSlicesArray = oldSlices.getData();
             for (int i = oldSlices.size(); --i >= 0; ) {
                 final Slice slice = (Slice) oldSlicesArray[i];
-                if (!newSlices.contains(slice)) {
+                if (!newSlices.containsReference(slice)) {
 //#ifdef __LOG__
                     if (log.isEnabled()) log.debug("release image in " + slice);
 //#endif
@@ -1662,7 +1700,7 @@ final class MapViewer {
         // found it?
         if (slice != null) {
             // assertion
-            if (!newSlices.contains(slice)) {
+            if (!newSlices.containsReference(slice)) {
 //#ifdef __LOG__
                 if (log.isEnabled()) log.debug("add to new slices set: " + slice);
 //#endif
@@ -1681,8 +1719,8 @@ final class MapViewer {
         final int xu = descale(px);
         final int yu = descale(py);
 
-        /* synchronized to avoid race condition with scroll() */
-        synchronized (this) { // @threads input(scroll)|?:slices
+        /* synchronized to avoid race condition with ensureSlices() */
+        synchronized (this) { // @threads update->ensureSlices:slices
             // first look in current set
             final Object[] slicesArray = this.slices.getData();
             for (int i = slices.size(); --i >= 0; ) {

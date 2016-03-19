@@ -159,7 +159,7 @@
 2105=Stop 
 2106=Traces 
 2107=Repères 
-2108=Nouveau projet Waypoint
+2108=Nouveau Waypoint projeté
 2109=Fin de session 
 
 # formulaires de navigation / domaines (formulaire des points de passage) 
@@ -245,11 +245,11 @@
 3105=Plugins 
 
 # settings (Plugins) 
-3180=Configurer 
-3181=Actifs 
-3182=<Aucune configuration> 
+3180=Configurer
+3181=Activé
+3182=<Aucune configuration>
 
-# formulaires/champs/valeurs de paramétrage (de base) 
+# formulaires/champs/valeurs de paramétrage (de base)
 3400=Carte de démarrage 
 3401=Point de référence par défaut 
 3402=Coordonnées 
@@ -402,7 +402,7 @@
 4200=Accueil 
 4201=www.trekbuddy.net 
 4202=Version 
-4203=Commandes Clavier/Ecran tactile
-4204=\nCLAVIER : Fonctions des touches \n0 - Style crosshairs (appui long puis 3 courts)/Affichage nom des POIs (idem) \n1 - Navigation/Liste Waypoints \n3 - Rétro-éclairage (selon pression) \n5/OK (appui court) - Position GPS/informations OSD \n5/OK (appui long) - Zoom \n5/OK (clic X2) - Création MOB Waypoint.gpx \n2-4-6-8/Cmd Nav - Défilement carte \n7 (appui long) - Sélection couches (atlas) \n9 (appui long) - Sélection cartes (atlas) \n7-9 (appui court) - Zoom direct (+/-) \n# - Choix écrans (carte/boussole/CMS) \n* - Blocage clavier (appui long) \n \nECRAN TACTILE : Commandes spécifiques \n- De Gauche à Droite et de Haut en Bas, l'écran est divisé en 12 zones tactiles correspondant aux fonctions des touches clavier : \n \n  1  2  3 \n  4  5  6 \n  7  8  9 \n  *  0  # \n \nAutres fonctions tactiles : \n- Déplacement carte par toucher/glisser \n- Zoom carte (+/-) par écarter/pincer \n- Utiliser les icones appropriées pour obtenir les fonctions disponibles (si affichage menu activé) 
-4205=\nCLAVIER : Fonctions des touches \n0 - Mode Jour/Nuit \n1 - Navigation/Liste des Waypoints \n3 - Rétro-éclairage \n# - Choix mode écrans (carte/boussole/CMS) \n* - Blocage du clavier (pression longue) \n2-8/Cmd Nav Haut-Bas - Moyenne emplacement localisation \n5/OK - Verrouillage de l'aiguille boussole Nord en Haut \n4-6/Cmd Nav Gauche-Droite - Changement d'échelle \n \nECRAN TACTILE : Commandes spécifiques \n- De Gauche à Droite et de Haut en Bas, l'écran est divisé en 12 zones tactiles correspondant aux fonctions des touches clavier : \n \n  1  2  3 \n  4  5  6 \n  7  8  9 \n  *  0  # \n \nFonctions tactiles supplémentaires : \n- Utiliser les icones appropriées pour obtenir les fonctions disponibles (si affichage menu activé)
-4206=\nCLAVIER : Fonctions des touches \n0 - Mode Jour/Nuit \n1 - Navigation/Liste des Waypoints \n3 - Rétro-éclairage \n# - Choix mode écrans (carte/boussole/CMS) \n* - Blocage du clavier (pression longue) \n8/Cmd Nav Bas - Liste des CMS \n4-6/Cmd Nav Gauche-Droite - Changement direct de CMS \n7-9 - Waypoint précédent/suivant \n2/Cmd Nav Haut - Réglages spéciaux selon CMS \n \nECRAN TACTILE : Commandes spécifiques \n- De Gauche à Droite et de Haut en Bas, l'écran est divisé en 12 zones tactiles correspondant aux fonctions des touches clavier : \n \n  1  2  3 \n  4  5  6 \n  7  8  9 \n  *  0  # \n \nFonctions tactiles supplémentaires : \n- Utiliser les icones appropriées pour obtenir les fonctions disponibles (si affichage menu activé)
+4203=\nCOMMANDES - CLAVIER/ECRAN TACTILE
+4204=CLAVIER : Fonctions des touches \n \n0 - Style crosshairs (appui long puis 3 courts)/Affichage nom des POIs (idem) \n1 - Navigation/Listes des Wpts-Traces \n3 - Rétro-éclairage (selon pression) \n5/OK (appui court) - Position GPS/informations OSD \n5/OK (appui long) - Zoom (% réglable) \n5/OK (clic X2) - Création MOB Wpt.gpx \n2-4-6-8/Cmd Nav - Défilement carte \n7 (appui long) - Sélection couches (atlas) \n9 (appui long) - Sélection cartes (atlas) \n7-9 (appui court) - Zoom direct (+/-) \n# - Choix écrans (carte/boussole/CMS) \n* - Blocage du clavier (appui long) \n \nECRAN TACTILE : Commandes spécifiques \n \n- De gauche à droite et de haut en bas, l'écran est divisé en 12 zones tactiles correspondant aux fonctions des touches d'un clavier : \n \n  1  2  3 \n  4  5  6 \n  7  8  9 \n  *  0  # \n \nAutres fonctions tactiles : \n- Déplacement carte par toucher/glisser \n- Zoom carte (+/-) par écarter/pincer \n- Utiliser les icones appropriées pour obtenir les fonctions correspondantes disponibles (lorsque l'affichage du menu est activé dans les réglages) 
+4205=CLAVIER : Fonctions des touches \n \n0 - Mode Jour/Nuit \n1 - Navigation/Liste des Wpts-Traces \n3 - Rétro-éclairage (selon pression) \n# - Choix mode écrans (carte/boussole/CMS) \n* - Blocage du clavier (pression longue) \n2-8/Cmd Nav Haut-Bas - Moyenne emplacement localisation \n5/OK - Verrouillage de l'aiguille boussole Nord en Haut \n5/OK (clic X2) - Création MOB Wpt.gpx \n4-6-7-9/Cmd Nav Gauche-Droite - Changement d'échelle \n \nECRAN TACTILE : Commandes spécifiques \n \n- De gauche à droite et de haut en bas, l'écran est divisé en 12 zones tactiles correspondant aux fonctions des touches d'un clavier : \n \n  1  2  3 \n  4  5  6 \n  7  8  9 \n  *  0  # \n \nFonctions tactiles supplémentaires : \n- Utiliser les icones appropriées pour obtenir les fonctions correspondantes disponibles (lorsque l'affichage du menu est activé dans les réglages)
+4206=CLAVIER : Fonctions des touches \n \n0 - Mode Jour/Nuit \n1 - Navigation/Liste des Wpts-Traces \n3 - Rétro-éclairage (selon pression) \n5/OK (clic X2) - Création MOB Wpt.gpx \n# - Choix mode écrans (carte/boussole/CMS) \n* - Blocage du clavier (Appui long) \n8/Cmd Nav Bas - Liste des CMS \n4-6/Cmd Nav Gauche-Droite - Changement direct de CMS \n7-9 - Waypoint précédent/suivant \n2/Cmd Nav Haut - Réglages spéciaux (selon les caractéristiques du CMS) \n \nECRAN TACTILE : Commandes spécifiques \n \n- De gauche à droite et de haut en bas, l'écran est divisé en 12 zones tactiles correspondant aux fonctions des touches d'un clavier : \n \n  1  2  3 \n  4  5  6 \n  7  8  9 \n  *  0  # \n \nFonctions tactiles supplémentaires : \n- Utiliser les icones appropriées pour obtenir les fonctions correspondantes disponibles (lorsque l'affichage du menu est activé dans les réglages)

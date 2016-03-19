@@ -445,20 +445,23 @@ final class MapView extends View {
 
             case Canvas.KEY_NUM5: { // same as FIRE
                 if (!repeated) {
-                    if (mapViewer.hasMap()) {
-                        Desktop.synced = false;
-                        Desktop.browsing = false;
-                        Desktop.navigating = !Desktop.navigating;
-                        if (navigator.isTracking() && isLocation()) {
-                            mask |= updatedTrick();
+                    if (!toggle) {
+                        if (mapViewer.hasMap()) {
+                            Desktop.synced = false;
+                            Desktop.browsing = false;
+                            Desktop.navigating = !Desktop.navigating;
+                            if (navigator.isTracking() && isLocation()) {
+                                mask |= updatedTrick();
+                            }
+                        } else if (navigator.isTracking()) {
+                            Desktop.showWarning(navigator._getLoadingResultText(), null, Desktop.screen);
                         }
-                    } else if (navigator.isTracking()) {
-                        Desktop.showWarning(navigator._getLoadingResultText(), null, Desktop.screen);
                     }
                 } else { // trigger bitmap zoom
                     toggleMagnifier();
                     mask = Desktop.MASK_ALL;
                 }
+                toggle = repeated;
             }
             break;
 
@@ -636,10 +639,6 @@ final class MapView extends View {
             if (Desktop.screen.isKeylock()) {
                 NavigationScreens.drawKeylockStatus(g);
             }
-
-/*
-            drawGrid(g);
-*/
 
             // draw zoom spots
             if (navigator.isAtlas()) {
@@ -926,6 +925,7 @@ final class MapView extends View {
     }
 
     private boolean syncPosition() {
+        // result
         boolean moved = false;
 
         // update current position on map

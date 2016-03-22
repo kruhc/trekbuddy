@@ -70,10 +70,15 @@ final class ExtList extends List implements UiList {
         if (items == null) {
             return;
         }
+        final boolean append = size() == 0;
         final Object[] data = items.getData();
 //#ifndef __ANDROID__
         for (int i = 0, N = items.size(); i < N; i++) {
-            set(i, data[i].toString(), null);
+            if (append) {
+                append(data[i].toString(), null);
+            } else {
+                set(i, data[i].toString(), null);
+            }
         }
 //#else
         final String[] strings = new String[items.size()];

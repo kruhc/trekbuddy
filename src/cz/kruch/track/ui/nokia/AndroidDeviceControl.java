@@ -158,6 +158,11 @@ final class AndroidDeviceControl
     }
 
     @Override
+    boolean issense() {
+        return sensor != null;
+    }
+    
+    @Override
     public void onSensorChanged(android.hardware.SensorEvent event) {
 //        android.util.Log.w("TrekBuddy", "[app] azimuth = " + event.values[0] + "; orientation = " + cz.kruch.track.TrackingMIDlet.getActivity().orientation);
         int azimuth = (int) event.values[0];

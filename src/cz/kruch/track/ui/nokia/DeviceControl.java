@@ -133,6 +133,10 @@ public class DeviceControl extends TimerTask {
         instance.nonsense(listener);
     }
 
+    public static boolean isSense() {
+        return instance.issense();
+    }
+
     public static String getName() {
         return instance.name;
     }
@@ -221,6 +225,14 @@ public class DeviceControl extends TimerTask {
             SensorAction.exec(SensorAction.ACTION_STOP, sensor, listener);
             sensor = null; // gc hint
         }
+//#endif
+    }
+
+    boolean issense() {
+//#if !__ANDROID__ && !__CN1__
+        return sensor != null;
+//#else
+        return false;
 //#endif
     }
 

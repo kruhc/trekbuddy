@@ -191,6 +191,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
     public static int prescale                  = 100; // 100%
     public static boolean forceTextFieldFocus;
     public static boolean fixedCrosshair;
+    public static boolean hpsMagneticNeedle     = true;
 
     // [Units]
     public static int units;
@@ -682,6 +683,9 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
             wp8wvga = din.readBoolean();
 //#endif
 
+            // 1.33 changes
+            hpsMagneticNeedle = din.readBoolean();
+
         } catch (Exception e) {
 
             // 1.2.0 fallback
@@ -870,6 +874,9 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
 //#ifdef __CN1__
         dout.writeBoolean(wp8wvga);
 //#endif
+
+        /* since 1.33 */
+        dout.writeBoolean(hpsMagneticNeedle);
 
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("configuration updated");

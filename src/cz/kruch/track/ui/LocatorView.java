@@ -97,13 +97,13 @@ final class LocatorView extends View {
     void setVisible(final boolean b) {
         super.setVisible(b);
         orientation = -1;
-//#ifndef __CN1__
         if (b) {
-            cz.kruch.track.ui.nokia.DeviceControl.senseOn(navigator);
+            if (Config.hpsMagneticNeedle) {
+                cz.kruch.track.ui.nokia.DeviceControl.senseOn(navigator);
+            }
         } else {
             cz.kruch.track.ui.nokia.DeviceControl.senseOff(navigator);
         }
-//#endif
     }
 
     int handleAction(final int action, final boolean repeated) {
@@ -544,6 +544,14 @@ final class LocatorView extends View {
 
     int configChanged() {
         resetFont();
+        if (isVisible) {
+            orientation = -1;
+            if (Config.hpsMagneticNeedle && !cz.kruch.track.ui.nokia.DeviceControl.isSense()) {
+                cz.kruch.track.ui.nokia.DeviceControl.senseOn(navigator);
+            } else if (!Config.hpsMagneticNeedle && cz.kruch.track.ui.nokia.DeviceControl.isSense()) {
+                cz.kruch.track.ui.nokia.DeviceControl.senseOff(navigator);
+            }
+        }
         return super.configChanged();
     }
 

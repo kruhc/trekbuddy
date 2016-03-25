@@ -229,6 +229,7 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
             append(choice1, Resources.CFG_DESKTOP_FLD_TRAJECTORY);
             append(choice1, Resources.CFG_DESKTOP_FLD_DEC_PRECISION);
             append(choice1, Resources.CFG_DESKTOP_FLD_HPS_WPT_TRUE_AZI);
+            append(choice1, Resources.CFG_DESKTOP_FLD_HPS_SHOW_MAGNETIC);
             append(choice1, Resources.CFG_DESKTOP_FLD_EASYZOOM_VOLUME);
             append(choice1, Resources.CFG_DESKTOP_FLD_FORCE_TF_FOCUS);
             append(choice1, Resources.CFG_DESKTOP_FLD_FIXED_CROSSHAIR);
@@ -240,6 +241,7 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
                 Config.trailOn,
                 Config.decimalPrecision,
                 Config.hpsWptTrueAzimuth,
+                Config.hpsMagneticNeedle,
                 Config.easyZoomVolumeKeys,
                 Config.forceTextFieldFocus,
                 Config.fixedCrosshair
@@ -251,6 +253,7 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
             append(choice1, Resources.CFG_DESKTOP_FLD_TRAJECTORY);
             append(choice1, Resources.CFG_DESKTOP_FLD_DEC_PRECISION);
             append(choice1, Resources.CFG_DESKTOP_FLD_HPS_WPT_TRUE_AZI);
+            append(choice1, Resources.CFG_DESKTOP_FLD_HPS_SHOW_MAGNETIC);
             append(choice1, Resources.CFG_DESKTOP_FLD_EASYZOOM_VOLUME);
             append(choice1, Resources.CFG_DESKTOP_FLD_FORCE_TF_FOCUS);
             append(choice1, Resources.CFG_DESKTOP_FLD_FIXED_CROSSHAIR);
@@ -261,6 +264,7 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
                 Config.trailOn,
                 Config.decimalPrecision,
                 Config.hpsWptTrueAzimuth,
+                Config.hpsMagneticNeedle,
                 Config.easyZoomVolumeKeys,
                 Config.forceTextFieldFocus,
                 Config.fixedCrosshair
@@ -275,6 +279,7 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
             append(choice1, Resources.CFG_DESKTOP_FLD_TRAJECTORY);
             append(choice1, Resources.CFG_DESKTOP_FLD_DEC_PRECISION);
             append(choice1, Resources.CFG_DESKTOP_FLD_HPS_WPT_TRUE_AZI);
+            append(choice1, Resources.CFG_DESKTOP_FLD_HPS_SHOW_MAGNETIC);
             append(choice1, Resources.CFG_DESKTOP_FLD_EASYZOOM_VOLUME);
             append(choice1, Resources.CFG_DESKTOP_FLD_FORCE_TF_FOCUS);
             append(choice1, Resources.CFG_DESKTOP_FLD_FIXED_CROSSHAIR);
@@ -288,6 +293,7 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
                 Config.trailOn,
                 Config.decimalPrecision,
                 Config.hpsWptTrueAzimuth,
+                Config.hpsMagneticNeedle,
                 Config.easyZoomVolumeKeys,
                 Config.forceTextFieldFocus,
                 Config.fixedCrosshair
@@ -1092,9 +1098,10 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
                 Config.trailOn = desktop[4];
                 Config.decimalPrecision = desktop[5];
                 Config.hpsWptTrueAzimuth = desktop[6];
-                Config.easyZoomVolumeKeys = desktop[7];
-                Config.forceTextFieldFocus = desktop[8];
-                Config.fixedCrosshair = desktop[9];
+                Config.hpsMagneticNeedle = desktop[7];
+                Config.easyZoomVolumeKeys = desktop[8];
+                Config.forceTextFieldFocus = desktop[9];
+                Config.fixedCrosshair = desktop[10];
 //#elifdef __CN1__
                 Config.safeColors = desktop[0];
                 Config.noSounds = desktop[1];
@@ -1102,9 +1109,10 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
                 Config.trailOn = desktop[3];
                 Config.decimalPrecision = desktop[4];
                 Config.hpsWptTrueAzimuth = desktop[5];
-                Config.easyZoomVolumeKeys = desktop[6];
-                Config.forceTextFieldFocus = desktop[7];
-                Config.fixedCrosshair = desktop[8];
+                Config.hpsMagneticNeedle = desktop[6];
+                Config.easyZoomVolumeKeys = desktop[7];
+                Config.forceTextFieldFocus = desktop[8];
+                Config.fixedCrosshair = desktop[9];
 //#else
                 Config.fullscreen = desktop[0];
                 Config.safeColors = desktop[1];
@@ -1115,9 +1123,10 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
                 Config.trailOn = desktop[6];
                 Config.decimalPrecision = desktop[7];
                 Config.hpsWptTrueAzimuth = desktop[8];
-                Config.easyZoomVolumeKeys = desktop[9];
-                Config.forceTextFieldFocus = desktop[10];
-                Config.fixedCrosshair = desktop[11];
+                Config.hpsMagneticNeedle = desktop[9];
+                Config.easyZoomVolumeKeys = desktop[10];
+                Config.forceTextFieldFocus = desktop[11];
+                Config.fixedCrosshair = desktop[12];
 //#endif
 
                 // OSD

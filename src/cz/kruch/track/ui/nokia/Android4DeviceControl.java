@@ -69,16 +69,18 @@ final class Android4DeviceControl
             public void run() {
                 final org.microemu.android.MicroEmulatorActivity activity = cz.kruch.track.TrackingMIDlet.getActivity();
                 final android.view.Window window = activity.getWindow();
+                final String message;
                 if (backlight == 0) {
                     window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+                    message = cz.kruch.track.Resources.getString(cz.kruch.track.Resources.DESKTOP_MSG_BACKLIGHT_OFF);
                 } else {
                     window.addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
                     final android.view.WindowManager.LayoutParams layout = window.getAttributes();
                     layout.screenBrightness = value;
                     window.setAttributes(layout);
+                    message = cz.kruch.track.Resources.getString(cz.kruch.track.Resources.DESKTOP_MSG_BACKLIGHT_ON) + " " + getLevel();
                 }
-                android.widget.Toast.makeText(activity, "Backlight " + getLevel(),
-                                              android.widget.Toast. LENGTH_SHORT).show();
+                android.widget.Toast.makeText(activity, message, android.widget.Toast. LENGTH_SHORT).show();
             }
         });
     }
@@ -123,6 +125,11 @@ final class Android4DeviceControl
             sensor = null;
         }
         this.listener = null;
+    }
+
+    @Override
+    boolean issense() {
+        return sensor != null;
     }
 
     @Override

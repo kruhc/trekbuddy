@@ -81,7 +81,6 @@ final class ComputerView extends View
     private static final String TAG_CMS         = "cms";
     private static final String TAG_UNITS       = "units";
     private static final String TAG_FONT        = "font";
-    private static final String TAG_IMAGE       = "image";
     private static final String TAG_COLORS      = "colors";
     private static final String TAG_SCREEN      = "screen";
     private static final String TAG_AREA        = "area";
@@ -101,6 +100,7 @@ final class ComputerView extends View
     private static final String ATTR_W          = "w";
     private static final String ATTR_H          = "h";
     private static final String ATTR_ALIGN      = "align";
+    private static final String ATTR_IMAGE      = "image";
     private static final String ATTR_UNDEFVAL   = "undefval";
     private static final String ATTR_SIZE       = "size";
 
@@ -284,10 +284,6 @@ final class ComputerView extends View
         public short x, y, w, h;
         public String fontName;
         public Object fontImpl;
-//#if __ANDROID__ || __CN1__
-        public String imageName;
-        public Object imageImpl;
-//#endif
         public char[] value;
 //#ifdef __HECL__
         public CodeThing scriptlet;
@@ -318,9 +314,6 @@ final class ComputerView extends View
 
     /* graphics - shared among profiles */
     private Hashtable fonts, backgrounds;
-//#if __ANDROID__ || __CN1__
-    private Hashtable images;
-//#endif
 
 //#ifdef __HECL__
     /* HECL - shared among profiles */
@@ -410,9 +403,6 @@ final class ComputerView extends View
 
         // init themes shared var
         this.fonts = new Hashtable(8);
-//#if __ANDROID__ || __CN1__
-        this.images = new Hashtable(4);
-//#endif
         this.backgrounds = new Hashtable(4);
     }
 
@@ -968,15 +958,15 @@ final class ComputerView extends View
         if (areas != null) {
 
             // local cache
-            final Hashtable fontCache = new Hashtable(4);
-//#if __ANDROID__ || __CN1__
-            final Hashtable imageCache = new Hashtable(4);
-//#endif
+            final Hashtable cache = new Hashtable(4);
 
             // make sure image fonts are ready
             for (int i = areas.size(); --i >= 0; ) {
                 final Area area = (Area) areas.elementAt(i);
-                if (area.fontName != null && (area.fontImpl == null || area.fontImpl instanceof Image)) {
+                if (area.fontImpl == null || area.fontImpl instanceof Image) {
+
+                    // local var
+                    final String name = area.fontName;
 
                     // new font
                     Object font;
@@ -986,7 +976,29 @@ final class ComputerView extends View
                     try {
 
                         // get cached bitmap font
-                        bitmap = getImage(fontCache, fonts, area.fontName, dayNight);
+                        bitmap = (Image) cache.get(name);
+                        if (bitmap == null) { // create fresh new
+//#ifdef __LOG__
+                            if (log.isEnabled()) log.debug("bitmap font image not colorified yet: " + name + "; colorify using " + Integer.toHexString(colors[dayNight * 4 + 1]) + " color");
+//#endif
+
+                            // get raw data
+                            final byte[] data = (byte[]) fonts.get(name);
+
+                            // create image
+                            if (data != null) {
+
+                                // colorify
+                                colorifyPng(data, colors[dayNight * 4 + 1]);
+
+                                // create image
+                                bitmap = Image.createImage(data, 0, data.length);
+
+                                // cache image
+                                cache.put(name, bitmap);
+
+                            }
+                        }
 
                         // use bitmap font
                         font = bitmap;
@@ -1011,32 +1023,6 @@ final class ComputerView extends View
                         }
                     }
                 }
-//#if __ANDROID__ || __CN1__
-                if (area.imageName != null && (area.imageImpl == null || area.imageImpl instanceof Image)) {
-
-                    // new image
-                    Image bitmap = null;
-
-                    // set area's bitmap font
-                    try {
-
-                        // get cached bitmap
-                        bitmap = getImage(imageCache, images, area.imageName, dayNight);
-
-                    } catch (Throwable t) {
-//#ifdef __LOG__
-                        log.error("colorify failed", t);
-                        t.printStackTrace();
-//#endif
-                    }
-
-                    /* synchronized to avoid race with render */
-                    synchronized (this) {
-                        area.imageImpl = null;
-                        area.imageImpl = bitmap;
-                    }
-                }
-//#endif
             }
         }
 
@@ -1093,38 +1079,6 @@ final class ComputerView extends View
              }
          }
      }
-
-    private Image getImage(final Hashtable imageCache, final Hashtable dataCache,
-                           final String name, final int dayNight) {
-
-        // get cached bitmap
-        Image bitmap = (Image) imageCache.get(name);
-
-        // does not exist yet
-        if (bitmap == null) {
-//#ifdef __LOG__
-            if (log.isEnabled()) log.debug("bitmap not colorified yet: " + name + "; colorify using " + Integer.toHexString(colors[dayNight * 4 + 1]) + " color");
-//#endif
-
-            // get raw data
-            final byte[] data = (byte[]) dataCache.get(name);
-
-            // create image
-            if (data != null) {
-
-                // colorify
-                colorifyPng(data, colors[dayNight * 4 + 1]);
-
-                // create image
-                bitmap = Image.createImage(data, 0, data.length);
-
-                // cache image
-                imageCache.put(name, bitmap);
-            }
-        }
-
-        return bitmap;
-    }
 
     private String _task;
 
@@ -1672,24 +1626,29 @@ final class ComputerView extends View
                             graphics.setFont(f);
                             graphics.drawChars(text, 0, l, area.x + xoffset, area.y, 0);
                         } else if (area.fontImpl instanceof Image) {
-                            int narrowChars = 0; // charset = "0123456789 +-.:/°\"\'hkmps"
-                            for (int z = 0; z < l; z++) {
-                                final char c = text[z];
-                                /* only . and : for backward and drawChars() compatiblity */
-                                if (c == '.' || c == ':') {
-                                    narrowChars++;
-                                }
-                            }
-                            final int xoffset = area.align == Area.ALIGN_LEFT ? 0 : (area.w - (int)(area.cw * l) + (int)(narrowChars * (2D / 3D * area.cw))) / area.align;
-                            drawChars(graphics, text, l, area.x + xoffset, area.y, area);
+                            final Image image = (Image)area.fontImpl;
 //#if __ANDROID__ || __CN1__
-                        } else if (area.imageImpl instanceof Image) {
-                            try {
-                                final int rotation = (int) Float.parseFloat(sb.toString());
-                                graphics.drawImage((Image) area.imageImpl, area.x, area.y, 0, rotation);
-                            } catch (NumberFormatException e) {
-                                graphics.setFont(Desktop.font);
-                                graphics.drawChars(text, 0, l, area.x, area.y, 0);
+                            if (image.getWidth() == image.getHeight()) {
+                                try {
+                                    final int rotation = (int) Float.parseFloat(sb.toString());
+                                    graphics.drawImage(image, area.x, area.y, 0, rotation);
+                                } catch (NumberFormatException e) {
+                                    graphics.setFont(Desktop.font);
+                                    graphics.drawChars(text, 0, l, area.x, area.y, 0);
+                                }
+                            } else {
+//#endif
+                                int narrowChars = 0; // charset = "0123456789 +-.:/°\"\'hkmps"
+                                for (int z = 0; z < l; z++) {
+                                    final char c = text[z];
+                                    /* only . and : for backward and drawChars() compatiblity */
+                                    if (c == '.' || c == ':') {
+                                        narrowChars++;
+                                    }
+                                }
+                                final int xoffset = area.align == Area.ALIGN_LEFT ? 0 : (area.w - (int)(area.cw * l) + (int)(narrowChars * (2D / 3D * area.cw))) / area.align;
+                                drawChars(graphics, image, text, l, area.x + xoffset, area.y, area);
+//#if __ANDROID__ || __CN1__
                             }
 //#endif
                         }
@@ -1847,9 +1806,8 @@ final class ComputerView extends View
         return sb;
     }
 
-    private static void drawChars(final Graphics graphics, final char[] value,
+    private static void drawChars(final Graphics graphics, final Image image, final char[] value,
                                   final int length, int x, int y, final Area area) {
-        final Image image = (Image) area.fontImpl;
         final float cw = area.cw;
         final int scw = (int) (cw - cw / 5);
         final int icw = (int) cw;
@@ -2044,11 +2002,6 @@ final class ComputerView extends View
                     if (area.fontImpl instanceof Image) {
                         area.fontImpl = null;
                     }
-//#if __ANDROID__ || __CN1__
-                    if (area.imageImpl instanceof Image) {
-                        area.imageImpl = null;
-                    }
-//#endif
                 }
             }
         }
@@ -2221,20 +2174,24 @@ final class ComputerView extends View
                                  area.align = Area.ALIGN_RIGHT;
                              }
                              final String font = parser.getAttributeValue(null, TAG_FONT);
-                             final String image = parser.getAttributeValue(null, TAG_IMAGE);
                              if (font != null) {
                                  area.fontName = font;
                                  final Object fo = fonts.get(font);
                                  if (fo instanceof Font) {
                                      area.fontImpl = fo;
                                  }
-//#if __ANDROID__ || __CN1__
-                             } else if (image != null) {
-                                 area.imageName = image;
-//#endif
                              } else {
                                  area.fontName = "Desktop";
                                  area.fontImpl = Desktop.font;
+                             }
+                             final String name = parser.getAttributeValue(null, ATTR_IMAGE);
+                             if (name != null) {
+                                 final byte[] image = (byte[]) load(name);
+                                 if (image != null) {
+                                     area.fontName = name;
+                                     area.fontImpl = null;
+                                     fonts.put(name, image);
+                                 }
                              }
                          } else if (TAG_VALUE.equals(tag)) {
                              area.value = parser.nextText().toCharArray();
@@ -2260,9 +2217,9 @@ final class ComputerView extends View
                              if (!fonts.containsKey(name)) {
                                  String source = parser.getAttributeValue(null, ATTR_FILE);
                                  if (source != null) {
-                                     final byte[] data = (byte[]) load(source);
-                                     if (data != null) {
-                                         fonts.put(name, data);
+                                     final byte[] image = (byte[]) load(source);
+                                     if (image != null) {
+                                         fonts.put(name, image);
                                      }
                                  } else {
                                      source = parser.getAttributeValue(null, ATTR_SYSTEM);
@@ -2292,17 +2249,6 @@ final class ComputerView extends View
                                      }
                                  }
                              }
-//#if __ANDROID__ || __CN1__
-                         } else if (TAG_IMAGE.equals(tag)) {
-                             final String name = parser.getAttributeValue(null, ATTR_NAME);
-                             final String source = parser.getAttributeValue(null, ATTR_FILE);
-                             if (source != null) {
-                                 final byte[] data = (byte[]) load(source);
-                                 if (data != null) {
-                                     images.put(name, data);
-                                 }
-                             }
-//#endif
                          } else if (TAG_COLORS.equals(tag)) {
                              int offset = 0;
                              if ("night".equals(parser.getAttributeValue(null, ATTR_MODE))) {

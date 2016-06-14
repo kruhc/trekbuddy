@@ -38,7 +38,7 @@ final class WPPlayback extends Playback {
         boolean result = true;
 
         // call WP backend
-        com.codename1.ui.FriendlyAccess.execute("play-sound", new Object[]{
+        com.codename1.impl.ExtendedImplementation.exec("play-sound", new Object[]{
             url
         });
 

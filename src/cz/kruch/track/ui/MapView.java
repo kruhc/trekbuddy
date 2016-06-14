@@ -763,10 +763,6 @@ final class MapView extends View {
         // tracking?
         if (!Desktop.browsing && !navigator._isLoading()) {
 
-//#ifdef __LOG__
-            if (log.isEnabled()) log.debug("tracking...");
-//#endif
-
             final Location l;
             synchronized (this) { // @threads ?:location
                 // local rel

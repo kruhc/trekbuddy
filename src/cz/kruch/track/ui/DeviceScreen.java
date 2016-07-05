@@ -16,6 +16,10 @@ import javax.microedition.midlet.MIDlet;
 
 import java.util.TimerTask;
 
+//#ifdef __CN1__
+import com.codename1.impl.ExtendedImplementation;
+//#endif
+
 /**
  * Graphic output and user interaction.
  *
@@ -433,6 +437,12 @@ final class DeviceScreen extends GameCanvas implements Runnable {
             touchMenuActive = false;
             cmdExec = true;
 
+//#ifdef __CN1__
+            ExtendedImplementation.exec("touch-menu", new Object[]{
+                    new Boolean(touchMenuActive)
+            });
+//#endif
+
             // update screen anyway
             delegate.update(Desktop.MASK_SCREEN);
 
@@ -514,6 +524,12 @@ final class DeviceScreen extends GameCanvas implements Runnable {
 
                 // set "touch menu on" flag
                 touchMenuActive = true;
+
+//#ifdef __CN1__
+                ExtendedImplementation.exec("touch-menu", new Object[]{
+                        new Boolean(touchMenuActive)
+                });
+//#endif
 
                 // show the menu
                 flushGraphics();
@@ -746,6 +762,12 @@ final class DeviceScreen extends GameCanvas implements Runnable {
                 // ops flags
                 touchMenuActive = false;
                 cmdExec = true;
+
+//#ifdef __CN1__
+                ExtendedImplementation.exec("touch-menu", new Object[]{
+                        new Boolean(touchMenuActive)
+                });
+//#endif
 
                 // repaint screen
                 delegate.update(Desktop.MASK_SCREEN);
@@ -1131,8 +1153,8 @@ final class DeviceScreen extends GameCanvas implements Runnable {
             g.drawString(label1, x + ((bw - sw1) >> 1), y + (lspace << 1) + fh, Graphics.LEFT | Graphics.TOP);
         }
 //#else
-        com.codename1.ui.FriendlyAccess.execute("draw-button", new Object[]{
-                com.codename1.ui.FriendlyAccess.getNativeGraphics(offscreen.getNativeImage()),
+        ExtendedImplementation.exec("draw-button", new Object[]{
+                ExtendedImplementation.i().getNativeGraphics(offscreen.getNativeImage()),
                 new Integer(x), new Integer(y), new Integer(bw), new Integer(bh), cmd.getLabel()
         });
 //#endif

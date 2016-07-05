@@ -187,8 +187,8 @@ final class TarLoader extends /*Map.*/Loader /*implements Atlas.Loader*/ impleme
             if (calEntryName == null || pointers == null) {
 
                 // iterate over tar
-                TarEntry entry = tarIn.getNextEntry();
-                while (entry != null) {
+                TarEntry entry;
+                while ((entry = tarIn.getNextEntry()) != null) {
 
                     // get entry name
                     final CharArrayTokenizer.Token entryName = entry.getName();
@@ -214,9 +214,6 @@ final class TarLoader extends /*Map.*/Loader /*implements Atlas.Loader*/ impleme
                         calEntryName = entryName.toString();
                         calBlockOffset = (int)(entry.getPosition() / TarInputStream.DEFAULT_RCDSIZE);
                     }
-
-                    // next
-                    entry = tarIn.getNextEntry();
                 }
             }
 
@@ -294,8 +291,8 @@ final class TarLoader extends /*Map.*/Loader /*implements Atlas.Loader*/ impleme
             tarIn = new TarInputStream(in);
 
             // iterate over tar
-            TarEntry entry = tarIn.getNextEntry();
-            while (entry != null) {
+            TarEntry entry;
+            while ((entry = tarIn.getNextEntry()) != null) {
 
                 // get entry name
                 final CharArrayTokenizer.Token entryName = entry.getName();
@@ -309,9 +306,6 @@ final class TarLoader extends /*Map.*/Loader /*implements Atlas.Loader*/ impleme
 
                     break;
                 }
-
-                // next
-                entry = tarIn.getNextEntry();
             }
 
             // for disposal to work as usual
@@ -643,17 +637,19 @@ final class TarLoader extends /*Map.*/Loader /*implements Atlas.Loader*/ impleme
                 // size guess
                 hintTmiFileSize = (int) file.fileSize();
 //#endif
+                // tokenizer
+                final CharArrayTokenizer tokenizer = new CharArrayTokenizer();
+                final char[] delims = { ':' };
 
                 // each line is a slice filename
                 LineReader reader = null;
-                CharArrayTokenizer.Token token = null;
-                final CharArrayTokenizer tokenizer = new CharArrayTokenizer();
-                final char[] delims = { ':' };
                 try {
                     // read entry meta info
                     reader = new LineReader(file.openInputStream(), 4096);
-                    token = reader.readToken(false);
-                    while (token != null) {
+
+                    // iterate over
+                    CharArrayTokenizer.Token token;
+                    while ((token = reader.readToken(false)) != null) {
 
                         // skip leading "block  ", if any
                         token.skipNonDigits();
@@ -689,10 +685,6 @@ final class TarLoader extends /*Map.*/Loader /*implements Atlas.Loader*/ impleme
                             if (log.isEnabled()) log.debug("found calibration " + calEntryName + " at block " + calBlockOffset);
 //#endif
                         }
-
-                        // next line
-                        token = null; // gc hint
-                        token = reader.readToken(false);
                     }
 
                     // tmi used
@@ -801,8 +793,8 @@ final class TarLoader extends /*Map.*/Loader /*implements Atlas.Loader*/ impleme
             final CharArrayTokenizer tokenizer = new CharArrayTokenizer();
 
             // iterate over archive
-            TarEntry entry = tar.getNextEntry();
-            while (entry != null) {
+            TarEntry entry;
+            while ((entry = tar.getNextEntry()) != null) {
 
                 // entry name
                 final CharArrayTokenizer.Token entryName = entry.getName();
@@ -870,10 +862,6 @@ final class TarLoader extends /*Map.*/Loader /*implements Atlas.Loader*/ impleme
                         }
                     }
                 }
-
-                // next entry
-                entry = null; // gc hint
-                entry = tar.getNextEntry();
             }
 
         } finally {

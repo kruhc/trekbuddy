@@ -58,8 +58,8 @@ final class OziCalibration extends Calibration {
         // read content
         LineReader reader = new LineReader(in, 4096);
         CharArrayTokenizer tokenizer = new CharArrayTokenizer();
-        CharArrayTokenizer.Token line = reader.readToken(false);
-        while (line != null) {
+        CharArrayTokenizer.Token line;
+        while ((line = reader.readToken(false)) != null) {
             lines++;
             if (!almostDone) {
                 if (line.startsWith(LINE_POINT)) {
@@ -108,8 +108,6 @@ final class OziCalibration extends Calibration {
                 tokenizer.init(line, false);
                 parseIwh(tokenizer);
             }
-            line = null; // gc hint
-            line = reader.readToken(false);
         }
 
         // gc hint
@@ -117,7 +115,7 @@ final class OziCalibration extends Calibration {
 
         // close reader
         reader.close();
-        reader = null; // gc hint
+        reader = null;
 
         // fix projection
         if (ProjectionSetup.PROJ_UTM.equals(projectionType)) {

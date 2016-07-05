@@ -32,7 +32,7 @@ final class JarLoader extends /*Map.*/Loader /*implements Atlas.Loader*/ {
 
         try {
             // look for Ozi calibration first
-            in = getResourceAsStream(path = DEFAULT_OZI_MAP);
+            in = Resources.getResourceAsStream(path = DEFAULT_OZI_MAP);
             if (in == null) {
                 // we are screwed
                 throw new InvalidMapException(Resources.getString(Resources.DESKTOP_MSG_LOAD_MAP_FAILED));
@@ -42,13 +42,12 @@ final class JarLoader extends /*Map.*/Loader /*implements Atlas.Loader*/ {
             map.setCalibration(Calibration.newInstance(in, path, path));
 
             // parse tileset file
-            reader = new LineReader(getResourceAsStream(RESOURCES_SET_FILE));
-            CharArrayTokenizer.Token token = reader.readToken(false);
-            while (token != null) {
+            reader = new LineReader(Resources.getResourceAsStream(RESOURCES_SET_FILE));
+            CharArrayTokenizer.Token token;
+            while ((token = reader.readToken(false)) != null) {
                 addSlice(token);
-                token = null; // gc hint
-                token = reader.readToken(false);
             }
+            reader.close();
 //#ifdef __LOG__
             if (log.isEnabled()) log.debug("in-jar tileset file processed");
 //#endif
@@ -96,7 +95,7 @@ final class JarLoader extends /*Map.*/Loader /*implements Atlas.Loader*/ {
         try {
 
             // read image
-            slice.setImage(scaleImage(buffered(getResourceAsStream(url))));
+            slice.setImage(scaleImage(buffered(Resources.getResourceAsStream(url))));
 
         } finally {
 
@@ -118,14 +117,6 @@ final class JarLoader extends /*Map.*/Loader /*implements Atlas.Loader*/ {
 
     void loadIndex(Atlas atlas, String url, String baseUrl) throws IOException {
         throw new IllegalStateException("Not supported");
-    }
-
-    private static InputStream getResourceAsStream(final String resource) {
-//#ifndef __CN1__
-        return JarLoader.class.getResourceAsStream(resource);
-//#else
-        return com.codename1.ui.FriendlyAccess.getResourceAsStream(resource);
-//#endif
     }
 }
 

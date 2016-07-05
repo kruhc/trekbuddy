@@ -109,11 +109,9 @@ final class DirLoader extends /*Map.*/Loader /*implements Atlas.Loader*/ {
                     try {
                         // each line is a slice filename
                         reader = new LineReader(buffered(file.openInputStream()));
-                        CharArrayTokenizer.Token token = reader.readToken(false);
-                        while (token != null) {
+                        CharArrayTokenizer.Token token;
+                        while ((token = reader.readToken(false)) != null) {
                             addSlice(token);
-                            token = null; // gc hint
-                            token = reader.readToken(false);
                         }
                     } catch (InvalidMapException e) {
                         throw e;

@@ -294,8 +294,8 @@ public class ControlledInterp extends Interp {
             boolean comment = false;
             final char[] buffer = new char[1024];
             final StringBuffer sb = new StringBuffer(4096);
-            int c = reader.read(buffer);
-            while (c != -1) {
+            int c;
+            while ((c = reader.read(buffer)) != -1) {
                 if (Config.heclOpt > 0) {
                     for (int i = 0; i < c; i++) {
                         switch (buffer[i]) {
@@ -332,7 +332,6 @@ public class ControlledInterp extends Interp {
                 } else {
                     sb.append(buffer, 0, c);
                 }
-                c = reader.read(buffer);
             }
             return sb.toString();
         } finally {

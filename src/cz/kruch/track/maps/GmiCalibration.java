@@ -44,8 +44,8 @@ final class GmiCalibration extends Calibration {
 
         // additional data
         CharArrayTokenizer tokenizer = new CharArrayTokenizer();
-        String line = reader.readLine(false);
-        while (line != null) {
+        String line;
+        while ((line = reader.readLine(false)) != null) {
             if (line.startsWith("Additional Calibration Data"))
                 break;
             if (line.startsWith("Border and Scale")) {
@@ -67,9 +67,6 @@ final class GmiCalibration extends Calibration {
 
             tokenizer.init(line, DELIM, false);
             parsePoint(tokenizer, xy, ll);
-
-            line = null; // gc hint
-            line = reader.readLine(false);
         }
 
         // gc hint
@@ -77,7 +74,7 @@ final class GmiCalibration extends Calibration {
 
         // close reader
         reader.close();
-        reader = null; // gc hint
+        reader = null;
 
         // finalize
         doFinal(null, new ProjectionSetup(ProjectionSetup.PROJ_LATLON), xy, ll);

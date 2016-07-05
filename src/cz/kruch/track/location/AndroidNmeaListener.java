@@ -7,6 +7,7 @@ package cz.kruch.track.location;
 import cz.kruch.track.event.Callback;
 
 public class AndroidNmeaListener implements android.location.GpsStatus.NmeaListener, Callback {
+    
     private AndroidLocationProvider provider;
 
     AndroidNmeaListener() {
@@ -16,6 +17,7 @@ public class AndroidNmeaListener implements android.location.GpsStatus.NmeaListe
         switch (((Integer) action).intValue()) {
             case 0: {
                 ((android.location.LocationManager) params).removeNmeaListener(this);
+                provider = null;
             } break;
             case 1: {
                 Object[] refs = (Object[]) params;

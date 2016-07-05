@@ -663,11 +663,11 @@ public final class Resources {
 
 //#endif
 
-    private static InputStream getResourceAsStream(final String resource) {
+    public static InputStream getResourceAsStream(final String resource) {
 //#ifndef __CN1__
         return Resources.class.getResourceAsStream(resource);
 //#else
-        return com.codename1.ui.FriendlyAccess.getResourceAsStream(resource);
+        return com.codename1.impl.ExtendedImplementation.getResourceAsStream(resource);
 //#endif
     }
 }

@@ -22,6 +22,7 @@ import cz.kruch.track.ui.NavigationScreens;
 import cz.kruch.track.Resources;
 import cz.kruch.track.util.NmeaParser;
 import cz.kruch.track.util.NakedVector;
+import cz.kruch.track.util.SimpleCalendar;
 
 /**
  * GPX Tracklog.
@@ -121,8 +122,7 @@ public final class GpxTracklog extends Tracklog {
     private static final String FIX_3D      = "3d";
     private static final String FIX_DGPS    = "dgps";
 
-    private final Calendar calendar;
-    private final Date date;
+    private final SimpleCalendar calendar;
 /*
     private final String tzOffset;
 */
@@ -155,8 +155,7 @@ public final class GpxTracklog extends Tracklog {
 /*
         this.tzOffset = tzOffset(calendar);
 */
-        this.calendar = Calendar.getInstance(TimeZone.getTimeZone("GMT"));
-        this.date = new Date();
+        this.calendar = new SimpleCalendar("GMT", false);
         this.sb = new StringBuffer(32);
         this.sbChars = new char[32];
         this.queue = new NakedVector(16);
@@ -309,6 +308,9 @@ public final class GpxTracklog extends Tracklog {
 
         // executed as flusher task?
         if (flusher == this) {
+//#ifdef __LOG__
+            if (log.isEnabled()) log.debug("trigger flush");
+//#endif
             insert(Boolean.FALSE);
             return;
         }
@@ -363,6 +365,9 @@ public final class GpxTracklog extends Tracklog {
                 try {
 
                     if (item instanceof Location) {
+//#ifdef __LOG__
+                        if (log.isEnabled()) log.debug("serialize pt");
+//#endif
 
                         // save <trktp>
                         final Location l = (Location) item;
@@ -381,6 +386,9 @@ public final class GpxTracklog extends Tracklog {
                          */
 
                     } else if (item instanceof Boolean) {
+//#ifdef __LOG__
+                        if (log.isEnabled()) log.debug("flush");
+//#endif
 
                         // break <trkseg>
                         if (Boolean.TRUE.equals(item) && ptCount > 0) {
@@ -811,6 +819,9 @@ public final class GpxTracklog extends Tracklog {
         }
 
         if (bLog) {
+//#ifdef __LOG__
+            if (log.isEnabled()) log.debug("\tdo log");
+//#endif
 
             // use location as new reference
             refLocation.copyFrom(location);
@@ -825,11 +836,10 @@ public final class GpxTracklog extends Tracklog {
     }
 
     private int dateToXsdDate(final long timestamp) {
-        date.setTime(timestamp);
-        calendar.setTime(date);
+        calendar.setTime(timestamp);
 
         final StringBuffer sb = getSb();
-        final Calendar calendar = this.calendar;
+        final SimpleCalendar calendar = this.calendar;
 
         NavigationScreens.append(sb, calendar.get(Calendar.YEAR)).append('-');
         appendTwoDigitStr(sb, calendar.get(Calendar.MONTH) + 1).append('-');

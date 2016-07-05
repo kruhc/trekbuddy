@@ -4,6 +4,7 @@ package cz.kruch.track.util;
 
 import java.util.Calendar;
 import java.util.Date;
+import java.util.TimeZone;
 
 /**
  * Very simple calendar. It is more like 'time counter', to avoid int[]
@@ -13,11 +14,19 @@ import java.util.Date;
 public final class SimpleCalendar {
     private final Calendar calendar;
     private volatile Date date;
-    private volatile int fieldHour, fieldMin, fieldSec, fieldMs;
     private volatile long last;
+    private volatile boolean simple;
+    /* cached values for frequent access */
+    private volatile int fieldHour, fieldMin, fieldSec, fieldMs;
 
-    public SimpleCalendar(Calendar calendar) {
-        this.calendar = calendar;
+    public SimpleCalendar(boolean simple) {
+        this.simple = simple;
+        this.calendar = Calendar.getInstance(TimeZone.getDefault());
+    }
+
+    public SimpleCalendar(String tz, boolean simple) {
+        this.calendar = Calendar.getInstance(TimeZone.getTimeZone(tz));
+        this.simple = simple;
     }
 
     public void reset() {
@@ -25,6 +34,9 @@ public final class SimpleCalendar {
     }
 
     public void setTimeSafe(long millis) {
+        if (!simple) {
+            throw new RuntimeException("setTimeSafe is supported only for really simple calendar");
+        }
         if (Math.abs(millis - last) >= 60000) { // if time jumps too much (1 min)
             date = null;
         }
@@ -119,7 +131,10 @@ public final class SimpleCalendar {
                 value = fieldSec;
             break;
             default:
-                throw new IllegalArgumentException("Unknown field");
+                if (simple) {
+                    throw new IllegalArgumentException("Unknown field");
+                }
+                value = calendar.get(field);
         }
 
         return value;

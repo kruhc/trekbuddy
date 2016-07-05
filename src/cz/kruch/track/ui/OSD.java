@@ -16,10 +16,6 @@ import cz.kruch.track.configuration.Config;
  * @author kruhc@seznam.cz
  */
 final class OSD extends Bar {
-//#ifdef __LOG__
-    private static final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("OSD");
-//#endif
-
     private static final char[] MM = { '<', '>' };
     private static final String NSAT = "3*4*5*6*7*8*9*10*11*12*";
     private static final int NSAT_MAX = 12;
@@ -64,9 +60,6 @@ final class OSD extends Bar {
     }
 
     public void render(Graphics graphics) {
-//#ifdef __LOG__
-        if (log.isEnabled()) log.debug("render");
-//#endif
         if (!visible) {
             return;
         }

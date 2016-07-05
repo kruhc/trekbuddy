@@ -35,7 +35,6 @@ import java.io.ByteArrayOutputStream;
 import java.util.Vector;
 import java.util.Hashtable;
 import java.util.Calendar;
-import java.util.TimeZone;
 import java.util.TimerTask;
 import java.util.Enumeration;
 
@@ -373,8 +372,8 @@ final class ComputerView extends View
 
     private void init() {
         // init calendars
-        this.TIME_CALENDAR = new SimpleCalendar(Calendar.getInstance(TimeZone.getDefault()));
-        this.ETA_CALENDAR = new SimpleCalendar(Calendar.getInstance(TimeZone.getDefault()));
+        this.TIME_CALENDAR = new SimpleCalendar(true);
+        this.ETA_CALENDAR = new SimpleCalendar(true);
 
         // trip values
         this.valuesFloat = new float[TOKENS_float.length];
@@ -1015,7 +1014,12 @@ final class ComputerView extends View
 
                     /* synchronized to avoid race with render */
                     synchronized (this) {
-                        area.fontImpl = null;
+                        if (area.fontImpl instanceof Image) {
+//#ifdef __ANDROID__
+                            cz.kruch.track.util.ImageUtils.recycle((Image)area.fontImpl);
+//#endif
+                            area.fontImpl = null;
+                        }
                         area.fontImpl = font;
                         if (bitmap != null) {
                             area.cw = bitmap.getWidth() / CHARSET.length;
@@ -1627,7 +1631,7 @@ final class ComputerView extends View
                             graphics.drawChars(text, 0, l, area.x + xoffset, area.y, 0);
                         } else if (area.fontImpl instanceof Image) {
                             final Image image = (Image)area.fontImpl;
-//#if __ANDROID__ || __CN1__
+//#if __ANDROID__
                             if (image.getWidth() == image.getHeight()) {
                                 try {
                                     final int rotation = (int) Float.parseFloat(sb.toString());
@@ -1648,7 +1652,7 @@ final class ComputerView extends View
                                 }
                                 final int xoffset = area.align == Area.ALIGN_LEFT ? 0 : (area.w - (int)(area.cw * l) + (int)(narrowChars * (2D / 3D * area.cw))) / area.align;
                                 drawChars(graphics, image, text, l, area.x + xoffset, area.y, area);
-//#if __ANDROID__ || __CN1__
+//#if __ANDROID__
                             }
 //#endif
                         }
@@ -2000,6 +2004,9 @@ final class ComputerView extends View
                 for (int i = as.size(); --i >= 0; ) {
                     final Area area = (Area) as.elementAt(i);
                     if (area.fontImpl instanceof Image) {
+//#ifdef __ANDROID__
+                        cz.kruch.track.util.ImageUtils.recycle((Image)area.fontImpl);
+//#endif
                         area.fontImpl = null;
                     }
                 }
@@ -2292,10 +2299,9 @@ final class ComputerView extends View
         final ByteArrayOutputStream baos = new ByteArrayOutputStream(4096);
         final int N = 4096;
         final byte[] buffer = new byte[N];
-        int count = in.read(buffer, 0, N);
-        while (count > -1) {
+        int count;
+        while ((count  = in.read(buffer, 0, N)) > -1) {
             baos.write(buffer, 0, count);
-            count = in.read(buffer, 0, N);
         }
         return baos.toByteArray();
     }

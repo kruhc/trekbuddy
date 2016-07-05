@@ -330,7 +330,7 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
                                               true, alphaSteps, value));
 
             // map prescale
-            submenu.append(field3 = new TextField(Resources.getString(Resources.CFG_DESKTOP_FLD_MAP_PRESCALE) + " (100% - 270%)",
+            submenu.append(field3 = new TextField(Resources.getString(Resources.CFG_DESKTOP_FLD_MAP_PRESCALE) + " (100% - 400%)",
                                                   Integer.toString(Config.prescale),
                                                   3, /*TextField.*/NUMERIC));
 
@@ -1152,7 +1152,7 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
                 Config.listFont = Integer.parseInt(getString(field1), 16);
                 Config.cmsCycle = getInt(field2);
                 final int prescale = getInt(field3);
-                if (prescale < 100 || prescale > 270) {
+                if (prescale < 100 || prescale > 400) {
                     Desktop.showError(Resources.getString(Resources.DESKTOP_MSG_INVALID_INPUT) + ": " + getString(field3), null, null);
                 } else {
                     Config.prescale = prescale;
@@ -1377,13 +1377,19 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
         final int h = image.getHeight();
         final Graphics graphics = image.getGraphics();
         graphics.setColor(0x40ffffff);
+//#ifdef __CN1__
+        graphics.fillRect(0, 0, w, h);
+//#else
         graphics.fillRoundRect(0, 0, w, h, 5, 5);
+//#endif
         graphics.setColor(Config.COLORS_16[color]);
         // TODO respect dashed flag
         graphics.fillRect(3, /*3 + 3*/h / 2 - thickness, w - 3 - 3, thickness * 2 + 1);
+/*
 //#ifdef __CN1__
         ((javax.microedition.lcdui.game.ExtendedGraphics) com.codename1.ui.FriendlyAccess.getNativeGraphics(image.getNativeImage())).realize();
 //#endif
+*/
     }
 
     private final class LineCfgForm implements CommandListener, ItemStateListener {

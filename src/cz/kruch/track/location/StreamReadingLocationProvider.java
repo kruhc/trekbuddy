@@ -17,7 +17,7 @@ import cz.kruch.track.configuration.Config;
 /**
  * Base class for Serial/Bluetooth/Simulator providers.
  *
- * @author Ales Pour <kruhc@seznam.cz>
+ * @author kruhc@seznam.cz
  */
 abstract class StreamReadingLocationProvider extends LocationProvider {
 //#ifdef __LOG__

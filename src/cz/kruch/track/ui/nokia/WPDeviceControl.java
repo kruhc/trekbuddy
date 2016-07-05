@@ -1,5 +1,7 @@
 package cz.kruch.track.ui.nokia;
 
+import com.codename1.impl.ExtendedImplementation;
+
 //#ifdef __CN1__
 
 final class WPDeviceControl extends DeviceControl {
@@ -7,24 +9,24 @@ final class WPDeviceControl extends DeviceControl {
     private boolean isTicker;
 
     WPDeviceControl() {
-        this.name = "WP8";
+        this.name = "WP";
     }
 
     void turnOn() {
-        com.codename1.ui.FriendlyAccess.execute("backlight", new Object[]{ true });
+        ExtendedImplementation.i().lockScreen();
     }
 
     void turnOff() {
-        com.codename1.ui.FriendlyAccess.execute("backlight", new Object[]{ false });
+        ExtendedImplementation.i().unlockScreen();
     }
 
     void useTicker(final Object list, final String msg) {
         if (msg != null) {
-            com.codename1.ui.FriendlyAccess.execute("show-progress", new Object[]{ msg });
+            ExtendedImplementation.exec("show-progress", new Object[]{ msg });
             isTicker = true;
         } else {
             if (isTicker) {
-                com.codename1.ui.FriendlyAccess.execute("show-progress", new Object[]{ null });
+                ExtendedImplementation.exec("show-progress", new Object[]{ null });
                 isTicker = false;
             }
         }

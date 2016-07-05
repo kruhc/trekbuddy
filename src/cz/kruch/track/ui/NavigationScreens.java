@@ -22,7 +22,6 @@ import api.location.Datum;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Calendar;
-import java.util.TimeZone;
 import java.util.Vector;
 
 /**
@@ -56,7 +55,7 @@ public final class NavigationScreens {
     private static final Calendar CALENDAR = Calendar.getInstance(TimeZone.getDefault());
     private static final Date DATE = new Date();
 */
-    private static final SimpleCalendar CALENDAR = new SimpleCalendar(Calendar.getInstance(TimeZone.getDefault()));
+    private static final SimpleCalendar CALENDAR = new SimpleCalendar(true);
 
     private static final char[] STR_KN  = { ' ', 'k', 'n', ' ' };
     private static final char[] STR_MPH = { ' ', 'm', 'p', 'h', ' ' };
@@ -334,6 +333,12 @@ public final class NavigationScreens {
         final int size2 = arrowSize2[type];
         final boolean full = arrowsFull[type];
         final int courseInt = ((int) course) % 360;
+
+//#if __ANDROID__
+        if (image.getWidth() == image.getHeight()) {
+            graphics.drawImage(image, x - size2, y - size2, 0, courseInt);
+        } else 
+//#endif
 
         if (!full) {
             int cr = courseInt / 90;

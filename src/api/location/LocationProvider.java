@@ -7,7 +7,7 @@ import java.io.OutputStream;
 /**
  * Location provider abstraction.
  * 
- * @author Ales Pour <kruhc@seznam.cz>
+ * @author kruhc@seznam.cz
  */
 public abstract class LocationProvider {
     public static final int _STARTING               = 0x0; // non-JSR_179
@@ -19,6 +19,9 @@ public abstract class LocationProvider {
 
     public static int syncs, mismatches, invalids, checksums,
                       restarts, stalls, errors, pings, maxavail;
+//#ifdef __ANDROID__
+    public static String debugs;
+//#endif
 
     private String name;
     private volatile LocationListener listener;

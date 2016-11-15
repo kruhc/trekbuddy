@@ -6,6 +6,7 @@ import cz.kruch.track.util.CharArrayTokenizer;
 import cz.kruch.track.io.LineReader;
 import cz.kruch.track.ui.YesNoDialog;
 import cz.kruch.track.event.Callback;
+import cz.kruch.track.Resources;
 
 import javax.microedition.rms.RecordStore;
 import javax.microedition.io.Connector;
@@ -338,14 +339,19 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
 
 //#elifdef __CN1__
 
-        dataDir = "file:///TrekBuddy/";
         cardDir = "file:///Card/TrekBuddy/";
+        dataDir = cz.kruch.track.TrackingMIDlet.hasFlag("sd_writeable") ? cardDir : "file:///TrekBuddy/";
         desktopFontSize = 1;
         safeColors = true;
         fullscreen = true;
         wp8Io = true;
+        filesizeAvail = true;
 //#ifdef __ALT_RENDERER__
         S60renderer = false; // drawRegion supported well
+//#endif
+
+//#ifdef __LOG__
+        if (log.isEnabled()) log.debug("WP data dir: " + dataDir);
 //#endif
 
 //#else
@@ -1062,7 +1068,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
 
         switch (action) {
             case ACTION_INITDATADIR: {
-//#ifndef __CN1__
+//#ifndef __CN1_SL__
                 if (dataDirExists) {
                     response(YesNoDialog.NO, null);
                 } else {
@@ -1110,13 +1116,13 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         if (answer == YesNoDialog.YES) {
             File datadir = null;
             try {
-                datadir = File.open(getDataDir(), Connector.WRITE);
+                datadir = File.open(getDataDir(), Connector.READ_WRITE);
                 if (!datadir.exists()) {
                     datadir.mkdir();
                 }
                 dataDirExists = true;
             } catch (Exception e) {
-//#ifndef __CN1__
+//#ifndef __CN1_SL__
                 cz.kruch.track.ui.Desktop.showError("Failed to create " + getDataDir().substring(8 /* "file:///".length() */),
                                                     e, null);
 //#else
@@ -1157,13 +1163,12 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
                 file = File.open(Config.getFileURL(Config.FOLDER_MAPS, "no-map.xml"), Connector.READ_WRITE);
                 if (!file.exists()) {
                     file.create();
-                    final InputStream in = getResourceAsStream(NO_MAP_RESOURCE);
+                    final InputStream in = Resources.getResourceAsStream(NO_MAP_RESOURCE);
                     final OutputStream out = file.openOutputStream();
                     final byte[] buffer = new byte[256];
-                    int c = in.read(buffer);
-                    while (c > -1) {
+                    int c;
+                    while ((c = in.read(buffer)) > -1) {
                         out.write(buffer, 0, c);
-                        c = in.read(buffer);
                     }
                     File.closeQuietly(out);
                     File.closeQuietly(in);
@@ -1266,7 +1271,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
 
         // first try built-in
         try {
-            initDatums(getResourceAsStream("/resources/datums.txt"), tokenizer, delims);
+            initDatums(Resources.getResourceAsStream("/resources/datums.txt"), tokenizer, delims);
         } catch (Throwable t) {
             // ignore
         }
@@ -1302,10 +1307,9 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         LineReader reader = null;
         try {
             reader = new cz.kruch.track.io.LineReader(in);
-            CharArrayTokenizer.Token line = reader.readToken(false);
-            while (line != null) {
+            CharArrayTokenizer.Token line;
+            while ((line = reader.readToken(false)) != null) {
                 initDatum(tokenizer, line, delims);
-                line = reader.readToken(false);
             }
         } catch (Throwable t) {
             // ignore
@@ -1461,14 +1465,6 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
 
     public static boolean resourceExist(final Vector resources, final String name) {
         return rss > 0;
-    }
-
-    private static InputStream getResourceAsStream(final String resource) {
-//#ifndef __CN1__
-        return Config.class.getResourceAsStream(resource);
-//#else
-        return com.codename1.ui.FriendlyAccess.getResourceAsStream(resource);
-//#endif
     }
 
     /* The variant bellow is too dangerous for now */

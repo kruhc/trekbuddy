@@ -1167,7 +1167,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
                     final OutputStream out = file.openOutputStream();
                     final byte[] buffer = new byte[256];
                     int c;
-                    while ((c = in.read(buffer)) > -1) {
+                    while ((c = in.read(buffer)) != -1) {
                         out.write(buffer, 0, c);
                     }
                     File.closeQuietly(out);

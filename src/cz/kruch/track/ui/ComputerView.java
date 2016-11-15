@@ -2300,7 +2300,7 @@ final class ComputerView extends View
         final int N = 4096;
         final byte[] buffer = new byte[N];
         int count;
-        while ((count  = in.read(buffer, 0, N)) > -1) {
+        while ((count = in.read(buffer, 0, N)) != -1) {
             baos.write(buffer, 0, count);
         }
         return baos.toByteArray();

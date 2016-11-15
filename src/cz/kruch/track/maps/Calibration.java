@@ -520,7 +520,7 @@ abstract class Calibration {
         // let's spy with CRC calculation
         cz.kruch.track.io.CrcInputStream crcIn = new cz.kruch.track.io.CrcInputStream(in);
         c.init(crcIn, path);        // usual init
-        while (crcIn.read() > -1);  // complete reading
+        while (crcIn.read() != -1);  // complete reading
         crcIn.dispose();            // really closes the stream
     }
 

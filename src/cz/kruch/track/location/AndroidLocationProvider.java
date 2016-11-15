@@ -14,22 +14,25 @@ import cz.kruch.track.configuration.Config;
 
 import java.io.OutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InterruptedIOException;
 import java.util.TimerTask;
 
 /**
  * Android provider implementation.
  *
- * @author Ales Pour <kruhc@seznam.cz>
+ * @author kruhc@seznam.cz
  */
 
 public final class AndroidLocationProvider
-        extends api.location.LocationProvider
+        extends cz.kruch.track.location.StreamReadingLocationProvider
         implements android.location.LocationListener,
                    android.location.GpsStatus.Listener,
                    Runnable {
 //#ifdef __LOG__
     private static final cz.kruch.track.util.Logger log = new cz.kruch.track.util.Logger("AndroidLocationProvider");
 //#endif
+    
     private static final String TAG = cz.kruch.track.TrackingMIDlet.APP_TITLE;
     private static final String KEY_SATELLITES = "satellites";
     private static final byte[] CRLF = { '\r', '\n' };
@@ -38,22 +41,25 @@ public final class AndroidLocationProvider
     private android.location.GpsStatus gpsStatus;
     private android.os.Looper looper;
     private TimerTask watcher;
-//#ifndef __BACKPORT__
     private cz.kruch.track.event.Callback nmeaer;
-//#endif
+
+    private Thread nmeaThread;
+    private volatile InputStream nmeaIn;
+    private volatile OutputStream nmeaOut;
 
     private volatile int sat, status;
-    private volatile boolean hasNmea;
+    private volatile boolean hasNmea, nmeaWarn;
+    private volatile long nmeaLast; 
 
-    private final char[] raw;
+    private char[] raw;
     private int extraSat, extraFix, extraFixQuality;
 
     public AndroidLocationProvider() {
         super("Internal");
         this.status = android.location.LocationProvider.OUT_OF_SERVICE;
-        this.raw = new char[NmeaParser.MAX_SENTENCE_LENGTH];        
     }
 
+    @Override
     public int start() throws LocationException {
         try {
             manager = (android.location.LocationManager) cz.kruch.track.TrackingMIDlet.getActivity().getSystemService(android.content.Context.LOCATION_SERVICE);
@@ -82,16 +88,15 @@ public final class AndroidLocationProvider
         // let's roll
         baby();
 
-        // reset
+        // reset extra info
         extraSat = extraFix = extraFixQuality = 0;
 
         try {
-            // create looper
+            // start looper WTF?!?
             android.os.Looper.prepare();
             looper = android.os.Looper.myLooper();
 
-            // add listeners
-            manager.addGpsStatusListener(this);
+            // add NMEA listener
 //#ifndef __BACKPORT__
             try {
                 nmeaer = (Callback) Class.forName("cz.kruch.track.location.AndroidNmeaListener").newInstance();
@@ -100,6 +105,29 @@ public final class AndroidLocationProvider
                 // ignore
             }
 //#endif
+
+            // prefer NMEA source
+            if (nmeaer != null) {
+
+                // set flags
+                hasNmea = true;
+                debugs = "NMEA:primary";
+
+                // create pipe
+                nmeaIn = new java.io.PipedInputStream();
+                nmeaOut = new java.io.PipedOutputStream((java.io.PipedInputStream)nmeaIn);
+
+                // start GPS stream handler
+                nmeaThread = new Thread(new Runnable() {
+                    public void run() {
+                        gps();
+                    }
+                });
+                nmeaThread.start();
+            }
+
+            // add status listener
+            manager.addGpsStatusListener(this);
 
             // get timing
             int interval = 0;
@@ -111,21 +139,20 @@ public final class AndroidLocationProvider
             } catch (NumberFormatException e) {
                 // ignore
             }
-            android.util.Log.d(cz.kruch.track.TrackingMIDlet.APP_TITLE,
-                               "location updates interval: " + (interval == 0 ? "max" : (interval + " ms")));
+            android.util.Log.d(TAG, "location updates interval: " + (interval == 0 ? "realtime" : (interval + " ms")));
+
+            // start watcher // see SerialLocationprovider
+            cz.kruch.track.ui.Desktop.schedule(watcher = new TimerTask() {
+                public void run() {
+                    if (getLast() > 0 && System.currentTimeMillis() > (getLast() + 15000)) {
+                        notifyListener2(Location.newInstance(QualifiedCoordinates.INVALID, 0, 0));
+                    }
+                }
+            }, 15000, 5000); // delay = 15 sec, period = 5 sec 
 
             // start location updates
             manager.requestLocationUpdates(android.location.LocationManager.GPS_PROVIDER,
                                            interval, 0, this, looper);
-
-            // start watcher
-            cz.kruch.track.ui.Desktop.schedule(watcher = new TimerTask() {
-                public void run() {
-                    if (getLast() > 0 && System.currentTimeMillis() > (getLast() + 5000)) {
-                        notifyListener2(Location.newInstance(QualifiedCoordinates.INVALID, 0, 0));
-                    }
-                }
-            }, 15000, 1000);
 
             // status
             setStatus("running");
@@ -133,11 +160,9 @@ public final class AndroidLocationProvider
             // wait for end
             android.os.Looper.loop();
 
-//#ifdef __LOG__
-            if (log.isEnabled()) log.debug("loop abandoned");
-//#endif
-
         } catch (Throwable t) {
+
+            android.util.Log.e(TAG, "failed to start location provider", t);
 
             // record
             setThrowable(t);
@@ -150,34 +175,60 @@ public final class AndroidLocationProvider
                 watcher = null;
             }
 
-            // remove listeners and cancel updated
+            // stop updates
+            manager.removeUpdates(this);
+
+            // remove status listener
             manager.removeGpsStatusListener(this);
+
+            // remove NMEA listener
 //#ifndef __BACKPORT__
             try {
                 nmeaer.invoke(new Integer(0), null, manager);
-            } catch (Exception e) {
+            } catch (Exception e) { // NPE
                 // ignore
             }
 //#endif
-            manager.removeUpdates(this);
+
+            // if NMEA was used, wait for GPS stream handler
+            if (nmeaer != null) {
+                api.file.File.closeQuietly(nmeaOut);
+                api.file.File.closeQuietly(nmeaIn);
+                nmeaIn = null;
+                nmeaOut = null;
+                if (nmeaThread != null) {
+                    if (nmeaThread.isAlive()) {
+                        nmeaThread.interrupt();
+                    }
+                    try {
+                        nmeaThread.join();
+                    } catch (InterruptedException e) {
+                        // ignore
+                    }
+                }
+                nmeaThread = null;
+                nmeaer = null;
+            }
+
+            // cleanup
             manager = null;
+            looper = null;
 
             // almost dead
             zombie();
         }
     }
 
+    @Override
     public void stop() throws LocationException {
-        // debug
-        setStatus("requesting stop");
+        // die
+        die();
 
-        // quit loop
+        // shutdown looper
         try {
             looper.quit();
         } catch (Exception e) { // NPE?
             // ignore
-        } finally {
-            looper = null;
         }
     }
 
@@ -185,6 +236,10 @@ public final class AndroidLocationProvider
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("onLocationChanged");
 //#endif
+
+        if (hasNmea && isNmeaCurrent()) {
+            return;
+        }
 
         // create up-to-date location
         final QualifiedCoordinates qc = QualifiedCoordinates.newInstance(l.getLatitude(),
@@ -229,6 +284,10 @@ public final class AndroidLocationProvider
         if (log.isEnabled()) log.debug("onStatusChanged");
 //#endif
 
+        if (hasNmea && isNmeaCurrent()) {
+            return;
+        }
+        
         if (isGo()) {
             switch (status) {
                 case android.location.LocationProvider.OUT_OF_SERVICE:
@@ -274,7 +333,7 @@ public final class AndroidLocationProvider
         if (log.isEnabled()) log.debug("onGpsStatusChanged");
 //#endif
 
-        if (hasNmea) {
+        if (hasNmea && isNmeaCurrent()) {
             return;
         }
 
@@ -307,15 +366,86 @@ public final class AndroidLocationProvider
         }
     }
 
-//#ifndef __BACKPORT__
+    private boolean isNmeaCurrent() {
+        if (nmeaLast > 0 && System.currentTimeMillis() - nmeaLast > 15000) {
+            if (!nmeaWarn) {
+                nmeaWarn = true;
+                android.util.Log.w(TAG, "NMEA source is not current");
+                debugs = "NMEA:secondary";
+            }
+            return false;
+        }
+        if (nmeaWarn) {
+            nmeaWarn = false;
+            android.util.Log.i(TAG, "NMEA source is current again");
+            debugs = "NMEA:primary";
+        }
+        return true;
+    }
+
+    private void gps() {
+
+        // fake start for proper isNmeaCurrent() behaviour with vendors without NMEA
+        nmeaLast = System.currentTimeMillis();
+
+        // loop from stream-based provider
+        while (isGo()) {
+
+            // get next location
+            Location location;
+            try {
+
+                // parse from stream
+                location = nextLocation(nmeaIn, observer);
+
+            } catch (Throwable t) {
+
+                // record exception
+                if (t instanceof InterruptedException || t instanceof InterruptedIOException) {
+                    setStatus("interrupted");
+                    // probably stop request
+                } else {
+                    // record
+                    android.util.Log.e(TAG, "NMEA sink error", t);
+                    setThrowable(t);
+                }
+
+                // counter
+                errors++;
+
+                // ignore
+                continue;
+            }
+
+            // end of data?
+            if (location == null) {
+                break;
+            }
+
+            // new location timestamp
+            setLast(nmeaLast = System.currentTimeMillis());
+
+            // notify listener
+            notifyListener2(location);
+        }
+    }
 
     public void onNmeaReceived(long timestamp, String nmea) {
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("onNmeaReceived");
 //#endif
 
-        // set flag
-        hasNmea = true;
+        if (hasNmea) {
+            if (nmeaOut != null) {
+                try {
+                    nmeaOut.write(nmea.getBytes("US-ASCII"));
+                    nmeaOut.flush();
+                } catch (Exception e) {
+                    android.util.Log.e(TAG, "NMEA sink error", e);
+                }
+            }
+            return;
+        }
 
         // enhance with raw NMEA
         int sat = 0;
@@ -354,7 +484,10 @@ public final class AndroidLocationProvider
     }
 
     private void parseNmea(final String extra) throws Exception {
-        final char[] line = raw;
+        if (this.raw == null) {
+            this.raw = new char[NmeaParser.MAX_SENTENCE_LENGTH];
+        }
+        final char[] line = this.raw;
         final int length = extra.length();
         int start = 0;
         int idx = extra.indexOf("$GP");
@@ -394,7 +527,6 @@ public final class AndroidLocationProvider
         }
     }
 
-
     private static void logNmea(final OutputStream out,
                                 final String extra) throws IOException {
         final byte[] bytes = extra.getBytes();
@@ -428,9 +560,6 @@ public final class AndroidLocationProvider
             }
         }
     }
-
-//#endif /* !__BACKPORT__ */
-
 }
 
 //#endif

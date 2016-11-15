@@ -116,14 +116,19 @@ abstract class Loader implements Runnable {
 //#ifndef __CN1__
         final String sibPath = path.substring(0, path.lastIndexOf('.')).concat(ext);
 //#else
-        String sibPath = path.substring(0, path.lastIndexOf('.')).concat(ext);
-        if (path.startsWith("file:///Card/")) {
-            sibPath = sibPath.substring(13); // "file:///Card/".length()
-            final int idx = sibPath.indexOf("TrekBuddy/maps/");
-            if (idx > -1) {
-                sibPath = sibPath.substring(idx + 15); // "TrekBuddy/maps/".length()
+        String sibPath;
+        if (cz.kruch.track.TrackingMIDlet.hasFlag("sd_writeable")) {
+            sibPath = path.substring(0, path.lastIndexOf('.')).concat(ext);
+        } else {
+            sibPath = path.substring(0, path.lastIndexOf('.')).concat(ext);
+            if (path.startsWith("file:///Card/")) {
+                sibPath = sibPath.substring(13); // "file:///Card/".length()
+                final int idx = sibPath.indexOf("TrekBuddy/maps/");
+                if (idx > -1) {
+                    sibPath = sibPath.substring(idx + 15); // "TrekBuddy/maps/".length()
+                }
+                sibPath = "file:///Local/".concat(sibPath.replace('/', '_'));
             }
-            sibPath = "file:///Local/".concat(sibPath.replace('/', '_'));
         }
 //#endif
         return File.open(sibPath, mode);

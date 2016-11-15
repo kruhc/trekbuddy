@@ -116,31 +116,31 @@ public final class FileBrowser implements CommandListener, Runnable, Comparator 
 
                     // maximum robustness here needed
                     try {
-                        // try DataDir first
-//#ifdef __CN1__
-                        String dir;
-//#ifdef __LOG__
-                        if (log.isEnabled()) log.debug("folder: " + folder);
-//#endif
+
+                        // get starting point
+                        String url;
                         if (folder == null) { // generic file manager
-                            dir = Config.getDataDir();
+                            url = Config.getDataDir();
                         } else {
-                            dir = Config.getFolderURL(folder);
-                            if (folder.equals(Config.FOLDER_MAPS)) {
-                                if (com.codename1.ui.FriendlyAccess.getImplementation().hasExternalCard()) {
-                                    dir = Config.cardDir.concat(Config.FOLDER_MAPS);
+                            if (folder.startsWith("file:")) {
+                                url = folder;
+                            } else {
+                                url = Config.getFolderURL(folder);
+//#ifdef __CN1__
+                                if (folder.equals(Config.FOLDER_MAPS)) {
+                                    if (com.codename1.impl.ExtendedImplementation.i().hasExternalCard()) {
+                                        url = Config.cardDir.concat(Config.FOLDER_MAPS);
+                                    }
                                 }
+//#endif
                             }
                         }
-//#else
-                        final String dir = Config.getFolderURL(folder);
-//#endif
-                        file = File.open(dir);
+                        file = File.open(url);
                         if (file.exists()) {
 
                             // calculate and fix depth
-                            for (int i = dir.length(); --i >= 0; ) {
-                                if (dir.charAt(i) == File.PATH_SEPCHAR) {
+                            for (int i = url.length(); --i >= 0; ) {
+                                if (url.charAt(i) == File.PATH_SEPCHAR) {
                                     depth++;
                                 }
                             }

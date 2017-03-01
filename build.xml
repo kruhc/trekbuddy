@@ -25,18 +25,21 @@
     <property name="android15.home" value="c:\J2ME\android-sdk-windows\platforms\android-1.5"/>
     <property name="android16.home" value="c:\J2ME\android-sdk-windows\platforms\android-1.6"/>
     <property name="android20.home" value="c:\J2ME\android-sdk-windows\platforms\android-2.0"/>
+    <property name="android4.home" value="c:\J2ME\android-sdk-windows\platforms\android-14"/>
     <property name="androidant.home" value="c:\J2ME\android-sdk-ant"/>
     <property name="microemu.home" value="z:\repository\microemu-google\microemulator"/>
     <property name="cn1.home" value="z:\apps\Codename One"/>
     <property name="cn1.repository" value="z:\repository\cn1\CodenameOne"/>
     <property name="proguard3.home" value="z:\apps\proguard\3.11"/>
     <property name="proguard4.home" value="z:\apps\proguard\4.11"/>
-    <property name="proguard5.home" value="z:\apps\proguard\5.2.1"/>
+    <property name="proguard5.home" value="z:\apps\proguard\5.3.2"/>
 
     <property name="build.dir" value="r:\trekbuddy"/>
     <property name="temp.dir" value="r:\java-temp"/>
 
     <property name="use.proguard" value="3"/>
+    <property name="use.sdk.version" value="21"/>
+    <property name="use.api.level" value="14"/>
 
     <taskdef resource="antenna.properties" classpath="lib/antenna-bin-1.0.2.jar"/>
     <taskdef name="otaJad" classname="RimOtaJadSha" classpath="${basedir}/tools/classes"/>
@@ -333,10 +336,10 @@
              antfile="build-trekbuddy.xml" target="clean"
              inheritAll="false" inheritRefs="false">
             <property name="target.version" value="any"/>
-            <property name="sdk.version" value="2.2"/>
-            <property name="api.level" value="10"/>
+            <property name="sdk.version" value="${use.sdk.version}"/>
+            <property name="api.level" value="${use.api.level}"/>
             <property name="dist.dir" value="android"/>
-	    </ant>
+	      </ant>
         <antcall target="a.pre.android"/>
         <antcall target="compile.android"/>
         <antcall target="android.pack" inheritall="true"/>
@@ -351,8 +354,8 @@
              antfile="build-trekbuddy.xml" target="zipalign"
              inheritAll="false" inheritRefs="false">
             <property name="target.version" value="any"/>
-            <property name="sdk.version" value="2.2"/>
-            <property name="api.level" value="10"/>
+            <property name="sdk.version" value="${use.sdk.version}"/>
+            <property name="api.level" value="${use.api.level}"/>
             <property name="dist.dir" value="android"/>
             <property name="javac.debug" value="true"/>
             <property name="javac.debuglevel" value="source,lines"/>
@@ -375,8 +378,8 @@
              antfile="build-trekbuddy.xml" target="clean"
              inheritAll="false" inheritRefs="false">
             <property name="target.version" value="any"/>
-            <property name="sdk.version" value="2.2"/>
-            <property name="api.level" value="10"/>
+            <property name="sdk.version" value="${use.sdk.version}"/>
+            <property name="api.level" value="${use.api.level}"/>
             <property name="dist.dir" value="android"/>
 	    </ant>
         <antcall target="a.pre.android-offline"/>
@@ -393,8 +396,8 @@
              antfile="build-trekbuddy.xml" target="zipalign"
              inheritAll="false" inheritRefs="false">
             <property name="target.version" value="any-offline"/>
-            <property name="sdk.version" value="2.2"/>
-            <property name="api.level" value="10"/>
+            <property name="sdk.version" value="${use.sdk.version}"/>
+            <property name="api.level" value="${use.api.level}"/>
             <property name="dist.dir" value="android-offline"/>
             <property name="javac.debug" value="true"/>
             <property name="javac.debuglevel" value="source,lines"/>
@@ -563,7 +566,7 @@
         <antcall target="dist" inheritall="true"/>
     </target>
 
-    <target name="wp.full">
+    <target name="wp-full">
         <echo message="Use 'wp-shrinked' target!"/>
         <property name="suffix" value="-wp"/>
         <property name="dist.dir" value="wp"/>
@@ -755,30 +758,30 @@
 
     <target name="a.pre.cn1-nolog" depends="a.pre.hecl-android-offline">
         <mkdir dir="tmp/src"/>
-<!--
         <wtkpreprocess srcdir="cn1-compat/src" destdir="tmp/src" version="1"
                        symbols="__CN1__,${pre.extra}"/>
         <wtkpreprocess srcdir="src" destdir="tmp/src" version="1"
                        symbols="__HECL__,__CN1__,__NO_NET__,${pre.extra}"/>
--->
+<!--
         <wtkpreprocess srcdir="cn1-compat/src" destdir="tmp/src" version="1"
                        symbols="__CN1__,${pre.extra}"/>
         <wtkpreprocess srcdir="src" destdir="tmp/src" version="1"
                        symbols="__HECL__,__CN1__,__NO_NET__,__NOBJPOOL__,${pre.extra}"/>
+-->
     </target>
 
     <target name="a.pre.cn1" depends="a.pre.hecl-android-offline">
         <mkdir dir="tmp/src"/>
-<!--
         <wtkpreprocess srcdir="cn1-compat/src" destdir="tmp/src" version="1"
                        symbols="__CN1__,${pre.extra}"/>
         <wtkpreprocess srcdir="src" destdir="tmp/src" version="1"
-                       symbols="__HECL__,__CN1__,__NO_NET__,${pre.extra}"/>
--->
+                       symbols="__HECL__,__CN1__,__NO_NET__,__LOG__,${pre.extra}"/>
+<!--
         <wtkpreprocess srcdir="cn1-compat/src" destdir="tmp/src" version="1"
                        symbols="__CN1__,__LOG__,${pre.extra}"/>
         <wtkpreprocess srcdir="src" destdir="tmp/src" version="1"
-                       symbols="__HECL__,__CN1__,__NO_NET__,__NOBJPOOL__,__ALT_RENDERER__,__LOG__,${pre.extra}"/>
+                       symbols="__HECL__,__CN1__,__NO_NET__,__LOG__,__NOBJPOOL__,__ALT_RENDERER__,${pre.extra}"/>
+-->
     </target>
 
     <target name="a.pre.cn1-emulator">
@@ -1716,28 +1719,51 @@
             <arg value="-keep class net.*"/>
             <arg value="-keep class org.kxml2.*"/>
             <arg value="-keep class org.xmlpull.*"/>
+            <!--
             <arg value="-keep class com.codename1.location.Location { *; }"/>
             <arg value="-keep class com.codename1.location.LocationManager { *; }"/>
             <arg value="-keep class com.codename1.location.LocationListener { *; }"/>
             <arg value="-keep class com.codename1.io.FileSystemStorage { *; }"/>
-            <arg value="-keep class com.codename1.io.Log {
-                public static final int *;
-                public void set*(...);
-                public void closeWriter();
-            }"/>
             <arg value="-keep class com.codename1.ui.Display { public void init(); }"/>
             <arg value="-keep class com.codename1.ui.Font { *; }"/>
             <arg value="-keep class com.codename1.ui.Image { *; }"/>
             <arg value="-keep class com.codename1.ui.IndexedImage { *; }"/>
             <arg value="-keep class com.codename1.ui.RGBImage { *; }"/>
+            <arg value="-keep class com.codename1.io.Logger {
+                public static final int *;
+                public void set*(...);
+                public void closeWriter();
+            }"/>
             <arg value="-keep class com.codename1.io.Util { public void setImplementation(...); }"/>
+            <arg value="-keep class com.codename1.io.Logger { *; }"/>
+            -->
+            <arg value="-keep class com.codename1.impl.ExtendedImplementation {
+                public abstract &lt;methods&gt;;
+            }"/>
             <arg value="-keep class com.codename1.impl.CodenameOneImplementation {
                 public abstract &lt;methods&gt;;
                 public void flashBacklight(int);
-                public boolean shouldWriteUTFAsGetBytes();
+                public boolean instanceof*(java.lang.Object);
+                public int getFace(java.lang.Object);
+                public int getSize(java.lang.Object);
+                public int getStyle(java.lang.Object);
                 public void draw*(...);
                 public void fill*(...);
+                public boolean isScreenLockSupported();
+                public void lockScreen();
+                public void unlockScreen();
             }"/>
+            <arg value="-whyareyoukeeping class net.trekbuddy.midlet.TrackingApp"/>
+            <arg value="-whyareyoukeeping class com.codename1.ui.Display"/>
+            <arg value="-whyareyoukeeping class com.codename1.ui.Component"/>
+            <arg value="-whyareyoukeeping class com.codename1.ui.EncodedImage"/>
+            <arg value="-whyareyoukeeping class com.codename1.ui.animations.Animation"/>
+            <arg value="-whyareyoukeeping class com.codename1.io.Log"/>
+            <arg value="-whyareyoukeeping class com.codename1.io.Logger"/>
+            <arg value="-whyareyoukeeping class com.codename1.io.FileSystemStorage"/>
+            <arg value="-whyareyoukeeping class com.codename1.location.Location"/>
+            <arg value="-whyareyoukeeping class com.codename1.location.LocationManager"/>
+            <arg value="-whyareyoukeeping class com.codename1.location.LocationProvider"/>            
             <arg value="-printusage dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.dco"/>
             <arg value="-verbose"/>
         </java>

@@ -34,10 +34,6 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
     public static int pauses;
     public static int state; 
 
-//#ifdef __LOG__
-    private static boolean logEnabled;
-//#endif
-
     public static final String JAD_GPS_CONNECTION_URL      = "GPS-Connection-URL";
     public static final String JAD_GPS_DEVICE_NAME         = "GPS-Device-Name";
     public static final String JAD_UI_FULL_SCREEN_HEIGHT   = "UI-FullScreen-Height";
@@ -51,16 +47,13 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
         // detect environment
         platform = System.getProperty("microedition.platform");
         flags = getAppProperty(JAD_APP_FLAGS);
-        if (flags == null) {
-            flags = System.getProperty("trekbuddy.app-flags");
-        }
-//#if __ANDROID__ || __CN1__
+//#ifdef __ANDROID__
         version = System.getProperty("MIDlet-Version");
 //#else
         version = getAppProperty("MIDlet-Version");
 //#endif
 //#ifdef __LOG__
-        logEnabled = hasFlag("log_enable");
+        cz.kruch.track.util.Logger.setEnabled(hasFlag("log_enable"));
         cz.kruch.track.util.Logger.out("* platform: " + platform);
         cz.kruch.track.util.Logger.out("* version: " + version);
 //#endif
@@ -346,16 +339,6 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
     /*
      * Environment info.
      */
-
-//#ifdef __LOG__
-    public static boolean isLogEnabled() {
-        return logEnabled;
-    }
-//#elifdef __CN1__
-    public static boolean isLogEnabled() {
-        return false;
-    }
-//#endif
 
     public static String getPlatform() {
         return platform;

@@ -14,13 +14,14 @@ import cz.kruch.track.configuration.Config;
 import cz.kruch.track.maps.Map;
 import cz.kruch.track.maps.Atlas;
 import cz.kruch.track.Resources;
+import cz.kruch.track.event.Callback;
 
 import api.file.File;
 
 /**
  * Info form.
  *
- * @author Ales Pour <kruhc@seznam.cz>
+ * @author kruhc@seznam.cz
  */
 final class InfoForm implements CommandListener {
 
@@ -44,16 +45,66 @@ final class InfoForm implements CommandListener {
         pane.append(newItem(Resources.getString(Resources.INFO_ITEM_KEYS), ""));
         pane.append(newItem(null, Resources.getString((short) (Resources.INFO_ITEM_KEYS_MS + desktop.getMode()))));
         pane.addCommand(new Command(Resources.getString(Resources.INFO_CMD_DETAILS), Desktop.POSITIVE_CMD_TYPE, 0));
+//#ifdef __ANDROID__
+        pane.addCommand(new Command("Import Package", Desktop.POSITIVE_CMD_TYPE, 1));
+//#endif
 //#ifdef __CN1__
-        pane.addCommand(new Command("File Manager", Desktop.POSITIVE_CMD_TYPE, 1));
-        pane.addCommand(new Command("Send Log", Desktop.POSITIVE_CMD_TYPE, 2));
-        pane.addCommand(new Command("Set Loglevel", Desktop.POSITIVE_CMD_TYPE, 3));
+        pane.addCommand(new Command("File Manager", Desktop.POSITIVE_CMD_TYPE, 10));
+        pane.addCommand(new Command("Send Log", Desktop.POSITIVE_CMD_TYPE, 11));
+        pane.addCommand(new Command("Set Loglevel", Desktop.POSITIVE_CMD_TYPE, 12));
 //#endif
         pane.addCommand(new Command(Resources.getString(Resources.CMD_CLOSE), Desktop.BACK_CMD_TYPE, 1));
         pane.setCommandListener(this);
 
         // show
         Desktop.display.setCurrent(pane);
+    }
+
+    public void commandAction(Command command, Displayable displayable) {
+        if (command.getCommandType() == Desktop.BACK_CMD_TYPE) {
+            // gc hints
+            this.map = null;
+            this.atlas = null;
+            this.extras = null;
+            // restore desktop UI
+            Desktop.restore(displayable);
+        } else {
+            if (command.getPriority() == 0) {
+                final Form pane = new Form(Resources.prefixed(Resources.getString(Resources.DESKTOP_CMD_INFO)));
+                details(pane);
+                pane.addCommand(new Command(Resources.getString(Resources.CMD_CLOSE), Desktop.BACK_CMD_TYPE, 1));
+                pane.setCommandListener(this);
+                Desktop.display.setCurrent(pane);
+            } else {
+                switch (command.getPriority()) {
+//#ifdef __ANDROID__
+                    case 1:
+                        (new FileBrowser("Select package", new Callback() {
+                            public void invoke(Object result, Throwable throwable, Object source) {
+                                if (result != null) {
+                                    (new YesNoDialog(Desktop.screen, new cz.kruch.track.util.Package(((String[])result)[0], ((String[])result)[1]),
+                                                     null, "Package " + ((String[])result)[0] + " found, do you want to import the content?", null)).show();
+                                } else {
+                                    Desktop.display.setCurrent(Desktop.screen);
+                                }
+                            }
+                        }, System.getProperty("fileconn.dir.downloads"), new String[]{ ".zip" })).show();
+                    break;
+//#endif
+//#ifdef __CN1__
+                    case 10:
+                        (new FileBrowser("File Manager", null, null, null)).show();
+                    break;
+                    case 11:
+                        com.codename1.impl.ExtendedImplementation.exec("send-log", null);
+                    break;
+                    case 12:
+                        com.codename1.impl.ExtendedImplementation.exec("set-loglevel", null);
+                    break;
+//#endif
+                }
+            }
+        }
     }
 
     private void details(final Form pane) {
@@ -79,7 +130,7 @@ final class InfoForm implements CommandListener {
         pane.append(newItem("Memory", sb.toString()));
 //#endif
         getSb(sb);
-        if (File.fsType == File.FS_JSR75 || File.fsType == File.FS_SXG75)
+        if (File.fsType == File.FS_JSR75 || File.fsType == File.FS_SXG75 || File.fsType == File.FS_CN1)
             sb.append("75 ");
         if (cz.kruch.track.TrackingMIDlet.jsr82)
             sb.append("82 ");
@@ -135,7 +186,8 @@ final class InfoForm implements CommandListener {
                 .append("; nets error: ").append(cz.kruch.track.maps.Map.networkInputStreamError)
                 .append("; nets apinfo: ").append(cz.kruch.track.device.ApSelector.debug)
 //#endif
-                .append("; card: ").append(System.getProperty("fileconn.dir.memorycard"));
+                .append("; card: ").append(System.getProperty("fileconn.dir.memorycard"))
+                .append("; downloads: ").append(System.getProperty("fileconn.dir.downloads"));
         pane.append(newItem("Fs", sb.toString()));
 //#ifndef __ANDROID__
         pane.append(newItem("Orientation", cz.kruch.track.ui.nokia.DeviceControl.getSensorStatus()));
@@ -156,6 +208,10 @@ final class InfoForm implements CommandListener {
 //#endif                
                 .append("; hasRepeatEvents? ").append(Desktop.screen.hasRepeatEvents())
                 .append("; hasPointerEvents? ").append(Desktop.screen.hasPointerEvents())
+//#ifdef __ANDROID__
+                .append("; hasPermanentMenuKey? ").append(cz.kruch.track.TrackingMIDlet.getActivity().hasPermanentMenuKey)
+                .append("; nullActionBarHack? ").append(cz.kruch.track.TrackingMIDlet.getActivity().mActionBarField)
+//#endif
                 .append("; isDoubleBuffered? ").append(Desktop.screen.isDoubleBuffered())
                 .append("; skips? ").append(Desktop.skips);
         pane.append(newItem("Desktop", sb.toString()));
@@ -194,6 +250,9 @@ final class InfoForm implements CommandListener {
                 .append("; er=").append(api.location.LocationProvider.errors)
                 .append("; pg=").append(api.location.LocationProvider.pings)
                 .append("; mx=").append(api.location.LocationProvider.maxavail)
+//#ifdef __ANDROID__
+                .append("; ").append(api.location.LocationProvider.debugs == null ? "" : api.location.LocationProvider.debugs)
+//#endif
 //#ifdef __RIM50__
                 .append("; bbs=").append(cz.kruch.track.location.Jsr179LocationProvider.bbStatus)
                 .append("; bbe=").append(cz.kruch.track.location.Jsr179LocationProvider.bbError)
@@ -241,48 +300,6 @@ final class InfoForm implements CommandListener {
 //#endif
                 ;
         pane.append(newItem("Debug", sb.toString()));
-    }
-
-    public void commandAction(Command command, Displayable displayable) {
-        if (command.getCommandType() == Desktop.BACK_CMD_TYPE) {
-            // gc hints
-            this.map = null;
-            this.extras = null;
-            // restore desktop UI
-            Desktop.restore(displayable);
-        } else {
-//#ifndef __CN1__
-            // form
-            final Form pane = (Form) displayable;
-            // delete basic info
-            pane.deleteAll();
-            // remove 'Details' command
-            pane.removeCommand(command);
-            // show technical details
-            details(pane);
-//#else
-            // reuse does not work well in CN1 due to paint events cummulation // TODO no longer true
-            if (command.getPriority() == 0) {
-                final Form pane = new Form(Resources.prefixed(Resources.getString(Resources.DESKTOP_CMD_INFO)));
-                details(pane);
-                pane.addCommand(new Command(Resources.getString(Resources.CMD_CLOSE), Desktop.BACK_CMD_TYPE, 1));
-                pane.setCommandListener(this);
-                Desktop.display.setCurrent(pane);
-            } else {
-                switch (command.getPriority()) {
-                    case 1:
-                        (new FileBrowser("File Manager", null, null, null)).show();
-                    break;
-                    case 2:
-                        com.codename1.ui.FriendlyAccess.execute("send-log", null);
-                    break;
-                    case 3:
-                        com.codename1.ui.FriendlyAccess.execute("set-loglevel", null);
-                    break;
-                }
-            }
-//#endif
-        }
     }
 
     private static StringBuffer getSb(final StringBuffer sb) {

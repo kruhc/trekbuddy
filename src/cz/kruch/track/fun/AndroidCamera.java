@@ -53,7 +53,7 @@ final class AndroidCamera extends Camera implements CommandListener,
             camera = android.hardware.Camera.open();
             sizes = camera.getParameters().getSupportedPictureSizes();
         } catch (Exception e) {
-            Log.w(TAG, "Camera.getSupportedPictureSizes failed", e);
+            Log.w(TAG, "Camera.getSupportedPictureSizes failed: " + e);
         } finally {
             try {
                 camera.release();

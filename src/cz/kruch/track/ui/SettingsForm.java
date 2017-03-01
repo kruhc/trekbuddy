@@ -107,7 +107,7 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
     public void run() {
         try {
             // update config
-            Config.update(Config.CONFIG_090);
+            final boolean updated = Config.update(Config.CONFIG_090);
 
 //#ifdef __HECL__
             // update plugins configurations
@@ -116,7 +116,9 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
 
 //#ifndef __CN1__
             // show confirmation
-            Desktop.showConfirmation(Resources.getString(Resources.DESKTOP_MSG_CFG_UPDATED), Desktop.screen);
+            if (updated) {
+                Desktop.showConfirmation(Resources.getString(Resources.DESKTOP_MSG_CFG_UPDATED), Desktop.screen);
+            }
 //#endif
 
         } catch (ConfigurationException e) {

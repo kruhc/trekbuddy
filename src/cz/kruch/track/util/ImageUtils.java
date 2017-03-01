@@ -26,16 +26,32 @@ public final class ImageUtils {
 
 //#ifdef __ANDROID__
 
-    private static final int DENSITY_BASELINE = 160;
-
     private static final BitmapFactory.Options opts = new BitmapFactory.Options();
 
     static {
         opts.inPreferredConfig = Bitmap.Config.RGB_565;
+        opts.inDither = true;
+        opts.inScaled = false;
         opts.inTempStorage = new byte[16 * 1024];
-        opts.inPurgeable = true;
-        opts.inScaled = true;
-        opts.inDensity = DENSITY_BASELINE;
+    }
+
+    public static Object syncRecycle;
+
+    public static void recycle(Image image) {
+        /*
+         * Bitmap recycling is recommended for 2.3.3 (API level 10) and lower.
+         */
+        //if (android.os.Build.VERSION.SDK_INT <= 10) {
+            recycle(((org.microemu.android.device.ImageAccessor) image).getBitmap());
+        //}
+    }
+
+    private static void recycle(android.graphics.Bitmap bitmap) {
+        synchronized (syncRecycle) {
+            if (bitmap != null && !bitmap.isRecycled()) {
+                bitmap.recycle();
+            }
+        }
     }
 
 //#endif
@@ -131,11 +147,10 @@ public final class ImageUtils {
         final Bitmap bitmap = ((AndroidImmutableImage) src).getBitmap();
         final Bitmap scaled = Bitmap.createScaledBitmap(bitmap, destW, destH,
                                                         mode == SLOW_RESAMPLE || Config.tilesScaleFiltered);
-//#ifdef __BACKPORT__
-        if (recycle && bitmap != null && !bitmap.isRecycled()) {
-            bitmap.recycle();
+        if (recycle) {
+            recycle(bitmap);
         }
-//#endif
+
         return new AndroidImmutableImage(scaled);
 
 //-#elifdef __RIM__
@@ -227,6 +242,9 @@ public final class ImageUtils {
                 g.drawRGB(destPixels, 0, destW, 0, destY, destW, 1, true);
             }
 
+            // null buffer
+            srcPixels = null;
+
             // return immutable image
             return Image.createImage(mem);
 
@@ -282,7 +300,7 @@ public final class ImageUtils {
             }
 
             // vertical resampling of the temporary buffer (which has been horizontally resampled)
-            for (int x = 0; x < destW; ++x)
+            for (int x = 0; x < destW; ++x) {
                 for (int y = 0, xx = x; y < destH; y++, xx += destW) {
                     int srcY = (y * ratioH) >> FP_SHIFT; // calculate beginning of sample
                     int srcY2 = ((y + 1) * ratioH) >> FP_SHIFT; // calculate end of sample
@@ -300,14 +318,16 @@ public final class ImageUtils {
                     // recreate color from the averaged channels and place it into the destination buffer
                     destPixels[xx] = ((a / count) << 24) | ((r / count) << 16) | ((g / count) << 8) | (b / count);
                 }
+            }
+
+            // null buffer
+            srcPixels = null;
+
+            // return a new image created from the destination pixel buffer
+            return Image.createRGBImage(destPixels, destW, destH, true);
+            // note that if you put back alpha support, have to change false above to true or the alpha channel will be ignored
+
         }
-
-        // null buffer
-        srcPixels = null;
-
-        // return a new image created from the destination pixel buffer
-        return Image.createRGBImage(destPixels, destW, destH, true);
-        // note that if you put back alpha support, have to change false above to true or the alpha channel will be ignored
 
 //#endif
 
@@ -326,9 +346,15 @@ public final class ImageUtils {
 
 //#else
 
-        final BitmapFactory.Options opts = ImageUtils.opts;
-        opts.inTargetDensity = ExtraMath.prescale(prescale, DENSITY_BASELINE) << x2;
-        return new AndroidImmutableImage(BitmapFactory.decodeStream(stream, null, opts));
+//        final BitmapFactory.Options opts = ImageUtils.opts;
+//        opts.inTargetDensity = ExtraMath.prescale(prescale, DENSITY_BASELINE) << x2;
+        final Bitmap bitmap = BitmapFactory.decodeStream(stream, null, opts);
+        final Bitmap scaled = Bitmap.createScaledBitmap(bitmap,
+                                ExtraMath.prescale(prescale, bitmap.getWidth()) << x2,
+                                ExtraMath.prescale(prescale, bitmap.getHeight()) << x2,
+                                Config.tilesScaleFiltered);
+        recycle(bitmap);
+        return new AndroidImmutableImage(scaled);
 
 //#endif
 
@@ -337,13 +363,12 @@ public final class ImageUtils {
 /*
         api.io.NakedByteArrayOutputStream baos = new api.io.NakedByteArrayOutputStream(8192);
         byte[] buffer = new byte[8192];
-        int c = stream.read(buffer);
-        while (c > -1) {
+        int c;
+        while ((c = stream.read(buffer)) != -1) {
             baos.write(buffer, 0, c);
-            c = stream.read(buffer);
         }
-        buffer = null;
         baos.close();
+        buffer = null;
 */
 
 /*

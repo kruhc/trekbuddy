@@ -303,6 +303,12 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
 
 //#endif
 
+//#ifdef __ANDROID__
+
+    private static Integer config_090_hashcode;
+
+//#endif
+
     private static final int ACTION_INITDATADIR     = 0;
     private static final int ACTION_PERSISTCFG      = 1;
     private static final int ACTION_UPDATEMAINCFG   = 2;
@@ -929,7 +935,8 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
             // new store? existing store? corrupted store?
             result = rs.getNumRecords();
             if (result > 0) {
-                din = new DataInputStream(new ByteArrayInputStream(rs.getRecord(1)));
+                final byte[] bytes = rs.getRecord(1);
+                din = new DataInputStream(new ByteArrayInputStream(bytes));
                 if (CONFIG_090.equals(rms)) {
                     readMain(din);
                 } else if (VARS_090.equals(rms)) {
@@ -941,6 +948,11 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
                         throw e.getCause();
                     }
                 }
+//#ifdef __ANDROID__
+                if (CONFIG_090.equals(rms)) {
+                    config_090_hashcode = java.util.Arrays.hashCode(bytes);
+                }
+//#endif
             }
         } catch (Throwable t) {
 //#ifdef __LOG__
@@ -988,13 +1000,15 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
         }
     }
 
-    public static void update(final String rms) throws ConfigurationException {
-        update(rms, null);
+    public static boolean update(final String rms) throws ConfigurationException {
+        return update(rms, null);
     }
 
-    public static void update(final String rms, final Callback callback) throws ConfigurationException {
+    public static boolean update(final String rms, final Callback callback) throws ConfigurationException {
         RecordStore rs = null;
         DataOutputStream dout = null;
+
+        boolean updated = true;
 
         try {
             final ByteArrayOutputStream data = new ByteArrayOutputStream();
@@ -1020,6 +1034,13 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
             } else {
                 rs.addRecord(bytes, 0, bytes.length);
             }
+//#ifdef __ANDROID__
+            if (CONFIG_090.equals(rms)) {
+                final int hashcode = java.util.Arrays.hashCode(bytes);
+                updated = config_090_hashcode == null || config_090_hashcode != hashcode;
+                config_090_hashcode = hashcode;
+            }
+//#endif
         } catch (Throwable t) {
             throw new ConfigurationException(t);
         } finally {
@@ -1033,6 +1054,8 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
 //#endif
             cz.kruch.track.ui.Desktop.getDiskWorker().enqueue(new Config(ACTION_PERSISTCFG));
         }
+
+        return updated;
     }
 
     public static void configChanged() {

@@ -346,8 +346,6 @@ public final class ImageUtils {
 
 //#else
 
-//        final BitmapFactory.Options opts = ImageUtils.opts;
-//        opts.inTargetDensity = ExtraMath.prescale(prescale, DENSITY_BASELINE) << x2;
         final Bitmap bitmap = BitmapFactory.decodeStream(stream, null, opts);
         final Bitmap scaled = Bitmap.createScaledBitmap(bitmap,
                                 ExtraMath.prescale(prescale, bitmap.getWidth()) << x2,

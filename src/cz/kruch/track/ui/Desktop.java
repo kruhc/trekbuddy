@@ -31,7 +31,6 @@ import javax.microedition.lcdui.Form;
 import javax.microedition.lcdui.Choice;
 import javax.microedition.midlet.MIDlet;
 
-import java.util.Date;
 import java.util.Enumeration;
 import java.util.Timer;
 import java.util.Vector;
@@ -52,6 +51,9 @@ import android.content.Intent;
 import android.content.ServiceConnection;
 import android.os.IBinder;
 import net.trekbuddy.midlet.IRuntime;
+//#elifdef __CN1__
+import com.codename1.impl.ExtendedImplementation;
+import net.trekbuddy.util.Logger;
 //#endif
 import net.trekbuddy.midlet.Runtime;
 
@@ -121,7 +123,7 @@ public final class Desktop implements CommandListener,
     static Status status; // TODO should move to MapView 
 
     // desktop dimensions
-    static int width, height;
+    public static int width, height;
 
     // desktop views
     private View[] views;
@@ -133,8 +135,8 @@ public final class Desktop implements CommandListener,
     private Friends friends;
 
     // data components
-    private volatile Map map;
-    private volatile Atlas atlas;
+    volatile Map map;
+    volatile Atlas atlas;
 
     // LSM/MSK commands
     /*private */Command cmdRun, cmdRunLast, cmdStop;
@@ -345,6 +347,7 @@ public final class Desktop implements CommandListener,
         if (android.os.Build.VERSION.SDK_INT <= 10) {
             android.util.Log.i(TAG, "[app] * bitmap recycling used? yes");
         }
+        android.util.Log.i(TAG, "[app] * download directory: " + System.getProperty("fileconn.dir.downloads"));
 //#endif
 
 //#ifdef __B2B__
@@ -403,11 +406,11 @@ public final class Desktop implements CommandListener,
          * ~from TrackingMIDlet.run
          */
 
-//#ifdef __CN1__
+//#ifdef __CN1_SL__
 
         // start SD mirroring (resources and customizations)
         try {
-            com.codename1.ui.FriendlyAccess.execute("mirror-sd", new Object[]{ Boolean.FALSE });
+            ExtendedImplementation.exec("mirror-sd", new Object[]{ Boolean.FALSE });
         } catch (Throwable t) {
             // ignore
         }
@@ -565,10 +568,12 @@ public final class Desktop implements CommandListener,
         consoleDelay(tStart);
 //#endif
 
+/*
 //#ifdef __CN1__
         // hack MI clear
         screen.clearGraphics();
 //#endif
+*/
 
         // setup commands
         configure();
@@ -597,7 +602,7 @@ public final class Desktop implements CommandListener,
         // finish screen splash
         screen.autohide();
 
-//#ifndef __CN1__
+//#ifndef __CN1_SL__
 
         // check/initialize DataDir structure
         if (Config.dataDirAccess) {
@@ -612,16 +617,22 @@ public final class Desktop implements CommandListener,
 
         // finish SD mirroring
         try {
-            com.codename1.ui.FriendlyAccess.execute("mirror-sd", new Object[]{ Boolean.TRUE });
+            ExtendedImplementation.exec("mirror-sd", new Object[]{ Boolean.TRUE });
         } catch (Throwable t) {
             showError("SD synchronization failed", t, null);
         }
 
-        // trigger OneDrive mirroring
-        try {
-            com.codename1.ui.FriendlyAccess.execute("mirror-sky", new Object[]{ Boolean.TRUE });
-        } catch (Throwable t) {
-            showError("OneDrive synchronization failed", t, null);
+//#endif
+
+//#ifdef __CN1__
+
+        // trigger OneDrive mirroring if we have no SD
+        if (!cz.kruch.track.TrackingMIDlet.hasFlag("sd_writeable")) {
+            try {
+                ExtendedImplementation.exec("mirror-sky", new Object[]{ Boolean.TRUE });
+            } catch (Throwable t) {
+                showError("OneDrive synchronization failed", t, null);
+            }
         }
 
 //#endif
@@ -665,6 +676,8 @@ public final class Desktop implements CommandListener,
     public void onBackground() {
 //#ifdef __ANDROID__
         android.util.Log.i(TAG, "[app] going background");
+//#elifdef __LOG__
+        if (log.isEnabled()) log.debug("going background");
 //#endif
 
         // notify views
@@ -680,6 +693,8 @@ public final class Desktop implements CommandListener,
     public void onForeground() {
 //#ifdef __ANDROID__
         android.util.Log.i(TAG, "[app] going foreground");
+//#elifdef __LOG__
+        if (log.isEnabled()) log.debug("going foreground");
 //#endif
 
         // notify views
@@ -1024,6 +1039,8 @@ public final class Desktop implements CommandListener,
         // TODO move to better place
         cz.kruch.track.TrackingMIDlet.getActivity().config.ignoreVolumeKeys = !Config.easyZoomVolumeKeys;
         cz.kruch.track.TrackingMIDlet.getActivity().config.ignoreTextFieldFocus = !Config.forceTextFieldFocus;
+        // HACK
+        cz.kruch.track.util.ImageUtils.syncRecycle = screen.getGraphics();
 //#endif
 
 //#ifdef __LOG__
@@ -1373,7 +1390,7 @@ public final class Desktop implements CommandListener,
 
 //#ifdef __CN1__
                 // flush log
-                com.codename1.io.Log.getInstance().flush();
+                Logger.flush();
 //#endif
 
                 // bail out
@@ -1403,7 +1420,7 @@ public final class Desktop implements CommandListener,
     
     public void locationUpdated(LocationProvider provider, Location location) {
 //#ifdef __LOG__
-        if (log.isEnabled()) log.debug("location update: " + new Date(location.getTimestamp()) + ";" + location.getQualifiedCoordinates() + "; course = " + location.getCourse());
+        if (log.isEnabled()) log.debug("location updated; " + location.getTimestamp());
 //#endif
 //        eventing.callSerially(newEvent(Event.EVENT_TRACKING_POSITION_UPDATED,
 //                              location, null, provider));
@@ -2294,6 +2311,11 @@ public final class Desktop implements CommandListener,
         showAlert(AlertType.INFO, message, INFO_DIALOG_TIMEOUT, nextDisplayable);
     }
 
+    public static void showInfo(final String message, final Displayable nextDisplayable,
+                                final boolean forever) {
+        showAlert(AlertType.INFO, message, forever ? Alert.FOREVER : INFO_DIALOG_TIMEOUT, nextDisplayable);
+    }
+
     public static void showWarning(String message, final Throwable t, final Displayable nextDisplayable) {
         if (message == null) {
             message = "";
@@ -2795,7 +2817,7 @@ public final class Desktop implements CommandListener,
         private String msg, text;
         private long since;
 
-        public PauseTask() {
+        PauseTask() {
             this.sb = new StringBuffer(64);
             this.since = System.currentTimeMillis();
             this.msg = Resources.getString(Resources.DESKTOP_MSG_PAUSED);
@@ -2972,11 +2994,6 @@ public final class Desktop implements CommandListener,
         RenderTask() {
         }
 
-        public RenderTask(final int m, final boolean y) {
-            this.mask = m;
-            this.mapscr = y;
-        }
-
         void set(final int m, final boolean y) {
             this.mask = m;
             this.mapscr = y;
@@ -3025,20 +3042,22 @@ public final class Desktop implements CommandListener,
 
 //#ifdef __CN1__
                 // clear paint operations
-                //Desktop.screen.clearGraphics();
+                Desktop.screen.clearGraphics();
+/*
                 // using wipe
                 g.setColor(0x0);
                 g.fillRect(0, 0, Desktop.width, Desktop.height);
+*/
 //#endif
 
                 // render current view
                 synchronized (Desktop.renderLock) {
-                    Desktop.this.views[mode].render(g, font, mask);
+                    Desktop.this.views[mode].render(g, Desktop.font, mask);
                 }
 
                 // paused?
                 if (Desktop.paused) {
-                    Desktop.drawPause(g, screen, pauseTask.getText());
+                    Desktop.drawPause(g, Desktop.screen, pauseTask.getText());
                 }
 
                 // fps limit
@@ -3170,6 +3189,10 @@ public final class Desktop implements CommandListener,
     }
 
     /*private*/ void startOpenMap(final String url, final String name) { // Event visibility to avoid synthetic accessors
+//#ifdef __LOG__
+        if (log.isEnabled()) log.debug("start open map " + name + "; " + url);
+//#endif
+
         // flag on
         _setInitializingMap(true);
 
@@ -3435,7 +3458,7 @@ public final class Desktop implements CommandListener,
 //#ifdef __LOG__
             if (throwable != null) {
                 cz.kruch.track.util.Logger.out("*event throwable*");
-                cz.kruch.track.util.Logger.printStackTrace(throwable);
+                cz.kruch.track.util.Logger.out(throwable);
             }
             if (log.isEnabled()) log.debug("event " + this.toString());
 //#endif
@@ -3637,7 +3660,7 @@ public final class Desktop implements CommandListener,
 //#ifdef __CN1__
                 // skydrive
                 if (url.startsWith("file:///OneDrive/")) {
-                    com.codename1.ui.FriendlyAccess.execute("copy-map", new Object[]{
+                    ExtendedImplementation.exec("copy-map", new Object[]{
                             url, new Event(Event.EVENT_FILE_BROWSER_FINISHED, "map/atlas") 
                     });
                     return;
@@ -4378,6 +4401,7 @@ public final class Desktop implements CommandListener,
     private static void consoleInit(final Graphics g) {
         g.setColor(0x0);
         g.fillRect(0, 0, screen.getWidth(), screen.getHeight());
+//#ifndef __CN1__
         if (cz.kruch.track.configuration.Config.dataDirExists) {
             try {
                 final Image logo = NavigationScreens.loadImage(Config.FOLDER_RESOURCES, "logo.png");
@@ -4391,6 +4415,7 @@ public final class Desktop implements CommandListener,
                 // ignore
             }
         }
+//#endif
         screen.flushGraphics();
     }
 

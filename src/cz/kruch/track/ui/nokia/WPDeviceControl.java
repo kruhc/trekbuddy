@@ -1,8 +1,8 @@
 package cz.kruch.track.ui.nokia;
 
-import com.codename1.impl.ExtendedImplementation;
-
 //#ifdef __CN1__
+
+import com.codename1.impl.ExtendedImplementation;
 
 final class WPDeviceControl extends DeviceControl {
 

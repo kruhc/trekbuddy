@@ -167,7 +167,9 @@ abstract class StreamReadingLocationProvider extends LocationProvider {
         // corrections
         if (gsa != null) {
             if (gsa.fix != 3) { // not 3D fix - altitude is invalid
-                gga.altitude = Float.NaN;
+                if (gga.sat < 4) { // maybe not, but with less than 4 sats definitely
+                    gga.altitude = Float.NaN;
+                }
             }
         }
 

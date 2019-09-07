@@ -7,21 +7,21 @@ Homepage: [TrekBuddy](http://www.trekbuddy.net/forum/) (forum)
 You can tell by looking at the tools, naming convetion etc that it is on old, poorly maintained project. While during the course of time TrekBuddy was made available for various platforms (Java and Symbian phones, Blackberries, Windows Phone), it is now used on Android. This repository may not (YET) hold everything needed to build TrekBuddy for various platforms (most of them obsolete), but in the least it should have all needed for building APK. 
 
 ## Dependencies
-- microemulator - J2ME implementation (and more) for Android by Bartek Teodorczyk. I believe it is now available in Google archive only. _I have been using mix of CVS and SVN for TrekBuddy, and because I wasn't able to convert SVN to GIT I lost commit history for microemu changes. I will try to at least provide diff for externals/microemu sources against original._
+- microemulator - J2ME implementation (and more) for Android by Bartek Teodorczyk. I believe it is now available in Google archive only. _I have been using mix of CVS and SVN for TrekBuddy, and because I wasn't able to convert SVN to GIT I lost commit history for microemu changes. I will try to at least provide diff for externals/microemu sources against original soon._
 - HECL - scripting language by David Welton [github](https://github.com/davidw/hecl). _The same with diff of externals/hecl sources against original applies._
 
 There may be remains of others, but that is most likely obsolete and should be removed.
 
 ## Building
 The following tools are needed to build TrekBuddy:
-- Java (1.7 works ok)
+- Java (1.8 works ok for Android target, for other targets 1.7 may work better)
 - Ant (1.8 works ok)
 - Sun/Oracle WTK toolkit (2.5.2_01 works ok) 
-- Android SDK (26 have been used lately)
+- Android SDK (versions 14 and 26), Android ANT+ SDK
 
 The sources are preprocessed using Antenna 1.0.2 (you need `antenna-bin-1.0.2.jar`; other version may NOT work).
 
-Building on Linux was never tested (there may be Windows paths left in build files).
+Building on Linux was never tested (there are very likely Windows paths and tools references left in build files).
 
 Building APK:
 1. build `microemulator` core modules - go to `externals/microemulator`and execute `build-ant.bat`  

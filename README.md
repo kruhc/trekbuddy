@@ -1,4 +1,4 @@
-# TrekBuddy
+# TrekBuddy   ![logo](http://www.trekbuddy.net/icon.svg "Logo")
 TrekBuddy is an old, originally J2ME, application for GPS tracking etc. It was intended to be simple easy-to-use application that would run fast even on lowend devices (remember Siemens S65, Nokia 6230i... ?).
 
 Homepage: [TrekBuddy](http://www.trekbuddy.net/forum/) (forum)

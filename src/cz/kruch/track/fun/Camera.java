@@ -130,8 +130,11 @@ public abstract class Camera {
         Camera camera;
         try {
 //#ifdef __ANDROID__
+/* 2018-01-04: support requires some in-app and playstore policy... wtf
             camera = new AndroidCamera();
             type = TYPE_JSR234; // yes, this is a trick
+*/
+            if (true) throw new RuntimeException("no longer supported");
 //#else
             fixJsr234();
             if (cz.kruch.track.TrackingMIDlet.jsr234) {

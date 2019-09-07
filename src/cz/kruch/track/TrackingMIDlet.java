@@ -364,7 +364,7 @@ public class TrackingMIDlet extends MIDlet implements Runnable {
 //#ifndef __ANDROID__
         return ((jsr135 || jsr234) && "true".equals(System.getProperty("supports.video.capture")));
 //#else
-        return true;
+        return false;
 //#endif
     }
 

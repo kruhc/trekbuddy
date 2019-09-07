@@ -1,8 +1,10 @@
 <?xml version="1.0"?>
-<project name="TrekBuddy" default="standard" basedir=".">
+<project name="trekbuddy" default="standard" basedir=".">
 
     <property file="${include.properties}" prefix="external."/>
     <property file="build.properties"/>
+
+    <include file="build.windows.xml"/>
 
     <property name="name" value="${external.product.name}"/>
     <property name="version" value="${external.product.version}"/>
@@ -16,150 +18,123 @@
 
     <property name="permission.attribute" value="MIDlet-Permissions-Opt"/>
 
-    <property name="wtk.home" value="c:\J2ME\WTK2.5.2_01"/>
-    <property name="garnet.home" value="c:\J2ME\Garnet\PalmOS JVM 5.7.2\Tools"/>
-    <property name="rim41.home" value="c:\J2ME\RIM\JDE 4.1.0"/>
-    <property name="rim42.home" value="c:\J2ME\RIM\JDE 4.2.1"/>
-    <property name="rim50.home" value="c:\J2ME\RIM\JDE 5.0"/>
-    <property name="android.home" value="c:\J2ME\android-sdk-windows"/>
-    <property name="android15.home" value="c:\J2ME\android-sdk-windows\platforms\android-1.5"/>
-    <property name="android16.home" value="c:\J2ME\android-sdk-windows\platforms\android-1.6"/>
-    <property name="android20.home" value="c:\J2ME\android-sdk-windows\platforms\android-2.0"/>
-    <property name="android4.home" value="c:\J2ME\android-sdk-windows\platforms\android-14"/>
-    <property name="androidant.home" value="c:\J2ME\android-sdk-ant"/>
-    <property name="microemu.home" value="z:\repository\microemu-google\microemulator"/>
-    <property name="cn1.home" value="z:\apps\Codename One"/>
-    <property name="cn1.repository" value="z:\repository\cn1\CodenameOne"/>
-    <property name="proguard3.home" value="z:\apps\proguard\3.11"/>
-    <property name="proguard4.home" value="z:\apps\proguard\4.11"/>
-    <property name="proguard5.home" value="z:\apps\proguard\5.3.2"/>
-
-    <property name="build.dir" value="r:\trekbuddy"/>
-    <property name="temp.dir" value="r:\java-temp"/>
-
     <property name="use.proguard" value="3"/>
-    <property name="use.sdk.version" value="21"/>
-    <property name="use.api.level" value="14"/>
+    <property name="use.sdk.version" value="26"/> <!-- 21 long time safe value -->
+    <property name="use.api.level" value="26"/>   <!-- 14 long time safe value -->
+
+    <!-- property name="android.jar" value="${android.home}\platforms\android-${use.sdk.version}/android.jar"/ --> <!-- See issue #??? -->
+    <property name="android.jar" value="${android4.home}/android.jar"/>
+
+    <property name="microemu.home" value="${basedir}/externals/microemulator"/>
 
     <taskdef resource="antenna.properties" classpath="lib/antenna-bin-1.0.2.jar"/>
     <taskdef name="otaJad" classname="RimOtaJadSha" classpath="${basedir}/tools/classes"/>
     <taskdef name="barManifest" classname="BarManifestVersion" classpath="${basedir}/tools/classes"/>
     <taskdef name="buildVersion" classname="BuildVersion" classpath="${basedir}/tools/classes"/>
 
+    <condition property="android.target" value="zipalign-signed" else="zipalign-unsigned">
+        <available file="${basedir}/keystores/android.jks" property="android.jks.present"/>
+    </condition>
+    
     <path id="bootclasspath.standard">
-        <pathelement location="${wtk.home}\lib\cldcapi11.jar"/>
-        <pathelement location="${wtk.home}\lib\midpapi20.jar"/>
-        <pathelement location="${wtk.home}\lib\jsr75.jar"/>
-        <pathelement location="${wtk.home}\lib\jsr082.jar"/>
-        <pathelement location="${wtk.home}\lib\jsr179.jar"/>
-        <pathelement location="${wtk.home}\lib\jsr234.jar"/>
-        <pathelement location="${wtk.home}\lib\wma11.jar"/>
-        <pathelement location="${wtk.home}\lib\mmapi.jar"/>
-        <pathelement location="lib\lg-mmpp.jar"/>
-        <pathelement location="lib\motorola-ext.jar"/>
-        <pathelement location="lib\motorola-file.jar"/>
-        <pathelement location="lib\motorola-location.jar"/>
-        <pathelement location="lib\motorola-javaextensions.jar"/>
-        <pathelement location="lib\nokia-ui-devicecontrol.jar"/>
-        <pathelement location="lib\siemens-file.jar"/>
-        <pathelement location="lib\siemens-game.jar"/>
-        <pathelement location="lib\samsung-apis.jar"/>
-        <pathelement location="lib\SonimLibrary.jar"/>
+        <pathelement location="${wtk.home}/lib/cldcapi11.jar"/>
+        <pathelement location="${wtk.home}/lib/midpapi20.jar"/>
+        <pathelement location="${wtk.home}/lib/jsr75.jar"/>
+        <pathelement location="${wtk.home}/lib/jsr082.jar"/>
+        <pathelement location="${wtk.home}/lib/jsr179.jar"/>
+        <pathelement location="${wtk.home}/lib/jsr234.jar"/>
+        <pathelement location="${wtk.home}/lib/wma11.jar"/>
+        <pathelement location="${wtk.home}/lib/mmapi.jar"/>
+        <pathelement location="lib/lg-mmpp.jar"/>
+        <pathelement location="lib/motorola-ext.jar"/>
+        <pathelement location="lib/motorola-file.jar"/>
+        <pathelement location="lib/motorola-location.jar"/>
+        <pathelement location="lib/motorola-javaextensions.jar"/>
+        <pathelement location="lib/nokia-ui-devicecontrol.jar"/>
+        <pathelement location="lib/siemens-file.jar"/>
+        <pathelement location="lib/siemens-game.jar"/>
+        <pathelement location="lib/samsung-apis.jar"/>
+        <pathelement location="lib/SonimLibrary.jar"/>
     </path>
 
     <path id="bootclasspath.symbian">
-        <pathelement location="${wtk.home}\lib\cldcapi11.jar"/>
-        <pathelement location="${wtk.home}\lib\midpapi20.jar"/>
-        <pathelement location="${wtk.home}\lib\jsr75.jar"/>
-        <pathelement location="${wtk.home}\lib\jsr082.jar"/>
-        <pathelement location="${wtk.home}\lib\jsr179.jar"/>
-        <pathelement location="${wtk.home}\lib\jsr234.jar"/>
-        <pathelement location="${wtk.home}\lib\wma11.jar"/>
-        <pathelement location="${wtk.home}\lib\mmapi.jar"/>
-        <pathelement location="lib\nokia-ui-devicecontrol.jar"/>
-        <pathelement location="lib\nokia-iapinfo.jar"/>
+        <pathelement location="${wtk.home}/lib/cldcapi11.jar"/>
+        <pathelement location="${wtk.home}/lib/midpapi20.jar"/>
+        <pathelement location="${wtk.home}/lib/jsr75.jar"/>
+        <pathelement location="${wtk.home}/lib/jsr082.jar"/>
+        <pathelement location="${wtk.home}/lib/jsr179.jar"/>
+        <pathelement location="${wtk.home}/lib/jsr234.jar"/>
+        <pathelement location="${wtk.home}/lib/wma11.jar"/>
+        <pathelement location="${wtk.home}/lib/mmapi.jar"/>
+        <pathelement location="lib/nokia-ui-devicecontrol.jar"/>
+        <pathelement location="lib/nokia-iapinfo.jar"/>
     </path>
 
     <path id="bootclasspath.std">
-        <pathelement location="${wtk.home}\lib\cldcapi11.jar"/>
-        <pathelement location="${wtk.home}\lib\midpapi20.jar"/>
-        <pathelement location="${wtk.home}\lib\jsr75.jar"/>
-        <pathelement location="${wtk.home}\lib\jsr082.jar"/>
-        <pathelement location="${wtk.home}\lib\jsr179.jar"/>
-        <pathelement location="${wtk.home}\lib\jsr234.jar"/>
-        <pathelement location="${wtk.home}\lib\wma11.jar"/>
-        <pathelement location="${wtk.home}\lib\mmapi.jar"/>
+        <pathelement location="${wtk.home}/lib/cldcapi11.jar"/>
+        <pathelement location="${wtk.home}/lib/midpapi20.jar"/>
+        <pathelement location="${wtk.home}/lib/jsr75.jar"/>
+        <pathelement location="${wtk.home}/lib/jsr082.jar"/>
+        <pathelement location="${wtk.home}/lib/jsr179.jar"/>
+        <pathelement location="${wtk.home}/lib/jsr234.jar"/>
+        <pathelement location="${wtk.home}/lib/wma11.jar"/>
+        <pathelement location="${wtk.home}/lib/mmapi.jar"/>
     </path>
 
     <path id="bootclasspath.android20">
-        <pathelement location="${microemu.home}\microemu-cldc\target\microemu-cldc-3.0.0-SNAPSHOT.jar"/>
-        <pathelement location="${microemu.home}\microemu-midp\target\microemu-midp-3.0.0-SNAPSHOT.jar"/>
-        <pathelement location="${microemu.home}\microemu-extensions\microemu-jsr-75\target\microemu-jsr-75-3.0.0-SNAPSHOT.jar"/>
-        <pathelement location="${microemu.home}\microemu-android\microemu-android-ant.jar"/>
-        <pathelement location="${android20.home}\android.jar"/>
-        <pathelement location="${androidant.home}\lib\antlib.jar"/>
-        <pathelement location="${microemu.home}\microemu-android\antplus_demo.jar"/>
+        <pathelement location="${microemu.home}/microemu-cldc/target/microemu-cldc-3.0.0-SNAPSHOT.jar"/>
+        <pathelement location="${microemu.home}/microemu-midp/target/microemu-midp-3.0.0-SNAPSHOT.jar"/>
+        <pathelement location="${microemu.home}/microemu-extensions/microemu-jsr-75/target/microemu-jsr-75-3.0.0-SNAPSHOT.jar"/>
+        <pathelement location="${microemu.home}/microemu-android/microemu-android-ant.jar"/>
+        <pathelement location="${android.jar}"/>
+        <pathelement location="${androidant.home}/lib/antlib.jar"/>
+        <pathelement location="${microemu.home}/microemu-android/antplus_demo.jar"/>
     </path>
 
     <path id="bootclasspath.android16">
-        <pathelement location="${microemu.home}\microemu-cldc\target\microemu-cldc-3.0.0-SNAPSHOT.jar"/>
-        <pathelement location="${microemu.home}\microemu-midp\target\microemu-midp-3.0.0-SNAPSHOT.jar"/>
-        <pathelement location="${microemu.home}\microemu-extensions\microemu-jsr-75\target\microemu-jsr-75-3.0.0-SNAPSHOT.jar"/>
-        <pathelement location="${microemu.home}\microemu-android\microemu-android-ant.jar"/>
-        <pathelement location="${android16.home}\android.jar"/>
-        <pathelement location="${androidant.home}\lib\antlib.jar"/>
-        <pathelement location="${microemu.home}\microemu-android\antplus_demo.jar"/>
-        <pathelement location="${microemu.home}\microemu-android\lib\backport-android-bluetooth2.jar"/>
-    </path>
-
-    <path id="bootclasspath.rim41">
-        <pathelement location="${rim41.home}\lib\net_rim_api.jar"/>
+        <pathelement location="${microemu.home}/microemu-cldc/target/microemu-cldc-3.0.0-SNAPSHOT.jar"/>
+        <pathelement location="${microemu.home}/microemu-midp/target/microemu-midp-3.0.0-SNAPSHOT.jar"/>
+        <pathelement location="${microemu.home}/microemu-extensions/microemu-jsr-75/target/microemu-jsr-75-3.0.0-SNAPSHOT.jar"/>
+        <pathelement location="${microemu.home}/microemu-android/microemu-android-ant.jar"/>
+        <pathelement location="${android16.home}/android.jar"/>
+        <pathelement location="${androidant.home}/lib/antlib.jar"/>
+        <pathelement location="${microemu.home}/microemu-android/antplus_demo.jar"/>
+        <pathelement location="${microemu.home}/microemu-android/lib/backport-android-bluetooth2.jar"/>
     </path>
 
     <path id="bootclasspath.rim42">
-        <pathelement location="${rim42.home}\lib\net_rim_api.jar"/>
+        <pathelement location="${rim42.home}/lib/net_rim_api.jar"/>
     </path>
 
     <path id="bootclasspath.rim50">
-        <pathelement location="${rim50.home}\lib\net_rim_api.jar"/>
+        <pathelement location="${rim50.home}/lib/net_rim_api.jar"/>
     </path>
 
     <path id="bootclasspath.cn1">
-        <pathelement location="${cn1.home}\lib\CLDC11.jar"/>
-        <pathelement location="${cn1.home}\lib\CodenameOne.jar"/>
+        <pathelement location="${cn1.home}/lib/CLDC11.jar"/>
+        <pathelement location="${cn1.home}/lib/CodenameOne.jar"/>
     </path>
 
     <path id="bootclasspath.cn1-trunk">
-        <pathelement location="${cn1.repository}\CLDC11.jar"/>
-        <pathelement location="${cn1.repository}\dist\CodenameOne.jar"/>
+        <pathelement location="${cn1.repository}/CLDC11.jar"/>
+        <pathelement location="${cn1.repository}/dist/CodenameOne.jar"/>
     </path>
 
     <path id="bootclasspath.emulator">
-        <pathelement location="${wtk.home}\lib\cldcapi11.jar"/>
-        <pathelement location="${wtk.home}\lib\midpapi20.jar"/>
-        <pathelement location="${wtk.home}\lib\jsr75.jar"/>
-        <pathelement location="${wtk.home}\lib\jsr082.jar"/>
-        <pathelement location="${wtk.home}\lib\jsr179.jar"/>
-        <pathelement location="${wtk.home}\lib\jsr234.jar"/>
-        <pathelement location="${wtk.home}\lib\wma11.jar"/>
-        <pathelement location="${wtk.home}\lib\mmapi.jar"/>
-        <!--
-        <pathelement location="lib\lg-mmpp.jar"/>
-        <pathelement location="lib\motorola-ext.jar"/>
-        <pathelement location="lib\motorola-file.jar"/>
-        <pathelement location="lib\motorola-location.jar"/>
-        <pathelement location="lib\motorola-javaextensions.jar"/>
-        <pathelement location="lib\nokia-ui-devicecontrol.jar"/>
-        <pathelement location="lib\siemens-file.jar"/>
-        <pathelement location="lib\siemens-game.jar"/>
-        <pathelement location="lib\samsung-apis.jar"/>
-        -->
+        <pathelement location="${wtk.home}/lib/cldcapi11.jar"/>
+        <pathelement location="${wtk.home}/lib/midpapi20.jar"/>
+        <pathelement location="${wtk.home}/lib/jsr75.jar"/>
+        <pathelement location="${wtk.home}/lib/jsr082.jar"/>
+        <pathelement location="${wtk.home}/lib/jsr179.jar"/>
+        <pathelement location="${wtk.home}/lib/jsr234.jar"/>
+        <pathelement location="${wtk.home}/lib/wma11.jar"/>
+        <pathelement location="${wtk.home}/lib/mmapi.jar"/>
     </path>
 
     <target name="standard">
         <property name="suffix" value=""/>
         <property name="dist.dir" value="standard"/>
-        <property name="libraryjars" value="${wtk.home}\lib\cldcapi11.jar;${wtk.home}\lib\midpapi20.jar;${wtk.home}\lib\jsr75.jar;${wtk.home}\lib\jsr082.jar;${wtk.home}\lib\jsr179.jar;${wtk.home}\lib\jsr234.jar;${wtk.home}\lib\wma11.jar;${wtk.home}\lib\mmapi.jar;lib\lg-mmpp.jar;lib\motorola-ext.jar;lib\motorola-file.jar;lib\motorola-javaextensions.jar;lib\motorola-location.jar;lib\nokia-ui-devicecontrol.jar;lib\siemens-file.jar;lib\siemens-game.jar;lib\samsung-apis.jar"/> <!-- same as bootclasspath -->
+        <property name="libraryjars" value="${wtk.home}/lib/cldcapi11.jar;${wtk.home}/lib/midpapi20.jar;${wtk.home}/lib/jsr75.jar;${wtk.home}/lib/jsr082.jar;${wtk.home}/lib/jsr179.jar;${wtk.home}/lib/jsr234.jar;${wtk.home}/lib/wma11.jar;${wtk.home}/lib/mmapi.jar;lib/lg-mmpp.jar;lib/motorola-ext.jar;lib/motorola-file.jar;lib/motorola-javaextensions.jar;lib/motorola-location.jar;lib/nokia-ui-devicecontrol.jar;lib/siemens-file.jar;lib/siemens-game.jar;lib/samsung-apis.jar"/> <!-- same as bootclasspath -->
         <property name="classpath.preverify" value="${libraryjars}"/>
         <antcall target="clean"/>
         <antcall target="a.pre.standard"/>
@@ -174,7 +149,7 @@
     <target name="standard-lite">
         <property name="suffix" value="-lite"/>
         <property name="dist.dir" value="standard-lite"/>
-        <property name="libraryjars" value="${wtk.home}\lib\cldcapi11.jar;${wtk.home}\lib\midpapi20.jar;${wtk.home}\lib\jsr75.jar;${wtk.home}\lib\jsr082.jar;${wtk.home}\lib\jsr179.jar;${wtk.home}\lib\jsr234.jar;${wtk.home}\lib\wma11.jar;${wtk.home}\lib\mmapi.jar;lib\motorola-location.jar"/>
+        <property name="libraryjars" value="${wtk.home}/lib/cldcapi11.jar;${wtk.home}/lib/midpapi20.jar;${wtk.home}/lib/jsr75.jar;${wtk.home}/lib/jsr082.jar;${wtk.home}/lib/jsr179.jar;${wtk.home}/lib/jsr234.jar;${wtk.home}/lib/wma11.jar;${wtk.home}/lib/mmapi.jar;lib/motorola-location.jar"/>
         <property name="classpath.preverify" value="${libraryjars}"/>
         <antcall target="clean"/>
         <antcall target="a.pre.standard-lite"/>
@@ -189,7 +164,7 @@
     <target name="b2b-lite">
         <property name="suffix" value=""/>
         <property name="dist.dir" value="b2b-lite"/>
-        <property name="libraryjars" value="${wtk.home}\lib\cldcapi11.jar;${wtk.home}\lib\midpapi20.jar;${wtk.home}\lib\jsr75.jar;${wtk.home}\lib\jsr082.jar;${wtk.home}\lib\jsr179.jar;${wtk.home}\lib\jsr234.jar;${wtk.home}\lib\wma11.jar;${wtk.home}\lib\mmapi.jar;lib\motorola-location.jar"/>
+        <property name="libraryjars" value="${wtk.home}/lib/cldcapi11.jar;${wtk.home}/lib/midpapi20.jar;${wtk.home}/lib/jsr75.jar;${wtk.home}/lib/jsr082.jar;${wtk.home}/lib/jsr179.jar;${wtk.home}/lib/jsr234.jar;${wtk.home}/lib/wma11.jar;${wtk.home}/lib/mmapi.jar;lib/motorola-location.jar"/>
         <property name="classpath.preverify" value="${libraryjars}"/>
         <antcall target="clean"/>
         <antcall target="a.pre.b2b-lite"/>
@@ -204,7 +179,7 @@
     <target name="b2b-builder">
         <property name="suffix" value="-builder"/>
         <property name="dist.dir" value="b2b-builder"/>
-        <property name="libraryjars" value="${wtk.home}\lib\cldcapi11.jar;${wtk.home}\lib\midpapi20.jar;${wtk.home}\lib\jsr75.jar;${wtk.home}\lib\jsr082.jar;${wtk.home}\lib\jsr179.jar;${wtk.home}\lib\jsr234.jar;${wtk.home}\lib\wma11.jar;${wtk.home}\lib\mmapi.jar;lib\motorola-location.jar"/>
+        <property name="libraryjars" value="${wtk.home}/lib/cldcapi11.jar;${wtk.home}/lib/midpapi20.jar;${wtk.home}/lib/jsr75.jar;${wtk.home}/lib/jsr082.jar;${wtk.home}/lib/jsr179.jar;${wtk.home}/lib/jsr234.jar;${wtk.home}/lib/wma11.jar;${wtk.home}/lib/mmapi.jar;lib/motorola-location.jar"/>
         <property name="classpath.preverify" value="${libraryjars}"/>
         <antcall target="clean"/>
         <antcall target="a.pre.b2b-builder"/>
@@ -219,7 +194,7 @@
     <target name="basic">
         <property name="suffix" value="-basic"/>
         <property name="dist.dir" value="basic"/>
-        <property name="libraryjars" value="${wtk.home}\lib\cldcapi11.jar;${wtk.home}\lib\midpapi20.jar;${wtk.home}\lib\jsr75.jar;${wtk.home}\lib\jsr082.jar;${wtk.home}\lib\jsr179.jar;${wtk.home}\lib\jsr234.jar;${wtk.home}\lib\wma11.jar;${wtk.home}\lib\mmapi.jar"/>
+        <property name="libraryjars" value="${wtk.home}/lib/cldcapi11.jar;${wtk.home}/lib/midpapi20.jar;${wtk.home}/lib/jsr75.jar;${wtk.home}/lib/jsr082.jar;${wtk.home}/lib/jsr179.jar;${wtk.home}/lib/jsr234.jar;${wtk.home}/lib/wma11.jar;${wtk.home}/lib/mmapi.jar"/>
         <property name="classpath.preverify" value="${libraryjars}"/>
         <antcall target="clean"/>
         <antcall target="a.pre.std"/>
@@ -234,7 +209,7 @@
     <target name="symbian">
         <property name="suffix" value="-symbian"/>
         <property name="dist.dir" value="symbian"/>
-        <property name="libraryjars" value="${wtk.home}\lib\cldcapi11.jar;${wtk.home}\lib\midpapi20.jar;${wtk.home}\lib\jsr75.jar;${wtk.home}\lib\jsr082.jar;${wtk.home}\lib\jsr179.jar;${wtk.home}\lib\jsr234.jar;${wtk.home}\lib\wma11.jar;${wtk.home}\lib\mmapi.jar;lib\nokia-ui-devicecontrol.jar;lib\nokia-iapinfo.jar"/>
+        <property name="libraryjars" value="${wtk.home}/lib/cldcapi11.jar;${wtk.home}/lib/midpapi20.jar;${wtk.home}/lib/jsr75.jar;${wtk.home}/lib/jsr082.jar;${wtk.home}/lib/jsr179.jar;${wtk.home}/lib/jsr234.jar;${wtk.home}/lib/wma11.jar;${wtk.home}/lib/mmapi.jar;lib/nokia-ui-devicecontrol.jar;lib/nokia-iapinfo.jar"/>
         <property name="classpath.preverify" value="${libraryjars}"/>
         <antcall target="clean"/>
         <antcall target="a.pre.symbian"/>
@@ -249,7 +224,7 @@
     <target name="j9">
         <property name="suffix" value="-j9"/>
         <property name="dist.dir" value="j9"/>
-        <property name="libraryjars" value="${wtk.home}\lib\cldcapi11.jar;${wtk.home}\lib\midpapi20.jar;${wtk.home}\lib\jsr75.jar;${wtk.home}\lib\jsr082.jar;${wtk.home}\lib\jsr179.jar;${wtk.home}\lib\jsr234.jar;${wtk.home}\lib\wma11.jar;${wtk.home}\lib\mmapi.jar"/>
+        <property name="libraryjars" value="${wtk.home}/lib/cldcapi11.jar;${wtk.home}/lib/midpapi20.jar;${wtk.home}/lib/jsr75.jar;${wtk.home}/lib/jsr082.jar;${wtk.home}/lib/jsr179.jar;${wtk.home}/lib/jsr234.jar;${wtk.home}/lib/wma11.jar;${wtk.home}/lib/mmapi.jar"/>
         <property name="classpath.preverify" value="${libraryjars}"/>
         <antcall target="clean"/>
         <antcall target="a.pre.j9"/>
@@ -263,31 +238,11 @@
         <antcall target="jad2prc"/>
     </target>
 
-    <!--target name="rim41">
-        <property name="suffix" value="_bb_os41"/>
-        <property name="dist.dir" value="rim41"/>
-        <property name="rim.home" value="${rim41.home}"/>
-        <property name="libraryjars" value="${rim41.home}\lib\net_rim_api.jar"/>
-        <property name="classpath.preverify" value="${libraryjars}"/>
-        <property name="rim.cod.dependencies" value="net_rim_cldc,net_rim_os,net_rim_locationapi"/>
-        <property name="rim.bb.version" value="[4.1,4.2)"/>
-        <antcall target="clean"/>
-        <antcall target="a.pre.rim"/>
-        <antcall target="compile.rim41"/>
-        <antcall target="rim.pack" inheritall="true"/>
-        <antcall target="obfuscate${use.proguard}.rim" inheritall="true"/>
-        <antcall target="rim.preverify" inheritall="true"/>
-        <antcall target="dist" inheritall="true"/>
-        <antcall target="rim.rapc" inheritall="true"/>
-        <antcall target="rim.sign" inheritall="true"/>
-        <antcall target="rim.ota" inheritall="true"/>
-    </target-->
-
     <target name="rim42">
         <property name="suffix" value="_bb_os42"/>
         <property name="dist.dir" value="rim42"/>
         <property name="rim.home" value="${rim42.home}"/>
-        <property name="libraryjars" value="${rim42.home}\lib\net_rim_api.jar"/>
+        <property name="libraryjars" value="${rim42.home}/lib/net_rim_api.jar"/>
         <property name="classpath.preverify" value="${libraryjars}"/>
         <property name="rim.cod.dependencies" value="net_rim_cldc,net_rim_locationapi,net_rim_bluetooth"/>
         <property name="rim.bb.version" value="[4.2,5.0)"/>
@@ -309,7 +264,7 @@
         <property name="suffix" value="_bb_os50"/>
         <property name="dist.dir" value="rim50"/>
         <property name="rim.home" value="${rim50.home}"/>
-        <property name="libraryjars" value="${rim50.home}\lib\net_rim_api.jar"/>
+        <property name="libraryjars" value="${rim50.home}/lib/net_rim_api.jar"/>
         <property name="classpath.preverify" value="${libraryjars}"/>
         <property name="rim.cod.dependencies" value="net_rim_cldc,net_rim_locationapi,net_rim_bluetooth"/>
         <property name="rim.bb.version" value="[5.0,)"/>
@@ -330,20 +285,15 @@
     <target name="android">
         <property name="suffix" value="-android"/>
         <property name="dist.dir" value="android"/>
-        <property name="libraryjars" value="${microemu.home}\microemu-cldc\target\microemu-cldc-3.0.0-SNAPSHOT.jar;${microemu.home}\microemu-midp\target\microemu-midp-3.0.0-SNAPSHOT.jar;${microemu.home}\microemu-extensions\microemu-jsr-75\target\microemu-jsr-75-3.0.0-SNAPSHOT.jar;${android20.home}\android.jar;${microemu.home}\microemu-android\microemu-android-ant.jar;${androidant.home}\lib\antlib.jar;${microemu.home}\microemu-android\antplus_demo.jar"/>
+        <property name="libraryjars" value="${microemu.home}/microemu-cldc/target/microemu-cldc-3.0.0-SNAPSHOT.jar;${microemu.home}/microemu-midp/target/microemu-midp-3.0.0-SNAPSHOT.jar;${microemu.home}/microemu-extensions/microemu-jsr-75/target/microemu-jsr-75-3.0.0-SNAPSHOT.jar;${android.jar};${microemu.home}/microemu-android/microemu-android-ant.jar;${androidant.home}/lib/antlib.jar;${microemu.home}/microemu-android/antplus_demo.jar"/>
         <antcall target="clean"/>
         <ant dir="${microemu.home}/microemu-android"
-             antfile="build-trekbuddy.xml" target="clean"
-             inheritAll="false" inheritRefs="false">
-            <property name="target.version" value="any"/>
-            <property name="sdk.version" value="${use.sdk.version}"/>
-            <property name="api.level" value="${use.api.level}"/>
-            <property name="dist.dir" value="android"/>
+             antfile="build-trekbuddy.xml" target="clean" inheritAll="false" inheritRefs="false">
 	      </ant>
         <antcall target="a.pre.android"/>
         <antcall target="compile.android"/>
         <antcall target="android.pack" inheritall="true"/>
-        <antcall target="obfuscate5.android" inheritall="true"/>
+        <antcall target="obfuscate6.android" inheritall="true"/>
 <!-- not needed, so rename the jar as if it happened
         <antcall target="preverify" inheritall="true"/>
 -->
@@ -351,20 +301,20 @@
               tofile="tmp/preverified/trekbuddy${suffix}-obfuscated.jar"/>
         <antcall target="dist.android" inheritall="true"/>
         <ant dir="${microemu.home}/microemu-android"
-             antfile="build-trekbuddy.xml" target="zipalign"
-             inheritAll="false" inheritRefs="false">
+             antfile="build-trekbuddy.xml" target="${android.target}" inheritAll="false" inheritRefs="false">
+            <property name="trekbuddy.home" value="${basedir}"/>
+            <property name="microemu.home" value="${microemu.home}"/>
+            <property name="wtk.home" value="${wtk.home}"/>
+            <property name="proguard.home" value="${proguard6.home}"/>
             <property name="target.version" value="any"/>
             <property name="sdk.version" value="${use.sdk.version}"/>
             <property name="api.level" value="${use.api.level}"/>
             <property name="dist.dir" value="android"/>
             <property name="javac.debug" value="true"/>
             <property name="javac.debuglevel" value="source,lines"/>
-            <!--
-            <property name="do.obfuscate" value="true"/>
-            -->
         </ant>
         <copy file="${microemu.home}/microemu-android/bin/trekbuddy.apk"
-			  tofile="dist/${vendor.dir}/${dist.dir}/trekbuddy.apk"/>
+			        tofile="dist/${vendor.dir}/${dist.dir}/trekbuddy.apk"/>
         <move file="dist/${vendor.dir}/${dist.dir}/trekbuddy-android.map"
               tofile="dist/${vendor.dir}/${dist.dir}/trekbuddy.map"/>
     </target>
@@ -372,15 +322,10 @@
     <target name="android-offline">
         <property name="suffix" value="-android"/>
         <property name="dist.dir" value="android-offline"/>
-        <property name="libraryjars" value="${microemu.home}\microemu-cldc\target\microemu-cldc-3.0.0-SNAPSHOT.jar;${microemu.home}\microemu-midp\target\microemu-midp-3.0.0-SNAPSHOT.jar;${microemu.home}\microemu-extensions\microemu-jsr-75\target\microemu-jsr-75-3.0.0-SNAPSHOT.jar;${android20.home}\android.jar;${microemu.home}\microemu-android\microemu-android-ant.jar;${androidant.home}\lib\antlib.jar;${microemu.home}\microemu-android\antplus_demo.jar"/>
+        <property name="libraryjars" value="${microemu.home}/microemu-cldc/target/microemu-cldc-3.0.0-SNAPSHOT.jar;${microemu.home}/microemu-midp/target/microemu-midp-3.0.0-SNAPSHOT.jar;${microemu.home}/microemu-extensions/microemu-jsr-75/target/microemu-jsr-75-3.0.0-SNAPSHOT.jar;${android.jar};${microemu.home}/microemu-android/microemu-android-ant.jar;${androidant.home}/lib/antlib.jar;${microemu.home}/microemu-android/antplus_demo.jar"/>
         <antcall target="clean"/>
         <ant dir="${microemu.home}/microemu-android"
-             antfile="build-trekbuddy.xml" target="clean"
-             inheritAll="false" inheritRefs="false">
-            <property name="target.version" value="any"/>
-            <property name="sdk.version" value="${use.sdk.version}"/>
-            <property name="api.level" value="${use.api.level}"/>
-            <property name="dist.dir" value="android"/>
+             antfile="build-trekbuddy.xml" target="clean" inheritAll="false" inheritRefs="false">
 	    </ant>
         <antcall target="a.pre.android-offline"/>
         <antcall target="compile.android"/>
@@ -393,20 +338,20 @@
               tofile="tmp/preverified/trekbuddy${suffix}-obfuscated.jar"/>
         <antcall target="dist.android" inheritall="true"/>
         <ant dir="${microemu.home}/microemu-android"
-             antfile="build-trekbuddy.xml" target="zipalign"
-             inheritAll="false" inheritRefs="false">
+             antfile="build-trekbuddy.xml" target="${android.target}" inheritAll="false" inheritRefs="false">
+            <property name="trekbuddy.home" value="${basedir}"/>
+            <property name="microemu.home" value="${microemu.home}"/>
+            <property name="wtk.home" value="${wtk.home}"/>
+            <property name="proguard.home" value="${proguard6.home}"/>
             <property name="target.version" value="any-offline"/>
             <property name="sdk.version" value="${use.sdk.version}"/>
             <property name="api.level" value="${use.api.level}"/>
             <property name="dist.dir" value="android-offline"/>
             <property name="javac.debug" value="true"/>
             <property name="javac.debuglevel" value="source,lines"/>
-            <!--
-            <property name="do.obfuscate" value="true"/>
-            -->
         </ant>
         <copy file="${microemu.home}/microemu-android/bin/trekbuddy.apk"
-			  tofile="dist/${vendor.dir}/${dist.dir}/trekbuddy-offline.apk"/>
+			        tofile="dist/${vendor.dir}/${dist.dir}/trekbuddy-offline.apk"/>
         <move file="dist/${vendor.dir}/${dist.dir}/trekbuddy-android.map"
               tofile="dist/${vendor.dir}/${dist.dir}/trekbuddy-offline.map"/>
     </target>
@@ -414,15 +359,10 @@
     <target name="android-backport">
         <property name="suffix" value="-android"/>
         <property name="dist.dir" value="android-backport"/>
-        <property name="libraryjars" value="${microemu.home}\microemu-cldc\target\microemu-cldc-3.0.0-SNAPSHOT.jar;${microemu.home}\microemu-midp\target\microemu-midp-3.0.0-SNAPSHOT.jar;${microemu.home}\microemu-extensions\microemu-jsr-75\target\microemu-jsr-75-3.0.0-SNAPSHOT.jar;${android20.home}\android.jar;${microemu.home}\microemu-android\lib\backport-android-bluetooth2.jar;${microemu.home}\microemu-android\microemu-android-ant.jar;${androidant.home}\lib\antlib.jar;${microemu.home}\microemu-android\antplus_demo.jar"/>
+        <property name="libraryjars" value="${microemu.home}/microemu-cldc/target/microemu-cldc-3.0.0-SNAPSHOT.jar;${microemu.home}/microemu-midp/target/microemu-midp-3.0.0-SNAPSHOT.jar;${microemu.home}/microemu-extensions/microemu-jsr-75/target/microemu-jsr-75-3.0.0-SNAPSHOT.jar;${android.jar};${microemu.home}/microemu-android/lib/backport-android-bluetooth2.jar;${microemu.home}/microemu-android/microemu-android-ant.jar;${androidant.home}/lib/antlib.jar;${microemu.home}/microemu-android/antplus_demo.jar"/>
         <antcall target="clean"/>
         <ant dir="${microemu.home}/microemu-android"
-             antfile="build-trekbuddy.xml" target="clean"
-             inheritAll="false" inheritRefs="false">
-            <property name="target.version" value="backport"/>
-            <property name="sdk.version" value="1.6"/>
-            <property name="api.level" value="4"/>
-            <property name="dist.dir" value="android-backport"/>
+             antfile="build-trekbuddy.xml" target="clean" inheritAll="false" inheritRefs="false">
         </ant>
         <antcall target="a.pre.android-backport"/>
         <antcall target="compile.android-backport"/>
@@ -435,8 +375,11 @@
               tofile="tmp/preverified/trekbuddy${suffix}-obfuscated.jar"/>
         <antcall target="dist" inheritall="true"/>
         <ant dir="${microemu.home}/microemu-android"
-             antfile="build-trekbuddy.xml" target="zipalign"
-             inheritAll="false" inheritRefs="false">
+             antfile="build-trekbuddy.xml" target="${android.target}" inheritAll="false" inheritRefs="false">
+            <property name="trekbuddy.home" value="${basedir}"/>
+            <property name="microemu.home" value="${microemu.home}"/>
+            <property name="wtk.home" value="${wtk.home}"/>
+            <property name="proguard.home" value="${proguard6.home}"/>
             <property name="target.version" value="backport"/>
             <property name="sdk.version" value="1.6"/>
             <property name="api.level" value="4"/>
@@ -444,12 +387,9 @@
             <property name="javac.debug" value="true"/>
             <property name="javac.debuglevel" value="source,lines"/>
             <property name="is.backport" value="true"/>
-            <!--
-            <property name="do.obfuscate" value="true"/>
-            -->
         </ant>
         <copy file="${microemu.home}/microemu-android/bin/trekbuddy.apk"
-			  tofile="dist/${vendor.dir}/${dist.dir}/trekbuddy-backport.apk"/>
+			        tofile="dist/${vendor.dir}/${dist.dir}/trekbuddy-backport.apk"/>
         <move file="dist/${vendor.dir}/${dist.dir}/trekbuddy-android.map"
               tofile="dist/${vendor.dir}/${dist.dir}/trekbuddy-backport.map"/>
     </target>
@@ -458,46 +398,46 @@
         <delete includeemptydirs="true" verbose="true">
           <fileset dir="dist/${vendor.dir}/playbook" excludes="build.log"/>
         </delete>
-        <copy file="dist\public\android\trekbuddy.apk" todir="dist\public\playbook"/>
+        <copy file="dist/public/android/trekbuddy.apk" todir="dist/public/playbook"/>
         <java classname="net.rim.tools.apk2bar.Apk2BarVerifier"
               fork="true"
               failonerror="true"
               maxmemory="512m">
-            <arg line="dist\public\playbook\trekbuddy.apk ${android.home}"/>
+            <arg line="dist/public/playbook/trekbuddy.apk ${android.home}"/>
             <classpath>
-                <pathelement location="${android.home}\lib\BARPackager.jar"/>
-                <pathelement location="${android.home}\lib\Apk2Bar.jar"/>
-                <!--pathelement location="${android.home}\lib\Apk2Bar-1.0.3.jar"/-->
+                <pathelement location="${android.home}/lib/BARPackager.jar"/>
+                <pathelement location="${android.home}/lib/Apk2Bar.jar"/>
+                <!--pathelement location="${android.home}/lib/Apk2Bar-1.0.3.jar"/-->
             </classpath>
         </java>
         <java classname="net.rim.tools.apk2bar.Apk2Bar"
               fork="true"
               failonerror="true"
               maxmemory="512m">
-            <arg line="dist\public\playbook\trekbuddy.apk ${android.home} -a kruch"/>
+            <arg line="dist/public/playbook/trekbuddy.apk ${android.home} -a kruch"/>
             <classpath>
-                <pathelement location="${android.home}\lib\BARPackager.jar"/>
-                <pathelement location="${android.home}\lib\Apk2Bar.jar"/>
-                <!--pathelement location="${android.home}\lib\Apk2Bar-1.0.3.jar"/-->
+                <pathelement location="${android.home}/lib/BARPackager.jar"/>
+                <pathelement location="${android.home}/lib/Apk2Bar.jar"/>
+                <!--pathelement location="${android.home}/lib/Apk2Bar-1.0.3.jar"/-->
             </classpath>
         </java>
-        <unzip src="dist\public\playbook\trekbuddy.bar" dest="dist\public\playbook">
+        <unzip src="dist/public/playbook/trekbuddy.bar" dest="dist/public/playbook">
             <patternset>
                 <include name="META-INF/MANIFEST.MF"/>
             </patternset>
         </unzip>
-        <barManifest infile="dist\public\playbook\META-INF\MANIFEST.MF"
-                     outfile="dist\public\playbook\trekbuddy.MF"
+        <barManifest infile="dist/public/playbook/META-INF/MANIFEST.MF"
+                     outfile="dist/public/playbook/trekbuddy.MF"
                      appVersion="${version}.0.${build_version}"/>
         <java classname="net.rim.tools.apk2bar.Apk2Bar"
               fork="true"
               failonerror="true"
               maxmemory="512m">
-            <arg line="dist\public\playbook\trekbuddy.apk ${android.home} -m -a kruch"/>
+            <arg line="dist/public/playbook/trekbuddy.apk ${android.home} -m -a kruch"/>
             <classpath>
-                <pathelement location="${android.home}\lib\BARPackager.jar"/>
-                <pathelement location="${android.home}\lib\Apk2Bar.jar"/>
-                <!--pathelement location="${android.home}\lib\Apk2Bar-1.0.3.jar"/-->
+                <pathelement location="${android.home}/lib/BARPackager.jar"/>
+                <pathelement location="${android.home}/lib/Apk2Bar.jar"/>
+                <!--pathelement location="${android.home}/lib/Apk2Bar-1.0.3.jar"/-->
             </classpath>
         </java>
         <!--
@@ -509,19 +449,19 @@
     </target>
 
     <target name="playbook.signed">
-        <mkdir dir="dist\public\playbook\ota"/>
+        <mkdir dir="dist/public/playbook/ota"/>
         <java classname="net.rim.device.codesigning.barsigner.BarSigner"
               fork="true"
               failonerror="true"
               maxmemory="512m">
-            <arg line="-storepass changeit -signedbar dist\public\playbook\ota\trekbuddy.bar -verbose dist\public\playbook\trekbuddy.bar"/>
+            <arg line="-storepass changeit -signedbar dist/public/playbook/ota/trekbuddy.bar -verbose dist/public/playbook/trekbuddy.bar"/>
             <classpath>
-                <pathelement location="${android.home}\lib\EccpressoAll.jar"/>
-                <pathelement location="${android.home}\lib\EccpressoJDK15ECC.jar"/>
-                <pathelement location="${android.home}\lib\TrustpointAll.jar"/>
-                <pathelement location="${android.home}\lib\BarSigner.jar"/>
-                <pathelement location="${android.home}\lib\BarPackager.jar"/>
-                <pathelement location="${android.home}\lib\KeyTool.jar"/>
+                <pathelement location="${android.home}/lib/EccpressoAll.jar"/>
+                <pathelement location="${android.home}/lib/EccpressoJDK15ECC.jar"/>
+                <pathelement location="${android.home}/lib/TrustpointAll.jar"/>
+                <pathelement location="${android.home}/lib/BarSigner.jar"/>
+                <pathelement location="${android.home}/lib/BarPackager.jar"/>
+                <pathelement location="${android.home}/lib/KeyTool.jar"/>
             </classpath>
         </java>
     </target>
@@ -529,7 +469,7 @@
     <target name="cn1">
         <property name="suffix" value="-cn1"/>
         <property name="dist.dir" value="cn1"/>
-        <property name="libraryjars" value="${cn1.home}\lib\CLDC11.jar;${cn1.home}\lib\CodenameOne.jar"/>
+        <property name="libraryjars" value="${cn1.home}/lib/CLDC11.jar;${cn1.home}/lib/CodenameOne.jar"/>
         <property name="classpath.preverify" value="${libraryjars}"/>
         <antcall target="clean"/>
         <antcall target="a.pre.cn1"/>
@@ -549,7 +489,7 @@
     <target name="cn1-emulator">
         <property name="suffix" value="-cn1"/>
         <property name="dist.dir" value="cn1-emulator"/>
-        <property name="libraryjars" value="${cn1.home}\lib\CLDC11.jar;${cn1.home}\lib\CodenameOne.jar"/>
+        <property name="libraryjars" value="${cn1.home}/lib/CLDC11.jar;${cn1.home}/lib/CodenameOne.jar"/>
         <property name="classpath.preverify" value="${libraryjars}"/>
         <antcall target="clean"/>
         <antcall target="a.pre.cn1-emulator"/>
@@ -570,7 +510,7 @@
         <echo message="Use 'wp-shrinked' target!"/>
         <property name="suffix" value="-wp"/>
         <property name="dist.dir" value="wp"/>
-        <property name="libraryjars" value="${cn1.repository}\CLDC11.jar;${cn1.repository}\dist\CodenameOne.jar"/>
+        <property name="libraryjars" value="${cn1.repository}\CLDC11.jar;${cn1.repository}/dist/CodenameOne.jar"/>
         <property name="classpath.preverify" value="${libraryjars}"/>
         <antcall target="clean"/>
         <antcall target="a.pre.cn1-nb"/>
@@ -586,7 +526,7 @@
     <target name="wp-shrinked">
         <property name="suffix" value="-wp"/>
         <property name="dist.dir" value="wp"/>
-        <property name="libraryjars" value="${cn1.repository}\CLDC11.jar;${cn1.repository}\dist\CodenameOne-shrinked.jar"/>
+        <property name="libraryjars" value="${cn1.repository}/CLDC11.jar;${cn1.repository}/dist/CodenameOne-shrinked.jar"/>
         <property name="classpath.preverify" value="${libraryjars}"/>
         <antcall target="clean"/>
         <antcall target="a.pre.cn1-nb"/>
@@ -598,7 +538,7 @@
     <target name="wp-nolog">
         <property name="suffix" value="-wp"/>
         <property name="dist.dir" value="wp"/>
-        <property name="libraryjars" value="${cn1.repository}\CLDC11.jar;${cn1.repository}\dist\CodenameOne.jar"/>
+        <property name="libraryjars" value="${cn1.repository}/CLDC11.jar;${cn1.repository}/dist/CodenameOne.jar"/>
         <property name="classpath.preverify" value="${libraryjars}"/>
         <antcall target="clean"/>
         <antcall target="a.pre.cn1-nb-nolog"/>
@@ -610,7 +550,7 @@
     <target name="emulator">
         <property name="suffix" value="-emulator"/>
         <property name="dist.dir" value="emulator"/>
-        <property name="libraryjars" value="${wtk.home}\lib\cldcapi11.jar;${wtk.home}\lib\midpapi20.jar;${wtk.home}\lib\jsr75.jar;${wtk.home}\lib\jsr082.jar;${wtk.home}\lib\jsr179.jar;${wtk.home}\lib\jsr234.jar;${wtk.home}\lib\wma11.jar;${wtk.home}\lib\mmapi.jar"/>
+        <property name="libraryjars" value="${wtk.home}/lib/cldcapi11.jar;${wtk.home}/lib/midpapi20.jar;${wtk.home}/lib/jsr75.jar;${wtk.home}/lib/jsr082.jar;${wtk.home}/lib/jsr179.jar;${wtk.home}/lib/jsr234.jar;${wtk.home}/lib/wma11.jar;${wtk.home}/lib/mmapi.jar"/>
         <property name="classpath.preverify" value="${libraryjars}"/>
         <antcall target="clean"/>
         <antcall target="a.pre.emulator"/>
@@ -643,9 +583,8 @@
         <echo>*** Distribution: ${dist.dir}</echo>
         <echo>*** Suffix:       ${suffix}</echo>
         <echo>*** Properties:   ${include.properties}</echo>
-        <echo>*** Extra Prep:   ${pre.extra}</echo>
+        <echo>*** Extra Pre:    ${pre.extra}</echo>
         <echo>*** Vendor Dir:   ${vendor.dir}</echo>
-        <echo>*** Locale:       ${locale} (ignored)</echo>
         <echo>************************************************************</echo>
         <echo/>
     </target>
@@ -654,9 +593,7 @@
 <!--
         <ant antfile="hecl.xml" target="compile"/>
 -->
-        <wtkpreprocess srcdir="hecl-core" destdir="tmp/src" version="2"
-                       symbols="j2me=1,cldc=${wtk.cldc.version},midp=${wtk.midp.version},javaversion=1.2"/>
-        <wtkpreprocess srcdir="hecl-net" destdir="tmp/src" version="2"
+        <wtkpreprocess srcdir="externals/hecl/src" destdir="tmp/src" version="2"
                        symbols="j2me=1,cldc=${wtk.cldc.version},midp=${wtk.midp.version},javaversion=1.2"/>
         <delete file="tmp/src/org/hecl/PrintThing.java" verbose="true"/>
         <delete file="tmp/src/org/hecl/PutsCmd.java" verbose="true"/>
@@ -666,9 +603,7 @@
 <!--
         <ant antfile="hecl.xml" target="compile"/>
 -->
-        <wtkpreprocess srcdir="hecl-core" destdir="tmp/src" version="2"
-                       symbols="j2me=1,cldc=${wtk.cldc.version},midp=${wtk.midp.version},javaversion=1.2,android=1"/>
-        <wtkpreprocess srcdir="hecl-net" destdir="tmp/src" version="2"
+        <wtkpreprocess srcdir="externals/hecl/src" destdir="tmp/src" version="2"
                        symbols="j2me=1,cldc=${wtk.cldc.version},midp=${wtk.midp.version},javaversion=1.2,android=1"/>
         <delete file="tmp/src/org/hecl/PrintThing.java" verbose="true"/>
         <delete file="tmp/src/org/hecl/PutsCmd.java" verbose="true"/>
@@ -887,17 +822,6 @@
                bootclasspathref="bootclasspath.symbian"/>
     </target>
 
-    <target name="compile.rim41" depends="remove.nonrim41.src">
-        <mkdir dir="tmp/build/classes"/>
-        <mkdir dir="tmp/ant"/>
-        <javac srcdir="tmp/src"
-               destdir="tmp/build/classes"
-               tempdir="tmp/ant"
-               fork="true"
-               target="1.1" source="1.3"
-               bootclasspathref="bootclasspath.rim41"/>
-    </target>
-
     <target name="compile.rim42" depends="remove.nonrim42.src">
         <mkdir dir="tmp/build/classes"/>
         <mkdir dir="tmp/ant"/>
@@ -945,7 +869,7 @@
                destdir="tmp/build/classes"
                tempdir="tmp/ant"
                fork="true"
-               target="1.5" source="1.5" debug="true" debuglevel="source,lines"
+               target="1.6" source="1.6" debug="true" debuglevel="source,lines"
                bootclasspathref="bootclasspath.android20"/>
     </target>
 
@@ -1084,13 +1008,6 @@
 
     <target name="remove.b2b.src">
         <delete file="tmp/src/cz/kruch/track/io/CrcInputStream.java"/>
-    </target>
-
-    <target name="remove.nonrim41.src" depends="remove.nonstd.src,remove.android.src">
-        <delete file="tmp/src/api/file/Jsr75File.java"/>
-        <delete file="tmp/src/cz/kruch/track/fun/Jsr234Camera.java"/>
-        <delete file="tmp/src/cz/kruch/track/location/Jsr82LocationProvider.java"/>
-        <delete file="tmp/src/cz/kruch/track/ui/nokia/Midp2DeviceControl.java"/>
     </target>
 
     <target name="remove.nonrim42.src" depends="remove.nonstd.src,remove.android.src">
@@ -1381,7 +1298,7 @@
                 <include name="language.fr.res"/>
                 <include name="language.pl.res"/>
             </fileset>
-            <fileset dir="z:\repository\cn1\Themes">
+            <fileset dir="z:/repository/cn1/Themes">
                 <include name="winTheme.res"/>
             </fileset>
             <manifest>
@@ -1402,7 +1319,7 @@
 
     <target name="cn1-trunk.pack">
         <!-- just update localization files that may have changed... -->
-        <copy todir="c:\Users\pour\Documents\Visual Studio 2013\Projects\TrackingApp\TrackingApp\res">
+        <copy todir="c:\Users\kruch\Documents\Visual Studio 2013\Projects\TrackingApp\TrackingApp\res">
             <fileset dir="res-lang/resources">
                 <include name="language.en.res"/>
                 <include name="language.es.res"/>
@@ -1414,7 +1331,7 @@
     </target>
 
     <target name="wp.pack">
-        <unzip src="${cn1.repository}\dist\CodenameOne.jar" dest="tmp/build/classes"/>
+        <unzip src="${cn1.repository}/dist/CodenameOne.jar" dest="tmp/build/classes"/>
         <jar jarfile="tmp/trekbuddy${suffix}.jar">
             <fileset dir="tmp/build/classes"/>
         </jar>
@@ -1444,7 +1361,7 @@
     </target>
 
     <target name="obfuscate3">
-	    <java jar="${proguard3.home}\lib\proguard.jar" fork="true">
+	    <java jar="${proguard3.home}/lib/proguard.jar" fork="true">
             <arg value="-injars tmp/trekbuddy${suffix}.jar"/>
             <arg value="-outjars tmp/trekbuddy${suffix}-obfuscated.jar"/>
             <arg value="-libraryjars ${libraryjars}"/>
@@ -1478,7 +1395,7 @@
     </target> 
 
     <target name="obfuscate3.rim">
-	    <java jar="${proguard3.home}\lib\proguard.jar" fork="true">
+	    <java jar="${proguard3.home}/lib/proguard.jar" fork="true">
             <arg value="-injars tmp/trekbuddy${suffix}.jar"/>
             <arg value="-outjars tmp/trekbuddy${suffix}-obfuscated.jar"/>
             <arg value="-libraryjars '${libraryjars}'"/>
@@ -1509,7 +1426,7 @@
     </target>
 
     <target name="obfuscate4">
-        <java jar="${proguard4.home}\lib\proguard.jar" fork="true">
+        <java jar="${proguard4.home}/lib/proguard.jar" fork="true">
             <jvmarg value="-Dmaximum.inlined.code.length=4"/>
             <jvmarg value="-Doptimize.conservatively=true"/>
             <arg value="-injars tmp/trekbuddy${suffix}.jar"/>
@@ -1544,7 +1461,7 @@
     </target>
 
     <target name="obfuscate4.rim">
-	    <java jar="${proguard4.home}\lib\proguard.jar" fork="true">
+	    <java jar="${proguard4.home}/lib/proguard.jar" fork="true">
             <jvmarg value="-Dmaximum.inlined.code.length=4"/>
             <jvmarg value="-Doptimize.conservatively=true"/>
             <arg value="-injars tmp/trekbuddy${suffix}.jar"/>
@@ -1577,7 +1494,7 @@
     </target>
 
     <target name="obfuscate4.android">
-	    <java jar="${proguard4.home}\lib\proguard.jar" fork="true">
+	    <java jar="${proguard4.home}/lib/proguard.jar" fork="true">
             <jvmarg value="-Dmaximum.inlined.code.length=4"/>
             <jvmarg value="-Doptimize.conservatively=true"/>
             <arg value="-injars tmp/trekbuddy${suffix}.jar"/>
@@ -1619,7 +1536,7 @@
     </target>
 
     <target name="obfuscate4.cn1">
-        <java jar="${proguard4.home}\lib\proguard.jar" fork="true">
+        <java jar="${proguard4.home}/lib/proguard.jar" fork="true">
             <jvmarg value="-Dmaximum.inlined.code.length=4"/>
             <jvmarg value="-Doptimize.conservatively=true"/>
             <arg value="-injars tmp/trekbuddy${suffix}.jar"/>
@@ -1659,7 +1576,7 @@
     </target>
 
     <target name="obfuscate5.android">
-	    <java jar="${proguard5.home}\lib\proguard.jar" fork="true">
+	    <java jar="${proguard5.home}/lib/proguard.jar" fork="true">
             <jvmarg value="-Dmaximum.inlined.code.length=4"/>
             <jvmarg value="-Doptimize.conservatively=true"/>
             <arg value="-injars tmp/trekbuddy${suffix}.jar"/>
@@ -1686,6 +1603,51 @@
             <arg value="-keepnames class org.** extends java.lang.Exception"/>
             <arg value="-whyareyoukeeping class api.io.BufferedOutputStream"/>
             <arg value="-whyareyoukeeping class net.trekbuddy.midlet.IRuntime"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.fun.AndroidCamera"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.maps.io.FileInput"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.io.CrcInputStream"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.maps.NoMapLoader"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.ui.SmartList"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.ui.nokia.AndroidDeviceControl"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.util.Logger"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.hecl.ControlledInterp"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.hecl.PluginManager"/>
+            <arg value="-printmapping dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.map"/>
+            <arg value="-printseeds"/>
+            <arg value="-printusage dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.dco"/>
+            <arg value="-verbose"/>
+        </java>
+    </target>
+
+    <target name="obfuscate6.android">
+	    <java jar="${proguard6.home}/lib/proguard.jar" fork="true">
+            <jvmarg value="-Dmaximum.inlined.code.length=4"/>
+            <jvmarg value="-Doptimize.conservatively=true"/>
+            <arg value="-injars tmp/trekbuddy${suffix}.jar"/>
+            <arg value="-outjars tmp/trekbuddy${suffix}-obfuscated.jar"/>
+            <arg value="-libraryjars ${libraryjars}"/>
+            <arg value="-dontpreverify"/> <!-- not preverified; this is 4.x flag -->
+            <arg value="-optimizations !code/simplification/arithmetic"/> <!-- dalvik 1.0/1.5 issue workaround -->
+            <arg value="-dontusemixedcaseclassnames"/>
+            <arg value="-dontskipnonpubliclibraryclasses"/>
+            <arg value="-repackageclasses ''"/>
+            <arg value="-allowaccessmodification"/>
+<!-- leaving this optimization to dx? "Dalvik VM also can't handle aggressive overloading" (ProGuard Manual)
+            <arg value="-overloadaggressively"/>
+-->
+            <arg value="-renamesourcefileattribute TrekBuddy"/>
+            <arg value="-keepattributes SourceFile,LineNumberTable"/>
+            <arg value="-keep class * implements javax.microedition.midlet.MIDlet"/>
+            <arg value="-keepnames class api.io.RandomAccessInputStream"/>
+            <arg value="-keepnames class net.trekbuddy.midlet.Runtime"/>
+            <arg value="-keepnames class net.trekbuddy.midlet.IRuntime"/>
+            <arg value="-keepnames class com.dsi.ant.**"/>
+            <arg value="-keepnames class cz.** extends java.lang.Exception"/>
+            <arg value="-keepnames class api.** extends java.lang.Exception"/>
+            <arg value="-keepnames class org.** extends java.lang.Exception"/>
+            <arg value="-whyareyoukeeping class api.io.BufferedOutputStream"/>
+            <arg value="-whyareyoukeeping class net.trekbuddy.midlet.IRuntime"/>
+            <arg value="-whyareyoukeeping class cz.kruch.track.fun.AndroidCamera"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.maps.io.FileInput"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.io.CrcInputStream"/>
             <arg value="-whyareyoukeeping class cz.kruch.track.maps.NoMapLoader"/>
@@ -1702,10 +1664,10 @@
     </target>
 
     <target name="obfuscate5.wp">
-        <java jar="${proguard5.home}\lib\proguard.jar" fork="true">
+        <java jar="${proguard5.home}/lib/proguard.jar" fork="true">
             <arg value="-injars tmp/trekbuddy${suffix}.jar"/>
             <arg value="-outjars tmp/trekbuddy${suffix}-obfuscated.jar"/>
-            <arg value="-libraryjars ${cn1.repository}\CLDC11.jar;${cn1.repository}\..\Factory\dist\Factory.jar"/>
+            <arg value="-libraryjars ${cn1.repository}/CLDC11.jar;${cn1.repository}/..\Factory\dist/Factory.jar"/>
             <arg value="-dontpreverify"/> <!-- not preverified; this is 4.x flag -->
             <arg value="-dontoptimize"/>
             <arg value="-dontobfuscate"/>
@@ -1770,7 +1732,7 @@
     </target>
 
     <target name="obfuscate5">
-        <java jar="${proguard5.home}\lib\proguard.jar" fork="true">
+        <java jar="${proguard5.home}/lib/proguard.jar" fork="true">
             <jvmarg value="-Dmaximum.inlined.code.length=4"/>
             <jvmarg value="-Doptimize.conservatively=true"/>
             <arg value="-injars tmp/trekbuddy${suffix}.jar"/>
@@ -1805,14 +1767,14 @@
     </target>
 
     <target name="preverify">
-	    <exec executable="${wtk.home}\bin\preverify1.1.exe">
+	    <exec executable="${wtk.home}/bin/preverify1.1.exe">
             <arg line="-classpath ${classpath.preverify} -d tmp/preverified tmp/trekbuddy${suffix}-obfuscated.jar"/>
 	    </exec>
     </target>
 
     <target name="rim.preverify">
         <echo>Using ${classpath.preverify} for preverification...</echo>
-        <exec executable="${rim.home}\bin\preverify.exe">
+        <exec executable="${rim.home}/bin/preverify.exe">
             <arg line="-classpath '${classpath.preverify}' -d tmp/preverified tmp/trekbuddy${suffix}-obfuscated.jar"/>
         </exec>
     </target>
@@ -1917,16 +1879,16 @@
     <target name="sign.and.update.2013">
         <property name="jarfile" value="dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jar"/>
         <property name="jadfile" value="dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}-expired.jad"/>
-        <java jar="${wtk.home}\bin\JadTool.jar" fork="true">
+        <java jar="${wtk.home}/bin/JadTool.jar" fork="true">
             <arg line="-addcert -certnum 1 -alias 'trekbuddy2013' -keystore keystores\trekbuddy2013.jks -inputjad ${jadfile} -outputjad ${jadfile}"/>
         </java>
-        <java jar="${wtk.home}\bin\JadTool.jar" fork="true">
+        <java jar="${wtk.home}/bin/JadTool.jar" fork="true">
             <arg line="-addcert -certnum 2 -alias 'trekbuddy2013' -keystore keystores\trekbuddy2013.jks -inputjad ${jadfile} -outputjad ${jadfile}"/>
         </java>
-        <java jar="${wtk.home}\bin\JadTool.jar" fork="true">
+        <java jar="${wtk.home}/bin/JadTool.jar" fork="true">
             <arg line="-addcert -certnum 3 -alias 'trekbuddy2013' -keystore keystores\trekbuddy2013.jks -inputjad ${jadfile} -outputjad ${jadfile}"/>
         </java>
-        <java jar="${wtk.home}\bin\JadTool.jar" fork="true">
+        <java jar="${wtk.home}/bin/JadTool.jar" fork="true">
             <arg line="-addcert -certnum 4 -alias 'trekbuddy2013' -keystore keystores\trekbuddy2013.jks -inputjad ${jadfile} -outputjad ${jadfile}"/>
         </java>
 
@@ -1935,37 +1897,37 @@
         <!-- Thawte Premium Server CA w/ SN: 36... -->
         <!--echo file="dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad" append="true">MIDlet-Certificate-1-4: MIIDNjCCAp+gAwIBAgIQNhIilsXjOKUgodJfTNcJVDANBgkqhkiG9w0BAQUFADCBzjELMAkGA1UEBhMCWkExFTATBgNVBAgTDFdlc3Rlcm4gQ2FwZTESMBAGA1UEBxMJQ2FwZSBUb3duMR0wGwYDVQQKExRUaGF3dGUgQ29uc3VsdGluZyBjYzEoMCYGA1UECxMfQ2VydGlmaWNhdGlvbiBTZXJ2aWNlcyBEaXZpc2lvbjEhMB8GA1UEAxMYVGhhd3RlIFByZW1pdW0gU2VydmVyIENBMSgwJgYJKoZIhvcNAQkBFhlwcmVtaXVtLXNlcnZlckB0aGF3dGUuY29tMB4XDTk2MDgwMTAwMDAwMFoXDTIxMDEwMTIzNTk1OVowgc4xCzAJBgNVBAYTAlpBMRUwEwYDVQQIEwxXZXN0ZXJuIENhcGUxEjAQBgNVBAcTCUNhcGUgVG93bjEdMBsGA1UEChMUVGhhd3RlIENvbnN1bHRpbmcgY2MxKDAmBgNVBAsTH0NlcnRpZmljYXRpb24gU2VydmljZXMgRGl2aXNpb24xITAfBgNVBAMTGFRoYXd0ZSBQcmVtaXVtIFNlcnZlciBDQTEoMCYGCSqGSIb3DQEJARYZcHJlbWl1bS1zZXJ2ZXJAdGhhd3RlLmNvbTCBnzANBgkqhkiG9w0BAQEFAAOBjQAwgYkCgYEA0jY2aovXwlue2oFBYo847kkEVdbQ7xwblRZH7xhINTpS9CtqBo87L+pW46+GjZ4X9560ZXUCTe/LCaIhUdib0GfQug2SBhRz1JPLlyoAnFxODLz6FVL88kRu2hFKbgifLy3j+ao6hnO2RlNYyIkFvYMRuHM/qgeN9EJN50CdHDcCAwEAAaMTMBEwDwYDVR0TAQH/BAUwAwEB/zANBgkqhkiG9w0BAQUFAAOBgQBlkKyID1bZ5jA01CbH0FDxkt5r1DmICSLGpmODA/eZd9iy5Ri4XWPz1HP7bJyZePFLeH0ZJMMrAoT4vCLZiiLXoPxx7JGHIPG47LHlVYCsPVLIOQ7C8MAFT9aCdYy9X9LcdpoFEsmvcsPcJX6kTY4XpeCHf+GaWuFg3GQjPEIuTQ==</echo-->
 
-        <java jar="${wtk.home}\bin\JadTool.jar" fork="true">
+        <java jar="${wtk.home}/bin/JadTool.jar" fork="true">
             <arg line="-addjarsig -alias 'trekbuddy2013' -keystore keystores\trekbuddy2013.jks -keypass changeit -jarfile ${jarfile} -inputjad ${jadfile} -outputjad ${jadfile}"/>
         </java>
 
         <fixcrlf srcdir="dist/${vendor.dir}/${dist.dir}"
                  eol="crlf" eof="remove" encoding="UTF-8"
                  includes="trekbuddy${suffix}-expired.jad"/>
-        <java jar="${wtk.home}\bin\JadTool.jar" fork="true">
+        <java jar="${wtk.home}/bin/JadTool.jar" fork="true">
             <arg line="-showcert -all -inputjad ${jadfile}"/>
         </java>
     </target>
 
     <target name="rim.rapc">
         <echo>Using rim.home=${rim.home}</echo>
-        <exec dir="${basedir}\dist\${vendor.dir}\${dist.dir}" executable="${rim.home}\bin\rapc.exe">
-            <arg line="import='${rim.home}\lib\net_rim_api.jar' codename=trekbuddy${suffix} -quiet -midlet ${basedir}\dist\${vendor.dir}\${dist.dir}\trekbuddy${suffix}.jad ${basedir}\dist\${vendor.dir}\${dist.dir}\trekbuddy${suffix}.jar"/>
+        <exec dir="${basedir}/dist/${vendor.dir}/${dist.dir}" executable="${rim.home}/bin/rapc.exe">
+            <arg line="import='${rim.home}/lib/net_rim_api.jar' codename=trekbuddy${suffix} -quiet -midlet ${basedir}/dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jad ${basedir}/dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.jar"/>
         </exec>
-        <copy file="${basedir}\trekbuddy.alx"
-              tofile="${basedir}\dist\${vendor.dir}\${dist.dir}\trekbuddy${suffix}.alx"/>
-        <replace file="${basedir}\dist\${vendor.dir}\${dist.dir}\trekbuddy${suffix}.alx" token="@SUFFIX@" value="${suffix}"/>
-        <replace file="${basedir}\dist\${vendor.dir}\${dist.dir}\trekbuddy${suffix}.alx" token="@BBVERSION@" value="${rim.bb.version}"/>
-        <replace file="${basedir}\dist\${vendor.dir}\${dist.dir}\trekbuddy${suffix}.alx" token="@DESCRIPTION@" value="${description}"/>
-        <replace file="${basedir}\dist\${vendor.dir}\${dist.dir}\trekbuddy${suffix}.alx" token="@VERSION@" value="${version}.0.${build_version}"/>
-        <replace file="${basedir}\dist\${vendor.dir}\${dist.dir}\trekbuddy${suffix}.alx" token="@VENDOR@" value="${vendor}"/>
-        <replace file="${basedir}\dist\${vendor.dir}\${dist.dir}\trekbuddy${suffix}.alx" token="@MODULES@" value="trekbuddy${suffix}.cod"/>
+        <copy file="${basedir}/trekbuddy.alx"
+              tofile="${basedir}/dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.alx"/>
+        <replace file="${basedir}/dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.alx" token="@SUFFIX@" value="${suffix}"/>
+        <replace file="${basedir}/dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.alx" token="@BBVERSION@" value="${rim.bb.version}"/>
+        <replace file="${basedir}/dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.alx" token="@DESCRIPTION@" value="${description}"/>
+        <replace file="${basedir}/dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.alx" token="@VERSION@" value="${version}.0.${build_version}"/>
+        <replace file="${basedir}/dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.alx" token="@VENDOR@" value="${vendor}"/>
+        <replace file="${basedir}/dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.alx" token="@MODULES@" value="trekbuddy${suffix}.cod"/>
     </target>
 
     <target name="rim.sign">
         <echo>Signing rim.home=${rim42.home}</echo>
         <java fork="yes" jar="${rim42.home}/bin/SignatureTool.jar" failonerror="true">
-           <arg line="-a -c -s -p changeit ${basedir}\dist\${vendor.dir}\${dist.dir}\trekbuddy${suffix}.cod"/>
+           <arg line="-a -c -s -p changeit ${basedir}/dist/${vendor.dir}/${dist.dir}/trekbuddy${suffix}.cod"/>
         </java>
     </target>
 
@@ -2011,22 +1973,22 @@
         <fixcrlf srcdir="${rim.ota.dir}"
                  eol="crlf" eof="remove"
                  includes="trekbuddy${suffix}.jad"/>
-        <copy file="${basedir}\trekbuddy.alx"
-              tofile="${rim.ota.dir}\trekbuddy${suffix}.alx"/>
-        <replace file="${rim.ota.dir}\trekbuddy${suffix}.alx" token="@SUFFIX@" value="${suffix}"/>
-        <replace file="${rim.ota.dir}\trekbuddy${suffix}.alx" token="@BBVERSION@" value="${rim.bb.version}"/>
-        <replace file="${rim.ota.dir}\trekbuddy${suffix}.alx" token="@DESCRIPTION@" value="${description}"/>
-        <replace file="${rim.ota.dir}\trekbuddy${suffix}.alx" token="@VERSION@" value="${version}.0.${build_version}"/>
-        <replace file="${rim.ota.dir}\trekbuddy${suffix}.alx" token="@VENDOR@" value="${vendor}"/>
-        <replace file="${rim.ota.dir}\trekbuddy${suffix}.alx" token="@MODULES@" value="${rim.cod.modules}"/>
-        <zip destfile="${rim.ota.dir}\trekbuddy${suffix}.zip"
+        <copy file="${basedir}/trekbuddy.alx"
+              tofile="${rim.ota.dir}/trekbuddy${suffix}.alx"/>
+        <replace file="${rim.ota.dir}/trekbuddy${suffix}.alx" token="@SUFFIX@" value="${suffix}"/>
+        <replace file="${rim.ota.dir}/trekbuddy${suffix}.alx" token="@BBVERSION@" value="${rim.bb.version}"/>
+        <replace file="${rim.ota.dir}/trekbuddy${suffix}.alx" token="@DESCRIPTION@" value="${description}"/>
+        <replace file="${rim.ota.dir}/trekbuddy${suffix}.alx" token="@VERSION@" value="${version}.0.${build_version}"/>
+        <replace file="${rim.ota.dir}/trekbuddy${suffix}.alx" token="@VENDOR@" value="${vendor}"/>
+        <replace file="${rim.ota.dir}/trekbuddy${suffix}.alx" token="@MODULES@" value="${rim.cod.modules}"/>
+        <zip destfile="${rim.ota.dir}/trekbuddy${suffix}.zip"
              basedir="${rim.ota.dir}"
              includes="**.cod,**.alx"/>
     </target>
 
     <target name="jad2prc">
         <echo>Using garnet.home=${garnet.home}</echo>
-        <exec dir="${basedir}" newenvironment="true" executable="${garnet.home}\bin\jad2prc.exe">
+        <exec dir="${basedir}" newenvironment="true" executable="${garnet.home}/bin/jad2prc.exe">
             <env key="JAVA_HOME" value="${garnet.home}"/>
             <arg line="-keystore ${basedir}\keystores\j2me-manufacturer2011.keystore -vmOption -DLcduiHighResolution=true -vmOption -Xmx4M -o ${basedir}\dist\${vendor.dir}\palm\trekbuddy.prc ${basedir}\dist\${vendor.dir}\${dist.dir}\trekbuddy${suffix}.jad"/>
         </exec>

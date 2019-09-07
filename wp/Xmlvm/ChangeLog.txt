@@ -1,2 +1,0 @@
-﻿* 1.0.0.1
-	- changed String.substring methods to return new instance

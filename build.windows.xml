@@ -1,0 +1,29 @@
+<?xml version="1.0"?>
+<project name="trekbuddy.windows" basedir=".">
+
+    <property name="wtk.home" value="c:\J2ME\WTK2.5.2_01"/>
+    <property name="garnet.home" value="c:\J2ME\Garnet\PalmOS JVM 5.7.2\Tools"/>
+    <property name="rim42.home" value="c:\J2ME\RIM\JDE 4.2.1"/>
+    <property name="rim50.home" value="c:\J2ME\RIM\JDE 5.0"/>
+    
+    <property name="android.home" value="c:\J2ME\android-sdk-windows"/>
+    <property name="android15.home" value="c:\J2ME\android-sdk-windows\platforms\android-1.5"/> <!-- most likely obsolete -->
+    <property name="android16.home" value="c:\J2ME\android-sdk-windows\platforms\android-1.6"/> <!-- for backport ie. most likely obsolete as well -->
+    <property name="android20.home" value="c:\J2ME\android-sdk-windows\platforms\android-2.0"/> <!-- most likely obsolete -->
+    <property name="android4.home" value="c:\J2ME\android-sdk-windows\platforms\android-14"/> <!-- most likely obsolete -->
+    <property name="androidant.home" value="c:\J2ME\android-sdk-ant"/>
+    
+    <property name="proguard3.home" value="z:\apps\proguard\3.11"/>
+    <property name="proguard4.home" value="z:\apps\proguard\4.11"/>
+    <property name="proguard5.home" value="z:\apps\proguard\5.3.3"/>
+    <property name="proguard6.home" value="z:\apps\proguard\6.0.3"/>
+
+    <!-- obsolete TODO remove when removed from main build file -->
+    <property name="cn1.home" value="z:\apps\Codename One"/>
+    <property name="cn1.repository" value="z:\repository\cn1\CodenameOne"/>
+
+    <!-- ramdisk for builds -->
+    <property name="build.dir" value="r:\trekbuddy"/>
+    <property name="temp.dir" value="r:\java-temp"/>
+
+</project>

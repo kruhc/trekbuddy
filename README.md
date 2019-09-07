@@ -19,7 +19,7 @@ The following tools are needed to build TrekBuddy:
 - Sun/Oracle WTK toolkit (2.5.2_01 works ok) 
 - Android SDK (26 have been used lately)
 
-The sources are preprocessed using Antenna 1.0.2 (other version may NOT work).
+The sources are preprocessed using Antenna 1.0.2 (you need `antenna-bin-1.0.2.jar`; other version may NOT work).
 
 Building on Linux was never tested (there may be Windows paths left in build files).
 

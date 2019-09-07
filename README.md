@@ -23,6 +23,7 @@ __The sources contains Antenna preprocessor directives__. Used Antenna 1.0.2 (yo
 
 Building on Linux was never attempted (there are very likely Windows paths and tools references left in build files).
 
+### Android
 Building APK:
 1. build `microemulator` core modules - go to `externals/microemulator`and execute `build-ant.bat`  
 This is only needed once, or of course when you make a change in either `cldc`, `midp`, `microemu-javase` or `microemu-extensions\microemu-jsr-75` module.
@@ -30,5 +31,3 @@ This is only needed once, or of course when you make a change in either `cldc`, 
 3. build 'android' target by running `build.bat public android`  
 You should find `trekbuddy.apk` in `dist\public\android` folder. The APK will be unsigned unless you provide signing key (see 'sign' target in `externals/microemulator/microemu-android/build-trekbuddy.xml`). If the build fails, check `dist\public\android\build.log`.
 
-### Contact
-kruhc@seznam.cz

@@ -24,7 +24,7 @@ The sources are preprocessed using Antenna 1.0.2 (other version may NOT work).
 Building on Linux was never tested (there may be Windows paths left in build files).
 
 Building APK:
-1. build `microemulator` (only needed first time or when changed): go to `externals/microemulator`and execute `build-ant.bat`
+1. build `microemulator` core modules - go to `externals/microemulator`and execute `build-ant.bat`
 2. build 'android' target by running `build.bat public android`  
 
 You should find `trekbuddy.apk` in `dist\public\android` folder.

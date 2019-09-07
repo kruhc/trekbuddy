@@ -163,7 +163,7 @@
         </javac>
     </target>
 
-    <target name="package" depends="compile,compile.backport"/>
+    <target name="package" depends="compile,compile.backport">
         <jar destfile="${outdir-libs}\classes.jar" basedir="${outdir}\classes"/>
     </target>
 

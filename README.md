@@ -8,7 +8,7 @@ You can tell by looking at the tools, naming convetion etc that it is on old, po
 
 ## Dependencies
 - microemulator - J2ME implementation (and more) for Android by Bartek Teodorczyk. I believe it is now available in Google archive only. _I have been using mix of CVS and SVN for TrekBuddy, and because I wasn't able to convert SVN to GIT I lost commit history for microemu changes. I will try to at least provide diff for externals/microemu sources against original soon._
-- HECL - scripting language by David Welton [github](https://github.com/davidw/hecl). _The same with diff of externals/hecl sources against original applies._
+- HECL - scripting language by David Welton [(github)](https://github.com/davidw/hecl). _The same with diff of externals/hecl sources against original applies._
 
 There may be remains of others, but that is most likely obsolete and should be removed.
 

@@ -1,0 +1,486 @@
+<project name="microemu-android" default="package-apk" basedir=".">
+
+    <!--
+        These properties are passed from main build file:
+            * dist.dir
+            * api.level
+            * sdk.version
+            * target.version
+    -->
+
+    <include file="build-trekbuddy.windows.xml"/>
+
+    <!-- IMPORTANT TO SET WITH VALID VALUES --> 
+    <property file="${trekbuddy.home}/properties/build-public.properties" prefix="external."/>
+    <property name="midlet.name" value="${external.product.name}" />
+    <property name="midlet.version" value="${external.product.version}" />
+    <property name="midlet.package" value="trekbuddy.apk" />
+    <property name="midlet.signed.package" value="trekbuddy-signed.apk" />
+    <property name="midlet.unsigned.package" value="trekbuddy-unsigned.apk" />
+    <property name="midlet.icon.type" value="png" />
+    <property name="midlet.icon" value="${trekbuddy.home}/res-android/resources/icon.${midlet.icon.type}" />
+    <property name="midlet.notif.icon" value="${trekbuddy.home}/res-android/resources/icon.notif.${midlet.icon.type}" />
+    <property name="midlet.class" value="cz.kruch.track.TrackingMIDlet" />
+    <property name="midlet.jar" value="${trekbuddy.home}/dist/public/${dist.dir}/trekbuddy-android.jar" />
+    <property name="midlet.jad" value="${trekbuddy.home}/dist/public/${dist.dir}/trekbuddy-android.jad" />
+    <property name="build-tools-folder" value="${sdk-folder}/build-tools/19.1.0"/>
+    <property name="sdk-version" value="android-${sdk.version}" />
+    <property name="microemu.version" value="3.0.0-SNAPSHOT" />
+    <property name="microemu-cldc.jar" value="${microemu.home}/microemu-cldc/target/microemu-cldc-${microemu.version}.jar" />
+    <property name="microemu-midp.jar" value="${microemu.home}/microemu-midp/target/microemu-midp-${microemu.version}.jar" />
+    <property name="microemu-javase.jar" value="${microemu.home}/microemu-javase/target/microemu-javase-${microemu.version}.jar" />
+    <property name="microemu-jsr-75.jar" value="${microemu.home}/microemu-extensions/microemu-jsr-75/target/microemu-jsr-75-${microemu.version}.jar" />
+    <property name="asm.jar" value="${microemu.home}/microemu-android/asm-3.2.jar;${microemu.home}/microemu-android/asm-tree-3.2.jar" />
+    <property name="bluetooth-backport.jar" value="${microemu.home}/microemu-android/lib/backport-android-bluetooth2.jar" />
+    
+    <!-- Debug options -->
+    <property name="javac.debug" value="${javac.debug}"/>
+    <property name="javac.debuglevel" value="${javac.debuglevel}"/>
+
+    <!-- The intermediates directory -->
+    <!-- Eclipse uses "bin" for its own output, so we do the same. -->
+    <property name="outdir" value="${basedir}/bin" />
+
+    <!-- Output directories -->
+    <property name="outdir-assets" value="${outdir}/assets" />
+    <property name="outdir-classes" value="${outdir}/classes" />
+    <property name="outdir-producer" value="${outdir}/producer" />
+    <property name="outdir-res" value="${outdir}/res" />
+    <property name="outdir-libs" value="${outdir}/libs" />
+
+    <!-- Intermediate files -->
+    <property name="dex-file" value="classes.dex" />
+    <property name="intermediate-dex" value="${outdir}/${dex-file}" />
+
+    <!-- The final package file to generate -->
+    <property name="out-package" value="${outdir}/${midlet.package}" />
+    <property name="out-signed-package" value="${outdir}/${midlet.signed.package}" />
+    <property name="out-unsigned-package" value="${outdir}/${midlet.unsigned.package}" />
+
+    <!-- Tools -->
+<!--
+    <property name="aapt" value="${sdk-folder}/platforms/${sdk-version}/tools/aapt" />
+    <condition property="dx" value="${sdk-folder}/platforms/${sdk-version}/tools/dx.bat" else="${sdk-folder}/platforms/${sdk-version}/tools/dx" >
+        <os family="windows"/>
+    </condition>
+-->
+    <property name="aapt" value="${build-tools-folder}/aapt" />
+    <property name="dx" value="${build-tools-folder}/dx.bat" />
+    <property name="apk-builder" value="${sdk-folder}/tools_r05/apkbuilder.bat" />
+    <property name="android-jar" value="${sdk-folder}/platforms/${sdk-version}/android.jar" />
+
+    <taskdef resource="antenna.properties" classpath="antenna-bin-1.0.2.jar"/>
+
+    <target name="clean">
+        <delete dir="${outdir}" />
+    </target>
+
+    <target name="check">
+        <echo message="*** Building with SDK ${sdk.version} with target API level ${api.level} [manifest ${target.version}], jar from ${dist.dir}"/>
+        <echo message="*** debug ${javac.debug}, debuglevel ${javac.debuglevel}"/>
+
+        <available file="${microemu-cldc.jar}" property="microemu-cldc.jar.present"/>
+        <fail unless="microemu-cldc.jar.present" message="microemu-cldc.jar doesn't exist at ${microemu-cldc.jar}"/>
+        
+        <available file="${microemu-midp.jar}" property="microemu-midp.jar.present"/>
+        <fail unless="microemu-midp.jar.present" message="microemu-midp.jar doesn't exist at ${microemu-midp.jar}"/>
+        
+        <available file="${microemu-javase.jar}" property="microemu-javase.jar.present"/>
+        <fail unless="microemu-javase.jar.present" message="microemu-javase.jar doesn't exist at ${microemu-javase.jar}"/>
+
+        <available file="${microemu-jsr-75.jar}" property="microemu-jsr-75.jar.present"/>
+        <fail unless="microemu-jsr-75.jar.present" message="microemu-jsr-75.jar doesn't exist at ${microemu-jsr-75.jar}"/>
+    </target>
+
+    <target name="dirs">
+        <mkdir dir="${outdir}" />
+        <mkdir dir="${outdir-assets}" />
+        <mkdir dir="${outdir-classes}" />
+        <mkdir dir="${outdir-producer}" />
+        <mkdir dir="${outdir-res}" />
+        <mkdir dir="${outdir-libs}" />
+    </target>
+    
+    <target name="compile-producer" depends="check,dirs">
+        <echo message="${asm.jar}"/>
+        <javac target="1.6" source="1.6" debug="${javac.debug}" debuglevel="${javac.debuglevel}"
+                srcdir="src"
+                destdir="${outdir-producer}"
+                includes="org/microemu/android/asm/**">
+            <classpath>
+                <pathelement location="${microemu-javase.jar}"/>
+                <pathelement path="${asm.jar}"/>
+            </classpath>
+        </javac>
+   </target>
+
+    <target name="prepare-jars" depends="compile-producer">
+        <java classname="org.microemu.android.asm.AndroidProducer">            
+            <arg value="${midlet.jar}"/>
+            <arg value="${outdir-libs}/midlet.jar"/>
+            <arg value="midlet"/>
+            <classpath>
+                <pathelement path="${outdir-producer}"/>
+                <pathelement location="${microemu-javase.jar}"/>
+                <pathelement path="${asm.jar}"/>
+            </classpath>
+        </java>
+    </target>
+    
+    <target name="compile" unless="is.backport" depends="prepare-jars, package-res">
+        <wtkpreprocess srcdir="src" destdir="tmp/src" version="1"
+                       symbols="__ECLAIRPLUS__"/>
+        <javac target="1.6" source="1.6" debug="${javac.debug}" debuglevel="${javac.debuglevel}"
+                srcdir="tmp/src"
+                destdir="${outdir-classes}"
+                bootclasspath="${android-jar}"
+                excludes="org/microemu/android/asm/**">
+            <classpath>
+                <pathelement location="${microemu-cldc.jar}" />
+                <pathelement location="${microemu-midp.jar}" />
+                <pathelement location="${microemu-javase.jar}"/>
+                <pathelement location="${antplus.jar}"/>
+            </classpath>
+            <compilerarg value="-Xlint:unchecked"/>
+        </javac>
+    </target>
+
+    <target name="compile.backport" if="is.backport" depends="prepare-jars, package-res">
+        <wtkpreprocess srcdir="src" destdir="tmp/src" version="1"
+                       symbols="__BACKPORT__"/>
+        <javac target="1.5" source="1.5" debug="${javac.debug}" debuglevel="${javac.debuglevel}"
+                srcdir="tmp/src"
+                destdir="${outdir-classes}"
+                bootclasspath="${android-jar}"
+                excludes="org/microemu/android/asm/**">
+            <classpath>
+                <pathelement location="${microemu-cldc.jar}" />
+                <pathelement location="${microemu-midp.jar}" />
+                <pathelement location="${microemu-javase.jar}"/>
+                <pathelement location="${antplus.jar}"/>
+            </classpath>
+            <compilerarg value="-Xlint:unchecked"/>
+        </javac>
+    </target>
+
+    <target name="package" depends="compile,compile.backport"/>
+        <jar destfile="${outdir-libs}\classes.jar" basedir="${outdir}\classes"/>
+    </target>
+
+    <target name="dex" depends="package">
+        <antcall target="dex-${target.version}"/>
+    </target>
+
+    <target name="dex-any">
+        <exec executable="${dx}" failonerror="true">
+<!--
+            <arg value="-JXmx384M" />
+-->
+            <arg value="--dex" />
+            <arg value="--statistics" />
+            <arg value="--output=${intermediate-dex}" />
+            <arg value="--positions=lines" />
+            <arg value="${microemu-cldc.jar}"/>
+            <arg value="${microemu-midp.jar}" />
+            <arg value="${microemu-javase.jar}"/>
+            <arg value="${microemu-jsr-75.jar}"/>
+            <arg value="${antplus.jar}"/>
+            <arg value="${outdir-libs}/classes.jar" />
+            <arg value="${outdir-libs}/midlet.jar"/>
+        </exec>
+    </target>
+    
+    <target name="dex-any-offline" depends="dex-any"/>
+
+    <target name="dex-backport">
+        <exec executable="${dx}" failonerror="true">
+<!--
+            <arg value="-JXmx384M" />
+-->
+            <arg value="--dex" />
+            <arg value="--statistics" />
+            <arg value="--output=${intermediate-dex}" />
+            <arg value="--positions=lines" />
+            <arg value="${microemu-cldc.jar}"/>
+            <arg value="${microemu-midp.jar}" />
+            <arg value="${microemu-javase.jar}"/>
+            <arg value="${microemu-jsr-75.jar}"/>
+            <arg value="${bluetooth-backport.jar}"/>
+            <arg value="${outdir-libs}/classes.jar" />
+            <arg value="${outdir-libs}/midlet.jar"/>
+        </exec>
+    </target>
+
+    <target name="prepare-assets">
+        <unzip src="${midlet.jar}"
+               dest="${outdir-assets}">
+            <patternset>
+                <exclude name="**/*.class"/>
+                <exclude name="**/META-INF"/>
+                <exclude name="**/MANIFEST.MF"/>
+            </patternset>
+        </unzip>
+        <copy file="${midlet.jad}" todir="${outdir-assets}"/>
+        <copy file="lib\backport_android_bluetooth.properties" todir="${outdir-assets}"/>
+    </target>
+    
+    <target name="prepare-res">
+        <mkdir dir="${outdir-res}/menu" />
+        <echo file="${outdir-res}/menu/menu.xml">&lt;?xml version="1.0" encoding="utf-8"?&gt;
+&lt;menu xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto"&gt;
+&lt;/menu&gt;
+        </echo>
+        <mkdir dir="${outdir-res}/values" />
+        <echo file="${outdir-res}/values/strings.xml">&lt;?xml version="1.0" encoding="utf-8"?&gt;
+&lt;resources&gt;
+    &lt;string name="app_name"&gt;${midlet.name}&lt;/string&gt;
+    &lt;string name="app_version"&gt;${midlet.version}&lt;/string&gt;
+    &lt;string name="class_name"&gt;${midlet.class}&lt;/string&gt;
+    &lt;string name="jad_name"&gt;trekbuddy-android.jad&lt;/string&gt;
+&lt;/resources&gt;
+        </echo>
+        <echo file="${outdir-res}/values/styles.xml">&lt;?xml version="1.0" encoding="utf-8"?&gt;
+&lt;resources&gt;
+    &lt;style name="AppTheme" parent="android:Theme"&gt;
+        &lt;item name="android:windowNoTitle"&gt;true&lt;/item&gt;
+    &lt;/style&gt;
+&lt;/resources&gt;
+        </echo>
+        <mkdir dir="${outdir-res}/drawable" />
+        <copy file="${midlet.icon}" tofile="${outdir-res}/drawable/app_icon.${midlet.icon.type}" />
+        <copy file="${midlet.notif.icon}" tofile="${outdir-res}/drawable/app_icon_notif.${midlet.icon.type}" />
+        <mkdir dir="${outdir-res}/layout" />
+        <echo file="${outdir-res}/layout/displayable.xml">&lt;?xml version="1.0" encoding="utf-8"?&gt;
+&lt;LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:divider="?android:dividerHorizontal" android:showDividers="middle"
+    android:orientation="vertical" android:layout_height="fill_parent" android:layout_width="fill_parent"&gt;
+    &lt;TextView
+        android:id="@+id/titleView"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:minHeight="40dip"
+        android:textAppearance="@android:style/TextAppearance.DialogWindowTitle"
+        android:gravity="center_vertical"
+        android:paddingLeft="12dp"/&gt;
+&lt;/LinearLayout&gt;     
+        </echo>
+        <mkdir dir="${outdir-res}/values-v14" />
+        <echo file="${outdir-res}/values-v14/styles.xml">&lt;?xml version="1.0" encoding="utf-8"?&gt;
+&lt;resources&gt;
+    &lt;style name="AppTheme" parent="android:Theme.DeviceDefault"&gt;
+        &lt;!--
+        &lt;item name="android:windowNoTitle"&gt;true&lt;/item&gt;
+        --&gt;
+        &lt;item name="android:windowAnimationStyle"&gt;@null&lt;/item&gt;
+        &lt;item name="android:layoutAnimation"&gt;@null&lt;/item&gt;
+    &lt;/style&gt;
+&lt;/resources&gt;
+        </echo>
+        <mkdir dir="${outdir-res}/layout-v14" />
+        <echo file="${outdir-res}/layout-v14/displayable.xml">&lt;?xml version="1.0" encoding="utf-8"?&gt;
+&lt;LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:divider="?android:dividerHorizontal" android:showDividers="middle"
+    android:orientation="vertical" android:layout_height="fill_parent" android:layout_width="fill_parent"&gt;
+    &lt;TextView
+        android:id="@+id/titleView"
+        android:layout_width="fill_parent"
+        android:layout_height="?android:attr/actionBarSize"
+        android:textAppearance="@android:style/TextAppearance.DeviceDefault.Widget.ActionBar.Title"
+        android:gravity="center_vertical"
+        android:paddingLeft="12dp"/&gt;
+&lt;/LinearLayout&gt;     
+        </echo>
+        <mkdir dir="${outdir-res}/values-v21" />
+        <echo file="${outdir-res}/values-v21/styles.xml">&lt;?xml version="1.0" encoding="utf-8"?&gt;
+&lt;resources&gt;
+    &lt;style name="AppTheme" parent="android:Theme.DeviceDefault"&gt;
+        &lt;item name="android:windowNoTitle"&gt;true&lt;/item&gt;
+        &lt;item name="android:windowActionBar"&gt;false&lt;/item&gt;
+        &lt;item name="android:windowAnimationStyle"&gt;@null&lt;/item&gt;
+        &lt;item name="android:layoutAnimation"&gt;@null&lt;/item&gt;
+    &lt;/style&gt;
+&lt;/resources&gt;
+        </echo>
+        <mkdir dir="${outdir-res}/layout-v21" />
+        <echo file="${outdir-res}/layout-v21/displayable.xml">&lt;?xml version="1.0" encoding="utf-8"?&gt;
+&lt;LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" 
+    android:orientation="vertical" android:layout_height="fill_parent" android:layout_width="fill_parent"&gt;
+    &lt;Toolbar
+        android:id="@+id/toolbarView"
+        android:layout_width="match_parent"
+        android:layout_height="?android:attr/actionBarSize"
+        android:background="?android:attr/colorPrimary"
+        android:titleTextAppearance="@android:style/TextAppearance.DeviceDefault.Widget.ActionBar.Title"
+        android:subtitleTextAppearance="@android:style/TextAppearance.DeviceDefault.Widget.ActionBar.Subtitle"/&gt;
+&lt;/LinearLayout&gt;     
+        </echo>
+    </target>
+
+    <target name="timestamp">
+        <tstamp>
+            <format property="HSTAMP" pattern="HH"/>
+        </tstamp>
+    </target>
+
+    <target name="prepare-manifest" depends="timestamp">
+        <antcall target="prepare-manifest-${target.version}"/>
+    </target>
+
+    <target name="prepare-manifest-any">
+        <echo message="*** Preparing Manifest using 'prepare-manifest-any' target "/>
+        <echo file="${outdir}/AndroidManifest.xml">&lt;?xml version="1.0" encoding="utf-8"?&gt;
+&lt;manifest xmlns:android="http://schemas.android.com/apk/res/android"
+            package="net.trekbuddy.midlet"
+            android:versionCode="${DSTAMP}"
+            android:versionName="${midlet.version}"
+            android:installLocation="auto"&gt;
+    &lt;uses-sdk android:minSdkVersion="14" android:targetSdkVersion="${api.level}" /&gt;
+    &lt;uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" /&gt;
+    &lt;uses-permission android:name="android.permission.BLUETOOTH" /&gt;
+    &lt;uses-permission android:name="android.permission.BLUETOOTH_ADMIN" /&gt;
+    &lt;uses-permission android:name="android.permission.VIBRATE" /&gt;
+    &lt;!--uses-permission android:name="android.permission.WAKE_LOCK" /--&gt;
+    &lt;uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" /&gt;
+    &lt;!--uses-permission android:name="android.permission.CAMERA" /--&gt;
+    &lt;uses-permission android:name="android.permission.INTERNET" /&gt;
+    &lt;uses-permission android:name="com.dsi.ant.permission.ANT" /&gt;
+    &lt;uses-feature android:required="false" android:name="android.hardware.bluetooth" /&gt;
+    &lt;!--uses-feature android:required="false" android:name="android.hardware.camera" /--&gt;
+    &lt;!--uses-feature android:required="false" android:name="android.hardware.camera.autofocus" /--&gt;
+    &lt;supports-screens /&gt;
+    &lt;application android:label="@string/app_name" android:icon="@drawable/app_icon"&gt;
+        &lt;activity
+                android:name="org.microemu.android.MicroEmulator"
+                android:launchMode="singleInstance"
+                android:theme="@style/AppTheme"
+                android:configChanges="orientation|screenSize|keyboardHidden"&gt;
+            &lt;intent-filter&gt;
+                &lt;action android:name="android.intent.action.MAIN" /&gt;
+                &lt;category android:name="android.intent.category.LAUNCHER" /&gt;
+                &lt;category android:name="android.intent.category.MULTIWINDOW_LAUNCHER" /&gt;
+            &lt;/intent-filter&gt;
+            &lt;meta-data android:name="app_version" android:value="@string/app_version" /&gt;
+            &lt;meta-data android:name="com.sec.android.support.multiwindow" android:value="true" /&gt;
+            &lt;meta-data android:name="com.sec.android.multiwindow.DEFAULT_SIZE_W" android:value="640dip" /&gt;
+            &lt;meta-data android:name="com.sec.android.multiwindow.DEFAULT_SIZE_H" android:value="400dip" /&gt;            
+        &lt;/activity&gt;
+        &lt;uses-library android:required="false" android:name="com.sec.android.app.multiwindow" /&gt;
+        &lt;service android:name=".Runtime" /&gt;
+        &lt;service android:name="com.dsi.ant.antplusdemo.ANTPlusService" /&gt;
+    &lt;/application&gt;
+&lt;/manifest&gt;
+        </echo>
+    </target>
+
+    <target name="prepare-manifest-any-offline">
+        <echo message="*** Preparing Manifest using 'prepare-manifest-any-offline' target "/>
+        <echo file="${outdir}/AndroidManifest.xml">&lt;?xml version="1.0" encoding="utf-8"?&gt;
+&lt;manifest xmlns:android="http://schemas.android.com/apk/res/android"
+            package="net.trekbuddy.midlet"
+            android:versionCode="${DSTAMP}"
+            android:versionName="${midlet.version}"
+            android:installLocation="auto"&gt;
+    &lt;uses-sdk android:minSdkVersion="14" android:targetSdkVersion="${api.level}" /&gt;
+    &lt;uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" /&gt;
+    &lt;uses-permission android:name="android.permission.BLUETOOTH" /&gt;
+    &lt;uses-permission android:name="android.permission.BLUETOOTH_ADMIN" /&gt;
+    &lt;uses-permission android:name="android.permission.VIBRATE" /&gt;
+    &lt;!--uses-permission android:name="android.permission.WAKE_LOCK" /--&gt;
+    &lt;uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" /&gt;
+    &lt;!--uses-permission android:name="android.permission.CAMERA" /--&gt;
+    &lt;uses-permission android:name="com.dsi.ant.permission.ANT" /&gt;
+    &lt;uses-feature android:required="false" android:name="android.hardware.bluetooth" /&gt;
+    &lt;!--uses-feature android:required="false" android:name="android.hardware.camera" /--&gt;
+    &lt;!--uses-feature android:required="false" android:name="android.hardware.camera.autofocus" /--&gt;
+    &lt;supports-screens /&gt;
+    &lt;application android:label="@string/app_name" android:icon="@drawable/app_icon"&gt;
+        &lt;activity
+                android:name="org.microemu.android.MicroEmulator"
+                android:launchMode="singleInstance"
+                android:theme="@style/AppTheme"
+                android:configChanges="orientation|screenSize|keyboardHidden"&gt;
+            &lt;intent-filter&gt;
+                &lt;action android:name="android.intent.action.MAIN" /&gt;
+                &lt;category android:name="android.intent.category.LAUNCHER" /&gt;
+                &lt;category android:name="android.intent.category.MULTIWINDOW_LAUNCHER" /&gt;
+            &lt;/intent-filter&gt;
+            &lt;meta-data android:name="app_version" android:value="@string/app_version" /&gt;
+            &lt;meta-data android:name="com.sec.android.support.multiwindow" android:value="true" /&gt;
+        &lt;/activity&gt;
+        &lt;service android:name=".Runtime" /&gt;
+    &lt;/application&gt;
+&lt;/manifest&gt;
+        </echo>
+    </target>
+
+    <target name="prepare-manifest-backport">
+        <fail message="No longer supported"/>
+    </target>
+
+    <target name="package-res" depends="prepare-assets, prepare-res, prepare-manifest">
+        <exec executable="${aapt}" failonerror="true">
+            <arg value="package" />
+            <arg value="-f" />
+            <arg value="-m" />
+            <arg value="-J" />
+            <arg value="src" />
+            <arg value="-M" />
+            <arg value="${outdir}/AndroidManifest.xml" />
+            <arg value="-S" />
+            <arg value="${outdir-res}" />
+            <arg value="-A" />
+            <arg value="${outdir-assets}" />
+            <arg value="-I" />
+            <arg value="${android-jar}" />
+            <arg value="-F" />
+            <arg value="${out-package}.res" /> <!-- temp name -->
+        </exec>
+    </target>
+
+    <target name="package-apk" depends="clean, dex, package-res">
+        <exec executable="${apk-builder}" failonerror="true">
+            <arg value="${out-unsigned-package}" />
+            <arg value="-u" />
+            <arg value="-z" />
+            <arg value="${out-package}.res" /> <!-- temp name -->
+            <arg value="-f" />
+            <arg value="${intermediate-dex}" />
+        </exec>
+    </target>
+
+    <target name="sign" depends="package-apk">
+        <exec executable="jarsigner" failonerror="true">
+            <arg value="-digestalg" />
+            <arg value="SHA1" />
+            <arg value="-sigalg" />
+            <arg value="MD5withRSA" />
+            <arg value="-keystore" />
+            <arg value="${trekbuddy.home}/keystores/android.jks" />
+            <arg value="-storepass" />
+            <arg value="changeit" />
+            <arg value="-keypass" />
+            <arg value="changeit" />
+            <arg value="-signedjar" />
+            <arg value="${out-signed-package}" />
+            <arg value="${out-unsigned-package}" />
+            <arg value="trekbuddy" />
+        </exec>
+    </target>
+
+    <target name="zipalign-signed" depends="sign">
+        <exec executable="${build-tools-folder}/zipalign" failonerror="true">
+            <arg value="4" />
+            <arg value="${out-signed-package}" />
+            <arg value="${out-package}" />
+        </exec>
+    </target>
+
+    <target name="zipalign-unsigned" depends="package-apk">
+        <exec executable="${build-tools-folder}/zipalign" failonerror="true">
+            <arg value="4" />
+            <arg value="${out-unsigned-package}" />
+            <arg value="${out-package}" />
+        </exec>
+    </target>
+
+</project>

@@ -1,0 +1,6 @@
+<project name="microemu-android.windows" default="" basedir=".">
+
+    <property name="sdk-folder" value="c:/J2ME/android-sdk-windows" />
+    <property name="antplus.jar" value="c:/J2ME/android-sdk-ant/lib/antlib.jar" />
+
+</project>

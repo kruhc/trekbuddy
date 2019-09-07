@@ -1,0 +1,38 @@
+<project name="microemu-javase" default="package" basedir=".">
+    
+    <property name="outdir" value="${basedir}/target" />
+    <property name="microemu.version" value="3.0.0-SNAPSHOT"/>
+    <property name="javac.debug" value="${javac.debug}"/>
+    <property name="javac.debuglevel" value="${javac.debuglevel}"/>
+
+    <target name="clean">
+        <delete dir="${outdir}\classes" />
+    </target>
+
+    <target name="dirs">
+        <mkdir dir="${outdir}\classes" />
+    </target>
+    
+    <target name="compile" depends="dirs">
+        <javac target="1.5" source="1.4" debug="${javac.debug}" debuglevel="${javac.debuglevel}"
+               srcdir="src/main/java"
+               destdir="${outdir}/classes">
+            <classpath>
+                <pathelement location="${basedir}/../microemu-android/asm-3.2.jar"/>
+                <pathelement location="${basedir}/../microemu-cldc/target/microemu-cldc-${microemu.version}.jar"/>
+                <pathelement location="${basedir}/../microemu-midp/target/microemu-midp-${microemu.version}.jar"/>
+            </classpath>
+        </javac>
+   </target>
+
+   <target name="res">
+      <copy todir="${outdir}/classes">
+         <fileset dir="src/main/resources" includes="**/*.png,**/*.xml"/>
+      </copy>
+   </target>
+
+   <target name="package" depends="clean, compile">
+       <jar destfile="${outdir}\microemu-javase-${microemu.version}.jar" basedir="${outdir}/classes"/>
+   </target>
+        
+</project>

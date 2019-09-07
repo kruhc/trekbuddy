@@ -1,0 +1,31 @@
+<project name="microemu-jsr-75" default="package" basedir=".">
+    
+    <property name="outdir" value="${basedir}/target" />
+    <property name="microemu.version" value="3.0.0-SNAPSHOT"/>
+    <property name="javac.debug" value="${javac.debug}"/>
+    <property name="javac.debuglevel" value="${javac.debuglevel}"/>
+
+    <target name="clean">
+        <delete dir="${outdir}/classes" />
+    </target>
+
+    <target name="dirs">
+        <mkdir dir="${outdir}/classes" />
+    </target>
+    
+    <target name="compile" depends="dirs">
+        <javac target="1.5" source="1.4" debug="${javac.debug}" debuglevel="${javac.debuglevel}"
+               srcdir="src/main/java"
+               destdir="${outdir}/classes">
+            <classpath>
+                <pathelement location="${basedir}/../../microemu-cldc/target/microemu-cldc-${microemu.version}.jar"/>
+                <pathelement location="${basedir}/../../microemu-javase/target/microemu-javase-${microemu.version}.jar"/>
+            </classpath>
+        </javac>
+   </target>
+
+   <target name="package" depends="clean, compile">
+       <jar destfile="${outdir}\microemu-jsr-75-${microemu.version}.jar" basedir="${outdir}/classes"/>
+   </target>
+        
+</project>

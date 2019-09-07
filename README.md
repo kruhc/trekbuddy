@@ -19,7 +19,7 @@ The following tools are needed to build TrekBuddy:
 - Sun/Oracle WTK toolkit (2.5.2_01 works ok) 
 - Android SDK (versions 14 and 26), Android ANT+ SDK
 
-The sources are preprocessed using Antenna 1.0.2 (you need `antenna-bin-1.0.2.jar`; other version may NOT work).
+__The sources contains Antenna preprocessor directives__. Used Antenna 1.0.2 (you need `antenna-bin-1.0.2.jar`; other version may NOT work).
 
 Building on Linux was never tested (there are very likely Windows paths and tools references left in build files).
 
@@ -27,7 +27,7 @@ Building APK:
 1. build `microemulator` core modules - go to `externals/microemulator`and execute `build-ant.bat`  
 This is only needed once, or of course when you make a change in either `cldc`, `midp`, `microemu-javase` or `microemu-extensions\microemu-jsr-75` module.
 2. build 'android' target by running `build.bat public android`  
-You should find `trekbuddy.apk` in `dist\public\android` folder.
+You should find `trekbuddy.apk` in `dist\public\android` folder. The APK will be unsigned unless you provide signing key (see 'sign' target in `externals/microemulator/microemu-android/build-trekbuddy.xml`).
 
 ### Contact
 kruhc@seznam.cz

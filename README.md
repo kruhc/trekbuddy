@@ -26,7 +26,8 @@ Building on Linux was never attempted (there are very likely Windows paths and t
 Building APK:
 1. build `microemulator` core modules - go to `externals/microemulator`and execute `build-ant.bat`  
 This is only needed once, or of course when you make a change in either `cldc`, `midp`, `microemu-javase` or `microemu-extensions\microemu-jsr-75` module.
-2. build 'android' target by running `build.bat public android`  
+2. build language resources you want to include in the package by using either res-ascii or res-utf8 script, eg. `res-ascii.bat en en` or `res-utf8 fr fr` (first param can be full locale but it must match file suffix in `res-lang` folder)
+3. build 'android' target by running `build.bat public android`  
 You should find `trekbuddy.apk` in `dist\public\android` folder. The APK will be unsigned unless you provide signing key (see 'sign' target in `externals/microemulator/microemu-android/build-trekbuddy.xml`). If the build fails, check `dist\public\android\build.log`.
 
 ### Contact

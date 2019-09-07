@@ -1,0 +1,33 @@
+<?xml version="1.0"?>
+<project name="TrekBuddy - language resources" default="rescompile" basedir=".">
+
+    <target name="rescompile">
+        <echo>Compiling resources for locale '${locale}', short locale is '${short}'</echo>
+        <delete file="res-lang/resources/language.${short}.res"/>
+        <property environment="env"/>
+        <echo>JAVA_HOME: ${env.JAVA_HOME}</echo>
+        <javac 
+            destdir="tools/classes" 
+            srcdir="tools/src" 
+            includes="ResourceCompilerNG.java"/>
+        <copy file="tools/src/ignored.properties" todir="tools/classes"/>
+        <jar 
+            destfile="tools/dist/rc-ng.jar"
+            basedir="tools/classes"
+            includes="ResourceCompilerNG.class,ignored.properties">
+          <manifest>
+            <attribute name="Main-Class" value="ResourceCompilerNG"/>
+          </manifest>
+        </jar> 
+        <java fork="true" jar="tools/dist/rc-ng.jar">
+            <arg line="-utf8 res-lang\resources\language.${locale}.utf8.txt res-lang/resources/language.${short}.res"/>
+        </java>
+        <echo/>
+        <echo>************************************************************</echo>
+        <echo>*** Locale:   ${locale} (short: ${short})</echo>
+        <echo>*** Output:   res-lang/resources/language.${short}.res</echo>
+        <echo>************************************************************</echo>
+        <echo/>
+    </target>
+
+</project>

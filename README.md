@@ -20,6 +20,7 @@ The following tools are needed to build TrekBuddy:
 - Java (1.8 works ok for Android target, for other targets 1.7 may work better)
 - Ant (1.8 works ok)
 - Sun/Oracle WTK toolkit (2.5.2_01 works ok) 
+- Proguard optimizer (v6 for APK building)
 - Android SDK (versions 14 and 26), Android ANT+ SDK
 
 Building on Linux was never attempted (there are very likely Windows paths and tools references left in build files).

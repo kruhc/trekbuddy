@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<project name="trekbuddy-tools" default="tools" basedir=".">
+
+    <target name="tools">
+        <mkdir dir="${basedir}/tools/classes"/>
+        <javac srcdir="${basedir}/tools/src"
+               destdir="${basedir}/tools/classes"
+               fork="true"
+               debug="true"
+               target="1.5" source="1.5"/>
+    </target>
+
+</project>

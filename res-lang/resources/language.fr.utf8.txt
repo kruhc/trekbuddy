@@ -1,4 +1,4 @@
-ï»¿# commandes courantes 
+# commandes courantes 
 0000=OK 
 0001=Retour 
 0002=Fermer 
@@ -6,82 +6,82 @@
 0004=Oui 
 0005=Non 
 
-# messages de dÃ©marrage 
+# messages de démarrage 
 0300=Mise en cache des images ... 
 0301=Chargement de la configuration ... 
 0302=Personnalisation de l'interface ... 
-0303=CrÃ©ation des Ã©crans ... 
+0303=Création des écrans ... 
 0304=Chargement de la carte ... 
-0305=DÃ©finition des touches ... 
+0305=Définition des touches ... 
 0306=Localisation ... 
 0399= 
 
 # commandes du bureau 
-1000=DÃ©marrer 
-1001=ArrÃªter 
+1000=Démarrer GPS
+1001=Arrêter GPS 
 1002=Mettre en veille 
-1003=Continuer 
+1003=Continuer
 1004=Cartes
 #REMOVED 1005=Charger un atlas 
-1006=RÃ©glages 
-1007=Navigation 
-1008=Informations 
-1009=Quitter 
+1006=Paramètres
+1007=Navigation
+1008=Informations
+1009=Quitter TrekBuddy 
 1010=Actualiser 
 1011=Connecter 
 1012=Ouvrir 
-1013=SÃ©lection
-1014=Plugins 
-1015=Enregistrer trace
-1016=ArrÃªter trace
+1013=Sélection
+1014=Greffons
+1015=Enregistrer la trace
+1016=Stop enregistrement
 
 # messages du bureau 
 1300=Erreur d'initialisation du partage d'emplacement 
-1301=Voulez-vous arrÃªter ? 
-1302=Le point de passage sÃ©lectionnÃ© n'existe pas sur la couche actuelle 
-1303=Le point de passage sÃ©lectionnÃ© n'existe pas sur la carte actuelle 
-1304=Clavier verrouillÃ© 
-1305=Clavier dÃ©verrouillÃ© 
-1306=DÃ©marrer l'acquisition de la trace ? 
-1307=Impossible de crÃ©er le fournisseur 
-1308=Impossible de dÃ©marrer le fournisseur 
-1309=Impossible d'arrÃªter le fournisseur 
-1310=Navigation arrÃªtÃ©e 
-1311=Point de passage dÃ©fini sur la carte 
+1301=Voulez-vous quitter TrekBuddy ? 
+1302=Le point de passage sélectionné n'existe pas sur la couche actuelle 
+1303=Le point de passage sélectionné n'existe pas sur la carte actuelle 
+1304=Verrouillage actif 
+1305=Clavier déverrouillé 
+1306=Démarrer l'acquisition de la trace ? 
+1307=Impossible de créer le fournisseur 
+1308=Impossible de démarrer le fournisseur 
+1309=Impossible d'arrêter le fournisseur 
+1310=Navigation arrêtée 
+1311=Point de passage défini sur la carte 
 1312=Aucune couche dans l'atlas actuel 
 1313=Aucune carte dans la couche actuelle 
 1314=Aucune carte dans la couche pour la position actuelle 
 1315=Chargement de la carte 
 1316=Initialisation de la carte 
 1317=Chargement de l'atlas 
-1318=Configuration mise Ã  jour 
-1319=Impossible de mettre Ã  jour la configuration 
+1318=Configuration mise à jour 
+1319=Impossible de mettre à jour la configuration 
 1320=Erreur d'acquisition de la trace 
 1321=Impossible d'utiliser la carte 
 1322=Erreur de chargement de la carte 
-1323=Dalles chargÃ©es 
+1323=Dalles chargées 
 1324=Etat du chargement 
-1325=SÃ©lectionner carte/atlas 
-#REMOVED 1326=SÃ©lectionner un atlas 
-1327=SÃ©lectionner une couche 
+1325=Sélectionner carte/atlas 
+#REMOVED 1326=Sélectionner un atlas 
+1327=Sélectionner une couche 
 1328=SMS inconnu 
-1329=SMS de position envoyÃ© 
+1329=SMS de position envoyé 
 1330=Impossible d'envoyer un SMS 
 1331=Impossible de recevoir un SMS 
-#REMOVED 1332=Service pas trouvÃ© 
+#REMOVED 1332=Service pas trouvé 
 #REMOVED 1333=Impossible de rechercher le service 
-#REMOVED 1334=Aucun service trouvÃ© 
-#REMOVED 1335=Impossible de redÃ©marrer la dÃ©couverte 
+#REMOVED 1334=Aucun service trouvé 
+#REMOVED 1335=Impossible de redémarrer la découverte 
 1336=Impossible de lancer l'acquisition de la trace 
 1337=Impossible de charger le profil 
 1338=Aucune instance fournisseur 
-1339=Pas de carte de dÃ©marrage. Utilisez Options-> Cartes
+1339=Pas de carte de démarrage. Utilisez Options-> Cartes
 1340=Mis en veille 
 1341=Aucun profil disponible 
 1342=Profils 
-1343=Fichier sÃ©lectionnÃ© incorrect.\nRecommencez
+1343=Fichier sélectionné incorrect.\nRecommencez
 1344=Impossible d'analyser la projection de la carte 
-1345=Impossible d'analyser le point de rÃ©fÃ©rence de la carte 
+1345=Impossible d'analyser le point de référence de la carte 
 1346=Impossible d'analyser le fichier de calibration 
 1347=Impossible d'analyser le fichier SET 
 1348=URL d'atlas non valide 
@@ -95,45 +95,45 @@
 1356=IWH non valide 
 1357=Discordance des dimensions MMPXY:MMPLL 
 1358=Carte trop grande 
-1359=Trop peu de points d'Ã©talonnage 
+1359=Trop peu de points d'étalonnage 
 1360=Etalonnage introuvable 
 1361=Carte vide - aucune dalle 
 1362=Impossible de charger une dalle 
 1363=Absence d'image de la dalle 
-1364=Fichier d'Ã©talonnage inconnu 
-1365=RÃ©pertoire des dalles inaccessible 
+1364=Fichier d'étalonnage inconnu 
+1365=Répertoire des dalles inaccessible 
 1366=Impossible de lister les dalles 
 1367=Dalle trop grande 
 1368=Fichier introuvable 
-1369=Utiliser comme atlas par dÃ©faut ? 
-1370=Utiliser comme carte par dÃ©faut ? 
-1371=SÃ©lectionner un pÃ©riphÃ©rique 
-1372=Recherche de pÃ©riphÃ©riques en cours ... 
+1369=Utiliser comme atlas par défaut ? 
+1370=Utiliser comme carte par défaut ? 
+1371=Sélectionner un périphérique 
+1372=Recherche de périphériques en cours ... 
 1373=Rechercher un service ... 
 1374=Recherche de service en cours ... 
-1375=RÃ©solution de noms ... 
-1376=Pas de pÃ©riphÃ©rique dÃ©couvert 
-1377=Extension Bluetooth dÃ©sactivÃ©e 
-1379=RÃ©tro-Ã©clairage actif 
-1380=RÃ©tro-Ã©clairage inactif 
+1375=Résolution de noms ... 
+1376=Pas de périphérique découvert 
+1377=Extension Bluetooth désactivée 
+1379=Rétro-éclairage activé : 
+1380=Rétro-éclairage désactivé 
 1381=POSITION INCONNUE 
 1382=WPT INCONNU 
 1383=Lecture NMEA 
-1384=Informations de position reÃ§ues Ã  partir de : 
+1384=Informations de position reçues à partir de : 
 1385=Fichier du jeu de dalles introuvable 
 1386=Fournisseur hors-service 
-1387=DÃ©marrage du fournisseur 
-1388=OpÃ©ration en cours 
+1387=Démarrage du fournisseur 
+1388=Opération en cours 
 1389=Erreur d'envoi SMS 
-1390=EntrÃ©e non valide 
+1390=Entrée non valide 
 1391=Tracking actif 
-1392=Aucun plugin trouvÃ© 
+1392=Aucun greffon trouvé 
 
 # commandes de navigation 
 2000=Route Aller 
 2001=Route Retour 
 2002=Naviguer vers 
-2003=DÃ©finir comme actif 
+2003=Définir comme actif 
 2004=Montrer 
 2005=Ajouter 
 2006=Sauvegarder 
@@ -142,24 +142,24 @@
 2009=Tout afficher 
 2010=Tout masquer 
 2011=Modifier 
-2012=Mettre Ã  jour 
+2012=Mettre à jour 
 2013=Supprimer 
 2014=Montrer 
 2015=Trier par position 
 2016=Trier par nom 
 2017=Trier par distance 
-2018=Ajouter un repÃ¨re 
+2018=Ajouter un repère 
 
 # menu de navigation 
 2100=Points de passage 
-2101=Enregistrer le point actuel 
-2102=DÃ©finir un point personnalisÃ© 
+2101=Enregistrer le point GPS actuel
+2102=Ajouter un point personnalisé 
 2103=SMS Je suis ici 
-2104=SMS Rendez-vous lÃ -bas 
-2105=Stop 
+2104=SMS Rendez-vous là-bas 
+2105=Arrêter la navigation 
 2106=Traces 
-2107=RepÃ¨res 
-2108=Nouveau Waypoint projetÃ©
+2107=Repères 
+2108=Ajouter un point avec projection
 2109=Fin de session 
 
 # formulaires de navigation / domaines (formulaire des points de passage) 
@@ -170,12 +170,12 @@
 2204=Longitude (WGS-84) 
 2205=Date et heure 
 2206=Emplacement 
-2207=ClichÃ© 
+2207=Cliché 
 2208=Destinataire 
 2209=Message 
 2210=Appareil photographique 
 2211=Altitude 
-2212=RÃ©gion 
+2212=Région 
 2213=Latitude 
 2214=Longitude 
 2215=UTM Easting (m) 
@@ -191,72 +191,72 @@
 2225=GC Logs 
 2226=GC Log 
 2227=Date 
-2228=CatÃ©gorie 
-2229=DÃ©couvreur 
+2228=Catégorie 
+2229=Découvreur 
 2230=Texte 
-2231=RepÃ¨re 
+2231=Repère 
 2232=Orientation 
 2233=Origine 
 2234=Destination 
 2235=Mode session
 
 # messages de navigation 
-2300=Impossible de charger les points de passage intÃ©grÃ©s 
+2300=Impossible de charger les points de passage intégrés 
 2301=Impossible de lister les collections 
-2302=Pas de repÃ¨res enregistrÃ©s 
+2302=Pas de repères enregistrés 
 2303=Impossible de lister les collections 
-2304=Aucun point de passage trouvÃ© 
-2305=Points de passage chargÃ©s 
+2304=Aucun point de passage trouvé 
+2305=Points de passage chargés 
 2306=Position pas encore connue 
 2307=Pas d'acquisition de trace en cours 
-2308=Confirmer le point de passage personnalisÃ© ? 
-2309=Point de passage enregistrÃ© 
+2308=Confirmer le point de passage personnalisé ? 
+2309=Point de passage enregistré 
 2310=Erreur d'enregistrement du point de passage 
 2311=Point de passage obtenu 
 2312=En cours d'affichage ... 
 2313=En cours de chargement ... 
-2314=Ajouter waypoint Ã  [% s]? 
+2314=Ajouter waypoint à [% s]? 
 2315=Nom du fichier : 
-2316=SÃ©lectionnez une destination : 
+2316=Sélectionnez une destination : 
 2400=Erreur d'appareil photographique 
-2401=\n<Pas d'aperÃ§u> 
-2402=Pas d'aperÃ§u  
-2403=Echec clichÃ© 
-2404=Pas de clichÃ© 
-2405=CoordonnÃ©es mal formÃ©es : 
-2406=RepÃ¨res mis Ã  jour 
-2407=Impossible de mettre Ã  jour les repÃ¨res 
+2401=\n<Pas d'aperçu> 
+2402=Pas d'aperçu  
+2403=Echec cliché 
+2404=Pas de cliché 
+2405=Coordonnées mal formées : 
+2406=Repères mis à jour 
+2407=Impossible de mettre à jour les repères 
 2408=Pas encore de commentaires 
-2409=Note ajoutÃ©e 
+2409=Note ajoutée 
 2410=<nouveau fichier> 
 2411=Utilisateur 
-2412=SÃ©lectionner premier waypoint 
+2412=Sélectionner premier waypoint 
 
-# commandes de paramÃ©trage 
+# commandes de paramétrage 
 3000=Appliquer 
 3001=Sauver 
 
-# menu de paramÃ©trage 
+# menu de paramétrage 
 3100=Base 
 3101=Bureau 
 3102=Emplacement 
 3103=Navigation 
 3104=Divers 
-3105=Plugins 
+3105=Greffons 
 
 # settings (Plugins) 
 3180=Configurer
-3181=ActivÃ©
+3181=Activé
 3182=<Aucune configuration>
 
-# formulaires/champs/valeurs de paramÃ©trage (de base)
-3400=Carte de dÃ©marrage 
-3401=Point de rÃ©fÃ©rence par dÃ©faut 
-3402=CoordonnÃ©es 
-3403=SystÃ¨me d'unitÃ©s 
-3405=RÃ©pertoire des donnÃ©es 
-3406=MÃ©trique 
-3407=ImpÃ©rial 
+# formulaires/champs/valeurs de paramétrage (de base)
+3400=Carte de démarrage 
+3401=Point de référence par défaut 
+3402=Coordonnées 
+3403=Système d'unités 
+3405=Répertoire des données 
+3406=Métrique 
+3407=Impérial 
 3408=Nautique 
 3409=<Carte avec Lat/Lon> 
 3410=<Carte avec grille> 
@@ -267,25 +267,25 @@
 3415=CMS
 3416=<GPX Lat/Lon>
 
-# formulaires/champs/valeurs de paramÃ©trage (Bureau) 
+# formulaires/champs/valeurs de paramétrage (Bureau) 
 3500=Bureau 
-3501=Plein Ã©cran 
+3501=Plein écran 
 3502=Pas de sons 
-3503=PrÃ©cision dÃ©cimale 
+3503=Précision décimale 
 3504=Azimut Wpt HPS vrai 
 3505=Affichage basique 
-3506=Affichage Ã©tendu 
-3507=Affichage de l'Ã©chelle 
-3508=Affichage sans arriÃ¨re-plan 
+3506=Affichage étendu 
+3507=Affichage de l'échelle 
+3508=Affichage sans arrière-plan 
 3509=Police d'affichage moyenne 
-3510=Police d'affichage grasse 
+3510=Affichage police en gras 
 3511=Affichage de couleur noire 
 3512=Transparence de l'affichage 
 3513=Rotation CMS (s) 
-3514=Montrer la trace 
-3515=Ligne de trace 
+3514=Montrer le parcours 
+3515=Ligne de parcours 
 3516=Mode 
-3517=Couleurs de sÃ©curitÃ© 
+3517=Couleurs de sécurité 
 3518=Police des listes
 3519=Couleur 
 3520=Epaisseur 
@@ -295,31 +295,32 @@
 3524=Zoom facile 
 3525=Couches 
 3526=Cartes 
-3527=DÃ©sactivÃ©
+3527=Désactivé
 3528=Zoom facile (touches volume) 
-3529=Afficher les commandes de zoom 
+3529=Affichage commandes de zoom 
 3530=Aucune commande 
-3531=Afficher la barre de menus 
-3532=Cacher aprÃ¨s 
+3531=Affichage barre de menus 
+3532=Cacher après 
 3533=Mode liste 
-3534=Plateforme par dÃ©faut 
-3535=Filtre personnalisÃ© 
+3534=Plateforme par défaut 
+3535=Filtre personnalisé 
 3536=Zoom Carte 
 3537=Forcer champ de texte
 3538=Crosshair fixe 
 3539=Automatique
+3540=Boussole magnétique (HPS)
 
-# formulaires/champs/valeurs de paramÃ©trage (Emplacement) 
-3600=Fournisseur 
+# formulaires/champs/valeurs de paramétrage (Emplacement) 
+3600=Source  GPS 
 3601=Acquisition de la trace 
 3602=Toujours 
 3603=Demander 
 3604=Jamais 
 3605=Format d'acquisition de la trace 
-3606=Capture de  repÃ¨res 
+3606=Capture de  repères 
 3607=Format de capture 
 3608=URL de connexion 
-3609=Retard du simulateur 
+3609=Cadence du simulateur (ms) 
 3610=Temps de synchronisation du Fix 
 3611=Bluetooth 
 3612=Interne 
@@ -335,74 +336,74 @@
 3622=Maintien de la connexion (ms) 
 3623=Correction de l'altitude (m) 
 3624=Enregistrer temps (ms) 
-3625=Compenser altitude nÃ©gative 
+3625=Compenser altitude négative 
 3626=Correspondance exacte de temps 
-3627=A-GPS (GPS assistÃ©) 
+3627=A-GPS (GPS assisté) 
 3628=Forcer la recherche 
-3629=ContrÃ´le de la consommation 
+3629=Contrôle de la consommation 
 3630=Correction de la position 
 3631=Correction de temps
 3632=Autoriser les extensions 
 
-# formulaires/champs/valeurs de paramÃ©trage (Navigation) 
-3700=ProximitÃ© du point de passage (m) 
-3701=ProximitÃ© du point d'intÃ©rÃªt 
+# formulaires/champs/valeurs de paramétrage (Navigation) 
+3700=Proximité du point de passage (m) 
+3701=Proximité du point d'intérêt 
 3702=Ligne de route 
-3703=En pointillÃ©s 
+3703=En pointillés 
 #REMOVED 3704=de couleur rouge 
-3705=IcÃ´nes de points d'intÃ©rÃªt 
+3705=Icônes de points d'intérêt 
 3706=SMS d'emplacement 
-3707=ReÃ§oit 
+3707=Reçoit 
 3708=Masquer la notification 
-3709=RÃ©visions de fichiers 
+3709=Révisions de fichiers 
 3710=Indiquer le nom GC 
 3711=Tri par 
 3712=Position 
 3713=Nombre 
 3714=Distance 
 3715=Dynamique 
-3716=Alertes de proximitÃ© Wpt 
+3716=Alertes de proximité Wpt 
 3717=Acoustique 
 3718=Vibration 
-3719=Ligne de piste 
+3719=Ligne de trace 
 3720=Activer MOB 
 
-# formulaires/champs/valeurs de paramÃ©trage (rÃ©glages) 
-3800=RÃ©glages 
+# formulaires/champs/valeurs de paramétrage (réglages) 
+3800=Réglages spéciaux 
 3801=En panne I/O
-#REMOVED 3802=moteur de rendu sÃ©curisÃ© 
-3803=Forcer le nettoyage mÃ©moire 
-3804=DÃ©filement par dalle 
+#REMOVED 3802=moteur de rendu sécurisé 
+3803=Forcer le nettoyage mémoire 
+3804=Défilement par dalle 
 3805=Grands atlas 
-3806=Mode Ã©conomie d'Ã©nergie 
-3807=DonnÃ©es d'entrÃ©e fiables 
-#REMOVED 3808=esconder menÃº de comandos 
+3806=Mode économie d'énergie 
+3807=Données d'entrée fiables 
+#REMOVED 3808=Masquer les commandes de menu
 3809=Utiliser le service natif 
 3810=Analyse partielle GPX 
-3811=MÃ©moire faible I/O 
-3812=Autorisation entrÃ©e numÃ©rique 
-3813=Menu principal Ã©tendu 
+3811=Mémoire faible I/O 
+3812=Autorisation entrée numérique 
+3813=Menu principal étendu 
 3814=Sauvegarde configuration externe 
 3815=Optimisation HECL 
 3816=Aucun 
-3817=PrÃ©traitement 
-3818=PrÃ©compiler 
-3819=Filtrage Ã©chelle 
-3820=DÃ©tails de chargement 
+3817=Pré-traitement 
+3818=Précompiler 
+3819=Filtrage échelle 
+3820=Détails de chargement 
 3821=Indicateur de progression (S40) 
-3822=ContrÃ´le du dÃ©placement des cartes 
+3822=Contrôle du déplacement des cartes 
 3823=Aucun 
 3824=Normal 
-3825=RÃ©actif
+3825=Réactif
 
 # Commandes d'information 
 4000=Technique 
 
-# ElÃ©ments d'information 
+# Eléments d'information 
 4200=Accueil 
 4201=www.trekbuddy.net 
 4202=Version 
-4203=\nCOMMANDES - CLAVIER/ECRAN TACTILE
-4204=CLAVIER : Fonctions des touches \n \n0 - Style crosshairs (appui long puis 3 courts)/Affichage nom des POIs (idem) \n1 - Navigation/Listes des Wpts-Traces \n3 - RÃ©tro-Ã©clairage (selon pression) \n5/OK (appui court) - Position GPS/informations OSD \n5/OK (appui long) - Zoom (% rÃ©glable) \n5/OK (clic X2) - CrÃ©ation MOB Wpt.gpx \n2-4-6-8/Cmd Nav - DÃ©filement carte \n7 (appui long) - SÃ©lection couches (atlas) \n9 (appui long) - SÃ©lection cartes (atlas) \n7-9 (appui court) - Zoom direct (+/-) \n# - Choix Ã©crans (carte/boussole/CMS) \n* - Blocage du clavier (appui long) \n \nECRAN TACTILE : Commandes spÃ©cifiques \n \n- De gauche Ã  droite et de haut en bas, l'Ã©cran est divisÃ© en 12 zones tactiles correspondant aux fonctions des touches d'un clavier : \n \n  1  2  3 \n  4  5  6 \n  7  8  9 \n  *  0  # \n \nAutres fonctions tactiles : \n- DÃ©placement carte par toucher/glisser \n- Zoom carte (+/-) par Ã©carter/pincer \n- Utiliser les icones appropriÃ©es pour obtenir les fonctions correspondantes disponibles (lorsque l'affichage du menu est activÃ© dans les rÃ©glages) 
-4205=CLAVIER : Fonctions des touches \n \n0 - Mode Jour/Nuit \n1 - Navigation/Liste des Wpts-Traces \n3 - RÃ©tro-Ã©clairage (selon pression) \n# - Choix mode Ã©crans (carte/boussole/CMS) \n* - Blocage du clavier (pression longue) \n2-8/Cmd Nav Haut-Bas - Moyenne emplacement localisation \n5/OK - Verrouillage de l'aiguille boussole Nord en Haut \n5/OK (clic X2) - CrÃ©ation MOB Wpt.gpx \n4-6-7-9/Cmd Nav Gauche-Droite - Changement d'Ã©chelle \n \nECRAN TACTILE : Commandes spÃ©cifiques \n \n- De gauche Ã  droite et de haut en bas, l'Ã©cran est divisÃ© en 12 zones tactiles correspondant aux fonctions des touches d'un clavier : \n \n  1  2  3 \n  4  5  6 \n  7  8  9 \n  *  0  # \n \nFonctions tactiles supplÃ©mentaires : \n- Utiliser les icones appropriÃ©es pour obtenir les fonctions correspondantes disponibles (lorsque l'affichage du menu est activÃ© dans les rÃ©glages)
-4206=CLAVIER : Fonctions des touches \n \n0 - Mode Jour/Nuit \n1 - Navigation/Liste des Wpts-Traces \n3 - RÃ©tro-Ã©clairage (selon pression) \n5/OK (clic X2) - CrÃ©ation MOB Wpt.gpx \n# - Choix mode Ã©crans (carte/boussole/CMS) \n* - Blocage du clavier (Appui long) \n8/Cmd Nav Bas - Liste des CMS \n4-6/Cmd Nav Gauche-Droite - Changement direct de CMS \n7-9 - Waypoint prÃ©cÃ©dent/suivant \n2/Cmd Nav Haut - RÃ©glages spÃ©ciaux (selon les caractÃ©ristiques du CMS) \n \nECRAN TACTILE : Commandes spÃ©cifiques \n \n- De gauche Ã  droite et de haut en bas, l'Ã©cran est divisÃ© en 12 zones tactiles correspondant aux fonctions des touches d'un clavier : \n \n  1  2  3 \n  4  5  6 \n  7  8  9 \n  *  0  # \n \nFonctions tactiles supplÃ©mentaires : \n- Utiliser les icones appropriÃ©es pour obtenir les fonctions correspondantes disponibles (lorsque l'affichage du menu est activÃ© dans les rÃ©glages)
+4203=\nCOMMANDES
+4204=Mode : CARTE \n \nCLAVIER : Fonctions des touches \n \n0 - Style crosshairs (appui long puis 3 courts)/Affichage infos POIs (nom-rien-commentaire-prochain) \n1 - Navigation/Listes des Wpts-Traces \n3 - Rétro-éclairage (selon pression) \n5/OK (appui court) - Position GPS/informations OSD \n5/OK (appui long) - Zoom (% réglable) \n5/OK (clic X2) - Création MOB Wpt gpx \n2-4-6-8/Cmd Nav - Défilement carte \n7 (appui long) - Sélection couches (atlas) \n9 (appui long) - Sélection cartes (atlas) \n7-9 (appui court) - Zoom direct (+/-) \n# - Choix écrans (carte/boussole/CMS) \n* (appui court) - Menu (écrans tactiles) \n* (appui long) - Blocage clavier/écran \n \nECRAN TACTILE : Commandes spécifiques \n \n- De gauche à droite et de haut en bas, l'écran est divisé en 12 zones tactiles correspondant aux fonctions des touches d'un clavier : \n \n  1  2  3 \n  4  5  6 \n  7  8  9 \n  *  0  # \n \nNote : les zones tactiles sont de formes et de surfaces variables en fonction des appareils et du mode portrait ou paysage utilisé. \n \nAutres fonctions tactiles : \n- Déplacement carte par toucher/glisser \n- Zoom carte (+/-) par écarter/pincer \n- Utiliser les icones appropriées de la barre de menus inférieure et des commandes de zoom pour obtenir les fonctions correspondantes disponibles (lorsque l'affichage de ces menus est activé dans les paramètres). 
+4205=Mode : BOUSSOLE \n \nCLAVIER : Fonctions des touches \n \n0 - Mode Jour/Nuit \n1 - Navigation/Liste des Wpts-Traces \n3 - Rétro-éclairage (selon pression) \n# - Choix mode écrans (carte/boussole/CMS) \n* (appui court) - Menu (écrans tactiles) \n* (appui long) - Blocage clavier/écran \n2-8/Cmd Nav Haut-Bas - Moyenne emplacement localisation \n5/OK - Verrouillage de l'aiguille boussole Nord en Haut \n5/OK (clic X2) - Création MOB Wpt gpx \n4-6-7-9/Cmd Nav Gauche-Droite - Changement d'échelle \n \nECRAN TACTILE : Commandes spécifiques \n \n- De gauche à droite et de haut en bas, l'écran est divisé en 12 zones tactiles correspondant aux fonctions des touches d'un clavier : \n \n  1  2  3 \n  4  5  6 \n  7  8  9 \n  *  0  # \n \nNote : les zones tactiles sont de formes et de surfaces variables en fonction des appareils et du mode portrait ou paysage utilisé. \n \nFonctions tactiles supplémentaires : \n- Utiliser les icones appropriées de la barre de menus inférieure et des commandes de zoom pour obtenir les fonctions correspondantes disponibles (lorsque l'affichage de ces menus est activé dans les paramètres).
+4206=Mode : CMS \n \nCLAVIER : Fonctions des touches \n \n0 - Mode Jour/Nuit \n1 - Navigation/Liste des Wpts-Traces \n3 - Rétro-éclairage (selon pression) \n5/OK (clic X2) - Création MOB Wpt gpx \n# - Choix mode écrans (carte/boussole/CMS) \n* (appui court) - Menu (écrans tactiles) \n* (appui long) - Blocage clavier/écran \n8/Cmd Nav Bas - Liste des CMS \n4-6/Cmd Nav Gauche-Droite - Changement direct de CMS \n7-9 - Waypoint précédent/suivant \n2/Cmd Nav Haut - Réglages spéciaux (selon les caractéristiques du CMS) \n \nECRAN TACTILE : Commandes spécifiques \n \n- De gauche à droite et de haut en bas, l'écran est divisé en 12 zones tactiles correspondant aux fonctions des touches d'un clavier : \n \n  1  2  3 \n  4  5  6 \n  7  8  9 \n  *  0  # \n \nNote : les zones tactiles sont de formes et de surfaces variables en fonction des appareils et du mode portrait ou paysage utilisé. \n \nFonctions tactiles supplémentaires : \n- Utiliser les icones appropriées de la barre de menus inférieure et des commandes de zoom pour obtenir les fonctions correspondantes disponibles (lorsque l'affichage de ces menus est activé dans les paramètres).

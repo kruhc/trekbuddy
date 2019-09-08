@@ -322,6 +322,7 @@
 3537=force textfield focus
 3538=fixed crosshair
 3539=auto
+3540=HPS magnetic compass
 
 # settings forms/fields/values (Location)
 3600=Provider
@@ -407,7 +408,7 @@
 3825=aggressive
 
 # info commands
-4000=Technical
+4000=Technical Details
 
 # info items
 4200=Home

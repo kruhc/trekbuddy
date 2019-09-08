@@ -8,7 +8,7 @@ You can tell by looking at the tools, naming convetion etc that it is oa old, po
 
 WORK IN PROGRESS: sources and other were migrated from CVS and SVN, it was not 100% successful migration so there may be obsolete dangling files and/or version that do not match those used to build current APK in PlayStore.
 
-## Dependencies
+## Dependencies / 3rd parties
 - microemulator - J2ME implementation (and more) for Android by Bartek Teodorczyk. I believe it is now available in Google archive only. _I have been using mix of CVS and SVN for TrekBuddy, and because I wasn't able to convert SVN to GIT I lost commit history for microemu changes. I will try to at least provide diff for externals/microemu sources against original soon._
 - HECL - scripting language by David Welton [(github)](https://github.com/davidw/hecl). _The same with diff of externals/hecl sources against original applies._
 - KXML - low memory footprint XML parser by Stefan Haustein

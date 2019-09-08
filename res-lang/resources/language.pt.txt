@@ -1,0 +1,311 @@
+# common commands - Comandos Comuns
+0000=OK
+0001=Voltar
+0002=Fechar
+0003=Cancelar
+0004=Sim
+0005=Nao
+
+# boot messages - Mensagens do Arranque
+0300=Recompilando imagens...
+0301=Carregando configuração...
+0302=Personalizando "ui"...
+0303=Criando ecrãs...
+0304=Carregando mapas...
+0305=Mapeando teclas...
+0306=Localizando...
+0399= 
+
+# desktop commands - Comandos do "Ecra?"
+1000=Iniciar
+1001=Parar
+1002=Pausa
+1003=Continuar
+1004=Carregar Mapa
+1005=Carregar Atlas
+1006=Configuração
+1007=Navegação
+1008=Informacao
+1009=Sair
+1010=Refrescar
+1011=Conectar
+1012=Abrir
+
+# desktop messages - Mensagens do "ecrã?"
+1300=Falha ao iniciar"ubicación compartida"
+1301=Imagem do programa? 
+1302=O waypoint selecionado está fora da tela actual
+1303=O waypoint seleccionado está fora do mapa actual
+1304=Teclado bloqueado
+1305=Teclado desbloqueado
+1306=Registar o percurso "tracklog"?
+1307=Falha ao criar provedor gps
+1308=Falha ao iniciar provedor gps
+1309=Falha ao parar provedor gps
+1310=Navegação suspensa
+1311=Waypoint colocado no mapa
+1312=Nao há modos zoom, no atlas selecionado
+1313=Nao há mapas no zoom seleccionado
+1314=Nao há mapa para a posição actual neste zoom
+1315=Carregando mapa
+1316=Mapa inicial
+1317=Carregando Atlas
+1318=Configuração actualizada
+1319=Falha ao actualizar a configuração
+1320=Falha ao guardar a rota "Tracklog"
+1321=Falha ao usar o mapa
+1322=Falha ao carregar o mapa
+1323=Telas do mapa carregadas
+1324=Carregando estado
+1325=Seleciona Mapa
+1326=Seleciona Atlas
+1327=Seleciona zoom
+1328=SMS desconhecido
+1329=SMS de localização enviado
+1330=Falha ao enviar SMS
+1331=Falha ao receber SMS
+1332=Servico não encontrado
+1333=Falha na procura por serviços
+1334=Não foram encontrados serviços
+1335=Falha ao reiniciar a busca
+1336=Falha ao iniciar "tracklog"
+1337=Falha ao carregar perfil
+1338=Não há provedor de sinal gps
+1339=Mapa inicial nao defenido. Utilize Opções-> Carregar Mapa/Atlas
+1340=Pausa
+1341=Perfil não encontrado(s)
+1342=Perfil
+1343=Arquivo incorrecto. Tente de novo.
+1344=Falha na projecção do mapa
+1345=Falha no "datum"/modo de dados
+1346=Falha no arquivo de calibragem
+1347=Falha no arquivo de configuração
+1348=Endereço de atlas nao válido
+1349=Endereço de mapa nao válido
+1350=Arquivo de fracção do mapa nao válido:
+1351=Dimensões de mapa nao válidas
+1352=Ponto nao válido
+1353=Projecçao nao válida
+1354=MMPXY nao válido
+1355=MMPLL nao válido
+1356=IWH nao válido
+1357=Tamanho incorrecto MMPXY:MMPLL 
+1358=Mapa demasiado grande
+1359=Pontos de calibragem insuficientes
+1360=Mapa nao calibrado
+1361=Mapa vazio - sem fracções/telas
+1362=Falha ao carregar parte do mapa
+1363=Nao há imagem para esta parte do mapa
+1364=Arquivo de calibragem desconhecido
+1365=Directório de fracções do mapa nao encontrado
+1366=Falha ao listar partes do mapa
+1367=Fracção de mapa demasiado grande
+1368=Arquivo nao encontrado
+1369=Utilizar como Atlas base?
+1370=Utilizar como Mapa base?
+1371=Dispositivos BT
+1372=Procurando dispositivos...
+1373=Procurando serviços
+1374=Procurando Serviço...
+1375=Resolvendo nomes...
+1376=Dispositivos não encontrados
+1377=Radio Bluetooth desconectado
+1379=Iluminacao de ecra ligada
+1380=Iluminacao de ecra desligada
+1381=SEM POSICAO
+1382=SEM WPT
+1383=Reproduc. NMEA
+1384=Recebida informação de posição de:
+1385=Arquivo de informação de parcelas do mapa nao encontrado:
+1386=Ecra fora de servico
+1387=Iniciando ecrã
+1388=Operação em progresso...
+1389=Falha de registo por SMS push
+
+# navigation commands - Comandos de Navegação
+2000=Seguir rota
+2001=Inverter rota
+2002=Navegar para
+2003=Fixar como activo
+2004=Ir para/selecionar
+2005=Adicionar
+2006=Guardar
+2007=Tirar foto
+2008=Enviar
+2009=Mostrar todos
+2010=Ocultar todos
+2011=Editar
+2012=Actualizar
+2013=Apagar
+2014=Mostrar
+2015=Ordenar por posição
+2016=Ordenar por nome
+2017=Ordenar por distancia
+
+# navigation menu - Menu "Navegação"
+2100=Waypoints
+2101=Guardar Actual
+2102=Adicionar Wpt Personalizado
+2103=SMS "Estou aqui"
+2104=SMS "Encontro-me lá contigo"
+2105=Parar
+2106=Tracks
+2111=Waypoints(wpts)
+
+# navigation forms/fields (wpt form) - Campos de preenchimento de navegação
+2200=Waypoint 
+2201=Nome 
+2202=Comentário 
+2203=Latitude (WGS-84) 
+2204=Longitude (WGS-84) 
+2205=Data e hora 
+2206=Localização 
+2207=Capturar Foto
+2208=Número Receptor 
+2209=Mensagem 
+2210=Camera
+2211=Altitude(m)
+2212=Zona
+2213=Lat
+2214=Lon
+2215=UTM Este(m)
+2216=UTM Norte(m)
+2217=Este(m)
+2218=Norte(m)
+2219=GC Id 
+2220=GC Clase
+2221=GC Desc. Curta
+2222=GC Desc. Larga
+2223=GC Pistas
+2224=Distancia
+
+# navigation messages - Mensagens de Navegação
+2300=Falha ao carregar waypoints de arquivo .jar
+2301=Falha ao listar dados guardados
+2302=Nao ha pontos de referencia guardados
+2303=Falha ao listar dados guardados
+2304=Waypoints nao encontrados
+2305=Waypoints carregados
+2306=Posição nao fixada
+2307=Rota nao fixada
+2308=Manter waypoint personalizado?
+2309=Waypoint gravado
+2310=Erro gravando waypoint
+2311=Waypoint adicionado à lista
+2312=Listando...
+2313=Carregando...
+2400=Falha na camera
+2401=\n<Vista prévia nao disponivel>
+2402=Vista prévia nao disponivel
+2403=Falha na captura de Imagem
+2404=Nao é possível capturar Imagem
+2405=Coordenada mal formada:
+2406=Marcas de terreno actualizadas
+2407=Falha ao actualizar marcas de terreno (wpts)
+
+# settings commands - Definições
+3000=Aplicar
+3001=Guardar
+
+# settings menu - Menu de Definições
+3100=Básico
+3101=Apresentação
+3102=Localização
+3103=Navegação
+3104=Várias
+
+# settings forms/fields/values (Basic) - Campos de Definições Básico
+3400=Mapa de inicio
+3401="Datum" por defeito
+3402=Coordenadas
+3403=Sistema de Unidades
+3405=Directório de dados
+3406=Métrico(Km)
+3407=Imperial(Mph)
+3408=Náutico(Kn)
+3409=<Mapa Lat/Lon>
+3410=<Quadrícula de Mapa>
+3411=<Geocaching Lat/Lon>
+
+# settings forms/fields/values (Desktop) - Campos de Definições "Ecrã?"
+3500=Aspecto do ecra
+3501=Ecrã completo
+3502=Sem sons
+3503=Precisão decimal
+3504=HPS-azimute do wpt ao N verdadeiro
+3505=OSD básico
+3506=OSD extendido
+3507=OSD escala
+3508=OSD sem fundo
+3509=OSD fonte mediana
+3510=OSD fonte negrito
+3511=OSD cor negra
+3512=OSD Transparência
+3513=Rodar ecrã CMS X emX seg
+3514=Mostrar rasto/trilha
+3515=Estilo do rasto
+3516=Modo
+3517=Sobressair MenuWpts 
+
+# settings forms/fields/values (Location) - Campos de Definições Localização
+3600=Provedor gps
+3601=Tracklog
+3602=Sempre
+3603=Perguntar
+3604=Nunca
+3605=Formato "Tracklog"
+3606=Capturar desde...
+3607=Formato de captura
+3608=Conexão URL
+3609=Velocidade de simulação
+3610=Parametros internos do provedor
+3611=Bluetooth
+3612=Interno
+3613=Stream
+3614=Simulador
+3615=Motorola
+3616=Opções GPX
+3617=Registar so dados válidos
+3618=O2 Germany
+3619=Nivel de filtro
+3620=Registar GSM info
+3621=HGE-100
+3622=Manter activo(ms)
+
+# settings forms/fields/values (Navigation) - Campos de Definições Navegação
+3700=Próximo a Wpt(m)
+3701=Próximo a POI(m)
+3702=Estilo da linha de rota
+3703=Tracejada
+3704=Cor vermelha
+3705=Icones POI
+3706=SMS de localização
+3707=Receber
+3708=Esconder notificacão sms
+3709=Backup wpts
+3710=Mostrar nome GC
+3711=Ordenar por 
+3712=Posição
+3713=Nome
+3714=Distancia
+
+# settings forms/fields/values (Tweaks) - Campos de Definições Vários/Menu "Tweaks"
+3800="Tweaks"
+3801=Siemens I/O
+3802=Deslocamento/Scroll Seguro
+3803=Forçar GC (S60 2nd)
+3804=Scroll tela a tela
+3805=Atlas muito grandes
+3806=Vibração Off
+
+# info commands
+4000=Técnicos
+
+# info items
+4200=Página web: 
+4201=\nwww.trekbuddy.net
+4202=Versão 
+4203=Funções das Teclas
+4204=\n0 - Estilo do ponteiro/dia-noite, 1 - Navegação (Manter pressionado, para acesso rápido à lista de waypoints activos; pressionar levemente: menu de Navegação), 3 - iluminacão de fundo do ecra, 5/"Tecla Disparar" - Centrar posição actual, se gps ligado/ informacão OSD de Navegação (OSD=On Screen Display=informação a apresentar no ecrã), 2-4-6-8/JOY(stick) - Deslocar-se no(s) mapa(s)/Scroll, 7 - Seleccionar zoom do mapa (atlas), 9 - Seleccionar tipo de mapa, se vários disponíveis (atlas), # - Mudar ecrã Seguinte: HPS ("Bússola"), * - Bloqueio do teclado (Manter pressionado); ou pressionar levemente seguido de 0, para apresentar/esconder o nome dos Wpts e/ou comentarios.
+4205=\n0 - Modo dia/noite, 1 - Navegação (Manter: acesso rápido à lista de waypoints; pressionar levemente para menu de Navegação), 3 - iluminacão de ecra, 2-8/JOY UP-DOWN - localização "promediada", 4-6/JOY LEFT-RIGHT - escala, # - Modo de ecra seguinte "CMS" (tema personalizado-UI), * - bloqueio teclado (Manter pressionado)
+4206=\n0 - dia/noite, 1 - Navegação (Manter pressionado: acesso rápido à lista de waypoints; pressionar levemente: menu de Navegação), 3 - iluminacão de ecra, 8/JOY DOWN - desenhos/Ficheiros CMS, 4-6/JOY LEFT-RIGHT Ecrãs CMS # - ecrã seguinte, * - bloqueio do teclado rota

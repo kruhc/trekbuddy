@@ -1,0 +1,310 @@
+# common commands
+0000=OK
+0001=Inapoi
+0002=Inchide
+0003=Renunta
+0004=Da
+0005=Nu
+
+# boot messages
+0300=se cacheaza imaginile...
+0301=se incarca configurarea...
+0302=se customizeaza UI-ul...
+0303=se creeaza ecranele...
+0304=se incarca harta...
+0305=se mapeaza tastele...
+0306=se localizeaza...
+0399=
+
+# desktop commands
+1000=Start
+1001=Stop
+1002=Pauza
+1003=Continuare
+1004=Incarca Harta
+1005=Incarca Atlas
+1006=Setari
+1007=Navigare
+1008=Info
+1009=Iesire
+1010=Actualizare
+1011=Conectare
+1012=Deschide
+
+# desktop messages
+1300=Initializarea locatiei de sharing esuata
+1301=Vreti sa parasiti aplicatia?
+1302=Punctul selectat se afla in afara nivelului curent
+1303=Punctul selectat se afla in afara hartii curente
+1304=Tastatura blocata
+1305=Tastatura deblocata
+1306=Porneste scrierea traseului?
+1307=Crearea furnizoruluiesuata
+1308=Pornirea furnizorului esuata
+1309=Oprirea furnizorului esuata
+1310=Navigatie oprita
+1311=Punct fixat pe harta
+1312=Atlasul curent nu are niciun nivel
+1313=Nivelul curent nu are nicio harta
+1314=Nicio harta pentru pozitia curenta in nivel
+1315=Se incarca harta
+1316=Se initializeaza harta
+1317=Se incarca atlasul
+1318=Configurare actualizata
+1319=Actualizarea configurarii esuata
+1320=Eroare la scrierea traseului
+1321=Eroare la folosirea hartii
+1322=Eroare la incarcarea hartii
+1323=Fragmente incarcate
+1324=Se incarca statusul
+1325=Selecteaza Harta
+1326=Selecteaza Atlasul
+1327=Selecteaza Nivelul
+1328=SMS necunoscut
+1329=SMS cu locatia trimis
+1330=Eroare la trimiterea SMS-ului
+1331=Eroare la primirea SMS-ului
+1332=Serviciul nu a fost gasit
+1333=Eroare la cautarea serviciului
+1334=Niciun serviciu gasit
+1335=Eroare la reinceperea descoperirii
+1336=Eroare la inceperea scrierii traseului
+1337=Eroare la incarcarea profilului
+1338=Nicio instanta a furnizorului
+1339=Nicio harta de inceput. Folositi Optiuni->Incarca Harta/Atlas
+1340=Pauza
+1341=Niciun profil gasit
+1342=Profiluri
+1343=Eroare la fisierul selectat.\nMai incercati odata.
+1344=Eroare la analizarea proiectiei hartii
+1345=Eroare la analizarea datei hartii
+1346=Eroare la analizarea fisierului de calibrare
+1347=Eroare la analizarea fisierului SET
+1348=URL atlas invalid
+1349=URL harta invalid
+1350=Numele fisierului fragment invalid:
+1351=Dimensiune harta invalida
+1352=Punct invalid
+1353=Setup-ul proiectiei invalid
+1354=MMPXY invalid
+1355=MMPLL invalid
+1356=IWH invalid
+1357=Dimensiune MMPXY:MMPLL gresita
+1358=Harta prea mare
+1359=Prea putine puncte pentru calibrare
+1360=Nicio calibrare
+1361=Harta goala - niciun fragment
+1362=Eroare la incarcarea fragmentului
+1363=Nicio imagine pentru fragment
+1364=Fisier de calibrare necunoscut
+1365=Directorul fragmentelor nu a fost gasit
+1366=Eroare la listarea fragmentelor
+1367=Fragment prea mare
+1368=Fisierul nu a fost gasit
+1369=Folositi ca atlas implicit?
+1370=Folositi ca harta implicita?
+1371=Alege dispozitiv
+1372=Se cauta dispozitive...
+1373=Cauta serviciu
+1374=Se cauta serviciu...
+1375=Se rezolva numele...
+1376=Niciun dispozitiv descoperit
+1377=Bluetooth oprit
+1379=Lumina de fundal pornita
+1380=Lumina de fundal oprita
+1381=NICIO POZITIE
+1382=NICIUN PUNCT
+1383=Redare NMEA
+1384=S-a primit informatii despre locatie de la:
+1385=Fisierul de fragmente nu a fost gasit:
+1386=furnizorul nu este activ
+1387=Porneste furnizorul
+1388=Operatiune in progres...
+1389=Eroare la inregistrarea pentru SMS push
+
+# navigation commands
+2000=De-aLungulRutei
+2001=RutaInapoi
+2002=NavigheazaLa
+2003=SeteazaCaActiv
+2004=Du-teLa
+2005=Adauga
+2006=Salveaza
+2007=Ia
+2008=Trimite
+2009=ArataTot
+2010=AscundeTot
+2011=Editeaza
+2012=Actualizeaza
+2013=Sterge
+2014=Arata
+2015=SorteazaDupaPozitie
+2016=SorteazaDupaNume
+2017=SorteazaDupaDistanta
+
+# navigation menu
+2100=Puncte
+2101=Inregistreaza punctul curent
+2102=Adauga Punct
+2103=SMS Sunt aici
+2104=SMS Ne intalnim acolo
+2105=Stop
+2106=Trasee
+
+# navigation forms/fields (wpt form)
+2200=Punct
+2201=Nume
+2202=Comentariu
+2203=Lat (WGS-84)
+2204=Lon (WGS-84)
+2205=Timp
+2206=Locatie
+2207=Poza
+2208=Destinatar
+2209=Messaj
+2210=Camera
+2211=Altitudine (m)
+2212=Zona
+2213=Lat
+2214=Lon
+2215=UTM est(m)
+2216=UTM nord (m)
+2217=Est (m)
+2218=Nord (m)
+2219=GC Id
+2220=GC Clasa
+2221=GC DescScurta
+2222=GC DescLunga
+2223=GC Sugestie
+2224=Distanta
+
+# navigation messages
+2300=Eroare la incarcarea punctelor din jar
+2301=Eroare la listarea stocarilor
+2302=Niciun reper stocat
+2303=Eroare la listarea stocarilor
+2304=Niciun punct gasit in
+2305=Puncte incarcate
+2306=Nicio pozitie deocamdata
+2307=Nu se inregistreaza traseul
+2308=Se persista punctul?
+2309=Punct inregistrat
+2310=Eroare la inregistrarea punctului
+2311=Punct inscris in lista
+2312=Se listeaza...
+2313=Se incarca...
+2400=Eroare camera
+2401=\n<fara previzualizare>
+2402=Fara previzualizare :-(
+2403=Eroare la instantaneu
+2404=Fara instantaneu
+2405=Coordonate gresite
+2406=Reper actualizat
+2407=Eroare la actualizarea reperului
+
+# settings commands
+3000=Aplica
+3001=Salveaza
+
+# settings menu
+3100=Basic
+3101=Desktop
+3102=Locatie
+3103=Navigatie
+3104=Diverse
+
+# settings forms/fields/values (Basic)
+3400=Harta de start
+3401=Data implicita
+3402=Coordonate
+3403=Unitate de masura
+3405=Director Date
+3406=metric
+3407=imperial
+3408=nautic
+3409=<Harta Lat/Lon>
+3410=<Grid harta>
+3411=<Geocaching Lat/Lon>
+
+# settings forms/fields/values (Desktop)
+3500=Desktop
+3501=pe tot ecranul
+3502=fara sunete
+3503=precizie zecimala
+3504=HPS adevarat punct azimut
+3505=OSD basic
+3506=OSD extins
+3507=OSD scara
+3508=OSD fara fundal
+3509=OSD font mediu
+3510=OSD font bold
+3511=OSD culoare neagra
+3512=OSD Transparenta
+3513=CMS rotire (sec)
+3514=arata traseu
+3515=Linie traseu
+3516=Mod
+3517=colori sigure
+
+# settings forms/fields/values (Location)
+3600=furnizor
+3601=Tracklog
+3602=intotdeauna
+3603=intreaba
+3604=niciodata
+3605=Format jurnal
+3606=Captureaza localizarea
+3607=Captureaza formatarea
+3608=Conexiune URL
+3609=Intarzierea simulatorului
+3610=Locatia timpilor
+3611=Bluetooth
+3612=Intern
+3613=Stream
+3614=Simulator
+3615=Motorola
+3616=Optiuni GPX
+3617=doar jurnal valid
+3618=O2 Germany
+3619=Adancimea filtrului
+3620=jurnal gsm info
+3621=HGE-100
+3622=Pastreaza conexiunea (ms)
+
+# settings forms/fields/values (Navigation)
+3700=Proximitate Wpt
+3701=Proximitate POI
+3702=Linie ruta
+3703=punctata
+3704=rosu
+3705=icoane POI
+3706=Locatie SMS
+3707=primeste
+3708=ascunde notificarea automat
+3709=revizuirile fisierului
+3710=prefer nume GC
+3711=Sorteaza Dupa
+3712=pozitie
+3713=nume
+3714=distanta
+
+# settings forms/fields/values (Tweaks)
+3800=Tweaks
+3801=Siemens I/O
+3802=rendare sigura
+3803=forteaza GC
+3804=scroll 1 fragment
+3805=atlase mari
+3806=salvare baterie
+
+# info commands
+4000=Tehnic
+
+# info items
+4200=Acasa
+4201=www.trekbuddy.net
+4202=Versiune
+4203=Taste
+4204=\n0 - busola, 1 - navigare (tine apasat pt acces rapid la lista de wpts), 3 - lumina, 5/FIRE - jurnal/navigare info OSD, 2-4-6-8/JOY - scroll harta, 7 - nivelurie (atlas), 9 - harti (atlas), # - ecrane, * - blocare taste (tine apasat; apasa scurt apoi 0 pt afisarea numelor wpts)
+4205=\n0 - day/night, 1 - navigation (hold for quick active wpts list access), 3 - lumina, 2-8/JOY SUS-JOS - location averaging, 4-6/JOY STANGA-DREAPTA - scara, # - ecrane, * - blocare taste (tine apasat)
+4206=\n0 - zi/noapte, 1 - navigare (tine apasat pt acces rapid la lista de wpts), 3 - lumina, 8/JOY JOS - profiluri, # - ecrane, * - blocare taste (tine apasat)

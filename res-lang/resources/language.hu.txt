@@ -1,0 +1,346 @@
+# common commands
+0000=OK
+0001=Vissza
+0002=Bezárás
+0003=Mégse
+0004=Igen
+0005=Nem
+
+# boot messages
+0300=képek gyorsítótárazása...
+0301=konfiguráció betöltése...
+0302=ui testreszabása...
+0303=képernyők elkészítése...
+0304=térkép betöltése...
+0305=billentyűk leképzése...
+0306=lokalizálás...
+0399=
+
+# desktop commands
+1000=Indítás
+1001=Leállítás
+1002=Szünet
+1003=Folytatás
+1004=Térkép betöltése
+1005=Atlasz betöltése
+1006=Beállítások
+1007=Navigáció
+1008=Információ
+1009=Kilépés
+1010=Frissítés
+1011=Csatlakozás
+1012=Megnyitás
+
+# desktop messages
+1300=Helyzetmegosztás inicializálása sikertelen
+1301=Biztosan ki akarsz lépni?
+1302=A kiválasztott pont a rétegen kívül van
+1303=A kiválasztott pont a térképen kívül van
+1304=Billentyűk lezárva
+1305=Billentyűk feloldva
+1306=Naplózás indítása?
+1307=Jeladó készítése sikertelen
+1308=Jeladó indítása sikertelen
+1309=Jeladó leállítása sikertelen
+1310=Navigáció leállítva
+1311=Pont elhelyezve a térképen
+1312=Nincsenek rétegek az atlaszban
+1313=Nincsenek térképek a rétegben
+1314=Nincs térkép a jelenlegi pozícióhoz a rétegben
+1315=Térkép betöltése
+1316=Térkép inicializálása
+1317=Atlasz betöltése
+1318=Konfiguráció frissítve
+1319=Konfiguráció frissítése sikertelen
+1320=Naplózási hiba
+1321=Térkép használata sikertelen
+1322=Térképbetöltés sikertelen
+1323=Csempék betöltve
+1324=Betöltés állapota
+1325=Térképválasztás
+1326=Atlaszválasztás
+1327=Rétegválasztás
+1328=Ismeretlen SMS
+1329=Helyzet SMS elküldve
+1330=SMS elküldése sikertelen
+1331=SMS fogadása sikertelen
+1332=Szolgáltatás nem található
+1333=Szolgáltatáskeresés sikertelen
+1334=Nem található szolgáltatás
+1335=Felderítés újrakezdése sikertelen
+1336=Naplózás indítása sikertelen
+1337=Profil betöltése sikertelen
+1338=Nincs jeladó egység
+1339=Nincs kezdeti térkép. Használd az Opciók->Térkép/Atlasz betöltése opciót.
+1340=Szüneteltetve
+1341=Nem található profil
+1342=Profilok
+1343=A kiválasztott fájl hibás.\nPróbáld újra.
+1344=Térképvetület elemzése sikertelen
+1345=Térképrendszer elemzése sikertelen
+1346=Kalibrációs fájl elemzése sikertelen
+1347=SET fájl elemzése sikertelen
+1348=Érvénytelen atlasz URL
+1349=Érvénytelen térkép URL
+1350=Érvénytelen csempenév:
+1351=Érvénytelen térképméret
+1352=Érvénytelen pont
+1353=Érvénytelen vetületbeállítás
+1354=Érvénytelen MMPXY
+1355=Érvénytelen MMPLL
+1356=Érvénytelen IWH
+1357=MMPXY:MMPLL méretkülönbség
+1358=Túl nagy térkép
+1359=Túl kevés kalibrációs pont
+1360=Nincs kalibráció
+1361=Üres map - nincsenek csempék
+1362=Csempe betöltése sikertelen
+1363=Nincs kép a csempéhez
+1364=Ismeretlen kalibrációs fájl
+1365=Csempék mappa nem található
+1366=Csempék listázása sikertelen:
+1367=Túl nagy csempe
+1368=A fájl nem található
+1369=Használat alapértelmezett atlaszként?
+1370=Használat alapértelmezett térképként?
+1371=Eszközválasztás
+1372=Eszközök keresése...
+1373=Szolgáltatáskeresés
+1374=Szolgáltatás keresése...
+1375=Nevek feloldása...
+1376=Nincs felderített eszköz
+1377=Bluetooth rádió kikapcsolva
+1379=Háttérvilágítás bekapcsolva
+1380=Háttérvilágítás kikapcsolva
+1381=NINCS POZÍCIÓ
+1382=NINCS PONT
+1383=NMEA visszajátszás
+1384=Helyzetinformáció érkezett:
+1385=Csempecsomag nem található:
+1386=Jeladó nem működik
+1387=Jeladó indul
+1388=Művelet folyamatban...
+1389=SMS regisztrálása sikertelen
+
+# navigation commands
+2000=Útvonal oda
+2001=Útvonal vissza
+2002=Navigáció ide
+2003=Aktívként beállít
+2004=Ugrás ide
+2005=Hozzáadás
+2006=Mentés
+2007=Fotózás
+2008=Küldés
+2009=Összes mutatása
+2010=Összes elrejtése
+2011=Szerkesztés
+2012=Frissítés
+2013=Törlés
+2014=Mutatás
+2015=Rendezés: sorrend
+2016=Rendezés: név
+2017=Rendezés: távolság
+2018=Megjegyzés hozzáadás
+
+# navigation menu
+2100=Pontok
+2101=Jelenlegi felvétele
+2102=Egyéni hozzáadása
+2103=SMS Itt vagyok
+2104=SMS Ott találkozunk
+2105=Leállítás
+2106=Útvonalak
+2107=Megjegyzések
+
+# navigation forms/fields (wpt form)
+2200=Pont
+2201=Név
+2202=Megjegyzés
+2203=Lat (WGS-84)
+2204=Lon (WGS-84)
+2205=Idő
+2206=Helyzet
+2207=Fénykép
+2208=Címzett
+2209=Üzenet
+2210=Kamera
+2211=Magasság (m)
+2212=Zóna
+2213=Lat
+2214=Lon
+2215=UTM keleti (m)
+2216=UTM északi (m)
+2217=Keleti (m)
+2218=Északi (m)
+2219=GC Id
+2220=GC Oszt
+2221=GC RövidLeír
+2222=GC HosszúLeír
+2223=GC Tippek
+2224=Távolság
+2225=GC Naplók
+2226=GC Napló
+2227=Dátum
+2228=Típus
+2229=Kereső
+2230=Szöveg
+2231=Megjegyzés
+
+# navigation messages
+2300=Jar pontjainak betöltése sikertelen
+2301=Tárolók listázása sikertelen
+2302=Nincsenek tárolók
+2303=Tároló listázása sikertelen
+2304=Nincs pont:
+2305=pontok betöltve
+2306=Még nincs pozíció
+2307=Nincs követés
+2308=Egyéni pont rögzítése?
+2309=Pont rögzítve
+2310=Pontrögzítési hiba
+2311=Pont besorozva
+2312=Listázás...
+2313=Betöltés...
+2400=Kamera sikertelen
+2401=\n<nincs előnézet>
+2402=Nincs előnézet :-(
+2403=Fotózás sikertelen
+2404=Nincs fénykép
+2405=Sérült koordináta:
+2406=Tároló frissítve
+2407=Tároló frissítése sikertelen
+2408=Még nincs megjegyzés
+2409=Megjegyzés hozzáadása
+
+# settings commands
+3000=Alkalmaz
+3001=Ment
+
+# settings menu
+3100=Alapvető
+3101=Felület
+3102=Helyzet
+3103=Navigáció
+3104=Vegyes
+
+# settings forms/fields/values (Basic)
+3400=Kezdeti térkép
+3401=Alapértelmezett rendszer
+3402=Koordináták
+3403=Mértékegységek
+3405=Adatkönyvtár
+3406=metrikus
+3407=birodalmi
+3408=hajózási
+3409=<Térkép Lat/Lon>
+3410=<Térképrács>
+3411=<Geocaching Lat/Lon>
+3412=Induló képernyő
+3413=térkép
+3414=iránytű
+3415=cms
+
+# settings forms/fields/values (Desktop)
+3500=Felület
+3501=teljes képernyő
+3502=nincs hang
+3503=tizedes pontosság
+3504=HPS valódi pont irányszög
+3505=OSD alapvető
+3506=OSD bővített
+3507=OSD arány
+3508=OSD nincs háttér
+3509=OSD közepes betűk
+3510=OSD félkövér betűk
+3511=OSD fekete betűk
+3512=OSD áttetszőség
+3513=CMS váltás (sec)
+3514=nyomvonal mutatása
+3515=Nyomvonal
+3516=Mód
+3517=biztos színek
+3518=Betű lista
+3519=Szín
+3520=Vastagság
+3521=Nincs kérdés
+3522=Betűméret
+3523=Menü gombok kikapcsolása
+
+# settings forms/fields/values (Location)
+3600=Jeladó
+3601=Naplózás
+3602=mindig
+3603=rákérdez
+3604=soha
+3605=Napló formátuma
+3606=Felvétellokátor
+3607=Felvételformátum
+3608=Kapcsolat URL
+3609=Szimulátor késleltetés
+3610=Helyzet ütemezések
+3611=Bluetooth
+3612=Beépített
+3613=Adatfolyam
+3614=Szimulátor
+3615=Motorola
+3616=GPX opciók
+3617=csak érvényes naplózása
+3618=O2 Németország
+3619=Szűrőmélység
+3620=gsm info naplózása
+3621=HGE-100
+3622=Ébren tartás (ms)
+3623=Magasság korrekció (m)
+3624=Loggolási idő (ms)
+3625=Negativ fix magasság
+3626=Pontos idő egyezés
+3627=GPS Támogatás
+3628=Bluetooth szolgáltató keresése
+3629=Hálózati használat
+3630=Fix cím
+3631=Fix idő
+
+# settings forms/fields/values (Navigation)
+3700=Pont közelség
+3701=POI közelség
+3702=Útvonal
+3703=pontmintás
+3704=piros színű
+3705=POI ikonok
+3706=Helyzet SMS
+3707=fogadás
+3708=értesítés elrejtése
+3709=fájl módosítások
+3710=GC név, ha van
+3711=Rendezés elve
+3712=sorrend
+3713=név
+3714=távolság
+3715=dinamikus
+
+# settings forms/fields/values (Tweaks)
+3800=Trükkök
+3801=Siemens I/O
+3802=biztos renderer
+3803=GC kényszerítése
+3804=1-csempés görgetés
+3805=nagy atlaszok
+3806=takarékos üzemmód
+3807=megbízható bevitel
+3808=menüsor elrejtése CMD
+3809=Belsőszolgáltatás használata
+3810=lassu GPX vizsgálat
+3811=Kevés a memória I/O
+
+# info commands
+4000=Technikai
+
+# info items
+4200=Honlap
+4201=www.trekbuddy.net
+4202=Verzió
+4203=Billentyűk
+4204=\n0 - célkereszt, 1 - navigáció (hosszan az aktív pontok listájához), 3 - háttérvilágítás, 5/TŰZ - nyomkövetés/navigáció OSD info, 2-4-6-8/JOY - görgetés, 7 - rétegek (atlasz), 9 - térképek (atlasz), # - képernyők, * - billentyűzár (hosszan; röviden, majd 0 a pontok nevének megjelenítéséhez)
+4205=\n0 - mód, 1 - navigáció (hosszan az aktív pontok listájához), 3 - háttérvilágítás, 2-8/JOY FEL-LE - helyzet átlagolás, 4-6/JOY BAL-JOBB - arány, # - képernyők, * - billentyűzár (hosszan)
+4206=\n0 - mód, 1 - navigáció (hosszan az aktív pontok listájához), 3 - háttérvilágítás, 8/JOY LE - profilok, # - képernyők, * - billentyűzár (hosszan)

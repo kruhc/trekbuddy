@@ -1,0 +1,415 @@
+#
+#Trekbuddy 1.2.6
+#
+0000=OK
+0001=Atzera
+0002=Itxi
+0003=Ezeztatu
+0004=Bai
+0005=Ez
+
+# boot messages
+0300=Irudiak hartzen...
+0301=Konfigurazioa kargatzen...
+0302=UI pertsonalizatzen...
+0303=Pantailak sortzen...
+0304=Mapak kargatzen...
+0305=Tekla-mapaketa...
+0306=Topatzen...
+0399=
+
+# desktop commands
+1000=Abiarazi
+1001=Gelditu
+1002=Eten
+1003=Jarraitu
+1004=Mapak
+#REMOVED 1005=Atlasak
+1006=Konfigurazioa
+1007=Nabigazioa
+1008=Informazioa
+1009=Irten
+1010=Freskatu
+1011=Konektatu
+1012=Zabaldu
+1013=Aukeratu
+1014=Gehigarriak
+
+# desktop messages
+1300=Hutsegitea lokalizazio konpartitua hastean
+1301=Programatik irten?
+1302=Waypoint hautatua ez dago uneko geruzan
+1303=Waypoint hautatua ez dago uneko mapan
+1304=Teklatu blokeatua
+1305=Teklatu desblokeatua
+1306="Tracklog" abiarazi?
+1307=Hutsegitea hornitzailea sortzean
+1308=Hutsegitea hornitzailea abieraztean
+1309=Hutsegitea hornitzailea gelditzean
+1310=Nabigazio geldituta
+1311=Waypoint mapan gehituta
+1312=Hautatutako Atlasean ez dago geruzarik
+1313=Hautatutako geruzean ez dago maparik
+1314=Ez dago maparik posizio honetarako geruza honetan 
+1315=Mapa kargatzen
+1316=Hasierako Mapa
+1317=Atlasa kargatzen
+1318=Konfigurazioa eguneratuta
+1319=Hutsegitea konfigurazioa eguneratzean
+1320=Hutsegitea Tracklog gordetzean
+1321=Hutsegitea mapa erabiltzean
+1322=Hutsegitea mapa kargatzean
+1323=Maparen mosaikoak kargatuta
+1324=Uneko egoera kargatzen
+1325=Mapa hautatu
+#REMOVED 1326=Atlasa hautatu
+1327=Geruza hautatu
+1328=SMS ezezaguna
+1329=Lokalizatzeko SMSa bidalita
+1330=Hutsegitea SMSa bidaltzean
+1331=Hutsegitea SMSa jasotzean
+#REMOVED 1332=Ezin da zerbitzua aurkitu
+#REMOVED 1333=Hutsegitea zerbitzuen bilaketan
+#REMOVED 1334=Ez da zerbitzurik aurkitu
+#REMOVED 1335=Hutsegitea bilaketa abiaraztean
+1336=Hutsegitea trackloga abiaraztean
+1337=Hutsegitea profila kargatzean
+1338=Hornitzaile klaseko instantziarik ez
+1339=Hasierako mapa ezarri barik. Opzioak->Kargatu Mapa/Atlasa
+1340=Etenda
+1341=Profilik ezin aurkitu
+1342=Profila
+1343=Fitxategi baliogabea. Saitu berriro.
+1344=Hutsegitea maparen proiekzioan
+1345=Hutsegitea maparen datumean
+1346=Hutsegitea kalibraziorako fitxategian
+1347=Hutsegitea konfiguraziorako fitxategian
+1348=Atlasen URLa baliogabea
+1349=Maparen URLa baliogabea
+1350=Maparen mosaiko-fitxategi baliogabea:
+1351=Maparen neurria baliogabea
+1352=Puntua baliogabea
+1353=Proiekzioa baliogabea
+1354=MMPXY-a baliogabea
+1355=MMPLL-a baliogabea
+1356=IWH-a baliogabea
+1357=Tamainu okerra MMPXY:MMPLL 
+1358=Mapa handiegia
+1359=Kalibratzeko puntu gutxi
+1360=Kalibratugabeko mapa
+1361=Mapa hutsik - mosaikorik ez
+1362=Hutsegitea maparen mosaikoa kargatzean
+1363=Mosaiko honek ez dauka irudirik
+1364=Kalibrazio-fitxategi ezezaguna
+1365=Maparen mosaiko-direktorioa aurkitu ezinik
+1366=Hutsegitea maparen mosaikoak zerrendatzean
+1367=Maparen mosaikoa handiegia
+1368=Fitxategia aurkitu ezinik
+1369=Atlasa lehenetsi?
+1370=Mapa lehenetsi?
+1371=BT gailuak
+1372=Gailuak bilatzen...
+1373=Zerbitzuen bilaketa
+1374=Zerbitzua bilatzen...
+1375=Izenak bereizten...
+1376=Gailurik ez
+1377=BT gailua deskonektatua
+1378=1378
+1379=Pantaila argiztapena konektatua
+1380=Pantaila argiztapena deskonektatua
+1381=POSIZIORIK EZ
+1382=EZ DAGO WPT
+1383=NMEA erreproduzitu
+1384=Posiziorako informazioa jasota:
+1385=Maparen mosaiko-informazioa ez da aurkitu:
+1386=Hornitzailea zerbitzuz kanpo
+1387=Hornitzailea abiarazten
+1388=Hasitako eragiketa...
+1389=Hutsegitea SMS bidez log-erregistroan
+1390=Sarrera baliogabea
+1391=Tracking aktiboa
+1392=Ez dago erabilgarri
+
+# navigation commands
+2000=Ibilbideari jarraitu
+2001=Ibilbidea alderantzikatu
+2002=Hona nabigatu?
+2003=Aktibo gisa ezarri
+2004=Hona joan?
+2005=Gehitu
+2006=Gorde
+2007=Atera
+2008=Bidali
+2009=Denak erakutsi
+2010=Denak ezkutatu
+2011=Editatu
+2012=Eguneratu
+2013=Ezabatu
+2014=Erakutsi
+2015=Ordenatu posizioz
+2016=Ordenatu izenez
+2017=Ordenatu distantziaz
+2018=Oharra gehitu
+
+# navigation menu
+2100=Waypointak
+2101=Gorde WPT (GPSko posizioa)
+2102=Gorde WPT (kurtsorearen posizioa)
+2103="Hemen nago" SMSa
+2104="Han elkartuko gara" SMSa
+2105=Gelditu
+2106="Track" zerrenda
+2107=Oharrak
+2108=Sortu WPT berria
+2109=Saioa amaitu
+
+# navigation forms/fields (wpt form)
+2200=Waypoint 
+2201=Izena 
+2202=Azalpena
+2203=Latitudea (WGS-84) 
+2204=Longitudea (WGS-84) 
+2205=Data eta ordua 
+2206=Lokalizazioa 
+2207=argazkia 
+2208=Hartzaile-zenbakia 
+2209=Mezua 
+2210=Argazki-kamera 
+2211=Altitudea (m)
+2212=Eremua
+2213=Latitudea 
+2214=Longitudea 
+2215=UTM easting (m)
+2216=UTM northing (m)
+2217=Easting (m)
+2218=Northing (m)
+2219=GC Id
+2220=GC Mota
+2221=GC azalpen laburra
+2222=GC azalpen luzea
+2223=GC aholkuak
+2224=Distantzia
+2225=GC Logak
+2226=GC Loga
+2227=Data
+2228=Mota
+2229=Aurkitzailea
+2230=Testua
+2231=Oharra
+2232=Orientazioa
+2233=Sorburuaren
+2234=Helmuga
+2235=Saio bezala
+
+# navigation messages
+2300=Hutsegitea .jar fitxategiko waypointak kargatzean
+2301=Hutsegitea gordetakoak zerrendatzean
+2302=Erreferentzi punturik ez dago gordeta
+2303=Hutsegitea gordetakoak zerrendatzean
+2304=Waypointak aurkitu barik
+2305=Waypointa kargatuta
+2306=Posizioa finkatu barik
+2307=Ibilbidea finkatu barik
+2308=Waypoint pertsonalizatua mantendu?
+2309=Waypointa gordeta
+2310=Hutsegitea waypoint gordetzean
+2311=Waypointa zerrendara gehitua
+2312=Zerrenda egiten...
+2313=Kargatzen...
+2314=Waypointa gehitu [%s]?
+2315=Fitxategi izena:
+2316=Helburua hautatu:
+2400=Hutsegitea argazki kameran
+2401=<Aurrebista erabilezina>
+2402=Aurrebista erabilezina
+2403=Hutsegitea argazkia ateratzean
+2404=Ezin da argazkirik atera
+2405=Koordenatua txarto eginda:
+2406=Lursail-markak eguneratuak
+2407=Hutsegitea lursail-markak eguneratzean
+2408=Oharrik ez
+2409=Oharra gehitua
+2410=<Fitxategi berria>
+2411=user-
+2412=Lehenengo waypointa aukeratu
+
+# settings commands
+3000=Aplikatu
+3001=Gorde
+
+# settings menu
+3100=Oinarrizkoa
+3101=Datuen aurkezpena
+3102=Lokalizazioa
+3103=Nabigazioa
+3104=Hainbat
+3105=Gehigarriak
+
+# settings (Plugins)
+3180=Konfiguratu
+3181=Gaitua
+3182=<Konfigurazino barik>
+
+# settings forms/fields/values (Basic)
+3400=Hasierako mapa
+3401="Datum" lehenetsia
+3402=Koordenatu-sistema
+3403=Unitate-sistema
+3404=3404
+3405=Datu-direktorioa
+3406=metrikoa
+3407=inperiala
+3408=nautikoa
+3409=<Mapa Lat/Lon>
+3410=<Mapa sareta>
+3411=<Geocaching Lat/Lon>
+3412=Hasierako pantaila
+3413=Mapa
+3414=Konpasa (HPS)
+3415=CMS
+3416=<GPX Lat/Lon>
+
+# settings forms/fields/values (Desktop)
+3500=Pantailaren itxura
+3501=Pantaila osoa
+3502=Soinu barik
+3503=Doitasun hamartarra
+3504=HPS benetako norabidea WPTera
+3505=OSD oinarrizkoa
+3506=OSD hedatua
+3507=OSD eskala
+3508=OSD atzeko plano barik
+3509=OSD letra-tipo ertaina
+3510=OSD letra-tipo lodia
+3511=OSD kolore beltza
+3512=OSD gardenkia
+3513=CMS aldatu (sg)
+3514="Trail" erakutsi
+3515="Trail" lerro estiloa
+3516=Modua
+3517=Kolore ikusgaiak
+3518=Zerrendetarako letra-tipoa
+3519=Kolorea 
+3520=Lodiera
+3521=Galdera barik
+3522=Letra-tamaina
+3523=Menu-tekla barik
+3524=EasyZoom
+3525=Geruzak
+3526=Mapak
+3527=Deskonektatua
+3528=Easyzoom bolumen-tekleekin
+3529=Zoom kontrolak erakutsi
+3530=GC komando barik
+3531=Menu-barra erakutsi
+3532=ezkutatu
+3533=Zerrenda modua
+3534=Plataforma lehenetsia
+3535=Aukeraketa pertsonalizatua
+3536=Zoom-ezarpena
+3537=Behartu testuen fokua 
+3538="Crosshair" finkatua
+
+# settings forms/fields/values (Location)
+3600=GPS Hornitzailea
+3601=Tracklog
+3602=Beti
+3603=Galdetu
+3604=Inoiz ez
+3605="Tracklog" formatua
+3606=Kaptura lokalizatzailea
+3607=Kaptura-formatua
+3608=URL konexioa
+3609=Simulatze-abiadura
+3610=Lokalizatze-erritmoa
+3611=Bluetooth
+3612=Barnekoa
+3613=Stream
+3614=Simulatzailea
+3615=Motorola
+3616=GPX opzioak
+3617=Datu egokiak baino ez
+3618=O2 Germany
+3619=Iragazki-hautapena
+3620=GSM informazioa
+3621=HGE-100
+3622=Aktibo mantendu (ms)
+3623=Altuera zuzenketa (m)
+3624=Denbora (ms)
+3625=Altuera negatiboa konpensatu
+3626=Denbora zehatzarekin bat egin
+3627=GPS lagundua
+3628=Bilaketa behartu
+3629=Kontsumo-kontrola
+3630=GPS helbidea hautatu
+3631=Erlojua hautatu
+3632=Eranski gaituak
+
+# settings forms/fields/values (Navigation)
+3700=WPTetik hurbil (m)
+3701=POIetik hurbil (m)
+3702="Route" lerro estiloa
+3703=Lerro etena
+#REMOVED 3704=Kolore gorria
+3705=POI ikonoak
+3706=Lokalizazio-SMSa
+3707=Jaso
+3708=Jakinarazpena ezkutatu
+3709=Fitxategien berrikuspenak
+3710=GC izena azaldu
+3711=Honela ordenatu 
+3712=posizioa
+3713=izena
+3714=distantzia
+3715=dinamikoa
+3716=WPTetik hurbileko alerta
+3717=akustikoa
+3718=bibrazioa
+3719="Track" lerro estiloa
+3720=Gaitu MOB
+
+# settings forms/fields/values (Tweaks)
+3800=Ezarpenak
+3801=I/O etena
+#REMOVED 3802=Errendatzaile segurua
+3803=GC behartu
+3804=Mosaiko bat korritu
+3805=Atlas handiak
+3806=Energia aurrezteko modua
+3807=Sarrerako datu fidakorrak
+#REMOVED 3808=Menu-barra ezkutatzeko komandoa
+3809=Natibo zerbitzua erabili
+3810=GPX-analisi partziala
+3811=I/O memoria gutxi
+3812=Aldatu zenbakizko sarrera
+3813=Menu nagusia sortu
+3814=Kanpo-konfigurazioaren babeskopia
+3815=HECL aukera maila
+3816=Bat ere ez
+3817=Aurretratamendua
+3818=Aurre konpilazioa
+3819=Iragazitako eskala
+3820=Jakinarazpenak beti
+3821=S40 goiko adierazlea
+3822=Mapen korritze-kontrola
+3823=bat ere ez
+3824=normala
+3825=bizia
+ 
+# info commands
+4000=Informazio teknikoa
+
+# info items
+4200=Web orria: 
+4201=www.trekbuddy.net
+4202=Bertsioa 
+4203=Teklak
+4204=0 - Map: Kurtsore-estiloa\nHPS/CMS: gaua-eguna\n1 - Waypoint-zerrenda\n(Mantenduta: Nabigazioa)\n3 - Pantaila-argiztapena \n5 -  Map: Uneko lokalizazioa\nHPS: Iparra finkatu \n2-4-6-8 - Mapetatik mugitu \n7 - Geruza hautatu (Atlasan) \n9 - Mapa hautatu (Atlasan)\n# - Pantaila aldatu\n(Map->HPS->CMS)\n* - Menu nagusia\n(Mantenduta: Teklatua blokeatu)
+4205=0 - HPS: gaua-eguna\n1 - Waypoint-zerrenda\n(Mantenduta: Nabigazioa)\n3 - Pantaila-argiztapena\n2-8 - Batez besteko lokalizazioa\n4-6 - eskala aldatu\n# - Pantaila aldatu\n(Map->HPS->CMS)\n* - Menu nagusia\n(Mantenduta: Teklatua blokeatu)
+4206=0 - CMS:gaua-eguna\n1 - Waypoint-zerrenda\n(Mantenduta: Nabigazioa)\n3 - Pantaila-argiztapena\n8 - CMS pantaila zerrenda\n# - Pantaila aldatu\n(Map->HPS->CMS)\n* - Menu nagusia\n(Mantenduta: Teklatua blokeatu)
+
+
+
+
+
+

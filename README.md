@@ -11,7 +11,7 @@ WORK IN PROGRESS: sources and other were migrated from CVS and SVN, it was not 1
 ## Dependencies
 - microemulator - J2ME implementation (and more) for Android by Bartek Teodorczyk. I believe it is now available in Google archive only. _I have been using mix of CVS and SVN for TrekBuddy, and because I wasn't able to convert SVN to GIT I lost commit history for microemu changes. I will try to at least provide diff for externals/microemu sources against original soon._
 - HECL - scripting language by David Welton [(github)](https://github.com/davidw/hecl). _The same with diff of externals/hecl sources against original applies._
-- KXML - low footprint XML parser by Stefan Haustein
+- KXML - low memory footprint XML parser by Stefan Haustein
 
 There may be remains of others, but that is most likely obsolete and should be removed.
 
@@ -25,10 +25,10 @@ The following tools are needed to build TrekBuddy:
 
 Building on Linux was never attempted (there are very likely Windows paths and tools references left in build files).
 
-__The sources contains Antenna preprocessor directives__. Used Antenna 1.0.2 (you need `antenna-bin-1.0.2.jar` in `lib` folder), other version may NOT work.
+__The sources contains Antenna preprocessor directives__. Used Antenna 1.0.2 (you need `antenna-bin-1.0.2.jar` in `lib` folder), other versions may NOT work.
 
 Build helper tools:
-`ant -f build-tools.xml
+`ant -f build-tools.xml`
 
 ### Android
 Building APK:

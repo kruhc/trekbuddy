@@ -5,7 +5,7 @@ package api.location;
 /**
  * Represents map projection information. <b>There is no such thing in JSR-179</b>.
  *
- * @author Ales Pour <kruhc@seznam.cz>
+ * @author kruhc@seznam.cz
  */
 public class ProjectionSetup {
 

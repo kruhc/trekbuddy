@@ -7,7 +7,7 @@ package cz.kruch.track.ui.nokia;
 /**
  * Device control implementation for Blackberry phones.
  *
- * @author Ales Pour <kruhc@seznam.cz>
+ * @author kruhc@seznam.cz
  */
 final class BlackberryDeviceControl extends DeviceControl {
     private static final long KEY = 0xa224326efdc3cb05L; // long hash of "net.trekbuddy.midlet"

@@ -5,7 +5,7 @@ package api.location;
 /**
  * Represents basic location information.
  * 
- * @author Ales Pour <kruhc@seznam.cz>
+ * @author kruhc@seznam.cz
  */
 public final class Location {
     private static final int XDR_MASK   = 0x40000000;

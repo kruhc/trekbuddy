@@ -13,7 +13,7 @@ import java.io.OutputStream;
 /**
  * File abstraction.
  *
- * @author Ales Pour <kruhc@seznam.cz>
+ * @author kruhc@seznam.cz
  */
 public abstract class File {
 

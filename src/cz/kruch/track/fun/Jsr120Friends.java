@@ -26,7 +26,7 @@ import api.location.QualifiedCoordinates;
 /**
  * JSR-120 (SMS) friends.
  *
- * @author Ales Pour <kruhc@seznam.cz>
+ * @author kruhc@seznam.cz
  */
 final class Jsr120Friends extends Friends implements MessageListener, Runnable {
 

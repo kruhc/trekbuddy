@@ -8,7 +8,7 @@ import java.io.IOException;
 /**
  * Motorola File API implementation.
  *
- * @author Ales Pour <kruhc@seznam.cz>
+ * @author kruhc@seznam.cz
  */
 final class MotorolaFile extends File {
 

@@ -23,7 +23,7 @@ import api.file.File;
 /**
  * JSR-234 camera.
  *
- * @author Ales Pour <kruhc@seznam.cz>
+ * @author kruhc@seznam.cz
  */
 final class Jsr234Camera extends Jsr135Camera {
 //#ifdef __LOG__

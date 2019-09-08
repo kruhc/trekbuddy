@@ -23,7 +23,7 @@ import java.io.OutputStream;
 /**
  * Bluetooth GPS provider implementation.
  *
- * @author Ales Pour <kruhc@seznam.cz>
+ * @author kruhc@seznam.cz
  */
 public final class Jsr82LocationProvider extends SerialLocationProvider {
     

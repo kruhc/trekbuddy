@@ -5,7 +5,7 @@ package cz.kruch.track.configuration;
 /**
  * Configuration exception.
  * 
- * @author Ales Pour <kruhc@seznam.cz>
+ * @author kruhc@seznam.cz
  */
 public class ConfigurationException extends Exception {
 

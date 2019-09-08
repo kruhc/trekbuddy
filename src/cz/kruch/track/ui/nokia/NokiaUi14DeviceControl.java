@@ -5,7 +5,7 @@ package cz.kruch.track.ui.nokia;
 /**
  * Device control implementation for Nokia phones with Nokia UI API 1.4+.
  *
- * @author Ales Pour <kruhc@seznam.cz>
+ * @author kruhc@seznam.cz
  */
 final class NokiaUi14DeviceControl extends NokiaDeviceControl {
 

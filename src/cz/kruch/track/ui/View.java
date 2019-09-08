@@ -15,7 +15,7 @@ import cz.kruch.track.Resources;
 /**
  * Base class for screens.
  *
- * @author Ales Pour <kruhc@seznam.cz>
+ * @author kruhc@seznam.cz
  */
 abstract class View {
     protected static String MSG_NO_POSITION = Resources.getString(Resources.DESKTOP_MSG_NO_POSITION);

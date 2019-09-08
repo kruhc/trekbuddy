@@ -5,7 +5,7 @@ package cz.kruch.track.ui.nokia;
 /**
  * Device control implementation for Motorola phones with multimedia.Lighting API.
  *
- * @author Ales Pour <kruhc@seznam.cz>
+ * @author kruhc@seznam.cz
  */
 final class MotorolaDeviceControl extends DeviceControl {
 

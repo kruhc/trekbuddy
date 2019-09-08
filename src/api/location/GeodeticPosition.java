@@ -5,7 +5,7 @@ package api.location;
 /**
  * Abstract position info.
  *
- * @author Ales Pour <kruhc@seznam.cz>
+ * @author kruhc@seznam.cz
  */
 public interface GeodeticPosition {
     public double getH();

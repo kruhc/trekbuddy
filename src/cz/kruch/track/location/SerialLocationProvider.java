@@ -18,7 +18,7 @@ import java.util.TimerTask;
 /**
  * Stream port (comm, btspp, tcp/ip) location provider implemenation.
  *
- * @author Ales Pour <kruhc@seznam.cz>
+ * @author kruhc@seznam.cz
  */
 public class SerialLocationProvider
         extends StreamReadingLocationProvider

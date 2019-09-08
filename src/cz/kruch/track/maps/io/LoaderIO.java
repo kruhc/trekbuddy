@@ -11,7 +11,7 @@ import java.util.Vector;
  * TODO Misused!
  * TODO Rename and move! It is a task runner actually :-)
  *
- * @author Ales Pour <kruhc@seznam.cz>
+ * @author kruhc@seznam.cz
  */
 public final class LoaderIO extends Thread {
 //#ifdef __LOG__

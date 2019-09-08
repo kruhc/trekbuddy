@@ -5,7 +5,7 @@ package cz.kruch.track.ui.nokia;
 /**
  * Device control implementation for Samsung phones.
  *
- * @author Ales Pour <kruhc@seznam.cz>
+ * @author kruhc@seznam.cz
  */
 final class SamsungDeviceControl extends DeviceControl {
 

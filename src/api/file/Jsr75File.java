@@ -10,7 +10,7 @@ import java.io.IOException;
 /**
  * JSR-75 file implementation.
  *  
- * @author Ales Pour <kruhc@seznam.cz>
+ * @author kruhc@seznam.cz
  */
 final class Jsr75File extends File {
 

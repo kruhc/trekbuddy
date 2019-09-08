@@ -7,7 +7,7 @@ import java.io.IOException;
 /**
  * Calibration processing and map handling exception.
  *
- * @author Ales Pour <kruhc@seznam.cz>
+ * @author kruhc@seznam.cz
  */
 public class InvalidMapException extends IOException {
 

@@ -13,7 +13,7 @@ import java.io.InputStream;
 /**
  * JSR-135 sound player.
  *
- * @author Ales Pour <kruhc@seznam.cz>
+ * @author kruhc@seznam.cz
  */
 final class Jsr135Playback extends Playback implements PlayerListener {
 //#ifdef __LOG__

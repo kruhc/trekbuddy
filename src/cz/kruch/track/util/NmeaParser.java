@@ -12,7 +12,7 @@ import java.util.Hashtable;
 /**
  * NMEA parser.
  *
- * @author Ales Pour <kruhc@seznam.cz>
+ * @author kruhc@seznam.cz
  */
 public final class NmeaParser {
     public static final int MAX_SENTENCE_LENGTH = 128; // 82(79) max according to NMEA 0183 v3.01

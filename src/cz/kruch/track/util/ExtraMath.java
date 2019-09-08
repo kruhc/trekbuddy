@@ -13,7 +13,7 @@ package cz.kruch.track.util;
  * </p>
  *
  * @author Richard Carless (xedarius at Nokia forum)
- * @author Ales Pour <kruhc@seznam.cz>
+ * @author kruhc@seznam.cz
  */
 public final class ExtraMath {
 

@@ -20,7 +20,7 @@ import cz.kruch.track.configuration.Config;
 /**
  * O2 Germany provider implementation.
  *
- * @author Ales Pour <kruhc@seznam.cz>
+ * @author kruhc@seznam.cz
  */
 public final class O2GermanyLocationProvider
         extends api.location.LocationProvider

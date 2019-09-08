@@ -5,7 +5,7 @@ package cz.kruch.track.maps;
 /**
  * Represents map tile in a tar.
  *
- * @author Ales Pour <kruhc@seznam.cz>
+ * @author kruhc@seznam.cz
  */
 final class TarSlice extends Slice {
 

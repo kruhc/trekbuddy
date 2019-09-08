@@ -7,7 +7,7 @@ import java.util.TimerTask;
 /**
  * Device specific control.
  *
- * @author Ales Pour <kruhc@seznam.cz>
+ * @author kruhc@seznam.cz
  */
 public class DeviceControl extends TimerTask {
 

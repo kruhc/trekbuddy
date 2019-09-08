@@ -8,7 +8,7 @@ import java.io.IOException;
 /**
  * Siemens Sx5 File API implementation.
  *
- * @author Ales Pour <kruhc@seznam.cz>
+ * @author kruhc@seznam.cz
  */
 final class SiemensFile extends File {
 

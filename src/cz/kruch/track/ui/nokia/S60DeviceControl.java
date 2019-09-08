@@ -7,7 +7,7 @@ package cz.kruch.track.ui.nokia;
 /**
  * Device control implementation for S60/UIQ phones.
  *
- * @author Ales Pour <kruhc@seznam.cz>
+ * @author kruhc@seznam.cz
  */
 final class S60DeviceControl extends NokiaDeviceControl {
 

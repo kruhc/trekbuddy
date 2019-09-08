@@ -5,7 +5,7 @@ package cz.kruch.track.ui.nokia;
 /**
  * Device control implementation for LG phones.
  *
- * @author Ales Pour <kruhc@seznam.cz>
+ * @author kruhc@seznam.cz
  */
 final class LgDeviceControl extends DeviceControl {
 

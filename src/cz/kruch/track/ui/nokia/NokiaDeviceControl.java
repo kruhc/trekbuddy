@@ -7,7 +7,7 @@ import cz.kruch.track.configuration.Config;
 /**
  * Device control implementation for Nokia phones.
  *
- * @author Ales Pour <kruhc@seznam.cz>
+ * @author kruhc@seznam.cz
  */
 class NokiaDeviceControl extends DeviceControl {
 

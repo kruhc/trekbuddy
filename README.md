@@ -31,5 +31,5 @@ This is only needed once, or of course when you make a change in either `cldc`, 
 2. build language resources you want to include in the package by using either res-ascii or res-utf8 script, eg. `res-ascii.bat en en` or `res-utf8 fr fr` (first param can be full locale but it must match file suffix in `res-lang` folder). English res file should always be included in the package.
 
 3. build 'android' target by running `build.bat public android`  
-You should find `trekbuddy.apk` in `dist\public\android` folder. The APK will be unsigned unless you provide signing key (see 'sign' target in `externals/microemulator/microemu-android/build-trekbuddy.xml`). If the build fails, check `dist\public\android\build.log`.
+You should find `trekbuddy.apk` in `dist\public\android` folder. The APK will be unsigned unless you provide signing key (see 'sign' target in `externals/microemulator/microemu-android/build-trekbuddy.xml`). If the build fails, check `dist/public/android/build.log`.
 

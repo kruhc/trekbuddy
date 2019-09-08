@@ -4,7 +4,7 @@ TrekBuddy is an old, originally J2ME, application for GPS tracking etc. It was i
 Homepage: [TrekBuddy](http://www.trekbuddy.net/forum/) (forum)
 
 ## State of the project
-You can tell by looking at the tools, naming convetion etc that it is on old, poorly maintained project. While during the course of time TrekBuddy was made available for various platforms (Java and Symbian phones, Blackberries, Windows Phone), it is now used on Android. This repository may not (YET) hold everything needed to build TrekBuddy for various platforms (most of them obsolete), but in the least it should have all needed for building APK. 
+You can tell by looking at the tools, naming convetion etc that it is oa old, poorly maintained project. While during the course of time TrekBuddy was made available for various platforms (Java and Symbian phones, Blackberries, Windows Phone), it is now used on Android. This repository may not (YET) hold everything needed to build TrekBuddy for various platforms (most of them obsolete), but in the least it should have all needed for building APK. 
 
 ## Dependencies
 - microemulator - J2ME implementation (and more) for Android by Bartek Teodorczyk. I believe it is now available in Google archive only. _I have been using mix of CVS and SVN for TrekBuddy, and because I wasn't able to convert SVN to GIT I lost commit history for microemu changes. I will try to at least provide diff for externals/microemu sources against original soon._
@@ -27,7 +27,9 @@ Building on Linux was never attempted (there are very likely Windows paths and t
 Building APK:
 1. build `microemulator` core modules - go to `externals/microemulator`and execute `build-ant.bat`  
 This is only needed once, or of course when you make a change in either `cldc`, `midp`, `microemu-javase` or `microemu-extensions\microemu-jsr-75` module.
-2. build language resources you want to include in the package by using either res-ascii or res-utf8 script, eg. `res-ascii.bat en en` or `res-utf8 fr fr` (first param can be full locale but it must match file suffix in `res-lang` folder)
+
+2. build language resources you want to include in the package by using either res-ascii or res-utf8 script, eg. `res-ascii.bat en en` or `res-utf8 fr fr` (first param can be full locale but it must match file suffix in `res-lang` folder). English res file should always be included in the package.
+
 3. build 'android' target by running `build.bat public android`  
 You should find `trekbuddy.apk` in `dist\public\android` folder. The APK will be unsigned unless you provide signing key (see 'sign' target in `externals/microemulator/microemu-android/build-trekbuddy.xml`). If the build fails, check `dist\public\android\build.log`.
 

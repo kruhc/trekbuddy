@@ -316,7 +316,7 @@
         <copy file="${microemu.home}/microemu-android/bin/trekbuddy.apk"
 			        tofile="dist/${vendor.dir}/${dist.dir}/trekbuddy.apk"/>
         <move file="dist/${vendor.dir}/${dist.dir}/trekbuddy-android.map"
-              tofile="dist/${vendor.dir}/${dist.dir}/trekbuddy.map"/>
+              tofile="dist/${vendor.dir}/${dist.dir}/trekbuddy.map" failonerror="false"/>
     </target>
 
     <target name="android-offline">
@@ -1627,6 +1627,7 @@
             <arg value="-outjars tmp/trekbuddy${suffix}-obfuscated.jar"/>
             <arg value="-libraryjars ${libraryjars}"/>
             <arg value="-dontpreverify"/> <!-- not preverified; this is 4.x flag -->
+            <arg value="-dontobfuscate"/>
             <arg value="-optimizations !code/simplification/arithmetic"/> <!-- dalvik 1.0/1.5 issue workaround -->
             <arg value="-dontusemixedcaseclassnames"/>
             <arg value="-dontskipnonpubliclibraryclasses"/>

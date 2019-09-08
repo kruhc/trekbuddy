@@ -1,7 +1,7 @@
 # TrekBuddy   ![logo](http://www.trekbuddy.net/icon.svg "Logo")
 TrekBuddy is an old, originally J2ME, application for GPS tracking etc. It was intended to be simple easy-to-use application that would run fast even on lowend devices (remember Siemens S65, Nokia 6230i... ?).
 
-Homepage: [TrekBuddy](http://www.trekbuddy.net/forum/) (forum)
+Homepage: [TrekBuddy](http://www.trekbuddy.net/)
 
 ## State of the project
 You can tell by looking at the tools, naming convetion etc that it is oa old, poorly maintained project. While during the course of time TrekBuddy was made available for various platforms (Java and Symbian phones, Blackberries, Windows Phone), it is now used on Android. This repository may not (YET) hold everything needed to build TrekBuddy for various platforms (most of them obsolete), but in the least it should have all needed for building APK. 

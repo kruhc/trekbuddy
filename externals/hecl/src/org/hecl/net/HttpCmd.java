@@ -64,6 +64,7 @@ public class HttpCmd extends org.hecl.Operator {
 */
 		h.put(useragentheader, defuseragent);
 		h.put(acceptcharsetheader, defcharset);
+		h.put(connectionheader, "close");
 	    for(int i = 2; i<argv.length; i += 2) {
 		String key = argv[i].toString();
 		if(key.equals("-query")) {
@@ -183,6 +184,7 @@ public class HttpCmd extends org.hecl.Operator {
     public static final String acceptcharsetheader = "Accept-Charset";    
     public static final String useragentheader = "User-Agent";
     public static final String contentlanguageheader = "Content-Language";
+    public static final String connectionheader = "Connection";
 
     private static String defcharset = "ISO-8859-1";
     private static String defuseragent = "Hecl http-module";

@@ -68,7 +68,7 @@ public abstract class MicroEmulatorActivity extends Activity {
 	
 	public int orientation;
 	
-	public boolean windowFullscreen;
+	public boolean windowFullscreen, windowLandscape;
 
 	public boolean hasPermanentMenuKey = true;
 

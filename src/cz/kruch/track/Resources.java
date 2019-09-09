@@ -335,6 +335,7 @@ public final class Resources {
     public static final short CFG_DESKTOP_FLD_FIXED_CROSSHAIR   = 3538;
     public static final short CFG_DESKTOP_FLD_EASYZOOM_AUTO     = 3539;
     public static final short CFG_DESKTOP_FLD_HPS_SHOW_MAGNETIC = 3540;
+    public static final short CFG_DESKTOP_FLD_FORCE_LANDSCAPE   = 3541;
     /* settings - Location */
     public static final short CFG_LOCATION_GROUP_PROVIDER       = 3600;
     public static final short CFG_LOCATION_GROUP_TRACKLOG       = 3601;

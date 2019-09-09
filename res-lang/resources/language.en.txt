@@ -283,7 +283,7 @@
 
 # settings forms/fields/values (Screen)
 3500=Desktop
-3501=fullscreen
+3501=use fullscreen
 3502=no sounds
 3503=decimal precision
 3504=HPS true wpt azimuth
@@ -323,6 +323,7 @@
 3538=fixed crosshair
 3539=auto
 3540=HPS magnetic compass
+3541=force landscape
 
 # settings forms/fields/values (Location)
 3600=Provider

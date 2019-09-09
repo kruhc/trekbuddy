@@ -225,6 +225,7 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
             choice1 = newChoiceGroup(Resources.CFG_DESKTOP_GROUP, ChoiceGroup.MULTIPLE);
 //#ifdef __ANDROID__
             append(choice1, Resources.CFG_DESKTOP_FLD_FULLSCREEN);
+            append(choice1, Resources.CFG_DESKTOP_FLD_FORCE_LANDSCAPE);
             append(choice1, Resources.CFG_DESKTOP_FLD_SAFE_COLORS);
             append(choice1, Resources.CFG_DESKTOP_FLD_NO_SOUNDS);
             append(choice1, Resources.CFG_DESKTOP_FLD_NO_QUESTIONS);
@@ -237,6 +238,7 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
             append(choice1, Resources.CFG_DESKTOP_FLD_FIXED_CROSSHAIR);
             choice1.setSelectedFlags(new boolean[] {
                 Config.fullscreen,
+                Config.forceLandscape,
                 Config.safeColors,
                 Config.noSounds,
                 Config.noQuestions,
@@ -1094,16 +1096,17 @@ final class SettingsForm implements CommandListener, ItemStateListener, ItemComm
                 final boolean[] desktop = getSelectedFlags(choice1);
 //#ifdef __ANDROID__
                 Config.fullscreen = desktop[0];
-                Config.safeColors = desktop[1];
-                Config.noSounds = desktop[2];
-                Config.noQuestions = desktop[3];
-                Config.trailOn = desktop[4];
-                Config.decimalPrecision = desktop[5];
-                Config.hpsWptTrueAzimuth = desktop[6];
-                Config.hpsMagneticNeedle = desktop[7];
-                Config.easyZoomVolumeKeys = desktop[8];
-                Config.forceTextFieldFocus = desktop[9];
-                Config.fixedCrosshair = desktop[10];
+                Config.forceLandscape = desktop[1];
+                Config.safeColors = desktop[2];
+                Config.noSounds = desktop[3];
+                Config.noQuestions = desktop[4];
+                Config.trailOn = desktop[5];
+                Config.decimalPrecision = desktop[6];
+                Config.hpsWptTrueAzimuth = desktop[7];
+                Config.hpsMagneticNeedle = desktop[8];
+                Config.easyZoomVolumeKeys = desktop[9];
+                Config.forceTextFieldFocus = desktop[10];
+                Config.fixedCrosshair = desktop[11];
 //#elifdef __CN1__
                 Config.safeColors = desktop[0];
                 Config.noSounds = desktop[1];

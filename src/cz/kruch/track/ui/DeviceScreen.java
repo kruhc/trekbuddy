@@ -224,15 +224,8 @@ final class DeviceScreen extends GameCanvas implements Runnable {
 
     /** @Override */
     public void setFullScreenMode(final boolean b) {
-        if (b) {
-            cz.kruch.track.TrackingMIDlet.getActivity().runOnUiThread(new Runnable() {
-				public void run() {
-                    cz.kruch.track.TrackingMIDlet.getActivity().getWindow().setFlags(
-                            android.view.WindowManager.LayoutParams.FLAG_FULLSCREEN,
-                            android.view.WindowManager.LayoutParams.FLAG_FULLSCREEN);
-				}
-			});
-        }
+        // fullscreen is handled in MicroEmulator.onCreate() where it belongs
+        // can't remember if there was a reason to have it here... 
     }
 
 //#endif

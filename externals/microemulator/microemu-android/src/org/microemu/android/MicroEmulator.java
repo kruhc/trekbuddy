@@ -128,10 +128,22 @@ public class MicroEmulator extends MicroEmulatorActivity {
 
         android.content.SharedPreferences settings = getPreferences(0);
         windowFullscreen = settings.getBoolean("fullscreen", false);
-	Logger.info("fullscreen? " + windowFullscreen);
+        Logger.info("use fullscreen? " + windowFullscreen);
+        windowLandscape = settings.getBoolean("landscape", false);
+        Logger.info("force landscape? " + windowLandscape);
 
-	hasPermanentMenuKey = AndroidRuntimeMethods.hasPermanentMenuKey(this);
-	Logger.info("hasPermanentMenuKey? " + hasPermanentMenuKey);
+        if (windowLandscape) {
+            this.setRequestedOrientation(android.content.pm.ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
+        }
+        if (windowFullscreen) {
+            this.getWindow().setFlags(
+                android.view.WindowManager.LayoutParams.FLAG_FULLSCREEN,
+                android.view.WindowManager.LayoutParams.FLAG_FULLSCREEN
+            );
+        }
+
+        hasPermanentMenuKey = AndroidRuntimeMethods.hasPermanentMenuKey(this);
+        Logger.info("hasPermanentMenuKey? " + hasPermanentMenuKey);
 
 //	if (android.os.Build.VERSION.SDK_INT >= 14) {
 //		Logger.info("set device default theme");
@@ -149,13 +161,13 @@ public class MicroEmulator extends MicroEmulatorActivity {
 //		Logger.info("hasPermanentMenuKey? " + hasPermanentMenuKey);	
 //	}
 
-	if (android.os.Build.VERSION.SDK_INT >= 14 && android.os.Build.VERSION.SDK_INT < 21) {
-		actionBar = AndroidRuntimeMethods.getActionBar(this); // actionBar presence controlled by XML layout (displayable.xml)
-		if (actionBar != null) {
-			AndroidRuntimeMethods.setActionBarVisibility(this, actionBar, android.view.View.GONE); // initially hidden (map screen is current)
-		}
-		Logger.info("actionBar = " + actionBar);
-	}
+        if (android.os.Build.VERSION.SDK_INT >= 14 && android.os.Build.VERSION.SDK_INT < 21) {
+            actionBar = AndroidRuntimeMethods.getActionBar(this); // actionBar presence controlled by XML layout (displayable.xml)
+            if (actionBar != null) {
+                AndroidRuntimeMethods.setActionBarVisibility(this, actionBar, android.view.View.GONE); // initially hidden (map screen is current)
+            }
+            Logger.info("actionBar = " + actionBar);
+        }
 
         java.util.List params = new ArrayList();
         params.add("--usesystemclassloader");

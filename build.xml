@@ -20,7 +20,7 @@
 
     <property name="use.proguard" value="3"/>
     <property name="use.sdk.version" value="26"/> <!-- 21 long time safe value -->
-    <property name="use.api.level" value="26"/>   <!-- 14 long time safe value -->
+    <property name="use.api.level" value="28"/>   <!-- 14 long time safe value -->
 
     <!-- property name="android.jar" value="${android.home}\platforms\android-${use.sdk.version}/android.jar"/ --> <!-- See issue #??? -->
     <property name="android.jar" value="${android4.home}/android.jar"/>

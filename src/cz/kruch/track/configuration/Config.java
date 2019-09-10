@@ -193,6 +193,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
     public static boolean forceTextFieldFocus;
     public static boolean fixedCrosshair;
     public static boolean hpsMagneticNeedle     = true;
+    public static boolean forceLandscape;
 
     // [Units]
     public static int units;
@@ -697,14 +698,11 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
 
             // 1.33 changes
             hpsMagneticNeedle = din.readBoolean();
+            forceLandscape = din.readBoolean();
 
         } catch (Exception e) {
 
-            // 1.2.0 fallback
-            wptAlertSound = !noSounds;
-            wptAlertVibr = !powerSave;
-            trackColor = routeColor;
-            trackThick = routeThick;
+            // silently ignore
 
         }
 
@@ -889,6 +887,7 @@ public final class Config implements Runnable, YesNoDialog.AnswerListener {
 
         /* since 1.33 */
         dout.writeBoolean(hpsMagneticNeedle);
+        dout.writeBoolean(forceLandscape);
 
 //#ifdef __LOG__
         if (log.isEnabled()) log.debug("configuration updated");

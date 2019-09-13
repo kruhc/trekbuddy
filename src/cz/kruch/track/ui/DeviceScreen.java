@@ -146,7 +146,9 @@ final class DeviceScreen extends GameCanvas implements Runnable {
     /** @Override */
     public final void flushGraphics() {
         if (touchMenuActive) {
-            drawTouchMenu();
+            synchronized (Desktop.renderLock) {
+                drawTouchMenu();
+            }
 //#ifdef __ALL__
         } else if (softMenuActive) {
             drawSoftMenu();

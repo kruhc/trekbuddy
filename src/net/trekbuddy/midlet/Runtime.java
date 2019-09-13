@@ -1,17 +1,16 @@
 package net.trekbuddy.midlet;
 
 //#ifdef __ANDROID__
-import android.app.Activity;
 import android.app.Notification;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Intent;
+import android.content.Context;
 import android.os.Binder;
-import android.os.Bundle;
 import android.os.IBinder;
+import android.os.Build;
 import android.util.Log;
-import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 //#endif
 import api.location.LocationProvider;
@@ -182,15 +181,30 @@ public final class Runtime
     private Notification createNotification() {
         // In this sample, we'll use the same text for the ticker and the expanded notification
         CharSequence text = Resources.getString(Resources.DESKTOP_MSG_TRACKING_ACTIVE);
-        // Set the icon, scrolling text and timestamp
-        Notification notification = new Notification(R.drawable.app_icon_notif, text,
-                                                     System.currentTimeMillis());
         // The PendingIntent to launch our activity if the user selects this notification
         PendingIntent contentIntent = PendingIntent.getActivity(this, 0,
                 new Intent(this, org.microemu.android.MicroEmulator.class), 0);
-        // Set the info for the views that show in the notification panel.
-        notification.setLatestEventInfo(this, NOTIFICATION_TITLE, text, contentIntent);
-        return notification;
+        // Context
+        Context context = cz.kruch.track.TrackingMIDlet.getActivity();
+        // Set the icon, scrolling text and timestamp
+        if (Build.VERSION.SDK_INT < 23) {
+            Notification notification = new Notification(R.drawable.app_icon_notif, text,
+                                                         System.currentTimeMillis());
+            try {
+                Method deprecatedMethod = notification.getClass().getMethod("setLatestEventInfo", Context.class, CharSequence.class, CharSequence.class, PendingIntent.class);
+                deprecatedMethod.invoke(notification, context, text, null, contentIntent);
+            } catch (Throwable t) {
+                Log.w(TAG, "Notification.setLatestEventInfo not found of failed", t);
+            }
+            return notification;
+        } else {
+            // Use new API
+            Notification.Builder builder = new Notification.Builder(context)
+                    .setContentIntent(contentIntent)
+                    .setSmallIcon(R.drawable.app_icon_notif)
+                    .setContentTitle(text);
+            return builder.build();
+        }
     }
 
     //

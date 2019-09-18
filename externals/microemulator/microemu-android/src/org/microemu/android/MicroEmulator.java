@@ -131,17 +131,15 @@ public class MicroEmulator extends MicroEmulatorActivity {
         Logger.info("use fullscreen? " + windowFullscreen);
         windowLandscape = settings.getBoolean("landscape", false);
         Logger.info("force landscape? " + windowLandscape);
-
-        if (windowLandscape) {
-            this.setRequestedOrientation(android.content.pm.ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
-        }
         if (windowFullscreen) {
             this.getWindow().setFlags(
                 android.view.WindowManager.LayoutParams.FLAG_FULLSCREEN,
                 android.view.WindowManager.LayoutParams.FLAG_FULLSCREEN
             );
         }
-
+        if (windowLandscape) {
+            this.setRequestedOrientation(android.content.pm.ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
+        }
         hasPermanentMenuKey = AndroidRuntimeMethods.hasPermanentMenuKey(this);
         Logger.info("hasPermanentMenuKey? " + hasPermanentMenuKey);
 
@@ -167,6 +165,19 @@ public class MicroEmulator extends MicroEmulatorActivity {
                 AndroidRuntimeMethods.setActionBarVisibility(this, actionBar, android.view.View.GONE); // initially hidden (map screen is current)
             }
             Logger.info("actionBar = " + actionBar);
+        }
+
+        if (android.os.Build.VERSION.SDK_INT >= 23) { // 6.0+
+            final String READ_EXTERNAL_STORAGE = "android.permission.READ_EXTERNAL_STORAGE";
+            final String WRITE_EXTERNAL_STORAGE = "android.permission.WRITE_EXTERNAL_STORAGE";
+            final String ACCESS_FINE_LOCATION = "android.permission.ACCESS_FINE_LOCATION";
+            Logger.info("re-acquire dangerous permissions (6.0+)");
+            requestPermissions(
+                    new String[] {
+                            READ_EXTERNAL_STORAGE,
+                            WRITE_EXTERNAL_STORAGE,
+                            ACCESS_FINE_LOCATION
+                    }, 112); // 112 is request code... wtf
         }
 
         java.util.List params = new ArrayList();

@@ -19,11 +19,10 @@
     <property name="permission.attribute" value="MIDlet-Permissions-Opt"/>
 
     <property name="use.proguard" value="3"/>
-    <property name="use.sdk.version" value="26"/> <!-- 21 long time safe value -->
-    <property name="use.api.level" value="28"/>   <!-- 14 long time safe value -->
+    <property name="use.sdk.version" value="23"/>
+    <property name="use.api.level" value="26"/>
 
-    <!-- property name="android.jar" value="${android.home}\platforms\android-${use.sdk.version}/android.jar"/ --> <!-- See issue #??? -->
-    <property name="android.jar" value="${android4.home}/android.jar"/>
+    <property name="android.jar" value="${android.home}/platforms/android-${use.sdk.version}/android.jar"/>
 
     <property name="microemu.home" value="${basedir}/externals/microemulator"/>
 
@@ -288,8 +287,18 @@
         <property name="libraryjars" value="${microemu.home}/microemu-cldc/target/microemu-cldc-3.0.0-SNAPSHOT.jar;${microemu.home}/microemu-midp/target/microemu-midp-3.0.0-SNAPSHOT.jar;${microemu.home}/microemu-extensions/microemu-jsr-75/target/microemu-jsr-75-3.0.0-SNAPSHOT.jar;${android.jar};${microemu.home}/microemu-android/microemu-android-ant.jar;${androidant.home}/lib/antlib.jar;${microemu.home}/microemu-android/antplus_demo.jar"/>
         <antcall target="clean"/>
         <ant dir="${microemu.home}/microemu-android"
-             antfile="build-trekbuddy.xml" target="clean" inheritAll="false" inheritRefs="false">
-	      </ant>
+             antfile="build-trekbuddy.xml" target="microemu-android-ant" inheritAll="false" inheritRefs="false">
+            <property name="trekbuddy.home" value="${basedir}"/>
+            <property name="microemu.home" value="${microemu.home}"/>
+            <property name="wtk.home" value="${wtk.home}"/>
+            <property name="proguard.home" value="${proguard6.home}"/>
+            <property name="target.version" value="any"/>
+            <property name="sdk.version" value="${use.sdk.version}"/>
+            <property name="api.level" value="${use.api.level}"/>
+            <property name="dist.dir" value="android"/>
+            <property name="javac.debug" value="true"/>
+            <property name="javac.debuglevel" value="source,lines"/>
+        </ant>
         <antcall target="a.pre.android"/>
         <antcall target="compile.android"/>
         <antcall target="android.pack" inheritall="true"/>
@@ -1622,9 +1631,10 @@
             <arg value="-injars tmp/trekbuddy${suffix}.jar"/>
             <arg value="-outjars tmp/trekbuddy${suffix}-obfuscated.jar"/>
             <arg value="-libraryjars ${libraryjars}"/>
-            <arg value="-dontpreverify"/> <!-- not preverified; this is 4.x flag -->
+            <arg value="-android"/> <!-- 6.x flag -->
+            <arg value="-dontpreverify"/>
             <arg value="-dontobfuscate"/>
-            <arg value="-optimizations !code/simplification/arithmetic"/> <!-- dalvik 1.0/1.5 issue workaround -->
+            <arg value="-optimizations !code/simplification/arithmetic,!method/inlining/*"/> <!-- dalvik 1.0/1.5 issue workaround + correct stack traces option -->
             <arg value="-dontusemixedcaseclassnames"/>
             <arg value="-dontskipnonpubliclibraryclasses"/>
             <arg value="-repackageclasses ''"/>

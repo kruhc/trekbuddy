@@ -23,7 +23,7 @@
     <property name="midlet.class" value="cz.kruch.track.TrackingMIDlet" />
     <property name="midlet.jar" value="${trekbuddy.home}/dist/public/${dist.dir}/trekbuddy-android.jar" />
     <property name="midlet.jad" value="${trekbuddy.home}/dist/public/${dist.dir}/trekbuddy-android.jad" />
-    <property name="build-tools-folder" value="${sdk-folder}/build-tools/19.1.0"/>
+    <property name="build-tools-folder" value="${sdk-folder}/build-tools/29.0.2"/>
     <property name="sdk-version" value="android-${sdk.version}" />
     <property name="microemu.version" value="3.0.0-SNAPSHOT" />
     <property name="microemu-cldc.jar" value="${microemu.home}/microemu-cldc/target/microemu-cldc-${microemu.version}.jar" />
@@ -69,7 +69,7 @@
     <property name="apk-builder" value="${sdk-folder}/tools_r05/apkbuilder.bat" />
     <property name="android-jar" value="${sdk-folder}/platforms/${sdk-version}/android.jar" />
 
-    <taskdef resource="antenna.properties" classpath="antenna-bin-1.0.2.jar"/>
+    <taskdef resource="antenna.properties" classpath="${trekbuddy.home}/lib/antenna-bin-1.0.2.jar"/>
 
     <target name="clean">
         <delete dir="${outdir}" />
@@ -126,7 +126,26 @@
             </classpath>
         </java>
     </target>
-    
+
+    <target name="microemu-android-ant" depends="clean,check,dirs">
+        <wtkpreprocess srcdir="src" destdir="tmp/src" version="1"
+                       symbols="__ECLAIRPLUS__"/>
+        <javac target="1.6" source="1.6" debug="${javac.debug}" debuglevel="${javac.debuglevel}"
+                srcdir="tmp/src"
+                destdir="${outdir-classes}"
+                bootclasspath="${android-jar}"
+                excludes="org/microemu/android/asm/**">
+            <classpath>
+                <pathelement location="${microemu-cldc.jar}" />
+                <pathelement location="${microemu-midp.jar}" />
+                <pathelement location="${microemu-javase.jar}"/>
+                <pathelement location="${antplus.jar}"/>
+            </classpath>
+            <compilerarg value="-Xlint:unchecked"/>
+        </javac>
+        <jar destfile="${basedir}/microemu-android-ant.jar" basedir="${outdir}/classes"/>
+    </target>
+
     <target name="compile" unless="is.backport" depends="prepare-jars, package-res">
         <wtkpreprocess srcdir="src" destdir="tmp/src" version="1"
                        symbols="__ECLAIRPLUS__"/>
@@ -164,7 +183,7 @@
     </target>
 
     <target name="package" depends="compile,compile.backport">
-        <jar destfile="${outdir-libs}\classes.jar" basedir="${outdir}\classes"/>
+        <jar destfile="${outdir-libs}/classes.jar" basedir="${outdir}/classes"/>
     </target>
 
     <target name="dex" depends="package">
@@ -340,6 +359,7 @@
     &lt;uses-permission android:name="android.permission.BLUETOOTH_ADMIN" /&gt;
     &lt;uses-permission android:name="android.permission.VIBRATE" /&gt;
     &lt;!--uses-permission android:name="android.permission.WAKE_LOCK" /--&gt;
+    &lt;uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" /&gt;
     &lt;uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" /&gt;
     &lt;!--uses-permission android:name="android.permission.CAMERA" /--&gt;
     &lt;uses-permission android:name="android.permission.INTERNET" /&gt;
@@ -386,6 +406,7 @@
     &lt;uses-permission android:name="android.permission.BLUETOOTH_ADMIN" /&gt;
     &lt;uses-permission android:name="android.permission.VIBRATE" /&gt;
     &lt;!--uses-permission android:name="android.permission.WAKE_LOCK" /--&gt;
+    &lt;uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" /&gt;
     &lt;uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" /&gt;
     &lt;!--uses-permission android:name="android.permission.CAMERA" /--&gt;
     &lt;uses-permission android:name="com.dsi.ant.permission.ANT" /&gt;

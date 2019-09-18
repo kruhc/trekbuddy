@@ -3554,8 +3554,8 @@ public final class Desktop implements CommandListener,
 
 //#ifdef __ANDROID__
             final org.microemu.android.MicroEmulatorActivity activity = cz.kruch.track.TrackingMIDlet.getActivity();
-            activity.config.ignoreVolumeKeys = !Config.easyZoomVolumeKeys;
-            activity.config.ignoreTextFieldFocus = !Config.forceTextFieldFocus;
+            org.microemu.android.MicroEmulatorActivity.config.ignoreVolumeKeys = !Config.easyZoomVolumeKeys;
+            org.microemu.android.MicroEmulatorActivity.config.ignoreTextFieldFocus = !Config.forceTextFieldFocus;
             final android.content.SharedPreferences settings = activity.getPreferences(0);
             final android.content.SharedPreferences.Editor editor = settings.edit();
             editor.putBoolean("fullscreen", Config.fullscreen);
